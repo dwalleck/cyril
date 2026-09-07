@@ -1,0 +1,28 @@
+{
+  "qualification": "Native success before the grouped-choice-only decoder correction; later replay failed before initialize because the native account was logged out.",
+  "cli_version": "2.21.1",
+  "platform": "Linux x86_64",
+  "seconds": 20.286801170004765,
+  "runs": [
+    {
+      "label": "A",
+      "completed": true,
+      "own_identity_returned": true,
+      "foreign_identity_absent": true,
+      "mutation_unchanged": true,
+      "private_roots_removed": true
+    },
+    {
+      "label": "B",
+      "completed": true,
+      "own_identity_returned": true,
+      "foreign_identity_absent": true,
+      "mutation_unchanged": true,
+      "private_roots_removed": true
+    }
+  ],
+  "observed_pids_gone": true,
+  "provider_variables_absent_from_runtime": true,
+  "hook_marker_absent": true,
+  "mcp_start_marker_absent": true
+}

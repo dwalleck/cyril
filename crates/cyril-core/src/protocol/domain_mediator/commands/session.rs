@@ -1,6 +1,7 @@
 use std::future::Future;
 
 use agent_client_protocol::{Agent, ConnectionTo, UntypedMessage, schema::v1 as acp};
+use serde::Deserialize;
 
 use super::super::{CommandOutcome, DomainMediator, SessionStart};
 use super::{COMMAND_RPC_TIMEOUT, SESSION_RPC_TIMEOUT, await_response};
@@ -304,6 +305,86 @@ impl DomainMediator {
                     }))
                     .await;
             }
+        });
+        Ok(())
+    }
+
+    pub(super) async fn set_config_option(
+        &mut self,
+        connection: &ConnectionTo<Agent>,
+        config_id: String,
+        value: String,
+    ) -> crate::Result<()> {
+        let operation = "set_config_option";
+        let Some(session_id) = self.active_session_id.as_ref() else {
+            return self
+                .notify(
+                    Notification::BridgeError {
+                        operation: operation.into(),
+                        message: "no active session — run /new or /load first".into(),
+                    }
+                    .into(),
+                )
+                .await;
+        };
+        let request = acp::SetSessionConfigOptionRequest::new(
+            acp::SessionId::new(session_id.as_str()),
+            acp::SessionConfigId::new(config_id.as_str()),
+            acp::SessionConfigValueId::new(value),
+        );
+        // Keep wire order with other commands; only the response wait is spawned.
+        let sent = send_standard(connection, "session/set_config_option", request);
+        let channels = self.channels.clone();
+        self.spawn_command(async move {
+            let result = async {
+                let response = await_response(sent?, operation, COMMAND_RPC_TIMEOUT).await?;
+                let raw_options = response.get("configOptions").ok_or_else(|| {
+                    agent_client_protocol::Error::internal_error()
+                        .data("set_config_option response is missing configOptions")
+                })?;
+                // Bypass the outer tolerant catalog adapter; borrow the raw value
+                // so nested loss checks do not clone JSON or parse choices twice.
+                let options =
+                    Vec::<acp::SessionConfigOption>::deserialize(raw_options).map_err(|error| {
+                        agent_client_protocol::Error::internal_error().data(format!(
+                            "deserialize set_config_option configOptions: {error}"
+                        ))
+                    })?;
+                for (option_index, option) in options.iter().enumerate() {
+                    if let acp::SessionConfigKind::Select(select) = &option.kind
+                        && let acp::SessionConfigSelectOptions::Grouped(groups) = &select.options
+                    {
+                        for (group_index, group) in groups.iter().enumerate() {
+                            // Group.options also uses DefaultOnError<VecSkipError>.
+                            // A non-array or a dropped required choice is not an ack.
+                            let count =
+                                raw_options[option_index]["options"][group_index]["options"]
+                                    .as_array()
+                                    .map(Vec::len);
+                            if count != Some(group.options.len()) {
+                                return Err(agent_client_protocol::Error::internal_error().data(
+                                    "set_config_option response contains malformed grouped choices",
+                                ));
+                            }
+                        }
+                    }
+                }
+                Ok(options)
+            }
+            .await;
+            let notification = match result {
+                Ok(options) => Notification::ConfigOptionSet {
+                    config_id,
+                    options: crate::protocol::convert::to_config_options(&options),
+                },
+                Err(error) => Notification::BridgeError {
+                    operation: operation.into(),
+                    message: error.to_string(),
+                },
+            };
+            channels
+                .enqueue_outcome(CommandOutcome::notify(notification))
+                .await;
         });
         Ok(())
     }

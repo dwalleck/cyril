@@ -942,7 +942,8 @@ impl UiState {
                 self.set_activity(Activity::ToolRunning);
                 true
             }
-            Notification::ConfigOptionsUpdated(options) => {
+            Notification::ConfigOptionsUpdated(options)
+            | Notification::ConfigOptionSet { options, .. } => {
                 if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
                     // Route through set_current_model so the "clear effort on a
                     // real model change" invariant lives in exactly one place.

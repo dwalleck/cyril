@@ -85,7 +85,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             partial_text,
             reason,
         } => {
-            println!("INCOMPLETE_AFTER_TEARDOWN {reason:?}\n{partial_text}");
+            println!("INCOMPLETE_AFTER_TEARDOWN {reason:?}");
+            match partial_text {
+                Some(text) => println!("{text}"),
+                None => println!("OUTPUT_UNAVAILABLE"),
+            }
             Err(reason.into())
         }
     }

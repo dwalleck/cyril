@@ -1,0 +1,44 @@
+{
+  "checkpoint": "PR116 reviewer correction",
+  "date": "2026-09-07",
+  "platform": "Linux x86_64",
+  "status": "CONTROLLED_PASS_NATIVE_REPLAY_BLOCKED",
+  "original_review_records": 54,
+  "additional_review_records": 1,
+  "accepted_or_modified": 25,
+  "rejected": 30,
+  "verification": {
+    "workspace_tests_passed": 1923,
+    "workbench_tests_after_helper_correction": 46,
+    "standalone_non_kas_core_tests_passed": 739,
+    "workspace_clippy": "PASS",
+    "standalone_non_kas_core_clippy": "PASS",
+    "format": "PASS",
+    "complete_shape_and_mutations": "PASS",
+    "workspace_tests_after_all_fixture_corrections": 1923
+  },
+  "core_increment": {
+    "pr": 118,
+    "commit": "a59acd43",
+    "changed_lines": 1535,
+    "workbench_dependency": false,
+    "checkpoint": "review-checkpoint-core-runtime.json"
+  },
+  "native": {
+    "cli": "2.21.1",
+    "prior_success": "review-native/prior-success.json",
+    "final_revision_replay": "BLOCKED before initialize: native launcher and ordinary kiro-cli whoami report not logged in",
+    "failure": "review-native/auth-blocked-acceptance.json",
+    "auth_material_read_or_copied_by_investigation": false
+  },
+  "windows": {
+    "gate": "Windows CI runs public constructor cases plus compiling red/restored mutation controls",
+    "native_kas_or_descendant_acceptance": "Not claimed; cyril-6y1s/cyril-jlw9 remain open"
+  },
+  "cleanup": {
+    "cargo_smoke_examples_removed": true,
+    "sources_retained_as_evidence": true
+  },
+  "qualification": "This checkpoint records local controlled proof, not a successful final-revision native replay or an unobserved Windows run.",
+  "fixture_ownership": "POSIX descriptor-inheritance control reproduced ETXTBSY; fixture-only ownership correction passes full workspace and feature-isolated gates."
+}

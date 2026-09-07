@@ -14,6 +14,12 @@ use tokio::time::timeout;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
+// A concurrent fork can inherit another test's writable executable descriptor
+// until exec, producing ETXTBSY even after fs::write returns in the parent.
+// Keep fixture creation and process lifetime together; nextest already isolates
+// each case in its own process. Intentional concurrent launches remain below.
+static EXECUTABLE_FIXTURES: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
 fn executable(root: &Path) -> TestResult<AgentCommand> {
     let path = root.join("agent space λ.sh");
     std::fs::write(
@@ -61,6 +67,7 @@ async fn launch_command(
 
 #[tokio::test]
 async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     // Re-enter to seed a canary without mutating the test runner's environment.
     const CANARY: &str = "CYRIL_ISOLATION_PARENT_AUTHORITY";
     const COMPLETED: &str = "CYRIL_ISOLATION_COMPLETED";
@@ -109,6 +116,82 @@ async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
     Ok(())
 }
 
+#[tokio::test]
+async fn final_sender_drop_stops_unanswered_initialization() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
+    let fixture = tempfile::tempdir()?;
+    let root = fixture.path().canonicalize()?;
+    let home = root.join("home");
+    std::fs::create_dir(&home)?;
+    let peer = root.join("unanswered-initialize.sh");
+    std::fs::write(
+        &peer,
+        r#"#!/bin/sh
+set -eu
+peer_pid=$$
+(
+    /bin/sleep 20
+    printf 'natural exit\n' > natural-exit
+    kill -TERM "$peer_pid"
+) &
+IFS= read -r request
+printf '%s\n' "$request" > initialize.pending
+/bin/mv initialize.pending initialize.json
+wait
+"#,
+    )?;
+    std::fs::set_permissions(&peer, std::fs::Permissions::from_mode(0o700))?;
+    let bridge = spawn_bridge(
+        AgentCommand::new(peer.to_str().ok_or("non-UTF-8 fixture path")?),
+        SpawnConfig {
+            engine: cyril_core::types::AgentEngine::V2,
+            kas_hooks: cyril_core::types::kas_hooks::KasHooksMode::Off,
+            environment: SpawnEnvironment::Replace(BTreeMap::from([(
+                OsString::from("HOME"),
+                home.into_os_string(),
+            )])),
+            ..SpawnConfig::default()
+        },
+        root.clone(),
+    )?;
+    let sender = bridge.sender();
+    let retained_sender = sender.clone();
+    let (split_sender, _notifications, _permissions, _sources, mut completion) = bridge.split();
+    let initialize = tokio::time::timeout(Duration::from_secs(10), async {
+        loop {
+            match std::fs::read(root.join("initialize.json")) {
+                Ok(bytes) => return Ok::<_, std::io::Error>(bytes),
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+                Err(error) => return Err(error),
+            }
+        }
+    })
+    .await??;
+    let request: serde_json::Value = serde_json::from_slice(&initialize)?;
+    assert_eq!(request["method"], "initialize");
+
+    drop(sender);
+    drop(split_sender);
+    // Longer than the two-second process grace: a lost clone guard would finish.
+    assert!(
+        tokio::time::timeout(Duration::from_secs(3), &mut completion)
+            .await
+            .is_err(),
+        "a retained client must keep initialization alive"
+    );
+    drop(retained_sender);
+    // Leave realistic scheduler margin around the existing process grace, without
+    // accepting the peer's independent twenty-second red-control exit as cleanup.
+    tokio::time::timeout(Duration::from_secs(8), &mut completion).await??;
+    assert!(
+        !root.join("natural-exit").try_exists()?,
+        "completion must come from bridge teardown, not the peer's safety exit"
+    );
+    Ok(())
+}
+
 #[cfg(feature = "kas")]
 fn kas_config(root: &Path, thinking: bool) -> TestResult<SpawnConfig> {
     std::fs::create_dir_all(root.join("settings"))?;
@@ -140,12 +223,18 @@ fn kas_config(root: &Path, thinking: bool) -> TestResult<SpawnConfig> {
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn concurrent_settings_are_run_local() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     let a = tempfile::tempdir()?;
     let b = tempfile::tempdir()?;
     let a_config = kas_config(a.path(), true)?;
     let b_config = kas_config(b.path(), false)?;
+    let a_command = executable(a.path())?;
+    let b_command = executable(b.path())?;
     let original_home = std::env::var_os("KIRO_HOME");
-    let (a_result, b_result) = tokio::join!(launch(a.path(), a_config), launch(b.path(), b_config));
+    let (a_result, b_result) = tokio::join!(
+        launch_command(a.path(), a_config, a_command),
+        launch_command(b.path(), b_config, b_command)
+    );
     a_result?;
     b_result?;
     for (root, expected) in [(a.path(), true), (b.path(), false)] {
@@ -170,6 +259,7 @@ async fn concurrent_settings_are_run_local() -> TestResult {
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn exact_version_mismatch_never_starts_agent() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     let root = tempfile::tempdir()?;
     let mut config = kas_config(root.path(), false)?;
     if let SpawnEnvironment::Replace(values) = &mut config.environment {
@@ -185,6 +275,7 @@ async fn exact_version_mismatch_never_starts_agent() -> TestResult {
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn hanging_version_probe_fails_before_workbench_deadline() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     let root = tempfile::tempdir()?;
     let path = root.path().join("hanging-agent.sh");
     std::fs::write(
@@ -223,6 +314,7 @@ async fn hanging_version_probe_fails_before_workbench_deadline() -> TestResult {
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn free_replacement_refuses_before_inherited_discovery() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     const ROOT: &str = "CYRIL_FREE_REPLACEMENT_FIXTURE";
     let Some(root) = std::env::var_os(ROOT) else {
         let root = tempfile::tempdir()?;
@@ -313,6 +405,7 @@ async fn free_replacement_refuses_before_inherited_discovery() -> TestResult {
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn verbose_version_probe_drains_both_pipes_past_capture_limit() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     let root = tempfile::tempdir()?;
     let command = executable(root.path())?;
     let source = std::fs::read_to_string(command.program())?;
@@ -343,6 +436,7 @@ async fn verbose_version_probe_drains_both_pipes_past_capture_limit() -> TestRes
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn version_deadline_includes_exited_wrappers_inherited_pipes() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     let root = tempfile::tempdir()?;
     let command = executable(root.path())?;
     let source = std::fs::read_to_string(command.program())?;
@@ -398,6 +492,7 @@ async fn version_deadline_includes_exited_wrappers_inherited_pipes() -> TestResu
 #[cfg(feature = "kas")]
 #[tokio::test]
 async fn replacement_host_hooks_refuse_before_probe_or_agent_start() -> TestResult {
+    let _fixture_guard = EXECUTABLE_FIXTURES.lock().await;
     const ROOT: &str = "CYRIL_HOST_REPLACEMENT_FIXTURE";
     let Some(root) = std::env::var_os(ROOT) else {
         let root = tempfile::tempdir()?;

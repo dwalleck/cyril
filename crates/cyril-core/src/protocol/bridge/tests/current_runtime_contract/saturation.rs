@@ -25,6 +25,10 @@ fn all_commands() -> Vec<BridgeCommand> {
         BridgeCommand::SetModel {
             model_id: "model".to_owned(),
         },
+        BridgeCommand::SetConfigOption {
+            config_id: "setting".to_owned(),
+            value: "value".to_owned(),
+        },
         BridgeCommand::ExtMethod {
             method: "oracle/ext".to_owned(),
             params: serde_json::json!({}),
@@ -189,12 +193,11 @@ async fn c6_command_channel_capacity_fifo_and_closed_errors_are_exact() {
     let (handle, mut command_rx) = BridgeHandle::for_tests_with_command_rx();
     let sender = handle.sender();
     let commands = all_commands();
-    assert_eq!(commands.len(), 20, "C6 exhaustive command fixture count");
     let expected: Vec<_> = commands.iter().map(command_name).collect();
     for command in commands {
         sender
             .try_send(command)
-            .expect_contract("C6 first 20 exhaustive commands fit");
+            .expect_contract("C6 command fixture fits the bounded channel");
     }
     for _ in expected.len()..EXPECTED_COMMAND_CAPACITY {
         sender

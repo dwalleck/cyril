@@ -1,0 +1,53 @@
+Privacy mutation: remove the response-confirmed predicate.
+   Compiling cyril-workbench v0.2.0-alpha.1 (${HOME}/.omp/wt/116-2a29f01/crates/cyril-workbench)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1.99s
+     Running unittests src/lib.rs (target/debug/deps/cyril_workbench-416097c71475b10b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s
+
+     Running tests/reviewer.rs (target/debug/deps/reviewer-c0ed18ba5a2e1824)
+
+running 1 test
+test late_collection_confirmation_precedes_first_prompt ... FAILED
+
+failures:
+
+---- late_collection_confirmation_precedes_first_prompt stdout ----
+
+thread 'late_collection_confirmation_precedes_first_prompt' (2461427) panicked at crates/cyril-workbench/tests/reviewer.rs:602:5:
+assertion failed: confirmed["time"].as_f64().ok_or("confirmation time")? <=
+    prompted["time"].as_f64().ok_or("prompt time")?
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    late_collection_confirmation_precedes_first_prompt
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 36 filtered out; finished in 0.21s
+
+error: test failed, to rerun pass `-p cyril-workbench --test reviewer`
+Terminal mutation: permit failure to overwrite an established terminal.
+   Compiling cyril-workbench v0.2.0-alpha.1 (${HOME}/.omp/wt/116-2a29f01/crates/cyril-workbench)
+    Finished `test` profile [optimized + debuginfo] target(s) in 3.56s
+     Running unittests src/lib.rs (target/debug/deps/cyril_workbench-416097c71475b10b)
+
+running 1 test
+test reviewer::tests::late_command_error_cannot_demote_authoritative_completion_but_cleanup_can ... FAILED
+
+failures:
+
+---- reviewer::tests::late_command_error_cannot_demote_authoritative_completion_but_cleanup_can stdout ----
+
+thread 'reviewer::tests::late_command_error_cannot_demote_authoritative_completion_but_cleanup_can' (2486010) panicked at crates/cyril-workbench/src/reviewer.rs:536:9:
+assertion failed: matches!(state.terminal, Some(Terminal::Complete))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    reviewer::tests::late_command_error_cannot_demote_authoritative_completion_but_cleanup_can
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-workbench --lib`

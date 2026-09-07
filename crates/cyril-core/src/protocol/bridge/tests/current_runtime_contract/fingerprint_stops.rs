@@ -16,12 +16,14 @@ async fn fingerprint_stops_v2_bound_on_kas_wire() {
     let probe = Rc::clone(&script);
     with_harness(
         script,
-        |_sender, _rx, _permission_rx, _gate, loop_handle| async move {
+        |sender, _rx, _permission_rx, _gate, loop_handle| async move {
+            // Keep a client alive: this tests a contradiction, not owner cancellation.
             let error = tokio::time::timeout(Duration::from_secs(5), loop_handle)
                 .await
                 .expect_contract("fingerprint stop within 5s")
                 .expect_contract("loop task joined")
                 .expect_err_contract("a v2-bound loop on a KAS wire must fail-stop");
+            drop(sender);
             let reason = error.to_string();
             assert!(
                 reason.contains("_meta.kiro"),

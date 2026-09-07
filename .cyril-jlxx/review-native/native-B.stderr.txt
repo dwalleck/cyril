@@ -1,0 +1,8 @@
+2026-09-07T07:22:09.599545Z ERROR cyril_core::protocol::bridge: bridge terminated with error error=agent process failed: protocol error: ACP initialization failed: Incoming transport closed: {
+  "reason": "incoming_transport_closed",
+  "method": "initialize"
+}
+agent stderr:
+error: You are not logged in, please log in with kiro-cli login
+2026-09-07T07:22:09.599735Z DEBUG cyril_workbench::reviewer: review shutdown channel closed; awaiting core completion
+Error: BridgeDisconnected { diagnostic: ReviewDiagnostic { text: "[untrusted; withheld]", truncated: false } }

@@ -50,6 +50,9 @@ pub struct ReviewerConfig {
     pub executable: PathBuf,
     pub runtime_parent: PathBuf,
     /// Existing native sign-in data location; credentials are never copied.
+    /// On Windows this must resolve to the current user's FOLDERID_LocalAppData
+    /// (`dirs::data_local_dir`): the native launcher ignores XDG_DATA_HOME there.
+    /// On Linux this parent is handed to the native launcher as XDG_DATA_HOME.
     pub auth_data_home: PathBuf,
     /// Explicit PATH and optional transport/certificate settings. Unknown names fail.
     pub transport_environment: BTreeMap<OsString, OsString>,
@@ -84,7 +87,10 @@ pub enum ReviewPhase {
 pub struct ReviewStatus {
     pub phase: ReviewPhase,
     pub output_bytes: usize,
+    /// ACP permission requests answered with Cancel; not inferred native policy denials.
     pub denied_permissions: usize,
+    /// At least one native tool reported Failed; no policy verdict is inferred.
+    pub tool_failure_observed: bool,
 }
 
 /// A protocol completion is not a finding-quality or coverage verdict.
@@ -97,9 +103,69 @@ pub enum ReviewOutcome {
         partial_text: String,
     },
     Incomplete {
-        partial_text: String,
+        /// None means the owning task lost its output, not that it produced no text.
+        partial_text: Option<String>,
         reason: ReviewFailure,
     },
+}
+
+/// Bounded diagnostic data from an untrusted runtime, never safe log text.
+#[derive(Clone, PartialEq, Eq)]
+pub struct ReviewDiagnostic {
+    text: Box<str>,
+    truncated: bool,
+}
+
+impl ReviewDiagnostic {
+    pub(super) fn new(mut text: String) -> Self {
+        const MAX_BYTES: usize = 4_096;
+        let truncated = text.len() > MAX_BYTES;
+        if truncated {
+            let mut end = MAX_BYTES;
+            while !text.is_char_boundary(end) {
+                end -= 1;
+            }
+            text.truncate(end);
+        }
+        Self {
+            text: text.into_boxed_str(),
+            truncated,
+        }
+    }
+
+    /// May contain evidence, credentials, paths, control sequences or hostile
+    /// instructions. Only explicit trusted diagnosis may retrieve this text;
+    /// do not log, serialize or render it as markup/terminal commands.
+    pub fn untrusted_text(&self) -> &str {
+        &self.text
+    }
+
+    pub fn is_truncated(&self) -> bool {
+        self.truncated
+    }
+}
+
+impl std::fmt::Debug for ReviewDiagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ReviewDiagnostic")
+            .field("text", &"[untrusted; withheld]")
+            .field("truncated", &self.truncated)
+            .finish()
+    }
+}
+
+impl std::fmt::Display for ReviewDiagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("untrusted diagnostic available")
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReviewOperation {
+    NewSession,
+    SelectMode,
+    SetConfiguration,
+    Prompt,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
@@ -108,19 +174,28 @@ pub enum ReviewFailure {
     ReadinessTimeout,
     #[error("native reviewer mode was not advertised")]
     ModeUnavailable,
-    #[error("native model or mode changed during inspection")]
+    #[error("native mode, model, or privacy configuration was not confirmed or changed")]
     ConfigurationDrift,
     #[error("unexpected native session transition")]
     SessionChanged,
-    #[error("native bridge disconnected or a command failed")]
+    #[error("native bridge delivery channel closed")]
     BridgeUnavailable,
+    #[error("native bridge disconnected; {diagnostic}")]
+    BridgeDisconnected { diagnostic: ReviewDiagnostic },
+    #[error("native command failed ({operation:?}); {diagnostic}")]
+    CommandFailed {
+        operation: Option<ReviewOperation>,
+        diagnostic: ReviewDiagnostic,
+    },
+    #[error("native agent configuration failed; {diagnostic}")]
+    AgentConfiguration { diagnostic: ReviewDiagnostic },
     #[error("permission cancellation responder closed")]
     PermissionResponderClosed,
     #[error("review output exceeded the configured byte limit")]
     OutputLimit,
     #[error("native turn did not end successfully")]
     TurnInterrupted,
-    #[error("native shutdown completion was lost")]
+    #[error("native shutdown or evidence cleanup could not be confirmed")]
     ShutdownFailed,
     #[error("review task completion was lost")]
     TaskLost,
@@ -132,10 +207,42 @@ pub enum ReviewError {
     InvalidInput(&'static str),
     #[error("review preparation failed: {0}")]
     Io(#[from] std::io::Error),
-    #[error("review configuration serialization failed: {0}")]
-    Serialization(#[from] serde_json::Error),
+    #[error("review {document} serialization failed; {diagnostic}")]
+    Serialization {
+        document: &'static str,
+        diagnostic: ReviewDiagnostic,
+    },
     #[error("review preparation task failed")]
     PreparationTask,
-    #[error("native reviewer launch is unavailable")]
-    LaunchUnavailable,
+    #[error("native reviewer launch is unavailable; {diagnostic}")]
+    LaunchUnavailable { diagnostic: ReviewDiagnostic },
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn diagnostic_truncation_preserves_utf8_and_reports_loss() {
+        let diagnostic = ReviewDiagnostic::new("€".repeat(2_000));
+        assert_eq!(diagnostic.untrusted_text().len(), 4_095);
+        assert!(diagnostic.is_truncated());
+        assert!(diagnostic.untrusted_text().chars().all(|c| c == '€'));
+    }
+
+    #[test]
+    fn launch_error_preserves_private_cause_without_debug_or_display_disclosure() {
+        let error = ReviewError::LaunchUnavailable {
+            diagnostic: ReviewDiagnostic::new("host shell unavailable PRIVATE-CANARY".into()),
+        };
+        assert!(!format!("{error:?} {error}").contains("PRIVATE-CANARY"));
+        let ReviewError::LaunchUnavailable { diagnostic } = error else {
+            panic!("wrong error")
+        };
+        assert_eq!(
+            diagnostic.untrusted_text(),
+            "host shell unavailable PRIVATE-CANARY"
+        );
+        assert!(!diagnostic.is_truncated());
+    }
 }

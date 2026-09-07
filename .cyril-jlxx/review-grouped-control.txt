@@ -1,0 +1,22 @@
+   Compiling cyril-core v0.2.0-alpha.1 (${HOME}/.omp/wt/116-2a29f01/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 9.40s
+     Running tests/session_configuration.rs (target/debug/deps/session_configuration-daa34a38f44a6d3b)
+
+running 1 test
+test standard_configuration_uses_returned_catalog_and_rejects_malformed_response ... FAILED
+
+failures:
+
+---- standard_configuration_uses_returned_catalog_and_rejects_malformed_response stdout ----
+
+thread 'standard_configuration_uses_returned_catalog_and_rejects_malformed_response' (2621485) panicked at crates/cyril-core/tests/session_configuration.rs:246:5:
+malformed grouped choices must not be silently discarded
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    standard_configuration_uses_returned_catalog_and_rejects_malformed_response
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p cyril-core --test session_configuration`

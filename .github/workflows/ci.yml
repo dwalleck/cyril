@@ -103,6 +103,10 @@ jobs:
       - name: Run doc tests
         run: cargo test --doc --workspace --all-features
 
+      - name: Challenge native Windows constructor guards
+        if: runner.os == 'Windows'
+        run: python .cyril-jlxx/oracles/windows-construction.py
+
   build:
     name: Build
     runs-on: ${{ matrix.os }}

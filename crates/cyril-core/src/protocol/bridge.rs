@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::protocol::engine::{Engine, V2Engine};
 use crate::types::agent_command::AgentCommand;
@@ -29,6 +29,7 @@ pub(crate) const fn source_disposition(
 
 pub struct BridgeHandle {
     command_tx: mpsc::Sender<BridgeCommand>,
+    client_lifetime_tx: Option<watch::Sender<()>>,
     pub(crate) notification_rx: mpsc::Receiver<RoutedNotification>,
     pub(crate) permission_rx: mpsc::Receiver<PermissionRequest>,
     source_rx: mpsc::Receiver<crate::types::SourceTurnEvent>,
@@ -47,6 +48,7 @@ impl BridgeHandle {
     pub fn sender(&self) -> BridgeSender {
         BridgeSender {
             command_tx: self.command_tx.clone(),
+            _client_lifetime_tx: self.client_lifetime_tx.clone(),
         }
     }
 
@@ -66,6 +68,7 @@ impl BridgeHandle {
         (
             Self {
                 command_tx,
+                client_lifetime_tx: None,
                 notification_rx,
                 permission_rx,
                 source_rx,
@@ -87,6 +90,7 @@ impl BridgeHandle {
         (
             BridgeSender {
                 command_tx: self.command_tx,
+                _client_lifetime_tx: self.client_lifetime_tx,
             },
             self.notification_rx,
             self.permission_rx,
@@ -99,11 +103,16 @@ impl BridgeHandle {
 #[derive(Clone)]
 pub struct BridgeSender {
     command_tx: mpsc::Sender<BridgeCommand>,
+    // Ownership only: the final real client closes initialization's watch channel.
+    _client_lifetime_tx: Option<watch::Sender<()>>,
 }
 
 impl BridgeSender {
     pub fn from_sender(tx: mpsc::Sender<BridgeCommand>) -> Self {
-        Self { command_tx: tx }
+        Self {
+            command_tx: tx,
+            _client_lifetime_tx: None,
+        }
     }
 
     pub async fn send(&self, cmd: BridgeCommand) -> crate::Result<()> {
@@ -122,6 +131,7 @@ impl BridgeSender {
 
 pub(crate) struct BridgeChannels {
     pub command_rx: mpsc::Receiver<BridgeCommand>,
+    pub client_lifetime_rx: watch::Receiver<()>,
     pub notification_tx: mpsc::Sender<RoutedNotification>,
     pub permission_tx: mpsc::Sender<PermissionRequest>,
     pub source_tx: mpsc::Sender<crate::types::SourceTurnEvent>,
@@ -130,6 +140,7 @@ pub(crate) struct BridgeChannels {
 
 pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     let (command_tx, command_rx) = mpsc::channel(COMMAND_CAPACITY);
+    let (client_lifetime_tx, client_lifetime_rx) = watch::channel(());
     let (notification_tx, notification_rx) = mpsc::channel(NOTIFICATION_CAPACITY);
     let (permission_tx, permission_rx) = mpsc::channel(PERMISSION_CAPACITY);
     let (source_tx, source_rx) =
@@ -138,6 +149,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
     (
         BridgeHandle {
             command_tx,
+            client_lifetime_tx: Some(client_lifetime_tx),
             notification_rx,
             permission_rx,
             source_rx,
@@ -145,6 +157,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
         },
         BridgeChannels {
             command_rx,
+            client_lifetime_rx,
             notification_tx,
             permission_tx,
             source_tx,

@@ -43,7 +43,7 @@ impl Peer {
                 std::env::var_os("PATH").ok_or("PATH missing")?,
             )]),
             limits: ReviewLimits {
-                startup_timeout: Duration::from_secs(2),
+                startup_timeout: Duration::from_secs(1),
                 stall_threshold: Duration::from_millis(100),
                 ..ReviewLimits::default()
             },
@@ -143,18 +143,32 @@ async fn model_mismatch_never_starts_inspection() -> TestResult {
     peer.cleaned()
 }
 
+async fn readiness_rejects(scenario: &str) -> TestResult {
+    let peer = Peer::new(scenario)?;
+    assert!(matches!(
+        finish(peer.reviewer()?.start(input("visible")).await?).await?,
+        ReviewOutcome::Incomplete {
+            reason: ReviewFailure::ReadinessTimeout,
+            ..
+        }
+    ));
+    assert!(peer.events("prompt")?.is_empty());
+    peer.cleaned()
+}
+
 #[tokio::test]
-async fn missing_model_catalog_and_wrong_mode_never_start() -> TestResult {
-    for scenario in ["catalog-missing", "wrong-mode", "missing"] {
-        let peer = Peer::new(scenario)?;
-        assert!(matches!(
-            finish(peer.reviewer()?.start(input("visible")).await?).await?,
-            ReviewOutcome::Incomplete { .. }
-        ));
-        assert!(peer.events("prompt")?.is_empty());
-        peer.cleaned()?;
-    }
-    Ok(())
+async fn missing_model_catalog_never_starts() -> TestResult {
+    readiness_rejects("catalog-missing").await
+}
+
+#[tokio::test]
+async fn wrong_mode_never_starts() -> TestResult {
+    readiness_rejects("wrong-mode").await
+}
+
+#[tokio::test]
+async fn missing_configuration_never_starts() -> TestResult {
+    readiness_rejects("missing").await
 }
 
 #[tokio::test]
@@ -179,7 +193,7 @@ async fn configuration_drift_preserves_partial_but_never_completes() -> TestResu
     let peer = Peer::new("drift")?;
     let result = finish(peer.reviewer()?.start(input("visible")).await?).await?;
     assert!(
-        matches!(result, ReviewOutcome::Incomplete { partial_text, reason: ReviewFailure::ConfigurationDrift } if partial_text == "partial-before-drift")
+        matches!(result, ReviewOutcome::Incomplete { partial_text: Some(partial_text), reason: ReviewFailure::ConfigurationDrift } if partial_text == "partial-before-drift")
     );
     peer.cleaned()
 }
@@ -350,7 +364,7 @@ async fn output_limit_is_incomplete() -> TestResult {
     let mut peer = Peer::new("output-limit")?;
     peer.config.limits.output_bytes = 6;
     assert!(
-        matches!(finish(peer.reviewer()?.start(input("visible")).await?).await?, ReviewOutcome::Incomplete { partial_text, reason: ReviewFailure::OutputLimit } if partial_text == "prefix")
+        matches!(finish(peer.reviewer()?.start(input("visible")).await?).await?, ReviewOutcome::Incomplete { partial_text: Some(partial_text), reason: ReviewFailure::OutputLimit } if partial_text == "prefix")
     );
     peer.cleaned()
 }
@@ -417,11 +431,16 @@ async fn dropping_owner_terminates_process_tree_before_removing_evidence() -> Te
     let pid = spawn["pid"].as_u64().ok_or("pid")?;
     drop(run);
     timeout(Duration::from_secs(15), async {
-        while cwd.exists() {
+        while fs::read_dir(&peer.config.runtime_parent)?
+            .next()
+            .transpose()?
+            .is_some()
+        {
             sleep(Duration::from_millis(20)).await;
         }
+        Ok::<_, Box<dyn Error>>(())
     })
-    .await?;
+    .await??;
     for id in [pid, child] {
         // A reparented zombie is already terminated; it cannot read or mutate.
         match fs::read_to_string(format!("/proc/{id}/stat")) {
@@ -502,7 +521,217 @@ async fn connection_loss_keeps_incomplete_output() -> TestResult {
     let peer = Peer::new("disconnect")?;
     assert!(
         matches!(finish(peer.reviewer()?.start(input("visible")).await?).await?,
-        ReviewOutcome::Incomplete { partial_text, .. } if partial_text == "partial-before-disconnect")
+        ReviewOutcome::Incomplete { partial_text: Some(partial_text), .. } if partial_text == "partial-before-disconnect")
     );
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn authoritative_completion_survives_late_disconnect() -> TestResult {
+    let peer = Peer::new("complete-disconnect")?;
+    assert_eq!(
+        complete(finish(peer.reviewer()?.start(input("visible")).await?).await?)?,
+        "authoritative-review"
+    );
+    peer.cleaned()
+}
+
+async fn privacy_rejects(scenario: &str) -> TestResult {
+    let peer = Peer::new(scenario)?;
+    assert!(matches!(
+        finish(peer.reviewer()?.start(input("visible")).await?).await?,
+        ReviewOutcome::Incomplete {
+            reason: ReviewFailure::ConfigurationDrift,
+            ..
+        }
+    ));
+    assert!(peer.events("prompt")?.is_empty());
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn content_collection_must_be_confirmed_disabled() -> TestResult {
+    privacy_rejects("collection-enabled").await
+}
+
+#[tokio::test]
+async fn missing_collection_confirmation_never_prompts() -> TestResult {
+    privacy_rejects("collection-missing").await
+}
+
+#[tokio::test]
+async fn unsolicited_collection_update_cannot_repair_invalid_acknowledgement() -> TestResult {
+    privacy_rejects("collection-late").await
+}
+
+#[tokio::test]
+async fn malformed_configuration_response_is_not_silently_discarded() -> TestResult {
+    let peer = Peer::new("collection-malformed")?;
+    assert!(matches!(
+        finish(peer.reviewer()?.start(input("visible")).await?).await?,
+        ReviewOutcome::Incomplete {
+            reason: ReviewFailure::CommandFailed {
+                operation: Some(ReviewOperation::SetConfiguration),
+                ..
+            },
+            ..
+        }
+    ));
+    assert!(peer.events("prompt")?.is_empty());
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn rejected_privacy_change_preserves_private_cause_without_sending_evidence() -> TestResult {
+    let peer = Peer::new("collection-rejected")?;
+    let outcome = finish(peer.reviewer()?.start(input("visible")).await?).await?;
+    assert!(!format!("{outcome:?}").contains("PRIVATE-RPC-FAILURE"));
+    let ReviewOutcome::Incomplete {
+        reason:
+            ReviewFailure::CommandFailed {
+                operation: Some(ReviewOperation::SetConfiguration),
+                diagnostic,
+            },
+        ..
+    } = outcome
+    else {
+        return Err("missing configuration failure".into());
+    };
+    assert!(diagnostic.untrusted_text().contains("PRIVATE-RPC-FAILURE"));
+    assert!(peer.events("prompt")?.is_empty());
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn late_collection_confirmation_precedes_first_prompt() -> TestResult {
+    let peer = Peer::new("collection-delayed-response")?;
+    assert_eq!(
+        complete(finish(peer.reviewer()?.start(input("visible")).await?).await?)?,
+        "visible"
+    );
+    let confirmed = peer.events("collection-ack")?.remove(0);
+    let prompted = peer.events("prompt")?.remove(0);
+    assert!(
+        confirmed["time"].as_f64().ok_or("confirmation time")?
+            <= prompted["time"].as_f64().ok_or("prompt time")?
+    );
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn content_collection_drift_is_incomplete() -> TestResult {
+    let peer = Peer::new("collection-drift")?;
+    assert!(matches!(
+        finish(peer.reviewer()?.start(input("visible")).await?).await?,
+        ReviewOutcome::Incomplete {
+            reason: ReviewFailure::ConfigurationDrift,
+            ..
+        }
+    ));
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn model_from_wrong_mode_cannot_authorize_mode_only_switch() -> TestResult {
+    readiness_rejects("pre-switch-model").await
+}
+
+#[tokio::test]
+async fn post_switch_model_confirmation_allows_inspection() -> TestResult {
+    let peer = Peer::new("pre-switch-model-late")?;
+    assert_eq!(
+        complete(finish(peer.reviewer()?.start(input("visible")).await?).await?)?,
+        "visible"
+    );
+    let valid = peer
+        .events("configuration")?
+        .into_iter()
+        .find(|row| row["mode"] == "cyril-inspection-reviewer")
+        .ok_or("post-switch confirmation")?;
+    let prompted = peer.events("prompt")?.remove(0);
+    assert!(
+        valid["time"].as_f64().ok_or("confirmation time")?
+            <= prompted["time"].as_f64().ok_or("prompt time")?
+    );
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn failed_tool_is_observed_without_inventing_permission_denial() -> TestResult {
+    let peer = Peer::new("tool-failure")?;
+    let run = peer.reviewer()?.start(input("visible")).await?;
+    let status = run.subscribe();
+    assert_eq!(complete(finish(run).await?)?, "observed-tool-failure");
+    assert!(status.borrow().tool_failure_observed);
+    assert_eq!(status.borrow().denied_permissions, 0);
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn continuation_after_startup_deadline_still_completes() -> TestResult {
+    let peer = Peer::new("slow-follow-up")?;
+    let mut review = input("visible");
+    review.follow_up_instructions.push("Continue".into());
+    assert_eq!(
+        complete(finish(peer.reviewer()?.start(review).await?).await?)?,
+        "visiblecontinued"
+    );
+    peer.cleaned()
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn runtime_drop_retains_evidence_until_core_completion() -> TestResult {
+    let peer = Peer::new("runtime-drop")?;
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let (run, spawn) = runtime.block_on(async {
+        let run = peer.reviewer()?.start(input("visible")).await?;
+        peer.event("prompt").await?;
+        Ok::<_, Box<dyn Error>>((run, peer.event("spawn").await?))
+    })?;
+    let cwd = std::path::PathBuf::from(spawn["cwd"].as_str().ok_or("cwd")?);
+    drop(runtime);
+    drop(run);
+    let deadline = Instant::now() + Duration::from_secs(15);
+    while cwd.exists() && Instant::now() < deadline {
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert!(!cwd.exists(), "cleanup waiter did not release evidence");
+    for event in ["cleanup-window", "cleanup-window-end"] {
+        assert_eq!(
+            peer.events(event)?.first().ok_or("missing EOF window")?["evidence_exists"],
+            true
+        );
+    }
+    for key in ["pid", "child"] {
+        let id = spawn[key].as_u64().ok_or("pid")?;
+        match fs::read_to_string(format!("/proc/{id}/stat")) {
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
+            Ok(stat) => assert_eq!(stat.split_whitespace().nth(2), Some("Z")),
+            Err(error) => return Err(error.into()),
+        }
+    }
+    peer.cleaned()
+}
+
+#[tokio::test]
+async fn runtime_command_diagnostic_is_explicitly_retrievable_but_not_logged() -> TestResult {
+    let peer = Peer::new("prompt-error")?;
+    let outcome = finish(peer.reviewer()?.start(input("visible")).await?).await?;
+    let ReviewOutcome::Incomplete { reason, .. } = outcome else {
+        return Err("runtime error completed review".into());
+    };
+    assert!(!format!("{reason:?} {reason}").contains("PRIVATE-ERROR-SECRET"));
+    let ReviewFailure::CommandFailed {
+        operation,
+        diagnostic,
+    } = reason
+    else {
+        return Err("command failure lost its diagnostic".into());
+    };
+    assert_eq!(operation, Some(ReviewOperation::Prompt));
+    assert!(diagnostic.untrusted_text().contains("PRIVATE-ERROR-SECRET"));
     peer.cleaned()
 }

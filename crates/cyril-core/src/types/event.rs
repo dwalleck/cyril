@@ -43,6 +43,12 @@ pub enum Notification {
         mode_id: ModeId,
     },
     ConfigOptionsUpdated(Vec<ConfigOption>),
+    /// Catalog returned by a successful standard configuration change.
+    /// Unlike an unsolicited update, this acknowledges the requested option.
+    ConfigOptionSet {
+        config_id: String,
+        options: Vec<ConfigOption>,
+    },
     CommandsUpdated {
         commands: Vec<CommandInfo>,
         prompts: Vec<crate::types::PromptInfo>,
@@ -559,6 +565,12 @@ pub enum BridgeCommand {
     /// advertise `session/set_model` in its capabilities.
     SetModel {
         model_id: String,
+    },
+    /// Set a standard ACP session configuration value. The agent's returned
+    /// configuration is authoritative and arrives as `ConfigOptionsUpdated`.
+    SetConfigOption {
+        config_id: String,
+        value: String,
     },
     ExtMethod {
         method: String,

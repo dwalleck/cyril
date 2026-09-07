@@ -1,0 +1,6 @@
+STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Starting, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Stopping, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+STATUS ReviewStatus { phase: Incomplete, output_bytes: 0, denied_permissions: 0, tool_failure_observed: false }
+INCOMPLETE_AFTER_TEARDOWN BridgeDisconnected { diagnostic: ReviewDiagnostic { text: "[untrusted; withheld]", truncated: false } }
+

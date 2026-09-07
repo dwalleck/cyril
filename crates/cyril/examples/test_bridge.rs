@@ -428,7 +428,8 @@ fn print_notification(n: &Notification) {
         Notification::ModeChanged { mode_id } => {
             println!("  [ModeChanged] {mode_id}");
         }
-        Notification::ConfigOptionsUpdated(options) => {
+        Notification::ConfigOptionsUpdated(options)
+        | Notification::ConfigOptionSet { options, .. } => {
             println!("  [ConfigOptionsUpdated] {} options", options.len());
             for opt in options {
                 println!(

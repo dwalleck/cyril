@@ -5,14 +5,15 @@ mod types;
 pub use types::*;
 
 use cyril_core::{
-    protocol::bridge::{BridgeHandle, spawn_bridge},
+    protocol::bridge::{BridgeSender, spawn_bridge},
     types::{
-        BridgeCommand, Notification, PermissionResponse, PromptEnvelope, SessionId, StopReason,
+        BridgeCommand, Notification, PermissionRequest, PermissionResponse, PromptEnvelope,
+        RoutedNotification, SessionId, StopReason, ToolCallStatus,
     },
 };
-use evidence::EvidenceTree;
+use evidence::{EvidenceCleanup, EvidenceTree};
 use std::sync::Arc;
-use tokio::sync::{oneshot, watch};
+use tokio::sync::{mpsc, oneshot, watch};
 
 /// Concrete isolated native Kiro inspection backend; no raw runtime commands escape.
 #[derive(Clone, Debug)]
@@ -39,21 +40,29 @@ impl Reviewer {
             let prompts = std::iter::once(prompt).chain(input.follow_up_instructions).collect();
             Ok::<_, ReviewError>((tree, command, spawn_config, prompts))
         }).await.map_err(|_| ReviewError::PreparationTask)??;
-        let bridge = spawn_bridge(command, spawn_config, tree.cwd.clone())
-            .map_err(|_| ReviewError::LaunchUnavailable)?;
+        let bridge = spawn_bridge(command, spawn_config, tree.cwd.clone()).map_err(|error| {
+            ReviewError::LaunchUnavailable {
+                diagnostic: ReviewDiagnostic::new(error.to_string()),
+            }
+        })?;
+        let cwd = tree.cwd.clone();
+        let (sender, notifications, permissions, sources, completion) = bridge.split();
+        drop(sources);
+        let cleanup = EvidenceCleanup::new(tree, completion);
         let (cancel, cancelled) = watch::channel(false);
         let (status, observer) = watch::channel(ReviewStatus {
             phase: ReviewPhase::Starting,
             output_bytes: 0,
             denied_permissions: 0,
+            tool_failure_observed: false,
         });
         let (result, outcome) = oneshot::channel();
         // Nothing awaits between acquiring the bridge and transferring all its
         // ownership. Dropping ReviewRun requests cancellation, never aborts drain.
         tokio::spawn(drive(
-            bridge,
-            tree,
-            prompts,
+            (sender, notifications, permissions),
+            cleanup,
+            (cwd, prompts),
             self.config.limits.clone(),
             cancelled,
             status,
@@ -74,6 +83,7 @@ pub struct ReviewRun {
 }
 
 impl ReviewRun {
+    /// Clone the latest status; never hold a watch borrow across an await.
     pub fn subscribe(&self) -> watch::Receiver<ReviewStatus> {
         self.status.clone()
     }
@@ -82,13 +92,15 @@ impl ReviewRun {
         self.cancel.send_replace(true);
     }
 
-    /// Resolves only after existing core teardown completes and private evidence
-    /// is released. Cancellation also works when this future itself is dropped.
+    /// Ordinary outcomes resolve after core teardown and evidence cleanup attempts.
+    /// ShutdownFailed means cleanup was not confirmed; lost core completion
+    /// retains the private root. TaskLost may precede the independent cleanup
+    /// waiter and makes no teardown claim. Dropping this future requests cancellation.
     pub async fn finish(mut self) -> ReviewOutcome {
         match (&mut self.outcome).await {
             Ok(outcome) => outcome,
             Err(_) => ReviewOutcome::Incomplete {
-                partial_text: String::new(),
+                partial_text: None,
                 reason: ReviewFailure::TaskLost,
             },
         }
@@ -101,7 +113,6 @@ impl Drop for ReviewRun {
     }
 }
 
-#[derive(Clone)]
 enum Terminal {
     Complete,
     Cancelled,
@@ -112,6 +123,9 @@ struct Inspection {
     session: Option<SessionId>,
     mode_confirmed: bool,
     model_confirmed: bool,
+    collection_disabled: bool,
+    collection_confirmed: bool,
+    started: bool,
     prompt_sent: bool,
     prompts: std::collections::VecDeque<String>,
     text: String,
@@ -123,10 +137,14 @@ impl Inspection {
     fn fail(&mut self, reason: ReviewFailure) {
         // Preserve the cause of an incomplete inspection through shutdown noise.
         // Teardown failure itself must never be hidden by an earlier cause.
-        if !matches!(self.terminal, Some(Terminal::Failed(_)))
-            || reason == ReviewFailure::ShutdownFailed
-        {
+        if self.terminal.is_none() || reason == ReviewFailure::ShutdownFailed {
             self.terminal = Some(Terminal::Failed(reason));
+        }
+    }
+
+    fn apply_cancellation(&mut self, cancelled: bool) {
+        if cancelled && !matches!(self.terminal, Some(Terminal::Failed(_))) {
+            self.terminal = Some(Terminal::Cancelled);
         }
     }
 
@@ -136,6 +154,10 @@ impl Inspection {
         sender: Option<&cyril_core::protocol::bridge::BridgeSender>,
         limits: &ReviewLimits,
     ) {
+        let collection_response = matches!(
+            &notification,
+            Notification::ConfigOptionSet { config_id, .. } if config_id == "contentCollection"
+        );
         match notification {
             Notification::SessionCreated {
                 session_id,
@@ -157,44 +179,83 @@ impl Inspection {
                 // Discard pre-session config: confirmation must follow SetMode.
                 self.mode_confirmed = false;
                 self.model_confirmed = false;
-                if let Some(sender) = sender
-                    && sender
-                        .try_send(BridgeCommand::SetMode {
+                if let Some(sender) = sender {
+                    for command in [
+                        BridgeCommand::SetMode {
                             mode_id: runtime::MODE.into(),
-                        })
-                        .is_err()
-                {
-                    self.fail(ReviewFailure::BridgeUnavailable);
+                        },
+                        BridgeCommand::SetConfigOption {
+                            config_id: "contentCollection".into(),
+                            value: "disabled".into(),
+                        },
+                    ] {
+                        if sender.try_send(command).is_err() {
+                            self.fail(ReviewFailure::BridgeUnavailable);
+                            break;
+                        }
+                    }
                 }
             }
-            Notification::ConfigOptionsUpdated(options) if self.session.is_some() => {
+            Notification::ConfigOptionsUpdated(options)
+            | Notification::ConfigOptionSet { options, .. }
+                if self.session.is_some() =>
+            {
+                if collection_response {
+                    self.collection_confirmed = options.iter().any(|option| {
+                        option.key == "contentCollection"
+                            && option.value.as_deref() == Some("disabled")
+                            && option.options.iter().any(|value| value == "disabled")
+                    });
+                    if !self.collection_confirmed {
+                        self.fail(ReviewFailure::ConfigurationDrift);
+                        return;
+                    }
+                }
+                // Process mode first regardless of option ordering. A model
+                // from an unconfirmed/wrong profile cannot survive its switch.
+                if let Some(mode) = options.iter().find(|option| option.key == "mode") {
+                    self.mode_confirmed = mode.value.as_deref() == Some(runtime::MODE)
+                        && mode.options.iter().any(|value| value == runtime::MODE);
+                }
+                if !self.mode_confirmed {
+                    self.model_confirmed = false;
+                }
                 for option in options {
                     let expected = match option.key.as_str() {
                         "mode" => runtime::MODE,
                         "model" => runtime::MODEL,
+                        "contentCollection" => "disabled",
                         _ => continue,
                     };
                     let confirmed = option.value.as_deref() == Some(expected)
                         && option.options.iter().any(|value| value == expected);
-                    if self.prompt_sent && !confirmed {
+                    if self.started && !confirmed {
                         self.fail(ReviewFailure::ConfigurationDrift);
                         return;
                     }
-                    if option.key == "mode" {
-                        self.mode_confirmed = confirmed;
-                    } else {
-                        self.model_confirmed = confirmed;
+                    match option.key.as_str() {
+                        "model" => self.model_confirmed = self.mode_confirmed && confirmed,
+                        "contentCollection" => self.collection_disabled = confirmed,
+                        _ => {}
                     }
                 }
             }
-            Notification::ModeChanged { mode_id }
-                if self.prompt_sent && mode_id.as_str() != runtime::MODE =>
-            {
-                self.fail(ReviewFailure::ConfigurationDrift);
+            Notification::ModeChanged { mode_id } => {
+                if mode_id.as_str() != runtime::MODE {
+                    self.mode_confirmed = false;
+                    self.model_confirmed = false;
+                    if self.started {
+                        self.fail(ReviewFailure::ConfigurationDrift);
+                    }
+                }
             }
-            Notification::AgentSwitched { name, model, .. } if self.prompt_sent => {
+            Notification::AgentSwitched { name, model, .. } => {
                 if name != runtime::MODE || model.as_deref() != Some(runtime::MODEL) {
-                    self.fail(ReviewFailure::ConfigurationDrift);
+                    self.mode_confirmed = false;
+                    self.model_confirmed = false;
+                    if self.started {
+                        self.fail(ReviewFailure::ConfigurationDrift);
+                    }
                 }
             }
             Notification::AgentMessage(message) if self.prompt_sent && self.terminal.is_none() => {
@@ -226,17 +287,40 @@ impl Inspection {
                 }
             }
             Notification::ToolCallStarted(tool) | Notification::ToolCallUpdated(tool) => {
-                tracing::debug!(?tool, "review native tool observation");
+                self.status.tool_failure_observed |= tool.status() == ToolCallStatus::Failed;
+                tracing::debug!(kind = ?tool.kind(), status = ?tool.status(), "review native tool observation");
             }
-            Notification::BridgeDisconnected { .. }
-            | Notification::BridgeError { .. }
-            | Notification::AgentConfigError { .. } => self.fail(ReviewFailure::BridgeUnavailable),
+            Notification::BridgeDisconnected { reason } if self.terminal.is_none() => {
+                self.fail(ReviewFailure::BridgeDisconnected {
+                    diagnostic: ReviewDiagnostic::new(reason),
+                });
+            }
+            Notification::BridgeError { operation, message } if self.terminal.is_none() => {
+                let operation = match operation.as_str() {
+                    "session/new" => Some(ReviewOperation::NewSession),
+                    "set_mode 'cyril-inspection-reviewer'" => Some(ReviewOperation::SelectMode),
+                    "set_config_option" => Some(ReviewOperation::SetConfiguration),
+                    "prompt" => Some(ReviewOperation::Prompt),
+                    _ => None,
+                };
+                self.fail(ReviewFailure::CommandFailed {
+                    operation,
+                    diagnostic: ReviewDiagnostic::new(message),
+                });
+            }
+            Notification::AgentConfigError { error, .. } if self.terminal.is_none() => {
+                self.fail(ReviewFailure::AgentConfiguration {
+                    diagnostic: ReviewDiagnostic::new(error),
+                });
+            }
             _ => {}
         }
         if self.terminal.is_none()
             && !self.prompt_sent
             && self.mode_confirmed
             && self.model_confirmed
+            && self.collection_disabled
+            && self.collection_confirmed
             && let (Some(sender), Some(session), Some(prompt)) =
                 (sender, self.session.clone(), self.prompts.pop_front())
         {
@@ -250,6 +334,7 @@ impl Inspection {
                 self.fail(ReviewFailure::BridgeUnavailable);
             } else {
                 self.prompt_sent = true;
+                self.started = true;
                 self.status.phase = ReviewPhase::Inspecting;
             }
         }
@@ -257,31 +342,34 @@ impl Inspection {
 }
 
 async fn drive(
-    bridge: BridgeHandle,
-    tree: EvidenceTree,
-    prompts: std::collections::VecDeque<String>,
+    channels: (
+        BridgeSender,
+        mpsc::Receiver<RoutedNotification>,
+        mpsc::Receiver<PermissionRequest>,
+    ),
+    mut cleanup: EvidenceCleanup,
+    preparation: (std::path::PathBuf, std::collections::VecDeque<String>),
     limits: ReviewLimits,
     mut cancelled: watch::Receiver<bool>,
     status: watch::Sender<ReviewStatus>,
     result: oneshot::Sender<ReviewOutcome>,
 ) {
-    let (sender, mut notifications, mut permissions, mut sources, mut completion) = bridge.split();
+    let (sender, mut notifications, mut permissions) = channels;
+    let (cwd, prompts) = preparation;
     let mut inspection = Inspection {
         session: None,
         mode_confirmed: false,
         model_confirmed: false,
+        collection_disabled: false,
+        collection_confirmed: false,
+        started: false,
         prompt_sent: false,
         prompts,
         text: String::new(),
         status: status.borrow().clone(),
         terminal: None,
     };
-    if sender
-        .try_send(BridgeCommand::NewSession {
-            cwd: tree.cwd.clone(),
-        })
-        .is_err()
-    {
+    if sender.try_send(BridgeCommand::NewSession { cwd }).is_err() {
         inspection.fail(ReviewFailure::BridgeUnavailable);
     }
     let mut sender = Some(sender);
@@ -289,16 +377,13 @@ async fn drive(
     tokio::pin!(deadline);
     let mut notifications_open = true;
     let mut permissions_open = true;
-    let mut sources_open = true;
     let mut cancel_open = true;
     let cancel_grace = tokio::time::sleep(std::time::Duration::from_millis(250));
     tokio::pin!(cancel_grace);
     let mut stopping = false;
     let mut waiting_for_cancel = false;
     loop {
-        if *cancelled.borrow() && !matches!(inspection.terminal, Some(Terminal::Failed(_))) {
-            inspection.terminal = Some(Terminal::Cancelled);
-        }
+        inspection.apply_cancellation(*cancelled.borrow());
         if inspection.terminal.is_some() && !stopping {
             stopping = true;
             inspection.status.phase = ReviewPhase::Stopping;
@@ -330,26 +415,24 @@ async fn drive(
             biased;
             changed = cancelled.changed(), if cancel_open => {
                 cancel_open = changed.is_ok();
-                if !cancel_open && !matches!(inspection.terminal, Some(Terminal::Failed(_))) {
-                    inspection.terminal = Some(Terminal::Cancelled);
-                }
+                // ReviewRun::drop sets the cancellation value before closing.
             }
             request = permissions.recv(), if permissions_open => {
                 if let Some(request) = request {
-                    inspection.status.denied_permissions = inspection.status.denied_permissions.saturating_add(1);
                     // Deliberately independent of session, options and tool identity.
                     if request.responder.send(PermissionResponse::Cancel).is_err() {
                         inspection.fail(ReviewFailure::PermissionResponderClosed);
+                    } else {
+                        inspection.status.denied_permissions = inspection.status.denied_permissions.saturating_add(1);
                     }
                 } else { permissions_open = false; }
             }
-            _ = &mut deadline, if !inspection.prompt_sent && inspection.terminal.is_none() => {
+            _ = &mut deadline, if !inspection.started && inspection.terminal.is_none() => {
                 inspection.fail(ReviewFailure::ReadinessTimeout);
             }
             _ = &mut cancel_grace, if waiting_for_cancel => {
                 waiting_for_cancel = false;
             }
-            source = sources.recv(), if sources_open => { sources_open = source.is_some(); }
             event = notifications.recv(), if notifications_open => {
                 if let Some(event) = event {
                     let relevant = event.session_id.is_none() || event.session_id.as_ref() == inspection.session.as_ref();
@@ -367,58 +450,198 @@ async fn drive(
                     if inspection.terminal.is_none() { inspection.fail(ReviewFailure::BridgeUnavailable); }
                 }
             }
-            completed = &mut completion => {
+            completed = &mut cleanup.completion => {
+                cleanup.resolved(completed.is_ok());
                 if completed.is_err() { inspection.fail(ReviewFailure::ShutdownFailed); }
                 else if inspection.terminal.is_none() { inspection.fail(ReviewFailure::BridgeUnavailable); }
                 break;
             }
         }
     }
-    // Core completion means its child owner has finished; only now remove roots.
-    match tokio::task::spawn_blocking(move || tree.close()).await {
-        Ok(Ok(())) => {}
-        Ok(Err(error)) => {
-            tracing::warn!(%error, "review tree cleanup failed");
-            inspection.fail(ReviewFailure::ShutdownFailed);
-        }
-        Err(error) => {
-            tracing::warn!(%error, "review tree cleanup task failed");
-            inspection.fail(ReviewFailure::ShutdownFailed);
-        }
+    if cleanup.close().await.is_err() {
+        inspection.fail(ReviewFailure::ShutdownFailed);
     }
-    if *cancelled.borrow() && matches!(inspection.terminal, Some(Terminal::Complete)) {
-        inspection.terminal = Some(Terminal::Cancelled);
-    }
-    let outcome = match inspection.terminal {
-        Some(Terminal::Complete) => {
+    inspection.apply_cancellation(*cancelled.borrow());
+    let terminal = inspection.terminal.unwrap_or_else(|| {
+        tracing::error!("review ended without an authoritative terminal");
+        Terminal::Failed(ReviewFailure::BridgeUnavailable)
+    });
+    let outcome = match terminal {
+        Terminal::Complete => {
             inspection.status.phase = ReviewPhase::Completed;
             ReviewOutcome::Completed {
                 text: inspection.text,
             }
         }
-        Some(Terminal::Cancelled) => {
+        Terminal::Cancelled => {
             inspection.status.phase = ReviewPhase::Cancelled;
             ReviewOutcome::Cancelled {
                 partial_text: inspection.text,
             }
         }
-        Some(Terminal::Failed(reason)) => {
+        Terminal::Failed(reason) => {
             inspection.status.phase = ReviewPhase::Incomplete;
             ReviewOutcome::Incomplete {
-                partial_text: inspection.text,
+                partial_text: Some(inspection.text),
                 reason,
-            }
-        }
-        None => {
-            inspection.status.phase = ReviewPhase::Incomplete;
-            ReviewOutcome::Incomplete {
-                partial_text: inspection.text,
-                reason: ReviewFailure::BridgeUnavailable,
             }
         }
     };
     status.send_replace(inspection.status);
     if result.send(outcome).is_err() {
         tracing::debug!("review owner dropped after cancellation/teardown");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+    use std::sync::Mutex;
+
+    fn inspection(terminal: Option<Terminal>) -> Inspection {
+        Inspection {
+            session: Some(SessionId::new("test")),
+            mode_confirmed: true,
+            model_confirmed: true,
+            collection_disabled: true,
+            collection_confirmed: true,
+            started: true,
+            prompt_sent: true,
+            prompts: Default::default(),
+            text: "complete output".into(),
+            status: ReviewStatus {
+                phase: ReviewPhase::Inspecting,
+                output_bytes: 15,
+                denied_permissions: 0,
+                tool_failure_observed: false,
+            },
+            terminal,
+        }
+    }
+
+    #[test]
+    fn late_command_error_cannot_demote_authoritative_completion_but_cleanup_can() {
+        let mut state = inspection(Some(Terminal::Complete));
+        state.notification(
+            Notification::BridgeError {
+                operation: "prompt".into(),
+                message: "late failure".into(),
+            },
+            None,
+            &ReviewLimits::default(),
+        );
+        assert!(matches!(state.terminal, Some(Terminal::Complete)));
+        state.notification(
+            Notification::ModeChanged {
+                mode_id: cyril_core::types::ModeId::new("other"),
+            },
+            None,
+            &ReviewLimits::default(),
+        );
+        assert!(matches!(state.terminal, Some(Terminal::Complete)));
+        state.fail(ReviewFailure::ShutdownFailed);
+        assert!(matches!(
+            state.terminal,
+            Some(Terminal::Failed(ReviewFailure::ShutdownFailed))
+        ));
+    }
+
+    #[test]
+    fn in_turn_command_error_remains_actionable_without_automatic_disclosure() {
+        let mut state = inspection(None);
+        state.notification(
+            Notification::BridgeError {
+                operation: "prompt".into(),
+                message: "PRIVATE-ERROR-SECRET".into(),
+            },
+            None,
+            &ReviewLimits::default(),
+        );
+        let Some(Terminal::Failed(reason)) = state.terminal else {
+            panic!("missing failure")
+        };
+        assert!(!format!("{reason:?} {reason}").contains("PRIVATE-ERROR-SECRET"));
+        let ReviewFailure::CommandFailed {
+            operation,
+            diagnostic,
+        } = reason
+        else {
+            panic!("wrong failure")
+        };
+        assert_eq!(operation, Some(ReviewOperation::Prompt));
+        assert_eq!(diagnostic.untrusted_text(), "PRIVATE-ERROR-SECRET");
+        assert!(!diagnostic.is_truncated());
+    }
+
+    #[tokio::test]
+    async fn lost_outcome_does_not_invent_empty_output() {
+        let (cancel, _) = watch::channel(false);
+        let (_, status) = watch::channel(inspection(None).status);
+        let (result, outcome) = oneshot::channel();
+        drop(result);
+        let run = ReviewRun {
+            cancel,
+            status,
+            outcome,
+        };
+        assert!(matches!(
+            run.finish().await,
+            ReviewOutcome::Incomplete {
+                partial_text: None,
+                reason: ReviewFailure::TaskLost,
+            }
+        ));
+    }
+
+    #[derive(Clone)]
+    struct Capture(Arc<Mutex<Vec<u8>>>);
+    impl Write for Capture {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.0
+                .lock()
+                .map_err(|_| std::io::Error::other("capture lock poisoned"))?
+                .extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn tool_observation_logs_only_typed_metadata() -> Result<(), Box<dyn std::error::Error>> {
+        use cyril_core::types::{ToolCall, ToolCallId, ToolKind};
+        let bytes = Arc::new(Mutex::new(Vec::new()));
+        let capture = Capture(Arc::clone(&bytes));
+        let subscriber = tracing_subscriber::fmt()
+            .without_time()
+            .with_ansi(false)
+            .with_max_level(tracing::Level::DEBUG)
+            .with_writer(move || capture.clone())
+            .finish();
+        tracing::subscriber::with_default(subscriber, || {
+            let tool = ToolCall::new(
+                ToolCallId::new("PRIVATE-ID"),
+                "PRIVATE-TITLE".into(),
+                ToolKind::Read,
+                ToolCallStatus::Failed,
+                Some(serde_json::json!({"secret": "PRIVATE-INPUT"})),
+            )
+            .with_raw_output(Some(serde_json::json!({"secret": "PRIVATE-OUTPUT"})));
+            inspection(None).notification(
+                Notification::ToolCallUpdated(tool),
+                None,
+                &ReviewLimits::default(),
+            );
+        });
+        let logged = String::from_utf8(std::mem::take(
+            &mut *bytes
+                .lock()
+                .map_err(|_| std::io::Error::other("capture lock poisoned"))?,
+        ))?;
+        assert!(logged.contains("review native tool observation"));
+        assert!(!logged.contains("PRIVATE-"));
+        Ok(())
     }
 }

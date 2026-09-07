@@ -54,6 +54,21 @@ def configuration(model=MODEL, mode=MODE, catalog=True):
              options=[dict(value=MODEL if catalog else 'other', name='Model')])]))
 
 
+def collection(value='disabled'):
+    options = [dict(type='select', id='contentCollection', name='Content collection',
+                    currentValue=value, options=[
+                        dict(value='enabled', name='Enabled'), dict(value='disabled', name='Disabled')])]
+    journal('collection', value=value)
+    update(dict(sessionUpdate='config_option_update', configOptions=options))
+    return options
+
+
+def mode_only():
+    update(dict(sessionUpdate='config_option_update', configOptions=[
+        dict(type='select', id='mode', name='Mode', currentValue=MODE,
+             options=[dict(value=MODE, name='Reviewer')])]))
+
+
 def text(value):
     update(dict(sessionUpdate='agent_message_chunk', content=dict(type='text', text=value)))
 
@@ -110,6 +125,12 @@ for line in sys.stdin:
     elif method == 'session/set_mode':
         journal('set_mode', params=request['params'])
         reply(request, {})
+        if SCENARIO in ('pre-switch-model', 'pre-switch-model-late'):
+            configuration(mode='vibe')
+            mode_only()
+            if SCENARIO == 'pre-switch-model-late':
+                threading.Timer(0.15, configuration).start()
+            continue
         if SCENARIO == 'missing':
             pass
         elif SCENARIO == 'wrong':
@@ -124,6 +145,30 @@ for line in sys.stdin:
         else:
             configuration()
             configuration()  # duplicate matching update must not duplicate prompt
+    elif method == 'session/set_config_option':
+        def acknowledge(options, request=request):
+            journal('collection-ack')
+            reply(request, dict(configOptions=options))
+        journal('set_config_option', params=request['params'])
+        assert request['params']['configId'] == 'contentCollection'
+        assert request['params']['value'] == 'disabled'
+        if SCENARIO == 'collection-missing':
+            reply(request, dict(configOptions=[]))
+        elif SCENARIO == 'collection-late':
+            reply(request, dict(configOptions=[]))
+            threading.Timer(0.15, collection).start()
+        elif SCENARIO == 'collection-delayed-response':
+            options = collection()
+            threading.Timer(0.15, acknowledge, args=(options,)).start()
+        elif SCENARIO == 'collection-malformed':
+            collection()
+            reply(request, dict(configOptions=[dict(id=123)]))
+        elif SCENARIO == 'collection-rejected':
+            collection()
+            send(dict(id=request['id'], error=dict(code=-32602, message='PRIVATE-RPC-FAILURE')))
+        else:
+            options = collection('enabled' if SCENARIO == 'collection-enabled' else 'disabled')
+            acknowledge(options)
     elif method == 'session/prompt':
         TURN += 1
         PENDING = request
@@ -144,6 +189,31 @@ for line in sys.stdin:
         elif SCENARIO == 'disconnect':
             text('partial-before-disconnect')
             os._exit(0)
+        elif SCENARIO == 'complete-disconnect':
+            text('authoritative-review')
+            end_turn()
+            os._exit(0)
+        elif SCENARIO == 'collection-drift':
+            text('partial-before-drift')
+            collection('enabled')
+            end_turn()
+        elif SCENARIO == 'tool-failure':
+            update(dict(sessionUpdate='tool_call', toolCallId='failed-read',
+                        title='PRIVATE-DOCUMENT-TITLE', kind='read', status='failed',
+                        rawInput=dict(secret='PRIVATE-INPUT'),
+                        rawOutput=dict(message='PRIVATE-OUTPUT'),
+                        content=[dict(type='content', content=dict(type='text', text='PRIVATE-CONTENT'))]))
+            text('observed-tool-failure')
+            end_turn()
+        elif SCENARIO == 'prompt-error':
+            send(dict(id=request['id'], error=dict(code=-32603, message='PRIVATE-ERROR-SECRET')))
+            PENDING = None
+        elif SCENARIO == 'slow-follow-up':
+            text(captured[0]['text'] if TURN == 1 else 'continued')
+            if TURN == 1:
+                threading.Timer(1.2, end_turn).start()
+            else:
+                end_turn()
         elif SCENARIO == 'flood':
             threading.Thread(target=flood, daemon=True).start()
             permissions()
@@ -151,7 +221,7 @@ for line in sys.stdin:
             text('prefix')
             text('x' * 65536)
             end_turn()
-        elif SCENARIO == 'stall':
+        elif SCENARIO in ('stall', 'runtime-drop'):
             text('waiting')
         else:
             text(captured[0]['text'] if TURN == 1 else 'continued')
@@ -174,3 +244,9 @@ for line in sys.stdin:
     elif method is not None and 'id' in request:
         reply(request, {})
 journal('stdin-closed')
+if SCENARIO == 'runtime-drop':
+    # Keep the direct child alive after EOF so evidence ordering is observable
+    # from outside the now-destroyed caller runtime.
+    journal('cleanup-window', evidence_exists=(Path.cwd() / 'evidence/manifest.json').is_file())
+    time.sleep(0.4)
+    journal('cleanup-window-end', evidence_exists=(Path.cwd() / 'evidence/manifest.json').is_file())
