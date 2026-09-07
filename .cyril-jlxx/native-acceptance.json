@@ -1,0 +1,189 @@
+{
+  "root": "/tmp/cyril-jlxx-native-0vvbbp0e",
+  "platform": "Linux x86_64",
+  "seconds": 17.003833285998553,
+  "runs": [
+    {
+      "label": "A",
+      "command": [
+        "/home/REDACTED_USER/repos/cyril-wt-feat-cyril-jlxx/target/debug/examples/review_smoke",
+        "/home/REDACTED_USER/.local/bin/kiro-cli",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/A/runs",
+        "/home/REDACTED_USER/.local/share",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/A/prompt.txt",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/A/source.txt",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/A/followup.txt"
+      ],
+      "exit": 0,
+      "completed": true,
+      "own_identity_returned": true,
+      "foreign_identity_absent": true,
+      "mutation_unchanged": true,
+      "private_roots_removed": true,
+      "stdout": "/tmp/cyril-jlxx-native-0vvbbp0e/A/stdout.txt",
+      "stderr": "/tmp/cyril-jlxx-native-0vvbbp0e/A/stderr.txt"
+    },
+    {
+      "label": "B",
+      "command": [
+        "/home/REDACTED_USER/repos/cyril-wt-feat-cyril-jlxx/target/debug/examples/review_smoke",
+        "/home/REDACTED_USER/.local/bin/kiro-cli",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/B/runs",
+        "/home/REDACTED_USER/.local/share",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/B/prompt.txt",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/B/source.txt",
+        "/tmp/cyril-jlxx-native-0vvbbp0e/B/followup.txt"
+      ],
+      "exit": 0,
+      "completed": true,
+      "own_identity_returned": true,
+      "foreign_identity_absent": true,
+      "mutation_unchanged": true,
+      "private_roots_removed": true,
+      "stdout": "/tmp/cyril-jlxx-native-0vvbbp0e/B/stdout.txt",
+      "stderr": "/tmp/cyril-jlxx-native-0vvbbp0e/B/stderr.txt"
+    }
+  ],
+  "runtime_processes": {
+    "3874019": {
+      "cwd": "/tmp/cyril-jlxx-native-0vvbbp0e/B/runs/cyril-review-u05CFR/workspace",
+      "comm": "kiro-cli",
+      "starttime": "25643998",
+      "environment_names": [
+        "APPDATA",
+        "HOME",
+        "KIRO_HOME",
+        "LANG",
+        "LOCALAPPDATA",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "USERPROFILE",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR"
+      ]
+    },
+    "3874020": {
+      "cwd": "/tmp/cyril-jlxx-native-0vvbbp0e/A/runs/cyril-review-9z5Ugg/workspace",
+      "comm": "kiro-cli",
+      "starttime": "25643998",
+      "environment_names": [
+        "APPDATA",
+        "HOME",
+        "KIRO_HOME",
+        "LANG",
+        "LOCALAPPDATA",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "USERPROFILE",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR"
+      ]
+    },
+    "3874045": {
+      "cwd": "/tmp/cyril-jlxx-native-0vvbbp0e/B/runs/cyril-review-u05CFR/workspace",
+      "comm": "kiro-cli-chat",
+      "starttime": "25644056",
+      "environment_names": [
+        "APPDATA",
+        "HOME",
+        "KIRO_HOME",
+        "LANG",
+        "LOCALAPPDATA",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "USERPROFILE",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR"
+      ]
+    },
+    "3874121": {
+      "cwd": "/tmp/cyril-jlxx-native-0vvbbp0e/A/runs/cyril-review-9z5Ugg/workspace",
+      "comm": "kiro-cli-chat",
+      "starttime": "25644061",
+      "environment_names": [
+        "APPDATA",
+        "HOME",
+        "KIRO_HOME",
+        "LANG",
+        "LOCALAPPDATA",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "USERPROFILE",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR"
+      ]
+    },
+    "3874201": {
+      "cwd": "/tmp/cyril-jlxx-native-0vvbbp0e/B/runs/cyril-review-u05CFR/workspace",
+      "comm": "node",
+      "starttime": "25644064",
+      "environment_names": [
+        "APPDATA",
+        "CLOUD_CONFIG_ENDPOINT",
+        "HOME",
+        "KIRO_CONTENT_COLLECTION_ENABLED",
+        "KIRO_CUSTOM_USER_AGENT",
+        "KIRO_HOME",
+        "KIRO_REMOTE_SESSIONS_ENDPOINT",
+        "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+        "LANG",
+        "LOCALAPPDATA",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "USERPROFILE",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR"
+      ]
+    },
+    "3874206": {
+      "cwd": "/tmp/cyril-jlxx-native-0vvbbp0e/A/runs/cyril-review-9z5Ugg/workspace",
+      "comm": "node",
+      "starttime": "25644067",
+      "environment_names": [
+        "APPDATA",
+        "CLOUD_CONFIG_ENDPOINT",
+        "HOME",
+        "KIRO_CONTENT_COLLECTION_ENABLED",
+        "KIRO_CUSTOM_USER_AGENT",
+        "KIRO_HOME",
+        "KIRO_REMOTE_SESSIONS_ENDPOINT",
+        "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+        "LANG",
+        "LOCALAPPDATA",
+        "PATH",
+        "TEMP",
+        "TMP",
+        "TMPDIR",
+        "USERPROFILE",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME",
+        "XDG_RUNTIME_DIR"
+      ]
+    }
+  },
+  "observed_pids_gone": true,
+  "provider_variables_absent_from_runtime": true,
+  "hook_marker_absent": true,
+  "mcp_start_marker_absent": true
+}

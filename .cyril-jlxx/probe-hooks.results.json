@@ -1,0 +1,178 @@
+{
+  "purpose": "Synthetic inherited native v2 hook boundary; supported 2.21.1 public bridge supplied by Main",
+  "reference": "experiments/conductor-spike/probe-kas-v2hooks-2.16.0.py:93-105,246-259",
+  "arms": {
+    "off": {
+      "root": "/tmp/cyril-jlxx-hooks-off-u_3efyaz",
+      "marker": "/tmp/cyril-jlxx-hooks-off-u_3efyaz/hook-marker.txt",
+      "hooks": {
+        "version": "v1",
+        "hooks": [
+          {
+            "name": "jlxx-sessionStart",
+            "description": "Synthetic harmless marker probe",
+            "trigger": "sessionStart",
+            "action": {
+              "type": "command",
+              "command": "printf \"sessionStart\\n\" >> /tmp/cyril-jlxx-hooks-off-u_3efyaz/hook-marker.txt"
+            },
+            "timeout": 30,
+            "enabled": true
+          },
+          {
+            "name": "jlxx-preToolUse",
+            "description": "Synthetic harmless marker probe",
+            "trigger": "preToolUse",
+            "action": {
+              "type": "command",
+              "command": "printf \"preToolUse\\n\" >> /tmp/cyril-jlxx-hooks-off-u_3efyaz/hook-marker.txt"
+            },
+            "timeout": 30,
+            "enabled": true
+          }
+        ]
+      },
+      "profile": {
+        "name": "jlxx-hook-probe",
+        "description": "Synthetic hook boundary probe",
+        "model": "claude-sonnet-4.6",
+        "tools": [
+          "*"
+        ],
+        "includeMcpJson": false,
+        "includePowers": false,
+        "mcpServers": {}
+      },
+      "permissions": {
+        "rules": [
+          {
+            "capability": "fs_read",
+            "effect": "allow",
+            "match": [
+              "/tmp/cyril-jlxx-hooks-off-u_3efyaz/workspace/fixture.txt"
+            ]
+          },
+          {
+            "capability": "fs_write",
+            "effect": "deny"
+          },
+          {
+            "capability": "shell",
+            "effect": "deny"
+          }
+        ]
+      },
+      "prompt": "Read /tmp/cyril-jlxx-hooks-off-u_3efyaz/workspace/fixture.txt using the read tool and reply with just its number. Do not use shell or write any file.\n",
+      "marker_exists": false,
+      "marker_content": null,
+      "observed_hook_events": [],
+      "permission_events": [],
+      "profile_model_verified": true,
+      "completed": true,
+      "log_path": "/home/REDACTED_USER/.omp/wt/t8fe739ad0/m/.cyril-jlxx/probe-hooks.off.log",
+      "command": [
+        "python3",
+        "/home/REDACTED_USER/repos/cyril-wt-feat-cyril-jlxx/.cyril-jlxx/probe.py",
+        "/tmp/cyril-jlxx-hooks-off-u_3efyaz",
+        "jlxx-hook-probe",
+        "/tmp/cyril-jlxx-hooks-off-u_3efyaz/prompt.txt",
+        "off"
+      ]
+    },
+    "kas": {
+      "root": "/tmp/cyril-jlxx-hooks-kas-txmos90k",
+      "marker": "/tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt",
+      "hooks": {
+        "version": "v1",
+        "hooks": [
+          {
+            "name": "jlxx-sessionStart",
+            "description": "Synthetic harmless marker probe",
+            "trigger": "sessionStart",
+            "action": {
+              "type": "command",
+              "command": "printf \"sessionStart\\n\" >> /tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt"
+            },
+            "timeout": 30,
+            "enabled": true
+          },
+          {
+            "name": "jlxx-preToolUse",
+            "description": "Synthetic harmless marker probe",
+            "trigger": "preToolUse",
+            "action": {
+              "type": "command",
+              "command": "printf \"preToolUse\\n\" >> /tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt"
+            },
+            "timeout": 30,
+            "enabled": true
+          }
+        ]
+      },
+      "profile": {
+        "name": "jlxx-hook-probe",
+        "description": "Synthetic hook boundary probe",
+        "model": "claude-sonnet-4.6",
+        "tools": [
+          "*"
+        ],
+        "includeMcpJson": false,
+        "includePowers": false,
+        "mcpServers": {}
+      },
+      "permissions": {
+        "rules": [
+          {
+            "capability": "fs_read",
+            "effect": "allow",
+            "match": [
+              "/tmp/cyril-jlxx-hooks-kas-txmos90k/workspace/fixture.txt"
+            ]
+          },
+          {
+            "capability": "fs_write",
+            "effect": "deny"
+          },
+          {
+            "capability": "shell",
+            "effect": "deny"
+          }
+        ]
+      },
+      "prompt": "Read /tmp/cyril-jlxx-hooks-kas-txmos90k/workspace/fixture.txt using the read tool and reply with just its number. Do not use shell or write any file.\n",
+      "marker_exists": true,
+      "marker_content": "sessionStart\npreToolUse\n",
+      "observed_hook_events": [
+        "EVENT HooksChanged { hooks: [HookInfo { trigger: \"SessionStart\", command: \"printf \\\"sessionStart\\\\n\\\" >> /tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt\", matcher: None, id: Some(HookId(\"/tmp/cyril-jlxx-hooks-kas-txmos90k/workspace/.kiro/hooks/probe.json#hook-0\")), name: Some(\"jlxx-sessionStart\"), enabled: Some(true) }, HookInfo { trigger: \"PreToolUse\", command: \"printf \\\"preToolUse\\\\n\\\" >> /tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt\", matcher: None, id: Some(HookId(\"/tmp/cyril-jlxx-hooks-kas-txmos90k/workspace/.kiro/hooks/probe.json#hook-1\")), name: Some(\"jlxx-preToolUse\"), enabled: Some(true) }] }",
+        "EVENT HooksChanged { hooks: [HookInfo { trigger: \"SessionStart\", command: \"printf \\\"sessionStart\\\\n\\\" >> /tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt\", matcher: None, id: Some(HookId(\"/tmp/cyril-jlxx-hooks-kas-txmos90k/workspace/.kiro/hooks/probe.json#hook-0\")), name: Some(\"jlxx-sessionStart\"), enabled: Some(true) }, HookInfo { trigger: \"PreToolUse\", command: \"printf \\\"preToolUse\\\\n\\\" >> /tmp/cyril-jlxx-hooks-kas-txmos90k/hook-marker.txt\", matcher: None, id: Some(HookId(\"/tmp/cyril-jlxx-hooks-kas-txmos90k/workspace/.kiro/hooks/probe.json#hook-1\")), name: Some(\"jlxx-preToolUse\"), enabled: Some(true) }] }",
+        "EVENT HookExecuted { name: \"jlxx-preToolUse\", status: \"completed\", exit_code: None }"
+      ],
+      "permission_events": [],
+      "profile_model_verified": true,
+      "completed": true,
+      "log_path": "/home/REDACTED_USER/.omp/wt/t8fe739ad0/m/.cyril-jlxx/probe-hooks.kas.log",
+      "command": [
+        "python3",
+        "/home/REDACTED_USER/repos/cyril-wt-feat-cyril-jlxx/.cyril-jlxx/probe.py",
+        "/tmp/cyril-jlxx-hooks-kas-txmos90k",
+        "jlxx-hook-probe",
+        "/tmp/cyril-jlxx-hooks-kas-txmos90k/prompt.txt",
+        "kas"
+      ]
+    }
+  },
+  "observations": [
+    "Off: no marker and no Hook events; authorized read completed.",
+    "KAS enabled control: marker independently contains sessionStart and preToolUse; HooksChanged lists both enabled hooks; HookExecuted reports preToolUse completed; sessionStart has marker evidence but no HookExecuted callback.",
+    "Both arms confirmed selected native profile and claude-sonnet-4.6 before prompt, then completed authorized fixture read.",
+    "No permission events appeared in either public bridge event log.",
+    "Native hook commands execute and write their synthetic marker despite global permissions.yaml fs_write deny and shell deny. These rules therefore do not constrain the demonstrated inherited hook command path.",
+    "Hooks availability is conditional on supplied hooks mode: explicit off versus kas control. This experiment does not establish unconfigured runtime defaults.",
+    "No production code, native authentication data, or repository commands were modified/executed. No builds, lint, or tests run."
+  ],
+  "limits": [
+    "Global deny rules configured as supplied by Main; direct model write/shell denial was not independently re-probed in this hook-only experiment.",
+    "Public bridge event logs are callback-level evidence, not raw wire captures.",
+    "These results demonstrate hook path behavior only, not a general sandbox or production enforcement design."
+  ]
+}
