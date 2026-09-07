@@ -1,0 +1,97 @@
+{
+  "restricted": [
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/tools/didChange",
+      "params": {
+        "sessionId": "sess_ee39b8a8-b273-4516-bb8e-83bff53efd24",
+        "tags": [
+          {
+            "source": "builtin",
+            "tag": "read",
+            "description": "read-file, diagnostics, search tools"
+          },
+          {
+            "source": "builtin",
+            "tag": "write",
+            "description": "write-file tools"
+          },
+          {
+            "source": "builtin",
+            "tag": "web",
+            "description": "web search tools"
+          }
+        ]
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/policy/changed",
+      "params": {
+        "sessionId": "sess_ee39b8a8-b273-4516-bb8e-83bff53efd24",
+        "status": "success",
+        "errors": [
+          {
+            "scope": "agent",
+            "source": "agent-profile",
+            "message": "Skipping workspace-scope rule in agent-profile: pattern \"/tmp/cyril-jlxx-r1hd42fb/outside/private.txt\" references a path outside the workspace. Workspace permissions must use workspace-relative paths (e.g. \"src/**\").",
+            "fatal": false
+          }
+        ]
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/tools/didChange",
+      "params": {
+        "sessionId": "sess_ee39b8a8-b273-4516-bb8e-83bff53efd24",
+        "tags": [
+          {
+            "source": "builtin",
+            "tag": "read",
+            "description": "read-file, diagnostics, search tools"
+          }
+        ]
+      }
+    }
+  ],
+  "control": [
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/tools/didChange",
+      "params": {
+        "sessionId": "sess_e28b71b2-79aa-4259-aa2e-0a05f85e4f01",
+        "tags": [
+          {
+            "source": "builtin",
+            "tag": "read",
+            "description": "read-file, diagnostics, search tools"
+          },
+          {
+            "source": "builtin",
+            "tag": "write",
+            "description": "write-file tools"
+          },
+          {
+            "source": "builtin",
+            "tag": "shell",
+            "description": "run-commands tools"
+          },
+          {
+            "source": "builtin",
+            "tag": "web",
+            "description": "web search tools"
+          }
+        ]
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/policy/changed",
+      "params": {
+        "sessionId": "sess_e28b71b2-79aa-4259-aa2e-0a05f85e4f01",
+        "status": "success"
+      }
+    }
+  ]
+}

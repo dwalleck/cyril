@@ -1,0 +1,160 @@
+{
+  "a": [
+    {
+      "pid": 3166992,
+      "command": "cyril-jlxx-prob",
+      "environment_names": [
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_HOME",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    },
+    {
+      "pid": 3166998,
+      "command": "kiro-cli",
+      "environment_names": [
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_HOME",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    },
+    {
+      "pid": 3167011,
+      "command": "kiro-cli-chat",
+      "environment_names": [
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_HOME",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    },
+    {
+      "pid": 3167171,
+      "command": "node",
+      "environment_names": [
+        "CLOUD_CONFIG_ENDPOINT",
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_CONTENT_COLLECTION_ENABLED",
+        "KIRO_CUSTOM_USER_AGENT",
+        "KIRO_HOME",
+        "KIRO_REMOTE_SESSIONS_ENDPOINT",
+        "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    }
+  ],
+  "b": [
+    {
+      "pid": 3166991,
+      "command": "cyril-jlxx-prob",
+      "environment_names": [
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_HOME",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    },
+    {
+      "pid": 3166997,
+      "command": "kiro-cli",
+      "environment_names": [
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_HOME",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    },
+    {
+      "pid": 3167053,
+      "command": "kiro-cli-chat",
+      "environment_names": [
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_HOME",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    },
+    {
+      "pid": 3167181,
+      "command": "node",
+      "environment_names": [
+        "CLOUD_CONFIG_ENDPOINT",
+        "HOME",
+        "JLXX_HOOKS",
+        "JLXX_PROFILE",
+        "JLXX_PROMPT",
+        "JLXX_SECOND_PROMPT",
+        "KIRO_CONTENT_COLLECTION_ENABLED",
+        "KIRO_CUSTOM_USER_AGENT",
+        "KIRO_HOME",
+        "KIRO_REMOTE_SESSIONS_ENDPOINT",
+        "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+        "LANG",
+        "PATH",
+        "TMPDIR",
+        "XDG_CACHE_HOME",
+        "XDG_CONFIG_HOME",
+        "XDG_DATA_HOME"
+      ]
+    }
+  ]
+}

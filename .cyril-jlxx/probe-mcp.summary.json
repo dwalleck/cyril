@@ -1,0 +1,84 @@
+{
+  "outcomes": [
+    {
+      "case": "reviewer",
+      "root": "/tmp/cyril-jlxx-mcp-reviewer-csqnpou3",
+      "markers": {
+        "globalcanary": {
+          "startups": 2,
+          "invocations": 0,
+          "startup_present_at_session_created": true
+        },
+        "workspacecanary": {
+          "startups": 2,
+          "invocations": 0,
+          "startup_present_at_session_created": true
+        }
+      },
+      "permission_cancels": 2,
+      "completed": true
+    },
+    {
+      "case": "control",
+      "root": "/tmp/cyril-jlxx-mcp-control-dd21gdh5",
+      "markers": {
+        "globalcanary": {
+          "startups": 2,
+          "invocations": 1,
+          "startup_present_at_session_created": true
+        },
+        "workspacecanary": {
+          "startups": 2,
+          "invocations": 1,
+          "startup_present_at_session_created": true
+        }
+      },
+      "permission_cancels": 0,
+      "completed": true
+    },
+    {
+      "case": "clean",
+      "root": "/tmp/cyril-jlxx-mcp-clean-0h5c1560",
+      "markers": {
+        "globalcanary": {
+          "startups": 0,
+          "invocations": 0,
+          "startup_present_at_session_created": false
+        },
+        "workspacecanary": {
+          "startups": 0,
+          "invocations": 0,
+          "startup_present_at_session_created": false
+        }
+      },
+      "permission_cancels": 0,
+      "completed": true
+    },
+    {
+      "case": "reviewerallow",
+      "root": "/tmp/cyril-jlxx-mcp-reviewerallow-n8qoocgv",
+      "markers": {
+        "globalcanary": {
+          "startups": 2,
+          "invocations": 1,
+          "startup_present_at_session_created": true
+        },
+        "workspacecanary": {
+          "startups": 2,
+          "invocations": 1,
+          "startup_present_at_session_created": true
+        }
+      },
+      "permission_cancels": 0,
+      "completed": true
+    }
+  ],
+  "learning": [
+    "Native inherited global and workspace MCP processes start before SessionCreated(vibe), hence before SetMode.",
+    "includeMcpJson:false plus mcpServers:{} does not remove inherited tools in this public bridge lifecycle; reviewer with native inherited mcp allow invokes both tools.",
+    "Without native mcp allow the probes cancel actual permission requests; no tool invocation markers occur. This is ACP cancellation, not proof of profile exclusion.",
+    "Clean owned home/workspace with MCP configs only beneath inert evidence directories creates no server startup or invocation markers.",
+    "Initial allowedTools profiles passed kiro-cli agent validate but were omitted by KAS profile discovery. Removing legacy allowedTools restored mode/model selection; resources:[] also added, not separately isolated.",
+    "No real publication tool, external MCP server, provider credentials, production edits, builds, tests or lint were used."
+  ]
+}

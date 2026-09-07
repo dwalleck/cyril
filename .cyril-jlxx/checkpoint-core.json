@@ -1,0 +1,22 @@
+{
+  "slice": 1,
+  "claim_ids": ["C2"],
+  "worktree": "/home/REDACTED_USER/repos/cyril-wt-feat-cyril-jlxx",
+  "gates": {
+    "affected_tests": "PASS: cargo test --workspace --features cyril-core/kas; final strengthened spawn_isolation fixture rerun green",
+    "pending_falsifiers": "PASS: public bridge inherited/replaced process environment and concurrent KAS initialize settings",
+    "stress": "PASS: 128 selected variables (~64 KiB), Unicode value/executable path, two 256 KiB settings files, exact prerelease-version mismatch",
+    "independent_oracle": "PASS: external shell journals actual child environment and initialize JSON; parent remains unchanged; wrong-version executable never starts ACP",
+    "module_shape": "PASS: AST/source/dependency/diff oracle, allowed wiring/default changes, unchanged mediator/SDK production; test-only module classification corrected",
+    "loop_budget": "PASS: ordered environment application O(E log E), selected settings snapshot O(J); three production-sized fixture cases completed in 0.01 seconds against 1-second local preparation bound",
+    "always_on_budget": "N/A — one-off launch phase; no per-notification work added",
+    "regression_fence": "PASS: spawn_isolation tests, selected_home_fallback_and_snapshot_ignore_later_file_changes in workspace KAS suite",
+    "named_mutations": "PASS: removed env_clear exposed canary (artifact://157); ambient KIRO_HOME produced wrong thinking=false value; inverted exact version predicate started ACP and failed mismatch fence (artifact://164)",
+    "restored_fences": "PASS: cargo test -p cyril-core --features kas --test spawn_isolation (artifact://166)",
+    "lint": "PASS: cargo clippy --workspace --features cyril-core/kas --all-targets -- -D warnings; cargo fmt"
+  },
+  "caller_analysis": "Writer LSP before edits: 20 SpawnConfig references and 11 AgentProcess references. Main's absolute-worktree LSP returned empty and was reported; grep plus all-target builds confirm migration. main.rs:62 exhaustive config; bridge.rs:352 spawn; transport.rs:364/410/491/534; transport/tests/current_runtime_contract.rs:23/53; sdk_runtime/tests/process.rs:99/198/370; engine.rs:385/504 and probe_dn91.rs:24/31/38/103 KasEngine literals. Existing default-based live/example callers unchanged.",
+  "corrections": ["Removed new test lint suppression; Result-returning fixtures propagate errors", "Host shell fixture uses supported selector bash, not an executable pathname", "Removed incidental version-error wording assertion", "Shape oracle recognizes default-field wiring and cfg(test) external modules"],
+  "symmetry": "Inherit keeps native HOME/KIRO_HOME lookup and installed-runtime discovery; Replace intentionally does not fall back to ambient variables. Missing/malformed native settings preserve existing logged defaults. Exact version requirement outside KAS Wrapper errors rather than silently being ignored.",
+  "native_platform": "Linux; native Windows cyril-6y1s remains unverified"
+}

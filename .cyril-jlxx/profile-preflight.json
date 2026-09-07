@@ -1,0 +1,23 @@
+{
+  "name": "jlxx-preflight",
+  "description": "Synthetic tool-less model preflight",
+  "prompt": "Reply to the supplied text. No tools.",
+  "model": "claude-sonnet-4.6",
+  "tools": [],
+  "permissions": {
+    "rules": [
+      {
+        "capability": "fs_write",
+        "effect": "deny"
+      },
+      {
+        "capability": "shell",
+        "effect": "deny"
+      }
+    ]
+  },
+  "mcpServers": {},
+  "resources": [],
+  "includeMcpJson": false,
+  "includePowers": false
+}

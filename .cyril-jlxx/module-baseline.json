@@ -1,0 +1,46 @@
+{
+  "Cargo.toml": {
+    "non_test_prefix_lines": 87,
+    "total_lines": 87
+  },
+  "crates/cyril-core/src/types/mod.rs": {
+    "non_test_prefix_lines": 87,
+    "total_lines": 87
+  },
+  "crates/cyril-core/src/protocol/bridge.rs": {
+    "non_test_prefix_lines": 366,
+    "total_lines": 451
+  },
+  "crates/cyril-core/src/protocol/transport.rs": {
+    "non_test_prefix_lines": 332,
+    "total_lines": 551
+  },
+  "crates/cyril-core/src/protocol/engine.rs": {
+    "non_test_prefix_lines": 332,
+    "total_lines": 818
+  },
+  "crates/cyril-core/src/protocol/kas/settings.rs": {
+    "non_test_prefix_lines": 180,
+    "total_lines": 443
+  },
+  "crates/cyril-core/src/protocol/kas/version.rs": {
+    "non_test_prefix_lines": 80,
+    "total_lines": 123
+  },
+  "crates/cyril-core/src/protocol/kas/discovery.rs": {
+    "non_test_prefix_lines": 339,
+    "total_lines": 800
+  },
+  "crates/cyril-core/src/protocol/kas/host_shell.rs": {
+    "non_test_prefix_lines": 120,
+    "total_lines": 1036
+  },
+  "crates/cyril/src/main.rs": {
+    "non_test_prefix_lines": 287,
+    "total_lines": 359
+  },
+  "crates/cyril-core/src/protocol/domain_mediator/mod.rs": {
+    "non_test_prefix_lines": 95,
+    "total_lines": 703
+  }
+}

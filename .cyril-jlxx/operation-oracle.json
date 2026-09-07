@@ -1,0 +1,12 @@
+{
+  "restricted": {
+    "mutation": "ORIGINAL_SYNTHETIC\n",
+    "shell_marker": null,
+    "outside": "OUTSIDE_8f7c6aa2577f81c7b5cbc508\n"
+  },
+  "control": {
+    "mutation": "MUTATED_SYNTHETIC",
+    "shell_marker": "EXECUTED_SYNTHETIC",
+    "outside": "OUTSIDE_8f7c6aa2577f81c7b5cbc508\n"
+  }
+}

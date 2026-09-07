@@ -1,0 +1,8 @@
+# Standalone historical probe build; retain sources and captured proof.
+/target/
+/Cargo.lock
+# Local review-repair handoff, not historical proof.
+/archive-review.patch
+# Python caches are also excluded by the repository-wide convention.
+__pycache__/
+*.pyc
