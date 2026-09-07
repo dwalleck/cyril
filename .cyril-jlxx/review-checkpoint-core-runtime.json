@@ -88,7 +88,7 @@
       "restored": "PASS: host-selected interpreter completes the same exchange"
     },
     "retained_evidence": "Production/decoder inputs and assertions unchanged. CI34102117724 passed all 13 jobs on assembled a8577505, including the macOS configuration exchange. Later changes are evidence records only.",
-    "native_acceptance": "Still blocked on user sign-in; no native result upgraded.",
+    "native_acceptance": "The 07:22 UTC replay was blocked on sign-in. The separate final-reviewer replay on 686d509d passed at 13:08 UTC; review-native/native-acceptance.json and auth-preflight.json retain it without relabeling historical runs. This is assembled reviewer proof, not a core-only native run.",
     "ci_provenance": {
       "run": "https://github.com/dwalleck/cyril/actions/runs/34102117724",
       "temporary_base": "2e56ed603ea3685ceb656dfdc4ec515cfd659d93",
