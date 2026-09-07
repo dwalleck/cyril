@@ -1,0 +1,16 @@
+{
+  "name": "jlxx-reviewer",
+  "description": "Synthetic tool-less model preflight",
+  "prompt": "Use available tools to fulfill the requested synthetic fixture operations. Report actual results. Respect tool errors; do not retry through alternatives or change configuration.",
+  "model": "claude-sonnet-4.6",
+  "tools": [
+    "read_file"
+  ],
+  "permissions": {
+    "rules": []
+  },
+  "mcpServers": {},
+  "resources": [],
+  "includeMcpJson": false,
+  "includePowers": false
+}

@@ -1,0 +1,51 @@
+{
+  "claim": "C7",
+  "mode": "slice",
+  "status": "PASS",
+  "violations": [],
+  "census": {
+    "crates/cyril/src/main.rs": {
+      "prefix": 287,
+      "maximum": 295
+    },
+    "crates/cyril-core/src/protocol/bridge.rs": {
+      "prefix": 366,
+      "maximum": 420
+    },
+    "crates/cyril-core/src/protocol/engine.rs": {
+      "prefix": 332,
+      "maximum": 370
+    },
+    "crates/cyril-core/src/protocol/kas/discovery.rs": {
+      "prefix": 339,
+      "maximum": 345
+    },
+    "crates/cyril-core/src/protocol/kas/settings.rs": {
+      "prefix": 180,
+      "maximum": 230
+    },
+    "crates/cyril-core/src/protocol/kas/version.rs": {
+      "prefix": 80,
+      "maximum": 150
+    },
+    "crates/cyril-core/src/protocol/transport.rs": {
+      "prefix": 332,
+      "maximum": 345
+    },
+    "crates/cyril-core/src/types/mod.rs": {
+      "prefix": 87,
+      "maximum": 92
+    },
+    "upstream": "refs/remotes/origin/main",
+    "merge_base": "2e56ed603ea3685ceb656dfdc4ec515cfd659d93"
+  },
+  "mutation_detection": {
+    "body": [
+      "C7: forbidden responsibility/dependency: crates/cyril-core/src/protocol/transport.rs"
+    ],
+    "dev_dependency": [
+      "C7: unapproved workbench dependency: crates/cyril-core/Cargo.toml"
+    ],
+    "renamed_protected_body": "C7: protected body changed: main.rs::renamed_operation"
+  }
+}

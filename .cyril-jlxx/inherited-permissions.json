@@ -1,0 +1,45 @@
+{
+  "global": [
+    {
+      "capability": "fs_read",
+      "effect": "deny",
+      "match": [
+        "**"
+      ],
+      "exclude": [
+        "/tmp/cyril-jlxx-r1hd42fb/workspace/evidence/**"
+      ]
+    },
+    {
+      "capability": "fs_read",
+      "effect": "allow",
+      "match": [
+        "/tmp/cyril-jlxx-r1hd42fb/workspace/evidence/**"
+      ]
+    },
+    {
+      "capability": "fs_write",
+      "effect": "deny"
+    },
+    {
+      "capability": "shell",
+      "effect": "deny"
+    }
+  ],
+  "workspace": {
+    "rules": [
+      {
+        "capability": "fs_read",
+        "effect": "allow"
+      },
+      {
+        "capability": "fs_write",
+        "effect": "allow"
+      },
+      {
+        "capability": "shell",
+        "effect": "allow"
+      }
+    ]
+  }
+}

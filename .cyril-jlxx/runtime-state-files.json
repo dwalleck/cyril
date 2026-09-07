@@ -1,0 +1,18 @@
+{
+  "run_a_home_files": [
+    "home/.kiro/session-index/5195d3ccce5e093f.jsonl",
+    "home/.kiro/settings/cli.json",
+    "home/.kiro/settings/permissions.yaml",
+    "home/.kiro/logs/20260906T233239319/powers.log",
+    "home/.kiro/logs/20260906T233239319/mcp.log",
+    "home/.kiro/logs/20260906T233239319/kiro.log",
+    "home/.kiro/sessions/5195d3ccce5e093f/.index/.lock",
+    "home/.kiro/sessions/5195d3ccce5e093f/sess_01880846-3c4a-4936-9ad9-c7fde2fef16c/session.json.tmp.a26821e3-51de-4fc9-a61a-1ac684aa3a37",
+    "home/.kiro/sessions/5195d3ccce5e093f/sess_01880846-3c4a-4936-9ad9-c7fde2fef16c/session.json",
+    "home/.kiro/sessions/5195d3ccce5e093f/sess_01880846-3c4a-4936-9ad9-c7fde2fef16c/publish.cursor",
+    "home/.kiro/sessions/5195d3ccce5e093f/sess_01880846-3c4a-4936-9ad9-c7fde2fef16c/messages.jsonl"
+  ],
+  "resource_files": {
+    "workspace/evidence/identity.txt": "RUN-A_2c4ca0e87804fb0621228767"
+  }
+}

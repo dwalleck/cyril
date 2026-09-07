@@ -1,0 +1,16 @@
+[package]
+name = "cyril-jlxx-probe"
+version = "0.0.0"
+edition = "2024"
+
+[workspace]
+
+[[bin]]
+name = "cyril-jlxx-probe"
+path = "probe.rs"
+
+[dependencies]
+cyril-core = { path = "../crates/cyril-core", features = ["kas"] }
+tokio = { version = "1.50", features = ["rt", "macros", "time", "sync"] }
+
+serde_json = "1"
