@@ -158,7 +158,7 @@ impl ProcessGroupGuard {
     /// Build from the freshly spawned child's pid. Right after spawn,
     /// `Child::id()` is `None` only in pathological cases — warn and degrade
     /// to the `kill_on_drop` backstop rather than risk a zero pgid.
-    fn new(child_pid: Option<u32>) -> Self {
+    pub(crate) fn new(child_pid: Option<u32>) -> Self {
         let pgid = child_pid
             .and_then(|pid| i32::try_from(pid).ok())
             .and_then(std::num::NonZeroI32::new);
@@ -205,11 +205,16 @@ pub(crate) struct AgentProcess {
 
 impl AgentProcess {
     /// Spawn an ACP agent subprocess described by `cmd`.
-    pub async fn spawn(cmd: &AgentCommand, cwd: &Path) -> crate::Result<Self> {
+    pub async fn spawn(
+        cmd: &AgentCommand,
+        cwd: &Path,
+        environment: &crate::types::SpawnEnvironment,
+    ) -> crate::Result<Self> {
         let program = cmd.program();
         let args = cmd.args();
 
         let mut command = Command::new(program);
+        environment.apply(command.as_std_mut());
         command
             .args(args)
             .current_dir(cwd)
@@ -355,9 +360,10 @@ mod tests {
         let script = r#"i=0; while [ $i -lt 4000 ]; do echo "stderr spam line $i padding-padding-padding" 1>&2; i=$((i+1)); done; echo done"#;
         let cmd = AgentCommand::new("sh").with_args(vec!["-c".to_string(), script.to_string()]);
 
-        let mut process = AgentProcess::spawn(&cmd, dir.path())
-            .await
-            .expect("spawn sh");
+        let mut process =
+            AgentProcess::spawn(&cmd, dir.path(), &crate::types::SpawnEnvironment::Inherit)
+                .await
+                .expect("spawn sh");
 
         let status = tokio::time::timeout(Duration::from_secs(5), process._child.wait())
             .await
@@ -400,9 +406,10 @@ mod tests {
         let script = r#"sleep 30 & echo $!; wait"#;
         let cmd = AgentCommand::new("sh").with_args(vec!["-c".to_string(), script.to_string()]);
 
-        let mut process = AgentProcess::spawn(&cmd, dir.path())
-            .await
-            .expect("spawn sh");
+        let mut process =
+            AgentProcess::spawn(&cmd, dir.path(), &crate::types::SpawnEnvironment::Inherit)
+                .await
+                .expect("spawn sh");
         let child_pid = process
             ._child
             .id()
@@ -480,9 +487,10 @@ mod tests {
         let script = format!("head -c {BLOB_BYTES} /dev/zero | tr '\\0' x 1>&2");
         let cmd = AgentCommand::new("sh").with_args(vec!["-c".to_string(), script]);
 
-        let mut process = AgentProcess::spawn(&cmd, dir.path())
-            .await
-            .expect("spawn sh");
+        let mut process =
+            AgentProcess::spawn(&cmd, dir.path(), &crate::types::SpawnEnvironment::Inherit)
+                .await
+                .expect("spawn sh");
         let tail = process.stderr_tail();
 
         tokio::time::timeout(Duration::from_secs(5), process._child.wait())
@@ -522,9 +530,10 @@ mod tests {
         let script = r#"i=0; while [ $i -lt 60 ]; do echo "line $i" 1>&2; i=$((i+1)); done"#;
         let cmd = AgentCommand::new("sh").with_args(vec!["-c".to_string(), script.to_string()]);
 
-        let mut process = AgentProcess::spawn(&cmd, dir.path())
-            .await
-            .expect("spawn sh");
+        let mut process =
+            AgentProcess::spawn(&cmd, dir.path(), &crate::types::SpawnEnvironment::Inherit)
+                .await
+                .expect("spawn sh");
         let tail = process.stderr_tail();
 
         tokio::time::timeout(Duration::from_secs(5), process._child.wait())

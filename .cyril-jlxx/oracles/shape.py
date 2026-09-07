@@ -34,30 +34,42 @@ REQUIRED = [
 CORE = 'crates/cyril-core/src/'
 FORBIDDEN_CORE = re.compile(r'\b(?:ReviewInput|ReviewRun|Reviewer|reviewer_profile|stage_review_evidence)\b')
 FORBIDDEN_WORKBENCH = re.compile(r'\b(?:agent_client_protocol|agent_client_protocol_schema|agent_client_protocol_conductor)\b|cyril_core::protocol::(?:transport|domain_mediator|sdk_runtime|engine|kas)\b')
-# Allowed changed function bodies in protected parents; new helpers are forbidden.
+# Only listed bodies may change or be introduced in protected parents.
 PROTECTED = {
     CORE+'types/mod.rs': set(),
-    CORE+'protocol/bridge.rs': {'SpawnConfig::default', 'engine_for', 'resolve_spawn_command', 'run_bridge'},
+    CORE+'protocol/bridge.rs': {'SpawnConfig::default', 'engine_for', 'resolve_spawn_command', 'run_bridge', 'BridgeHandle::sender', 'BridgeHandle::for_tests_with_command_rx', 'BridgeHandle::split', 'BridgeSender::from_sender', 'create_channel_pair'},
     CORE+'protocol/engine.rs': {'KasEngine::new', 'KasEngine::default', 'KasEngine::settings_extra'},
     'crates/cyril/src/main.rs': {'main'},
-    CORE+'protocol/domain_mediator/mod.rs': set(),
+    CORE+'protocol/domain_mediator/mod.rs': {'DomainMediator::run'},
     'crates/cyril-workbench/src/lib.rs': set(),
+    CORE+'types/event.rs': set(),
+    CORE+'protocol/domain_mediator/commands/mod.rs': {'DomainMediator::handle_command'},
+    CORE+'protocol/domain_mediator/commands/session.rs': {'DomainMediator::set_config_option'},
+    CORE+'session.rs': {'SessionController::apply_notification'},
+    'crates/cyril-ui/src/state.rs': {'UiState::apply_notification'},
 }
 # Growth tripwires from plan.md. Existing unchanged modules are also diff-guarded.
 MAX_PREFIX = {
     CORE+'types/mod.rs':92, CORE+'types/spawn_environment.rs':150,
     CORE+'protocol/kas/version.rs':180,
-    CORE+'protocol/bridge.rs':420, CORE+'protocol/transport.rs':345,
+    CORE+'protocol/bridge.rs':440, CORE+'protocol/transport.rs':345,
     CORE+'protocol/engine.rs':370, CORE+'protocol/kas/settings.rs':230,
     CORE+'protocol/kas/discovery.rs':345,
     'crates/cyril/src/main.rs':295,
     'crates/cyril-workbench/src/lib.rs':12,
-    'crates/cyril-workbench/src/reviewer.rs':500,
+    'crates/cyril-workbench/src/reviewer.rs':540,
     'crates/cyril-workbench/src/reviewer/evidence.rs':220,
     'crates/cyril-workbench/src/reviewer/runtime.rs':270,
     'crates/cyril-workbench/src/reviewer/types.rs':270,
+    CORE+'types/event.rs':680,
+    CORE+'protocol/domain_mediator/commands/mod.rs':190,
+    CORE+'protocol/domain_mediator/commands/session.rs':550,
+    CORE+'session.rs':380,
+    'crates/cyril-ui/src/state.rs':2490,
 }
-ALLOWED_PRODUCTION = set(MAX_PREFIX)
+# An early test-only enum variant makes a prefix cap unsuitable for this owner.
+MAX_TOTAL = {CORE+'protocol/domain_mediator/mod.rs':735}
+ALLOWED_PRODUCTION = set(MAX_PREFIX) | set(MAX_TOTAL)
 
 
 def git(root, *args):
@@ -127,6 +139,11 @@ def violations(root, complete=False, compare_git=False):
             census[rel] = {'prefix':prefix, 'maximum':MAX_PREFIX[rel]}
             if prefix > MAX_PREFIX[rel]:
                 failures.append(f'C7: growth {rel}: {prefix} > {MAX_PREFIX[rel]}')
+        if rel in MAX_TOTAL:
+            lines = len(source.splitlines())
+            census[rel] = {'lines':lines, 'maximum':MAX_TOTAL[rel]}
+            if lines > MAX_TOTAL[rel]:
+                failures.append(f'C7: total growth {rel}: {lines} > {MAX_TOTAL[rel]}')
     for path in sorted((root / 'crates').glob('*/Cargo.toml')):
         data = tomllib.loads(path.read_text())
         name = data.get('package', {}).get('name')

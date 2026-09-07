@@ -64,6 +64,9 @@ impl DomainMediator {
             BridgeCommand::SetModel { model_id } => {
                 self.set_model(connection, model_id).await?;
             }
+            BridgeCommand::SetConfigOption { config_id, value } => {
+                self.set_config_option(connection, config_id, value).await?;
+            }
             BridgeCommand::ExtMethod { method, params } => {
                 self.execute_extension(connection, method, params);
             }

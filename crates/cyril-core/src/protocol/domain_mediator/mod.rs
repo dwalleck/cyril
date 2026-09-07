@@ -293,7 +293,17 @@ impl DomainMediator {
             #[cfg(feature = "kas")]
             Rc::clone(&self.host_ctx),
         );
-        if let Err(error) = self.initialize(&connection).await {
+        // This channel carries no values; closure means every real client is gone.
+        // Keep command reception in the main loop so initialization cannot reorder it.
+        let mut client_lifetime_rx = self.bridge.client_lifetime_rx.clone();
+        let initialization = tokio::select! {
+            result = self.initialize(&connection) => result,
+            _ = client_lifetime_rx.changed() => {
+                self.shutdown_runtime(runtime, host_task).await;
+                return Ok(());
+            }
+        };
+        if let Err(error) = initialization {
             runtime.await_stderr_eof().await;
             let detail = runtime.disconnect_reason(error.to_string());
             let drain_result = self.drain_work_dropping_turn_completion().await;

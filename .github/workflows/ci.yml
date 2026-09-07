@@ -162,15 +162,19 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      # The mirror image of the kas-feature job (ADR-0002): every other lane
-      # enables `kas` (--all-features or --features kas), so `#[cfg(not(feature
-      # = "kas"))]` code and tests — the C5 bridge-command contract fence among
-      # them — would otherwise never lint or run in CI.
+      # Workspace defaults include workbench's KAS dependency. Keep that
+      # coverage, then select core alone to exercise its default-off KAS code.
       - name: Clippy (default features)
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test (default features)
         run: cargo nextest run --workspace
+
+      - name: Clippy (core without KAS)
+        run: cargo clippy -p cyril-core --no-default-features --all-targets -- -D warnings
+
+      - name: Test (core without KAS)
+        run: cargo nextest run -p cyril-core --no-default-features
 
   # cyril-4rc1: the worktree helper + guard are dev tooling (bash), not product
   # code, so they ride an ubuntu-only shell job rather than the Rust matrix.
