@@ -1,0 +1,72 @@
+PR #116 review slice 3 — deliberate negative controls
+Command: cargo test -p cyril-core --features kas --test spawn_isolation
+Expected failure, not a broken final checkout.
+Mutations: remove Replace+Host rejection; discard captured timeout stderr; stale nested Free --exact filter.
+Observed: corresponding three outer tests fail; five other outer tests pass. Host control runs with private HOME.
+All mutations were restored before the green checkpoint.
+
+   Compiling cyril-core v0.2.0-alpha.1 (<WORKTREE>/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 13.09s
+     Running tests/spawn_isolation.rs (target/debug/deps/spawn_isolation-37596961e4b63be3)
+
+running 8 tests
+
+running 1 test
+
+running 0 tests
+
+running 1 test
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+test exact_version_mismatch_never_starts_agent ... ok
+
+thread 'replacement_host_hooks_refuse_before_probe_or_agent_start' (1137586) panicked at crates/cyril-core/tests/spawn_isolation.rs:427:5:
+assertion failed: !root.join("probe.env").exists()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test replacement_host_hooks_refuse_before_probe_or_agent_start ... FAILED
+
+failures:
+
+failures:
+    replacement_host_hooks_refuse_before_probe_or_agent_start
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+test replacement_host_hooks_refuse_before_probe_or_agent_start ... FAILED
+test isolated_spawn_does_not_inherit_parent_authority ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+test isolated_spawn_does_not_inherit_parent_authority ... ok
+test free_replacement_refuses_before_inherited_discovery ... FAILED
+test concurrent_settings_are_run_local ... ok
+test verbose_version_probe_drains_both_pipes_past_capture_limit ... ok
+test hanging_version_probe_fails_before_workbench_deadline ... FAILED
+test version_deadline_includes_exited_wrappers_inherited_pipes ... ok
+
+failures:
+
+---- replacement_host_hooks_refuse_before_probe_or_agent_start stdout ----
+
+thread 'replacement_host_hooks_refuse_before_probe_or_agent_start' (1137570) panicked at crates/cyril-core/tests/spawn_isolation.rs:416:9:
+nested hook-isolation assertions failed
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- free_replacement_refuses_before_inherited_discovery stdout ----
+Error: Os { code: 2, kind: NotFound, message: "No such file or directory" }
+
+---- hanging_version_probe_fails_before_workbench_deadline stdout ----
+
+thread 'hanging_version_probe_fails_before_workbench_deadline' (1137568) panicked at crates/cyril-core/tests/spawn_isolation.rs:215:5:
+invalid configuration: `/home/REDACTED_USER/.claude/tmp/.tmpPOE18k/hanging-agent.sh --version` exceeded the 3 second startup probe deadline
+
+
+failures:
+    free_replacement_refuses_before_inherited_discovery
+    hanging_version_probe_fails_before_workbench_deadline
+    replacement_host_hooks_refuse_before_probe_or_agent_start
+
+test result: FAILED. 5 passed; 3 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.02s
+
+error: test failed, to rerun pass `-p cyril-core --test spawn_isolation`

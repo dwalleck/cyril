@@ -1,0 +1,37 @@
+{
+  "slice": 3,
+  "review_records": [
+    "V1",
+    "V4",
+    "V5",
+    "V7",
+    "V8",
+    "V19",
+    "V21",
+    "S3"
+  ],
+  "claim_ids": [
+    "C2",
+    "C6"
+  ],
+  "assessment_base": "1136dabdda0bb5905df54cf9cd6dd005d771d921",
+  "archive_base": "44bcf1ec",
+  "gates": {
+    "workspace_tests": "PASS: cargo test --workspace; 1896 reported passes including nested fixture processes, 13 ignored",
+    "core_without_kas": "PASS: cargo test -p cyril-core --no-default-features; 737 reported passes, 4 ignored; subsequent change is KAS-only error formatting",
+    "lint": "PASS: workspace all-target clippy and core-only no-default-features all-target clippy with -D warnings",
+    "format": "PASS: cargo fmt --all",
+    "named_mutations": "PASS: all three expected failures in review-startup-controls.txt; no mutation remains",
+    "restored_fences": "PASS: all eight outer spawn_isolation cases plus all three nested bodies in workspace run",
+    "shape": "PASS: complete oracle and all three placement/body/dependency mutations; version owner 178 <= 180; no growth allowance relaxed",
+    "latency": "Hanging/held-pipe cases completed under their ten-second bounds; focused suite 3.01 seconds, mutation suite 3.02 seconds",
+    "always_on": "N/A: startup-only changes; concurrent capture retains at most 1 MiB per pipe"
+  },
+  "corrections": [
+    "Corrected the test enum import path to types::kas_hooks::KasHooksMode",
+    "Host-hook negative control also re-executes with private HOME and an externally attested completion file",
+    "Error formatting trims once without retaining another copy or exceeding the existing source-growth bound"
+  ],
+  "native_platform": "POSIX fixtures on Linux; no new native Windows claim",
+  "next_gate": "Remaining workbench/configuration/native-construction fixes have not passed their checkpoints"
+}

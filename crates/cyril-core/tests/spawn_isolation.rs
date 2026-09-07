@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::{AgentCommand, Notification, SpawnEnvironment};
+#[cfg(feature = "kas")]
 use tokio::time::timeout;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
@@ -62,7 +63,10 @@ async fn launch_command(
 async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
     // Re-enter to seed a canary without mutating the test runner's environment.
     const CANARY: &str = "CYRIL_ISOLATION_PARENT_AUTHORITY";
-    if std::env::var_os(CANARY).is_none() {
+    const COMPLETED: &str = "CYRIL_ISOLATION_COMPLETED";
+    let Some(completed) = std::env::var_os(COMPLETED) else {
+        let root = tempfile::tempdir()?;
+        let completed = root.path().join("completed");
         let status = std::process::Command::new(std::env::current_exe()?)
             .args([
                 "--exact",
@@ -70,10 +74,12 @@ async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
                 "--nocapture",
             ])
             .env(CANARY, "parent-only-secret")
+            .env(COMPLETED, &completed)
             .status()?;
         assert!(status.success());
+        assert_eq!(std::fs::read_to_string(completed)?, "isolation checked");
         return Ok(());
-    }
+    };
     let inherited = tempfile::tempdir()?;
     launch(inherited.path(), SpawnConfig::default()).await?;
     assert!(
@@ -99,6 +105,7 @@ async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
     assert!(!observed.contains(CANARY));
     assert!(observed.lines().any(|line| line == "RUN_VALUE=selected λ"));
     assert_eq!(std::env::var(CANARY)?, "parent-only-secret");
+    std::fs::write(completed, "isolation checked")?;
     Ok(())
 }
 
@@ -116,6 +123,7 @@ fn kas_config(root: &Path, thinking: bool) -> TestResult<SpawnConfig> {
     Ok(SpawnConfig {
         engine: cyril_core::types::AgentEngine::Kas,
         kas_spawn: cyril_core::types::KasSpawn::Wrapper,
+        kas_hooks: cyril_core::types::kas_hooks::KasHooksMode::Off,
         shell: Some("bash".into()),
         required_cli_version: Some("2.21.1".into()),
         environment: SpawnEnvironment::Replace(BTreeMap::from([
@@ -181,7 +189,7 @@ async fn hanging_version_probe_fails_before_workbench_deadline() -> TestResult {
     let path = root.path().join("hanging-agent.sh");
     std::fs::write(
         &path,
-        "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then sleep 60; fi\n",
+        "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then printf 'probe-auth-diagnostic' >&2; /bin/sleep 60; fi\n",
     )?;
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700))?;
     let started = std::time::Instant::now();
@@ -204,7 +212,7 @@ async fn hanging_version_probe_fails_before_workbench_deadline() -> TestResult {
     timeout(Duration::from_secs(10), completion)
         .await?
         .map_err(|_| "bridge completion lost")?;
-    assert!(reason.contains("version"), "{reason}");
+    assert!(reason.contains("probe-auth-diagnostic"), "{reason}");
     assert!(
         started.elapsed() < Duration::from_secs(10),
         "probe not bounded"
@@ -244,12 +252,17 @@ async fn free_replacement_refuses_before_inherited_discovery() -> TestResult {
             .env_remove("KIRO_HOME")
             .status()?;
         assert!(status.success(), "isolated free-path regression failed");
+        assert_eq!(
+            std::fs::read_to_string(root.path().join("completed"))?,
+            "free discovery checked"
+        );
         return Ok(());
     };
     let root = std::path::PathBuf::from(root);
     let config = SpawnConfig {
         engine: cyril_core::types::AgentEngine::Kas,
         kas_spawn: cyril_core::types::KasSpawn::Free,
+        kas_hooks: cyril_core::types::kas_hooks::KasHooksMode::Off,
         shell: Some("bash".into()),
         ..SpawnConfig::default()
     };
@@ -274,6 +287,26 @@ async fn free_replacement_refuses_before_inherited_discovery() -> TestResult {
         !root.join("initialize.json").exists(),
         "rejected launch spawned an agent"
     );
+    // This nested process has a private HOME: ordinary inherited Host hooks
+    // remain supported without loading the developer's real hook registry.
+    launch(
+        &root,
+        SpawnConfig {
+            engine: cyril_core::types::AgentEngine::Kas,
+            kas_spawn: cyril_core::types::KasSpawn::Wrapper,
+            kas_hooks: cyril_core::types::kas_hooks::KasHooksMode::Host,
+            shell: Some("bash".into()),
+            ..SpawnConfig::default()
+        },
+    )
+    .await?;
+    let initialize: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(root.join("initialize.json"))?)?;
+    assert_eq!(
+        initialize["params"]["clientCapabilities"]["_meta"]["kiro"]["hooks"]["enabled"],
+        true
+    );
+    std::fs::write(root.join("completed"), "free discovery checked")?;
     Ok(())
 }
 
@@ -359,5 +392,41 @@ async fn version_deadline_includes_exited_wrappers_inherited_pipes() -> TestResu
         })
         .await??;
     }
+    Ok(())
+}
+
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn replacement_host_hooks_refuse_before_probe_or_agent_start() -> TestResult {
+    const ROOT: &str = "CYRIL_HOST_REPLACEMENT_FIXTURE";
+    let Some(root) = std::env::var_os(ROOT) else {
+        let root = tempfile::tempdir()?;
+        let status = std::process::Command::new(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "replacement_host_hooks_refuse_before_probe_or_agent_start",
+                "--nocapture",
+            ])
+            .env(ROOT, root.path())
+            .env("HOME", root.path())
+            .env("USERPROFILE", root.path())
+            .env_remove("KIRO_HOME")
+            .env_remove("XDG_CONFIG_HOME")
+            .status()?;
+        assert!(status.success(), "nested hook-isolation assertions failed");
+        assert_eq!(
+            std::fs::read_to_string(root.path().join("completed"))?,
+            "host hooks checked"
+        );
+        return Ok(());
+    };
+    let root = std::path::PathBuf::from(root);
+    let mut config = kas_config(&root, false)?;
+    config.kas_hooks = cyril_core::types::kas_hooks::KasHooksMode::Host;
+    launch(&root, config).await?;
+    assert!(!root.join("probe.env").exists());
+    assert!(!root.join("environment.txt").exists());
+    assert!(!root.join("initialize.json").exists());
+    std::fs::write(root.join("completed"), "host hooks checked")?;
     Ok(())
 }

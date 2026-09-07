@@ -11,6 +11,11 @@ use std::fmt;
 /// `Replace` forwards only the supplied entries, including when the map is
 /// empty. Native OS strings preserve non-Unicode environment values. Values
 /// (and names) are omitted from diagnostics because they may carry secrets.
+///
+/// Executable lookup follows the platform's `std::process::Command` rules.
+/// For predictable lookup with `Replace`, use an absolute executable path or
+/// supply `PATH` explicitly. An omitted `PATH` is not restored from the parent
+/// by Cyril; platform default search paths may still apply.
 #[derive(Clone, Default, PartialEq, Eq)]
 pub enum SpawnEnvironment {
     #[default]

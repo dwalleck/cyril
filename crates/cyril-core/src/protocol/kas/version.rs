@@ -53,12 +53,17 @@ pub(crate) fn flag_for_version(version: &str) -> Result<&'static str, String> {
     }
 }
 
-async fn read_limited(mut pipe: impl AsyncRead + Unpin, limit: u64) -> std::io::Result<Vec<u8>> {
-    let mut bytes = Vec::new();
-    (&mut pipe).take(limit).read_to_end(&mut bytes).await?;
+async fn read_limited(
+    mut pipe: impl AsyncRead + Unpin,
+    bytes: &mut Vec<u8>,
+) -> std::io::Result<()> {
+    (&mut pipe)
+        .take(VERSION_PIPE_LIMIT)
+        .read_to_end(bytes)
+        .await?;
     // Keep draining after the capture cap so verbose probes can still exit.
     tokio::io::copy(&mut pipe, &mut tokio::io::sink()).await?;
-    Ok(bytes)
+    Ok(())
 }
 
 /// Read the installed kiro-cli version through a bounded child lifecycle.
@@ -93,11 +98,15 @@ pub(crate) async fn kiro_cli_version(
         .stderr
         .take()
         .ok_or_else(|| format!("failed to capture stderr from `{program} --version`"))?;
+    // Keep captured bytes outside the cancellable reads so a deadline retains
+    // diagnostics already received, without waiting again for pipe EOF.
+    let mut stdout_bytes = Vec::new();
+    let mut stderr_bytes = Vec::new();
     let output = timeout(VERSION_PROBE_TIMEOUT, async {
         tokio::try_join!(
             child.wait(),
-            read_limited(stdout, VERSION_PIPE_LIMIT),
-            read_limited(stderr, VERSION_PIPE_LIMIT)
+            read_limited(stdout, &mut stdout_bytes),
+            read_limited(stderr, &mut stderr_bytes)
         )
     })
     .await
@@ -113,8 +122,8 @@ pub(crate) async fn kiro_cli_version(
     // Also kill descendants when the wrapper has already exited normally.
     #[cfg(unix)]
     drop(group);
-    let (status, stdout_bytes, stderr_bytes) = match output {
-        Ok(output) => output,
+    let status = match output {
+        Ok((status, (), ())) => status,
         Err(reason) => {
             match timeout(VERSION_REAP_TIMEOUT, child.kill()).await {
                 Ok(Ok(())) => {}
@@ -123,7 +132,10 @@ pub(crate) async fn kiro_cli_version(
                     tracing::warn!(program, %error, "version probe reap deadline elapsed")
                 }
             }
-            return Err(reason);
+            return Err(match String::from_utf8_lossy(&stderr_bytes).trim() {
+                "" => reason,
+                diagnostic => format!("{reason}: {diagnostic}"),
+            });
         }
     };
     if !status.success() {

@@ -112,6 +112,16 @@ Protected parents: bridge.rs (configuration/delegation wiring only), engine.rs (
 
 Mechanical shape oracle: `.cyril-jlxx/oracles/shape.py` checks forbidden review-domain identifiers outside workbench, forbidden protocol implementation imports/ACP dependencies inside workbench, and reverse workbench dependencies. Before implementation it checks the negative placement baseline; complete mode additionally requires the six approved new owner files. This is a mechanically scoped guard, not semantic proof of every function's responsibility. Protected-parent body changes still require ledger review; plan.md must add measured growth tripwires and changed-path/body-delta checks before implementation. Named C7 mutation must turn the oracle red independently of cargo warnings.
 
+### Review implementation corrections (2026-09-07)
+
+The review decision ledger repairs the existing C1/C2/C5/C6 guarantees; it does not select another architecture or waive native acceptance. Privacy confirmation is a prerequisite to sending evidence: set the advertised standard `contentCollection` option to `disabled` and validate the returned catalog. An unsolicited update is not an acknowledgement of that operation.
+
+The demonstrated missing seam is standard ACP configuration control. `types/event.rs` gains `SetConfigOption` and a response-qualified configuration notification; `domain_mediator/commands/{mod,session}.rs` owns generic dispatch and strict response decoding, using the existing bounded asynchronous command path. Generic configuration consumers in core `SessionController`, UI `UiState`, and the bridge example consume the returned catalog through their existing configuration-update arms. No reviewer policy, model name, evidence IO or provider authority enters these owners. The mediator root, SDK/process ownership, TUI App, memory and voice retain their production bodies.
+
+Workbench evidence ownership gains a cancellation-safe cleanup guard, not another runtime/process owner. It waits existing core completion even when the caller executor disappears; lost completion retains and identifies the private root. This does not upgrade that completion into native Windows descendant proof: verified cyril-jlw9 and cyril-6y1s retain that separate obligation.
+
+Windows construction must use compatible canonical paths and must not pretend that `XDG_DATA_HOME` redirects a native Known Folder. Validate the requested native-auth parent against `FOLDERID_LocalAppData`; credentials remain launcher-owned and are never copied. The ambient core Free/auth lookup concern remains the verified cyril-tpwn scope; this reviewer uses Wrapper with `--auth-method cli`. Keep exact CLI qualification, native policy and explicit hooks-off.
+
 ## Claims
 
 1. C1: Inspection starts only after supported executable, native reviewer mode and catalog-confirmed Sonnet 4.6 are verified.

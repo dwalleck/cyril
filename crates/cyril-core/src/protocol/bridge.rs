@@ -162,7 +162,8 @@ pub struct SpawnConfig {
     pub kas_hooks: KasHooksMode,
     pub stall_threshold: std::time::Duration,
     /// Environment used by both the agent and the existing CLI version probe.
-    /// KAS Free launches require `Inherit`; use Wrapper with `Replace`.
+    /// KAS Free launches and Host hooks require `Inherit`; use Wrapper without
+    /// Host hooks with `Replace`. See `SpawnEnvironment` for PATH lookup rules.
     pub environment: crate::types::SpawnEnvironment,
     /// Exact CLI version token required for KAS Wrapper launches.
     pub required_cli_version: Option<String>,
@@ -305,16 +306,18 @@ async fn resolve_spawn_command(
     config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
     if config.engine == AgentEngine::Kas
-        && config.kas_spawn == KasSpawn::Free
+        && (config.kas_spawn == KasSpawn::Free || config.kas_hooks == KasHooksMode::Host)
         && matches!(
             config.environment,
             crate::types::SpawnEnvironment::Replace(_)
         )
     {
-        return Err(
+        return Err(if config.kas_spawn == KasSpawn::Free {
             "KAS Free launches require an inherited environment; use Wrapper for a replacement environment"
-                .into(),
-        );
+        } else {
+            "KAS Host hooks require an inherited environment; disable host hooks for a replacement environment"
+        }
+        .into());
     }
     if config.required_cli_version.is_some()
         && (config.engine != AgentEngine::Kas || config.kas_spawn != KasSpawn::Wrapper)
