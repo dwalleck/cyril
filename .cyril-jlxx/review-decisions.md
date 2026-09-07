@@ -85,7 +85,7 @@ These records concern the published `a1ac53c7` reviewer / `62437d73` core state,
 | finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
 |---|---|---|---|---|---|---|---|
 | Acommand | Command inventory omits SetConfigOption and still pins 20 entries. | Delayed advisory | Refuted | current_runtime_contract/saturation.rs:28 includes the command; the FIFO test derives its expected length. | Reject | N/A — current fixture already migrated. | No count-only assertion restored. |
-| APython | Configuration fixture assumes /usr/bin/python3; select runnable host Python instead. | Delayed advisory | Verified | Fixed shebang and restricted PATH are present; the host-selection control is red while the protocol exchange itself passes. | Modify | Resolve sys.executable through host Python before environment replacement; launch it with explicit -I and script arguments. | Preserve the same isolated peer and protocol assertions; no new production helper or dependency. |
+| APython | Configuration fixture assumes /usr/bin/python3; select runnable host Python instead. | Delayed advisory | Verified | Baseline62437d73 used a fixed-path shebang and restricted PATH. Its protocol test passed but bypassed the selected host Python; the selection control was red. | Modify | Core7477df72 resolves sys.executable before environment replacement and launches explicit -I/script argv; the corrected control and exchanges pass. | This is a verified host-layout assumption, not a reproduced missing-interpreter or macOS runtime failure. |
 | ATracked | Three flagged files may be absent from published commits. | Delayed advisory | Refuted | git ls-tree at both published heads includes spawn_environment.rs, spawn_isolation.rs and session_configuration.rs with identical blobs. | Reject | N/A — all files are committed. | Immutable trees, not unstaged diff output, decide this claim. |
 | AGates | Final local proof lacks delivered job completion. | Delayed advisory | Refuted | artifact 516 contains completed test/clippy/shape results; CI 34098257297 completed all 13 jobs successfully. | Reject | N/A — delivered results already establish controlled proof. | Native authentication failure is not part of that PASS. |
 | ANative | Auth-blocked replay must not be counted as native success. | Delayed advisory | Verified | Current checkpoint is CONTROLLED_PASS_NATIVE_REPLAY_BLOCKED and retains prior-success versus auth-blocked captures separately. | Reject | N/A — preserve the existing qualification. | No runtime workaround, credential access or weakened diagnostic boundary. |
@@ -93,9 +93,95 @@ These records concern the published `a1ac53c7` reviewer / `62437d73` core state,
 | APlan | Plan has projections but no measured post-partition revision pairs. | Delayed advisory | Verified | Published tree differences are 2102 core and 3705 reviewer lines; current plan paragraph remains projected arithmetic. | Modify | Record immutable revision-pair measurements separately from estimates; preserve margin and ownership. | Fixture guard commit 9fafca05 is an ancestor of core62437d73. |
 | AWorktree | Failed primary-checkout push requires safe worktree publication. | Delayed advisory | Verified | Specialized push rejected main metadata; explicit non-force push from the prepared pr-116 worktree published a1ac53c7. | Modify | Use explicit prepared-worktree cwd for publication; do not reset/re-checkout the already validated branch. | Primary source checkout remains untouched. |
 | ADraft | No-merge prose does not establish draft status. | Delayed advisory | Verified | GitHub conversion succeeded; API reread reports isDraft=true for PR116 at a1ac53c7. | Accept | Explicitly mark PR116 draft while final native acceptance is blocked. | No merge or readiness claim. |
+| ARecords | Earlier accepted repairs lack same-surface compact provenance records. | Delayed advisory | Verified | The ledger originally linked aggregate checkpoints but only APython had a compact record. | Modify | Add the original atomic-repair records below with ownership, paths, exact commands/results and retained-evidence applicability. | Evidence reconciliation only; no new behavior or retroactively invented result. |
+| AOracle | Artifact558 predates the control's shlex.quote edit. | Delayed advisory | Verified | Artifact558 remains valid test/clippy proof but is not the current oracle revision. | Modify | Retain a fresh post-shlex run in python-selection-postquote.json with source hashes, exact command and actual results; pin CI checkout/head tree equivalence. | No production, test or oracle code changed in this reconciliation. |
 
 ### APython bounded proof repair
 
 Ownership: C1/C2/C7, existing slice 4 generic configuration prerequisite. Only `tests/session_configuration.rs` launch setup changes; its single caller is the existing configuration exchange test (LSP missed it; scoped search located it). Reuse structured AgentCommand argv and Python's sys.executable; no core resolver dependency exists. Resolve before replacing HOME/PATH so a host version-manager shim cannot depend on the peer's private HOME.
 
-Proof: host-selection control is red against the old shebang (protocol exit 0, host-selected=false, control exit 1), then green after repair (protocol exit 0, host-selected=true). Non-KAS and KAS configuration exchanges, both core all-targets clippy selections and formatting pass; `review-checkpoint-core-runtime.json` records all nine bounded gates. Decoder mutation results remain applicable because their inputs/assertions and production decoder are unchanged. Artifact 558 retains the refreshed local gate. Current bounded repair gate: PASS; refreshed assembled Unix CI is the publication gate. Native acceptance remains auth-blocked.
+Proof: baseline protocol execution passed while host-selection failed; this was not merely a --no-run compile. The corrected selection control and both feature selections pass. Artifact558 records test/clippy proof, not the later quoting revision; `review-native/python-selection-postquote.json` pins the fresh post-shlex execution and source hashes. `review-checkpoint-core-runtime.json` records all nine bounded gates plus CI34102117724: all 13 jobs passed on a8577505. CI's temporary-main checkout d5afbef and the published head have identical trees; the stacked base was restored. Native acceptance remains auth-blocked.
+
+## Original compact repair records
+
+These records reconcile already-executed repairs; they do not claim new executions. Explicit paths are repository-relative; core source paths resolve under `crates/cyril-core/src/`, workbench source paths under `crates/cyril-workbench/src/`, and short proof/oracle paths under `.cyril-jlxx/`. Unchanged fields inherit `plan.md` slices 3–5 and claims C1–C7. Common proof: artifact516 records `cargo test --workspace` (1,923 passes), `cargo test -p cyril-core --no-default-features` (739 passes), workspace/standalone-core all-target clippy with `-D warnings`, formatting, and `python3 .cyril-jlxx/oracles/shape.py --complete --mutation-check` (PASS). CI34102117724 passed all 13 jobs after APython's test-only launcher repair. These record-only amendments leave checked code and inputs unchanged. Native acceptance remains blocked, not a retained PASS.
+
+### R-version — V5
+- Ownership: C2/C6, slice3; startup commit8f028ebd, inherited by core a59acd43.
+- Root/paths: retain bounded version-probe buffers outside cancellable readers in `crates/cyril-core/src/protocol/kas/version.rs`; strengthen `crates/cyril-core/tests/spawn_isolation.rs`. No second pipe drain or timeout owner.
+- Commands/results: `cargo test -p cyril-core --features kas --test spawn_isolation` observes pre-timeout diagnostic bytes and bounded completion; discarding captured timeout stderr is red in `review-startup-controls.txt`, restored suite green.
+- Evidence disposition: pre-fix diagnostic loss is superseded. `review-checkpoint-startup.json` and final assembled proof remain applicable; capture limit and production path are unchanged by later fixture/docs repairs.
+
+### R-hooks — V8, V19
+- Ownership: C2, slice3; startup8f028ebd/core a59acd43.
+- Root/paths: reject KAS Replace+Host before discovery/probe in `crates/cyril-core/src/protocol/bridge.rs`; document replacement lookup in `crates/cyril-core/src/types/spawn_environment.rs`; `spawn_isolation.rs` holds private-HOME controls.
+- Commands/results: `cargo test -p cyril-core --features kas --test spawn_isolation` proves rejection before marker creation while Inherit+Host remains functional. Removing rejection is red in `review-startup-controls.txt`; restored cases pass.
+- Evidence disposition: hypothetical parameter-threading fix rejected; existing validation/teardown reused. Final Linux and CI proof retained; no Windows/native-auth enforcement inference.
+
+### R-nested — V21
+- Ownership: C2, slice3; startup8f028ebd/core a59acd43.
+- Root/paths: `crates/cyril-core/tests/spawn_isolation.rs` writes completion sentinels only after nested assertions, then requires them in the parent.
+- Commands/results: `cargo test -p cyril-core --features kas --test spawn_isolation`; deliberately stale --exact filters fail the external sentinel check (`review-startup-controls.txt`); restored nested bodies and parents pass.
+- Evidence disposition: status.success alone is no longer proof. Later fixture serialization preserves these sentinels; artifact516 and both platform CI runs execute them.
+
+### R-feature-selection — S3
+- Ownership: C7, slice3; startup8f028ebd/core a59acd43.
+- Root/paths: `.github/workflows/ci.yml` selects standalone core without default features, rather than relying on workspace feature unification; cfg-qualified imports remain in `crates/cyril-core/tests/spawn_isolation.rs`.
+- Commands/results: `cargo test -p cyril-core --no-default-features` and `cargo clippy -p cyril-core --no-default-features --all-targets -- -D warnings` pass; the CI Default Features job's `cargo nextest run -p cyril-core --no-default-features` passes in CI34102117724.
+- Evidence disposition: workspace-only inference superseded by actual isolated selection. Final 739-pass local result and CI retained; no lint suppression or dependency workaround.
+
+### R-readiness — S1, V22
+- Ownership: C1/C2, slice4; core a59acd43 plus reviewer b19b75c6.
+- Root/paths: standard command/response in core `types/event.rs` and `protocol/domain_mediator/commands/{mod,session}.rs`; existing core `session.rs`, UI `state.rs`, bridge example and command inventory migrate atomically. Workbench `reviewer.rs` requires response-bound disabled collection and post-profile model confirmation; `tests/reviewer.rs` and its peer exercise ordering.
+- Commands/results: `cargo test -p cyril-workbench` passes the no-early-prompt, rejected/coerced/missing acknowledgement, drift and profile-order cases; `cargo test -p cyril-core --no-default-features --test session_configuration` preserves response versus unsolicited event identity. Removing privacy readiness is red in `review-runtime-controls.txt`, restored suite green.
+- Evidence disposition: requested-value/unsolicited-update trust is superseded. Artifact516 and CI retain controlled proof; the earlier successful native run is historical and the final sign-in-gated replay is not upgraded.
+
+### R-decoder — Fgroup
+- Ownership: C1/C2, slice4 generic prerequisite; core a59acd43.
+- Root/paths: `crates/cyril-core/src/protocol/domain_mediator/commands/session.rs` decodes borrowed JSON once and rejects malformed/lost required grouped choices; `crates/cyril-core/tests/session_configuration.rs` supplies valid and malformed catalogs.
+- Commands/results: `cargo test -p cyril-core --no-default-features --test session_configuration` preserves server-selected grouped values and rejects malformed flat/grouped data. Tolerant outer/grouped controls are red in `review-core-controls.txt` and `review-grouped-control.txt`; restored exchange passes.
+- Evidence disposition: partial acknowledgement is superseded. APython changes only launch setup, not catalog inputs/assertions; refreshed exchanges, the macOS CI case and retained decoder controls establish applicability.
+
+### R-lifetime — V12, C8, C10
+- Ownership: C5/C6/C7, slice4; core a59acd43 plus reviewer b19b75c6.
+- Root/paths: core `protocol/bridge.rs` handles and `protocol/domain_mediator/mod.rs` observe final-client loss during initialize through existing teardown. Workbench `reviewer.rs` and `reviewer/evidence.rs` retain evidence across executor loss, consolidate cancellation and drop the unused source receiver.
+- Commands/results: `cargo test -p cyril-core --features kas --test spawn_isolation` preserves a retained clone and completes before peer natural exit after final drop; `cargo test -p cyril-workbench` covers dropped/unpolled executor and lost completion. Removing client-loss observation is red (`review-core-controls.txt`); corrected public probe completes at 2.0022s versus baseline natural exit at 6.9947s (`review-native/initialize-drop-results.json`).
+- Evidence disposition: waiting for completion alone is no longer timely-shutdown proof. Existing process ownership is retained, not copied. Final controlled gates apply; unknown/native Windows descendants remain qualified.
+
+### R-outcome — V10, S4, C15
+- Ownership: C5/C6, slice4; reviewer b19b75c6.
+- Root/paths: workbench `reviewer.rs` and `reviewer/types.rs` preserve authoritative completion over late errors, distinguish observed tool failure from permission verdict, and represent unavailable partial output as None.
+- Commands/results: `cargo test -p cyril-workbench` passes terminal precedence, in-turn errors, cleanup override, failed-tool observation and lost-output cases. Reintroducing late-error demotion is red in `review-runtime-controls.txt`; corrected cases pass.
+- Evidence disposition: synthetic denial and fabricated empty output are not retained behavior. Public consumers/archived driver use the new result contract; artifact516 and CI remain applicable.
+
+### R-private-diagnostics — V13, V14, C14, S5
+- Ownership: C4/C6, slice4; reviewer b19b75c6.
+- Root/paths: workbench `reviewer.rs`, `reviewer/{types,evidence,runtime}.rs` preserve bounded private synchronous/asynchronous/serialization diagnostics while redacting automatic formatting and logging only typed tool metadata.
+- Commands/results: `cargo test -p cyril-workbench` passes UTF-8 truncation, explicit cause retrieval, Debug/Display redaction and captured-log canary checks; artifact516 and CI34102117724 include the concrete private-diagnostic and tool-observation cases.
+- Evidence disposition: generic error erasure/raw logging superseded by typed private diagnostics. No raw exception, tool payload or credential inspection is introduced; no new mutation execution is claimed by this record-only amendment.
+
+### R-transient-io — C7
+- Ownership: C3/C6, slice4; reviewer b19b75c6.
+- Root/paths: `crates/cyril-workbench/src/reviewer/evidence.rs` removes transient fsync calls while retaining write/flush/error completion before spawning.
+- Commands/results: `cargo test -p cyril-workbench` passes complete staging/read cases and staging-IO failure with no child; artifact516 and CI include these cases.
+- Evidence disposition: no latency improvement or crash-durability requirement is invented. This remains private transient evidence, not a persistent store; native replay qualification is unchanged.
+
+### R-readiness-fixtures — C17a
+- Ownership: C1, slice4 technical proof; reviewer b19b75c6.
+- Root/paths: `crates/cyril-workbench/tests/reviewer.rs` and its fixture separate absent catalog, absent configuration and wrong-mode cases under the shared one-second startup bound.
+- Commands/results: `cargo test -p cyril-workbench` passes all 46 cases, including the split failures; CI34102117724 macOS logs show each isolated negative case passing rather than one combined assertion masking another.
+- Evidence disposition: earlier combined timing proof is superseded by individual outcomes. No production deadline or successful-silence behavior changes; final local/CI evidence retained.
+
+### R-windows-construction — V15, V9
+- Ownership: C1/C2/C3, slice5; reviewer b19b75c6.
+- Root/paths: workbench `reviewer/runtime.rs`, `reviewer/types.rs`, root/workbench Cargo manifests and lockfile, and `.github/workflows/ci.yml`; `.cyril-jlxx/oracles/windows-construction.py` checks compatible canonicalization and Known Folder auth-parent equality.
+- Commands/results: `python .cyril-jlxx/oracles/windows-construction.py` in Windows CI requires fixed constructor cases green, raw-canonicalization and removed-auth-guard mutants red, restored cases green. CI34098257297's named step and all jobs in CI34102117724 pass.
+- Evidence disposition: Linux source inference is superseded by native Windows constructor execution. This is not native KAS authentication, cloud isolation or descendant acceptance; those qualifications and the final sign-in blocker remain.
+
+### R-executable-fixture-ownership — AFd
+- Ownership: C2/C5, slices3/4 fixture proof; core9fafca05, qualified by7477df72.
+- Root/paths: `crates/cyril-core/tests/spawn_isolation.rs` serializes executable creation/process lifetime between tests and preconstructs the intentionally concurrent pair before tokio::join!.
+- Commands/results: original verbose fixture reports ETXTBSY (artifact509); `python3 .cyril-jlxx/review-native/executable-fd-probe.py` independently demonstrates inherited-writer ETXTBSY followed by successful execution on release. Corrected `cargo test -p cyril-core --features kas --test spawn_isolation` reports 12 passes including nested cases; full artifact516 and CI pass.
+- Evidence disposition: exact historical PID/fd attribution remains inferred, not demonstrated. The fix is test-only and preserves intended launch concurrency; no production retry or process manager is added.
+
+Nonbehavioral records C13/C16/V19 retain their roadmap/archive/contract evidence in the finding rows. C5 removes the Cargo smoke driver after capturing the final attempted native replay; source remains archived and all-target checks include its removal. They do not require invented runtime checkpoints. ARecords/AOracle add only provenance; current proof sources and all application/test code remain unchanged.
