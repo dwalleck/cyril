@@ -1,0 +1,12 @@
+2026-09-07T13:07:51.829333Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
+2026-09-07T13:07:53.819904Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:07:53.822227Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=InProgress
+2026-09-07T13:07:53.825775Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
+2026-09-07T13:07:55.872425Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:07:55.873002Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=InProgress
+2026-09-07T13:07:55.875796Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
+2026-09-07T13:07:58.241632Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:07:58.244032Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Failed
+2026-09-07T13:08:05.644665Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Read status=Pending
+2026-09-07T13:08:05.645186Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=InProgress
+2026-09-07T13:08:05.646938Z DEBUG cyril_workbench::reviewer: review native tool observation kind=Other status=Completed
