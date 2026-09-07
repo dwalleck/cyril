@@ -47,18 +47,28 @@ fn read_settings_at(path: &std::path::Path) -> Map<String, Value> {
 /// (used verbatim, NOT joined with `.kiro`), otherwise `$HOME/.kiro`. Reading a
 /// different path would silently fall back to empty settings for users who set
 /// `$KIRO_HOME` — exactly the bare-fallback-flags bug this handshake fixes.
-fn kiro_home_dir() -> Option<std::path::PathBuf> {
-    crate::kiro_agent_config::kiro_home_dir()
+fn kiro_home_dir(environment: &crate::types::SpawnEnvironment) -> Option<std::path::PathBuf> {
+    use std::ffi::OsStr;
+    match environment.effective_var(OsStr::new("KIRO_HOME")) {
+        Some(path) if !path.is_empty() => Some(path.into()),
+        _ => environment
+            .effective_var(OsStr::new("HOME"))
+            .or_else(|| environment.effective_var(OsStr::new("USERPROFILE")))
+            .map(|home| std::path::PathBuf::from(home).join(".kiro")),
+    }
 }
 
 /// Read the global kiro-cli settings (`<kiro-home>/settings/cli.json`, where
 /// `<kiro-home>` follows [`kiro_home_dir`]). Missing home or file → empty map (see
 /// [`read_settings_at`]). Workspace-scoped overlay is out of scope for v1
 /// (tracked: cyril-sa39).
-pub(crate) fn read_cli_settings() -> Map<String, Value> {
-    match kiro_home_dir() {
+fn read_cli_settings(environment: &crate::types::SpawnEnvironment) -> Map<String, Value> {
+    match kiro_home_dir(environment) {
         Some(dir) => read_settings_at(&dir.join("settings/cli.json")),
-        None => Map::new(),
+        None => {
+            tracing::debug!("selected environment has no Kiro settings home; using KAS defaults");
+            Map::new()
+        }
     }
 }
 
@@ -169,13 +179,15 @@ pub(crate) fn marshal_agent_settings(e: &Map<String, Value>) -> Value {
 }
 
 /// The opaque `_meta.kiro.settings` content for the KAS handshake
-/// advertisement (cyril-nhzw). Reads the live global cli.json each call
-/// (initialize is once per session). Content only: the presence-derived keys
+/// advertisement (cyril-nhzw). Captured once from the selected launch environment
+/// before constructing the engine. Content only: the presence-derived keys
 /// (`hooks` per [ADR-0010]'s direction, fs dialect flags) are assembled by
 /// `engine::client_capabilities` from the adapter set (cyril-dn91) — this
 /// module no longer decides advertisement structure.
-pub(crate) fn settings_extra_value() -> serde_json::Value {
-    marshal_agent_settings(&read_cli_settings())
+pub(crate) fn settings_extra_value(
+    environment: &crate::types::SpawnEnvironment,
+) -> serde_json::Value {
+    marshal_agent_settings(&read_cli_settings(environment))
 }
 
 #[cfg(test)]
@@ -183,6 +195,39 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+
+    #[test]
+    fn selected_home_fallback_and_snapshot_ignore_later_file_changes() {
+        use crate::protocol::engine::{Engine, KasEngine};
+        use crate::types::SpawnEnvironment;
+        let root = tempfile::tempdir().unwrap();
+        let settings = root.path().join(".kiro/settings");
+        std::fs::create_dir_all(&settings).unwrap();
+        let file = settings.join("cli.json");
+        std::fs::write(&file, r#"{"chat.enableThinking":false}"#).unwrap();
+        for home_key in ["HOME", "USERPROFILE"] {
+            let environment = SpawnEnvironment::Replace(std::collections::BTreeMap::from([
+                (home_key.into(), root.path().as_os_str().to_owned()),
+                ("KIRO_HOME".into(), "".into()),
+            ]));
+            let engine = KasEngine {
+                settings: settings_extra_value(&environment),
+                ..Default::default()
+            };
+            std::fs::write(&file, r#"{"chat.enableThinking":true}"#).unwrap();
+            assert_eq!(
+                engine.settings_extra().unwrap()["thinking"]["enabled"],
+                false
+            );
+            assert_eq!(
+                settings_extra_value(&environment)["thinking"]["enabled"],
+                true
+            );
+            std::fs::write(&file, r#"{"chat.enableThinking":false}"#).unwrap();
+        }
+        let empty = SpawnEnvironment::Replace(std::collections::BTreeMap::new());
+        assert_eq!(settings_extra_value(&empty)["thinking"]["enabled"], true);
+    }
 
     #[test]
     fn absent_file_defaults() {

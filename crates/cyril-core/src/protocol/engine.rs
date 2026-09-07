@@ -248,11 +248,22 @@ impl Engine for V2Engine {
 /// cyril-ufie) capabilities so KAS delegates file I/O and shell execution to
 /// cyril's host-io responders instead of running them in-process.
 #[cfg(feature = "kas")]
-#[derive(Default)]
 pub(crate) struct KasEngine {
     /// The decided hooks advertisement (cyril-jiyn); carried by the engine so
     /// `client_capabilities()` stays parameterless on the trait.
     pub(crate) hooks_mode: crate::types::kas_hooks::KasHooksMode,
+    /// Immutable settings captured from this launch's selected environment.
+    pub(crate) settings: serde_json::Value,
+}
+
+#[cfg(all(any(test, feature = "test-support"), feature = "kas"))]
+impl Default for KasEngine {
+    fn default() -> Self {
+        Self {
+            hooks_mode: crate::types::kas_hooks::KasHooksMode::default(),
+            settings: super::kas::settings::marshal_agent_settings(&serde_json::Map::new()),
+        }
+    }
 }
 
 #[cfg(feature = "kas")]
@@ -291,7 +302,7 @@ impl Engine for KasEngine {
     /// cyril-nhzw: `_meta.kiro.settings` (AgentSettings marshaled from the
     /// user's kiro-cli cli.json) so KAS honors the same feature flags v2 would.
     fn settings_extra(&self) -> Option<serde_json::Value> {
-        Some(super::kas::settings::settings_extra_value())
+        Some(self.settings.clone())
     }
 
     fn convert_session_update(&self, args: &acp::SessionNotification) -> Option<Notification> {
@@ -370,7 +381,14 @@ mod tests {
             Adapters::NONE,
             "V2 installs no adapters even in a kas build"
         );
-        let hooks_of = |mode| KasEngine { hooks_mode: mode }.adapters().hooks;
+        let hooks_of = |mode| {
+            KasEngine {
+                hooks_mode: mode,
+                ..Default::default()
+            }
+            .adapters()
+            .hooks
+        };
         assert_eq!(hooks_of(KasHooksMode::Off), HooksAdapter::None);
         assert_eq!(hooks_of(KasHooksMode::Host), HooksAdapter::Inbound);
         assert_eq!(hooks_of(KasHooksMode::Kas), HooksAdapter::Outbound);
@@ -483,7 +501,10 @@ mod tests {
         use crate::types::kas_hooks::KasHooksMode;
 
         let hooks_json = |mode: KasHooksMode| -> Option<serde_json::Value> {
-            let caps = client_capabilities(&KasEngine { hooks_mode: mode });
+            let caps = client_capabilities(&KasEngine {
+                hooks_mode: mode,
+                ..Default::default()
+            });
             let meta = serde_json::to_value(caps.meta.expect("KAS meta present")).unwrap();
             meta.get("kiro").and_then(|k| k.get("hooks")).cloned()
         };

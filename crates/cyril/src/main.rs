@@ -70,6 +70,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // v1 ships no tuning surface for it. Unlike the fields above,
             // which mirror `[agent]` config keys, this one is a constant.
             stall_threshold: cyril_core::protocol::bridge::DEFAULT_STALL_THRESHOLD,
+            environment: cyril_core::types::SpawnEnvironment::Inherit,
+            required_cli_version: None,
         },
         cwd.clone(),
     )?;

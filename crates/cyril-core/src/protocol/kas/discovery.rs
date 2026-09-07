@@ -280,7 +280,8 @@ fn list_kas_entries(root: &Path) -> Vec<(String, bool)> {
 /// which is the best available guess when the CLI can't be asked.
 fn installed_cli_version() -> Option<(u32, u32, u32)> {
     let step =
-        super::version::kiro_cli_version("kiro-cli").and_then(|v| super::version::parse_semver(&v));
+        super::version::kiro_cli_version("kiro-cli", &crate::types::SpawnEnvironment::Inherit)
+            .and_then(|v| super::version::parse_semver(&v));
     match step {
         Ok(v) => Some(v),
         Err(e) => {

@@ -44,8 +44,13 @@ pub(crate) fn flag_for_version(version: &str) -> Result<&'static str, String> {
 
 /// Read the installed kiro-cli version by running `<program> --version` and
 /// pulling the first digit-leading token (`kiro-cli 2.8.1` → `2.8.1`).
-pub(crate) fn kiro_cli_version(program: &str) -> Result<String, String> {
-    let out = std::process::Command::new(program)
+pub(crate) fn kiro_cli_version(
+    program: &str,
+    environment: &crate::types::SpawnEnvironment,
+) -> Result<String, String> {
+    let mut command = std::process::Command::new(program);
+    environment.apply(&mut command);
+    let out = command
         .arg("--version")
         .output()
         .map_err(|e| format!("run `{program} --version`: {e}"))?;
@@ -69,8 +74,20 @@ pub(crate) fn kiro_cli_version(program: &str) -> Result<String, String> {
 /// Build the wrapper spawn command: the bound agent command (`kiro-cli acp`)
 /// with `--agent-engine <flag>` appended, the flag resolved from the installed
 /// version. Custom `agent_command` args are preserved (the flag is appended).
-pub(crate) fn build_wrapper_command(agent_command: &AgentCommand) -> Result<AgentCommand, String> {
-    let version = kiro_cli_version(agent_command.program())?;
+pub(crate) fn build_wrapper_command(
+    agent_command: &AgentCommand,
+    environment: &crate::types::SpawnEnvironment,
+    required_version: Option<&str>,
+) -> Result<AgentCommand, String> {
+    let version = kiro_cli_version(agent_command.program(), environment)?;
+    if let Some(required) = required_version
+        && version != required
+    {
+        return Err(format!(
+            "this launch requires kiro-cli {required}, found {version} at {}; install the required version or select its executable",
+            agent_command.program(),
+        ));
+    }
     let flag = flag_for_version(&version)?;
     let mut args = agent_command.args().to_vec();
     args.push("--agent-engine".to_string());

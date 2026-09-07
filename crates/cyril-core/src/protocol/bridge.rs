@@ -161,6 +161,10 @@ pub struct SpawnConfig {
     pub present_as: Option<PresentAs>,
     pub kas_hooks: KasHooksMode,
     pub stall_threshold: std::time::Duration,
+    /// Environment used by both the agent and the existing CLI version probe.
+    pub environment: crate::types::SpawnEnvironment,
+    /// Exact CLI version token required for KAS Wrapper launches.
+    pub required_cli_version: Option<String>,
 }
 
 pub const DEFAULT_STALL_THRESHOLD: std::time::Duration = std::time::Duration::from_secs(30);
@@ -174,6 +178,8 @@ impl Default for SpawnConfig {
             present_as: None,
             kas_hooks: KasHooksMode::default(),
             stall_threshold: DEFAULT_STALL_THRESHOLD,
+            environment: crate::types::SpawnEnvironment::Inherit,
+            required_cli_version: None,
         }
     }
 }
@@ -257,6 +263,7 @@ fn engine_for(config: &SpawnConfig) -> Result<std::rc::Rc<dyn Engine>, String> {
         #[cfg(feature = "kas")]
         AgentEngine::Kas => Ok(std::rc::Rc::new(crate::protocol::engine::KasEngine {
             hooks_mode: config.kas_hooks,
+            settings: crate::protocol::kas::settings::settings_extra_value(&config.environment),
         })),
         #[cfg(not(feature = "kas"))]
         AgentEngine::Kas => Err("KAS engine requires a build with --features kas".to_string()),
@@ -294,17 +301,23 @@ fn resolve_host_shell(
 #[cfg(feature = "kas")]
 fn resolve_spawn_command(
     agent_command: &AgentCommand,
-    agent_engine: AgentEngine,
-    kas_spawn: KasSpawn,
+    config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
-    match agent_engine {
-        AgentEngine::Kas => match kas_spawn {
+    if config.required_cli_version.is_some()
+        && (config.engine != AgentEngine::Kas || config.kas_spawn != KasSpawn::Wrapper)
+    {
+        return Err("required_cli_version requires the KAS Wrapper launch path".into());
+    }
+    match config.engine {
+        AgentEngine::Kas => match config.kas_spawn {
             KasSpawn::Free => {
                 crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
             }
-            KasSpawn::Wrapper => {
-                crate::protocol::kas::version::build_wrapper_command(agent_command)
-            }
+            KasSpawn::Wrapper => crate::protocol::kas::version::build_wrapper_command(
+                agent_command,
+                &config.environment,
+                config.required_cli_version.as_deref(),
+            ),
         },
         AgentEngine::V2 => Ok(agent_command.clone()),
     }
@@ -313,9 +326,13 @@ fn resolve_spawn_command(
 #[cfg(not(feature = "kas"))]
 fn resolve_spawn_command(
     agent_command: &AgentCommand,
-    _agent_engine: AgentEngine,
-    _kas_spawn: KasSpawn,
+    config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
+    if config.required_cli_version.is_some() {
+        return Err(
+            "required_cli_version requires a build with --features kas and KAS Wrapper".into(),
+        );
+    }
     Ok(agent_command.clone())
 }
 
@@ -328,10 +345,11 @@ async fn run_bridge(
 ) -> crate::Result<()> {
     let engine = engine_for(&config)
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
-    let command = resolve_spawn_command(agent_command, config.engine, config.kas_spawn)
+    let command = resolve_spawn_command(agent_command, &config)
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
     crate::platform::path::bind_agent_location(command.program());
-    let process = crate::protocol::transport::AgentProcess::spawn(&command, cwd).await?;
+    let process =
+        crate::protocol::transport::AgentProcess::spawn(&command, cwd, &config.environment).await?;
     #[cfg(not(feature = "kas"))]
     let _host_shell = host_shell;
     let domain_config = crate::protocol::domain_mediator::DomainConfig {
