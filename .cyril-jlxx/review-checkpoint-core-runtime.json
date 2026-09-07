@@ -74,6 +74,7 @@
     "change": "Resolve runnable host Python before environment replacement; pass -I and script via AgentCommand argv. No production changes.",
     "baseline_control": {"peer_test_exit": 0, "host_python_selected": false, "control_exit": 1},
     "corrected_control": {"peer_test_exit": 0, "host_python_selected": true, "control_exit": 0},
+    "postquote_execution": "review-native/python-selection-postquote.json",
     "local_verification": "Non-KAS and KAS configuration exchanges PASS; both core all-targets clippy selections and formatting PASS (artifact558).",
     "gate": {
       "affected_tests": "PASS",
@@ -86,7 +87,16 @@
       "mutation": "PASS: old fixed shebang leaves host marker absent",
       "restored": "PASS: host-selected interpreter completes the same exchange"
     },
-    "retained_evidence": "Production/decoder inputs and assertions unchanged; prior decoder mutations, workspace integration and shape controls remain applicable. Unix CI is refreshed on the amended assembled head.",
-    "native_acceptance": "Still blocked on user sign-in; no native result upgraded."
+    "retained_evidence": "Production/decoder inputs and assertions unchanged. CI34102117724 passed all 13 jobs on assembled a8577505, including the macOS configuration exchange. Later changes are evidence records only.",
+    "native_acceptance": "Still blocked on user sign-in; no native result upgraded.",
+    "ci_provenance": {
+      "run": "https://github.com/dwalleck/cyril/actions/runs/34102117724",
+      "temporary_base": "2e56ed603ea3685ceb656dfdc4ec515cfd659d93",
+      "head": "a85775058110b141fd682deb512633bdec1002a4",
+      "checkout_merge": "d5afbef7bd75203211086cd537c13f60f48fa136",
+      "checkout_and_head_tree": "86066a6ff6228081a7c4ff79da7c29d2c2f80019",
+      "checkout_log": "macOS job101678701599; artifact598",
+      "result": "PASS; identical merge/head trees; PR116 stacked base restored after CI"
+    }
   }
 }
