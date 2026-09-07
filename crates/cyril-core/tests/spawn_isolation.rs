@@ -35,7 +35,15 @@ printf '%s\n' "$request" > initialize.json
 }
 
 async fn launch(root: &Path, config: SpawnConfig) -> TestResult<String> {
-    let bridge = spawn_bridge(executable(root)?, config, root.to_owned())?;
+    launch_command(root, config, executable(root)?).await
+}
+
+async fn launch_command(
+    root: &Path,
+    config: SpawnConfig,
+    command: AgentCommand,
+) -> TestResult<String> {
+    let bridge = spawn_bridge(command, config, root.to_owned())?;
     let (_sender, mut notifications, _permissions, _sources, completion) = bridge.split();
     let reason = tokio::time::timeout(Duration::from_secs(10), async {
         while let Some(routed) = notifications.recv().await {
@@ -201,5 +209,155 @@ async fn hanging_version_probe_fails_before_workbench_deadline() -> TestResult {
         started.elapsed() < Duration::from_secs(10),
         "probe not bounded"
     );
+    Ok(())
+}
+
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn free_replacement_refuses_before_inherited_discovery() -> TestResult {
+    const ROOT: &str = "CYRIL_FREE_REPLACEMENT_FIXTURE";
+    let Some(root) = std::env::var_os(ROOT) else {
+        let root = tempfile::tempdir()?;
+        let cli = root.path().join("kiro-cli");
+        std::fs::write(
+            &cli,
+            "#!/bin/sh\nprintf '%s' \"$PARENT_ONLY_CANARY\" > \"$PROBE_JOURNAL\"\nprintf 'kiro-cli 2.21.1\\n'\n",
+        )?;
+        std::fs::set_permissions(&cli, std::fs::Permissions::from_mode(0o700))?;
+        let status = std::process::Command::new(std::env::current_exe()?)
+            .args([
+                "--exact",
+                "free_replacement_refuses_before_inherited_discovery",
+                "--nocapture",
+            ])
+            .env(ROOT, root.path())
+            .env("HOME", root.path())
+            .env("USERPROFILE", root.path())
+            .env(
+                "PATH",
+                std::env::join_paths([root.path(), Path::new("/usr/bin"), Path::new("/bin")])?,
+            )
+            .env("PROBE_JOURNAL", root.path().join("probe.env"))
+            .env("PARENT_ONLY_CANARY", "parent-only-authority")
+            .env_remove("KIRO_KAS_SERVER_PATH")
+            .env_remove("KIRO_AGENT_PATH")
+            .env_remove("KIRO_HOME")
+            .status()?;
+        assert!(status.success(), "isolated free-path regression failed");
+        return Ok(());
+    };
+    let root = std::path::PathBuf::from(root);
+    let config = SpawnConfig {
+        engine: cyril_core::types::AgentEngine::Kas,
+        kas_spawn: cyril_core::types::KasSpawn::Free,
+        shell: Some("bash".into()),
+        ..SpawnConfig::default()
+    };
+    // Positive control: inherited Free discovery actually invokes our parent CLI.
+    launch(&root, config.clone()).await?;
+    let journal = root.join("probe.env");
+    assert_eq!(std::fs::read_to_string(&journal)?, "parent-only-authority");
+    std::fs::remove_file(&journal)?;
+    launch(
+        &root,
+        SpawnConfig {
+            environment: SpawnEnvironment::Replace(BTreeMap::new()),
+            ..config
+        },
+    )
+    .await?;
+    assert!(
+        !journal.exists(),
+        "rejected launch executed the inherited version probe"
+    );
+    assert!(
+        !root.join("initialize.json").exists(),
+        "rejected launch spawned an agent"
+    );
+    Ok(())
+}
+
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn verbose_version_probe_drains_both_pipes_past_capture_limit() -> TestResult {
+    let root = tempfile::tempdir()?;
+    let command = executable(root.path())?;
+    let source = std::fs::read_to_string(command.program())?;
+    // Both streams exceed the 1 MiB capture cap, not only OS pipe capacity.
+    let noise = " ".repeat(2 * 1024 * 1024);
+    std::fs::write(
+        command.program(),
+        source.replace(
+            "exit 0",
+            &format!("printf '%s' '{noise}'\nprintf '%s' '{noise}' >&2\nexit 0"),
+        ),
+    )?;
+    let mut config = kas_config(root.path(), false)?;
+    if let SpawnEnvironment::Replace(values) = &mut config.environment {
+        values.insert(
+            "PATH".into(),
+            std::env::var_os("PATH").ok_or("PATH missing")?,
+        );
+    }
+    let reason = launch_command(root.path(), config, command).await?;
+    assert!(
+        root.path().join("initialize.json").exists(),
+        "verbose successful probe blocked agent startup: {reason}"
+    );
+    Ok(())
+}
+
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn version_deadline_includes_exited_wrappers_inherited_pipes() -> TestResult {
+    let root = tempfile::tempdir()?;
+    let command = executable(root.path())?;
+    let source = std::fs::read_to_string(command.program())?;
+    std::fs::write(
+        command.program(),
+        source.replace(
+            "exit 0",
+            "/bin/sleep 60 &\nprintf '%s' \"$!\" > \"$DESCENDANT_PID\"\nexit 0",
+        ),
+    )?;
+    let mut config = kas_config(root.path(), false)?;
+    let pid_file = root.path().join("descendant.pid");
+    if let SpawnEnvironment::Replace(values) = &mut config.environment {
+        values.insert("DESCENDANT_PID".into(), pid_file.clone().into_os_string());
+    }
+    let started = std::time::Instant::now();
+    launch_command(root.path(), config, command).await?;
+    assert!(
+        started.elapsed() < Duration::from_secs(6),
+        "inherited pipe bypassed deadline"
+    );
+    assert!(
+        !root.path().join("initialize.json").exists(),
+        "timed-out probe started an agent"
+    );
+    // The process group must be gone or contain only a killed, unreaped zombie.
+    #[cfg(target_os = "linux")]
+    {
+        let pid = std::fs::read_to_string(pid_file)?.parse::<i32>()?;
+        let stat = std::path::PathBuf::from(format!("/proc/{pid}/stat"));
+        timeout(Duration::from_secs(2), async {
+            loop {
+                match std::fs::read_to_string(&stat) {
+                    Ok(value)
+                        if value
+                            .rsplit_once(") ")
+                            .is_some_and(|(_, fields)| fields.starts_with('Z')) =>
+                    {
+                        break;
+                    }
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => break,
+                    Err(error) => return Err(error),
+                    Ok(_) => tokio::time::sleep(Duration::from_millis(10)).await,
+                }
+            }
+            Ok::<_, std::io::Error>(())
+        })
+        .await??;
+    }
     Ok(())
 }

@@ -158,7 +158,7 @@ impl ProcessGroupGuard {
     /// Build from the freshly spawned child's pid. Right after spawn,
     /// `Child::id()` is `None` only in pathological cases — warn and degrade
     /// to the `kill_on_drop` backstop rather than risk a zero pgid.
-    fn new(child_pid: Option<u32>) -> Self {
+    pub(crate) fn new(child_pid: Option<u32>) -> Self {
         let pgid = child_pid
             .and_then(|pid| i32::try_from(pid).ok())
             .and_then(std::num::NonZeroI32::new);

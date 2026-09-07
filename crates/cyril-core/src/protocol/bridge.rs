@@ -162,6 +162,7 @@ pub struct SpawnConfig {
     pub kas_hooks: KasHooksMode,
     pub stall_threshold: std::time::Duration,
     /// Environment used by both the agent and the existing CLI version probe.
+    /// KAS Free launches require `Inherit`; use Wrapper with `Replace`.
     pub environment: crate::types::SpawnEnvironment,
     /// Exact CLI version token required for KAS Wrapper launches.
     pub required_cli_version: Option<String>,
@@ -299,10 +300,22 @@ fn resolve_host_shell(
 }
 
 #[cfg(feature = "kas")]
-fn resolve_spawn_command(
+async fn resolve_spawn_command(
     agent_command: &AgentCommand,
     config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
+    if config.engine == AgentEngine::Kas
+        && config.kas_spawn == KasSpawn::Free
+        && matches!(
+            config.environment,
+            crate::types::SpawnEnvironment::Replace(_)
+        )
+    {
+        return Err(
+            "KAS Free launches require an inherited environment; use Wrapper for a replacement environment"
+                .into(),
+        );
+    }
     if config.required_cli_version.is_some()
         && (config.engine != AgentEngine::Kas || config.kas_spawn != KasSpawn::Wrapper)
     {
@@ -310,21 +323,24 @@ fn resolve_spawn_command(
     }
     match config.engine {
         AgentEngine::Kas => match config.kas_spawn {
-            KasSpawn::Free => {
-                crate::protocol::kas::discovery::resolve_kas_command().map_err(|m| m.reason())
+            KasSpawn::Free => crate::protocol::kas::discovery::resolve_kas_command()
+                .await
+                .map_err(|m| m.reason()),
+            KasSpawn::Wrapper => {
+                crate::protocol::kas::version::build_wrapper_command(
+                    agent_command,
+                    &config.environment,
+                    config.required_cli_version.as_deref(),
+                )
+                .await
             }
-            KasSpawn::Wrapper => crate::protocol::kas::version::build_wrapper_command(
-                agent_command,
-                &config.environment,
-                config.required_cli_version.as_deref(),
-            ),
         },
         AgentEngine::V2 => Ok(agent_command.clone()),
     }
 }
 
 #[cfg(not(feature = "kas"))]
-fn resolve_spawn_command(
+async fn resolve_spawn_command(
     agent_command: &AgentCommand,
     config: &SpawnConfig,
 ) -> Result<AgentCommand, String> {
@@ -346,6 +362,7 @@ async fn run_bridge(
     let engine = engine_for(&config)
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
     let command = resolve_spawn_command(agent_command, &config)
+        .await
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
     crate::platform::path::bind_agent_location(command.program());
     let process =
