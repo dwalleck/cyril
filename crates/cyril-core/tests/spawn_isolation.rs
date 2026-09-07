@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::{AgentCommand, Notification, SpawnEnvironment};
+use tokio::time::timeout;
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
@@ -163,5 +164,42 @@ async fn exact_version_mismatch_never_starts_agent() -> TestResult {
     assert!(root.path().join("probe.env").exists());
     assert!(!root.path().join("initialize.json").exists());
     assert!(!root.path().join("environment.txt").exists());
+    Ok(())
+}
+#[cfg(feature = "kas")]
+#[tokio::test]
+async fn hanging_version_probe_fails_before_workbench_deadline() -> TestResult {
+    let root = tempfile::tempdir()?;
+    let path = root.path().join("hanging-agent.sh");
+    std::fs::write(
+        &path,
+        "#!/bin/sh\nif [ \"$1\" = \"--version\" ]; then sleep 60; fi\n",
+    )?;
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700))?;
+    let started = std::time::Instant::now();
+    let bridge = spawn_bridge(
+        AgentCommand::new(path.to_str().ok_or("fixture path")?),
+        kas_config(root.path(), false)?,
+        root.path().to_owned(),
+    )?;
+    let (_sender, mut notifications, _permissions, _sources, completion) = bridge.split();
+    let reason = timeout(Duration::from_secs(10), async {
+        while let Some(routed) = notifications.recv().await {
+            if let Notification::BridgeDisconnected { reason } = routed.notification {
+                return reason;
+            }
+        }
+        "notifications closed before bridge failure".to_string()
+    })
+    .await
+    .map_err(|_| "hanging version probe did not fail within deadline")?;
+    timeout(Duration::from_secs(10), completion)
+        .await?
+        .map_err(|_| "bridge completion lost")?;
+    assert!(reason.contains("version"), "{reason}");
+    assert!(
+        started.elapsed() < Duration::from_secs(10),
+        "probe not bounded"
+    );
     Ok(())
 }

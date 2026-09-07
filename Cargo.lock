@@ -786,6 +786,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cyril-workbench"
+version = "0.2.0-alpha.1"
+dependencies = [
+ "cyril-core",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "darling"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

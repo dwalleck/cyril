@@ -5,6 +5,7 @@ members = [
     "crates/cyril-memory",
     "crates/cyril-ui",
     "crates/cyril-voice",
+    "crates/cyril-workbench",
     "crates/cyril",
 ]
 
