@@ -1098,6 +1098,12 @@ impl App {
         self.handle_notification_inner(routed, true)
     }
 
+    /// Route one notification, optionally observing usage.
+    ///
+    /// `observe_usage` is `false` only for frames replayed out of
+    /// `pending_session_notifications` (cyril-68ag): the usage observer runs
+    /// before routing, so it already saw those frames on first receipt and
+    /// observing them again would double-count the turn.
     fn handle_notification_inner(
         &mut self,
         routed: RoutedNotification,
@@ -3841,7 +3847,7 @@ mod tests {
             "SessionCreated and both tool lifecycle frames reach the main UI exactly once"
         );
         assert!(
-            !logs.contains("unattributable, dropping"),
+            logs.trim().is_empty(),
             "the observed KAS startup ordering is valid and must not warn: {logs}"
         );
     }
