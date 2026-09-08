@@ -39,3 +39,6 @@ none — implement with normal repository fix/TDD
 Local — the focused behavioral verification named here records PASS: `cargo test -p cyril --features kas startup_cloud_config_frame_is_buffered_and_replayed_without_warning`; after the hand-off append `Result: <YYYY-MM-DD> | <command> | <PASS or FAIL>`
 
 Result: 2026-09-02 | `cargo test -p cyril --features kas startup_cloud_config_frame_is_buffered_and_replayed_without_warning` | PASS
+Result: 2026-09-08 | `cargo test -p cyril --features kas startup_cloud_config_frame_is_buffered_and_replayed_without_warning` (after rebase onto main 512b7d0b and fence repair) | PASS
+Mutation proof: 2026-09-08 | Pending arm `tracing::debug!` → `tracing::warn!` makes the fixture test FAIL on `logs.trim().is_empty()`; restored → PASS | PASS
+Lane evidence: 2026-09-08 | `cargo fmt --all -- --check`; `cargo clippy --workspace --all-targets --all-features -- -D warnings`; `cargo nextest run --workspace --all-features` (1922 passed, 13 skipped); `cargo test --doc --workspace --all-features`; `cargo clippy --workspace --all-targets -- -D warnings`; `cargo nextest run --workspace` (1920 passed, 13 skipped) | PASS
