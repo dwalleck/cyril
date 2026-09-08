@@ -1,0 +1,3 @@
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess_b8497059-ddae-4e37-8068-bece383c216f","update":{"sessionUpdate":"tool_call","toolCallId":"cbff6417-7455-4298-85c5-e9743d184d4e","title":"Fetching your cloud config","kind":"other","status":"in_progress","_meta":{"kiro":{"toolId":"fetch_cloud_config"}}}}}
+{"jsonrpc":"2.0","id":12,"result":{"sessionId":"sess_b8497059-ddae-4e37-8068-bece383c216f"}}
+{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"sess_b8497059-ddae-4e37-8068-bece383c216f","update":{"sessionUpdate":"tool_call_update","toolCallId":"cbff6417-7455-4298-85c5-e9743d184d4e","status":"completed","rawOutput":{"kind":"notEnabled","retracted":false}}}}
