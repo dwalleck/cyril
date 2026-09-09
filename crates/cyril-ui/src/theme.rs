@@ -653,6 +653,197 @@ pub fn resolve_no_color(id: ThemeId) -> Theme {
     }
 }
 
+/// Operator-facing spellings for every bundled palette: `(id, config id, label)`.
+///
+/// The config file is a public contract. These strings must not change when a
+/// Rust variant is renamed, which is why they are declared rather than derived
+/// from the variant name; `ThemeId::name()` stays a Rust-facing identity.
+const BUNDLED_APPEARANCES: [(ThemeId, &str, &str); 6] = [
+    (ThemeId::CyrilDark, "cyril-dark", "Cyril Dark"),
+    (ThemeId::CyrilLight, "cyril-light", "Cyril Light"),
+    (
+        ThemeId::HighContrastDark,
+        "high-contrast-dark",
+        "High Contrast Dark",
+    ),
+    (
+        ThemeId::HighContrastLight,
+        "high-contrast-light",
+        "High Contrast Light",
+    ),
+    (
+        ThemeId::CatppuccinMocha,
+        "catppuccin-mocha",
+        "Catppuccin Mocha",
+    ),
+    (ThemeId::GruvboxDark, "gruvbox-dark", "Gruvbox Dark"),
+];
+
+/// The palette an absent or unrecognized `theme` setting falls back to.
+pub const DEFAULT_THEME: ThemeId = ThemeId::CyrilDark;
+
+/// The operator-facing id of a bundled palette.
+pub fn theme_config_id(theme: ThemeId) -> &'static str {
+    BUNDLED_APPEARANCES
+        .iter()
+        .find(|(id, _, _)| *id == theme)
+        .map(|(_, config_id, _)| *config_id)
+        .unwrap_or_else(|| BUNDLED_APPEARANCES[0].1)
+}
+
+/// The human-readable label of a bundled palette, for the `/theme` picker.
+pub fn theme_label(theme: ThemeId) -> &'static str {
+    BUNDLED_APPEARANCES
+        .iter()
+        .find(|(id, _, _)| *id == theme)
+        .map(|(_, _, label)| *label)
+        .unwrap_or_else(|| BUNDLED_APPEARANCES[0].2)
+}
+
+/// Parse an operator-facing palette id. Exact match only.
+pub fn parse_theme_id(value: &str) -> Option<ThemeId> {
+    BUNDLED_APPEARANCES
+        .iter()
+        .find(|(_, config_id, _)| *config_id == value)
+        .map(|(theme, _, _)| *theme)
+}
+
+/// A requested color mode: a fixed mode, or "decide from the environment".
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColorModeRequest {
+    Automatic,
+    Fixed(ColorMode),
+}
+
+/// Parse an operator-facing `color_mode` value. Exact match only.
+pub fn parse_color_mode(value: &str) -> Option<ColorModeRequest> {
+    match value {
+        "automatic" => Some(ColorModeRequest::Automatic),
+        "truecolor" => Some(ColorModeRequest::Fixed(ColorMode::TrueColor)),
+        "ansi256" => Some(ColorModeRequest::Fixed(ColorMode::Ansi256)),
+        "ansi16" => Some(ColorModeRequest::Fixed(ColorMode::Ansi16)),
+        "none" => Some(ColorModeRequest::Fixed(ColorMode::None)),
+        _ => None,
+    }
+}
+
+/// The process environment values color-mode detection depends on.
+///
+/// Injected rather than read: `cyril-ui` never touches `std::env`, so the
+/// precedence is a pure function and its tests need no environment mutation.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ColorEnvironment {
+    pub no_color: Option<String>,
+    pub color_term: Option<String>,
+    pub term: Option<String>,
+    pub is_windows: bool,
+}
+
+/// First match wins. `ColorModeRequest::Fixed` short-circuits every rule.
+pub fn detect_color_mode(request: ColorModeRequest, environment: &ColorEnvironment) -> ColorMode {
+    if let ColorModeRequest::Fixed(mode) = request {
+        return mode;
+    }
+    if environment
+        .no_color
+        .as_deref()
+        .is_some_and(|value| !value.is_empty())
+    {
+        return ColorMode::None;
+    }
+    if matches!(
+        environment.color_term.as_deref(),
+        Some("truecolor" | "24bit")
+    ) {
+        return ColorMode::TrueColor;
+    }
+    if environment.is_windows {
+        return ColorMode::TrueColor;
+    }
+    if environment
+        .term
+        .as_deref()
+        .is_some_and(|term| term.contains("256color"))
+    {
+        return ColorMode::Ansi256;
+    }
+    if environment.term.as_deref() == Some("dumb") {
+        return ColorMode::None;
+    }
+    ColorMode::TrueColor
+}
+
+/// A recognized key whose value was not recognized.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AppearanceDiagnostic {
+    pub key: &'static str,
+    pub value: String,
+    pub default: &'static str,
+}
+
+/// The appearance a process should start with, plus one diagnostic per
+/// unrecognized value. An unrecognized value falls back to its own key's
+/// default and leaves every other key alone.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StartupAppearance {
+    pub theme: ThemeId,
+    pub mode: ColorMode,
+    pub diagnostics: Vec<AppearanceDiagnostic>,
+}
+
+impl StartupAppearance {
+    /// The startup appearance with no configuration at all.
+    pub fn default_with(environment: &ColorEnvironment) -> Self {
+        Self {
+            theme: DEFAULT_THEME,
+            mode: detect_color_mode(ColorModeRequest::Automatic, environment),
+            diagnostics: Vec::new(),
+        }
+    }
+}
+
+/// Resolve `[ui] theme` and `[ui] color_mode` into a startup appearance.
+pub fn resolve_startup_appearance(
+    theme: Option<&str>,
+    color_mode: Option<&str>,
+    environment: &ColorEnvironment,
+) -> StartupAppearance {
+    let mut diagnostics = Vec::new();
+    let theme = match theme {
+        None => DEFAULT_THEME,
+        Some(value) => match parse_theme_id(value) {
+            Some(theme) => theme,
+            None => {
+                diagnostics.push(AppearanceDiagnostic {
+                    key: "theme",
+                    value: value.to_owned(),
+                    default: theme_config_id(DEFAULT_THEME),
+                });
+                DEFAULT_THEME
+            }
+        },
+    };
+    let request = match color_mode {
+        None => ColorModeRequest::Automatic,
+        Some(value) => match parse_color_mode(value) {
+            Some(request) => request,
+            None => {
+                diagnostics.push(AppearanceDiagnostic {
+                    key: "color_mode",
+                    value: value.to_owned(),
+                    default: "automatic",
+                });
+                ColorModeRequest::Automatic
+            }
+        },
+    };
+    StartupAppearance {
+        theme,
+        mode: detect_color_mode(request, environment),
+        diagnostics,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1786,5 +1977,224 @@ mod tests {
             println!("{}\tsyntax\tnone", theme_id.name());
         }
         println!("END_NO_COLOR_PROBE");
+    }
+
+    // ── Appearance vocabulary and detection (cyril-qaq0) ────────────────────
+
+    const REJECTED_THEME_IDS: [&str; 5] =
+        ["", "CyrilDark", "cyril_dark", "cyril-dark ", "solarized"];
+    const REJECTED_COLOR_MODES: [&str; 5] = ["", "auto", "24bit", "ANSI256", "none "];
+
+    #[test]
+    fn parse_theme_id_covers_exactly_the_bundled_ids() {
+        let mut seen = std::collections::HashSet::new();
+        for theme in ThemeId::ALL.iter().copied() {
+            let config_id = theme_config_id(theme);
+            assert_eq!(parse_theme_id(config_id), Some(theme), "{config_id}");
+            assert!(seen.insert(config_id), "duplicate config id {config_id}");
+            let label = theme_label(theme);
+            assert!(!label.is_empty(), "{config_id} needs a label");
+        }
+        assert_eq!(seen.len(), ThemeId::ALL.len());
+        for rejected in REJECTED_THEME_IDS {
+            assert_eq!(
+                parse_theme_id(rejected),
+                None,
+                "{rejected:?} must be rejected"
+            );
+        }
+    }
+
+    #[test]
+    fn parse_color_mode_covers_exactly_the_five_values() {
+        assert_eq!(
+            parse_color_mode("automatic"),
+            Some(ColorModeRequest::Automatic)
+        );
+        for (value, mode) in [
+            ("truecolor", ColorMode::TrueColor),
+            ("ansi256", ColorMode::Ansi256),
+            ("ansi16", ColorMode::Ansi16),
+            ("none", ColorMode::None),
+        ] {
+            assert_eq!(parse_color_mode(value), Some(ColorModeRequest::Fixed(mode)));
+        }
+        for rejected in REJECTED_COLOR_MODES {
+            assert_eq!(
+                parse_color_mode(rejected),
+                None,
+                "{rejected:?} must be rejected"
+            );
+        }
+    }
+
+    /// One row per line of the spec's precedence table, plus the combination
+    /// rows. Names match `.cyril-qaq0/oracle-precedence.py` case for case.
+    fn detection_cases() -> Vec<(&'static str, Option<&'static str>, ColorEnvironment)> {
+        let env = |no_color: Option<&str>,
+                   color_term: Option<&str>,
+                   term: Option<&str>,
+                   is_windows: bool| {
+            ColorEnvironment {
+                no_color: no_color.map(str::to_owned),
+                color_term: color_term.map(str::to_owned),
+                term: term.map(str::to_owned),
+                is_windows,
+            }
+        };
+        vec![
+            (
+                "explicit-beats-no-color",
+                Some("ansi256"),
+                env(Some("1"), Some("truecolor"), Some("xterm-256color"), false),
+            ),
+            (
+                "explicit-none",
+                Some("none"),
+                env(None, Some("truecolor"), Some("xterm-256color"), false),
+            ),
+            (
+                "explicit-ansi16",
+                Some("ansi16"),
+                env(Some("1"), None, Some("dumb"), true),
+            ),
+            (
+                "no-color-nonempty",
+                None,
+                env(Some("1"), Some("truecolor"), Some("xterm-256color"), false),
+            ),
+            (
+                "no-color-empty-is-unset",
+                None,
+                env(Some(""), Some("truecolor"), Some("xterm-256color"), false),
+            ),
+            (
+                "colorterm-truecolor",
+                None,
+                env(None, Some("truecolor"), Some("xterm"), false),
+            ),
+            (
+                "colorterm-24bit",
+                None,
+                env(None, Some("24bit"), Some("xterm"), false),
+            ),
+            (
+                "colorterm-other-falls-through",
+                None,
+                env(None, Some("yes"), Some("xterm-256color"), false),
+            ),
+            (
+                "windows-default",
+                None,
+                env(None, None, Some("xterm"), true),
+            ),
+            (
+                "windows-loses-to-no-color",
+                None,
+                env(Some("1"), None, Some("xterm"), true),
+            ),
+            (
+                "term-256color",
+                None,
+                env(None, None, Some("xterm-256color"), false),
+            ),
+            ("term-dumb", None, env(None, None, Some("dumb"), false)),
+            (
+                "term-other-defaults-truecolor",
+                None,
+                env(None, None, Some("xterm"), false),
+            ),
+            ("all-unset", None, env(None, None, None, false)),
+        ]
+    }
+
+    fn request(value: &str) -> ColorModeRequest {
+        match parse_color_mode(value) {
+            Some(request) => request,
+            None => panic!("detection case uses an unknown color_mode value {value:?}"),
+        }
+    }
+
+    fn mode_config_id(mode: ColorMode) -> &'static str {
+        match mode {
+            ColorMode::TrueColor => "truecolor",
+            ColorMode::Ansi256 => "ansi256",
+            ColorMode::Ansi16 => "ansi16",
+            ColorMode::None => "none",
+        }
+    }
+
+    #[test]
+    fn detection_precedence_matches_every_table_row() {
+        for (name, explicit, environment) in detection_cases() {
+            let request = explicit.map(request).unwrap_or(ColorModeRequest::Automatic);
+            let mode = detect_color_mode(request, &environment);
+            let expected = match name {
+                "explicit-beats-no-color" => ColorMode::Ansi256,
+                "explicit-none" => ColorMode::None,
+                "explicit-ansi16" => ColorMode::Ansi16,
+                "no-color-nonempty" | "windows-loses-to-no-color" | "term-dumb" => ColorMode::None,
+                "colorterm-truecolor"
+                | "colorterm-24bit"
+                | "no-color-empty-is-unset"
+                | "windows-default"
+                | "term-other-defaults-truecolor"
+                | "all-unset" => ColorMode::TrueColor,
+                "colorterm-other-falls-through" | "term-256color" => ColorMode::Ansi256,
+                other => panic!("unclassified case {other}"),
+            };
+            assert_eq!(
+                mode_config_id(mode),
+                mode_config_id(expected),
+                "{name} resolved to the wrong mode"
+            );
+        }
+    }
+
+    #[test]
+    fn startup_appearance_reports_one_diagnostic_per_unknown_key() {
+        let environment = ColorEnvironment::default();
+        let clean = resolve_startup_appearance(Some("gruvbox-dark"), Some("ansi16"), &environment);
+        assert_eq!(clean.theme, ThemeId::GruvboxDark);
+        assert_eq!(clean.mode, ColorMode::Ansi16);
+        assert!(clean.diagnostics.is_empty());
+
+        let unknown = resolve_startup_appearance(Some("cyrl-light"), Some("bogus"), &environment);
+        assert_eq!(unknown.theme, DEFAULT_THEME);
+        assert_eq!(unknown.mode, ColorMode::TrueColor);
+        assert_eq!(unknown.diagnostics.len(), 2);
+        assert_eq!(unknown.diagnostics[0].key, "theme");
+        assert_eq!(unknown.diagnostics[0].value, "cyrl-light");
+        assert_eq!(unknown.diagnostics[0].default, "cyril-dark");
+        assert_eq!(unknown.diagnostics[1].key, "color_mode");
+        assert_eq!(unknown.diagnostics[1].default, "automatic");
+
+        // One unknown key must not disturb the other key's explicit value.
+        let partial = resolve_startup_appearance(Some("bogus"), Some("ansi256"), &environment);
+        assert_eq!(partial.mode, ColorMode::Ansi256);
+        assert_eq!(partial.diagnostics.len(), 1);
+    }
+
+    /// Independent-oracle probe (`.cyril-qaq0/oracles/compare_appearance.py`).
+    #[test]
+    fn emit_appearance_probe() {
+        println!("BEGIN_APPEARANCE_PROBE");
+        for theme in ThemeId::ALL.iter().copied() {
+            println!("theme\t{}\t{}", theme_config_id(theme), theme_label(theme));
+        }
+        for value in REJECTED_THEME_IDS {
+            println!("theme_rejected\t{value}");
+        }
+        for value in REJECTED_COLOR_MODES {
+            println!("mode_rejected\t{value}");
+        }
+        for (name, explicit, environment) in detection_cases() {
+            let request = explicit.map(request).unwrap_or(ColorModeRequest::Automatic);
+            println!(
+                "case\t{name}\t{}",
+                mode_config_id(detect_color_mode(request, &environment))
+            );
+        }
+        println!("END_APPEARANCE_PROBE");
     }
 }

@@ -81,8 +81,55 @@ PY
 expect_red M1-no-color-leak "syntax expected Reset" cargo test -p cyril-ui --lib all_scene_theme_mode_combinations_pass
 restore "$THEME"
 
+# --- M2: lenient theme-id parser (C1) --------------------------------------
+backup "$THEME"
+python3 - "$THEME" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+s = s.replace("""pub fn parse_theme_id(value: &str) -> Option<ThemeId> {
+    BUNDLED_APPEARANCES
+        .iter()
+        .find(|(_, config_id, _)| *config_id == value)
+        .map(|(theme, _, _)| *theme)
+}""", """pub fn parse_theme_id(value: &str) -> Option<ThemeId> {
+    Some(
+        BUNDLED_APPEARANCES
+            .iter()
+            .find(|(_, config_id, _)| *config_id == value)
+            .map(|(theme, _, _)| *theme)
+            .unwrap_or(ThemeId::CyrilDark),
+    )
+}""", 1)
+p.write_text(s)
+PY
+expect_red M2-lenient-theme-id "must be rejected" cargo test -p cyril-ui --lib parse_theme_id_covers_exactly_the_bundled_ids
+restore "$THEME"
+
+# --- M3: NO_COLOR checked before the explicit value (C3) -------------------
+backup "$THEME"
+python3 - "$THEME" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = "pub fn detect_color_mode(request: ColorModeRequest, environment: &ColorEnvironment) -> ColorMode {"
+leak = anchor + """
+    if environment
+        .no_color
+        .as_deref()
+        .is_some_and(|value| !value.is_empty())
+    {
+        return ColorMode::None;
+    }"""
+assert anchor in s, "detect_color_mode signature not found"
+s = s.replace(anchor, leak, 1)
+p.write_text(s)
+PY
+expect_red M3-precedence-order "resolved to the wrong mode" cargo test -p cyril-ui --lib detection_precedence_matches_every_table_row
+restore "$THEME"
+
 # --- restoration: every fence green again ----------------------------------
 expect_green C6-render-matrix cargo test -p cyril-ui --lib all_scene_theme_mode_combinations_pass
+expect_green C1-theme-ids cargo test -p cyril-ui --lib parse_theme_id_covers_exactly_the_bundled_ids
+expect_green C3-precedence cargo test -p cyril-ui --lib detection_precedence_matches_every_table_row
 
 if [ "$FAILURES" -ne 0 ]; then
   echo "FAIL  $FAILURES mutation proof(s) did not behave as required"

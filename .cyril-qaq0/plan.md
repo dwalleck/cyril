@@ -155,6 +155,24 @@ through the same code path, so a symmetric change cancels. `design.md`'s C6 row
 now names the observable mutation. This is a technical proof correction, not a
 decision change.
 
+### Slice 2 — Appearance vocabulary and detection policy
+
+| # | Gate | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test -p cyril-ui --lib theme::tests` → 42 passed; full workspace suite green |
+| 2 | Falsifiers | PASS | C1, C2, C3 discharged: six ids round-trip, five spellings rejected per key, 14 precedence rows match |
+| 3 | Stress fixture | PASS | Rejected spellings (`""`, `CyrilDark`, `cyril_dark`, trailing space, `solarized`; `""`, `auto`, `24bit`, `ANSI256`, `none `) all return `None`; one unknown key leaves the other key's explicit value intact |
+| 4 | Implementation vs oracle | PASS | `python3 .cyril-qaq0/oracles/compare_appearance.py` → `PASS 30 rows agree with the independent oracle` |
+| 5 | Approved module shape | PASS | Only `crates/cyril-ui/src/theme.rs` changed; protected parents at zero production delta |
+| 6 | Production-scale budget | N/A — one-off startup resolution; constant comparisons, no allocation |
+| 7 | Regression fence | PASS | `parse_theme_id_covers_exactly_the_bundled_ids`, `parse_color_mode_covers_exactly_the_five_values`, `detection_precedence_matches_every_table_row`, `startup_appearance_reports_one_diagnostic_per_unknown_key` |
+| 8 | Named mutation | PASS | M2 (lenient parser) red `"" must be rejected`; M3 (NO_COLOR before explicit) red `explicit-beats-no-color resolved to the wrong mode` |
+| 9 | Fence restored | PASS | green after restore (all three fences) |
+
+Deviation recorded: `parse_color_mode` returns a `ColorModeRequest`
+(`Automatic | Fixed(ColorMode)`) rather than a bare `ColorMode`, because
+`automatic` is not itself a mode. `design.md` C2 records the refinement.
+
 ## Tracker taxonomy
 
 - Persisting a theme choice — **permanent non-goal** (ADR 0005 + the requester's
