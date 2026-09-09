@@ -131,6 +131,30 @@ increments: N/A — the plan has one increment.
 
 ---
 
+## Checkpoint records
+
+Recorded by `checkpointed-build`. One checkpoint per completed slice.
+
+### Slice 1 — Render fence covers every bundled theme × mode
+
+| # | Gate | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test -p cyril-ui --lib render::` green; full `cargo test --workspace` green (every suite `ok`, no `FAILED`) |
+| 2 | Falsifiers | PASS | C6 discharged: 96 combinations pass, 96 distinct labels, 24 no-color passes with zero non-Reset cells |
+| 3 | Stress fixture | PASS | The 96-combination matrix itself; the pre-correction single-marker variant was red (`syntax expected Rgb(204,153,204), actual Rgb(180,142,173)`) |
+| 4 | Implementation vs oracle | PASS | `migrated_scenes_match_all_pinned_cells` → 0/7,680 differences; per-role projection from `resolve(id, mode)` |
+| 5 | Approved module shape | PASS | Test-only change: `git diff` touches only `render.rs`'s `#[cfg(test)]` module; no production line changes. The shape-fence script arrives with slice 4 |
+| 6 | Production-scale budget | N/A — test-only slice; no production loop or phase |
+| 7 | Regression fence | PASS | `render::tests::all_scene_theme_mode_combinations_pass` |
+| 8 | Named mutation | PASS | `mutations.sh` M1 (no-color role leak) red: `CyrilDark/no-color/markdown foreground cell 122: syntax expected Reset, actual Rgb(255, 255, 255)` |
+| 9 | Fence restored | PASS | green after restore |
+
+Deviation recorded: the design's original C6 mutation (`resolve` ignoring its
+`id`) was **unobservable** — the fence renders the marker and projected scenes
+through the same code path, so a symmetric change cancels. `design.md`'s C6 row
+now names the observable mutation. This is a technical proof correction, not a
+decision change.
+
 ## Tracker taxonomy
 
 - Persisting a theme choice — **permanent non-goal** (ADR 0005 + the requester's

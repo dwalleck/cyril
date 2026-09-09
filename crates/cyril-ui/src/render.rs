@@ -1296,67 +1296,81 @@ mod conversation_baseline_compatibility {
         no_color_non_reset: Option<usize>,
     }
 
+    /// Every bundled palette x every color mode x every scene.
+    ///
+    /// The marker scenes are rebuilt per palette (cyril-qaq0): the syntax
+    /// branch of `validate_projected_color` compares syntax colors against the
+    /// projected theme's own syntax component, so the marker must carry the
+    /// same component. Building the marker once made every non-CyrilDark
+    /// palette fail with `syntax expected .., actual ..`.
     fn mode_matrix() -> anyhow::Result<Vec<ModePass>> {
-        let mut marker_theme = crate::traits::test_support::marker_theme();
-        marker_theme.syntax = truecolor_theme().syntax;
-        let marker_scenes = scene_buffers(marker_theme)?;
+        let mut base_marker = crate::traits::test_support::marker_theme();
+        base_marker.syntax = truecolor_theme().syntax;
         let modes = [
             ("truecolor", ColorMode::TrueColor),
             ("ansi256", ColorMode::Ansi256),
             ("ansi16", ColorMode::Ansi16),
             ("no-color", ColorMode::None),
         ];
-        let mut passes = Vec::with_capacity(16);
+        let mut passes = Vec::with_capacity(ThemeId::ALL.len() * modes.len() * 4);
 
-        for (mode_label, mode) in modes {
-            let projected_theme = crate::theme::resolve(ThemeId::CyrilDark, mode);
-            let projected_scenes = scene_buffers(projected_theme)?;
-            for ((marker_label, marker), (projected_label, projected)) in
-                marker_scenes.iter().zip(&projected_scenes)
-            {
-                assert_eq!(marker_label, projected_label);
-                let mut no_color_non_reset = 0usize;
-                for (index, (marker_cell, projected_cell)) in
-                    marker.content().iter().zip(projected.content()).enumerate()
+        for id in ThemeId::ALL.iter().copied() {
+            let mut marker_theme = base_marker;
+            marker_theme.syntax = crate::theme::resolve(id, ColorMode::TrueColor).syntax;
+            let marker_scenes = scene_buffers(marker_theme)?;
+            for (mode_label, mode) in modes {
+                let projected_theme = crate::theme::resolve(id, mode);
+                let projected_scenes = scene_buffers(projected_theme)?;
+                for ((marker_label, marker), (projected_label, projected)) in
+                    marker_scenes.iter().zip(&projected_scenes)
                 {
-                    if marker_cell.symbol() != projected_cell.symbol()
-                        || marker_cell.modifier != projected_cell.modifier
+                    assert_eq!(marker_label, projected_label);
+                    let mut no_color_non_reset = 0usize;
+                    for (index, (marker_cell, projected_cell)) in
+                        marker.content().iter().zip(projected.content()).enumerate()
                     {
-                        return Err(anyhow::anyhow!(
-                            "{mode_label}/{marker_label} geometry drift at cell {index}"
-                        ));
-                    }
-                    validate_projected_color(
-                        marker_cell.fg,
-                        projected_cell.fg,
-                        &marker_theme,
-                        &projected_theme,
-                    )
-                    .map_err(|reason| {
-                        anyhow::anyhow!(
-                            "{mode_label}/{marker_label} foreground cell {index}: {reason}"
+                        if marker_cell.symbol() != projected_cell.symbol()
+                            || marker_cell.modifier != projected_cell.modifier
+                        {
+                            return Err(anyhow::anyhow!(
+                                "{}/{mode_label}/{marker_label} geometry drift at cell {index}",
+                                id.name()
+                            ));
+                        }
+                        validate_projected_color(
+                            marker_cell.fg,
+                            projected_cell.fg,
+                            &marker_theme,
+                            &projected_theme,
                         )
-                    })?;
-                    validate_projected_color(
-                        marker_cell.bg,
-                        projected_cell.bg,
-                        &marker_theme,
-                        &projected_theme,
-                    )
-                    .map_err(|reason| {
-                        anyhow::anyhow!(
-                            "{mode_label}/{marker_label} background cell {index}: {reason}"
+                        .map_err(|reason| {
+                            anyhow::anyhow!(
+                                "{}/{mode_label}/{marker_label} foreground cell {index}: {reason}",
+                                id.name()
+                            )
+                        })?;
+                        validate_projected_color(
+                            marker_cell.bg,
+                            projected_cell.bg,
+                            &marker_theme,
+                            &projected_theme,
                         )
-                    })?;
-                    if mode == ColorMode::None {
-                        no_color_non_reset += usize::from(projected_cell.fg != Color::Reset);
-                        no_color_non_reset += usize::from(projected_cell.bg != Color::Reset);
+                        .map_err(|reason| {
+                            anyhow::anyhow!(
+                                "{}/{mode_label}/{marker_label} background cell {index}: {reason}",
+                                id.name()
+                            )
+                        })?;
+                        if mode == ColorMode::None {
+                            no_color_non_reset += usize::from(projected_cell.fg != Color::Reset);
+                            no_color_non_reset += usize::from(projected_cell.bg != Color::Reset);
+                        }
                     }
+                    passes.push(ModePass {
+                        label: format!("{}/{mode_label}/{marker_label}", id.name()),
+                        no_color_non_reset: (mode == ColorMode::None).then_some(no_color_non_reset),
+                    });
                 }
-                passes.push(ModePass {
-                    label: format!("{mode_label}/{marker_label}"),
-                    no_color_non_reset: (mode == ColorMode::None).then_some(no_color_non_reset),
-                });
             }
         }
         Ok(passes)
@@ -1437,19 +1451,24 @@ mod conversation_baseline_compatibility {
     }
 
     #[test]
-    fn all_sixteen_scene_mode_combinations_pass() -> anyhow::Result<()> {
+    fn all_scene_theme_mode_combinations_pass() -> anyhow::Result<()> {
         let passes = mode_matrix()?;
-        assert_eq!(passes.len(), 16);
+        let expected = ThemeId::ALL.len() * 4 * 4;
+        assert_eq!(passes.len(), expected);
         let labels = passes
             .iter()
             .map(|pass| pass.label.as_str())
             .collect::<std::collections::HashSet<_>>();
-        assert_eq!(labels.len(), 16);
+        assert_eq!(labels.len(), expected);
         let no_color_counts = passes
             .iter()
             .filter_map(|pass| pass.no_color_non_reset)
             .collect::<Vec<_>>();
-        assert_eq!(no_color_counts, vec![0, 0, 0, 0]);
+        assert_eq!(no_color_counts.len(), ThemeId::ALL.len() * 4);
+        assert!(
+            no_color_counts.iter().all(|count| *count == 0),
+            "no-color must leave every cell on the terminal background: {no_color_counts:?}"
+        );
         Ok(())
     }
 
