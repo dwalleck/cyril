@@ -533,4 +533,8 @@ Use the canonical five-role vocabulary: `needs-triage`, `needs-info`, `ready-for
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
 
+### Desktop development
+
+Before designing, implementing, or reviewing the Tauri app, IPC, evidence rendering, background lifecycle, or desktop acceptance, read [the desktop guide](docs/agents/desktop.md).
+
 
