@@ -28,9 +28,18 @@ macro_rules! bundled_theme_ids {
 
 bundled_theme_ids! {
     /// Bundled visual theme identifier.
+    ///
+    /// Declaration order is the operator-facing order used by the future
+    /// activation picker (cyril-qaq0); `CyrilDark` stays first because it
+    /// remains the startup default.
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     pub enum ThemeId {
         CyrilDark,
+        CyrilLight,
+        HighContrastDark,
+        HighContrastLight,
+        CatppuccinMocha,
+        GruvboxDark,
     }
 }
 
@@ -50,15 +59,36 @@ enum SourceColor {
 }
 
 /// Syntax-highlighting component selected by a visual theme.
+///
+/// Every variant names a component bundled with Syntect's default theme set;
+/// `tests::all_bundled_syntax_themes_exist` fails if a name drifts out of that
+/// set, so a palette cannot silently render unstyled.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SyntaxTheme {
     Base16EightiesDark,
+    Base16OceanLight,
+    Base16OceanDark,
+    InspiredGitHub,
+    Base16MochaDark,
 }
 
 impl SyntaxTheme {
+    /// Every bundled syntax component, in declaration order.
+    pub const ALL: &'static [Self] = &[
+        Self::Base16EightiesDark,
+        Self::Base16OceanLight,
+        Self::Base16OceanDark,
+        Self::InspiredGitHub,
+        Self::Base16MochaDark,
+    ];
+
     pub const fn name(self) -> &'static str {
         match self {
             Self::Base16EightiesDark => "base16-eighties.dark",
+            Self::Base16OceanLight => "base16-ocean.light",
+            Self::Base16OceanDark => "base16-ocean.dark",
+            Self::InspiredGitHub => "InspiredGitHub",
+            Self::Base16MochaDark => "base16-mocha.dark",
         }
     }
 }
@@ -138,12 +168,9 @@ impl SourceTheme {
     }
 }
 
-/// The fixed Cyril Dark source palette. Role values are fixed brightened RGB
-/// (not terminal-named colors) held to per-tier WCAG contrast targets — see
-/// `docs/adr/0007-cyril-dark-contrast-contract.md` and enforced by
-/// `tests::cyril_dark_contrast_contract`.
-fn cyril_dark_source(id: ThemeId) -> SourceTheme {
+fn source(id: ThemeId) -> SourceTheme {
     match id {
+        // The fixed Cyril Dark palette: fixed brightened RGB held to per-tier WCAG targets (ADR 0007, tests::cyril_dark_contrast_contract).
         ThemeId::CyrilDark => SourceTheme {
             syntax: SyntaxTheme::Base16EightiesDark,
             canvas: SourceColor::Reset,
@@ -165,10 +192,6 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
             diff_add: SourceColor::Rgb(0x00, 0xff, 0x00),
             diff_delete: SourceColor::Rgb(0xff, 0x00, 0x00),
             diff_context: SourceColor::Rgb(0x8c, 0x8c, 0x8c),
-            // cyril-leiq: brightened off the VGA dark-half so conversation roles
-            // meet per-tier contrast on dark terminals (was 0x808000; link
-            // accent_tertiary was 0x000080 = 1.02:1 on chrome). Fixed RGB, hue
-            // preserved; contract enforced by `cyril_dark_contrast_contract`.
             emphasis: SourceColor::Rgb(0xd7, 0xba, 0x7d),
             accent_tertiary: SourceColor::Rgb(0x6c, 0xb6, 0xff),
             accent_quaternary: SourceColor::Rgb(0xcd, 0x9e, 0xe6),
@@ -181,6 +204,181 @@ fn cyril_dark_source(id: ThemeId) -> SourceTheme {
             inset_background: SourceColor::Rgb(0x28, 0x2c, 0x34),
             text_secondary: SourceColor::Rgb(0xc0, 0xc0, 0xc0),
             accent_violet: SourceColor::Rgb(0xb0, 0x8d, 0xff),
+        },
+        // Cyril Light: dark foregrounds on a painted light canvas (tier policy: .cyril-fkke/design.md).
+        ThemeId::CyrilLight => SourceTheme {
+            syntax: SyntaxTheme::Base16OceanLight,
+            canvas: SourceColor::Rgb(0xff, 0xff, 0xff),
+            chrome: SourceColor::Rgb(0xe8, 0xe8, 0xef),
+            code: SourceColor::Rgb(0xf2, 0xf2, 0xf7),
+            selection: SourceColor::Rgb(0xd7, 0xd7, 0xe8),
+            text: SourceColor::Rgb(0x1c, 0x1c, 0x28),
+            muted: SourceColor::Rgb(0x5f, 0x5f, 0x6b),
+            border: SourceColor::Rgb(0x6b, 0x6b, 0x78),
+            accent: SourceColor::Rgb(0x00, 0x69, 0x7a),
+            accent_alt: SourceColor::Rgb(0x7a, 0x3f, 0x7a),
+            user: SourceColor::Rgb(0x1a, 0x5f, 0xb4),
+            agent: SourceColor::Rgb(0x1a, 0x6b, 0x3a),
+            system: SourceColor::Rgb(0x7a, 0x3f, 0x7a),
+            info: SourceColor::Rgb(0x00, 0x69, 0x7a),
+            success: SourceColor::Rgb(0x15, 0x80, 0x3d),
+            warning: SourceColor::Rgb(0x8a, 0x5a, 0x00),
+            danger: SourceColor::Rgb(0xb3, 0x26, 0x1e),
+            diff_add: SourceColor::Rgb(0x15, 0x80, 0x3d),
+            diff_delete: SourceColor::Rgb(0xb3, 0x26, 0x1e),
+            diff_context: SourceColor::Rgb(0x5f, 0x5f, 0x6b),
+            emphasis: SourceColor::Rgb(0x7a, 0x4f, 0x00),
+            accent_tertiary: SourceColor::Rgb(0x0b, 0x5c, 0xad),
+            accent_quaternary: SourceColor::Rgb(0x7a, 0x3f, 0x9e),
+            accent_quinary: SourceColor::Rgb(0x00, 0x66, 0x6b),
+            subdued: SourceColor::Rgb(0x6b, 0x6b, 0x78),
+            subdued_positive: SourceColor::Rgb(0x2f, 0x6b, 0x3a),
+            subdued_negative: SourceColor::Rgb(0xa0, 0x4a, 0x4a),
+            soft_accent: SourceColor::Rgb(0x1a, 0x5f, 0xb4),
+            positive_accent: SourceColor::Rgb(0x1a, 0x6b, 0x3a),
+            inset_background: SourceColor::Rgb(0xf2, 0xf2, 0xf7),
+            text_secondary: SourceColor::Rgb(0x4a, 0x4a, 0x57),
+            accent_violet: SourceColor::Rgb(0x6a, 0x3f, 0xb0),
+        },
+        // High Contrast Dark: AAA targets (>=7.0 primary, >=4.5 muted) on a painted black canvas.
+        ThemeId::HighContrastDark => SourceTheme {
+            syntax: SyntaxTheme::Base16OceanDark,
+            canvas: SourceColor::Rgb(0x00, 0x00, 0x00),
+            chrome: SourceColor::Rgb(0x00, 0x00, 0x00),
+            code: SourceColor::Rgb(0x10, 0x10, 0x10),
+            selection: SourceColor::Rgb(0x00, 0x40, 0x5a),
+            text: SourceColor::Rgb(0xff, 0xff, 0xff),
+            muted: SourceColor::Rgb(0xc0, 0xc0, 0xc0),
+            border: SourceColor::Rgb(0xc0, 0xc0, 0xc0),
+            accent: SourceColor::Rgb(0x00, 0xff, 0xff),
+            accent_alt: SourceColor::Rgb(0xff, 0x9e, 0xf5),
+            user: SourceColor::Rgb(0x7f, 0xb3, 0xff),
+            agent: SourceColor::Rgb(0x7f, 0xff, 0xa0),
+            system: SourceColor::Rgb(0xff, 0xa0, 0xff),
+            info: SourceColor::Rgb(0x00, 0xff, 0xff),
+            success: SourceColor::Rgb(0x00, 0xff, 0x00),
+            warning: SourceColor::Rgb(0xff, 0xff, 0x00),
+            danger: SourceColor::Rgb(0xff, 0x80, 0x80),
+            diff_add: SourceColor::Rgb(0x00, 0xff, 0x00),
+            diff_delete: SourceColor::Rgb(0xff, 0x80, 0x80),
+            diff_context: SourceColor::Rgb(0xc0, 0xc0, 0xc0),
+            emphasis: SourceColor::Rgb(0xff, 0xe0, 0x66),
+            accent_tertiary: SourceColor::Rgb(0x8a, 0xb4, 0xff),
+            accent_quaternary: SourceColor::Rgb(0xe0, 0xa0, 0xff),
+            accent_quinary: SourceColor::Rgb(0x66, 0xe0, 0xe0),
+            subdued: SourceColor::Rgb(0xb0, 0xb0, 0xb0),
+            subdued_positive: SourceColor::Rgb(0x7f, 0xff, 0xa0),
+            subdued_negative: SourceColor::Rgb(0xff, 0x9e, 0x9e),
+            soft_accent: SourceColor::Rgb(0x7f, 0xb3, 0xff),
+            positive_accent: SourceColor::Rgb(0x7f, 0xff, 0xa0),
+            inset_background: SourceColor::Rgb(0x10, 0x10, 0x10),
+            text_secondary: SourceColor::Rgb(0xd0, 0xd0, 0xd0),
+            accent_violet: SourceColor::Rgb(0xc9, 0xa7, 0xff),
+        },
+        // High Contrast Light: AAA targets on a painted white canvas.
+        ThemeId::HighContrastLight => SourceTheme {
+            syntax: SyntaxTheme::InspiredGitHub,
+            canvas: SourceColor::Rgb(0xff, 0xff, 0xff),
+            chrome: SourceColor::Rgb(0xf0, 0xf0, 0xf0),
+            code: SourceColor::Rgb(0xf0, 0xf0, 0xf0),
+            selection: SourceColor::Rgb(0xc8, 0xdc, 0xf0),
+            text: SourceColor::Rgb(0x00, 0x00, 0x00),
+            muted: SourceColor::Rgb(0x44, 0x44, 0x44),
+            border: SourceColor::Rgb(0x44, 0x44, 0x44),
+            accent: SourceColor::Rgb(0x00, 0x4f, 0x66),
+            accent_alt: SourceColor::Rgb(0x6a, 0x1f, 0x6a),
+            user: SourceColor::Rgb(0x0a, 0x3f, 0x8f),
+            agent: SourceColor::Rgb(0x0a, 0x4a, 0x1f),
+            system: SourceColor::Rgb(0x6a, 0x1f, 0x6a),
+            info: SourceColor::Rgb(0x00, 0x4f, 0x66),
+            success: SourceColor::Rgb(0x0a, 0x5a, 0x1f),
+            warning: SourceColor::Rgb(0x5a, 0x3a, 0x00),
+            danger: SourceColor::Rgb(0x8f, 0x1a, 0x12),
+            diff_add: SourceColor::Rgb(0x0a, 0x5a, 0x1f),
+            diff_delete: SourceColor::Rgb(0x8f, 0x1a, 0x12),
+            diff_context: SourceColor::Rgb(0x44, 0x44, 0x44),
+            emphasis: SourceColor::Rgb(0x5a, 0x3a, 0x00),
+            accent_tertiary: SourceColor::Rgb(0x0a, 0x3f, 0x8f),
+            accent_quaternary: SourceColor::Rgb(0x6a, 0x1f, 0x6a),
+            accent_quinary: SourceColor::Rgb(0x00, 0x4f, 0x66),
+            subdued: SourceColor::Rgb(0x44, 0x44, 0x44),
+            subdued_positive: SourceColor::Rgb(0x0a, 0x5a, 0x1f),
+            subdued_negative: SourceColor::Rgb(0x8f, 0x1a, 0x12),
+            soft_accent: SourceColor::Rgb(0x0a, 0x3f, 0x8f),
+            positive_accent: SourceColor::Rgb(0x0a, 0x5a, 0x1f),
+            inset_background: SourceColor::Rgb(0xf0, 0xf0, 0xf0),
+            text_secondary: SourceColor::Rgb(0x33, 0x33, 0x33),
+            accent_violet: SourceColor::Rgb(0x5a, 0x1f, 0xa0),
+        },
+        // Catppuccin Mocha: upstream Mocha colors adjusted only where a tier required it; Syntect has no Catppuccin component, so base16-mocha.dark is the nearest available syntax theme.
+        ThemeId::CatppuccinMocha => SourceTheme {
+            syntax: SyntaxTheme::Base16MochaDark,
+            canvas: SourceColor::Rgb(0x1e, 0x1e, 0x2e),
+            chrome: SourceColor::Rgb(0x18, 0x18, 0x25),
+            code: SourceColor::Rgb(0x18, 0x18, 0x25),
+            selection: SourceColor::Rgb(0x45, 0x47, 0x5a),
+            text: SourceColor::Rgb(0xcd, 0xd6, 0xf4),
+            muted: SourceColor::Rgb(0x93, 0x99, 0xb2),
+            border: SourceColor::Rgb(0x6c, 0x70, 0x86),
+            accent: SourceColor::Rgb(0x89, 0xdc, 0xeb),
+            accent_alt: SourceColor::Rgb(0xcb, 0xa6, 0xf7),
+            user: SourceColor::Rgb(0x89, 0xb4, 0xfa),
+            agent: SourceColor::Rgb(0xa6, 0xe3, 0xa1),
+            system: SourceColor::Rgb(0xcb, 0xa6, 0xf7),
+            info: SourceColor::Rgb(0x89, 0xdc, 0xeb),
+            success: SourceColor::Rgb(0xa6, 0xe3, 0xa1),
+            warning: SourceColor::Rgb(0xf9, 0xe2, 0xaf),
+            danger: SourceColor::Rgb(0xf3, 0x8b, 0xa8),
+            diff_add: SourceColor::Rgb(0xa6, 0xe3, 0xa1),
+            diff_delete: SourceColor::Rgb(0xf3, 0x8b, 0xa8),
+            diff_context: SourceColor::Rgb(0x93, 0x99, 0xb2),
+            emphasis: SourceColor::Rgb(0xf9, 0xe2, 0xaf),
+            accent_tertiary: SourceColor::Rgb(0x89, 0xb4, 0xfa),
+            accent_quaternary: SourceColor::Rgb(0xcb, 0xa6, 0xf7),
+            accent_quinary: SourceColor::Rgb(0x94, 0xe2, 0xd5),
+            subdued: SourceColor::Rgb(0x7f, 0x84, 0x9c),
+            subdued_positive: SourceColor::Rgb(0x8f, 0xbf, 0x95),
+            subdued_negative: SourceColor::Rgb(0xd9, 0x90, 0x9f),
+            soft_accent: SourceColor::Rgb(0x89, 0xb4, 0xfa),
+            positive_accent: SourceColor::Rgb(0xa6, 0xe3, 0xa1),
+            inset_background: SourceColor::Rgb(0x18, 0x18, 0x25),
+            text_secondary: SourceColor::Rgb(0xba, 0xc2, 0xde),
+            accent_violet: SourceColor::Rgb(0xb4, 0xbe, 0xfe),
+        },
+        // Gruvbox Dark (medium): upstream Gruvbox colors adjusted only where a tier required it; base16-eighties.dark is the nearest bundled syntax theme.
+        ThemeId::GruvboxDark => SourceTheme {
+            syntax: SyntaxTheme::Base16EightiesDark,
+            canvas: SourceColor::Rgb(0x28, 0x28, 0x28),
+            chrome: SourceColor::Rgb(0x1d, 0x20, 0x21),
+            code: SourceColor::Rgb(0x32, 0x30, 0x2f),
+            selection: SourceColor::Rgb(0x50, 0x49, 0x45),
+            text: SourceColor::Rgb(0xeb, 0xdb, 0xb2),
+            muted: SourceColor::Rgb(0xa8, 0x99, 0x84),
+            border: SourceColor::Rgb(0x92, 0x83, 0x74),
+            accent: SourceColor::Rgb(0x8e, 0xc0, 0x7c),
+            accent_alt: SourceColor::Rgb(0xd3, 0x86, 0x9b),
+            user: SourceColor::Rgb(0x83, 0xa5, 0x98),
+            agent: SourceColor::Rgb(0xb8, 0xbb, 0x26),
+            system: SourceColor::Rgb(0xd3, 0x86, 0x9b),
+            info: SourceColor::Rgb(0x8e, 0xc0, 0x7c),
+            success: SourceColor::Rgb(0xb8, 0xbb, 0x26),
+            warning: SourceColor::Rgb(0xfa, 0xbd, 0x2f),
+            danger: SourceColor::Rgb(0xfb, 0x49, 0x34),
+            diff_add: SourceColor::Rgb(0xb8, 0xbb, 0x26),
+            diff_delete: SourceColor::Rgb(0xfb, 0x49, 0x34),
+            diff_context: SourceColor::Rgb(0xa8, 0x99, 0x84),
+            emphasis: SourceColor::Rgb(0xfa, 0xbd, 0x2f),
+            accent_tertiary: SourceColor::Rgb(0x83, 0xa5, 0x98),
+            accent_quaternary: SourceColor::Rgb(0xd3, 0x86, 0x9b),
+            accent_quinary: SourceColor::Rgb(0x8e, 0xc0, 0x7c),
+            subdued: SourceColor::Rgb(0x92, 0x83, 0x74),
+            subdued_positive: SourceColor::Rgb(0x98, 0x97, 0x1a),
+            subdued_negative: SourceColor::Rgb(0xcc, 0x66, 0x66),
+            soft_accent: SourceColor::Rgb(0x83, 0xa5, 0x98),
+            positive_accent: SourceColor::Rgb(0xb8, 0xbb, 0x26),
+            inset_background: SourceColor::Rgb(0x32, 0x30, 0x2f),
+            text_secondary: SourceColor::Rgb(0xd5, 0xc4, 0xa1),
+            accent_violet: SourceColor::Rgb(0xd3, 0x86, 0x9b),
         },
     }
 }
@@ -246,7 +444,7 @@ impl SourceColor {
 }
 
 fn resolve_with(id: ThemeId, project: fn(SourceColor) -> Color) -> Theme {
-    let source = cyril_dark_source(id);
+    let source = source(id);
     Theme {
         syntax: Some(source.syntax),
         canvas: project(source.canvas),
@@ -471,8 +669,23 @@ mod tests {
 
     #[test]
     fn bundled_theme_registry_is_complete_and_unique() {
-        assert_eq!(ThemeId::ALL, &[ThemeId::CyrilDark]);
+        assert_eq!(
+            ThemeId::ALL,
+            &[
+                ThemeId::CyrilDark,
+                ThemeId::CyrilLight,
+                ThemeId::HighContrastDark,
+                ThemeId::HighContrastLight,
+                ThemeId::CatppuccinMocha,
+                ThemeId::GruvboxDark,
+            ]
+        );
         assert_eq!(ThemeId::CyrilDark.name(), "CyrilDark");
+        assert_eq!(ThemeId::HighContrastLight.name(), "HighContrastLight");
+        let mut names: Vec<&str> = ThemeId::ALL.iter().map(|id| id.name()).collect();
+        names.sort_unstable();
+        names.dedup();
+        assert_eq!(names.len(), ThemeId::ALL.len(), "theme ids must be unique");
     }
 
     #[test]
@@ -676,7 +889,7 @@ mod tests {
 
     #[test]
     fn cyril_dark_source_matches_the_signed_contract() {
-        let source = cyril_dark_source(ThemeId::CyrilDark);
+        let source = source(ThemeId::CyrilDark);
         let actual: Vec<_> = source
             .roles()
             .into_iter()
@@ -689,7 +902,7 @@ mod tests {
 
     #[test]
     fn conversation_legacy_colors_are_representable() {
-        let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let available = source(ThemeId::CyrilDark).roles();
         // cyril-leiq DELIBERATELY supersedes five dim VGA legacy colors that
         // the ghuu migration had preserved (they were unreadable on dark
         // terminals): Red 0x800000, Yellow-olive 0x808000, Blue 0x000080,
@@ -720,7 +933,7 @@ mod tests {
     /// is representable in the expanded contract.
     #[test]
     fn modal_legacy_colors_are_representable() {
-        let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let available = source(ThemeId::CyrilDark).roles();
         // cyril-leiq supersedes the dim VGA Cyan/Yellow/Red legacy colors
         // (they mapped to accent_quinary/emphasis/subdued_negative, now
         // brightened for contrast — see cyril_dark_contrast_contract).
@@ -747,7 +960,7 @@ mod tests {
     /// re-mapping batch (no expansion).
     #[test]
     fn chrome_legacy_colors_are_representable() {
-        let available = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let available = source(ThemeId::CyrilDark).roles();
         // cyril-leiq supersedes the dim VGA Yellow/Red/Cyan/Magenta legacy
         // colors (they mapped to emphasis/subdued_negative/accent_quinary/
         // accent_quaternary, now brightened — see cyril_dark_contrast_contract).
@@ -803,7 +1016,7 @@ mod tests {
 
     #[test]
     fn first_five_compatibility_roles_match_signed_values() {
-        let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let actual = source(ThemeId::CyrilDark).roles();
         let expected = [
             ("emphasis", SourceColor::Rgb(0xd7, 0xba, 0x7d)),
             ("accent_tertiary", SourceColor::Rgb(0x6c, 0xb6, 0xff)),
@@ -823,7 +1036,7 @@ mod tests {
 
     #[test]
     fn complete_compatibility_contract_has_thirty_one_roles() {
-        let actual = cyril_dark_source(ThemeId::CyrilDark).roles();
+        let actual = source(ThemeId::CyrilDark).roles();
         let expected = [
             ("subdued_positive", SourceColor::Rgb(0x00, 0x80, 0x00)),
             ("subdued_negative", SourceColor::Rgb(0xd9, 0x8a, 0x8a)),
@@ -978,6 +1191,160 @@ mod tests {
         }
     }
 
+    // --- cyril-fkke: bundled palette contract ----------------------------------
+    // Cyril Dark keeps its own signed contract above (ADR 0007). The palettes
+    // added here share the same tier vocabulary but declare their own intended
+    // backgrounds, and the high-contrast variants raise every tier to AAA.
+    // `.cyril-fkke/palette-oracle.py` recomputes the same numbers independently.
+
+    /// Conversation foreground roles, by tier.
+    const PRIMARY_ROLES: [&str; 14] = [
+        "text",
+        "user",
+        "agent",
+        "system",
+        "accent",
+        "accent_alt",
+        "accent_violet",
+        "info",
+        "soft_accent",
+        "positive_accent",
+        "emphasis",
+        "accent_tertiary",
+        "accent_quaternary",
+        "accent_quinary",
+    ];
+    const MUTED_ROLES: [&str; 7] = [
+        "muted",
+        "border",
+        "diff_context",
+        "text_secondary",
+        "subdued",
+        "subdued_positive",
+        "subdued_negative",
+    ];
+    const SATURATED_ROLES: [&str; 5] = ["success", "diff_add", "warning", "danger", "diff_delete"];
+
+    /// (terminal default background, chrome background) each palette is designed
+    /// to be read on. Both legs are enforced, so a role readable on one surface
+    /// and not the other fails.
+    fn palette_backgrounds(id: ThemeId) -> [(&'static str, (u8, u8, u8)); 2] {
+        match id {
+            ThemeId::CyrilDark => [("black", BG_BLACK), ("chrome", BG_CHROME)],
+            ThemeId::CyrilLight => [
+                ("white", (0xff, 0xff, 0xff)),
+                ("chrome", (0xe8, 0xe8, 0xef)),
+            ],
+            ThemeId::HighContrastDark => [
+                ("black", (0x00, 0x00, 0x00)),
+                ("chrome", (0x00, 0x00, 0x00)),
+            ],
+            ThemeId::HighContrastLight => [
+                ("white", (0xff, 0xff, 0xff)),
+                ("chrome", (0xf0, 0xf0, 0xf0)),
+            ],
+            ThemeId::CatppuccinMocha => [
+                ("black", (0x00, 0x00, 0x00)),
+                ("chrome", (0x18, 0x18, 0x25)),
+            ],
+            ThemeId::GruvboxDark => [
+                ("black", (0x00, 0x00, 0x00)),
+                ("chrome", (0x1d, 0x20, 0x21)),
+            ],
+        }
+    }
+
+    /// (primary, muted, saturated-on-default-background, saturated-on-chrome).
+    fn palette_tiers(id: ThemeId) -> (f64, f64, f64, f64) {
+        match id {
+            ThemeId::HighContrastDark | ThemeId::HighContrastLight => (7.0, 4.5, 7.0, 4.5),
+            _ => (4.5, 3.0, 4.5, 3.0),
+        }
+    }
+
+    fn role_tiers(role: &str, id: ThemeId) -> Option<(f64, f64)> {
+        let (primary, muted, saturated_default, saturated_chrome) = palette_tiers(id);
+        if PRIMARY_ROLES.contains(&role) {
+            Some((primary, primary))
+        } else if MUTED_ROLES.contains(&role) {
+            Some((muted, muted))
+        } else if SATURATED_ROLES.contains(&role) {
+            Some((saturated_default, saturated_chrome))
+        } else {
+            None
+        }
+    }
+
+    #[test]
+    fn bundled_palette_contrast_contract() {
+        // Anchor: white-on-black is exactly 21.0 by definition.
+        assert!((contrast((0xff, 0xff, 0xff), (0x00, 0x00, 0x00)) - 21.0).abs() < 0.01);
+
+        let mut checked = 0;
+        for id in ThemeId::ALL.iter().copied() {
+            let theme = resolve_truecolor(id);
+            let [(default_name, default_bg), (chrome_name, chrome_bg)] = palette_backgrounds(id);
+            for (role, color) in resolved_roles(theme) {
+                let Some((default_min, chrome_min)) = role_tiers(role, id) else {
+                    continue;
+                };
+                let rgb = rgb_of(color);
+                let on_default = contrast(rgb, default_bg);
+                let on_chrome = contrast(rgb, chrome_bg);
+                assert!(
+                    on_default >= default_min && on_chrome >= chrome_min,
+                    "{} {role} #{:02x}{:02x}{:02x}: contrast {default_name} {on_default:.2} \
+                     (>= {default_min}), {chrome_name} {on_chrome:.2} (>= {chrome_min}) — \
+                     tier not met",
+                    id.name(),
+                    rgb.0,
+                    rgb.1,
+                    rgb.2
+                );
+                checked += 1;
+            }
+        }
+        // 6 palettes × 26 foreground roles — a dropped role would otherwise
+        // shrink the loop silently.
+        assert_eq!(checked, 156);
+    }
+
+    #[test]
+    fn muted_family_never_projects_into_protected_slots() {
+        const PROTECTED: [Color; 3] = [Color::LightBlue, Color::LightGreen, Color::LightMagenta];
+        let mut checked = 0;
+        for id in ThemeId::ALL.iter().copied() {
+            // resolve_ansi16 panics on a contract violation, so reaching the
+            // assertions is itself part of the claim.
+            let theme = resolve_ansi16(id);
+            for (role, color) in [
+                ("muted", theme.muted),
+                ("border", theme.border),
+                ("subdued", theme.subdued),
+                ("diff_context", theme.diff_context),
+            ] {
+                assert!(
+                    !PROTECTED.contains(&color),
+                    "{} {role} projected into protected speaker slot {color:?}",
+                    id.name()
+                );
+                checked += 1;
+            }
+        }
+        assert_eq!(checked, 24);
+
+        // Positive control: the check can fail. A synthetic muted role forced
+        // into a protected slot is rejected by the same finalizer.
+        for role in ["muted", "border", "subdued", "diff_context"] {
+            let mut candidate = resolve_with(ThemeId::CyrilDark, SourceColor::ansi16);
+            set_muted_family_role(&mut candidate, role, Color::LightGreen);
+            assert!(
+                apply_ansi16_semantics(candidate).is_err(),
+                "finalizer accepted {role} in a protected speaker slot"
+            );
+        }
+    }
+
     #[test]
     fn cyril_dark_hue_identity() {
         // The five brightened roles must keep their hue family — a value that
@@ -1126,11 +1493,11 @@ mod tests {
     #[test]
     fn non_speaker_ansi16_remains_nearest() {
         for theme_id in ThemeId::ALL.iter().copied() {
-            let source = resolved_roles(resolve_truecolor(theme_id));
+            let source_roles = resolved_roles(resolve_truecolor(theme_id));
             let projected = resolved_roles(resolve_ansi16(theme_id));
             let mut checked = 0;
             for ((source_name, source_color), (projected_name, projected_color)) in
-                source.into_iter().zip(projected)
+                source_roles.into_iter().zip(projected)
             {
                 assert_eq!(source_name, projected_name);
                 if matches!(source_name, "user" | "agent" | "system") {
@@ -1142,7 +1509,19 @@ mod tests {
                     checked += 1;
                 }
             }
-            assert_eq!(checked, 27);
+            // Palettes differ in how many non-speaker roles are explicit RGB
+            // (Cyril Dark's canvas is Reset; the painted-canvas palettes declare
+            // one), so the expected count comes from the palette itself rather
+            // than a constant that silently drifts.
+            let expected_rgb = source(theme_id)
+                .roles()
+                .into_iter()
+                .filter(|(name, color)| {
+                    !matches!(*name, "user" | "agent" | "system")
+                        && matches!(color, SourceColor::Rgb(_, _, _))
+                })
+                .count();
+            assert_eq!(checked, expected_rgb, "{}", theme_id.name());
         }
     }
 
@@ -1215,18 +1594,23 @@ mod tests {
     }
 
     #[test]
-    fn cyril_dark_syntax_theme_exists() {
+    fn all_bundled_syntax_themes_exist() {
         let themes = ThemeSet::load_defaults();
-        assert!(
-            themes
-                .themes
-                .contains_key(SyntaxTheme::Base16EightiesDark.name())
-        );
+        for syntax in SyntaxTheme::ALL.iter().copied() {
+            assert!(
+                themes.themes.contains_key(syntax.name()),
+                "Syntect has no bundled theme named {:?} — a palette selecting it \
+                 would silently render unstyled",
+                syntax.name()
+            );
+        }
+        // Positive control: a near-miss name is absent, so the loop above is
+        // not passing because `contains_key` accepts anything.
         assert!(!themes.themes.contains_key("base16-eighties.drak"));
     }
 
     #[test]
-    fn no_color_resets_all_29_roles() {
+    fn no_color_resets_every_role() {
         let theme = resolve_no_color(ThemeId::CyrilDark);
         assert!(
             resolved_roles(theme)

@@ -1,5 +1,6 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
+use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
 
 use crate::traits::{TuiState, approval_origin_label};
@@ -29,6 +30,18 @@ const CHAT_COMFORT: u16 = 5;
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
     let theme = state.theme();
+
+    // Paint the palette's canvas before any widget writes. Ratatui merges cell
+    // styles field-wise, so a widget that sets only a foreground leaves this
+    // background intact while a widget with its own surface (chrome, code,
+    // selection, inset) still overrides it. `Color::Reset` means "the
+    // terminal's own background", so Cyril Dark keeps today's appearance and
+    // the frozen conversation baseline stays byte-identical.
+    if theme.canvas != Color::Reset {
+        frame
+            .buffer_mut()
+            .set_style(area, Style::default().bg(theme.canvas));
+    }
 
     // Runtime-variable panel heights are owned by their widget's height_for().
     let crew_height = crate::widgets::crew_panel::height_for(state);
@@ -168,6 +181,73 @@ mod tests {
         let mut terminal = Terminal::new(backend)?;
         terminal.draw(|frame| super::draw(frame, state))?;
         Ok(terminal.backend().buffer().clone())
+    }
+
+    /// A populated frame with the given theme: enough content that widgets
+    /// write most cells, so an unpainted canvas would be visible.
+    fn canvas_state(theme: crate::theme::Theme) -> MockTuiState {
+        MockTuiState {
+            messages: vec![
+                ChatMessage::user_text("user".into()),
+                ChatMessage::agent_text("agent reply".into()),
+                ChatMessage::system("system".into()),
+            ],
+            activity: Activity::ToolRunning,
+            activity_elapsed: Some(Duration::from_secs(1)),
+            theme,
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn light_palette_paints_canvas_background() -> anyhow::Result<()> {
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilLight,
+            crate::theme::ColorMode::TrueColor,
+        );
+        let buffer = render_buffer(&canvas_state(theme))?;
+        let canvas = theme.canvas;
+        let mut canvas_cells = 0usize;
+        let mut terminal_owned = Vec::new();
+        for (index, cell) in buffer.content().iter().enumerate() {
+            if cell.bg == canvas {
+                canvas_cells += 1;
+            } else if cell.bg == ratatui::style::Color::Reset {
+                terminal_owned.push((index, cell.symbol().to_string()));
+            }
+        }
+        // Positive control: the assertion below is vacuous if nothing painted.
+        assert!(
+            canvas_cells > 0,
+            "no cell carried the palette canvas background"
+        );
+        assert!(
+            terminal_owned.is_empty(),
+            "{} cells fell back to the terminal background instead of the palette canvas, e.g. {:?}",
+            terminal_owned.len(),
+            &terminal_owned[..terminal_owned.len().min(8)]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn reset_canvas_leaves_terminal_background_untouched() -> anyhow::Result<()> {
+        // Cyril Dark declares `Color::Reset`, so no cell may be painted with a
+        // concrete canvas colour — the frozen 7,680-cell baseline depends on it.
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::TrueColor,
+        );
+        assert_eq!(theme.canvas, ratatui::style::Color::Reset);
+        let buffer = render_buffer(&canvas_state(theme))?;
+        assert!(
+            buffer
+                .content()
+                .iter()
+                .all(|cell| cell.bg != ratatui::style::Color::Rgb(0xff, 0xff, 0xff)),
+            "Cyril Dark must not paint a light canvas"
+        );
+        Ok(())
     }
 
     fn baseline_steer(text: &str, status: SteerEchoStatus) -> ChatMessage {
