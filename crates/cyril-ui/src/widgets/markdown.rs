@@ -864,6 +864,35 @@ mod tests {
     }
 
     #[test]
+    fn markdown_cache_key_distinguishes_bundled_palettes() {
+        const DOC: &str = "# heading\n\n```rust\nfn main() {}\n```\n";
+        let key = |id: ThemeId, mode: ColorMode| {
+            markdown_cache_key(DOC, 80, &crate::theme::resolve(id, mode))
+        };
+        for mode in [ColorMode::TrueColor, ColorMode::Ansi256, ColorMode::Ansi16] {
+            let mut seen = std::collections::HashMap::new();
+            for id in ThemeId::ALL.iter().copied() {
+                if let Some(previous) = seen.insert(key(id, mode), id) {
+                    panic!(
+                        "markdown cache key collision in {mode:?}: {} and {}",
+                        previous.name(),
+                        id.name()
+                    );
+                }
+            }
+            assert_eq!(seen.len(), ThemeId::ALL.len());
+        }
+        // See the highlight twin: no-color resolves identically for every
+        // palette, so a single shared key is the correct outcome there.
+        let no_color_keys: std::collections::HashSet<_> = ThemeId::ALL
+            .iter()
+            .copied()
+            .map(|id| key(id, ColorMode::None))
+            .collect();
+        assert_eq!(no_color_keys.len(), 1);
+    }
+
+    #[test]
     fn syntax_and_markdown_caches_isolate_truecolor_and_no_color_in_both_orders() {
         let truecolor = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
         let no_color = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);

@@ -457,6 +457,40 @@ mod tests {
     }
 
     #[test]
+    fn cache_key_distinguishes_bundled_palettes() {
+        let key = |id: ThemeId, mode: ColorMode| {
+            highlight_cache_key(
+                "fn main() {}\n",
+                Some("rust"),
+                &crate::theme::resolve(id, mode),
+            )
+        };
+        for mode in [ColorMode::TrueColor, ColorMode::Ansi256, ColorMode::Ansi16] {
+            let mut seen = std::collections::HashMap::new();
+            for id in ThemeId::ALL.iter().copied() {
+                if let Some(previous) = seen.insert(key(id, mode), id) {
+                    panic!(
+                        "highlight cache key collision in {mode:?}: {} and {}",
+                        previous.name(),
+                        id.name()
+                    );
+                }
+            }
+            assert_eq!(seen.len(), ThemeId::ALL.len());
+        }
+        // No-color resolves every palette to the same reset theme with no
+        // syntax, so one shared key is correct there rather than a stale-cache
+        // bug. Pinned explicitly so a future per-palette difference in
+        // no-color resolution cannot hide behind that assumption.
+        let no_color_keys: std::collections::HashSet<_> = ThemeId::ALL
+            .iter()
+            .copied()
+            .map(|id| key(id, ColorMode::None))
+            .collect();
+        assert_eq!(no_color_keys.len(), 1);
+    }
+
+    #[test]
     fn cache_never_leaks_truecolor_into_no_color_in_either_order() {
         let truecolor = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
         let no_color = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
