@@ -173,6 +173,32 @@ Deviation recorded: `parse_color_mode` returns a `ColorModeRequest`
 (`Automatic | Fixed(ColorMode)`) rather than a bare `ColorMode`, because
 `automatic` is not itself a mode. `design.md` C2 records the refinement.
 
+### Slice 3 — Config surface, startup resolution, invalid-value message
+
+| # | Gate | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test --workspace` green; `cyril-core` config tests 26 passed; `cyril` bin `app::tests` 121 passed |
+| 2 | Falsifiers | PASS | C7, C8, C10, C11 discharged |
+| 3 | Stress fixture | PASS | `theme`/`color_mode` wrong-typed as `3`, `true`, `[]`, inline table; each rejects the whole file (`max_messages` stays 500) |
+| 4 | Implementation vs oracle | PASS | `compare_appearance.py` PASS 30 rows (unchanged by this slice) |
+| 5 | Approved module shape | PASS | `module_shape.py` PASS; `--selftest` PASS (planted `ThemeId` reported, clean file accepted); protected parents at zero delta |
+| 6 | Production-scale budget | N/A — one resolution per process |
+| 7 | Regression fence | PASS | `absent_appearance_keys_are_silent`, `configured_appearance_reaches_startup_state`, `unknown_theme_value_reports_one_visible_message`, `unknown_color_mode_value_reports_one_visible_message`, `startup_detection_honors_no_color`, `wrong_typed_{theme,color_mode}_falls_back_to_whole_file_defaults`, `default_ui_config_schema_is_exactly_four_fields` |
+| 8 | Named mutation | PASS | M4 (dropped diagnostic) red; M5 (field-skipping deserializer) red `rejection must be whole-file, not field-skipping`; M6 (catalog leak into `cyril-core`) red; M7 (changed startup default) red |
+| 9 | Fence restored | PASS | green after restore (all four fences) |
+
+Deviation recorded: `App::new` reached 8 arguments and tripped
+`clippy::too_many_arguments`. Rather than an `#[allow]` (forbidden), the two
+process-level inputs are grouped as `StartupInputs { ui, environment }`, keeping
+the signature at 7 and the two "read once, from outside the crate" inputs
+adjacent. The exhaustive `UiConfig` destructure is unchanged, so the nd4h C6
+consumption fence still holds.
+
+Deviation recorded: C7's named mutation was unobservable — the baseline fence
+resolves its theme through `truecolor_theme()`, never `UiState::new`. The
+observable fence is `state::tests::new_state_uses_cyril_dark_truecolor`; the
+baseline test independently keeps proving the pixels (0/7,680 differences).
+
 ## Tracker taxonomy
 
 - Persisting a theme choice — **permanent non-goal** (ADR 0005 + the requester's

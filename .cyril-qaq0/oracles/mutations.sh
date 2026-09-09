@@ -13,11 +13,13 @@ THEME=crates/cyril-ui/src/theme.rs
 STATE=crates/cyril-ui/src/state.rs
 RENDER=crates/cyril-ui/src/render.rs
 BUILTIN=crates/cyril-core/src/commands/builtin.rs
+APP=crates/cyril/src/app.rs
+CONFIG=crates/cyril-core/src/types/config.rs
 BACKUP=$(mktemp -d)
 FAILURES=0
 
 restore_all() {
-  for file in "$THEME" "$STATE" "$RENDER" "$BUILTIN"; do
+  for file in "$THEME" "$STATE" "$RENDER" "$BUILTIN" "$APP" "$CONFIG"; do
     if [ -f "$BACKUP/$(basename "$file")" ]; then
       cp "$BACKUP/$(basename "$file")" "$file"
     fi
@@ -126,10 +128,88 @@ PY
 expect_red M3-precedence-order "resolved to the wrong mode" cargo test -p cyril-ui --lib detection_precedence_matches_every_table_row
 restore "$THEME"
 
+# --- M4: startup drops the unknown-value diagnostic (C8) -------------------
+backup "$APP"
+python3 - "$APP" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = "        for diagnostic in &appearance.diagnostics {"
+assert anchor in s, "diagnostic loop not found"
+s = s.replace(anchor, "        for diagnostic in appearance.diagnostics.iter().take(0) {", 1)
+p.write_text(s)
+PY
+expect_red M4-dropped-diagnostic "left == right" cargo test -p cyril --bin cyril unknown_theme_value_reports_one_visible_message
+restore "$APP"
+
+# --- M5: field-skipping deserializer swallows a wrong type (C11) -----------
+backup "$CONFIG"
+python3 - "$CONFIG" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+helper = """fn lenient_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::Deserialize;
+    Ok(
+        Option::<toml::Value>::deserialize(deserializer)
+            .ok()
+            .flatten()
+            .and_then(|value| value.as_str().map(str::to_owned)),
+    )
+}
+
+"""
+anchor = "#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]\n#[serde(default)]\npub struct UiConfig {"
+assert anchor in s, "UiConfig declaration not found"
+s = s.replace(anchor, helper + anchor, 1)
+s = s.replace("""    #[serde(default)]
+    pub theme: Option<String>,""", """    #[serde(default, deserialize_with = "lenient_string")]
+    pub theme: Option<String>,""", 1)
+p.write_text(s)
+PY
+expect_red M5-field-skipping-deserializer "rejection must be whole-file" cargo test -p cyril-core --lib wrong_typed_theme_falls_back_to_whole_file_defaults
+restore "$CONFIG"
+
+# --- M6: palette catalog leaks into cyril-core (C10) -----------------------
+backup "$CONFIG"
+python3 - "$CONFIG" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+s = 'pub const PLANTED_THEME: &str = "gruvbox-dark";\n' + s
+p.write_text(s)
+PY
+expect_red M6-catalog-leak "bundled id literal" python3 .cyril-qaq0/oracles/module_shape.py
+restore "$CONFIG"
+
+# --- M7: startup default palette changes (C7) ------------------------------
+# The design named `migrated_scenes_match_all_pinned_cells` for this mutation,
+# but that fence resolves its theme directly (`truecolor_theme()`), so changing
+# `UiState::new` cannot move it. Corrected 2026-09-09: the observable fence for
+# the startup default is `new_state_uses_cyril_dark_truecolor`; the baseline
+# test keeps proving the pixels independently.
+backup "$STATE"
+python3 - "$STATE" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = """            theme: resolve(ThemeId::CyrilDark, ColorMode::TrueColor),
+            theme_id: ThemeId::CyrilDark,"""
+assert anchor in s, "UiState::new default not found"
+s = s.replace(anchor, """            theme: resolve(ThemeId::GruvboxDark, ColorMode::TrueColor),
+            theme_id: ThemeId::GruvboxDark,""", 1)
+p.write_text(s)
+PY
+expect_red M7-default-palette-changed "left == right" cargo test -p cyril-ui --lib new_state_uses_cyril_dark_truecolor
+restore "$STATE"
+
 # --- restoration: every fence green again ----------------------------------
 expect_green C6-render-matrix cargo test -p cyril-ui --lib all_scene_theme_mode_combinations_pass
 expect_green C1-theme-ids cargo test -p cyril-ui --lib parse_theme_id_covers_exactly_the_bundled_ids
 expect_green C3-precedence cargo test -p cyril-ui --lib detection_precedence_matches_every_table_row
+expect_green C8-diagnostic cargo test -p cyril --bin cyril unknown_theme_value_reports_one_visible_message
+expect_green C11-whole-file cargo test -p cyril-core --lib wrong_typed_theme_falls_back_to_whole_file_defaults
+expect_green C10-module-shape python3 .cyril-qaq0/oracles/module_shape.py
+expect_green C7-default-palette cargo test -p cyril-ui --lib new_state_uses_cyril_dark_truecolor
 
 if [ "$FAILURES" -ne 0 ]; then
   echo "FAIL  $FAILURES mutation proof(s) did not behave as required"

@@ -53,5 +53,7 @@ User config loaded from `~/.config/cyril/config.toml` (TOML). Falls back to defa
 |---------|-----|---------|---------|
 | `ui` | `max_messages` | 500 | Chat history limit |
 | `ui` | `mouse_capture` | true | Enable mouse capture on startup; `Ctrl+M` toggles at runtime |
+| `ui` | `theme` | unset | Bundled palette id (`cyril-dark`, `cyril-light`, `high-contrast-dark`, `high-contrast-light`, `catppuccin-mocha`, `gruvbox-dark`). Unset = `cyril-dark`; an unrecognized id reports a message and uses the default. `/theme` changes it for the session only — cyril never writes this file |
+| `ui` | `color_mode` | unset | `automatic`, `truecolor`, `ansi256`, `ansi16`, or `none`. Unset or `automatic` detects from `NO_COLOR`/`COLORTERM`/`TERM`; an unrecognized value reports a message and detects |
 | `agent` | `agent_name` | `"kiro-cli"` | Agent binary name |
 | `agent` | `extra_args` | `[]` | Extra subprocess args |

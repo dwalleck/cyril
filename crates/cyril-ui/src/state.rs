@@ -23,6 +23,11 @@ pub enum AutocompleteAction {
 
 pub struct UiState {
     theme: Theme,
+    /// The palette and mode `theme` was resolved from (cyril-qaq0). Kept
+    /// alongside the resolved `Theme` so the `/theme` picker can reopen on the
+    /// current selection and re-resolve at a new mode.
+    theme_id: ThemeId,
+    color_mode: ColorMode,
 
     // Chat
     messages: Vec<ChatMessage>,
@@ -328,9 +333,29 @@ impl TuiState for UiState {
 }
 
 impl UiState {
+    /// Replace the active palette and color mode. The resolved `Theme` is the
+    /// only thing the renderer reads; `theme_id`/`color_mode` are its inputs.
+    pub fn set_appearance(&mut self, theme_id: ThemeId, color_mode: ColorMode) {
+        self.theme_id = theme_id;
+        self.color_mode = color_mode;
+        self.theme = resolve(theme_id, color_mode);
+    }
+
+    /// The active palette id.
+    pub fn theme_id(&self) -> ThemeId {
+        self.theme_id
+    }
+
+    /// The active color mode.
+    pub fn color_mode(&self) -> ColorMode {
+        self.color_mode
+    }
+
     pub fn new(max_messages: usize) -> Self {
         Self {
             theme: resolve(ThemeId::CyrilDark, ColorMode::TrueColor),
+            theme_id: ThemeId::CyrilDark,
+            color_mode: ColorMode::TrueColor,
             messages: Vec::new(),
             messages_version: 0,
             streaming_text: String::new(),
