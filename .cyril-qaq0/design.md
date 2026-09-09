@@ -224,10 +224,20 @@ C6 is the cheapest falsifier and has been run (see the run log). No row is
 
 ## Approval
 
-**PENDING.** No approval recorded yet. This design is presented for the
-requester's approval before `budgeted-plan` runs.
+**Approved 2026-09-09.** The requester replied, verbatim:
 
-Risk acceptances requiring approval:
+> Approve
 
-- **Detection cannot see terminals that misreport `COLORTERM`/`TERM`, or tmux
-  RGB-passthrough variance** (spec, Success criteria) — accepted risk, no fence.
+Approved risk acceptances:
+
+- **C12-adjacent detection limitation** — terminals that misreport
+  `COLORTERM`/`TERM`, and tmux RGB-passthrough variance, may resolve to a mode
+  the operator did not intend. Recorded in `.cyril-qaq0/spec.md` under Success
+  criteria; no fence is possible.
+
+Approved decisions presented for this approval: the `[ui]` config surface and
+kebab-case value spelling, `Option<String>` config typing, `cyril-ui` ownership
+of id/mode parsing and detection policy with the env probe in the binary,
+`PickerState` + `PickerKind` reuse instead of a new overlay, the semantic
+`ShowThemePicker` command result, and the per-theme marker scenes the C6
+falsifier proved necessary.
