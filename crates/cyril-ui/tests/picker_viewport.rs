@@ -4,7 +4,7 @@
 //! the implementation's own formula.
 
 use cyril_core::types::CommandOption;
-use cyril_ui::traits::PickerState;
+use cyril_ui::traits::{PickerKind, PickerState};
 use cyril_ui::widgets::picker;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
@@ -24,6 +24,7 @@ fn opts(n: usize) -> Vec<CommandOption> {
 fn picker_state(options: Vec<CommandOption>, selected: usize) -> PickerState {
     let n = options.len();
     PickerState {
+        kind: PickerKind::Agent,
         title: "Fence".into(),
         options,
         filter: String::new(),
@@ -238,6 +239,7 @@ fn scrollbar_thumb_reaches_bottom_at_list_end() {
 fn filtered_subset_keeps_selection_visible() {
     let filtered: Vec<usize> = (0..30).filter(|i| i % 3 == 0).collect(); // 10 entries
     let state = PickerState {
+        kind: PickerKind::Agent,
         title: "Fence".into(),
         options: opts(30),
         filter: "x".into(),

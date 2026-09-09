@@ -5,7 +5,9 @@ use crossterm::event::{KeyCode, KeyEvent};
 use cyril_core::types::*;
 
 use crate::file_completer::FileCompleter;
-use crate::theme::{ColorMode, Theme, ThemeId, resolve};
+use crate::theme::{
+    ColorMode, Theme, ThemeId, parse_theme_id, resolve, theme_config_id, theme_label,
+};
 use crate::traits::*;
 
 /// Result of handling a key event when autocomplete is active.
@@ -23,6 +25,16 @@ pub enum AutocompleteAction {
 
 pub struct UiState {
     theme: Theme,
+    /// The palette and mode `theme` was resolved from (cyril-qaq0). Kept
+    /// alongside the resolved `Theme` so the `/theme` picker can reopen on the
+    /// current selection and re-resolve at a new mode.
+    theme_id: ThemeId,
+    color_mode: ColorMode,
+    /// The palette under the cursor while the `/theme` picker is open. Rendered
+    /// in place of `theme` so the operator sees the choice before committing;
+    /// cleared on both commit and cancel, so a discarded preview can never
+    /// survive into the committed appearance (cyril-qaq0).
+    theme_preview: Option<Theme>,
 
     // Chat
     messages: Vec<ChatMessage>,
@@ -158,8 +170,11 @@ fn refusal_message(alert: &cyril_core::types::RefusalAlert) -> String {
 }
 
 impl TuiState for UiState {
+    /// The committed palette, or the preview while the `/theme` picker is open.
+    /// Every renderer reads this one accessor, so a preview needs no separate
+    /// rendering path and cannot diverge from the committed theme.
     fn theme(&self) -> Theme {
-        self.theme
+        self.theme_preview.unwrap_or(self.theme)
     }
 
     fn messages(&self) -> &[ChatMessage] {
@@ -328,9 +343,30 @@ impl TuiState for UiState {
 }
 
 impl UiState {
+    /// Replace the active palette and color mode. The resolved `Theme` is the
+    /// only thing the renderer reads; `theme_id`/`color_mode` are its inputs.
+    pub fn set_appearance(&mut self, theme_id: ThemeId, color_mode: ColorMode) {
+        self.theme_id = theme_id;
+        self.color_mode = color_mode;
+        self.theme = resolve(theme_id, color_mode);
+    }
+
+    /// The active palette id.
+    pub fn theme_id(&self) -> ThemeId {
+        self.theme_id
+    }
+
+    /// The active color mode.
+    pub fn color_mode(&self) -> ColorMode {
+        self.color_mode
+    }
+
     pub fn new(max_messages: usize) -> Self {
         Self {
             theme: resolve(ThemeId::CyrilDark, ColorMode::TrueColor),
+            theme_id: ThemeId::CyrilDark,
+            color_mode: ColorMode::TrueColor,
+            theme_preview: None,
             messages: Vec::new(),
             messages_version: 0,
             streaming_text: String::new(),
@@ -2120,7 +2156,83 @@ impl UiState {
             filter: String::new(),
             filtered_indices,
             selected: 0,
+            kind: PickerKind::Agent,
         });
+        self.sync_theme_preview();
+    }
+
+    /// Open Cyril's own palette picker (cyril-qaq0).
+    ///
+    /// The catalog is built here because `cyril-ui` owns it: `cyril-core` only
+    /// signals the intent, and never learns a palette id or label. The current
+    /// palette is marked so the picker opens on the operator's own value.
+    pub fn open_theme_picker(&mut self) {
+        let options: Vec<CommandOption> = ThemeId::ALL
+            .iter()
+            .copied()
+            .map(|id| CommandOption {
+                label: theme_label(id).to_owned(),
+                value: theme_config_id(id).to_owned(),
+                description: None,
+                group: None,
+                is_current: id == self.theme_id,
+            })
+            .collect();
+        let filtered_indices: Vec<usize> = (0..options.len()).collect();
+        let selected = options
+            .iter()
+            .position(|option| option.is_current)
+            .unwrap_or(0);
+        self.picker = Some(PickerState {
+            title: "theme".to_owned(),
+            options,
+            filter: String::new(),
+            filtered_indices,
+            selected,
+            kind: PickerKind::Theme,
+        });
+        self.sync_theme_preview();
+    }
+
+    /// Which kind of picker is open, if any.
+    pub fn picker_kind(&self) -> Option<PickerKind> {
+        self.picker.as_ref().map(|picker| picker.kind)
+    }
+
+    /// Commit the highlighted palette and close the picker. Returns the palette
+    /// that became active, or `None` if no palette picker is open.
+    ///
+    /// The color mode is preserved: choosing a palette must not silently change
+    /// how colors are emitted.
+    pub fn commit_theme(&mut self) -> Option<ThemeId> {
+        if self.picker.as_ref()?.kind != PickerKind::Theme {
+            return None;
+        }
+        let picker = self.picker.take()?;
+        let index = picker.filtered_indices.get(picker.selected).copied()?;
+        let theme_id = parse_theme_id(&picker.options.get(index)?.value)?;
+        self.theme_preview = None;
+        self.set_appearance(theme_id, self.color_mode);
+        Some(theme_id)
+    }
+
+    /// Recompute the preview from the picker's highlighted row.
+    fn sync_theme_preview(&mut self) {
+        let Some(picker) = self.picker.as_ref() else {
+            self.theme_preview = None;
+            return;
+        };
+        if picker.kind != PickerKind::Theme {
+            self.theme_preview = None;
+            return;
+        }
+        let highlighted = picker
+            .filtered_indices
+            .get(picker.selected)
+            .and_then(|index| picker.options.get(*index));
+        self.theme_preview = highlighted
+            .and_then(|option| parse_theme_id(&option.value))
+            .map(|id| resolve(id, self.color_mode));
     }
 
     /// Get the picker title, if a picker is active.
@@ -2135,6 +2247,7 @@ impl UiState {
         {
             picker.selected -= 1;
         }
+        self.sync_theme_preview();
     }
 
     /// Move picker selection to the next option.
@@ -2145,6 +2258,7 @@ impl UiState {
         {
             picker.selected += 1;
         }
+        self.sync_theme_preview();
     }
 
     /// Confirm the picker selection. Returns the selected value if any.
@@ -2161,6 +2275,9 @@ impl UiState {
     /// Cancel and close the picker dialog.
     pub fn picker_cancel(&mut self) {
         self.picker = None;
+        // Esc must leave the committed appearance exactly as it was: dropping
+        // the preview is what makes "discard" true rather than merely "close".
+        self.theme_preview = None;
     }
 
     /// Type a character into the picker filter.
@@ -2169,6 +2286,7 @@ impl UiState {
             picker.filter.push(c);
             Self::refilter_picker(picker);
         }
+        self.sync_theme_preview();
     }
 
     /// Delete the last character from the picker filter.
@@ -2177,6 +2295,7 @@ impl UiState {
             picker.filter.pop();
             Self::refilter_picker(picker);
         }
+        self.sync_theme_preview();
     }
 
     /// Re-compute filtered indices after filter text changes.
@@ -7666,5 +7785,142 @@ mod tests {
             "a loaded completer must keep suggesting"
         );
         assert_eq!(system_message_count(&state, UNAVAILABLE_NEEDLE), 0);
+    }
+
+    // ── cyril-qaq0: /theme picker ───────────────────────────────────────────
+
+    fn theme_picker_state() -> UiState {
+        let mut state = UiState::new(500);
+        state.open_theme_picker();
+        state
+    }
+
+    #[test]
+    fn theme_picker_lists_every_bundled_palette() {
+        let state = theme_picker_state();
+        assert_eq!(state.picker_title(), Some("theme"));
+        assert_eq!(state.picker_kind(), Some(PickerKind::Theme));
+        let Some(picker) = TuiState::picker(&state) else {
+            panic!("theme picker must be open");
+        };
+        assert_eq!(picker.options.len(), ThemeId::ALL.len());
+        for theme in ThemeId::ALL.iter().copied() {
+            let config_id = theme_config_id(theme);
+            let option = picker
+                .options
+                .iter()
+                .find(|option| option.value == config_id)
+                .unwrap_or_else(|| panic!("{config_id} missing from the picker"));
+            assert_eq!(option.label, theme_label(theme));
+            assert_eq!(
+                option.is_current,
+                theme == ThemeId::CyrilDark,
+                "{config_id} marked as current"
+            );
+        }
+    }
+
+    // C4: the preview drives what the renderer resolves, while the committed
+    // appearance stays untouched until Enter.
+    #[test]
+    fn theme_preview_drives_the_rendered_theme_until_commit() {
+        let mut state = theme_picker_state();
+        for character in "gruvbox".chars() {
+            state.picker_type_char(character);
+        }
+        assert_eq!(
+            TuiState::theme(&state),
+            resolve(ThemeId::GruvboxDark, ColorMode::TrueColor),
+            "the filtered selection must preview"
+        );
+        assert_eq!(
+            state.theme_id(),
+            ThemeId::CyrilDark,
+            "previewing must not commit"
+        );
+
+        assert_eq!(state.commit_theme(), Some(ThemeId::GruvboxDark));
+        assert_eq!(state.theme_id(), ThemeId::GruvboxDark);
+        assert_eq!(
+            TuiState::theme(&state),
+            resolve(ThemeId::GruvboxDark, ColorMode::TrueColor)
+        );
+        assert_eq!(state.picker_kind(), None, "commit closes the picker");
+    }
+
+    // C5: Esc discards. The committed appearance is exactly what it was, and no
+    // preview survives the close.
+    #[test]
+    fn picker_cancel_discards_the_preview() {
+        let committed = resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        let mut state = theme_picker_state();
+        state.picker_select_next();
+        assert_ne!(TuiState::theme(&state), committed, "selection must preview");
+
+        state.picker_cancel();
+        assert_eq!(state.theme_id(), ThemeId::CyrilDark);
+        assert_eq!(state.color_mode(), ColorMode::TrueColor);
+        assert_eq!(
+            TuiState::theme(&state),
+            committed,
+            "Esc must restore the committed theme"
+        );
+        assert_eq!(state.picker_kind(), None);
+    }
+
+    // A palette choice must not silently change how colors are emitted.
+    #[test]
+    fn commit_theme_preserves_the_active_color_mode() {
+        let mut state = UiState::new(500);
+        state.set_appearance(ThemeId::CyrilDark, ColorMode::Ansi256);
+        state.open_theme_picker();
+        state.picker_select_next();
+        assert_eq!(state.commit_theme(), Some(ThemeId::CyrilLight));
+        assert_eq!(state.color_mode(), ColorMode::Ansi256);
+        assert_eq!(
+            TuiState::theme(&state),
+            resolve(ThemeId::CyrilLight, ColorMode::Ansi256)
+        );
+    }
+
+    // The agent picker keeps its own commit path: `commit_theme` must not
+    // swallow it, and must leave it open.
+    #[test]
+    fn commit_theme_is_inert_for_an_agent_picker() {
+        let mut state = UiState::new(500);
+        state.show_picker(
+            "model".into(),
+            vec![CommandOption {
+                label: "sonnet".into(),
+                value: "sonnet".into(),
+                description: None,
+                group: None,
+                is_current: false,
+            }],
+        );
+        assert_eq!(state.picker_kind(), Some(PickerKind::Agent));
+        assert_eq!(state.commit_theme(), None);
+        assert_eq!(
+            state.picker_kind(),
+            Some(PickerKind::Agent),
+            "an agent picker must stay open"
+        );
+        assert_eq!(
+            state.picker_confirm().map(|(command, _)| command),
+            Some("model".to_owned())
+        );
+    }
+
+    #[test]
+    fn picker_opens_on_the_committed_palette() {
+        let mut state = UiState::new(500);
+        state.set_appearance(ThemeId::CatppuccinMocha, ColorMode::TrueColor);
+        state.open_theme_picker();
+        assert_eq!(
+            TuiState::theme(&state),
+            resolve(ThemeId::CatppuccinMocha, ColorMode::TrueColor),
+            "the picker must open previewing the committed palette"
+        );
+        assert_eq!(state.commit_theme(), Some(ThemeId::CatppuccinMocha));
     }
 }

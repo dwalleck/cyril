@@ -1,0 +1,66 @@
+--- /tmp/render.rs.bak	2026-09-09 18:04:01.978779434 -0500
++++ crates/cyril-ui/src/render.rs	2026-09-09 18:04:10.767400559 -0500
+@@ -1297,19 +1297,22 @@
+     }
+ 
+     fn mode_matrix() -> anyhow::Result<Vec<ModePass>> {
+-        let mut marker_theme = crate::traits::test_support::marker_theme();
+-        marker_theme.syntax = truecolor_theme().syntax;
+-        let marker_scenes = scene_buffers(marker_theme)?;
++        let mut base_marker = crate::traits::test_support::marker_theme();
++        base_marker.syntax = truecolor_theme().syntax;
+         let modes = [
+             ("truecolor", ColorMode::TrueColor),
+             ("ansi256", ColorMode::Ansi256),
+             ("ansi16", ColorMode::Ansi16),
+             ("no-color", ColorMode::None),
+         ];
+-        let mut passes = Vec::with_capacity(16);
++        let mut passes = Vec::with_capacity(96);
+ 
++        for id in ThemeId::ALL.iter().copied() {
++        let mut marker_theme = base_marker;
++        marker_theme.syntax = crate::theme::resolve(id, ColorMode::TrueColor).syntax;
++        let marker_scenes = scene_buffers(marker_theme)?;
+         for (mode_label, mode) in modes {
+-            let projected_theme = crate::theme::resolve(ThemeId::CyrilDark, mode);
++            let projected_theme = crate::theme::resolve(id, mode);
+             let projected_scenes = scene_buffers(projected_theme)?;
+             for ((marker_label, marker), (projected_label, projected)) in
+                 marker_scenes.iter().zip(&projected_scenes)
+@@ -1354,11 +1357,12 @@
+                     }
+                 }
+                 passes.push(ModePass {
+-                    label: format!("{mode_label}/{marker_label}"),
++                    label: format!("{}/{mode_label}/{marker_label}", id.name()),
+                     no_color_non_reset: (mode == ColorMode::None).then_some(no_color_non_reset),
+                 });
+             }
+         }
++        }
+         Ok(passes)
+     }
+ 
+@@ -1439,17 +1443,18 @@
+     #[test]
+     fn all_sixteen_scene_mode_combinations_pass() -> anyhow::Result<()> {
+         let passes = mode_matrix()?;
+-        assert_eq!(passes.len(), 16);
++        assert_eq!(passes.len(), 96);
+         let labels = passes
+             .iter()
+             .map(|pass| pass.label.as_str())
+             .collect::<std::collections::HashSet<_>>();
+-        assert_eq!(labels.len(), 16);
++        assert_eq!(labels.len(), 96);
+         let no_color_counts = passes
+             .iter()
+             .filter_map(|pass| pass.no_color_non_reset)
+             .collect::<Vec<_>>();
+-        assert_eq!(no_color_counts, vec![0, 0, 0, 0]);
++        assert_eq!(no_color_counts.len(), 24);
++        assert!(no_color_counts.iter().all(|count| *count == 0));
+         Ok(())
+     }
+ 

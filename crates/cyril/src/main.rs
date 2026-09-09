@@ -86,6 +86,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let (usage_snapshot, usage_snapshot_rx) =
         cyril_core::usage::spawn_usage_snapshot_worker(usage_path);
 
+    // The ONE place the process reads terminal color capability (cyril-qaq0).
+    // cyril-ui stays free of `std::env`; the binary hands the values down so
+    // detection is a pure function with an injectable environment. An unset or
+    // non-UTF8 variable is indistinguishable from an absent one here, which is
+    // exactly the meaning the precedence table assigns to `None`.
+    let environment = cyril_ui::theme::ColorEnvironment {
+        no_color: std::env::var("NO_COLOR").ok(),
+        color_term: std::env::var("COLORTERM").ok(),
+        term: std::env::var("TERM").ok(),
+        is_windows: cfg!(windows),
+    };
+
     // Build and run TUI.
 
     rt.block_on(async {
@@ -103,7 +115,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cyril_core::commands::WorkflowCommandSource::resolve(agent_engine, cwd.clone());
         let mut app = app::App::new(
             bridge,
-            &config.ui,
+            app::StartupInputs {
+                ui: &config.ui,
+                environment: &environment,
+            },
             cwd.clone(),
             hooks_source,
             workflow_source,

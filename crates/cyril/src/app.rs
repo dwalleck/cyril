@@ -24,7 +24,7 @@ use cyril_core::usage::{
 };
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
-use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
+use cyril_ui::traits::{Activity, PickerKind, TuiState, approval_origin_label};
 
 use cyril_core::types::code_panel::CodeCommandResponse;
 
@@ -355,6 +355,18 @@ pub struct UsageWiring {
     pub snapshot_rx: mpsc::UnboundedReceiver<UsageSnapshotResult>,
 }
 
+/// The process-level inputs `App::new` consumes once at startup.
+///
+/// Grouped rather than passed loose so the signature stays within the argument
+/// limit, and so the two "read once, from outside the crate" inputs sit
+/// together: the parsed config file and the terminal's color environment
+/// (cyril-qaq0). The environment is injected rather than read here so
+/// `cyril-ui` stays free of `std::env`.
+pub struct StartupInputs<'a> {
+    pub ui: &'a config::UiConfig,
+    pub environment: &'a cyril_ui::theme::ColorEnvironment,
+}
+
 impl App {
     /// Build the app from the UI config.
     ///
@@ -365,13 +377,14 @@ impl App {
     /// read them; this seam is what stops that recurring.
     pub fn new(
         bridge: BridgeHandle,
-        ui: &config::UiConfig,
+        inputs: StartupInputs<'_>,
         cwd: PathBuf,
         hooks: cyril_core::commands::HooksCommandSource,
         workflows: cyril_core::commands::WorkflowCommandSource,
         usage: UsageWiring,
         agent_engine: AgentEngine,
     ) -> Self {
+        let StartupInputs { ui, environment } = inputs;
         let UsageWiring {
             log: usage_log,
             snapshot: usage_snapshot,
@@ -382,6 +395,8 @@ impl App {
         let &config::UiConfig {
             max_messages,
             mouse_capture,
+            ref theme,
+            ref color_mode,
         } = ui;
         let (bridge_sender, notification_rx, permission_rx, source_rx, bridge_completion_rx) =
             bridge.split();
@@ -410,6 +425,22 @@ impl App {
         // rather than reading the config a second time, so the flag and the
         // terminal cannot disagree and Ctrl+M can never start out inverted.
         ui_state.set_mouse_captured(mouse_capture);
+        // This is the ONE read of the configured appearance (cyril-qaq0). An
+        // absent key is silent; an unrecognized value falls back to that key's
+        // default and says so, because a typo that silently does nothing is
+        // indistinguishable from a feature that does not work.
+        let appearance = cyril_ui::theme::resolve_startup_appearance(
+            theme.as_deref(),
+            color_mode.as_deref(),
+            environment,
+        );
+        ui_state.set_appearance(appearance.theme, appearance.mode);
+        for diagnostic in &appearance.diagnostics {
+            ui_state.add_system_message(format!(
+                "unknown {} \"{}\" in config.toml — using {}",
+                diagnostic.key, diagnostic.value, diagnostic.default
+            ));
+        }
         Self {
             bridge_sender,
             notification_rx,
@@ -1778,7 +1809,13 @@ impl App {
             KeyCode::Up => self.ui_state.picker_select_prev(),
             KeyCode::Down => self.ui_state.picker_select_next(),
             KeyCode::Enter => {
-                if let Some((command_name, value)) = self.ui_state.picker_confirm()
+                if self.ui_state.picker_kind() == Some(PickerKind::Theme) {
+                    // Cyril's own palette: commit locally. No session is
+                    // required and no bridge command is sent.
+                    if let Some(theme_id) = self.ui_state.commit_theme() {
+                        tracing::debug!(theme = %theme_id.name(), "theme committed for this session");
+                    }
+                } else if let Some((command_name, value)) = self.ui_state.picker_confirm()
                     && let Some(session_id) = self.session.id()
                 {
                     self.bridge_sender
@@ -1948,6 +1985,12 @@ impl App {
             }
             CommandResultKind::ShowPicker { title, options } => {
                 self.ui_state.show_picker(title, options);
+            }
+            CommandResultKind::ShowThemePicker => {
+                // Local: the palette catalog lives in cyril-ui, so the picker
+                // builds its own options. Nothing is sent to the agent here or
+                // on confirm (cyril-qaq0 C9).
+                self.ui_state.open_theme_picker();
             }
             CommandResultKind::Dispatched => {
                 // Already sent via bridge
@@ -2825,11 +2868,15 @@ mod tests {
     // it fails against pre-fix code, where App::new called
     // `set_mouse_captured(true)` unconditionally.
     fn app_with_mouse_capture(mouse_capture: bool) -> App {
+        let ui = config::UiConfig {
+            mouse_capture,
+            ..config::UiConfig::default()
+        };
         App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig {
-                mouse_capture,
-                ..config::UiConfig::default()
+            StartupInputs {
+                ui: &ui,
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
             },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
@@ -2841,6 +2888,139 @@ mod tests {
             },
             AgentEngine::V2,
         )
+    }
+
+    // ── cyril-qaq0: startup appearance ──────────────────────────────────────
+
+    fn app_with_appearance(
+        theme: Option<&str>,
+        color_mode: Option<&str>,
+        environment: cyril_ui::theme::ColorEnvironment,
+    ) -> App {
+        let ui = config::UiConfig {
+            theme: theme.map(str::to_owned),
+            color_mode: color_mode.map(str::to_owned),
+            ..config::UiConfig::default()
+        };
+        App::new(
+            BridgeHandle::for_tests(),
+            StartupInputs {
+                ui: &ui,
+                environment: &environment,
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::V2,
+        )
+    }
+
+    fn system_messages(app: &App) -> Vec<String> {
+        app.ui_state
+            .messages()
+            .iter()
+            .filter_map(|message| match &message.kind {
+                ChatMessageKind::System(text) => Some(text.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    // cyril-qaq0 C10: the configured appearance is what the renderer resolves,
+    // not merely what was parsed. The sentinel is the non-default pair -- the
+    // pre-fix code hardcoded `resolve(CyrilDark, TrueColor)` in `UiState::new`
+    // and this assertion fails against it.
+    #[test]
+    fn configured_appearance_reaches_startup_state() {
+        use cyril_ui::theme::{ColorMode, ThemeId};
+
+        let app = app_with_appearance(
+            Some("gruvbox-dark"),
+            Some("ansi16"),
+            cyril_ui::theme::ColorEnvironment::default(),
+        );
+        assert_eq!(app.ui_state.theme_id(), ThemeId::GruvboxDark);
+        assert_eq!(app.ui_state.color_mode(), ColorMode::Ansi16);
+        assert_eq!(
+            app.ui_state.theme(),
+            cyril_ui::theme::resolve(ThemeId::GruvboxDark, ColorMode::Ansi16),
+            "the rendered theme must be the resolved palette, not the default"
+        );
+        assert!(system_messages(&app).is_empty());
+    }
+
+    // C8: an absent key is silent. A warning here would train the operator to
+    // ignore warnings that matter.
+    #[test]
+    fn absent_appearance_keys_are_silent() {
+        use cyril_ui::theme::{ColorMode, ThemeId};
+
+        let app = app_with_appearance(None, None, cyril_ui::theme::ColorEnvironment::default());
+        assert_eq!(app.ui_state.theme_id(), ThemeId::CyrilDark);
+        assert_eq!(app.ui_state.color_mode(), ColorMode::TrueColor);
+        assert!(system_messages(&app).is_empty());
+    }
+
+    // C8: an unrecognized value is visible, names the offending key and value,
+    // and falls back to that key's own default.
+    #[test]
+    fn unknown_theme_value_reports_one_visible_message() {
+        use cyril_ui::theme::ThemeId;
+
+        let app = app_with_appearance(
+            Some("gruvbox-dark "),
+            None,
+            cyril_ui::theme::ColorEnvironment::default(),
+        );
+        assert_eq!(app.ui_state.theme_id(), ThemeId::CyrilDark);
+        assert_eq!(
+            system_messages(&app),
+            vec!["unknown theme \"gruvbox-dark \" in config.toml — using cyril-dark".to_owned()]
+        );
+    }
+
+    #[test]
+    fn unknown_color_mode_value_reports_one_visible_message() {
+        use cyril_ui::theme::ColorMode;
+
+        let app = app_with_appearance(
+            None,
+            Some("bogus"),
+            cyril_ui::theme::ColorEnvironment::default(),
+        );
+        assert_eq!(
+            app.ui_state.color_mode(),
+            ColorMode::TrueColor,
+            "an unknown mode falls back to detection, not to a fixed mode"
+        );
+        assert_eq!(
+            system_messages(&app),
+            vec!["unknown color_mode \"bogus\" in config.toml — using automatic".to_owned()]
+        );
+    }
+
+    // C3 at the startup seam: the environment the binary hands down is what
+    // decides, and NO_COLOR wins over the terminal's own capability.
+    #[test]
+    fn startup_detection_honors_no_color() {
+        use cyril_ui::theme::{ColorEnvironment, ColorMode};
+
+        let app = app_with_appearance(
+            None,
+            None,
+            ColorEnvironment {
+                no_color: Some("1".to_owned()),
+                color_term: Some("truecolor".to_owned()),
+                ..ColorEnvironment::default()
+            },
+        );
+        assert_eq!(app.ui_state.color_mode(), ColorMode::None);
+        assert!(system_messages(&app).is_empty());
     }
 
     #[test]
@@ -2863,7 +3043,10 @@ mod tests {
         // behavior they had before this ticket existed.
         let app = App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -3006,7 +3189,10 @@ mod tests {
     fn test_app() -> App {
         App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -3032,7 +3218,10 @@ mod tests {
         (
             App::new(
                 handle,
-                &config::UiConfig::default(),
+                StartupInputs {
+                    ui: &config::UiConfig::default(),
+                    environment: &cyril_ui::theme::ColorEnvironment::default(),
+                },
                 PathBuf::from("/tmp"),
                 cyril_core::commands::HooksCommandSource::Agent,
                 cyril_core::commands::WorkflowCommandSource::None,
@@ -3050,7 +3239,10 @@ mod tests {
     fn app_with_snapshot_handle(handle: UsageSnapshotHandle) -> App {
         App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -3422,7 +3614,10 @@ mod tests {
         drop(command_rx);
         let mut failed = App::new(
             handle,
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             PathBuf::from("/tmp"),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -3611,7 +3806,10 @@ mod tests {
 
         let mut app = App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -3683,7 +3881,10 @@ mod tests {
 
         let mut app = App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -3729,7 +3930,10 @@ mod tests {
 
         let mut app = App::new(
             BridgeHandle::for_tests(),
-            &config::UiConfig::default(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
             tmp.path().to_path_buf(),
             cyril_core::commands::HooksCommandSource::Agent,
             cyril_core::commands::WorkflowCommandSource::None,
@@ -6517,4 +6721,137 @@ mod tests {
         );
     }
     mod current_runtime_contract;
+
+    // ── cyril-qaq0: /theme command and picker session ───────────────────────
+
+    // C9: /theme is local end to end. The positive control runs a
+    // bridge-reaching command on the same receiver, so the empty receive means
+    // "no send" rather than "no probe".
+    #[tokio::test]
+    async fn theme_command_opens_picker_without_bridge_traffic() {
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("execute local /theme");
+        assert_eq!(app.ui_state.picker_title(), Some("theme"));
+        assert_eq!(app.ui_state.picker_kind(), Some(PickerKind::Theme));
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "/theme must not reach the agent"
+        );
+
+        app.ui_state.insert_text("/new");
+        app.submit_input().await.expect("execute /new");
+        assert!(
+            rx.try_recv().is_ok(),
+            "the control must observe a bridge command"
+        );
+    }
+
+    // C5: Enter commits and Esc discards, and neither reaches the wire.
+    #[tokio::test]
+    async fn theme_picker_enter_commits_and_esc_discards_without_bridge_traffic() {
+        use cyril_ui::theme::{ColorMode, ThemeId};
+
+        let (mut app, mut rx) = test_app_with_command_rx();
+        let committed = cyril_ui::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("open theme picker");
+
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await
+            .expect("move selection");
+        assert_ne!(
+            app.ui_state.theme(),
+            committed,
+            "moving the selection must preview"
+        );
+        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+            .await
+            .expect("cancel picker");
+        assert_eq!(
+            app.ui_state.theme(),
+            committed,
+            "Esc must discard the preview"
+        );
+        assert_eq!(app.ui_state.theme_id(), ThemeId::CyrilDark);
+        assert_eq!(app.ui_state.picker_kind(), None);
+
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("reopen theme picker");
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await
+            .expect("move selection");
+        let previewed = app.ui_state.theme();
+        app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .await
+            .expect("commit picker");
+        assert_eq!(
+            app.ui_state.theme(),
+            previewed,
+            "Enter must commit the preview"
+        );
+        assert_eq!(app.ui_state.theme_id(), ThemeId::CyrilLight);
+        assert_eq!(app.ui_state.picker_kind(), None);
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "no theme key may reach the agent"
+        );
+    }
+
+    // C5: Cyril never writes configuration. The fixture carries comments,
+    // alignment, and an inline comment specifically so that a rewrite through
+    // serialization shows up as a byte difference.
+    #[tokio::test]
+    async fn theme_picker_session_leaves_config_bytes_untouched() {
+        let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join(".cyril-qaq0")
+            .join("config-nowrite-fixture.toml");
+        let before = std::fs::read(&fixture).expect("read the config fixture");
+        let report = cyril_memory::load_config_report(&fixture);
+        let ui = report.ordinary().ui.clone();
+
+        let (handle, mut rx) = BridgeHandle::for_tests_with_command_rx();
+        let mut app = App::new(
+            handle,
+            StartupInputs {
+                ui: &ui,
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::V2,
+        );
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("open theme picker");
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await
+            .expect("preview");
+        app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .await
+            .expect("commit");
+
+        assert_eq!(
+            std::fs::read(&fixture).expect("re-read the config fixture"),
+            before,
+            "the appearance path must never rewrite config.toml"
+        );
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+    }
 }

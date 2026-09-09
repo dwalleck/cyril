@@ -22,6 +22,18 @@ pub struct UiConfig {
     /// scroll, so a user who prefers their terminal's own selection sets this
     /// `false`; `Ctrl+M` toggles it at runtime from whichever state this picks.
     pub mouse_capture: bool,
+    /// Bundled palette id, e.g. `"gruvbox-dark"` (cyril-qaq0). `None` means the
+    /// key was absent, which is silent; an unrecognized *string* falls back to
+    /// the default and reports a visible message. The value is a string rather
+    /// than an enum because `cyril-core` must not depend on `cyril-ui`'s
+    /// palette registry, and because an unknown value must not fail the whole
+    /// file.
+    #[serde(default)]
+    pub theme: Option<String>,
+    /// Terminal color mode, e.g. `"ansi256"` or `"automatic"` (cyril-qaq0).
+    /// Same absent/unknown distinction as `theme`.
+    #[serde(default)]
+    pub color_mode: Option<String>,
 }
 
 impl Default for UiConfig {
@@ -29,6 +41,8 @@ impl Default for UiConfig {
         Self {
             max_messages: 500,
             mouse_capture: true,
+            theme: None,
+            color_mode: None,
         }
     }
 }
@@ -140,8 +154,9 @@ mod tests {
     // with zero readers, so a *new* key appearing in this list is the signal
     // that the same rot has started again. Pairs with the exhaustive
     // destructure in `App::new`, which catches it at the consumption end.
+    // cyril-qaq0 added `theme` and `color_mode`; both are consumed there.
     #[test]
-    fn default_ui_config_schema_is_exactly_two_fields() -> anyhow::Result<()> {
+    fn default_ui_config_schema_is_exactly_four_fields() -> anyhow::Result<()> {
         use anyhow::Context;
 
         let config: Config = toml::from_str(
@@ -149,6 +164,8 @@ mod tests {
 [ui]
 max_messages = 1000
 mouse_capture = false
+theme = "gruvbox-dark"
+color_mode = "ansi256"
 "#,
         )?;
         let encoded = toml::to_string(&config.ui)?;
@@ -161,7 +178,22 @@ mouse_capture = false
 
         assert_eq!(config.ui.max_messages, 1000);
         assert!(!config.ui.mouse_capture);
-        assert_eq!(keys, ["max_messages", "mouse_capture"]);
+        assert_eq!(config.ui.theme.as_deref(), Some("gruvbox-dark"));
+        assert_eq!(config.ui.color_mode.as_deref(), Some("ansi256"));
+        assert_eq!(
+            keys,
+            ["color_mode", "max_messages", "mouse_capture", "theme"]
+        );
+        Ok(())
+    }
+
+    /// An absent key is silent; only a present-but-unrecognized *string* earns
+    /// a visible message (cyril-qaq0 C8).
+    #[test]
+    fn absent_appearance_keys_stay_none() -> anyhow::Result<()> {
+        let config: Config = toml::from_str("[ui]\nmax_messages = 1000\n")?;
+        assert_eq!(config.ui.theme, None);
+        assert_eq!(config.ui.color_mode, None);
         Ok(())
     }
 
@@ -276,6 +308,53 @@ agent_name = "opencode"
             let config = Config::load_from_path(&path);
             assert!(
                 config.ui.mouse_capture,
+                "{bad}: an unparseable value must leave the default in place"
+            );
+            assert_eq!(
+                config.ui.max_messages, 500,
+                "{bad}: rejection must be whole-file, not field-skipping"
+            );
+        }
+    }
+
+    // cyril-qaq0 claim C11: a wrong-typed appearance value must keep the same
+    // house posture as every other field -- whole-file rejection, never
+    // field-skipping. The discriminator is a non-default sibling key: 500 means
+    // the file was rejected, 1000 would mean the bad field was silently
+    // skipped and the rest honored.
+    #[test]
+    fn wrong_typed_theme_falls_back_to_whole_file_defaults() {
+        for bad in ["3", "true", "[]", "{ id = \"cyril-dark\" }"] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("config.toml");
+            std::fs::write(&path, format!("[ui]\nmax_messages = 1000\ntheme = {bad}\n")).unwrap();
+
+            let config = Config::load_from_path(&path);
+            assert_eq!(
+                config.ui.theme, None,
+                "{bad}: an unparseable value must leave the default in place"
+            );
+            assert_eq!(
+                config.ui.max_messages, 500,
+                "{bad}: rejection must be whole-file, not field-skipping"
+            );
+        }
+    }
+
+    #[test]
+    fn wrong_typed_color_mode_falls_back_to_whole_file_defaults() {
+        for bad in ["3", "true", "[]", "[\"ansi256\"]"] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("config.toml");
+            std::fs::write(
+                &path,
+                format!("[ui]\nmax_messages = 1000\ncolor_mode = {bad}\n"),
+            )
+            .unwrap();
+
+            let config = Config::load_from_path(&path);
+            assert_eq!(
+                config.ui.color_mode, None,
                 "{bad}: an unparseable value must leave the default in place"
             );
             assert_eq!(

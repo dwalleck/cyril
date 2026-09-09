@@ -155,12 +155,14 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, state: &PickerState
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::traits::PickerKind;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
     #[test]
     fn picker_renders() {
         let state = PickerState {
+            kind: PickerKind::Agent,
             title: "Select Model".into(),
             options: vec![
                 cyril_core::types::CommandOption {

@@ -14,7 +14,7 @@ use cyril_core::types::{
 };
 use cyril_ui::theme::{ColorMode, Theme, ThemeId, resolve};
 use cyril_ui::traits::{
-    ApprovalPhase, ApprovalState, HooksPanelState, PickerState, TrackedToolCall,
+    ApprovalPhase, ApprovalState, HooksPanelState, PickerKind, PickerState, TrackedToolCall,
 };
 use cyril_ui::widgets::{approval, code_panel, hooks_panel, picker};
 use ratatui::Terminal;
@@ -87,6 +87,7 @@ fn approval_state(trust_phase: bool) -> ApprovalState {
 
 fn picker_scene_state() -> PickerState {
     PickerState {
+        kind: PickerKind::Agent,
         title: "Probe".into(),
         options: (0..3)
             .map(|i| CommandOption {

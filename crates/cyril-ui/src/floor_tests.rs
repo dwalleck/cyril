@@ -8,7 +8,8 @@ use ratatui::buffer::Buffer;
 
 use crate::traits::test_support::MockTuiState;
 use crate::traits::{
-    ApprovalPhase, ApprovalState, ChatMessage, Suggestion, UsageAccountStatus, UsageRefreshStatus,
+    ApprovalPhase, ApprovalState, ChatMessage, PickerKind, Suggestion, UsageAccountStatus,
+    UsageRefreshStatus,
 };
 
 fn render_frame(state: &MockTuiState, width: u16, height: u16) -> anyhow::Result<Buffer> {
@@ -97,6 +98,7 @@ fn picker_clamped_above_input_keeps_selection_visible() -> anyhow::Result<()> {
         })
         .collect();
     let picker = PickerState {
+        kind: PickerKind::Agent,
         title: "Select model".into(),
         options,
         filter: String::new(),
@@ -393,6 +395,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
             Box::new(|state: &mut MockTuiState| {
                 use cyril_core::types::CommandOption;
                 state.picker = Some(PickerState {
+                    kind: PickerKind::Agent,
                     title: "Select model".into(),
                     options: (0..4)
                         .map(|index| CommandOption {

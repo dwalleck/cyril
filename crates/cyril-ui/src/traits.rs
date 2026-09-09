@@ -476,6 +476,19 @@ pub struct ApprovalState {
     pub responder: tokio::sync::oneshot::Sender<cyril_core::types::PermissionResponse>,
 }
 
+/// What confirming a picker does (cyril-qaq0).
+///
+/// The two kinds share the viewport, filter, and scrollbar machinery but have
+/// opposite commit semantics: an agent picker sends the selection back over the
+/// wire, Cyril's palette picker applies it locally and never writes anything.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PickerKind {
+    /// Options owned by the agent: confirming dispatches a bridge command.
+    Agent,
+    /// Cyril's palette picker: confirming commits locally, never to the wire.
+    Theme,
+}
+
 /// Selection picker dialog state.
 #[derive(Debug)]
 pub struct PickerState {
@@ -484,6 +497,7 @@ pub struct PickerState {
     pub filter: String,
     pub filtered_indices: Vec<usize>,
     pub selected: usize,
+    pub kind: PickerKind,
 }
 
 /// Hooks panel overlay state (read-only table display for `/hooks` command).
