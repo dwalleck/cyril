@@ -24,7 +24,7 @@ use cyril_core::usage::{
 };
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
-use cyril_ui::traits::{Activity, TuiState, approval_origin_label};
+use cyril_ui::traits::{Activity, PickerKind, TuiState, approval_origin_label};
 
 use cyril_core::types::code_panel::CodeCommandResponse;
 
@@ -1809,7 +1809,13 @@ impl App {
             KeyCode::Up => self.ui_state.picker_select_prev(),
             KeyCode::Down => self.ui_state.picker_select_next(),
             KeyCode::Enter => {
-                if let Some((command_name, value)) = self.ui_state.picker_confirm()
+                if self.ui_state.picker_kind() == Some(PickerKind::Theme) {
+                    // Cyril's own palette: commit locally. No session is
+                    // required and no bridge command is sent.
+                    if let Some(theme_id) = self.ui_state.commit_theme() {
+                        tracing::debug!(theme = %theme_id.name(), "theme committed for this session");
+                    }
+                } else if let Some((command_name, value)) = self.ui_state.picker_confirm()
                     && let Some(session_id) = self.session.id()
                 {
                     self.bridge_sender
@@ -1979,6 +1985,12 @@ impl App {
             }
             CommandResultKind::ShowPicker { title, options } => {
                 self.ui_state.show_picker(title, options);
+            }
+            CommandResultKind::ShowThemePicker => {
+                // Local: the palette catalog lives in cyril-ui, so the picker
+                // builds its own options. Nothing is sent to the agent here or
+                // on confirm (cyril-qaq0 C9).
+                self.ui_state.open_theme_picker();
             }
             CommandResultKind::Dispatched => {
                 // Already sent via bridge
@@ -6709,4 +6721,137 @@ mod tests {
         );
     }
     mod current_runtime_contract;
+
+    // ── cyril-qaq0: /theme command and picker session ───────────────────────
+
+    // C9: /theme is local end to end. The positive control runs a
+    // bridge-reaching command on the same receiver, so the empty receive means
+    // "no send" rather than "no probe".
+    #[tokio::test]
+    async fn theme_command_opens_picker_without_bridge_traffic() {
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("execute local /theme");
+        assert_eq!(app.ui_state.picker_title(), Some("theme"));
+        assert_eq!(app.ui_state.picker_kind(), Some(PickerKind::Theme));
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "/theme must not reach the agent"
+        );
+
+        app.ui_state.insert_text("/new");
+        app.submit_input().await.expect("execute /new");
+        assert!(
+            rx.try_recv().is_ok(),
+            "the control must observe a bridge command"
+        );
+    }
+
+    // C5: Enter commits and Esc discards, and neither reaches the wire.
+    #[tokio::test]
+    async fn theme_picker_enter_commits_and_esc_discards_without_bridge_traffic() {
+        use cyril_ui::theme::{ColorMode, ThemeId};
+
+        let (mut app, mut rx) = test_app_with_command_rx();
+        let committed = cyril_ui::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor);
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("open theme picker");
+
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await
+            .expect("move selection");
+        assert_ne!(
+            app.ui_state.theme(),
+            committed,
+            "moving the selection must preview"
+        );
+        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+            .await
+            .expect("cancel picker");
+        assert_eq!(
+            app.ui_state.theme(),
+            committed,
+            "Esc must discard the preview"
+        );
+        assert_eq!(app.ui_state.theme_id(), ThemeId::CyrilDark);
+        assert_eq!(app.ui_state.picker_kind(), None);
+
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("reopen theme picker");
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await
+            .expect("move selection");
+        let previewed = app.ui_state.theme();
+        app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .await
+            .expect("commit picker");
+        assert_eq!(
+            app.ui_state.theme(),
+            previewed,
+            "Enter must commit the preview"
+        );
+        assert_eq!(app.ui_state.theme_id(), ThemeId::CyrilLight);
+        assert_eq!(app.ui_state.picker_kind(), None);
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "no theme key may reach the agent"
+        );
+    }
+
+    // C5: Cyril never writes configuration. The fixture carries comments,
+    // alignment, and an inline comment specifically so that a rewrite through
+    // serialization shows up as a byte difference.
+    #[tokio::test]
+    async fn theme_picker_session_leaves_config_bytes_untouched() {
+        let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join("..")
+            .join(".cyril-qaq0")
+            .join("config-nowrite-fixture.toml");
+        let before = std::fs::read(&fixture).expect("read the config fixture");
+        let report = cyril_memory::load_config_report(&fixture);
+        let ui = report.ordinary().ui.clone();
+
+        let (handle, mut rx) = BridgeHandle::for_tests_with_command_rx();
+        let mut app = App::new(
+            handle,
+            StartupInputs {
+                ui: &ui,
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::V2,
+        );
+        app.ui_state.insert_text("/theme");
+        app.submit_input().await.expect("open theme picker");
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::NONE))
+            .await
+            .expect("preview");
+        app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .await
+            .expect("commit");
+
+        assert_eq!(
+            std::fs::read(&fixture).expect("re-read the config fixture"),
+            before,
+            "the appearance path must never rewrite config.toml"
+        );
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+    }
 }

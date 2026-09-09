@@ -202,6 +202,74 @@ PY
 expect_red M7-default-palette-changed "left == right" cargo test -p cyril-ui --lib new_state_uses_cyril_dark_truecolor
 restore "$STATE"
 
+# --- M8: /theme reaches the bridge (C9) ------------------------------------
+backup "$BUILTIN"
+python3 - "$BUILTIN" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = """    async fn execute(
+        &self,
+        _ctx: &CommandContext<'_>,
+        _args: &str,
+    ) -> crate::Result<CommandResult> {
+        Ok(CommandResult::show_theme_picker())
+    }"""
+assert anchor in s, "ThemeCommand::execute not found"
+leak = """    async fn execute(
+        &self,
+        ctx: &CommandContext<'_>,
+        _args: &str,
+    ) -> crate::Result<CommandResult> {
+        ctx.bridge
+            .send(BridgeCommand::NewSession {
+                cwd: ctx.workspace.to_path_buf(),
+            })
+            .await?;
+        Ok(CommandResult::show_theme_picker())
+    }"""
+s = s.replace(anchor, leak, 1)
+p.write_text(s)
+PY
+expect_red M8-theme-reaches-bridge "/theme must not reach the agent" cargo test -p cyril --bin cyril theme_command_opens_picker_without_bridge_traffic
+restore "$BUILTIN"
+
+# --- M9: Esc keeps the preview (C5) ----------------------------------------
+backup "$STATE"
+python3 - "$STATE" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = """    pub fn picker_cancel(&mut self) {
+        self.picker = None;
+        // Esc must leave the committed appearance exactly as it was: dropping
+        // the preview is what makes "discard" true rather than merely "close".
+        self.theme_preview = None;
+    }"""
+assert anchor in s, "picker_cancel not found"
+s = s.replace(anchor, """    pub fn picker_cancel(&mut self) {
+        self.picker = None;
+    }""", 1)
+p.write_text(s)
+PY
+expect_red M9-esc-keeps-preview "Esc must restore the committed theme" cargo test -p cyril-ui --lib picker_cancel_discards_the_preview
+restore "$STATE"
+
+# --- M10: theme() ignores the preview (C4) ---------------------------------
+backup "$STATE"
+python3 - "$STATE" <<'PY'
+import sys, pathlib
+p = pathlib.Path(sys.argv[1]); s = p.read_text()
+anchor = """    fn theme(&self) -> Theme {
+        self.theme_preview.unwrap_or(self.theme)
+    }"""
+assert anchor in s, "TuiState::theme not found"
+s = s.replace(anchor, """    fn theme(&self) -> Theme {
+        self.theme
+    }""", 1)
+p.write_text(s)
+PY
+expect_red M10-preview-not-rendered "the filtered selection must preview" cargo test -p cyril-ui --lib theme_preview_drives_the_rendered_theme_until_commit
+restore "$STATE"
+
 # --- restoration: every fence green again ----------------------------------
 expect_green C6-render-matrix cargo test -p cyril-ui --lib all_scene_theme_mode_combinations_pass
 expect_green C1-theme-ids cargo test -p cyril-ui --lib parse_theme_id_covers_exactly_the_bundled_ids
@@ -210,6 +278,9 @@ expect_green C8-diagnostic cargo test -p cyril --bin cyril unknown_theme_value_r
 expect_green C11-whole-file cargo test -p cyril-core --lib wrong_typed_theme_falls_back_to_whole_file_defaults
 expect_green C10-module-shape python3 .cyril-qaq0/oracles/module_shape.py
 expect_green C7-default-palette cargo test -p cyril-ui --lib new_state_uses_cyril_dark_truecolor
+expect_green C9-theme-local cargo test -p cyril --bin cyril theme_command_opens_picker_without_bridge_traffic
+expect_green C5-esc-discards cargo test -p cyril-ui --lib picker_cancel_discards_the_preview
+expect_green C4-preview-rendered cargo test -p cyril-ui --lib theme_preview_drives_the_rendered_theme_until_commit
 
 if [ "$FAILURES" -ne 0 ]; then
   echo "FAIL  $FAILURES mutation proof(s) did not behave as required"

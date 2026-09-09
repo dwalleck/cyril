@@ -199,6 +199,32 @@ resolves its theme through `truecolor_theme()`, never `UiState::new`. The
 observable fence is `state::tests::new_state_uses_cyril_dark_truecolor`; the
 baseline test independently keeps proving the pixels (0/7,680 differences).
 
+### Slice 4 — `/theme` picker, preview, commit, no-write proof
+
+| # | Gate | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test --workspace` green; `cyril-ui` state fences 6 passed; `cyril-core` theme command tests 2 passed; `cyril` bin app tests 135 passed |
+| 2 | Falsifiers | PASS | C4, C5, C9 discharged — all 11 claims now PASS |
+| 3 | Stress fixture | PASS | Picker filter narrows to one palette and previews it; `commit_theme` is inert for an agent picker; the color mode survives a palette commit; the fixture config (comments, alignment, inline comment) is byte-identical after a full session |
+| 4 | Implementation vs oracle | PASS | `compare_appearance.py` PASS 30 rows; `module_shape.py` PASS + `--selftest` |
+| 5 | Approved module shape | PASS | `module_shape.py` PASS, now also asserting the two `/theme` regions in `app.rs` construct no `BridgeCommand` |
+| 6 | Production-scale budget | N/A — six options built once per `/theme` |
+| 7 | Regression fence | PASS | `theme_picker_lists_every_bundled_palette`, `theme_preview_drives_the_rendered_theme_until_commit`, `picker_cancel_discards_the_preview`, `commit_theme_preserves_the_active_color_mode`, `commit_theme_is_inert_for_an_agent_picker`, `picker_opens_on_the_committed_palette`, `theme_command_is_local_and_returns_show_theme_picker`, `theme_is_registered_in_the_builtin_registry`, `theme_command_opens_picker_without_bridge_traffic`, `theme_picker_enter_commits_and_esc_discards_without_bridge_traffic`, `theme_picker_session_leaves_config_bytes_untouched` |
+| 8 | Named mutation | PASS | M8 (`/theme` reaches the bridge) red; M9 (Esc keeps the preview) red; M10 (`theme()` ignores the preview) red |
+| 9 | Fence restored | PASS | green after restore (all three fences) |
+
+Real-surface verification (throwaway harness, deleted after the run): the real
+picker rendered through `cyril_ui::render::draw` on a `TestBackend` shows the
+title `theme`, all six labels, `✓` on the committed palette, and opens on it;
+moving the selection changed the rendered border foreground from
+`Rgb(86,199,208)` (Cyril Dark) to `Rgb(142,192,124)` (Gruvbox Dark), proving the
+preview reaches pixels rather than only `TuiState::theme`.
+
+Deviation recorded: `crates/cyril-ui/src/widgets/` is not a byte-identity
+protected parent in `module_shape.py`. Widening `PickerState` with `kind` forced
+one test-fixture line in `widgets/picker.rs`; the design's stated exit condition
+for that parent is the widget palette fence, which `check_widgets` enforces.
+
 ## Tracker taxonomy
 
 - Persisting a theme choice — **permanent non-goal** (ADR 0005 + the requester's

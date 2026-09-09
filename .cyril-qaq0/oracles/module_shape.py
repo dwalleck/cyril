@@ -31,8 +31,13 @@ PALETTE_FREE_ROOTS = [
     REPO / "crates" / "cyril-memory" / "src",
 ]
 WIDGETS = REPO / "crates" / "cyril-ui" / "src" / "widgets"
+APP = REPO / "crates" / "cyril" / "src" / "app.rs"
+# Byte-identity protected parents. `crates/cyril-ui/src/widgets` is NOT here:
+# widening `PickerState` with `kind` forced one test-fixture line in
+# `widgets/picker.rs`, which is neither production nor palette vocabulary. The
+# widgets contract is enforced by `check_widgets` (palette ban) instead, exactly
+# as the design's exit condition states.
 PROTECTED = [
-    "crates/cyril-ui/src/widgets",
     "crates/cyril-memory",
     "crates/cyril-core/src/protocol",
 ]
@@ -102,6 +107,43 @@ def check_widgets() -> list[str]:
     return failures
 
 
+def brace_region(text: str, marker: str) -> str:
+    """The source between `marker` and its matching closing brace."""
+    start = text.find(marker)
+    if start < 0:
+        return ""
+    index = start + len(marker)
+    depth = 1
+    while index < len(text) and depth:
+        character = text[index]
+        if character == "{":
+            depth += 1
+        elif character == "}":
+            depth -= 1
+        index += 1
+    return text[start:index]
+
+
+def check_theme_path_sends_no_bridge_command() -> list[str]:
+    """C9: the `/theme` path never constructs a bridge command."""
+    failures: list[str] = []
+    source = APP.read_text()
+    for marker in (
+        "CommandResultKind::ShowThemePicker => {",
+        "if self.ui_state.picker_kind() == Some(PickerKind::Theme) {",
+    ):
+        region = brace_region(source, marker)
+        if not region:
+            failures.append(f"C9\t{APP}\tmarker not found: {marker!r}")
+            continue
+        if "BridgeCommand" in region:
+            failures.append(
+                f"C9\t{APP}\t{marker!r} constructs a BridgeCommand — the theme "
+                "picker path must stay local"
+            )
+    return failures
+
+
 def default_branch() -> str:
     for command in (
         ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
@@ -165,6 +207,7 @@ def main() -> int:
         scan_palette_free(PALETTE_FREE_ROOTS[0])
         + scan_palette_free(PALETTE_FREE_ROOTS[1])
         + check_widgets()
+        + check_theme_path_sends_no_bridge_command()
         + check_protected_parents()
     )
     for failure in failures:

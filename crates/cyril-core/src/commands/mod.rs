@@ -178,6 +178,12 @@ pub enum CommandResultKind {
         title: String,
         options: Vec<CommandOption>,
     },
+    /// Open Cyril's local palette picker (cyril-qaq0). The command layer has no
+    /// access to UI state and must not name a palette — the catalog lives in
+    /// `cyril-ui` — so it returns only the intent and the App opens the picker.
+    /// Same split as `ShowPicker`/`ToggleVoice`, with the added constraint that
+    /// confirming must never reach the agent.
+    ShowThemePicker,
     /// Command dispatched to bridge (already sent).
     Dispatched,
     /// Queue-steer the user's message (ROADMAP K1b, cyril-bm1j). The App routes
@@ -221,6 +227,13 @@ impl CommandResult {
     pub fn show_picker(title: String, options: Vec<CommandOption>) -> Self {
         Self {
             kind: CommandResultKind::ShowPicker { title, options },
+        }
+    }
+
+    /// Open Cyril's local palette picker (cyril-qaq0).
+    pub fn show_theme_picker() -> Self {
+        Self {
+            kind: CommandResultKind::ShowThemePicker,
         }
     }
 
@@ -336,7 +349,7 @@ impl CommandRegistry {
     ) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
-            "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "memory",
+            "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "memory", "theme",
             "sessions", "spawn", "kill", "msg",
         ];
         if let HooksCommandSource::Kas { workspace_root } = hooks {
@@ -354,6 +367,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::LoadCommand));
         registry.register(Arc::new(builtin::SteerCommand));
         registry.register(Arc::new(builtin::VoiceToggleCommand));
+        registry.register(Arc::new(builtin::ThemeCommand));
         registry.register(Arc::new(builtin::UsageCommand::new(usage_account)));
         registry.register(Arc::new(builtin::MemoryCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
@@ -1359,5 +1373,66 @@ mod hooks_source_tests {
         let (cmd, args) = kas.parse("/hooks disable audit").expect("registered");
         assert_eq!(cmd.name(), "hooks");
         assert_eq!(args, "disable audit");
+    }
+}
+
+#[cfg(test)]
+mod theme_command_tests {
+    use super::*;
+
+    // cyril-qaq0 C9: /theme is local. It returns the picker intent and must not
+    // touch the bridge. The positive control matters as much as the assertion:
+    // an empty receive proves nothing unless the same sender is observed to
+    // carry a command when one is actually sent.
+    #[tokio::test]
+    async fn theme_command_is_local_and_returns_show_theme_picker() -> crate::Result<()> {
+        let cmd = crate::commands::builtin::ThemeCommand;
+        assert_eq!(cmd.name(), "theme");
+        assert!(!cmd.description().is_empty());
+
+        let session = crate::session::SessionController::new();
+        let (tx, mut rx) = tokio::sync::mpsc::channel(1);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+
+        let result = cmd.execute(&ctx, "").await?;
+        assert!(matches!(result.kind, CommandResultKind::ShowThemePicker));
+        assert!(
+            rx.try_recv().is_err(),
+            "/theme must not send a bridge command"
+        );
+
+        crate::commands::builtin::NewCommand
+            .execute(&ctx, "")
+            .await?;
+        assert!(
+            rx.try_recv().is_ok(),
+            "the control must observe a bridge command"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn theme_is_registered_in_the_builtin_registry() {
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        let names: Vec<&str> = registry
+            .all_commands()
+            .iter()
+            .map(|command| command.name())
+            .collect();
+        assert!(names.contains(&"theme"), "registered commands: {names:?}");
+        let Some((cmd, args)) = registry.parse("/theme") else {
+            panic!("/theme must parse");
+        };
+        assert_eq!(cmd.name(), "theme");
+        assert_eq!(args, "");
     }
 }

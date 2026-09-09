@@ -308,7 +308,7 @@ mod tests {
     }
 
     fn picker_state() -> MockTuiState {
-        use crate::traits::PickerState;
+        use crate::traits::{PickerKind, PickerState};
         use cyril_core::types::CommandOption;
 
         let option =
@@ -328,6 +328,7 @@ mod tests {
                 crate::theme::ColorMode::TrueColor,
             ),
             picker: Some(PickerState {
+                kind: PickerKind::Agent,
                 title: "Select model".into(),
                 options: vec![
                     option(

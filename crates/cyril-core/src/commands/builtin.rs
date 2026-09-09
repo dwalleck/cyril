@@ -149,6 +149,32 @@ impl Command for VoiceToggleCommand {
     }
 }
 
+/// `/theme` — pick a bundled palette for this session (cyril-qaq0).
+///
+/// Local: it never reaches the agent, and confirming it never does either. The
+/// palette catalog lives in `cyril-ui`, so this returns only the intent to open
+/// the picker.
+pub struct ThemeCommand;
+
+#[async_trait::async_trait]
+impl Command for ThemeCommand {
+    fn name(&self) -> &str {
+        "theme"
+    }
+
+    fn description(&self) -> &str {
+        "Pick a color theme for this session"
+    }
+
+    async fn execute(
+        &self,
+        _ctx: &CommandContext<'_>,
+        _args: &str,
+    ) -> crate::Result<CommandResult> {
+        Ok(CommandResult::show_theme_picker())
+    }
+}
+
 /// /usage — open Cyril's local live-usage dashboard.
 pub struct UsageCommand {
     account_source: UsageAccountCommandSource,
