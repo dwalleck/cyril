@@ -21,13 +21,14 @@ WIDGET=crates/cyril-ui/src/widgets/powers_panel.rs
 STATE=crates/cyril-ui/src/state.rs
 APP=crates/cyril/src/app.rs
 BUILTIN=crates/cyril-core/src/commands/builtin.rs
+ENGINE=crates/cyril-core/src/protocol/engine.rs
 
 BACKUP=$(mktemp -d)
 FAILURES=0
 MUTATIONS_RUN=0
 
 restore_all() {
-  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$APP" "$BUILTIN"; do
+  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$APP" "$BUILTIN" "$ENGINE"; do
     if [ -f "$BACKUP/$(echo "$file" | tr / _)" ]; then
       cp "$BACKUP/$(echo "$file" | tr / _)" "$file"
     fi
@@ -176,6 +177,29 @@ prove C5 no-catalog-answer-dropped "$BUILTIN" \
             )),' \
   '            None => Ok(CommandResult::dispatched()),' \
   "${CORE_TEST[@]}" powers_without_catalog_reports_and_with_catalog_opens
+
+# --- Slice 4: the census and the transport -----------------------------------
+
+prove C7 an-unusable-powers-method-cannot-be-called "$STATE" \
+  '    pub fn has_powers_panel(&self) -> bool {' \
+  '    /// A refresh affordance — exactly what this ticket forbids.
+    pub fn refresh_powers_hack(&self) -> bool {
+        let _method = "_kiro/powers/refresh";
+        true
+    }
+
+    pub fn has_powers_panel(&self) -> bool {' \
+  cargo test -p cyril --test powers_source_fence
+
+# The transport fence's own claim: the frame must survive the real SDK2 path
+# INTO the converter. Dropping the engine arm leaves the listener green (the
+# frame is simply never recognized), which is the failure this proves.
+prove C5 push-dropped-at-the-engine "$ENGINE" \
+  '                if let Some(powers) = convert::kas::powers::to_notification(method, params)? {
+                    return Ok(Some(powers));
+                }' \
+  '' \
+  cargo test -p cyril-core --all-features --lib powers_push_survives_the_transport
 
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"

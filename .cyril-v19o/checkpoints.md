@@ -63,3 +63,36 @@ Claims: C5 (command and App halves)
 | 7 | Regression fence green | PASS | Command, registration, App push/command and key-map fences all green; the `Notification` variant's exhaustive-match arms in `state.rs` and `test_bridge.rs` compile and pass |
 | 8 | Named mutation red | PASS | C5 push-opens-the-panel (App arm calling `show_powers_panel` unconditionally) RED; C5 no-catalog-answer-dropped (`Dispatched` instead of the system line) RED — both GREEN after restore, in a pass that also re-proved slices 1 and 2 (11 mutations total) |
 | 9 | Fence restored green | PASS | `mutations.sh` prints `GREEN after restore` for all 11; `trap` restores on interrupt |
+
+## Slice 4 — nothing can call a method that does not exist; the frame survives the wire
+
+Claims: C7 (census), C8 (module ledger over the assembled increment)
+
+| # | Gate item | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test -p cyril-core -p cyril-ui -p cyril --all-features` clean; **default-feature lane** also clean (the harness and the census compile without `kas`); `cargo clippy --workspace --all-targets --all-features -- -D warnings` → 0 diagnostics *and* the same at default features; `cargo fmt --check` clean |
+| 2 | Falsifiers (C7, C8 were `PENDING`) | PASS | Discharged: `no_production_source_names_an_unusable_powers_method`, `powers_census_detects_the_methods_it_exists_to_catch`, `powers_census_is_line_ending_agnostic`, `powers_push_survives_the_transport_and_draws_no_request` |
+| 3 | Stress fixture | PASS | Census walks **170** `crates/*/src/**/*.rs` files; the transport fence replays the committed capture through the real SDK2 path and checks the three power names, `title()`, `has_steering_files()` and `mcp_server_names()` at that boundary |
+| 4 | Implementation vs independent oracle | PASS | The capture's own method census (`jq`) lists exactly three powers methods: one push, one unadvertised, one unimplemented. Production code names **only** the push — the other two appear six times, all six on `//`/`//!` lines (verified by grep), which is precisely the comment/code split the scanner is built on. C8's oracle also runs at **full strictness** (no `--slice`) over the assembled diff: PASS |
+| 5 | Module shape | PASS | `python3 .cyril-v19o/oracles/module_shape.py` (full) → PASS C8/C7/C1. Every rule proved non-vacuous by injection: wire field in a protected parent's struct → named; helper outside the allowed `app.rs` regions → flagged; `serde`/`from_str` in the widget → flagged; `ratatui` in the adapter → flagged; each clean after restore. The redundant line-based `App`-field check was **deleted** after it false-positived on a function parameter the region check already covers |
+| 6 | Production-scale budget | PASS | No hot-path code added: the census is a test (0.02 s over 170 files) and the transport fence is one session's worth of frames. Slice 3's `/powers` measurement (182 µs at 1000 powers) remains the production figure |
+| 7 | Regression fence green | PASS | All four slice-4 fences green in both feature lanes |
+| 8 | Named mutation red | PASS | C7 an-unusable-powers-method-cannot-be-called (a `refresh` call injected into `state.rs`) RED; C5 push-dropped-at-the-engine (the engine arm removed, i.e. the frame silently unrecognized) RED — both GREEN after restore. Re-proved after `cargo fmt` retouched the fence text. Full suite: **13 named mutations** |
+| 9 | Fence restored green | PASS | `mutations.sh` → `all 13 named mutations proved red/green`; `trap` restores on interrupt |
+
+### The fence found a real defect in itself
+
+The census's first run failed on a false positive: the fixture lives at
+`tests/fixtures/kas/powers/items-changed-2.21.2.json`, so `include_str!` lines
+contain the text `powers/items` followed by `-`. A path is not a method. The
+scan now anchors on the `kiro/powers/` wire namespace, and the case is a
+permanent assertion in `powers_census_detects_the_methods_it_exists_to_catch` —
+the direction that matters, since a scanner that quietly stops matching is
+worse than no scanner.
+
+Also recorded for honesty: the transport fence asserts the push's **content and
+provenance**, not its position relative to the bridge's local
+`UsageSessionStarted` — the push races that local notification, and nothing in
+the evidence pins the order (the capture's 18 ms gap is wall-clock). The claim
+at stake is "arrives unprompted and survives normalization", and that is what is
+asserted.
