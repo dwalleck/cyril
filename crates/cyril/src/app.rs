@@ -24,7 +24,7 @@ use cyril_core::usage::{
 };
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
-use cyril_ui::traits::{Activity, PickerKind, TuiState, approval_origin_label};
+use cyril_ui::traits::{Activity, Overlay, PickerKind, TuiState, approval_origin_label};
 
 use cyril_core::types::code_panel::CodeCommandResponse;
 
@@ -1404,8 +1404,11 @@ impl App {
         // the App's only remaining job is the view — and only when the panel is
         // already open. This notification arrives unprompted on any hook-file
         // edit, so it must never pop an overlay open by itself.
+        //
+        // The catalog goes in by reference: the refresh clones only when the
+        // panel is open and the rows actually differ (review finding 19).
         if let Notification::HooksChanged { ref hooks } = notification
-            && self.ui_state.refresh_hooks_panel(hooks.clone())
+            && self.ui_state.refresh_hooks_panel(hooks)
         {
             self.redraw_needed = true;
         }
@@ -1417,7 +1420,7 @@ impl App {
         // (+18 ms after `session/new`), and a modal that opens itself over the
         // user is worse than a stale one.
         if let Notification::PowersChanged { ref powers } = notification
-            && self.ui_state.refresh_powers_panel(powers.clone())
+            && self.ui_state.refresh_powers_panel(powers)
         {
             self.redraw_needed = true;
         }
@@ -1578,13 +1581,10 @@ impl App {
             Event::Key(key) => self.handle_key(key).await?,
             Event::Mouse(mouse) => {
                 // Respect modal overlay priority — don't scroll chat when
-                // an overlay is consuming input.
-                if !self.ui_state.has_approval()
-                    && !self.ui_state.has_picker()
-                    && !self.ui_state.has_hooks_panel()
-                    && !self.ui_state.has_powers_panel()
-                    && !self.ui_state.has_code_panel()
-                    && !self.ui_state.has_usage_panel()
+                // an overlay is consuming input. One predicate, shared with the
+                // key chain and the paste path: hand-written lists here went
+                // stale every time an overlay was added (review finding 13).
+                if !self.ui_state.has_modal_overlay()
                     && self.ui_state.subagent_ui().focused_session_id().is_none()
                 {
                     // Mouse wheel uses a fixed 3-line step; keyboard
@@ -1607,7 +1607,13 @@ impl App {
                 self.redraw_needed = true;
             }
             Event::Paste(text) => {
-                if !self.ui_state.has_usage_panel() {
+                // A pasted blob must never land in the input buffer while a
+                // modal overlay hides it: the overlay consumes every keystroke,
+                // so the next Esc would reveal text the user never saw
+                // themselves type. The guard used to name only `/usage`; the
+                // same predicate as the key chain and the mouse guard covers
+                // every overlay by construction (review finding 13).
+                if !self.ui_state.has_modal_overlay() {
                     self.ui_state.insert_text(&text);
                     self.redraw_needed = true;
                 }
@@ -1644,34 +1650,21 @@ impl App {
             _ => {}
         }
 
-        // Layer 2: Modal overlays
-        if self.ui_state.has_approval() {
-            self.handle_approval_key(key);
-            self.redraw_needed = true;
-            return Ok(());
-        }
-        if self.ui_state.has_picker() {
-            self.handle_picker_key(key).await?;
-            self.redraw_needed = true;
-            return Ok(());
-        }
-        if self.ui_state.has_hooks_panel() {
-            self.handle_hooks_panel_key(key);
-            self.redraw_needed = true;
-            return Ok(());
-        }
-        if self.ui_state.has_powers_panel() {
-            dispatch_powers_panel_key(key, &mut self.ui_state);
-            self.redraw_needed = true;
-            return Ok(());
-        }
-        if self.ui_state.has_code_panel() {
-            self.handle_code_panel_key(key).await?;
-            self.redraw_needed = true;
-            return Ok(());
-        }
-        if self.ui_state.has_usage_panel() {
-            dispatch_usage_panel_key(key, &mut self.ui_state);
+        // Layer 2: Modal overlays. Exactly one overlay owns the keyboard — the
+        // one painted last (`render` iterates `Overlay::ALL` front to back), so
+        // what the user sees on top is what reacts. Both the choice and the
+        // order come from `UiState`; the match is exhaustive, so an overlay
+        // added to the enum cannot silently become unreachable (review findings
+        // 3 and 20).
+        if let Some(overlay) = self.ui_state.topmost_overlay() {
+            match overlay {
+                Overlay::Approval => self.handle_approval_key(key),
+                Overlay::Picker => self.handle_picker_key(key).await?,
+                Overlay::Hooks => self.handle_hooks_panel_key(key),
+                Overlay::Powers => dispatch_powers_panel_key(key, &mut self.ui_state),
+                Overlay::Code => self.handle_code_panel_key(key).await?,
+                Overlay::Usage => dispatch_usage_panel_key(key, &mut self.ui_state),
+            }
             self.redraw_needed = true;
             return Ok(());
         }
@@ -2036,9 +2029,11 @@ impl App {
             }
             CommandResultKind::ShowPowers { powers } => {
                 // The panel holds the catalog; ordering and clamping happen in
-                // `UiState::show_powers_panel`, so this arm is pure wiring.
+                // `UiState::show_powers_panel`, so this arm is pure wiring. The
+                // flags go in by reference and the arm sets no `redraw_needed`:
+                // `handle_command_result` already does that unconditionally at
+                // the end, so a store here would be dead (review finding 19).
                 self.ui_state.show_powers_panel(powers);
-                self.redraw_needed = true;
             }
             CommandResultKind::ShowUsage {
                 account_query_started,
@@ -2100,8 +2095,22 @@ impl App {
         match event {
             VoiceEvent::Level(level) => self.ui_state.set_voice_level(level),
             VoiceEvent::Status(status) => self.ui_state.set_voice_status(status),
-            // The payoff: a finished transcript drops into the input buffer.
-            VoiceEvent::Transcript(text) => self.ui_state.insert_text(&text),
+            // The payoff: a finished transcript drops into the input buffer —
+            // but only while the user can see that buffer. Voice capture runs
+            // in its own thread and a modal overlay (an approval, a panel, a
+            // picker) may have opened since `/voice` started; inserting under it
+            // would hide the transcript and then surprise the user with it after
+            // Esc (review finding 13).
+            VoiceEvent::Transcript(text) => {
+                if self.ui_state.has_modal_overlay() {
+                    tracing::warn!(
+                        chars = text.chars().count(),
+                        "dropping a voice transcript: a modal overlay owns the input"
+                    );
+                } else {
+                    self.ui_state.insert_text(&text);
+                }
+            }
             VoiceEvent::Error(msg) => {
                 // The engine bailed → it is no longer capturing. Clear intent so
                 // the next /voice starts fresh.
@@ -5491,9 +5500,9 @@ mod tests {
     /// it must update the catalog without opening a modal; the panel opens only
     /// from the command. Both halves are asserted here because either one alone
     /// is satisfied by a wrong App arm (always-open, or never-open).
-    #[test]
-    fn powers_push_updates_without_opening_and_command_opens() {
-        let mut app = test_app();
+    #[tokio::test]
+    async fn powers_push_updates_without_opening_and_command_opens() {
+        let (mut app, _rx) = test_app_with_command_rx();
         let catalog = powers_catalog();
 
         app.handle_notification(RoutedNotification::global(Notification::PowersChanged {
@@ -5512,8 +5521,12 @@ mod tests {
         );
 
         // Positive control for that absence: the panel does exist, and the
-        // command result is what opens it.
-        app.ui_state.show_powers_panel(catalog.clone());
+        // COMMAND is what opens it. Driven through `submit_input`, so
+        // `handle_command_result`'s `ShowPowers` arm is load-bearing — a direct
+        // `show_powers_panel` call here would keep passing with that arm
+        // deleted (review finding 14b).
+        app.ui_state.insert_text("/powers");
+        app.submit_input().await.expect("execute local /powers");
         assert!(app.ui_state.has_powers_panel());
         assert_eq!(
             app.ui_state.powers_panel().expect("panel").powers.len(),
@@ -5522,12 +5535,33 @@ mod tests {
         );
 
         // An open panel is refreshed in place by a later push, never closed and
-        // never re-opened from scratch (the scroll offset is preserved).
+        // never re-opened from scratch: the viewport survives the replacement.
+        let many: Vec<cyril_core::types::PowerInfo> = (0..9)
+            .map(|n| {
+                cyril_core::types::PowerInfo::new(
+                    format!("power-{n:02}"),
+                    Some(format!("Power {n:02}")),
+                    None,
+                    Vec::new(),
+                    false,
+                )
+            })
+            .collect();
         app.handle_notification(RoutedNotification::global(Notification::PowersChanged {
-            powers: vec![catalog[1].clone()],
+            powers: many.clone(),
+        }));
+        app.ui_state.powers_panel_scroll_down(1);
+        assert_eq!(app.ui_state.powers_panel().expect("panel").scroll_offset, 1);
+
+        app.handle_notification(RoutedNotification::global(Notification::PowersChanged {
+            powers: many[..7].to_vec(),
         }));
         let panel = app.ui_state.powers_panel().expect("still open");
-        assert_eq!(panel.powers.len(), 1, "contents replaced");
+        assert_eq!(panel.powers.len(), 7, "contents replaced");
+        assert_eq!(
+            panel.scroll_offset, 1,
+            "…and the viewport is preserved, not yanked to the top"
+        );
     }
 
     /// SC4 (spec acceptance): "not reported yet" and "reported empty" are
@@ -5591,8 +5625,8 @@ mod tests {
         ui_state.show_powers_panel(powers_catalog());
         assert!(ui_state.has_powers_panel());
 
-        // Five powers, so the page step (the panel's window height) is not
-        // clamped to the same value as the single-line step.
+        // Twelve powers, so the page step runs against a catalog longer than
+        // the window instead of being clamped by it immediately.
         let many: Vec<cyril_core::types::PowerInfo> = (0..12)
             .map(|n| {
                 cyril_core::types::PowerInfo::new(
@@ -5612,10 +5646,21 @@ mod tests {
         assert_eq!(
             ui_state.powers_panel().expect("panel").scroll_offset,
             6,
-            "page step matches the panel's five-power window plus one"
+            "the page step is the panel's five-power window"
+        );
+        // …and the end of the list is the last offset that still fills that
+        // window, not the last power's index: further pages cannot scroll past
+        // it (review finding 8).
+        dispatch_powers_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        dispatch_powers_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        assert_eq!(
+            ui_state.powers_panel().expect("panel").scroll_offset,
+            12 - cyril_ui::traits::MAX_VISIBLE_POWERS,
+            "the viewport stops where the last full window starts"
         );
         dispatch_powers_panel_key(key(KeyCode::PageUp), &mut ui_state);
-        assert_eq!(ui_state.powers_panel().expect("panel").scroll_offset, 1);
+        assert_eq!(ui_state.powers_panel().expect("panel").scroll_offset, 2);
+        dispatch_powers_panel_key(key(KeyCode::Up), &mut ui_state);
         dispatch_powers_panel_key(key(KeyCode::Up), &mut ui_state);
         assert_eq!(ui_state.powers_panel().expect("panel").scroll_offset, 0);
         // An unrelated key is a no-op, not a close.
@@ -5624,6 +5669,133 @@ mod tests {
 
         dispatch_powers_panel_key(key(KeyCode::Esc), &mut ui_state);
         assert!(!ui_state.has_powers_panel(), "Esc closes the panel");
+    }
+
+    /// REGRESSION FENCE (cyril-v19o, review findings 3 + 20). The keyboard
+    /// follows the overlay the user SEES on top (`Overlay::ALL`'s last open
+    /// layer — the one `render` paints last), not the overlay that opened most
+    /// recently. A permission prompt that arrives while `/powers` is open owns
+    /// Down and Esc; the panel underneath eats neither, and the moment the
+    /// prompt is gone the panel takes the same keys back.
+    #[tokio::test]
+    async fn keys_follow_the_topmost_overlay() {
+        let (mut app, _rx) = test_app_with_command_rx();
+        let many: Vec<cyril_core::types::PowerInfo> = (0..8)
+            .map(|n| {
+                cyril_core::types::PowerInfo::new(
+                    format!("power-{n:02}"),
+                    Some(format!("Power {n:02}")),
+                    None,
+                    Vec::new(),
+                    false,
+                )
+            })
+            .collect();
+        app.ui_state.show_powers_panel(many);
+
+        // A permission request interrupts: it is the top layer from here on.
+        let (mut request, _responder) = trust_request("main");
+        request.options.push(PermissionOption {
+            id: PermissionOptionId::new("reject"),
+            label: "No".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: false,
+        });
+        app.ui_state.show_approval(request);
+        assert_eq!(app.ui_state.topmost_overlay(), Some(Overlay::Approval));
+
+        app.handle_key(key(KeyCode::Down)).await.expect("down");
+        assert_eq!(
+            app.ui_state.approval().map(|approval| approval.selected),
+            Some(1),
+            "Down belongs to the approval, not to the panel beneath it"
+        );
+        assert_eq!(
+            app.ui_state.powers_panel().expect("panel").scroll_offset,
+            0,
+            "…and the panel must not scroll underneath"
+        );
+
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(!app.ui_state.has_approval(), "Esc answers the top layer");
+        assert!(
+            app.ui_state.has_powers_panel(),
+            "…and leaves the layer below open"
+        );
+
+        // With the prompt gone the panel is topmost again, and the same two
+        // keys act on it.
+        assert_eq!(app.ui_state.topmost_overlay(), Some(Overlay::Powers));
+        app.handle_key(key(KeyCode::Down)).await.expect("down");
+        assert_eq!(app.ui_state.powers_panel().expect("panel").scroll_offset, 1);
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(!app.ui_state.has_powers_panel(), "Esc closes the panel");
+    }
+
+    /// REGRESSION FENCE (cyril-v19o, review finding 13). The key chain, the
+    /// mouse-scroll guard, the paste path and the voice-transcript insert all
+    /// consult ONE predicate (`UiState::has_modal_overlay`). Each of those was a
+    /// hand-written list, and the paste/voice paths named only `/usage`: text
+    /// pasted or dictated under any other overlay landed in the input buffer
+    /// behind it, invisible until Esc revealed it. (`/usage` keeps its own
+    /// coverage in `usage_modal_command_and_key_priority`.)
+    #[tokio::test]
+    async fn paste_mouse_and_voice_respect_every_overlay() {
+        use crossterm::event::MouseEvent;
+
+        let (mut app, _rx) = test_app_with_command_rx();
+        app.ui_state.show_powers_panel(powers_catalog());
+        app.ui_state.insert_text("draft");
+
+        let wheel = || {
+            Event::Mouse(MouseEvent {
+                kind: MouseEventKind::ScrollUp,
+                column: 1,
+                row: 1,
+                modifiers: KeyModifiers::NONE,
+            })
+        };
+
+        app.handle_terminal_event(Event::Paste("pasted".into()))
+            .await
+            .expect("paste under the panel");
+        assert_eq!(
+            app.ui_state.input_text(),
+            "draft",
+            "a paste must not land in the buffer an overlay is hiding"
+        );
+        app.handle_voice_event(VoiceEvent::Transcript("dictated".into()));
+        assert_eq!(
+            app.ui_state.input_text(),
+            "draft",
+            "…and neither may a finished transcript"
+        );
+        app.handle_terminal_event(wheel())
+            .await
+            .expect("wheel under the panel");
+        assert!(
+            app.ui_state.chat_scroll_back().is_none(),
+            "the wheel must not scroll the chat behind an overlay"
+        );
+
+        // Positive control: with the overlay gone all three paths reach the
+        // input and the chat, so the assertions above are not the work of a
+        // guard that never lets anything through.
+        app.ui_state.hide_powers_panel();
+        app.handle_terminal_event(Event::Paste("pasted".into()))
+            .await
+            .expect("paste with no overlay");
+        assert_eq!(app.ui_state.input_text(), "draftpasted");
+        app.handle_voice_event(VoiceEvent::Transcript(" dictated".into()));
+        assert_eq!(app.ui_state.input_text(), "draftpasted dictated");
+        app.handle_terminal_event(wheel())
+            .await
+            .expect("wheel with no overlay");
+        assert_eq!(
+            app.ui_state.chat_scroll_back(),
+            Some(MOUSE_SCROLL_LINES),
+            "the chat scrolls again once the overlay is gone"
+        );
     }
 
     // --- dispatch_hooks_panel_key tests ---

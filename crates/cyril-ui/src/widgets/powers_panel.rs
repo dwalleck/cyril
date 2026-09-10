@@ -22,20 +22,24 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 
-use crate::text::truncate_and_pad;
+use crate::text::{truncate, truncate_and_pad};
 use crate::theme::Theme;
-use crate::traits::PowersPanelState;
+use crate::traits::{MAX_VISIBLE_POWERS, PowersPanelState};
 
 /// Rows one power occupies, always.
 const LINES_PER_POWER: usize = 3;
-/// Powers shown before the list scrolls. 15 content rows + 4 chrome rows = 19,
-/// which still fits the 24-row terminal the panel is checked against.
-const MAX_VISIBLE_POWERS: usize = 5;
 /// Two-cell indent on every content line.
 const INDENT: usize = 2;
-/// Chrome rows beyond the content: the two borders plus one row of margin at
-/// each edge — the same +4 the hooks panel reserves.
-const CHROME_ROWS: usize = 4;
+/// Rows the block spends on its own frame: the two borders, nothing else.
+///
+/// Deliberately NOT the hooks panel's +4 — that panel draws a header row
+/// inside its frame, while this one puts the count in the title. Reserving
+/// rows this widget does not draw drops the last power that fits whenever
+/// `place` clamps the popup (review finding 5).
+const BORDER_ROWS: usize = 2;
+/// Marker for a power that ships steering files, appended to the meta line.
+/// ASCII, so its byte length is its cell width.
+const STEERING_TOKEN: &str = " · steering";
 
 /// Render the powers panel overlay (input-protected popup).
 ///
@@ -51,7 +55,7 @@ pub fn render(
     theme: &Theme,
 ) {
     let listed = state.powers.len().clamp(1, MAX_VISIBLE_POWERS);
-    let desired_height = (listed * LINES_PER_POWER) as u16 + CHROME_ROWS as u16;
+    let desired_height = (listed * LINES_PER_POWER) as u16 + BORDER_ROWS as u16;
     let Some(popup_area) = crate::widgets::modal::place(area, input_top, 96, desired_height) else {
         return; // no rows above the input can hold the popup
     };
@@ -60,11 +64,41 @@ pub fn render(
 
     frame.render_widget(Clear, popup_area);
 
-    let title = format!(
-        " /powers · {} power{} ",
-        state.powers.len(),
-        if state.powers.len() == 1 { "" } else { "s" }
-    );
+    // Content width inside the borders and the two-cell indent. Floor division
+    // is deliberate: a trailing partial line is left unpainted rather than
+    // clipped mid-row.
+    let inner_width = (width as usize).saturating_sub(2);
+    let text_width = inner_width.saturating_sub(INDENT).max(1);
+    // What the PLACED popup can show. `place` may have clamped it below
+    // `desired_height`, so this can be smaller than the window the keyboard
+    // clamps to (`MAX_VISIBLE_POWERS`).
+    let window = (((height as usize).saturating_sub(BORDER_ROWS)) / LINES_PER_POWER).max(1);
+    // …and the viewport must start inside the catalog: the keyboard's offset is
+    // bounded by the maximum window, which a squeezed popup would otherwise
+    // overshoot into blank rows (review finding 8).
+    let first_visible = state
+        .scroll_offset
+        .min(state.powers.len().saturating_sub(window));
+
+    let title = if state.powers.is_empty() {
+        " /powers · 0 powers ".to_owned()
+    } else if state.powers.len() > window {
+        // Without this a twelve-power catalog reads as five rows and stops:
+        // the panel has no `+N more` row and no key footer, so nothing says
+        // the other seven exist (review finding 6).
+        format!(
+            " /powers · {} powers · showing {}–{} ",
+            state.powers.len(),
+            first_visible + 1,
+            (first_visible + window).min(state.powers.len())
+        )
+    } else {
+        format!(
+            " /powers · {} power{} ",
+            state.powers.len(),
+            if state.powers.len() == 1 { "" } else { "s" }
+        )
+    };
     let block = Block::default()
         .title(Span::styled(
             title,
@@ -88,20 +122,8 @@ pub fn render(
         return;
     }
 
-    // Content width inside the borders and the two-cell indent. Floor division
-    // is deliberate: a trailing partial line is left unpainted rather than
-    // clipped mid-row.
-    let inner_width = (width as usize).saturating_sub(2);
-    let text_width = inner_width.saturating_sub(INDENT).max(1);
-    let visible_powers = ((height as usize).saturating_sub(CHROME_ROWS)) / LINES_PER_POWER;
-
     let mut lines: Vec<Line> = Vec::with_capacity(state.powers.len() * LINES_PER_POWER);
-    for power in state
-        .powers
-        .iter()
-        .skip(state.scroll_offset)
-        .take(visible_powers.max(1))
-    {
+    for power in state.powers.iter().skip(first_visible).take(window) {
         lines.push(Line::styled(
             format!("  {}", truncate_and_pad(power.title(), text_width)),
             Style::default().fg(theme.text).add_modifier(Modifier::BOLD),
@@ -109,15 +131,30 @@ pub fn render(
 
         // The identifier is the stable half of the row: a display name can be
         // edited upstream, the id is what `~/.kiro/powers/` holds.
+        //
+        // The steering token is budgeted BEFORE the server list, not appended
+        // after it: the row is truncated to the panel width, so a long or
+        // multi-server MCP list used to eat ` · steering` whole and the panel
+        // then stated by omission that the power ships no steering files
+        // (review finding 7).
         let mut meta = format!("  {}", power.name());
         for server in power.mcp_server_names() {
             meta.push_str(&format!(" · mcp {server}"));
         }
-        if power.has_steering_files() {
-            meta.push_str(" · steering");
-        }
+        // A panel too narrow for the token plus at least one cell of identifier
+        // drops the token rather than painting past its own border; the row is
+        // an ellipsis at that width anyway.
+        let steering = if power.has_steering_files() && inner_width > STEERING_TOKEN.len() {
+            STEERING_TOKEN
+        } else {
+            ""
+        };
+        let meta = format!(
+            "{}{steering}",
+            truncate(&meta, inner_width.saturating_sub(steering.len()))
+        );
         lines.push(Line::styled(
-            truncate_and_pad(&meta, inner_width),
+            meta,
             Style::default().fg(theme.text_secondary),
         ));
 
@@ -159,6 +196,17 @@ mod tests {
     }
 
     fn draw(state: &PowersPanelState, width: u16, height: u16) -> Terminal<TestBackend> {
+        draw_at(state, width, height, height)
+    }
+
+    /// Draw with an explicit input top, so a test can reach the branch where
+    /// `place` has to clamp the popup instead of centering it.
+    fn draw_at(
+        state: &PowersPanelState,
+        width: u16,
+        height: u16,
+        input_top: u16,
+    ) -> Terminal<TestBackend> {
         let backend = TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend).unwrap();
         terminal
@@ -166,7 +214,7 @@ mod tests {
                 render(
                     frame,
                     frame.area(),
-                    frame.area().height,
+                    input_top,
                     state,
                     &crate::theme::resolve(
                         crate::theme::ThemeId::CyrilDark,
@@ -360,6 +408,113 @@ mod tests {
         );
     }
 
+    /// REGRESSION FENCE (cyril-v19o review finding 6). A catalog taller than
+    /// the window says so in the title: the panel has no `+N more` row and no
+    /// key footer, so without this it reads as "these five are all of them".
+    #[test]
+    fn title_states_the_window_when_the_catalog_overflows() {
+        let powers: Vec<PowerInfo> = (0..12)
+            .map(|n| {
+                power(
+                    &format!("power-{n:02}"),
+                    Some(&format!("Power {n:02}")),
+                    None,
+                    &[],
+                    false,
+                )
+            })
+            .collect();
+
+        let state = PowersPanelState {
+            powers: powers.clone(),
+            scroll_offset: 0,
+        };
+        let text = rendered_text(&draw(&state, 100, 24));
+        assert!(
+            text.contains("12 powers"),
+            "the count is still stated: {text}"
+        );
+        assert!(
+            text.contains("showing 1–5"),
+            "the window is stated when it is not the whole catalog: {text}"
+        );
+
+        let state = PowersPanelState {
+            powers,
+            scroll_offset: 7,
+        };
+        let text = rendered_text(&draw(&state, 100, 24));
+        assert!(text.contains("Power 07"), "the window starts at the offset");
+        assert!(
+            text.contains("showing 8–12"),
+            "…and the title follows the scroll: {text}"
+        );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 5). `place`'s clamp branch
+    /// is the only geometry where the chrome arithmetic shows: the popup is
+    /// capped to the rows above the input, so a window computed with the hooks
+    /// panel's +4 — a header row THIS widget does not draw — drops the last
+    /// power that fits. Five powers are 15 content rows plus two borders, so
+    /// all five render.
+    #[test]
+    fn clamped_popup_still_shows_every_power_that_fits() {
+        let powers: Vec<PowerInfo> = (0..5)
+            .map(|n| {
+                power(
+                    &format!("power-{n:02}"),
+                    Some(&format!("Power {n:02}")),
+                    None,
+                    &[],
+                    false,
+                )
+            })
+            .collect();
+        let state = PowersPanelState {
+            powers,
+            scroll_offset: 0,
+        };
+        // 100x24 with the input top at row 18: the geometry the constant's own
+        // comment cites, where `place` clamps the popup to rows 1..17.
+        let text = rendered_text(&draw_at(&state, 100, 24, 18));
+        assert!(
+            text.contains("Power 00"),
+            "the first power renders in the clamped popup: {text}"
+        );
+        assert!(
+            text.contains("Power 04"),
+            "the fifth fits in 15 content rows and must not be dropped: {text}"
+        );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 7). The steering marker is
+    /// budgeted before the MCP list, so it survives a meta line that has to be
+    /// truncated — losing it states by omission that the power ships no
+    /// steering files.
+    #[test]
+    fn steering_marker_survives_a_truncated_meta_line() {
+        let state = PowersPanelState {
+            powers: vec![power(
+                "aws-infrastructure-as-code",
+                Some("Build AWS"),
+                None,
+                &["awslabs.aws-iac-mcp-server", "awslabs.cdk-mcp-server"],
+                true,
+            )],
+            scroll_offset: 0,
+        };
+        let terminal = draw(&state, 60, 24);
+        let meta = row_text(&terminal, 1);
+        assert!(
+            meta.contains("· steering"),
+            "the marker survives the width budget: {meta:?}"
+        );
+        assert!(
+            meta.contains('…'),
+            "the server list is what gives way, not the marker: {meta:?}"
+        );
+    }
+
     /// REGRESSION FENCE (cyril-v19o C6): the viewport shows whole powers and
     /// clamps at the end, so a stale scroll offset cannot strand the panel past
     /// the catalog.
@@ -384,8 +539,13 @@ mod tests {
         let text = rendered_text(&terminal);
         assert!(text.contains("Power 11"), "the last power renders");
         assert!(
-            !text.contains("Power 10"),
-            "a scrolled viewport shows only the window: {text}"
+            text.contains("Power 07"),
+            "an offset past the last full window is pulled back to it, so the \
+             viewport still shows five powers (review finding 8): {text}"
+        );
+        assert!(
+            !text.contains("Power 06"),
+            "…and the window is whole: {text}"
         );
 
         // Scrolled to the front, the window is exactly MAX_VISIBLE_POWERS tall.

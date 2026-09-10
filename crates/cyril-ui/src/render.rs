@@ -3,7 +3,7 @@ use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
 
-use crate::traits::{TuiState, approval_origin_label};
+use crate::traits::{Overlay, TuiState, approval_origin_label};
 
 /// Draw the full TUI frame. Panic-safe wrapper with fallback rendering.
 pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
@@ -135,32 +135,75 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         }
     }
 
-    // Overlays (rendered on top)
-    if let Some(approval) = state.approval() {
-        let attribution = match state.main_session_id() {
-            Some(main)
-                if !approval.session_id.as_str().is_empty() && main == &approval.session_id =>
-            {
-                None
+    // Overlays (rendered on top, bottom-most first).
+    //
+    // The order is `Overlay::ALL`, whose reverse is the key-dispatch order: the
+    // overlay painted last is the one `App::handle_key` hands the keyboard to.
+    // Each widget clears its own rect before drawing, so painting the approval
+    // prompt FIRST (as this loop used to) let the next panel's `Clear` erase it
+    // while Enter still answered it — the exact inverse of what the user sees
+    // (review findings 3 and 20).
+    for overlay in Overlay::ALL {
+        match overlay {
+            Overlay::Approval => {
+                if let Some(approval) = state.approval() {
+                    let attribution = match state.main_session_id() {
+                        Some(main)
+                            if !approval.session_id.as_str().is_empty()
+                                && main == &approval.session_id =>
+                        {
+                            None
+                        }
+                        _ => Some(approval_origin_label(&approval.session_id)),
+                    };
+                    crate::widgets::approval::render(
+                        frame,
+                        area,
+                        input_area.y,
+                        approval,
+                        attribution,
+                        &theme,
+                    );
+                }
             }
-            _ => Some(approval_origin_label(&approval.session_id)),
-        };
-        crate::widgets::approval::render(frame, area, input_area.y, approval, attribution, &theme);
-    }
-    if let Some(picker) = state.picker() {
-        crate::widgets::picker::render(frame, area, input_area.y, picker, &theme);
-    }
-    if let Some(hooks) = state.hooks_panel() {
-        crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
-    }
-    if let Some(powers) = state.powers_panel() {
-        crate::widgets::powers_panel::render(frame, area, input_area.y, powers, &theme);
-    }
-    if let Some(code_panel) = state.code_panel() {
-        crate::widgets::code_panel::render(frame, area, input_area.y, code_panel, &theme);
-    }
-    if let Some(usage_panel) = state.usage_panel() {
-        crate::widgets::usage_panel::render(frame, area, input_area.y, usage_panel, &theme);
+            Overlay::Picker => {
+                if let Some(picker) = state.picker() {
+                    crate::widgets::picker::render(frame, area, input_area.y, picker, &theme);
+                }
+            }
+            Overlay::Hooks => {
+                if let Some(hooks) = state.hooks_panel() {
+                    crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
+                }
+            }
+            Overlay::Powers => {
+                if let Some(powers) = state.powers_panel() {
+                    crate::widgets::powers_panel::render(frame, area, input_area.y, powers, &theme);
+                }
+            }
+            Overlay::Code => {
+                if let Some(code_panel) = state.code_panel() {
+                    crate::widgets::code_panel::render(
+                        frame,
+                        area,
+                        input_area.y,
+                        code_panel,
+                        &theme,
+                    );
+                }
+            }
+            Overlay::Usage => {
+                if let Some(usage_panel) = state.usage_panel() {
+                    crate::widgets::usage_panel::render(
+                        frame,
+                        area,
+                        input_area.y,
+                        usage_panel,
+                        &theme,
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -724,6 +767,119 @@ mod tests {
         assert!(
             text(&state)?.contains("Permission Required — unknown session"),
             "an empty origin must stay attributed even when the main id is also empty"
+        );
+        Ok(())
+    }
+
+    /// REGRESSION FENCE (cyril-v19o, review findings 3 + 20). Two overlays are
+    /// open at once, and the one the key chain consults FIRST must be the one
+    /// painted LAST. Approval and the powers panel both anchor above the input,
+    /// so they overlap; painted in key order the powers panel's own `Clear`
+    /// erased the approval prompt while `handle_key` still handed that prompt
+    /// every key — Enter answered a box the user could not see.
+    ///
+    /// Geometry-independent: every cell both boxes claim must hold the TOP
+    /// overlay's content, whatever the terminal size happens to be.
+    #[test]
+    fn topmost_overlay_paints_last() -> anyhow::Result<()> {
+        use crate::traits::{
+            ApprovalPhase, ApprovalState, Overlay, PowersPanelState, TrackedToolCall,
+        };
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PowerInfo, SessionId,
+            ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+        };
+
+        let approval = || ApprovalState {
+            session_id: SessionId::new("main"),
+            tool_call: TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("tc"),
+                "rm -rf /tmp/x".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Pending,
+                None,
+            )),
+            message: "Allow this command?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            selected: 0,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+        };
+        let powers = PowersPanelState {
+            powers: (0..5)
+                .map(|n| {
+                    PowerInfo::new(
+                        format!("power-{n}"),
+                        Some(format!("Power {n}")),
+                        None,
+                        Vec::new(),
+                        false,
+                    )
+                })
+                .collect(),
+            scroll_offset: 0,
+        };
+
+        let base = render_buffer(&MockTuiState::default())?;
+        let approval_only = render_buffer(&MockTuiState {
+            approval: Some(approval()),
+            ..MockTuiState::default()
+        })?;
+        let powers_only = render_buffer(&MockTuiState {
+            powers_panel: Some(powers.clone()),
+            ..MockTuiState::default()
+        })?;
+        let both = render_buffer(&MockTuiState {
+            approval: Some(approval()),
+            powers_panel: Some(powers),
+            ..MockTuiState::default()
+        })?;
+
+        let claimed =
+            |buffer: &Buffer, index: usize| buffer.content()[index] != base.content()[index];
+        let shared: Vec<usize> = (0..base.content().len())
+            .filter(|&index| claimed(&approval_only, index) && claimed(&powers_only, index))
+            .collect();
+        // Non-vacuity: the two boxes must actually overlap, and the ordering
+        // must be visible in the overlap — otherwise this fence would pass on a
+        // frame where nothing collides.
+        assert!(
+            !shared.is_empty(),
+            "the approval prompt and the powers panel must overlap for this fence to mean anything"
+        );
+        assert!(
+            shared
+                .iter()
+                .any(|&index| approval_only.content()[index] != powers_only.content()[index]),
+            "the overlap must distinguish the two overlays for the order to matter"
+        );
+        for index in shared {
+            assert_eq!(
+                both.content()[index],
+                approval_only.content()[index],
+                "cell {index} belongs to the approval prompt and must carry it: the \
+                 overlay that receives keys first is painted last"
+            );
+        }
+        let text: String = both.content().iter().map(|cell| cell.symbol()).collect();
+        assert!(
+            text.contains("Allow this command?"),
+            "the topmost overlay's own text must survive the frame"
+        );
+        assert!(
+            text.contains("/powers"),
+            "and the panel underneath is still drawn where nothing covers it"
+        );
+        assert_eq!(
+            Overlay::ALL.last(),
+            Some(&Overlay::Approval),
+            "approval is the top of the stack in `Overlay::ALL` and in the key chain"
         );
         Ok(())
     }

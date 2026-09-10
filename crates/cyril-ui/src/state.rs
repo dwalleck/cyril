@@ -92,8 +92,13 @@ pub struct UiState {
     /// UiState's `last_turn`, so the render-path summary must reconcile too.
     pending_refusal: bool,
     /// The active turn is stalled (cyril-14ou; CONTEXT.md "Stalled turn").
-    /// Set by `TurnStalled` while busy; cleared by ANY other notification —
-    /// resumed traffic ends the quiet period, and a terminal ends the turn.
+    /// Set by `TurnStalled` while busy; cleared only by a notification that
+    /// PROVES the turn is progressing — the six-variant allowlist in
+    /// `apply_notification` (`AgentMessage`, `AgentThought`, `ToolCallStarted`,
+    /// `ToolCallUpdated`, `PlanUpdated`, `TurnCompleted`). Bridge-synthesized
+    /// command responses and every other session-less frame leave it standing,
+    /// which is the safe direction but means a chip can lag the resume by up to
+    /// the stall threshold (30 s).
     /// Never blocks input and never fakes a terminal: display state only.
     stall: Option<StallState>,
 
@@ -1588,6 +1593,45 @@ impl UiState {
         self.picker.is_some()
     }
 
+    /// The overlay that owns the keyboard: the open layer closest to the top of
+    /// [`Overlay::ALL`].
+    ///
+    /// `None` means input reaches the chat (autocomplete and the textarea). This
+    /// is the single answer to "who gets this key", used by `App::handle_key`,
+    /// and it is deliberately the SAME order [`crate::render`] paints in
+    /// reverse, so the overlay that shows on top is the overlay that reacts
+    /// (review findings 3 and 20).
+    pub fn topmost_overlay(&self) -> Option<Overlay> {
+        Overlay::ALL
+            .into_iter()
+            .rev()
+            .find(|overlay| self.is_overlay_open(*overlay))
+    }
+
+    /// Whether [`Self::topmost_overlay`] is `Some` — i.e. whether keyboard
+    /// input is owned by an overlay rather than the chat.
+    ///
+    /// Its three readers are the guards that must agree about that: the key
+    /// chain, the mouse-scroll guard and the paste / voice-transcript insert
+    /// path. Each of those was a hand-written list, and each list was missing
+    /// overlays (the paste guard knew only about `/usage`; the mouse guard
+    /// predated `/powers`) — a keystroke-free write path mutating state behind
+    /// an overlay the user cannot see into (review findings 13 and 20).
+    pub fn has_modal_overlay(&self) -> bool {
+        self.topmost_overlay().is_some()
+    }
+
+    fn is_overlay_open(&self, overlay: Overlay) -> bool {
+        match overlay {
+            Overlay::Approval => self.has_approval(),
+            Overlay::Picker => self.has_picker(),
+            Overlay::Hooks => self.has_hooks_panel(),
+            Overlay::Powers => self.has_powers_panel(),
+            Overlay::Code => self.has_code_panel(),
+            Overlay::Usage => self.has_usage_panel(),
+        }
+    }
+
     /// Handle a key event for the input field.
     pub fn handle_input_key(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
@@ -2341,20 +2385,26 @@ impl UiState {
     /// iterate `state.hooks` directly without re-sorting on every render
     /// frame. The stored order is the panel's display order — callers that
     /// need the original wire order should keep their own copy.
-    pub fn show_hooks_panel(&mut self, mut hooks: Vec<HookInfo>) {
-        hooks.sort_by(|a, b| {
-            a.trigger
-                .cmp(&b.trigger)
-                .then_with(|| a.command.cmp(&b.command))
-        });
+    pub fn show_hooks_panel(&mut self, hooks: Vec<HookInfo>) {
         self.hooks_panel = Some(HooksPanelState {
-            hooks,
+            hooks: Self::sorted_hooks(&hooks),
             scroll_offset: 0,
         });
     }
 
+    /// Order a registry the way the widget paints it: `(trigger, command)`.
+    fn sorted_hooks(hooks: &[HookInfo]) -> Vec<HookInfo> {
+        let mut ordered = hooks.to_vec();
+        ordered.sort_by(|a, b| {
+            a.trigger
+                .cmp(&b.trigger)
+                .then_with(|| a.command.cmp(&b.command))
+        });
+        ordered
+    }
+
     /// Replace the hooks panel's contents **only if it is already open**,
-    /// returning whether anything changed (cyril-gk17).
+    /// returning whether anything VISIBLY changed (cyril-gk17).
     ///
     /// KAS pushes `_kiro/hooks/didChange` whenever a hook file is edited,
     /// unprompted. Routing that through
@@ -2366,15 +2416,23 @@ impl UiState {
     /// The scroll offset is preserved and then clamped: a refresh that
     /// shortens the list must not strand the viewport past the end, and one
     /// that merely flips an `enabled` flag must not yank the user to the top.
-    pub fn refresh_hooks_panel(&mut self, hooks: Vec<HookInfo>) -> bool {
+    ///
+    /// `false` for a push that leaves the panel's rows identical (a file
+    /// rewrite, or an edit the registry does not reflect): the caller redraws
+    /// only when there is something to redraw (review finding 19).
+    pub fn refresh_hooks_panel(&mut self, hooks: &[HookInfo]) -> bool {
         let Some(panel) = self.hooks_panel.as_ref() else {
             return false;
         };
-        let scroll = panel.scroll_offset;
-        self.show_hooks_panel(hooks);
-        if let Some(panel) = self.hooks_panel.as_mut() {
-            panel.scroll_offset = scroll.min(panel.hooks.len().saturating_sub(1));
+        let ordered = Self::sorted_hooks(hooks);
+        if panel.hooks == ordered {
+            return false;
         }
+        let scroll = panel.scroll_offset.min(ordered.len().saturating_sub(1));
+        self.hooks_panel = Some(HooksPanelState {
+            hooks: ordered,
+            scroll_offset: scroll,
+        });
         true
     }
 
@@ -2415,21 +2473,39 @@ impl UiState {
     ///
     /// Rows are ordered here, on insert, so the widget iterates
     /// `state.powers` directly without re-sorting every frame. The key is the
-    /// *display* title (case-insensitive), tie-broken by identifier: the title
-    /// is what the user reads, and two powers can share one — `sort_by_cached_key`
-    /// computes each key once rather than once per comparison.
-    pub fn show_powers_panel(&mut self, mut powers: Vec<PowerInfo>) {
-        powers.sort_by_cached_key(|power| {
-            (power.title().to_ascii_lowercase(), power.name().to_owned())
-        });
+    /// *display* title compared as ASCII lowercase, tie-broken by identifier:
+    /// the title is what the user reads, two powers can share one, and the id
+    /// is what makes the order total — `sort_by_cached_key` computes each key
+    /// once rather than once per comparison.
+    pub fn show_powers_panel(&mut self, powers: Vec<PowerInfo>) {
         self.powers_panel = Some(PowersPanelState {
-            powers,
+            powers: Self::sorted_powers(&powers),
             scroll_offset: 0,
         });
     }
 
+    /// Order a catalog for display: title (ASCII-lowercase), then identifier.
+    fn sorted_powers(powers: &[PowerInfo]) -> Vec<PowerInfo> {
+        let mut ordered = powers.to_vec();
+        ordered.sort_by_cached_key(|power| {
+            (power.title().to_ascii_lowercase(), power.name().to_owned())
+        });
+        ordered
+    }
+
+    /// The last scroll offset that still fills the panel's window.
+    ///
+    /// The widget paints at most [`MAX_VISIBLE_POWERS`] powers, so any offset
+    /// past `len - MAX_VISIBLE_POWERS` starts the viewport past the end of the
+    /// catalog and leaves blank rows under a partial list (review finding 8 —
+    /// the hooks panel's index clamp suits one-line rows, and this panel copied
+    /// it with three-line rows).
+    fn max_powers_scroll(len: usize) -> usize {
+        len.saturating_sub(MAX_VISIBLE_POWERS)
+    }
+
     /// Replace the powers panel's contents **only if it is already open**,
-    /// returning whether anything changed.
+    /// returning whether anything VISIBLY changed.
     ///
     /// The catalog arrives unprompted once per session, and a second push can
     /// arrive while the user is reading the panel. Routing that through
@@ -2438,18 +2514,25 @@ impl UiState {
     /// change with the panel closed is deliberately invisible until the next
     /// `/powers`.
     ///
-    /// The scroll offset is preserved and then clamped: a refresh that shortens
-    /// the catalog must not strand the viewport past its end, and one that
-    /// merely renames a power must not yank the user back to the top.
-    pub fn refresh_powers_panel(&mut self, powers: Vec<PowerInfo>) -> bool {
+    /// `false` for a closed panel and for a push whose rows are identical
+    /// (a `/new` re-sending the same user-level catalog): neither is a
+    /// repaint. A changed catalog keeps its scroll position, clamped to the
+    /// window so a shorter list cannot strand the viewport past its end.
+    pub fn refresh_powers_panel(&mut self, powers: &[PowerInfo]) -> bool {
         let Some(panel) = self.powers_panel.as_ref() else {
             return false;
         };
-        let scroll = panel.scroll_offset;
-        self.show_powers_panel(powers);
-        if let Some(panel) = self.powers_panel.as_mut() {
-            panel.scroll_offset = scroll.min(panel.powers.len().saturating_sub(1));
+        let ordered = Self::sorted_powers(powers);
+        if panel.powers == ordered {
+            return false;
         }
+        let scroll = panel
+            .scroll_offset
+            .min(Self::max_powers_scroll(ordered.len()));
+        self.powers_panel = Some(PowersPanelState {
+            powers: ordered,
+            scroll_offset: scroll,
+        });
         true
     }
 
@@ -2470,12 +2553,14 @@ impl UiState {
         }
     }
 
-    /// Scroll the powers panel down by `powers`. Saturates at the last power's
-    /// index — the same index-based clamp the hooks panel uses, so the widget's
-    /// window can end with blank rows rather than a viewport-aware bound.
+    /// Scroll the powers panel down by `powers`. Saturates at the last offset
+    /// that still fills the window (`len - MAX_VISIBLE_POWERS`), not at the
+    /// last power's index: with three-line rows an index clamp scrolls a
+    /// three-power catalog into an almost-blank panel while the title still
+    /// claims three powers (review finding 8).
     pub fn powers_panel_scroll_down(&mut self, powers: usize) {
         if let Some(panel) = self.powers_panel.as_mut() {
-            let max = panel.powers.len().saturating_sub(1);
+            let max = Self::max_powers_scroll(panel.powers.len());
             panel.scroll_offset = (panel.scroll_offset + powers).min(max);
         }
     }
@@ -5558,7 +5643,7 @@ mod tests {
     #[test]
     fn refresh_is_inert_while_the_panel_is_closed() {
         let mut state = UiState::new(10);
-        let changed = state.refresh_hooks_panel(vec![HookInfo::v2("PreToolUse", "echo", None)]);
+        let changed = state.refresh_hooks_panel(&[HookInfo::v2("PreToolUse", "echo", None)]);
         assert!(!changed, "a closed panel reports no change");
         assert!(!state.has_hooks_panel(), "and must stay closed");
     }
@@ -5585,25 +5670,41 @@ mod tests {
         assert_eq!(state.hooks_panel().map(|p| p.scroll_offset), Some(7));
 
         // Shrinking the registry must not strand the viewport past the end.
-        assert!(state.refresh_hooks_panel(hooks(3)));
+        assert!(state.refresh_hooks_panel(&hooks(3)));
         let panel = state.hooks_panel().expect("still open");
         assert_eq!(panel.hooks.len(), 3, "contents are replaced, not merged");
         assert_eq!(panel.scroll_offset, 2, "scroll clamps to the new last row");
 
-        // A same-size refresh (e.g. one `enabled` flag flipped) must NOT yank
-        // the user back to the top.
-        assert!(state.refresh_hooks_panel(hooks(3)));
+        // A same-size refresh that DOES change a row (`enabled` flipped) must
+        // NOT yank the user back to the top.
+        let mut flipped = hooks(3);
+        flipped[0].enabled = Some(true);
+        assert!(state.refresh_hooks_panel(&flipped));
         assert_eq!(
             state.hooks_panel().map(|p| p.scroll_offset),
             Some(2),
             "an in-place refresh preserves the viewport"
         );
+
+        // …while an identical push repaints nothing. The registry is replaced
+        // wholesale on every hook-file edit, so most pushes carry exactly the
+        // rows already on screen (review finding 19).
+        assert!(
+            !state.refresh_hooks_panel(&flipped),
+            "an identical registry is not a change"
+        );
+        assert_eq!(
+            state.hooks_panel().map(|p| p.scroll_offset),
+            Some(2),
+            "…and leaves the viewport alone"
+        );
     }
 
     /// REGRESSION FENCE (cyril-v19o C5, ordering half — the command and push
-    /// halves land with slice 3). Order is display order: title, case-folded,
-    /// identifier as tie-break; duplicates are never collapsed and a refresh
-    /// clamps a stale offset instead of stranding the viewport.
+    /// halves land with slice 3). Order is display order: title, ASCII-folded,
+    /// identifier as tie-break; duplicates are never collapsed, an identical
+    /// push is not a repaint, and the scroll clamp is window-aware
+    /// (review findings 8, 14a, 19).
     #[test]
     fn powers_panel_orders_and_replaces() {
         fn power(name: &str, title: &str) -> PowerInfo {
@@ -5613,57 +5714,148 @@ mod tests {
         let mut state = UiState::new(500);
         assert!(!state.has_powers_panel(), "starts closed");
 
-        // Deliberately unsorted, with a case difference that only a
-        // case-insensitive key orders correctly, and a duplicate title that
-        // must survive as two rows.
+        // Deliberately unsorted, with a case difference that only an
+        // ASCII-lowercased key orders correctly, and a duplicate title whose
+        // ids arrive in the WRONG order. A stable sort without the identifier
+        // tie-break would keep `datadog-copy` first, so the id assertion — not
+        // the title one — is what the tie-break buys (review findings 14a, 16).
         state.show_powers_panel(vec![
             power("zeta", "zeta tool"),
             power("aws-infrastructure-as-code", "Build AWS"),
-            power("datadog", "Datadog Observability"),
-            power("markdownlint", "markdownlint"),
             power("datadog-copy", "Datadog Observability"),
+            power("markdownlint", "markdownlint"),
+            power("datadog", "Datadog Observability"),
         ]);
-        let titles: Vec<&str> = state
+        let rows: Vec<(&str, &str)> = state
             .powers_panel()
             .expect("panel open")
             .powers
             .iter()
-            .map(PowerInfo::title)
+            .map(|power| (power.title(), power.name()))
             .collect();
         assert_eq!(
-            titles,
+            rows,
             [
-                "Build AWS",
-                "Datadog Observability",
-                "Datadog Observability",
-                "markdownlint",
-                "zeta tool"
+                ("Build AWS", "aws-infrastructure-as-code"),
+                ("Datadog Observability", "datadog"),
+                ("Datadog Observability", "datadog-copy"),
+                ("markdownlint", "markdownlint"),
+                ("zeta tool", "zeta"),
             ],
-            "case-insensitive by title; the duplicate title is ordered by id, not dropped"
+            "ASCII-lowercase by title; the duplicate title is ordered by id, not dropped"
         );
 
-        // A refresh replaces the contents…, and the tie-break is the id.
-        let replaced = state.refresh_powers_panel(vec![power("datadog", "Datadog Observability")]);
-        assert!(replaced);
+        // A refresh replaces the contents and reports the change…
+        assert!(state.refresh_powers_panel(&[power("datadog", "Datadog Observability")]));
         assert_eq!(state.powers_panel().expect("open").powers.len(), 1);
 
-        // …clamping a stale offset to the new end.
-        state.powers_panel_scroll_down(10);
-        assert_eq!(state.powers_panel().expect("open").scroll_offset, 0);
+        // …while an identical push afterwards repaints nothing (review 19).
+        assert!(!state.refresh_powers_panel(&[power("datadog", "Datadog Observability")]));
+
+        // The clamp is the last offset that still fills the window (review 8):
+        // a catalog shorter than the window cannot scroll at all…
         state.show_powers_panel(vec![power("a", "A"), power("b", "B"), power("c", "C")]);
         state.powers_panel_scroll_down(2);
-        assert_eq!(state.powers_panel().expect("open").scroll_offset, 2);
-        state.refresh_powers_panel(vec![power("a", "A")]);
         assert_eq!(
             state.powers_panel().expect("open").scroll_offset,
             0,
-            "a shorter catalog cannot leave the viewport past its end"
+            "three powers fit a five-power window; scrolling would paint blank \
+             rows under a partial list"
+        );
+
+        // …and a longer one stops at the last full window rather than the last
+        // index.
+        let many: Vec<PowerInfo> = (0..9)
+            .map(|n| power(&format!("p{n:02}"), &format!("P{n:02}")))
+            .collect();
+        state.show_powers_panel(many.clone());
+        state.powers_panel_scroll_down(100);
+        assert_eq!(
+            state.powers_panel().expect("open").scroll_offset,
+            9 - MAX_VISIBLE_POWERS,
+            "the viewport stops at the last offset that fills the window"
+        );
+
+        // A refresh that shortens the catalog re-clamps into the NEW window
+        // instead of stranding the viewport past its end.
+        assert!(state.refresh_powers_panel(&many[..6]));
+        assert_eq!(
+            state.powers_panel().expect("open").scroll_offset,
+            6 - MAX_VISIBLE_POWERS,
+            "a shorter catalog pulls the viewport back into range"
         );
 
         // A closed panel is left closed by a push.
         state.hide_powers_panel();
-        assert!(!state.refresh_powers_panel(vec![power("a", "A")]));
+        assert!(!state.refresh_powers_panel(&many));
         assert!(!state.has_powers_panel(), "a push never opens the panel");
+    }
+
+    /// REGRESSION FENCE (cyril-v19o, review findings 3 + 20): exactly one
+    /// predicate answers "who owns the keyboard", and its order is the order
+    /// `render` paints in reverse — the topmost overlay is the one painted
+    /// last, so what the user sees on top is what reacts.
+    ///
+    /// The stack is a fixed priority, not recency: a LOWER layer opened last
+    /// stays underneath. Recency is what let a push-driven panel cover an
+    /// approval prompt while the prompt kept every key.
+    #[test]
+    fn topmost_overlay_orders_the_stack() {
+        use crate::traits::Overlay;
+
+        let mut state = UiState::new(500);
+        assert_eq!(
+            state.topmost_overlay(),
+            None,
+            "no overlay: the chat has input"
+        );
+        assert!(!state.has_modal_overlay());
+
+        state.show_hooks_panel(vec![HookInfo::v2("PreToolUse", "echo", None)]);
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Hooks));
+        assert!(state.has_modal_overlay());
+
+        // Opened last, still underneath: the predicate reports the LAYER, not
+        // the most recent open.
+        state.show_usage_panel(cyril_core::types::UsageSnapshot::default());
+        assert_eq!(
+            state.topmost_overlay(),
+            Some(Overlay::Hooks),
+            "the stack is ordered by layer, not by who opened last"
+        );
+
+        // An interrupted permission request goes to the very top.
+        let (request, _rx) = make_approval_request(vec![cyril_core::types::PermissionOption {
+            id: cyril_core::types::PermissionOptionId::new("allow"),
+            label: "Allow".into(),
+            kind: cyril_core::types::PermissionOptionKind::AllowOnce,
+            is_destructive: false,
+        }]);
+        state.show_approval(request);
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Approval));
+
+        // Closing the top layer hands the keyboard to the next one down, and
+        // the last layer out clears the predicate entirely.
+        state.approval_cancel();
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Hooks));
+        state.hide_hooks_panel();
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Usage));
+        state.hide_usage_panel();
+        assert_eq!(state.topmost_overlay(), None);
+        assert!(!state.has_modal_overlay());
+
+        // The enum IS the paint order, bottom-most first.
+        assert_eq!(
+            Overlay::ALL,
+            [
+                Overlay::Usage,
+                Overlay::Code,
+                Overlay::Powers,
+                Overlay::Hooks,
+                Overlay::Picker,
+                Overlay::Approval,
+            ]
+        );
     }
 
     #[test]

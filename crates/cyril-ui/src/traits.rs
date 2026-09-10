@@ -127,6 +127,54 @@ pub trait TuiState {
     fn subagent_ui(&self) -> &crate::subagent_ui::SubagentUiState;
 }
 
+/// Which modal overlay owns the keyboard — and, in the reverse order, which one
+/// is painted on top.
+///
+/// Overlays stack: several can be open at once (`/model` while a permission
+/// request is pending, a powers panel under an approval), and each widget
+/// paints its own [`ratatui::widgets::Clear`] before its content. Whoever paints
+/// last therefore *erases* the others inside the overlap, so the paint order and
+/// the key-dispatch order MUST be inverses of each other. They were not: both
+/// chains ran approval-first, which painted the approval prompt at the bottom
+/// (erased by the next panel's `Clear`) while `App::handle_key` still fed it
+/// every key — Enter could answer a prompt the user could not see (review
+/// findings 3 and 20).
+///
+/// [`Overlay::ALL`] is the one place the stack order lives. Rendering iterates
+/// it front-to-back; the key chain takes the last open layer
+/// ([`crate::state::UiState::topmost_overlay`]). Adding a variant breaks both
+/// [`crate::render`] and `App::handle_key` at compile time — an overlay cannot
+/// be added without deciding where it sits in the stack and which keys it eats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Overlay {
+    /// Usage panel (`/usage`).
+    Usage,
+    /// Code panel (`/code`).
+    Code,
+    /// Powers panel (`/powers`).
+    Powers,
+    /// Hooks panel (`/hooks`).
+    Hooks,
+    /// Command-option picker (`/model`, `/theme`, and every
+    /// `CommandOptionsReceived` reply, which also arrives unprompted).
+    Picker,
+    /// Permission prompt. Painted last and consulted first: an approval the
+    /// user cannot see must never be answerable by a stray Enter.
+    Approval,
+}
+
+impl Overlay {
+    /// Every overlay, bottom-most (painted first, keyed last) to top-most.
+    pub const ALL: [Overlay; 6] = [
+        Overlay::Usage,
+        Overlay::Code,
+        Overlay::Powers,
+        Overlay::Hooks,
+        Overlay::Picker,
+        Overlay::Approval,
+    ];
+}
+
 /// A chat message for display purposes.
 #[derive(Debug, Clone)]
 pub struct ChatMessage {
@@ -518,6 +566,18 @@ pub struct HooksPanelState {
     pub scroll_offset: usize,
 }
 
+/// Powers the `/powers` panel shows at once: five powers are 15 content rows
+/// plus the two borders = 17, which still fits the 24-row terminal the panel's
+/// geometry is checked against.
+///
+/// One number, two readers, because a mismatch between them is a defect: the
+/// widget sizes the popup from it, and [`crate::state::UiState`] uses it as the
+/// upper bound of its scroll clamp — the panel can never show more than this,
+/// so an offset past `len - MAX_VISIBLE_POWERS` has no reachable state behind
+/// it. A popup squeezed by `modal::place` shows less; the widget clamps to what
+/// actually fits at that width and height.
+pub const MAX_VISIBLE_POWERS: usize = 5;
+
 /// Powers panel overlay state (read-only display for `/powers`).
 ///
 /// Populated from a `PowersChanged` push — the agent announces its installed
@@ -525,7 +585,7 @@ pub struct HooksPanelState {
 /// agent, so the panel carries no interactive state beyond scroll position.
 #[derive(Debug, Clone)]
 pub struct PowersPanelState {
-    /// Powers in display order: title (case-insensitive), tie-broken by
+    /// Powers in display order: title (ASCII-lowercase), tie-broken by
     /// identifier. Pre-sorted by [`crate::state::UiState::show_powers_panel`];
     /// the renderer iterates this directly. A caller constructing
     /// `PowersPanelState` by hand owns that ordering.
