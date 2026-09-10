@@ -120,3 +120,57 @@ SC4 — PASS: `powers_submit_distinguishes_unloaded_from_empty` in `app.rs` driv
 the real submit path: no catalog → zero panels and exactly one `System` message
 ("No powers reported yet…") with no bridge traffic; known-empty → the panel
 opens on its placeholder and adds no message.
+
+## Final design-conformance review (gilfoyle `module-shape.md`)
+
+**Isolation.** Two blank-context subagents, neither of which implemented the
+change:
+
+1. **Reconstruction — `ReconPowers`** (isolated worktree, instructed to read no
+   `.cyril-v19o/` artifact, `docs/adr/`, or design/spec/plan document; production
+   code only). Its full report is frozen at
+   `.cyril-v19o/reconstruction-recon-powers.md`. It derived the four-cluster map
+   (wire adaptation / domain vocabulary / catalog+user routing / presentation),
+   the inbound and outbound seam chains, and the protected-parent growth split
+   without seeing the design.
+2. **Comparison — `ComparePowers`** (a second fresh reviewer that received the
+   frozen reconstruction plus `design.md`, then verified every load-bearing
+   claim in the code itself).
+
+**Result: PASS.** All eleven approved ledger rows exist at the paths the ledger
+names, each with the responsibility, interface, and adapter claims assigned to
+it; both protected parents grew only by routing plus one required overlay
+predicate; no MISSING rows.
+
+**Mismatches and dispositions** (all record-level; no code change):
+
+| Item | Verdict | Disposition |
+|---|---|---|
+| `app.rs:1585` — `&& !self.ui_state.has_powers_panel()` in the mouse-scroll overlay predicate | MISMATCH against the protected-parent allowed-change *enumeration* | the-design-record-is-wrong: the code is the required form (a new modal owner must join the predicate every other overlay occupies); the enumeration was incomplete. `design.md` corrected |
+| `commands/mod.rs` (`ShowPowers`, `show_powers`, registration) | UNCOVERED (in code, only prose in the design) | record-is-incomplete: ledger rows added |
+| `convert/kas.rs:18` (`pub(crate) mod powers;`), `types/mod.rs`, `widgets/mod.rs` | UNCOVERED | record-is-incomplete: ledger rows added |
+| `theme.rs:1827` — the new widget joins the pre-existing theme-source census | UNCOVERED (never cited) | record-is-incomplete: ledger row added; removing it would redden an existing fence |
+| `power.rs:36` — public `PowerInfo::new` absent from the interface cell | record gap | record-is-incomplete: row 2's own "fields private + invariants at construction" rule requires it; cell updated |
+| `examples/test_bridge.rs:647-661` — new arm in the example printer | UNCOVERED (non-production) | acceptable: exhaustive-match obligation of the new variant |
+
+Three trade-offs the reviewer adjudicated explicitly, all ruled **not**
+mismatches with the governing ledger row named: the App's page-step literal `5`
+(row 11 owns the key map; the same literal pattern exists for hooks and usage,
+and the widget's `MAX_VISIBLE_POWERS` is private and caps a popup height rather
+than the painted window), the twice-per-push catalog clone (row 5 + row 8;
+explicitly accepted by Alternative 1 and already the hooks shape), and the
+widget tests constructing `PowersPanelState` literals (row 9 sanctions
+`render`-via-`TestBackend` with "a `PowersPanelState` the state layer would
+produce"; ordering stays fenced at the state layer).
+
+**Residual, non-blocking risks the reviewer named** (recorded, not fixed):
+
+* The widget fixture restates the display order in a comment instead of deriving
+  it, so a change to `show_powers_panel`'s sort key would not fail the widget
+  test — the order is fenced at the state layer and by the App key-map test.
+* `to_ascii_lowercase` in the sort key does not fold non-ASCII case (observable
+  only for titles whose lowercase form crosses U+007A; the capture has none, and
+  the design's `sort -f` oracle does not exercise it).
+* If the App's page step and the widget's window height ever disagree, the
+  effect is a longer page jump on a short terminal; the scroll clamp keeps the
+  offset valid.

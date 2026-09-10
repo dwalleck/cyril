@@ -99,7 +99,7 @@ Enumeration is of `_kiro/powers/items_changed` frames and item payloads; sources
 | Module/path | Interface | Owns | Hides/reuses | Must not own | Adapters | Tests through | Change |
 |---|---|---|---|---|---|---|---|
 | `crates/cyril-core/src/protocol/convert/kas/powers.rs` | `to_notification(method, params) -> Result<Option<Notification>>` | `kiro/powers/items_changed` recognition, wire structs, per-frame validation (required `name`, list type), empty-vs-missing distinction | serde plumbing, field naming, the all-or-nothing rule | display formatting, ordering, state | `N/A — one concrete caller by design (engine dispatch)` | `to_notification` | create |
-| `crates/cyril-core/src/types/power.rs` | `PowerInfo` accessors: `name`, `title`, `description`, `mcp_server_names`, `has_steering_files` | the domain payload's invariants (title falls back to id, empty string means absent) | field storage, wire key mapping | wire names, widths, colors, panels | `N/A — plain data type` | accessors | create |
+| `crates/cyril-core/src/types/power.rs` | `PowerInfo::new(...)` + accessors: `name`, `title`, `description`, `mcp_server_names`, `has_steering_files` | the domain payload's invariants (title falls back to id, empty string means absent) | field storage, wire key mapping | wire names, widths, colors, panels | `N/A — plain data type` | accessors | create |
 | `crates/cyril-core/src/protocol/engine.rs` | `Engine::convert_ext_notification` (unchanged) | engine dispatch order (workflow → powers → shared kiro) | — | powers wire knowledge | `V2Engine`, `KasEngine` | engine tests | retain |
 | `crates/cyril-core/src/types/event.rs` | `Notification` enum | the new `PowersChanged` variant | — | ordering/formatting | `N/A` | matches in consumers | retain |
 | `crates/cyril-core/src/session.rs` | `apply_notification`, `powers()` | catalog storage and last-write-wins replacement | — | sorting, rendering, panel state | `N/A` | `apply_notification` + `powers()` | deepen |
@@ -109,13 +109,33 @@ Enumeration is of `_kiro/powers/items_changed` frames and item payloads; sources
 | `crates/cyril-ui/src/widgets/powers_panel.rs` | `render(frame, area, input_top, &PowersPanelState, &Theme)` | painting the approved three-line layout, placeholder, width clamping | `modal::place`, theme tokens | state, domain computation | `N/A` | `render` via `TestBackend` | create |
 | `crates/cyril-ui/src/render.rs` | `draw` | overlay composition | — | powers layout | `N/A` | render tests | retain |
 | `crates/cyril/src/app.rs` | event loop | routing the notification/key/command-result | — | parsing, formatting, ordering, new state fields | `N/A` | app tests | protected parent |
+| `crates/cyril-core/src/commands/mod.rs` | `CommandResultKind::ShowPowers`, `CommandResult::show_powers` | carrying the catalog from the command layer (session reachable) to the App (UI reachable); owning the `powers` name | — | UI types, panel state | `N/A` | `Command::execute` + result match | retain |
+| `crates/cyril-core/src/protocol/convert/kas.rs` | module list | declaring the `powers` sibling adapter | — | any powers logic | `N/A` | compile | retain |
+| `crates/cyril-core/src/types/mod.rs`, `crates/cyril-ui/src/widgets/mod.rs` | re-export / module list | registering the new module | — | — | `N/A` | compile | retain |
+| `crates/cyril-ui/src/theme.rs` | theme-source census | listing the new widget among the censused widget sources | — | any powers behavior | `N/A` | `widgets_only_use_the_explicit_theme` | retain |
 
 ### 5. Protected parents
 
 | Protected parent | Baseline responsibilities | Allowed change | Forbidden change | Exit condition |
 |---|---|---|---|---|
-| `crates/cyril/src/app.rs` | event loop, notification routing, overlay key dispatch, command-result projection | one `Notification::PowersChanged` arm (update session state + refresh-if-open), one key-dispatch branch, one `ShowPowers` command-result arm, module wiring in `main.rs` | a new state field on `App`; any parsing, formatting, sorting, or wire knowledge; an auto-open on push | production delta confined to those arms; no new `App` field; the shape fence's protected-parent census stays green |
+| `crates/cyril/src/app.rs` | event loop, notification routing, overlay key dispatch, command-result projection | one `Notification::PowersChanged` arm (update session state + refresh-if-open), one key-dispatch branch, one `ShowPowers` command-result arm, one term in the modal overlay predicate that guards mouse-scroll, module wiring in `main.rs` | a new state field on `App`; any parsing, formatting, sorting, or wire knowledge; an auto-open on push | production delta confined to those arms; no new `App` field; the shape fence's protected-parent census stays green |
 | `crates/cyril-ui/src/state.rs` | UI state for every surface, one `apply_notification` arm per variant | panel lifecycle methods mirroring the hooks-panel set, one `apply_notification` arm returning `false` | wire parsing, domain formatting, chat-message emission | the powers methods are the only production delta; `hooks_panel`/`usage_panel`/`code_panel` methods untouched |
+
+### 5a. Conformance-review record corrections (applied after the build)
+
+The isolated design-conformance review (`.cyril-v19o/checkpoints.md`, "Final
+design-conformance review") returned **PASS** with no code drift and four
+record-completeness gaps in *this* document. Corrected here: the
+protected-parent allowed-change list now names the modal overlay predicate term
+the new overlay must join; the registration modules
+(`commands/mod.rs`, `convert/kas.rs`, `types/mod.rs`, `widgets/mod.rs`) and the
+theme-source census (`theme.rs`) have ledger rows instead of appearing only in
+prose; and row 2's interface cell names the public constructor that row 2's own
+"fields private, invariants at construction" rule requires.
+
+None of these changes an approved behavior, ownership boundary, interface
+contract, or accepted risk — each records what the review confirmed the code
+already does under the design's own rules. No re-approval is required.
 
 ### 6. Mechanical shape claim (see C8)
 
