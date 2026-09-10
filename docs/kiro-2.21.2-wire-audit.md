@@ -2,10 +2,12 @@
 
 **Audit status:** complete for the stated paired scope. The installed binary
 was already 2.21.2 when the audit began; 2.21.1 was compared from the research
-archive. Probes isolated `HOME` to protect real `~/.kiro` state. No paid turns
-were spent — no `session/prompt` was sent on either binary.
+archive. Probes isolated `HOME` to protect real `~/.kiro` state. Cost: two
+tiny real turns (one per binary) for the turn-lifecycle sweep in § 6b.
 
-**Conclusion:** **SAFE for cyril — no wire change on any exercised path.** The
+**Conclusion:** **SAFE for cyril — no wire change on any exercised path**, and
+a structural field sweep over both session-creation and full-turn workloads
+finds **188 = 188 JSON paths with zero new and zero missing fields** (§ 6b). The
 `_kiro/*` census is 110 = 110 and the KAS runtime is **byte-frozen at 0.58.7**
 (`acp-server.js` hashes identically), so nothing in this release can be a KAS
 change. All three ACP-relevant release notes are **host-side**. Two are
@@ -232,6 +234,59 @@ Two standing CLAUDE.md claims are re-confirmed on 2.21.2: `config_options` is
 **absent entirely** from the v1/v2 `session/new` result, and `commands/options`
 entries carry **no** `current` flag (cyril-imjx).
 
+## 6b. Structural field sweep — new and missing data on the wire
+
+A method census answers "did a method appear"; it cannot answer "did a field
+appear inside a frame nobody asked about". `sweep-new-fields.py` collapses each
+capture to its set of JSON paths (array indices flattened to `[]`) and diffs
+the sets. Run on two workloads:
+
+| workload | paths 2.21.1 | paths 2.21.2 | new | missing |
+|---|---:|---:|---:|---:|
+| session creation + agent switch | 149 | 149 | 0 | 0 |
+| full turn (prompt → file-read tool call → `end_turn`) | 118 | 118 | 0 | 0 |
+| **union across both** | **188** | **188** | **0** | **0** |
+
+**Identical field sets on every lane. No new and no missing data on the wire.**
+
+The turn lane was added specifically because the first live probe sent no
+`session/prompt` and therefore captured none of the frames cyril actually
+renders. Both binaries produced the same frame families for the same workload:
+
+```
+session/update:agent_message_chunk   1     _kiro.dev/metadata              4
+session/update:tool_call             1     _kiro.dev/session/update        1
+session/update:tool_call_update      1     _kiro.dev/subagent/list_update  1
+                                           _kiro.dev/commands/available    1
+```
+
+`stop_reason: end_turn` on both; 3.9 s vs 3.4 s; zero permission requests (file
+reads need none on v2, as documented).
+
+### Fields cyril does not model
+
+The sweep also answers the inverse question — not "did Kiro change" but "is
+cyril dropping something that is already arriving". Cross-checking all 91
+distinct leaf names against `crates/` separates serde-typed fields (which
+arrive as snake_case Rust identifiers, not string literals — `availableModes`,
+`currentModeId`, `locations`, `rawInput`, `rawOutput` are all handled) from
+genuine drops:
+
+* **`commands[].meta` subcommand metadata** — cyril reads only `meta.inputType`
+  and `meta.local` (`convert/kiro.rs:700`). It silently drops `optionsMethod`,
+  `subcommands`, `subcommandHints`, `subcommandDescriptions`, and `hint`. The
+  `/agent` entry alone carries three subcommands with per-subcommand hints and
+  descriptions. Filed as **cyril-j90q**.
+* **`result.hasMore` on `commands/options`** — never read (`has_more` occurs
+  zero times in `crates/`). `false` on every observed call, so nothing is
+  truncated today, but a truncated picker would render silently as a complete
+  list. Filed as **cyril-8bz8**.
+
+Neither is a 2.21.2 regression — the field sets are identical across the pair.
+Both are pre-existing drops that the sweep made visible, and both are below the
+project bar for received payloads (model every field, or explicit-ignore plus a
+debug log).
+
 ## 7. Cyril impact
 
 **No code change is required by this release.**
@@ -290,6 +345,12 @@ stream-JSON, auto-update, and enterprise MCP behavior. The `[V3]` shell
 streaming contract in § 5c is recovered from the shipped bundle, not from a live
 KAS session with `streamingShellContent` advertised.
 
+The § 6b sweep covers the v2 engine only, and within it the two workloads
+listed. Frame families never exercised — permission prompts, plans, subagent
+crews, cancellation, compaction, KAS `_kiro/*` turns — are outside the swept
+path set, so "zero new fields" is scoped to what was driven, not to the whole
+protocol.
+
 ## 9. Artifacts
 
 Live probe and captures:
@@ -297,6 +358,11 @@ Live probe and captures:
 * `experiments/conductor-spike/probe-v2-models-agentswitch-2.21.2.py`
 * `experiments/conductor-spike/v2-models-agentswitch-2.21.1-2.21.2.jsonl`
 * `experiments/conductor-spike/v2-models-agentswitch-2.21.2-2.21.2.jsonl`
+* `experiments/conductor-spike/probe-v2-turn-sweep-2.21.2.py` — the turn lane
+* `experiments/conductor-spike/v2-turn-sweep-2.21.1-2.21.2.jsonl`
+* `experiments/conductor-spike/v2-turn-sweep-2.21.2-2.21.2.jsonl`
+* `experiments/conductor-spike/v2-field-sweep-2.21.2.txt` — sweep output
+* Sweeps run with `sweep-new-fields.py` in both inventory and `--diff` mode.
 
 Static scripts (outputs stay local and regenerable, per prior releases):
 

@@ -1,0 +1,60 @@
+=== INVENTORY: session-creation + agent-switch workload ===
+   149  experiments/conductor-spike/v2-models-agentswitch-2.21.1-2.21.2.jsonl
+   149  experiments/conductor-spike/v2-models-agentswitch-2.21.2-2.21.2.jsonl
+
+union: 149 distinct paths
+
+usage/token/credit-shaped paths (3):
+    agent_switched_params.previousAgentName
+    params.contextUsagePercentage
+    params.previousAgentName
+
+=== DIFF: agent-switch workload, 2.21.2 vs 2.21.1 ===
+live   experiments/conductor-spike/v2-models-agentswitch-2.21.2-2.21.2.jsonl: 149 paths
+pinned experiments/conductor-spike/v2-models-agentswitch-2.21.1-2.21.2.jsonl: 149 paths
+
+ONLY under live (0) — new-field candidates:
+
+ONLY under pinned (0) — usually just coverage:
+
+IDENTICAL field sets — no shape change on this workload.
+
+=== INVENTORY: full-turn workload ===
+   118  experiments/conductor-spike/v2-turn-sweep-2.21.1-2.21.2.jsonl
+   118  experiments/conductor-spike/v2-turn-sweep-2.21.2-2.21.2.jsonl
+
+union: 118 distinct paths
+
+usage/token/credit-shaped paths (5):
+    params.contextUsagePercentage
+    params.meteringUsage
+    params.meteringUsage[].unit
+    params.meteringUsage[].unitPlural
+    params.meteringUsage[].value
+
+=== DIFF: turn workload, 2.21.2 vs 2.21.1 ===
+live   experiments/conductor-spike/v2-turn-sweep-2.21.2-2.21.2.jsonl: 118 paths
+pinned experiments/conductor-spike/v2-turn-sweep-2.21.1-2.21.2.jsonl: 118 paths
+
+ONLY under live (0) — new-field candidates:
+
+ONLY under pinned (0) — usually just coverage:
+
+IDENTICAL field sets — no shape change on this workload.
+
+=== UNION across all four captures ===
+   149  experiments/conductor-spike/v2-models-agentswitch-2.21.1-2.21.2.jsonl
+   149  experiments/conductor-spike/v2-models-agentswitch-2.21.2-2.21.2.jsonl
+   118  experiments/conductor-spike/v2-turn-sweep-2.21.1-2.21.2.jsonl
+   118  experiments/conductor-spike/v2-turn-sweep-2.21.2-2.21.2.jsonl
+
+union: 188 distinct paths
+
+usage/token/credit-shaped paths (7):
+    agent_switched_params.previousAgentName
+    params.contextUsagePercentage
+    params.meteringUsage
+    params.meteringUsage[].unit
+    params.meteringUsage[].unitPlural
+    params.meteringUsage[].value
+    params.previousAgentName
