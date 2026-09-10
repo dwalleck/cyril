@@ -12,8 +12,8 @@
 /// method`, so the identifier has exactly one consumer — matching a row to the
 /// push it came from.
 ///
-/// Fields are private because two of them are normalized on construction
-/// (empty means absent) and `title()` derives from them; a struct literal would
+/// Fields are private because three of them are normalized on construction
+/// (blank means absent) and `title()` derives from them; a struct literal would
 /// let a caller bypass that.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PowerInfo {
@@ -28,9 +28,11 @@ impl PowerInfo {
     /// Builds one power from its wire values.
     ///
     /// `display_name` and `description` are normalized here: the observed wire
-    /// sends them as strings, and an empty string is the agent saying "not
-    /// provided" rather than a title of length zero (AGENTS.md "Guard partial
-    /// updates"). Normalizing at construction keeps every consumer — the
+    /// sends them as strings, and a blank string (empty OR whitespace-only) is
+    /// the agent saying "not provided" rather than a title of length zero
+    /// (AGENTS.md "Guard partial updates"). Blank MCP server names are dropped
+    /// for the same reason: `["", "datadog"]` would paint a `· mcp` token
+    /// naming nothing. Normalizing at construction keeps every consumer — the
     /// panel, the sort, a future one — from re-deciding what empty means.
     #[must_use]
     pub fn new(
@@ -42,9 +44,12 @@ impl PowerInfo {
     ) -> Self {
         Self {
             name: name.into(),
-            display_name: display_name.filter(|value| !value.is_empty()),
-            description: description.filter(|value| !value.is_empty()),
-            mcp_server_names,
+            display_name: display_name.filter(|value| !value.trim().is_empty()),
+            description: description.filter(|value| !value.trim().is_empty()),
+            mcp_server_names: mcp_server_names
+                .into_iter()
+                .filter(|value| !value.trim().is_empty())
+                .collect(),
             has_steering_files,
         }
     }
@@ -58,8 +63,10 @@ impl PowerInfo {
     /// What to show as the power's title: its display name when the agent
     /// provided one, otherwise the identifier.
     ///
-    /// Always non-empty: `name` is a required wire field, so the fallback
-    /// cannot produce a blank row.
+    /// Always non-empty. `name` is a required wire field and the converter
+    /// drops a frame whose item names nothing — neither absent nor blank — and
+    /// a blank `display_name` normalizes to `None` here, so neither half of
+    /// the fallback can produce a blank row (cyril-v19o review finding 12).
     #[must_use]
     pub fn title(&self) -> &str {
         self.display_name.as_deref().unwrap_or(&self.name)
@@ -75,8 +82,9 @@ impl PowerInfo {
         self.description.as_deref()
     }
 
-    /// MCP servers this power contributes, in wire order. Empty is the common
-    /// case for a power that only ships steering files.
+    /// MCP servers this power contributes, in wire order, with blank entries
+    /// dropped at construction. Empty is the common case for a power that only
+    /// ships steering files.
     #[must_use]
     pub fn mcp_server_names(&self) -> &[String] {
         &self.mcp_server_names
@@ -126,6 +134,38 @@ mod tests {
         assert_eq!(absent.title(), "markdownlint");
         assert_eq!(absent.description(), None);
         assert_eq!(bare, absent);
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 12). Blank means absent on
+    /// every optional string, not "empty but present": a whitespace-only
+    /// `displayName` would otherwise title the row with cells of nothing (a
+    /// blank BOLD line sorted above every real power) and a blank MCP entry
+    /// would paint a `· mcp` token naming nothing.
+    #[test]
+    fn whitespace_only_optionals_are_absent_and_blank_servers_are_dropped() {
+        let power = PowerInfo::new(
+            "spaced",
+            Some("   ".to_owned()),
+            Some("\t\n ".to_owned()),
+            vec![
+                String::new(),
+                "   ".to_owned(),
+                "datadog".to_owned(),
+                "  ".to_owned(),
+            ],
+            false,
+        );
+        assert_eq!(
+            power.title(),
+            "spaced",
+            "a whitespace display name falls back to the identifier"
+        );
+        assert_eq!(power.description(), None);
+        assert_eq!(
+            power.mcp_server_names(),
+            ["datadog"],
+            "blank server entries are dropped, real ones keep wire order"
+        );
     }
 
     #[test]

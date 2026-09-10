@@ -152,7 +152,11 @@ fn select_server(entries: &[(String, bool)], cli_version: Option<(u32, u32, u32)
 /// Treat an env value as "not provided" when unset or empty/whitespace-only —
 /// so `KIRO_AGENT_PATH=""` falls back to PATH rather than spawning the empty
 /// string as a binary.
-fn nonempty(v: Option<String>) -> Option<String> {
+///
+/// Shared with the KAS wire adapters: a required wire string that is present
+/// but blank identifies nothing, so it is the same fact as a missing one (see
+/// `convert/kas/powers.rs`).
+pub(crate) fn nonempty(v: Option<String>) -> Option<String> {
     v.filter(|s| !s.trim().is_empty())
 }
 
