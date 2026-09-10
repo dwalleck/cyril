@@ -5530,6 +5530,61 @@ mod tests {
         assert_eq!(panel.powers.len(), 1, "contents replaced");
     }
 
+    /// SC4 (spec acceptance): "not reported yet" and "reported empty" are
+    /// different facts, and the difference is visible to the user. Submitting
+    /// `/powers` with no catalog must leave zero panels open and add exactly one
+    /// system message; a known-empty catalog must open the panel instead.
+    #[tokio::test]
+    async fn powers_submit_distinguishes_unloaded_from_empty() {
+        let (mut app, mut rx) = test_app_with_command_rx();
+
+        app.ui_state.insert_text("/powers");
+        app.submit_input().await.expect("execute local /powers");
+        assert!(
+            !app.ui_state.has_powers_panel(),
+            "no catalog means no panel — an empty one would claim the user has \
+             nothing installed"
+        );
+        let messages = app.ui_state.messages();
+        assert_eq!(
+            messages.len(),
+            1,
+            "the user must be told why nothing opened: {messages:?}"
+        );
+        // `system_message` results surface as `System`, not `CommandOutput`:
+        // this one is cyril speaking, not the agent's answer.
+        assert!(
+            matches!(
+                messages[0].kind(),
+                cyril_ui::traits::ChatMessageKind::System(text)
+                    if text.contains("No powers reported yet")
+            ),
+            "expected the not-reported line, got {:?}",
+            messages[0].kind()
+        );
+        // Local command: nothing crossed the bridge to answer it.
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+
+        // A catalog is known and empty: the panel opens on its placeholder.
+        app.handle_notification(RoutedNotification::global(Notification::PowersChanged {
+            powers: Vec::new(),
+        }));
+        app.ui_state.insert_text("/powers");
+        app.submit_input().await.expect("execute /powers again");
+        assert!(
+            app.ui_state.has_powers_panel(),
+            "a known-empty catalog is a fact the panel can state"
+        );
+        assert_eq!(
+            app.ui_state.messages().len(),
+            1,
+            "opening the panel must not also add a message"
+        );
+    }
+
     #[test]
     fn powers_panel_key_map() {
         let mut ui_state = UiState::new(500);

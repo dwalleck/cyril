@@ -65,6 +65,45 @@ Recorded output (not re-quoted in full; see the named artifacts):
 - **P3 — validated prior understanding**: the v2 engine advertises 25 commands — including `/code` and `/hooks` — with no `powers` among them, and emits no powers method. cyril's `/powers` builtin therefore cannot shadow an agent-advertised command on either engine, so no command-source seam is needed.
 - **P5 — validated prior understanding**: the catalog is user-level and session-independent; a process-global cache populated by the latest push is the correct model.
 
+## Live acceptance (2026-09-10, kiro-cli 2.21.2)
+
+Run from this worktree: `cargo build --features kas` then `./target/debug/cyril
+--agent-engine kas`, driven through a PTY. The first attempt failed closed on an
+expired credential (`invalid configuration: KAS auth not servable … kiro token
+expired`) — the fail-closed path working as designed. `kiro-cli whoami` refreshed
+the stored PKCE token non-interactively (`expires_at` 14:03:57Z → 16:09:12Z);
+the second attempt started a KAS session.
+
+**SC1 — PASS.** The rendered frame after `/powers`:
+
+```
+┌ /powers · 3 powers ─────────────────────────────────────────────────────────┐
+│  Build AWS infrastructure with CDK and CloudFormation                       │
+│  aws-infrastructure-as-code · mcp awslabs.aws-iac-mcp-server                │
+│  Build well-architected AWS infrastructure with CDK using latest document…  │
+│  Datadog Observability                                                      │
+│  datadog · mcp datadog · steering                                           │
+│  Query logs, metrics, traces, RUM events, incidents, and monitors from Da…  │
+│  Markdownlint                                                               │
+│  markdownlint · mcp markdownlint · steering                                 │
+│  Lint, validate, and auto-fix Markdown files using markdownlint rules. Enf… │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+All three `displayName` values from the live capture are present, in wire order.
+
+**SC2 — PASS.** In that frame `datadog` shows its id, its MCP server name
+`datadog`, and the `steering` token; `aws-infrastructure-as-code` shows
+`awslabs.aws-iac-mcp-server` and **no** `steering` token — the one power the
+capture records with `hasSteeringFiles: false`.
+
+**Esc — PASS (live).** Esc closed the panel: the next typed text reached the
+input box and submitted as a normal prompt, so the key chain returns focus to
+the textarea rather than leaving the modal consuming input.
+
+The push itself was never asked for: cyril sent `session/new` and nothing else
+before the panel was opened — the catalog arrived unprompted, as measured.
+
 ## Related issues
 
 - Consulted (copied from `spec.md`; no upstream search was repeated): **cyril-v19o** (this feature), **cyril-q159** (open Agent Plugin format research — owns the strategic consume/supply question, deliberately out of scope here), **cyril-nk4o** (the sibling KAS panel scope for `_kiro/mcp/*`), **cyril-58uv** (in_progress; instrumentation of the same silent-drop boundary — the design keeps its converter in a new KAS-side module to avoid colliding with its edits in `convert/kiro.rs`), **cyril-oiyt** (KS hooks-panel extension; source of the never-auto-open panel discipline), **cyril-7q8u** (prior live capture of `_kiro/powers/items_changed`, agreeing with this run), and `docs/kiro-2.20.1-wire-audit.md` §3 (the wire contract).

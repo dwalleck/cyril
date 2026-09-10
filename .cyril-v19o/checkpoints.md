@@ -96,3 +96,27 @@ provenance**, not its position relative to the bridge's local
 the evidence pins the order (the capture's 18 ms gap is wall-clock). The claim
 at stake is "arrives unprompted and survives normalization", and that is what is
 asserted.
+
+## Live acceptance — SC1, SC2, Esc (after slice 4)
+
+Run against kiro-cli 2.21.2 from this worktree (`--features kas`,
+`--agent-engine kas`, PTY-driven). Full frame and interpretation in
+`evidence.md` §"Live acceptance".
+
+* **SC1 — PASS**: the panel renders all three powers' `displayName` values in
+  wire order.
+* **SC2 — PASS**: `datadog` shows id + `mcp datadog` + `steering`;
+  `aws-infrastructure-as-code` shows `awslabs.aws-iac-mcp-server` and no
+  `steering` — matching the one capture entry with `hasSteeringFiles: false`.
+* **Esc — PASS (live)**: the next typed text reached the input box and
+  submitted, proving focus returned to the textarea.
+
+The credential had expired between the slice-1 probes and this run; cyril failed
+closed with an actionable message, and `kiro-cli whoami` refreshed the PKCE token
+without a browser. Recorded because a reviewer will otherwise wonder how a
+"live" check ran on a machine whose token needed `kiro-cli login`.
+
+SC4 — PASS: `powers_submit_distinguishes_unloaded_from_empty` in `app.rs` drives
+the real submit path: no catalog → zero panels and exactly one `System` message
+("No powers reported yet…") with no bridge traffic; known-empty → the panel
+opens on its placeholder and adds no message.
