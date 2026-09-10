@@ -304,6 +304,66 @@ the pair. All are pre-existing drops that the sweep made visible, and all are
 below the project bar for received payloads (model every field, or
 explicit-ignore plus a debug log).
 
+## 6c. Live capture — `_kiro/tools/content_chunk` with the gate flipped
+
+The § 5c contract was recovered statically. It has since been proven live
+against KAS 0.58.7, and the live run found a **second necessary condition the
+static read did not reveal**.
+
+`probe-kas-content-chunk-2.21.2.py`, same KAS build and prompt on every leg,
+running `for i in 1 2 3 4 5 6; do echo "chunk-line-$i"; sleep 1; done`:
+
+| `streamingShellContent` | `terminal` capability | `content_chunk` frames |
+|---|---|---:|
+| advertised | advertised | **0** |
+| advertised | **omitted** | **6** |
+| omitted | omitted | **0** |
+
+**Both conditions are necessary.** The gate alone is not enough.
+
+The cause is in `runBashCommand`, which wires the streaming sink only when the
+*terminal object* implements `onOutputChunk`:
+
+```js
+t.onOutputChunk && n.onOutputChunk && (s = n.onOutputChunk(t.onOutputChunk));
+```
+
+Only `DefaultTerminal` implements it, and `DefaultTerminal` executes the
+command **inside the KAS node process**. A client advertising `terminal: true`
+makes KAS delegate shells back over ACP `terminal/create` / `terminal/output`
+instead, and that implementation has no such hook — the sink silently never
+attaches, with no error on the wire. Confirmed empirically: under
+`terminal: true`, KAS called `terminal/output` exactly **once**, after exit,
+never polling, so no partial output existed to stream even with the gate on.
+
+Live frame, verbatim — structurally identical to the recovered `VYn` contract
+on all five checks (`sessionId`, string `toolCallId`, `content.type ==
+"content"`, `content.content.type == "text"`, non-empty `text`):
+
+```json
+{"jsonrpc":"2.0","method":"_kiro/tools/content_chunk","params":{
+  "sessionId":"sess_cedd72cc-…",
+  "toolCallId":"run_command_toolu_bdrk_01SzfcQusExtnqGHy6B27Jzb",
+  "content":{"type":"content","content":{"type":"text","text":"chunk-line-1\n"}}}}
+```
+
+Cadence: 6 frames from t+4.22 s to t+9.23 s, ~1.00 s apart, one line each, all
+sharing a single `toolCallId`. Each frame carries **one new line, not the
+accumulated output** — the chunks are deltas, which is precisely why
+`merge: "append"` is the correct semantic.
+
+**Cyril impact — a conflict, not a checklist.** Cyril advertises
+`.terminal(true)` (`protocol/engine.rs:110`), so it sits in the top row: zero
+chunks, no error. Enabling this feature means choosing between
+
+* `terminal: true` — cyril owns shell execution through host callbacks (it can
+  gate, log, sandbox and render the command), but gets **no** streaming; or
+* omitting `terminal` — KAS runs shells inside its own node process, streaming
+  works, but cyril loses execution control.
+
+Neither is obviously correct, and the tradeoff should be settled before any of
+the three changes in cyril-2mo0 are built.
+
 ## 7. Cyril impact
 
 **No code change is required by this release.**
@@ -340,11 +400,16 @@ explicit-ignore plus a debug log).
   needed, because a correct backend list can still contain models the account
   is not entitled to. No claim is made that fj6j is fixed.
 
-* **Shell streaming (§ 5c): no breakage, new design input.** Cyril has no
-  `content_chunk` consumer at all, so nothing regresses. cyril-2mo0 now has a
-  first-party reference implementation and an exact merge contract to build
-  against — including the detail that chunks **append** while the standard
-  update **replaces**, which is easy to get backwards.
+* **Shell streaming (§ 5c, § 6c): no breakage, and a conflict to settle.**
+  Cyril has no `content_chunk` consumer, so nothing regresses. But the live
+  capture shows the feature needs **two** conditions, and cyril currently
+  fails the second: it advertises `.terminal(true)` (`protocol/engine.rs:110`),
+  which makes KAS delegate shells over ACP instead of running them in-process,
+  and the delegated path never attaches the streaming sink. Flipping
+  `streamingShellContent` alone would yield zero chunks and no error. cyril-2mo0
+  therefore starts with a tradeoff — own shell execution, or receive streaming —
+  before any of its three code changes. The merge contract (chunks **append**,
+  the standard update **replaces**) is confirmed live and still easy to invert.
 
 ## 8. Coverage boundary
 
@@ -358,9 +423,11 @@ model-list reasoning as conditional on that shape.
 
 Also outside this audit's exercised surface: TUI-only rendering behavior (the
 scrollback, spinner, settings-footer, and reasoning-hint notes), non-interactive
-stream-JSON, auto-update, and enterprise MCP behavior. The `[V3]` shell
-streaming contract in § 5c is recovered from the shipped bundle, not from a live
-KAS session with `streamingShellContent` advertised.
+stream-JSON, auto-update, and enterprise MCP behavior. The § 5c contract is no longer static-only: § 6c proves it live with the gate
+flipped, and found the additional `terminal`-capability condition that the
+static read had missed. What remains unexercised there is whether any route
+exists to receive chunks *while* advertising `terminal: true` — nothing
+observed suggests one, but absence of a route was not proven.
 
 The § 6b sweep covers the v2 engine only, and within it the two workloads
 listed. Frame families never exercised — permission prompts, plans, subagent
@@ -380,6 +447,12 @@ Live probe and captures:
 * `experiments/conductor-spike/v2-turn-sweep-2.21.2-2.21.2.jsonl`
 * `experiments/conductor-spike/v2-field-sweep-2.21.2.txt` — sweep output
 * Sweeps run with `sweep-new-fields.py` in both inventory and `--diff` mode.
+* `experiments/conductor-spike/probe-kas-content-chunk-2.21.2.py` — the gate
+  probe; `LEG=on|off` flips `streamingShellContent`, `TERM_CAP=on|off` flips the
+  `terminal` capability, `KIRO_KAS_SERVER_PATH` pins the KAS build.
+* `experiments/conductor-spike/kas-content-chunk-on-2.21.2.jsonl` (gate on,
+  terminal on → 0 chunks), `…-on-noterm-2.21.2.jsonl` (gate on, terminal
+  omitted → 6 chunks), `…-off-noterm-2.21.2.jsonl` (control → 0 chunks).
 
 Static scripts (outputs stay local and regenerable, per prior releases):
 
