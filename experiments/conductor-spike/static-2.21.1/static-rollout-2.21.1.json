@@ -1,0 +1,226 @@
+[
+  {
+    "keys": [
+      "c2s",
+      "cloud_config",
+      "infra_safety",
+      "lite",
+      "memory",
+      "remote_changelog",
+      "remote_sandbox",
+      "session_dashboard",
+      "tangent",
+      "test",
+      "test_internal_only",
+      "test_nightly_only",
+      "tui",
+      "v2_non_interactive",
+      "v3_prompt",
+      "voice",
+      "workflows"
+    ],
+    "offset": 673300072,
+    "path": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.0/kiro-cli-chat",
+    "registry": {
+      "c2s": {
+        "channel": "nightly",
+        "description": "Code-to-Spec Explore agent and analysis pipeline. Internal nightly only; launcher exports KIRO_C2S_ROLLOUT_ENABLED and the TUI honors chat.enableC2s + shows the Explore agent only when enabled.",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "cloud_config": {
+        "description": "Cloud config: the consolidated /config panel, cloud/local source labels on config listings, and the launcher passing the stage-default cloud-config BFF endpoint to KAS for local V3 sessions. Turning this off hides the UI and stops the launcher supplying that stage default, so KAS makes no cloud-config calls unless the user explicitly sets a trusted-host CLOUD_CONFIG_ENDPOINT override (which applies regardless of the rollout). GA: ramped to 100% for ALL users on every channel; per-user activation stays governed by KAS's server-side AB_CLOUD_CONFIG entitlement, so non-entitled users see local-only sources. This flag is retained purely as the client-side kill switch: to darken the fleet, set treatment_percent to 0 in a follow-up release (config is compiled in); the immediate per-user lever is KIRO_FEATURE_CLOUD_CONFIG_ENABLED, an env override read by the KAS server (kiro-agent's feature-config provider), not by this crate.",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "infra_safety": {
+        "description": "ICECAP infrastructure-safety gate (monitor/enforce). Internal-only initially; launcher exports KIRO_INFRA_SAFETY_ROLLOUT_ENABLED and the TUI advertises the capability + honors the infraSafety settings only when enabled. Ramp via treatment_percent.",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "lite": {
+        "description": "Lite TUI mode - all channels, Amazon employees only",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "memory": {
+        "channel": "nightly",
+        "description": "Persistent agent memory. Dark-shipped at 0% while under development; ramp via treatment_percent.",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "remote_changelog": {
+        "channel": "stable",
+        "description": "Remote changelog feed fetch on stable builds (prod CloudFront). Nightly always fetches from gamma unconditionally. GA: all stable users at 100%. To darken the fleet, set treatment_percent to 0 in a follow-up release (config is compiled in); the immediate per-user lever is KIRO_NO_REMOTE_CHANGELOG.",
+        "treatment_percent": 100
+      },
+      "remote_sandbox": {
+        "description": "Remote/cloud sandbox sessions (--cloud/--repo flags). Ramped to 100% for all users on every channel. Dial treatment_percent to 0 to kill-switch (re-darkens the flags in the next release).",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "session_dashboard": {
+        "description": "Session dashboard: the /sessions browser, --sessions flag, and --resume-picker dashboard routing (v3). Generally available: every user on every channel. treatment_percent stays at 100 rather than ramping, because the single per-feature percent buckets internal users too \u2014 a partial percent would drop the feature for the internal cohort it was already ramped to. Dial treatment_percent to 0 to kill-switch (config is compiled in, so that ships in the next release). The surface is V3-only, but --sessions selects V3 itself, so the flag is not bounded by a separate engine choice; a user who saved or passed a non-V3 engine is told the dashboard needs V3 rather than being moved onto it.",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "tangent": {
+        "description": "/tangent named side-conversations. Generally available; the launcher includes tangent in KIRO_ENABLED_FEATURES and the TUI registers the /tangent command only when enabled. Dial treatment_percent to 0 to kill-switch.",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "test": {
+        "description": "Test experiment for unit tests",
+        "treatment_percent": 100
+      },
+      "test_internal_only": {
+        "description": "Test experiment for unit tests (internal only)",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "test_nightly_only": {
+        "channel": "nightly",
+        "description": "Test experiment for unit tests (nightly channel only)",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "tui": {
+        "description": "Gradual rollout of the new React/Ink TUI to replace legacy terminal UI",
+        "segment": "internal",
+        "treatment_percent": 50
+      },
+      "v2_non_interactive": {
+        "description": "Default non-interactive and piped-stdin to V2 engine instead of V1",
+        "treatment_percent": 1
+      },
+      "v3_prompt": {
+        "description": "Who is offered the V3 ease-in prompt. There is no feature that flips the default engine to V3 during the ease-in \u2014 the prompt is the only path \u2014 so a user is never defaulted onto V3 without being asked. Dialing this to 0 stops asking; answers already given are honored via the persisted chat.agentEngine setting.",
+        "segment": "all",
+        "treatment_percent": 0
+      },
+      "voice": {
+        "description": "Voice input mode - generally available to all users",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "workflows": {
+        "description": "KAS dynamic workflows and TUI workflow management. All internal users on the KAS engine can opt in via chat.enableWorkflows in /settings features.",
+        "segment": "internal",
+        "treatment_percent": 100
+      }
+    },
+    "sha256": "c2b03820e98d2dac1fe13a85f7c91388cac4c56afbed28f17ec3f2e2b2f20b96"
+  },
+  {
+    "keys": [
+      "c2s",
+      "cloud_config",
+      "infra_safety",
+      "lite",
+      "memory",
+      "remote_changelog",
+      "remote_sandbox",
+      "session_dashboard",
+      "tangent",
+      "test",
+      "test_internal_only",
+      "test_nightly_only",
+      "tui",
+      "v2_non_interactive",
+      "v3_prompt",
+      "voice",
+      "workflows"
+    ],
+    "offset": 672961103,
+    "path": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.1/extracted/kiro-cli-chat",
+    "registry": {
+      "c2s": {
+        "channel": "nightly",
+        "description": "Code-to-Spec Explore agent and analysis pipeline. Internal nightly only; launcher exports KIRO_C2S_ROLLOUT_ENABLED and the TUI honors chat.enableC2s + shows the Explore agent only when enabled.",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "cloud_config": {
+        "description": "Cloud config: the consolidated /config panel, cloud/local source labels on config listings, and the launcher passing the stage-default cloud-config BFF endpoint to KAS for local V3 sessions. Turning this off hides the UI and stops the launcher supplying that stage default, so KAS makes no cloud-config calls unless the user explicitly sets a trusted-host CLOUD_CONFIG_ENDPOINT override (which applies regardless of the rollout). GA: ramped to 100% for ALL users on every channel; per-user activation stays governed by KAS's server-side AB_CLOUD_CONFIG entitlement, so non-entitled users see local-only sources. This flag is retained purely as the client-side kill switch: to darken the fleet, set treatment_percent to 0 in a follow-up release (config is compiled in); the immediate per-user lever is KIRO_FEATURE_CLOUD_CONFIG_ENABLED, an env override read by the KAS server (kiro-agent's feature-config provider), not by this crate.",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "infra_safety": {
+        "description": "ICECAP infrastructure-safety gate (monitor/enforce). Internal-only initially; launcher exports KIRO_INFRA_SAFETY_ROLLOUT_ENABLED and the TUI advertises the capability + honors the infraSafety settings only when enabled. Ramp via treatment_percent.",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "lite": {
+        "description": "Lite TUI mode - all channels, Amazon employees only",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "memory": {
+        "channel": "nightly",
+        "description": "Persistent agent memory. Dark-shipped at 0% while under development; ramp via treatment_percent.",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "remote_changelog": {
+        "channel": "stable",
+        "description": "Remote changelog feed fetch on stable builds (prod CloudFront). Nightly always fetches from gamma unconditionally. GA: all stable users at 100%. To darken the fleet, set treatment_percent to 0 in a follow-up release (config is compiled in); the immediate per-user lever is KIRO_NO_REMOTE_CHANGELOG.",
+        "treatment_percent": 100
+      },
+      "remote_sandbox": {
+        "description": "Remote/cloud sandbox sessions (--cloud/--repo flags). Ramped to 100% for all users on every channel. Dial treatment_percent to 0 to kill-switch (re-darkens the flags in the next release).",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "session_dashboard": {
+        "description": "Session dashboard: the /sessions browser, --sessions flag, and --resume-picker dashboard routing (v3). Generally available: every user on every channel. treatment_percent stays at 100 rather than ramping, because the single per-feature percent buckets internal users too \u2014 a partial percent would drop the feature for the internal cohort it was already ramped to. Dial treatment_percent to 0 to kill-switch (config is compiled in, so that ships in the next release). The surface is V3-only, but --sessions selects V3 itself, so the flag is not bounded by a separate engine choice; a user who saved or passed a non-V3 engine is told the dashboard needs V3 rather than being moved onto it.",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "tangent": {
+        "description": "/tangent named side-conversations. Generally available; the launcher includes tangent in KIRO_ENABLED_FEATURES and the TUI registers the /tangent command only when enabled. Dial treatment_percent to 0 to kill-switch.",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "test": {
+        "description": "Test experiment for unit tests",
+        "treatment_percent": 100
+      },
+      "test_internal_only": {
+        "description": "Test experiment for unit tests (internal only)",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "test_nightly_only": {
+        "channel": "nightly",
+        "description": "Test experiment for unit tests (nightly channel only)",
+        "segment": "internal",
+        "treatment_percent": 100
+      },
+      "tui": {
+        "description": "Gradual rollout of the new React/Ink TUI to replace legacy terminal UI",
+        "segment": "internal",
+        "treatment_percent": 50
+      },
+      "v2_non_interactive": {
+        "description": "Default non-interactive and piped-stdin to V2 engine instead of V1",
+        "treatment_percent": 10
+      },
+      "v3_prompt": {
+        "description": "Who is offered the V3 ease-in prompt. There is no feature that flips the default engine to V3 during the ease-in \u2014 the prompt is the only path \u2014 so a user is never defaulted onto V3 without being asked. Dialing this to 0 stops asking; answers already given are honored via the persisted chat.agentEngine setting.",
+        "segment": "all",
+        "treatment_percent": 0
+      },
+      "voice": {
+        "description": "Voice input mode - generally available to all users",
+        "segment": "all",
+        "treatment_percent": 100
+      },
+      "workflows": {
+        "description": "KAS dynamic workflows and TUI workflow management. All internal users on the KAS engine can opt in via chat.enableWorkflows in /settings features.",
+        "segment": "internal",
+        "treatment_percent": 100
+      }
+    },
+    "sha256": "f130f53bfa9e435d864c1b148ea27086cb3ed0399306318161a8a54dd03d1952"
+  }
+]

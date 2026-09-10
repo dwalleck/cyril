@@ -1,0 +1,116 @@
+Kiro CLI 2.21.1 KAS paired field-path sweep
+==============================================
+
+Generated with:
+  python3 experiments/conductor-spike/sweep-new-fields.py --diff <old-capture.jsonl> <new-capture.jsonl>
+
+The first argument below is the 2.21.0-host / pinned-2.21.0-KAS capture and the second is the 2.21.1-host / pinned-2.21.1-KAS capture. `sweep-new-fields.py` compares JSON paths after collapsing array indexes; path-only differences are coverage leads, not semantic verdicts.
+
+Surface
+-------
+Old: 341 paths
+New: 344 paths
+Only old: 0
+Only new:
+  params.env
+  params.env[].name
+  params.env[].value
+Interpretation: the new run exposed environment callback fields; this single workload does not establish a version-wide addition or removal.
+
+Watchdog (100 ms warning / 300 ms timeout)
+------------------------------------------
+Old: 265 paths
+New: 265 paths
+Only old: 0
+Only new: 0
+Interpretation: identical JSON path sets; both returned StreamIdleTimeoutError (-32000).
+
+Powers
+------
+Old: 236 paths
+New: 236 paths
+Only old: 0
+Only new: 0
+Interpretation: identical JSON path sets; both list/refresh fixture runs produced an empty list and the same unknown refresh-method error.
+
+Workflow: restate recipe
+------------------------
+Old: 419 paths
+New: 432 paths
+Only old:
+  params.prompt
+  result.configOptions[].options[]._meta.kiro.defaultEffortLevel
+  result.configOptions[].options[]._meta.kiro.effortLevels
+  result.configOptions[].options[]._meta.kiro.effortSchemaPath
+  result.configOptions[].options[]._meta.kiro.hasEffort
+  result.configOptions[].options[]._meta.kiro.rateMultiplier
+  result.configOptions[].options[]._meta.kiro.rateUnit
+Only new:
+  params._meta.kiro.command
+  params._meta.kiro.consent.triggeringResource
+  params.command
+  params.env
+  params.env[].name
+  params.env[].value
+  params.terminalId
+  params.update.content[].terminalId
+  params.update.rawInput.command
+  params.update.rawInput.run_in_background
+  params.update.rawOutput.exitCode
+  params.update.rawOutput.output
+  result.exitCode
+  result.exitStatus
+  result.exitStatus.exitCode
+  result.exitStatus.signal
+  result.output
+  result.signal
+  result.terminalId
+  result.truncated
+Interpretation: path churn is callback/workload coverage, not a proven new semantic field. Both completed with captured s1=ALPHA and s2=DONE.
+
+Workflow: terse recipe
+----------------------
+Old: 436 paths
+New: 418 paths
+Only old:
+  params._meta.kiro.command
+  params._meta.kiro.consent.triggeringResource
+  params.command
+  params.prompt
+  params.terminalId
+  params.update.content[].terminalId
+  params.update.rawInput.command
+  params.update.rawInput.run_in_background
+  params.update.rawOutput.exitCode
+  params.update.rawOutput.output
+  result.exitCode
+  result.exitStatus
+  result.exitStatus.exitCode
+  result.exitStatus.signal
+  result.output
+  result.signal
+  result.terminalId
+  result.truncated
+Only new: 0
+Interpretation: path churn is callback/workload coverage, not a proven removal. Both completed with captured s1=Done. and s2=DONE.
+
+Unified metadata targeted lead
+------------------------------
+Old: 270 paths
+New: 270 paths
+Only old: 0
+Only new: 0
+Interpretation: both accepted/echoed the supplied unifiedAgent metadata but exposed no unifiedAgent config option and showed no behavior change. This does not exercise the static stall_reasoning_retry flag.
+
+Raw interpolation evidence (terse captures)
+--------------------------------------------
+Old capture `kas-workflow-channels-2.21.0-terse-2.21.1.jsonl`, raw JSONL line 110 (reader selector tag B783) contains a `session/update` whose `update.sessionUpdate` is `user_message_chunk`; its content begins:
+  Two independent channels ... A_BEGIN<prior_step_output_ad93faf70315215e id="s1">\nDone.\n</prior_step_output_ad93faf70315215e>A_END.
+New capture `kas-workflow-channels-2.21.1-terse-2.21.1.jsonl`, raw JSONL line 88 (reader selector tag 1438) contains the same `user_message_chunk` shape with id `6695a27d733819d1`.
+Both preceding `_kiro/workflow/node_start` prompts retain literal `{{s1.output}}` (old line 95; new line 73). Therefore the wrapper is inserted by workflow/KAS transport before the child model sees the prompt, not created by the model's response. It is present in both versions, so it is not a 2.21.1 addition. The verdict difference (old channelA interpreted as `Done.`; new channelA returned the wrapper) is model/sample interpretation and whitespace variance; no binary causality claim is supported.
+
+Control caveat
+--------------
+The one-workload surface path difference must not be described as "the 2.21.0 env callback was absent" or "2.21.1 added env callbacks". It only says this pair of captures differed in observed callback coverage.
+
+The paired captures and verdicts are adjacent files in this directory. Values that could contain auth tokens/profile data are redacted by the probes.

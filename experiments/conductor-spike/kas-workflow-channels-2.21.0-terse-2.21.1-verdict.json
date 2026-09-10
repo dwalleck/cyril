@@ -1,0 +1,985 @@
+{
+  "capturedOutputs": {
+    "s1": "Done.",
+    "s2": "DONE"
+  },
+  "channelA": "Done.",
+  "channelA_CORRECT": false,
+  "channelB": "ALPHA",
+  "channelB_CORRECT": true,
+  "diskValue": "ALPHA",
+  "elapsedSec": 17.35,
+  "events": [
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/run_start",
+      "params": {
+        "inputs": {
+          "token": "<REDACTED>",
+          "workdir": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164"
+        },
+        "nodeTree": [
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s1",
+            "type": "step"
+          },
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s2",
+            "type": "step"
+          }
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "workflowId": "wf_40713882eca1ed39",
+        "workflowName": "audit-channels-2.21.1"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s1",
+        "nodePath": [
+          "wf_40713882eca1ed39",
+          "s1"
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "prompt": "Create the directory {{workdir}} if it does not exist. Write exactly the single word {{token}} to the file {{workdir}}/value.txt with no other text. That is the entire task. Do not write any summary, explanation or closing message; signal completion and stop.",
+        "type": "step",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s1",
+        "nodePath": [
+          "wf_40713882eca1ed39",
+          "s1"
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "sessionId": "sess_c0fa025e-a498-4ecd-adf1-46b5fd07aa5f",
+        "type": "step",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_complete",
+      "params": {
+        "artifacts": {
+          "value": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164/value.txt"
+        },
+        "capturedOutput": "Done.",
+        "nodeId": "s1",
+        "nodePath": [
+          "wf_40713882eca1ed39",
+          "s1"
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "status": "completed",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s2",
+        "nodePath": [
+          "wf_40713882eca1ed39",
+          "s2"
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "prompt": "Two independent channels are under test; report what you ACTUALLY see.\nCHANNEL A (template): between the markers here is A_BEGIN{{s1.output}}A_END. If there is nothing between the markers, channelA is the empty string.\nCHANNEL B (file): read the file {{artifacts.value}} and note its exact contents.\nWrite a JSON file to {{workdir}}/result.json containing exactly the keys channelA and channelB, whose values are the two things you saw, verbatim. Do not guess or copy one channel into the other. Then reply with exactly: DONE",
+        "type": "step",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s2",
+        "nodePath": [
+          "wf_40713882eca1ed39",
+          "s2"
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "sessionId": "sess_35c8ef31-70a6-4f26-b9cd-f65c34bafb50",
+        "type": "step",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_complete",
+      "params": {
+        "capturedOutput": "DONE",
+        "nodeId": "s2",
+        "nodePath": [
+          "wf_40713882eca1ed39",
+          "s2"
+        ],
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "status": "completed",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/run_complete",
+      "params": {
+        "finalState": {
+          "artifacts": {
+            "value": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164/value.txt"
+          },
+          "capturedOutputs": {
+            "s1": "Done.",
+            "s2": "DONE"
+          },
+          "createdAt": "2026-09-05T03:32:45.560Z",
+          "inputs": {
+            "token": "<REDACTED>",
+            "workdir": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164"
+          },
+          "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+          "planRevision": 0,
+          "root": {
+            "children": [
+              {
+                "agentName": "wf-coder",
+                "artifacts": {
+                  "value": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164/value.txt"
+                },
+                "capturedOutput": "Done.",
+                "completionSignal": "success",
+                "completionSignalSource": "send_message",
+                "effortLevel": "low",
+                "endedAt": "2026-09-05T03:32:53.365Z",
+                "nodeId": "s1",
+                "sessionId": "sess_c0fa025e-a498-4ecd-adf1-46b5fd07aa5f",
+                "startedAt": "2026-09-05T03:32:45.566Z",
+                "status": "completed",
+                "type": "step"
+              },
+              {
+                "agentName": "wf-coder",
+                "capturedOutput": "DONE",
+                "completionSignal": "success",
+                "completionSignalSource": "send_message",
+                "effortLevel": "low",
+                "endedAt": "2026-09-05T03:33:02.912Z",
+                "nodeId": "s2",
+                "sessionId": "sess_35c8ef31-70a6-4f26-b9cd-f65c34bafb50",
+                "startedAt": "2026-09-05T03:32:53.366Z",
+                "status": "completed",
+                "type": "step"
+              }
+            ],
+            "endedAt": "2026-09-05T03:33:02.913Z",
+            "nodeId": "wf_40713882eca1ed39",
+            "startedAt": "2026-09-05T03:32:45.565Z",
+            "status": "completed",
+            "type": "sequence"
+          },
+          "rootConversationId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+          "status": "completed",
+          "workflowId": "wf_40713882eca1ed39",
+          "workflowName": "audit-channels-2.21.1",
+          "workspacePath": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y"
+        },
+        "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+        "status": "completed",
+        "workflowId": "wf_40713882eca1ed39"
+      }
+    }
+  ],
+  "initialize": {
+    "agentCapabilities": {
+      "_meta": {
+        "kiro": {
+          "checkpoints": true,
+          "executionTargets": [
+            "local",
+            "cloud-sandbox"
+          ],
+          "extensionMethods": [
+            "_kiro/knowledge",
+            "_kiro/codeIntelligence",
+            "_kiro/session/context",
+            "_kiro/session/compact",
+            "_kiro/session/export",
+            "_kiro/session/history",
+            "_kiro/config/template",
+            "_kiro/workflow/new",
+            "_kiro/workflow/invoke",
+            "_kiro/workflow/load",
+            "_kiro/workflow/inspect",
+            "_kiro/workflow/list",
+            "_kiro/workflow/pause",
+            "_kiro/workflow/cancel",
+            "_kiro/workflow/delete",
+            "_kiro/workflow/listRecipes",
+            "_kiro/workflow/listWatchHandlers",
+            "_kiro/workflow/resumeAll",
+            "_kiro/workflow/retry",
+            "_kiro/workflow/update",
+            "_kiro/workflow/resume",
+            "_kiro/sourceProviders/list",
+            "_kiro/sourceProviders/listResources"
+          ],
+          "logging": {
+            "channels": [
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-home-_jbyd8y2/.kiro/logs/20260905T033245109/kiro.log",
+                "name": "kiro"
+              },
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-home-_jbyd8y2/.kiro/logs/20260905T033245109/mcp.log",
+                "name": "mcp"
+              },
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-home-_jbyd8y2/.kiro/logs/20260905T033245109/powers.log",
+                "name": "powers"
+              }
+            ],
+            "logDir": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-home-_jbyd8y2/.kiro/logs/20260905T033245109"
+          },
+          "policyNotifications": true,
+          "replayMarking": true,
+          "sessionList": true,
+          "sessionListScopes": [
+            "workspace",
+            "user"
+          ],
+          "sessionSources": [
+            "local",
+            "remote"
+          ],
+          "sourceProviders": true
+        }
+      },
+      "loadSession": true,
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "promptCapabilities": {
+        "embeddedContext": true,
+        "image": true
+      },
+      "sessionCapabilities": {
+        "fork": {
+          "_meta": {
+            "kiro": {
+              "messageId": true
+            }
+          }
+        },
+        "list": {}
+      }
+    },
+    "authMethods": [
+      {
+        "id": "aws-builder-id",
+        "name": "AWS Builder ID"
+      },
+      {
+        "id": "aws-iam-identity-center",
+        "name": "AWS IAM Identity Center"
+      }
+    ],
+    "protocolVersion": 1
+  },
+  "kasPin": "/home/dwalleck/.local/share/kiro-research/kas-carves/2.21.1/2.21.0/tree/node_modules/@kiro/agent/dist/server/acp-server.js",
+  "label": "2.21.0",
+  "launcher": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.0/kiro-cli",
+  "observedResult": {
+    "channelA": "Done.",
+    "channelB": "ALPHA"
+  },
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1,
+    "fs/read_text_file": 5,
+    "fs/write_text_file": 2,
+    "session/request_permission": 3,
+    "terminal/create": 1,
+    "terminal/output": 1,
+    "terminal/release": 1,
+    "terminal/wait_for_exit": 1
+  },
+  "sessionNew": {
+    "_meta": {
+      "agentMode": "vibe",
+      "createdAt": "2026-09-05T03:32:45.521Z",
+      "disableAutoCompaction": false,
+      "ftaEnabled": false,
+      "id": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+      "lastModifiedAt": "2026-09-05T03:32:45.521Z",
+      "schemaVersion": "1.0.0",
+      "semanticReviewEnabled": true,
+      "source": "local",
+      "specPlanEnabled": false,
+      "specSkipClarificationEnabled": true,
+      "specWorkflow": "quick",
+      "title": "New Session",
+      "workflowsEnabled": false,
+      "workspacePaths": [
+        "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y"
+      ]
+    },
+    "configOptions": [
+      {
+        "category": "mode",
+        "currentValue": "vibe",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "General coding assistance",
+            "name": "Default",
+            "value": "vibe"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Structured feature development",
+            "name": "Spec",
+            "value": "spec"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+            "name": "Quick Spec",
+            "value": "quick-spec"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+            "name": "Bug Fix",
+            "value": "bug-fix"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled",
+                "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+              }
+            },
+            "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Autonomous agent execution",
+            "name": "Autonomous",
+            "value": "autonomous"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+            "name": "semantic_reviewer",
+            "value": "semantic_reviewer"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "model",
+        "currentValue": "auto",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 1,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Models chosen by task for optimal usage and consistent quality",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 5 model with 1M context window",
+            "name": "Claude Opus 5",
+            "value": "claude-opus-5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Sonnet 5 model with 1M context window",
+            "name": "Claude Sonnet 5",
+            "value": "claude-sonnet-5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.8 model with 1M context window",
+            "name": "Claude Opus 4.8",
+            "value": "claude-opus-4.8"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "reasoning",
+                "hasEffort": true,
+                "rateMultiplier": 2.4,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+            "name": "GPT 5.6 Sol",
+            "value": "gpt-5.6-sol"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "reasoning",
+                "hasEffort": true,
+                "rateMultiplier": 1,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+            "name": "GPT 5.6 Terra",
+            "value": "gpt-5.6-terra"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "reasoning",
+                "hasEffort": true,
+                "rateMultiplier": 0.1,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+            "name": "GPT 5.6 Luna",
+            "value": "gpt-5.6-luna"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "xhigh",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.7 model with 1M context window",
+            "name": "Claude Opus 4.7",
+            "value": "claude-opus-4.7"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.6 model with 1M context window",
+            "name": "Claude Opus 4.6",
+            "value": "claude-opus-4.6"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Sonnet 4.6 model with 1M context window",
+            "name": "Claude Sonnet 4.6",
+            "value": "claude-sonnet-4.6"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.5 model",
+            "name": "Claude Opus 4.5",
+            "value": "claude-opus-4.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Sonnet 4.5 model",
+            "name": "Claude Sonnet 4.5",
+            "value": "claude-sonnet-4.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Hybrid reasoning and coding for regular use",
+            "name": "Claude Sonnet 4",
+            "value": "claude-sonnet-4"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.4,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "The latest Claude Haiku model",
+            "name": "Claude Haiku 4.5",
+            "value": "claude-haiku-4.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.25,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of DeepSeek V3.2",
+            "name": "Deepseek v3.2",
+            "value": "deepseek-3.2"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.25,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "MiniMax M2.5 model",
+            "name": "MiniMax M2.5",
+            "value": "minimax-m2.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.15,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of MiniMax M2.1",
+            "name": "MiniMax M2.1",
+            "value": "minimax-m2.1"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.5,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "GLM-5 model",
+            "name": "GLM 5",
+            "value": "glm-5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.05,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of Qwen3 Coder Next",
+            "name": "Qwen3 Coder Next",
+            "value": "qwen3-coder-next"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "currentValue": "on",
+        "id": "autopilot",
+        "name": "Autopilot",
+        "options": [
+          {
+            "description": "Agent executes tools without confirmation",
+            "name": "Autopilot",
+            "value": "on"
+          },
+          {
+            "description": "Agent asks for approval before file changes",
+            "name": "Supervised",
+            "value": "off"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "currentValue": "enabled",
+        "id": "contentCollection",
+        "name": "Content Collection",
+        "options": [
+          {
+            "description": "Allow content to be used for service improvement",
+            "name": "Enabled",
+            "value": "enabled"
+          },
+          {
+            "description": "Opt out of content collection",
+            "name": "Disabled",
+            "value": "disabled"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "modes": {
+      "availableModes": [
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "General coding assistance",
+          "id": "vibe",
+          "name": "Default"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Structured feature development",
+          "id": "spec",
+          "name": "Spec"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+          "id": "quick-spec",
+          "name": "Quick Spec"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+          "id": "bug-fix",
+          "name": "Bug Fix"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled",
+              "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+            }
+          },
+          "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+          "id": "plan",
+          "name": "Plan"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Autonomous agent execution",
+          "id": "autonomous",
+          "name": "Autonomous"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+          "id": "semantic_reviewer",
+          "name": "semantic_reviewer"
+        }
+      ],
+      "currentModeId": "vibe"
+    },
+    "sessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c"
+  },
+  "status": "completed",
+  "style": "terse",
+  "workdir": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164",
+  "workflowId": "wf_40713882eca1ed39",
+  "workflowNew": {
+    "initialState": {
+      "artifacts": {},
+      "capturedOutputs": {},
+      "createdAt": "2026-09-05T03:32:45.560Z",
+      "inputs": {
+        "token": "<REDACTED>",
+        "workdir": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y/run-1788579164"
+      },
+      "parentSessionId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+      "planRevision": 0,
+      "root": {
+        "children": [
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s1",
+            "status": "pending",
+            "type": "step"
+          },
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s2",
+            "status": "pending",
+            "type": "step"
+          }
+        ],
+        "nodeId": "wf_40713882eca1ed39",
+        "status": "pending",
+        "type": "sequence"
+      },
+      "rootConversationId": "sess_7a69963e-f929-466b-bc36-9b01a3c4995c",
+      "status": "running",
+      "workflowId": "wf_40713882eca1ed39",
+      "workflowName": "audit-channels-2.21.1",
+      "workspacePath": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y"
+    },
+    "workflowId": "wf_40713882eca1ed39"
+  },
+  "workspace": "/home/dwalleck/.claude/tmp/wf-2.21.0-terse-2.21.1-ws-80mcsv8y"
+}

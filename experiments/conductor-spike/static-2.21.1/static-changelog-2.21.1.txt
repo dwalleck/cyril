@@ -1,0 +1,26 @@
+Changelog for version 2.21.1:
+Version 2.21.1 (2026-09-03)
+  - Added: Customize the busy indicator verbs via the chat.spinnerVerbs setting (opt-in with chat.enableCustomSpinnerVerbs), with append and replace modes and optional verb links
+  - Changed: [V3] Large tool outputs are saved in full under the session's `tool-outputs/` directory instead of clipped
+  - Changed: Surface provider refusal reasons instead of a generic "failed to generate a response" error
+  - Changed: Submitted prompts hide the input chevron when the prompt background distinguishes them in conversation history
+  - Fixed: Workspace `cli.json` settings now override global settings in the TUI
+  - Fixed: [V3] `--no-interactive` no longer hangs callers waiting for the run output to close
+  - Fixed: A non-interactive run resumed with `--resume-id` no longer reports the loaded conversation as its own output
+  - Fixed: API-key authentication now discovers non-commercial service endpoints correctly
+  - Fixed: [V3] Interrupting a `--no-interactive` run now writes a terminal `runError` with stage `interrupted` to `--output-format stream-json`, instead of ending the stream with no final record
+  - Fixed: Submitted prompts no longer extend the active response accent into the blank row before thinking
+  - Fixed: [V3] A `--no-interactive` run that is interrupted or terminated now stops the engine and the processes it started, instead of leaving them behind
+  - Fixed: Nameless subagents no longer appear as `undefined` in the agent panel
+  - Fixed: Sessions permanently failing with `TokenExpiredError` after an auto-update removed the running binary
+  - Fixed: Replayed failed tool cards no longer print a doubled output label under the output header
+  - Fixed: Session-start tool cards render below the banner and What's-new block at boot, adjacent to the conversation, instead of sandwiched between them
+  - Fixed: [V3] Agents without a configured model now honor saved model and effort defaults while agent-pinned models still win
+  - Fixed: [V3] Duplicate notifications no longer emitted when steering or skills files change
+  - Fixed: [V3] Mid-stream stalls during reasoning-only responses are automatically re-issued instead of failing the turn
+  - Fixed: [V3] Resumed sessions replay tool cards with their deterministic titles, real arguments, and tool IDs
+  - Fixed: [V3] SessionStart hook content is kept on every turn instead of dropping after the first
+  - Fixed: Enterprise MCP registries no longer fail with HTTP 403 on hosts that require a User-Agent
+  - Fixed: Active-tail accent no longer paints on wrap-disabled or lite surfaces that drop the left status bar
+  - Fixed: Per-turn usage footer now renders with a consistent leading blank line and no stray leading space whether the turn was committed live or replayed on resume
+

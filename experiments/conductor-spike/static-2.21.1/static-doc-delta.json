@@ -1,0 +1,55 @@
+{
+  "old": 163,
+  "new": 163,
+  "added": [],
+  "removed": [],
+  "changed": [
+    {
+      "path": "settings/show-thinking-tips.md",
+      "old": {
+        "category": "setting",
+        "description": "Show or hide the feature tip below the thinking indicator while waiting",
+        "file": "show-thinking-tips.md",
+        "keywords": [
+          "setting",
+          "thinking",
+          "tips",
+          "indicator",
+          "waiting",
+          "display",
+          "hint"
+        ],
+        "path": "settings/show-thinking-tips.md",
+        "related": [
+          "show-thinking",
+          "settings"
+        ],
+        "status": "validated",
+        "title": "chat.showThinkingTips",
+        "validated": "2026-07-24"
+      },
+      "new": {
+        "category": "setting",
+        "description": "Show or hide the feature tip below the thinking indicator while waiting",
+        "file": "show-thinking-tips.md",
+        "keywords": [
+          "setting",
+          "thinking",
+          "tips",
+          "indicator",
+          "waiting",
+          "display",
+          "hint"
+        ],
+        "path": "settings/show-thinking-tips.md",
+        "related": [
+          "show-thinking",
+          "settings"
+        ],
+        "status": "validated",
+        "title": "chat.showThinkingTips",
+        "validated": "2026-09-02"
+      }
+    }
+  ]
+}

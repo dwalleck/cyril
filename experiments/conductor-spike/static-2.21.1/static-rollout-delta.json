@@ -1,0 +1,12 @@
+{
+  "v2_non_interactive": {
+    "new": {
+      "description": "Default non-interactive and piped-stdin to V2 engine instead of V1",
+      "treatment_percent": 10
+    },
+    "old": {
+      "description": "Default non-interactive and piped-stdin to V2 engine instead of V1",
+      "treatment_percent": 1
+    }
+  }
+}

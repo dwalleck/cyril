@@ -1,0 +1,9 @@
+live   experiments/conductor-spike/kas-output-replay-2.21.1-old.jsonl: 355 paths
+pinned experiments/conductor-spike/kas-output-replay-2.21.1-new.jsonl: 358 paths
+
+ONLY under live (0) — new-field candidates:
+
+ONLY under pinned (3) — usually just coverage:
+   - params.env
+   - params.env[].name
+   - params.env[].value

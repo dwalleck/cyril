@@ -1,0 +1,34 @@
+{
+  "runtime": "KAS 0.58.7 shipped with Kiro CLI 2.21.1",
+  "source": "~/.local/share/kiro-research/kas-carves/2.21.1/2.21.1/tree/node_modules/@kiro/agent/dist/server/acp-server.js",
+  "evidence_kind": "static reference trace plus executed extracted gate/environment initializer; no authenticated live-agent activation",
+  "source_offsets_characters": {
+    "schema_unifiedAgent": 422455,
+    "enum_AB_UNIFIED_AGENT": 9467170,
+    "default_false": 9467776,
+    "gate_registration": 9474826,
+    "generated_env_map": 9474890,
+    "env_map_spread": 9475591,
+    "active_experiment_reporter": 9476530,
+    "active_experiment_reporter_caller": 11269856,
+    "registry_construction": 11271316
+  },
+  "executed_initializer_result": {
+    "settingKey": "unifiedAgent",
+    "featureKey": "unified_agent_enabled",
+    "envVar": "KIRO_FEATURE_UNIFIED_AGENT_ENABLED",
+    "reachable_env_entries": 10,
+    "missing_returns_no_value_sentinel": true,
+    "true_resolves": true,
+    "false_resolves": false
+  },
+  "reference_counts": {
+    "uGa_gate_identifier": 2,
+    "settingComponent": 1,
+    "settingKey": 3,
+    "featureKey": 2,
+    "dot_AB_UNIFIED_AGENT": 0
+  },
+  "conclusion": "Generated environment override and generic active-experiment reporting are wired. No agent-graph, prompt, or tool selection consumer of this gate was found in this bundle. Intended unified-agent functionality remains unknown.",
+  "correction": "Original literal-only static-kas-flags-2.21.1.txt missed the generated Emr() map spread: new runtime has 10 environment-reachable flags, not 9."
+}

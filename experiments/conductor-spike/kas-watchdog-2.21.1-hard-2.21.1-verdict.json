@@ -1,0 +1,768 @@
+{
+  "elapsedSec": 4.085,
+  "initialize": {
+    "agentCapabilities": {
+      "_meta": {
+        "kiro": {
+          "checkpoints": true,
+          "executionTargets": [
+            "local",
+            "cloud-sandbox"
+          ],
+          "extensionMethods": [
+            "_kiro/knowledge",
+            "_kiro/codeIntelligence",
+            "_kiro/session/context",
+            "_kiro/session/compact",
+            "_kiro/session/export",
+            "_kiro/session/history",
+            "_kiro/config/template",
+            "_kiro/workflow/new",
+            "_kiro/workflow/invoke",
+            "_kiro/workflow/load",
+            "_kiro/workflow/inspect",
+            "_kiro/workflow/list",
+            "_kiro/workflow/pause",
+            "_kiro/workflow/cancel",
+            "_kiro/workflow/delete",
+            "_kiro/workflow/listRecipes",
+            "_kiro/workflow/listWatchHandlers",
+            "_kiro/workflow/resumeAll",
+            "_kiro/workflow/retry",
+            "_kiro/workflow/update",
+            "_kiro/workflow/resume",
+            "_kiro/sourceProviders/list",
+            "_kiro/sourceProviders/listResources"
+          ],
+          "logging": {
+            "channels": [
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/kas-wd-2.21.1-hard-2.21.1-home-pik9wr2e/.kiro/logs/20260905T033054368/kiro.log",
+                "name": "kiro"
+              },
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/kas-wd-2.21.1-hard-2.21.1-home-pik9wr2e/.kiro/logs/20260905T033054368/mcp.log",
+                "name": "mcp"
+              },
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/kas-wd-2.21.1-hard-2.21.1-home-pik9wr2e/.kiro/logs/20260905T033054368/powers.log",
+                "name": "powers"
+              }
+            ],
+            "logDir": "/home/dwalleck/.claude/tmp/kas-wd-2.21.1-hard-2.21.1-home-pik9wr2e/.kiro/logs/20260905T033054368"
+          },
+          "policyNotifications": true,
+          "replayMarking": true,
+          "sessionList": true,
+          "sessionListScopes": [
+            "workspace",
+            "user"
+          ],
+          "sessionSources": [
+            "local",
+            "remote"
+          ],
+          "sourceProviders": true
+        }
+      },
+      "loadSession": true,
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "promptCapabilities": {
+        "embeddedContext": true,
+        "image": true
+      },
+      "sessionCapabilities": {
+        "fork": {
+          "_meta": {
+            "kiro": {
+              "messageId": true
+            }
+          }
+        },
+        "list": {}
+      }
+    },
+    "authMethods": [
+      {
+        "id": "aws-builder-id",
+        "name": "AWS Builder ID"
+      },
+      {
+        "id": "aws-iam-identity-center",
+        "name": "AWS IAM Identity Center"
+      }
+    ],
+    "protocolVersion": 1
+  },
+  "kasPin": "/home/dwalleck/.local/share/kiro-research/kas-carves/2.21.1/2.21.1/tree/node_modules/@kiro/agent/dist/server/acp-server.js",
+  "label": "2.21.1",
+  "launcher": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.1/extracted/kiro-cli",
+  "notify": [
+    {
+      "atSec": 1.175,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    },
+    {
+      "atSec": 1.75,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    },
+    {
+      "atSec": 1.953,
+      "params": {
+        "level": "warning",
+        "message": "The connection to the model was interrupted. Retrying\u2026"
+      }
+    },
+    {
+      "atSec": 3.873,
+      "params": {
+        "level": "warning",
+        "message": "The model response paused unexpectedly. Waiting for it to resume\u2026"
+      }
+    }
+  ],
+  "serverRequests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1
+  },
+  "sessionNew": {
+    "_meta": {
+      "agentMode": "vibe",
+      "createdAt": "2026-09-05T03:30:54.829Z",
+      "disableAutoCompaction": false,
+      "ftaEnabled": false,
+      "id": "sess_c1429c7a-33a8-4877-8d41-955511e474f1",
+      "lastModifiedAt": "2026-09-05T03:30:54.829Z",
+      "schemaVersion": "1.0.0",
+      "semanticReviewEnabled": true,
+      "source": "local",
+      "specPlanEnabled": false,
+      "specSkipClarificationEnabled": true,
+      "specWorkflow": "quick",
+      "title": "New Session",
+      "workflowsEnabled": false,
+      "workspacePaths": [
+        "/home/dwalleck/.claude/tmp/kas-wd-2.21.1-hard-2.21.1-cwd-r2cnqk0q"
+      ]
+    },
+    "configOptions": [
+      {
+        "category": "mode",
+        "currentValue": "vibe",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "General coding assistance",
+            "name": "Default",
+            "value": "vibe"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Structured feature development",
+            "name": "Spec",
+            "value": "spec"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+            "name": "Quick Spec",
+            "value": "quick-spec"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+            "name": "Bug Fix",
+            "value": "bug-fix"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled",
+                "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+              }
+            },
+            "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Autonomous agent execution",
+            "name": "Autonomous",
+            "value": "autonomous"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+            "name": "semantic_reviewer",
+            "value": "semantic_reviewer"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "category": "model",
+        "currentValue": "auto",
+        "id": "model",
+        "name": "Model",
+        "options": [
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 1,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Models chosen by task for optimal usage and consistent quality",
+            "name": "Auto",
+            "value": "auto"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 5 model with 1M context window",
+            "name": "Claude Opus 5",
+            "value": "claude-opus-5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Sonnet 5 model with 1M context window",
+            "name": "Claude Sonnet 5",
+            "value": "claude-sonnet-5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.8 model with 1M context window",
+            "name": "Claude Opus 4.8",
+            "value": "claude-opus-4.8"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "reasoning",
+                "hasEffort": true,
+                "rateMultiplier": 2.4,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+            "name": "GPT 5.6 Sol",
+            "value": "gpt-5.6-sol"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "reasoning",
+                "hasEffort": true,
+                "rateMultiplier": 1,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+            "name": "GPT 5.6 Terra",
+            "value": "gpt-5.6-terra"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "none",
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "reasoning",
+                "hasEffort": true,
+                "rateMultiplier": 0.1,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+            "name": "GPT 5.6 Luna",
+            "value": "gpt-5.6-luna"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "xhigh",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "xhigh",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.7 model with 1M context window",
+            "name": "Claude Opus 4.7",
+            "value": "claude-opus-4.7"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.6 model with 1M context window",
+            "name": "Claude Opus 4.6",
+            "value": "claude-opus-4.6"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "defaultEffortLevel": "high",
+                "effortLevels": [
+                  "low",
+                  "medium",
+                  "high",
+                  "max"
+                ],
+                "effortSchemaPath": "output_config",
+                "hasEffort": true,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Sonnet 4.6 model with 1M context window",
+            "name": "Claude Sonnet 4.6",
+            "value": "claude-sonnet-4.6"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 2.2,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Opus 4.5 model",
+            "name": "Claude Opus 4.5",
+            "value": "claude-opus-4.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Claude Sonnet 4.5 model",
+            "name": "Claude Sonnet 4.5",
+            "value": "claude-sonnet-4.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 1.3,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Hybrid reasoning and coding for regular use",
+            "name": "Claude Sonnet 4",
+            "value": "claude-sonnet-4"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.4,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "The latest Claude Haiku model",
+            "name": "Claude Haiku 4.5",
+            "value": "claude-haiku-4.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.25,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of DeepSeek V3.2",
+            "name": "Deepseek v3.2",
+            "value": "deepseek-3.2"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.25,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "MiniMax M2.5 model",
+            "name": "MiniMax M2.5",
+            "value": "minimax-m2.5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.15,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of MiniMax M2.1",
+            "name": "MiniMax M2.1",
+            "value": "minimax-m2.1"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.5,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "GLM-5 model",
+            "name": "GLM 5",
+            "value": "glm-5"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "hasEffort": false,
+                "rateMultiplier": 0.05,
+                "rateUnit": "Credit"
+              }
+            },
+            "description": "Experimental preview of Qwen3 Coder Next",
+            "name": "Qwen3 Coder Next",
+            "value": "qwen3-coder-next"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "currentValue": "on",
+        "id": "autopilot",
+        "name": "Autopilot",
+        "options": [
+          {
+            "description": "Agent executes tools without confirmation",
+            "name": "Autopilot",
+            "value": "on"
+          },
+          {
+            "description": "Agent asks for approval before file changes",
+            "name": "Supervised",
+            "value": "off"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "currentValue": "enabled",
+        "id": "contentCollection",
+        "name": "Content Collection",
+        "options": [
+          {
+            "description": "Allow content to be used for service improvement",
+            "name": "Enabled",
+            "value": "enabled"
+          },
+          {
+            "description": "Opt out of content collection",
+            "name": "Disabled",
+            "value": "disabled"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "modes": {
+      "availableModes": [
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "General coding assistance",
+          "id": "vibe",
+          "name": "Default"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Structured feature development",
+          "id": "spec",
+          "name": "Spec"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+          "id": "quick-spec",
+          "name": "Quick Spec"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+          "id": "bug-fix",
+          "name": "Bug Fix"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled",
+              "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+            }
+          },
+          "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+          "id": "plan",
+          "name": "Plan"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Autonomous agent execution",
+          "id": "autonomous",
+          "name": "Autonomous"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+          "id": "semantic_reviewer",
+          "name": "semantic_reviewer"
+        }
+      ],
+      "currentModeId": "vibe"
+    },
+    "sessionId": "sess_c1429c7a-33a8-4877-8d41-955511e474f1"
+  },
+  "terminal": null,
+  "terminalError": {
+    "code": -32000,
+    "data": {
+      "errorType": "StreamIdleTimeoutError",
+      "requestId": "70f09351-91b6-44eb-a125-534c8bcd508a",
+      "retryErrorType": "TRANSIENT"
+    },
+    "message": "The model response stalled and timed out. Please try again. (Request ID: 70f09351-91b6-44eb-a125-534c8bcd508a)"
+  },
+  "timeoutMs": "300",
+  "warnMs": "100"
+}

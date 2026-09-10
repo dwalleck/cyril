@@ -1,0 +1,22 @@
+bundle: /home/dwalleck/.local/share/kiro-research/kas-carves/2.21.1/2.21.0/tree/node_modules/@kiro/agent/dist/server/acp-server.js
+
+| wire key | default | env var |
+|---|---|---|
+| `system_field_injection` | `false` | — none — |
+| `system_prompt_migration` | `false` | — none — |
+| `steering_supervisor` | `false` | `KIRO_FEATURE_STEERING_SUPERVISOR_ENABLED` |
+| `cgs_delegation_v2` | `false` | `KIRO_FEATURE_CGS_DELEGATION_V2_ENABLED` |
+| `session_title_llm` | `false` | `KIRO_FEATURE_SESSION_TITLE_LLM_ENABLED` |
+| `user_agent_refactoring_enabled` | `false` | `KIRO_FEATURE_USER_AGENT_REFACTORING_ENABLED` |
+| `kiroInfraSafetyMonitor` | `false` | `KIRO_FEATURE_KIRO_INFRA_SAFETY_MONITOR_ENABLED` |
+| `fta_vibe` | `false` | `KIRO_FEATURE_FTA_VIBE_ENABLED` |
+| `empty_response_retry` | `true` | — none — |
+| `truncated_response_retry` | `true` | — none — |
+| `stream_error_retry` | `true` | — none — |
+| `stream_idle_watchdog` | `true` | `KIRO_FEATURE_STREAM_IDLE_WATCHDOG_ENABLED` |
+| `auth_expiry_retry` | `true` | `KIRO_FEATURE_AUTH_EXPIRY_RETRY_ENABLED` |
+| `memory_internal_enabled` | `disabled` | — none — |
+| `memory_external_enabled` | `false` | `KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED` |
+
+15 flags; 9 env-reachable; 6 experiment-only
+experiment-only: system_field_injection, system_prompt_migration, empty_response_retry, truncated_response_retry, stream_error_retry, memory_internal_enabled

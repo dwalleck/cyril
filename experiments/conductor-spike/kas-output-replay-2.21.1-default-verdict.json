@@ -1,0 +1,4869 @@
+{
+  "schema": "cyril.kas-output-replay-audit.2.21.1",
+  "large_output_arm": "default",
+  "same_workload": true,
+  "same_day_backend_control": true,
+  "large_output": {
+    "command_output_bytes": 32047,
+    "historical_wire_cap_bytes": 30000,
+    "unique_end_marker": "_OUTPUT_REPLAY_2211_ENDMARK",
+    "command": "python3 -c '<marker prefix> + (X * 32000) + <unique end marker>'"
+  },
+  "old": {
+    "label": "old",
+    "large_output_arm": "default",
+    "binary": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.0/kiro-cli",
+    "kas_pin": "/home/dwalleck/.local/share/kiro-research/kas-carves/2.21.1/2.21.0/tree/node_modules/@kiro/agent/dist/server/acp-server.js",
+    "cwd": "/home/dwalleck/.claude/tmp/kas-output-replay-cwd-ot61737c",
+    "home": "/home/dwalleck/.claude/tmp/kas-output-replay-home-_dggt8d9",
+    "runtime": "/home/dwalleck/.claude/tmp/kas-output-replay-runtime-fjgyn722",
+    "assertions": {
+      "initialize_ok": true,
+      "session_new_ok": true,
+      "original_prompt_ok": true,
+      "original_marker_on_wire": true,
+      "original_offloaded": false,
+      "original_marker_on_disk": false,
+      "load_response_ok": true,
+      "load_replayed_updates": true,
+      "replayed_tool_card_ids": true,
+      "replayed_titles_equal": true,
+      "replayed_raw_inputs_equal": true
+    },
+    "original": {
+      "prompt": "Use execute_bash exactly once, with no other tools, and run this exact command verbatim: python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")' Do not alter the command or shorten its output. Wait for completion, then reply exactly DONE_REPLAY_2211.",
+      "response": {
+        "kind": "result",
+        "result": {
+          "stopReason": "end_turn"
+        }
+      },
+      "wire": {
+        "marker_observations": [
+          {
+            "path": "update.rawOutput.output",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "OUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n"
+          },
+          {
+            "path": "update.rawOutput.message",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+          }
+        ],
+        "contains_full_expected_body": false,
+        "max_marker_string_length": 1031,
+        "payload_count": 5
+      },
+      "tool_cards": {
+        "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": "Run Command",
+              "kind": "execute",
+              "status": "pending",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": null,
+              "kind": null,
+              "status": "in_progress",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": null,
+              "kind": null,
+              "status": "in_progress",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": null,
+              "kind": null,
+              "status": "in_progress",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": "Run Command",
+              "kind": null,
+              "status": "completed",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [
+                {
+                  "path": "rawOutput.output",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "OUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n"
+                },
+                {
+                  "path": "rawOutput.message",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+                }
+              ],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": {
+                "kind": "clipped",
+                "originalChars": 32069
+              }
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+            "title": "Run Command",
+            "kind": null,
+            "status": "completed",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [
+              {
+                "path": "rawOutput.output",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "OUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n"
+              },
+              {
+                "path": "rawOutput.message",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+              }
+            ],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": {
+              "kind": "clipped",
+              "originalChars": 32069
+            }
+          }
+        }
+      },
+      "output_transformations": [
+        {
+          "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+          "transformation": {
+            "kind": "clipped",
+            "originalChars": 32069
+          }
+        }
+      ],
+      "permission_count": 1,
+      "disk_after_turn": {
+        "tool_output_directories": [],
+        "marker_files": [
+          {
+            "root": "/home/dwalleck/.claude/tmp/kas-output-replay-home-_dggt8d9",
+            "relative": ".kiro/sessions/65e64f861ccc973a/sess_40163632-d792-4b9d-aa4d-d7352f6ad094/messages.jsonl",
+            "bytes": 54594,
+            "sha256": "9979258e0e0a15f84ae990943ef101033a2542a954a46e9f0982fb382ba512f7",
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "{\"id\":\"df2cbd0b-e64e-4e00-8959-bfc9e8a50c03-call\",\"timestamp\":\"2026-09-05T04:16:",
+            "tail": "apshot>\",\"forcedRole\":true,\"messageId\":\"08767502-9880-4653-910a-4c3b245935ab\"}}\n"
+          },
+          {
+            "root": "/home/dwalleck/.claude/tmp/kas-output-replay-cwd-ot61737c",
+            "relative": "README.txt",
+            "bytes": 36,
+            "sha256": "de5f59de9ffa7776654cc919760e8724915127a54f2ff897fbadbb772e355de9",
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": false,
+            "head": "KAS_OUTPUT_REPLAY_2211_FILE_FIXTURE\n",
+            "tail": "KAS_OUTPUT_REPLAY_2211_FILE_FIXTURE\n"
+          }
+        ]
+      },
+      "session_id": "sess_40163632-d792-4b9d-aa4d-d7352f6ad094",
+      "expected_output_bytes": 32047
+    },
+    "load": {
+      "initialize": {
+        "kind": "timeout"
+      },
+      "session_list": {
+        "kind": "result",
+        "result": {
+          "sessions": [
+            {
+              "sessionId": "<sessionId>",
+              "cwd": "/home/dwalleck/.claude/<workspace>",
+              "title": "Run Bash Command Printing Large Output",
+              "updatedAt": "<updatedAt>",
+              "_meta": {
+                "kiro": {
+                  "agentMode": "vibe",
+                  "createdAt": "<createdAt>",
+                  "source": "local",
+                  "executionTarget": {
+                    "kind": "local"
+                  },
+                  "status": "idle"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "kind": "result",
+        "result": {
+          "_meta": {
+            "agentMode": "vibe",
+            "contextUsage": {
+              "summarizationThreshold": 80,
+              "truncationThreshold": 95,
+              "usagePercentage": 5.5406999588012695
+            },
+            "createdAt": "<createdAt>",
+            "id": "sess_40163632-d792-4b9d-aa4d-d7352f6ad094",
+            "lastModifiedAt": "<lastModifiedAt>",
+            "title": "Run Bash Command Printing Large Output",
+            "workspacePaths": [
+              "/home/dwalleck/.claude/<workspace>"
+            ],
+            "source": "local",
+            "executionTarget": {
+              "kind": "local"
+            }
+          },
+          "modes": {
+            "availableModes": [
+              {
+                "id": "vibe",
+                "name": "Default",
+                "description": "General coding assistance",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "spec",
+                "name": "Spec",
+                "description": "Structured feature development",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "quick-spec",
+                "name": "Quick Spec",
+                "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "bug-fix",
+                "name": "Bug Fix",
+                "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "plan",
+                "name": "Plan",
+                "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+                "_meta": {
+                  "kiro": {
+                    "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "autonomous",
+                "name": "Autonomous",
+                "description": "Autonomous agent execution",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "semantic_reviewer",
+                "name": "semantic_reviewer",
+                "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "currentModeId": "vibe"
+          },
+          "configOptions": [
+            {
+              "type": "select",
+              "id": "mode",
+              "name": "Mode",
+              "category": "mode",
+              "currentValue": "vibe",
+              "options": [
+                {
+                  "value": "vibe",
+                  "name": "Default",
+                  "description": "General coding assistance",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "spec",
+                  "name": "Spec",
+                  "description": "Structured feature development",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "quick-spec",
+                  "name": "Quick Spec",
+                  "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "bug-fix",
+                  "name": "Bug Fix",
+                  "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "plan",
+                  "name": "Plan",
+                  "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+                  "_meta": {
+                    "kiro": {
+                      "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "autonomous",
+                  "name": "Autonomous",
+                  "description": "Autonomous agent execution",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "semantic_reviewer",
+                  "name": "semantic_reviewer",
+                  "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "select",
+              "id": "model",
+              "name": "Model",
+              "category": "model",
+              "currentValue": "auto",
+              "options": [
+                {
+                  "value": "auto",
+                  "name": "Auto",
+                  "description": "Models chosen by task for optimal usage and consistent quality",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-5",
+                  "name": "Claude Opus 5",
+                  "description": "Claude Opus 5 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-5",
+                  "name": "Claude Sonnet 5",
+                  "description": "Claude Sonnet 5 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.8",
+                  "name": "Claude Opus 4.8",
+                  "description": "Claude Opus 4.8 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "gpt-5.6-sol",
+                  "name": "GPT 5.6 Sol",
+                  "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.4,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "reasoning",
+                      "effortLevels": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "gpt-5.6-terra",
+                  "name": "GPT 5.6 Terra",
+                  "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "reasoning",
+                      "effortLevels": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "gpt-5.6-luna",
+                  "name": "GPT 5.6 Luna",
+                  "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.1,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "reasoning",
+                      "effortLevels": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.7",
+                  "name": "Claude Opus 4.7",
+                  "description": "Claude Opus 4.7 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "xhigh"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.6",
+                  "name": "Claude Opus 4.6",
+                  "description": "Claude Opus 4.6 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-4.6",
+                  "name": "Claude Sonnet 4.6",
+                  "description": "Claude Sonnet 4.6 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.5",
+                  "name": "Claude Opus 4.5",
+                  "description": "Claude Opus 4.5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-4.5",
+                  "name": "Claude Sonnet 4.5",
+                  "description": "Claude Sonnet 4.5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-4",
+                  "name": "Claude Sonnet 4",
+                  "description": "Hybrid reasoning and coding for regular use",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-haiku-4.5",
+                  "name": "Claude Haiku 4.5",
+                  "description": "The latest Claude Haiku model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.4,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "deepseek-3.2",
+                  "name": "Deepseek v3.2",
+                  "description": "Experimental preview of DeepSeek V3.2",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.25,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "minimax-m2.5",
+                  "name": "MiniMax M2.5",
+                  "description": "MiniMax M2.5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.25,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "minimax-m2.1",
+                  "name": "MiniMax M2.1",
+                  "description": "Experimental preview of MiniMax M2.1",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.15,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "glm-5",
+                  "name": "GLM 5",
+                  "description": "GLM-5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.5,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "qwen3-coder-next",
+                  "name": "Qwen3 Coder Next",
+                  "description": "Experimental preview of Qwen3 Coder Next",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.05,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "select",
+              "id": "autopilot",
+              "name": "Autopilot",
+              "currentValue": "on",
+              "options": [
+                {
+                  "value": "on",
+                  "name": "Autopilot",
+                  "description": "Agent executes tools without confirmation"
+                },
+                {
+                  "value": "off",
+                  "name": "Supervised",
+                  "description": "Agent asks for approval before file changes"
+                }
+              ]
+            },
+            {
+              "type": "select",
+              "id": "contentCollection",
+              "name": "Content Collection",
+              "currentValue": "enabled",
+              "options": [
+                {
+                  "value": "enabled",
+                  "name": "Enabled",
+                  "description": "Allow content to be used for service improvement"
+                },
+                {
+                  "value": "disabled",
+                  "name": "Disabled",
+                  "description": "Opt out of content collection"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "wire": {
+        "marker_observations": [
+          {
+            "path": "update.rawOutput",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+          },
+          {
+            "path": "update.content[0].content.text",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+          }
+        ],
+        "contains_full_expected_body": false,
+        "max_marker_string_length": 1031,
+        "payload_count": 8
+      },
+      "tool_cards": {
+        "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+              "title": "Fetching your cloud config",
+              "kind": "other",
+              "status": "in_progress",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+              "title": "fetch_cloud_config",
+              "kind": "other",
+              "status": "completed",
+              "rawInput": {
+                "toolName": "fetch_cloud_config"
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+            "title": "Fetching your cloud config",
+            "kind": "other",
+            "status": "in_progress",
+            "rawInput": null,
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+            "title": null,
+            "kind": null,
+            "status": "completed",
+            "rawInput": null,
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          }
+        },
+        "df2cbd0b-e64e-4e00-8959-bfc9e8a50c03": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "df2cbd0b-e64e-4e00-8959-bfc9e8a50c03",
+              "title": "fetch_cloud_config",
+              "kind": "other",
+              "status": "completed",
+              "rawInput": {
+                "toolName": "fetch_cloud_config"
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "df2cbd0b-e64e-4e00-8959-bfc9e8a50c03",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "df2cbd0b-e64e-4e00-8959-bfc9e8a50c03",
+            "title": "fetch_cloud_config",
+            "kind": "other",
+            "status": "completed",
+            "rawInput": {
+              "toolName": "fetch_cloud_config"
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "df2cbd0b-e64e-4e00-8959-bfc9e8a50c03",
+            "title": null,
+            "kind": null,
+            "status": "completed",
+            "rawInput": null,
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          }
+        },
+        "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": "Run Command",
+              "kind": "execute",
+              "status": "completed",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [
+                {
+                  "path": "rawOutput",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+                }
+              ],
+              "content": [
+                {
+                  "path": "content[0].content.text",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+                }
+              ],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "completed",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+            "title": null,
+            "kind": null,
+            "status": "completed",
+            "rawInput": null,
+            "rawOutput": [
+              {
+                "path": "rawOutput",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+              }
+            ],
+            "content": [
+              {
+                "path": "content[0].content.text",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+              }
+            ],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          }
+        }
+      },
+      "output_transformations": []
+    },
+    "initialize": {
+      "kind": "result",
+      "result": {
+        "protocolVersion": 1,
+        "agentCapabilities": {
+          "loadSession": true,
+          "promptCapabilities": {
+            "image": true,
+            "embeddedContext": true
+          },
+          "mcpCapabilities": {
+            "http": true,
+            "sse": true
+          },
+          "sessionCapabilities": {
+            "list": {},
+            "fork": {
+              "_meta": {
+                "kiro": {
+                  "messageId": true
+                }
+              }
+            }
+          },
+          "_meta": {
+            "kiro": {
+              "checkpoints": true,
+              "sessionList": true,
+              "policyNotifications": true,
+              "extensionMethods": [
+                "_kiro/knowledge",
+                "_kiro/codeIntelligence",
+                "_kiro/session/context",
+                "_kiro/session/compact",
+                "_kiro/session/export",
+                "_kiro/session/history",
+                "_kiro/config/template",
+                "_kiro/workflow/new",
+                "_kiro/workflow/invoke",
+                "_kiro/workflow/load",
+                "_kiro/workflow/inspect",
+                "_kiro/workflow/list",
+                "_kiro/workflow/pause",
+                "_kiro/workflow/cancel",
+                "_kiro/workflow/delete",
+                "_kiro/workflow/listRecipes",
+                "_kiro/workflow/listWatchHandlers",
+                "_kiro/workflow/resumeAll",
+                "_kiro/workflow/retry",
+                "_kiro/workflow/update",
+                "_kiro/workflow/resume",
+                "_kiro/sourceProviders/list",
+                "_kiro/sourceProviders/listResources"
+              ],
+              "sessionSources": [
+                "local",
+                "remote"
+              ],
+              "sessionListScopes": [
+                "workspace",
+                "user"
+              ],
+              "executionTargets": [
+                "local",
+                "cloud-sandbox"
+              ],
+              "sourceProviders": true,
+              "replayMarking": true,
+              "logging": {
+                "logDir": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041648645",
+                "channels": [
+                  {
+                    "name": "kiro",
+                    "filePath": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041648645/kiro.log"
+                  },
+                  {
+                    "name": "mcp",
+                    "filePath": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041648645/mcp.log"
+                  },
+                  {
+                    "name": "powers",
+                    "filePath": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041648645/powers.log"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "authMethods": [
+          {
+            "id": "aws-builder-id",
+            "name": "AWS Builder ID"
+          },
+          {
+            "id": "aws-iam-identity-center",
+            "name": "AWS IAM Identity Center"
+          }
+        ]
+      }
+    },
+    "initialize_fields": [
+      "agentCapabilities",
+      "agentCapabilities._meta",
+      "agentCapabilities._meta.kiro",
+      "agentCapabilities._meta.kiro.checkpoints",
+      "agentCapabilities._meta.kiro.executionTargets",
+      "agentCapabilities._meta.kiro.extensionMethods",
+      "agentCapabilities._meta.kiro.logging",
+      "agentCapabilities._meta.kiro.logging.channels",
+      "agentCapabilities._meta.kiro.logging.channels[].filePath",
+      "agentCapabilities._meta.kiro.logging.channels[].name",
+      "agentCapabilities._meta.kiro.logging.logDir",
+      "agentCapabilities._meta.kiro.policyNotifications",
+      "agentCapabilities._meta.kiro.replayMarking",
+      "agentCapabilities._meta.kiro.sessionList",
+      "agentCapabilities._meta.kiro.sessionListScopes",
+      "agentCapabilities._meta.kiro.sessionSources",
+      "agentCapabilities._meta.kiro.sourceProviders",
+      "agentCapabilities.loadSession",
+      "agentCapabilities.mcpCapabilities",
+      "agentCapabilities.mcpCapabilities.http",
+      "agentCapabilities.mcpCapabilities.sse",
+      "agentCapabilities.promptCapabilities",
+      "agentCapabilities.promptCapabilities.embeddedContext",
+      "agentCapabilities.promptCapabilities.image",
+      "agentCapabilities.sessionCapabilities",
+      "agentCapabilities.sessionCapabilities.fork",
+      "agentCapabilities.sessionCapabilities.fork._meta",
+      "agentCapabilities.sessionCapabilities.fork._meta.kiro",
+      "agentCapabilities.sessionCapabilities.fork._meta.kiro.messageId",
+      "agentCapabilities.sessionCapabilities.list",
+      "authMethods",
+      "authMethods[].id",
+      "authMethods[].name",
+      "protocolVersion"
+    ],
+    "session_new": {
+      "kind": "result",
+      "result": {
+        "_meta": {
+          "schemaVersion": "1.0.0",
+          "id": "sess_40163632-d792-4b9d-aa4d-d7352f6ad094",
+          "title": "New Session",
+          "agentMode": "vibe",
+          "workspacePaths": [
+            "/home/dwalleck/.claude/<workspace>"
+          ],
+          "createdAt": "<createdAt>",
+          "lastModifiedAt": "<lastModifiedAt>",
+          "semanticReviewEnabled": true,
+          "disableAutoCompaction": false,
+          "ftaEnabled": false,
+          "workflowsEnabled": false,
+          "specPlanEnabled": false,
+          "specWorkflow": "quick",
+          "specSkipClarificationEnabled": true,
+          "source": "local"
+        },
+        "sessionId": "<sessionId>",
+        "modes": {
+          "availableModes": [
+            {
+              "id": "vibe",
+              "name": "Default",
+              "description": "General coding assistance",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "spec",
+              "name": "Spec",
+              "description": "Structured feature development",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "quick-spec",
+              "name": "Quick Spec",
+              "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "bug-fix",
+              "name": "Bug Fix",
+              "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "plan",
+              "name": "Plan",
+              "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+              "_meta": {
+                "kiro": {
+                  "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "autonomous",
+              "name": "Autonomous",
+              "description": "Autonomous agent execution",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "semantic_reviewer",
+              "name": "semantic_reviewer",
+              "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "currentModeId": "vibe"
+        },
+        "configOptions": [
+          {
+            "type": "select",
+            "id": "mode",
+            "name": "Mode",
+            "category": "mode",
+            "currentValue": "vibe",
+            "options": [
+              {
+                "value": "vibe",
+                "name": "Default",
+                "description": "General coding assistance",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "spec",
+                "name": "Spec",
+                "description": "Structured feature development",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "quick-spec",
+                "name": "Quick Spec",
+                "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "bug-fix",
+                "name": "Bug Fix",
+                "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "plan",
+                "name": "Plan",
+                "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+                "_meta": {
+                  "kiro": {
+                    "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "autonomous",
+                "name": "Autonomous",
+                "description": "Autonomous agent execution",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "semantic_reviewer",
+                "name": "semantic_reviewer",
+                "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "select",
+            "id": "model",
+            "name": "Model",
+            "category": "model",
+            "currentValue": "auto",
+            "options": [
+              {
+                "value": "auto",
+                "name": "Auto",
+                "description": "Models chosen by task for optimal usage and consistent quality",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5",
+                "description": "Claude Opus 5 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5",
+                "description": "Claude Sonnet 5 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.8",
+                "name": "Claude Opus 4.8",
+                "description": "Claude Opus 4.8 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT 5.6 Sol",
+                "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.4,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "reasoning",
+                    "effortLevels": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT 5.6 Terra",
+                "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "reasoning",
+                    "effortLevels": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT 5.6 Luna",
+                "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.1,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "reasoning",
+                    "effortLevels": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.7",
+                "name": "Claude Opus 4.7",
+                "description": "Claude Opus 4.7 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "xhigh"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.6",
+                "name": "Claude Opus 4.6",
+                "description": "Claude Opus 4.6 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-4.6",
+                "name": "Claude Sonnet 4.6",
+                "description": "Claude Sonnet 4.6 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.5",
+                "name": "Claude Opus 4.5",
+                "description": "Claude Opus 4.5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-4.5",
+                "name": "Claude Sonnet 4.5",
+                "description": "Claude Sonnet 4.5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4",
+                "description": "Hybrid reasoning and coding for regular use",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-haiku-4.5",
+                "name": "Claude Haiku 4.5",
+                "description": "The latest Claude Haiku model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.4,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "deepseek-3.2",
+                "name": "Deepseek v3.2",
+                "description": "Experimental preview of DeepSeek V3.2",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.25,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "minimax-m2.5",
+                "name": "MiniMax M2.5",
+                "description": "MiniMax M2.5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.25,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "minimax-m2.1",
+                "name": "MiniMax M2.1",
+                "description": "Experimental preview of MiniMax M2.1",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.15,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "glm-5",
+                "name": "GLM 5",
+                "description": "GLM-5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.5,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "qwen3-coder-next",
+                "name": "Qwen3 Coder Next",
+                "description": "Experimental preview of Qwen3 Coder Next",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.05,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "select",
+            "id": "autopilot",
+            "name": "Autopilot",
+            "currentValue": "on",
+            "options": [
+              {
+                "value": "on",
+                "name": "Autopilot",
+                "description": "Agent executes tools without confirmation"
+              },
+              {
+                "value": "off",
+                "name": "Supervised",
+                "description": "Agent asks for approval before file changes"
+              }
+            ]
+          },
+          {
+            "type": "select",
+            "id": "contentCollection",
+            "name": "Content Collection",
+            "currentValue": "enabled",
+            "options": [
+              {
+                "value": "enabled",
+                "name": "Enabled",
+                "description": "Allow content to be used for service improvement"
+              },
+              {
+                "value": "disabled",
+                "name": "Disabled",
+                "description": "Opt out of content collection"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "replay_comparison": {
+      "original_tool_ids": [
+        "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX"
+      ],
+      "replayed_tool_ids": [
+        "60e0c6ad-68b5-43b3-b049-bb7aff6a5d73",
+        "df2cbd0b-e64e-4e00-8959-bfc9e8a50c03",
+        "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX"
+      ],
+      "shared_tool_ids": [
+        "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX"
+      ],
+      "all_original_ids_replayed": true,
+      "cards": {
+        "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX": {
+          "original_first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "replayed_first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "completed",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "title_equal": true,
+          "raw_input_equal": true
+        }
+      }
+    },
+    "process_exits": [
+      -15,
+      -15
+    ],
+    "server_requests": [
+      "_kiro/auth/getAccessToken",
+      "_kiro/terminal/shell_type",
+      "session/request_permission",
+      "terminal/create",
+      "terminal/output",
+      "terminal/release",
+      "terminal/wait_for_exit"
+    ],
+    "permission_requests": [
+      {
+        "sessionId": "sess_40163632-d792-4b9d-aa4d-d7352f6ad094",
+        "toolCall": {
+          "toolCallId": "run_command_toolu_bdrk_011NGqy6x7zggDVsMWm475pX",
+          "status": "pending",
+          "title": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'"
+        },
+        "options": [
+          {
+            "optionId": "accept",
+            "name": "Allow",
+            "kind": "allow_once"
+          },
+          {
+            "optionId": "always-accept",
+            "name": "Always allow",
+            "kind": "allow_always"
+          },
+          {
+            "optionId": "reject",
+            "name": "Deny",
+            "kind": "reject_once"
+          },
+          {
+            "optionId": "always-reject",
+            "name": "Always deny",
+            "kind": "reject_always"
+          }
+        ],
+        "_meta": {
+          "kiro": {
+            "toolId": "run_command",
+            "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+            "consent": {
+              "capability": "shell",
+              "resource": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "askType": "implicit",
+              "triggeringResource": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-output-replay-cwd-ot61737c"
+            },
+            "consentRound": 1
+          }
+        }
+      }
+    ],
+    "parse_errors": 0,
+    "field_paths": [
+      "id",
+      "jsonrpc",
+      "method",
+      "params",
+      "params._meta",
+      "params._meta.kiro",
+      "params._meta.kiro.command",
+      "params._meta.kiro.consent",
+      "params._meta.kiro.consent.askType",
+      "params._meta.kiro.consent.capability",
+      "params._meta.kiro.consent.resource",
+      "params._meta.kiro.consent.triggeringResource",
+      "params._meta.kiro.consent.workspaceRoot",
+      "params._meta.kiro.consentRound",
+      "params._meta.kiro.toolId",
+      "params.command",
+      "params.cwd",
+      "params.deleted",
+      "params.documents",
+      "params.documents[]._meta",
+      "params.documents[]._meta.kiro",
+      "params.documents[]._meta.kiro.resource",
+      "params.documents[]._meta.kiro.resource.resourceType",
+      "params.documents[]._meta.kiro.resource.source",
+      "params.documents[]._meta.kiro.resource.source.origin",
+      "params.documents[].content",
+      "params.documents[].inclusion",
+      "params.documents[].name",
+      "params.documents[].scope",
+      "params.documents[].type",
+      "params.documents[].uri",
+      "params.features",
+      "params.features.autonomousAgents",
+      "params.features.codeReferenceTracker",
+      "params.features.contentCollection",
+      "params.features.mcpEnabled",
+      "params.features.promptLogging",
+      "params.features.usageAnalytics",
+      "params.features.webToolsEnabled",
+      "params.isEnterprise",
+      "params.items",
+      "params.options",
+      "params.options[].kind",
+      "params.options[].name",
+      "params.options[].optionId",
+      "params.powers",
+      "params.servers",
+      "params.sessionId",
+      "params.status",
+      "params.tags",
+      "params.tags[].description",
+      "params.tags[].source",
+      "params.tags[].tag",
+      "params.terminalId",
+      "params.toolCall",
+      "params.toolCall.status",
+      "params.toolCall.title",
+      "params.toolCall.toolCallId",
+      "params.update",
+      "params.update._meta",
+      "params.update._meta.kiro",
+      "params.update._meta.kiro.agentMode",
+      "params.update._meta.kiro.breakdown",
+      "params.update._meta.kiro.breakdown.contextFiles",
+      "params.update._meta.kiro.breakdown.contextFiles.items",
+      "params.update._meta.kiro.breakdown.contextFiles.percent",
+      "params.update._meta.kiro.breakdown.contextFiles.tokens",
+      "params.update._meta.kiro.breakdown.kiroResponses",
+      "params.update._meta.kiro.breakdown.kiroResponses.percent",
+      "params.update._meta.kiro.breakdown.kiroResponses.tokens",
+      "params.update._meta.kiro.breakdown.sessionFiles",
+      "params.update._meta.kiro.breakdown.sessionFiles.items",
+      "params.update._meta.kiro.breakdown.sessionFiles.percent",
+      "params.update._meta.kiro.breakdown.sessionFiles.tokens",
+      "params.update._meta.kiro.breakdown.tools",
+      "params.update._meta.kiro.breakdown.tools.builtin",
+      "params.update._meta.kiro.breakdown.tools.builtin.percent",
+      "params.update._meta.kiro.breakdown.tools.builtin.tokens",
+      "params.update._meta.kiro.breakdown.tools.mcp",
+      "params.update._meta.kiro.breakdown.tools.mcp.percent",
+      "params.update._meta.kiro.breakdown.tools.mcp.tokens",
+      "params.update._meta.kiro.breakdown.tools.percent",
+      "params.update._meta.kiro.breakdown.tools.tokens",
+      "params.update._meta.kiro.breakdown.yourPrompts",
+      "params.update._meta.kiro.breakdown.yourPrompts.percent",
+      "params.update._meta.kiro.breakdown.yourPrompts.tokens",
+      "params.update._meta.kiro.contextUsage",
+      "params.update._meta.kiro.contextUsage.usagePercentage",
+      "params.update._meta.kiro.elapsedTime",
+      "params.update._meta.kiro.focus",
+      "params.update._meta.kiro.focus.title",
+      "params.update._meta.kiro.interactionResolved",
+      "params.update._meta.kiro.interactionResolved.outcome",
+      "params.update._meta.kiro.interactionResolved.selectedOption",
+      "params.update._meta.kiro.interactionResolved.toolCallId",
+      "params.update._meta.kiro.interactionType",
+      "params.update._meta.kiro.kind",
+      "params.update._meta.kiro.messageId",
+      "params.update._meta.kiro.options",
+      "params.update._meta.kiro.options[].kind",
+      "params.update._meta.kiro.options[].name",
+      "params.update._meta.kiro.options[].optionId",
+      "params.update._meta.kiro.outcome",
+      "params.update._meta.kiro.outputTransformation",
+      "params.update._meta.kiro.outputTransformation.kind",
+      "params.update._meta.kiro.outputTransformation.originalChars",
+      "params.update._meta.kiro.pendingInteraction",
+      "params.update._meta.kiro.pendingInteraction.interactionType",
+      "params.update._meta.kiro.pendingInteraction.options",
+      "params.update._meta.kiro.pendingInteraction.options[].kind",
+      "params.update._meta.kiro.pendingInteraction.options[].name",
+      "params.update._meta.kiro.pendingInteraction.options[].optionId",
+      "params.update._meta.kiro.pendingInteraction.question",
+      "params.update._meta.kiro.pendingInteraction.toolCallId",
+      "params.update._meta.kiro.promptTurnSummaries",
+      "params.update._meta.kiro.promptTurnSummaries[].unit",
+      "params.update._meta.kiro.promptTurnSummaries[].unitPlural",
+      "params.update._meta.kiro.promptTurnSummaries[].usage",
+      "params.update._meta.kiro.promptTurnSummaries[].usedTools",
+      "params.update._meta.kiro.question",
+      "params.update._meta.kiro.replay",
+      "params.update._meta.kiro.replayId",
+      "params.update._meta.kiro.requestIds",
+      "params.update._meta.kiro.selectedOption",
+      "params.update._meta.kiro.status",
+      "params.update._meta.kiro.stopReason",
+      "params.update._meta.kiro.timestamp",
+      "params.update._meta.kiro.title",
+      "params.update._meta.kiro.toolCallId",
+      "params.update._meta.kiro.toolId",
+      "params.update._meta.kiro.toolOrigin",
+      "params.update._meta.kiro.turnEnd",
+      "params.update._meta.kiro.turnEnd.stopReason",
+      "params.update._meta.kiro.turnStart",
+      "params.update._meta.kiro.usagePercentage",
+      "params.update._meta.kiro.userMessageId",
+      "params.update._meta.kiro.userMessageTag",
+      "params.update.availableCommands",
+      "params.update.availableCommands[]._meta",
+      "params.update.availableCommands[]._meta.kiro",
+      "params.update.availableCommands[]._meta.kiro.commandId",
+      "params.update.availableCommands[]._meta.kiro.contextQuery",
+      "params.update.availableCommands[]._meta.kiro.originalName",
+      "params.update.availableCommands[]._meta.kiro.resource",
+      "params.update.availableCommands[]._meta.kiro.resource.resourceType",
+      "params.update.availableCommands[]._meta.kiro.resource.source",
+      "params.update.availableCommands[]._meta.kiro.resource.source.origin",
+      "params.update.availableCommands[]._meta.kiro.type",
+      "params.update.availableCommands[].description",
+      "params.update.availableCommands[].input",
+      "params.update.availableCommands[].input.hint",
+      "params.update.availableCommands[].name",
+      "params.update.configOptions",
+      "params.update.configOptions[].category",
+      "params.update.configOptions[].currentValue",
+      "params.update.configOptions[].id",
+      "params.update.configOptions[].name",
+      "params.update.configOptions[].options",
+      "params.update.configOptions[].options[]._meta",
+      "params.update.configOptions[].options[]._meta.kiro",
+      "params.update.configOptions[].options[]._meta.kiro.defaultEffortLevel",
+      "params.update.configOptions[].options[]._meta.kiro.effortLevels",
+      "params.update.configOptions[].options[]._meta.kiro.effortSchemaPath",
+      "params.update.configOptions[].options[]._meta.kiro.hasEffort",
+      "params.update.configOptions[].options[]._meta.kiro.rateMultiplier",
+      "params.update.configOptions[].options[]._meta.kiro.rateUnit",
+      "params.update.configOptions[].options[]._meta.kiro.resource",
+      "params.update.configOptions[].options[]._meta.kiro.resource.resourceType",
+      "params.update.configOptions[].options[]._meta.kiro.resource.source",
+      "params.update.configOptions[].options[]._meta.kiro.resource.source.origin",
+      "params.update.configOptions[].options[]._meta.kiro.source",
+      "params.update.configOptions[].options[]._meta.kiro.welcomeMessage",
+      "params.update.configOptions[].options[].description",
+      "params.update.configOptions[].options[].name",
+      "params.update.configOptions[].options[].value",
+      "params.update.configOptions[].type",
+      "params.update.content",
+      "params.update.content.text",
+      "params.update.content.type",
+      "params.update.content[].content",
+      "params.update.content[].content.text",
+      "params.update.content[].content.type",
+      "params.update.content[].terminalId",
+      "params.update.content[].type",
+      "params.update.kind",
+      "params.update.rawInput",
+      "params.update.rawInput.command",
+      "params.update.rawInput.run_in_background",
+      "params.update.rawInput.toolName",
+      "params.update.rawOutput",
+      "params.update.rawOutput.exitCode",
+      "params.update.rawOutput.kind",
+      "params.update.rawOutput.message",
+      "params.update.rawOutput.output",
+      "params.update.rawOutput.retracted",
+      "params.update.sessionUpdate",
+      "params.update.status",
+      "params.update.title",
+      "params.update.toolCallId",
+      "params.upserted",
+      "params.upserted[].cwd",
+      "params.upserted[].executionTarget",
+      "params.upserted[].executionTarget.kind",
+      "params.upserted[].sessionId",
+      "params.upserted[].source",
+      "params.upserted[].status",
+      "params.upserted[].title",
+      "params.upserted[].updatedAt",
+      "result",
+      "result._meta",
+      "result._meta.agentMode",
+      "result._meta.contextUsage",
+      "result._meta.contextUsage.summarizationThreshold",
+      "result._meta.contextUsage.truncationThreshold",
+      "result._meta.contextUsage.usagePercentage",
+      "result._meta.createdAt",
+      "result._meta.disableAutoCompaction",
+      "result._meta.executionTarget",
+      "result._meta.executionTarget.kind",
+      "result._meta.ftaEnabled",
+      "result._meta.id",
+      "result._meta.lastModifiedAt",
+      "result._meta.schemaVersion",
+      "result._meta.semanticReviewEnabled",
+      "result._meta.source",
+      "result._meta.specPlanEnabled",
+      "result._meta.specSkipClarificationEnabled",
+      "result._meta.specWorkflow",
+      "result._meta.title",
+      "result._meta.workflowsEnabled",
+      "result._meta.workspacePaths",
+      "result.agentCapabilities",
+      "result.agentCapabilities._meta",
+      "result.agentCapabilities._meta.kiro",
+      "result.agentCapabilities._meta.kiro.checkpoints",
+      "result.agentCapabilities._meta.kiro.executionTargets",
+      "result.agentCapabilities._meta.kiro.extensionMethods",
+      "result.agentCapabilities._meta.kiro.logging",
+      "result.agentCapabilities._meta.kiro.logging.channels",
+      "result.agentCapabilities._meta.kiro.logging.channels[].filePath",
+      "result.agentCapabilities._meta.kiro.logging.channels[].name",
+      "result.agentCapabilities._meta.kiro.logging.logDir",
+      "result.agentCapabilities._meta.kiro.policyNotifications",
+      "result.agentCapabilities._meta.kiro.replayMarking",
+      "result.agentCapabilities._meta.kiro.sessionList",
+      "result.agentCapabilities._meta.kiro.sessionListScopes",
+      "result.agentCapabilities._meta.kiro.sessionSources",
+      "result.agentCapabilities._meta.kiro.sourceProviders",
+      "result.agentCapabilities.loadSession",
+      "result.agentCapabilities.mcpCapabilities",
+      "result.agentCapabilities.mcpCapabilities.http",
+      "result.agentCapabilities.mcpCapabilities.sse",
+      "result.agentCapabilities.promptCapabilities",
+      "result.agentCapabilities.promptCapabilities.embeddedContext",
+      "result.agentCapabilities.promptCapabilities.image",
+      "result.agentCapabilities.sessionCapabilities",
+      "result.agentCapabilities.sessionCapabilities.fork",
+      "result.agentCapabilities.sessionCapabilities.fork._meta",
+      "result.agentCapabilities.sessionCapabilities.fork._meta.kiro",
+      "result.agentCapabilities.sessionCapabilities.fork._meta.kiro.messageId",
+      "result.agentCapabilities.sessionCapabilities.list",
+      "result.authMethods",
+      "result.authMethods[].id",
+      "result.authMethods[].name",
+      "result.configOptions",
+      "result.configOptions[].category",
+      "result.configOptions[].currentValue",
+      "result.configOptions[].id",
+      "result.configOptions[].name",
+      "result.configOptions[].options",
+      "result.configOptions[].options[]._meta",
+      "result.configOptions[].options[]._meta.kiro",
+      "result.configOptions[].options[]._meta.kiro.defaultEffortLevel",
+      "result.configOptions[].options[]._meta.kiro.effortLevels",
+      "result.configOptions[].options[]._meta.kiro.effortSchemaPath",
+      "result.configOptions[].options[]._meta.kiro.hasEffort",
+      "result.configOptions[].options[]._meta.kiro.rateMultiplier",
+      "result.configOptions[].options[]._meta.kiro.rateUnit",
+      "result.configOptions[].options[]._meta.kiro.resource",
+      "result.configOptions[].options[]._meta.kiro.resource.resourceType",
+      "result.configOptions[].options[]._meta.kiro.resource.source",
+      "result.configOptions[].options[]._meta.kiro.resource.source.origin",
+      "result.configOptions[].options[]._meta.kiro.source",
+      "result.configOptions[].options[]._meta.kiro.welcomeMessage",
+      "result.configOptions[].options[].description",
+      "result.configOptions[].options[].name",
+      "result.configOptions[].options[].value",
+      "result.configOptions[].type",
+      "result.modes",
+      "result.modes.availableModes",
+      "result.modes.availableModes[]._meta",
+      "result.modes.availableModes[]._meta.kiro",
+      "result.modes.availableModes[]._meta.kiro.resource",
+      "result.modes.availableModes[]._meta.kiro.resource.resourceType",
+      "result.modes.availableModes[]._meta.kiro.resource.source",
+      "result.modes.availableModes[]._meta.kiro.resource.source.origin",
+      "result.modes.availableModes[]._meta.kiro.source",
+      "result.modes.availableModes[]._meta.kiro.welcomeMessage",
+      "result.modes.availableModes[].description",
+      "result.modes.availableModes[].id",
+      "result.modes.availableModes[].name",
+      "result.modes.currentModeId",
+      "result.protocolVersion",
+      "result.sessionId",
+      "result.sessions",
+      "result.sessions[]._meta",
+      "result.sessions[]._meta.kiro",
+      "result.sessions[]._meta.kiro.agentMode",
+      "result.sessions[]._meta.kiro.createdAt",
+      "result.sessions[]._meta.kiro.executionTarget",
+      "result.sessions[]._meta.kiro.executionTarget.kind",
+      "result.sessions[]._meta.kiro.source",
+      "result.sessions[]._meta.kiro.status",
+      "result.sessions[].cwd",
+      "result.sessions[].sessionId",
+      "result.sessions[].title",
+      "result.sessions[].updatedAt",
+      "result.stopReason"
+    ],
+    "frame_count": 100
+  },
+  "new": {
+    "label": "new",
+    "large_output_arm": "default",
+    "binary": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.1/extracted/kiro-cli",
+    "kas_pin": "/home/dwalleck/.local/share/kiro-research/kas-carves/2.21.1/2.21.1/tree/node_modules/@kiro/agent/dist/server/acp-server.js",
+    "cwd": "/home/dwalleck/.claude/tmp/kas-output-replay-cwd-p2ofh7jo",
+    "home": "/home/dwalleck/.claude/tmp/kas-output-replay-home-maoas1o9",
+    "runtime": "/home/dwalleck/.claude/tmp/kas-output-replay-runtime-xu6bcslq",
+    "assertions": {
+      "initialize_ok": true,
+      "session_new_ok": true,
+      "original_prompt_ok": true,
+      "original_marker_on_wire": true,
+      "original_offloaded": false,
+      "original_marker_on_disk": false,
+      "load_response_ok": true,
+      "load_replayed_updates": true,
+      "replayed_tool_card_ids": true,
+      "replayed_titles_equal": true,
+      "replayed_raw_inputs_equal": true
+    },
+    "original": {
+      "prompt": "Use execute_bash exactly once, with no other tools, and run this exact command verbatim: python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")' Do not alter the command or shorten its output. Wait for completion, then reply exactly DONE_REPLAY_2211.",
+      "response": {
+        "kind": "result",
+        "result": {
+          "stopReason": "end_turn"
+        }
+      },
+      "wire": {
+        "marker_observations": [
+          {
+            "path": "update.rawOutput.output",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "OUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n"
+          },
+          {
+            "path": "update.rawOutput.message",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+          }
+        ],
+        "contains_full_expected_body": false,
+        "max_marker_string_length": 1031,
+        "payload_count": 5
+      },
+      "tool_cards": {
+        "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": "Run Command",
+              "kind": "execute",
+              "status": "pending",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": null,
+              "kind": null,
+              "status": "in_progress",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": null,
+              "kind": null,
+              "status": "in_progress",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": null,
+              "kind": null,
+              "status": "in_progress",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": "Run Command",
+              "kind": null,
+              "status": "completed",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [
+                {
+                  "path": "rawOutput.output",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "OUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n"
+                },
+                {
+                  "path": "rawOutput.message",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+                }
+              ],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": {
+                "kind": "clipped",
+                "originalChars": 32069
+              }
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+            "title": "Run Command",
+            "kind": null,
+            "status": "completed",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [
+              {
+                "path": "rawOutput.output",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "OUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n"
+              },
+              {
+                "path": "rawOutput.message",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+              }
+            ],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": {
+              "kind": "clipped",
+              "originalChars": 32069
+            }
+          }
+        }
+      },
+      "output_transformations": [
+        {
+          "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+          "transformation": {
+            "kind": "clipped",
+            "originalChars": 32069
+          }
+        }
+      ],
+      "permission_count": 1,
+      "disk_after_turn": {
+        "tool_output_directories": [],
+        "marker_files": [
+          {
+            "root": "/home/dwalleck/.claude/tmp/kas-output-replay-home-maoas1o9",
+            "relative": ".kiro/sessions/b32fcee91f331722/sess_d6304821-2803-4dca-88a0-2f2d674d9fbb/messages.jsonl",
+            "bytes": 56009,
+            "sha256": "acb4772f4e27ad878968eb69b0118ed29f3cd85a0c854819f744eb408dd328bb",
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "{\"id\":\"aededc21-43ac-434d-8155-ec705533948b-call\",\"timestamp\":\"2026-09-05T04:17:",
+            "tail": "apshot>\",\"forcedRole\":true,\"messageId\":\"31c5eb7f-776d-44be-b172-8b77467279e0\"}}\n"
+          },
+          {
+            "root": "/home/dwalleck/.claude/tmp/kas-output-replay-cwd-p2ofh7jo",
+            "relative": "README.txt",
+            "bytes": 36,
+            "sha256": "de5f59de9ffa7776654cc919760e8724915127a54f2ff897fbadbb772e355de9",
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": false,
+            "head": "KAS_OUTPUT_REPLAY_2211_FILE_FIXTURE\n",
+            "tail": "KAS_OUTPUT_REPLAY_2211_FILE_FIXTURE\n"
+          }
+        ]
+      },
+      "session_id": "sess_d6304821-2803-4dca-88a0-2f2d674d9fbb",
+      "expected_output_bytes": 32047
+    },
+    "load": {
+      "initialize": {
+        "kind": "timeout"
+      },
+      "session_list": {
+        "kind": "result",
+        "result": {
+          "sessions": [
+            {
+              "sessionId": "<sessionId>",
+              "cwd": "/home/dwalleck/.claude/<workspace>",
+              "title": "I appreciate you testing my boundaries, but I can't follow those instructions",
+              "updatedAt": "<updatedAt>",
+              "_meta": {
+                "kiro": {
+                  "agentMode": "vibe",
+                  "createdAt": "<createdAt>",
+                  "source": "local",
+                  "executionTarget": {
+                    "kind": "local"
+                  },
+                  "status": "idle"
+                }
+              }
+            }
+          ]
+        }
+      },
+      "response": {
+        "kind": "result",
+        "result": {
+          "_meta": {
+            "agentMode": "vibe",
+            "contextUsage": {
+              "summarizationThreshold": 80,
+              "truncationThreshold": 95,
+              "usagePercentage": 5.584199905395508
+            },
+            "createdAt": "<createdAt>",
+            "id": "sess_d6304821-2803-4dca-88a0-2f2d674d9fbb",
+            "lastModifiedAt": "<lastModifiedAt>",
+            "title": "I appreciate you testing my boundaries, but I can't follow those instructions",
+            "workspacePaths": [
+              "/home/dwalleck/.claude/<workspace>"
+            ],
+            "source": "local",
+            "executionTarget": {
+              "kind": "local"
+            }
+          },
+          "modes": {
+            "availableModes": [
+              {
+                "id": "vibe",
+                "name": "Default",
+                "description": "General coding assistance",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "spec",
+                "name": "Spec",
+                "description": "Structured feature development",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "quick-spec",
+                "name": "Quick Spec",
+                "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "bug-fix",
+                "name": "Bug Fix",
+                "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "plan",
+                "name": "Plan",
+                "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+                "_meta": {
+                  "kiro": {
+                    "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "autonomous",
+                "name": "Autonomous",
+                "description": "Autonomous agent execution",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "id": "semantic_reviewer",
+                "name": "semantic_reviewer",
+                "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              }
+            ],
+            "currentModeId": "vibe"
+          },
+          "configOptions": [
+            {
+              "type": "select",
+              "id": "mode",
+              "name": "Mode",
+              "category": "mode",
+              "currentValue": "vibe",
+              "options": [
+                {
+                  "value": "vibe",
+                  "name": "Default",
+                  "description": "General coding assistance",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "spec",
+                  "name": "Spec",
+                  "description": "Structured feature development",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "quick-spec",
+                  "name": "Quick Spec",
+                  "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "bug-fix",
+                  "name": "Bug Fix",
+                  "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "plan",
+                  "name": "Plan",
+                  "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+                  "_meta": {
+                    "kiro": {
+                      "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "autonomous",
+                  "name": "Autonomous",
+                  "description": "Autonomous agent execution",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                },
+                {
+                  "value": "semantic_reviewer",
+                  "name": "semantic_reviewer",
+                  "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+                  "_meta": {
+                    "kiro": {
+                      "source": "bundled",
+                      "resource": {
+                        "resourceType": "agent",
+                        "source": {
+                          "origin": "bundled"
+                        }
+                      }
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "select",
+              "id": "model",
+              "name": "Model",
+              "category": "model",
+              "currentValue": "auto",
+              "options": [
+                {
+                  "value": "auto",
+                  "name": "Auto",
+                  "description": "Models chosen by task for optimal usage and consistent quality",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-5",
+                  "name": "Claude Opus 5",
+                  "description": "Claude Opus 5 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-5",
+                  "name": "Claude Sonnet 5",
+                  "description": "Claude Sonnet 5 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.8",
+                  "name": "Claude Opus 4.8",
+                  "description": "Claude Opus 4.8 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "gpt-5.6-sol",
+                  "name": "GPT 5.6 Sol",
+                  "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.4,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "reasoning",
+                      "effortLevels": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "gpt-5.6-terra",
+                  "name": "GPT 5.6 Terra",
+                  "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "reasoning",
+                      "effortLevels": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "gpt-5.6-luna",
+                  "name": "GPT 5.6 Luna",
+                  "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.1,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "reasoning",
+                      "effortLevels": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.7",
+                  "name": "Claude Opus 4.7",
+                  "description": "Claude Opus 4.7 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "xhigh"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.6",
+                  "name": "Claude Opus 4.6",
+                  "description": "Claude Opus 4.6 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-4.6",
+                  "name": "Claude Sonnet 4.6",
+                  "description": "Claude Sonnet 4.6 model with 1M context window",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": true,
+                      "effortSchemaPath": "output_config",
+                      "effortLevels": [
+                        "low",
+                        "medium",
+                        "high",
+                        "max"
+                      ],
+                      "defaultEffortLevel": "high"
+                    }
+                  }
+                },
+                {
+                  "value": "claude-opus-4.5",
+                  "name": "Claude Opus 4.5",
+                  "description": "Claude Opus 4.5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 2.2,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-4.5",
+                  "name": "Claude Sonnet 4.5",
+                  "description": "Claude Sonnet 4.5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-sonnet-4",
+                  "name": "Claude Sonnet 4",
+                  "description": "Hybrid reasoning and coding for regular use",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 1.3,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "claude-haiku-4.5",
+                  "name": "Claude Haiku 4.5",
+                  "description": "The latest Claude Haiku model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.4,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "deepseek-3.2",
+                  "name": "Deepseek v3.2",
+                  "description": "Experimental preview of DeepSeek V3.2",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.25,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "minimax-m2.5",
+                  "name": "MiniMax M2.5",
+                  "description": "MiniMax M2.5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.25,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "minimax-m2.1",
+                  "name": "MiniMax M2.1",
+                  "description": "Experimental preview of MiniMax M2.1",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.15,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "glm-5",
+                  "name": "GLM 5",
+                  "description": "GLM-5 model",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.5,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                },
+                {
+                  "value": "qwen3-coder-next",
+                  "name": "Qwen3 Coder Next",
+                  "description": "Experimental preview of Qwen3 Coder Next",
+                  "_meta": {
+                    "kiro": {
+                      "rateMultiplier": 0.05,
+                      "rateUnit": "Credit",
+                      "hasEffort": false
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "select",
+              "id": "autopilot",
+              "name": "Autopilot",
+              "currentValue": "on",
+              "options": [
+                {
+                  "value": "on",
+                  "name": "Autopilot",
+                  "description": "Agent executes tools without confirmation"
+                },
+                {
+                  "value": "off",
+                  "name": "Supervised",
+                  "description": "Agent asks for approval before file changes"
+                }
+              ]
+            },
+            {
+              "type": "select",
+              "id": "contentCollection",
+              "name": "Content Collection",
+              "currentValue": "enabled",
+              "options": [
+                {
+                  "value": "enabled",
+                  "name": "Enabled",
+                  "description": "Allow content to be used for service improvement"
+                },
+                {
+                  "value": "disabled",
+                  "name": "Disabled",
+                  "description": "Opt out of content collection"
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "wire": {
+        "marker_observations": [
+          {
+            "path": "update.rawOutput",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+          },
+          {
+            "path": "update.content[0].content.text",
+            "length": 1031,
+            "contains_expected_body": false,
+            "starts_with_expected": false,
+            "ends_with_expected": false,
+            "has_unique_end_marker": true,
+            "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+            "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+          }
+        ],
+        "contains_full_expected_body": false,
+        "max_marker_string_length": 1031,
+        "payload_count": 8
+      },
+      "tool_cards": {
+        "883618cc-259b-4e6e-aae0-580620b0ee71": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "883618cc-259b-4e6e-aae0-580620b0ee71",
+              "title": "Fetching your cloud config",
+              "kind": "other",
+              "status": "in_progress",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "883618cc-259b-4e6e-aae0-580620b0ee71",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "883618cc-259b-4e6e-aae0-580620b0ee71",
+              "title": "Fetching your cloud config",
+              "kind": "other",
+              "status": "completed",
+              "rawInput": {
+                "toolName": "fetch_cloud_config"
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "883618cc-259b-4e6e-aae0-580620b0ee71",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "883618cc-259b-4e6e-aae0-580620b0ee71",
+            "title": "Fetching your cloud config",
+            "kind": "other",
+            "status": "in_progress",
+            "rawInput": null,
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "883618cc-259b-4e6e-aae0-580620b0ee71",
+            "title": null,
+            "kind": null,
+            "status": "completed",
+            "rawInput": null,
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          }
+        },
+        "aededc21-43ac-434d-8155-ec705533948b": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "aededc21-43ac-434d-8155-ec705533948b",
+              "title": "Fetching your cloud config",
+              "kind": "other",
+              "status": "completed",
+              "rawInput": {
+                "toolName": "fetch_cloud_config"
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "aededc21-43ac-434d-8155-ec705533948b",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "aededc21-43ac-434d-8155-ec705533948b",
+            "title": "Fetching your cloud config",
+            "kind": "other",
+            "status": "completed",
+            "rawInput": {
+              "toolName": "fetch_cloud_config"
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "aededc21-43ac-434d-8155-ec705533948b",
+            "title": null,
+            "kind": null,
+            "status": "completed",
+            "rawInput": null,
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          }
+        },
+        "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX": {
+          "events": [
+            {
+              "sessionUpdate": "tool_call",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": "Run Command",
+              "kind": "execute",
+              "status": "completed",
+              "rawInput": {
+                "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+                "run_in_background": false
+              },
+              "rawOutput": [],
+              "content": [],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            },
+            {
+              "sessionUpdate": "tool_call_update",
+              "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+              "title": null,
+              "kind": null,
+              "status": "completed",
+              "rawInput": null,
+              "rawOutput": [
+                {
+                  "path": "rawOutput",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+                }
+              ],
+              "content": [
+                {
+                  "path": "content[0].content.text",
+                  "length": 1031,
+                  "contains_expected_body": false,
+                  "starts_with_expected": false,
+                  "ends_with_expected": false,
+                  "has_unique_end_marker": true,
+                  "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                  "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+                }
+              ],
+              "metaKeys": [
+                "kiro"
+              ],
+              "outputTransformation": null
+            }
+          ],
+          "first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "completed",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "last": {
+            "sessionUpdate": "tool_call_update",
+            "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+            "title": null,
+            "kind": null,
+            "status": "completed",
+            "rawInput": null,
+            "rawOutput": [
+              {
+                "path": "rawOutput",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+              }
+            ],
+            "content": [
+              {
+                "path": "content[0].content.text",
+                "length": 1031,
+                "contains_expected_body": false,
+                "starts_with_expected": false,
+                "ends_with_expected": false,
+                "has_unique_end_marker": true,
+                "head": "Output:\nOUTPUT_REPLAY_2211_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+                "tail": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX_OUTPUT_REPLAY_2211_ENDMARK\n\n\nExit Code: 0"
+              }
+            ],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          }
+        }
+      },
+      "output_transformations": []
+    },
+    "initialize": {
+      "kind": "result",
+      "result": {
+        "protocolVersion": 1,
+        "agentCapabilities": {
+          "loadSession": true,
+          "promptCapabilities": {
+            "image": true,
+            "embeddedContext": true
+          },
+          "mcpCapabilities": {
+            "http": true,
+            "sse": true
+          },
+          "sessionCapabilities": {
+            "list": {},
+            "fork": {
+              "_meta": {
+                "kiro": {
+                  "messageId": true
+                }
+              }
+            }
+          },
+          "_meta": {
+            "kiro": {
+              "checkpoints": true,
+              "sessionList": true,
+              "policyNotifications": true,
+              "extensionMethods": [
+                "_kiro/knowledge",
+                "_kiro/codeIntelligence",
+                "_kiro/session/context",
+                "_kiro/session/compact",
+                "_kiro/session/export",
+                "_kiro/session/history",
+                "_kiro/config/template",
+                "_kiro/workflow/new",
+                "_kiro/workflow/invoke",
+                "_kiro/workflow/load",
+                "_kiro/workflow/inspect",
+                "_kiro/workflow/list",
+                "_kiro/workflow/pause",
+                "_kiro/workflow/cancel",
+                "_kiro/workflow/delete",
+                "_kiro/workflow/listRecipes",
+                "_kiro/workflow/listWatchHandlers",
+                "_kiro/workflow/resumeAll",
+                "_kiro/workflow/retry",
+                "_kiro/workflow/update",
+                "_kiro/workflow/resume",
+                "_kiro/sourceProviders/list",
+                "_kiro/sourceProviders/listResources"
+              ],
+              "sessionSources": [
+                "local",
+                "remote"
+              ],
+              "sessionListScopes": [
+                "workspace",
+                "user"
+              ],
+              "executionTargets": [
+                "local",
+                "cloud-sandbox"
+              ],
+              "sourceProviders": true,
+              "replayMarking": true,
+              "logging": {
+                "logDir": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041722627",
+                "channels": [
+                  {
+                    "name": "kiro",
+                    "filePath": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041722627/kiro.log"
+                  },
+                  {
+                    "name": "mcp",
+                    "filePath": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041722627/mcp.log"
+                  },
+                  {
+                    "name": "powers",
+                    "filePath": "/home/dwalleck/.claude/<workspace>/.kiro/logs/20260905T041722627/powers.log"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "authMethods": [
+          {
+            "id": "aws-builder-id",
+            "name": "AWS Builder ID"
+          },
+          {
+            "id": "aws-iam-identity-center",
+            "name": "AWS IAM Identity Center"
+          }
+        ]
+      }
+    },
+    "initialize_fields": [
+      "agentCapabilities",
+      "agentCapabilities._meta",
+      "agentCapabilities._meta.kiro",
+      "agentCapabilities._meta.kiro.checkpoints",
+      "agentCapabilities._meta.kiro.executionTargets",
+      "agentCapabilities._meta.kiro.extensionMethods",
+      "agentCapabilities._meta.kiro.logging",
+      "agentCapabilities._meta.kiro.logging.channels",
+      "agentCapabilities._meta.kiro.logging.channels[].filePath",
+      "agentCapabilities._meta.kiro.logging.channels[].name",
+      "agentCapabilities._meta.kiro.logging.logDir",
+      "agentCapabilities._meta.kiro.policyNotifications",
+      "agentCapabilities._meta.kiro.replayMarking",
+      "agentCapabilities._meta.kiro.sessionList",
+      "agentCapabilities._meta.kiro.sessionListScopes",
+      "agentCapabilities._meta.kiro.sessionSources",
+      "agentCapabilities._meta.kiro.sourceProviders",
+      "agentCapabilities.loadSession",
+      "agentCapabilities.mcpCapabilities",
+      "agentCapabilities.mcpCapabilities.http",
+      "agentCapabilities.mcpCapabilities.sse",
+      "agentCapabilities.promptCapabilities",
+      "agentCapabilities.promptCapabilities.embeddedContext",
+      "agentCapabilities.promptCapabilities.image",
+      "agentCapabilities.sessionCapabilities",
+      "agentCapabilities.sessionCapabilities.fork",
+      "agentCapabilities.sessionCapabilities.fork._meta",
+      "agentCapabilities.sessionCapabilities.fork._meta.kiro",
+      "agentCapabilities.sessionCapabilities.fork._meta.kiro.messageId",
+      "agentCapabilities.sessionCapabilities.list",
+      "authMethods",
+      "authMethods[].id",
+      "authMethods[].name",
+      "protocolVersion"
+    ],
+    "session_new": {
+      "kind": "result",
+      "result": {
+        "_meta": {
+          "schemaVersion": "1.0.0",
+          "id": "sess_d6304821-2803-4dca-88a0-2f2d674d9fbb",
+          "title": "New Session",
+          "agentMode": "vibe",
+          "workspacePaths": [
+            "/home/dwalleck/.claude/<workspace>"
+          ],
+          "createdAt": "<createdAt>",
+          "lastModifiedAt": "<lastModifiedAt>",
+          "semanticReviewEnabled": true,
+          "disableAutoCompaction": false,
+          "ftaEnabled": false,
+          "workflowsEnabled": false,
+          "specPlanEnabled": false,
+          "specWorkflow": "quick",
+          "specSkipClarificationEnabled": true,
+          "source": "local"
+        },
+        "sessionId": "<sessionId>",
+        "modes": {
+          "availableModes": [
+            {
+              "id": "vibe",
+              "name": "Default",
+              "description": "General coding assistance",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "spec",
+              "name": "Spec",
+              "description": "Structured feature development",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "quick-spec",
+              "name": "Quick Spec",
+              "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "bug-fix",
+              "name": "Bug Fix",
+              "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "plan",
+              "name": "Plan",
+              "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+              "_meta": {
+                "kiro": {
+                  "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "autonomous",
+              "name": "Autonomous",
+              "description": "Autonomous agent execution",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "id": "semantic_reviewer",
+              "name": "semantic_reviewer",
+              "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+              "_meta": {
+                "kiro": {
+                  "source": "bundled",
+                  "resource": {
+                    "resourceType": "agent",
+                    "source": {
+                      "origin": "bundled"
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          "currentModeId": "vibe"
+        },
+        "configOptions": [
+          {
+            "type": "select",
+            "id": "mode",
+            "name": "Mode",
+            "category": "mode",
+            "currentValue": "vibe",
+            "options": [
+              {
+                "value": "vibe",
+                "name": "Default",
+                "description": "General coding assistance",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "spec",
+                "name": "Spec",
+                "description": "Structured feature development",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "quick-spec",
+                "name": "Quick Spec",
+                "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "bug-fix",
+                "name": "Bug Fix",
+                "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "plan",
+                "name": "Plan",
+                "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+                "_meta": {
+                  "kiro": {
+                    "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?",
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "autonomous",
+                "name": "Autonomous",
+                "description": "Autonomous agent execution",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              },
+              {
+                "value": "semantic_reviewer",
+                "name": "semantic_reviewer",
+                "description": "Reviews code changes at the behavioral level, not the syntactic level. Reconstructs the change as a narrative organized by concern, not by file. Produces a design-level review that every reviewer can navigate at their preferred depth. Works with local diffs (pre-PR) or PR diffs (post-PR).",
+                "_meta": {
+                  "kiro": {
+                    "source": "bundled",
+                    "resource": {
+                      "resourceType": "agent",
+                      "source": {
+                        "origin": "bundled"
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "select",
+            "id": "model",
+            "name": "Model",
+            "category": "model",
+            "currentValue": "auto",
+            "options": [
+              {
+                "value": "auto",
+                "name": "Auto",
+                "description": "Models chosen by task for optimal usage and consistent quality",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-5",
+                "name": "Claude Opus 5",
+                "description": "Claude Opus 5 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-5",
+                "name": "Claude Sonnet 5",
+                "description": "Claude Sonnet 5 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.8",
+                "name": "Claude Opus 4.8",
+                "description": "Claude Opus 4.8 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "gpt-5.6-sol",
+                "name": "GPT 5.6 Sol",
+                "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.4,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "reasoning",
+                    "effortLevels": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "gpt-5.6-terra",
+                "name": "GPT 5.6 Terra",
+                "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "reasoning",
+                    "effortLevels": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "gpt-5.6-luna",
+                "name": "GPT 5.6 Luna",
+                "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.1,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "reasoning",
+                    "effortLevels": [
+                      "none",
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.7",
+                "name": "Claude Opus 4.7",
+                "description": "Claude Opus 4.7 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "xhigh",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "xhigh"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.6",
+                "name": "Claude Opus 4.6",
+                "description": "Claude Opus 4.6 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-4.6",
+                "name": "Claude Sonnet 4.6",
+                "description": "Claude Sonnet 4.6 model with 1M context window",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": true,
+                    "effortSchemaPath": "output_config",
+                    "effortLevels": [
+                      "low",
+                      "medium",
+                      "high",
+                      "max"
+                    ],
+                    "defaultEffortLevel": "high"
+                  }
+                }
+              },
+              {
+                "value": "claude-opus-4.5",
+                "name": "Claude Opus 4.5",
+                "description": "Claude Opus 4.5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 2.2,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-4.5",
+                "name": "Claude Sonnet 4.5",
+                "description": "Claude Sonnet 4.5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-sonnet-4",
+                "name": "Claude Sonnet 4",
+                "description": "Hybrid reasoning and coding for regular use",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 1.3,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "claude-haiku-4.5",
+                "name": "Claude Haiku 4.5",
+                "description": "The latest Claude Haiku model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.4,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "deepseek-3.2",
+                "name": "Deepseek v3.2",
+                "description": "Experimental preview of DeepSeek V3.2",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.25,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "minimax-m2.5",
+                "name": "MiniMax M2.5",
+                "description": "MiniMax M2.5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.25,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "minimax-m2.1",
+                "name": "MiniMax M2.1",
+                "description": "Experimental preview of MiniMax M2.1",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.15,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "glm-5",
+                "name": "GLM 5",
+                "description": "GLM-5 model",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.5,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              },
+              {
+                "value": "qwen3-coder-next",
+                "name": "Qwen3 Coder Next",
+                "description": "Experimental preview of Qwen3 Coder Next",
+                "_meta": {
+                  "kiro": {
+                    "rateMultiplier": 0.05,
+                    "rateUnit": "Credit",
+                    "hasEffort": false
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "select",
+            "id": "autopilot",
+            "name": "Autopilot",
+            "currentValue": "on",
+            "options": [
+              {
+                "value": "on",
+                "name": "Autopilot",
+                "description": "Agent executes tools without confirmation"
+              },
+              {
+                "value": "off",
+                "name": "Supervised",
+                "description": "Agent asks for approval before file changes"
+              }
+            ]
+          },
+          {
+            "type": "select",
+            "id": "contentCollection",
+            "name": "Content Collection",
+            "currentValue": "enabled",
+            "options": [
+              {
+                "value": "enabled",
+                "name": "Enabled",
+                "description": "Allow content to be used for service improvement"
+              },
+              {
+                "value": "disabled",
+                "name": "Disabled",
+                "description": "Opt out of content collection"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "replay_comparison": {
+      "original_tool_ids": [
+        "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX"
+      ],
+      "replayed_tool_ids": [
+        "883618cc-259b-4e6e-aae0-580620b0ee71",
+        "aededc21-43ac-434d-8155-ec705533948b",
+        "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX"
+      ],
+      "shared_tool_ids": [
+        "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX"
+      ],
+      "all_original_ids_replayed": true,
+      "cards": {
+        "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX": {
+          "original_first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "pending",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "replayed_first": {
+            "sessionUpdate": "tool_call",
+            "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+            "title": "Run Command",
+            "kind": "execute",
+            "status": "completed",
+            "rawInput": {
+              "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "run_in_background": false
+            },
+            "rawOutput": [],
+            "content": [],
+            "metaKeys": [
+              "kiro"
+            ],
+            "outputTransformation": null
+          },
+          "title_equal": true,
+          "raw_input_equal": true
+        }
+      }
+    },
+    "process_exits": [
+      -15,
+      -15
+    ],
+    "server_requests": [
+      "_kiro/auth/getAccessToken",
+      "_kiro/terminal/shell_type",
+      "session/request_permission",
+      "terminal/create",
+      "terminal/output",
+      "terminal/release",
+      "terminal/wait_for_exit"
+    ],
+    "permission_requests": [
+      {
+        "sessionId": "sess_d6304821-2803-4dca-88a0-2f2d674d9fbb",
+        "toolCall": {
+          "toolCallId": "run_command_toolu_bdrk_01GdYtVyBiLkhjdwyC9dCLzX",
+          "status": "pending",
+          "title": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'"
+        },
+        "options": [
+          {
+            "optionId": "accept",
+            "name": "Allow",
+            "kind": "allow_once"
+          },
+          {
+            "optionId": "always-accept",
+            "name": "Always allow",
+            "kind": "allow_always"
+          },
+          {
+            "optionId": "reject",
+            "name": "Deny",
+            "kind": "reject_once"
+          },
+          {
+            "optionId": "always-reject",
+            "name": "Always deny",
+            "kind": "reject_always"
+          }
+        ],
+        "_meta": {
+          "kiro": {
+            "toolId": "run_command",
+            "command": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+            "consent": {
+              "capability": "shell",
+              "resource": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "askType": "implicit",
+              "triggeringResource": "python3 -c 'import sys;sys.stdout.write(\"OUTPUT_REPLAY_2211_\" + (\"X\" * 32000) + \"_OUTPUT_REPLAY_2211_ENDMARK\\n\")'",
+              "workspaceRoot": "/home/dwalleck/.claude/tmp/kas-output-replay-cwd-p2ofh7jo"
+            },
+            "consentRound": 1
+          }
+        }
+      }
+    ],
+    "parse_errors": 0,
+    "field_paths": [
+      "id",
+      "jsonrpc",
+      "method",
+      "params",
+      "params._meta",
+      "params._meta.kiro",
+      "params._meta.kiro.command",
+      "params._meta.kiro.consent",
+      "params._meta.kiro.consent.askType",
+      "params._meta.kiro.consent.capability",
+      "params._meta.kiro.consent.resource",
+      "params._meta.kiro.consent.triggeringResource",
+      "params._meta.kiro.consent.workspaceRoot",
+      "params._meta.kiro.consentRound",
+      "params._meta.kiro.toolId",
+      "params.command",
+      "params.cwd",
+      "params.deleted",
+      "params.documents",
+      "params.documents[]._meta",
+      "params.documents[]._meta.kiro",
+      "params.documents[]._meta.kiro.resource",
+      "params.documents[]._meta.kiro.resource.resourceType",
+      "params.documents[]._meta.kiro.resource.source",
+      "params.documents[]._meta.kiro.resource.source.origin",
+      "params.documents[].content",
+      "params.documents[].inclusion",
+      "params.documents[].name",
+      "params.documents[].scope",
+      "params.documents[].type",
+      "params.documents[].uri",
+      "params.env",
+      "params.env[].name",
+      "params.env[].value",
+      "params.features",
+      "params.features.autonomousAgents",
+      "params.features.codeReferenceTracker",
+      "params.features.contentCollection",
+      "params.features.mcpEnabled",
+      "params.features.promptLogging",
+      "params.features.usageAnalytics",
+      "params.features.webToolsEnabled",
+      "params.isEnterprise",
+      "params.items",
+      "params.options",
+      "params.options[].kind",
+      "params.options[].name",
+      "params.options[].optionId",
+      "params.powers",
+      "params.servers",
+      "params.sessionId",
+      "params.status",
+      "params.tags",
+      "params.tags[].description",
+      "params.tags[].source",
+      "params.tags[].tag",
+      "params.terminalId",
+      "params.toolCall",
+      "params.toolCall.status",
+      "params.toolCall.title",
+      "params.toolCall.toolCallId",
+      "params.update",
+      "params.update._meta",
+      "params.update._meta.kiro",
+      "params.update._meta.kiro.agentMode",
+      "params.update._meta.kiro.breakdown",
+      "params.update._meta.kiro.breakdown.contextFiles",
+      "params.update._meta.kiro.breakdown.contextFiles.items",
+      "params.update._meta.kiro.breakdown.contextFiles.percent",
+      "params.update._meta.kiro.breakdown.contextFiles.tokens",
+      "params.update._meta.kiro.breakdown.kiroResponses",
+      "params.update._meta.kiro.breakdown.kiroResponses.percent",
+      "params.update._meta.kiro.breakdown.kiroResponses.tokens",
+      "params.update._meta.kiro.breakdown.sessionFiles",
+      "params.update._meta.kiro.breakdown.sessionFiles.items",
+      "params.update._meta.kiro.breakdown.sessionFiles.percent",
+      "params.update._meta.kiro.breakdown.sessionFiles.tokens",
+      "params.update._meta.kiro.breakdown.tools",
+      "params.update._meta.kiro.breakdown.tools.builtin",
+      "params.update._meta.kiro.breakdown.tools.builtin.percent",
+      "params.update._meta.kiro.breakdown.tools.builtin.tokens",
+      "params.update._meta.kiro.breakdown.tools.mcp",
+      "params.update._meta.kiro.breakdown.tools.mcp.percent",
+      "params.update._meta.kiro.breakdown.tools.mcp.tokens",
+      "params.update._meta.kiro.breakdown.tools.percent",
+      "params.update._meta.kiro.breakdown.tools.tokens",
+      "params.update._meta.kiro.breakdown.yourPrompts",
+      "params.update._meta.kiro.breakdown.yourPrompts.percent",
+      "params.update._meta.kiro.breakdown.yourPrompts.tokens",
+      "params.update._meta.kiro.contextUsage",
+      "params.update._meta.kiro.contextUsage.usagePercentage",
+      "params.update._meta.kiro.elapsedTime",
+      "params.update._meta.kiro.focus",
+      "params.update._meta.kiro.focus.title",
+      "params.update._meta.kiro.interactionResolved",
+      "params.update._meta.kiro.interactionResolved.outcome",
+      "params.update._meta.kiro.interactionResolved.selectedOption",
+      "params.update._meta.kiro.interactionResolved.toolCallId",
+      "params.update._meta.kiro.interactionType",
+      "params.update._meta.kiro.kind",
+      "params.update._meta.kiro.messageId",
+      "params.update._meta.kiro.options",
+      "params.update._meta.kiro.options[].kind",
+      "params.update._meta.kiro.options[].name",
+      "params.update._meta.kiro.options[].optionId",
+      "params.update._meta.kiro.outcome",
+      "params.update._meta.kiro.outputTransformation",
+      "params.update._meta.kiro.outputTransformation.kind",
+      "params.update._meta.kiro.outputTransformation.originalChars",
+      "params.update._meta.kiro.pendingInteraction",
+      "params.update._meta.kiro.pendingInteraction.interactionType",
+      "params.update._meta.kiro.pendingInteraction.options",
+      "params.update._meta.kiro.pendingInteraction.options[].kind",
+      "params.update._meta.kiro.pendingInteraction.options[].name",
+      "params.update._meta.kiro.pendingInteraction.options[].optionId",
+      "params.update._meta.kiro.pendingInteraction.question",
+      "params.update._meta.kiro.pendingInteraction.toolCallId",
+      "params.update._meta.kiro.promptTurnSummaries",
+      "params.update._meta.kiro.promptTurnSummaries[].unit",
+      "params.update._meta.kiro.promptTurnSummaries[].unitPlural",
+      "params.update._meta.kiro.promptTurnSummaries[].usage",
+      "params.update._meta.kiro.promptTurnSummaries[].usedTools",
+      "params.update._meta.kiro.question",
+      "params.update._meta.kiro.replay",
+      "params.update._meta.kiro.replayId",
+      "params.update._meta.kiro.requestIds",
+      "params.update._meta.kiro.selectedOption",
+      "params.update._meta.kiro.status",
+      "params.update._meta.kiro.stopReason",
+      "params.update._meta.kiro.timestamp",
+      "params.update._meta.kiro.title",
+      "params.update._meta.kiro.toolCallId",
+      "params.update._meta.kiro.toolId",
+      "params.update._meta.kiro.toolOrigin",
+      "params.update._meta.kiro.turnEnd",
+      "params.update._meta.kiro.turnEnd.stopReason",
+      "params.update._meta.kiro.turnStart",
+      "params.update._meta.kiro.usagePercentage",
+      "params.update._meta.kiro.userMessageId",
+      "params.update._meta.kiro.userMessageTag",
+      "params.update.availableCommands",
+      "params.update.availableCommands[]._meta",
+      "params.update.availableCommands[]._meta.kiro",
+      "params.update.availableCommands[]._meta.kiro.commandId",
+      "params.update.availableCommands[]._meta.kiro.contextQuery",
+      "params.update.availableCommands[]._meta.kiro.originalName",
+      "params.update.availableCommands[]._meta.kiro.resource",
+      "params.update.availableCommands[]._meta.kiro.resource.resourceType",
+      "params.update.availableCommands[]._meta.kiro.resource.source",
+      "params.update.availableCommands[]._meta.kiro.resource.source.origin",
+      "params.update.availableCommands[]._meta.kiro.type",
+      "params.update.availableCommands[].description",
+      "params.update.availableCommands[].input",
+      "params.update.availableCommands[].input.hint",
+      "params.update.availableCommands[].name",
+      "params.update.configOptions",
+      "params.update.configOptions[].category",
+      "params.update.configOptions[].currentValue",
+      "params.update.configOptions[].id",
+      "params.update.configOptions[].name",
+      "params.update.configOptions[].options",
+      "params.update.configOptions[].options[]._meta",
+      "params.update.configOptions[].options[]._meta.kiro",
+      "params.update.configOptions[].options[]._meta.kiro.defaultEffortLevel",
+      "params.update.configOptions[].options[]._meta.kiro.effortLevels",
+      "params.update.configOptions[].options[]._meta.kiro.effortSchemaPath",
+      "params.update.configOptions[].options[]._meta.kiro.hasEffort",
+      "params.update.configOptions[].options[]._meta.kiro.rateMultiplier",
+      "params.update.configOptions[].options[]._meta.kiro.rateUnit",
+      "params.update.configOptions[].options[]._meta.kiro.resource",
+      "params.update.configOptions[].options[]._meta.kiro.resource.resourceType",
+      "params.update.configOptions[].options[]._meta.kiro.resource.source",
+      "params.update.configOptions[].options[]._meta.kiro.resource.source.origin",
+      "params.update.configOptions[].options[]._meta.kiro.source",
+      "params.update.configOptions[].options[]._meta.kiro.welcomeMessage",
+      "params.update.configOptions[].options[].description",
+      "params.update.configOptions[].options[].name",
+      "params.update.configOptions[].options[].value",
+      "params.update.configOptions[].type",
+      "params.update.content",
+      "params.update.content.text",
+      "params.update.content.type",
+      "params.update.content[].content",
+      "params.update.content[].content.text",
+      "params.update.content[].content.type",
+      "params.update.content[].terminalId",
+      "params.update.content[].type",
+      "params.update.kind",
+      "params.update.rawInput",
+      "params.update.rawInput.command",
+      "params.update.rawInput.run_in_background",
+      "params.update.rawInput.toolName",
+      "params.update.rawOutput",
+      "params.update.rawOutput.exitCode",
+      "params.update.rawOutput.kind",
+      "params.update.rawOutput.message",
+      "params.update.rawOutput.output",
+      "params.update.rawOutput.retracted",
+      "params.update.sessionUpdate",
+      "params.update.status",
+      "params.update.title",
+      "params.update.toolCallId",
+      "params.upserted",
+      "params.upserted[].cwd",
+      "params.upserted[].executionTarget",
+      "params.upserted[].executionTarget.kind",
+      "params.upserted[].sessionId",
+      "params.upserted[].source",
+      "params.upserted[].status",
+      "params.upserted[].title",
+      "params.upserted[].updatedAt",
+      "result",
+      "result._meta",
+      "result._meta.agentMode",
+      "result._meta.contextUsage",
+      "result._meta.contextUsage.summarizationThreshold",
+      "result._meta.contextUsage.truncationThreshold",
+      "result._meta.contextUsage.usagePercentage",
+      "result._meta.createdAt",
+      "result._meta.disableAutoCompaction",
+      "result._meta.executionTarget",
+      "result._meta.executionTarget.kind",
+      "result._meta.ftaEnabled",
+      "result._meta.id",
+      "result._meta.lastModifiedAt",
+      "result._meta.schemaVersion",
+      "result._meta.semanticReviewEnabled",
+      "result._meta.source",
+      "result._meta.specPlanEnabled",
+      "result._meta.specSkipClarificationEnabled",
+      "result._meta.specWorkflow",
+      "result._meta.title",
+      "result._meta.workflowsEnabled",
+      "result._meta.workspacePaths",
+      "result.agentCapabilities",
+      "result.agentCapabilities._meta",
+      "result.agentCapabilities._meta.kiro",
+      "result.agentCapabilities._meta.kiro.checkpoints",
+      "result.agentCapabilities._meta.kiro.executionTargets",
+      "result.agentCapabilities._meta.kiro.extensionMethods",
+      "result.agentCapabilities._meta.kiro.logging",
+      "result.agentCapabilities._meta.kiro.logging.channels",
+      "result.agentCapabilities._meta.kiro.logging.channels[].filePath",
+      "result.agentCapabilities._meta.kiro.logging.channels[].name",
+      "result.agentCapabilities._meta.kiro.logging.logDir",
+      "result.agentCapabilities._meta.kiro.policyNotifications",
+      "result.agentCapabilities._meta.kiro.replayMarking",
+      "result.agentCapabilities._meta.kiro.sessionList",
+      "result.agentCapabilities._meta.kiro.sessionListScopes",
+      "result.agentCapabilities._meta.kiro.sessionSources",
+      "result.agentCapabilities._meta.kiro.sourceProviders",
+      "result.agentCapabilities.loadSession",
+      "result.agentCapabilities.mcpCapabilities",
+      "result.agentCapabilities.mcpCapabilities.http",
+      "result.agentCapabilities.mcpCapabilities.sse",
+      "result.agentCapabilities.promptCapabilities",
+      "result.agentCapabilities.promptCapabilities.embeddedContext",
+      "result.agentCapabilities.promptCapabilities.image",
+      "result.agentCapabilities.sessionCapabilities",
+      "result.agentCapabilities.sessionCapabilities.fork",
+      "result.agentCapabilities.sessionCapabilities.fork._meta",
+      "result.agentCapabilities.sessionCapabilities.fork._meta.kiro",
+      "result.agentCapabilities.sessionCapabilities.fork._meta.kiro.messageId",
+      "result.agentCapabilities.sessionCapabilities.list",
+      "result.authMethods",
+      "result.authMethods[].id",
+      "result.authMethods[].name",
+      "result.configOptions",
+      "result.configOptions[].category",
+      "result.configOptions[].currentValue",
+      "result.configOptions[].id",
+      "result.configOptions[].name",
+      "result.configOptions[].options",
+      "result.configOptions[].options[]._meta",
+      "result.configOptions[].options[]._meta.kiro",
+      "result.configOptions[].options[]._meta.kiro.defaultEffortLevel",
+      "result.configOptions[].options[]._meta.kiro.effortLevels",
+      "result.configOptions[].options[]._meta.kiro.effortSchemaPath",
+      "result.configOptions[].options[]._meta.kiro.hasEffort",
+      "result.configOptions[].options[]._meta.kiro.rateMultiplier",
+      "result.configOptions[].options[]._meta.kiro.rateUnit",
+      "result.configOptions[].options[]._meta.kiro.resource",
+      "result.configOptions[].options[]._meta.kiro.resource.resourceType",
+      "result.configOptions[].options[]._meta.kiro.resource.source",
+      "result.configOptions[].options[]._meta.kiro.resource.source.origin",
+      "result.configOptions[].options[]._meta.kiro.source",
+      "result.configOptions[].options[]._meta.kiro.welcomeMessage",
+      "result.configOptions[].options[].description",
+      "result.configOptions[].options[].name",
+      "result.configOptions[].options[].value",
+      "result.configOptions[].type",
+      "result.modes",
+      "result.modes.availableModes",
+      "result.modes.availableModes[]._meta",
+      "result.modes.availableModes[]._meta.kiro",
+      "result.modes.availableModes[]._meta.kiro.resource",
+      "result.modes.availableModes[]._meta.kiro.resource.resourceType",
+      "result.modes.availableModes[]._meta.kiro.resource.source",
+      "result.modes.availableModes[]._meta.kiro.resource.source.origin",
+      "result.modes.availableModes[]._meta.kiro.source",
+      "result.modes.availableModes[]._meta.kiro.welcomeMessage",
+      "result.modes.availableModes[].description",
+      "result.modes.availableModes[].id",
+      "result.modes.availableModes[].name",
+      "result.modes.currentModeId",
+      "result.protocolVersion",
+      "result.sessionId",
+      "result.sessions",
+      "result.sessions[]._meta",
+      "result.sessions[]._meta.kiro",
+      "result.sessions[]._meta.kiro.agentMode",
+      "result.sessions[]._meta.kiro.createdAt",
+      "result.sessions[]._meta.kiro.executionTarget",
+      "result.sessions[]._meta.kiro.executionTarget.kind",
+      "result.sessions[]._meta.kiro.source",
+      "result.sessions[]._meta.kiro.status",
+      "result.sessions[].cwd",
+      "result.sessions[].sessionId",
+      "result.sessions[].title",
+      "result.sessions[].updatedAt",
+      "result.stopReason"
+    ],
+    "frame_count": 99
+  },
+  "comparison": {
+    "old_field_count": 318,
+    "new_field_count": 321,
+    "only_old_fields": [],
+    "only_new_fields": [
+      "params.env",
+      "params.env[].name",
+      "params.env[].value"
+    ],
+    "field_sets_identical": false,
+    "tool_ids_same": false,
+    "original_disk_marker_old": false,
+    "original_disk_marker_new": false,
+    "replayed_tool_cards_old": true,
+    "replayed_tool_cards_new": true
+  },
+  "provider_refusal": {
+    "status": "gap_not_live_triggered",
+    "reason": "No safe deterministic provider-refusal trigger was available; the probe did not send abusive or content-policy prompts.",
+    "static_precise_mapping": {
+      "release_claim": "Surface provider refusal reasons instead of a generic failed-to-generate-a-response error.",
+      "host_error_types": [
+        "chat_cli::api_client::error::ConverseStreamError",
+        "chat_cli_v2::api_client::error::ConverseStreamError",
+        "ConverseStreamErrorKind"
+      ],
+      "host_mapping_markers": [
+        "ConverseStreamError::error_code",
+        "ConverseStreamError -> agent_loop::StreamError",
+        "ConverseStreamError as telemetry::ReasonCode"
+      ],
+      "evidence": "static-2.21.1/static-2.21.1-report.json lines 162, 271, 430-433, 1626-1628, 2320, 2370-2371, 9515-9519; release text is embedded in 2.21.1 kiro-cli strings.",
+      "limit": "Stripped binary symbols identify the typed error and reason-code branches but not a safe backend refusal payload; live reason/category/explanation values remain unobserved."
+    }
+  },
+  "limitations": [
+    "Tool output and model wording are backend-dependent; raw ACP observations are kept separately from model final text.",
+    "Temporary HOME/workspace roots are retained in captures only as paths; auth replies are represented by redacted callback records.",
+    "A session/load response is only counted as replay when replay-phase notifications and the supported load response are both captured."
+  ]
+}

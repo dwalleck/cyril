@@ -1,0 +1,1965 @@
+{
+  "schema": "cyril.v2-wire-audit.2.21.1",
+  "same_day_backend_control": true,
+  "old": {
+    "label": "old",
+    "binary": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.0/kiro-cli-chat",
+    "version": "kiro-cli-chat 2.21.0",
+    "sha256": "c2b03820e98d2dac1fe13a85f7c91388cac4c56afbed28f17ec3f2e2b2f20b96",
+    "cwd": "/tmp/v2-audit-_vi1yhbj",
+    "assertions": {
+      "initialize_result": true,
+      "session_new_session_id": true,
+      "success_prompt_result": true,
+      "success_streamed_text": true,
+      "success_file_tool": true,
+      "success_shell_tool": true,
+      "approval_lifecycle": true,
+      "cancel_notification_sent": true,
+      "cancel_turn_observed": true,
+      "error_response_observed": true
+    },
+    "extension": {
+      "_kiro.dev/settings/list {}": {
+        "kind": "result",
+        "result": {}
+      },
+      "_kiro.dev/settings/list {\"sessionId\": \"<sessionId>\"}": {
+        "kind": "result",
+        "result": {}
+      },
+      "_kiro.dev/settings/set {\"key\": \"probe.nonexistent.key\", \"value\": true}": {
+        "kind": "error",
+        "code": -32602,
+        "message": "Invalid params",
+        "data": "`probe.nonexistent.key` is not a valid setting"
+      },
+      "_kiro.dev/settings/set {\"key\": \"probe.nonexistent.key\", \"sessionId\": \"<sessionId>\", \"value\": true}": {
+        "kind": "error",
+        "code": -32602,
+        "message": "Invalid params",
+        "data": "`probe.nonexistent.key` is not a valid setting"
+      },
+      "_kiro.dev/session/list {\"cwd\": \"<cwd>\"}": {
+        "kind": "result",
+        "result": {
+          "sessions": [
+            {
+              "sessionId": "<sessionId>",
+              "cwd": "<cwd>",
+              "updatedAt": "<updatedAt>",
+              "messageCount": 0
+            }
+          ]
+        }
+      },
+      "_kiro.dev/session/list {}": {
+        "kind": "result",
+        "result": {
+          "sessions": [
+            {
+              "sessionId": "<sessionId>",
+              "cwd": "<cwd>",
+              "updatedAt": "<updatedAt>",
+              "messageCount": 0
+            }
+          ]
+        }
+      },
+      "_kiro.dev/session/terminate {\"sessionId\": \"<sessionId>\"}": {
+        "kind": "result",
+        "result": {}
+      },
+      "_session/steer/clear {\"sessionId\": \"<sessionId>\"}": {
+        "kind": "result",
+        "result": {
+          "cleared": true
+        }
+      },
+      "_message/send {\"message\": \"probe\", \"sessionId\": \"<sessionId>\"}": {
+        "kind": "error",
+        "code": -32700,
+        "message": "Parse error",
+        "data": {
+          "error": "missing field `content`",
+          "json": {
+            "sessionId": "<sessionId>",
+            "message": "probe"
+          },
+          "phase": "deserialization"
+        }
+      },
+      "_kiro.dev/nonexistent/method {}": {
+        "kind": "error",
+        "code": -32601,
+        "message": "Method not found",
+        "data": "_kiro.dev/nonexistent/method"
+      }
+    },
+    "workload": {
+      "success": {
+        "kind": "result",
+        "result": {
+          "stopReason": "end_turn"
+        }
+      },
+      "success_prompt": "Use the file tool to read exactly /tmp/v2-audit-_vi1yhbj/input.txt. Then use the shell tool to run exactly: printf 'V2_AUDIT_2211_SHELL_MARKER\\n'. Finally use the file tool to write exactly this text to /tmp/v2-audit-_vi1yhbj/result.txt: V2_AUDIT_2211_FILE_MARKER|V2_AUDIT_2211_SHELL_MARKER. Do the tool actions, do not merely explain them, and reply exactly DONE.",
+      "success_output_exists": true,
+      "success_output": "V2_AUDIT_2211_FILE_MARKER|V2_AUDIT_2211_SHELL_MARKER",
+      "success_events": [],
+      "tool_names": [
+        "file",
+        "shell"
+      ],
+      "permission_count": 2,
+      "cancel": {
+        "kind": "result",
+        "result": {
+          "stopReason": "cancelled"
+        }
+      },
+      "cancel_notification_sent": true,
+      "cancel_stop_reasons": [],
+      "error_control": {
+        "kind": "error",
+        "code": -32601,
+        "message": "Method not found",
+        "data": "_kiro.dev/nonexistent/method"
+      }
+    },
+    "initialize": {
+      "kind": "result",
+      "result": {
+        "protocolVersion": 1,
+        "agentCapabilities": {
+          "loadSession": true,
+          "promptCapabilities": {
+            "image": true,
+            "audio": false,
+            "embeddedContext": false
+          },
+          "mcpCapabilities": {
+            "http": true,
+            "sse": false
+          },
+          "sessionCapabilities": {},
+          "auth": {}
+        },
+        "authMethods": [],
+        "agentInfo": {
+          "name": "Kiro CLI Agent",
+          "title": "Kiro CLI Agent",
+          "version": "2.21.0"
+        }
+      }
+    },
+    "initialize_capabilities": {
+      "protocolVersion": 1,
+      "agentCapabilities": {
+        "loadSession": true,
+        "promptCapabilities": {
+          "image": true,
+          "audio": false,
+          "embeddedContext": false
+        },
+        "mcpCapabilities": {
+          "http": true,
+          "sse": false
+        },
+        "sessionCapabilities": {},
+        "auth": {}
+      },
+      "authMethods": [],
+      "agentInfo": {
+        "name": "Kiro CLI Agent",
+        "title": "Kiro CLI Agent",
+        "version": "2.21.0"
+      }
+    },
+    "session_new": {
+      "kind": "result",
+      "result": {
+        "sessionId": "<sessionId>",
+        "modes": {
+          "currentModeId": "kiro_default",
+          "availableModes": [
+            {
+              "id": "kiro_default",
+              "name": "kiro_default",
+              "description": "The default agent for Kiro CLI"
+            },
+            {
+              "id": "kiro_planner",
+              "name": "kiro_planner",
+              "description": "Specialized planning agent that helps break down ideas into implementation plans",
+              "_meta": {
+                "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+              }
+            },
+            {
+              "id": "kiro_guide",
+              "name": "kiro_guide",
+              "description": "Guide agent that answers questions about Kiro CLI features using documentation",
+              "_meta": {
+                "welcomeMessage": "Welcome to Kiro CLI Guide!\n\nYour friendly AI sidekick, ready to help you get the most out of the CLI. Here's what I can help with:\n\n- Slash commands — /agent, /context, /tools and more\n- Built-in tools — read, code, grep... basically superpowers\n- Configuration settings — tweak things to your heart's content\n- Features — MCP, Code Intelligence, and everything in between\n- Create and modify agents, prompts, and configs in ~/.kiro/ and .kiro/\n\nGo ahead, ask me anything about Kiro CLI — no question too weird!\n\nSome fan favorites:\n- \"How do I save a conversation?\"\n- \"What tools are available?\"\n- \"How does the code tool work?\"\n- \"Create a new agent for me\"\n\nTip: Type /guide again to return to your previous agent"
+              }
+            }
+          ]
+        },
+        "models": {
+          "currentModelId": "auto",
+          "availableModels": [
+            {
+              "modelId": "auto",
+              "name": "auto",
+              "description": "Models chosen by task for optimal usage and consistent quality"
+            },
+            {
+              "modelId": "claude-opus-5",
+              "name": "claude-opus-5",
+              "description": "Claude Opus 5 model with 1M context window"
+            },
+            {
+              "modelId": "claude-sonnet-5",
+              "name": "claude-sonnet-5",
+              "description": "Claude Sonnet 5 model with 1M context window"
+            },
+            {
+              "modelId": "claude-opus-4.8",
+              "name": "claude-opus-4.8",
+              "description": "Claude Opus 4.8 model with 1M context window"
+            },
+            {
+              "modelId": "gpt-5.6-sol",
+              "name": "gpt-5.6-sol",
+              "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window"
+            },
+            {
+              "modelId": "gpt-5.6-terra",
+              "name": "gpt-5.6-terra",
+              "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window"
+            },
+            {
+              "modelId": "gpt-5.6-luna",
+              "name": "gpt-5.6-luna",
+              "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window"
+            },
+            {
+              "modelId": "claude-opus-4.7",
+              "name": "claude-opus-4.7",
+              "description": "Claude Opus 4.7 model with 1M context window"
+            },
+            {
+              "modelId": "claude-opus-4.6",
+              "name": "claude-opus-4.6",
+              "description": "Claude Opus 4.6 model with 1M context window"
+            },
+            {
+              "modelId": "claude-sonnet-4.6",
+              "name": "claude-sonnet-4.6",
+              "description": "Claude Sonnet 4.6 model with 1M context window"
+            },
+            {
+              "modelId": "claude-opus-4.5",
+              "name": "claude-opus-4.5",
+              "description": "Claude Opus 4.5 model"
+            },
+            {
+              "modelId": "claude-sonnet-4.5",
+              "name": "claude-sonnet-4.5",
+              "description": "Claude Sonnet 4.5 model"
+            },
+            {
+              "modelId": "claude-sonnet-4",
+              "name": "claude-sonnet-4",
+              "description": "Hybrid reasoning and coding for regular use"
+            },
+            {
+              "modelId": "claude-haiku-4.5",
+              "name": "claude-haiku-4.5",
+              "description": "The latest Claude Haiku model"
+            },
+            {
+              "modelId": "deepseek-3.2",
+              "name": "deepseek-3.2",
+              "description": "Experimental preview of DeepSeek V3.2"
+            },
+            {
+              "modelId": "minimax-m2.5",
+              "name": "minimax-m2.5",
+              "description": "MiniMax M2.5 model"
+            },
+            {
+              "modelId": "minimax-m2.1",
+              "name": "minimax-m2.1",
+              "description": "Experimental preview of MiniMax M2.1"
+            },
+            {
+              "modelId": "glm-5",
+              "name": "glm-5",
+              "description": "GLM-5 model"
+            },
+            {
+              "modelId": "qwen3-coder-next",
+              "name": "qwen3-coder-next",
+              "description": "Experimental preview of Qwen3 Coder Next"
+            }
+          ]
+        }
+      }
+    },
+    "session_new_keys": [
+      "models",
+      "modes",
+      "sessionId"
+    ],
+    "model_surface": {
+      "currentModelId": "auto",
+      "availableModels": [
+        {
+          "modelId": "auto",
+          "name": "auto",
+          "description": "Models chosen by task for optimal usage and consistent quality"
+        },
+        {
+          "modelId": "claude-opus-5",
+          "name": "claude-opus-5",
+          "description": "Claude Opus 5 model with 1M context window"
+        },
+        {
+          "modelId": "claude-sonnet-5",
+          "name": "claude-sonnet-5",
+          "description": "Claude Sonnet 5 model with 1M context window"
+        },
+        {
+          "modelId": "claude-opus-4.8",
+          "name": "claude-opus-4.8",
+          "description": "Claude Opus 4.8 model with 1M context window"
+        },
+        {
+          "modelId": "gpt-5.6-sol",
+          "name": "gpt-5.6-sol",
+          "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window"
+        },
+        {
+          "modelId": "gpt-5.6-terra",
+          "name": "gpt-5.6-terra",
+          "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window"
+        },
+        {
+          "modelId": "gpt-5.6-luna",
+          "name": "gpt-5.6-luna",
+          "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window"
+        },
+        {
+          "modelId": "claude-opus-4.7",
+          "name": "claude-opus-4.7",
+          "description": "Claude Opus 4.7 model with 1M context window"
+        },
+        {
+          "modelId": "claude-opus-4.6",
+          "name": "claude-opus-4.6",
+          "description": "Claude Opus 4.6 model with 1M context window"
+        },
+        {
+          "modelId": "claude-sonnet-4.6",
+          "name": "claude-sonnet-4.6",
+          "description": "Claude Sonnet 4.6 model with 1M context window"
+        },
+        {
+          "modelId": "claude-opus-4.5",
+          "name": "claude-opus-4.5",
+          "description": "Claude Opus 4.5 model"
+        },
+        {
+          "modelId": "claude-sonnet-4.5",
+          "name": "claude-sonnet-4.5",
+          "description": "Claude Sonnet 4.5 model"
+        },
+        {
+          "modelId": "claude-sonnet-4",
+          "name": "claude-sonnet-4",
+          "description": "Hybrid reasoning and coding for regular use"
+        },
+        {
+          "modelId": "claude-haiku-4.5",
+          "name": "claude-haiku-4.5",
+          "description": "The latest Claude Haiku model"
+        },
+        {
+          "modelId": "deepseek-3.2",
+          "name": "deepseek-3.2",
+          "description": "Experimental preview of DeepSeek V3.2"
+        },
+        {
+          "modelId": "minimax-m2.5",
+          "name": "minimax-m2.5",
+          "description": "MiniMax M2.5 model"
+        },
+        {
+          "modelId": "minimax-m2.1",
+          "name": "minimax-m2.1",
+          "description": "Experimental preview of MiniMax M2.1"
+        },
+        {
+          "modelId": "glm-5",
+          "name": "glm-5",
+          "description": "GLM-5 model"
+        },
+        {
+          "modelId": "qwen3-coder-next",
+          "name": "qwen3-coder-next",
+          "description": "Experimental preview of Qwen3 Coder Next"
+        }
+      ]
+    },
+    "mode_surface": {
+      "currentModeId": "kiro_default",
+      "availableModes": [
+        {
+          "id": "kiro_default",
+          "name": "kiro_default",
+          "description": "The default agent for Kiro CLI"
+        },
+        {
+          "id": "kiro_planner",
+          "name": "kiro_planner",
+          "description": "Specialized planning agent that helps break down ideas into implementation plans",
+          "_meta": {
+            "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+          }
+        },
+        {
+          "id": "kiro_guide",
+          "name": "kiro_guide",
+          "description": "Guide agent that answers questions about Kiro CLI features using documentation",
+          "_meta": {
+            "welcomeMessage": "Welcome to Kiro CLI Guide!\n\nYour friendly AI sidekick, ready to help you get the most out of the CLI. Here's what I can help with:\n\n- Slash commands — /agent, /context, /tools and more\n- Built-in tools — read, code, grep... basically superpowers\n- Configuration settings — tweak things to your heart's content\n- Features — MCP, Code Intelligence, and everything in between\n- Create and modify agents, prompts, and configs in ~/.kiro/ and .kiro/\n\nGo ahead, ask me anything about Kiro CLI — no question too weird!\n\nSome fan favorites:\n- \"How do I save a conversation?\"\n- \"What tools are available?\"\n- \"How does the code tool work?\"\n- \"Create a new agent for me\"\n\nTip: Type /guide again to return to your previous agent"
+          }
+        }
+      ]
+    },
+    "config_surface": null,
+    "command_options": {
+      "model": {
+        "kind": "result",
+        "result": {
+          "options": [
+            {
+              "value": "auto",
+              "label": "auto",
+              "description": "Models chosen by task for optimal usage and consistent quality [active]",
+              "group": "1.00x credits"
+            },
+            {
+              "value": "claude-opus-5",
+              "label": "claude-opus-5",
+              "description": "Claude Opus 5 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-sonnet-5",
+              "label": "claude-sonnet-5",
+              "description": "Claude Sonnet 5 model with 1M context window",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-opus-4.8",
+              "label": "claude-opus-4.8",
+              "description": "Claude Opus 4.8 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "gpt-5.6-sol",
+              "label": "gpt-5.6-sol",
+              "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+              "group": "2.40x credits"
+            },
+            {
+              "value": "gpt-5.6-terra",
+              "label": "gpt-5.6-terra",
+              "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+              "group": "1.00x credits"
+            },
+            {
+              "value": "gpt-5.6-luna",
+              "label": "gpt-5.6-luna",
+              "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+              "group": "0.10x credits"
+            },
+            {
+              "value": "claude-opus-4.7",
+              "label": "claude-opus-4.7",
+              "description": "Claude Opus 4.7 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-opus-4.6",
+              "label": "claude-opus-4.6",
+              "description": "Claude Opus 4.6 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-sonnet-4.6",
+              "label": "claude-sonnet-4.6",
+              "description": "Claude Sonnet 4.6 model with 1M context window",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-opus-4.5",
+              "label": "claude-opus-4.5",
+              "description": "Claude Opus 4.5 model",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-sonnet-4.5",
+              "label": "claude-sonnet-4.5",
+              "description": "Claude Sonnet 4.5 model",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-sonnet-4",
+              "label": "claude-sonnet-4",
+              "description": "Hybrid reasoning and coding for regular use",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-haiku-4.5",
+              "label": "claude-haiku-4.5",
+              "description": "The latest Claude Haiku model",
+              "group": "0.40x credits"
+            },
+            {
+              "value": "deepseek-3.2",
+              "label": "deepseek-3.2",
+              "description": "Experimental preview of DeepSeek V3.2",
+              "group": "0.25x credits"
+            },
+            {
+              "value": "minimax-m2.5",
+              "label": "minimax-m2.5",
+              "description": "MiniMax M2.5 model",
+              "group": "0.25x credits"
+            },
+            {
+              "value": "minimax-m2.1",
+              "label": "minimax-m2.1",
+              "description": "Experimental preview of MiniMax M2.1",
+              "group": "0.15x credits"
+            },
+            {
+              "value": "glm-5",
+              "label": "glm-5",
+              "description": "GLM-5 model",
+              "group": "0.50x credits"
+            },
+            {
+              "value": "qwen3-coder-next",
+              "label": "qwen3-coder-next",
+              "description": "Experimental preview of Qwen3 Coder Next",
+              "group": "0.05x credits"
+            }
+          ],
+          "hasMore": false
+        }
+      },
+      "mode": {
+        "kind": "error",
+        "code": -32700,
+        "message": "Parse error",
+        "data": {
+          "error": "unknown variant `mode`, expected one of `model`, `agent`, `context`, `compact`, `clear`, `quit`, `usage`, `mcp`, `tools`, `prompts`, `feedback`, `chat`, `rewind`, `effort`",
+          "json": {
+            "sessionId": "<sessionId>",
+            "command": "mode"
+          },
+          "phase": "deserialization"
+        }
+      },
+      "effort": {
+        "kind": "result",
+        "result": {
+          "options": [],
+          "hasMore": false
+        }
+      },
+      "bogus": {
+        "kind": "error",
+        "code": -32700,
+        "message": "Parse error",
+        "data": {
+          "error": "unknown variant `bogus`, expected one of `model`, `agent`, `context`, `compact`, `clear`, `quit`, `usage`, `mcp`, `tools`, `prompts`, `feedback`, `chat`, `rewind`, `effort`",
+          "json": {
+            "sessionId": "<sessionId>",
+            "command": "bogus"
+          },
+          "phase": "deserialization"
+        }
+      }
+    },
+    "set_config_option": {
+      "kind": "error",
+      "code": -32601,
+      "message": "Method not found",
+      "data": "session/set_config_option"
+    },
+    "notification_order": [
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "_kiro.dev/commands/available",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "response",
+      "response",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "_kiro.dev/metadata",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "_kiro.dev/metadata",
+      "response"
+    ],
+    "field_paths": [
+      "_meta",
+      "_meta.trustOptions",
+      "_meta.trustOptions[].display",
+      "_meta.trustOptions[].label",
+      "_meta.trustOptions[].patterns",
+      "_meta.trustOptions[].setting_key",
+      "agentCapabilities",
+      "agentCapabilities.auth",
+      "agentCapabilities.loadSession",
+      "agentCapabilities.mcpCapabilities",
+      "agentCapabilities.mcpCapabilities.http",
+      "agentCapabilities.mcpCapabilities.sse",
+      "agentCapabilities.promptCapabilities",
+      "agentCapabilities.promptCapabilities.audio",
+      "agentCapabilities.promptCapabilities.embeddedContext",
+      "agentCapabilities.promptCapabilities.image",
+      "agentCapabilities.sessionCapabilities",
+      "agentInfo",
+      "agentInfo.name",
+      "agentInfo.title",
+      "agentInfo.version",
+      "authMethods",
+      "cleared",
+      "code",
+      "commands",
+      "commands[].description",
+      "commands[].meta",
+      "commands[].meta.hint",
+      "commands[].meta.inputType",
+      "commands[].meta.local",
+      "commands[].meta.optionsMethod",
+      "commands[].meta.searchable",
+      "commands[].meta.subcommandDescriptions",
+      "commands[].meta.subcommandDescriptions.add",
+      "commands[].meta.subcommandDescriptions.clear",
+      "commands[].meta.subcommandDescriptions.create",
+      "commands[].meta.subcommandDescriptions.edit",
+      "commands[].meta.subcommandDescriptions.init",
+      "commands[].meta.subcommandDescriptions.load",
+      "commands[].meta.subcommandDescriptions.logs",
+      "commands[].meta.subcommandDescriptions.new",
+      "commands[].meta.subcommandDescriptions.overview",
+      "commands[].meta.subcommandDescriptions.remove",
+      "commands[].meta.subcommandDescriptions.save",
+      "commands[].meta.subcommandDescriptions.set-current-as-default",
+      "commands[].meta.subcommandDescriptions.show",
+      "commands[].meta.subcommandDescriptions.status",
+      "commands[].meta.subcommandDescriptions.summary",
+      "commands[].meta.subcommandDescriptions.swap",
+      "commands[].meta.subcommandHints",
+      "commands[].meta.subcommandHints.add",
+      "commands[].meta.subcommandHints.create",
+      "commands[].meta.subcommandHints.edit",
+      "commands[].meta.subcommandHints.load",
+      "commands[].meta.subcommandHints.new",
+      "commands[].meta.subcommandHints.remove",
+      "commands[].meta.subcommandHints.save",
+      "commands[].meta.subcommandHints.swap",
+      "commands[].meta.subcommands",
+      "commands[].name",
+      "contextUsagePercentage",
+      "data",
+      "data.error",
+      "data.json",
+      "data.json.command",
+      "data.json.message",
+      "data.json.sessionId",
+      "data.phase",
+      "hasMore",
+      "mcpServers",
+      "message",
+      "meteringUsage",
+      "meteringUsage[].unit",
+      "meteringUsage[].unitPlural",
+      "meteringUsage[].value",
+      "models",
+      "models.availableModels",
+      "models.availableModels[].description",
+      "models.availableModels[].modelId",
+      "models.availableModels[].name",
+      "models.currentModelId",
+      "modes",
+      "modes.availableModes",
+      "modes.availableModes[]._meta",
+      "modes.availableModes[]._meta.welcomeMessage",
+      "modes.availableModes[].description",
+      "modes.availableModes[].id",
+      "modes.availableModes[].name",
+      "modes.currentModeId",
+      "options",
+      "options[].description",
+      "options[].group",
+      "options[].kind",
+      "options[].label",
+      "options[].name",
+      "options[].optionId",
+      "options[].value",
+      "pendingStages",
+      "prompts",
+      "protocolVersion",
+      "sessionId",
+      "sessions",
+      "sessions[].cwd",
+      "sessions[].messageCount",
+      "sessions[].sessionId",
+      "sessions[].updatedAt",
+      "stopReason",
+      "subagents",
+      "toolCall",
+      "toolCall.rawInput",
+      "toolCall.rawInput.__tool_use_purpose",
+      "toolCall.rawInput.command",
+      "toolCall.rawInput.content",
+      "toolCall.rawInput.path",
+      "toolCall.title",
+      "toolCall.toolCallId",
+      "tools",
+      "tools[].description",
+      "tools[].name",
+      "tools[].source",
+      "turnDurationMs",
+      "update",
+      "update._meta",
+      "update._meta.kiro",
+      "update._meta.kiro.toolName",
+      "update.content",
+      "update.content.text",
+      "update.content.type",
+      "update.content[].content",
+      "update.content[].content.text",
+      "update.content[].content.type",
+      "update.content[].newText",
+      "update.content[].oldText",
+      "update.content[].path",
+      "update.content[].type",
+      "update.kind",
+      "update.locations",
+      "update.locations[].line",
+      "update.locations[].path",
+      "update.rawInput",
+      "update.rawInput.__tool_use_purpose",
+      "update.rawInput.command",
+      "update.rawInput.content",
+      "update.rawInput.operations",
+      "update.rawInput.operations[].mode",
+      "update.rawInput.operations[].path",
+      "update.rawInput.path",
+      "update.rawOutput",
+      "update.rawOutput.items",
+      "update.rawOutput.items[].Json",
+      "update.rawOutput.items[].Json.exit_status",
+      "update.rawOutput.items[].Json.stderr",
+      "update.rawOutput.items[].Json.stdout",
+      "update.rawOutput.items[].Text",
+      "update.sessionUpdate",
+      "update.status",
+      "update.title",
+      "update.toolCallId"
+    ],
+    "server_requests": [
+      "session/request_permission"
+    ],
+    "permission_requests": [
+      {
+        "sessionId": "6de9f14f-506b-46ab-b0fb-01413c2873d3",
+        "toolCall": {
+          "toolCallId": "toolu_bdrk_01GZPun96Pqq33CzXSJ9YxuJ",
+          "title": "Running: printf 'V2_AUDIT_2211_SHELL_MARKER\\n'",
+          "rawInput": {
+            "__tool_use_purpose": "Running the requested shell command.",
+            "command": "printf 'V2_AUDIT_2211_SHELL_MARKER\\n'"
+          }
+        },
+        "options": [
+          {
+            "optionId": "allow_once",
+            "name": "Yes",
+            "kind": "allow_once"
+          },
+          {
+            "optionId": "allow_always",
+            "name": "Always",
+            "kind": "allow_always"
+          },
+          {
+            "optionId": "reject_once",
+            "name": "No",
+            "kind": "reject_once"
+          }
+        ],
+        "_meta": {
+          "trustOptions": [
+            {
+              "label": "Full command",
+              "display": "printf 'V2_AUDIT_2211_SHELL_MARKER\\n'",
+              "setting_key": "allowedCommands",
+              "patterns": [
+                "printf 'V2_AUDIT_2211_SHELL_MARKER\\\\n'"
+              ]
+            },
+            {
+              "label": "Partial command",
+              "display": "printf 'V2_AUDIT_2211_SHELL_MARKER\\n' *",
+              "setting_key": "allowedCommands",
+              "patterns": [
+                "printf 'V2_AUDIT_2211_SHELL_MARKER\\\\n'( .*)?"
+              ]
+            },
+            {
+              "label": "Base command",
+              "display": "printf *",
+              "setting_key": "allowedCommands",
+              "patterns": [
+                "printf( .*)?"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "sessionId": "6de9f14f-506b-46ab-b0fb-01413c2873d3",
+        "toolCall": {
+          "toolCallId": "toolu_bdrk_015HUphEiQnt6AwjL6q9uy1D",
+          "title": "Creating result.txt",
+          "rawInput": {
+            "__tool_use_purpose": "Writing the requested result file.",
+            "command": "create",
+            "path": "/tmp/v2-audit-_vi1yhbj/result.txt",
+            "content": "V2_AUDIT_2211_FILE_MARKER|V2_AUDIT_2211_SHELL_MARKER"
+          }
+        },
+        "options": [
+          {
+            "optionId": "allow_once",
+            "name": "Yes",
+            "kind": "allow_once"
+          },
+          {
+            "optionId": "allow_always",
+            "name": "Always",
+            "kind": "allow_always"
+          },
+          {
+            "optionId": "reject_once",
+            "name": "No",
+            "kind": "reject_once"
+          }
+        ],
+        "_meta": {
+          "trustOptions": [
+            {
+              "label": "Specific paths",
+              "display": "result.txt",
+              "setting_key": "runtime_write_paths",
+              "patterns": [
+                "/tmp/v2-audit-_vi1yhbj/result.txt"
+              ]
+            },
+            {
+              "label": "Complete directory",
+              "display": "/tmp/v2-audit-_vi1yhbj",
+              "setting_key": "runtime_write_paths",
+              "patterns": [
+                "/tmp/v2-audit-_vi1yhbj"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "frame_count": 71,
+    "process_exit": 0,
+    "captured_frames": 71
+  },
+  "new": {
+    "label": "new",
+    "binary": "/home/dwalleck/.local/share/kiro-research/binaries/2.21.1/extracted/kiro-cli-chat",
+    "version": "kiro-cli-chat 2.21.1",
+    "sha256": "f130f53bfa9e435d864c1b148ea27086cb3ed0399306318161a8a54dd03d1952",
+    "cwd": "/tmp/v2-audit-lmc_ywe4",
+    "assertions": {
+      "initialize_result": true,
+      "session_new_session_id": true,
+      "success_prompt_result": true,
+      "success_streamed_text": true,
+      "success_file_tool": true,
+      "success_shell_tool": true,
+      "approval_lifecycle": true,
+      "cancel_notification_sent": true,
+      "cancel_turn_observed": true,
+      "error_response_observed": true
+    },
+    "extension": {
+      "_kiro.dev/settings/list {}": {
+        "kind": "result",
+        "result": {}
+      },
+      "_kiro.dev/settings/list {\"sessionId\": \"<sessionId>\"}": {
+        "kind": "result",
+        "result": {}
+      },
+      "_kiro.dev/settings/set {\"key\": \"probe.nonexistent.key\", \"value\": true}": {
+        "kind": "error",
+        "code": -32602,
+        "message": "Invalid params",
+        "data": "`probe.nonexistent.key` is not a valid setting"
+      },
+      "_kiro.dev/settings/set {\"key\": \"probe.nonexistent.key\", \"sessionId\": \"<sessionId>\", \"value\": true}": {
+        "kind": "error",
+        "code": -32602,
+        "message": "Invalid params",
+        "data": "`probe.nonexistent.key` is not a valid setting"
+      },
+      "_kiro.dev/session/list {\"cwd\": \"<cwd>\"}": {
+        "kind": "result",
+        "result": {
+          "sessions": [
+            {
+              "sessionId": "<sessionId>",
+              "cwd": "<cwd>",
+              "updatedAt": "<updatedAt>",
+              "messageCount": 0
+            }
+          ]
+        }
+      },
+      "_kiro.dev/session/list {}": {
+        "kind": "result",
+        "result": {
+          "sessions": [
+            {
+              "sessionId": "<sessionId>",
+              "cwd": "<cwd>",
+              "updatedAt": "<updatedAt>",
+              "messageCount": 0
+            }
+          ]
+        }
+      },
+      "_kiro.dev/session/terminate {\"sessionId\": \"<sessionId>\"}": {
+        "kind": "result",
+        "result": {}
+      },
+      "_session/steer/clear {\"sessionId\": \"<sessionId>\"}": {
+        "kind": "result",
+        "result": {
+          "cleared": true
+        }
+      },
+      "_message/send {\"message\": \"probe\", \"sessionId\": \"<sessionId>\"}": {
+        "kind": "error",
+        "code": -32700,
+        "message": "Parse error",
+        "data": {
+          "error": "missing field `content`",
+          "json": {
+            "sessionId": "<sessionId>",
+            "message": "probe"
+          },
+          "phase": "deserialization"
+        }
+      },
+      "_kiro.dev/nonexistent/method {}": {
+        "kind": "error",
+        "code": -32601,
+        "message": "Method not found",
+        "data": "_kiro.dev/nonexistent/method"
+      }
+    },
+    "workload": {
+      "success": {
+        "kind": "result",
+        "result": {
+          "stopReason": "end_turn"
+        }
+      },
+      "success_prompt": "Use the file tool to read exactly /tmp/v2-audit-lmc_ywe4/input.txt. Then use the shell tool to run exactly: printf 'V2_AUDIT_2211_SHELL_MARKER\\n'. Finally use the file tool to write exactly this text to /tmp/v2-audit-lmc_ywe4/result.txt: V2_AUDIT_2211_FILE_MARKER|V2_AUDIT_2211_SHELL_MARKER. Do the tool actions, do not merely explain them, and reply exactly DONE.",
+      "success_output_exists": true,
+      "success_output": "V2_AUDIT_2211_FILE_MARKER|V2_AUDIT_2211_SHELL_MARKER",
+      "success_events": [],
+      "tool_names": [
+        "file",
+        "shell"
+      ],
+      "permission_count": 2,
+      "cancel": {
+        "kind": "result",
+        "result": {
+          "stopReason": "cancelled"
+        }
+      },
+      "cancel_notification_sent": true,
+      "cancel_stop_reasons": [],
+      "error_control": {
+        "kind": "error",
+        "code": -32601,
+        "message": "Method not found",
+        "data": "_kiro.dev/nonexistent/method"
+      }
+    },
+    "initialize": {
+      "kind": "result",
+      "result": {
+        "protocolVersion": 1,
+        "agentCapabilities": {
+          "loadSession": true,
+          "promptCapabilities": {
+            "image": true,
+            "audio": false,
+            "embeddedContext": false
+          },
+          "mcpCapabilities": {
+            "http": true,
+            "sse": false
+          },
+          "sessionCapabilities": {},
+          "auth": {}
+        },
+        "authMethods": [],
+        "agentInfo": {
+          "name": "Kiro CLI Agent",
+          "title": "Kiro CLI Agent",
+          "version": "2.21.1"
+        }
+      }
+    },
+    "initialize_capabilities": {
+      "protocolVersion": 1,
+      "agentCapabilities": {
+        "loadSession": true,
+        "promptCapabilities": {
+          "image": true,
+          "audio": false,
+          "embeddedContext": false
+        },
+        "mcpCapabilities": {
+          "http": true,
+          "sse": false
+        },
+        "sessionCapabilities": {},
+        "auth": {}
+      },
+      "authMethods": [],
+      "agentInfo": {
+        "name": "Kiro CLI Agent",
+        "title": "Kiro CLI Agent",
+        "version": "2.21.1"
+      }
+    },
+    "session_new": {
+      "kind": "result",
+      "result": {
+        "sessionId": "<sessionId>",
+        "modes": {
+          "currentModeId": "kiro_default",
+          "availableModes": [
+            {
+              "id": "kiro_default",
+              "name": "kiro_default",
+              "description": "The default agent for Kiro CLI"
+            },
+            {
+              "id": "kiro_planner",
+              "name": "kiro_planner",
+              "description": "Specialized planning agent that helps break down ideas into implementation plans",
+              "_meta": {
+                "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+              }
+            },
+            {
+              "id": "kiro_guide",
+              "name": "kiro_guide",
+              "description": "Guide agent that answers questions about Kiro CLI features using documentation",
+              "_meta": {
+                "welcomeMessage": "Welcome to Kiro CLI Guide!\n\nYour friendly AI sidekick, ready to help you get the most out of the CLI. Here's what I can help with:\n\n- Slash commands — /agent, /context, /tools and more\n- Built-in tools — read, code, grep... basically superpowers\n- Configuration settings — tweak things to your heart's content\n- Features — MCP, Code Intelligence, and everything in between\n- Create and modify agents, prompts, and configs in ~/.kiro/ and .kiro/\n\nGo ahead, ask me anything about Kiro CLI — no question too weird!\n\nSome fan favorites:\n- \"How do I save a conversation?\"\n- \"What tools are available?\"\n- \"How does the code tool work?\"\n- \"Create a new agent for me\"\n\nTip: Type /guide again to return to your previous agent"
+              }
+            }
+          ]
+        },
+        "models": {
+          "currentModelId": "auto",
+          "availableModels": [
+            {
+              "modelId": "auto",
+              "name": "auto",
+              "description": "Models chosen by task for optimal usage and consistent quality"
+            },
+            {
+              "modelId": "claude-opus-5",
+              "name": "claude-opus-5",
+              "description": "Claude Opus 5 model with 1M context window"
+            },
+            {
+              "modelId": "claude-sonnet-5",
+              "name": "claude-sonnet-5",
+              "description": "Claude Sonnet 5 model with 1M context window"
+            },
+            {
+              "modelId": "claude-opus-4.8",
+              "name": "claude-opus-4.8",
+              "description": "Claude Opus 4.8 model with 1M context window"
+            },
+            {
+              "modelId": "gpt-5.6-sol",
+              "name": "gpt-5.6-sol",
+              "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window"
+            },
+            {
+              "modelId": "gpt-5.6-terra",
+              "name": "gpt-5.6-terra",
+              "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window"
+            },
+            {
+              "modelId": "gpt-5.6-luna",
+              "name": "gpt-5.6-luna",
+              "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window"
+            },
+            {
+              "modelId": "claude-opus-4.7",
+              "name": "claude-opus-4.7",
+              "description": "Claude Opus 4.7 model with 1M context window"
+            },
+            {
+              "modelId": "claude-opus-4.6",
+              "name": "claude-opus-4.6",
+              "description": "Claude Opus 4.6 model with 1M context window"
+            },
+            {
+              "modelId": "claude-sonnet-4.6",
+              "name": "claude-sonnet-4.6",
+              "description": "Claude Sonnet 4.6 model with 1M context window"
+            },
+            {
+              "modelId": "claude-opus-4.5",
+              "name": "claude-opus-4.5",
+              "description": "Claude Opus 4.5 model"
+            },
+            {
+              "modelId": "claude-sonnet-4.5",
+              "name": "claude-sonnet-4.5",
+              "description": "Claude Sonnet 4.5 model"
+            },
+            {
+              "modelId": "claude-sonnet-4",
+              "name": "claude-sonnet-4",
+              "description": "Hybrid reasoning and coding for regular use"
+            },
+            {
+              "modelId": "claude-haiku-4.5",
+              "name": "claude-haiku-4.5",
+              "description": "The latest Claude Haiku model"
+            },
+            {
+              "modelId": "deepseek-3.2",
+              "name": "deepseek-3.2",
+              "description": "Experimental preview of DeepSeek V3.2"
+            },
+            {
+              "modelId": "minimax-m2.5",
+              "name": "minimax-m2.5",
+              "description": "MiniMax M2.5 model"
+            },
+            {
+              "modelId": "minimax-m2.1",
+              "name": "minimax-m2.1",
+              "description": "Experimental preview of MiniMax M2.1"
+            },
+            {
+              "modelId": "glm-5",
+              "name": "glm-5",
+              "description": "GLM-5 model"
+            },
+            {
+              "modelId": "qwen3-coder-next",
+              "name": "qwen3-coder-next",
+              "description": "Experimental preview of Qwen3 Coder Next"
+            }
+          ]
+        }
+      }
+    },
+    "session_new_keys": [
+      "models",
+      "modes",
+      "sessionId"
+    ],
+    "model_surface": {
+      "currentModelId": "auto",
+      "availableModels": [
+        {
+          "modelId": "auto",
+          "name": "auto",
+          "description": "Models chosen by task for optimal usage and consistent quality"
+        },
+        {
+          "modelId": "claude-opus-5",
+          "name": "claude-opus-5",
+          "description": "Claude Opus 5 model with 1M context window"
+        },
+        {
+          "modelId": "claude-sonnet-5",
+          "name": "claude-sonnet-5",
+          "description": "Claude Sonnet 5 model with 1M context window"
+        },
+        {
+          "modelId": "claude-opus-4.8",
+          "name": "claude-opus-4.8",
+          "description": "Claude Opus 4.8 model with 1M context window"
+        },
+        {
+          "modelId": "gpt-5.6-sol",
+          "name": "gpt-5.6-sol",
+          "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window"
+        },
+        {
+          "modelId": "gpt-5.6-terra",
+          "name": "gpt-5.6-terra",
+          "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window"
+        },
+        {
+          "modelId": "gpt-5.6-luna",
+          "name": "gpt-5.6-luna",
+          "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window"
+        },
+        {
+          "modelId": "claude-opus-4.7",
+          "name": "claude-opus-4.7",
+          "description": "Claude Opus 4.7 model with 1M context window"
+        },
+        {
+          "modelId": "claude-opus-4.6",
+          "name": "claude-opus-4.6",
+          "description": "Claude Opus 4.6 model with 1M context window"
+        },
+        {
+          "modelId": "claude-sonnet-4.6",
+          "name": "claude-sonnet-4.6",
+          "description": "Claude Sonnet 4.6 model with 1M context window"
+        },
+        {
+          "modelId": "claude-opus-4.5",
+          "name": "claude-opus-4.5",
+          "description": "Claude Opus 4.5 model"
+        },
+        {
+          "modelId": "claude-sonnet-4.5",
+          "name": "claude-sonnet-4.5",
+          "description": "Claude Sonnet 4.5 model"
+        },
+        {
+          "modelId": "claude-sonnet-4",
+          "name": "claude-sonnet-4",
+          "description": "Hybrid reasoning and coding for regular use"
+        },
+        {
+          "modelId": "claude-haiku-4.5",
+          "name": "claude-haiku-4.5",
+          "description": "The latest Claude Haiku model"
+        },
+        {
+          "modelId": "deepseek-3.2",
+          "name": "deepseek-3.2",
+          "description": "Experimental preview of DeepSeek V3.2"
+        },
+        {
+          "modelId": "minimax-m2.5",
+          "name": "minimax-m2.5",
+          "description": "MiniMax M2.5 model"
+        },
+        {
+          "modelId": "minimax-m2.1",
+          "name": "minimax-m2.1",
+          "description": "Experimental preview of MiniMax M2.1"
+        },
+        {
+          "modelId": "glm-5",
+          "name": "glm-5",
+          "description": "GLM-5 model"
+        },
+        {
+          "modelId": "qwen3-coder-next",
+          "name": "qwen3-coder-next",
+          "description": "Experimental preview of Qwen3 Coder Next"
+        }
+      ]
+    },
+    "mode_surface": {
+      "currentModeId": "kiro_default",
+      "availableModes": [
+        {
+          "id": "kiro_default",
+          "name": "kiro_default",
+          "description": "The default agent for Kiro CLI"
+        },
+        {
+          "id": "kiro_planner",
+          "name": "kiro_planner",
+          "description": "Specialized planning agent that helps break down ideas into implementation plans",
+          "_meta": {
+            "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+          }
+        },
+        {
+          "id": "kiro_guide",
+          "name": "kiro_guide",
+          "description": "Guide agent that answers questions about Kiro CLI features using documentation",
+          "_meta": {
+            "welcomeMessage": "Welcome to Kiro CLI Guide!\n\nYour friendly AI sidekick, ready to help you get the most out of the CLI. Here's what I can help with:\n\n- Slash commands — /agent, /context, /tools and more\n- Built-in tools — read, code, grep... basically superpowers\n- Configuration settings — tweak things to your heart's content\n- Features — MCP, Code Intelligence, and everything in between\n- Create and modify agents, prompts, and configs in ~/.kiro/ and .kiro/\n\nGo ahead, ask me anything about Kiro CLI — no question too weird!\n\nSome fan favorites:\n- \"How do I save a conversation?\"\n- \"What tools are available?\"\n- \"How does the code tool work?\"\n- \"Create a new agent for me\"\n\nTip: Type /guide again to return to your previous agent"
+          }
+        }
+      ]
+    },
+    "config_surface": null,
+    "command_options": {
+      "model": {
+        "kind": "result",
+        "result": {
+          "options": [
+            {
+              "value": "auto",
+              "label": "auto",
+              "description": "Models chosen by task for optimal usage and consistent quality [active]",
+              "group": "1.00x credits"
+            },
+            {
+              "value": "claude-opus-5",
+              "label": "claude-opus-5",
+              "description": "Claude Opus 5 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-sonnet-5",
+              "label": "claude-sonnet-5",
+              "description": "Claude Sonnet 5 model with 1M context window",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-opus-4.8",
+              "label": "claude-opus-4.8",
+              "description": "Claude Opus 4.8 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "gpt-5.6-sol",
+              "label": "gpt-5.6-sol",
+              "description": "Experimental preview of OpenAI GPT 5.6 Sol with 272k context window",
+              "group": "2.40x credits"
+            },
+            {
+              "value": "gpt-5.6-terra",
+              "label": "gpt-5.6-terra",
+              "description": "Experimental preview of OpenAI GPT 5.6 Terra with 272k context window",
+              "group": "1.00x credits"
+            },
+            {
+              "value": "gpt-5.6-luna",
+              "label": "gpt-5.6-luna",
+              "description": "Experimental preview of OpenAI GPT 5.6 Luna with 272k context window",
+              "group": "0.10x credits"
+            },
+            {
+              "value": "claude-opus-4.7",
+              "label": "claude-opus-4.7",
+              "description": "Claude Opus 4.7 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-opus-4.6",
+              "label": "claude-opus-4.6",
+              "description": "Claude Opus 4.6 model with 1M context window",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-sonnet-4.6",
+              "label": "claude-sonnet-4.6",
+              "description": "Claude Sonnet 4.6 model with 1M context window",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-opus-4.5",
+              "label": "claude-opus-4.5",
+              "description": "Claude Opus 4.5 model",
+              "group": "2.20x credits"
+            },
+            {
+              "value": "claude-sonnet-4.5",
+              "label": "claude-sonnet-4.5",
+              "description": "Claude Sonnet 4.5 model",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-sonnet-4",
+              "label": "claude-sonnet-4",
+              "description": "Hybrid reasoning and coding for regular use",
+              "group": "1.30x credits"
+            },
+            {
+              "value": "claude-haiku-4.5",
+              "label": "claude-haiku-4.5",
+              "description": "The latest Claude Haiku model",
+              "group": "0.40x credits"
+            },
+            {
+              "value": "deepseek-3.2",
+              "label": "deepseek-3.2",
+              "description": "Experimental preview of DeepSeek V3.2",
+              "group": "0.25x credits"
+            },
+            {
+              "value": "minimax-m2.5",
+              "label": "minimax-m2.5",
+              "description": "MiniMax M2.5 model",
+              "group": "0.25x credits"
+            },
+            {
+              "value": "minimax-m2.1",
+              "label": "minimax-m2.1",
+              "description": "Experimental preview of MiniMax M2.1",
+              "group": "0.15x credits"
+            },
+            {
+              "value": "glm-5",
+              "label": "glm-5",
+              "description": "GLM-5 model",
+              "group": "0.50x credits"
+            },
+            {
+              "value": "qwen3-coder-next",
+              "label": "qwen3-coder-next",
+              "description": "Experimental preview of Qwen3 Coder Next",
+              "group": "0.05x credits"
+            }
+          ],
+          "hasMore": false
+        }
+      },
+      "mode": {
+        "kind": "error",
+        "code": -32700,
+        "message": "Parse error",
+        "data": {
+          "error": "unknown variant `mode`, expected one of `model`, `agent`, `context`, `compact`, `clear`, `quit`, `usage`, `mcp`, `tools`, `prompts`, `feedback`, `chat`, `rewind`, `effort`",
+          "json": {
+            "sessionId": "<sessionId>",
+            "command": "mode"
+          },
+          "phase": "deserialization"
+        }
+      },
+      "effort": {
+        "kind": "result",
+        "result": {
+          "options": [],
+          "hasMore": false
+        }
+      },
+      "bogus": {
+        "kind": "error",
+        "code": -32700,
+        "message": "Parse error",
+        "data": {
+          "error": "unknown variant `bogus`, expected one of `model`, `agent`, `context`, `compact`, `clear`, `quit`, `usage`, `mcp`, `tools`, `prompts`, `feedback`, `chat`, `rewind`, `effort`",
+          "json": {
+            "sessionId": "<sessionId>",
+            "command": "bogus"
+          },
+          "phase": "deserialization"
+        }
+      }
+    },
+    "set_config_option": {
+      "kind": "error",
+      "code": -32601,
+      "message": "Method not found",
+      "data": "session/set_config_option"
+    },
+    "notification_order": [
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "_kiro.dev/commands/available",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "response",
+      "response",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "_kiro.dev/metadata",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "_kiro.dev/metadata",
+      "response"
+    ],
+    "field_paths": [
+      "_meta",
+      "_meta.trustOptions",
+      "_meta.trustOptions[].display",
+      "_meta.trustOptions[].label",
+      "_meta.trustOptions[].patterns",
+      "_meta.trustOptions[].setting_key",
+      "agentCapabilities",
+      "agentCapabilities.auth",
+      "agentCapabilities.loadSession",
+      "agentCapabilities.mcpCapabilities",
+      "agentCapabilities.mcpCapabilities.http",
+      "agentCapabilities.mcpCapabilities.sse",
+      "agentCapabilities.promptCapabilities",
+      "agentCapabilities.promptCapabilities.audio",
+      "agentCapabilities.promptCapabilities.embeddedContext",
+      "agentCapabilities.promptCapabilities.image",
+      "agentCapabilities.sessionCapabilities",
+      "agentInfo",
+      "agentInfo.name",
+      "agentInfo.title",
+      "agentInfo.version",
+      "authMethods",
+      "cleared",
+      "code",
+      "commands",
+      "commands[].description",
+      "commands[].meta",
+      "commands[].meta.hint",
+      "commands[].meta.inputType",
+      "commands[].meta.local",
+      "commands[].meta.optionsMethod",
+      "commands[].meta.searchable",
+      "commands[].meta.subcommandDescriptions",
+      "commands[].meta.subcommandDescriptions.add",
+      "commands[].meta.subcommandDescriptions.clear",
+      "commands[].meta.subcommandDescriptions.create",
+      "commands[].meta.subcommandDescriptions.edit",
+      "commands[].meta.subcommandDescriptions.init",
+      "commands[].meta.subcommandDescriptions.load",
+      "commands[].meta.subcommandDescriptions.logs",
+      "commands[].meta.subcommandDescriptions.new",
+      "commands[].meta.subcommandDescriptions.overview",
+      "commands[].meta.subcommandDescriptions.remove",
+      "commands[].meta.subcommandDescriptions.save",
+      "commands[].meta.subcommandDescriptions.set-current-as-default",
+      "commands[].meta.subcommandDescriptions.show",
+      "commands[].meta.subcommandDescriptions.status",
+      "commands[].meta.subcommandDescriptions.summary",
+      "commands[].meta.subcommandDescriptions.swap",
+      "commands[].meta.subcommandHints",
+      "commands[].meta.subcommandHints.add",
+      "commands[].meta.subcommandHints.create",
+      "commands[].meta.subcommandHints.edit",
+      "commands[].meta.subcommandHints.load",
+      "commands[].meta.subcommandHints.new",
+      "commands[].meta.subcommandHints.remove",
+      "commands[].meta.subcommandHints.save",
+      "commands[].meta.subcommandHints.swap",
+      "commands[].meta.subcommands",
+      "commands[].name",
+      "contextUsagePercentage",
+      "data",
+      "data.error",
+      "data.json",
+      "data.json.command",
+      "data.json.message",
+      "data.json.sessionId",
+      "data.phase",
+      "hasMore",
+      "mcpServers",
+      "message",
+      "meteringUsage",
+      "meteringUsage[].unit",
+      "meteringUsage[].unitPlural",
+      "meteringUsage[].value",
+      "models",
+      "models.availableModels",
+      "models.availableModels[].description",
+      "models.availableModels[].modelId",
+      "models.availableModels[].name",
+      "models.currentModelId",
+      "modes",
+      "modes.availableModes",
+      "modes.availableModes[]._meta",
+      "modes.availableModes[]._meta.welcomeMessage",
+      "modes.availableModes[].description",
+      "modes.availableModes[].id",
+      "modes.availableModes[].name",
+      "modes.currentModeId",
+      "options",
+      "options[].description",
+      "options[].group",
+      "options[].kind",
+      "options[].label",
+      "options[].name",
+      "options[].optionId",
+      "options[].value",
+      "pendingStages",
+      "prompts",
+      "protocolVersion",
+      "sessionId",
+      "sessions",
+      "sessions[].cwd",
+      "sessions[].messageCount",
+      "sessions[].sessionId",
+      "sessions[].updatedAt",
+      "stopReason",
+      "subagents",
+      "toolCall",
+      "toolCall.rawInput",
+      "toolCall.rawInput.__tool_use_purpose",
+      "toolCall.rawInput.command",
+      "toolCall.rawInput.content",
+      "toolCall.rawInput.path",
+      "toolCall.title",
+      "toolCall.toolCallId",
+      "tools",
+      "tools[].description",
+      "tools[].name",
+      "tools[].source",
+      "turnDurationMs",
+      "update",
+      "update._meta",
+      "update._meta.kiro",
+      "update._meta.kiro.toolName",
+      "update.content",
+      "update.content.text",
+      "update.content.type",
+      "update.content[].content",
+      "update.content[].content.text",
+      "update.content[].content.type",
+      "update.content[].newText",
+      "update.content[].oldText",
+      "update.content[].path",
+      "update.content[].type",
+      "update.kind",
+      "update.locations",
+      "update.locations[].line",
+      "update.locations[].path",
+      "update.rawInput",
+      "update.rawInput.__tool_use_purpose",
+      "update.rawInput.command",
+      "update.rawInput.content",
+      "update.rawInput.operations",
+      "update.rawInput.operations[].mode",
+      "update.rawInput.operations[].path",
+      "update.rawInput.path",
+      "update.rawOutput",
+      "update.rawOutput.items",
+      "update.rawOutput.items[].Json",
+      "update.rawOutput.items[].Json.exit_status",
+      "update.rawOutput.items[].Json.stderr",
+      "update.rawOutput.items[].Json.stdout",
+      "update.rawOutput.items[].Text",
+      "update.sessionUpdate",
+      "update.status",
+      "update.title",
+      "update.toolCallId"
+    ],
+    "server_requests": [
+      "session/request_permission"
+    ],
+    "permission_requests": [
+      {
+        "sessionId": "9e86f582-1f9f-4d8a-94a2-a377a2482fea",
+        "toolCall": {
+          "toolCallId": "toolu_bdrk_01VrBRPKdX3gFAZLsjyi6Wxg",
+          "title": "Running: printf 'V2_AUDIT_2211_SHELL_MARKER\\n'",
+          "rawInput": {
+            "__tool_use_purpose": "Running the requested command.",
+            "command": "printf 'V2_AUDIT_2211_SHELL_MARKER\\n'"
+          }
+        },
+        "options": [
+          {
+            "optionId": "allow_once",
+            "name": "Yes",
+            "kind": "allow_once"
+          },
+          {
+            "optionId": "allow_always",
+            "name": "Always",
+            "kind": "allow_always"
+          },
+          {
+            "optionId": "reject_once",
+            "name": "No",
+            "kind": "reject_once"
+          }
+        ],
+        "_meta": {
+          "trustOptions": [
+            {
+              "label": "Full command",
+              "display": "printf 'V2_AUDIT_2211_SHELL_MARKER\\n'",
+              "setting_key": "allowedCommands",
+              "patterns": [
+                "printf 'V2_AUDIT_2211_SHELL_MARKER\\\\n'"
+              ]
+            },
+            {
+              "label": "Partial command",
+              "display": "printf 'V2_AUDIT_2211_SHELL_MARKER\\n' *",
+              "setting_key": "allowedCommands",
+              "patterns": [
+                "printf 'V2_AUDIT_2211_SHELL_MARKER\\\\n'( .*)?"
+              ]
+            },
+            {
+              "label": "Base command",
+              "display": "printf *",
+              "setting_key": "allowedCommands",
+              "patterns": [
+                "printf( .*)?"
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "sessionId": "9e86f582-1f9f-4d8a-94a2-a377a2482fea",
+        "toolCall": {
+          "toolCallId": "toolu_bdrk_01DvQaQiRATMTJPdJzEE38kH",
+          "title": "Creating result.txt",
+          "rawInput": {
+            "__tool_use_purpose": "Writing the requested result file.",
+            "command": "create",
+            "path": "/tmp/v2-audit-lmc_ywe4/result.txt",
+            "content": "V2_AUDIT_2211_FILE_MARKER|V2_AUDIT_2211_SHELL_MARKER"
+          }
+        },
+        "options": [
+          {
+            "optionId": "allow_once",
+            "name": "Yes",
+            "kind": "allow_once"
+          },
+          {
+            "optionId": "allow_always",
+            "name": "Always",
+            "kind": "allow_always"
+          },
+          {
+            "optionId": "reject_once",
+            "name": "No",
+            "kind": "reject_once"
+          }
+        ],
+        "_meta": {
+          "trustOptions": [
+            {
+              "label": "Specific paths",
+              "display": "result.txt",
+              "setting_key": "runtime_write_paths",
+              "patterns": [
+                "/tmp/v2-audit-lmc_ywe4/result.txt"
+              ]
+            },
+            {
+              "label": "Complete directory",
+              "display": "/tmp/v2-audit-lmc_ywe4",
+              "setting_key": "runtime_write_paths",
+              "patterns": [
+                "/tmp/v2-audit-lmc_ywe4"
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "frame_count": 67,
+    "process_exit": 0,
+    "captured_frames": 67
+  },
+  "comparison": {
+    "field_paths_old": 158,
+    "field_paths_new": 158,
+    "only_new_fields": [],
+    "only_old_fields": [],
+    "extension_keys_only_new": [],
+    "extension_keys_only_old": [],
+    "extension_value_differences": [],
+    "notification_order_identical": false,
+    "notification_order_old": [
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "_kiro.dev/commands/available",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "response",
+      "response",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "_kiro.dev/metadata",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "_kiro.dev/metadata",
+      "response"
+    ],
+    "notification_order_new": [
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "_kiro.dev/commands/available",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "response",
+      "_kiro.dev/subagent/list_update",
+      "response",
+      "response",
+      "response",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:tool_call_update",
+      "_kiro.dev/session/update",
+      "_kiro.dev/metadata",
+      "session/update:tool_call",
+      "session/request_permission",
+      "session/update:tool_call_update",
+      "session/update:agent_message_chunk",
+      "session/update:agent_message_chunk",
+      "_kiro.dev/metadata",
+      "_kiro.dev/metadata",
+      "response",
+      "response",
+      "_kiro.dev/metadata",
+      "response"
+    ]
+  },
+  "limitations": [
+    "Backend responses are live and can vary in model wording, timing, usage, and tool choice.",
+    "Dynamic IDs, timestamps, and disposable workspace paths are normalized only in comparison fields; raw sanitized ordering is retained in captures.",
+    "A tool leg that chooses not to execute a requested tool is reported as a workload limitation, not as a protocol removal."
+  ]
+}

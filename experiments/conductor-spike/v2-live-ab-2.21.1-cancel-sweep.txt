@@ -1,0 +1,8 @@
+live   experiments/conductor-spike/v2-live-ab-2.21.1-cancel-new.jsonl: 175 paths
+pinned experiments/conductor-spike/v2-live-ab-2.21.1-cancel-old.jsonl: 175 paths
+
+ONLY under live (0) — new-field candidates:
+
+ONLY under pinned (0) — usually just coverage:
+
+IDENTICAL field sets — no shape change on this workload.
