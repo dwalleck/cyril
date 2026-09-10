@@ -174,3 +174,50 @@ produce"; ordering stays fenced at the state layer).
 * If the App's page step and the widget's window height ever disagree, the
   effect is a longer page jump on a short terminal; the scroll clamp keeps the
   offset valid.
+
+## PR122 review fixes (2026-09-10, tiers 1–4)
+
+Scope and per-finding decisions: `review-decisions.md`. The slices above are
+unchanged in behavior; this pass hardened them against the adjudicated review.
+
+**Landed, by tier**
+
+1. *Push-side, no spec change* — #9 (both defaulted fields are `Option`), #11
+   (unrecognized `powers/*` warns, other families stay silent), #12
+   (`discovery::nonempty` for the identifier; blank optionals normalized in
+   `PowerInfo::new`), #4 (census control anchored to the converter, fed
+   comment-stripped and test-stripped text), #2 (`names.push("powers")` above the
+   `/help` snapshot + the registry-wide fence).
+2. *Widget/state arithmetic* — #5 (`BORDER_ROWS = 2`), #7 (steering token
+   budgeted out of the line), #8 (window-aware clamp in state; render-side clamp
+   for a squeezed popup), #6 (title states the window), #19 (changed-check in
+   both refresh methods, no clone, dead store deleted).
+3. *Fence repairs* — #14a (ids asserted, fixture case fixed), #14c (CRLF fed to
+   the function under test), #18 (order-agnostic transport collection), #13 +
+   #15 + #16 (shared predicate; both doc files; ASCII-lowercase prose).
+4. *Root cause* — #20 + #3: `Overlay` + `Overlay::ALL` in `traits.rs`,
+   `UiState::topmost_overlay`/`has_modal_overlay`, `render` paints the constant
+   (approval last), `handle_key` matches on it, and the three guards that must
+   agree now share the predicate.
+
+**Not landed (tier 5, needs re-approval)** — the pull path, the catalog
+lifecycle on `/new`, `/powers` registration gating, and the overlay displacement
+policy. Rationale per item in `review-decisions.md`.
+
+**Oracles**
+
+- `python3 .cyril-v19o/oracles/module_shape.py` → PASS (C8 ledger + the two
+  censuses). The protected-parent allowlist was widened once for this pass, with
+  the correction recorded in `design.md` → "PR122 review fixes".
+- `bash .cyril-v19o/oracles/mutations.sh` → every named mutation red, every
+  fence green after restore (transcript in the commit that added them).
+
+**Gates** (committed tree) — `cargo fmt --all -- --check` clean;
+`cargo clippy --workspace --all-targets --features kas` and
+`cargo clippy --all-targets -- -D warnings` both silent; `cargo test --workspace
+--features kas` 1993 passed / 0 failed; `cargo test --workspace` 1991 passed /
+0 failed. Oracle run: 27 named mutations, every fence red under its mutation and
+green after restore.
+
+**Not verified** — no live KAS run this pass; the 100×24 / `input_top = 18`
+geometry is exercised in `TestBackend` only.

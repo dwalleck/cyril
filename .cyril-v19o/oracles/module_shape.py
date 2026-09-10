@@ -247,19 +247,34 @@ def check_module_delta(
 
 
 def check_protected_parents(branch: str) -> None:
-    """4: protected parents carry wiring, not responsibility."""
+    """4: protected parents carry wiring, not responsibility.
+
+    The allowlists were widened once, deliberately, for the PR122 review fixes
+    (recorded in `design.md` → C8): the verified root cause of findings 3/20 is
+    one overlay predicate plus one stack order, so `UiState` owns the query
+    methods, `App` consults the predicate at its three guard sites plus the key
+    chain, and finding 19's mirror reaches the hooks panel's lifecycle methods.
+    Every other added production line in these two files is still reported.
+    """
     check_module_delta(
         "C8",
         APP,
         branch,
-        allowed_functions=re.compile(r"dispatch_powers_panel_key"),
-        allowed_markers=re.compile(r"Notification::PowersChanged|CommandResultKind::ShowPowers"),
+        allowed_functions=re.compile(
+            r"dispatch_powers_panel_key"
+            r"|handle_key"
+            r"|handle_terminal_event"
+            r"|handle_voice_event"
+        ),
+        allowed_markers=re.compile(
+            r"Notification::PowersChanged|CommandResultKind::ShowPowers|[Oo]verlay"
+        ),
     )
     check_module_delta(
         "C8",
         STATE,
         branch,
-        allowed_functions=re.compile(r"powers"),
+        allowed_functions=re.compile(r"powers|hooks|overlay"),
         allowed_markers=re.compile(r"powers_panel|PowersPanelState|PowersChanged"),
     )
 

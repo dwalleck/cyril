@@ -19,8 +19,10 @@ ADAPTER=crates/cyril-core/src/protocol/convert/kas/powers.rs
 TYPE=crates/cyril-core/src/types/power.rs
 WIDGET=crates/cyril-ui/src/widgets/powers_panel.rs
 STATE=crates/cyril-ui/src/state.rs
+TRAITS=crates/cyril-ui/src/traits.rs
 APP=crates/cyril/src/app.rs
 BUILTIN=crates/cyril-core/src/commands/builtin.rs
+COMMANDS=crates/cyril-core/src/commands/mod.rs
 ENGINE=crates/cyril-core/src/protocol/engine.rs
 
 BACKUP=$(mktemp -d)
@@ -28,7 +30,7 @@ FAILURES=0
 MUTATIONS_RUN=0
 
 restore_all() {
-  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$APP" "$BUILTIN" "$ENGINE"; do
+  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$TRAITS" "$APP" "$BUILTIN" "$COMMANDS" "$ENGINE"; do
     if [ -f "$BACKUP/$(echo "$file" | tr / _)" ]; then
       cp "$BACKUP/$(echo "$file" | tr / _)" "$file"
     fi
@@ -122,21 +124,54 @@ prove C3 malformed-frame-becomes-an-empty-catalog "$ADAPTER" \
 UI_TEST=(cargo test -p cyril-ui --lib)
 
 prove C4 title-keeps-empty-display-name "$TYPE" \
-  '            display_name: display_name.filter(|value| !value.is_empty()),' \
+  '            display_name: display_name.filter(|value| !value.trim().is_empty()),' \
   '            display_name,' \
   "${CORE_TEST[@]}" title_falls_back_to_id_and_empty_strings_mean_absent
 
+prove C4 whitespace-only-is-not-absent "$TYPE" \
+  '            display_name: display_name.filter(|value| !value.trim().is_empty()),' \
+  '            display_name: display_name.filter(|value| !value.is_empty()),' \
+  "${CORE_TEST[@]}" whitespace_only_optionals_are_absent_and_blank_servers_are_dropped
+
 prove C5 no-sort-on-open "$STATE" \
-  '        powers.sort_by_cached_key(|power| {
+  '        ordered.sort_by_cached_key(|power| {
             (power.title().to_ascii_lowercase(), power.name().to_owned())
         });' \
-  '        let _ = &mut powers;' \
+  '        let _ = &mut ordered;' \
+  "${UI_TEST[@]}" powers_panel_orders_and_replaces
+
+prove C5 id-tie-break-dropped "$STATE" \
+  '        ordered.sort_by_cached_key(|power| {
+            (power.title().to_ascii_lowercase(), power.name().to_owned())
+        });' \
+  '        ordered.sort_by_cached_key(|power| power.title().to_ascii_lowercase());' \
   "${UI_TEST[@]}" powers_panel_orders_and_replaces
 
 prove C5 refresh-strands-the-viewport "$STATE" \
-  '            panel.scroll_offset = scroll.min(panel.powers.len().saturating_sub(1));' \
-  '            panel.scroll_offset = scroll;' \
+  '        let scroll = panel
+            .scroll_offset
+            .min(Self::max_powers_scroll(ordered.len()));' \
+  '        let scroll = panel.scroll_offset;' \
   "${UI_TEST[@]}" powers_panel_orders_and_replaces
+
+prove C5 scroll-clamp-uses-the-last-index "$STATE" \
+  '        len.saturating_sub(MAX_VISIBLE_POWERS)' \
+  '        len.saturating_sub(1)' \
+  "${UI_TEST[@]}" powers_panel_orders_and_replaces
+
+prove C5 identical-push-reports-a-change "$STATE" \
+  '        if panel.powers == ordered {
+            return false;
+        }' \
+  '' \
+  "${UI_TEST[@]}" powers_panel_orders_and_replaces
+
+prove C5 hooks-identical-push-reports-a-change "$STATE" \
+  '        if panel.hooks == ordered {
+            return false;
+        }' \
+  '' \
+  "${UI_TEST[@]}" refresh_replaces_contents_and_clamps_scroll
 
 prove C6 title-clamp-dropped "$WIDGET" \
   '            format!("  {}", truncate_and_pad(power.title(), text_width)),' \
@@ -144,11 +179,31 @@ prove C6 title-clamp-dropped "$WIDGET" \
   "${UI_TEST[@]}" wide_title_clamps_to_the_panel
 
 prove C6 steering-marker-dropped "$WIDGET" \
-  '        if power.has_steering_files() {
-            meta.push_str(" · steering");
-        }' \
-  '        let _ = power.has_steering_files();' \
+  '        let steering = if power.has_steering_files() && inner_width > STEERING_TOKEN.len() {
+            STEERING_TOKEN
+        } else {
+            ""
+        };' \
+  '        let steering = "";' \
   "${UI_TEST[@]}" layout_matches_the_approved_row_shape
+
+prove C6 steering-token-unbudgeted "$WIDGET" \
+  '        let meta = format!(
+            "{}{steering}",
+            truncate(&meta, inner_width.saturating_sub(steering.len()))
+        );' \
+  '        let meta = format!(
+            "{}{steering}",
+            truncate(&meta, inner_width)
+        );' \
+  "${UI_TEST[@]}" steering_marker_survives_a_truncated_meta_line
+
+prove C6 viewport-scroll-not-clamped "$WIDGET" \
+  '    let first_visible = state
+        .scroll_offset
+        .min(state.powers.len().saturating_sub(window));' \
+  '    let first_visible = state.scroll_offset;' \
+  "${UI_TEST[@]}" viewport_window_clamps_scroll
 
 prove C6 empty-catalog-placeholder-dropped "$WIDGET" \
   '    if state.powers.is_empty() {' \
@@ -161,7 +216,7 @@ CYRIL_TEST=(cargo test -p cyril --features kas)
 
 prove C5 push-opens-the-panel "$APP" \
   '        if let Notification::PowersChanged { ref powers } = notification
-            && self.ui_state.refresh_powers_panel(powers.clone())
+            && self.ui_state.refresh_powers_panel(powers)
         {
             self.redraw_needed = true;
         }' \
@@ -173,7 +228,9 @@ prove C5 push-opens-the-panel "$APP" \
 
 prove C5 no-catalog-answer-dropped "$BUILTIN" \
   '            None => Ok(CommandResult::system_message(
-                "No powers reported yet — start a KAS session first.".to_string(),
+                "No powers reported yet — powers come from the KAS engine, so this build needs \
+                 --features kas and the session needs --agent-engine kas."
+                    .to_string(),
             )),' \
   '            None => Ok(CommandResult::dispatched()),' \
   "${CORE_TEST[@]}" powers_without_catalog_reports_and_with_catalog_opens
@@ -200,6 +257,82 @@ prove C5 push-dropped-at-the-engine "$ENGINE" \
                 }' \
   '' \
   cargo test -p cyril-core --all-features --lib powers_push_survives_the_transport
+
+# --- Slice 5: the PR-review fixes (PR122 verification tiers 1-4) --------------
+#
+# Every fence added or strengthened for the review gets its own named mutation.
+
+# #12: a blank identifier is not an identifier. Without the `nonempty` guard an
+# empty `name` renders as a blank BOLD row sorted above every real power.
+prove C5 blank-name-renders-a-row "$ADAPTER" \
+  '    #[serde(deserialize_with = "identified_name")]
+    name: String,' \
+  '    name: String,' \
+  "${CORE_TEST[@]}" malformed_powers_frames_drop_and_never_clear
+
+# #4: the census control is anchored to the CONVERTER module, not "somewhere in
+# the tree" — the old control was satisfied by a doc comment and two test
+# doubles. Assembling the method name from pieces (what a textual guard cannot
+# see) must red it.
+prove C7 control-anchored-to-the-converter "$ADAPTER" \
+  'pub(crate) const METHOD: &str = "kiro/powers/items_changed";' \
+  'pub(crate) const METHOD: &str = concat!("kiro/powers/", "items_changed");' \
+  cargo test -p cyril --test powers_source_fence no_production_source_names_an_unusable_powers_method
+
+# #4/#7: and a production mention of the unadvertised pull method must red the
+# violator scan, not just the control.
+prove C7 a-pull-method-in-production-cannot-ship "$ADAPTER" \
+  'pub(crate) const METHOD: &str = "kiro/powers/items_changed";' \
+  'pub(crate) const METHOD: &str = "kiro/powers/items_changed";
+/// The unadvertised pull method this census exists to forbid.
+pub(crate) const PULL_METHOD: &str = "_kiro/powers/list";' \
+  cargo test -p cyril --test powers_source_fence no_production_source_names_an_unusable_powers_method
+
+# #2: `/help` prints the registry's eager snapshot, so a name pushed after the
+# snapshot is invisible.
+prove C5 help-snapshot-misses-late-commands "$COMMANDS" \
+  '        names.push("powers");
+        registry.register(Arc::new(builtin::HelpCommand::new(&names)));' \
+  '        registry.register(Arc::new(builtin::HelpCommand::new(&names)));
+        names.push("powers");' \
+  "${CORE_TEST[@]}" help_lists_every_registered_command
+
+# #3/#20: the keyboard follows the topmost LAYER. Dropping the `.rev()` makes
+# the predicate report the bottom-most open overlay instead.
+prove C8 topmost-overlay-ignores-layer-priority "$STATE" \
+  '            .rev()
+            .find(|overlay| self.is_overlay_open(*overlay))' \
+  '            .find(|overlay| self.is_overlay_open(*overlay))' \
+  "${UI_TEST[@]}" topmost_overlay_orders_the_stack
+
+# #3/#20: and the paint order is the key order reversed. Flipping the constant
+# paints the approval prompt under the panel that clears its rect.
+prove C8 paint-order-inverted "$TRAITS" \
+  '    pub const ALL: [Overlay; 6] = [
+        Overlay::Usage,
+        Overlay::Code,
+        Overlay::Powers,
+        Overlay::Hooks,
+        Overlay::Picker,
+        Overlay::Approval,
+    ];' \
+  '    pub const ALL: [Overlay; 6] = [
+        Overlay::Approval,
+        Overlay::Picker,
+        Overlay::Hooks,
+        Overlay::Powers,
+        Overlay::Code,
+        Overlay::Usage,
+    ];' \
+  "${UI_TEST[@]}" topmost_overlay_paints_last
+
+# #13: one predicate, three guards. The paste guard knew only about `/usage`.
+prove C8 paste-guard-knows-only-usage "$APP" \
+  '                if !self.ui_state.has_modal_overlay() {
+                    self.ui_state.insert_text(&text);' \
+  '                if !self.ui_state.has_usage_panel() {
+                    self.ui_state.insert_text(&text);' \
+  "${CYRIL_TEST[@]}" paste_mouse_and_voice_respect_every_overlay
 
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"

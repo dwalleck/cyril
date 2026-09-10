@@ -213,3 +213,81 @@ Every other row is `PENDING — checkpointed-build` with its slice named; no row
 Requester approval (verbatim): `"Approve design.md"`
 Date: 2026-09-10
 Approved risk acceptances: C0's regression fence is `N/A — approved risk` (one-shot fixture-provenance check run before approval; the pinned values become permanent literals in C1's fence, and the raw capture, probe script and verdict are committed under `experiments/conductor-spike/` so provenance stays auditable).
+
+## PR122 review fixes (2026-09-10, post-approval)
+
+Input: `PR122-code-review-verification.md`'s "Verified fix order", tiers 1–4.
+Per-finding decisions and evidence states: `review-decisions.md`. The approved
+claims C1–C8 are unchanged; what follows records how the review changed the
+fences and the oracles that enforce them, plus the one allowlist correction.
+
+### Claims touched
+
+- **C5** — ordering now has a load-bearing id tie-break (finding 14a), a
+  `refresh` that reports `false` for identical rows (finding 19), and a
+  window-aware scroll clamp (finding 8). The App fence drives the real
+  `/powers` submit path (finding 14b).
+- **C6** — the popup's row budget is `BORDER_ROWS = 2`; the title states the
+  visible window when the catalog overflows (finding 6); the steering token is
+  budgeted before truncation (finding 7); the widget clamps a stale offset into
+  the placed window (finding 8).
+- **C7** — the census control is anchored to `convert/kas/powers.rs` and fed
+  comment-stripped, test-stripped production text (finding 4); the rationale
+  strings state that `list` is unadvertised rather than non-functional
+  (finding 1); an unrecognized `powers/*` method warns (finding 11).
+- **C8** — allowlist widened, below.
+- **C9 (new)** — *One predicate answers "who owns the keyboard", and it is the
+  overlay painted last.* Falsifier: open two overlays whose rects overlap and
+  draw the frame; every cell both claim must carry the topmost one's content,
+  and the key chain must dispatch to it. Oracle: `TestBackend` buffers for
+  `approval + powers`, `approval`-only, `powers`-only and neither, compared
+  cell-wise (no geometry assumption), plus the key chain driven through
+  `App::handle_key`.
+
+### Named mutations added (or re-anchored) in `mutations.sh`
+
+| Claim | Mutation | Fence that must red |
+|---|---|---|
+| C5 | `no-sort-on-open` (re-anchored to `sorted_powers`) | `powers_panel_orders_and_replaces` |
+| C5 | `id-tie-break-dropped` | `powers_panel_orders_and_replaces` |
+| C5 | `refresh-strands-the-viewport` (re-anchored) | `powers_panel_orders_and_replaces` |
+| C5 | `scroll-clamp-uses-the-last-index` | `powers_panel_orders_and_replaces` |
+| C5 | `identical-push-reports-a-change` | `powers_panel_orders_and_replaces` |
+| C5 | `hooks-identical-push-reports-a-change` | `refresh_replaces_contents_and_clamps_scroll` |
+| C5 | `push-opens-the-panel` (re-anchored, by-reference refresh) | `powers_push_updates_without_opening_and_command_opens` |
+| C5 | `no-catalog-answer-dropped` (re-anchored to finding 17's message) | `powers_without_catalog_reports_and_with_catalog_opens` |
+| C5 | `help-snapshot-misses-late-commands` | `help_lists_every_registered_command` |
+| C6 | `steering-marker-dropped` (re-anchored) | `layout_matches_the_approved_row_shape` |
+| C6 | `steering-token-unbudgeted` | `steering_marker_survives_a_truncated_meta_line` |
+| C6 | `viewport-scroll-not-clamped` | `viewport_window_clamps_scroll` |
+| C7 | `blank-name-renders-a-row` | `malformed_powers_frames_drop_and_never_clear` |
+| C7 | `control-anchored-to-the-converter` | `no_production_source_names_an_unusable_powers_method` |
+| C7 | `a-pull-method-in-production-cannot-ship` | `no_production_source_names_an_unusable_powers_method` |
+| C8 | `topmost-overlay-ignores-layer-priority` | `topmost_overlay_orders_the_stack` |
+| C8 | `paint-order-inverted` | `topmost_overlay_paints_last` |
+| C8 | `paste-guard-knows-only-usage` | `paste_mouse_and_voice_respect_every_overlay` |
+
+Not expressible as a single-anchor mutation: finding 9's `Option`+`default`
+decode tolerance (the defect is the field's *type*, and reverting it breaks the
+conversion's compile). That claim's evidence is the verification's executed
+serde mirror probe plus the fence `explicit_null_on_a_defaulted_item_field_keeps_the_catalog`,
+which asserts the observable outcome (null on a defaulted field ⇒ the catalog
+still loads).
+
+### C8 allowlist correction
+
+`module_shape.py`'s protected-parent net gained the overlay predicate work:
+
+- `app.rs`: allowed functions `dispatch_powers_panel_key`, `handle_key`,
+  `handle_terminal_event`, `handle_voice_event`; allowed markers
+  `Notification::PowersChanged`, `CommandResultKind::ShowPowers`, `overlay`.
+- `state.rs`: allowed functions `*powers*`, `*hooks*`, `*overlay*`.
+
+Rationale: the verified root cause of findings 3/20 is one predicate plus one
+stack order, so `UiState` owns the query methods, `App` consults the predicate at
+its three guard sites and dispatches the stack in the key chain, and finding
+19's mirror reaches the hooks panel's lifecycle methods — all of which the
+review's tier-3/4 fix order mandates. The net still reports any other added
+production line in these two files, and the "no chat emission from powers
+methods" check is unchanged.
+
