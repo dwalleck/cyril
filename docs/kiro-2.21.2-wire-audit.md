@@ -534,6 +534,45 @@ to `Ok(None)`. The families worth deciding on deliberately are the capability
 and feature advertisements, because ignoring those means cyril cannot know what
 the agent offers.
 
+## 6g. Why the gap existed — delta audits cannot find standing gaps
+
+The leaf-name count in § 6f understates the problem. Counted as *frames on one
+ordinary v3 turn*:
+
+| frame | per turn | cyril |
+|---|---:|---|
+| `_kiro/sessions/changed` | 5 | dropped |
+| `_kiro/progressive_context/items_changed` | 2 | dropped |
+| `_kiro/governance/state` | 1 | dropped |
+| `_kiro/mcp/status` | 1 | dropped |
+| `_kiro/powers/items_changed` | 1 | dropped |
+| `_kiro/steering/documents_changed` | 1 | dropped |
+| `_kiro/tools/didChange` | 1 | dropped |
+| **total notifications** | **12** | **all dropped** |
+| `_kiro/auth/getAccessToken`, `_kiro/terminal/shell_type` | 2 | **handled** (requests, not notifications) |
+
+`KasEngine::convert_ext_notification` delegates to
+`convert::kiro::to_ext_notification` (`engine.rs:227`), whose arms are **15
+`kiro.dev/*` (v2) against 2 `kiro/*` (KAS)**. Everything else returns `Ok(None)`,
+and `inbound.rs:186` maps `Ok(None) => Ok(false)` — **no warning, no debug line,
+no counter**, while the adjacent `Err` branch does warn. An unhandled v3 frame is
+therefore indistinguishable from no frame at all.
+
+**This is why no audit caught it.** Every release audit in `docs/` asks one
+question: *what changed between version N and N+1?* A frame that has arrived
+unchanged since KAS 0.46 appears in no diff, so a delta audit **structurally
+cannot** surface it — and the same blind spot explains § 6e's context breakdown,
+which was never new and therefore never flagged.
+
+The 110-method census knew the method *names* the entire time. What never
+existed was a comparison between that list and the arms cyril implements. That
+is a different lane — coverage, not delta — and § 6f is its first run.
+
+The cheapest durable fix is not a handler but a **log**: a `debug!` on the
+`Ok(None)` path converts a silent gap into a discoverable one, and would have
+surfaced this the first time anyone pointed cyril at KAS. Filed as
+**cyril-58uv** (P1).
+
 ## 7. Cyril impact
 
 **No code change is required by this release.**
