@@ -1,20 +1,25 @@
 //! cyril-v19o C7: no production code can call a powers method that does not
 //! exist.
 //!
-//! The catalog is push-only by necessity, not preference. Measured on kiro-cli
+//! The catalog is push-only by decision, not preference. Measured on kiro-cli
 //! 2.21.2 against a live KAS session (IAM Identity Center):
 //!
 //! * `_kiro/powers/items_changed` **arrives unprompted** ~18 ms after
 //!   `session/new`, carrying the installed power set — that is the whole
-//!   catalog surface.
-//! * `_kiro/powers/list` is **never advertised** by the agent.
+//!   catalog surface cyril consumes.
+//! * `_kiro/powers/list` is **never advertised** by the agent in
+//!   `extensionMethods`. It does dispatch when called (the PR's own probe
+//!   exercised it 1 ms after `session/new` and got three powers back), but
+//!   nothing on the wire says so: an unadvertised method cannot be
+//!   feature-detected, so an affordance on it would be a control whose
+//!   availability the client can never establish.
 //! * `_kiro/powers/refresh` is **declared but unimplemented**: calling it
 //!   returns `-32603 Unknown ext method`.
 //!
-//! So an affordance wired to either pull method would be a control that cannot
-//! work, and the kind of defect that only shows up when a user presses it. This
-//! fence makes that impossible rather than merely absent: the *only* powers
-//! method any production source may name is the push.
+//! So neither pull method may be wired to a control, and the requester
+//! re-confirmed push-only after the `list` row was challenged. This fence makes
+//! that impossible rather than merely absent: the *only* powers method any
+//! production source may name is the push.
 //!
 //! Scope is `crates/*/src/**/*.rs` — production code plus the `#[cfg(test)]`
 //! modules inside it. Prose is stripped first, so documentation may discuss the
@@ -136,6 +141,21 @@ fn unimplemented_powers_methods(src: &str) -> Vec<String> {
 
 // ── C7: the census ───────────────────────────────────────────────────────────
 
+/// The one production file that must name the push: the converter that owns
+/// the method string.
+///
+/// Anchoring the non-vacuity control here is the point. A control that only
+/// asked "is the string somewhere in the tree?" stayed green with the
+/// converter deleted — a doc comment in `types/power.rs` and two test doubles
+/// spell the method too (review finding 4).
+const CONVERTER: &str = "crates/cyril-core/src/protocol/convert/kas/powers.rs";
+
+/// Everything before a file's `#[cfg(test)]` module: the code that ships.
+/// The control must not be satisfiable by a test that names the method either.
+fn production_prefix(src: &str) -> &str {
+    src.split("#[cfg(test)]").next().unwrap_or(src)
+}
+
 /// The claim: no production source names a powers method other than the push.
 #[test]
 fn no_production_source_names_an_unusable_powers_method() {
@@ -153,34 +173,37 @@ fn no_production_source_names_an_unusable_powers_method() {
     let mut push_seen_in: Vec<String> = Vec::new();
     for path in &sources {
         let src = read_normalized(path);
-        if src.contains(&format!("kiro/powers/{PUSH_METHOD}")) {
-            let rel = path
-                .strip_prefix(repo_root())
+        let rel = || {
+            path.strip_prefix(repo_root())
                 .unwrap_or(path)
                 .display()
-                .to_string();
-            push_seen_in.push(rel);
+                .to_string()
+        };
+        // Same stripping as the violator scan, and shipping code only: prose
+        // and test doubles must not be able to satisfy a control that exists
+        // to prove this census is looking at real code.
+        if production_prefix(&strip_line_comments(&src))
+            .contains(&format!("kiro/powers/{PUSH_METHOD}"))
+        {
+            push_seen_in.push(rel());
         }
         for spelling in unimplemented_powers_methods(&src) {
-            let rel = path
-                .strip_prefix(repo_root())
-                .unwrap_or(path)
-                .display()
-                .to_string();
-            violators.push(format!("{rel}: {spelling}"));
+            violators.push(format!("{}: {spelling}", rel()));
         }
     }
 
     assert!(
-        !push_seen_in.is_empty(),
-        "the push method must appear in production code (the converter owns it) \
-         — its absence means this census is scanning the wrong tree"
+        push_seen_in.iter().any(|seen| seen == CONVERTER),
+        "the converter must name the push method in production code \
+         ({CONVERTER}) — its absence means this census is scanning the wrong \
+         tree, or the one consumer it protects is gone. Seen in: {push_seen_in:?}"
     );
     assert!(
         violators.is_empty(),
-        "these production sources name a powers method that does not exist \
-         (`list` is unadvertised, `refresh` answers -32603 Unknown ext method) — \
-         an affordance on either is a control that cannot work: {violators:?}. \
+        "these production sources name a powers method cyril cannot use \
+         (`list` is unadvertised, so its availability cannot be feature-detected; \
+         `refresh` answers -32603 Unknown ext method) — an affordance on either \
+         is a control the client can never establish: {violators:?}. \
          Scanned {} files across crates/*/src.",
         sources.len()
     );

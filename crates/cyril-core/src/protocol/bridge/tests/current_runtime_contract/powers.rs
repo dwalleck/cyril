@@ -45,7 +45,18 @@ async fn powers_push_survives_the_transport_and_draws_no_request() {
             let mut pushed: Option<Notification> = None;
             let mut session_id: Option<crate::types::SessionId> = None;
             let mut saw_usage = false;
-            for _ in 0..3 {
+            // Read until BOTH the push and `SessionCreated` have arrived, not
+            // until `SessionCreated` has: the push measures 18 ms after the
+            // `session/new` reply on this machine, but that gap is wall-clock,
+            // not a wire guarantee, and what this fence owes the claim is that
+            // the frame survives the transport — not which side of a local
+            // notification it lands on. Breaking on `SessionCreated` made the
+            // verdict order-dependent, so the harness's own timing decided the
+            // result (review finding 18).
+            for _ in 0..5 {
+                if pushed.is_some() && session_id.is_some() {
+                    break;
+                }
                 match next_notification("powers", &mut rx).await {
                     Notification::PowersChanged { powers } => {
                         pushed = Some(Notification::PowersChanged { powers });
@@ -59,7 +70,6 @@ async fn powers_push_survives_the_transport_and_draws_no_request() {
                         ..
                     } => {
                         session_id = Some(created);
-                        break;
                     }
                     other => panic!("unexpected frame during session start: {other:?}"),
                 }
@@ -69,8 +79,7 @@ async fn powers_push_survives_the_transport_and_draws_no_request() {
                 "the bridge's own usage-session notification must still be emitted"
             );
             assert!(session_id.is_some(), "SessionCreated must arrive");
-            let pushed =
-                pushed.expect_contract("the powers push must arrive before SessionCreated");
+            let pushed = pushed.expect_contract("the powers push must arrive");
 
             match pushed {
                 Notification::PowersChanged { powers } => {
