@@ -183,7 +183,10 @@ impl DomainMediator {
                 self.source_observer.observe(&routed);
                 self.handle_routed(routed).await
             }
-            Ok(None) => Ok(false),
+            Ok(None) => {
+                tracing::debug!(method, "unhandled extension notification");
+                Ok(false)
+            }
             Err(error) => {
                 tracing::warn!(method, %error, "extension conversion failed");
                 Ok(false)

@@ -1104,10 +1104,7 @@ pub(crate) fn to_ext_notification(
             );
             Ok(None)
         }
-        other => {
-            tracing::debug!(method = other, "unknown extension notification");
-            Ok(None)
-        }
+        _ => Ok(None),
     }
 }
 
