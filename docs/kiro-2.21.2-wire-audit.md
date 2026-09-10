@@ -473,8 +473,66 @@ and `tools.mcp` were zero throughout — untested rather than known-empty, since
 the probe workspace loaded none.
 
 Identical on 0.54.8 and 0.58.7: this is **not** new in 2.21.2. It has been on
-the v3 wire all along and was missed because every prior sweep targeted v2,
-which does not push it. Filed as **cyril-8xca**.
+the v3 wire all along and was missed by the sweeps because every prior sweep
+targeted v2, which does not push it.
+
+**Cyril already consumes all of this.** `parse_breakdown` / `parse_bucket`
+(`convert/kas.rs:551`) parse all five buckets into a typed `ContextBreakdown`,
+`TuiState::context_breakdown()` exposes it, and `widgets/toolbar.rs:197` renders
+it — and `parse_bucket` already refuses a malformed bucket rather than
+fabricating a sentinel zero. An initial issue claiming otherwise (cyril-8xca)
+was filed from the wire evidence without checking the consumer, and has been
+closed as invalid. The only real residue is that `{tokens: 0, percent: 2.1}`
+passes validation (both are well-typed) and reaches the toolbar as a
+contradictory pair — filed as **cyril-0s9x** (P4).
+
+The general lesson, recorded because it cost two wrong claims in one session: a
+wire sweep establishes what *arrives*, never what cyril *does with it*. Those
+are two different questions and the second one requires reading the consumer.
+
+## 6f. v3 coverage — what cyril models of what arrives
+
+Sweeping paths answers "what arrives"; it says nothing about what cyril does
+with them. Cross-checking the v3 leaf names against `crates/` — matching both
+string literals and snake_case identifiers, since serde-derived fields never
+appear as literals — gives:
+
+| | count |
+|---|---:|
+| v3 wire paths (both workloads) | 309 |
+| distinct leaf names | 157 |
+| matched in `crates/` | 112 |
+| **not found** | **45** |
+
+The 45 cluster into families rather than scattering:
+
+* **`params.update._meta.kiro` enrichments (18)** — `commandId`, `contextQuery`,
+  `originalName` on available commands; the `hasEffort` / `effortLevels` /
+  `rateMultiplier` / `rateUnit` family; `interactionType`,
+  `interactionResolved`, `pendingInteraction`; `replayId`;
+  `rawOutput.retracted`; `rawInput.run_in_background`.
+* **`result._meta` session flags (8)** — `agentMode`, `workflowsEnabled`,
+  `specWorkflow`, `specPlanEnabled`, `specSkipClarificationEnabled`,
+  `semanticReviewEnabled`, `ftaEnabled`, `lastModifiedAt`.
+* **`params.features` (6)** — `mcpEnabled`, `webToolsEnabled`, `promptLogging`,
+  `usageAnalytics`, `autonomousAgents`, `codeReferenceTracker`.
+* **`result.agentCapabilities._meta.kiro` (5)** — `executionTargets`,
+  `replayMarking`, `sessionListScopes`, `sessionSources`, `sourceProviders`.
+  This family is the most consequential: it is KAS telling the client what it
+  can do, and cyril reads none of it.
+* **consent (3)**, **steering documents (2)**, and `powers` / `upserted` /
+  `executionTarget`.
+
+**Treat 112 as an optimistic upper bound.** The heuristic matches an identifier
+anywhere in `crates/`, so an incidental match counts as modelled — spot-checking
+found `governance` has no non-test reference despite being counted. The true
+figure is somewhere below 112, and only reading each consumer settles it.
+
+Equally, "not found" is not "broken". Many of the 45 are `_meta` enrichments a
+client may legitimately ignore, and unknown `_kiro/*` frames already drop safely
+to `Ok(None)`. The families worth deciding on deliberately are the capability
+and feature advertisements, because ignoring those means cyril cannot know what
+the agent offers.
 
 ## 7. Cyril impact
 
