@@ -379,6 +379,16 @@ impl CommandRegistry {
             names.push("workflow");
             registry.register(Arc::new(workflow::WorkflowCommand::new(workspace_root)));
         }
+        // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
+        // advertises 25 commands and `powers` is not among them, and KAS
+        // advertises no TUI commands at all — so cyril always owns the name
+        // (and `register_agent_commands` skips a name already taken). On v2 the
+        // command can only ever answer "not reported yet" (cyril-v19o).
+        //
+        // Pushed BEFORE `HelpCommand` copies the list: the snapshot is eager,
+        // so a name pushed after it is invisible to `/help` — the state this
+        // fixes (review finding 2).
+        names.push("powers");
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
         registry.register(Arc::new(builtin::QuitCommand));
@@ -388,12 +398,6 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::VoiceToggleCommand));
         registry.register(Arc::new(builtin::ThemeCommand));
         registry.register(Arc::new(builtin::UsageCommand::new(usage_account)));
-        // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
-        // advertises 25 commands and `powers` is not among them, and KAS
-        // advertises no TUI commands at all — so cyril always owns the name
-        // (and `register_agent_commands` skips a name already taken). On v2 the
-        // command can only ever answer "not reported yet" (cyril-v19o).
-        names.push("powers");
         registry.register(Arc::new(builtin::PowersCommand));
         registry.register(Arc::new(builtin::MemoryCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
@@ -861,6 +865,68 @@ mod tests {
             rx.try_recv().is_err(),
             "executing /powers must not dispatch a bridge command"
         );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 2). `/help` is the discovery
+    /// surface a user reads, so every command the registry can execute must be
+    /// named there. `HelpCommand` copies its name list at construction, so a
+    /// name pushed after that registration parses fine and is silently missing
+    /// from `/help` — which is how `/powers` shipped. Both registry shapes are
+    /// checked because `/hooks` and `/workflow` are engine-conditional.
+    #[tokio::test]
+    async fn help_lists_every_registered_command() {
+        let workspace = std::path::PathBuf::from("/workspace");
+        let shapes = [
+            (HooksCommandSource::Agent, WorkflowCommandSource::None),
+            (
+                HooksCommandSource::Kas {
+                    workspace_root: workspace.clone(),
+                },
+                WorkflowCommandSource::Kas {
+                    workspace_root: workspace.clone(),
+                },
+            ),
+        ];
+        for (hooks, workflows) in shapes {
+            let registry = CommandRegistry::with_builtins(hooks, workflows);
+            let session = crate::session::SessionController::new();
+            let (tx, _rx) = tokio::sync::mpsc::channel(1);
+            let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+            let ctx = CommandContext {
+                workspace: std::path::Path::new("."),
+                session: &session,
+                bridge: &sender,
+                subagent_tracker: None,
+                workflow_tracker: None,
+                memory_status: None,
+            };
+
+            let (help, args) = registry.parse("/help").expect("/help is registered");
+            assert_eq!(args, "");
+            let rendered = match help.execute(&ctx, "").await.unwrap().kind {
+                CommandResultKind::SystemMessage(text) => text,
+                other => panic!("help answers with a system message, got {other:?}"),
+            };
+
+            let names: Vec<String> = registry
+                .all_commands()
+                .iter()
+                .map(|command| command.name().to_owned())
+                .collect();
+            assert!(
+                names.len() >= 14,
+                "the builtin registry is not a toy: {names:?}"
+            );
+            for name in names {
+                let listed = rendered
+                    .lines()
+                    .any(|line| line.trim() == format!("/{name}"));
+                assert!(
+                    listed,
+                    "`/{name}` is registered but absent from /help:\n{rendered}"
+                );
+            }
+        }
     }
 
     #[test]
