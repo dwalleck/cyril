@@ -282,10 +282,27 @@ genuine drops:
   truncated today, but a truncated picker would render silently as a complete
   list. Filed as **cyril-8bz8**.
 
-Neither is a 2.21.2 regression — the field sets are identical across the pair.
-Both are pre-existing drops that the sweep made visible, and both are below the
-project bar for received payloads (model every field, or explicit-ignore plus a
-debug log).
+* **`rawInput.__tool_use_purpose`** — every tool call carries the model's own
+  stated reason (`"Read PROBE.txt to get the single word."`); cyril models it
+  nowhere. Filed as **cyril-fp8y**.
+* **`rawInput.operations[].path`** — `TrackedToolCall::primary_path()`
+  (`cyril-ui/src/traits.rs:300`) falls back to a *flat* `file_path`/`path`
+  lookup, which cannot match the nested `operations[]` shape v2 sends for
+  `fs_read`. Latent only: all 4 observed calls with `operations[]` also carried
+  `locations[]`, so branch 1 always hit and the fallback never fired. Filed as
+  **cyril-gl0m**.
+
+Full disposition of the 18 leaf names with no string-literal match in
+`crates/`: **6 handled** (serde-typed, arriving as snake_case Rust identifiers —
+`availableModes`, `currentModeId`, `modes`, `locations`, `rawInput`,
+`rawOutput`), **10 filed** across the four issues above (five `commands[].meta`
+keys plus the map keys nested under `subcommandDescriptions`, `hasMore`,
+`__tool_use_purpose`, `operations`). Nothing is left unaccounted for.
+
+None of the four is a 2.21.2 regression — the field sets are identical across
+the pair. All are pre-existing drops that the sweep made visible, and all are
+below the project bar for received payloads (model every field, or
+explicit-ignore plus a debug log).
 
 ## 7. Cyril impact
 
