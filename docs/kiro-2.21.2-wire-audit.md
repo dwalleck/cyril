@@ -84,6 +84,30 @@ A recursive diff of the two carved trees reports 22 differing entries, and
 `undici-types/package.json` — a `@types/node` 26.4.1 → 26.5.0 bump. **No
 runtime JavaScript differs.**
 
+**The `.d.ts` files are not all noise, though.** The *differing* ones are
+`@types/node`, but `@kiro/agent/dist/server` ships **8 complete, unminified
+declaration files with full JSDoc** (none truncated — all end in
+`//# sourceMappingURL=`). Against a minified `acp-server.js` they are a
+readable island, and worth checking before regexing the bundle. They add
+semantics rather than new methods — every method they name is already in the
+110-method census — but the semantics are substantial: `multiplex-stream.d.ts`
+documents the `primary` / `observer` multi-client architecture,
+out-of-band `_kiro/permission/respond` and `_kiro/userInput/respond`
+resolution keyed by `toolCallId`, and session-scoped (not global) notification
+broadcast with two shipped bugs cited as the reason.
+`select-auth-provider.d.ts` gives the complete five-mode auth priority order.
+
+`acp-server.externals.json` lists the 12 packages the bundle does **not**
+inline, and they are ~450 MB of the 521 MB carved tree — which is why
+`kiro-cli-chat` is 838 MB. They ship as real runtime and the bundle references
+them: a formal policy/constraint stack (`@cedar-policy/cedar-wasm` with a
+policy-set cache, plus `z3-solver` fed `{constraints, relationships,
+variableTypes, bounds}` derived from tool parameters), a local ML inference
+stack (`onnxruntime-node`/`-web`, `@huggingface/transformers`), and code
+parsing (`web-tree-sitter`, `@unit-mesh/treesitter-artifacts`,
+`@vscode/ripgrep`). **None of it is visible on the ACP wire surface** — the
+dependency manifest is an audit lane of its own.
+
 Censuses on the carved bundles:
 
 | lane | 2.21.1 | 2.21.2 | delta |
