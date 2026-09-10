@@ -263,11 +263,6 @@ def check_protected_parents(branch: str) -> None:
         allowed_markers=re.compile(r"powers_panel|PowersPanelState|PowersChanged"),
     )
 
-    # No new App field: a struct field is a responsibility, not wiring.
-    for _, text in added_lines_with_numbers(working_tree_delta(APP, branch)):
-        if re.match(r"^\s{4}\w+:\s", text) and "self." not in text:
-            report("C8", "crates/cyril/src/app.rs", f"new App field: {text.strip()[:90]}")
-
     # The powers panel methods on UiState must not emit chat output.
     text = production_text(STATE)
     for method in re.finditer(r"\n    pub fn (\w*powers\w*)\([^)]*\)[^{]*\{", text):

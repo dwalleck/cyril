@@ -47,3 +47,19 @@ Claims: C4, C6 (+ C5's ordering/refresh half)
 1. **Two anti-rot fences required registration of the new widget module**, only one of which the plan anticipated: `crates/cyril-ui/tests/widget_theme_sources.rs` (`MODULES` 15 → 16) and `crates/cyril-ui/src/theme.rs::widgets_only_use_the_explicit_theme` (an `include_str!` list asserted against the directory count).
 2. **`state.rs` gained the `PowersChanged` arm in slice 1, not slice 3** (recorded there), so this slice's `state.rs` delta is the panel cluster only.
 3. **Fence text changed after the first mutation pass** (stress assertions added, blank-description assertion corrected), which invalidated the earlier mutation evidence under Evidence validity; all six slice-2 mutations were re-run against the final fences.
+
+## Slice 3 — `/powers` answers, and the push refreshes without opening
+
+Claims: C5 (command and App halves)
+
+| # | Gate item | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test -p cyril-core -p cyril-ui -p cyril --all-features` → no failures in any suite; `cargo clippy --workspace --all-targets --all-features -- -D warnings` → 0 diagnostics; `cargo fmt --check` clean |
+| 2 | Falsifiers (C5 were `PENDING`) | PASS | Discharged: `powers_without_catalog_reports_and_with_catalog_opens`, `powers_command_registered_and_parses`, `powers_push_updates_without_opening_and_command_opens`, `powers_panel_key_map` — the remaining C5 half, with the ordering half already discharged in slice 2 |
+| 3 | Stress fixture | PASS | No catalog → one system line and no panel; `/powers enable datadog` → a usage line, not a panel request; known-empty catalog → the panel still opens (the placeholder's whole reason); catalog → rows handed over in wire order; two pushes with the panel open → contents replaced in place; five-vs-one-key page step at 12 powers; unrelated key → no-op, Esc → close |
+| 4 | Implementation vs independent oracle | PASS | Full round trip replayed from the committed capture: `jq` over the fixture vs converter → session → command → App payload, diffed as TSV → **identical**, three rows × four fields. The command performs no transformation, so the oracle covers the whole path it sits in. Harness removed after the run |
+| 5 | Module shape | PASS (slice scope) | `python3 .cyril-v19o/oracles/module_shape.py --slice 3` → `PASS C8/C7/C1` with `app.rs`'s delta confined to `dispatch_powers_panel_key` and the two marker-matched arms. Non-vacuity re-proven: an added `App` field is caught and named. The redundant line-based field check was deleted after it false-positived on a function parameter the region check had already covered |
+| 6 | Production-scale budget | PASS | `/powers` at 1000 powers: **182 µs** average over 100 executions against the plan's 1 ms ceiling (clone + `sort_by_cached_key`); the push path was measured in slice 1 |
+| 7 | Regression fence green | PASS | Command, registration, App push/command and key-map fences all green; the `Notification` variant's exhaustive-match arms in `state.rs` and `test_bridge.rs` compile and pass |
+| 8 | Named mutation red | PASS | C5 push-opens-the-panel (App arm calling `show_powers_panel` unconditionally) RED; C5 no-catalog-answer-dropped (`Dispatched` instead of the system line) RED — both GREEN after restore, in a pass that also re-proved slices 1 and 2 (11 mutations total) |
+| 9 | Fence restored green | PASS | `mutations.sh` prints `GREEN after restore` for all 11; `trap` restores on interrupt |

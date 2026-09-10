@@ -453,3 +453,48 @@ impl Command for KasHooksCommand {
         Ok(CommandResult::dispatched())
     }
 }
+
+/// `/powers` (cyril-v19o).
+///
+/// Lists the powers the agent announced it has installed. Display-only: the
+/// catalog arrives as an unprompted `_kiro/powers/items_changed` push, and
+/// cyril issues no request for it — `_kiro/powers/list` is unadvertised and
+/// `_kiro/powers/refresh` is unimplemented upstream, so there is no affordance
+/// to wire and nothing to refresh.
+///
+/// Registered on every engine. On v2 no powers frame ever arrives, so the only
+/// reachable answer is the "not reported yet" line — which is the truth: v2 has
+/// no powers surface at all (measured: 25 advertised commands, none `powers`).
+pub struct PowersCommand;
+
+#[async_trait::async_trait]
+impl Command for PowersCommand {
+    fn name(&self) -> &str {
+        "powers"
+    }
+
+    fn description(&self) -> &str {
+        "List the powers the agent has installed"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        // No actions exist on this surface, so an argument is a mistake worth
+        // naming rather than silently ignoring — the agent would otherwise
+        // treat "/powers foo" as a panel request the user never got.
+        if !args.trim().is_empty() {
+            return Ok(CommandResult::system_message(
+                "Usage: /powers (no arguments)".to_string(),
+            ));
+        }
+        match ctx.session.powers() {
+            Some(powers) => Ok(CommandResult::show_powers(powers.to_vec())),
+            // `None` is "the agent has not pushed a catalog yet", which the
+            // panel cannot express — an empty panel would claim the user has
+            // nothing installed. No bridge call is made here: there is no
+            // powers request to send.
+            None => Ok(CommandResult::system_message(
+                "No powers reported yet — start a KAS session first.".to_string(),
+            )),
+        }
+    }
+}

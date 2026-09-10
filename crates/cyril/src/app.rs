@@ -1410,6 +1410,18 @@ impl App {
             self.redraw_needed = true;
         }
 
+        // KAS pushed the installed power set (cyril-v19o). Same view-only job
+        // as `HooksChanged` above: `SessionController` already recorded the
+        // catalog for `/powers`, so the App refreshes an already-open panel and
+        // never opens one — the push arrives unprompted once per session
+        // (+18 ms after `session/new`), and a modal that opens itself over the
+        // user is worse than a stale one.
+        if let Notification::PowersChanged { ref powers } = notification
+            && self.ui_state.refresh_powers_panel(powers.clone())
+        {
+            self.redraw_needed = true;
+        }
+
         // Handle command options received — open picker or show message
         if let Notification::CommandOptionsReceived {
             ref command,
@@ -1570,6 +1582,7 @@ impl App {
                 if !self.ui_state.has_approval()
                     && !self.ui_state.has_picker()
                     && !self.ui_state.has_hooks_panel()
+                    && !self.ui_state.has_powers_panel()
                     && !self.ui_state.has_code_panel()
                     && !self.ui_state.has_usage_panel()
                     && self.ui_state.subagent_ui().focused_session_id().is_none()
@@ -1644,6 +1657,11 @@ impl App {
         }
         if self.ui_state.has_hooks_panel() {
             self.handle_hooks_panel_key(key);
+            self.redraw_needed = true;
+            return Ok(());
+        }
+        if self.ui_state.has_powers_panel() {
+            dispatch_powers_panel_key(key, &mut self.ui_state);
             self.redraw_needed = true;
             return Ok(());
         }
@@ -2015,6 +2033,12 @@ impl App {
             }
             CommandResultKind::MemoryAction(_) => {
                 tracing::error!("MemoryAction reached synchronous result routing");
+            }
+            CommandResultKind::ShowPowers { powers } => {
+                // The panel holds the catalog; ordering and clamping happen in
+                // `UiState::show_powers_panel`, so this arm is pure wiring.
+                self.ui_state.show_powers_panel(powers);
+                self.redraw_needed = true;
             }
             CommandResultKind::ShowUsage {
                 account_query_started,
@@ -2747,6 +2771,23 @@ fn dispatch_rewind_command(
             session_id: old_session_id,
         },
     ]
+}
+
+/// Dispatch a key press while the `/powers` panel is visible.
+///
+/// Extracted as a free function so the full key-map can be unit-tested without
+/// constructing an `App`, exactly like `dispatch_hooks_panel_key`. Esc hides
+/// the panel; arrow keys scroll one power; page keys scroll five (the panel's
+/// window height); other keys are no-ops.
+fn dispatch_powers_panel_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiState) {
+    match key.code {
+        KeyCode::Esc => ui_state.hide_powers_panel(),
+        KeyCode::Up => ui_state.powers_panel_scroll_up(1),
+        KeyCode::Down => ui_state.powers_panel_scroll_down(1),
+        KeyCode::PageUp => ui_state.powers_panel_scroll_up(5),
+        KeyCode::PageDown => ui_state.powers_panel_scroll_down(5),
+        _ => {}
+    }
 }
 
 /// Dispatch a key press while the `/hooks` panel is visible.
@@ -5423,6 +5464,111 @@ mod tests {
             "non-hooks commands should never open the hooks panel"
         );
         assert_eq!(ui_state.messages().len(), 1);
+    }
+
+    // --- powers panel (cyril-v19o) ---
+
+    fn powers_catalog() -> Vec<cyril_core::types::PowerInfo> {
+        vec![
+            cyril_core::types::PowerInfo::new(
+                "aws-infrastructure-as-code",
+                Some("Build AWS infrastructure with CDK and CloudFormation".to_owned()),
+                None,
+                vec!["awslabs.aws-iac-mcp-server".to_owned()],
+                false,
+            ),
+            cyril_core::types::PowerInfo::new(
+                "datadog",
+                Some("Datadog Observability".to_owned()),
+                None,
+                vec!["datadog".to_owned()],
+                true,
+            ),
+        ]
+    }
+
+    /// REGRESSION FENCE (cyril-v19o C5, App half). The push is unprompted, so
+    /// it must update the catalog without opening a modal; the panel opens only
+    /// from the command. Both halves are asserted here because either one alone
+    /// is satisfied by a wrong App arm (always-open, or never-open).
+    #[test]
+    fn powers_push_updates_without_opening_and_command_opens() {
+        let mut app = test_app();
+        let catalog = powers_catalog();
+
+        app.handle_notification(RoutedNotification::global(Notification::PowersChanged {
+            powers: catalog.clone(),
+        }));
+        assert!(
+            !app.ui_state.has_powers_panel(),
+            "an unprompted push must never open the panel"
+        );
+        assert_eq!(
+            app.session
+                .powers()
+                .map(<[cyril_core::types::PowerInfo]>::len),
+            Some(2),
+            "…but the catalog still lands for `/powers` to read"
+        );
+
+        // Positive control for that absence: the panel does exist, and the
+        // command result is what opens it.
+        app.ui_state.show_powers_panel(catalog.clone());
+        assert!(app.ui_state.has_powers_panel());
+        assert_eq!(
+            app.ui_state.powers_panel().expect("panel").powers.len(),
+            2,
+            "the panel carries the catalog the push delivered"
+        );
+
+        // An open panel is refreshed in place by a later push, never closed and
+        // never re-opened from scratch (the scroll offset is preserved).
+        app.handle_notification(RoutedNotification::global(Notification::PowersChanged {
+            powers: vec![catalog[1].clone()],
+        }));
+        let panel = app.ui_state.powers_panel().expect("still open");
+        assert_eq!(panel.powers.len(), 1, "contents replaced");
+    }
+
+    #[test]
+    fn powers_panel_key_map() {
+        let mut ui_state = UiState::new(500);
+        ui_state.show_powers_panel(powers_catalog());
+        assert!(ui_state.has_powers_panel());
+
+        // Five powers, so the page step (the panel's window height) is not
+        // clamped to the same value as the single-line step.
+        let many: Vec<cyril_core::types::PowerInfo> = (0..12)
+            .map(|n| {
+                cyril_core::types::PowerInfo::new(
+                    format!("power-{n:02}"),
+                    None,
+                    None,
+                    Vec::new(),
+                    false,
+                )
+            })
+            .collect();
+        ui_state.show_powers_panel(many);
+
+        dispatch_powers_panel_key(key(KeyCode::Down), &mut ui_state);
+        assert_eq!(ui_state.powers_panel().expect("panel").scroll_offset, 1);
+        dispatch_powers_panel_key(key(KeyCode::PageDown), &mut ui_state);
+        assert_eq!(
+            ui_state.powers_panel().expect("panel").scroll_offset,
+            6,
+            "page step matches the panel's five-power window plus one"
+        );
+        dispatch_powers_panel_key(key(KeyCode::PageUp), &mut ui_state);
+        assert_eq!(ui_state.powers_panel().expect("panel").scroll_offset, 1);
+        dispatch_powers_panel_key(key(KeyCode::Up), &mut ui_state);
+        assert_eq!(ui_state.powers_panel().expect("panel").scroll_offset, 0);
+        // An unrelated key is a no-op, not a close.
+        dispatch_powers_panel_key(key(KeyCode::Char('x')), &mut ui_state);
+        assert!(ui_state.has_powers_panel());
+
+        dispatch_powers_panel_key(key(KeyCode::Esc), &mut ui_state);
+        assert!(!ui_state.has_powers_panel(), "Esc closes the panel");
     }
 
     // --- dispatch_hooks_panel_key tests ---

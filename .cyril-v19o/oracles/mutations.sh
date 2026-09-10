@@ -154,6 +154,29 @@ prove C6 empty-catalog-placeholder-dropped "$WIDGET" \
   '    if false {' \
   "${UI_TEST[@]}" empty_catalog_shows_placeholder
 
+# --- Slice 3: command and wiring ---------------------------------------------
+
+CYRIL_TEST=(cargo test -p cyril --features kas)
+
+prove C5 push-opens-the-panel "$APP" \
+  '        if let Notification::PowersChanged { ref powers } = notification
+            && self.ui_state.refresh_powers_panel(powers.clone())
+        {
+            self.redraw_needed = true;
+        }' \
+  '        if let Notification::PowersChanged { ref powers } = notification {
+            self.ui_state.show_powers_panel(powers.clone());
+            self.redraw_needed = true;
+        }' \
+  "${CYRIL_TEST[@]}" powers_push_updates_without_opening_and_command_opens
+
+prove C5 no-catalog-answer-dropped "$BUILTIN" \
+  '            None => Ok(CommandResult::system_message(
+                "No powers reported yet — start a KAS session first.".to_string(),
+            )),' \
+  '            None => Ok(CommandResult::dispatched()),' \
+  "${CORE_TEST[@]}" powers_without_catalog_reports_and_with_catalog_opens
+
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"
   exit 1
