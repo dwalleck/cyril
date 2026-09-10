@@ -3,31 +3,32 @@
 
 `--slice N` scopes the *requirements* to what slice N has created so far, so
 each checkpoint gates its own artifacts while the final run (no flag) demands
-the whole ledger. A module that a later slice owns is reported as PENDING
-rather than missing when it does not exist yet.
+the whole ledger. A module a later slice owns is reported as PENDING rather
+than missing when it does not exist yet.
 
 Checks the approved module ledger in `.cyril-v19o/design.md`:
 
 1. The powers wire adapter lives in `crates/cyril-core/src/protocol/convert/
-   kas/powers.rs`, and the wire keys (`displayName`, `mcpServerNames`,
-   `hasSteeringFiles`, `isAgentPlugin`, `keywords`) appear nowhere under
-   `crates/cyril-ui/src/` — presentation must consume the domain type, never
-   the wire.
+   kas/powers.rs`, and no wire key (`displayName`, `mcpServerNames`,
+   `hasSteeringFiles`, `isAgentPlugin`, `keywords`) appears in `crates/
+   cyril-ui/src/` — presentation consumes the domain type, never the wire.
+   Comments are stripped first, so a doc comment may name a wire key.
 2. The domain payload lives in `crates/cyril-core/src/types/power.rs` and is
    re-exported from `types/mod.rs`.
 3. Powers painting lives in `crates/cyril-ui/src/widgets/powers_panel.rs`,
-   which never mentions `serde`, `serde_json`, or wire keys.
-4. Protected parents receive wiring only:
-   - `crates/cyril/src/app.rs` — the powers delta is confined to the
-     notification arm, the command-result arm, and the key-dispatch function;
-     no new `App` field.
-   - `crates/cyril-ui/src/state.rs` — the powers delta is confined to panel
-     lifecycle methods and one `apply_notification` arm; no chat-message
-     emission (`add_command_output` / `add_system_message` / `add_message`)
-     may appear inside a powers method.
+   which decodes nothing; the adapter formats nothing.
+4. Protected parents receive wiring only. Each added production line must sit
+   inside an allowed function or match an allowed marker; anything else is a
+   new responsibility smuggled into a protected parent:
+   - `crates/cyril/src/app.rs` — arms and `dispatch_powers_panel_key`; no field.
+   - `crates/cyril-ui/src/state.rs` — `*powers*` methods, the panel accessor,
+     the catalog field, and the `PowersChanged` arm; no chat-message emission.
+5. No `powers/list` or `powers/refresh` request string in `cyril-core` (the
+   two pulls cyril must never issue, B8).
 
-The default branch is discovered, never hard-coded. Reports the claim ID and
-the exact path/symbol. Usage: python3 .cyril-v19o/oracles/module_shape.py
+The default branch is discovered, never hard-coded. Reports the claim ID, the
+path, and the offending symbol. Usage:
+python3 .cyril-v19o/oracles/module_shape.py [--slice N]
 """
 
 from __future__ import annotations
@@ -46,20 +47,17 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 CORE = REPO / "crates" / "cyril-core" / "src"
 UI = REPO / "crates" / "cyril-ui" / "src"
 
-# (path, owning slice) for the files the ledger requires.
 POWERS_ADAPTER = CORE / "protocol" / "convert" / "kas" / "powers.rs"
 POWERS_TYPE = CORE / "types" / "power.rs"
 POWERS_WIDGET = UI / "widgets" / "powers_panel.rs"
 TYPES_MOD = CORE / "types" / "mod.rs"
-REQUIRED = [(POWERS_ADAPTER, 1), (POWERS_TYPE, 1), (TYPES_MOD, 1), (POWERS_WIDGET, 2)]
 APP = REPO / "crates" / "cyril" / "src" / "app.rs"
 STATE = UI / "state.rs"
 
-# Wire spellings. Their presence outside the adapter means a second owner of
-# the wire shape has appeared.
-WIRE_KEYS = ["displayName", "mcpServerNames", "hasSteeringFiles", "isAgentPlugin", "keywords"]
+# (path, owning slice) for the files the ledger requires.
+REQUIRED = [(POWERS_ADAPTER, 1), (POWERS_TYPE, 1), (TYPES_MOD, 1), (POWERS_WIDGET, 2)]
 
-# The two pulls cyril must never issue (cyril-v19o B8).
+WIRE_KEYS = ["displayName", "mcpServerNames", "hasSteeringFiles", "isAgentPlugin", "keywords"]
 FORBIDDEN_REQUESTS = ["powers/list", "powers/refresh"]
 
 failures: list[str] = []
@@ -92,16 +90,80 @@ def default_branch() -> str:
 def strip_rust_comments(text: str) -> str:
     """Remove `//`/`///` line comments and `/* */` blocks.
 
-    The forbidden-request census must catch a request *issued* by code, not a
-    doc comment that explains why the request is never issued — the adapter's
-    module docs name both pull methods for exactly that reason.
+    The censuses below must catch a wire key or a request *used by code*, not
+    documentation that names why it is absent — the adapter's module docs name
+    both pull methods for exactly that reason.
     """
     text = re.sub(r"/\*.*?\*/", "", text, flags=re.DOTALL)
     return re.sub(r"//[^\n]*", "", text)
 
 
-def same_line_imports(text: str) -> set[str]:
-    return set(re.findall(r"^use\s+[^;]+;", text, flags=re.MULTILINE))
+def production_text(path: pathlib.Path) -> str:
+    """The file's production half: everything above its first `#[cfg(test)]`."""
+    text = path.read_text()
+    cut = text.find("#[cfg(test)]")
+    return text if cut == -1 else text[:cut]
+
+
+def function_ranges(text: str) -> list[tuple[str, int, int]]:
+    """`(name, first_line, last_line)` for every impl-level `fn`, 1-indexed."""
+    lines = text.splitlines()
+    ranges: list[tuple[str, int, int]] = []
+    current: tuple[str, int] | None = None
+    for number, line in enumerate(lines, start=1):
+        match = re.match(r"^    (?:pub )?(?:async )?fn (\w+)", line)
+        if match:
+            if current is not None:
+                ranges.append((current[0], current[1], number - 1))
+            current = (match.group(1), number)
+    if current is not None:
+        ranges.append((current[0], current[1], len(lines)))
+    return ranges
+
+
+def enclosing_function(ranges: list[tuple[str, int, int]], line: int) -> str | None:
+    """Name of the narrowest function range containing `line`."""
+    best: tuple[int, str] | None = None
+    for name, start, end in ranges:
+        if start <= line <= end and (best is None or end - start < best[0]):
+            best = (end - start, name)
+    return None if best is None else best[1]
+
+
+def added_lines_with_numbers(diff: str) -> list[tuple[int, str]]:
+    """`(new_file_line, text)` for every added line in a `--unified=0` diff."""
+    added: list[tuple[int, str]] = []
+    new_line = 0
+    for line in diff.splitlines():
+        header = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+        if header:
+            new_line = int(header.group(1))
+            continue
+        if line.startswith("+++") or line.startswith("---"):
+            continue
+        if line.startswith("+"):
+            added.append((new_line, line[1:]))
+            new_line += 1
+        elif line.startswith(" "):
+            new_line += 1
+    return added
+
+
+def working_tree_delta(path: pathlib.Path, branch: str) -> str:
+    """`--unified=0` diff of the working tree against the merge-base.
+
+    The working tree, not `branch...HEAD`: a slice is gated before it is
+    committed, so its delta is uncommitted at gate time.
+    """
+    merge_base = subprocess.run(
+        ["git", "merge-base", branch, "HEAD"], cwd=REPO, capture_output=True, text=True
+    ).stdout.strip()
+    return subprocess.run(
+        ["git", "diff", merge_base, "--unified=0", "--", str(path.relative_to(REPO))],
+        cwd=REPO,
+        capture_output=True,
+        text=True,
+    ).stdout
 
 
 def check_paths() -> None:
@@ -117,31 +179,29 @@ def check_paths() -> None:
     if TYPES_MOD.exists() and "pub use power::PowerInfo;" not in TYPES_MOD.read_text():
         report("C8", str(TYPES_MOD.relative_to(REPO)), "PowerInfo is not re-exported")
 
-    # No wire spelling anywhere in cyril-ui: the domain type is the only
-    # currency crossing that boundary.
+    # No wire spelling anywhere in cyril-ui: `PowerInfo` is the only currency
+    # crossing that boundary.
     for path in sorted(UI.rglob("*.rs")):
         code = strip_rust_comments(path.read_text())
         for key in WIRE_KEYS:
             if key in code:
                 report("C8", str(path.relative_to(REPO)), f"wire key {key!r} in presentation code")
 
-    # The widget must not decode anything itself.
+    # The widget decodes nothing…
     if POWERS_WIDGET.exists():
-        text = POWERS_WIDGET.read_text()  # noqa: E501
-        for token in ("serde", "serde_json", "from_value", "from_str"):
-            if token in text:
+        code = strip_rust_comments(POWERS_WIDGET.read_text())
+        for token in ("serde", "from_value", "from_str"):
+            if token in code:
                 report("C8", str(POWERS_WIDGET.relative_to(REPO)), f"decoding token {token!r} in the widget")
 
-    # The adapter must not format for display (no theme, no width math).
+    # …and the adapter formats nothing.
     if POWERS_ADAPTER.exists():
-        text = POWERS_ADAPTER.read_text()
+        code = strip_rust_comments(POWERS_ADAPTER.read_text())
         for token in ("ratatui", "Theme", "truncate"):
-            if token in text:
+            if token in code:
                 report("C8", str(POWERS_ADAPTER.relative_to(REPO)), f"presentation token {token!r} in the adapter")
 
-    # Forbidden outbound requests, anywhere in cyril-core. Comments are
-    # stripped first: a doc comment naming a method cyril never calls is
-    # documentation, not a request.
+    # Forbidden outbound requests, anywhere in cyril-core, comments stripped.
     for path in sorted(CORE.rglob("*.rs")):
         code = strip_rust_comments(path.read_text())
         for forbidden in FORBIDDEN_REQUESTS:
@@ -149,86 +209,67 @@ def check_paths() -> None:
                 report("C8", str(path.relative_to(REPO)), f"forbidden powers request {forbidden!r}")
 
 
-def production_delta(path: pathlib.Path, branch: str) -> str:
-    """Lines this branch added/removed in `path`, tests excluded from the count.
+def check_module_delta(
+    claim: str,
+    path: pathlib.Path,
+    branch: str,
+    allowed_functions: re.Pattern[str],
+    allowed_markers: re.Pattern[str],
+) -> None:
+    """Every added production line is inside an allowed function or marker line.
 
-    Test bodies are authored by definition, so the tripwire counts only
-    production lines: everything above the file's first `#[cfg(test)]`.
+    This is what "wiring only" means mechanically: a protected parent may gain
+    arms and lifecycle methods, but a line of new behavior anywhere else — a
+    helper, a parsing step, a formatting decision — falls outside both nets and
+    is reported with its enclosing function.
     """
-    result = subprocess.run(
-        ["git", "diff", f"{branch}...HEAD", "--unified=0", "--", str(path.relative_to(REPO))],
-        cwd=REPO,
-        capture_output=True,
-        text=True,
-    )
-    return result.stdout
-
-
-def added_production_lines(diff: str) -> list[str]:
-    """Added lines that are not inside a `#[cfg(test)]` module."""
-    added: list[str] = []
-    in_tests = False
-    for line in diff.splitlines():
-        if line.startswith("@@"):
-            # A hunk header names its enclosing function; test modules appear
-            # as `mod tests`.
-            in_tests = "mod tests" in line
+    diff = working_tree_delta(path, branch)
+    if not diff:
+        return
+    production = production_text(path)
+    production_lines = production.count("\n") + 1
+    ranges = function_ranges(production)
+    for line_number, text in added_lines_with_numbers(diff):
+        if line_number > production_lines:
+            continue  # a test-module line: no production responsibility
+        stripped = text.strip()
+        if not stripped or stripped.startswith(("//", "///", "/*", "*")):
             continue
-        if not line.startswith("+"):
+        if stripped in ("}", ")", "};", "});", "{", "];"):
             continue
-        body = line[1:]
-        if re.match(r"\s*#\[cfg\(test\)\]", body):
-            in_tests = True
+        function = enclosing_function(ranges, line_number)
+        if function is not None and allowed_functions.search(function):
             continue
-        if not in_tests:
-            added.append(body)
-    return added
+        if allowed_markers.search(text):
+            continue
+        where = function if function is not None else "<file scope>"
+        report(claim, str(path.relative_to(REPO)), f"delta outside the allowed region ({where}): {stripped[:90]}")
 
 
 def check_protected_parents(branch: str) -> None:
     """4: protected parents carry wiring, not responsibility."""
-    for path, allowed_markers in (
-        (
-            APP,
-            [
-                "Notification::PowersChanged",
-                "CommandResultKind::ShowPowers",
-                "dispatch_powers_panel_key",
-            ],
-        ),
-        (
-            STATE,
-            [
-                "powers_panel",
-                "PowersPanelState",
-                "PowersChanged",
-            ],
-        ),
-    ):
-        diff = production_delta(path, branch)
-        if not diff:
-            continue
-        added = added_production_lines(diff)
-        allowed = re.compile("|".join(re.escape(m) for m in allowed_markers))
-        for line in added:
-            stripped = line.strip()
-            if not stripped or stripped.startswith(("//", "///", "}", ")")):
-                continue
-            if not allowed.search(line):
-                report(
-                    "C8",
-                    f"{path.relative_to(REPO)}",
-                    f"protected-parent delta outside the allowed arms: {stripped[:90]}",
-                )
+    check_module_delta(
+        "C8",
+        APP,
+        branch,
+        allowed_functions=re.compile(r"dispatch_powers_panel_key"),
+        allowed_markers=re.compile(r"Notification::PowersChanged|CommandResultKind::ShowPowers"),
+    )
+    check_module_delta(
+        "C8",
+        STATE,
+        branch,
+        allowed_functions=re.compile(r"powers"),
+        allowed_markers=re.compile(r"powers_panel|PowersPanelState|PowersChanged"),
+    )
 
-    # No new App field (a struct field is a responsibility, not wiring).
-    diff = production_delta(APP, branch)
-    for line in added_production_lines(diff):
-        if re.match(r"\s{4}\w+:\s", line) and "self." not in line:
-            report("C8", "crates/cyril/src/app.rs", f"new App field: {line.strip()[:90]}")
+    # No new App field: a struct field is a responsibility, not wiring.
+    for _, text in added_lines_with_numbers(working_tree_delta(APP, branch)):
+        if re.match(r"^\s{4}\w+:\s", text) and "self." not in text:
+            report("C8", "crates/cyril/src/app.rs", f"new App field: {text.strip()[:90]}")
 
-    # The powers panel methods in UiState must not emit chat output.
-    text = STATE.read_text()
+    # The powers panel methods on UiState must not emit chat output.
+    text = production_text(STATE)
     for method in re.finditer(r"\n    pub fn (\w*powers\w*)\([^)]*\)[^{]*\{", text):
         name = method.group(1)
         body = text[method.end() : text.find("\n    }\n", method.end())]

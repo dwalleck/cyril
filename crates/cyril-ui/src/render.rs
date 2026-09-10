@@ -153,6 +153,9 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     if let Some(hooks) = state.hooks_panel() {
         crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
     }
+    if let Some(powers) = state.powers_panel() {
+        crate::widgets::powers_panel::render(frame, area, input_area.y, powers, &theme);
+    }
     if let Some(code_panel) = state.code_panel() {
         crate::widgets::code_panel::render(frame, area, input_area.y, code_panel, &theme);
     }

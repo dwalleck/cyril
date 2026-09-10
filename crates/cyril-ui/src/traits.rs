@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use cyril_core::types::{
-    CommandOption, EffortLevel, HookInfo, MemoryStatusView, Plan, SessionId, VoiceStatus,
+    CommandOption, EffortLevel, HookInfo, MemoryStatusView, Plan, PowerInfo, SessionId, VoiceStatus,
 };
 
 use crate::theme::Theme;
@@ -105,6 +105,7 @@ pub trait TuiState {
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
+    fn powers_panel(&self) -> Option<&PowersPanelState>;
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData>;
     fn usage_panel(&self) -> Option<&UsagePanelState>;
     fn code_intelligence_active(&self) -> bool;
@@ -517,6 +518,24 @@ pub struct HooksPanelState {
     pub scroll_offset: usize,
 }
 
+/// Powers panel overlay state (read-only display for `/powers`).
+///
+/// Populated from a `PowersChanged` push — the agent announces its installed
+/// powers unprompted, and cyril never asks for them. Powers execute inside the
+/// agent, so the panel carries no interactive state beyond scroll position.
+#[derive(Debug, Clone)]
+pub struct PowersPanelState {
+    /// Powers in display order: title (case-insensitive), tie-broken by
+    /// identifier. Pre-sorted by [`crate::state::UiState::show_powers_panel`];
+    /// the renderer iterates this directly. A caller constructing
+    /// `PowersPanelState` by hand owns that ordering.
+    pub powers: Vec<PowerInfo>,
+    /// Index of the first power in the viewport, not a line offset: the widget
+    /// always renders whole powers, so a scroll position that is not a power
+    /// boundary cannot exist.
+    pub scroll_offset: usize,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum UsagePage {
     #[default]
@@ -761,6 +780,7 @@ pub mod test_support {
         pub approval: Option<ApprovalState>,
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
+        pub powers_panel: Option<PowersPanelState>,
         pub code_panel: Option<cyril_core::types::CodePanelData>,
         pub usage_panel: Option<UsagePanelState>,
         pub code_intelligence_active: bool,
@@ -804,6 +824,7 @@ pub mod test_support {
                 approval: None,
                 picker: None,
                 hooks_panel: None,
+                powers_panel: None,
                 code_panel: None,
                 usage_panel: None,
                 code_intelligence_active: false,
@@ -903,6 +924,9 @@ pub mod test_support {
         }
         fn hooks_panel(&self) -> Option<&HooksPanelState> {
             self.hooks_panel.as_ref()
+        }
+        fn powers_panel(&self) -> Option<&PowersPanelState> {
+            self.powers_panel.as_ref()
         }
         fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
             self.code_panel.as_ref()

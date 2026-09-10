@@ -25,3 +25,25 @@ Commit: `<filled by the commit>` · Claims: C1, C2, C3 (+ C0's provenance artifa
 2. **`UiState::apply_notification` arm moved from slice 3 to slice 1.** Adding a `Notification` variant cannot compile without its arm in the exhaustive match at `state.rs:451`; the compiler named it (my pre-implementation grep had counted a catch-all that belongs to a different match). The arm's content is exactly what slice 3 would have written — an explicit `=> false` with the "the App refreshes only if open" comment — so slice 3's delta for `state.rs` is now 0 lines rather than 12.
 3. **`crates/cyril/examples/test_bridge.rs` gained a `PowersChanged` print arm** (not in the plan's file list). Same cause: that match is exhaustive.
 4. **`experiments/conductor-spike/` artifacts measured 468 lines** against the ledger's ~300 projection (the verdict JSON alone is 248). Placement is unchanged and the partition still holds; the plan's arithmetic was updated rather than the artifacts trimmed, because the verdict is the machine-readable form the directory's other probes already commit.
+
+## Slice 2 — the panel paints the approved layout
+
+Claims: C4, C6 (+ C5's ordering/refresh half)
+
+| # | Gate item | State | Evidence |
+|---|---|---|---|
+| 1 | Affected unit tests | PASS | `cargo test -p cyril-ui --all-features` → 595 passed, 0 failed (lib) plus every integration suite ok; `cargo test -p cyril-core --all-features` ok; `cargo clippy --workspace --all-targets --all-features -- -D warnings` → 0 diagnostics; `cargo fmt --check` clean |
+| 2 | Falsifiers (C4, C6 were `PENDING`) | PASS | Discharged: `title_falls_back_to_id_and_empty_strings_mean_absent` (C4), and C6's five widget fences — `layout_matches_the_approved_row_shape`, `empty_catalog_shows_placeholder`, `wide_title_clamps_to_the_panel`, `viewport_window_clamps_scroll`, `tiny_area_paints_nothing` |
+| 3 | Stress fixture | PASS | CJK title at the panel width (truncation marker, border intact, content stops before it); 400-char description (marker, row stays inside the border); two MCP servers on one row; 12-power catalog with the offset at the end (window shows only the last power) and at the front (exactly five); 1000-power catalog renders the window only; zero-room area paints nothing; `displayName: ""` falls back to the id; duplicate display names both render, ordered by id |
+| 4 | Implementation vs independent oracle | PASS | Two oracles. Ordering: `printf '%s\n' … \| sort -f` over the same titles produced exactly the sequence the state fence asserts. Layout: the fence asserts hand-written cell rows (0=title, 1=meta, 2=description) located from the popup's own `┌` border rather than from widget math |
+| 5 | Module shape | PASS (slice scope) | `python3 .cyril-v19o/oracles/module_shape.py --slice 2` → `PASS C8/C7/C1`. `state.rs` delta = 84 added production lines, all inside `*powers*` methods / the panel accessor / the catalog field / the `PowersChanged` arm (the rewritten check classifies by enclosing function and skips the test region). Non-vacuity proven: an injected `sneaky_helper` in production code is caught and named; removed afterwards → clean |
+| 6 | Production-scale budget | PASS | Always-on render phase at the pathological size of 1000 powers: **347 µs/frame** average over 100 `TestBackend` frames against the plan's 1 ms ceiling — the widget's work is bounded by the 5-power window, not the catalog. Harness removed after the run |
+| 7 | Regression fence green | PASS | All six powers fences plus the two anti-rot fences (`widgets/mod.rs` coverage in `widget_theme_sources.rs`, the `theme.rs` include_str list) run green in the crate suite |
+| 8 | Named mutation red | PASS | Re-proved after the fences changed mid-slice: C4 title-keeps-empty-display-name, C5 no-sort-on-open, C5 refresh-strands-the-viewport, C6 title-clamp-dropped, C6 steering-marker-dropped, C6 empty-catalog-placeholder-dropped — all RED, all GREEN after restore |
+| 9 | Fence restored green | PASS | `mutations.sh` restores from byte-exact backups and re-runs each fence (`GREEN after restore` ×6); the slice-1 proofs were re-run in the same pass and still hold |
+
+### Deviations from plan.md
+
+1. **Two anti-rot fences required registration of the new widget module**, only one of which the plan anticipated: `crates/cyril-ui/tests/widget_theme_sources.rs` (`MODULES` 15 → 16) and `crates/cyril-ui/src/theme.rs::widgets_only_use_the_explicit_theme` (an `include_str!` list asserted against the directory count).
+2. **`state.rs` gained the `PowersChanged` arm in slice 1, not slice 3** (recorded there), so this slice's `state.rs` delta is the panel cluster only.
+3. **Fence text changed after the first mutation pass** (stress assertions added, blank-description assertion corrected), which invalidated the earlier mutation evidence under Evidence validity; all six slice-2 mutations were re-run against the final fences.

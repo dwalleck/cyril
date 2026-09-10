@@ -116,6 +116,44 @@ prove C3 malformed-frame-becomes-an-empty-catalog "$ADAPTER" \
   '        Err(_error) => Ok(Some(Notification::PowersChanged { powers: Vec::new() })),' \
   "${CORE_TEST[@]}" malformed_powers_frames_drop_and_never_clear
 
+# --- Slice 2: panel view -----------------------------------------------------
+
+UI_TEST=(cargo test -p cyril-ui --lib)
+
+prove C4 title-keeps-empty-display-name "$TYPE" \
+  '            display_name: display_name.filter(|value| !value.is_empty()),' \
+  '            display_name,' \
+  "${CORE_TEST[@]}" title_falls_back_to_id_and_empty_strings_mean_absent
+
+prove C5 no-sort-on-open "$STATE" \
+  '        powers.sort_by_cached_key(|power| {
+            (power.title().to_ascii_lowercase(), power.name().to_owned())
+        });' \
+  '        let _ = &mut powers;' \
+  "${UI_TEST[@]}" powers_panel_orders_and_replaces
+
+prove C5 refresh-strands-the-viewport "$STATE" \
+  '            panel.scroll_offset = scroll.min(panel.powers.len().saturating_sub(1));' \
+  '            panel.scroll_offset = scroll;' \
+  "${UI_TEST[@]}" powers_panel_orders_and_replaces
+
+prove C6 title-clamp-dropped "$WIDGET" \
+  '            format!("  {}", truncate_and_pad(power.title(), text_width)),' \
+  '            format!("  {}", power.title()),' \
+  "${UI_TEST[@]}" wide_title_clamps_to_the_panel
+
+prove C6 steering-marker-dropped "$WIDGET" \
+  '        if power.has_steering_files() {
+            meta.push_str(" · steering");
+        }' \
+  '        let _ = power.has_steering_files();' \
+  "${UI_TEST[@]}" layout_matches_the_approved_row_shape
+
+prove C6 empty-catalog-placeholder-dropped "$WIDGET" \
+  '    if state.powers.is_empty() {' \
+  '    if false {' \
+  "${UI_TEST[@]}" empty_catalog_shows_placeholder
+
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"
   exit 1

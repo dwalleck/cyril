@@ -108,6 +108,7 @@ pub struct UiState {
     approvals: VecDeque<ApprovalState>,
     picker: Option<PickerState>,
     hooks_panel: Option<HooksPanelState>,
+    powers_panel: Option<PowersPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
     usage_panel: Option<UsagePanelState>,
     /// The last completed snapshot, kept across a panel close so a reopen is
@@ -297,6 +298,10 @@ impl TuiState for UiState {
         self.hooks_panel.as_ref()
     }
 
+    fn powers_panel(&self) -> Option<&PowersPanelState> {
+        self.powers_panel.as_ref()
+    }
+
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
         self.code_panel.as_ref()
     }
@@ -405,6 +410,7 @@ impl UiState {
             approvals: VecDeque::new(),
             picker: None,
             hooks_panel: None,
+            powers_panel: None,
             code_panel: None,
             usage_panel: None,
             last_usage_snapshot: None,
@@ -2400,6 +2406,77 @@ impl UiState {
         if let Some(panel) = self.hooks_panel.as_mut() {
             let max = panel.hooks.len().saturating_sub(1);
             panel.scroll_offset = (panel.scroll_offset + lines).min(max);
+        }
+    }
+
+    // --- Powers panel ---
+
+    /// Open the powers panel overlay with the catalog the agent pushed.
+    ///
+    /// Rows are ordered here, on insert, so the widget iterates
+    /// `state.powers` directly without re-sorting every frame. The key is the
+    /// *display* title (case-insensitive), tie-broken by identifier: the title
+    /// is what the user reads, and two powers can share one — `sort_by_cached_key`
+    /// computes each key once rather than once per comparison.
+    pub fn show_powers_panel(&mut self, mut powers: Vec<PowerInfo>) {
+        powers.sort_by_cached_key(|power| {
+            (power.title().to_ascii_lowercase(), power.name().to_owned())
+        });
+        self.powers_panel = Some(PowersPanelState {
+            powers,
+            scroll_offset: 0,
+        });
+    }
+
+    /// Replace the powers panel's contents **only if it is already open**,
+    /// returning whether anything changed.
+    ///
+    /// The catalog arrives unprompted once per session, and a second push can
+    /// arrive while the user is reading the panel. Routing that through
+    /// [`show_powers_panel`](Self::show_powers_panel) would make a modal
+    /// overlay open itself over whatever the user was doing; an unprompted
+    /// change with the panel closed is deliberately invisible until the next
+    /// `/powers`.
+    ///
+    /// The scroll offset is preserved and then clamped: a refresh that shortens
+    /// the catalog must not strand the viewport past its end, and one that
+    /// merely renames a power must not yank the user back to the top.
+    pub fn refresh_powers_panel(&mut self, powers: Vec<PowerInfo>) -> bool {
+        let Some(panel) = self.powers_panel.as_ref() else {
+            return false;
+        };
+        let scroll = panel.scroll_offset;
+        self.show_powers_panel(powers);
+        if let Some(panel) = self.powers_panel.as_mut() {
+            panel.scroll_offset = scroll.min(panel.powers.len().saturating_sub(1));
+        }
+        true
+    }
+
+    /// Close the powers panel overlay.
+    pub fn hide_powers_panel(&mut self) {
+        self.powers_panel = None;
+    }
+
+    /// Check if the powers panel is currently visible.
+    pub fn has_powers_panel(&self) -> bool {
+        self.powers_panel.is_some()
+    }
+
+    /// Scroll the powers panel up by `powers`. Saturates at 0.
+    pub fn powers_panel_scroll_up(&mut self, powers: usize) {
+        if let Some(panel) = self.powers_panel.as_mut() {
+            panel.scroll_offset = panel.scroll_offset.saturating_sub(powers);
+        }
+    }
+
+    /// Scroll the powers panel down by `powers`. Saturates at the last power's
+    /// index — the same index-based clamp the hooks panel uses, so the widget's
+    /// window can end with blank rows rather than a viewport-aware bound.
+    pub fn powers_panel_scroll_down(&mut self, powers: usize) {
+        if let Some(panel) = self.powers_panel.as_mut() {
+            let max = panel.powers.len().saturating_sub(1);
+            panel.scroll_offset = (panel.scroll_offset + powers).min(max);
         }
     }
 
@@ -5521,6 +5598,72 @@ mod tests {
             Some(2),
             "an in-place refresh preserves the viewport"
         );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o C5, ordering half — the command and push
+    /// halves land with slice 3). Order is display order: title, case-folded,
+    /// identifier as tie-break; duplicates are never collapsed and a refresh
+    /// clamps a stale offset instead of stranding the viewport.
+    #[test]
+    fn powers_panel_orders_and_replaces() {
+        fn power(name: &str, title: &str) -> PowerInfo {
+            PowerInfo::new(name, Some(title.to_owned()), None, Vec::new(), false)
+        }
+
+        let mut state = UiState::new(500);
+        assert!(!state.has_powers_panel(), "starts closed");
+
+        // Deliberately unsorted, with a case difference that only a
+        // case-insensitive key orders correctly, and a duplicate title that
+        // must survive as two rows.
+        state.show_powers_panel(vec![
+            power("zeta", "zeta tool"),
+            power("aws-infrastructure-as-code", "Build AWS"),
+            power("datadog", "Datadog Observability"),
+            power("markdownlint", "markdownlint"),
+            power("datadog-copy", "Datadog Observability"),
+        ]);
+        let titles: Vec<&str> = state
+            .powers_panel()
+            .expect("panel open")
+            .powers
+            .iter()
+            .map(PowerInfo::title)
+            .collect();
+        assert_eq!(
+            titles,
+            [
+                "Build AWS",
+                "Datadog Observability",
+                "Datadog Observability",
+                "markdownlint",
+                "zeta tool"
+            ],
+            "case-insensitive by title; the duplicate title is ordered by id, not dropped"
+        );
+
+        // A refresh replaces the contents…, and the tie-break is the id.
+        let replaced = state.refresh_powers_panel(vec![power("datadog", "Datadog Observability")]);
+        assert!(replaced);
+        assert_eq!(state.powers_panel().expect("open").powers.len(), 1);
+
+        // …clamping a stale offset to the new end.
+        state.powers_panel_scroll_down(10);
+        assert_eq!(state.powers_panel().expect("open").scroll_offset, 0);
+        state.show_powers_panel(vec![power("a", "A"), power("b", "B"), power("c", "C")]);
+        state.powers_panel_scroll_down(2);
+        assert_eq!(state.powers_panel().expect("open").scroll_offset, 2);
+        state.refresh_powers_panel(vec![power("a", "A")]);
+        assert_eq!(
+            state.powers_panel().expect("open").scroll_offset,
+            0,
+            "a shorter catalog cannot leave the viewport past its end"
+        );
+
+        // A closed panel is left closed by a push.
+        state.hide_powers_panel();
+        assert!(!state.refresh_powers_panel(vec![power("a", "A")]));
+        assert!(!state.has_powers_panel(), "a push never opens the panel");
     }
 
     #[test]
