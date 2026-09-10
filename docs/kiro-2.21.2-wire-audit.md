@@ -388,6 +388,94 @@ chunks, no error. Enabling this feature means choosing between
 Neither is obviously correct, and the tradeoff should be settled before any of
 the three changes in cyril-2mo0 are built.
 
+## 6d. Live results — the v3/KAS paired sweep
+
+§ 6b covered the **v2** engine only: both sweep probes spawned `<binary> acp`
+with no engine flag, and their captures carry only `_kiro.dev/*` frames. v3 was
+exercised solely by the § 6c gate probe, whose three legs all pinned the same
+KAS 0.58.7 — so v3 had no version-paired sweep. This closes that.
+
+The strict 2.21.1 ↔ 2.21.2 pairing cannot supply one (KAS is byte-frozen across
+it, § 3), so the two **distinct** archived builds were pinned instead —
+**KAS 0.58.7** (2.21.1/2.21.2) against **KAS 0.54.8** (2.21.0) — same day, same
+backend, and a workload identical to the v2 turn sweep so the surfaces are
+directly comparable.
+
+| leg | wire-only paths | stop reason | turn |
+|---|---:|---|---:|
+| KAS 0.58.7 | 246 | `end_turn` | 12.1 s |
+| KAS 0.54.8 | 252 | `end_turn` | 11.7 s |
+| v2, same workload | 104 | `end_turn` | 3.4 s |
+
+**Binary-axis result: no new fields in 0.58.7.** The diff's only asymmetry was
+six paths present under 0.54.8 and missing under 0.58.7 — all
+`result.configOptions[].options[]._meta.kiro.{defaultEffortLevel, effortLevels,
+effortSchemaPath, hasEffort, rateMultiplier, rateUnit}`.
+
+**That is a false positive, and a single sample would have reported it as a
+regression.** A repeat run of 0.58.7 carries all six. The fields always arrive
+on `config_option_update`; what varies run to run is whether the `session/new`
+**result** *also* carries them:
+
+| leg | effort metadata carried on |
+|---|---|
+| 0.58.7 run 1 | `config_option_update` ×2 — absent from the `session/new` result |
+| 0.58.7 run 2 | `config_option_update` ×2 **+** `session/new` result |
+| 0.54.8 | `config_option_update` ×2 **+** `session/new` result |
+
+This is the arrival-timing nondeterminism already on record ("model configOption
+LATE via update", 2.19.0; "transiently absent", 2.17.0), not a 0.58.7 change.
+The operational rule for any KAS client: **never read model/effort metadata off
+the `session/new` result alone** — it may only arrive later via
+`config_option_update`. Cyril already handles that notification, so it is
+tolerant here.
+
+**Surface size.** On an identical workload v3 emits **246** wire paths to v2's
+**104** — 204 paths v2 never sends. The extra is not incidental: it includes the
+per-bucket context accounting in § 6e below, `promptTurnSummaries`, powers,
+steering, governance, progressive-context and MCP status frames.
+
+## 6e. Context token breakdown — real values, inconsistent population
+
+The v3 sweep surfaced populated token counts, which merit care because they are
+easy to mistake for the billing tokens that have never been obtainable.
+
+```json
+"breakdown": {
+  "tools":         {"tokens": 5063, "percent": 0.5,
+                    "builtin": {"tokens": 5063, "percent": 0.5},
+                    "mcp":     {"tokens": 0, "percent": 0}},
+  "yourPrompts":   {"tokens": 4309, "percent": 0.4},
+  "kiroResponses": {"tokens": 0, "percent": 0},
+  "contextFiles":  {"tokens": 0, "percent": 0, "items": []},
+  "sessionFiles":  {"tokens": 0, "percent": 0, "items": []}
+},
+"contextUsage": {"usagePercentage": 0.9}
+```
+
+These are **context-window** tokens — occupancy per category — **not** per-turn
+input/output billing tokens. The billing channel on the same frames remains
+credit-denominated with no token counts:
+
+```json
+"promptTurnSummaries": [{"unit":"credit","unitPlural":"credits",
+                         "usage":0.1342758736318408,"usedTools":["read_file"]}]
+```
+
+So the standing "the backend strips tokens" finding holds for billing.
+
+Population is uneven across the 20 breakdown frames captured: `tools.tokens` is
+5063 in all 20; `yourPrompts.tokens` is populated in 10 and **zero in the other
+10 while its own `percent` reads 2.1**. A non-zero percent beside a zero token
+count is self-contradictory, so a consumer must treat the two as independently
+trustworthy and never derive one from the other. `contextFiles`, `sessionFiles`
+and `tools.mcp` were zero throughout — untested rather than known-empty, since
+the probe workspace loaded none.
+
+Identical on 0.54.8 and 0.58.7: this is **not** new in 2.21.2. It has been on
+the v3 wire all along and was missed because every prior sweep targeted v2,
+which does not push it. Filed as **cyril-8xca**.
+
 ## 7. Cyril impact
 
 **No code change is required by this release.**
@@ -453,11 +541,14 @@ static read had missed. What remains unexercised there is whether any route
 exists to receive chunks *while* advertising `terminal: true` — nothing
 observed suggests one, but absence of a route was not proven.
 
-The § 6b sweep covers the v2 engine only, and within it the two workloads
-listed. Frame families never exercised — permission prompts, plans, subagent
-crews, cancellation, compaction, KAS `_kiro/*` turns — are outside the swept
-path set, so "zero new fields" is scoped to what was driven, not to the whole
-protocol.
+§ 6b covers v2 and § 6d covers v3, each on the workloads listed. Frame
+families never exercised on either engine — plans, subagent crews, cancellation,
+compaction, workflow runs — remain outside the swept path set, so "zero new
+fields" is scoped to what was driven, not to the whole protocol. The v3 legs
+pinned two archived KAS builds against one same-day backend, which isolates the
+binary axis but leaves backend drift unmeasured. `contextFiles`, `sessionFiles`
+and `tools.mcp` in § 6e read zero because the probe workspace loaded none —
+untested, not known-empty.
 
 ## 9. Artifacts
 
@@ -477,6 +568,10 @@ Live probe and captures:
 * `experiments/conductor-spike/kas-content-chunk-on-2.21.2.jsonl` (gate on,
   terminal on → 0 chunks), `…-on-noterm-2.21.2.jsonl` (gate on, terminal
   omitted → 6 chunks), `…-off-noterm-2.21.2.jsonl` (control → 0 chunks).
+* `experiments/conductor-spike/probe-kas-turn-sweep-2.21.2.py` — the v3 paired
+  turn lane; `KAS=<acp-server.js>` pins the build, `LABEL` tags the output.
+  Captures `kas-turn-sweep-{0587,0587b,0548}-2.21.2.jsonl`; `0587b` is the
+  repeat run that falsified the apparent effort-metadata regression.
 
 Static scripts (outputs stay local and regenerable, per prior releases):
 
