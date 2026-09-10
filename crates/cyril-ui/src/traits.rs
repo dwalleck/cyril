@@ -570,12 +570,13 @@ pub struct HooksPanelState {
 /// plus the two borders = 17, which still fits the 24-row terminal the panel's
 /// geometry is checked against.
 ///
-/// One number, two readers, because a mismatch between them is a defect: the
-/// widget sizes the popup from it, and [`crate::state::UiState`] uses it as the
-/// upper bound of its scroll clamp — the panel can never show more than this,
-/// so an offset past `len - MAX_VISIBLE_POWERS` has no reachable state behind
-/// it. A popup squeezed by `modal::place` shows less; the widget clamps to what
-/// actually fits at that width and height.
+/// This is the panel's DESIRED window, not the one it always gets:
+/// `modal::place` squeezes the popup into the rows above the input, so a short
+/// terminal or a tall input shows fewer powers. The window that actually
+/// decides layout is `widgets::powers_panel::placement`'s, and the keyboard's
+/// scroll bound is measured from that same number (`render::powers_window`) —
+/// bounding it here would strand the tail of a long catalog in exactly those
+/// frames.
 pub const MAX_VISIBLE_POWERS: usize = 5;
 
 /// Powers panel overlay state (read-only display for `/powers`).
@@ -593,6 +594,10 @@ pub struct PowersPanelState {
     /// Index of the first power in the viewport, not a line offset: the widget
     /// always renders whole powers, so a scroll position that is not a power
     /// boundary cannot exist.
+    ///
+    /// [`crate::state::UiState`] keeps it inside the last full window of the
+    /// popup's ACTUAL size, so this is always a position the widget renders as
+    /// given; the widget still clamps a hand-built state into range.
     pub scroll_offset: usize,
 }
 

@@ -2493,15 +2493,25 @@ impl UiState {
         ordered
     }
 
-    /// The last scroll offset that still fills the panel's window.
+    /// The last scroll offset whose window is still full.
     ///
-    /// The widget paints at most [`MAX_VISIBLE_POWERS`] powers, so any offset
-    /// past `len - MAX_VISIBLE_POWERS` starts the viewport past the end of the
-    /// catalog and leaves blank rows under a partial list (review finding 8 —
-    /// the hooks panel's index clamp suits one-line rows, and this panel copied
-    /// it with three-line rows).
-    fn max_powers_scroll(len: usize) -> usize {
-        len.saturating_sub(MAX_VISIBLE_POWERS)
+    /// An offset past the last full window starts the viewport past the end of
+    /// the catalog and leaves blank rows under a partial list (review finding 8
+    /// — the hooks panel's index clamp suits one-line rows, and this panel
+    /// copied it with three-line rows).
+    ///
+    /// The window is the one the popup ACTUALLY has, from
+    /// [`crate::render::powers_window`], not [`MAX_VISIBLE_POWERS`]:
+    /// `modal::place` squeezes the popup into the rows above the input, and a
+    /// bound computed for the widest window leaves the tail of the catalog
+    /// unreachable whenever it squeezes — nine powers on an 18-row terminal
+    /// show three at a time, so a bound of `len - MAX_VISIBLE_POWERS` can never
+    /// bring the last two into view.
+    ///
+    /// `max(1)`: a popup with nowhere to draw has no window at all; the bound
+    /// then reduces to the last index, which no frame gets to use.
+    fn max_powers_scroll(&self, len: usize) -> usize {
+        len.saturating_sub(crate::render::powers_window(self, len).max(1))
     }
 
     /// Replace the powers panel's contents **only if it is already open**,
@@ -2528,7 +2538,7 @@ impl UiState {
         }
         let scroll = panel
             .scroll_offset
-            .min(Self::max_powers_scroll(ordered.len()));
+            .min(self.max_powers_scroll(ordered.len()));
         self.powers_panel = Some(PowersPanelState {
             powers: ordered,
             scroll_offset: scroll,
@@ -2554,13 +2564,20 @@ impl UiState {
     }
 
     /// Scroll the powers panel down by `powers`. Saturates at the last offset
-    /// that still fills the window (`len - MAX_VISIBLE_POWERS`), not at the
-    /// last power's index: with three-line rows an index clamp scrolls a
-    /// three-power catalog into an almost-blank panel while the title still
-    /// claims three powers (review finding 8).
+    /// whose window is still full (`max_powers_scroll`), not at the last
+    /// power's index: with three-line rows an index clamp scrolls a three-power
+    /// catalog into an almost-blank panel while the title still claims three
+    /// powers (review finding 8).
+    ///
+    /// The bound is read before the panel is borrowed mutably because it
+    /// depends on the frame layout, which is derived from the state as a whole
+    /// (the input's growth decides where the popup can start).
     pub fn powers_panel_scroll_down(&mut self, powers: usize) {
+        let Some(len) = self.powers_panel.as_ref().map(|panel| panel.powers.len()) else {
+            return;
+        };
+        let max = self.max_powers_scroll(len);
         if let Some(panel) = self.powers_panel.as_mut() {
-            let max = Self::max_powers_scroll(panel.powers.len());
             panel.scroll_offset = (panel.scroll_offset + powers).min(max);
         }
     }

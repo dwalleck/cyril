@@ -41,6 +41,26 @@ const BORDER_ROWS: usize = 2;
 /// ASCII, so its byte length is its cell width.
 const STEERING_TOKEN: &str = " · steering";
 
+/// The popup's rect and the number of whole powers it can show.
+///
+/// `None` when [`crate::widgets::modal::place`] finds no room above the input:
+/// there is nowhere to draw and nothing to scroll. The window is what the
+/// PLACED popup fits — `place` clamps the popup to the rows above the input, so
+/// a short terminal or a tall input leaves less than [`MAX_VISIBLE_POWERS`]
+/// powers' worth of rows.
+///
+/// That number is also the keyboard's scroll bound, through
+/// [`crate::render::powers_window`]: bounding it at `len - MAX_VISIBLE_POWERS`
+/// instead strands the tail of a long catalog, because no offset the bound
+/// allows starts the window over the last powers (review finding 8).
+pub(crate) fn placement(len: usize, area: Rect, input_top: u16) -> Option<(Rect, usize)> {
+    let listed = len.clamp(1, MAX_VISIBLE_POWERS);
+    let desired_height = (listed * LINES_PER_POWER) as u16 + BORDER_ROWS as u16;
+    let popup = crate::widgets::modal::place(area, input_top, 96, desired_height)?;
+    let window = ((popup.height as usize).saturating_sub(BORDER_ROWS) / LINES_PER_POWER).max(1);
+    Some((popup, window))
+}
+
 /// Render the powers panel overlay (input-protected popup).
 ///
 /// `input_top` is the absolute row of the input box's top border; placement
@@ -54,13 +74,10 @@ pub fn render(
     state: &PowersPanelState,
     theme: &Theme,
 ) {
-    let listed = state.powers.len().clamp(1, MAX_VISIBLE_POWERS);
-    let desired_height = (listed * LINES_PER_POWER) as u16 + BORDER_ROWS as u16;
-    let Some(popup_area) = crate::widgets::modal::place(area, input_top, 96, desired_height) else {
+    let Some((popup_area, window)) = placement(state.powers.len(), area, input_top) else {
         return; // no rows above the input can hold the popup
     };
     let width = popup_area.width;
-    let height = popup_area.height;
 
     frame.render_widget(Clear, popup_area);
 
@@ -69,13 +86,10 @@ pub fn render(
     // clipped mid-row.
     let inner_width = (width as usize).saturating_sub(2);
     let text_width = inner_width.saturating_sub(INDENT).max(1);
-    // What the PLACED popup can show. `place` may have clamped it below
-    // `desired_height`, so this can be smaller than the window the keyboard
-    // clamps to (`MAX_VISIBLE_POWERS`).
-    let window = (((height as usize).saturating_sub(BORDER_ROWS)) / LINES_PER_POWER).max(1);
-    // …and the viewport must start inside the catalog: the keyboard's offset is
-    // bounded by the maximum window, which a squeezed popup would otherwise
-    // overshoot into blank rows (review finding 8).
+    // The viewport must start inside the catalog. `UiState` bounds the keyboard
+    // to the same window this returns, so the clamp only bites for a panel
+    // state built by hand or one whose catalog shrank under it (review
+    // finding 8).
     let first_visible = state
         .scroll_offset
         .min(state.powers.len().saturating_sub(window));
@@ -176,6 +190,8 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use crate::state::UiState;
+    use crate::traits::TuiState;
     use cyril_core::types::PowerInfo;
     use ratatui::backend::TestBackend;
 
@@ -222,6 +238,18 @@ mod tests {
                     ),
                 )
             })
+            .unwrap();
+        terminal
+    }
+
+    /// Draw the WHOLE frame — chrome, chat, input, overlays — the way the app
+    /// does, so a fence can assert on the geometry the real layout produces
+    /// instead of a hand-passed input row.
+    fn draw_frame(state: &UiState, width: u16, height: u16) -> Terminal<TestBackend> {
+        let backend = TestBackend::new(width, height);
+        let mut terminal = Terminal::new(backend).unwrap();
+        terminal
+            .draw(|frame| crate::render::draw(frame, state))
             .unwrap();
         terminal
     }
@@ -557,6 +585,65 @@ mod tests {
         let text = rendered_text(&terminal);
         assert!(text.contains("Power 04"));
         assert!(!text.contains("Power 05"), "window caps at five powers");
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 8, advisory follow-up).
+    ///
+    /// The keyboard's scroll bound is the window the popup ACTUALLY has, not
+    /// `MAX_VISIBLE_POWERS`: `modal::place` squeezes the popup into the rows
+    /// above the input, and nine powers in an 18-row frame show three at a
+    /// time. Bounded at `len - MAX_VISIBLE_POWERS` the keyboard stops at index
+    /// 4, and since the widget clamps the viewport into the last full window
+    /// (index 6), no reachable offset ever starts the window over the last
+    /// powers — they are unreachable, not merely scrolled past.
+    ///
+    /// This drives the real `UiState` scroll and draws the real frame, so the
+    /// state's bound and the widget's placement are compared where they meet.
+    #[test]
+    fn squeezed_viewport_reaches_the_last_power() {
+        let powers: Vec<PowerInfo> = (0..9)
+            .map(|n| {
+                power(
+                    &format!("power-{n:02}"),
+                    Some(&format!("Power {n:02}")),
+                    None,
+                    &[],
+                    false,
+                )
+            })
+            .collect();
+        let mut ui = UiState::new(500);
+        // An 18-row frame: chat gets 13 rows, so the input starts at row 14 and
+        // the popup is clamped to rows 1..13 — three powers, not five.
+        ui.set_terminal_size(100, 18);
+        ui.show_powers_panel(powers);
+        ui.powers_panel_scroll_down(usize::MAX);
+        assert_eq!(
+            ui.powers_panel().expect("open").scroll_offset,
+            9 - 3,
+            "the bound is the squeezed window (9 powers, 3 visible), so the \
+             viewport can still start over the last powers"
+        );
+
+        let terminal = draw_frame(&ui, 100, 18);
+        let text = rendered_text(&terminal);
+        assert!(
+            text.contains("9 powers") && text.contains("showing 7–9"),
+            "the frame really is squeezed to three powers: {text}"
+        );
+        assert!(
+            text.contains("Power 08"),
+            "the last power is reachable at the extreme scroll: {text}"
+        );
+        // …and the window is whole: the three visible powers hold the three
+        // content rows each, ending on the last one.
+        assert!(row_text(&terminal, 0).contains("Power 06"));
+        assert!(row_text(&terminal, 3).contains("Power 07"));
+        assert!(row_text(&terminal, 6).contains("Power 08"));
+        assert!(
+            !row_text(&terminal, 9).contains("Power"),
+            "nothing is painted past the window's last power"
+        );
     }
 
     /// REGRESSION FENCE (cyril-v19o C6): with no room above the input the panel

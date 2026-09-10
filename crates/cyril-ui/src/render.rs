@@ -1,5 +1,5 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
 
@@ -27,6 +27,121 @@ const INPUT_FLOOR: u16 = 3;
 /// suggestion list to the floating overlay (D4).
 const CHAT_COMFORT: u16 = 5;
 
+/// Vertical chrome for one frame, derived from state alone.
+///
+/// One formula, two readers: [`draw_inner`] turns these heights into its
+/// constraint list, and [`powers_window`] asks where the input starts. A second
+/// copy of the budget arithmetic is how an overlay's geometry drifts from the
+/// frame it is drawn into.
+struct FrameRows {
+    /// Chat takes the remainder of the vertical budget — `Min(CHAT_FLOOR)`.
+    chat: u16,
+    crew: u16,
+    voice: u16,
+    input: u16,
+    suggestions: u16,
+    /// Whether the suggestion list floats above the input instead of taking
+    /// its in-flow row (it does not fit, so `suggestions` is 0).
+    suggestions_overlay: bool,
+    /// The list's unclamped height — what the floating overlay needs.
+    suggestions_demand: u16,
+}
+
+fn frame_rows(area: Rect, state: &dyn TuiState) -> FrameRows {
+    // Runtime-variable panel heights are owned by their widget's height_for().
+    let crew = crate::widgets::crew_panel::height_for(state);
+    let voice = crate::widgets::voice::height_for(state);
+    let suggestions_demand = crate::widgets::suggestions::height_for(state);
+    let input_demand = crate::widgets::input::height_for(state);
+
+    // Explicit vertical budget (cyril-a14l R1): the input may grow with its
+    // draft only until chat would drop below its floor — its allocation is
+    // decided here, not by the constraint solver, so the widget's
+    // cursor-follow window always sees its real height.
+    let avail = area
+        .height
+        .saturating_sub(2)
+        .saturating_sub(crew)
+        .saturating_sub(voice);
+    let input = input_demand
+        .min(avail.saturating_sub(CHAT_FLOOR))
+        .max(INPUT_FLOOR.min(avail));
+    if input < input_demand {
+        tracing::trace!(
+            input_demand,
+            input,
+            frame_height = area.height,
+            "input height clamped by the vertical budget"
+        );
+    }
+
+    // Suggestions keep today's in-flow row below the input only while chat
+    // retains its comfortable 5 rows (cyril-a14l R3/D4); under pressure the
+    // list floats above the input instead, so opening autocomplete never
+    // reflows the frame (C5).
+    let suggestions_overlay = suggestions_demand > 0
+        && avail
+            < input
+                .saturating_add(suggestions_demand)
+                .saturating_add(CHAT_COMFORT);
+    let suggestions = if suggestions_overlay {
+        0
+    } else {
+        suggestions_demand
+    };
+
+    // Chat is `Min(CHAT_FLOOR)`: it takes exactly what the fixed rows leave,
+    // which the input budget above holds at or above its floor.
+    let chat = area
+        .height
+        .saturating_sub(2)
+        .saturating_sub(crew)
+        .saturating_sub(voice)
+        .saturating_sub(input)
+        .saturating_sub(suggestions);
+    FrameRows {
+        chat,
+        crew,
+        voice,
+        input,
+        suggestions,
+        suggestions_overlay,
+        suggestions_demand,
+    }
+}
+
+/// Absolute row of the input box's top border at this frame layout.
+///
+/// The row every overlay's placement is measured against
+/// ([`crate::widgets::modal::place`]), so a caller outside the renderer can ask
+/// where a popup has room without restating the layout.
+pub(crate) fn input_top(area: Rect, state: &dyn TuiState) -> u16 {
+    let rows = frame_rows(area, state);
+    area.y
+        .saturating_add(1)
+        .saturating_add(rows.chat)
+        .saturating_add(rows.crew)
+        .saturating_add(rows.voice)
+}
+
+/// Powers the `/powers` popup shows at once in the frame the state reports.
+///
+/// The popup is placed against the frame's real input row, so a short terminal
+/// or a tall input leaves less than a full window and
+/// [`crate::state::UiState`]'s scroll bound has to know that number: bounded at
+/// `len - MAX_VISIBLE_POWERS` instead, the tail of a long catalog is
+/// unreachable, because no offset such a clamp allows starts the window over it
+/// (review finding 8).
+///
+/// Zero means the popup has nowhere to draw — there is no window to scroll.
+pub(crate) fn powers_window(state: &dyn TuiState, len: usize) -> usize {
+    let (width, height) = state.terminal_size();
+    let area = Rect::new(0, 0, width, height);
+    let input_top = input_top(area, state);
+    crate::widgets::powers_panel::placement(len, area, input_top)
+        .map_or(0, |(_popup, window)| window)
+}
+
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
     let theme = state.theme();
@@ -43,47 +158,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
             .set_style(area, Style::default().bg(theme.canvas));
     }
 
-    // Runtime-variable panel heights are owned by their widget's height_for().
-    let crew_height = crate::widgets::crew_panel::height_for(state);
-    let voice_height = crate::widgets::voice::height_for(state);
-    let suggestions_demand = crate::widgets::suggestions::height_for(state);
-    let input_demand = crate::widgets::input::height_for(state);
-
-    // Explicit vertical budget (cyril-a14l R1): the input may grow with its
-    // draft only until chat would drop below its floor — its allocation is
-    // decided here, not by the constraint solver, so the widget's
-    // cursor-follow window always sees its real height.
-    let avail = area
-        .height
-        .saturating_sub(2)
-        .saturating_sub(crew_height)
-        .saturating_sub(voice_height);
-    let input_height = input_demand
-        .min(avail.saturating_sub(CHAT_FLOOR))
-        .max(INPUT_FLOOR.min(avail));
-    if input_height < input_demand {
-        tracing::trace!(
-            input_demand,
-            input_height,
-            frame_height = area.height,
-            "input height clamped by the vertical budget"
-        );
-    }
-
-    // Suggestions keep today's in-flow row below the input only while chat
-    // retains its comfortable 5 rows (cyril-a14l R3/D4); under pressure the
-    // list floats above the input instead, so opening autocomplete never
-    // reflows the frame (C5).
-    let suggestions_overlay = suggestions_demand > 0
-        && avail
-            < input_height
-                .saturating_add(suggestions_demand)
-                .saturating_add(CHAT_COMFORT);
-    let suggestions_height = if suggestions_overlay {
-        0
-    } else {
-        suggestions_demand
-    };
+    let rows = frame_rows(area, state);
 
     let [
         toolbar_area,
@@ -96,24 +171,24 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     ] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(CHAT_FLOOR),
-        Constraint::Length(crew_height),
-        Constraint::Length(voice_height),
-        Constraint::Length(input_height),
-        Constraint::Length(suggestions_height),
+        Constraint::Length(rows.crew),
+        Constraint::Length(rows.voice),
+        Constraint::Length(rows.input),
+        Constraint::Length(rows.suggestions),
         Constraint::Length(1),
     ])
     .areas(area);
 
     crate::widgets::toolbar::render(frame, toolbar_area, state, &theme);
     crate::widgets::chat::render(frame, chat_area, state, &theme);
-    if crew_height > 0 {
+    if rows.crew > 0 {
         crate::widgets::crew_panel::render(frame, crew_area, state, &theme);
     }
-    if voice_height > 0 {
+    if rows.voice > 0 {
         crate::widgets::voice::render(frame, voice_area, state, &theme);
     }
     crate::widgets::input::render(frame, input_area, state, &theme);
-    if suggestions_height > 0 {
+    if rows.suggestions > 0 {
         crate::widgets::suggestions::render(frame, suggestions_area, state, &theme);
     }
     crate::widgets::toolbar::render_status_bar(frame, status_area, state, &theme);
@@ -121,10 +196,10 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     // Constrained-mode autocomplete: float directly above the input without
     // moving any in-flow row (cyril-a14l C5). Modals render after and may
     // paint over it — they also own the keyboard while open.
-    if suggestions_overlay {
-        let overlay_height = suggestions_demand.min(input_area.y.saturating_sub(1));
+    if rows.suggestions_overlay {
+        let overlay_height = rows.suggestions_demand.min(input_area.y.saturating_sub(1));
         if overlay_height > 0 {
-            let overlay_area = ratatui::layout::Rect::new(
+            let overlay_area = Rect::new(
                 area.x,
                 input_area.y - overlay_height,
                 area.width,

@@ -225,8 +225,12 @@ fences and the oracles that enforce them, plus the one allowlist correction.
 
 - **C5** — ordering now has a load-bearing id tie-break (finding 14a), a
   `refresh` that reports `false` for identical rows (finding 19), and a
-  window-aware scroll clamp (finding 8). The App fence drives the real
-  `/powers` submit path (finding 14b).
+  window-aware scroll clamp (finding 8). The clamp is window-aware in the
+  literal sense: it reads the window the popup actually gets
+  (`render::powers_window` → `widgets::powers_panel::placement`, both derived
+  from the frame the state reports), so a terminal short enough to squeeze the
+  popup cannot strand the catalog's tail (`squeezed_viewport_reaches_the_last_power`).
+  The App fence drives the real `/powers` submit path (finding 14b).
 - **C6** — the popup's row budget is `BORDER_ROWS = 2`; the title states the
   visible window when the catalog overflows (finding 6); the steering token is
   budgeted before truncation (finding 7); the widget clamps a stale offset into
@@ -251,7 +255,8 @@ fences and the oracles that enforce them, plus the one allowlist correction.
 | C5 | `no-sort-on-open` (re-anchored to `sorted_powers`) | `powers_panel_orders_and_replaces` |
 | C5 | `id-tie-break-dropped` | `powers_panel_orders_and_replaces` |
 | C5 | `refresh-strands-the-viewport` (re-anchored) | `powers_panel_orders_and_replaces` |
-| C5 | `scroll-clamp-uses-the-last-index` | `powers_panel_orders_and_replaces` |
+| C5 | `scroll-clamp-assumes-the-max-window` (replaces `scroll-clamp-uses-the-last-index`) | `squeezed_viewport_reaches_the_last_power` |
+| C5 | `powers-window-ignores-the-placed-popup` | `squeezed_viewport_reaches_the_last_power` |
 | C5 | `identical-push-reports-a-change` | `powers_panel_orders_and_replaces` |
 | C5 | `hooks-identical-push-reports-a-change` | `refresh_replaces_contents_and_clamps_scroll` |
 | C5 | `push-opens-the-panel` (re-anchored, by-reference refresh) | `powers_push_updates_without_opening_and_command_opens` |

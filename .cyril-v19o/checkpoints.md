@@ -221,3 +221,50 @@ green after restore.
 
 **Not verified** — no live KAS run this pass; the 100×24 / `input_top = 18`
 geometry is exercised in `TestBackend` only.
+
+## Advisory follow-up — squeezed-window reachability (2026-09-10)
+
+The advisory on finding 8 was correct and is fixed. The first pass bounded the
+state's scroll at `len - MAX_VISIBLE_POWERS` — the WIDEST window — while the
+widget paints at most the window the PLACED popup fits. When `modal::place`
+squeezes the popup (a short terminal, or a tall input), the state's bound stops
+the keyboard short of the last full window; the widget then clamps the viewport
+into that window, so the tail of the catalog is unreachable rather than merely
+unscrolled. Nine powers in an 18-row frame show three at a time: the keyboard
+stopped at index 4, the viewport clamp starts at 6, and indices 7–8 could never
+be painted. Not exotic — the standard 24-row frame squeezes the popup to four
+powers once the input is tall enough for 10+ powers to overflow.
+
+Fix — the bound is the window the popup actually gets:
+
+- `render::frame_rows` — the vertical chrome budget extracted from `draw_inner`
+  (one formula, two readers: the constraint list and the geometry queries).
+- `render::input_top` / `render::powers_window` — the input row and the window
+  that follows from it, for the frame the state reports a size for.
+- `widgets::powers_panel::placement` — the popup rect and its window in one
+  place; `render` and the state's bound both read it.
+- `UiState::max_powers_scroll` — `len - powers_window(len)`, read before the
+  panel is borrowed mutably; `refresh_powers_panel` re-clamps through it.
+
+Fence: `squeezed_viewport_reaches_the_last_power` — drives the real `UiState`
+scroll to its extreme at 100×18, then draws the WHOLE frame (the input row comes
+from the real layout, not a hand-passed constant) and asserts the last power is
+painted inside a whole three-power window, with the title saying `showing 7–9`.
+
+Mutations: `scroll-clamp-assumes-the-max-window` (replaces
+`scroll-clamp-uses-the-last-index`, which no longer names a defect) and
+`powers-window-ignores-the-placed-popup`; both red the new fence. `render.rs`
+joined the restore set, so a killed run cannot leave it mutated.
+
+`.cyril-v19o/oracles/anchor_check.py` — new pre-flight: parses every `prove`
+invocation and requires each anchor to occur exactly once. A stale anchor
+aborted the first post-fix oracle run after ~9 minutes; this answers in 0.2s.
+
+**Gates** (this change) — `cargo fmt --all -- --check` clean;
+`cargo clippy --workspace --all-targets --features kas` and
+`cargo clippy --all-targets -- -D warnings` silent;
+`cargo test --workspace --features kas` 1994 passed / 0 failed;
+`cargo test --workspace` 1992 passed / 0 failed;
+`cargo test --doc --workspace --all-features` green; `cargo doc -p cyril-ui
+--no-deps` warning-free; `module_shape.py` PASS; `mutations.sh` 28/28 red then
+green.

@@ -24,13 +24,14 @@ APP=crates/cyril/src/app.rs
 BUILTIN=crates/cyril-core/src/commands/builtin.rs
 COMMANDS=crates/cyril-core/src/commands/mod.rs
 ENGINE=crates/cyril-core/src/protocol/engine.rs
+RENDER=crates/cyril-ui/src/render.rs
 
 BACKUP=$(mktemp -d)
 FAILURES=0
 MUTATIONS_RUN=0
 
 restore_all() {
-  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$TRAITS" "$APP" "$BUILTIN" "$COMMANDS" "$ENGINE"; do
+  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$TRAITS" "$APP" "$BUILTIN" "$COMMANDS" "$ENGINE" "$RENDER"; do
     if [ -f "$BACKUP/$(echo "$file" | tr / _)" ]; then
       cp "$BACKUP/$(echo "$file" | tr / _)" "$file"
     fi
@@ -150,14 +151,20 @@ prove C5 id-tie-break-dropped "$STATE" \
 prove C5 refresh-strands-the-viewport "$STATE" \
   '        let scroll = panel
             .scroll_offset
-            .min(Self::max_powers_scroll(ordered.len()));' \
+            .min(self.max_powers_scroll(ordered.len()));' \
   '        let scroll = panel.scroll_offset;' \
   "${UI_TEST[@]}" powers_panel_orders_and_replaces
 
-prove C5 scroll-clamp-uses-the-last-index "$STATE" \
-  '        len.saturating_sub(MAX_VISIBLE_POWERS)' \
-  '        len.saturating_sub(1)' \
-  "${UI_TEST[@]}" powers_panel_orders_and_replaces
+prove C5 scroll-clamp-assumes-the-max-window "$STATE" \
+  '        len.saturating_sub(crate::render::powers_window(self, len).max(1))' \
+  '        len.saturating_sub(crate::traits::MAX_VISIBLE_POWERS)' \
+  "${UI_TEST[@]}" squeezed_viewport_reaches_the_last_power
+
+prove C5 powers-window-ignores-the-placed-popup "$RENDER" \
+  '    crate::widgets::powers_panel::placement(len, area, input_top)
+        .map_or(0, |(_popup, window)| window)' \
+  '    crate::traits::MAX_VISIBLE_POWERS' \
+  "${UI_TEST[@]}" squeezed_viewport_reaches_the_last_power
 
 prove C5 identical-push-reports-a-change "$STATE" \
   '        if panel.powers == ordered {
