@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+# Named-mutation proofs for cyril-v19o (checkpointed-build obligation).
+#
+# Each mutation applies the exact buggy implementation from `design.md`'s Named
+# mutation column to the working tree, runs the owning fence, and requires it to
+# go RED. The file is then restored from a byte-exact backup and the same fence
+# must go GREEN again. A mutation that does not turn its fence red aborts with a
+# non-zero exit: a fence seen only green has not demonstrated defect detection.
+#
+# Mutations are appended per slice as their fences land.
+#
+# Usage: bash .cyril-v19o/oracles/mutations.sh [name-filter]
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+FILTER="${1:-}"
+
+ADAPTER=crates/cyril-core/src/protocol/convert/kas/powers.rs
+TYPE=crates/cyril-core/src/types/power.rs
+WIDGET=crates/cyril-ui/src/widgets/powers_panel.rs
+STATE=crates/cyril-ui/src/state.rs
+APP=crates/cyril/src/app.rs
+BUILTIN=crates/cyril-core/src/commands/builtin.rs
+
+BACKUP=$(mktemp -d)
+FAILURES=0
+MUTATIONS_RUN=0
+
+restore_all() {
+  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$APP" "$BUILTIN"; do
+    if [ -f "$BACKUP/$(echo "$file" | tr / _)" ]; then
+      cp "$BACKUP/$(echo "$file" | tr / _)" "$file"
+    fi
+  done
+}
+# Always restore, even when a proof fails or the script is interrupted: a
+# mutated working tree must never outlive this run.
+trap 'restore_all; rm -rf "$BACKUP"' EXIT
+
+backup() {
+  local file="$1"
+  if [ ! -f "$BACKUP/$(echo "$file" | tr / _)" ]; then
+    cp "$file" "$BACKUP/$(echo "$file" | tr / _)"
+  fi
+}
+
+# apply <file> <python-replacement>  — exact anchor replacement, loud on miss.
+apply() {
+  local file="$1" from="$2" to="$3"
+  backup "$file"
+  python3 - "$file" "$from" "$to" <<'PY'
+import pathlib, sys
+path, old, new = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+text = path.read_text()
+if text.count(old) != 1:
+    raise SystemExit(f"ANCHOR MISS in {path}: {old[:60]!r} occurs {text.count(old)}x")
+path.write_text(text.replace(old, new))
+PY
+}
+
+# prove <claim> <name> <file> <from> <to> <fence-command...>
+prove() {
+  local claim="$1" name="$2" file="$3" from="$4" to="$5"
+  shift 5
+  if [ -n "$FILTER" ] && [[ "$name" != *"$FILTER"* ]]; then
+    return 0
+  fi
+  MUTATIONS_RUN=$((MUTATIONS_RUN + 1))
+  apply "$file" "$from" "$to"
+  if "$@" >/dev/null 2>&1; then
+    echo "FAIL	$claim	$name	fence stayed GREEN under its mutation"
+    FAILURES=$((FAILURES + 1))
+  else
+    echo "PASS	$claim	$name	fence went RED"
+  fi
+  restore_all
+  if "$@" >/dev/null 2>&1; then
+    echo "PASS	$claim	$name	fence GREEN after restore"
+  else
+    echo "FAIL	$claim	$name	fence still RED after restore"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
+CORE_TEST=(cargo test -p cyril-core --features kas --lib)
+
+# --- Slice 1: conversion -----------------------------------------------------
+
+prove C1 swap-name-and-display-name "$ADAPTER" \
+  '        Self::new(
+            wire.name,
+            wire.display_name,' \
+  '        Self::new(
+            wire.display_name.unwrap_or_default(),
+            Some(wire.name),' \
+  "${CORE_TEST[@]}" powers_frame_maps_every_field_from_the_capture
+
+prove C2 empty-catalog-becomes-a-drop "$ADAPTER" \
+  '    match parse(params) {
+        Ok(powers) => Ok(Some(Notification::PowersChanged { powers })),' \
+  '    match parse(params) {
+        Ok(powers) if powers.is_empty() => Ok(None),
+        Ok(powers) => Ok(Some(Notification::PowersChanged { powers })),' \
+  "${CORE_TEST[@]}" empty_catalog_is_loaded_not_dropped
+
+prove C3 malformed-frame-becomes-an-empty-catalog "$ADAPTER" \
+  '        Err(error) => {
+            tracing::warn!(
+                method,
+                field_path = %error.path(),
+                error = %error.inner(),
+                "malformed powers notification; not converted"
+            );
+            Ok(None)
+        }' \
+  '        Err(_error) => Ok(Some(Notification::PowersChanged { powers: Vec::new() })),' \
+  "${CORE_TEST[@]}" malformed_powers_frames_drop_and_never_clear
+
+if [ "$MUTATIONS_RUN" -eq 0 ]; then
+  echo "FAIL	-	$FILTER	no mutation matched the filter"
+  exit 1
+fi
+if [ "$FAILURES" -ne 0 ]; then
+  echo "$FAILURES mutation proof(s) failed"
+  exit 1
+fi
+echo "all $MUTATIONS_RUN named mutations proved red/green"

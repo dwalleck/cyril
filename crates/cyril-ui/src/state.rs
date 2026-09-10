@@ -1129,6 +1129,13 @@ impl UiState {
             // decision. Listed explicitly rather than falling into a catch-all
             // so a future notification cannot be silently swallowed.
             Notification::HooksChanged { .. } => false,
+            // Handled by the App via `refresh_powers_panel`, not here
+            // (cyril-v19o). Same reasoning as `HooksChanged` above: the push
+            // arrives unprompted once per session (+18 ms after `session/new`)
+            // and must never pop a modal open over the user, which is a
+            // decision this method cannot express without duplicating the App's
+            // "only if already open" rule.
+            Notification::PowersChanged { .. } => false,
         };
         changed || stall_cleared
     }

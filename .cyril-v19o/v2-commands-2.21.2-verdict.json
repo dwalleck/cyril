@@ -1,0 +1,10 @@
+{
+  "commandCount": 0,
+  "commands": [],
+  "engine": "v2",
+  "label": "2.21.2",
+  "launcher": "/home/dwalleck/.local/bin/kiro-cli",
+  "powersAdvertised": false,
+  "powersMethods": [],
+  "sessionIdPresent": true
+}
