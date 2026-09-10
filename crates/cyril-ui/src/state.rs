@@ -2557,9 +2557,22 @@ impl UiState {
     }
 
     /// Scroll the powers panel up by `powers`. Saturates at 0.
+    ///
+    /// The stored offset is normalized into the CURRENT window before it moves.
+    /// A terminal that grew, an input that shrank, or a crew row that went away
+    /// all enlarge the popup, and an offset clamped for the smaller window then
+    /// sits past the last full window — where the widget renders the view from
+    /// the window's end rather than from the offset. Subtracting from that stale
+    /// number would spend keypresses walking it back into range with the
+    /// viewport standing still; normalizing first means one Up moves the view by
+    /// one power (review finding 8, second advisory).
     pub fn powers_panel_scroll_up(&mut self, powers: usize) {
+        let Some(len) = self.powers_panel.as_ref().map(|panel| panel.powers.len()) else {
+            return;
+        };
+        let max = self.max_powers_scroll(len);
         if let Some(panel) = self.powers_panel.as_mut() {
-            panel.scroll_offset = panel.scroll_offset.saturating_sub(powers);
+            panel.scroll_offset = panel.scroll_offset.min(max).saturating_sub(powers);
         }
     }
 

@@ -284,6 +284,22 @@ mod tests {
             .collect::<String>()
     }
 
+    /// Nine powers: two more than the widest window, so any offset bound short
+    /// of the real one is visible as an unreachable tail.
+    fn nine_powers() -> Vec<PowerInfo> {
+        (0..9)
+            .map(|n| {
+                power(
+                    &format!("power-{n:02}"),
+                    Some(&format!("Power {n:02}")),
+                    None,
+                    &[],
+                    false,
+                )
+            })
+            .collect()
+    }
+
     /// The three powers installed on the capture machine, in the display order
     /// `UiState` produces.
     fn three_powers() -> Vec<PowerInfo> {
@@ -601,22 +617,11 @@ mod tests {
     /// state's bound and the widget's placement are compared where they meet.
     #[test]
     fn squeezed_viewport_reaches_the_last_power() {
-        let powers: Vec<PowerInfo> = (0..9)
-            .map(|n| {
-                power(
-                    &format!("power-{n:02}"),
-                    Some(&format!("Power {n:02}")),
-                    None,
-                    &[],
-                    false,
-                )
-            })
-            .collect();
         let mut ui = UiState::new(500);
         // An 18-row frame: chat gets 13 rows, so the input starts at row 14 and
         // the popup is clamped to rows 1..13 — three powers, not five.
         ui.set_terminal_size(100, 18);
-        ui.show_powers_panel(powers);
+        ui.show_powers_panel(nine_powers());
         ui.powers_panel_scroll_down(usize::MAX);
         assert_eq!(
             ui.powers_panel().expect("open").scroll_offset,
@@ -643,6 +648,50 @@ mod tests {
         assert!(
             !row_text(&terminal, 9).contains("Power"),
             "nothing is painted past the window's last power"
+        );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 8, second advisory).
+    ///
+    /// The stored offset can outlive the window it was clamped for.
+    /// `set_terminal_size` only records the size, so a terminal that GROWS
+    /// leaves the offset past the new last full window while the widget renders
+    /// the view from that window's end. Up must normalize into the current
+    /// window before it moves, or the first keypresses walk the stale number
+    /// back into range with the viewport standing still.
+    #[test]
+    fn scroll_up_moves_after_the_window_grows() {
+        let mut ui = UiState::new(500);
+        ui.set_terminal_size(100, 18);
+        ui.show_powers_panel(nine_powers());
+        ui.powers_panel_scroll_down(usize::MAX);
+        assert_eq!(
+            ui.powers_panel().expect("open").scroll_offset,
+            9 - 3,
+            "the extreme offset for a three-power window"
+        );
+
+        // The terminal grows: five powers fit, so the old offset of 6 is past
+        // the new bound of 4 and the widget renders the view from 4.
+        ui.set_terminal_size(100, 24);
+        ui.powers_panel_scroll_up(1);
+        assert_eq!(
+            ui.powers_panel().expect("open").scroll_offset,
+            3,
+            "Up normalizes into the wider window first, then moves by one"
+        );
+
+        let terminal = draw_frame(&ui, 100, 24);
+        let text = rendered_text(&terminal);
+        assert!(
+            text.contains("showing 4–8"),
+            "one Up moves the viewport one power up from the bottom of the \
+             list: {text}"
+        );
+        assert!(
+            row_text(&terminal, 0).contains("Power 03"),
+            "…and the first visible row follows the offset: {}",
+            row_text(&terminal, 0)
         );
     }
 

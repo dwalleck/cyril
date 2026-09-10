@@ -160,6 +160,11 @@ prove C5 scroll-clamp-assumes-the-max-window "$STATE" \
   '        len.saturating_sub(crate::traits::MAX_VISIBLE_POWERS)' \
   "${UI_TEST[@]}" squeezed_viewport_reaches_the_last_power
 
+prove C5 scroll-up-ignores-the-current-window "$STATE" \
+  '            panel.scroll_offset = panel.scroll_offset.min(max).saturating_sub(powers);' \
+  '            panel.scroll_offset = panel.scroll_offset.saturating_sub(powers);' \
+  "${UI_TEST[@]}" scroll_up_moves_after_the_window_grows
+
 prove C5 powers-window-ignores-the-placed-popup "$RENDER" \
   '    crate::widgets::powers_panel::placement(len, area, input_top)
         .map_or(0, |(_popup, window)| window)' \

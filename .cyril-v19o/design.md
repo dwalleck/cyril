@@ -229,7 +229,10 @@ fences and the oracles that enforce them, plus the one allowlist correction.
   literal sense: it reads the window the popup actually gets
   (`render::powers_window` → `widgets::powers_panel::placement`, both derived
   from the frame the state reports), so a terminal short enough to squeeze the
-  popup cannot strand the catalog's tail (`squeezed_viewport_reaches_the_last_power`).
+  popup cannot strand the catalog's tail (`squeezed_viewport_reaches_the_last_power`),
+  and Up normalizes the stored offset into the current window before it moves,
+  so a terminal that grew cannot make the first keypresses dead
+  (`scroll_up_moves_after_the_window_grows`).
   The App fence drives the real `/powers` submit path (finding 14b).
 - **C6** — the popup's row budget is `BORDER_ROWS = 2`; the title states the
   visible window when the catalog overflows (finding 6); the steering token is
@@ -256,6 +259,7 @@ fences and the oracles that enforce them, plus the one allowlist correction.
 | C5 | `id-tie-break-dropped` | `powers_panel_orders_and_replaces` |
 | C5 | `refresh-strands-the-viewport` (re-anchored) | `powers_panel_orders_and_replaces` |
 | C5 | `scroll-clamp-assumes-the-max-window` (replaces `scroll-clamp-uses-the-last-index`) | `squeezed_viewport_reaches_the_last_power` |
+| C5 | `scroll-up-ignores-the-current-window` | `scroll_up_moves_after_the_window_grows` |
 | C5 | `powers-window-ignores-the-placed-popup` | `squeezed_viewport_reaches_the_last_power` |
 | C5 | `identical-push-reports-a-change` | `powers_panel_orders_and_replaces` |
 | C5 | `hooks-identical-push-reports-a-change` | `refresh_replaces_contents_and_clamps_scroll` |

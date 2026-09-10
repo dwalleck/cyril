@@ -268,3 +268,29 @@ aborted the first post-fix oracle run after ~9 minutes; this answers in 0.2s.
 `cargo test --doc --workspace --all-features` green; `cargo doc -p cyril-ui
 --no-deps` warning-free; `module_shape.py` PASS; `mutations.sh` 28/28 red then
 green.
+
+## Second advisory — the offset outlives its window (2026-09-10)
+
+Correct again. `set_terminal_size` only records the size, and
+`powers_panel_scroll_up` subtracted from whatever offset was stored. A terminal
+that GROWS (or an input/crew/voice row that goes away) enlarges the popup and
+puts the stored offset past the new last full window, where the widget renders
+the view from the window's end: from offset 6 at 100×18, growing to 100×24 (five
+powers, bound 4) and pressing Up left the viewport at 4 — two keypresses bought
+nothing before the view moved.
+
+Fix: `powers_panel_scroll_up` normalizes the offset into the CURRENT window
+(`min(max_powers_scroll(len))`) before subtracting, read before the panel is
+borrowed mutably. Down needed nothing — it saturates to the bound and the view
+is already at the bottom, so no press can be swallowed there.
+
+Fence: `scroll_up_moves_after_the_window_grows` — 100×18, scroll to the extreme,
+grow to 100×24, one Up, draw the whole frame and require `showing 4–8` with
+`Power 03` on the first content row. Mutation
+`scroll-up-ignores-the-current-window` reds it.
+
+**Gates** (final tree) — fmt clean; both clippy configurations silent;
+`cargo test --workspace --features kas` 1995 passed / 0 failed;
+`cargo test --workspace` 1993 passed / 0 failed;
+`cargo test --doc --workspace --all-features` green; `module_shape.py` PASS;
+`mutations.sh` 29/29 red then green; `anchor_check.py` 29/29 anchors unique.
