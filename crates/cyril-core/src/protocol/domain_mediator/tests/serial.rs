@@ -3,6 +3,132 @@ use agent_client_protocol::UntypedMessage;
 use super::super::{DomainChannels, DomainWork};
 use crate::protocol::source_observer::IngressTracker;
 
+#[test]
+fn unhandled_extension_diagnostic_excludes_payload_and_preserves_dispatch() {
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use super::super::{DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::V2Engine;
+    use crate::test_support::{capture_json_subscriber, must_succeed};
+    use crate::types::Notification;
+
+    let runtime = must_succeed(
+        tokio::runtime::Builder::new_current_thread().build(),
+        "diagnostic test runtime",
+    );
+    let (_guard, capture, dispatch) = capture_json_subscriber();
+    tracing::dispatcher::with_default(&dispatch, || {
+        runtime.block_on(async {
+            let (handle, bridge) = create_channel_pair();
+            let (_sender, mut notifications, _permissions, _source, _completion) = handle.split();
+            let config = DomainConfig {
+                engine: Rc::new(V2Engine),
+                cwd: std::env::temp_dir(),
+                present_as: None,
+                stall_threshold: Duration::from_secs(30),
+                #[cfg(feature = "kas")]
+                host_shell: None,
+            };
+            let (mut mediator, _channels) =
+                must_succeed(DomainMediator::new(config, bridge), "diagnostic mediator");
+            let unknown = must_succeed(
+                UntypedMessage::new(
+                    "_kiro/sessions/changed",
+                    serde_json::json!({"privatePayload": "do-not-log-this"}),
+                ),
+                "unknown notification",
+            );
+            assert!(!must_succeed(
+                mediator.handle_extension_notification(unknown).await,
+                "unknown notification remains nonterminal",
+            ));
+            assert!(matches!(
+                notifications.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ));
+            let events = capture.captured();
+            assert_eq!(events.iter().filter(|event| {
+                event["level"] == "DEBUG"
+                    && event["fields"]["method"] == "kiro/sessions/changed"
+            }).count(), 1, "unhandled method must be logged once at DEBUG: {events:?}");
+            assert!(!must_succeed(
+                serde_json::to_string(&events),
+                "captured events serialize",
+            ).contains("do-not-log-this"));
+            let discarded = must_succeed(
+                UntypedMessage::new("_kiro.dev/clear/status", serde_json::json!({})),
+                "notification without display content",
+            );
+            assert!(!must_succeed(
+                mediator.handle_extension_notification(discarded).await,
+                "discarded notification remains nonterminal",
+            ));
+            assert!(capture.captured().iter().any(|event| {
+                event["level"] == "DEBUG"
+                    && event["fields"]["method"] == "kiro.dev/clear/status"
+            }), "every unhandled conversion must identify its method");
+            let acknowledged = must_succeed(
+                UntypedMessage::new("_kiro.dev/session/activity", serde_json::json!({})),
+                "acknowledged multi-session notification",
+            );
+            assert!(!must_succeed(
+                mediator.handle_extension_notification(acknowledged).await,
+                "acknowledged notification remains nonterminal",
+            ));
+            assert!(matches!(
+                notifications.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ));
+            let events = capture.captured();
+            assert_eq!(
+                events.iter().filter(|event| {
+                    event["level"] == "DEBUG"
+                        && event["fields"]["method"] == "kiro.dev/session/activity"
+                }).count(),
+                1,
+                "acknowledged notification must have one method diagnostic: {events:?}",
+            );
+            let after_unknown = capture.captured().len();
+
+            let handled = must_succeed(
+                UntypedMessage::new(
+                    "_kiro/system/notify",
+                    serde_json::json!({"level": "info", "message": "agent notice"}),
+                ),
+                "handled notification",
+            );
+            assert!(!must_succeed(
+                mediator.handle_extension_notification(handled).await,
+                "handled notification remains nonterminal",
+            ));
+            assert!(matches!(
+                must_succeed(notifications.try_recv(), "handled notification delivered").notification,
+                Notification::SystemNotify { message, .. } if message == "agent notice"
+            ));
+
+            let malformed = must_succeed(
+                UntypedMessage::new("_kiro.dev/session/update", serde_json::json!({})),
+                "malformed notification",
+            );
+            assert!(!must_succeed(
+                mediator.handle_extension_notification(malformed).await,
+                "conversion failure remains nonterminal",
+            ));
+            let events = capture.captured();
+            let subsequent = &events[after_unknown..];
+            assert!(subsequent.iter().any(|event| {
+                event["level"] == "WARN"
+                    && event["fields"]["method"] == "kiro.dev/session/update"
+            }));
+            assert!(!subsequent.iter().any(|event| {
+                event["level"] == "DEBUG" && event["fields"].get("method").is_some()
+            }), "handled and failed conversions are not unhandled: {subsequent:?}");
+        });
+    });
+}
+
 #[tokio::test]
 async fn domain_ingress_is_bounded_and_typed() {
     let (channels, mut work_rx, _host_rx) = DomainChannels::new(IngressTracker::new())
