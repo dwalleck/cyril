@@ -1824,6 +1824,7 @@ mod tests {
             include_str!("widgets/mod.rs"),
             include_str!("widgets/modal.rs"),
             include_str!("widgets/picker.rs"),
+            include_str!("widgets/powers_panel.rs"),
             include_str!("widgets/suggestions.rs"),
             include_str!("widgets/toolbar.rs"),
             include_str!("widgets/usage_panel.rs"),

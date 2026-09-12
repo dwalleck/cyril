@@ -7,6 +7,7 @@ pub mod input;
 pub mod markdown;
 pub mod modal;
 pub mod picker;
+pub mod powers_panel;
 pub mod suggestions;
 pub mod toolbar;
 pub mod usage_panel;

@@ -1,9 +1,9 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Paragraph;
 
-use crate::traits::{TuiState, approval_origin_label};
+use crate::traits::{Overlay, TuiState, approval_origin_label};
 
 /// Draw the full TUI frame. Panic-safe wrapper with fallback rendering.
 pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
@@ -27,6 +27,121 @@ const INPUT_FLOOR: u16 = 3;
 /// suggestion list to the floating overlay (D4).
 const CHAT_COMFORT: u16 = 5;
 
+/// Vertical chrome for one frame, derived from state alone.
+///
+/// One formula, two readers: [`draw_inner`] turns these heights into its
+/// constraint list, and [`powers_window`] asks where the input starts. A second
+/// copy of the budget arithmetic is how an overlay's geometry drifts from the
+/// frame it is drawn into.
+struct FrameRows {
+    /// Chat takes the remainder of the vertical budget — `Min(CHAT_FLOOR)`.
+    chat: u16,
+    crew: u16,
+    voice: u16,
+    input: u16,
+    suggestions: u16,
+    /// Whether the suggestion list floats above the input instead of taking
+    /// its in-flow row (it does not fit, so `suggestions` is 0).
+    suggestions_overlay: bool,
+    /// The list's unclamped height — what the floating overlay needs.
+    suggestions_demand: u16,
+}
+
+fn frame_rows(area: Rect, state: &dyn TuiState) -> FrameRows {
+    // Runtime-variable panel heights are owned by their widget's height_for().
+    let crew = crate::widgets::crew_panel::height_for(state);
+    let voice = crate::widgets::voice::height_for(state);
+    let suggestions_demand = crate::widgets::suggestions::height_for(state);
+    let input_demand = crate::widgets::input::height_for(state);
+
+    // Explicit vertical budget (cyril-a14l R1): the input may grow with its
+    // draft only until chat would drop below its floor — its allocation is
+    // decided here, not by the constraint solver, so the widget's
+    // cursor-follow window always sees its real height.
+    let avail = area
+        .height
+        .saturating_sub(2)
+        .saturating_sub(crew)
+        .saturating_sub(voice);
+    let input = input_demand
+        .min(avail.saturating_sub(CHAT_FLOOR))
+        .max(INPUT_FLOOR.min(avail));
+    if input < input_demand {
+        tracing::trace!(
+            input_demand,
+            input,
+            frame_height = area.height,
+            "input height clamped by the vertical budget"
+        );
+    }
+
+    // Suggestions keep today's in-flow row below the input only while chat
+    // retains its comfortable 5 rows (cyril-a14l R3/D4); under pressure the
+    // list floats above the input instead, so opening autocomplete never
+    // reflows the frame (C5).
+    let suggestions_overlay = suggestions_demand > 0
+        && avail
+            < input
+                .saturating_add(suggestions_demand)
+                .saturating_add(CHAT_COMFORT);
+    let suggestions = if suggestions_overlay {
+        0
+    } else {
+        suggestions_demand
+    };
+
+    // Chat is `Min(CHAT_FLOOR)`: it takes exactly what the fixed rows leave,
+    // which the input budget above holds at or above its floor.
+    let chat = area
+        .height
+        .saturating_sub(2)
+        .saturating_sub(crew)
+        .saturating_sub(voice)
+        .saturating_sub(input)
+        .saturating_sub(suggestions);
+    FrameRows {
+        chat,
+        crew,
+        voice,
+        input,
+        suggestions,
+        suggestions_overlay,
+        suggestions_demand,
+    }
+}
+
+/// Absolute row of the input box's top border at this frame layout.
+///
+/// The row every overlay's placement is measured against
+/// ([`crate::widgets::modal::place`]), so a caller outside the renderer can ask
+/// where a popup has room without restating the layout.
+pub(crate) fn input_top(area: Rect, state: &dyn TuiState) -> u16 {
+    let rows = frame_rows(area, state);
+    area.y
+        .saturating_add(1)
+        .saturating_add(rows.chat)
+        .saturating_add(rows.crew)
+        .saturating_add(rows.voice)
+}
+
+/// Powers the `/powers` popup shows at once in the frame the state reports.
+///
+/// The popup is placed against the frame's real input row, so a short terminal
+/// or a tall input leaves less than a full window and
+/// [`crate::state::UiState`]'s scroll bound has to know that number: bounded at
+/// `len - MAX_VISIBLE_POWERS` instead, the tail of a long catalog is
+/// unreachable, because no offset such a clamp allows starts the window over it
+/// (review finding 8).
+///
+/// Zero means the popup has nowhere to draw — there is no window to scroll.
+pub(crate) fn powers_window(state: &dyn TuiState, len: usize) -> usize {
+    let (width, height) = state.terminal_size();
+    let area = Rect::new(0, 0, width, height);
+    let input_top = input_top(area, state);
+    crate::widgets::powers_panel::placement(len, area, input_top)
+        .map_or(0, |(_popup, window)| window)
+}
+
 fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     let area = frame.area();
     let theme = state.theme();
@@ -43,47 +158,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
             .set_style(area, Style::default().bg(theme.canvas));
     }
 
-    // Runtime-variable panel heights are owned by their widget's height_for().
-    let crew_height = crate::widgets::crew_panel::height_for(state);
-    let voice_height = crate::widgets::voice::height_for(state);
-    let suggestions_demand = crate::widgets::suggestions::height_for(state);
-    let input_demand = crate::widgets::input::height_for(state);
-
-    // Explicit vertical budget (cyril-a14l R1): the input may grow with its
-    // draft only until chat would drop below its floor — its allocation is
-    // decided here, not by the constraint solver, so the widget's
-    // cursor-follow window always sees its real height.
-    let avail = area
-        .height
-        .saturating_sub(2)
-        .saturating_sub(crew_height)
-        .saturating_sub(voice_height);
-    let input_height = input_demand
-        .min(avail.saturating_sub(CHAT_FLOOR))
-        .max(INPUT_FLOOR.min(avail));
-    if input_height < input_demand {
-        tracing::trace!(
-            input_demand,
-            input_height,
-            frame_height = area.height,
-            "input height clamped by the vertical budget"
-        );
-    }
-
-    // Suggestions keep today's in-flow row below the input only while chat
-    // retains its comfortable 5 rows (cyril-a14l R3/D4); under pressure the
-    // list floats above the input instead, so opening autocomplete never
-    // reflows the frame (C5).
-    let suggestions_overlay = suggestions_demand > 0
-        && avail
-            < input_height
-                .saturating_add(suggestions_demand)
-                .saturating_add(CHAT_COMFORT);
-    let suggestions_height = if suggestions_overlay {
-        0
-    } else {
-        suggestions_demand
-    };
+    let rows = frame_rows(area, state);
 
     let [
         toolbar_area,
@@ -96,24 +171,24 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     ] = Layout::vertical([
         Constraint::Length(1),
         Constraint::Min(CHAT_FLOOR),
-        Constraint::Length(crew_height),
-        Constraint::Length(voice_height),
-        Constraint::Length(input_height),
-        Constraint::Length(suggestions_height),
+        Constraint::Length(rows.crew),
+        Constraint::Length(rows.voice),
+        Constraint::Length(rows.input),
+        Constraint::Length(rows.suggestions),
         Constraint::Length(1),
     ])
     .areas(area);
 
     crate::widgets::toolbar::render(frame, toolbar_area, state, &theme);
     crate::widgets::chat::render(frame, chat_area, state, &theme);
-    if crew_height > 0 {
+    if rows.crew > 0 {
         crate::widgets::crew_panel::render(frame, crew_area, state, &theme);
     }
-    if voice_height > 0 {
+    if rows.voice > 0 {
         crate::widgets::voice::render(frame, voice_area, state, &theme);
     }
     crate::widgets::input::render(frame, input_area, state, &theme);
-    if suggestions_height > 0 {
+    if rows.suggestions > 0 {
         crate::widgets::suggestions::render(frame, suggestions_area, state, &theme);
     }
     crate::widgets::toolbar::render_status_bar(frame, status_area, state, &theme);
@@ -121,10 +196,10 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     // Constrained-mode autocomplete: float directly above the input without
     // moving any in-flow row (cyril-a14l C5). Modals render after and may
     // paint over it — they also own the keyboard while open.
-    if suggestions_overlay {
-        let overlay_height = suggestions_demand.min(input_area.y.saturating_sub(1));
+    if rows.suggestions_overlay {
+        let overlay_height = rows.suggestions_demand.min(input_area.y.saturating_sub(1));
         if overlay_height > 0 {
-            let overlay_area = ratatui::layout::Rect::new(
+            let overlay_area = Rect::new(
                 area.x,
                 input_area.y - overlay_height,
                 area.width,
@@ -135,29 +210,75 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         }
     }
 
-    // Overlays (rendered on top)
-    if let Some(approval) = state.approval() {
-        let attribution = match state.main_session_id() {
-            Some(main)
-                if !approval.session_id.as_str().is_empty() && main == &approval.session_id =>
-            {
-                None
+    // Overlays (rendered on top, bottom-most first).
+    //
+    // The order is `Overlay::ALL`, whose reverse is the key-dispatch order: the
+    // overlay painted last is the one `App::handle_key` hands the keyboard to.
+    // Each widget clears its own rect before drawing, so painting the approval
+    // prompt FIRST (as this loop used to) let the next panel's `Clear` erase it
+    // while Enter still answered it — the exact inverse of what the user sees
+    // (review findings 3 and 20).
+    for overlay in Overlay::ALL {
+        match overlay {
+            Overlay::Approval => {
+                if let Some(approval) = state.approval() {
+                    let attribution = match state.main_session_id() {
+                        Some(main)
+                            if !approval.session_id.as_str().is_empty()
+                                && main == &approval.session_id =>
+                        {
+                            None
+                        }
+                        _ => Some(approval_origin_label(&approval.session_id)),
+                    };
+                    crate::widgets::approval::render(
+                        frame,
+                        area,
+                        input_area.y,
+                        approval,
+                        attribution,
+                        &theme,
+                    );
+                }
             }
-            _ => Some(approval_origin_label(&approval.session_id)),
-        };
-        crate::widgets::approval::render(frame, area, input_area.y, approval, attribution, &theme);
-    }
-    if let Some(picker) = state.picker() {
-        crate::widgets::picker::render(frame, area, input_area.y, picker, &theme);
-    }
-    if let Some(hooks) = state.hooks_panel() {
-        crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
-    }
-    if let Some(code_panel) = state.code_panel() {
-        crate::widgets::code_panel::render(frame, area, input_area.y, code_panel, &theme);
-    }
-    if let Some(usage_panel) = state.usage_panel() {
-        crate::widgets::usage_panel::render(frame, area, input_area.y, usage_panel, &theme);
+            Overlay::Picker => {
+                if let Some(picker) = state.picker() {
+                    crate::widgets::picker::render(frame, area, input_area.y, picker, &theme);
+                }
+            }
+            Overlay::Hooks => {
+                if let Some(hooks) = state.hooks_panel() {
+                    crate::widgets::hooks_panel::render(frame, area, input_area.y, hooks, &theme);
+                }
+            }
+            Overlay::Powers => {
+                if let Some(powers) = state.powers_panel() {
+                    crate::widgets::powers_panel::render(frame, area, input_area.y, powers, &theme);
+                }
+            }
+            Overlay::Code => {
+                if let Some(code_panel) = state.code_panel() {
+                    crate::widgets::code_panel::render(
+                        frame,
+                        area,
+                        input_area.y,
+                        code_panel,
+                        &theme,
+                    );
+                }
+            }
+            Overlay::Usage => {
+                if let Some(usage_panel) = state.usage_panel() {
+                    crate::widgets::usage_panel::render(
+                        frame,
+                        area,
+                        input_area.y,
+                        usage_panel,
+                        &theme,
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -721,6 +842,119 @@ mod tests {
         assert!(
             text(&state)?.contains("Permission Required — unknown session"),
             "an empty origin must stay attributed even when the main id is also empty"
+        );
+        Ok(())
+    }
+
+    /// REGRESSION FENCE (cyril-v19o, review findings 3 + 20). Two overlays are
+    /// open at once, and the one the key chain consults FIRST must be the one
+    /// painted LAST. Approval and the powers panel both anchor above the input,
+    /// so they overlap; painted in key order the powers panel's own `Clear`
+    /// erased the approval prompt while `handle_key` still handed that prompt
+    /// every key — Enter answered a box the user could not see.
+    ///
+    /// Geometry-independent: every cell both boxes claim must hold the TOP
+    /// overlay's content, whatever the terminal size happens to be.
+    #[test]
+    fn topmost_overlay_paints_last() -> anyhow::Result<()> {
+        use crate::traits::{
+            ApprovalPhase, ApprovalState, Overlay, PowersPanelState, TrackedToolCall,
+        };
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PowerInfo, SessionId,
+            ToolCall, ToolCallId, ToolCallStatus, ToolKind,
+        };
+
+        let approval = || ApprovalState {
+            session_id: SessionId::new("main"),
+            tool_call: TrackedToolCall::new(ToolCall::new(
+                ToolCallId::new("tc"),
+                "rm -rf /tmp/x".into(),
+                ToolKind::Execute,
+                ToolCallStatus::Pending,
+                None,
+            )),
+            message: "Allow this command?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            selected: 0,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+        };
+        let powers = PowersPanelState {
+            powers: (0..5)
+                .map(|n| {
+                    PowerInfo::new(
+                        format!("power-{n}"),
+                        Some(format!("Power {n}")),
+                        None,
+                        Vec::new(),
+                        false,
+                    )
+                })
+                .collect(),
+            scroll_offset: 0,
+        };
+
+        let base = render_buffer(&MockTuiState::default())?;
+        let approval_only = render_buffer(&MockTuiState {
+            approval: Some(approval()),
+            ..MockTuiState::default()
+        })?;
+        let powers_only = render_buffer(&MockTuiState {
+            powers_panel: Some(powers.clone()),
+            ..MockTuiState::default()
+        })?;
+        let both = render_buffer(&MockTuiState {
+            approval: Some(approval()),
+            powers_panel: Some(powers),
+            ..MockTuiState::default()
+        })?;
+
+        let claimed =
+            |buffer: &Buffer, index: usize| buffer.content()[index] != base.content()[index];
+        let shared: Vec<usize> = (0..base.content().len())
+            .filter(|&index| claimed(&approval_only, index) && claimed(&powers_only, index))
+            .collect();
+        // Non-vacuity: the two boxes must actually overlap, and the ordering
+        // must be visible in the overlap — otherwise this fence would pass on a
+        // frame where nothing collides.
+        assert!(
+            !shared.is_empty(),
+            "the approval prompt and the powers panel must overlap for this fence to mean anything"
+        );
+        assert!(
+            shared
+                .iter()
+                .any(|&index| approval_only.content()[index] != powers_only.content()[index]),
+            "the overlap must distinguish the two overlays for the order to matter"
+        );
+        for index in shared {
+            assert_eq!(
+                both.content()[index],
+                approval_only.content()[index],
+                "cell {index} belongs to the approval prompt and must carry it: the \
+                 overlay that receives keys first is painted last"
+            );
+        }
+        let text: String = both.content().iter().map(|cell| cell.symbol()).collect();
+        assert!(
+            text.contains("Allow this command?"),
+            "the topmost overlay's own text must survive the frame"
+        );
+        assert!(
+            text.contains("/powers"),
+            "and the panel underneath is still drawn where nothing covers it"
+        );
+        assert_eq!(
+            Overlay::ALL.last(),
+            Some(&Overlay::Approval),
+            "approval is the top of the stack in `Overlay::ALL` and in the key chain"
         );
         Ok(())
     }

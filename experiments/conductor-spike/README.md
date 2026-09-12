@@ -134,3 +134,36 @@ as `profileArn`, so every turn died with KRS 400 REQUEST_BODY_INVALID and the
 LIST/EXEC/marker conclusions are unaffected (those callbacks fire before the
 model call). Expect `prompt_completed: true` from fixed runs; a false there is
 signal again.
+
+## Powers push (cyril-v19o)
+
+The KAS power catalog arrives as an unprompted push; these artifacts are the
+evidence for `/powers` rendering it, and the provenance of the fixture the
+adapter's tests replay
+(`crates/cyril-core/tests/fixtures/kas/powers/items-changed-2.21.2.json`).
+
+| File | What |
+|---|---|
+| `probe-kas-powers-2.21.2.py` | Spawns `kiro-cli acp --agent-engine kas` in cyril's shape and records every frame. Seeds one `.kiro/powers/*/POWER.md` first, then offers `_kiro/powers/list` and `_kiro/powers/refresh` and reports what came back. |
+| `kas-powers-2.21.2.jsonl` | The capture. `_kiro/powers/items_changed` arrives unprompted after `session/new`; `list` answers with the same three powers; `refresh` answers `-32603`. |
+| `kas-powers-2.21.2-verdict.json` | Machine-readable conclusions: the advertised `extensionMethods` list (powers is absent), the push's item shape, the `list` response, the `refresh` error. |
+
+Established on 2.21.2 (2026-09-10, IAM Identity Center login):
+
+- **The push is unprompted.** `.cyril-v19o/probe-kas-powers-unprompted-2.21.2.py`
+  issues only `initialize` + `session/new`; the frame still arrives, +0.018 s
+  after the reply, with all three installed powers. A client that never asks
+  still receives the catalog.
+- **Neither pull method is usable.** `_kiro/powers/list` is absent from
+  `extensionMethods` (it answers anyway, with an extra `errors` key), and
+  `_kiro/powers/refresh` returns `-32603 Internal error`, `data.details =
+  "Unknown ext method: _kiro/powers/refresh"`. Cyril therefore issues no
+  powers request at all.
+- **`hasSteeringFiles` counts files, not directories.**
+  `aws-infrastructure-as-code` ships a `steering/` directory with zero files in
+  it and reports `false`; `datadog` (1 file) and `markdownlint` (2 files) report
+  `true`. A directory-existence oracle disagrees with the wire here — the wire
+  is right, and cyril reads the wire value verbatim.
+- **v2 has no powers surface.** `.cyril-v19o/probe-v2-command-advertisement.py`
+  records 25 v2-advertised commands, none named `powers`, and zero
+  `_kiro/powers/*` frames.

@@ -644,6 +644,22 @@ fn print_notification(n: &Notification) {
         Notification::HooksChanged { hooks } => {
             println!("  [HooksChanged] {} hook(s)", hooks.len());
         }
+        Notification::PowersChanged { powers } => {
+            println!("  [PowersChanged] {} power(s)", powers.len());
+            for power in powers {
+                println!(
+                    "    {} — {} (mcp: {}; steering: {})",
+                    power.name(),
+                    power.title(),
+                    if power.mcp_server_names().is_empty() {
+                        "none".to_owned()
+                    } else {
+                        power.mcp_server_names().join(", ")
+                    },
+                    power.has_steering_files()
+                );
+            }
+        }
         Notification::HookExecuted {
             name,
             status,

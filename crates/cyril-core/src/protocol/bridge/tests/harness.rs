@@ -54,6 +54,12 @@ pub(super) struct Script {
     /// Some(true): minted session ids are KAS-shaped (`sess_fake-N`);
     /// Some(false): bare (`fake-N`); None: follow `wire_kas`.
     pub(super) sess_ids: Option<bool>,
+    /// Emit `_kiro/powers/items_changed` over the wire right after the
+    /// `session/new` response (cyril-v19o). The live capture on 2.21.2 has KAS
+    /// pushing the power set unprompted ~18 ms after the response, so that is
+    /// the order reproduced here — including the fact that the frame is
+    /// scoped to a session the client has just been told about.
+    pub(super) emit_powers_changed: bool,
     /// Emit a `session_info_update{kind:"turn_end"}` before parking/answering
     /// the prompt, scoped to `turn_end_session` or the prompt's own session.
     pub(super) emit_turn_end: bool,
@@ -127,6 +133,7 @@ fn fake_agent(
     let prompt_gate = Arc::clone(gate);
     let block_prompt = script.borrow().block_prompt;
     let prompt_err = script.borrow().prompt_err;
+    let emit_powers_changed = script.borrow().emit_powers_changed;
     let wire_kas = script.borrow().wire_kas.unwrap_or(false);
     let kas_session_ids = script.borrow().sess_ids.unwrap_or(wire_kas);
     let emit_turn_end = Arc::new(std::sync::atomic::AtomicBool::new(
@@ -245,7 +252,9 @@ fn fake_agent(
             agent_client_protocol::on_receive_request!(),
         )
         .on_receive_request(
-            async move |_request: acp::NewSessionRequest, responder, _connection| {
+            async move |_request: acp::NewSessionRequest,
+                        responder,
+                        connection: ConnectionTo<Client>| {
                 record(&received_new, "new_session");
                 let index = next_session.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 if fail_new_session {
@@ -258,7 +267,19 @@ fn fake_agent(
                 } else {
                     format!("fake-{index}")
                 };
-                responder.respond(acp::NewSessionResponse::new(session_id))
+                responder.respond(acp::NewSessionResponse::new(session_id.clone()))?;
+                if emit_powers_changed {
+                    let push = powers_push_notification(
+                        &session_id,
+                        include_str!("../../../../tests/fixtures/kas/powers/items-changed-2.21.2.json"),
+                    )?;
+                    let push_connection = connection.clone();
+                    connection.spawn(async move {
+                        push_connection.send_notification(push)?;
+                        Ok(())
+                    })?;
+                }
+                Ok(())
             },
             agent_client_protocol::on_receive_request!(),
         )
@@ -472,6 +493,30 @@ pub(super) async fn wait_for_received(
     })
     .await
     .is_ok()
+}
+
+/// The live-capture powers frame, rebuilt as an outgoing extension
+/// notification (cyril-v19o). `payload` is the verbatim params object committed
+/// under `tests/fixtures/kas/powers/`, so the transport fence and the converter
+/// fence are judged against the same bytes the agent actually sent.
+fn powers_push_notification(
+    session_id: &str,
+    payload: &str,
+) -> agent_client_protocol::Result<UntypedMessage> {
+    let mut params: serde_json::Value = serde_json::from_str(payload)
+        .map_err(|error| agent_client_protocol::Error::internal_error().data(error.to_string()))?;
+    params
+        .as_object_mut()
+        .ok_or_else(|| {
+            agent_client_protocol::Error::internal_error().data("powers fixture must be an object")
+        })?
+        // The capture's own session id belongs to the probe session; the frame
+        // under test must be scoped to the session this fake agent minted.
+        .insert(
+            "sessionId".to_string(),
+            serde_json::Value::String(session_id.to_string()),
+        );
+    UntypedMessage::new("_kiro/powers/items_changed", params)
 }
 
 fn initialize_response(
