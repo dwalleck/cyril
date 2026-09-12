@@ -384,6 +384,37 @@ prove C8 module-shape-net-blind-outside-the-allowed-regions "$APP" \
         let _probe = self.ui_state.powers_panel().is_some();' \
   python3 .cyril-v19o/oracles/module_shape.py
 
+# R4 / round-3 finding 5: the guard's user-visible half. Dropping the notice
+# leaves the user with no account of why the dictation vanished, and the buffer
+# assertion cannot see that (the input is equally empty either way).
+prove C8 voice-discard-not-announced "$APP" \
+  '                    self.ui_state.add_system_message(
+                        "Discarded a finished dictation: a panel is open (Esc closes it)."
+                            .to_string(),
+                    );' \
+  '' \
+  "${CYRIL_TEST[@]}" paste_mouse_and_voice_respect_every_overlay
+
+# R4: and the notice is tied to the DROP, not to the transcript: emitting it on
+# both paths keeps the drop assertion satisfied (one notice) and is caught only
+# by the positive control's count.
+prove C8 voice-notice-emitted-on-both-paths "$APP" \
+  '                } else {
+                    self.ui_state.insert_text(&text);
+                }
+            }
+            VoiceEvent::Error(msg) => {' \
+  '                } else {
+                    self.ui_state.insert_text(&text);
+                    self.ui_state.add_system_message(
+                        "Discarded a finished dictation: a panel is open (Esc closes it)."
+                            .to_string(),
+                    );
+                }
+            }
+            VoiceEvent::Error(msg) => {' \
+  "${CYRIL_TEST[@]}" paste_mouse_and_voice_respect_every_overlay
+
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"
   exit 1

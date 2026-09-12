@@ -5866,6 +5866,22 @@ mod tests {
             "draft",
             "…and neither may a finished transcript"
         );
+        // The drop is not silent: a dictation is the one input the user cannot
+        // redo, so the guard announces it in the chat instead of confining the
+        // failure to `cyril.log` (round-3 review finding 5). Counting the notice
+        // also gives the guard a failure mode the buffer assertion cannot see —
+        // a guard that drops the text *and* swallows the notice.
+        let notice = |app: &App| {
+            app.ui_state
+                .messages()
+                .iter()
+                .filter(|message| {
+                    matches!(message.kind(), ChatMessageKind::System(text)
+                        if text.contains("Discarded a finished dictation"))
+                })
+                .count()
+        };
+        assert_eq!(notice(&app), 1, "the discarded dictation is announced");
         app.handle_terminal_event(wheel())
             .await
             .expect("wheel under the panel");
@@ -5884,6 +5900,11 @@ mod tests {
         assert_eq!(app.ui_state.input_text(), "draftpasted");
         app.handle_voice_event(VoiceEvent::Transcript(" dictated".into()));
         assert_eq!(app.ui_state.input_text(), "draftpasted dictated");
+        assert_eq!(
+            notice(&app),
+            1,
+            "a transcript that lands is never announced as discarded"
+        );
         app.handle_terminal_event(wheel())
             .await
             .expect("wheel with no overlay");
