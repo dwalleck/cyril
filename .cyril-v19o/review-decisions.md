@@ -116,14 +116,27 @@ at all — previously the gate's `PASS C8` was never falsified by the mutation
 set.
 
 **Test-infrastructure defect found while writing the log fence:** `tracing`
-caches a callsite's interest **process-wide** on its first evaluation, so the
-guard's `warn!` callsites — driven by a peer test that installs no subscriber —
-were cached uninterested, and a later `with_default` capture recorded nothing.
-The fence passed on its own and saw an empty log beside that peer
-(`state=(overlay=true, input="")`: the guard ran). `app.rs`'s
-`with_captured_logs` now installs an always-interested global default once per
-test binary (`AlwaysInterested`), which rebuilds the interest cache; the fence
-passes alone, in parallel with its peer, and serially in either order.
+caches a callsite's interest **process-wide**, and the guard's `warn!` callsites
+are also driven by tests that install no subscriber
+(`paste_mouse_and_voice_respect_every_overlay`,
+`usage_modal_command_and_key_priority`), which caches them uninterested — after
+which a capture records nothing. Observed: the fence passed alone and saw an
+empty log beside a bare driver, with `state=(overlay=true, input="")` — the
+guard ran and the log was dropped. Alternatives measured, all insufficient:
+
+| arrangement | result |
+|---|---|
+| fence alone | pass |
+| beside a bare driver, `with_captured_logs` (fmt) | empty |
+| beside a bare driver, `capture_json_subscriber` (`Interest::always`, TRACE) | empty |
+| …plus `rebuild_interest_cache` under the capture | serial pass, parallel empty |
+| …with each bare driver individually wrapped | pass, until the next bare driver is added |
+
+`with_captured_logs` therefore installs an always-interested global default once
+per test binary (`AlwaysInterested`, whose `enabled` is `false` — it captures
+nothing itself); installing it rebuilds the interest cache, and from then on a
+bare evaluation caches `always` instead of `never`. The fence passes alone,
+beside either bare driver, and serially in every order.
 
 **Harness defect found by running the full set:** `restore_all` restored only
 the ten production files it knew about, so the first `crlf-read-path-stops-

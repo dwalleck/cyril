@@ -6631,17 +6631,27 @@ mod tests {
 
     /// A dispatch interested in every callsite that captures nothing itself.
     ///
-    /// `tracing` caches a callsite's interest **process-wide** the first time it
-    /// is evaluated, so a callsite first driven by a test that installed no
-    /// subscriber can be cached as uninterested — after which a later
-    /// `with_default` capture records nothing, on every thread. That is exactly
-    /// how the overlay-guard log fence below passed on its own and recorded an
-    /// empty log when run beside `paste_mouse_and_voice_respect_every_overlay`,
-    /// which drives the same guard without a capture (`state=(overlay=true,
-    /// input="")` — the guard ran and the log was dropped). Registering an
-    /// always-interested dispatch once as the global default rebuilds the
-    /// interest cache and leaves each callsite consultable by whichever dispatch
-    /// the current thread installs.
+    /// `tracing` caches a callsite's interest **process-wide**, and the guard
+    /// callsites under test are also driven by tests that install no subscriber
+    /// (`paste_mouse_and_voice_respect_every_overlay`,
+    /// `usage_modal_command_and_key_priority`), which caches them as
+    /// uninterested — after which a `with_default` capture records nothing at
+    /// all. Measured on this toolchain, with the log fence below:
+    ///
+    /// | arrangement                                            | result |
+    /// |--------------------------------------------------------|--------|
+    /// | fence alone                                            | pass   |
+    /// | fence beside a bare driver, fmt capture                | empty  |
+    /// | fence beside a bare driver, `Interest::always` capture | empty  |
+    /// | …plus `rebuild_interest_cache` under the capture       | serial pass, parallel empty |
+    /// | …with every driver individually wrapped                | pass, until the next bare driver |
+    ///
+    /// An always-interested **global** default is what holds: it rebuilds the
+    /// interest cache on install, and from then on a bare evaluation caches
+    /// `always` rather than `never`, leaving the per-call decision to whichever
+    /// dispatch the current thread has installed. It captures nothing itself
+    /// (`enabled` is `false`), so events still go nowhere unless a test installs
+    /// a capture.
     struct AlwaysInterested;
 
     impl tracing::Subscriber for AlwaysInterested {
