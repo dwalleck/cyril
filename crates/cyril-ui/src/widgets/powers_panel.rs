@@ -21,6 +21,7 @@
 
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use unicode_width::UnicodeWidthStr;
 
 use crate::text::{truncate, truncate_and_pad};
 use crate::theme::Theme;
@@ -38,8 +39,17 @@ const INDENT: usize = 2;
 /// `place` clamps the popup (review finding 5).
 const BORDER_ROWS: usize = 2;
 /// Marker for a power that ships steering files, appended to the meta line.
-/// ASCII, so its byte length is its cell width.
+///
+/// Not ASCII: the separator is U+00B7, two bytes in one cell, so this is
+/// measured in display cells — `len()` over-reserved one column and dropped the
+/// token a column before the panel ran out of room (round-3 review finding 6).
+/// Size it with [`steering_width`].
 const STEERING_TOKEN: &str = " · steering";
+
+/// Display cells [`STEERING_TOKEN`] occupies.
+fn steering_width() -> usize {
+    UnicodeWidthStr::width(STEERING_TOKEN)
+}
 
 /// The popup's rect and the number of whole powers it can show.
 ///
@@ -158,14 +168,17 @@ pub fn render(
         // A panel too narrow for the token plus at least one cell of identifier
         // drops the token rather than painting past its own border; the row is
         // an ellipsis at that width anyway.
-        let steering = if power.has_steering_files() && inner_width > STEERING_TOKEN.len() {
+        let steering = if power.has_steering_files() && inner_width > steering_width() {
             STEERING_TOKEN
         } else {
             ""
         };
         let meta = format!(
             "{}{steering}",
-            truncate(&meta, inner_width.saturating_sub(steering.len()))
+            truncate(
+                &meta,
+                inner_width.saturating_sub(UnicodeWidthStr::width(steering))
+            )
         );
         lines.push(Line::styled(
             meta,

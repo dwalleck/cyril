@@ -25,13 +25,16 @@ BUILTIN=crates/cyril-core/src/commands/builtin.rs
 COMMANDS=crates/cyril-core/src/commands/mod.rs
 ENGINE=crates/cyril-core/src/protocol/engine.rs
 RENDER=crates/cyril-ui/src/render.rs
+# The census's own read path is a fence target (round-3 `crlf-read-path-stops-
+# normalizing`), so the fence file must be restored like production code.
+FENCE=crates/cyril/tests/powers_source_fence.rs
 
 BACKUP=$(mktemp -d)
 FAILURES=0
 MUTATIONS_RUN=0
 
 restore_all() {
-  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$TRAITS" "$APP" "$BUILTIN" "$COMMANDS" "$ENGINE" "$RENDER"; do
+  for file in "$ADAPTER" "$TYPE" "$WIDGET" "$STATE" "$TRAITS" "$APP" "$BUILTIN" "$COMMANDS" "$ENGINE" "$RENDER" "$FENCE"; do
     if [ -f "$BACKUP/$(echo "$file" | tr / _)" ]; then
       cp "$BACKUP/$(echo "$file" | tr / _)" "$file"
     fi
@@ -191,7 +194,7 @@ prove C6 title-clamp-dropped "$WIDGET" \
   "${UI_TEST[@]}" wide_title_clamps_to_the_panel
 
 prove C6 steering-marker-dropped "$WIDGET" \
-  '        let steering = if power.has_steering_files() && inner_width > STEERING_TOKEN.len() {
+  '        let steering = if power.has_steering_files() && inner_width > steering_width() {
             STEERING_TOKEN
         } else {
             ""
@@ -200,14 +203,11 @@ prove C6 steering-marker-dropped "$WIDGET" \
   "${UI_TEST[@]}" layout_matches_the_approved_row_shape
 
 prove C6 steering-token-unbudgeted "$WIDGET" \
-  '        let meta = format!(
-            "{}{steering}",
-            truncate(&meta, inner_width.saturating_sub(steering.len()))
-        );' \
-  '        let meta = format!(
-            "{}{steering}",
-            truncate(&meta, inner_width)
-        );' \
+  '            truncate(
+                &meta,
+                inner_width.saturating_sub(UnicodeWidthStr::width(steering))
+            )' \
+  '            truncate(&meta, inner_width)' \
   "${UI_TEST[@]}" steering_marker_survives_a_truncated_meta_line
 
 prove C6 viewport-scroll-not-clamped "$WIDGET" \
@@ -345,6 +345,44 @@ prove C8 paste-guard-knows-only-usage "$APP" \
   '                if !self.ui_state.has_usage_panel() {
                     self.ui_state.insert_text(&text);' \
   "${CYRIL_TEST[@]}" paste_mouse_and_voice_respect_every_overlay
+
+# ── Round 3 (review of head 92cf3cde) ────────────────────────────────────────
+
+# R1 / round-3 finding 2: the frame geometry comes from the terminal the frame is
+# drawn into. Dropping the sync sends `/powers` back to `UiState::new`'s 80x24
+# default, whose five-power window cannot reach the tail of a nine-power catalog
+# on the 18-row terminal the fence draws into.
+prove C8 draw-path-does-not-sync-the-frame-geometry "$APP" \
+  '        self.ui_state.set_terminal_size(size.width, size.height);' \
+  '' \
+  "${CYRIL_TEST[@]}" drawing_syncs_the_frame_geometry_the_scroll_bound_reads
+
+# R2 / round-3 finding 3: the CRLF fence judges the RAW CRLF text. Neutering the
+# read path's normalization is what the fence's own assertion covers.
+prove C7 crlf-read-path-stops-normalizing crates/cyril/tests/powers_source_fence.rs \
+  'raw.replace("\r\n", "\n")' \
+  'raw' \
+  cargo test -p cyril --test powers_source_fence powers_census_is_line_ending_agnostic
+
+# R3 / round-3 finding 4: the shape oracle's protected-parent net is live for
+# `app.rs`. A new `App` field is the ledger's own stated falsifier
+# (`design.md` → C8) and must fail the gate — it did not while `production_text`
+# cut the file at line 133.
+prove C8 module-shape-net-blind-to-a-new-App-field "$APP" \
+  '    workflow_tracker: WorkflowTracker,' \
+  '    workflow_tracker: WorkflowTracker,
+    /// A field the ledger forbids: no powers responsibility may land on App.
+    powers_cache: Vec<String>,' \
+  python3 .cyril-v19o/oracles/module_shape.py
+
+# R3: and the net reaches production lines outside the allowed regions, at any
+# indentation — a line of new behavior in a function the ledger does not name is
+# reported with that function.
+prove C8 module-shape-net-blind-outside-the-allowed-regions "$APP" \
+  '    fn toggle_voice(&mut self) {' \
+  '    fn toggle_voice(&mut self) {
+        let _probe = self.ui_state.powers_panel().is_some();' \
+  python3 .cyril-v19o/oracles/module_shape.py
 
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"

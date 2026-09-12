@@ -148,7 +148,15 @@ fn unimplemented_powers_methods(src: &str) -> Vec<String> {
 /// asked "is the string somewhere in the tree?" stayed green with the
 /// converter deleted — a doc comment in `types/power.rs` and two test doubles
 /// spell the method too (review finding 4).
-const CONVERTER: &str = "crates/cyril-core/src/protocol/convert/kas/powers.rs";
+///
+/// It is a path, not a string: comparing the census's findings as strings is
+/// separator-dependent, and `display()` renders `\` on Windows while a literal
+/// spells `/` — which turned the Windows leg red on a walk that had found the
+/// converter (round-3 review finding 1). `Path` equality compares components,
+/// so it holds under either separator.
+fn converter_path() -> &'static Path {
+    Path::new("crates/cyril-core/src/protocol/convert/kas/powers.rs")
+}
 
 /// Everything before a file's `#[cfg(test)]` module: the code that ships.
 /// The control must not be satisfiable by a test that names the method either.
@@ -170,33 +178,29 @@ fn no_production_source_names_an_unusable_powers_method() {
     );
 
     let mut violators: Vec<String> = Vec::new();
-    let mut push_seen_in: Vec<String> = Vec::new();
+    let mut push_seen_in: Vec<PathBuf> = Vec::new();
     for path in &sources {
         let src = read_normalized(path);
-        let rel = || {
-            path.strip_prefix(repo_root())
-                .unwrap_or(path)
-                .display()
-                .to_string()
-        };
+        let rel = path.strip_prefix(repo_root()).unwrap_or(path).to_path_buf();
         // Same stripping as the violator scan, and shipping code only: prose
         // and test doubles must not be able to satisfy a control that exists
         // to prove this census is looking at real code.
         if production_prefix(&strip_line_comments(&src))
             .contains(&format!("kiro/powers/{PUSH_METHOD}"))
         {
-            push_seen_in.push(rel());
+            push_seen_in.push(rel.clone());
         }
         for spelling in unimplemented_powers_methods(&src) {
-            violators.push(format!("{}: {spelling}", rel()));
+            violators.push(format!("{}: {spelling}", rel.display()));
         }
     }
 
     assert!(
-        push_seen_in.iter().any(|seen| seen == CONVERTER),
+        push_seen_in.iter().any(|seen| seen == converter_path()),
         "the converter must name the push method in production code \
-         ({CONVERTER}) — its absence means this census is scanning the wrong \
-         tree, or the one consumer it protects is gone. Seen in: {push_seen_in:?}"
+         ({}) — its absence means this census is scanning the wrong \
+         tree, or the one consumer it protects is gone. Seen in: {push_seen_in:?}",
+        converter_path().display()
     );
     assert!(
         violators.is_empty(),
@@ -277,15 +281,48 @@ fn powers_census_detects_the_methods_it_exists_to_catch() {
     );
 }
 
-/// CRLF hazard fence: identical verdict under both line endings.
+/// CRLF hazard fence: a CRLF checkout reaches the same verdict as an LF one,
+/// and the read path strips CRLF before anything looks at the text.
+///
+/// The function under test is fed the RAW CRLF string. Re-normalizing the
+/// argument first (`f(&crlf.replace("\r\n", "\n"))`) makes this `f(lf) == f(lf)`
+/// by construction — the assertion that shipped here until round 3, which no
+/// implementation of the scanner could fail (round-3 review finding 3).
 #[test]
 fn powers_census_is_line_ending_agnostic() {
-    let lf = "let m = \"kiro/powers/refresh\";\n";
+    let lf = "let m = \"kiro/powers/refresh\";\nlet p = \"kiro/powers/items_changed\";\n";
     let crlf = lf.replace('\n', "\r\n");
+
+    // Non-vacuity first: the CRLF input must still trip the census. Without
+    // this, "same verdict" would be satisfied by a scanner that finds nothing.
     assert_eq!(
-        unimplemented_powers_methods(lf),
-        unimplemented_powers_methods(&crlf.replace("\r\n", "\n")),
-        "a CRLF checkout must produce the same verdict as an LF one — the \
-         cyril-xi4a failure mode that turned Windows CI red"
+        unimplemented_powers_methods(&crlf),
+        ["powers/refresh"],
+        "the raw CRLF text must still be judged as code"
     );
+    assert_eq!(
+        unimplemented_powers_methods(&crlf),
+        unimplemented_powers_methods(lf),
+        "a CRLF checkout must produce the same verdict as an LF one — the \
+         cyril-xi4a failure mode"
+    );
+
+    // Mixed endings, which is what a partial checkout or an editor round-trip
+    // leaves behind: the LF-terminated line must not swallow the CRLF one.
+    assert_eq!(
+        unimplemented_powers_methods("let a = \"kiro/powers/list\";\r\nlet b = 1;\n"),
+        ["powers/list"]
+    );
+
+    // The read path the census owns normalizes the file, so nothing downstream
+    // can be handed a `\r` at all.
+    let dir = tempfile::tempdir().unwrap_or_else(|e| panic!("temp dir: {e}"));
+    let file = dir.path().join("crlf.rs");
+    std::fs::write(&file, &crlf).unwrap_or_else(|e| panic!("write a CRLF source: {e}"));
+    let read = read_normalized(&file);
+    assert!(
+        !read.contains('\r'),
+        "read_normalized must strip CRLF: {read:?}"
+    );
+    assert_eq!(unimplemented_powers_methods(&read), ["powers/refresh"]);
 }

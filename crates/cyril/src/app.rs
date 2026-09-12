@@ -5,6 +5,8 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
 use futures_util::{FutureExt, StreamExt};
 use ratatui::DefaultTerminal;
+use ratatui::Terminal;
+use ratatui::backend::Backend;
 use serde::Deserialize;
 use tokio::sync::{mpsc, oneshot};
 
@@ -793,16 +795,7 @@ impl App {
         redraw_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
 
         // Initial draw
-        terminal
-            .draw(|frame| cyril_ui::render::draw(frame, &self.ui_state))
-            .map_err(|e| {
-                cyril_core::Error::with_source(
-                    cyril_core::ErrorKind::Transport {
-                        detail: "initial draw failed".into(),
-                    },
-                    e,
-                )
-            })?;
+        self.draw_frame(terminal, "initial draw failed")?;
 
         loop {
             tokio::select! {
@@ -908,16 +901,7 @@ impl App {
 
             // Conditional redraw
             if self.redraw_needed {
-                terminal
-                    .draw(|frame| cyril_ui::render::draw(frame, &self.ui_state))
-                    .map_err(|e| {
-                        cyril_core::Error::with_source(
-                            cyril_core::ErrorKind::Transport {
-                                detail: "draw failed".into(),
-                            },
-                            e,
-                        )
-                    })?;
+                self.draw_frame(terminal, "draw failed")?;
                 self.redraw_needed = false;
             }
 
@@ -931,6 +915,46 @@ impl App {
         }
 
         Ok(())
+    }
+
+    /// Draw one frame, syncing the state's frame geometry first.
+    ///
+    /// `crossterm` reports a terminal size only when SIGWINCH fires, so a
+    /// session started in a terminal that is not `UiState`'s default would lay
+    /// its overlays out for a frame that is not the one on screen: `/powers`
+    /// takes its keyboard scroll bound from this value, and a short terminal
+    /// then could not reach the tail of its catalog (round-3 review finding 2).
+    /// The chat page step reads the same value. Reading the size at the draw
+    /// site keeps the state's geometry equal to the frame actually painted,
+    /// whatever the terminal did at startup.
+    fn draw_frame<B: Backend>(
+        &mut self,
+        terminal: &mut Terminal<B>,
+        detail: &'static str,
+    ) -> cyril_core::Result<()>
+    where
+        <B as Backend>::Error: Send + Sync + 'static,
+    {
+        let size = terminal.size().map_err(|e| {
+            cyril_core::Error::with_source(
+                cyril_core::ErrorKind::Transport {
+                    detail: "terminal size query failed".into(),
+                },
+                e,
+            )
+        })?;
+        self.ui_state.set_terminal_size(size.width, size.height);
+        terminal
+            .draw(|frame| cyril_ui::render::draw(frame, &self.ui_state))
+            .map_err(|e| {
+                cyril_core::Error::with_source(
+                    cyril_core::ErrorKind::Transport {
+                        detail: detail.into(),
+                    },
+                    e,
+                )
+            })
+            .map(|_| ())
     }
 
     fn redraw_duration(activity: Activity) -> Duration {
@@ -1608,14 +1632,24 @@ impl App {
             }
             Event::Paste(text) => {
                 // A pasted blob must never land in the input buffer while a
-                // modal overlay hides it: the overlay consumes every keystroke,
-                // so the next Esc would reveal text the user never saw
-                // themselves type. The guard used to name only `/usage`; the
-                // same predicate as the key chain and the mouse guard covers
-                // every overlay by construction (review finding 13).
+                // modal overlay owns the keyboard: the overlay consumes every
+                // keystroke, so nothing could submit, clear or even scroll the
+                // text until Esc — it would sit there as an unseen draft. (The
+                // input box itself stays visible below every panel, so the
+                // repair's original "the overlay hides it" note overstated the
+                // case; the guard is a policy, not a layout necessity —
+                // round-3 review finding 5.) The same predicate as the key
+                // chain and the mouse guard covers every overlay by
+                // construction (review finding 13). The drop is logged, never
+                // silent.
                 if !self.ui_state.has_modal_overlay() {
                     self.ui_state.insert_text(&text);
                     self.redraw_needed = true;
+                } else {
+                    tracing::warn!(
+                        chars = text.chars().count(),
+                        "dropping a paste: a modal overlay owns the input"
+                    );
                 }
             }
             _ => {}
@@ -2096,16 +2130,24 @@ impl App {
             VoiceEvent::Level(level) => self.ui_state.set_voice_level(level),
             VoiceEvent::Status(status) => self.ui_state.set_voice_status(status),
             // The payoff: a finished transcript drops into the input buffer —
-            // but only while the user can see that buffer. Voice capture runs
-            // in its own thread and a modal overlay (an approval, a panel, a
-            // picker) may have opened since `/voice` started; inserting under it
-            // would hide the transcript and then surprise the user with it after
-            // Esc (review finding 13).
+            // but only while the overlay does not own the keyboard. Voice
+            // capture runs in its own thread, and a modal overlay (an approval,
+            // a panel, a picker) may have opened since `/voice` started;
+            // inserting under it would park text nothing can submit or clear
+            // until Esc. (The input box stays visible below every panel, so the
+            // note this guard carried overstates the case — round-3 review
+            // finding 5.) Dictation is the one input the user cannot simply
+            // redo, so dropping it is logged AND said out loud rather than left
+            // to cyril.log (review finding 13).
             VoiceEvent::Transcript(text) => {
                 if self.ui_state.has_modal_overlay() {
                     tracing::warn!(
                         chars = text.chars().count(),
                         "dropping a voice transcript: a modal overlay owns the input"
+                    );
+                    self.ui_state.add_system_message(
+                        "Discarded a finished dictation: a panel is open (Esc closes it)."
+                            .to_string(),
                     );
                 } else {
                     self.ui_state.insert_text(&text);
@@ -2786,8 +2828,9 @@ fn dispatch_rewind_command(
 ///
 /// Extracted as a free function so the full key-map can be unit-tested without
 /// constructing an `App`, exactly like `dispatch_hooks_panel_key`. Esc hides
-/// the panel; arrow keys scroll one power; page keys scroll five (the panel's
-/// window height); other keys are no-ops.
+/// the panel; arrow keys scroll one power; page keys scroll
+/// `MAX_VISIBLE_POWERS` — the widest window, and a step the state then clamps
+/// to the window the popup actually got; other keys are no-ops.
 fn dispatch_powers_panel_key(key: KeyEvent, ui_state: &mut cyril_ui::state::UiState) {
     match key.code {
         KeyCode::Esc => ui_state.hide_powers_panel(),
@@ -5669,6 +5712,59 @@ mod tests {
 
         dispatch_powers_panel_key(key(KeyCode::Esc), &mut ui_state);
         assert!(!ui_state.has_powers_panel(), "Esc closes the panel");
+    }
+
+    /// REGRESSION FENCE (round-3 review finding 2). The state's frame geometry
+    /// must come from the terminal the frame is drawn into, not from
+    /// `UiState::new`'s 80x24 default: `/powers` derives its keyboard scroll
+    /// bound from that value, and `crossterm` reports a size only when SIGWINCH
+    /// fires — so a session started in a shorter terminal kept the default and
+    /// the catalog's tail became unreachable (the very failure the window clamp
+    /// closed for the case where the size is right). Driven through
+    /// `draw_frame`, so deleting the sync from the draw path reddens this.
+    #[test]
+    fn drawing_syncs_the_frame_geometry_the_scroll_bound_reads() {
+        use ratatui::Terminal;
+        use ratatui::backend::TestBackend;
+
+        let (mut app, _rx) = test_app_with_command_rx();
+        let many: Vec<cyril_core::types::PowerInfo> = (0..9)
+            .map(|n| {
+                cyril_core::types::PowerInfo::new(
+                    format!("power-{n:02}"),
+                    Some(format!("Power {n:02}")),
+                    None,
+                    Vec::new(),
+                    false,
+                )
+            })
+            .collect();
+        app.ui_state.show_powers_panel(many);
+        assert_eq!(
+            app.ui_state.terminal_size(),
+            (80, 24),
+            "the default the draw has to replace"
+        );
+
+        let mut terminal = Terminal::new(TestBackend::new(100, 18)).expect("test terminal");
+        app.draw_frame(&mut terminal, "test draw").expect("draw");
+
+        assert_eq!(
+            app.ui_state.terminal_size(),
+            (100, 18),
+            "the draw establishes the geometry every overlay is laid out for"
+        );
+
+        // The observable consequence: an 18-row frame squeezes the popup to
+        // three powers, so the bound must reach the last full window (offset 6
+        // of nine). Bounded by the 80x24 default's five-power window it stops
+        // at 4, and powers 7 and 8 can never be painted at all.
+        app.ui_state.powers_panel_scroll_down(usize::MAX);
+        assert_eq!(
+            app.ui_state.powers_panel().expect("panel").scroll_offset,
+            6,
+            "the tail of the catalog must stay reachable on a short terminal"
+        );
     }
 
     /// REGRESSION FENCE (cyril-v19o, review findings 3 + 20). The keyboard

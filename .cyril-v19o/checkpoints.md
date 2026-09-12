@@ -193,7 +193,10 @@ unchanged in behavior; this pass hardened them against the adjudicated review.
    for a squeezed popup), #6 (title states the window), #19 (changed-check in
    both refresh methods, no clone, dead store deleted).
 3. *Fence repairs* — #14a (ids asserted, fixture case fixed), #14c (CRLF fed to
-   the function under test), #18 (order-agnostic transport collection), #13 +
+   the function under test — **landed in round 3, not in this pass**: the row
+   claimed it while the assertion was still `f(lf) == f(lf)`; see
+   `review-decisions.md` → "Round 3"), #18 (order-agnostic transport
+   collection), #13 +
    #15 + #16 (shared predicate; both doc files; ASCII-lowercase prose).
 4. *Root cause* — #20 + #3: `Overlay` + `Overlay::ALL` in `traits.rs`,
    `UiState::topmost_overlay`/`has_modal_overlay`, `render` paints the constant

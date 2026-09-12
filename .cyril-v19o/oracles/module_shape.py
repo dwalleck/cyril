@@ -60,6 +60,10 @@ REQUIRED = [(POWERS_ADAPTER, 1), (POWERS_TYPE, 1), (TYPES_MOD, 1), (POWERS_WIDGE
 WIRE_KEYS = ["displayName", "mcpServerNames", "hasSteeringFiles", "isAgentPlugin", "keywords"]
 FORBIDDEN_REQUESTS = ["powers/list", "powers/refresh"]
 
+# The start of a file's test module: `#[cfg(test)]` (optionally with other
+# attributes between) immediately followed by a `mod` declaration.
+TEST_MODULE = re.compile(r"(?m)^[ \t]*#\[cfg\(test\)\][ \t]*\n(?:[ \t]*#\[[^\n]*\][ \t]*\n)*[ \t]*(?:pub[ \t]+)?mod[ \t]")
+
 failures: list[str] = []
 
 
@@ -99,19 +103,40 @@ def strip_rust_comments(text: str) -> str:
 
 
 def production_text(path: pathlib.Path) -> str:
-    """The file's production half: everything above its first `#[cfg(test)]`."""
+    """The file's production half: everything above its test module.
+
+    The cut is the `#[cfg(test)] mod` declaration, not the first `#[cfg(test)]`
+    token in the file. `app.rs` declares seven test-only struct fields before
+    any test module, so a token cut truncated that file at line 133 and every
+    later production line escaped the census — 406 of the 407 added app.rs lines
+    in this PR, including the very wiring arms the ledger's "wiring only" rule
+    exists to police (round-3 review finding 4). Files whose `#[cfg(test)]`
+    never introduces a module keep the token cut.
+    """
     text = path.read_text()
+    module = TEST_MODULE.search(text)
+    if module:
+        return text[: module.start()]
     cut = text.find("#[cfg(test)]")
     return text if cut == -1 else text[:cut]
 
 
 def function_ranges(text: str) -> list[tuple[str, int, int]]:
-    """`(name, first_line, last_line)` for every impl-level `fn`, 1-indexed."""
+    """`(name, first_line, last_line)` for every `fn`, 1-indexed.
+
+    Every `fn`, at any indentation: matching only impl-level declarations left
+    free functions invisible, so their lines were attributed to whichever impl
+    method preceded them (`dispatch_powers_panel_key`'s lines reported as
+    `toggle_voice`), which made those functions unallowable by name
+    (round-3 review finding 4).
+    """
     lines = text.splitlines()
     ranges: list[tuple[str, int, int]] = []
     current: tuple[str, int] | None = None
     for number, line in enumerate(lines, start=1):
-        match = re.match(r"^    (?:pub )?(?:async )?fn (\w+)", line)
+        match = re.match(
+            r"^\s*(?:pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:const\s+)?fn\s+(\w+)", line
+        )
         if match:
             if current is not None:
                 ranges.append((current[0], current[1], number - 1))
@@ -254,7 +279,14 @@ def check_protected_parents(branch: str) -> None:
     one overlay predicate plus one stack order, so `UiState` owns the query
     methods, `App` consults the predicate at its three guard sites plus the key
     chain, and finding 19's mirror reaches the hooks panel's lifecycle methods.
-    Every other added production line in these two files is still reported.
+
+    Round 3 widened them again, for the same reason and with the same discipline
+    (round-3 review finding 4): the net was live only in name — `production_text`
+    cut `app.rs` at line 133, so 406 of its 407 added lines were never examined —
+    and once it was live, three regions had to be named that the ledger already
+    sanctions: `draw_frame`/`run` (round-3 finding 2's frame-geometry sync), the
+    notification and command-result arms' own wiring calls, and the two imports
+    that sync needs. Everything else added to either file is still reported.
     """
     check_module_delta(
         "C8",
@@ -262,12 +294,22 @@ def check_protected_parents(branch: str) -> None:
         branch,
         allowed_functions=re.compile(
             r"dispatch_powers_panel_key"
+            r"|draw_frame"
             r"|handle_key"
             r"|handle_terminal_event"
             r"|handle_voice_event"
         ),
         allowed_markers=re.compile(
-            r"Notification::PowersChanged|CommandResultKind::ShowPowers|[Oo]verlay"
+            r"Notification::PowersChanged"
+            r"|Notification::HooksChanged"
+            r"|CommandResultKind::ShowPowers"
+            r"|refresh_powers_panel"
+            r"|refresh_hooks_panel"
+            r"|show_powers_panel"
+            r"|self\.draw_frame\(terminal,"
+            r"|redraw_needed"
+            r"|use ratatui::(?:Terminal|backend::Backend);"
+            r"|[Oo]verlay"
         ),
     )
     check_module_delta(
