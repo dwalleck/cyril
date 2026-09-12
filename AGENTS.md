@@ -288,14 +288,13 @@ Subagent commands need read access to `SubagentTracker`, so `CommandContext` car
 Input dispatch follows strict priority (each layer consumes or passes through):
 
 1. **Global shortcuts** (Ctrl+C, Ctrl+Q, Ctrl+M) — always active
-2. **Approval overlay** — consumes all keys if active, early return
-3. **Picker overlay** — consumes all keys if active, early return
-4. **Hooks panel overlay** — Esc closes, arrow/page keys scroll, all others consumed
-5. **Code panel overlay** — Esc closes, `r` refreshes, all others consumed
-6. **Autocomplete** — `handle_autocomplete_key()` returns `AutocompleteAction` enum (Consumed/Accepted/AcceptedAndSubmit/NotActive), early return unless NotActive
-7. **Normal input** — Enter submits, Esc cancels, other keys go to textarea
+2. **Modal overlays** — exactly one overlay owns the keyboard: the topmost open layer of `Overlay::ALL` (`cyril_ui::traits`), resolved by `UiState::topmost_overlay()` and dispatched by the exhaustive `match` in `handle_key`. Bottom to top: usage → code → powers → hooks → picker → approval. Esc closes the topmost layer; the layer below keeps its keys.
+3. **Autocomplete** — `handle_autocomplete_key()` returns `AutocompleteAction` enum (Consumed/Accepted/AcceptedAndSubmit/NotActive), early return unless NotActive
+4. **Normal input** — Enter submits, Esc cancels, other keys go to textarea
 
-Any new modal overlay must be added to both this chain and the mouse-scroll guard in `handle_terminal_event`.
+Overlays are painted in `Overlay::ALL` order and keyed in the reverse order, so the overlay the user sees on top is the overlay that reacts (`render` iterates the same constant). Adding a variant breaks both `render` and `handle_key` at compile time.
+
+A new modal overlay must be added as an `Overlay` variant and served by `has_modal_overlay()` — the shared predicate behind the key chain, the mouse-scroll guard and the paste / voice-transcript insert path in `handle_terminal_event`. Hand-written overlay lists in those guards are what let a paste land in the input buffer behind an open panel.
 
 ### Streaming Content Model
 

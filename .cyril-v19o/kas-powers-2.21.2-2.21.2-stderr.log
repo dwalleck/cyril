@@ -1,0 +1,8 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.58.7"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":true}
+[INFO] acp.remote_sessions.enabled {"endpoint":"https://app.kiro.dev"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] (node:4163454) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[ERROR] Error handling request {"jsonrpc":"2.0","id":14,"method":"_kiro/powers/refresh"} {"code":-32603,"message":"Internal error","data":{"details":"Unknown ext method: _kiro/powers/refresh"}}

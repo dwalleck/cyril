@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use cyril_core::types::{
-    CommandOption, EffortLevel, HookInfo, MemoryStatusView, Plan, SessionId, VoiceStatus,
+    CommandOption, EffortLevel, HookInfo, MemoryStatusView, Plan, PowerInfo, SessionId, VoiceStatus,
 };
 
 use crate::theme::Theme;
@@ -105,6 +105,7 @@ pub trait TuiState {
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
+    fn powers_panel(&self) -> Option<&PowersPanelState>;
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData>;
     fn usage_panel(&self) -> Option<&UsagePanelState>;
     fn code_intelligence_active(&self) -> bool;
@@ -124,6 +125,54 @@ pub trait TuiState {
     // Subagents
     fn subagent_tracker(&self) -> &cyril_core::subagent::SubagentTracker;
     fn subagent_ui(&self) -> &crate::subagent_ui::SubagentUiState;
+}
+
+/// Which modal overlay owns the keyboard — and, in the reverse order, which one
+/// is painted on top.
+///
+/// Overlays stack: several can be open at once (`/model` while a permission
+/// request is pending, a powers panel under an approval), and each widget
+/// paints its own [`ratatui::widgets::Clear`] before its content. Whoever paints
+/// last therefore *erases* the others inside the overlap, so the paint order and
+/// the key-dispatch order MUST be inverses of each other. They were not: both
+/// chains ran approval-first, which painted the approval prompt at the bottom
+/// (erased by the next panel's `Clear`) while `App::handle_key` still fed it
+/// every key — Enter could answer a prompt the user could not see (review
+/// findings 3 and 20).
+///
+/// [`Overlay::ALL`] is the one place the stack order lives. Rendering iterates
+/// it front-to-back; the key chain takes the last open layer
+/// ([`crate::state::UiState::topmost_overlay`]). Adding a variant breaks both
+/// [`crate::render`] and `App::handle_key` at compile time — an overlay cannot
+/// be added without deciding where it sits in the stack and which keys it eats.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Overlay {
+    /// Usage panel (`/usage`).
+    Usage,
+    /// Code panel (`/code`).
+    Code,
+    /// Powers panel (`/powers`).
+    Powers,
+    /// Hooks panel (`/hooks`).
+    Hooks,
+    /// Command-option picker (`/model`, `/theme`, and every
+    /// `CommandOptionsReceived` reply, which also arrives unprompted).
+    Picker,
+    /// Permission prompt. Painted last and consulted first: an approval the
+    /// user cannot see must never be answerable by a stray Enter.
+    Approval,
+}
+
+impl Overlay {
+    /// Every overlay, bottom-most (painted first, keyed last) to top-most.
+    pub const ALL: [Overlay; 6] = [
+        Overlay::Usage,
+        Overlay::Code,
+        Overlay::Powers,
+        Overlay::Hooks,
+        Overlay::Picker,
+        Overlay::Approval,
+    ];
 }
 
 /// A chat message for display purposes.
@@ -517,6 +566,41 @@ pub struct HooksPanelState {
     pub scroll_offset: usize,
 }
 
+/// Powers the `/powers` panel shows at once: five powers are 15 content rows
+/// plus the two borders = 17, which still fits the 24-row terminal the panel's
+/// geometry is checked against.
+///
+/// This is the panel's DESIRED window, not the one it always gets:
+/// `modal::place` squeezes the popup into the rows above the input, so a short
+/// terminal or a tall input shows fewer powers. The window that actually
+/// decides layout is `widgets::powers_panel::placement`'s, and the keyboard's
+/// scroll bound is measured from that same number (`render::powers_window`) —
+/// bounding it here would strand the tail of a long catalog in exactly those
+/// frames.
+pub const MAX_VISIBLE_POWERS: usize = 5;
+
+/// Powers panel overlay state (read-only display for `/powers`).
+///
+/// Populated from a `PowersChanged` push — the agent announces its installed
+/// powers unprompted, and cyril never asks for them. Powers execute inside the
+/// agent, so the panel carries no interactive state beyond scroll position.
+#[derive(Debug, Clone)]
+pub struct PowersPanelState {
+    /// Powers in display order: title (ASCII-lowercase), tie-broken by
+    /// identifier. Pre-sorted by [`crate::state::UiState::show_powers_panel`];
+    /// the renderer iterates this directly. A caller constructing
+    /// `PowersPanelState` by hand owns that ordering.
+    pub powers: Vec<PowerInfo>,
+    /// Index of the first power in the viewport, not a line offset: the widget
+    /// always renders whole powers, so a scroll position that is not a power
+    /// boundary cannot exist.
+    ///
+    /// [`crate::state::UiState`] keeps it inside the last full window of the
+    /// popup's ACTUAL size, so this is always a position the widget renders as
+    /// given; the widget still clamps a hand-built state into range.
+    pub scroll_offset: usize,
+}
+
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum UsagePage {
     #[default]
@@ -761,6 +845,7 @@ pub mod test_support {
         pub approval: Option<ApprovalState>,
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
+        pub powers_panel: Option<PowersPanelState>,
         pub code_panel: Option<cyril_core::types::CodePanelData>,
         pub usage_panel: Option<UsagePanelState>,
         pub code_intelligence_active: bool,
@@ -804,6 +889,7 @@ pub mod test_support {
                 approval: None,
                 picker: None,
                 hooks_panel: None,
+                powers_panel: None,
                 code_panel: None,
                 usage_panel: None,
                 code_intelligence_active: false,
@@ -903,6 +989,9 @@ pub mod test_support {
         }
         fn hooks_panel(&self) -> Option<&HooksPanelState> {
             self.hooks_panel.as_ref()
+        }
+        fn powers_panel(&self) -> Option<&PowersPanelState> {
+            self.powers_panel.as_ref()
         }
         fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
             self.code_panel.as_ref()

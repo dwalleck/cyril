@@ -331,6 +331,15 @@ impl Engine for KasEngine {
             }
             convert::kas::WorkflowFrameOutcome::Dropped => Ok(None),
             convert::kas::WorkflowFrameOutcome::NotWorkflow => {
+                // cyril-v19o: the KAS powers push, claimed before the shared
+                // kiro converter so a malformed frame is reported by the
+                // adapter that recognizes the family (with its failing field
+                // path) instead of as an unknown extension method. The adapter
+                // rejects a non-matching method on the name alone, so the
+                // near-miss performance fence below is unaffected.
+                if let Some(powers) = convert::kas::powers::to_notification(method, params)? {
+                    return Ok(Some(powers));
+                }
                 // Same C8 suppression as the session-update path: the shared
                 // kiro converter can also emit CommandsUpdated, and the four
                 // gate commands must not reach autocomplete from any route.
@@ -784,6 +793,59 @@ mod tests {
             long_elapsed <= std::time::Duration::from_secs(5),
             "100 iterations of the 64 KiB method near miss exceeded 5 s: {long_elapsed:?}"
         );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o C1–C3, engine half). The powers family is
+    /// claimed by the KAS engine alone: v2 must keep its unknown-extension
+    /// result, and the raw underscore spelling must not bypass normalization
+    /// and reach the adapter as a second, unclaimed method.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_engine_dispatches_powers_and_v2_does_not() {
+        let params = json!({
+            "sessionId": "sess_test",
+            "status": "success",
+            "powers": [{
+                "name": "datadog",
+                "displayName": "Datadog Observability",
+                "mcpServerNames": ["datadog"],
+                "hasSteeringFiles": true
+            }]
+        });
+
+        let kas =
+            KasEngine::default().convert_ext_notification("kiro/powers/items_changed", &params);
+        match kas {
+            Ok(Some(crate::types::Notification::PowersChanged { powers })) => {
+                assert_eq!(powers.len(), 1);
+                assert_eq!(powers[0].name(), "datadog");
+                assert_eq!(powers[0].title(), "Datadog Observability");
+                assert_eq!(powers[0].mcp_server_names(), ["datadog"]);
+                assert!(powers[0].has_steering_files());
+            }
+            other => panic!("KAS must convert the powers push, got {other:?}"),
+        }
+
+        let v2 = V2Engine.convert_ext_notification("kiro/powers/items_changed", &params);
+        assert!(
+            matches!(v2, Ok(None)),
+            "v2 has no powers surface (evidence P3) and must stay inert, got {v2:?}"
+        );
+
+        let raw =
+            KasEngine::default().convert_ext_notification("_kiro/powers/items_changed", &params);
+        assert!(
+            matches!(raw, Ok(None)),
+            "raw underscore spelling must not bypass ACP normalization, got {raw:?}"
+        );
+
+        // The empty catalog reaches the engine as a loaded catalog, not a drop.
+        let empty = KasEngine::default()
+            .convert_ext_notification("kiro/powers/items_changed", &json!({ "powers": [] }));
+        assert!(matches!(
+            empty,
+            Ok(Some(crate::types::Notification::PowersChanged { ref powers })) if powers.is_empty()
+        ));
     }
 
     #[cfg(feature = "kas")]

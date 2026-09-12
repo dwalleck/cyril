@@ -44,6 +44,8 @@ mod commands;
 mod death;
 mod fingerprint_stops;
 mod lifecycle;
+#[cfg(feature = "kas")]
+mod powers;
 mod routing;
 mod saturation;
 mod stall;

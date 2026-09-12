@@ -45,6 +45,11 @@ pub struct SessionController {
     /// `_kiro/hooks/setEnabled` accepts. Empty on v2, whose registry carries
     /// no ids at all.
     kas_hooks: Vec<HookInfo>,
+    /// Last KAS power catalog seen (cyril-v19o). `None` means the agent has
+    /// not pushed one — a *different* fact from `Some(vec![])`, which is the
+    /// agent reporting that nothing is installed. `/powers` must not tell a
+    /// user with zero powers that the agent is still loading, nor the reverse.
+    powers: Option<Vec<PowerInfo>>,
 }
 
 impl SessionController {
@@ -66,6 +71,7 @@ impl SessionController {
             last_turn: None,
             steering_unsupported: false,
             kas_hooks: Vec::new(),
+            powers: None,
         }
     }
 
@@ -123,6 +129,13 @@ impl SessionController {
     /// listing or a `didChange` lands.
     pub fn kas_hooks(&self) -> &[HookInfo] {
         &self.kas_hooks
+    }
+
+    /// The last KAS power catalog seen, or `None` before the agent pushes one
+    /// (cyril-v19o). Wire order, not display order — ordering belongs to the
+    /// panel that renders it.
+    pub fn powers(&self) -> Option<&[PowerInfo]> {
+        self.powers.as_deref()
     }
 
     /// Resolve a user-typed hook reference to the composite id that
@@ -198,6 +211,18 @@ impl SessionController {
                 // panel is open and needs refreshing.
                 let changed = self.kas_hooks != *hooks;
                 self.kas_hooks = hooks.clone();
+                changed
+            }
+            // Full replacement, never a merge: the push carries the whole
+            // installed set, so a power uninstalled between two pushes
+            // disappears here by its absence from the later list (B4).
+            //
+            // A malformed frame never reaches this arm — the converter drops it
+            // before it becomes a notification — so a catalog already held can
+            // never be cleared by drift (B7).
+            Notification::PowersChanged { powers } => {
+                let changed = self.powers.as_deref() != Some(powers.as_slice());
+                self.powers = Some(powers.clone());
                 changed
             }
             Notification::ModeChanged { mode_id } => {
@@ -1184,6 +1209,55 @@ mod kas_hook_tests {
         assert!(
             s.resolve_kas_hook_id("b").is_err(),
             "the deleted hook is gone"
+        );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o C1–C3, session half). The catalog is
+    /// last-write-wins, starts absent rather than empty, and drift cannot
+    /// clear it.
+    #[test]
+    fn powers_catalog_replaces_and_survives_malformed_pushes() {
+        fn power(name: &str) -> PowerInfo {
+            PowerInfo::new(name, None, None, Vec::new(), false)
+        }
+
+        let mut s = SessionController::new();
+        assert_eq!(
+            s.powers(),
+            None,
+            "before the push there is no catalog at all — not an empty one"
+        );
+
+        let changed = s.apply_notification(&Notification::PowersChanged {
+            powers: vec![power("datadog"), power("markdownlint")],
+        });
+        assert!(changed, "first catalog is a change");
+        assert_eq!(
+            s.powers().map(|powers| powers.len()),
+            Some(2),
+            "a catalog of two is loaded, not the empty case"
+        );
+
+        let unchanged = s.apply_notification(&Notification::PowersChanged {
+            powers: vec![power("datadog"), power("markdownlint")],
+        });
+        assert!(!unchanged, "an identical push reports no change");
+
+        // An empty push is the agent reporting zero installed powers.
+        s.apply_notification(&Notification::PowersChanged { powers: vec![] });
+        assert_eq!(s.powers(), Some([].as_slice()));
+
+        // The converter drops malformed frames before they can become
+        // notifications, so this asserts the boundary the drop protects: the
+        // catalog is only ever replaced by a notification that exists.
+        s.apply_notification(&Notification::PowersChanged {
+            powers: vec![power("datadog")],
+        });
+        s.apply_notification(&Notification::PowersChanged { powers: vec![] });
+        assert_eq!(
+            s.powers().map(|powers| powers.len()),
+            Some(0),
+            "the last valid push is authoritative"
         );
     }
 

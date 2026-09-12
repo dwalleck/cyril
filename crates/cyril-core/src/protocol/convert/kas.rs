@@ -15,6 +15,7 @@ use crate::types::{
     UsageTurnStatus,
 };
 
+pub(crate) mod powers;
 pub(crate) mod workflow;
 
 #[derive(Debug, thiserror::Error)]

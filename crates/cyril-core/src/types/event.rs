@@ -291,6 +291,24 @@ pub enum Notification {
         hooks: Vec<crate::types::HookInfo>,
     },
 
+    /// KAS announced its installed power set (`_kiro/powers/items_changed`,
+    /// cyril-v19o). Carries the **full** new catalog, so it is a replacement
+    /// rather than a delta — a power uninstalled between two pushes disappears
+    /// by its absence from the later list.
+    ///
+    /// Same deliberate split as [`Notification::HooksChanged`]: it arrives
+    /// unprompted once per session (measured: +18 ms after `session/new`
+    /// replies, with no client request involved), so it must never pop a modal
+    /// open over the user. It updates the catalog and refreshes an
+    /// already-open panel, and is otherwise inert.
+    ///
+    /// `None` on the session's stored catalog means "the agent has not reported
+    /// yet", which is a different state from an empty catalog — see
+    /// `SessionController::powers`.
+    PowersChanged {
+        powers: Vec<crate::types::PowerInfo>,
+    },
+
     /// A KAS-side hook changed state (`session_info_update`,
     /// `_meta.kiro.kind = "hook_update"`; cyril-gk17).
     ///

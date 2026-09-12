@@ -10,6 +10,7 @@ pub mod kas_spawn;
 pub mod memory;
 pub mod message;
 pub mod plan;
+pub mod power;
 pub mod present_as;
 pub mod prompt;
 pub mod session;
@@ -45,6 +46,7 @@ pub use memory::{
 };
 pub use message::{AgentMessage, AgentThought, UserMessage};
 pub use plan::{Plan, PlanEntry, PlanEntryPriority, PlanEntryStatus};
+pub use power::PowerInfo;
 pub use present_as::PresentAs;
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{

@@ -203,6 +203,18 @@ pub enum CommandResultKind {
     /// Open Cyril's local usage dashboard; records whether an async KAS
     /// account query was dispatched before returning.
     ShowUsage { account_query_started: bool },
+    /// Open the `/powers` panel with the agent's installed power set
+    /// (cyril-v19o). Carries the catalog because the command layer can read it
+    /// (`SessionController::powers`) while the panel lives in `cyril-ui`; the
+    /// App is the only place both exist, so it opens the panel here — the same
+    /// split as `ShowUsage`.
+    ///
+    /// Only produced when a catalog is held: with none, the command answers
+    /// with a system message instead, because "the agent has not reported yet"
+    /// is information the empty panel cannot express.
+    ShowPowers {
+        powers: Vec<crate::types::PowerInfo>,
+    },
     /// Return Cyril's current typed memory runtime status.
     MemoryStatus(crate::types::MemoryStatusView),
     /// Execute one typed project-memory operation in the binary orchestrator.
@@ -234,6 +246,13 @@ impl CommandResult {
     pub fn show_theme_picker() -> Self {
         Self {
             kind: CommandResultKind::ShowThemePicker,
+        }
+    }
+
+    /// Open the `/powers` panel (cyril-v19o).
+    pub fn show_powers(powers: Vec<crate::types::PowerInfo>) -> Self {
+        Self {
+            kind: CommandResultKind::ShowPowers { powers },
         }
     }
 
@@ -360,6 +379,16 @@ impl CommandRegistry {
             names.push("workflow");
             registry.register(Arc::new(workflow::WorkflowCommand::new(workspace_root)));
         }
+        // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
+        // advertises 25 commands and `powers` is not among them, and KAS
+        // advertises no TUI commands at all — so cyril always owns the name
+        // (and `register_agent_commands` skips a name already taken). On v2 the
+        // command can only ever answer "not reported yet" (cyril-v19o).
+        //
+        // Pushed BEFORE `HelpCommand` copies the list: the snapshot is eager,
+        // so a name pushed after it is invisible to `/help` — the state this
+        // fixes (review finding 2).
+        names.push("powers");
         registry.register(Arc::new(builtin::HelpCommand::new(&names)));
         registry.register(Arc::new(builtin::ClearCommand));
         registry.register(Arc::new(builtin::QuitCommand));
@@ -369,6 +398,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::VoiceToggleCommand));
         registry.register(Arc::new(builtin::ThemeCommand));
         registry.register(Arc::new(builtin::UsageCommand::new(usage_account)));
+        registry.register(Arc::new(builtin::PowersCommand));
         registry.register(Arc::new(builtin::MemoryCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
@@ -728,6 +758,190 @@ mod tests {
             result.unwrap().kind,
             CommandResultKind::SystemMessage(_)
         ));
+    }
+
+    /// REGRESSION FENCE (cyril-v19o C5, command half). With no catalog the
+    /// command answers instead of opening an empty panel; with one it hands
+    /// the catalog to the App; and it never sends a powers request, because
+    /// neither pull method is usable (evidence P2/P3).
+    #[tokio::test]
+    async fn powers_without_catalog_reports_and_with_catalog_opens() {
+        use crate::types::{Notification, PowerInfo};
+
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+
+        // No push yet: one system line, and no panel (no ShowPowers at all).
+        let session = crate::session::SessionController::new();
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let result = builtin::PowersCommand.execute(&ctx, "").await.unwrap();
+        match result.kind {
+            CommandResultKind::SystemMessage(text) => {
+                assert!(
+                    text.contains("No powers reported yet"),
+                    "the not-reported case must say so: {text}"
+                );
+            }
+            other => panic!("expected a system message, got {other:?}"),
+        }
+
+        // Arguments are a mistake, not a panel request.
+        let result = builtin::PowersCommand
+            .execute(&ctx, "enable datadog")
+            .await
+            .unwrap();
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::SystemMessage(ref text) if text.contains("Usage: /powers")
+        ));
+
+        // With a catalog: the panel payload, verbatim from session state.
+        let mut session = crate::session::SessionController::new();
+        session.apply_notification(&Notification::PowersChanged {
+            powers: vec![
+                PowerInfo::new(
+                    "markdownlint",
+                    Some("Markdownlint".into()),
+                    None,
+                    vec![],
+                    true,
+                ),
+                PowerInfo::new(
+                    "datadog",
+                    Some("Datadog Observability".into()),
+                    None,
+                    vec![],
+                    true,
+                ),
+            ],
+        });
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let result = builtin::PowersCommand.execute(&ctx, "").await.unwrap();
+        match result.kind {
+            CommandResultKind::ShowPowers { powers } => {
+                let names: Vec<&str> = powers.iter().map(PowerInfo::name).collect();
+                assert_eq!(
+                    names,
+                    ["markdownlint", "datadog"],
+                    "wire order reaches the App; ordering is the panel's job"
+                );
+            }
+            other => panic!("expected ShowPowers, got {other:?}"),
+        }
+
+        // A known-empty catalog still opens the panel — that is what the
+        // placeholder exists for.
+        session.apply_notification(&Notification::PowersChanged { powers: vec![] });
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let result = builtin::PowersCommand.execute(&ctx, "").await.unwrap();
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::ShowPowers { ref powers } if powers.is_empty()
+        ));
+
+        // The command layer sends nothing: no powers request exists to send.
+        assert!(
+            rx.try_recv().is_err(),
+            "executing /powers must not dispatch a bridge command"
+        );
+    }
+
+    /// REGRESSION FENCE (cyril-v19o review finding 2). `/help` is the discovery
+    /// surface a user reads, so every command the registry can execute must be
+    /// named there. `HelpCommand` copies its name list at construction, so a
+    /// name pushed after that registration parses fine and is silently missing
+    /// from `/help` — which is how `/powers` shipped. Both registry shapes are
+    /// checked because `/hooks` and `/workflow` are engine-conditional.
+    #[tokio::test]
+    async fn help_lists_every_registered_command() {
+        let workspace = std::path::PathBuf::from("/workspace");
+        let shapes = [
+            (HooksCommandSource::Agent, WorkflowCommandSource::None),
+            (
+                HooksCommandSource::Kas {
+                    workspace_root: workspace.clone(),
+                },
+                WorkflowCommandSource::Kas {
+                    workspace_root: workspace.clone(),
+                },
+            ),
+        ];
+        for (hooks, workflows) in shapes {
+            let registry = CommandRegistry::with_builtins(hooks, workflows);
+            let session = crate::session::SessionController::new();
+            let (tx, _rx) = tokio::sync::mpsc::channel(1);
+            let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+            let ctx = CommandContext {
+                workspace: std::path::Path::new("."),
+                session: &session,
+                bridge: &sender,
+                subagent_tracker: None,
+                workflow_tracker: None,
+                memory_status: None,
+            };
+
+            let (help, args) = registry.parse("/help").expect("/help is registered");
+            assert_eq!(args, "");
+            let rendered = match help.execute(&ctx, "").await.unwrap().kind {
+                CommandResultKind::SystemMessage(text) => text,
+                other => panic!("help answers with a system message, got {other:?}"),
+            };
+
+            let names: Vec<String> = registry
+                .all_commands()
+                .iter()
+                .map(|command| command.name().to_owned())
+                .collect();
+            assert!(
+                names.len() >= 14,
+                "the builtin registry is not a toy: {names:?}"
+            );
+            for name in names {
+                let listed = rendered
+                    .lines()
+                    .any(|line| line.trim() == format!("/{name}"));
+                assert!(
+                    listed,
+                    "`/{name}` is registered but absent from /help:\n{rendered}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn powers_command_registered_and_parses() {
+        let registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        let (command, args) = registry
+            .parse("/powers")
+            .expect("/powers is registered on every engine");
+        assert_eq!(command.name(), "powers");
+        assert!(args.is_empty());
+        assert!(
+            command.is_local(),
+            "the panel is answered from session state, not the agent"
+        );
     }
 
     #[tokio::test]
