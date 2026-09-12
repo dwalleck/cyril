@@ -415,6 +415,42 @@ prove C8 voice-notice-emitted-on-both-paths "$APP" \
             VoiceEvent::Error(msg) => {' \
   "${CYRIL_TEST[@]}" paste_mouse_and_voice_respect_every_overlay
 
+# R5 / round-3 finding 5, the log half: a dropped paste that leaves no record
+# was the finding itself.
+prove C8 paste-discard-not-logged "$APP" \
+  '                } else {
+                    tracing::warn!(
+                        chars = text.chars().count(),
+                        "dropping a paste: a modal overlay owns the input"
+                    );
+                }' \
+  '                }' \
+  "${CYRIL_TEST[@]}" overlay_guards_log_what_they_drop
+
+prove C8 voice-discard-not-logged "$APP" \
+  '                    tracing::warn!(
+                        chars = text.chars().count(),
+                        "dropping a voice transcript: a modal overlay owns the input"
+                    );
+' \
+  '' \
+  "${CYRIL_TEST[@]}" overlay_guards_log_what_they_drop
+
+# R5: and the log is tied to the drop, not to the event — logging on both paths
+# satisfies the drop assertion and is caught by the control's absence check.
+prove C8 paste-log-fires-unconditionally "$APP" \
+  '                if !self.ui_state.has_modal_overlay() {
+                    self.ui_state.insert_text(&text);
+                    self.redraw_needed = true;' \
+  '                tracing::warn!(
+                    chars = text.chars().count(),
+                    "dropping a paste: a modal overlay owns the input"
+                );
+                if !self.ui_state.has_modal_overlay() {
+                    self.ui_state.insert_text(&text);
+                    self.redraw_needed = true;' \
+  "${CYRIL_TEST[@]}" overlay_guards_log_what_they_drop
+
 if [ "$MUTATIONS_RUN" -eq 0 ]; then
   echo "FAIL	-	$FILTER	no mutation matched the filter"
   exit 1

@@ -5882,6 +5882,22 @@ mod tests {
                 .count()
         };
         assert_eq!(notice(&app), 1, "the discarded dictation is announced");
+        // The drop is not silent: a dictation is the one input the user cannot
+        // redo, so the guard announces it in the chat instead of confining the
+        // failure to `cyril.log` (round-3 review finding 5). Counting the notice
+        // also gives the guard a failure mode the buffer assertion cannot see —
+        // a guard that drops the text *and* swallows the notice.
+        let notice = |app: &App| {
+            app.ui_state
+                .messages()
+                .iter()
+                .filter(|message| {
+                    matches!(message.kind(), ChatMessageKind::System(text)
+                        if text.contains("Discarded a finished dictation"))
+                })
+                .count()
+        };
+        assert_eq!(notice(&app), 1, "the discarded dictation is announced");
         app.handle_terminal_event(wheel())
             .await
             .expect("wheel under the panel");
@@ -5905,6 +5921,11 @@ mod tests {
             1,
             "a transcript that lands is never announced as discarded"
         );
+        assert_eq!(
+            notice(&app),
+            1,
+            "a transcript that lands is never announced as discarded"
+        );
         app.handle_terminal_event(wheel())
             .await
             .expect("wheel with no overlay");
@@ -5912,6 +5933,51 @@ mod tests {
             app.ui_state.chat_scroll_back(),
             Some(MOUSE_SCROLL_LINES),
             "the chat scrolls again once the overlay is gone"
+        );
+    }
+
+    /// REGRESSION FENCE (round-3 review finding 5). The other half of the
+    /// guard's repair: a paste dropped by an overlay used to be discarded with
+    /// no record at all. The logs are the only account of a paste that never
+    /// reaches the buffer, so this asserts them on the drop path and their
+    /// absence on the path where the text lands — a `warn!` that fires
+    /// unconditionally satisfies the first assertion and reddens the second.
+    #[test]
+    fn overlay_guards_log_what_they_drop() {
+        fn drive(drop_path: bool) -> String {
+            let (_, logs) = with_captured_logs(|| {
+                let (mut app, _rx) = test_app_with_command_rx();
+                if drop_path {
+                    app.ui_state.show_powers_panel(powers_catalog());
+                }
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .unwrap_or_else(|error| panic!("test runtime: {error}"));
+                runtime
+                    .block_on(app.handle_terminal_event(Event::Paste("pasted".into())))
+                    .expect("paste");
+                app.handle_voice_event(VoiceEvent::Transcript(" dictated".into()));
+            });
+            logs
+        }
+
+        let dropped = drive(true);
+        assert!(
+            dropped.contains("dropping a paste"),
+            "a paste an overlay discards must be logged, not silent: {dropped}"
+        );
+        assert!(
+            dropped.contains("dropping a voice transcript"),
+            "a discarded dictation must be logged: {dropped}"
+        );
+
+        // Positive control: nothing is dropped without the overlay, so nothing
+        // may be logged either.
+        let landed = drive(false);
+        assert!(
+            !landed.contains("dropping a paste") && !landed.contains("dropping a voice transcript"),
+            "both paths took the text, so neither may log a drop: {landed}"
         );
     }
 
@@ -6563,9 +6629,57 @@ mod tests {
         Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
     }
 
+    /// A dispatch interested in every callsite that captures nothing itself.
+    ///
+    /// `tracing` caches a callsite's interest **process-wide** the first time it
+    /// is evaluated, so a callsite first driven by a test that installed no
+    /// subscriber can be cached as uninterested — after which a later
+    /// `with_default` capture records nothing, on every thread. That is exactly
+    /// how the overlay-guard log fence below passed on its own and recorded an
+    /// empty log when run beside `paste_mouse_and_voice_respect_every_overlay`,
+    /// which drives the same guard without a capture (`state=(overlay=true,
+    /// input="")` — the guard ran and the log was dropped). Registering an
+    /// always-interested dispatch once as the global default rebuilds the
+    /// interest cache and leaves each callsite consultable by whichever dispatch
+    /// the current thread installs.
+    struct AlwaysInterested;
+
+    impl tracing::Subscriber for AlwaysInterested {
+        fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+            false
+        }
+
+        fn register_callsite(
+            &self,
+            _metadata: &'static tracing::Metadata<'static>,
+        ) -> tracing::subscriber::Interest {
+            tracing::subscriber::Interest::always()
+        }
+
+        fn new_span(&self, _attributes: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+
+        fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+        fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+        fn event(&self, _event: &tracing::Event<'_>) {}
+
+        fn enter(&self, _span: &tracing::span::Id) {}
+
+        fn exit(&self, _span: &tracing::span::Id) {}
+    }
+
     /// Run `f` under a WARN-level capture subscriber; return its result and
     /// the captured log text.
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        static GLOBAL: std::sync::OnceLock<()> = std::sync::OnceLock::new();
+        GLOBAL.get_or_init(|| {
+            if let Err(error) = tracing::subscriber::set_global_default(AlwaysInterested) {
+                tracing::debug!(%error, "another test installed a tracing default first");
+            }
+        });
         let _capture_lock = cyril_core::test_support::tracing_capture_lock();
         let capture = cyril_core::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
