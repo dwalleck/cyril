@@ -124,7 +124,18 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # macOS is deliberately absent. This job is a compile check -- it
+        # uploads nothing, and `release.yml` is what builds macOS artifacts on
+        # a tag. What `cargo build --release` proves over `cargo test` is
+        # release-profile compilation and compiling without dev-dependencies in
+        # the graph, and neither is platform-specific: feature unification
+        # resolves identically everywhere, so Linux catches both first.
+        #
+        # macOS concurrency is an account-wide pool of five shared across every
+        # repository, and a macOS leg is the slowest in the matrix. `test` still
+        # compiles this crate on macOS, so a Darwin-only `cfg` block is still
+        # type-checked there.
+        os: [ubuntu-latest, windows-latest]
 
     steps:
       - name: Checkout code
