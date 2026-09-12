@@ -10,6 +10,17 @@ env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
 
+# Cancel superseded runs on a PR branch when it's re-pushed, but never cancel
+# a run on main (keep main's history fully validated). One lane per ref.
+#
+# `test` and `build` each put a macOS job in the matrix, so every run asks for
+# two of them, and macOS concurrency is an account-wide pool shared with every
+# other repository. Without a lane, a branch pushed repeatedly stacks runs that
+# hold those slots while unrelated projects wait.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   # Validate commit messages follow conventional commits.
   commitlint:
