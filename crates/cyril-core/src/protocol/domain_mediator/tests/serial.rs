@@ -69,6 +69,27 @@ fn unhandled_extension_diagnostic_excludes_payload_and_preserves_dispatch() {
                 event["level"] == "DEBUG"
                     && event["fields"]["method"] == "kiro.dev/clear/status"
             }), "every unhandled conversion must identify its method");
+            let acknowledged = must_succeed(
+                UntypedMessage::new("_kiro.dev/session/activity", serde_json::json!({})),
+                "acknowledged multi-session notification",
+            );
+            assert!(!must_succeed(
+                mediator.handle_extension_notification(acknowledged).await,
+                "acknowledged notification remains nonterminal",
+            ));
+            assert!(matches!(
+                notifications.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ));
+            let events = capture.captured();
+            assert_eq!(
+                events.iter().filter(|event| {
+                    event["level"] == "DEBUG"
+                        && event["fields"]["method"] == "kiro.dev/session/activity"
+                }).count(),
+                1,
+                "acknowledged notification must have one method diagnostic: {events:?}",
+            );
             let after_unknown = capture.captured().len();
 
             let handled = must_succeed(

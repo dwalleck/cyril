@@ -184,7 +184,7 @@ impl DomainMediator {
                 self.handle_routed(routed).await
             }
             Ok(None) => {
-                tracing::debug!(method, "unhandled extension notification");
+                tracing::debug!(method, "extension notification not forwarded");
                 Ok(false)
             }
             Err(error) => {

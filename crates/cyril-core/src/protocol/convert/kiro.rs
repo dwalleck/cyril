@@ -1097,13 +1097,6 @@ pub(crate) fn to_ext_notification(
                 senders,
             }))
         }
-        "kiro.dev/session/activity" | "kiro.dev/session/list_update" => {
-            tracing::debug!(
-                method,
-                "multi-session notification acknowledged, not forwarded"
-            );
-            Ok(None)
-        }
         _ => Ok(None),
     }
 }
