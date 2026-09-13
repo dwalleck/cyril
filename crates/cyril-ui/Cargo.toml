@@ -25,6 +25,7 @@ similar = { workspace = true }
 unicode-width = { workspace = true }
 
 [dev-dependencies]
+cyril-core = { path = "../cyril-core", features = ["kas", "test-support"] }
 anyhow = { workspace = true }
 rstest = { workspace = true }
 insta = { workspace = true }
