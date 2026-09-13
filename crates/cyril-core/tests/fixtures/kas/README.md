@@ -53,3 +53,23 @@ rides `_meta.kiro` beside `kind`: `{messageId, content}` on queued/injected,
 `steering_cleared` fires BOTH on explicit `_session/steer/clear` AND routinely
 post-injection with the injected id (same turn — findings F4), which is why
 `Notification::SteeringCleared` is id-scoped.
+
+## Source-derived tool-call input shapes (cyril-a5wo)
+
+`tool_call_raw_input_2_18_1_source_derived.jsonl` is a compatibility fixture,
+not a live capture. It is derived from the self-extracted kiro-cli 2.18.1
+`@kiro/agent` 0.38.7 `dist/server/acp-server.js`:
+
+- source SHA-256:
+  `965ae084945a48eb73fe2049feed7e3deb6fb8d8a9cf49aa4713b172ed3fb70a`;
+- fixture SHA-256:
+  `384dc37487079a49ac1f344648c32850cd2e81bced44165d6a6cfa86fe03719b`;
+- absent input: `user_input` emits an initial call without `rawInput` and a
+  status-only completion (source lines 488440–488450 and 488489–488492);
+- partial input: streaming replace emits path-only input, then path plus a
+  partial `newStr`; `ACPEventAdapter` forwards both objects unchanged (source
+  lines 445879–445899 and 488864–488941).
+
+Regenerate or verify it with `.cyril-a5wo/derive-raw-input-fixture.py`. The
+generator pins the package version, source hash, and cited source markers
+before producing any bytes.

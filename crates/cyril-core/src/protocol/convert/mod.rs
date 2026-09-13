@@ -2613,4 +2613,73 @@ mod tests {
             .expect("model config option");
         assert_eq!(model.value.as_deref(), Some("openai-codex/gpt-5.6-luna"));
     }
+
+    #[test]
+    fn source_derived_raw_input_fixture_is_exact() {
+        const FIXTURE: &str = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/tests/fixtures/kas/tool_call_raw_input_2_18_1_source_derived.jsonl"
+        ));
+
+        let updates: Vec<acp::SessionUpdate> = FIXTURE
+            .lines()
+            .map(|line| {
+                let frame: serde_json::Value =
+                    serde_json::from_str(line).expect("source-derived frame is JSON");
+                let notification: acp::SessionNotification =
+                    serde_json::from_value(frame["params"].clone())
+                        .expect("source-derived params deserialize at the ACP layer");
+                notification.update
+            })
+            .collect();
+        assert_eq!(updates.len(), 4, "fixture has both two-frame lifecycles");
+
+        let acp::SessionUpdate::ToolCall(absent) = &updates[0] else {
+            panic!("frame 0 must be the absent-input tool_call");
+        };
+        assert_eq!(absent.title, "Choose an option");
+        assert_eq!(absent.kind, acp::ToolKind::Other);
+        assert_eq!(absent.status, acp::ToolCallStatus::Pending);
+        assert!(absent.raw_input.is_none());
+        assert!(absent.locations.is_empty());
+
+        let acp::SessionUpdate::ToolCallUpdate(absent_done) = &updates[1] else {
+            panic!("frame 1 must be the absent-input status update");
+        };
+        assert_eq!(
+            absent_done.fields.status,
+            Some(acp::ToolCallStatus::Completed)
+        );
+        assert!(absent_done.fields.title.is_none());
+        assert!(absent_done.fields.raw_input.is_none());
+
+        let expected_path = "/workspace/src/space ü.rs";
+        let acp::SessionUpdate::ToolCall(partial) = &updates[2] else {
+            panic!("frame 2 must be the path-only partial tool_call");
+        };
+        assert_eq!(partial.kind, acp::ToolKind::Edit);
+        assert_eq!(partial.status, acp::ToolCallStatus::InProgress);
+        assert_eq!(
+            partial.raw_input,
+            Some(serde_json::json!({ "path": expected_path }))
+        );
+        assert_eq!(partial.locations.len(), 1);
+        assert_eq!(partial.locations[0].path.to_string_lossy(), expected_path);
+
+        let acp::SessionUpdate::ToolCallUpdate(partial_update) = &updates[3] else {
+            panic!("frame 3 must be the expanding partial update");
+        };
+        assert_eq!(
+            partial_update.fields.status,
+            Some(acp::ToolCallStatus::InProgress)
+        );
+        assert_eq!(
+            partial_update.fields.raw_input,
+            Some(serde_json::json!({
+                "path": expected_path,
+                "newStr": "partial replacement"
+            }))
+        );
+        assert!(partial_update.fields.title.is_none());
+    }
 }
