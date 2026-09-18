@@ -52,6 +52,7 @@ This index is the source of truth for "is doc X current?" — if a doc's status 
 
 | Doc | Status | Release | Findings summary |
 |---|---|---|---|
+| [`kiro-2.22.0-wire-audit.md`](kiro-2.22.0-wire-audit.md) | 🧪 Research artifact (focused) | 2.22.0 findings summary; examples 2.18.0, 2.19.1, 2.21.0 | Field-level comparison of current Cyril ACP types/converters against KAS MCP status, tool tags, permission metadata, `session_info_update` kinds, and other observed extension messages, with redacted examples. |
 | [`kiro-2.8.1-wire-audit.md`](kiro-2.8.1-wire-audit.md) | 📜 Historical (but holds latest KAS runtime behavior) | 2.8.1 (2026-06-18 + 2026-06-21 addendum) | v2 SAFE/unchanged (proven 3 ways). KAS bundle `@kiro/agent` 0.3.234→0.3.257: new `_kiro/sessions/changed` (multi-client observer roster CDC), `_kiro/hooks/setEnabled`. **§ KAS runtime behavior (2026-06-21)** holds the live auth free-path + three-mode fs gating (the facts the covenant can't carry). |
 | [`kiro-2.8.0-wire-audit.md`](kiro-2.8.0-wire-audit.md) | 📜 Historical | 2.8.0 (2026-06-17) | v2 unchanged; V3/KAS promoted to advertised `--v3`; engine flag renamed `kas`→`v3`. New KAS `_kiro/safety/*` Infrastructure Safety gate. |
 | [`kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) | — see KAS reference above | 2.7.1 (2026-06-16) | The KAS landing (assets embedded, self-extracting). Elevated to KAS canon — listed under "KAS engine reference". |

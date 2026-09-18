@@ -1,0 +1,204 @@
+{
+  "probe": {
+    "script": "experiments/conductor-spike/probe-kas-mcp-2.22.0.py",
+    "cli": "kiro-cli 2.22.0",
+    "engine": "v3",
+    "kasRuntime": "0.66.0",
+    "cwd": "<repo>",
+    "home": "<user-home>",
+    "environment": "allowlisted; provider/token credential variables excluded",
+    "all_parsed_frames_scanned": true,
+    "directions_scanned": ["client->agent", "agent->client"]
+  },
+  "account_context": {
+    "reported_plan": "Amazon Q Pro",
+    "entitlement_observed": false,
+    "unlimited_usage_hypothesis": "plausible",
+    "attribution": "unverified; these captures cannot distinguish plan suppression from backend or version behavior"
+  },
+  "turns": {
+    "control": {
+      "capture": "<temp>/kas-mcp-2.22.0/kas-mcp-2.22.0-credit-probe.jsonl",
+      "prompt": "no tools; exact marker response",
+      "turnCompletion": {
+        "sessionUpdate": "session_info_update",
+        "kind": "turn_completion",
+        "status": "success",
+        "elapsedTime": 2524,
+        "promptTurnSummaries": [],
+        "requestIdCount": 1
+      }
+    },
+    "metered_mcp": {
+      "capture": "<temp>/kas-mcp-2.22.0/kas-mcp-2.22.0-metered.jsonl",
+      "prompt": "one aws-docs/search_documentation call, then exact marker response",
+      "permission": {
+        "capability": "mcp",
+        "serverName": "aws-docs",
+        "toolName": "search_documentation",
+        "outcome": "allow_once"
+      },
+      "toolLifecycle": [
+        {"sessionUpdate": "tool_call", "status": "pending", "title": "@aws-docs/search_documentation"},
+        {"sessionUpdate": "tool_call_update", "status": "in_progress"},
+        {"sessionUpdate": "tool_call_update", "status": "completed", "title": "@aws-docs/search_documentation"}
+      ],
+      "turnCompletion": {
+        "sessionUpdate": "session_info_update",
+        "kind": "turn_completion",
+        "status": "success",
+        "elapsedTime": 7170,
+        "promptTurnSummaries": [],
+        "requestIdCount": 2
+      }
+    }
+  },
+  "credit_observation": {
+    "literal_credit_metadata": [
+      {
+        "direction": "agent->client",
+        "path": "params.update.configOptions[1].options[0]._meta.kiro.rateUnit",
+        "value": "Credit"
+      },
+      {
+        "direction": "agent->client",
+        "path": "params.update.configOptions[1].options[1]._meta.kiro.rateUnit",
+        "value": "Credit"
+      }
+    ],
+    "context_usage": {
+      "paths": [
+        "params.update._meta.kiro.contextUsage.usagePercentage",
+        "params.update._meta.kiro.usagePercentage",
+        "params.update._meta.kiro.breakdown.tools.mcp.tokens"
+      ],
+      "observed_usage_percentages": [2, 7.132200241088867, 10.555599212646484],
+      "interpretation": "context/token accounting, not a billed credit amount; token values are redacted in captures"
+    },
+    "turn_summary": {
+      "path": "params.update._meta.kiro.promptTurnSummaries",
+      "observed_value": [],
+      "interpretation": "no per-turn credit/metering summary was emitted in either completed turn"
+    },
+    "billing_amount": {
+      "numeric_credit_debit_observed": false,
+      "numeric_cost_observed": false,
+      "observed_credit_field": "rateUnit=Credit only",
+      "scope": "these two 2.22.0 KAS/v3 runs"
+    },
+    "historical_comparison": {
+      "version": "2.18.0",
+      "raw_path": "experiments/conductor-spike/kas-agentsmd-2.18.0.jsonl:41",
+      "promptTurnSummaries": [{"unit": "credit", "unitPlural": "credits", "usage": 0.0634635384742952}],
+      "interpretation": "KAS can expose numeric credit usage; the absence is specific to these 2.22.0 v3 runs"
+    },
+    "historical_converted_evidence": {
+      "converter_path": "crates/cyril-core/src/protocol/convert/kas.rs:309-449",
+      "source_capture": "experiments/conductor-spike/kas-agentsmd-2.18.0.jsonl:41",
+      "charges": [0.08586639658374792, 0.02012802978441128],
+      "unit": "credit"
+    },
+    "scan_note": "Lexical matches in steering/tool descriptions and the probe client name were excluded from the billing conclusion; the scan covered every parsed JSON-RPC object."
+  },
+  "mcp_status": {
+    "method": "_kiro/mcp/status",
+    "frame_count": 6,
+    "payload_keys": [
+      "accessMode",
+      "accessModeFilteredServers",
+      "registryServers",
+      "servers",
+      "sessionId",
+      "unresolvedRegistryServers"
+    ],
+    "final_server_entries": [
+      {
+        "name": "aws-docs",
+        "status": "connected",
+        "entry_keys": ["_meta", "name", "prompts", "resourceTemplates", "resources", "status", "tools"],
+        "tool_count": 5
+      },
+      {
+        "name": "playwright",
+        "status": "connected",
+        "entry_keys": ["_meta", "name", "prompts", "resourceTemplates", "resources", "status", "tools"],
+        "tool_count": 26
+      },
+      {
+        "name": "aws-mcp",
+        "status": "failed",
+        "entry_keys": ["_meta", "errorMessage", "failedAuthorization", "name", "status"],
+        "errorMessage": "Connection closed",
+        "failedAuthorization": false
+      },
+      {
+        "name": "azure-devops",
+        "status": "connected",
+        "entry_keys": ["_meta", "name", "prompts", "resourceTemplates", "resources", "status", "tools"],
+        "tool_count": 40
+      }
+    ],
+    "registry_servers": [
+      {"name": "aws-docs", "version": "1.1.24", "enabled": true},
+      {"name": "playwright", "version": "0.0.75", "enabled": true},
+      {"name": "azure-devops", "version": "2.7.0", "enabled": true},
+      {"name": "aws-mcp", "version": "1.6.2", "enabled": true}
+    ],
+    "accessMode": "registry",
+    "unresolvedRegistryServers": [],
+    "accessModeFilteredServers": [
+      "playwright-mcp",
+      "power-aws-infrastructure-as-code-awslabs.aws-iac-mcp-server"
+    ]
+  },
+  "configuration_transport": {
+    "session_new_request_mcpServers": [],
+    "registry_configuration_over_acp": "not observed; KAS loaded local workspace/global configuration",
+    "resolved_metadata_over_acp": [
+      "registry server names/versions/enabled",
+      "accessMode",
+      "server status and tool catalogs",
+      "_meta.kiro.resource.source origin=workspace and workspace root"
+    ],
+    "full_command_args_env_or_url_over_acp": "not observed in these runs"
+  },
+"catalog_wire_shapes": {
+  "mcp_status_connected_server": {
+    "entry_keys": ["_meta", "name", "prompts", "resourceTemplates", "resources", "status", "tools"],
+    "representative_tool": {
+      "name": "search_documentation",
+      "keys": ["description", "disabled", "inputSchema", "name"],
+      "inputSchema_keys": ["properties", "required", "title", "type"],
+      "property_names": ["guide_types", "limit", "product_types", "search_intent", "search_phrase"],
+      "required": ["search_phrase"]
+    }
+  },
+  "tools_didChange": {
+    "payload_keys": ["sessionId", "tags"],
+    "tag_entry_keys": ["description", "source", "tag"],
+    "representative_mcp_tag": {
+      "tag": "@aws-docs/read_documentation",
+      "source": "mcp",
+      "description_type": "string"
+    }
+  }
+},
+  "failure_debugging": {
+    "acp_failure_signal": "_kiro/mcp/status servers[] entry with status=failed, errorMessage, failedAuthorization",
+    "mcp_error_response_frames": 0,
+    "mcp_log": "<user-home>/.kiro/logs/<run>/mcp.log",
+    "mcp_log_observations": [
+      "merged declared servers",
+      "accessModeFiltered for two non-registry servers",
+      "connect.start for all four registry servers",
+      "aws-mcp connect.error: Connection closed"
+    ],
+    "diagnostic_depth": "ACP exposes the terminal failure message and authorization boolean; the local mcp.log carries the deeper connection trace"
+  },
+  "retention": {
+    "raw_redacted_control_capture_location": "<temp>/kas-mcp-2.22.0/",
+    "raw_redacted_metered_capture_location": "<temp>/kas-mcp-2.22.0/",
+    "repository_probe_scripts_deleted": false,
+    "credentials": "not retained; credential-bearing values are redacted"
+  }
+}
