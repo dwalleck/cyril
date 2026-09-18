@@ -1,0 +1,84 @@
+{
+ "probe": "rollout-force-internal",
+ "label": "tui-internal-zero",
+ "mode": "tui",
+ "injected": {
+  "KIRO_ROLLOUT_FORCE_INTERNAL": "0"
+ },
+ "fake_home": "/home/dwalleck/.claude/tmp/rf-tui-internal-zero-home-erjdjd_6",
+ "frames": [],
+ "tree": [
+  {
+   "pid": 3601530,
+   "cmd": "/home/dwalleck/.local/bin/kiro-cli chat",
+   "env": {
+    "KIRO_KEY": "<REDACTED>",
+    "KIRO_ROLLOUT_FORCE_INTERNAL": "0"
+   }
+  },
+  {
+   "pid": 3601570,
+   "cmd": "kiro-cli-chat chat",
+   "env": {
+    "KIRO_KEY": "<REDACTED>",
+    "KIRO_ROLLOUT_FORCE_INTERNAL": "0"
+   }
+  },
+  {
+   "pid": 3601659,
+   "cmd": "/home/dwalleck/.local/share/kiro-cli/bun /home/dwalleck/.local/share/kiro-cli/tui.js chat",
+   "env": {
+    "KIRO_CHAT_CLI_BIN": "/home/dwalleck/.local/bin/kiro-cli-chat",
+    "KIRO_CHAT_CLI_BIN_IDENTITY": "<REDACTED>",
+    "KIRO_CHAT_CLI_FALLBACK_BIN": "/home/dwalleck/.local/share/kiro-cli/run/chat-cli-2.22.0",
+    "KIRO_CONTENT_COLLECTION_ENABLED": "true",
+    "KIRO_ENABLED_FEATURES": "[\"voice\",\"lite\",\"remote_sandbox\",\"infra_safety\",\"workflows\",\"tangent\",\"remote_changelog\",\"cloud_config\",\"session_dashboard\"]",
+    "KIRO_FEED_FILE": "/home/dwalleck/.local/share/kiro-cli/feed.json",
+    "KIRO_INFRA_SAFETY_ROLLOUT_ENABLED": "1",
+    "KIRO_KEY": "<REDACTED>",
+    "KIRO_LITE_ROLLOUT_ENABLED": "1",
+    "KIRO_ROLLOUT_FORCE_INTERNAL": "0",
+    "KIRO_TELEMETRY_CLIENT_ID": "<REDACTED>",
+    "KIRO_TELEMETRY_ENABLED": "true",
+    "KIRO_TELEMETRY_IS_INTERNAL_AMAZON": "false",
+    "KIRO_TELEMETRY_OTLP_ENDPOINT": "https://prod.us-east-1.telemetry-v2.kiro.dev",
+    "KIRO_TUI_FORCE_COLOR": "3",
+    "KIRO_TUI_READY_FILE": "<REDACTED>",
+    "KIRO_TUI_READY_TOKEN": "<REDACTED>",
+    "KIRO_USER_ID": "<REDACTED>",
+    "KIRO_VERSION": "2.22.0",
+    "KIRO_VERSION_OVERRIDE": "2.22.0",
+    "KIRO_VOICE_SUPPORTED": "0"
+   }
+  },
+  {
+   "pid": 3601704,
+   "cmd": "/home/dwalleck/.local/bin/kiro-cli-chat acp",
+   "env": {
+    "KIRO_CHAT_CLI_BIN": "/home/dwalleck/.local/bin/kiro-cli-chat",
+    "KIRO_CHAT_CLI_BIN_IDENTITY": "<REDACTED>",
+    "KIRO_CHAT_CLI_FALLBACK_BIN": "/home/dwalleck/.local/share/kiro-cli/run/chat-cli-2.22.0",
+    "KIRO_CONTENT_COLLECTION_ENABLED": "true",
+    "KIRO_ENABLED_FEATURES": "[\"voice\",\"lite\",\"remote_sandbox\",\"infra_safety\",\"workflows\",\"tangent\",\"remote_changelog\",\"cloud_config\",\"session_dashboard\"]",
+    "KIRO_FEED_FILE": "/home/dwalleck/.local/share/kiro-cli/feed.json",
+    "KIRO_INFRA_SAFETY_ROLLOUT_ENABLED": "1",
+    "KIRO_KEY": "<REDACTED>",
+    "KIRO_LITE_ROLLOUT_ENABLED": "1",
+    "KIRO_ROLLOUT_FORCE_INTERNAL": "0",
+    "KIRO_TELEMETRY_CLIENT_ID": "<REDACTED>",
+    "KIRO_TELEMETRY_ENABLED": "true",
+    "KIRO_TELEMETRY_OTLP_ENDPOINT": "https://prod.us-east-1.telemetry-v2.kiro.dev",
+    "KIRO_TUI_FORCE_COLOR": "3",
+    "KIRO_TUI_READY_FILE": "<REDACTED>",
+    "KIRO_TUI_READY_TOKEN": "<REDACTED>",
+    "KIRO_TUI_TELEMETRY_KEY_FILE": "/home/dwalleck/.claude/tmp/kiro-tui-telemetry-592c6a08-778f-4d60-9a95-05216281b1f7.key",
+    "KIRO_VERSION": "2.22.0",
+    "KIRO_VERSION_OVERRIDE": "2.22.0",
+    "KIRO_VOICE_SUPPORTED": "0"
+   }
+  }
+ ],
+ "commands": null,
+ "notes": [],
+ "tui_screen_tail": "                                         /copy to clipboard\r\r\n\r\r\n\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\u25cf Initializing...\r\r\r\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\r\nkiro_default \u00b7 auto /home/dwalleck/.claude/tmp/rf-tui-internal-zero-cwd-5tpwzjxh\r\r\r\n \u2728 What's new in 2.22.0\r\r\n \r\r\n Added\r\r\n \r\r\n \u2726 Type /fullscreen to expand the chat to the whole terminal with mouse\r\r\n scrolling; run it again to return.\r\r\n \u2726 Support KIRO_SKIP_BINARY_PINNING=1 to disable session binary pinning for\r\r\n environments with fixed install paths\r\r\n \r\r\n ctrl+o to expand\r\r\n\r\r\n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\r\r\nkiro_default \u00b7 auto /home/dwalleck/.claude/tmp/rf-tui-internal-zero-cwd-5tpwzjxh\r\r\n\r\r\n\u203a  ask a question or describe a task \u21b5\r\r\n                                                             /copy to clipboard\r\r\n\r\r\n\rkiro_default \u00b7 auto \u00b7 \u25d4 4%\r\r\n/home/dwalleck/.claude/tmp/rf-tui-internal-zero-cwd-5tpwzjxh\r\r\n\r\r\n\u203a  ask a question or describe a task \u21b5\r\r\n                                                             /copy to clipboard\r\r\n\r\r\n"
+}

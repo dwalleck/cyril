@@ -186,6 +186,56 @@ family behind the "reduced memory growth" fix. `KIRO_KAS_SERVER_PATH`,
 showed them "removed" only because the glued string they sit in was re-cut).
 A `Qwen3` model-name literal is present in both 2.21.2 and 2.22.0.
 
+### 4b. Live — `KIRO_ROLLOUT_FORCE_INTERNAL` works, but only where the registry is consulted
+
+Both override names live in `kiro-cli-chat`'s `chat_cli::rollout` module (the
+`kiro-cli` launcher has zero hits) and the result of `Rollout::enabled_features`
+is exported to the TUI child as a JSON `KIRO_ENABLED_FEATURES` array plus
+per-feature `KIRO_<NAME>_ROLLOUT_ENABLED` flags, so the observable is the child
+process environment. `probe-rollout-force-internal-2.22.0.py` spawns each path
+under an isolated `HOME`, completes the handshake (or waits for the TUI to
+paint), then walks the process tree and dumps every `KIRO_*` variable. Eleven
+legs, no prompts sent.
+
+| path | override | `KIRO_ENABLED_FEATURES` | `INFRA_SAFETY` / `LITE` flags | ACP handshake |
+|---|---|---|---|---|
+| `kiro-cli chat` (TUI) | none | `voice, remote_sandbox, tangent, remote_changelog, cloud_config, session_dashboard` | 0 / 0 | — |
+| `kiro-cli chat` (TUI) | `FORCE_INTERNAL=1` | **+ `lite`, `infra_safety`, `workflows`** | **1 / 1** | — |
+| `kiro-cli chat` (TUI) | `FORCE_INTERNAL=1` + `FORCE_NIGHTLY=1` | same as internal-only | 1 / 1 | — |
+| `kiro-cli chat` (TUI) | `FORCE_NIGHTLY=1` only | unchanged | 0 / 0 | — |
+| `kiro-cli chat` (TUI) | `FORCE_INTERNAL=true` or **`=0`** | same as `=1` | 1 / 1 | — |
+| `kiro-cli acp --agent-engine kas` | none / internal / both | **not exported at all** (node child gets only `CLOUD_CONFIG_ENDPOINT`) | — | 206 = 206 paths, 5 = 5 commands, identical |
+| `kiro-cli acp` (v2) | none / both | not exported | — | 75 = 75 paths, 25 = 25 commands, identical |
+
+* **It works, and it is presence-tested.** Any value, including `0`, forces
+  the internal segment. Every `segment: internal, channel: any` row flips:
+  `lite`, `infra_safety`, `workflows`. The bucketed rows (`tui` 50 %,
+  `v3_prompt` 5 %) did not land for this user's hash and `model_fallback` is
+  0 %, so nothing can be said about them from one account.
+* **`KIRO_ROLLOUT_FORCE_NIGHTLY` produced no observable change.** The two
+  `channel: nightly` rows (`c2s`, `memory`) never appeared, alone or combined,
+  so either nightly is decided from the build's version string rather than
+  the env, or those two are exported through a path this probe does not see.
+  Treated as not working until a nightly build is examined.
+* **The telemetry flag is separate.** `KIRO_TELEMETRY_IS_INTERNAL_AMAZON`
+  stays `false` under every override, and `KIRO_INTERNAL` (which the TUI
+  tests as `=== "1"`) is never exported on this account. The override changes
+  rollout bucketing, not identity.
+* **Cyril's path is unaffected.** On both `acp` paths nothing rollout-related
+  reaches the engine child and the handshake, command list and every frame
+  path are byte-identical with and without the override. The registry is a
+  TUI-and-launcher concern; the ACP server never consults it.
+
+**A second table sits right after the registry: a per-user cohort override.**
+`chat_cli::rollout::FeatureOverride {treatment, control}` is a compiled-in
+`HashMap<feature, {treatment: [sha256…], control: [sha256…]}>`. In all three
+releases it holds exactly one entry — `v3_prompt` with **135 hashed
+identifiers in `treatment`** and none in `control`, unchanged 2.21.2 → 2.22.0.
+Those users were being offered the V3 ease-in prompt while its
+`treatment_percent` was still 0 %. This account's telemetry user id and
+client id hash to none of them. Which identifier is hashed was not
+determined.
+
 **Embedded TUI bundle:** the set of `onExtNotification("…")` registrations is
 **14 = 14 = 14** and the quoted `_kiro`/`kiro.dev` literal set is 82 = 82 = 82
 across 2.21.2 / 2.21.4 / 2.22.0 — no new first-party consumer of any KAS
@@ -466,6 +516,9 @@ Live probes and captures (`experiments/conductor-spike/`):
 * `probe-kas-stall-continuation-2.22.0.py` — `WD_TIMEOUT`/`WD_WARN`;
   `kas-stall-{0660,0587}-{1500,700,250}-2.22.0.jsonl`.
 * `probe-v2-turn-sweep-2.22.0.py` — `v2-turn-sweep-{2.21.2,2.21.4,2.22.0}-2.22.0.jsonl`.
+* `probe-rollout-force-internal-2.22.0.py` — `MODE=acp-kas|acp-v2|tui`,
+  `FORCE_INTERNAL` / `FORCE_NIGHTLY`; outputs `rollout-force-*-2.22.0.json`
+  (per-user identifiers redacted).
 * Sweeps via `sweep-new-fields.py` in inventory and `--diff` mode.
 
 Static scripts and outputs: `static-kas-surface-2.22.0.py` (N-tree census),
