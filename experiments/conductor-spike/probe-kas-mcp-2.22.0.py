@@ -407,7 +407,7 @@ class Probe:
                 "excluded_sensitive_env_names": self.excluded_sensitive_env_names,
                 "stderr_line_count": len(self.stderr),
                 "teardown": None,
-                "capture": self.capture.name,
+                "capture": "<capture>",
             }
         finally:
             self.stop()
@@ -432,7 +432,7 @@ def main() -> int:
         summary = {
             "completed": False,
             "error": "<redacted>",
-            "capture": probe.capture.name,
+            "capture": "<capture>",
             "frames_seen": len(probe.frames),
             "server_requests": dict(sorted(probe.server_requests.items())),
             "permission_requests": probe.permission_requests,
