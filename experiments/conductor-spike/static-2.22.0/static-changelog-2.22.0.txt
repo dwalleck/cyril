@@ -1,0 +1,23 @@
+Changelog for version 2.22.0:
+Version 2.22.0 (2026-09-16)
+  - Added: Type `/fullscreen` to expand the chat to the whole terminal with mouse scrolling; run it again to return.
+  - Added: Support `KIRO_SKIP_BINARY_PINNING=1` to disable session binary pinning for environments with fixed install paths
+  - Changed: [V3] Refreshed `/sessions` with simpler controls and a streamlined session view
+  - Changed: Backing out of a `/settings` screen returns the cursor to the row you left instead of the top
+  - Changed: Replayed and resumed transcripts no longer leave a blank line above a turn's divider, matching live turns
+  - Changed: [V3] Large tool results are now always saved to a session file with a short preview for the model
+  - Fixed: [V3] `--require-mcp-startup` now works in non-interactive runs: they wait for MCP servers to connect and fail closed on startup failure, instead of running without MCP tools
+  - Fixed: [V3] A turn that stalls after a complete tool call now runs the tool and continues instead of failing
+  - Fixed: [V3] Prompts behind a proxy that requires credentials report a proxy authentication error instead of "Internal error"
+  - Fixed: [V3] The cloud-config pull card appears only when sync is enabled, not on every session start
+  - Fixed: Esc out of the status line settings panel returns to Display instead of jumping to `/settings`
+  - Fixed: Stopped thinking-only message boundaries from rendering an empty assistant response marker before tool calls
+  - Fixed: [V3] A symlinked agent config that uses a `file://` prompt now loads the prompt from the config file location
+  - Fixed: [V3] `/context` lists global steering files and workspace steering files without frontmatter
+  - Fixed: [V3] Custom agents are told their working directory, so command-tool `cwd` guesses no longer fail in worktrees
+  - Fixed: Automatic compaction now keeps the active response and Thinking indicator visible, then continues queued prompts without requiring Esc
+  - Fixed: Long shell commands and metadata now share one Ctrl+O expansion hint
+  - Fixed: [V3] Resuming a session now separates the session-start cloud config card from the previous turn instead of rendering it flush under that turn's usage summary
+  - Fixed: Mislabeled image files now attach using their actual format instead of breaking the chat
+  - Fixed: Reduced memory growth in long-running TUI sessions with heavy subagent use
+

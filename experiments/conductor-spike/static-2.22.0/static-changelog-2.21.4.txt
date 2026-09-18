@@ -1,0 +1,9 @@
+Changelog for version 2.21.4:
+Version 2.21.4 (2026-09-11)
+  - Added: [V3] Session search now includes agent responses by default; choose what it searches in `/settings`
+  - Added: `--v2` flag to explicitly select the V2 agent engine, overriding persisted settings
+  - Changed: Settings menus now share one keyboard contract: Left/Right change a value, Enter selects or opens a submenu, and Esc goes back. The `/verbosity` preview moves to `ctrl+x` (`ctrl+p` still works for now).
+  - Changed: Removed the left status rail and replaced it with a small agent-colored response indicator
+  - Fixed: Dismiss pending approval and question prompts when a turn fails so you are not stranded on a dead modal
+  - Fixed: [V3] The tangent indicator (↯ tangent-N) is now shown when resuming a tangent session with `--resume-id`, `/chat`, or the session picker
+

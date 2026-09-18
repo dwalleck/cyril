@@ -1,0 +1,33 @@
+{
+  "model_fallback": {
+    "new": {
+      "channel": "nightly",
+      "description": "Moving a turn to another model when the one it is using refuses it or is over capacity. Dark-shipped at 0% while under development; ramp via treatment_percent.",
+      "segment": "internal",
+      "treatment_percent": 0
+    },
+    "old": null
+  },
+  "v2_non_interactive": {
+    "new": {
+      "description": "Default non-interactive and piped-stdin to V2 engine instead of V1",
+      "treatment_percent": 50
+    },
+    "old": {
+      "description": "Default non-interactive and piped-stdin to V2 engine instead of V1",
+      "treatment_percent": 10
+    }
+  },
+  "v3_prompt": {
+    "new": {
+      "description": "Who is offered the V3 ease-in prompt. There is no feature that flips the default engine to V3 during the ease-in \u2014 the prompt is the only path \u2014 so a user is never defaulted onto V3 without being asked. Dialing this to 0 stops asking; answers already given are honored via the persisted chat.agentEngine setting.",
+      "segment": "internal",
+      "treatment_percent": 5
+    },
+    "old": {
+      "description": "Who is offered the V3 ease-in prompt. There is no feature that flips the default engine to V3 during the ease-in \u2014 the prompt is the only path \u2014 so a user is never defaulted onto V3 without being asked. Dialing this to 0 stops asking; answers already given are honored via the persisted chat.agentEngine setting.",
+      "segment": "all",
+      "treatment_percent": 0
+    }
+  }
+}
