@@ -118,6 +118,10 @@ _Avoid_: target, review mode
 The standing consent granted at the review confirm screen that decides a workflow run's step-session permission approvals without prompting — allowing what the review policy permits, denying the rest. Bound to one workflow id before the run is invoked, never persisted, and withdrawn when the run terminates; sessions it does not own still reach the operator as ordinary permission approvals.
 _Avoid_: auto-approver, trust (that persists beyond the run), allowlist (that is the policy's content)
 
+**crtool**:
+The deterministic review tool a review's workflow steps invoke from a shell line to move data between steps — gathering the diff, merging and sharding candidates, tallying ballots, rendering the report. Step-facing only: the operator starts a review with `/review` and never types crtool; the models make judgment calls, crtool does every mechanical transformation.
+_Avoid_: review command (that is `/review`), driver (that is the client running the workflow)
+
 ### Sessions & turns
 
 **Session**:
