@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """Line up a workflow run's findings against a baseline review's summary table.
 
     compare_baseline.py <baseline.md> <rundir> [--window 15]
@@ -15,6 +19,11 @@ import argparse
 import json
 import os
 import re
+import sys
+
+for _stream in (sys.stdout, sys.stderr):  # Windows legacy code pages
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("baseline")

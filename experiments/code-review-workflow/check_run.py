@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """Health-check a finished code-review-max run from its artifacts and ACP trace.
 
     check_run.py <rundir> [<trace.jsonl> ...]     # several traces = one run that was retried/resumed
@@ -21,6 +25,12 @@ import json
 import os
 import re
 import sys
+
+# Windows consoles and pipes default to a legacy code page; this output carries
+# arrows, dashes and ellipses, so pin UTF-8 rather than crash on the first one.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 run = os.path.abspath(sys.argv[1])
 traces = sys.argv[2:]

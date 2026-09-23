@@ -20,6 +20,7 @@ assembled max-effort `/code-review` prompt (`code-review-assembled-max.md` in th
 | `.kiro/code-review/crtool.py` | every mechanical transformation (`gather merge shard collate finalize`) |
 | `experiments/code-review-workflow/run_review.py` | raw-ACP driver: zero-credit validate, run, retry, per-session stats |
 | `experiments/code-review-workflow/compare_baseline.py` | line a run up against a baseline review's table |
+| `experiments/code-review-workflow/selftest_crtool.py` | offline cross-platform self-test (CI runs it on all three OSes) |
 
 ## Running it
 
@@ -31,6 +32,7 @@ python3 experiments/code-review-workflow/run_review.py --workspace <ws> --instal
         --context-file review-context.txt \                 # which docs are authoritative for this change
         --check-cmd 'cargo clippy --workspace --all-targets --message-format=short -- -D warnings'
 python3 experiments/code-review-workflow/check_run.py <rundir> <trace.jsonl>          # health-check a finished run
+uv run --script experiments/code-review-workflow/selftest_crtool.py                  # offline self-test, any OS
 ```
 
 `--context` names the documents a verifier must consult before confirming: the change's own spec/design docs and
@@ -43,6 +45,27 @@ in `manifest.json` when it is not. For a historical range, use a throwaway
 detached worktree (`git worktree add --detach ../cyril-wt-review-x <head>`) and
 `--install` to copy the recipe, agents and crtool into it. Results land in
 `<ws>/.code-review/<timestamp>/{findings.json,report.md}`.
+
+## Platforms and Python
+
+Linux, macOS and native Windows; plain Python ≥ 3.10 or [uv](https://docs.astral.sh/uv/). Every script carries
+PEP 723 inline metadata with no dependencies, so `uv run --script <file>.py` needs no project or venv, and
+`python3 <file>.py` (`python` on Windows) works the same.
+
+- **How KAS launches crtool** is the workflow's `crtool` input — a machine fact, not a recipe fact. The driver's
+  `--runner auto` (default) uses `uv run --script .kiro/code-review/crtool.py` when `uv` is on PATH, else
+  `python .kiro/code-review/crtool.py` on Windows / `python3 …` elsewhere; `--crtool-cmd` sets it exactly. Anyone
+  starting the recipe another way (cyril's `/workflow run`) must pass `crtool=…` too.
+- **On Windows KAS runs commands in PowerShell** (when the client advertises no terminal it picks its own local
+  shell: `pwsh`, else `powershell`). So every `crtool` argument in the recipe is double-quoted — single quotes mean
+  nothing to cmd.exe, and a bare `a,b,c` becomes an array in PowerShell — and run paths are written with forward
+  slashes, which bash, pwsh, cmd, Python and node all accept.
+- **kiro-cli's data directory** (auth store + KAS bundles) is `%LOCALAPPDATA%\Kiro-Cli` on Windows,
+  `$XDG_DATA_HOME/kiro-cli` (default `~/.local/share/kiro-cli`) elsewhere; `KIRO_DATA_DIR` overrides. The driver
+  isolates `USERPROFILE` as well as `HOME` on Windows (node's home directory), kills the server tree with
+  `taskkill /T`, and compares permission paths case-insensitively.
+- **Checked on every PR**: CI's *Code Review Tooling* job runs `selftest_crtool.py` under uv on ubuntu, windows and
+  macOS — the recipe's own `crtool` lines through that platform's shell, then every `crtool` subcommand end to end.
 
 ## Shape (20 of the engine's 20 step nodes)
 

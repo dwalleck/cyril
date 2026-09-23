@@ -214,12 +214,31 @@ jobs:
       - name: Worktree helper + guard fences
         run: bash scripts/tests/worktree_test.sh
 
+  code-review-tooling:
+    name: Code Review Tooling (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      # Offline: runs the recipe's own crtool command lines through this platform's
+      # shell (PowerShell on Windows, as KAS does there) and every crtool subcommand.
+      - name: crtool self-test
+        run: uv run --script experiments/code-review-workflow/selftest_crtool.py
+
   # Summary job that requires all other jobs to pass — use this as the single
   # required status check in branch protection.
   ci-success:
     name: CI Success
     if: always()
-    needs: [commitlint, format, lint, test, build, kas-feature, default-features, worktree-tooling]
+    needs: [commitlint, format, lint, test, build, kas-feature, default-features, worktree-tooling, code-review-tooling]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs
@@ -236,7 +255,8 @@ jobs:
              [[ "${{ needs.build.result }}" != "success" ]] || \
              [[ "${{ needs.kas-feature.result }}" != "success" ]] || \
              [[ "${{ needs.default-features.result }}" != "success" ]] || \
-             [[ "${{ needs.worktree-tooling.result }}" != "success" ]]; then
+             [[ "${{ needs.worktree-tooling.result }}" != "success" ]] || \
+             [[ "${{ needs.code-review-tooling.result }}" != "success" ]]; then
             echo "One or more CI jobs failed"
             exit 1
           fi

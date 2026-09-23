@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """Drive the `code-review-max` KAS workflow over raw ACP.
 
     # zero credits: register + validate against the live engine, never invoke
@@ -17,9 +21,13 @@ not blanket-approved. Writes are allowed only inside the run directory and
 shell only for crtool.py, so a confused step cannot touch the code under
 review.
 
-HOME is isolated (KAS writes ~/.kiro/{sessions,logs}) while XDG_DATA_HOME
-stays real (the auth store lives there). A real run uses a STABLE isolated
-HOME so a failed run can be retried: `--retry <workflowId>`.
+HOME is isolated (KAS writes ~/.kiro/{sessions,logs}) while kiro-cli's data
+directory stays real (the auth store lives there). A real run uses a STABLE
+isolated HOME so a failed run can be retried: `--retry <workflowId>`.
+
+Runs on Linux, macOS and Windows, under plain Python or `uv run --script`.
+The workflow's `crtool` input is how KAS launches crtool.py on this machine;
+`--runner` picks it (default: uv when it is on PATH, else the platform's python).
 """
 import argparse
 import calendar
@@ -37,6 +45,14 @@ import tempfile
 import threading
 import time
 from typing import NoReturn
+
+IS_WINDOWS = os.name == "nt"
+
+# Windows consoles and pipes default to a legacy code page; this output carries
+# arrows, dashes and ellipses, so pin UTF-8 rather than crash on the first one.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 HERE =os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
@@ -84,14 +100,31 @@ ap.add_argument("--auto-recover", type=int, default=0, metavar="N",
 ap.add_argument("--rundir", help="run directory (default <ws>/.code-review/<timestamp>)")
 ap.add_argument("--timeout-min", type=float, default=180)
 ap.add_argument("--idle-min", type=float, default=20, help="abort when the wire is silent this long")
+ap.add_argument("--runner", choices=("auto", "uv", "python"), default="auto",
+                help="how KAS's shell launches crtool.py: `uv run --script` (no project or venv needed) or the "
+                     "platform's python (`python` on Windows, `python3` elsewhere). auto = uv when it is on PATH")
+ap.add_argument("--crtool-cmd", help="launch crtool.py with exactly this command (overrides --runner)")
 ap.add_argument("--kiro", default=os.environ.get("KIRO_BIN", shutil.which("kiro-cli") or "kiro-cli"))
 args = ap.parse_args()
 
 WS = os.path.realpath(args.workspace)
 RUN_ID = time.strftime("%Y%m%d-%H%M%S")
 RUNDIR = os.path.realpath(args.rundir) if args.rundir else os.path.join(WS, ".code-review", RUN_ID)
-DATA_HOME = os.environ.get("KIRO_XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
-AUTH_DB = os.path.join(DATA_HOME, "kiro-cli", "data.sqlite3")
+
+
+def kiro_data_dir():
+    """Where kiro-cli keeps data.sqlite3 (the auth store) and its kas/ bundles."""
+    if os.environ.get("KIRO_DATA_DIR"):
+        return os.environ["KIRO_DATA_DIR"]
+    if os.environ.get("KIRO_XDG_DATA_HOME"):  # the older, Linux-only override
+        return os.path.join(os.environ["KIRO_XDG_DATA_HOME"], "kiro-cli")
+    if IS_WINDOWS:  # native Windows kiro-cli: %LOCALAPPDATA%\Kiro-Cli
+        return os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser(r"~\AppData\Local")), "Kiro-Cli")
+    return os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "kiro-cli")
+
+
+KIRO_DATA = kiro_data_dir()
+AUTH_DB = os.path.join(KIRO_DATA, "data.sqlite3")
 REAL_ENV = dict(os.environ)
 
 if args.install:
@@ -103,6 +136,17 @@ if args.install:
 missing = [rel for rel in INSTALL if not os.path.exists(os.path.join(WS, rel))]
 if missing:
     sys.exit(f"workspace is missing {missing}; pass --install")
+
+if args.crtool_cmd:
+    CRTOOL = args.crtool_cmd
+else:
+    runner = args.runner
+    if runner == "auto":
+        runner = "uv" if shutil.which("uv") else "python"
+    # Forward slashes and a relative path: KAS runs these from the workspace root, and
+    # bash, pwsh and cmd all accept `.kiro/code-review/crtool.py`.
+    CRTOOL = ("uv run --script .kiro/code-review/crtool.py" if runner == "uv"
+              else f"{'python' if IS_WINDOWS else 'python3'} .kiro/code-review/crtool.py")
 
 CONTEXT = open(args.context_file, encoding="utf-8").read().strip() if args.context_file else args.context.strip()
 CONTEXT = CONTEXT or "No extra context was provided; rely on manifest.json `change_docs`."
@@ -121,6 +165,8 @@ if args.check_cmd and not (args.validate_only or args.retry or args.resume or ar
         if r.returncode != 0:
             sys.exit(f"pre-step failed (exit {r.returncode})")
 
+if not os.path.exists(AUTH_DB) and not args.validate_only:
+    print(f"!! no kiro-cli auth store at {AUTH_DB}; set KIRO_DATA_DIR if kiro-cli keeps it elsewhere")
 os.makedirs(os.path.join(CACHE, "traces"), exist_ok=True)
 if args.validate_only:
     FAKE_HOME = tempfile.mkdtemp(prefix="kas-cr-validate-home-")
@@ -274,7 +320,7 @@ def scrub(x, key=""):
     return x
 
 
-trace = open(TRACE, "w", buffering=1)
+trace = open(TRACE, "w", buffering=1, encoding="utf-8")
 
 
 def record(direction, obj):
@@ -284,28 +330,37 @@ def record(direction, obj):
 
 
 env = dict(os.environ)
+if IS_WINDOWS:
+    # node's os.homedir() reads USERPROFILE on Windows, so that is what isolates ~/.kiro;
+    # kiro-cli's own data is under LOCALAPPDATA, which stays real.
+    env.update({"USERPROFILE": FAKE_HOME, "TEMP": RUNTIME, "TMP": RUNTIME})
 # HOME is isolated below, but rustup shims (rust-analyzer, cargo) locate their
 # toolchain through $HOME: pin them to the real install or a language server
 # spawned by KAS's code-intelligence tool fails for sandbox reasons, not KAS ones.
 env.setdefault("RUSTUP_HOME", os.path.expanduser("~/.rustup"))
 env.setdefault("CARGO_HOME", os.path.expanduser("~/.cargo"))
-env.update({"HOME": FAKE_HOME, "XDG_DATA_HOME": DATA_HOME, "XDG_RUNTIME_DIR": RUNTIME})
-stderr = open(STDERR, "w")
+env["HOME"] = FAKE_HOME
+if not IS_WINDOWS:
+    env.update({"XDG_DATA_HOME": os.path.dirname(KIRO_DATA), "XDG_RUNTIME_DIR": RUNTIME})
+stderr = open(STDERR, "w", encoding="utf-8")
 if args.direct:
     # The launcher's own spawn line, minus the launcher: client meta reaches KAS unmediated.
     version = subprocess.run([args.kiro, "--version"], capture_output=True, text=True, env=REAL_ENV).stdout.split()[-1]
-    root = os.path.join(DATA_HOME, "kiro-cli")
+    root = KIRO_DATA
     matches = sorted(d for d in os.listdir(os.path.join(root, "kas")) if d.startswith(version + "-") and not d.endswith(".lock"))
     if not matches:
         sys.exit(f"no KAS bundle for kiro-cli {version} under {root}/kas")
     server = os.path.join(root, "kas", matches[-1], "node_modules", "@kiro", "agent", "dist", "server", "acp-server.js")
-    SPAWN = [os.path.join(root, "node"), "--experimental-wasm-modules", server, "--transport=stdio", "--auth=acp-callback"]
+    SPAWN = [os.path.join(root, "node.exe" if IS_WINDOWS else "node"), "--experimental-wasm-modules", server, "--transport=stdio", "--auth=acp-callback"]
     print(f"== spawn     DIRECT node acp-server.js ({matches[-1][:24]}…)")
 else:
     SPAWN = [args.kiro, "acp", "--agent-engine", "kas"]
 proc = subprocess.Popen(SPAWN, cwd=WS, env=env,
                         stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=stderr,
-                        text=True, bufsize=1, start_new_session=True)
+                        text=True, bufsize=1, encoding="utf-8",
+                        # its own process group, so cleanup reaps the node server KAS spawns too
+                        **({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if IS_WINDOWS
+                           else {"start_new_session": True}))
 assert proc.stdin is not None and proc.stdout is not None
 STDIN, STDOUT = proc.stdin, proc.stdout
 msgs = queue.Queue()
@@ -349,8 +404,9 @@ DENIED = []
 
 def under(path, root):
     try:
-        return os.path.commonpath([os.path.realpath(path), root]) == root
-    except ValueError:
+        path, root = os.path.normcase(os.path.realpath(path)), os.path.normcase(os.path.realpath(root))
+        return os.path.commonpath([path, root]) == root
+    except ValueError:  # different drives on Windows
         return False
 
 
@@ -408,7 +464,7 @@ def callback(obj):
     if method == "_kiro/auth/getAccessToken":
         return read_token() or {}
     if method == "_kiro/terminal/shell_type":
-        return {"shellType": "bash"}
+        return {"shellType": "powershell" if IS_WINDOWS else "bash"}
     if method == "session/request_permission":
         return answer_permission(p)
     return {}
@@ -549,13 +605,21 @@ def pump(until_id=None, timeout=60, stop=None):
 
 def cleanup():
     if proc.poll() is None:
-        for sig in (signal.SIGTERM, signal.SIGKILL):
+        if IS_WINDOWS:
+            # taskkill /T takes the whole tree: the launcher and the node server under it.
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
             try:
-                os.killpg(os.getpgid(proc.pid), sig)  # the group: killing only the Rust host orphans node
                 proc.wait(timeout=8)
-                break
-            except (ProcessLookupError, subprocess.TimeoutExpired):
-                continue
+            except subprocess.TimeoutExpired:
+                pass
+        else:
+            for sig in (signal.SIGTERM, signal.SIGKILL):
+                try:
+                    os.killpg(os.getpgid(proc.pid), sig)  # the group: killing only the Rust host orphans node
+                    proc.wait(timeout=8)
+                    break
+                except (ProcessLookupError, subprocess.TimeoutExpired):
+                    continue
     trace.close()
     stderr.close()
 
@@ -587,7 +651,8 @@ def _terminate(signum, _frame):
 
 
 signal.signal(signal.SIGTERM, _terminate)
-signal.signal(signal.SIGHUP, _terminate)
+if hasattr(signal, "SIGHUP"):  # not on Windows
+    signal.signal(signal.SIGHUP, _terminate)
 
 stop_refresh = threading.Event()
 print(f"== workspace {WS}\n== rundir    {RUNDIR}\n== trace     {TRACE}")
@@ -607,6 +672,7 @@ try:
         fail("initialize failed", init)
     info = init["result"].get("agentInfo") or init["result"].get("serverInfo") or {}
     print(f"== agent     {info.get('name', '?')} {info.get('version', '?')}")
+    print(f"== crtool    {CRTOOL}")
 
     new_params = {"cwd": WS, "mcpServers": []}
     if args.kiro_setting and args.kiro_setting_at in ("session", "both"):
@@ -648,7 +714,8 @@ try:
         if not r or "error" in r:
             fail(f"workflow/{verb} failed", r)
     else:
-        params = {"inputs": {"rundir": RUNDIR, "target": args.target, "scope": args.scope, "context": CONTEXT},
+        params = {"inputs": {"rundir": RUNDIR, "target": args.target, "scope": args.scope, "context": CONTEXT,
+                             "crtool": CRTOOL},
                   "parentSessionId": sid, "workspacePaths": [WS]}
         if args.recipe or args.model or args.effort:
             recipe = json.load(open(args.recipe or os.path.join(WS, RECIPE_REL), encoding="utf-8"))
@@ -671,7 +738,7 @@ try:
         print(f"== compiled tree: {steps} step nodes, {total} nodes, depth {depth}; "
               f"initialState keys={sorted(state.keys())}")
         if args.validate_only:
-            with open(os.path.join(CACHE, "last-validate-initial-state.json"), "w") as f:
+            with open(os.path.join(CACHE, "last-validate-initial-state.json"), "w", encoding="utf-8") as f:
                 json.dump(scrub(state), f, indent=2)
             print("== validate-only: not invoking (zero credits)")
             cleanup()
@@ -722,7 +789,7 @@ summary = {"workflowId": STATE.get("wid"), "status": STATE["status"], "elapsedSe
            "target": args.target, "scope": args.scope, "sessions": rows, "permissions": dict(PERMS),
            "denied": DENIED, "trace": TRACE}
 if os.path.isdir(RUNDIR):
-    with open(os.path.join(RUNDIR, "_driver-summary.json"), "w") as f:
+    with open(os.path.join(RUNDIR, "_driver-summary.json"), "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 for name in ("report.md", "findings.json", "comments.md"):
     path = os.path.join(RUNDIR, name)
@@ -736,11 +803,14 @@ if STATE["status"] != "completed" and args.auto_recover > 0 and STATE.get("wid")
         # A failed run is terminal -> retry; anything else rehydrates as paused -> resume.
         verb = "--retry" if STATE["status"] == "failed" else "--resume"
         argv = [sys.executable, os.path.abspath(__file__), "--workspace", WS, "--rundir", RUNDIR, verb, STATE["wid"],
+                "--crtool-cmd", CRTOOL,
                 "--auto-recover", str(args.auto_recover - 1), "--idle-min", str(args.idle_min),
                 "--timeout-min", str(args.timeout_min)]
         for k in args.kiro_setting:
             argv += ["--kiro-setting", k]
         print(f"\n== AUTO-RECOVER ({args.auto_recover} left): {verb} {STATE['wid']} in a fresh server\n", flush=True)
         time.sleep(20)
-        os.execv(sys.executable, argv)
+        # A child, not os.execv: on Windows execv starts a new process and returns control
+        # to the caller at once, which would look like the driver finishing early.
+        sys.exit(subprocess.call(argv))
 sys.exit(0 if STATE["status"] == "completed" else 1)
