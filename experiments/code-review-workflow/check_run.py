@@ -135,6 +135,7 @@ if trace:
             pending[m["id"]] = (p.get("sessionId"), k.get("toolId"), c.get("capability"), str(c.get("resource")))
         elif "result" in m and m.get("id") in pending and r["dir"] == "client->agent":
             sid, tool, cap, res = pending.pop(m["id"])
+            res = res.replace("\\", "/")  # Windows consents may carry backslash paths
             allowed = (m["result"].get("outcome") or {}).get("optionId") == "accept"
             who = node.get(sid, "?")
             if not allowed:

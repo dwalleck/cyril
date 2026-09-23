@@ -397,7 +397,9 @@ def cmd_diagnostics(a):
     """Run the repo's check command ONCE and keep what concerns the changed files."""
     run = os.path.abspath(a.rundir)
     manifest = read_json(os.path.join(run, "manifest.json"))
-    argv = shlex.split(a.command, posix=os.name != "nt")  # POSIX mode eats Windows backslashes
+    # POSIX: split like a shell. Windows: hand the string to CreateProcess, which applies the
+    # platform's own quoting rules - shlex's non-POSIX mode leaves the quote characters in.
+    argv = shlex.split(a.command) if os.name != "nt" else a.command
     os.makedirs(os.path.join(run, "facts"), exist_ok=True)
     # An EMPTY toolchain variable is never a setting, only a broken environment:
     # cargo refuses to start on CARGO_TARGET_DIR="" and the review would record
@@ -410,7 +412,7 @@ def cmd_diagnostics(a):
     except subprocess.TimeoutExpired as e:
         code, text = None, ((e.stdout or b"") + b"\n" + (e.stderr or b"")).decode(errors="replace")
     except OSError as e:
-        die(f"cannot run {argv[0]!r}: {e}")
+        die(f"cannot run {a.command!r}: {e}")
     took = time.time() - t0
     with open(os.path.join(run, "facts", "diagnostics-raw.txt"), "w", encoding="utf-8") as f:
         f.write(text)

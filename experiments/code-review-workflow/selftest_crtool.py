@@ -8,12 +8,16 @@
     uv run --script experiments/code-review-workflow/selftest_crtool.py
     python3 experiments/code-review-workflow/selftest_crtool.py
 
+0. The driver's pure decisions (review_policy.py): kiro-cli data dir per platform,
+   path containment, the permission policy, crtool-command and input validation.
 1. The recipe regenerates from build_recipe.py at the node cap, and every crtool
    command line in it is double-quoted (single quotes mean nothing to cmd.exe and
    a bare `a,b,c` becomes an array in PowerShell).
-2. Those exact command lines, with the recipe's templates filled in, run through
-   this platform's shell - PowerShell on Windows, as KAS uses there; bash
-   elsewhere - against a throwaway git repository.
+2. Those exact command lines, with {{crtool}} filled in exactly as the driver
+   fills it (uv, and the platform's python when it is a real interpreter), run
+   through this platform's shell - PowerShell on Windows, as KAS uses there; bash
+   elsewhere - against a throwaway git repository, and each one is put through
+   the driver's permission policy first.
 3. Every crtool subcommand runs end to end on synthetic finder, verifier, ballot,
    ranking and comment files, and the outputs are checked.
 
@@ -36,10 +40,15 @@ REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 CRTOOL = os.path.join(REPO, ".kiro", "code-review", "crtool.py")
 RECIPE = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow.json")
 IS_WINDOWS = os.name == "nt"
+sys.path.insert(0, HERE)
+import review_policy as policy  # noqa: E402
 ANGLES = ["a-line-scan", "b-removed-behavior", "c-cross-file", "d-language-pitfalls", "e-wrapper-proxy",
           "cleanup", "altitude", "conventions"]
-GIT_ENV = dict(os.environ, GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com",
-               GIT_COMMITTER_NAME="t", GIT_COMMITTER_EMAIL="t@example.com")
+# Fully faked git: no global or system config (gpgsign, hooksPath, noprefix, color) and
+# no inherited repository variables reach the throwaway repo.
+GIT_ENV = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+GIT_ENV.update(GIT_AUTHOR_NAME="t", GIT_AUTHOR_EMAIL="t@example.com", GIT_COMMITTER_NAME="t",
+               GIT_COMMITTER_EMAIL="t@example.com", GIT_CONFIG_GLOBAL=os.devnull, GIT_CONFIG_NOSYSTEM="1")
 
 
 def step(msg):
@@ -78,6 +87,60 @@ def write_json(path, obj):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         json.dump(obj, f)
+
+
+def shell_request(cmd):
+    """A session/request_permission shaped like KAS's run_command consent."""
+    return {"toolCall": {"title": cmd}, "_meta": {"kiro": {"toolId": "run_command", "command": cmd,
+            "consent": {"capability": "shell", "resource": cmd}}}}
+
+
+def policy_tests():
+    step("driver policy (review_policy.py)")
+    home = "/h"
+    check(policy.kiro_data_dir({"LOCALAPPDATA": r"C:\Users\u\AppData\Local"}, "win32", home=home)
+          .endswith("Kiro-Cli"), "Windows: %LOCALAPPDATA%\\Kiro-Cli")
+    check(policy.kiro_data_dir({}, "linux", home=home) == os.path.join(home, ".local", "share", "kiro-cli"),
+          "Linux: ~/.local/share/kiro-cli")
+    check(policy.kiro_data_dir({"XDG_DATA_HOME": "/x"}, "linux", home=home) == os.path.join("/x", "kiro-cli"),
+          "Linux: $XDG_DATA_HOME/kiro-cli")
+    check("Application Support" in policy.kiro_data_dir({}, "darwin", exists=lambda p: False, home=home),
+          "macOS: ~/Library/Application Support/kiro-cli by default")
+    xdg_db = os.path.join(home, ".local", "share", "kiro-cli", "data.sqlite3")
+    check(policy.kiro_data_dir({}, "darwin", exists=lambda p: p == xdg_db, home=home).endswith(
+          os.path.join(".local", "share", "kiro-cli")), "macOS: the XDG location when only it holds a store")
+    check(policy.kiro_data_dir({"KIRO_DATA_DIR": "/d"}, "win32", home=home) == "/d", "KIRO_DATA_DIR overrides")
+
+    ws = os.path.join(TMP, "policy-ws")
+    rundir = os.path.join(ws, ".code-review", "r")
+    os.makedirs(rundir)
+    check(policy.under(os.path.join(rundir, "verdicts", "x.json"), rundir), "under: a file inside the run dir")
+    check(not policy.under(os.path.join(ws, "src", "x.rs"), rundir), "under: a file outside the run dir")
+    if IS_WINDOWS:
+        check(policy.under(os.path.join(rundir, "X.JSON").upper(), rundir), "under: case-insensitive on Windows")
+        check(not policy.under(r"Z:\\elsewhere", rundir), "under: another drive is outside")
+    write = lambda res: {"_meta": {"kiro": {"toolId": "fs_write", "consent": {
+        "capability": "fs_write", "resource": res, "workspaceRoot": ws}}}}
+    check(policy.decide(write(os.path.join(rundir, "a.json")), ws, rundir)[0], "decide: write into the run dir")
+    check(not policy.decide(write(os.path.join(ws, "src", "lib.rs")), ws, rundir)[0], "decide: no write to source")
+    check(policy.decide({"_meta": {"kiro": {"toolId": "read_file", "consent": {"capability": "fs_read",
+          "resource": "src/lib.rs", "workspaceRoot": ws}}}}, ws, rundir)[0], "decide: relative read in workspace")
+
+    for runner, uv in (("uv", True), ("python", False), ("auto", True), ("auto", False)):
+        for win in (True, False):
+            cmd = policy.crtool_command(runner, uv, win)
+            check(policy.crtool_command_problem(cmd) is None and policy.decide(shell_request(cmd + ' gather "x"'),
+                  ws, rundir)[0], f"runner={runner} uv={uv} windows={win}: {cmd!r} passes the policy")
+    quoted = f'& "{sys.executable}" .kiro/code-review/crtool.py'
+    check(policy.crtool_command_problem(quoted) is None and policy.decide(shell_request(quoted + ' ballots "x"'),
+          ws, rundir)[0], "PowerShell's `& \"exe\"` call form passes the policy")
+    check(policy.crtool_command_problem("python3 x.py") is not None, "a command without crtool.py is refused")
+    check(not policy.decide(shell_request('python3 .kiro/code-review/crtool.py gather "x"; rm -rf /'), ws,
+          rundir)[0], "a chained command is refused")
+    check(policy.input_problem("rundir", "C:/w/r") is None, "input: a forward-slash path is fine")
+    for bad in ("", "a$b", "a`b", 'a"b', "C:\\w\\"):
+        check(policy.input_problem("x", bad) is not None, f"input: {bad!r} is refused")
+    check("\\" not in policy.posix_path(TMP), "posix_path uses forward slashes")
 
 
 def recipe_commands():
@@ -125,17 +188,35 @@ def main():
     run(["git", "add", "-A"], cwd=ws)
     run(["git", "commit", "-q", "-m", "change"], cwd=ws)
 
+    policy_tests()
     lines = recipe_commands()
+    # The driver's crtool commands are relative to the workspace root, so crtool lives there.
+    os.makedirs(os.path.join(ws, ".kiro", "code-review"))
+    shutil.copy2(CRTOOL, os.path.join(ws, ".kiro", "code-review", "crtool.py"))
     # A run directory with a space in it: the double quotes have to carry it.
-    run_dir = os.path.join(ws, ".code-review", "self test").replace("\\", "/")
-    fill = {"{{crtool}}": f'"{sys.executable}" "{CRTOOL}"' if not IS_WINDOWS
-            else f'& "{sys.executable}" "{CRTOOL}"',
-            "{{rundir}}": run_dir, "{{target}}": "HEAD~1...HEAD", "{{scope}}": "."}
+    run_dir = policy.posix_path(os.path.join(ws, ".code-review", "self test"))
+    # {{crtool}} exactly as the driver fills it. Every form KAS could be handed on this
+    # machine is used for at least one step; `& "exe"` is the --crtool-cmd quoted form.
+    forms = []
+    if shutil.which("uv"):
+        forms.append(policy.crtool_command("uv", True, IS_WINDOWS))
+    py = shutil.which("python" if IS_WINDOWS else "python3")
+    if py and subprocess.run([py, "-c", "import sys"], capture_output=True).returncode == 0:
+        forms.append(policy.crtool_command("python", False, IS_WINDOWS))
+    forms.append(f'& "{sys.executable}" .kiro/code-review/crtool.py' if IS_WINDOWS
+                 else f'"{sys.executable}" .kiro/code-review/crtool.py')
+    print(f"   ..  crtool forms under test: {forms}")
+    fill = {"{{rundir}}": run_dir, "{{target}}": "HEAD~1...HEAD", "{{scope}}": "."}
+    used = []
 
     def through_shell(node, which=0):
-        cmd = lines[node][which]
+        form = forms[len(used) % len(forms)]
+        used.append(form)
+        cmd = lines[node][which].replace("{{crtool}}", form)
         for k, v in fill.items():
             cmd = cmd.replace(k, v)
+        allowed, why = policy.decide(shell_request(cmd), ws, run_dir)
+        check(allowed, f"[{node}] the driver's policy allows: {cmd[:100]}")
         return run(shell_argv(cmd), cwd=ws)
 
     step(f"the recipe's own gather line, through {'PowerShell' if IS_WINDOWS else 'bash'}")
@@ -216,6 +297,7 @@ def main():
     r = subprocess.run([sys.executable, os.path.join(HERE, "check_run.py"), run_dir], cwd=ws, capture_output=True,
                        text=True, encoding="utf-8", errors="replace")
     check("PASS  one comment entry per reported finding" in r.stdout, "check_run reads and checks the run")
+    check(set(used) == set(forms), f"every crtool form ran at least once ({len(used)} shell steps)")
     print("\nALL SELF-TESTS PASS")
 
 

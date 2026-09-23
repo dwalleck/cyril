@@ -16,6 +16,16 @@ leave JSON files in a run directory; a script, `.kiro/code-review/crtool.py`,
 does every mechanical transformation between them. You run that script and
 make only the judgment calls it cannot.
 
+## If the crtool command is missing
+
+The command that runs `crtool.py` is the workflow input `crtool`, which whoever
+started this review fills in. If a command in your step prompt starts with a
+blank or with a literal `{{crtool}}` instead of a program, that input was never
+set: use `uv run --script .kiro/code-review/crtool.py` when `uv` is installed,
+otherwise `python .kiro/code-review/crtool.py` on Windows and
+`python3 .kiro/code-review/crtool.py` elsewhere — then the rest of the command
+exactly as given.
+
 ## Rules
 
 - **Never retype candidate or verdict records by hand.** The script moves data

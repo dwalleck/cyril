@@ -20,6 +20,7 @@ assembled max-effort `/code-review` prompt (`code-review-assembled-max.md` in th
 | `.kiro/code-review/crtool.py` | every mechanical transformation (`gather merge shard collate finalize`) |
 | `experiments/code-review-workflow/run_review.py` | raw-ACP driver: zero-credit validate, run, retry, per-session stats |
 | `experiments/code-review-workflow/compare_baseline.py` | line a run up against a baseline review's table |
+| `experiments/code-review-workflow/review_policy.py` | the driver's pure decisions: data dir, crtool command, input checks, permission policy |
 | `experiments/code-review-workflow/selftest_crtool.py` | offline cross-platform self-test (CI runs it on all three OSes) |
 
 ## Running it
@@ -64,6 +65,18 @@ PEP 723 inline metadata with no dependencies, so `uv run --script <file>.py` nee
   `$XDG_DATA_HOME/kiro-cli` (default `~/.local/share/kiro-cli`) elsewhere; `KIRO_DATA_DIR` overrides. The driver
   isolates `USERPROFILE` as well as `HOME` on Windows (node's home directory), kills the server tree with
   `taskkill /T`, and compares permission paths case-insensitively.
+- **Inputs are checked before anything spawns.** `rundir` is written with forward slashes once, where it is
+  created. `rundir`, `target` and `scope` may not be empty or contain `$`, a backtick, a double quote or a trailing
+  backslash — the characters that change meaning inside the recipe's double quotes. A `--crtool-cmd` must name
+  `crtool.py` and contain no shell metacharacters (PowerShell's leading `& "exe"` call form is allowed), or the
+  permission policy would refuse every crtool step.
+- **Callers that never set `crtool`** (KAS inputs have no defaults, and `workflow/new` does not validate templates):
+  the clerk and commenter agents fall back to uv, else `python`/`python3`, when a command starts blank or with a
+  literal `{{crtool}}`.
+- **`--retry`/`--resume` keep the run's stored inputs**, so a new `--crtool-cmd`/`--runner` is ignored with a warning.
+- **macOS**: kiro-cli's data is looked for under `~/Library/Application Support/kiro-cli` (Rust's
+  `data_local_dir`), falling back to the XDG location when only that holds an auth store. Not tested on a Mac
+  with kiro-cli; CI covers the tooling only.
 - **Checked on every PR**: CI's *Code Review Tooling* job runs `selftest_crtool.py` under uv on ubuntu, windows and
   macOS — the recipe's own `crtool` lines through that platform's shell, then every `crtool` subcommand end to end.
 

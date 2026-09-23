@@ -47,6 +47,8 @@ import time
 from typing import NoReturn
 
 IS_WINDOWS = os.name == "nt"
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import review_policy as policy  # noqa: E402  (next to this file; the pure, tested decisions)
 
 # Windows consoles and pipes default to a legacy code page; this output carries
 # arrows, dashes and ellipses, so pin UTF-8 rather than crash on the first one.
@@ -100,7 +102,7 @@ ap.add_argument("--auto-recover", type=int, default=0, metavar="N",
 ap.add_argument("--rundir", help="run directory (default <ws>/.code-review/<timestamp>)")
 ap.add_argument("--timeout-min", type=float, default=180)
 ap.add_argument("--idle-min", type=float, default=20, help="abort when the wire is silent this long")
-ap.add_argument("--runner", choices=("auto", "uv", "python"), default="auto",
+ap.add_argument("--runner", choices=("auto", "uv", "python"), default=None,
                 help="how KAS's shell launches crtool.py: `uv run --script` (no project or venv needed) or the "
                      "platform's python (`python` on Windows, `python3` elsewhere). auto = uv when it is on PATH")
 ap.add_argument("--crtool-cmd", help="launch crtool.py with exactly this command (overrides --runner)")
@@ -109,21 +111,12 @@ args = ap.parse_args()
 
 WS = os.path.realpath(args.workspace)
 RUN_ID = time.strftime("%Y%m%d-%H%M%S")
-RUNDIR = os.path.realpath(args.rundir) if args.rundir else os.path.join(WS, ".code-review", RUN_ID)
+# Forward slashes, fixed once here: RUNDIR reaches the recipe as {{rundir}}, and models copy it
+# into JSON; a backslash path there becomes an escaping bug on Windows.
+RUNDIR = policy.posix_path(args.rundir or os.path.join(WS, ".code-review", RUN_ID))
 
 
-def kiro_data_dir():
-    """Where kiro-cli keeps data.sqlite3 (the auth store) and its kas/ bundles."""
-    if os.environ.get("KIRO_DATA_DIR"):
-        return os.environ["KIRO_DATA_DIR"]
-    if os.environ.get("KIRO_XDG_DATA_HOME"):  # the older, Linux-only override
-        return os.path.join(os.environ["KIRO_XDG_DATA_HOME"], "kiro-cli")
-    if IS_WINDOWS:  # native Windows kiro-cli: %LOCALAPPDATA%\Kiro-Cli
-        return os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser(r"~\AppData\Local")), "Kiro-Cli")
-    return os.path.join(os.environ.get("XDG_DATA_HOME") or os.path.expanduser("~/.local/share"), "kiro-cli")
-
-
-KIRO_DATA = kiro_data_dir()
+KIRO_DATA = policy.kiro_data_dir()
 AUTH_DB = os.path.join(KIRO_DATA, "data.sqlite3")
 REAL_ENV = dict(os.environ)
 
@@ -137,16 +130,19 @@ missing = [rel for rel in INSTALL if not os.path.exists(os.path.join(WS, rel))]
 if missing:
     sys.exit(f"workspace is missing {missing}; pass --install")
 
-if args.crtool_cmd:
-    CRTOOL = args.crtool_cmd
-else:
-    runner = args.runner
-    if runner == "auto":
-        runner = "uv" if shutil.which("uv") else "python"
-    # Forward slashes and a relative path: KAS runs these from the workspace root, and
-    # bash, pwsh and cmd all accept `.kiro/code-review/crtool.py`.
-    CRTOOL = ("uv run --script .kiro/code-review/crtool.py" if runner == "uv"
-              else f"{'python' if IS_WINDOWS else 'python3'} .kiro/code-review/crtool.py")
+RESUMING = bool(args.retry or args.resume)
+CRTOOL = args.crtool_cmd or policy.crtool_command(args.runner or "auto", bool(shutil.which("uv")), IS_WINDOWS)
+if RESUMING and (args.crtool_cmd or args.runner):
+    # KAS keeps the inputs a run was created with; a retry cannot change them.
+    print("!! --crtool-cmd/--runner ignored: --retry/--resume reuse the crtool command stored with the run")
+problem = policy.crtool_command_problem(CRTOOL)
+if problem and not RESUMING:
+    sys.exit(f"crtool command {CRTOOL!r} would not work: {problem}")
+if not (RESUMING or args.validate_only or args.parent_prompt):
+    for _name, _value in (("rundir", RUNDIR), ("target", args.target), ("scope", args.scope)):
+        problem = policy.input_problem(_name, _value)
+        if problem:
+            sys.exit(f"cannot start the review: {problem}")
 
 CONTEXT = open(args.context_file, encoding="utf-8").read().strip() if args.context_file else args.context.strip()
 CONTEXT = CONTEXT or "No extra context was provided; rely on manifest.json `change_docs`."
@@ -160,7 +156,8 @@ if args.check_cmd and not (args.validate_only or args.retry or args.resume or ar
         steps.append([sys.executable, crtool, "diagnostics", RUNDIR, args.check_cmd])
     for argv in steps:
         print(f"== pre-step  {' '.join(argv[2:4])} …")
-        r = subprocess.run(argv, cwd=WS, env=REAL_ENV, capture_output=True, text=True)
+        r = subprocess.run(argv, cwd=WS, env=REAL_ENV, capture_output=True, text=True,
+                           encoding="utf-8", errors="replace")
         print("   " + (r.stdout.strip() or r.stderr.strip()).replace("\n", "\n   "))
         if r.returncode != 0:
             sys.exit(f"pre-step failed (exit {r.returncode})")
@@ -200,6 +197,7 @@ def profile_arn():
         pass
     try:
         out = subprocess.run([args.kiro, "user", "whoami"], capture_output=True, text=True,
+                             encoding="utf-8", errors="replace",
                              timeout=30, env=REAL_ENV).stdout
     except (OSError, subprocess.SubprocessError):
         out = ""
@@ -341,11 +339,20 @@ env.setdefault("RUSTUP_HOME", os.path.expanduser("~/.rustup"))
 env.setdefault("CARGO_HOME", os.path.expanduser("~/.cargo"))
 env["HOME"] = FAKE_HOME
 if not IS_WINDOWS:
-    env.update({"XDG_DATA_HOME": os.path.dirname(KIRO_DATA), "XDG_RUNTIME_DIR": RUNTIME})
+    env["XDG_RUNTIME_DIR"] = RUNTIME
+    # HOME is fake, so kiro-cli's default ~/.local/share would move with it: point XDG_DATA_HOME at
+    # the real parent - which only expresses the data dir when it is literally <parent>/kiro-cli.
+    _data = os.path.normpath(KIRO_DATA)
+    if os.path.basename(_data) == "kiro-cli" and sys.platform != "darwin":
+        env["XDG_DATA_HOME"] = os.path.dirname(_data)
+    elif sys.platform != "darwin":
+        print(f"!! kiro data dir {KIRO_DATA} is not named kiro-cli; the child cannot be pointed at it and "
+              "will look under the isolated HOME")
 stderr = open(STDERR, "w", encoding="utf-8")
 if args.direct:
     # The launcher's own spawn line, minus the launcher: client meta reaches KAS unmediated.
-    version = subprocess.run([args.kiro, "--version"], capture_output=True, text=True, env=REAL_ENV).stdout.split()[-1]
+    version = subprocess.run([args.kiro, "--version"], capture_output=True, text=True, encoding="utf-8",
+                             errors="replace", env=REAL_ENV).stdout.split()[-1]
     root = KIRO_DATA
     matches = sorted(d for d in os.listdir(os.path.join(root, "kas")) if d.startswith(version + "-") and not d.endswith(".lock"))
     if not matches:
@@ -403,43 +410,11 @@ DENIED = []
 
 
 def under(path, root):
-    try:
-        path, root = os.path.normcase(os.path.realpath(path)), os.path.normcase(os.path.realpath(root))
-        return os.path.commonpath([path, root]) == root
-    except ValueError:  # different drives on Windows
-        return False
+    return policy.under(path, root)
 
 
 def decide(p):
-    """(allow, why). Writes only under the run directory; shell only for crtool."""
-    kiro = (p.get("_meta") or {}).get("kiro") or {}
-    consent = kiro.get("consent") or {}
-    cap = consent.get("capability") or kiro.get("toolId") or ""
-    res = str(consent.get("resource") or "")
-    blob = json.dumps(p)
-    if cap in args.allow_cap:
-        return True, f"{cap} {res[:120]} (--allow-cap)"
-    if cap == "fs_read":
-        # KAS asks an implicit fs_read consent for directory listings and for a
-        # shell command's cwd (nested under the run_command call: denying it
-        # rejects the command). Reading the workspace is the whole job.
-        full = res if os.path.isabs(res) else os.path.join(consent.get("workspaceRoot") or WS, res)
-        return under(full, WS), f"read {res}"
-    if cap in ("fs_write", "str_replace") or kiro.get("toolId") in ("fs_write", "str_replace"):
-        full = res if os.path.isabs(res) else os.path.join(consent.get("workspaceRoot") or WS, res)
-        return under(full, RUNDIR), f"write {res}"
-    if "execute_bash" in (cap, kiro.get("toolId")) or cap in ("shell", "execute"):
-        # The shell consent shape has never been captured, so look everywhere a
-        # command could ride; the first request's raw params are printed below.
-        tc = p.get("toolCall") or {}
-        raw = tc.get("rawInput") if isinstance(tc.get("rawInput"), dict) else {}
-        cmd = next((v for v in (res, raw.get("command"), raw.get("cmd"), tc.get("title"))
-                    if isinstance(v, str) and "crtool.py" in v), None)
-        if cmd is None:
-            return "crtool.py" in blob, "shell (command location unknown; matched crtool.py in request)"
-        body = re.sub(r"^\s*cd\s+[^;&|`$]+&&\s*", "", cmd)  # tolerate a leading `cd <ws> &&`
-        return not re.search(r"[;&|`]|\$\(", body), f"shell {cmd[:160]}"
-    return False, f"unhandled capability {cap!r} {res[:120]}"
+    return policy.decide(p, WS, RUNDIR, tuple(args.allow_cap))
 
 
 def answer_permission(p):
@@ -604,22 +579,37 @@ def pump(until_id=None, timeout=60, stop=None):
 
 
 def cleanup():
-    if proc.poll() is None:
-        if IS_WINDOWS:
+    if IS_WINDOWS:
+        if proc.poll() is None:
             # taskkill /T takes the whole tree: the launcher and the node server under it.
-            subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True)
+            r = subprocess.run(["taskkill", "/T", "/F", "/PID", str(proc.pid)], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace")
+            if r.returncode != 0:
+                print(f"!! taskkill failed ({r.returncode}): {(r.stdout + r.stderr).strip()[:200]}")
             try:
                 proc.wait(timeout=8)
             except subprocess.TimeoutExpired:
-                pass
+                proc.kill()
+                print("!! launcher did not exit after taskkill; killed it directly")
         else:
-            for sig in (signal.SIGTERM, signal.SIGKILL):
-                try:
-                    os.killpg(os.getpgid(proc.pid), sig)  # the group: killing only the Rust host orphans node
-                    proc.wait(timeout=8)
-                    break
-                except (ProcessLookupError, subprocess.TimeoutExpired):
-                    continue
+            # Windows has no process group to signal after the leader exits.
+            print("!! kiro-cli had already exited; a KAS node server it started may still be running")
+    else:
+        # The group outlives its leader, so signal it even when kiro-cli itself already
+        # exited: node can still be in it. start_new_session made the pgid == our child's pid.
+        for sig in (signal.SIGTERM, signal.SIGKILL):
+            try:
+                os.killpg(proc.pid, sig)
+            except ProcessLookupError:
+                break
+            try:
+                proc.wait(timeout=8)
+                time.sleep(0.5)
+                os.killpg(proc.pid, 0)  # anything left in the group?
+            except ProcessLookupError:
+                break
+            except subprocess.TimeoutExpired:
+                continue
     trace.close()
     stderr.close()
 
@@ -672,7 +662,7 @@ try:
         fail("initialize failed", init)
     info = init["result"].get("agentInfo") or init["result"].get("serverInfo") or {}
     print(f"== agent     {info.get('name', '?')} {info.get('version', '?')}")
-    print(f"== crtool    {CRTOOL}")
+    print(f"== crtool    {'(the command stored with the run)' if RESUMING else CRTOOL}")
 
     new_params = {"cwd": WS, "mcpServers": []}
     if args.kiro_setting and args.kiro_setting_at in ("session", "both"):
@@ -803,14 +793,22 @@ if STATE["status"] != "completed" and args.auto_recover > 0 and STATE.get("wid")
         # A failed run is terminal -> retry; anything else rehydrates as paused -> resume.
         verb = "--retry" if STATE["status"] == "failed" else "--resume"
         argv = [sys.executable, os.path.abspath(__file__), "--workspace", WS, "--rundir", RUNDIR, verb, STATE["wid"],
-                "--crtool-cmd", CRTOOL,
-                "--auto-recover", str(args.auto_recover - 1), "--idle-min", str(args.idle_min),
-                "--timeout-min", str(args.timeout_min)]
+                "--kiro", args.kiro, "--auto-recover", str(args.auto_recover - 1), "--idle-min", str(args.idle_min),
+                "--timeout-min", str(args.timeout_min), "--kiro-setting-at", args.kiro_setting_at]
+        if args.direct:
+            argv.append("--direct")
         for k in args.kiro_setting:
             argv += ["--kiro-setting", k]
+        for c in args.allow_cap:
+            argv += ["--allow-cap", c]
         print(f"\n== AUTO-RECOVER ({args.auto_recover} left): {verb} {STATE['wid']} in a fresh server\n", flush=True)
         time.sleep(20)
-        # A child, not os.execv: on Windows execv starts a new process and returns control
-        # to the caller at once, which would look like the driver finishing early.
-        sys.exit(subprocess.call(argv))
+        if IS_WINDOWS:
+            # execv is not a real exec on Windows (it returns to the caller at once), so wait on a child.
+            sys.exit(subprocess.call(argv))
+        # POSIX: replace this process, so a SIGTERM reaches the process that owns the new
+        # KAS server and its `finally: cleanup()` runs. A child would be SIGKILLed by
+        # subprocess.call on our way out and leave its server running.
+        sys.stdout.flush()
+        os.execv(sys.executable, argv)
 sys.exit(0 if STATE["status"] == "completed" else 1)
