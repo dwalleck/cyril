@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """Generate `.kiro/workflows/code-review-max.workflow.json`.
 
 The recipe is a port of Claude Code's max-effort `/code-review` prompt
@@ -34,7 +38,11 @@ import os
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_OUT = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow.json")
-TOOL = "python3 .kiro/code-review/crtool.py"
+# How crtool is launched differs per machine (`python3` / `python` / `uv run --script`),
+# so it is a workflow input the client fills in. Every argument is DOUBLE-quoted: on
+# Windows KAS runs commands in PowerShell, where a bare `a,b,c` becomes an array and
+# single quotes mean nothing to cmd.exe; double quotes work in bash, pwsh and cmd.
+TOOL = "{{crtool}}"
 STEP_CAP = 20
 
 # --- angle texts ----------------------------------------------------------
@@ -198,7 +206,7 @@ def build(shards, split_cleanup, replay=False, only=()):
         {"type": "step", "id": "setup", "agent": "cr-clerk", "effortLevel": "low",
          "prompt": ("You are the setup step of a code review. From the workspace root, run exactly "
                     "this one command:\n\n"
-                    f"{TOOL} gather '{{{{rundir}}}}' '{{{{target}}}}' '{{{{scope}}}}'\n\n"
+                    f"{TOOL} gather \"{{{{rundir}}}}\" \"{{{{target}}}}\" \"{{{{scope}}}}\"\n\n"
                     "It gathers the diff under review into the run directory. If it fails, report its "
                     "error verbatim and signal failure — do not retry with different arguments and do "
                     "not gather the diff by hand."),
@@ -211,7 +219,7 @@ def build(shards, split_cleanup, replay=False, only=()):
 
         {"type": "step", "id": "dedup", "agent": "cr-clerk",
          "prompt": ("Merge and dedup the finders' candidates.\n\n"
-                    f"1. Run: {TOOL} merge '{{{{rundir}}}}' --expect {keys}\n"
+                    f"1. Run: {TOOL} merge \"{{{{rundir}}}}\" --expect \"{keys}\"\n"
                     "2. Read EVERY digest page the command names ({{rundir}}/candidates/digest-1.txt, ...). "
                     "One line per candidate: `pid | file:line | category | summary || fails: excerpt`, sorted "
                     "by location so probable duplicates sit on adjacent lines. Do NOT read all.json. When "
@@ -229,7 +237,7 @@ def build(shards, split_cleanup, replay=False, only=()):
                     "   `keep` is optional: name the member with the most concrete failure scenario if you "
                     "compared them, otherwise omit it and the script keeps the most detailed one. Write "
                     '{"groups": []} if there are no duplicates.\n'
-                    f"4. Run: {TOOL} shard '{{{{rundir}}}}' --shards {shards}"),
+                    f"4. Run: {TOOL} shard \"{{{{rundir}}}}\" --shards {shards}"),
          "artifacts": {"deduped_index": "{{rundir}}/deduped/index.json"}},
 
         {"type": "parallel", "id": "verify", "joinPolicy": "allSettled",
@@ -252,7 +260,7 @@ def build(shards, split_cleanup, replay=False, only=()):
          "prompt": ("One vote proved unstable exactly where it matters: a REFUTED verdict, and any claim that "
                     "turns on how a written rule is read. Those candidates get two more independent votes. From "
                     "the workspace root, run exactly this one command:\n\n"
-                    f"{TOOL} ballots '{{{{rundir}}}}'\n\n"
+                    f"{TOOL} ballots \"{{{{rundir}}}}\"\n\n"
                     "It decides which candidates qualify and writes their ballot queues. If it fails, report its "
                     "error verbatim and signal failure."),
          "artifacts": {"ballots": "{{rundir}}/ballots.json"}},
@@ -264,7 +272,7 @@ def build(shards, split_cleanup, replay=False, only=()):
 
         {"type": "step", "id": "rank", "agent": "cr-clerk",
          "prompt": ("Final phase of a code review: rank the verified findings.\n\n"
-                    f"1. Run: {TOOL} collate '{{{{rundir}}}}'\n"
+                    f"1. Run: {TOOL} collate \"{{{{rundir}}}}\"\n"
                     "2. Read EVERY digest page the command names ({{rundir}}/verified-digest-1.txt, ...): "
                     "`id | verdict | angles | category | file:line | summary || fails: excerpt`, one line per "
                     "(`votes R/C/P` after a verdict means three verifiers voted and that is the tally's "
@@ -285,7 +293,7 @@ def build(shards, split_cleanup, replay=False, only=()):
                     'surprising placement"}}\n'
                     "   List every kept id exactly once. The script reports the top 15 and records the "
                     "rest below the cap.\n"
-                    f"4. Run: {TOOL} finalize '{{{{rundir}}}}'"),
+                    f"4. Run: {TOOL} finalize \"{{{{rundir}}}}\""),
          "artifacts": {"findings": "{{rundir}}/findings.json", "report": "{{rundir}}/report.md"}},
 
         {"type": "step", "id": "comment", "agent": "cr-commenter",
@@ -296,7 +304,7 @@ def build(shards, split_cleanup, replay=False, only=()):
                     "Conventional Comments label, decorations, subject and discussion, or `duplicate_of` when it is "
                     "the same defect at the same place as a better-ranked finding. Open the source before you "
                     "propose a fix.\n"
-                    f"3. From the workspace root, run exactly: {TOOL} comments '{{{{rundir}}}}'\n"
+                    f"3. From the workspace root, run exactly: {TOOL} comments \"{{{{rundir}}}}\"\n"
                     "   It validates your files and renders {{rundir}}/comments.json and {{rundir}}/comments.md. If it "
                     "reports a warning about one of your files, fix that file and run the command again."),
          "artifacts": {"comments": "{{rundir}}/comments.json", "comments_md": "{{rundir}}/comments.md"}},
@@ -320,7 +328,9 @@ def build(shards, split_cleanup, replay=False, only=()):
                         "Inputs: rundir = fresh ABSOLUTE run directory inside the workspace (client-minted, "
                         "e.g. <ws>/.code-review/<timestamp>); context = free text naming the documents that are "
                         "authoritative for this change (its spec/design docs, protocol references) — verifiers "
-                        "consult them before confirming; target = a git diff target such as "
+                        "consult them before confirming; crtool = the command that runs .kiro/code-review/crtool.py "
+                        "on this machine, e.g. `uv run --script .kiro/code-review/crtool.py` or "
+                        "`python .kiro/code-review/crtool.py`; target = a git diff target such as "
                         "`main...HEAD`, `<base>...<head>`, a commit, or `auto`; scope = space-separated git "
                         "pathspecs (`.` for everything). Results: <rundir>/findings.json and "
                         "<rundir>/report.md, plus <rundir>/comments.json and comments.md — one postable review "
@@ -328,7 +338,7 @@ def build(shards, split_cleanup, replay=False, only=()):
                         ".kiro/code-review/crtool.py and the cr-finder, cr-verifier, cr-clerk, cr-commenter agents. "
                         "Generated by "
                         "experiments/code-review-workflow/build_recipe.py — edit that, not this file."),
-        "inputs": {"rundir": "string", "target": "string", "scope": "string", "context": "prompt"},
+        "inputs": {"rundir": "string", "target": "string", "scope": "string", "context": "prompt", "crtool": "string"},
         "steps": steps,
     }
 

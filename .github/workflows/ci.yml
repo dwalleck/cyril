@@ -214,12 +214,67 @@ jobs:
       - name: Worktree helper + guard fences
         run: bash scripts/tests/worktree_test.sh
 
+  # The code-review self-test holds a macOS slot, so a PR runs it only when it touches
+  # the tooling. main always runs it, keeping main's history fully validated.
+  code-review-tooling-changed:
+    name: Code Review Tooling (changed?)
+    runs-on: ubuntu-latest
+    outputs:
+      run: ${{ steps.diff.outputs.run }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.base_ref }}
+        run: |
+          if [[ "$EVENT" != "pull_request" ]]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch origin "$BASE"
+          if git diff --name-only "origin/$BASE...HEAD" \
+              | grep -qE '^(experiments/code-review-workflow/|\.kiro/|\.github/workflows/ci\.yml$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  code-review-tooling:
+    name: Code Review Tooling (${{ matrix.os }})
+    needs: code-review-tooling-changed
+    if: needs.code-review-tooling-changed.outputs.run == 'true'
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          # No lockfile or dependency list to key a cache on: the scripts have no dependencies.
+          enable-cache: false
+
+      # Offline: runs the recipe's own crtool command lines through this platform's
+      # shell (PowerShell on Windows, as KAS does there) and every crtool subcommand.
+      - name: crtool self-test
+        run: uv run --script experiments/code-review-workflow/selftest_crtool.py
+
   # Summary job that requires all other jobs to pass — use this as the single
   # required status check in branch protection.
   ci-success:
     name: CI Success
     if: always()
-    needs: [commitlint, format, lint, test, build, kas-feature, default-features, worktree-tooling]
+    needs: [commitlint, format, lint, test, build, kas-feature, default-features, worktree-tooling,
+            code-review-tooling-changed, code-review-tooling]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs
@@ -236,8 +291,15 @@ jobs:
              [[ "${{ needs.build.result }}" != "success" ]] || \
              [[ "${{ needs.kas-feature.result }}" != "success" ]] || \
              [[ "${{ needs.default-features.result }}" != "success" ]] || \
-             [[ "${{ needs.worktree-tooling.result }}" != "success" ]]; then
+             [[ "${{ needs.worktree-tooling.result }}" != "success" ]] || \
+             [[ "${{ needs.code-review-tooling-changed.result }}" != "success" ]]; then
             echo "One or more CI jobs failed"
+            exit 1
+          fi
+          # Skipped when the PR does not touch the code-review tooling.
+          if [[ "${{ needs.code-review-tooling.result }}" != "success" ]] && \
+             [[ "${{ needs.code-review-tooling.result }}" != "skipped" ]]; then
+            echo "Code review tooling failed"
             exit 1
           fi
           echo "All CI jobs passed successfully!"

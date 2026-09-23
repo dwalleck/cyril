@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.10"
+# dependencies = []
+# ///
 """Deterministic data movement for the `code-review-max` KAS workflow.
 
 The workflow's LLM steps make judgment calls only (find candidates, decide
@@ -67,11 +71,18 @@ import collections
 import datetime
 import json
 import os
+import pathlib
 import re
 import shlex
 import subprocess
 import sys
 import time
+
+# Windows consoles and pipes default to a legacy code page; this output carries
+# arrows, dashes and ellipses, so pin UTF-8 rather than crash on the first one.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 MAX_PER_ANGLE = 8
 MAX_FINDINGS = 15
@@ -386,7 +397,9 @@ def cmd_diagnostics(a):
     """Run the repo's check command ONCE and keep what concerns the changed files."""
     run = os.path.abspath(a.rundir)
     manifest = read_json(os.path.join(run, "manifest.json"))
-    argv = shlex.split(a.command)
+    # POSIX: split like a shell. Windows: hand the string to CreateProcess, which applies the
+    # platform's own quoting rules - shlex's non-POSIX mode leaves the quote characters in.
+    argv = shlex.split(a.command) if os.name != "nt" else a.command
     os.makedirs(os.path.join(run, "facts"), exist_ok=True)
     # An EMPTY toolchain variable is never a setting, only a broken environment:
     # cargo refuses to start on CARGO_TARGET_DIR="" and the review would record
@@ -399,13 +412,14 @@ def cmd_diagnostics(a):
     except subprocess.TimeoutExpired as e:
         code, text = None, ((e.stdout or b"") + b"\n" + (e.stderr or b"")).decode(errors="replace")
     except OSError as e:
-        die(f"cannot run {argv[0]!r}: {e}")
+        die(f"cannot run {a.command!r}: {e}")
     took = time.time() - t0
     with open(os.path.join(run, "facts", "diagnostics-raw.txt"), "w", encoding="utf-8") as f:
         f.write(text)
     lines = [ln for ln in text.splitlines() if ln.strip()]
     changed = [x["path"] for x in manifest["files"]]
-    mine = [ln for ln in lines if any(p in ln for p in changed)]
+    # Checkers print native paths (`crates\x\a.rs:12:5` on Windows); git's are forward-slash.
+    mine = [ln for ln in lines if any(p in ln.replace("\\", "/") for p in changed)]
     status = "TIMED OUT" if code is None else ("clean" if code == 0 else f"FAILED (exit {code})")
     body = [f"command: {a.command}", f"result: {status} in {took:.0f}s, on HEAD {manifest['head'][:12]}",
             f"{len(mine)} output line(s) mention a changed file" + (":" if mine else "."), *mine[:200], "",
@@ -587,7 +601,7 @@ def cmd_shard(a):
     for k, pending in enumerate(queues, 1):
         os.makedirs(os.path.join(run, "verdicts", f"q{k}"), exist_ok=True)
         write_json(os.path.join(run, "queues", f"queue-{k}.json"),
-                   {"done": not pending, "ids": pending, "verdict_dir": os.path.join(run, "verdicts", f"q{k}")})
+                   {"done": not pending, "ids": pending, "verdict_dir": pathlib.Path(run, "verdicts", f"q{k}").as_posix()})
     os.makedirs(os.path.join(run, "verdicts", "sweep"), exist_ok=True)
 
     write_json(os.path.join(run, "deduped", "index.json"), {
@@ -654,7 +668,7 @@ def cmd_ballots(a):
         ids = [f"{b['id']}.{tag}" for b in chosen]
         os.makedirs(os.path.join(run, "verdicts", loop), exist_ok=True)
         write_json(os.path.join(run, "queues", f"queue-{loop}.json"),
-                   {"done": not ids, "ids": ids, "verdict_dir": os.path.join(run, "verdicts", loop)})
+                   {"done": not ids, "ids": ids, "verdict_dir": pathlib.Path(run, "verdicts", loop).as_posix()})
     write_json(os.path.join(run, "ballots.json"), {"balloted": chosen})
     print(f"ballots: {len(chosen)} of {len(cands)} candidates get two more votes "
           f"({sum('REFUTED' in b['reason'] for b in chosen)} refuted, "
