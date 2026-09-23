@@ -66,19 +66,29 @@ PEP 723 inline metadata with no dependencies, so `uv run --script <file>.py` nee
   isolates `USERPROFILE` as well as `HOME` on Windows (node's home directory), kills the server tree with
   `taskkill /T`, and compares permission paths case-insensitively.
 - **Inputs are checked before anything spawns.** `rundir` is written with forward slashes once, where it is
-  created. `rundir`, `target` and `scope` may not be empty or contain `$`, a backtick, a double quote or a trailing
-  backslash — the characters that change meaning inside the recipe's double quotes. A `--crtool-cmd` must name
-  `crtool.py` and contain no shell metacharacters (PowerShell's leading `& "exe"` call form is allowed), or the
-  permission policy would refuse every crtool step.
+  created. `rundir`, `target` and `scope` may not be empty or contain a quote (including `“ ” „`, which PowerShell
+  reads as `"`), a backtick, a backslash, a control character, or a `$` a shell would expand — `$` is allowed only
+  before `/`, so a `//wsl$/<distro>/…` workspace works. A `--crtool-cmd` must be one simple command naming
+  `crtool.py` in the platform's shell syntax: on Windows a quoted program needs PowerShell's `& "exe"` call form;
+  under bash `&` is refused. `--runner auto` checks that the chosen `python` actually runs (on Windows it is often
+  the Microsoft Store alias) and stops with a hint when it does not.
 - **Callers that never set `crtool`** (KAS inputs have no defaults, and `workflow/new` does not validate templates):
   the clerk and commenter agents fall back to uv, else `python`/`python3`, when a command starts blank or with a
   literal `{{crtool}}`.
 - **`--retry`/`--resume` keep the run's stored inputs**, so a new `--crtool-cmd`/`--runner` is ignored with a warning.
+  The driver keeps its own copy in `<rundir>/_driver-inputs.json` (crtool command, target, scope): the permission
+  policy needs the exact crtool command, and a retry reads it from there. `--auto-recover` forwards `--target` and
+  `--scope` too.
 - **macOS**: kiro-cli's data is looked for under `~/Library/Application Support/kiro-cli` (Rust's
-  `data_local_dir`), falling back to the XDG location when only that holds an auth store. Not tested on a Mac
-  with kiro-cli; CI covers the tooling only.
-- **Checked on every PR**: CI's *Code Review Tooling* job runs `selftest_crtool.py` under uv on ubuntu, windows and
-  macOS — the recipe's own `crtool` lines through that platform's shell, then every `crtool` subcommand end to end.
+  `data_local_dir`), falling back to the XDG location when only that holds an auth store. The auth store is opened
+  read-only, so a lookup never creates an empty one. Because kiro-cli resolves that directory from `HOME`, the
+  driver links the real one into the isolated HOME; `XDG_DATA_HOME` stays real for uv. Not tested on a Mac with
+  kiro-cli; CI covers the tooling only.
+- **Checked in CI**: the *Code Review Tooling* job runs `selftest_crtool.py` under uv on ubuntu, windows and macOS —
+  on every push to main, and on a PR only when it touches `experiments/code-review-workflow/`, `.kiro/` or `ci.yml`
+  (the job holds a scarce macOS slot). It checks the permission policy against known bypasses, runs every recipe
+  `crtool` line through every shell on the runner (pwsh 7 and Windows PowerShell 5.1 on Windows) into an argv echo
+  that must match what the policy parsed, then runs each line for real and every `crtool` subcommand end to end.
 
 ## Shape (20 of the engine's 20 step nodes)
 
@@ -199,8 +209,16 @@ unranked finding is appended, never dropped; an exhausted verify loop uses
 ## Driver permission policy
 
 Unattended, but not blanket-approve: `fs_read` only inside the workspace,
-`fs_write` only inside the run directory, `shell` only for a `crtool.py`
-command with no shell metacharacters. Everything else is denied and logged.
+`fs_write` only inside the run directory. `shell` is an allowlist checked by
+construction, not a blacklist of dangerous characters: an optional
+`cd <workspace> && `, then this run's exact crtool command, then a step
+subcommand (`gather`, `merge`, `shard`, `facts`, `ballots`, `collate`,
+`finalize`, `comments` — never `diagnostics`, which runs an arbitrary command)
+whose first argument is the run directory, then only plain words or safely
+double-quoted strings. Redirects, newlines, subexpressions, chaining and
+substitution cannot be spelled that way. Every field that carries the command
+(consent resource, `_meta.kiro.command`, `rawInput.command`/`cmd`) must pass; a
+request with none is denied. Everything else is denied and logged.
 
 ## Results — PR #122 pre-review head (`ab65e7a31ae7...88187579`, scope `crates`, 23 files / 107 KB)
 

@@ -9,15 +9,19 @@
     python3 experiments/code-review-workflow/selftest_crtool.py
 
 0. The driver's pure decisions (review_policy.py): kiro-cli data dir per platform,
-   path containment, the permission policy, crtool-command and input validation.
+   path containment, the permission policy (including every known way around a
+   blacklist: redirects, newlines, subexpressions, a smuggled `cd`, a command in
+   another field), crtool-command and input validation.
 1. The recipe regenerates from build_recipe.py at the node cap, and every crtool
    command line in it is double-quoted (single quotes mean nothing to cmd.exe and
    a bare `a,b,c` becomes an array in PowerShell).
-2. Those exact command lines, with {{crtool}} filled in exactly as the driver
-   fills it (uv, and the platform's python when it is a real interpreter), run
-   through this platform's shell - PowerShell on Windows, as KAS uses there; bash
-   elsewhere - against a throwaway git repository, and each one is put through
-   the driver's permission policy first.
+2. Every one of those command lines, with {{crtool}} filled in exactly as the
+   driver fills it (uv, and the platform's python when it is a real interpreter),
+   runs through this platform's shell - PowerShell on Windows, as KAS uses there;
+   bash elsewhere - against a throwaway git repository, after the driver's
+   permission policy has allowed it for every crtool form. Separately, each line
+   runs through EVERY shell on the machine (pwsh 7 and Windows PowerShell 5.1 on
+   Windows) into an argv echo, which must match what the policy parsed.
 3. Every crtool subcommand runs end to end on synthetic finder, verifier, ballot,
    ranking and comment files, and the outputs are checked.
 
@@ -31,10 +35,6 @@ import subprocess
 import sys
 import tempfile
 
-for _stream in (sys.stdout, sys.stderr):  # Windows legacy code pages
-    if hasattr(_stream, "reconfigure"):
-        _stream.reconfigure(encoding="utf-8", errors="replace")
-
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.abspath(os.path.join(HERE, "..", ".."))
 CRTOOL = os.path.join(REPO, ".kiro", "code-review", "crtool.py")
@@ -42,6 +42,8 @@ RECIPE = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow.json
 IS_WINDOWS = os.name == "nt"
 sys.path.insert(0, HERE)
 import review_policy as policy  # noqa: E402
+
+policy.utf8_stdio()
 ANGLES = ["a-line-scan", "b-removed-behavior", "c-cross-file", "d-language-pitfalls", "e-wrapper-proxy",
           "cleanup", "altitude", "conventions"]
 # Fully faked git: no global or system config (gpgsign, hooksPath, noprefix, color) and
@@ -74,13 +76,22 @@ def crtool(ws, *args):
     return run([sys.executable, CRTOOL, *args], cwd=ws)
 
 
-def shell_argv(command):
-    """The shell KAS would use: PowerShell on Windows, bash (or sh) elsewhere."""
+def shells():
+    """Every shell KAS could hand a command to here: both PowerShells on Windows (5.1
+    drops empty arguments and mangles `\\"`, 7 does not), bash elsewhere."""
     if IS_WINDOWS:
-        exe = shutil.which("pwsh") or shutil.which("powershell")
-        check(exe is not None, "a PowerShell is on PATH")
+        found = [x for x in (shutil.which("pwsh"), shutil.which("powershell")) if x]
+        check(bool(found), "a PowerShell is on PATH")
+        return found
+    return [shutil.which("bash") or "/bin/sh"]
+
+
+def shell_argv(command, exe=None):
+    """`command` under the shell KAS would use (the first of shells(), unless given)."""
+    exe = exe or shells()[0]
+    if IS_WINDOWS:
         return [exe, "-NoProfile", "-NonInteractive", "-Command", command]
-    return [shutil.which("bash") or "/bin/sh", "-c", command]
+    return [exe, "-c", command]
 
 
 def write_json(path, obj):
@@ -89,10 +100,10 @@ def write_json(path, obj):
         json.dump(obj, f)
 
 
-def shell_request(cmd):
+def shell_request(cmd, command=None, title=None):
     """A session/request_permission shaped like KAS's run_command consent."""
-    return {"toolCall": {"title": cmd}, "_meta": {"kiro": {"toolId": "run_command", "command": cmd,
-            "consent": {"capability": "shell", "resource": cmd}}}}
+    return {"toolCall": {"title": title or cmd}, "_meta": {"kiro": {"toolId": "run_command",
+            "command": cmd if command is None else command, "consent": {"capability": "shell", "resource": cmd}}}}
 
 
 def policy_tests():
@@ -121,24 +132,57 @@ def policy_tests():
         check(not policy.under(r"Z:\\elsewhere", rundir), "under: another drive is outside")
     write = lambda res: {"_meta": {"kiro": {"toolId": "fs_write", "consent": {
         "capability": "fs_write", "resource": res, "workspaceRoot": ws}}}}
-    check(policy.decide(write(os.path.join(rundir, "a.json")), ws, rundir)[0], "decide: write into the run dir")
-    check(not policy.decide(write(os.path.join(ws, "src", "lib.rs")), ws, rundir)[0], "decide: no write to source")
+    check(policy.decide(write(os.path.join(rundir, "a.json")), ws, rundir, "")[0], "decide: write into the run dir")
+    check(not policy.decide(write(os.path.join(ws, "src", "lib.rs")), ws, rundir, "")[0], "decide: no write to source")
     check(policy.decide({"_meta": {"kiro": {"toolId": "read_file", "consent": {"capability": "fs_read",
-          "resource": "src/lib.rs", "workspaceRoot": ws}}}}, ws, rundir)[0], "decide: relative read in workspace")
+          "resource": "src/lib.rs", "workspaceRoot": ws}}}}, ws, rundir, "")[0], "decide: relative read in workspace")
 
+    rd = policy.posix_path(rundir)
     for runner, uv in (("uv", True), ("python", False), ("auto", True), ("auto", False)):
         for win in (True, False):
             cmd = policy.crtool_command(runner, uv, win)
-            check(policy.crtool_command_problem(cmd) is None and policy.decide(shell_request(cmd + ' gather "x"'),
-                  ws, rundir)[0], f"runner={runner} uv={uv} windows={win}: {cmd!r} passes the policy")
-    quoted = f'& "{sys.executable}" .kiro/code-review/crtool.py'
-    check(policy.crtool_command_problem(quoted) is None and policy.decide(shell_request(quoted + ' ballots "x"'),
-          ws, rundir)[0], "PowerShell's `& \"exe\"` call form passes the policy")
-    check(policy.crtool_command_problem("python3 x.py") is not None, "a command without crtool.py is refused")
-    check(not policy.decide(shell_request('python3 .kiro/code-review/crtool.py gather "x"; rm -rf /'), ws,
-          rundir)[0], "a chained command is refused")
+            check(policy.crtool_command_problem(cmd, win) is None and policy.decide(
+                  shell_request(f'{cmd} gather "{rd}"'), ws, rundir, cmd)[0],
+                  f"runner={runner} uv={uv} windows={win}: {cmd!r} passes the policy")
+    quoted = '& "C:/Program Files/Python/python.exe" .kiro/code-review/crtool.py'
+    check(policy.crtool_command_problem(quoted, True) is None, "Windows: PowerShell's `& \"exe\"` call form is fine")
+    check(policy.crtool_command_problem(quoted, False) is not None, "bash: the `& \"exe\"` form is refused")
+    check(policy.crtool_command_problem(quoted[2:], True) is not None,
+          "Windows: a quoted program without `& ` is refused (PowerShell reads it as a string)")
+    check(policy.crtool_command_problem(quoted[2:], False) is None, "bash: a quoted program path is fine")
+    check(policy.crtool_command_problem("python3 x.py", False) is not None, "a command without crtool.py is refused")
+
+    crt = "python3 .kiro/code-review/crtool.py"
+    allowed = lambda cmd, **kw: policy.decide(shell_request(cmd, **kw), ws, rundir, crt)[0]
+    check(allowed(f'{crt} merge "{rd}" --expect "a,b"'), "decide: a recipe line is allowed")
+    check(allowed(f'cd "{ws}" && {crt} collate "{rd}"'), "decide: `cd <workspace> && ` is allowed")
+    for why, cmd in (
+            ("a chained command", f'{crt} gather "{rd}"; rm -rf /'),
+            ("an output redirect", f'{crt} gather "{rd}" > src/lib.rs'),
+            ("a redirect on an unquoted word", f"{crt} gather x > src/lib.rs"),
+            ("a second line", f'{crt} gather "{rd}"\nrm -rf src'),
+            ("a PowerShell subexpression", f'{crt} gather "{rd}" (Remove-Item -Recurse -Force src)'),
+            ("a command substitution in quotes", f'{crt} gather "{rd}" "$(rm -rf src)"'),
+            ("a redirect hidden in the cd prefix", f'cd . > src/lib.rs && {crt} merge "{rd}"'),
+            ("a second line hidden in the cd prefix", f'cd x\nrm -rf src && {crt} merge "{rd}"'),
+            ("a cd outside the workspace", f'cd / && {crt} merge "{rd}"'),
+            ("another program naming crtool.py", "rm -rf src .kiro/code-review/crtool.py"),
+            ("the diagnostics subcommand (runs any command)", f'{crt} diagnostics "{rd}" "rm -rf src"'),
+            ("another run directory", f'{crt} gather "{ws}/src"'),
+            ("an escaped closing quote", f'{crt} gather "{rd}" "a\\"'),
+            ("a word glued to a quoted string", f'{crt} gather "{rd}"x')):
+        check(not allowed(cmd), f"decide: {why} is refused")
+    check(not allowed("rm -rf src", command="rm -rf src", title=f"run {crt}"),
+          "decide: a command elsewhere than the title is what gets checked")
+    check(not allowed(f'{crt} gather "{rd}"', command="rm -rf src"),
+          "decide: every command field must hold an allowed call")
+    check(not policy.decide({"toolCall": {"title": f'{crt} gather "{rd}"'}, "_meta": {"kiro": {
+          "toolId": "run_command", "consent": {"capability": "shell"}}}}, ws, rundir, crt)[0],
+          "decide: a shell request with no command field is refused")
+
     check(policy.input_problem("rundir", "C:/w/r") is None, "input: a forward-slash path is fine")
-    for bad in ("", "a$b", "a`b", 'a"b', "C:\\w\\"):
+    check(policy.input_problem("rundir", "//wsl$/Ubuntu/home/u/r") is None, "input: a \\\\wsl$ share path is fine")
+    for bad in ("", "a$b", "a$", "a`b", 'a"b', "a\u201db", "C:\\w", "a\nb"):
         check(policy.input_problem("x", bad) is not None, f"input: {bad!r} is refused")
     check("\\" not in policy.posix_path(TMP), "posix_path uses forward slashes")
 
@@ -169,6 +213,29 @@ def recipe_commands():
         check(re.search(r"\s[A-Za-z0-9_-]+,[A-Za-z0-9_-]+", line) is None,
               f"[{node}] no bare comma list (PowerShell would make it an array)")
     return lines
+
+
+def argv_probe(lines):
+    """Each recipe line, under EVERY shell here, into a program that echoes its argv: what
+    arrives must be exactly the words the permission policy parsed. Values are the hard
+    cases the inputs allow: a space, a `$` before `/` (as in \\\\wsl$), a range target."""
+    echo = os.path.join(TMP, "echo_argv.py")
+    with open(echo, "w", encoding="utf-8") as f:
+        f.write("import json, sys\nsys.stdout.write(json.dumps(sys.argv[1:]))\n")
+    prog = (f'& "{sys.executable}" "{echo}"' if IS_WINDOWS else f'"{sys.executable}" "{echo}"')
+    values = {"{{rundir}}": policy.posix_path(os.path.join(TMP, "probe dir", "wsl$", "r")),
+              "{{target}}": "main...HEAD", "{{scope}}": "crates docs/x"}
+    for key, value in values.items():
+        check(policy.input_problem(key, value) is None, f"probe value {value!r} is a valid input")
+    for exe in shells():
+        step(f"argv probe through {exe}")
+        for node, line in ((n, x) for n, xs in lines.items() for x in xs):
+            cmd = line.replace("{{crtool}}", prog)
+            for k, v in values.items():
+                cmd = cmd.replace(k, v)
+            want = policy.split_args(cmd[len(prog):])
+            got = json.loads(run(shell_argv(cmd, exe), cwd=TMP))
+            check(got == want, f"[{node}] {line.split()[1]}: the shell passed {len(got)} args as parsed")
 
 
 def main():
@@ -209,18 +276,27 @@ def main():
     fill = {"{{rundir}}": run_dir, "{{target}}": "HEAD~1...HEAD", "{{scope}}": "."}
     used = []
 
-    def through_shell(node, which=0):
+    def filled(line, form, values=fill):
+        cmd = line.replace("{{crtool}}", form)
+        for k, v in values.items():
+            cmd = cmd.replace(k, v)
+        return cmd
+
+    step("the policy allows every recipe line under every crtool form")
+    for node, line in ((n, x) for n, xs in lines.items() for x in xs):
+        for form in forms:
+            allowed, why = policy.decide(shell_request(filled(line, form)), ws, run_dir, form)
+            check(allowed, f"[{node}] {form.split()[0]}: {filled(line, form)[len(form):][:70]}")
+    argv_probe(lines)
+
+    def through_shell(node, which):
+        """The recipe's own line `which` of `node`, run through the shell. Forms rotate."""
         form = forms[len(used) % len(forms)]
         used.append(form)
-        cmd = lines[node][which].replace("{{crtool}}", form)
-        for k, v in fill.items():
-            cmd = cmd.replace(k, v)
-        allowed, why = policy.decide(shell_request(cmd), ws, run_dir)
-        check(allowed, f"[{node}] the driver's policy allows: {cmd[:100]}")
-        return run(shell_argv(cmd), cwd=ws)
+        return run(shell_argv(filled(lines[node][which], form)), cwd=ws)
 
     step(f"the recipe's own gather line, through {'PowerShell' if IS_WINDOWS else 'bash'}")
-    out = through_shell("setup")
+    out = through_shell("setup", 0)
     check("gathered 1 files" in out or "gathered 2 files" in out, f"gather ran ({out.strip().splitlines()[-1]})")
     with open(os.path.join(run_dir, "manifest.json"), encoding="utf-8") as f:
         m = json.load(f)
@@ -245,15 +321,15 @@ def main():
     for a in ANGLES:
         if not os.path.exists(os.path.join(run_dir, "candidates", f"{a}.json")):
             write_json(os.path.join(run_dir, "candidates", f"{a}.json"), {"angle": a, "candidates": []})
-    out = through_shell("dedup")
+    out = through_shell("dedup", 0)
     check("from 8/8 angles" in out, "merge saw all 8 angles through the shell's argument parsing")
     with open(os.path.join(run_dir, "candidates", "digest-1.txt"), encoding="utf-8") as f:
         check("SAME location" in f.read(), "the digest flags the two candidates at src/lib.rs:6")
 
-    step("dedup decision, shard, verdicts")
+    step("dedup decision, then the recipe's own shard line, verdicts")
     write_json(os.path.join(run_dir, "deduped", "decisions.json"),
                {"groups": [{"pids": ["a-line-scan-1", "d-language-pitfalls-1"], "reason": "same underflow"}]})
-    crtool(ws, "shard", run_dir, "--shards", "2")
+    through_shell("dedup", 1)
     with open(os.path.join(run_dir, "deduped", "index.json"), encoding="utf-8") as f:
         idx = json.load(f)
     check(idx["deduped_count"] == 2, "3 candidates -> 2 after grouping")
@@ -270,20 +346,20 @@ def main():
     write_json(os.path.join(run_dir, "candidates", "sweep.json"), {"angle": "sweep", "candidates": []})
 
     step("the recipe's own ballots line")
-    out = through_shell("ballots")
+    out = through_shell("ballots", 0)
     check("1 of 2 candidates get two more votes" in out, "the refuted conventions claim is balloted")
     for loop, tag, verdict in (("r1", "v2", "CONFIRMED"), ("r2", "v3", "CONFIRMED")):
         write_json(os.path.join(run_dir, "verdicts", loop, f"{conv}.{tag}.json"),
                    {"id": f"{conv}.{tag}", "verdict": verdict, "reasoning": "it is a rule"})
 
-    step("collate (2-of-3 tally), finalize, comments")
-    out = through_shell("rank")
+    step("the recipe's own collate (2-of-3 tally), finalize and comments lines")
+    out = through_shell("rank", 0)
     check("votes changed the outcome" in out, "REFUTED, CONFIRMED, CONFIRMED overturns to CONFIRMED")
     write_json(os.path.join(run_dir, "ranking.json"), {"order": [bug, conv]})
-    crtool(ws, "finalize", run_dir)
+    through_shell("rank", 1)
     write_json(os.path.join(run_dir, "comments", f"{bug}.json"), {"label": "issue", "decorations": ["blocking"],
                "subject": "`new_helper(0)` underflows", "discussion": "Use `x.saturating_sub(1)` or check for 0."})
-    out = through_shell("comment")
+    out = through_shell("comment", 0)
     check("1 model-written, 1 template" in out, "one model comment kept, the missing one templated")
     with open(os.path.join(run_dir, "comments.json"), encoding="utf-8") as f:
         comments = json.load(f)
@@ -297,7 +373,9 @@ def main():
     r = subprocess.run([sys.executable, os.path.join(HERE, "check_run.py"), run_dir], cwd=ws, capture_output=True,
                        text=True, encoding="utf-8", errors="replace")
     check("PASS  one comment entry per reported finding" in r.stdout, "check_run reads and checks the run")
-    check(set(used) == set(forms), f"every crtool form ran at least once ({len(used)} shell steps)")
+    total = sum(len(xs) for xs in lines.values())
+    check(len(used) == total, f"every recipe crtool line ran through the shell ({len(used)}/{total})")
+    check(set(used) == set(forms), "every crtool form ran at least once")
     print("\nALL SELF-TESTS PASS")
 
 

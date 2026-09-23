@@ -418,7 +418,8 @@ def cmd_diagnostics(a):
         f.write(text)
     lines = [ln for ln in text.splitlines() if ln.strip()]
     changed = [x["path"] for x in manifest["files"]]
-    mine = [ln for ln in lines if any(p in ln for p in changed)]
+    # Checkers print native paths (`crates\x\a.rs:12:5` on Windows); git's are forward-slash.
+    mine = [ln for ln in lines if any(p in ln.replace("\\", "/") for p in changed)]
     status = "TIMED OUT" if code is None else ("clean" if code == 0 else f"FAILED (exit {code})")
     body = [f"command: {a.command}", f"result: {status} in {took:.0f}s, on HEAD {manifest['head'][:12]}",
             f"{len(mine)} output line(s) mention a changed file" + (":" if mine else "."), *mine[:200], "",
