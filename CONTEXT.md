@@ -114,6 +114,10 @@ _Avoid_: scope (that is the path filter), diff range
 The paths within the review target that the review examines — a filter applied to a chosen target, never a choice of change.
 _Avoid_: target, review mode
 
+**Run authorization**:
+The standing consent granted at the review confirm screen that decides a workflow run's step-session permission approvals without prompting — allowing what the review policy permits, denying the rest. Bound to one workflow id before the run is invoked, never persisted, and withdrawn when the run terminates; sessions it does not own still reach the operator as ordinary permission approvals.
+_Avoid_: auto-approver, trust (that persists beyond the run), allowlist (that is the policy's content)
+
 ### Sessions & turns
 
 **Session**:
