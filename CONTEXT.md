@@ -104,6 +104,16 @@ _Avoid_: subscribe (no such wire verb), follow, reattach-and-resume (conflates t
 The engine-side exclusive claim on a run's execution, held by one process via a pid-stamped heartbeat (`run.beat`; beat interval × 4.5 = stale, dead pid = stale immediately). A live foreign owner refuses `resume` naming its pid; an abandoned run lists as `paused` after the engine's sweep. Cyril never bypasses this — it surfaces the refusal verbatim.
 _Avoid_: lock (it expires), lease (the client renews nothing), busy (says nothing about who owns it)
 
+### Code review
+
+**Review target**:
+The change a code review examines, as a git diff spec: a `base...head` range, a single revision diffed against the working tree, or `auto` (the tool picks). Choosing *which change* is choosing the target.
+_Avoid_: scope (that is the path filter), diff range
+
+**Review scope**:
+The paths within the review target that the review examines — a filter applied to a chosen target, never a choice of change.
+_Avoid_: target, review mode
+
 ### Sessions & turns
 
 **Session**:
