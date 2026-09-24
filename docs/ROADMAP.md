@@ -438,6 +438,25 @@ sessions and deliberately do not ride `SubagentTracker`.
 **Non-goals:** model-launched runs (that means flipping the gate — a separate, deliberate
 decision); proxying Kiro's four slash commands; cyril executing DAGs itself (that is W2).
 
+### W3 — `/review`: scoped code review on Kiro's workflow engine
+
+**Depends on:** W1 (control plane, workflow-owned session registry). **Spec:** cyril-5gb3
+(charted by the wayfinder map cyril-j4mt).
+
+- `/review` opens one form overlay to choose the Review target (`auto` / vs base branch /
+  uncommitted / commit at HEAD; HEAD-anchored only) and the Review scope. Its live summary is
+  the confirm screen, and confirming arms a per-run **Run authorization** that decides the
+  run's step-session permission approvals: policy-allowed, everything else denied and logged.
+- cyril replaces the Python driver: embedded recipe and `cyril-review-*` agents materialized
+  to `~/.kiro`, a self-ignoring `.code-review/<ts>-<hex>/` run dir, the `[review]` check
+  command run once, and one chat summary on completion. `/review resume` asks for consent again
+  and retries or resumes a failed or paused run, including after a restart.
+- crtool is ported to Rust as the hidden `cyril crtool` subcommand (new leaf crate
+  `cyril-review`) and proven byte-identical to the Python crtool. The port blocks shipping.
+
+**Non-goals:** a vendor-neutral review engine; an in-TUI findings view or follow-up actions;
+targets not checked out at HEAD. Still fog: PR mode, effort presets.
+
 ### W2 — Cross-vendor orchestration (unscheduled)
 
 The surviving, non-subsumed half of ADR-0003's workflow justification: stage 1 on Kiro,
