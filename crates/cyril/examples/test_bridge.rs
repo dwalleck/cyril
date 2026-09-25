@@ -465,11 +465,12 @@ fn print_notification(n: &Notification) {
             tokens,
             duration_ms,
             effort,
+            reasoning,
             session_id,
             refusal,
         } => {
             println!(
-                "  [MetadataUpdated] ctx={:?} metering={:?} tokens={:?} duration={duration_ms:?} effort={effort:?} session={session_id:?} refusal={refusal:?}",
+                "  [MetadataUpdated] ctx={:?} metering={:?} tokens={:?} duration={duration_ms:?} effort={effort:?} reasoning={reasoning:?} session={session_id:?} refusal={refusal:?}",
                 context_usage.as_ref().map(|u| u.percentage()),
                 metering.as_ref().map(|m| m.credits()),
                 tokens.as_ref().map(|t| (t.input(), t.output(), t.cached()))

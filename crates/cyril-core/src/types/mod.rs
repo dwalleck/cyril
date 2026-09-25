@@ -51,8 +51,9 @@ pub use present_as::PresentAs;
 pub use prompt::{PromptArgument, PromptInfo};
 pub use session::{
     CompactionPhase, ContextBreakdown, ContextBucket, ContextUsage, CreditUsage, EffortLevel,
-    EffortUpdate, ModeId, ModelId, ModelInfo, RefusalAlert, SessionCost, SessionId, SessionMode,
-    SessionStatus, StopReason, TokenCounts, TurnMetering, TurnSummary,
+    EffortUpdate, ModeId, ModelId, ModelInfo, ReasoningInfo, ReasoningSupport, RefusalAlert,
+    SessionCost, SessionId, SessionMode, SessionStatus, StopReason, TokenCounts, TurnMetering,
+    TurnSummary,
 };
 pub use source_turn::{
     PromptEnvelope, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,

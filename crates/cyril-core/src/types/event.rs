@@ -2,8 +2,8 @@ use crate::types::command::{CommandInfo, ConfigOption};
 use crate::types::message::{AgentMessage, AgentThought, UserMessage};
 use crate::types::plan::Plan;
 use crate::types::session::{
-    CompactionPhase, ContextBreakdown, ContextUsage, EffortUpdate, ModeId, ModelInfo, RefusalAlert,
-    SessionId, SessionMode, StopReason, TokenCounts, TurnMetering,
+    CompactionPhase, ContextBreakdown, ContextUsage, EffortUpdate, ModeId, ModelInfo,
+    ReasoningInfo, RefusalAlert, SessionId, SessionMode, StopReason, TokenCounts, TurnMetering,
 };
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
@@ -99,6 +99,14 @@ pub enum Notification {
         /// `effort: null` (engine-initiated badge clear); `Set` with a known
         /// or backend-defined level.
         effort: EffortUpdate,
+        /// The full `reasoning` snapshot (kiro-cli 2.23.0+, cyril-q1xs).
+        /// `Some` whenever the frame carries a well-formed block; `effort`
+        /// above is already derived from it (a block without an effort is
+        /// `Clear`). `None` when the frame has no block (pre-2.23.0 wire,
+        /// where `effort` comes from the top-level field instead), or when
+        /// the block is corrupt — that case is warned at parse time and
+        /// still clears the badge, matching Kiro's own fallback.
+        reasoning: Option<ReasoningInfo>,
         /// Session ID from the params-level `sessionId` on `kiro.dev/metadata`
         /// (cyril-fh06). During agent_crew runs every subagent session emits
         /// its own metadata frame; the bridge → client pathway promotes this
@@ -854,6 +862,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Set(EffortLevel::High),
+            reasoning: None,
             session_id: Some(SessionId::new("sess_1")),
             refusal: None,
         };
@@ -863,10 +872,12 @@ mod tests {
             tokens,
             duration_ms,
             effort,
+            reasoning,
             session_id,
             refusal,
         } = n
         {
+            assert!(reasoning.is_none());
             match context_usage {
                 Some(ctx) => assert!((ctx.percentage() - 75.0).abs() < f64::EPSILON),
                 None => panic!("context_usage should be present"),

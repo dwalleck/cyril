@@ -114,6 +114,7 @@ fn context_usage_flows_to_both() {
         tokens: None,
         duration_ms: None,
         effort: EffortUpdate::Unchanged,
+        reasoning: None,
         session_id: None,
     };
     ui.apply_notification(&notification);

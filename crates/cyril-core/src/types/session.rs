@@ -89,14 +89,124 @@ impl fmt::Display for EffortLevel {
 /// an explicit `effort: null` is the engine clearing the level, and a string
 /// sets it. tui.js checks `"effort" in e`, so `null` is a real badge-CLEAR
 /// signal a plain `Option` cannot represent.
+///
+/// kiro-cli 2.23.0+ sends a `reasoning` snapshot instead of the top-level
+/// field (cyril-q1xs); it maps through [`ReasoningInfo::effort_update`] and
+/// never yields `Unchanged` — a frame without the block does.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EffortUpdate {
-    /// `effort` absent — keep whatever level is showing (sticky).
+    /// No effort information on the frame — keep whatever level is showing.
     Unchanged,
-    /// Explicit `effort: null` — the engine cleared the badge.
+    /// The engine cleared the level: an explicit top-level `effort: null`,
+    /// or a `reasoning` snapshot with no effort.
     Clear,
     /// A string level, known or backend-defined.
     Set(EffortLevel),
+}
+
+/// Whether the current model supports reasoning, from `reasoning.support` on
+/// `kiro.dev/metadata` (kiro-cli 2.23.0+, cyril-q1xs). Kiro's 2.24.0 TUI
+/// knows `toggleable`, `alwaysOn` and `unavailable`; an unknown value is
+/// preserved as `Other` rather than rejecting the block (Kiro's own parser
+/// would drop it to `unavailable` and blank the badge).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReasoningSupport {
+    /// Thinking can be switched on and off (`thinkingEnabled` reports which).
+    Toggleable,
+    /// Thinking is always on for this model.
+    AlwaysOn,
+    /// The model has no reasoning controls.
+    Unavailable,
+    /// Backend-defined value outside the known set, carried verbatim.
+    Other(String),
+}
+
+impl ReasoningSupport {
+    /// Parse a wire `support` string. Unknown values are preserved as
+    /// `Other` and logged at debug so a backend addition stays visible.
+    pub fn from_wire(s: &str) -> Self {
+        match s {
+            "toggleable" => Self::Toggleable,
+            "alwaysOn" => Self::AlwaysOn,
+            "unavailable" => Self::Unavailable,
+            other => {
+                tracing::debug!(
+                    support = other,
+                    "unrecognized reasoning support value on the wire; preserved as Other"
+                );
+                Self::Other(other.to_string())
+            }
+        }
+    }
+
+    /// The wire string for this value.
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Toggleable => "toggleable",
+            Self::AlwaysOn => "alwaysOn",
+            Self::Unavailable => "unavailable",
+            Self::Other(s) => s,
+        }
+    }
+}
+
+/// The `reasoning` block on `kiro.dev/metadata` (kiro-cli 2.23.0+,
+/// cyril-q1xs), which replaced the top-level `effort` field. Unlike the old
+/// field it is a full SNAPSHOT sent on every frame: Kiro's own TUI replaces
+/// its reasoning state with each block and sets the effort to
+/// `reasoning.effort ?? null`, so a block without `effort` means "no level".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReasoningInfo {
+    support: ReasoningSupport,
+    thinking_enabled: Option<bool>,
+    effort: Option<EffortLevel>,
+    effort_levels: Vec<EffortLevel>,
+}
+
+impl ReasoningInfo {
+    pub fn new(
+        support: ReasoningSupport,
+        thinking_enabled: Option<bool>,
+        effort: Option<EffortLevel>,
+        effort_levels: Vec<EffortLevel>,
+    ) -> Self {
+        Self {
+            support,
+            thinking_enabled,
+            effort,
+            effort_levels,
+        }
+    }
+
+    pub fn support(&self) -> &ReasoningSupport {
+        &self.support
+    }
+
+    /// Whether thinking is on. `None` when the wire omits it — seen on
+    /// `toggleable` models before the first explicit toggle or effort
+    /// change. A `false` value still carries an `effort` on the wire.
+    pub fn thinking_enabled(&self) -> Option<bool> {
+        self.thinking_enabled
+    }
+
+    /// The current effort level, or `None` when the model reports none.
+    pub fn effort(&self) -> Option<&EffortLevel> {
+        self.effort.as_ref()
+    }
+
+    /// The levels the current model accepts (empty when unavailable).
+    pub fn effort_levels(&self) -> &[EffortLevel] {
+        &self.effort_levels
+    }
+
+    /// The badge update this snapshot implies: its effort, or a clear when
+    /// it carries none (snapshot semantics — never `Unchanged`).
+    pub fn effort_update(&self) -> EffortUpdate {
+        match &self.effort {
+            Some(level) => EffortUpdate::Set(level.clone()),
+            None => EffortUpdate::Clear,
+        }
+    }
 }
 
 /// Session lifecycle state machine.

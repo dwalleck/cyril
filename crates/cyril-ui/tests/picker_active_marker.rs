@@ -124,6 +124,7 @@ fn picker_marks_active_row_exactly_once_for_effort() {
         tokens: None,
         duration_ms: None,
         effort: cyril_core::types::EffortUpdate::Set(cyril_core::types::EffortLevel::High),
+        reasoning: None,
         session_id: None,
     });
     ui.show_picker(

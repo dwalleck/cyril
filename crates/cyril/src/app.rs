@@ -4071,6 +4071,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Unchanged,
+            reasoning: None,
             session_id: Some(sid.clone()),
         }
     }
