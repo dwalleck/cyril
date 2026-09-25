@@ -590,10 +590,12 @@ mod tests {
             tokens,
             duration_ms,
             effort,
+            reasoning,
             session_id,
             refusal,
         })) = result
         {
+            assert!(reasoning.is_none(), "no reasoning block => None");
             let ctx = context_usage.expect("context_usage should be present");
             assert!((ctx.percentage() - 75.0).abs() < f64::EPSILON);
             assert!(metering.is_none());
@@ -983,10 +985,15 @@ mod tests {
                 tokens,
                 duration_ms,
                 effort,
+                reasoning,
                 session_id,
                 refusal,
             })) = result
             {
+                assert!(
+                    reasoning.is_none(),
+                    "pre-2.23.0 frame has no reasoning block"
+                );
                 let ctx = context_usage.expect("context present");
                 assert!((ctx.percentage() - 42.5).abs() < f64::EPSILON);
                 let m = metering.expect("metering present");

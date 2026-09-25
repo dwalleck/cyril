@@ -556,6 +556,10 @@ impl UiState {
                 tokens,
                 duration_ms,
                 effort,
+                // `effort` is already derived from the reasoning snapshot
+                // (cyril-q1xs); showing thinking on/off is cyril-k3lz's, so
+                // the full block is not stored yet.
+                reasoning: _,
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
                 session_id: _,
@@ -4809,6 +4813,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Unchanged,
+            reasoning: None,
             session_id: None,
             refusal: Some(cyril_core::types::RefusalAlert::from_parts(
                 None,
@@ -6283,6 +6288,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Set(EffortLevel::High),
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), Some(&EffortLevel::High));
@@ -6295,6 +6301,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(
@@ -6327,6 +6334,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Set(EffortLevel::High),
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), Some(&EffortLevel::High));
@@ -6337,6 +6345,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Clear,
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), None, "explicit null must clear the badge");
@@ -6354,6 +6363,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Set(EffortLevel::Other("turbo".into())),
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), Some(&EffortLevel::Other("turbo".into())));
@@ -6388,6 +6398,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Set(EffortLevel::High),
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), Some(&EffortLevel::High));
@@ -6400,6 +6411,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Set(EffortLevel::Other("none".into())),
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(
@@ -6422,6 +6434,7 @@ mod tests {
             tokens: None,
             duration_ms: Some(2281),
             effort: EffortUpdate::Unchanged,
+            reasoning: None,
             session_id: None,
         });
         state.apply_notification(&Notification::MetadataUpdated {
@@ -6433,6 +6446,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Unchanged,
+            reasoning: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -6489,6 +6503,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert!((state.context_usage().unwrap_or(-1.0) - 42.0).abs() < f64::EPSILON);
@@ -6503,6 +6518,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Set(EffortLevel::High),
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert!(
@@ -6537,6 +6553,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Set(EffortLevel::High),
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), Some(&EffortLevel::High));
@@ -6559,6 +6576,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Set(EffortLevel::Medium),
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         state.set_current_model(Some("haiku".into()));
@@ -6583,6 +6601,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Set(EffortLevel::High),
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert_eq!(state.effort(), Some(&EffortLevel::High));
@@ -6611,6 +6630,7 @@ mod tests {
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert!(
@@ -6647,6 +6667,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -6682,6 +6703,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -6699,6 +6721,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {
@@ -6723,6 +6746,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         state.apply_notification(&Notification::TurnCompleted {

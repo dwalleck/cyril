@@ -592,6 +592,7 @@ fn refusal_alert_renders_in_chat_and_toolbar() {
         tokens: None,
         duration_ms: None,
         effort: EffortUpdate::Unchanged,
+        reasoning: None,
         session_id: None,
         refusal: Some(RefusalAlert::from_parts(
             None,

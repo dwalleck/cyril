@@ -512,6 +512,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert!(changed);
@@ -555,6 +556,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -572,6 +574,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -658,6 +661,7 @@ mod tests {
             tokens: Some(TokenCounts::new(800, 400, Some(100))),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert!(
@@ -689,6 +693,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -717,6 +722,7 @@ mod tests {
             tokens: None,
             duration_ms: None,
             effort: EffortUpdate::Unchanged,
+            reasoning: None,
             session_id: None,
             refusal: Some(crate::types::RefusalAlert::from_parts(
                 None,
@@ -855,6 +861,7 @@ mod tests {
             tokens: Some(TokenCounts::new(100, 50, None)),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -876,6 +883,7 @@ mod tests {
             tokens: Some(TokenCounts::new(800, 400, Some(200))),
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -987,6 +995,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         ctrl.apply_notification(&Notification::TurnCompleted {
@@ -1018,6 +1027,7 @@ mod tests {
             tokens: None,
             effort: EffortUpdate::Unchanged,
             duration_ms: None,
+            reasoning: None,
             session_id: None,
         });
         assert!(ctrl.context_usage().is_some());

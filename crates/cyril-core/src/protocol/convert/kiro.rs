@@ -332,6 +332,155 @@ pub(crate) fn parse_options_response(response: &serde_json::Value) -> Vec<Comman
         .collect()
 }
 
+/// Top-level `kiro.dev/metadata` keys cyril parses (or deliberately
+/// tolerates). Anything else is a backend addition and gets a debug log.
+fn is_known_metadata_key(key: &str) -> bool {
+    matches!(
+        key,
+        "sessionId"
+            | "contextUsagePercentage"
+            | "meteringUsage"
+            | "turnDurationMs"
+            | "effort"
+            | "reasoning"
+            | "inputTokens"
+            | "outputTokens"
+            | "cachedTokens"
+            | "refusal"
+            | "stopReason"
+    )
+}
+
+/// Legacy top-level `effort` on `kiro.dev/metadata` (Kiro 2.5.0–2.22.x,
+/// cyril-1gim). The wire is tri-state — tui.js checks `"effort" in e`:
+///   * absent  → Unchanged (retain the current badge; non-thinking models
+///     and mid-turn context-only frames omit it)
+///   * null    → Clear (explicit engine-initiated badge clear)
+///   * string  → Set. `EffortLevel::from_wire` maps known levels to typed
+///     variants and preserves backend-defined levels as `Other` (displayed,
+///     never dropped); "" maps to Unchanged (the wire's "not set"). A
+///     present-but-non-string, non-null field is corrupt, so warn rather
+///     than degrade silently (distinguish missing from corrupt).
+fn legacy_effort_update(params: &serde_json::Value) -> EffortUpdate {
+    match params.get("effort") {
+        None => EffortUpdate::Unchanged,
+        Some(e) if e.is_null() => EffortUpdate::Clear,
+        Some(e) => match e.as_str() {
+            Some(s) => match EffortLevel::from_wire(s) {
+                Some(level) => EffortUpdate::Set(level),
+                None => EffortUpdate::Unchanged,
+            },
+            None => {
+                tracing::warn!(
+                    effort = ?e,
+                    "metadata `effort` present but not a string, ignoring"
+                );
+                EffortUpdate::Unchanged
+            }
+        },
+    }
+}
+
+/// Parse the `reasoning` block on `kiro.dev/metadata` (kiro-cli 2.23.0+,
+/// cyril-q1xs): `{support, thinkingEnabled?, effort?, effortLevels}`.
+///
+/// Returns `None` for a block Kiro's own parser (2.24.0 tui.js `eQe`) would
+/// also reject on structure — not an object, `support` missing or not a
+/// string, `effortLevels` missing or not all strings, `thinkingEnabled` not a
+/// bool, `effort` neither a string nor null. Those are warned; `null` itself
+/// is Kiro's documented "no reasoning" and only logged at debug.
+///
+/// Deliberately more tolerant than Kiro on values: an unknown `support`
+/// becomes `ReasoningSupport::Other`, and an effort outside `effortLevels`
+/// or a `thinkingEnabled` on a non-toggleable model is kept (logged at
+/// debug). Kiro drops each of those to `unavailable`, which would blank the
+/// badge on the first backend addition.
+fn parse_reasoning(block: &serde_json::Value) -> Option<ReasoningInfo> {
+    if block.is_null() {
+        tracing::debug!("kiro.dev/metadata `reasoning` is null; treating as no reasoning");
+        return None;
+    }
+    let Some(map) = block.as_object() else {
+        tracing::warn!(value = ?block, "kiro.dev/metadata `reasoning` is not an object, ignoring");
+        return None;
+    };
+    let corrupt = |why: &str| {
+        tracing::warn!(value = ?block, why, "kiro.dev/metadata `reasoning` is malformed, ignoring");
+    };
+
+    let Some(support) = map.get("support").and_then(serde_json::Value::as_str) else {
+        corrupt("`support` missing or not a string");
+        return None;
+    };
+    let support = ReasoningSupport::from_wire(support);
+
+    let Some(raw_levels) = map
+        .get("effortLevels")
+        .and_then(serde_json::Value::as_array)
+    else {
+        corrupt("`effortLevels` missing or not an array");
+        return None;
+    };
+    let mut effort_levels = Vec::with_capacity(raw_levels.len());
+    for raw in raw_levels {
+        let Some(level) = raw.as_str() else {
+            corrupt("`effortLevels` entry is not a string");
+            return None;
+        };
+        match EffortLevel::from_wire(level) {
+            Some(level) => effort_levels.push(level),
+            None => tracing::debug!(
+                "kiro.dev/metadata `reasoning.effortLevels` has an empty entry, skipping"
+            ),
+        }
+    }
+
+    let thinking_enabled = match map.get("thinkingEnabled") {
+        None => None,
+        Some(v) => match v.as_bool() {
+            Some(enabled) => Some(enabled),
+            None => {
+                corrupt("`thinkingEnabled` is not a bool");
+                return None;
+            }
+        },
+    };
+    if thinking_enabled.is_some() && support != ReasoningSupport::Toggleable {
+        tracing::debug!(
+            support = support.as_str(),
+            "kiro.dev/metadata `reasoning.thinkingEnabled` on a non-toggleable model; kept"
+        );
+    }
+
+    let effort = match map.get("effort") {
+        None => None,
+        Some(v) if v.is_null() => None,
+        Some(v) => match v.as_str() {
+            Some(s) => EffortLevel::from_wire(s),
+            None => {
+                corrupt("`effort` is not a string");
+                return None;
+            }
+        },
+    };
+    if let Some(level) = &effort
+        && !effort_levels.is_empty()
+        && !effort_levels.contains(level)
+    {
+        tracing::debug!(
+            effort = level.as_str(),
+            "kiro.dev/metadata `reasoning.effort` is not in `effortLevels`; kept"
+        );
+    }
+
+    Some(ReasoningInfo::new(
+        support,
+        thinking_enabled,
+        effort,
+        effort_levels,
+    ))
+}
+
 pub(crate) fn to_ext_notification(
     method: &str,
     params: &serde_json::Value,
@@ -438,34 +587,22 @@ pub(crate) fn to_ext_notification(
                 }
             };
 
-            // Effort-level change (Kiro 2.5.0+, cyril-1gim). The wire is
-            // tri-state — tui.js checks `"effort" in e`:
-            //   * absent  → Unchanged (retain the current badge; non-thinking
-            //     models and mid-turn context-only frames omit it)
-            //   * null    → Clear (explicit engine-initiated badge clear —
-            //     previously dropped, so a backend clear never reached the UI)
-            //   * string  → Set. `EffortLevel::from_wire` maps known levels to
-            //     typed variants and preserves backend-defined levels as
-            //     `Other` (displayed, never dropped); "" maps to Unchanged
-            //     (the wire's "not set"). A present-but-non-string, non-null
-            //     field is corrupt, so warn rather than degrade silently
-            //     (distinguish missing from corrupt).
-            let effort = match params.get("effort") {
-                None => EffortUpdate::Unchanged,
-                Some(e) if e.is_null() => EffortUpdate::Clear,
-                Some(e) => match e.as_str() {
-                    Some(s) => match EffortLevel::from_wire(s) {
-                        Some(level) => EffortUpdate::Set(level),
-                        None => EffortUpdate::Unchanged,
-                    },
-                    None => {
-                        tracing::warn!(
-                            effort = ?e,
-                            "metadata `effort` present but not a string, ignoring"
-                        );
-                        EffortUpdate::Unchanged
-                    }
-                },
+            // Effort level. kiro-cli 2.23.0+ sends a `reasoning` snapshot on
+            // every frame instead of the top-level `effort` (cyril-q1xs);
+            // when the block is present it is authoritative and the
+            // top-level field is ignored. Older binaries send no block, so
+            // the legacy tri-state read below still applies to them.
+            let (effort, reasoning) = match params.get("reasoning") {
+                Some(block) => {
+                    let reasoning = parse_reasoning(block);
+                    // A corrupt block clears, as Kiro's own parser falls
+                    // back to `unavailable` (parse_reasoning warned).
+                    let effort = reasoning
+                        .as_ref()
+                        .map_or(EffortUpdate::Clear, ReasoningInfo::effort_update);
+                    (effort, reasoning)
+                }
+                None => (legacy_effort_update(params), None),
             };
 
             // Params-level session scope (cyril-fh06). During agent_crew runs
@@ -484,8 +621,8 @@ pub(crate) fn to_ext_notification(
             // handleMetadataUpdate + live captures, cyril-1gim). Parsed above:
             // sessionId, contextUsagePercentage, meteringUsage[] (validated
             // value/unit/unitPlural retained as typed non-money charges),
-            // turnDurationMs,
-            // effort, and the legacy inputTokens/outputTokens/cachedTokens
+            // turnDurationMs, effort, the 2.23.0+ `reasoning` snapshot
+            // (cyril-q1xs), and the legacy inputTokens/outputTokens/cachedTokens
             // (unconfirmed-on-wire on the v2 path; those names are the KAS
             // normalizer's legacy fallbacks — kept, not trusted). refusal
             // {category, explanation, recommendedModel} and stopReason are
@@ -496,19 +633,7 @@ pub(crate) fn to_ext_notification(
             // fields and the 2.12.1 refusal object both arrived this way).
             if let Some(obj) = params.as_object() {
                 for key in obj.keys() {
-                    if !matches!(
-                        key.as_str(),
-                        "sessionId"
-                            | "contextUsagePercentage"
-                            | "meteringUsage"
-                            | "turnDurationMs"
-                            | "effort"
-                            | "inputTokens"
-                            | "outputTokens"
-                            | "cachedTokens"
-                            | "refusal"
-                            | "stopReason"
-                    ) {
+                    if !is_known_metadata_key(key) {
                         tracing::debug!(
                             key = %key,
                             "kiro.dev/metadata: unrecognized top-level field"
@@ -588,6 +713,7 @@ pub(crate) fn to_ext_notification(
                 duration_ms,
                 tokens,
                 effort,
+                reasoning,
                 session_id,
                 refusal,
             }))
@@ -1831,6 +1957,253 @@ mod tests {
             ["auto", "sonnet"],
             "one malformed entry must not discard the catalog"
         );
+    }
+
+    // --- `reasoning` snapshot on kiro.dev/metadata (kiro-cli 2.23.0+, cyril-q1xs) ---
+
+    /// Parse a metadata frame and return its (effort, reasoning) pair.
+    fn effort_and_reasoning(params: &serde_json::Value) -> (EffortUpdate, Option<ReasoningInfo>) {
+        match to_ext_notification("kiro.dev/metadata", params) {
+            Ok(Some(Notification::MetadataUpdated {
+                effort, reasoning, ..
+            })) => (effort, reasoning),
+            other => panic!("expected MetadataUpdated, got {other:?}"),
+        }
+    }
+
+    /// Load the `_kiro.dev/metadata` params captured live, one per line.
+    fn load_metadata_fixture(name: &str) -> Vec<serde_json::Value> {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/v2")
+            .join(name);
+        std::fs::read_to_string(&path)
+            .expect("read fixture")
+            .lines()
+            .map(|line| serde_json::from_str(line).expect("fixture line is JSON"))
+            .collect()
+    }
+
+    #[test]
+    fn metadata_reasoning_toggleable_sets_effort_and_models_full_block() {
+        let (effort, reasoning) = effort_and_reasoning(&json!({
+            "sessionId": "s",
+            "contextUsagePercentage": 1.2,
+            "reasoning": {
+                "support": "toggleable",
+                "thinkingEnabled": true,
+                "effort": "max",
+                "effortLevels": ["low", "medium", "high", "max"]
+            }
+        }));
+        assert_eq!(effort, EffortUpdate::Set(EffortLevel::Max));
+        let reasoning = reasoning.expect("well-formed block is carried");
+        assert_eq!(reasoning.support(), &ReasoningSupport::Toggleable);
+        assert_eq!(reasoning.thinking_enabled(), Some(true));
+        assert_eq!(reasoning.effort(), Some(&EffortLevel::Max));
+        assert_eq!(
+            reasoning.effort_levels(),
+            [
+                EffortLevel::Low,
+                EffortLevel::Medium,
+                EffortLevel::High,
+                EffortLevel::Max
+            ]
+        );
+    }
+
+    #[test]
+    fn metadata_reasoning_unavailable_clears_effort() {
+        // Snapshot semantics: Kiro's TUI sets `currentEffort =
+        // reasoning.effort ?? null`, so switching to a model without
+        // reasoning must clear a badge left over from the previous model.
+        let (effort, reasoning) = effort_and_reasoning(&json!({
+            "reasoning": {"support": "unavailable", "effortLevels": []}
+        }));
+        assert_eq!(effort, EffortUpdate::Clear);
+        let reasoning = reasoning.expect("well-formed block is carried");
+        assert_eq!(reasoning.support(), &ReasoningSupport::Unavailable);
+        assert_eq!(reasoning.thinking_enabled(), None);
+        assert!(reasoning.effort_levels().is_empty());
+    }
+
+    #[test]
+    fn metadata_reasoning_without_effort_on_toggleable_clears() {
+        let (effort, _) = effort_and_reasoning(&json!({
+            "reasoning": {"support": "toggleable", "effortLevels": ["low", "high"]}
+        }));
+        assert_eq!(effort, EffortUpdate::Clear);
+    }
+
+    #[test]
+    fn metadata_reasoning_null_or_empty_effort_clears() {
+        for block_effort in [json!(null), json!("")] {
+            let (effort, reasoning) = effort_and_reasoning(&json!({
+                "reasoning": {
+                    "support": "toggleable",
+                    "effort": block_effort,
+                    "effortLevels": ["low"]
+                }
+            }));
+            assert_eq!(effort, EffortUpdate::Clear, "effort = {block_effort}");
+            assert!(reasoning.is_some(), "the block itself is well formed");
+        }
+    }
+
+    #[test]
+    fn metadata_reasoning_thinking_off_keeps_effort() {
+        // Live 2.24.0 shape after turning thinking off: the level stays on
+        // the wire. Showing "thinking off" is cyril-k3lz's job; here the
+        // flag must simply survive.
+        let (effort, reasoning) = effort_and_reasoning(&json!({
+            "reasoning": {
+                "support": "toggleable",
+                "thinkingEnabled": false,
+                "effort": "low",
+                "effortLevels": ["low", "medium", "high", "max"]
+            }
+        }));
+        assert_eq!(effort, EffortUpdate::Set(EffortLevel::Low));
+        assert_eq!(reasoning.and_then(|r| r.thinking_enabled()), Some(false));
+    }
+
+    #[test]
+    fn metadata_reasoning_wins_over_top_level_effort() {
+        let (effort, _) = effort_and_reasoning(&json!({
+            "effort": "high",
+            "reasoning": {"support": "unavailable", "effortLevels": []}
+        }));
+        assert_eq!(effort, EffortUpdate::Clear);
+    }
+
+    #[test]
+    fn metadata_reasoning_tolerates_unknown_values() {
+        // Tolerant where Kiro is strict: an unknown `support`, an effort
+        // outside `effortLevels`, and `thinkingEnabled` on a non-toggleable
+        // model are all kept (Kiro would blank the badge on each).
+        let (effort, reasoning) = effort_and_reasoning(&json!({
+            "reasoning": {
+                "support": "adaptive",
+                "thinkingEnabled": true,
+                "effort": "turbo",
+                "effortLevels": ["low", "high"]
+            }
+        }));
+        assert_eq!(
+            effort,
+            EffortUpdate::Set(EffortLevel::Other("turbo".into()))
+        );
+        let reasoning = reasoning.expect("tolerated block is carried");
+        assert_eq!(
+            reasoning.support(),
+            &ReasoningSupport::Other("adaptive".into())
+        );
+        assert_eq!(reasoning.thinking_enabled(), Some(true));
+
+        let (_, reasoning) = effort_and_reasoning(&json!({
+            "reasoning": {"support": "alwaysOn", "effort": "high", "effortLevels": ["high"]}
+        }));
+        assert_eq!(
+            reasoning.map(|r| r.support().clone()),
+            Some(ReasoningSupport::AlwaysOn)
+        );
+    }
+
+    #[test]
+    fn metadata_reasoning_corrupt_block_clears_and_is_not_carried() {
+        // Structural damage matches Kiro's fallback (`unavailable` ⇒ badge
+        // cleared); the block is not fabricated into a ReasoningInfo.
+        let corrupt = [
+            json!(null),
+            json!("toggleable"),
+            json!({"effortLevels": []}),
+            json!({"support": 3, "effortLevels": []}),
+            json!({"support": "toggleable"}),
+            json!({"support": "toggleable", "effortLevels": "low"}),
+            json!({"support": "toggleable", "effortLevels": ["low", 2]}),
+            json!({"support": "toggleable", "effortLevels": [], "thinkingEnabled": "yes"}),
+            json!({"support": "toggleable", "effortLevels": [], "effort": 5}),
+        ];
+        for block in corrupt {
+            let (effort, reasoning) = effort_and_reasoning(&json!({"reasoning": block}));
+            assert_eq!(effort, EffortUpdate::Clear, "block = {block}");
+            assert!(reasoning.is_none(), "block = {block}");
+        }
+    }
+
+    #[test]
+    fn metadata_without_reasoning_keeps_legacy_top_level_effort() {
+        let (effort, reasoning) = effort_and_reasoning(&json!({"effort": "high"}));
+        assert_eq!(effort, EffortUpdate::Set(EffortLevel::High));
+        assert!(reasoning.is_none());
+        let (effort, _) = effort_and_reasoning(&json!({"contextUsagePercentage": 3.0}));
+        assert_eq!(effort, EffortUpdate::Unchanged);
+    }
+
+    #[test]
+    fn metadata_live_2_24_0_capture_drives_the_badge() {
+        // Live capture (probe-v2-reasoning-2.24.0.py, args2 leg): auto model,
+        // set_model sonnet-4.6, /effort max, /effort low, thinking off.
+        let effort: Vec<EffortUpdate> = load_metadata_fixture("metadata-reasoning-2.24.0.jsonl")
+            .iter()
+            .map(|p| effort_and_reasoning(p).0)
+            .collect();
+        let set = |level| EffortUpdate::Set(level);
+        assert_eq!(
+            effort,
+            [
+                EffortUpdate::Clear,
+                set(EffortLevel::High),
+                set(EffortLevel::High),
+                set(EffortLevel::High),
+                set(EffortLevel::Max),
+                set(EffortLevel::Max),
+                set(EffortLevel::Max),
+                set(EffortLevel::Max),
+                set(EffortLevel::Low),
+                set(EffortLevel::Low),
+                set(EffortLevel::Low),
+                set(EffortLevel::Low),
+                set(EffortLevel::Low),
+            ]
+        );
+    }
+
+    #[test]
+    fn metadata_live_2_22_0_capture_still_drives_the_badge() {
+        let effort: Vec<EffortUpdate> = load_metadata_fixture("metadata-effort-2.22.0.jsonl")
+            .iter()
+            .map(|p| effort_and_reasoning(p).0)
+            .collect();
+        let set = |level| EffortUpdate::Set(level);
+        assert_eq!(
+            effort,
+            [
+                EffortUpdate::Unchanged,
+                set(EffortLevel::High),
+                set(EffortLevel::High),
+                set(EffortLevel::High),
+                set(EffortLevel::Max),
+                set(EffortLevel::Max),
+                set(EffortLevel::Max),
+            ]
+        );
+    }
+
+    #[test]
+    fn metadata_known_keys_cover_every_live_frame_key() {
+        // The unknown-key debug log must stay quiet for everything the
+        // 2.22.0 and 2.24.0 captures send, `reasoning` included.
+        for name in [
+            "metadata-reasoning-2.24.0.jsonl",
+            "metadata-effort-2.22.0.jsonl",
+        ] {
+            for params in load_metadata_fixture(name) {
+                for key in params.as_object().expect("params object").keys() {
+                    assert!(is_known_metadata_key(key), "{name}: `{key}` unknown");
+                }
+            }
+        }
+        assert!(!is_known_metadata_key("somethingNew"));
     }
 
     #[test]

@@ -1,0 +1,7 @@
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":3.5799999237060547}
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":0.7160000205039978,"effort":"high"}
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":1.2340999841690063,"effort":"high"}
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":1.2340999841690063,"meteringUsage":[{"value":0.037455261094527376,"unit":"credit","unitPlural":"credits"}],"turnDurationMs":1170,"effort":"high"}
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":1.2340999841690063,"effort":"max"}
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":1.2409999370574951,"effort":"max"}
+{"sessionId":"7dd0937e-da78-4166-8071-8ed0e552c436","contextUsagePercentage":1.2409999370574951,"meteringUsage":[{"value":0.03896222626865672,"unit":"credit","unitPlural":"credits"}],"turnDurationMs":1020,"effort":"max"}
