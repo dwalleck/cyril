@@ -15,7 +15,7 @@ SAFE with four new opportunities.**
 * **v2, since 2.23.0 — the effort badge is dead.** `_kiro.dev/metadata` no
   longer carries top-level `effort`; it moved into a new
   `reasoning{support, thinkingEnabled?, effort?, effortLevels}` block (§ 10).
-  Cyril reads only top-level `effort` (`convert/kiro.rs:452`) and the metadata
+  Cyril reads only top-level `effort` (`convert/kiro.rs:453`) and the metadata
   `Set` arm is the *only* writer of the badge (`cyril-ui/src/state.rs:591`), so
   on 2.23.0+ the badge never appears. No error, no crash — the new key is
   logged at `debug` as unrecognized. Filed as a P1 bug.
@@ -418,7 +418,7 @@ probed; attributed to 2.23.0). `reasoning` is on every frame, including the
 context-only ones. `/effort` still works (`"Effort set to max"`, options label
 `"high  [active]"` unchanged) — only the frame that reports the state moved.
 
-Cyril impact: `convert/kiro.rs:452` reads `params.get("effort")` → `None` →
+Cyril impact: `convert/kiro.rs:453` reads `params.get("effort")` → `None` →
 `EffortUpdate::Unchanged` on every frame; `state.rs:591` is the only badge
 writer; a model change clears the badge (`set_current_model`). Net: **the
 effort badge is never shown on v2 2.23.0+**, and the `/effort` picker's
