@@ -1,0 +1,8 @@
+191a192,194
+>   -v, --verbose...
+>           Increase logging verbosity
+> 
+196,198d198
+< 
+<   -v, --verbose...
+<           Increase logging verbosity

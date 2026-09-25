@@ -1,0 +1,22 @@
+Changelog for version 2.24.0:
+Version 2.24.0 (2026-09-23)
+  - Added: [V3] `/tools trust-all` to auto-approve every tool request for the rest of the session
+  - Changed: [V3] `/sessions` filter, sort, and group now list their options, and filters can be combined
+  - Changed: Render terminal frames with less repeated layout and text work, and paint a resize once at its new width
+  - Changed: Fullscreen wheel scrolling moves one transcript row per notch instead of three
+  - Fixed: Show no model instead of a stale one when the account's model list can't be determined
+  - Fixed: User agent configs with reserved built-in names (`kiro_default`, `kiro_planner`, `kiro_guide`) are now rejected with a clear error instead of silently shadowing the built-in agent
+  - Fixed: Tool details use available space with one shared expansion hint
+  - Fixed: [V3] Honor `chat.defaultModel` in new non-interactive sessions
+  - Fixed: Downscale oversized images and recover sessions broken by image dimension errors
+  - Fixed: `kiro-cli settings` now recognizes settings configured through the interactive `/settings` menu
+  - Fixed: Project `.env` files no longer override the environment of chat sessions, MCP servers, and tools
+  - Fixed: Ctrl+L now clears the screen without erasing scrollback history
+  - Fixed: [V3] `/effort` marks the effort saved in `chat.modelDefaults` as `[default]` instead of the engine default
+  - Fixed: The packaged chat updater now defers Homebrew-managed installs to Homebrew
+  - Fixed: Queued steering messages stay visible in the activity tray while the agent is working
+  - Fixed: Long conversations no longer show a misleading archived-turns row while full history remains available through `/transcript` and `/rewind`
+  - Fixed: [V3] Agent config upgrade keeps permission rules when a sibling setting in the same tool section is malformed
+  - Fixed: [V3] `/upgrade-agent` finds agents in legacy `.amazonq/cli-agents` and custom agent directories
+  - Fixed: [V3] Upgrading a symlinked agent config rewrites the linked file instead of replacing the symlink
+

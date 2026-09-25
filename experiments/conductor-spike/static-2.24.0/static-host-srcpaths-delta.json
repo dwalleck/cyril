@@ -1,0 +1,31 @@
+{
+  "kiro-cli": {
+    "old": 159,
+    "new": 159,
+    "added": [],
+    "removed": []
+  },
+  "kiro-cli-chat": {
+    "old": 360,
+    "new": 376,
+    "added": [
+      "crates/agent/src/agent/util/image.rs",
+      "crates/agent/src/agent/util/sanitize.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/config.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/json_errors.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/operation/get_user_preference.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/operation/get_user_preference/builders.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/operation/list_available_models.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/operation/list_available_models/paginator.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/operation/set_user_preference.rs",
+      "crates/amzn-kiro-controlplane-bearer-rust-client/src/operation/set_user_preference/builders.rs",
+      "crates/chat-cli-v2/src/agent/acp/commands/reasoning.rs",
+      "crates/chat-cli-v2/src/database/settings_file.rs",
+      "crates/chat-cli/src/cli/chat/resume.rs",
+      "crates/chat-cli/src/cli/sandbox.rs",
+      "crates/chat-cli/src/launch/kas_endpoint_overrides.rs",
+      "crates/chat-cli/src/turn_marker.rs"
+    ],
+    "removed": []
+  }
+}

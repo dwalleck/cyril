@@ -1,0 +1,27 @@
+
+| wire key | default | env var |
+|---|---|---|
+| `system_field_injection` | `false` | — none — |
+| `system_prompt_migration` | `false` | — none — |
+| `steering_supervisor` | `false` | — none — |
+| `cgs_delegation_v2` | `false` | — none — |
+| `session_title_llm` | `false` | — none — |
+| `user_agent_refactoring_enabled` | `false` | — none — |
+| `kiroInfraSafetyMonitor` | `false` | — none — |
+| `fta_vibe` | `false` | — none — |
+| `empty_response_retry` | `true` | — none — |
+| `truncated_response_retry` | `true` | — none — |
+| `stream_error_retry` | `true` | — none — |
+| `stream_idle_watchdog` | `true` | — none — |
+| `stall_reasoning_retry` | `true` | — none — |
+| `auth_expiry_retry` | `true` | — none — |
+| `stall_tool_continuation` | `true` | — none — |
+| `memory_internal_enabled` | `disabled` | — none — |
+| `memory_external_enabled` | `false` | — none — |
+| `tool_load_enabled` | `false` | — none — |
+| `unified_agent_enabled` | `false` | — none — |
+| `mom_config` | `disabled` | — none — |
+| `companion_shadow_mode` | `false` | — none — |
+
+21 flags; 0 env-reachable; 21 experiment-only
+experiment-only: system_field_injection, system_prompt_migration, steering_supervisor, cgs_delegation_v2, session_title_llm, user_agent_refactoring_enabled, kiroInfraSafetyMonitor, fta_vibe, empty_response_retry, truncated_response_retry, stream_error_retry, stream_idle_watchdog, stall_reasoning_retry, auth_expiry_retry, stall_tool_continuation, memory_internal_enabled, memory_external_enabled, tool_load_enabled, unified_agent_enabled, mom_config, companion_shadow_mode

@@ -1,0 +1,10 @@
+Changelog for version 2.23.1:
+Version 2.23.1 (2026-09-23)
+  - Added: `/sessions` can filter the list to main sessions
+  - Changed: Allowed commands prefixed with an environment variable no longer prompt on every run, reverting a 2.23.0 change
+  - Fixed: Chats on extended-thinking models no longer fail every turn after Tool Search loads a tool mid-conversation
+  - Fixed: Chats on extended-thinking models no longer fail every turn after a reply that thinks more than once
+  - Fixed: Classic `--resume-id` now reports missing, unreadable, empty, or V2-only sessions instead of starting fresh
+  - Fixed: Stale extracted V3 engine versions are now cleaned up regardless of which engine a session starts with
+  - Fixed: The classic chat path also stops replaying a thinking block bound to a different tool list
+

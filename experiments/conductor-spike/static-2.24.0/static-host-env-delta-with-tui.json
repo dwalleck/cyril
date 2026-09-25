@@ -1,0 +1,25 @@
+{
+  "added": [
+    {
+      "tok": "KIRO_KAS_REGION",
+      "substring_in_old": 0
+    },
+    {
+      "tok": "KIRO_KAS_SERVER_PATHKAS",
+      "substring_in_old": 0
+    },
+    {
+      "tok": "KIRO_LOCAL_SANDBOX_ROLLOUT_ENABLED",
+      "substring_in_old": 0
+    },
+    {
+      "tok": "KIRO_TEST_HOMEBREW_PREFIX",
+      "substring_in_old": 0
+    },
+    {
+      "tok": "KIRO_TURN_MARKER_DIR",
+      "substring_in_old": 0
+    }
+  ],
+  "removed": []
+}

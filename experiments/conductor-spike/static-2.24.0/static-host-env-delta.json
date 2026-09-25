@@ -1,0 +1,417 @@
+{
+  "kiro-cli": {
+    "old_count": 21,
+    "new_count": 21,
+    "added": [],
+    "removed": []
+  },
+  "kiro-cli-chat": {
+    "old_count": 111,
+    "new_count": 36,
+    "added": [
+      {
+        "tok": "KIRO_KAS_NODE_PATHKIRO_KAS_SERVER_PATHKAS",
+        "n_new": 1,
+        "substring_in_old": 0
+      },
+      {
+        "tok": "KIRO_REMOTE_SESSIONS_ENDPOINTCLOUD_CONFIG_ENDPOINTKIRO_PARENTQ_SET_PARENTKIRO_SET_PARENTQ_SET_PARENT_CHECKKIRO_SET_PARENT_CHECKQ_TERMKIRO_TERMQ_LOG_LEVELQ_ZDOTDIRKIRO_ZDOTDIRPROCESS_LAUNCHED_BY_QPROCESS_LAUNCHED_BY_KIROQ_SHELLKIRO_SHELLQ_DEBUG_SHELLQ_USING_ZSH_AUTOSUGGESTIONSKIRO_USING_ZSH_AUTOSUGGESTIONSQ_BUNDLE_METADATA_PATHKIRO_BUNDLE_METADATA_PATHQ_CLI_CLIENT_APPLICATIONQ_SHOW_CONTINUATION_IDSKIRO_SHOW_CONTINUATION_IDSQ_MOCK_CHAT_RESPONSEKIRO_MOCK_CHAT_RESPONSEQ_DISABLE_TRUECOLORKIRO_DISABLE_TRUECOLORQ_LOG_STDOUTKIRO_LOG_STDOUTKIRO_LOG_NO_COLORQ_DISABLE_TELEMETRYKIRO_DISABLE_TELEMETRYKIRO_FAKE_IS_REMOTEQ_CODESPACESKIRO_CODESPACESKIRO_CIQ_TELEMETRY_CLIENT_IDKIRO_TELEMETRY_CLIENT_IDKIRO_TUI_READY_FILEKIRO_TUI_READY_TOKENKIRO_TELEMETRY_OTELKIRO_TELEMETRY_OTLP_ENDPOINTKIRO_TELEMETRY_EXPORT_INTERVAL_MSKIRO_CONTENT_COLLECTION_ENABLEDKIRO_CHAT_SHELLQ_CLI_IS_INTEG_TESTAMAZON_Q_CHAT_SHELLEDITORVISUALAWS_REGIONCODESPACESCIKIRO_CHAT_UIKIRO_REQUIRE_MCP_STARTUP_TIMEOUT_SECSKIRO_CHAT_CLI_BIN_IDENTITYKIRO_VOICE_SUPPORTEDKIRO_VERSION_OVERRIDEKIRO_TUI_FORCE_COLORKIRO_MIDWAY_EXPIRYKAS_BUNDLE_PATHKIRO_TEST_MOCK_KAS_SESSIONSKIRO_TEST_DB_PATHKIRO_TEST_HOMEBREW_PREFIXKIRO_HOMEKIRO_DATA_DIRKIRO_SKIP_BINARY_PINNINGKIRO_API_KEYKIRO_NO_AUTO_UPDATEKIRO_DESKTOP_RELEASE_URLQ_DESKTOP_RELEASE_URLKIRO_FEED_URLKIRO_BUNDLED_FEED_FILEKIRO_NO_REMOTE_CHANGELOGKIRO_ROLLOUT_FORCE_INTERNALASBX_KIRO_MANDATORY_MCPSASBX_KIRO_TERMINAL_BANNERKIRO_SESSION_ID",
+        "n_new": 1,
+        "substring_in_old": 0
+      }
+    ],
+    "removed": [
+      {
+        "tok": "KIRO_ACP_MOCK_SOCKET",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_ACP_RECORD_PATH",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_AGENT_ENGINE",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_APERTURE_URL",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_ASCII_MODE",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_CHAT_CLI_BIN",
+        "n_old": 3,
+        "substring_in_new": 2
+      },
+      {
+        "tok": "KIRO_CHAT_CLI_BIN_IDENTITY",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_CHAT_CLI_FALLBACK_BIN",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_CUSTOM_USER_AGENT",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_DEV",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_DISABLE_SESSION_SEARCH_INDEX",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_DISABLE_TELEMETRY",
+        "n_old": 1,
+        "substring_in_new": 2
+      },
+      {
+        "tok": "KIRO_DISABLE_WRAP",
+        "n_old": 2,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_FAKE_IS_REMOTE",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_FEED_FILE",
+        "n_old": 2,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_INITIAL_RESPONSE_TIMEOUT_MS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_INTERNAL",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_KAS_CONTROL_PLANE_ENDPOINT",
+        "n_old": 5,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_KAS_ENDPOINT",
+        "n_old": 2,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_KAS_NODE_PATHKIRO_KAS_SERVER_PATH",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_LITE_ROLLOUT_ENABLED",
+        "n_old": 34,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_LITE_VERBOSE",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_MAX_STATIC_ITEMS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_MIDWAY_EXPIRY",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_MOCK_ACP",
+        "n_old": 2,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_MOCK_AGENT_NAME",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_MOCK_WELCOME_MESSAGE",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_MODE",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_NO_CMUX",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_NO_HYPERLINKS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_NO_PROGRESS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_NO_SYNCHRONIZED",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_PERF_TESTS",
+        "n_old": 3,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_PTT_HOLD_MS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_REMOTE_SESSIONS_ENDPOINTCLOUD_CONFIG_ENDPOINTKIRO_PARENTQ_SET_PARENTKIRO_SET_PARENTQ_SET_PARENT_CHECKKIRO_SET_PARENT_CHECKQ_TERMKIRO_TERMQ_LOG_LEVELQ_ZDOTDIRKIRO_ZDOTDIRPROCESS_LAUNCHED_BY_QPROCESS_LAUNCHED_BY_KIROQ_SHELLKIRO_SHELLQ_DEBUG_SHELLQ_USING_ZSH_AUTOSUGGESTIONSKIRO_USING_ZSH_AUTOSUGGESTIONSQ_BUNDLE_METADATA_PATHKIRO_BUNDLE_METADATA_PATHQ_CLI_CLIENT_APPLICATIONQ_SHOW_CONTINUATION_IDSKIRO_SHOW_CONTINUATION_IDSQ_MOCK_CHAT_RESPONSEKIRO_MOCK_CHAT_RESPONSEQ_DISABLE_TRUECOLORKIRO_DISABLE_TRUECOLORQ_LOG_STDOUTKIRO_LOG_STDOUTKIRO_LOG_NO_COLORQ_DISABLE_TELEMETRYKIRO_DISABLE_TELEMETRYKIRO_FAKE_IS_REMOTEQ_CODESPACESKIRO_CODESPACESKIRO_CIQ_TELEMETRY_CLIENT_IDKIRO_TELEMETRY_CLIENT_IDKIRO_TUI_READY_FILEKIRO_TUI_READY_TOKENKIRO_TELEMETRY_OTELKIRO_TELEMETRY_OTLP_ENDPOINTKIRO_TELEMETRY_EXPORT_INTERVAL_MSKIRO_CONTENT_COLLECTION_ENABLEDKIRO_CHAT_SHELLQ_CLI_IS_INTEG_TESTAMAZON_Q_CHAT_SHELLEDITORVISUALAWS_REGIONCODESPACESCIKIRO_CHAT_UIKIRO_REQUIRE_MCP_STARTUP_TIMEOUT_SECSKIRO_CHAT_CLI_BIN_IDENTITYKIRO_VOICE_SUPPORTEDKIRO_VERSION_OVERRIDEKIRO_TUI_FORCE_COLORKIRO_MIDWAY_EXPIRYKAS_BUNDLE_PATHKIRO_TEST_MOCK_KAS_SESSIONSKIRO_TEST_DB_PATHKIRO_HOMEKIRO_DATA_DIRKIRO_SKIP_BINARY_PINNINGKIRO_API_KEYKIRO_NO_AUTO_UPDATEKIRO_DESKTOP_RELEASE_URLQ_DESKTOP_RELEASE_URLKIRO_FEED_URLKIRO_BUNDLED_FEED_FILEKIRO_NO_REMOTE_CHANGELOGKIRO_ROLLOUT_FORCE_INTERNALASBX_KIRO_MANDATORY_MCPSASBX_KIRO_TERMINAL_BANNERKIRO_SESSION_ID",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_RENDER_DEBUG",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_RENDER_DEBUG_FILE",
+        "n_old": 2,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_RENDER_LOG",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_RENDER_LOG_FILE",
+        "n_old": 2,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_SESSION_LOAD_TIMEOUT_MS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_STATIC_MARKDOWN_MODE",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_SURVEY_COOLDOWN_DAYS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_SURVEY_COOLDOWN_DAYS_",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_SURVEY_SAMPLE_RATE",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_SURVEY_SAMPLE_RATE_",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TELEMETRY_CLIENT_ID",
+        "n_old": 1,
+        "substring_in_new": 2
+      },
+      {
+        "tok": "KIRO_TELEMETRY_ENABLED",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_TELEMETRY_EXPORT_INTERVAL_MS",
+        "n_old": 1,
+        "substring_in_new": 2
+      },
+      {
+        "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+        "n_old": 2,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_TELEMETRY_OTLP_ENDPOINT",
+        "n_old": 1,
+        "substring_in_new": 2
+      },
+      {
+        "tok": "KIRO_TEST_DISABLE_SUBAGENT_ORCHESTRATION",
+        "n_old": 3,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_HEAP_SNAPSHOT_DIR",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_MAX_DISPLAY_TURNS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_MAX_INACTIVE_SESSION_CONVERSATIONS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_MAX_LIVE_TURNS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_MAX_STATIC_RETAINED_STRING_WEIGHT",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_MOCK_TURN_TIMEOUT_MS",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_MODE",
+        "n_old": 8,
+        "substring_in_new": 3
+      },
+      {
+        "tok": "KIRO_TEST_SESSIONS_DIR",
+        "n_old": 8,
+        "substring_in_new": 3
+      },
+      {
+        "tok": "KIRO_TEST_SESSIONS_ROOT",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_SPEC_CLOUD_PARITY",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_STATIC_MARKDOWN_MODE",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_STATIC_SCROLLBACK_LINES",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_TUI_IPC_SOCKET_PATH",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TEST_WORKSPACE_SETTINGS_PATH",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TUI_FORCE_COLOR",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_TUI_LOG_FILE",
+        "n_old": 2,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TUI_LOG_LEVEL",
+        "n_old": 1,
+        "substring_in_new": 0
+      },
+      {
+        "tok": "KIRO_TUI_READY_FILE",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_TUI_READY_TOKEN",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_TUI_TELEMETRY_KEY",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_TUI_TELEMETRY_KEY_FILE",
+        "n_old": 2,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_UI_MODE",
+        "n_old": 1,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_USER_ID",
+        "n_old": 3,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_VERSION_OVERRIDE",
+        "n_old": 2,
+        "substring_in_new": 2
+      },
+      {
+        "tok": "KIRO_VOICE_SERVER_URL",
+        "n_old": 5,
+        "substring_in_new": 1
+      },
+      {
+        "tok": "KIRO_VOICE_SUPPORTED",
+        "n_old": 1,
+        "substring_in_new": 1
+      }
+    ]
+  },
+  "kiro-cli-term": {
+    "old_count": 0,
+    "new_count": 0,
+    "added": [],
+    "removed": []
+  }
+}

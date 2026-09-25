@@ -1,0 +1,33 @@
+Changelog for version 2.23.0:
+Version 2.23.0 (2026-09-21)
+  - Added: Reasoning settings (thinking and effort) in the `/model` surface
+  - Added: Live duration in the TUI prompt showing how long Kiro has been working, excluding approval waits
+  - Added: Animated spinner in the terminal title while Kiro is working when `chat.terminalTitle` is on
+  - Added: Progress indicators in ConEmu terminals with ANSI processing enabled
+  - Changed: Upgraded `/kiro` Easter egg with an animated roaming ghost overlay
+  - Changed: Smaller CLI installation size
+  - Changed: [V3] Cloud sessions no longer require a connected source provider to start; `/repo` opens the connect screen when none is connected, and the startup checklist notes a repository can be attached
+  - Changed: [V3] `/sessions` opens faster, especially with large session histories
+  - Changed: Improved message streaming performance
+  - Changed: Improved fullscreen scrolling performance
+  - Fixed: The CLI no longer crashes at startup on hosts without a system CA bundle
+  - Fixed: `settings open` now correctly handles `$VISUAL`/`$EDITOR` values that include arguments (e.g. `emacs -nw`)
+  - Fixed: `/chat load` with an extension-less name now loads the `.json` file `/chat save` wrote
+  - Fixed: Tool calls in a legacy V1 conversation loaded on the V2 engine no longer replay as cancelled
+  - Fixed: [V3] Honor the `api.krs.service` and `api.cps.service` endpoint overrides
+  - Fixed: A turn that ends silently after successful tool use now completes instead of erroring
+  - Fixed: Non-interactive runs show the failure reason and error code instead of a bare "Internal error"
+  - Fixed: `/model` lists models even when the service names no default, using the first available one
+  - Fixed: [V3] Resuming a session keeps the status shown by `/config` and `/hooks`, including disabled hooks
+  - Fixed: [V3] `str_replace` now matches text in files with mixed line endings
+  - Fixed: [V3] Custom agents are preserved when a session's mode is reapplied
+  - Fixed: [V3] A session card recorded just before a load now replays correctly
+  - Fixed: [V3] The response sanitizer no longer presents fabricated turns as the model's own speech
+  - Fixed: [V3] `chat.defaultAgent` is now honored in non-interactive runs, including a stale default agent's errors
+  - Fixed: [V3] Feedback typed when denying a tool call now reaches the model so it can adjust its next action
+  - Fixed: Progress indicator stays visible while Kiro keeps working after automatic compaction
+  - Fixed: Terminal progress indicator now goes idle while a turn is being cancelled instead of continuing to spin
+  - Fixed: [V3] Agent switching by display name without stale fallback warnings
+  - Fixed: Fullscreen scrolling ignores the horizontal component of a diagonal trackpad gesture instead of scrolling down for it
+  - security: Ask before running an allowed command prefixed with an environment variable that could change its behavior, such as `GIT_CONFIG_KEY_0` or `KUBECONFIG`
+
