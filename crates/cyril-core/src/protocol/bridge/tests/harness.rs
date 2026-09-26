@@ -33,6 +33,7 @@ impl InboundProbe {
 pub(super) struct Script {
     pub(super) received: Arc<Mutex<Vec<String>>>,
     pub(super) ext_calls: Arc<Mutex<Vec<(String, serde_json::Value)>>>,
+    pub(super) permission_responses: Arc<Mutex<Vec<serde_json::Value>>>,
     pub(super) negotiated_protocol:
         Arc<Mutex<Option<agent_client_protocol::schema::ProtocolVersion>>>,
     pub(super) emit_chunks: usize,
@@ -42,6 +43,8 @@ pub(super) struct Script {
     pub(super) request_malformed_standard_during_initialize: bool,
     pub(super) request_unknown_standard_during_initialize: bool,
     pub(super) request_permission_on_prompt: bool,
+    /// Raw ACP option array used for a scripted permission request.
+    pub(super) permission_options: Option<serde_json::Value>,
     pub(super) fail_extensions: Vec<String>,
     pub(super) fail_new_session: bool,
     /// Park the prompt response until the harness gate is notified.
@@ -57,8 +60,8 @@ pub(super) struct Script {
     /// Emit `_kiro/powers/items_changed` over the wire right after the
     /// `session/new` response (cyril-v19o). The live capture on 2.21.2 has KAS
     /// pushing the power set unprompted ~18 ms after the response, so that is
-    /// the order reproduced here — including the fact that the frame is
-    /// scoped to a session the client has just been told about.
+    /// the order reproduced here — including the fact that the frame is scoped
+    /// to a session the client has just been told about.
     pub(super) emit_powers_changed: bool,
     /// Emit a `session_info_update{kind:"turn_end"}` before parking/answering
     /// the prompt, scoped to `turn_end_session` or the prompt's own session.
@@ -86,6 +89,10 @@ impl Script {
     /// thinking-toggle contract tests.
     pub(super) fn ext_calls(&self) -> MutexGuard<'_, Vec<(String, serde_json::Value)>> {
         lock(&self.ext_calls)
+    }
+
+    pub(super) fn permission_responses(&self) -> MutexGuard<'_, Vec<serde_json::Value>> {
+        lock(&self.permission_responses)
     }
 
     pub(super) fn negotiated_protocol(
@@ -126,6 +133,7 @@ fn fake_agent(
     let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
+    let permission_responses = Arc::clone(&script.borrow().permission_responses);
     let ext_responses = Arc::clone(&script.borrow().ext_responses);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
     let emit_chunks = script.borrow().emit_chunks;
@@ -137,6 +145,7 @@ fn fake_agent(
         script.borrow().request_unknown_standard_during_initialize;
     let next_session = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let request_permission_on_prompt = script.borrow().request_permission_on_prompt;
+    let permission_options = script.borrow().permission_options.clone();
     let fail_extensions = script.borrow().fail_extensions.clone();
     let fail_new_session = script.borrow().fail_new_session;
     let new_session_config_options = script.borrow().new_session_config_options.clone();
@@ -310,20 +319,37 @@ fn fake_agent(
                         responder,
                         connection: ConnectionTo<Client>| {
                 if request_permission_on_prompt {
+                    let options = permission_options
+                        .as_ref()
+                        .map(|raw| {
+                            <Vec<acp::PermissionOption> as serde::Deserialize>::deserialize(raw)
+                                .map_err(|error| {
+                                    agent_client_protocol::Error::internal_error()
+                                        .data(format!("scripted permission options: {error}"))
+                                })
+                        })
+                        .transpose()?
+                        .unwrap_or_default();
                     let permission = acp::RequestPermissionRequest::new(
                         request.session_id.clone(),
                         acp::ToolCallUpdate::new(
                             "permission-tool",
                             acp::ToolCallUpdateFields::new(),
                         ),
-                        Vec::new(),
+                        options,
                     );
                     let permission_connection = connection.clone();
+                    let permission_responses = Arc::clone(&permission_responses);
                     connection.spawn(async move {
-                        let _response = permission_connection
+                        let response = permission_connection
                             .send_request(permission)
                             .block_task()
                             .await?;
+                        let response = serde_json::to_value(response).map_err(|error| {
+                            agent_client_protocol::Error::internal_error()
+                                .data(format!("permission response serialization: {error}"))
+                        })?;
+                        lock(&permission_responses).push(response);
                         Ok(())
                     })?;
                 }

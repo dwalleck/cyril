@@ -1642,7 +1642,11 @@ impl App {
                 // chain and the mouse guard covers every overlay by
                 // construction (review finding 13). The drop is logged, never
                 // silent.
-                if !self.ui_state.has_modal_overlay() {
+                if self.ui_state.approval_feedback_active() {
+                    if self.ui_state.approval_feedback_paste(&text) {
+                        self.redraw_needed = true;
+                    }
+                } else if !self.ui_state.has_modal_overlay() {
                     self.ui_state.insert_text(&text);
                     self.redraw_needed = true;
                 } else {
@@ -1753,10 +1757,18 @@ impl App {
     }
 
     fn handle_approval_key(&mut self, key: KeyEvent) {
-        match key.code {
-            KeyCode::Up => self.ui_state.approval_select_prev(),
-            KeyCode::Down => self.ui_state.approval_select_next(),
-            KeyCode::Enter => {
+        if self.ui_state.approval_feedback_active() {
+            self.ui_state.approval_feedback_key(key);
+            return;
+        }
+
+        match (key.modifiers, key.code) {
+            (KeyModifiers::NONE, KeyCode::Up) => self.ui_state.approval_select_prev(),
+            (KeyModifiers::NONE, KeyCode::Down) => self.ui_state.approval_select_next(),
+            (KeyModifiers::NONE, KeyCode::Char('r')) => {
+                self.ui_state.approval_begin_feedback();
+            }
+            (KeyModifiers::NONE, KeyCode::Enter) => {
                 // A confirmed trust tier carries its approval origin. Only a
                 // valid main-session id may write the active agent's durable
                 // config; an empty wire id is retained for provenance but is
@@ -1773,7 +1785,7 @@ impl App {
                     }
                 }
             }
-            KeyCode::Esc => self.ui_state.approval_cancel(),
+            (KeyModifiers::NONE, KeyCode::Esc) => self.ui_state.approval_cancel(),
             _ => {}
         }
     }
@@ -3849,11 +3861,146 @@ mod tests {
                     setting_key: "allowedCommands".into(),
                     patterns: vec!["echo safe".into()],
                 }],
+                can_reject_with_reason: false,
                 responder,
             },
             receiver,
         )
     }
+    fn feedback_request(
+        session_id: &str,
+        tool_call_id: &str,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        let (responder, receiver) = tokio::sync::oneshot::channel();
+        (
+            PermissionRequest {
+                session_id: SessionId::new(session_id),
+                tool_call: ToolCall::new(
+                    ToolCallId::new(tool_call_id),
+                    "Original Request Title".into(),
+                    ToolKind::Execute,
+                    ToolCallStatus::Pending,
+                    Some(serde_json::json!({"command": "echo safe"})),
+                ),
+                message: "Permission message".into(),
+                options: vec![PermissionOption {
+                    id: PermissionOptionId::new("reject"),
+                    label: "Reject".into(),
+                    kind: PermissionOptionKind::RejectOnce,
+                    is_destructive: true,
+                }],
+                trust_options: vec![],
+                can_reject_with_reason: true,
+                responder,
+            },
+            receiver,
+        )
+    }
+    #[tokio::test]
+    async fn rejection_feedback_app_routes_paste_and_voice_without_chat_draft_mutation() {
+        let mut app = test_app();
+        let (request, mut receiver) = feedback_request("feedback-session", "feedback-tool");
+        app.ui_state.insert_text("chat draft");
+        app.ui_state.show_approval(request);
+
+        app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE))
+            .await
+            .expect("enter rejection feedback");
+        assert!(matches!(
+            app.ui_state.approval().map(|approval| &approval.phase),
+            Some(cyril_ui::traits::ApprovalPhase::EnterReason { .. })
+        ));
+
+        app.handle_terminal_event(Event::Paste(" leading\r\ntrailing ".into()))
+            .await
+            .expect("paste into feedback editor");
+        assert_eq!(
+            app.ui_state.input_text(),
+            "chat draft",
+            "approval feedback paste must not mutate chat draft"
+        );
+
+        app.handle_voice_event(VoiceEvent::Transcript(" dictated".into()));
+        assert_eq!(
+            app.ui_state.input_text(),
+            "chat draft",
+            "voice transcript must remain guarded by the active approval"
+        );
+        assert!(app.ui_state.messages().iter().any(|message| {
+            matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text.contains("Discarded a finished dictation")
+            )
+        }));
+
+        app.handle_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE))
+            .await
+            .expect("submit feedback");
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(PermissionResponse::RejectWithReason { reason, .. })
+                if reason == " leading\ntrailing "
+        ));
+        assert!(!app.ui_state.has_approval());
+    }
+
+    #[tokio::test]
+    async fn rejection_feedback_terminal_decision_stops_batch_before_next_request() {
+        let mut app = test_app();
+        let (first, mut first_receiver) = feedback_request("first-feedback", "same-tool");
+        let (second, mut second_receiver) = feedback_request("second-feedback", "same-tool");
+        app.ui_state.show_approval(first);
+        app.ui_state.show_approval(second);
+
+        app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE))
+            .await
+            .expect("enter first feedback editor");
+        app.handle_terminal_event(Event::Paste("first reason".into()))
+            .await
+            .expect("paste first reason");
+
+        let mut buffered = Some(Event::Key(KeyEvent::new(
+            KeyCode::Enter,
+            KeyModifiers::NONE,
+        )));
+        app.handle_terminal_event_batch(
+            Event::Key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)),
+            || buffered.take(),
+        )
+        .await
+        .expect("submit first feedback as a terminal decision");
+
+        assert!(
+            buffered.is_some(),
+            "the next terminal decision must wait for the next redraw"
+        );
+        assert!(matches!(
+            first_receiver.try_recv(),
+            Ok(PermissionResponse::RejectWithReason { reason, .. })
+                if reason == "first reason"
+        ));
+        assert!(matches!(
+            app.ui_state.approval().map(|approval| &approval.phase),
+            Some(cyril_ui::traits::ApprovalPhase::SelectOption)
+        ));
+        assert!(matches!(
+            second_receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+
+        app.handle_terminal_event(buffered.take().expect("buffered decision"))
+            .await
+            .expect("resolve promoted second approval");
+        assert!(matches!(
+            second_receiver.try_recv(),
+            Ok(PermissionResponse::Selected { .. })
+        ));
+    }
+
     #[tokio::test]
     async fn buffered_input_stops_before_promoted_approval() {
         let mut app = test_app();

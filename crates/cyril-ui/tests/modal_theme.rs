@@ -74,6 +74,7 @@ fn approval_state(trust_phase: bool) -> ApprovalState {
             vec![]
         },
         selected: 0,
+        can_reject_with_reason: false,
         phase: if trust_phase {
             ApprovalPhase::SelectTrust {
                 chosen_option_id: PermissionOptionId::new("allow"),

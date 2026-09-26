@@ -514,6 +514,11 @@ pub struct PermissionRequest {
     pub message: String,
     pub options: Vec<PermissionOption>,
     pub trust_options: Vec<TrustOption>,
+    /// Whether this request may offer the KAS-only rejection-feedback action.
+    ///
+    /// The mediator computes this once from its immutable configured engine and
+    /// build features; it is not inferred from request payloads.
+    pub can_reject_with_reason: bool,
     pub responder: tokio::sync::oneshot::Sender<PermissionResponse>,
 }
 
@@ -572,6 +577,15 @@ pub enum PermissionResponse {
         option_id: PermissionOptionId,
         /// Trust tier label from phase-2 selection (v2 `AllowAlways` flow).
         trust_option: Option<String>,
+    },
+    /// The user rejected a KAS `reject_once` option with optional feedback.
+    ///
+    /// The converter emits the same selected outcome as [`Self::Selected`]
+    /// and only adds KAS response metadata when the option and reason satisfy
+    /// the originating request's eligibility rules.
+    RejectWithReason {
+        option_id: PermissionOptionId,
+        reason: String,
     },
     Cancel,
 }
@@ -947,18 +961,6 @@ mod tests {
         assert_eq!(opt.id.as_str(), "allow_once");
         assert_eq!(opt.kind, PermissionOptionKind::AllowOnce);
         assert!(!opt.is_destructive);
-    }
-
-    #[test]
-    fn permission_response_variants() {
-        let responses = [
-            PermissionResponse::Selected {
-                option_id: PermissionOptionId::new("opt-1"),
-                trust_option: None,
-            },
-            PermissionResponse::Cancel,
-        ];
-        assert_eq!(responses.len(), 2);
     }
 
     #[test]

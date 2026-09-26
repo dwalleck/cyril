@@ -4,6 +4,7 @@ use std::time::{Duration, Instant};
 use crossterm::event::{KeyCode, KeyEvent};
 use cyril_core::types::*;
 
+use crate::feedback_editor::FeedbackAction;
 use crate::file_completer::FileCompleter;
 use crate::theme::{
     ColorMode, Theme, ThemeId, parse_theme_id, resolve, theme_config_id, theme_label,
@@ -1599,6 +1600,7 @@ impl UiState {
             options: request.options,
             trust_options: request.trust_options,
             selected: 0,
+            can_reject_with_reason: request.can_reject_with_reason,
             phase: ApprovalPhase::SelectOption,
             responder: request.responder,
         });
@@ -2086,6 +2088,7 @@ impl UiState {
     pub fn approval_select_prev(&mut self) {
         if let Some(approval) = self.approvals.front_mut()
             && approval.selected > 0
+            && !matches!(approval.phase, ApprovalPhase::EnterReason { .. })
         {
             approval.selected -= 1;
         }
@@ -2097,10 +2100,126 @@ impl UiState {
             let max = match approval.phase {
                 ApprovalPhase::SelectOption => approval.options.len(),
                 ApprovalPhase::SelectTrust { .. } => approval.trust_options.len(),
+                ApprovalPhase::EnterReason { .. } => return,
             };
             if approval.selected + 1 < max {
                 approval.selected += 1;
             }
+        }
+    }
+    /// Whether the front approval currently owns the feedback editor.
+    pub fn approval_feedback_active(&self) -> bool {
+        matches!(
+            self.approvals.front().map(|approval| &approval.phase),
+            Some(ApprovalPhase::EnterReason { .. })
+        )
+    }
+
+    /// Enter the request-local feedback phase for the currently selected
+    /// reject_once option. The shared ApprovalState predicate keeps the hint,
+    /// key entry, and transition in agreement.
+    pub fn approval_begin_feedback(&mut self) -> bool {
+        let Some(approval) = self.approvals.front_mut() else {
+            return false;
+        };
+        if !approval.can_reject_with_reason() {
+            return false;
+        }
+        let Some(chosen_option_id) = approval
+            .options
+            .get(approval.selected)
+            .map(|option| option.id.clone())
+        else {
+            return false;
+        };
+        approval.phase = ApprovalPhase::EnterReason {
+            chosen_option_id,
+            editor: RejectionFeedback::new(),
+        };
+        true
+    }
+
+    /// Forward one key to the active feedback editor. The editor owns text
+    /// editing; this state machine owns the terminal submit/back transitions.
+    pub fn approval_feedback_key(&mut self, key: KeyEvent) -> bool {
+        let action = {
+            let Some(approval) = self.approvals.front_mut() else {
+                return false;
+            };
+            let ApprovalPhase::EnterReason { editor, .. } = &mut approval.phase else {
+                return false;
+            };
+            editor.handle_key(key)
+        };
+
+        match action {
+            FeedbackAction::Consumed => true,
+            FeedbackAction::Submit => {
+                drop(self.approval_confirm());
+                true
+            }
+            FeedbackAction::Cancel => {
+                self.approval_feedback_cancel();
+                true
+            }
+        }
+    }
+
+    /// Forward a bracketed paste to the active feedback editor only.
+    pub fn approval_feedback_paste(&mut self, text: &str) -> bool {
+        let Some(approval) = self.approvals.front_mut() else {
+            return false;
+        };
+        let ApprovalPhase::EnterReason { editor, .. } = &mut approval.phase else {
+            return false;
+        };
+        editor.insert_text(text);
+        true
+    }
+
+    /// Discard feedback and return to the same option without answering or
+    /// cancelling the originating request.
+    pub fn approval_feedback_cancel(&mut self) -> bool {
+        let Some(approval) = self.approvals.front_mut() else {
+            return false;
+        };
+        let ApprovalPhase::EnterReason {
+            chosen_option_id, ..
+        } = &approval.phase
+        else {
+            return false;
+        };
+        let Some(restored) = approval
+            .options
+            .iter()
+            .position(|option| &option.id == chosen_option_id)
+        else {
+            tracing::warn!("feedback option missing from originating approval");
+            return false;
+        };
+        approval.phase = ApprovalPhase::SelectOption;
+        approval.selected = restored;
+        true
+    }
+
+    fn approval_submit_feedback(
+        responder: tokio::sync::oneshot::Sender<PermissionResponse>,
+        chosen_option_id: PermissionOptionId,
+        editor: RejectionFeedback,
+    ) {
+        let response = if editor.is_blank() {
+            PermissionResponse::Selected {
+                option_id: chosen_option_id,
+                trust_option: None,
+            }
+        } else {
+            PermissionResponse::RejectWithReason {
+                option_id: chosen_option_id,
+                reason: editor.into_text(),
+            }
+        };
+        if responder.send(response).is_err() {
+            tracing::debug!("approval response dropped — agent receiver no longer listening");
         }
     }
 
@@ -2114,7 +2233,7 @@ impl UiState {
     /// option label and **returns the originating `SessionId` with the chosen
     /// `TrustOption`** so the caller (App) can decide whether the grant belongs
     /// to the active agent's durable config. Returns `None` in every other case
-    /// (phase-2 transition, immediate allow/reject, no active dialog).
+    /// (trust transition, ordinary or feedback decision, no active dialog).
     pub fn approval_confirm(
         &mut self,
     ) -> Option<(cyril_core::types::SessionId, cyril_core::types::TrustOption)> {
@@ -2122,7 +2241,7 @@ impl UiState {
         // request at the front; terminal paths expose the next queued request.
         let mut approval = self.approvals.pop_front()?;
 
-        match approval.phase.clone() {
+        match approval.phase {
             ApprovalPhase::SelectOption => {
                 let picked = approval
                     .options
@@ -2184,11 +2303,22 @@ impl UiState {
                 }
                 chosen.map(|trust| (approval.session_id, trust))
             }
+            ApprovalPhase::EnterReason {
+                chosen_option_id,
+                editor,
+            } => {
+                Self::approval_submit_feedback(approval.responder, chosen_option_id, editor);
+                None
+            }
         }
     }
 
-    /// Cancel the approval dialog or go back from phase 2 to phase 1.
+    /// Cancel option selection, or return from trust/feedback to option selection.
     pub fn approval_cancel(&mut self) {
+        if self.approval_feedback_active() {
+            self.approval_feedback_cancel();
+            return;
+        }
         if let Some(approval) = self.approvals.front_mut()
             && let ApprovalPhase::SelectTrust { chosen_option_id } = &approval.phase
         {
@@ -7359,9 +7489,246 @@ mod tests {
             message: "Allow?".into(),
             options,
             trust_options: Vec::new(),
+            can_reject_with_reason: false,
             responder: tx,
         };
         (req, rx)
+    }
+    #[test]
+    fn rejection_feedback_sends_exact_reason() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+        };
+
+        let (mut request, receiver) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("reject-exact"),
+            label: "Reject".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: true,
+        }]);
+        request.can_reject_with_reason = true;
+        let mut state = UiState::new(500);
+        state.show_approval(request);
+
+        assert!(state.approval_begin_feedback());
+        assert!(state.approval_feedback_paste(" leading 解释\r\ntrailing "));
+        assert!(state.approval_feedback_active());
+        assert!(state.approval_feedback_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE,)));
+
+        match receiver.blocking_recv() {
+            Ok(PermissionResponse::RejectWithReason { option_id, reason }) => {
+                assert_eq!(option_id.as_str(), "reject-exact");
+                assert_eq!(reason, " leading 解释\ntrailing ");
+            }
+            Ok(other) => panic!("expected reasoned rejection, got {other:?}"),
+            Err(_) => panic!("approval responder dropped before submit"),
+        }
+        assert!(!state.approval_feedback_active());
+        assert!(state.approval().is_none());
+    }
+
+    #[test]
+    fn rejection_feedback_blank_submits_selected_without_reason() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+        };
+
+        let (mut request, receiver) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("reject-blank"),
+            label: "Reject".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: true,
+        }]);
+        request.can_reject_with_reason = true;
+        let mut state = UiState::new(500);
+        state.show_approval(request);
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste(" \t\n ");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+
+        match receiver.blocking_recv() {
+            Ok(PermissionResponse::Selected {
+                option_id,
+                trust_option,
+            }) => {
+                assert_eq!(option_id.as_str(), "reject-blank");
+                assert_eq!(trust_option, None);
+            }
+            Ok(other) => panic!("expected blank Selected response, got {other:?}"),
+            Err(_) => panic!("approval responder dropped before submit"),
+        }
+    }
+
+    #[test]
+    fn rejection_feedback_escape_restores_option_without_response() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+        };
+
+        let (mut request, mut receiver) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("reject-esc"),
+            label: "Reject".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: true,
+        }]);
+        request.can_reject_with_reason = true;
+        let mut state = UiState::new(500);
+        state.show_approval(request);
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste("discard me");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+
+        let approval = state.approval().expect("approval returns to option phase");
+        assert_eq!(approval.phase, ApprovalPhase::SelectOption);
+        assert_eq!(approval.selected, 0);
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+
+        state.approval_cancel();
+        assert!(matches!(
+            receiver.blocking_recv(),
+            Ok(PermissionResponse::Cancel)
+        ));
+    }
+    #[test]
+    fn rejection_feedback_requires_capability_and_reject_once_kind() {
+        use cyril_core::types::{PermissionOption, PermissionOptionId, PermissionOptionKind};
+
+        let (request, _receiver) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("reject-gated"),
+            label: "Reject".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: true,
+        }]);
+        let mut state = UiState::new(500);
+        state.show_approval(request);
+        assert!(!state.approval_begin_feedback());
+
+        let (mut request, _receiver) = make_approval_request(vec![PermissionOption {
+            id: PermissionOptionId::new("allow-gated"),
+            label: "Allow".into(),
+            kind: PermissionOptionKind::AllowOnce,
+            is_destructive: false,
+        }]);
+        request.can_reject_with_reason = true;
+        let mut state = UiState::new(500);
+        state.show_approval(request);
+        assert!(!state.approval_begin_feedback());
+    }
+    #[test]
+    fn rejection_feedback_queue_is_fifo_across_sessions_with_equal_tool_ids() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+        };
+
+        let option = |id| PermissionOption {
+            id: PermissionOptionId::new(id),
+            label: "Reject".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: true,
+        };
+        let (mut first, mut first_receiver) = make_approval_request(vec![option("first-reject")]);
+        let (mut second, mut second_receiver) =
+            make_approval_request(vec![option("second-reject")]);
+        first.session_id = cyril_core::types::SessionId::new("first-session");
+        second.session_id = cyril_core::types::SessionId::new("second-session");
+        first.can_reject_with_reason = true;
+        second.can_reject_with_reason = true;
+
+        let mut state = UiState::new(500);
+        state.show_approval(first);
+        state.show_approval(second);
+
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste("discarded before re-enter");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE));
+        let approval = state
+            .approval()
+            .expect("first approval remains at queue head");
+        assert_eq!(approval.session_id.as_str(), "first-session");
+        assert_eq!(approval.tool_call.id().as_str(), "tc_1");
+        assert!(matches!(
+            first_receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste("first reason");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert!(matches!(
+            first_receiver.try_recv(),
+            Ok(PermissionResponse::RejectWithReason { option_id, reason })
+                if reason == "first reason" && option_id.as_str() == "first-reject"
+        ));
+        assert!(matches!(
+            second_receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+
+        let approval = state
+            .approval()
+            .expect("second approval promoted in FIFO order");
+        assert_eq!(approval.session_id.as_str(), "second-session");
+        assert_eq!(approval.tool_call.id().as_str(), "tc_1");
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste("second reason");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert!(matches!(
+            second_receiver.try_recv(),
+            Ok(PermissionResponse::RejectWithReason { option_id, reason })
+                if reason == "second reason" && option_id.as_str() == "second-reject"
+        ));
+    }
+
+    #[test]
+    fn rejection_feedback_dropped_receiver_advances_queue() {
+        use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+        use cyril_core::types::{
+            PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse,
+        };
+
+        let option = || PermissionOption {
+            id: PermissionOptionId::new("reject"),
+            label: "Reject".into(),
+            kind: PermissionOptionKind::RejectOnce,
+            is_destructive: true,
+        };
+        let (mut first, first_receiver) = make_approval_request(vec![option()]);
+        let (mut second, second_receiver) = make_approval_request(vec![option()]);
+        first.can_reject_with_reason = true;
+        second.can_reject_with_reason = true;
+        second.session_id = cyril_core::types::SessionId::new("surviving-session");
+        drop(first_receiver);
+
+        let mut state = UiState::new(500);
+        state.show_approval(first);
+        state.show_approval(second);
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste("receiver already gone");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+
+        assert_eq!(
+            state
+                .approval()
+                .expect("dropped first request still advances")
+                .session_id
+                .as_str(),
+            "surviving-session"
+        );
+        assert!(state.approval_begin_feedback());
+        state.approval_feedback_paste("surviving request");
+        state.approval_feedback_key(KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE));
+        assert!(matches!(
+            second_receiver.blocking_recv(),
+            Ok(PermissionResponse::RejectWithReason { reason, .. })
+                if reason == "surviving request"
+        ));
     }
 
     /// Unwrap a `Selected` response or panic with context.
@@ -7413,6 +7780,7 @@ mod tests {
                     is_destructive: false,
                 }],
                 trust_options: Vec::new(),
+                can_reject_with_reason: false,
                 responder: tx,
             };
             (req, rx)
@@ -7500,6 +7868,7 @@ mod tests {
                     })
                     .into_iter()
                     .collect(),
+                can_reject_with_reason: false,
                 responder,
             });
             if matches!(index, 10 | 20) {
@@ -7616,8 +7985,8 @@ mod tests {
             PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionRequest,
             ToolCall, ToolCallId, ToolCallStatus, ToolKind,
         };
-
         let (tx, _rx) = tokio::sync::oneshot::channel();
+
         let req = PermissionRequest {
             session_id: cyril_core::types::SessionId::new("main"),
             tool_call: ToolCall::new(
@@ -7635,6 +8004,7 @@ mod tests {
                 is_destructive: false,
             }],
             trust_options: Vec::new(),
+            can_reject_with_reason: false,
             responder: tx,
         };
         let mut state = UiState::new(500);
@@ -7821,6 +8191,7 @@ mod tests {
             message: "Allow?".into(),
             options,
             trust_options,
+            can_reject_with_reason: false,
             responder: tx,
         };
         (req, rx)

@@ -2,6 +2,7 @@ pub mod cache;
 #[cfg(test)]
 mod chrome_theme_tests;
 pub mod error;
+mod feedback_editor;
 pub mod file_completer;
 #[cfg(test)]
 mod floor_tests;

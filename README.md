@@ -95,11 +95,29 @@ out without them; chat never waits on memory.
 | Key | Action |
 |-----|--------|
 | `Enter` | Send message |
-| `Shift+Enter` | Newline in input |
+| `Shift+Enter` | Newline in input, when the terminal reports the Shift modifier |
 | `Tab` | Accept autocomplete suggestion |
 | `Esc` | Cancel current request |
 | `Ctrl+M` | Toggle mouse capture (off = copy mode) |
 | `Ctrl+C` / `Ctrl+Q` | Quit |
+
+### Rejecting a tool with feedback (KAS)
+
+Select the agent's one-time rejection option, then press `r` to **Reject with
+reason**. Pressing `Enter` on the option itself still rejects immediately
+without feedback.
+
+The feedback editor accepts multiline paste. `Ctrl+J` inserts a newline,
+`Enter` submits, and `Esc` discards the draft and returns to the same approval
+choice without answering it. Explicitly reported `Shift+Enter` also inserts a
+newline, but many terminals send it as plain Enter; use `Ctrl+J` reliably.
+Empty or whitespace-only feedback sends a plain rejection.
+
+Reasons are limited to 4,096 Unicode characters. An insertion that would exceed
+the limit is refused in full with a visible notice; it is never silently
+truncated. The editor does not alter the chat draft or a queued approval.
+KAS 0.66.8 and newer receive the reason through permission-response metadata;
+older KAS may ignore it. The action is not shown for v2 or always-reject options.
 
 ### Slash commands
 

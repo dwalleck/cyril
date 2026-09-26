@@ -95,6 +95,7 @@ fn permission(index: usize) -> PermissionRequest {
         message: format!("allow {index}"),
         options: Vec::new(),
         trust_options: Vec::new(),
+        can_reject_with_reason: false,
         responder,
     }
 }

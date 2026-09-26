@@ -1,0 +1,27 @@
+{
+  "base_commit": "83b1ee6575091d9ee9432577ea55b5608eb52cf3",
+  "files": {
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs": "ff144131f31344404731f4c96d3407d2481443ef8feac80fdc7e7495b5bdce42",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/rejection_feedback.rs": "a8193e272de28f0fe9d9a45cf5e492b928ce84e9648107234f57452a96da8d65",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/saturation.rs": "4e7af413c45166aa37f910a96a4a1b9e4020381a517c61f12ef501a643a03428",
+    "crates/cyril-core/src/protocol/bridge/tests/harness.rs": "4ea7618d5399d412d3baf52ebb64024b4ca483790ba63502289b546549c72941",
+    "crates/cyril-core/src/protocol/convert/kas.rs": "2816c6b9c268a85e4c091460cfdbf3aed189aac39b6d1b1d68b834e1afba7c11",
+    "crates/cyril-core/src/protocol/convert/mod.rs": "bf113bd0aea1d60f376ae4fcef5b1039ef157d768a777a54a89f5cac67e7329e",
+    "crates/cyril-core/src/protocol/convert/probe_qo13.rs": "728ae524b92c14564393ca1eb150a6d945e36470f0b4cbcf44795faa6579eeaa",
+    "crates/cyril-core/src/protocol/domain_mediator/mod.rs": "eda125e9a6b1a8d4e26665a493fcc46fb1bdd26752aadead0aeeeb35e34e4d2a",
+    "crates/cyril-core/src/types/event.rs": "d7ae2485683eb9a87a59e6689230061abc4530e6127560cd4642685b502c8686",
+    "crates/cyril-ui/src/feedback_editor.rs": "9d8bf3bce66b2afc48b63186ed63e03e186526d02c445ecb749b220e3cd5b2ae",
+    "crates/cyril-ui/src/floor_tests.rs": "c958c8cd6a686401b8a0601f81c26eb550456e9feb6708b4a43b23f768314e62",
+    "crates/cyril-ui/src/lib.rs": "178d5589c43d1f831e8bcd91c39886f8ceb300caf6f399e13a8ceb58c78d09b5",
+    "crates/cyril-ui/src/render.rs": "27ff53ecf4bd6f0f3390ff84dc1beec709d73ace9d10f32e431de8d3033dfcaf",
+    "crates/cyril-ui/src/state.rs": "ff78a90cf629fbd05b7f8438587f2607018c37f8422c933bdeed88cd8a5c5779",
+    "crates/cyril-ui/src/traits.rs": "c44c8096ca42dae10c09700bcd5ec08f86c3da2aa82a2ce375faedf7848522c9",
+    "crates/cyril-ui/src/widgets/approval.rs": "eeb4569784cf10014167af545b2be0ce2d288d8b3c53ba33236ee5eececa1724",
+    "crates/cyril-ui/src/widgets/input.rs": "0010d3fa22f9fc25d816276d5a2d17a87d176ca6aeec3ba473404aedd0888d48",
+    "crates/cyril-ui/src/widgets/toolbar.rs": "569c90f8ea8bdb7dfb707aed5890f32368dfd9972cdcbe6ffbf61ce0016d10cc",
+    "crates/cyril-ui/tests/modal_theme.rs": "9439e06d1a386a8c6bc1fb98b77bcc68f3f1d6f73eb90ab0ccad11ec9032308a",
+    "crates/cyril/src/app.rs": "7e19e9a2afeb4ba95d65f434da478d9caedb463b7ec5d5e414af42053d5701a2"
+  },
+  "rustc": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+  "binary_sha256": "f57f616a39bbf105a3fe0d22b599e31f6055d4f6f1ed922c7b74484ef80682d2"
+}

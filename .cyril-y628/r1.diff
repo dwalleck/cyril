@@ -1,0 +1,49 @@
+--- before-r1/crates/cyril-ui/src/feedback_editor.rs
++++ after-r1/crates/cyril-ui/src/feedback_editor.rs
+@@ -95,8 +95,14 @@
+                 FeedbackAction::Consumed
+             }
+             KeyCode::Enter if key.modifiers == KeyModifiers::NONE => FeedbackAction::Submit,
++            // Windows AltGr arrives as Ctrl+Alt, optionally with Shift.
++            // Plain Ctrl/Alt shortcuts must still not become draft text.
+             KeyCode::Char(character)
+-                if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT =>
++                if key.modifiers.is_empty()
++                    || key.modifiers == KeyModifiers::SHIFT
++                    || key.modifiers == (KeyModifiers::CONTROL | KeyModifiers::ALT)
++                    || key.modifiers
++                        == (KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT) =>
+             {
+                 self.insert_char(character);
+                 FeedbackAction::Consumed
+@@ -311,6 +317,30 @@
+     }
+ 
+     #[test]
++    fn rejection_feedback_accepts_altgr_text_without_accepting_shortcuts() {
++        let mut editor = RejectionFeedback::new();
++        let altgr = KeyModifiers::CONTROL | KeyModifiers::ALT;
++        for (character, modifiers) in [
++            ('@', altgr),
++            ('€', altgr | KeyModifiers::SHIFT),
++            ('j', altgr),
++        ] {
++            assert_eq!(
++                editor.handle_key(KeyEvent::new(KeyCode::Char(character), modifiers)),
++                FeedbackAction::Consumed
++            );
++        }
++        assert_eq!(editor.text(), "@€j");
++        assert_eq!(editor.cursor(), "@€j".len());
++        assert_eq!(editor.scalar_count(), 3);
++
++        for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
++            editor.handle_key(KeyEvent::new(KeyCode::Char('x'), modifiers));
++        }
++        assert_eq!(editor.text(), "@€j", "shortcuts must not become draft text");
++    }
++
++    #[test]
+     fn rejection_feedback_normalizes_crlf_and_filters_controls() {
+         let mut editor = RejectionFeedback::new();
+         editor.insert_text("a\r\nb\rc\u{0000}d\u{001b}e\t f");
