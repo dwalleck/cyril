@@ -18,6 +18,7 @@ pub mod source_turn;
 pub mod spawn_environment;
 pub mod steer_receipt;
 pub mod subagent;
+pub mod thinking;
 pub mod tool_call;
 pub mod turn;
 pub mod usage;
@@ -61,6 +62,10 @@ pub use source_turn::{
 pub use spawn_environment::SpawnEnvironment;
 pub use steer_receipt::SteerReceipt;
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
+pub use thinking::{
+    THINKING_ALWAYS_ON_MESSAGE, THINKING_CONFIG_ID, THINKING_NOT_TOGGLEABLE_MESSAGE, ThinkingLever,
+    ThinkingRefusal, ThinkingState,
+};
 pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
 };

@@ -129,6 +129,86 @@ fn unhandled_extension_diagnostic_excludes_payload_and_preserves_dispatch() {
     });
 }
 
+/// cyril-k3lz review finding 7: a session-bound command answer is delivered
+/// only while its session is still the active one. An answer that arrives
+/// after `/new` or `/load` rebound the session becomes an operation error and
+/// never reaches the new session's state. Driven through the private outcome
+/// handler so the interleaving is deterministic, not timing-dependent.
+#[tokio::test]
+async fn session_bound_answer_is_dropped_after_the_session_changes() {
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use super::super::{CommandOutcome, DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::V2Engine;
+    use crate::test_support::must_succeed;
+    use crate::types::{Notification, SessionId};
+
+    let (handle, bridge) = create_channel_pair();
+    let (_sender, mut notifications, _permissions, _source, _completion) = handle.split();
+    let config = DomainConfig {
+        engine: Rc::new(V2Engine),
+        cwd: std::env::temp_dir(),
+        present_as: None,
+        stall_threshold: Duration::from_secs(30),
+        #[cfg(feature = "kas")]
+        host_shell: None,
+    };
+    let (mut mediator, _channels) = must_succeed(
+        DomainMediator::new(config, bridge),
+        "session-bound mediator",
+    );
+    let old = SessionId::new("sess_old");
+    let new = SessionId::new("sess_new");
+    mediator.active_session_id = Some(new.clone());
+
+    let toggled = || Notification::ThinkingToggled { enabled: false };
+    let flow = must_succeed(
+        mediator
+            .apply_command_outcome(CommandOutcome::for_session(
+                old,
+                "Thinking change",
+                toggled(),
+            ))
+            .await,
+        "stale answer applies",
+    );
+    assert_eq!(
+        flow,
+        std::ops::ControlFlow::Continue(false),
+        "stale answer applies: the mediator loop keeps running"
+    );
+    let stale = must_succeed(notifications.try_recv(), "stale answer reported").notification;
+    assert!(
+        matches!(&stale, Notification::BridgeError { operation, message }
+            if operation == "Thinking change"
+                && message == "the session changed before the agent answered; the current session is unchanged"),
+        "a stale answer is an operation error, not an ack: {stale:?}"
+    );
+
+    let flow = must_succeed(
+        mediator
+            .apply_command_outcome(CommandOutcome::for_session(
+                new,
+                "Thinking change",
+                toggled(),
+            ))
+            .await,
+        "current answer applies",
+    );
+    assert_eq!(
+        flow,
+        std::ops::ControlFlow::Continue(false),
+        "current answer applies: the mediator loop keeps running"
+    );
+    let current = must_succeed(notifications.try_recv(), "current answer delivered").notification;
+    assert!(
+        matches!(current, Notification::ThinkingToggled { enabled: false }),
+        "an answer for the active session is delivered unchanged: {current:?}"
+    );
+}
+
 #[tokio::test]
 async fn domain_ingress_is_bounded_and_typed() {
     let (channels, mut work_rx, _host_rx) = DomainChannels::new(IngressTracker::new())

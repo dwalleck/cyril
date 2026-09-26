@@ -26,6 +26,49 @@ pub(super) fn send_extension(
     Ok(connection.send_request(request).block_task())
 }
 
+/// The v2 TUI-command RPC.
+const EXECUTE_METHOD: &str = "kiro.dev/commands/execute";
+
+/// Params of a `kiro.dev/commands/execute` request. `command` must be the
+/// adjacently tagged `{command, args}` object — a plain string crashes
+/// kiro-cli — so every call site builds it here (cyril-k3lz review
+/// finding 11).
+fn execute_params(
+    session_id: &SessionId,
+    command: &str,
+    args: serde_json::Value,
+) -> serde_json::Value {
+    serde_json::json!({
+        "sessionId": session_id.as_str(),
+        "command": {"command": command, "args": args}
+    })
+}
+
+/// `BridgeError.operation` for a failed v2 thinking toggle; the UI renders
+/// `"{operation} failed: {message}"`, i.e. "Thinking change failed: …".
+const REASONING_OPERATION: &str = "Thinking change";
+
+/// Map a v2 `reasoning` command result to its notification (cyril-k3lz C8).
+/// Response parsing is a Kiro wire concern and lives in
+/// `convert::kiro::parse_reasoning_command_ack`; this only maps outcomes.
+fn reasoning_toggle_outcome(
+    result: agent_client_protocol::Result<serde_json::Value>,
+    enabled: bool,
+) -> Notification {
+    let parsed = result
+        .map_err(|error| error.to_string())
+        .and_then(|response| {
+            crate::protocol::convert::kiro::parse_reasoning_command_ack(&response)
+        });
+    match parsed {
+        Ok(()) => Notification::ThinkingToggled { enabled },
+        Err(message) => Notification::BridgeError {
+            operation: REASONING_OPERATION.to_owned(),
+            message,
+        },
+    }
+}
+
 impl DomainMediator {
     /// Send an extension RPC and hand its result to `outcome` on a spawned
     /// task. A send/serialize failure produces the same outcome path with the
@@ -105,6 +148,45 @@ impl DomainMediator {
         );
     }
 
+    /// Toggle thinking through the v2 `reasoning` TUI command (kiro-cli
+    /// 2.23.0+, cyril-k3lz). Not advertised in `commands/available`, so it is
+    /// not an agent command; the args carry ONLY `thinkingEnabled` (unknown
+    /// keys are silently ignored by the agent, and `setAsDefault` is out of
+    /// scope — cyril-v2ol). A `success: true` ack becomes `ThinkingToggled`
+    /// with the requested value; anything else — `success: false`, a missing
+    /// `success`, an RPC error — is a `BridgeError` the UI renders as
+    /// "Thinking change failed: …".
+    pub(super) async fn set_reasoning_thinking(
+        &mut self,
+        connection: &ConnectionTo<Agent>,
+        enabled: bool,
+    ) -> crate::Result<()> {
+        let Some(session_id) = self.active_session_id.clone() else {
+            return self
+                .notify(
+                    Notification::BridgeError {
+                        operation: REASONING_OPERATION.into(),
+                        message: "no active session — run /new or /load first".into(),
+                    }
+                    .into(),
+                )
+                .await;
+        };
+        let params = execute_params(
+            &session_id,
+            "reasoning",
+            serde_json::json!({"thinkingEnabled": enabled}),
+        );
+        self.spawn_extension_command(connection, EXECUTE_METHOD, params, move |result| {
+            Some(CommandOutcome::for_session(
+                session_id,
+                REASONING_OPERATION,
+                reasoning_toggle_outcome(result, enabled),
+            ))
+        });
+        Ok(())
+    }
+
     pub(super) fn execute_command(
         &mut self,
         connection: &ConnectionTo<Agent>,
@@ -112,28 +194,20 @@ impl DomainMediator {
         session_id: SessionId,
         args: serde_json::Value,
     ) {
-        let params = serde_json::json!({
-            "sessionId": session_id.as_str(),
-            "command": {"command": command, "args": args}
+        let params = execute_params(&session_id, &command, args);
+        self.spawn_extension_command(connection, EXECUTE_METHOD, params, move |result| {
+            let response = match result {
+                Ok(response) => response,
+                Err(error) => serde_json::json!({
+                    "success": false,
+                    "error": error.to_string()
+                }),
+            };
+            Some(CommandOutcome::notify(Notification::CommandExecuted {
+                command,
+                response,
+            }))
         });
-        self.spawn_extension_command(
-            connection,
-            "kiro.dev/commands/execute",
-            params,
-            move |result| {
-                let response = match result {
-                    Ok(response) => response,
-                    Err(error) => serde_json::json!({
-                        "success": false,
-                        "error": error.to_string()
-                    }),
-                };
-                Some(CommandOutcome::notify(Notification::CommandExecuted {
-                    command,
-                    response,
-                }))
-            },
-        );
     }
 
     pub(super) fn list_settings(&mut self, connection: &ConnectionTo<Agent>) {

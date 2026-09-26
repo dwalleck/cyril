@@ -1,0 +1,204 @@
+{
+ "source": "experiments/conductor-spike/v2-reasoning-args2-2.24.0-2.24.0.jsonl",
+ "frames": [
+  {
+   "captureLine": 7,
+   "tag": "set_model",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 3.5799999237060547,
+     "reasoning": {
+      "support": "unavailable",
+      "effortLevels": []
+     }
+    }
+   }
+  },
+  {
+   "captureLine": 8,
+   "tag": "set_model",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 0.7160000205039978,
+     "reasoning": {
+      "support": "toggleable",
+      "effort": "high",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "captureLine": 24,
+   "tag": "rargs_effort_low",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 1.240899920463562,
+     "reasoning": {
+      "support": "toggleable",
+      "thinkingEnabled": true,
+      "effort": "max",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "captureLine": 25,
+   "tag": "rargs_effort_low",
+   "frame": {
+    "jsonrpc": "2.0",
+    "result": {
+     "success": true,
+     "message": "",
+     "data": {
+      "thinking": "toggleable",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ],
+      "defaultThinkingEnabled": true,
+      "defaultEffort": "low"
+     }
+    },
+    "id": 11
+   }
+  },
+  {
+   "captureLine": 26,
+   "tag": "rargs_enabled_false",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 1.240899920463562,
+     "reasoning": {
+      "support": "toggleable",
+      "thinkingEnabled": true,
+      "effort": "low",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "captureLine": 27,
+   "tag": "rargs_enabled_false",
+   "frame": {
+    "jsonrpc": "2.0",
+    "result": {
+     "success": true,
+     "message": "",
+     "data": {
+      "thinking": "toggleable",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ],
+      "defaultThinkingEnabled": true,
+      "defaultEffort": "low"
+     }
+    },
+    "id": 12
+   }
+  },
+  {
+   "captureLine": 28,
+   "tag": "rargs_thinkingEnabled_false",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 1.240899920463562,
+     "reasoning": {
+      "support": "toggleable",
+      "thinkingEnabled": true,
+      "effort": "low",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ]
+     }
+    }
+   }
+  },
+  {
+   "captureLine": 29,
+   "tag": "rargs_thinkingEnabled_false",
+   "frame": {
+    "jsonrpc": "2.0",
+    "result": {
+     "success": true,
+     "message": "",
+     "data": {
+      "thinking": "toggleable",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ],
+      "defaultThinkingEnabled": false,
+      "defaultEffort": "low"
+     }
+    },
+    "id": 13
+   }
+  },
+  {
+   "captureLine": 30,
+   "tag": "turn3",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 1.240899920463562,
+     "reasoning": {
+      "support": "toggleable",
+      "thinkingEnabled": false,
+      "effort": "low",
+      "effortLevels": [
+       "low",
+       "medium",
+       "high",
+       "max"
+      ]
+     }
+    }
+   }
+  }
+ ]
+}

@@ -80,16 +80,19 @@ fn c4_app_applies_session_before_ui_and_preserves_terminal_sequence() {
             _ => None,
         })
         .collect();
+    // Chronological: the partial answer streamed before the error, so the
+    // error's system message flushes it first (cyril-k3lz review finding 6);
+    // the completion then has nothing left to flush.
     assert_eq!(
         projected,
         [
-            ("system", "prompt failed: transport failed"),
             ("agent", "partial answer"),
+            ("system", "prompt failed: transport failed"),
             (
                 "system",
                 "Disconnected: agent connection closed unexpectedly"
             ),
         ],
-        "C4 exact error → completion flush → disconnect projection order"
+        "C4 exact stream → error → disconnect projection order"
     );
 }

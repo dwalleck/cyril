@@ -49,6 +49,10 @@ mod powers;
 mod routing;
 mod saturation;
 mod stall;
+// Deliberately ungated (cyril-k3lz review finding 9): SetThinking has no
+// `kas`-specific dispatch arm, and release builds ship `--all-features`, so
+// the toggle's wire and ack contract must hold in `kas` builds too.
+mod thinking;
 
 fn command_name(command: &BridgeCommand) -> &'static str {
     match command {
@@ -59,6 +63,7 @@ fn command_name(command: &BridgeCommand) -> &'static str {
         BridgeCommand::SetMode { .. } => "SetMode",
         BridgeCommand::SetModel { .. } => "SetModel",
         BridgeCommand::SetConfigOption { .. } => "SetConfigOption",
+        BridgeCommand::SetThinking { .. } => "SetThinking",
         BridgeCommand::ExtMethod { .. } => "ExtMethod",
         BridgeCommand::ListSettings => "ListSettings",
         BridgeCommand::QueryUsageAccount => "QueryUsageAccount",

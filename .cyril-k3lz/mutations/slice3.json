@@ -1,0 +1,58 @@
+[
+  {
+    "id": "C3a-core",
+    "file": "crates/cyril-core/src/session.rs",
+    "from": "let thinking_changed = self.thinking.apply_notification(notification);",
+    "to": "let thinking_changed = false;",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "session::thinking_tests::session_controller_follows_captured_thinking_sequences"],
+    "expect": "v2 capture line 8"
+  },
+  {
+    "id": "C4",
+    "file": "crates/cyril-core/src/commands/builtin.rs",
+    "from": "            ThinkingState::AlwaysOn => \"Thinking is always on for the current model.\",\n            ThinkingState::NotToggleable => THINKING_NOT_TOGGLEABLE_MESSAGE,",
+    "to": "            ThinkingState::NotToggleable => \"Thinking is always on for the current model.\",\n            ThinkingState::AlwaysOn => THINKING_NOT_TOGGLEABLE_MESSAGE,",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_report_messages"],
+    "expect": "report for"
+  },
+  {
+    "id": "C5",
+    "file": "crates/cyril-core/src/types/thinking.rs",
+    "from": "            Self::ToggleableByReasoning { .. } => Some(ThinkingLever::ReasoningCommand),",
+    "to": "            Self::ToggleableByReasoning { .. } | Self::AlwaysOn => Some(ThinkingLever::ReasoningCommand),",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_refuses_without_toggleable_support"],
+    "expect": "expected a system message, got Ok(Dispatched)"
+  },
+  {
+    "id": "C6-case",
+    "file": "crates/cyril-core/src/commands/builtin.rs",
+    "from": "match args.trim().to_ascii_lowercase().as_str() {",
+    "to": "match args.trim() {",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_args_and_no_session"],
+    "expect": "arg \"ON\" parses"
+  },
+  {
+    "id": "C6-session",
+    "file": "crates/cyril-core/src/commands/builtin.rs",
+    "from": "        ctx.session\n            .id()\n            .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;\n",
+    "to": "",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_args_and_no_session"],
+    "expect": "expected the no-session error"
+  },
+  {
+    "id": "C7",
+    "file": "crates/cyril-core/src/commands/builtin.rs",
+    "from": ".send(BridgeCommand::SetThinking { lever, enabled })",
+    "to": ".send(BridgeCommand::SetThinking { lever: { let _ = lever; crate::types::ThinkingLever::ReasoningCommand }, enabled })",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_sends_one_typed_toggle"],
+    "expect": "ConfigOn /thinking off must send exactly"
+  },
+  {
+    "id": "C12",
+    "file": "crates/cyril-core/src/commands/mod.rs",
+    "from": "\"thinking\", \"sessions\",",
+    "to": "\"sessions\",",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "commands::tests::help_lists_every_registered_command"],
+    "expect": "`/thinking` is registered but absent from /help"
+  }
+]

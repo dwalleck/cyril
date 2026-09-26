@@ -68,11 +68,39 @@ pub(crate) enum CommandOutcome {
     /// The agent answered `session/steer` with -32601: mark the session and
     /// tell the App once.
     SteeringUnsupported { session_id: SessionId },
+    /// A command's answer about one session (cyril-k3lz review finding 7).
+    /// A `/new` or `/load` can make another session current while the RPC
+    /// is in flight, and the App applies unscoped answers to whichever
+    /// session is main. Delivered only while `session_id` is still active;
+    /// otherwise replaced by a `BridgeError` on `operation`, so a stale
+    /// answer never lands on the new session's state.
+    ForSession {
+        session_id: SessionId,
+        operation: &'static str,
+        notification: Box<Notification>,
+    },
 }
+
+/// The `BridgeError` message for a session-bound answer that arrived after
+/// its session stopped being the active one.
+const SESSION_CHANGED_MESSAGE: &str =
+    "the session changed before the agent answered; the current session is unchanged";
 
 impl CommandOutcome {
     pub(crate) fn notify(notification: Notification) -> Self {
         Self::Notify(Box::new(notification))
+    }
+
+    pub(crate) fn for_session(
+        session_id: SessionId,
+        operation: &'static str,
+        notification: Notification,
+    ) -> Self {
+        Self::ForSession {
+            session_id,
+            operation,
+            notification: Box::new(notification),
+        }
     }
 }
 
@@ -503,6 +531,27 @@ impl DomainMediator {
                 self.notify(Notification::BridgeDisconnected { reason }.into())
                     .await?;
                 Ok(ControlFlow::Break(()))
+            }
+            CommandOutcome::ForSession {
+                session_id,
+                operation,
+                notification,
+            } => {
+                let notification = if self.active_session_id.as_ref() == Some(&session_id) {
+                    *notification
+                } else {
+                    tracing::debug!(
+                        session = session_id.as_str(),
+                        operation,
+                        "command answer for a session that is no longer active; not applied"
+                    );
+                    Notification::BridgeError {
+                        operation: operation.to_owned(),
+                        message: SESSION_CHANGED_MESSAGE.to_owned(),
+                    }
+                };
+                self.notify(notification.into()).await?;
+                Ok(ControlFlow::Continue(false))
             }
             CommandOutcome::SteeringUnsupported { session_id } => {
                 if self.steering_unsupported.insert(session_id) {

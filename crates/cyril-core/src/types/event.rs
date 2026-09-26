@@ -5,6 +5,7 @@ use crate::types::session::{
     CompactionPhase, ContextBreakdown, ContextUsage, EffortUpdate, ModeId, ModelInfo,
     ReasoningInfo, RefusalAlert, SessionId, SessionMode, StopReason, TokenCounts, TurnMetering,
 };
+use crate::types::thinking::ThinkingLever;
 use crate::types::tool_call::{ToolCall, ToolCallId};
 use crate::types::turn::TurnId;
 use crate::types::usage::{Money, SessionOrigin, TokenUsage, TurnMeteringUpdate, UsageAccount};
@@ -48,6 +49,13 @@ pub enum Notification {
     ConfigOptionSet {
         config_id: String,
         options: Vec<ConfigOption>,
+    },
+    /// The v2 `reasoning` command acknowledged a thinking toggle with
+    /// `success: true` (cyril-k3lz). Carries the REQUESTED value — the ack
+    /// has no session value of its own; the state itself arrives on the next
+    /// `kiro.dev/metadata` `reasoning` snapshot. KAS acks via `ConfigOptionSet`.
+    ThinkingToggled {
+        enabled: bool,
     },
     CommandsUpdated {
         commands: Vec<CommandInfo>,
@@ -597,6 +605,15 @@ pub enum BridgeCommand {
     SetConfigOption {
         config_id: String,
         value: String,
+    },
+    /// Turn extended thinking on or off for the active session's current
+    /// model (cyril-k3lz). `lever` comes from the snapshot that reported the
+    /// model toggleable (`ThinkingState::lever`), so the bridge maps it to the
+    /// matching wire request without consulting the bound engine: v2 acks as
+    /// `ThinkingToggled`, KAS as `ConfigOptionSet{config_id: "thinking"}`.
+    SetThinking {
+        lever: ThinkingLever,
+        enabled: bool,
     },
     ExtMethod {
         method: String,

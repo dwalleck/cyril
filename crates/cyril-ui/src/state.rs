@@ -72,6 +72,9 @@ pub struct UiState {
     /// updated when a metadata frame reports it (frames mid-turn may omit it),
     /// and reset on session change.
     effort: Option<EffortLevel>,
+    /// Extended-thinking state of the current model (cyril-k3lz), derived by
+    /// `ThinkingState::apply_notification`; drives the toolbar segment.
+    thinking: ThinkingState,
     context_usage: Option<f64>,
     /// KAS categorized context breakdown (KAS-2b, cyril-5et2). Retain-last: a
     /// `context_usage` frame that omits the breakdown updates `context_usage`
@@ -155,6 +158,16 @@ pub struct UiState {
 
     // Config
     max_messages: usize,
+}
+
+/// The confirmation for an acknowledged thinking toggle on either engine
+/// (cyril-k3lz spec B2/B3 — exact strings are fenced).
+fn thinking_toggled_message(enabled: bool) -> String {
+    if enabled {
+        "Thinking turned on.".to_owned()
+    } else {
+        "Thinking turned off.".to_owned()
+    }
 }
 
 /// Build the user-facing refusal system message (cyril-h8zb): the wire's
@@ -250,6 +263,10 @@ impl TuiState for UiState {
 
     fn effort(&self) -> Option<&EffortLevel> {
         self.effort.as_ref()
+    }
+
+    fn thinking_enabled(&self) -> Option<bool> {
+        self.thinking.enabled()
     }
 
     fn steering_queued(&self) -> usize {
@@ -399,6 +416,7 @@ impl UiState {
             current_mode: None,
             current_model: None,
             effort: None,
+            thinking: ThinkingState::Unreported,
             context_usage: None,
             context_breakdown: None,
             credit_usage: None,
@@ -459,6 +477,9 @@ impl UiState {
                 | Notification::PlanUpdated(_)
                 | Notification::TurnCompleted { .. }
         ) && self.stall.take().is_some();
+        // Thinking state has one owner of its derivation (cyril-k3lz); this
+        // state machine only holds the result for the toolbar and the KAS ack.
+        let thinking_changed = self.thinking.apply_notification(notification);
         let changed = match notification {
             Notification::AgentMessage(msg) => {
                 // Flush any pending user replay so the user turn commits
@@ -557,8 +578,9 @@ impl UiState {
                 duration_ms,
                 effort,
                 // `effort` is already derived from the reasoning snapshot
-                // (cyril-q1xs); showing thinking on/off is cyril-k3lz's, so
-                // the full block is not stored yet.
+                // (cyril-q1xs), and thinking on/off is consumed above by
+                // `self.thinking.apply_notification` — its single owner
+                // (cyril-k3lz). Do not derive either again here.
                 reasoning: _,
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
@@ -599,15 +621,13 @@ impl UiState {
                 // ahead of late notifications (cyril-9akh), and the probe
                 // showed the refusal frame lands just before the prompt
                 // response. One alert per turn (Kiro's own consumer dedupes
-                // to the first event). Streaming text flushes first so the
-                // message commits in chronological order (add_steer_echo
-                // idiom).
+                // to the first event). `add_system_message` flushes
+                // streaming text first, so the message commits in
+                // chronological order.
                 if let Some(alert) = refusal {
                     self.pending_refusal = true;
                     if !self.refusal_alerted_this_turn {
                         self.refusal_alerted_this_turn = true;
-                        self.flush_streaming_agent_text();
-                        self.flush_streaming_thought();
                         self.add_system_message(refusal_message(alert));
                     }
                 }
@@ -995,14 +1015,35 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options)
             | Notification::ConfigOptionSet { options, .. } => {
-                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
-                    // Route through set_current_model so the "clear effort on a
-                    // real model change" invariant lives in exactly one place.
-                    self.set_current_model(model_opt.value.clone());
-                    true
-                } else {
-                    false
+                let model_changed =
+                    if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                        // Route through set_current_model so the "clear effort on a
+                        // real model change" invariant lives in exactly one place.
+                        self.set_current_model(model_opt.value.clone());
+                        true
+                    } else {
+                        false
+                    };
+                // KAS thinking ack (cyril-k3lz B3): the message follows the
+                // REBUILT set, which `self.thinking` already reflects.
+                let thinking_acked = matches!(
+                    notification,
+                    Notification::ConfigOptionSet { config_id, .. } if config_id == THINKING_CONFIG_ID
+                );
+                if thinking_acked {
+                    let text = match self.thinking.enabled() {
+                        Some(enabled) => thinking_toggled_message(enabled),
+                        None => THINKING_NOT_TOGGLEABLE_MESSAGE.to_owned(),
+                    };
+                    self.add_system_message(text);
                 }
+                model_changed || thinking_acked
+            }
+            // v2 `reasoning` ack (cyril-k3lz B2). The toolbar follows the next
+            // metadata snapshot; the message confirms immediately.
+            Notification::ThinkingToggled { enabled } => {
+                self.add_system_message(thinking_toggled_message(*enabled));
+                true
             }
             Notification::CommandsUpdated { .. } => {
                 // Consumed by the App layer (registers in CommandRegistry).
@@ -1152,7 +1193,7 @@ impl UiState {
             // "only if already open" rule.
             Notification::PowersChanged { .. } => false,
         };
-        changed || stall_cleared
+        changed || stall_cleared || thinking_changed
     }
 
     /// Flush remaining streaming text and clear active tool call display.
@@ -1223,7 +1264,15 @@ impl UiState {
     }
 
     /// Add a system message to the chat history.
+    ///
+    /// Flushes pending streaming agent text and reasoning first (the
+    /// `add_user_message` idiom), so a message added mid-turn — a thinking
+    /// ack, a bridge error, command output — commits AFTER the text that
+    /// streamed before it rather than ahead of it. Outside a turn both
+    /// buffers are empty and the flushes are no-ops.
     pub fn add_system_message(&mut self, text: String) {
+        self.flush_streaming_agent_text();
+        self.flush_streaming_thought();
         self.messages.push(ChatMessage::system(text));
         self.messages_version += 1;
         self.enforce_message_limit();
@@ -5555,6 +5604,183 @@ mod tests {
         );
     }
 
+    /// cyril-k3lz C10a / spec B2: a v2 thinking ack adds exactly one message
+    /// with the fenced text; the v2 failure path is the generic BridgeError
+    /// message, which the operation label renders as "Thinking change failed".
+    #[test]
+    fn thinking_toggled_message() {
+        let mut state = UiState::new(500);
+        for (enabled, want) in [
+            (true, "Thinking turned on."),
+            (false, "Thinking turned off."),
+        ] {
+            let before = state.messages().len();
+            assert!(state.apply_notification(&Notification::ThinkingToggled { enabled }));
+            assert_eq!(state.messages().len(), before + 1, "one message per ack");
+            assert!(
+                matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
+                "ack enabled={enabled} must read {want:?}"
+            );
+        }
+        state.apply_notification(&Notification::BridgeError {
+            operation: "Thinking change".into(),
+            message: "nope".into(),
+        });
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Thinking change failed: nope"),
+            "spec B2 failure text"
+        );
+    }
+
+    /// cyril-k3lz review findings 2 + 4: the mediator's session-start order
+    /// (`SessionCreated`, then the response's config snapshot) keeps the
+    /// snapshot's thinking state AND model — a KAS `session/new|load` result
+    /// has no `models` key, so `SessionCreated.current_model` is None and the
+    /// snapshot is the only model report. Oracle: the captured `cfg_model` set
+    /// (claude-sonnet-4.6, thinking on).
+    #[test]
+    fn session_start_order_keeps_snapshot_thinking_and_model() {
+        let (_, kas) = cyril_core::test_support::thinking_capture_sequences();
+        let options = kas
+            .iter()
+            .find_map(|(step, n)| match n {
+                Notification::ConfigOptionSet { options, .. } if step == "cfg_model" => {
+                    Some(options.clone())
+                }
+                _ => None,
+            })
+            .expect("captured cfg_model step");
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_loaded"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
+        state.apply_notification(&Notification::ConfigOptionsUpdated(options));
+        assert_eq!(
+            state.thinking_enabled(),
+            Some(true),
+            "snapshot thinking kept"
+        );
+        assert_eq!(
+            state.current_model(),
+            Some("claude-sonnet-4.6"),
+            "snapshot model kept"
+        );
+    }
+
+    /// cyril-k3lz C3a (UI half): the UI state machine follows the same
+    /// captured sequences as `SessionController` (oracle: the capture lines
+    /// read by hand — same table as the core fence), frame by frame.
+    #[test]
+    fn thinking_follows_captured_sequences() {
+        let (v2, kas) = cyril_core::test_support::thinking_capture_sequences();
+        let v2_expected = [
+            (7, None),
+            (8, None),
+            (24, Some(true)),
+            (26, Some(true)),
+            (28, Some(true)),
+            (30, Some(false)),
+        ];
+        assert_eq!(v2.len(), v2_expected.len(), "v2 frame count");
+        let mut state = UiState::new(500);
+        for ((line, n), (want_line, want)) in v2.iter().zip(v2_expected) {
+            assert_eq!(*line, want_line, "v2 frame order");
+            state.apply_notification(n);
+            assert_eq!(state.thinking_enabled(), want, "v2 capture line {line}");
+        }
+        let kas_expected = [
+            ("session_new", None),
+            ("cfg_model", Some(true)),
+            ("cfg_effort_max", Some(true)),
+            ("cfg_thinking_off", Some(false)),
+            ("cfg_effort_max2", Some(true)),
+            ("cfg_thinking_bogus", Some(false)),
+            ("cfg_model_gpt", None),
+        ];
+        assert_eq!(kas.len(), kas_expected.len(), "KAS step count");
+        let mut state = UiState::new(500);
+        // Production order (publish_session_start): the SessionCreated reset
+        // precedes the session/new snapshot (review finding 2).
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_kas"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
+        for ((step, n), (want_step, want)) in kas.iter().zip(kas_expected) {
+            assert_eq!(step, want_step, "KAS step order");
+            state.apply_notification(n);
+            assert_eq!(state.thinking_enabled(), want, "KAS step {step}");
+        }
+    }
+
+    /// cyril-k3lz C10b / spec B3: a KAS `ConfigOptionSet{config_id:"thinking"}`
+    /// adds exactly one message read from the REBUILT set; a set of another
+    /// option adds none.
+    #[test]
+    fn thinking_config_ack_messages() {
+        let thinking = |value: Option<&str>| {
+            value
+                .map(|v| ConfigOption {
+                    key: "thinking".into(),
+                    label: "Thinking".into(),
+                    value: Some(v.into()),
+                    options: vec!["on".into(), "off".into()],
+                })
+                .into_iter()
+                .collect::<Vec<_>>()
+        };
+        let cases: [(&str, Vec<ConfigOption>, Option<&str>); 4] = [
+            (
+                "thinking",
+                thinking(Some("off")),
+                Some("Thinking turned off."),
+            ),
+            (
+                "thinking",
+                thinking(Some("on")),
+                Some("Thinking turned on."),
+            ),
+            (
+                "thinking",
+                thinking(None),
+                Some("Thinking can't be toggled on the current model."),
+            ),
+            ("model", thinking(Some("off")), None),
+        ];
+        for (config_id, options, want) in cases {
+            let mut state = UiState::new(500);
+            let before = state.messages().len();
+            state.apply_notification(&Notification::ConfigOptionSet {
+                config_id: config_id.into(),
+                options,
+            });
+            match want {
+                Some(text) => {
+                    assert_eq!(
+                        state.messages().len(),
+                        before + 1,
+                        "{config_id} ack adds one message"
+                    );
+                    assert!(
+                        matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == text),
+                        "{config_id} ack must read {text:?}"
+                    );
+                }
+                None => assert_eq!(
+                    state.messages().len(),
+                    before,
+                    "a `{config_id}` set adds no thinking message"
+                ),
+            }
+        }
+    }
+
     // ── Subagent routing tests ───────────────────────────────────────────
     // These verify the routing contract that App::handle_notification depends
     // on: session-scoped notifications must flow to SubagentUiState, not the
@@ -7063,6 +7289,52 @@ mod tests {
             ChatMessageKind::UserText(text) => assert_eq!(text, "next user prompt"),
             other => panic!("expected UserText, got {other:?}"),
         }
+    }
+
+    /// cyril-k3lz review finding 6: a system message added mid-turn (here the
+    /// v2 thinking ack) commits after the thought and text that streamed
+    /// before it, and text streamed after it starts a new message.
+    #[test]
+    fn system_message_flushes_pending_streams_first() {
+        use crate::traits::ChatMessageKind;
+
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "reasoning".into(),
+        }));
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "before the toggle".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::ThinkingToggled { enabled: false });
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "after the toggle".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+
+        let committed: Vec<(&str, &str)> = state
+            .messages()
+            .iter()
+            .map(|m| match m.kind() {
+                ChatMessageKind::Thought(t) => ("thought", t.as_str()),
+                ChatMessageKind::AgentText(t) => ("agent", t.as_str()),
+                ChatMessageKind::System(t) => ("system", t.as_str()),
+                other => panic!("unexpected message {other:?}"),
+            })
+            .collect();
+        assert_eq!(
+            committed,
+            [
+                ("thought", "reasoning"),
+                ("agent", "before the toggle"),
+                ("system", "Thinking turned off."),
+                ("agent", "after the toggle"),
+            ],
+            "chronological commit order"
+        );
     }
 
     // ---------- approval_confirm sends the picked option's id (cyril-qo13) ----------

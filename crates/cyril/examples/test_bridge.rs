@@ -440,6 +440,9 @@ fn print_notification(n: &Notification) {
                 );
             }
         }
+        Notification::ThinkingToggled { enabled } => {
+            println!("  [ThinkingToggled] enabled={enabled}");
+        }
         Notification::CommandsUpdated {
             commands: cmds,
             prompts,

@@ -10,9 +10,9 @@ use std::time::Duration;
 use agent_client_protocol::{Agent, ConnectionTo};
 
 use super::DomainMediator;
-use crate::types::BridgeCommand;
 #[cfg(not(feature = "kas"))]
 use crate::types::Notification;
+use crate::types::{BridgeCommand, THINKING_CONFIG_ID, ThinkingLever};
 
 /// Bound on `session/new` and `session/load` — load replays the session's
 /// history before answering, so it gets more headroom than a control call.
@@ -67,6 +67,19 @@ impl DomainMediator {
             BridgeCommand::SetConfigOption { config_id, value } => {
                 self.set_config_option(connection, config_id, value).await?;
             }
+            BridgeCommand::SetThinking { lever, enabled } => match lever {
+                ThinkingLever::ReasoningCommand => {
+                    self.set_reasoning_thinking(connection, enabled).await?;
+                }
+                ThinkingLever::ConfigOption => {
+                    self.set_config_option(
+                        connection,
+                        THINKING_CONFIG_ID.to_owned(),
+                        ThinkingLever::config_value(enabled).to_owned(),
+                    )
+                    .await?;
+                }
+            },
             BridgeCommand::ExtMethod { method, params } => {
                 self.execute_extension(connection, method, params);
             }
