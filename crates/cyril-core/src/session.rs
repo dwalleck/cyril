@@ -1412,6 +1412,15 @@ mod thinking_tests {
         ];
         assert_eq!(kas.len(), kas_expected.len(), "KAS step count");
         let mut ctrl = SessionController::new();
+        // Production order (publish_session_start): the SessionCreated reset
+        // precedes the session/new snapshot (review finding 2).
+        ctrl.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_kas"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
         for ((step, notification), (want_step, want)) in kas.iter().zip(kas_expected) {
             assert_eq!(step, want_step, "KAS step order");
             ctrl.apply_notification(notification);

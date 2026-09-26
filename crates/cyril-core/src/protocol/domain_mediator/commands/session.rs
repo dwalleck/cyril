@@ -69,6 +69,15 @@ fn session_started_outcome(
     }))
 }
 
+/// The recoverable failure of `session/load`: an operation error on a bridge
+/// (and any live session) that keeps running.
+fn load_failed(error: impl std::fmt::Display) -> Notification {
+    Notification::BridgeError {
+        operation: "Load session".into(),
+        message: error.to_string(),
+    }
+}
+
 impl DomainMediator {
     pub(super) fn new_session(
         &mut self,
@@ -166,20 +175,19 @@ impl DomainMediator {
                     // c5_new_session_rpc_failure_is_fatal), a failed load is
                     // recoverable: the id may be a typo or expired, and any
                     // live session must survive it. Main-line behavior: the
-                    // App is told, the bridge keeps running.
-                    Err(error) => CommandOutcome::notify(Notification::BridgeDisconnected {
-                        reason: format!("Failed to load session: {error}"),
-                    }),
+                    // App is told, the bridge keeps running. Reported as a
+                    // `BridgeError`, not `BridgeDisconnected`: the latter
+                    // resets the live session's state (status, context,
+                    // thinking) as if the connection had died (cyril-k3lz).
+                    Err(error) => CommandOutcome::notify(load_failed(error)),
                 };
                 channels.enqueue_outcome(outcome).await;
             }),
             Err(error) => {
-                let reason = format!("Failed to load session: {error}");
+                let notification = load_failed(error);
                 self.spawn_command(async move {
                     channels
-                        .enqueue_outcome(CommandOutcome::notify(Notification::BridgeDisconnected {
-                            reason,
-                        }))
+                        .enqueue_outcome(CommandOutcome::notify(notification))
                         .await;
                 });
             }
@@ -198,10 +206,14 @@ impl DomainMediator {
         self.steering_unsupported.remove(&session_id);
         self.notify(Notification::UsageSessionStarted { session_id, origin }.into())
             .await?;
+        // `SessionCreated` is a reset boundary for per-session state (model,
+        // effort, thinking), so the response's own config snapshot must land
+        // AFTER it — emitted first, the reset would discard it (cyril-k3lz).
+        self.notify(created.into()).await?;
         if let Some(config_options) = config_options {
             self.notify(config_options.into()).await?;
         }
-        self.notify(created.into()).await
+        Ok(())
     }
 
     pub(super) async fn cancel_active(&mut self, connection: &ConnectionTo<Agent>) {

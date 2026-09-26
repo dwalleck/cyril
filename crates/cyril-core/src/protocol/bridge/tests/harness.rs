@@ -70,6 +70,9 @@ pub(super) struct Script {
     /// Scripted extension results (cyril-k3lz): the first entry whose method
     /// matches a call is removed and returned instead of the default `{}`.
     pub(super) ext_responses: Arc<Mutex<Vec<(String, serde_json::Value)>>>,
+    /// `configOptions` carried by every `session/new` response (a raw ACP
+    /// array); None keeps the historical options-less response.
+    pub(super) new_session_config_options: Option<serde_json::Value>,
     /// Scripted `session/set_config_option` results, answered in order.
     /// Empty keeps the historical method-not-found answer.
     pub(super) config_option_responses: Arc<Mutex<Vec<serde_json::Value>>>,
@@ -138,6 +141,7 @@ fn fake_agent(
     let request_permission_on_prompt = script.borrow().request_permission_on_prompt;
     let fail_extensions = script.borrow().fail_extensions.clone();
     let fail_new_session = script.borrow().fail_new_session;
+    let new_session_config_options = script.borrow().new_session_config_options.clone();
     let prompt_gate = Arc::clone(gate);
     let block_prompt = script.borrow().block_prompt;
     let prompt_err = script.borrow().prompt_err;
@@ -275,7 +279,19 @@ fn fake_agent(
                 } else {
                     format!("fake-{index}")
                 };
-                responder.respond(acp::NewSessionResponse::new(session_id.clone()))?;
+                let config_options = new_session_config_options
+                    .as_ref()
+                    .map(|raw| {
+                        <Vec<acp::SessionConfigOption> as serde::Deserialize>::deserialize(raw)
+                            .map_err(|error| {
+                            agent_client_protocol::Error::internal_error()
+                                .data(format!("scripted session/new configOptions: {error}"))
+                        })
+                    })
+                    .transpose()?;
+                responder.respond(
+                    acp::NewSessionResponse::new(session_id.clone()).config_options(config_options),
+                )?;
                 if emit_powers_changed {
                     let push = powers_push_notification(
                         &session_id,

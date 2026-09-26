@@ -5625,6 +5625,45 @@ mod tests {
         );
     }
 
+    /// cyril-k3lz review findings 2 + 4: the mediator's session-start order
+    /// (`SessionCreated`, then the response's config snapshot) keeps the
+    /// snapshot's thinking state AND model — a KAS `session/new|load` result
+    /// has no `models` key, so `SessionCreated.current_model` is None and the
+    /// snapshot is the only model report. Oracle: the captured `cfg_model` set
+    /// (claude-sonnet-4.6, thinking on).
+    #[test]
+    fn session_start_order_keeps_snapshot_thinking_and_model() {
+        let (_, kas) = cyril_core::test_support::thinking_capture_sequences();
+        let options = kas
+            .iter()
+            .find_map(|(step, n)| match n {
+                Notification::ConfigOptionSet { options, .. } if step == "cfg_model" => {
+                    Some(options.clone())
+                }
+                _ => None,
+            })
+            .expect("captured cfg_model step");
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_loaded"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
+        state.apply_notification(&Notification::ConfigOptionsUpdated(options));
+        assert_eq!(
+            state.thinking_enabled(),
+            Some(true),
+            "snapshot thinking kept"
+        );
+        assert_eq!(
+            state.current_model(),
+            Some("claude-sonnet-4.6"),
+            "snapshot model kept"
+        );
+    }
+
     /// cyril-k3lz C3a (UI half): the UI state machine follows the same
     /// captured sequences as `SessionController` (oracle: the capture lines
     /// read by hand — same table as the core fence), frame by frame.
@@ -5656,6 +5695,15 @@ mod tests {
         ];
         assert_eq!(kas.len(), kas_expected.len(), "KAS step count");
         let mut state = UiState::new(500);
+        // Production order (publish_session_start): the SessionCreated reset
+        // precedes the session/new snapshot (review finding 2).
+        state.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_kas"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        });
         for ((step, n), (want_step, want)) in kas.iter().zip(kas_expected) {
             assert_eq!(step, want_step, "KAS step order");
             state.apply_notification(n);

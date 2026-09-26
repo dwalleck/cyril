@@ -218,3 +218,71 @@ async fn set_thinking_config_option_wire_and_ack() {
         "exactly one set_config_option per toggle with the on/off literal"
     );
 }
+
+/// cyril-k3lz review findings 2 + 3: the mediator's session-start and
+/// failed-load notifications, replayed in emitted order into a
+/// `SessionController`, keep the snapshot's thinking state.
+///
+/// - A `session/new` whose `configOptions` report a toggleable model (the
+///   captured `cfg_model` set, claude-sonnet-4.6, thinking on) must leave the
+///   state toggleable: the `SessionCreated` reset precedes the snapshot.
+/// - A recoverable `session/load` failure must not reset the live session.
+#[tokio::test]
+async fn session_start_and_failed_load_keep_thinking_state() {
+    let script = Rc::new(RefCell::new(Script {
+        new_session_config_options: Some(
+            captured_config_result("cfg_model")["configOptions"].clone(),
+        ),
+        ..Script::default()
+    }));
+    with_harness(
+        script,
+        |sender, mut rx, _permissions, _gate, _loop| async move {
+            sender
+                .send(BridgeCommand::NewSession {
+                    cwd: std::env::temp_dir(),
+                })
+                .await
+                .expect_contract("send NewSession");
+            let mut ctrl = crate::session::SessionController::new();
+            let mut kinds = Vec::new();
+            for label in ["usage", "created", "config"] {
+                let got = next_notification(label, &mut rx).await;
+                kinds.push(match &got {
+                    Notification::UsageSessionStarted { .. } => "UsageSessionStarted",
+                    Notification::SessionCreated { .. } => "SessionCreated",
+                    Notification::ConfigOptionsUpdated(_) => "ConfigOptionsUpdated",
+                    other => panic!("unexpected session-start notification {other:?}"),
+                });
+                ctrl.apply_notification(&got);
+            }
+            assert_eq!(
+                kinds,
+                ["UsageSessionStarted", "SessionCreated", "ConfigOptionsUpdated"],
+                "the reset boundary precedes the session's own snapshot"
+            );
+            let toggleable = crate::types::ThinkingState::ToggleableByConfigOption { enabled: true };
+            assert_eq!(ctrl.thinking(), &toggleable, "snapshot survives session start");
+
+            sender
+                .send(BridgeCommand::LoadSession {
+                    session_id: crate::types::SessionId::new("load-typo"),
+                })
+                .await
+                .expect_contract("send LoadSession");
+            let failed = next_notification("failed load", &mut rx).await;
+            assert!(
+                matches!(&failed, Notification::BridgeError { operation, .. } if operation == "Load session"),
+                "a failed load is an operation error, not a disconnect: {failed:?}"
+            );
+            ctrl.apply_notification(&failed);
+            assert_eq!(ctrl.thinking(), &toggleable, "failed load keeps thinking");
+            assert_eq!(
+                ctrl.status(),
+                &crate::types::session::SessionStatus::Active,
+                "failed load keeps the live session active"
+            );
+        },
+    )
+    .await;
+}
