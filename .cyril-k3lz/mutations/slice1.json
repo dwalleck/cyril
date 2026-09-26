@@ -1,0 +1,26 @@
+[
+  {
+    "id": "C1",
+    "file": "crates/cyril-core/src/protocol/convert/mod.rs",
+    "from": "    options\n        .iter()\n        .filter_map(|option| match &option.kind {",
+    "to": "    options\n        .iter()\n        .filter(|o| o.id.to_string() != \"thinking\")\n        .filter_map(|option| match &option.kind {",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "kas_thinking_option_survives"],
+    "expect": "step cfg_model"
+  },
+  {
+    "id": "C2",
+    "file": "crates/cyril-core/src/types/thinking.rs",
+    "from": "enabled: info.thinking_enabled(),",
+    "to": "enabled: Some(info.thinking_enabled().unwrap_or(true)),",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "types::thinking::tests::from_reasoning_matrix"],
+    "expect": "reasoning cell toggleable/None"
+  },
+  {
+    "id": "C3",
+    "file": "crates/cyril-core/src/types/thinking.rs",
+    "from": "            _ => return false,\n        };",
+    "to": "            Notification::MetadataUpdated { reasoning: None, .. } => Self::Unreported,\n            _ => return false,\n        };",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "types::thinking::tests::apply_notification_rules"],
+    "expect": "metadata without reasoning keeps: state"
+  }
+]

@@ -369,7 +369,7 @@ impl CommandRegistry {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
             "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "memory", "theme",
-            "sessions", "spawn", "kill", "msg",
+            "thinking", "sessions", "spawn", "kill", "msg",
         ];
         if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
@@ -400,6 +400,7 @@ impl CommandRegistry {
         registry.register(Arc::new(builtin::UsageCommand::new(usage_account)));
         registry.register(Arc::new(builtin::PowersCommand));
         registry.register(Arc::new(builtin::MemoryCommand));
+        registry.register(Arc::new(builtin::ThinkingCommand));
         registry.register(Arc::new(subagent::SessionsCommand));
         registry.register(Arc::new(subagent::SpawnCommand));
         registry.register(Arc::new(subagent::KillCommand));
@@ -1648,5 +1649,290 @@ mod theme_command_tests {
         };
         assert_eq!(cmd.name(), "theme");
         assert_eq!(args, "");
+    }
+}
+
+// ── /thinking (cyril-k3lz C4–C7, C12) ────────────────────────────────────
+// Oracle: the spec B1/B4/B5/B6 strings and the state→lever table,
+// hand-written. States are reached through the public notification path.
+#[cfg(test)]
+#[expect(clippy::expect_used)]
+mod thinking_command_tests {
+    use super::*;
+    use crate::types::{
+        ConfigOption, EffortUpdate, Notification, ReasoningInfo, ReasoningSupport, ThinkingLever,
+    };
+
+    #[derive(Clone, Copy, Debug)]
+    enum Shape {
+        Unreported,
+        ReasoningOn,
+        ReasoningOff,
+        ReasoningUnknown,
+        ConfigOn,
+        ConfigOff,
+        AlwaysOn,
+        NotToggleable,
+    }
+
+    fn metadata(support: ReasoningSupport, enabled: Option<bool>) -> Notification {
+        Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            reasoning: Some(ReasoningInfo::new(support, enabled, None, vec![])),
+            session_id: None,
+            refusal: None,
+        }
+    }
+
+    fn config(value: &str) -> Notification {
+        Notification::ConfigOptionsUpdated(vec![ConfigOption {
+            key: "thinking".into(),
+            label: "Thinking".into(),
+            value: Some(value.into()),
+            options: vec!["on".into(), "off".into()],
+        }])
+    }
+
+    fn session(shape: Shape, active: bool) -> crate::session::SessionController {
+        let mut session = crate::session::SessionController::new();
+        if active {
+            session.set_session(
+                crate::types::SessionId::new("sess"),
+                crate::types::SessionStatus::Active,
+            );
+        }
+        let notification = match shape {
+            Shape::Unreported => None,
+            Shape::ReasoningOn => Some(metadata(ReasoningSupport::Toggleable, Some(true))),
+            Shape::ReasoningOff => Some(metadata(ReasoningSupport::Toggleable, Some(false))),
+            Shape::ReasoningUnknown => Some(metadata(ReasoningSupport::Toggleable, None)),
+            Shape::ConfigOn => Some(config("on")),
+            Shape::ConfigOff => Some(config("off")),
+            Shape::AlwaysOn => Some(metadata(ReasoningSupport::AlwaysOn, None)),
+            Shape::NotToggleable => Some(metadata(ReasoningSupport::Unavailable, None)),
+        };
+        if let Some(n) = notification {
+            session.apply_notification(&n);
+        }
+        session
+    }
+
+    /// Run `/thinking <args>`; returns the result kind (or error) and
+    /// every bridge command it sent.
+    async fn run(
+        session: &crate::session::SessionController,
+        args: &str,
+    ) -> (
+        crate::Result<CommandResultKind>,
+        Vec<crate::types::BridgeCommand>,
+    ) {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let result = builtin::ThinkingCommand
+            .execute(&ctx, args)
+            .await
+            .map(|r| r.kind);
+        let mut sent = Vec::new();
+        while let Ok(command) = rx.try_recv() {
+            sent.push(command);
+        }
+        (result, sent)
+    }
+
+    fn message(result: crate::Result<CommandResultKind>) -> String {
+        match result {
+            Ok(CommandResultKind::SystemMessage(text)) => text,
+            other => panic!("expected a system message, got {other:?}"),
+        }
+    }
+
+    const USAGE: &str = "Usage: /thinking [on|off]";
+
+    #[tokio::test]
+    async fn thinking_report_messages() {
+        let cases = [
+            (Shape::ReasoningOn, "Thinking is on."),
+            (Shape::ConfigOn, "Thinking is on."),
+            (Shape::ReasoningOff, "Thinking is off."),
+            (Shape::ConfigOff, "Thinking is off."),
+            (
+                Shape::ReasoningUnknown,
+                "Thinking can be toggled on this model, but its current state hasn't been reported yet.",
+            ),
+            (
+                Shape::AlwaysOn,
+                "Thinking is always on for the current model.",
+            ),
+            (
+                Shape::NotToggleable,
+                "Thinking can't be toggled on the current model.",
+            ),
+            (
+                Shape::Unreported,
+                "Thinking state hasn't been reported yet.",
+            ),
+        ];
+        for (shape, want) in cases {
+            for active in [true, false] {
+                let (result, sent) = run(&session(shape, active), "").await;
+                assert_eq!(
+                    message(result),
+                    format!("{want}\n{USAGE}"),
+                    "report for {shape:?} (session active: {active})"
+                );
+                assert!(sent.is_empty(), "bare /thinking sends nothing: {sent:?}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn thinking_refuses_without_toggleable_support() {
+        let cases = [
+            (
+                Shape::AlwaysOn,
+                "on",
+                "Thinking is always on for the current model.",
+            ),
+            (
+                Shape::AlwaysOn,
+                "off",
+                "Thinking is always on for the current model and can't be turned off.",
+            ),
+            (
+                Shape::NotToggleable,
+                "on",
+                "Thinking can't be toggled on the current model.",
+            ),
+            (
+                Shape::NotToggleable,
+                "off",
+                "Thinking can't be toggled on the current model.",
+            ),
+            (
+                Shape::Unreported,
+                "off",
+                "Thinking state hasn't been reported yet — try again after the first reply.",
+            ),
+        ];
+        for (shape, args, want) in cases {
+            let (result, sent) = run(&session(shape, true), args).await;
+            assert_eq!(
+                message(result),
+                want,
+                "refusal for {shape:?} /thinking {args}"
+            );
+            assert!(
+                sent.is_empty(),
+                "{shape:?} /thinking {args} must send nothing: {sent:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn thinking_args_and_no_session() {
+        for args in ["maybe", "on off", "1", "enable"] {
+            let (result, sent) = run(&session(Shape::ReasoningOn, true), args).await;
+            assert_eq!(message(result), USAGE, "invalid arg {args:?}");
+            assert!(sent.is_empty(), "invalid arg {args:?} sends nothing");
+        }
+        for (args, want) in [("ON", true), ("  off ", false), ("Off", false)] {
+            let (result, sent) = run(&session(Shape::ReasoningOn, true), args).await;
+            assert!(
+                matches!(result, Ok(CommandResultKind::Dispatched)),
+                "arg {args:?} parses: {result:?}"
+            );
+            assert!(
+                matches!(sent.as_slice(), [crate::types::BridgeCommand::SetThinking { enabled, .. }] if *enabled == want),
+                "arg {args:?} sends enabled={want}: {sent:?}"
+            );
+        }
+        // No session, toggleable state: the no-session error, nothing sent.
+        let (result, sent) = run(&session(Shape::ConfigOn, false), "off").await;
+        match result {
+            Err(error) => assert!(
+                matches!(error.kind(), crate::ErrorKind::NoSession),
+                "no session error kind, got {error}"
+            ),
+            Ok(kind) => panic!("expected the no-session error, got {kind:?}"),
+        }
+        assert!(sent.is_empty(), "no session sends nothing: {sent:?}");
+    }
+
+    #[tokio::test]
+    async fn thinking_sends_one_typed_toggle() {
+        let cases = [
+            (
+                Shape::ReasoningOn,
+                "off",
+                ThinkingLever::ReasoningCommand,
+                false,
+            ),
+            (
+                Shape::ReasoningOff,
+                "on",
+                ThinkingLever::ReasoningCommand,
+                true,
+            ),
+            (
+                Shape::ReasoningUnknown,
+                "off",
+                ThinkingLever::ReasoningCommand,
+                false,
+            ),
+            (Shape::ConfigOn, "off", ThinkingLever::ConfigOption, false),
+            (Shape::ConfigOff, "on", ThinkingLever::ConfigOption, true),
+            // Already in the requested state: still sent (spec decision).
+            (Shape::ConfigOn, "on", ThinkingLever::ConfigOption, true),
+        ];
+        for (shape, args, want_lever, want_enabled) in cases {
+            let (result, sent) = run(&session(shape, true), args).await;
+            assert!(
+                matches!(result, Ok(CommandResultKind::Dispatched)),
+                "{shape:?} /thinking {args}: {result:?}"
+            );
+            assert!(
+                matches!(
+                    sent.as_slice(),
+                    [crate::types::BridgeCommand::SetThinking { lever, enabled }]
+                        if *lever == want_lever && *enabled == want_enabled
+                ),
+                "{shape:?} /thinking {args} must send exactly SetThinking{{{want_lever:?}, {want_enabled}}}: {sent:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn thinking_command_registered_on_every_engine() {
+        let root = std::path::PathBuf::from("/workspace");
+        for registry in [
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None),
+            CommandRegistry::with_builtins_and_usage(
+                HooksCommandSource::Kas {
+                    workspace_root: root.clone(),
+                },
+                WorkflowCommandSource::Kas {
+                    workspace_root: root.clone(),
+                },
+                UsageAccountCommandSource::Kas,
+            ),
+        ] {
+            let (command, args) = registry
+                .parse("/thinking off")
+                .expect("/thinking is registered on every engine");
+            assert_eq!(command.name(), "thinking");
+            assert_eq!(args, "off");
+        }
     }
 }

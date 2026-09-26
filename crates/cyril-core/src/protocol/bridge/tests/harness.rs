@@ -67,6 +67,14 @@ pub(super) struct Script {
     /// Set by `fake_agent`: lets a running test flip `emit_turn_end` for the
     /// NEXT prompt (the harness snapshot is taken at agent build time).
     pub(super) emit_turn_end_live: Option<Arc<std::sync::atomic::AtomicBool>>,
+    /// Scripted extension and `session/set_config_option` results
+    /// (cyril-k3lz): the first entry whose method matches a call is removed
+    /// and returned. Unscripted, an extension answers `{}` and
+    /// `set_config_option` keeps the historical method-not-found answer.
+    pub(super) ext_responses: Arc<Mutex<Vec<(String, serde_json::Value)>>>,
+    /// `configOptions` carried by every `session/new` response (a raw ACP
+    /// array); None keeps the historical options-less response.
+    pub(super) new_session_config_options: Option<serde_json::Value>,
 }
 
 impl Script {
@@ -74,8 +82,8 @@ impl Script {
         lock(&self.received)
     }
 
-    /// Only the v2-only C5 command oracle reads the exact call ledger.
-    #[cfg(not(feature = "kas"))]
+    /// The exact extension-call ledger, read by the C5 command oracle and the
+    /// thinking-toggle contract tests.
     pub(super) fn ext_calls(&self) -> MutexGuard<'_, Vec<(String, serde_json::Value)>> {
         lock(&self.ext_calls)
     }
@@ -118,6 +126,7 @@ fn fake_agent(
     let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
+    let ext_responses = Arc::clone(&script.borrow().ext_responses);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
     let emit_chunks = script.borrow().emit_chunks;
     let emit_unknown_update = script.borrow().emit_unknown_update;
@@ -130,6 +139,7 @@ fn fake_agent(
     let request_permission_on_prompt = script.borrow().request_permission_on_prompt;
     let fail_extensions = script.borrow().fail_extensions.clone();
     let fail_new_session = script.borrow().fail_new_session;
+    let new_session_config_options = script.borrow().new_session_config_options.clone();
     let prompt_gate = Arc::clone(gate);
     let block_prompt = script.borrow().block_prompt;
     let prompt_err = script.borrow().prompt_err;
@@ -267,7 +277,19 @@ fn fake_agent(
                 } else {
                     format!("fake-{index}")
                 };
-                responder.respond(acp::NewSessionResponse::new(session_id.clone()))?;
+                let config_options = new_session_config_options
+                    .as_ref()
+                    .map(|raw| {
+                        <Vec<acp::SessionConfigOption> as serde::Deserialize>::deserialize(raw)
+                            .map_err(|error| {
+                            agent_client_protocol::Error::internal_error()
+                                .data(format!("scripted session/new configOptions: {error}"))
+                        })
+                    })
+                    .transpose()?;
+                responder.respond(
+                    acp::NewSessionResponse::new(session_id.clone()).config_options(config_options),
+                )?;
                 if emit_powers_changed {
                     let push = powers_push_notification(
                         &session_id,
@@ -410,6 +432,25 @@ fn fake_agent(
                     return responder
                         .respond_with_error(agent_client_protocol::Error::method_not_found());
                 }
+                if request.method() == "session/set_config_option" {
+                    // Same ledger and failure rules as the extension branch
+                    // below, so call counts never depend on whether the
+                    // answer was scripted (cyril-k3lz review finding 12).
+                    let method = request.method().to_owned();
+                    record(&received_ext, "set_config_option");
+                    if fail_extensions.contains(&method) {
+                        return responder.respond_with_error(
+                            agent_client_protocol::Error::internal_error()
+                                .data("scripted failure"),
+                        );
+                    }
+                    lock(&ext_calls).push((method.clone(), request.params.clone()));
+                    return match take_scripted(&ext_responses, &method) {
+                        Some(result) => responder.respond(result),
+                        None => responder
+                            .respond_with_error(agent_client_protocol::Error::method_not_found()),
+                    };
+                }
                 let Some(method) = request.method().strip_prefix('_').map(str::to_owned) else {
                     return responder
                         .respond_with_error(agent_client_protocol::Error::method_not_found());
@@ -420,11 +461,24 @@ fn fake_agent(
                         agent_client_protocol::Error::internal_error().data("scripted failure"),
                     );
                 }
-                lock(&ext_calls).push((method, request.params.clone()));
-                responder.respond(serde_json::json!({}))
+                lock(&ext_calls).push((method.clone(), request.params.clone()));
+                let scripted = take_scripted(&ext_responses, &method);
+                responder.respond(scripted.unwrap_or_else(|| serde_json::json!({})))
             },
             agent_client_protocol::on_receive_request!(),
         )
+}
+
+/// Remove and return the first scripted result for `method`, if any.
+fn take_scripted(
+    responses: &Mutex<Vec<(String, serde_json::Value)>>,
+    method: &str,
+) -> Option<serde_json::Value> {
+    let mut queue = lock(responses);
+    let index = queue
+        .iter()
+        .position(|(scripted_method, _)| scripted_method == method)?;
+    Some(queue.remove(index).1)
 }
 
 pub(super) async fn recv_notif(

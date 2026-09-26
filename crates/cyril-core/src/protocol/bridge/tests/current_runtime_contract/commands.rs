@@ -289,7 +289,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             .await;
             let load = next_notification("LoadSession", &mut rx).await;
             assert!(
-                matches!(load, Notification::BridgeDisconnected { ref reason } if reason.starts_with("Failed to load session:")),
+                matches!(load, Notification::BridgeError { ref operation, .. } if operation == "Load session"),
                 "C5 LoadSession: {load:?}"
             );
 

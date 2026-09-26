@@ -1,0 +1,26 @@
+[
+  {
+    "id": "C13-S5",
+    "file": "crates/cyril-ui/src/state.rs",
+    "from": "None => THINKING_NOT_TOGGLEABLE_MESSAGE.to_owned(),",
+    "to": "None => cyril_core::commands::builtin::THINKING_NOT_TOGGLEABLE_MESSAGE.to_owned(),",
+    "cmd": ["python", ".cyril-k3lz/oracles/shape.py"],
+    "expect": "C13/S5: crates/cyril-ui/src/state.rs"
+  },
+  {
+    "id": "C13-S1",
+    "file": "crates/cyril/src/app.rs",
+    "from": "fn format_command_response(command: &str, response: &serde_json::Value) -> String {",
+    "to": "fn format_command_response(command: &str, response: &serde_json::Value) -> String {\n    // thinking",
+    "cmd": ["python", ".cyril-k3lz/oracles/shape.py"],
+    "expect": "C13/S1: crates/cyril/src/app.rs"
+  },
+  {
+    "id": "C13-S2",
+    "file": "crates/cyril-core/src/session.rs",
+    "from": "        let thinking_changed = self.thinking.apply_notification(notification);",
+    "to": "        let thinking_changed = self.thinking.apply_notification(notification);\n        let _probe = self.cached_model.as_deref() == Some(\"x\") || \"thinking\" == \"thinking\";",
+    "cmd": ["python", ".cyril-k3lz/oracles/shape.py"],
+    "expect": "C13/S2: crates/cyril-core/src/session.rs"
+  }
+]

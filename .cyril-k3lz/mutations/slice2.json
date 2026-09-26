@@ -1,0 +1,34 @@
+[
+  {
+    "id": "C8-args",
+    "file": "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs",
+    "from": "\"args\": {\"thinkingEnabled\": enabled}",
+    "to": "\"args\": {\"thinkingEnabled\": enabled, \"setAsDefault\": false}",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "current_runtime_contract::thinking::set_thinking_reasoning_wire_and_ack"],
+    "expect": "args = {thinkingEnabled} only"
+  },
+  {
+    "id": "C8-missing-success",
+    "file": "crates/cyril-core/src/protocol/convert/kiro.rs",
+    "from": "        Some(true) => Ok(()),",
+    "to": "        Some(true) | None => Ok(()),",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "current_runtime_contract::thinking::set_thinking_reasoning_wire_and_ack"],
+    "expect": "response missing success"
+  },
+  {
+    "id": "C9",
+    "file": "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+    "from": "ThinkingLever::config_value(enabled).to_owned()",
+    "to": "ThinkingLever::config_value(!enabled).to_owned()",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "current_runtime_contract::thinking::set_thinking_config_option_wire_and_ack"],
+    "expect": "exactly one set_config_option per toggle"
+  },
+  {
+    "id": "C10a",
+    "file": "crates/cyril-ui/src/state.rs",
+    "from": "self.add_system_message(thinking_toggled_message(*enabled));",
+    "to": "self.add_system_message(thinking_toggled_message(!*enabled));",
+    "cmd": ["cargo", "test", "-p", "cyril-ui", "--lib", "state::tests::thinking_toggled_message"],
+    "expect": "must read"
+  }
+]

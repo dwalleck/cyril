@@ -1,0 +1,34 @@
+[
+  {
+    "id": "C3a-ui",
+    "file": "crates/cyril-ui/src/state.rs",
+    "from": "let thinking_changed = self.thinking.apply_notification(notification);",
+    "to": "let thinking_changed = false;",
+    "cmd": ["cargo", "test", "-p", "cyril-ui", "--lib", "state::tests::thinking_follows_captured_sequences"],
+    "expect": "v2 capture line 24"
+  },
+  {
+    "id": "C10b",
+    "file": "crates/cyril-ui/src/state.rs",
+    "from": "Notification::ConfigOptionSet { config_id, .. } if config_id == THINKING_CONFIG_ID",
+    "to": "Notification::ConfigOptionSet { .. }",
+    "cmd": ["cargo", "test", "-p", "cyril-ui", "--lib", "state::tests::thinking_config_ack_messages"],
+    "expect": "a `model` set adds no thinking message"
+  },
+  {
+    "id": "C11",
+    "file": "crates/cyril-ui/src/widgets/toolbar.rs",
+    "from": "if let Some(enabled) = state.thinking_enabled() {",
+    "to": "if let Some(enabled) = state.thinking_enabled().or(Some(true)) {",
+    "cmd": ["cargo", "test", "-p", "cyril-ui", "--lib", "widgets::toolbar::tests::thinking_segment_per_state"],
+    "expect": "unreported: expected no thinking segment"
+  },
+  {
+    "id": "C4-recheck",
+    "file": "crates/cyril-core/src/commands/builtin.rs",
+    "from": "            ThinkingState::AlwaysOn => \"Thinking is always on for the current model.\",\n            ThinkingState::NotToggleable => THINKING_NOT_TOGGLEABLE_MESSAGE,",
+    "to": "            ThinkingState::NotToggleable => \"Thinking is always on for the current model.\",\n            ThinkingState::AlwaysOn => THINKING_NOT_TOGGLEABLE_MESSAGE,",
+    "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_report_messages"],
+    "expect": "report for AlwaysOn"
+  }
+]

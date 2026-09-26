@@ -275,6 +275,54 @@ fn split_active_label_suffix(label: &str) -> (&str, bool) {
     }
 }
 
+/// Parse the response to the v2 `reasoning` TUI command (kiro-cli 2.23.0+,
+/// cyril-k3lz): `{success, message, data}`. Only an explicit
+/// `success: true` is an ack — a missing `success` is a malformed response,
+/// not a default success. `Err` carries the text the UI shows after
+/// "Thinking change failed: " (the first non-empty of `error`, `message`,
+/// else `unknown error`).
+///
+/// A `success: true` is still refused when `data.thinking` reports the model
+/// as anything but `toggleable` (the value every captured ack carries): the
+/// toggle did not take effect, and reporting it as done would be a fake
+/// success (spec B4; cyril-k3lz review finding 5). An absent `data.thinking`
+/// keeps the explicit `success` as the ack.
+pub(crate) fn parse_reasoning_command_ack(response: &serde_json::Value) -> Result<(), String> {
+    match response.get("success").and_then(serde_json::Value::as_bool) {
+        Some(true) => match response
+            .get("data")
+            .and_then(|data| data.get("thinking"))
+            .map(|thinking| thinking.as_str())
+        {
+            None | Some(Some(THINKING_TOGGLEABLE)) => Ok(()),
+            Some(Some(other)) => {
+                tracing::warn!(%response, "reasoning command acked a non-toggleable model");
+                Err(format!(
+                    "the current model's thinking is `{other}` and can't be toggled"
+                ))
+            }
+            Some(None) => {
+                tracing::warn!(%response, "reasoning command `data.thinking` is not a string");
+                Err("response has a malformed data.thinking".to_owned())
+            }
+        },
+        Some(false) => Err(["error", "message"]
+            .iter()
+            .filter_map(|key| response.get(*key).and_then(serde_json::Value::as_str))
+            .find(|text| !text.is_empty())
+            .unwrap_or("unknown error")
+            .to_owned()),
+        None => {
+            tracing::warn!(%response, "reasoning command response has no boolean `success`");
+            Err("response missing success".to_owned())
+        }
+    }
+}
+
+/// The `data.thinking` value of a `reasoning` command ack whose toggle took
+/// effect (all 2.24.0 captures).
+const THINKING_TOGGLEABLE: &str = "toggleable";
+
 /// Parse a `kiro.dev/commands/options` response into `CommandOption`s.
 ///
 /// Handles two response shapes:
@@ -387,8 +435,13 @@ fn legacy_effort_update(params: &serde_json::Value) -> EffortUpdate {
 /// Returns `None` for a block Kiro's own parser (2.24.0 tui.js `eQe`) would
 /// also reject on structure — not an object, `support` missing or not a
 /// string, `effortLevels` missing or not all strings, `thinkingEnabled` not a
-/// bool, `effort` neither a string nor null. Those are warned; `null` itself
-/// is Kiro's documented "no reasoning" and only logged at debug.
+/// bool, `effort` neither a string nor null. Those are warned.
+///
+/// `null` itself is Kiro's documented "no reasoning", not damage: it becomes
+/// an explicit `unavailable` snapshot (what Kiro's parser falls back to), so
+/// a model switch to one without reasoning replaces a stale toggleable state
+/// instead of leaving it — and its lever — in place (cyril-k3lz review
+/// finding 5).
 ///
 /// Deliberately more tolerant than Kiro on values: an unknown `support`
 /// becomes `ReasoningSupport::Other`, and an effort outside `effortLevels`
@@ -397,8 +450,13 @@ fn legacy_effort_update(params: &serde_json::Value) -> EffortUpdate {
 /// badge on the first backend addition.
 fn parse_reasoning(block: &serde_json::Value) -> Option<ReasoningInfo> {
     if block.is_null() {
-        tracing::debug!("kiro.dev/metadata `reasoning` is null; treating as no reasoning");
-        return None;
+        tracing::debug!("kiro.dev/metadata `reasoning` is null; treating as unavailable");
+        return Some(ReasoningInfo::new(
+            ReasoningSupport::Unavailable,
+            None,
+            None,
+            Vec::new(),
+        ));
     }
     let Some(map) = block.as_object() else {
         tracing::warn!(value = ?block, "kiro.dev/metadata `reasoning` is not an object, ignoring");
@@ -2113,7 +2171,6 @@ mod tests {
         // Structural damage matches Kiro's fallback (`unavailable` ⇒ badge
         // cleared); the block is not fabricated into a ReasoningInfo.
         let corrupt = [
-            json!(null),
             json!("toggleable"),
             json!({"effortLevels": []}),
             json!({"support": 3, "effortLevels": []}),
@@ -2128,6 +2185,53 @@ mod tests {
             assert_eq!(effort, EffortUpdate::Clear, "block = {block}");
             assert!(reasoning.is_none(), "block = {block}");
         }
+    }
+
+    #[test]
+    fn reasoning_command_ack_checks_data_thinking() {
+        let ack = |data: serde_json::Value| {
+            parse_reasoning_command_ack(&json!({"success": true, "message": "", "data": data}))
+        };
+        // Captured 2.24.0 shape (v2-reasoning-args2 line 29).
+        assert_eq!(
+            ack(json!({"thinking": "toggleable", "defaultThinkingEnabled": false})),
+            Ok(())
+        );
+        assert_eq!(ack(json!({})), Ok(()), "absent data.thinking keeps the ack");
+        assert_eq!(
+            parse_reasoning_command_ack(&json!({"success": true})),
+            Ok(()),
+            "absent data keeps the ack"
+        );
+        for support in ["unavailable", "alwaysOn"] {
+            assert_eq!(
+                ack(json!({"thinking": support})).map_err(|e| e.to_string()),
+                Err(format!(
+                    "the current model's thinking is `{support}` and can't be toggled"
+                )),
+                "success:true on a {support} model is not a toggle"
+            );
+        }
+        assert_eq!(
+            ack(json!({"thinking": 1})),
+            Err("response has a malformed data.thinking".to_owned())
+        );
+    }
+
+    #[test]
+    fn metadata_reasoning_null_is_an_unavailable_snapshot() {
+        // Kiro's documented "no reasoning": the effort badge clears AND the
+        // block is carried as `unavailable`, so thinking state is replaced
+        // rather than left stale (cyril-k3lz review finding 5).
+        let (effort, reasoning) = effort_and_reasoning(&json!({"reasoning": null}));
+        assert_eq!(effort, EffortUpdate::Clear);
+        let reasoning = reasoning.expect("null is carried as a snapshot");
+        assert_eq!(reasoning.support(), &ReasoningSupport::Unavailable);
+        assert_eq!(reasoning.thinking_enabled(), None);
+        assert_eq!(reasoning.effort(), None);
+        let state = crate::types::ThinkingState::from_reasoning(&reasoning);
+        assert_eq!(state, crate::types::ThinkingState::NotToggleable);
+        assert_eq!(state.lever(), None, "no lever survives a null block");
     }
 
     #[test]

@@ -2689,4 +2689,46 @@ mod tests {
         );
         assert!(partial_update.fields.title.is_none());
     }
+
+    /// cyril-k3lz C1 (premise fence): the captured KAS 0.66.8 `thinking`
+    /// select option survives the generic `to_config_options` conversion with
+    /// its id and current value, per step of the audit § 7.1 table. Oracle:
+    /// the § 7.1 table values (on / on / off / on / off / absent), not the
+    /// converter. Fixture: verbatim capture results
+    /// (`.cyril-k3lz/extract_fixtures.py`).
+    #[test]
+    fn kas_thinking_option_survives_config_conversion_per_captured_step() {
+        use serde::Deserialize;
+
+        let fixture: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/fixtures/kas/thinking/set-config-sequence-0668.json"
+        ))
+        .unwrap();
+        let expected: [(&str, Option<&str>); 7] = [
+            ("session_new", None),
+            ("cfg_model", Some("on")),
+            ("cfg_effort_max", Some("on")),
+            ("cfg_thinking_off", Some("off")),
+            ("cfg_effort_max2", Some("on")),
+            ("cfg_thinking_bogus", Some("off")),
+            ("cfg_model_gpt", None),
+        ];
+        let steps = fixture["steps"].as_array().unwrap();
+        assert_eq!(steps.len(), expected.len(), "fixture step count");
+        for (step, (name, want)) in steps.iter().zip(expected) {
+            assert_eq!(step["step"], name, "fixture step order");
+            let options =
+                Vec::<acp::SessionConfigOption>::deserialize(&step["configOptions"]).unwrap();
+            let converted = to_config_options(&options);
+            let thinking = converted.iter().find(|o| o.key == "thinking");
+            assert_eq!(
+                thinking.and_then(|o| o.value.as_deref()),
+                want,
+                "step {name}: thinking option value after conversion"
+            );
+            if let Some(option) = thinking {
+                assert_eq!(option.options, ["on", "off"], "step {name}: choices");
+            }
+        }
+    }
 }
