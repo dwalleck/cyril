@@ -83,8 +83,8 @@ impl Script {
         lock(&self.received)
     }
 
-    /// Only the v2-only C5 command oracle reads the exact call ledger.
-    #[cfg(not(feature = "kas"))]
+    /// The exact extension-call ledger, read by the C5 command oracle and the
+    /// thinking-toggle contract tests.
     pub(super) fn ext_calls(&self) -> MutexGuard<'_, Vec<(String, serde_json::Value)>> {
         lock(&self.ext_calls)
     }
