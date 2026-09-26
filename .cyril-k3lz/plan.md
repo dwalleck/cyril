@@ -209,3 +209,39 @@ Lint: `cargo clippy -p cyril-core -p cyril-ui -p cyril -- -D warnings` clean; fm
 - Assembled state: `cargo test --workspace` PASS; `cargo test -p cyril-core --lib` (default features, runs the not-kas contract module) PASS 759; `cargo check --workspace --all-targets` PASS; clippy (default, lib targets) PASS; fmt PASS; shape oracle PASS.
 - Diff: 19 files, +1,843/−14 under `crates/` (incl. ~57 KB compact fixture ≈ 8 lines) — within the 2,080 plan budget; one increment.
 - Not verifiable here: Linux/macOS CI legs, `clippy --all-targets` (pre-existing Windows-only failures in untouched test files), and a live kiro-cli session (no kiro-cli on this host). Live wire behavior rests on the committed 2.24.0 captures.
+
+
+### Bounded repair checkpoint — isolated design-conformance finding
+
+Repair owner: checkpointed-build / implementer. Review receipt: independent fresh-context reconstruction found one FAIL — `cyril-ui/src/state.rs` imported `cyril_core::commands::builtin::THINKING_NOT_TOGGLEABLE_MESSAGE`, violating the approved cyril-ui types-only dependency direction. No other mismatch was found.
+
+Governing obligations: approved module ledger (types/thinking owns shared thinking-domain contracts; cyril-ui must not own command-layer knowledge), protected-parent shape fence, and repository dependency rule. The approved behavior, state model, wire shape, oracle meaning, and risk acceptance remain unchanged, so no renewed requester approval is required.
+
+Correction: moved `THINKING_NOT_TOGGLEABLE_MESSAGE` into `cyril-core/src/types/thinking.rs`, re-exported from `types/mod.rs`, and consumed from `cyril_core::types::*` by both command and UI code. Moved v2 response parsing into `protocol/convert/kiro.rs::parse_reasoning_command_ack`; mediator mapping remains unchanged observationally. Added shape-fence rule S5 and `mutations/repair1.json`.
+
+Repair gate:
+1. Affected tests: PASS — core thinking tests 15, UI thinking tests 4; workspace test command exit 0 with 31 green test-result lines.
+2. Falsifier: PASS — isolated reviewer’s mismatch is removed; post-repair shape/ledger comparison PASS.
+3. Stress fixture: N/A — placement-only repair; original capture fixtures unchanged.
+4. Implementation vs oracle: PASS — original C8/C10 behavior tests remain green; parser relocation changes no result mapping.
+5. Module shape: PASS — `python .cyril-k3lz/oracles/shape.py` → `C13 PASS (base 0db49e3565)`; S5 catches the original dependency violation.
+6. Budget: N/A — no new runtime loop or always-on phase.
+7. Fence: PASS — shape fence restored green.
+8. Mutation: PASS — `python .cyril-k3lz/mutate.py .cyril-k3lz/mutations/repair1.json`: C13-S5, C13-S1, C13-S2 all RED; restored oracle GREEN.
+9. Restored: PASS — all repair mutations restored byte-for-byte; shape oracle GREEN.
+10. Parity/reuse: PASS — shared message has one domain-type owner; parser now follows the existing `convert::kiro` boundary; mediator remains a result mapper; cyril-ui has no command-layer import.
+11. Preserved enforcement: PASS — existing behavior fences, C8 mutations, and workspace tests remain green; only the shape fence was strengthened with S5.
+
+Final conformance verdict: PASS. This is a bounded technical repair, not a changed approved decision.
+
+
+### Final validation after bounded repair
+
+Fresh validation at repaired worktree state (after moving the shared message into `types/thinking.rs` and rerunning the corrected C4 mutation anchor):
+
+- Mutation suites: `slice1.json`, `slice2.json`, `slice3.json`, `slice4.json`, and `repair1.json` all passed. Every named mutation was RED and every restored command was GREEN; the mutation runner rejected no silent test skips.
+- Structural: `python .cyril-k3lz/oracles/shape.py` → `C13 PASS (base 0db49e3565)`. Repair mutations C13-S5, C13-S1, C13-S2 were RED; restored oracle GREEN.
+- Tests: `cargo test --workspace` → exit 0, 31 green `test result: ok` lines; `cargo test --workspace --features kas` → exit 0, 31 green result lines. Targeted core/UI thinking tests pass.
+- Build/format: `cargo check --workspace --all-targets` PASS; `cargo fmt --check` PASS.
+- Lint: `cargo clippy -p cyril-core -p cyril-ui -p cyril -- -D warnings` PASS. KAS-feature clippy remains FAIL only on pre-existing untouched `crates/cyril-core/src/protocol/kas/host_io.rs:155` (`unused_mut`), plus all-target test-only warnings documented from the baseline; no new cyril-k3lz warning.
+- Diff/whitespace: `git diff --check` PASS; one PR increment and the cumulative estimate remains within the 2,080-line plan budget.

@@ -281,6 +281,28 @@ fn split_active_label_suffix(label: &str) -> (&str, bool) {
 /// - Object with `"options"` array: `{"options": [...]}`
 /// - Bare array: `[...]`
 ///
+/// Parse the response to the v2 `reasoning` TUI command (kiro-cli 2.23.0+,
+/// cyril-k3lz): `{success, message, data}`. Only an explicit
+/// `success: true` is an ack — a missing `success` is a malformed response,
+/// not a default success. `Err` carries the text the UI shows after
+/// "Thinking change failed: " (the first non-empty of `error`, `message`,
+/// else `unknown error`).
+pub(crate) fn parse_reasoning_command_ack(response: &serde_json::Value) -> Result<(), String> {
+    match response.get("success").and_then(serde_json::Value::as_bool) {
+        Some(true) => Ok(()),
+        Some(false) => Err(["error", "message"]
+            .iter()
+            .filter_map(|key| response.get(*key).and_then(serde_json::Value::as_str))
+            .find(|text| !text.is_empty())
+            .unwrap_or("unknown error")
+            .to_owned()),
+        None => {
+            tracing::warn!(%response, "reasoning command response has no boolean `success`");
+            Err("response missing success".to_owned())
+        }
+    }
+}
+
 /// `is_current` is set from the option's `current` boolean when the agent
 /// sends one, or from the `[active]` label suffix when it encodes the bit
 /// there instead. kiro-cli 2.14.2 uses neither for `/model`, so the picker

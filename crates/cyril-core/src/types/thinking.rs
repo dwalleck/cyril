@@ -24,6 +24,10 @@ use crate::types::session::{ReasoningInfo, ReasoningSupport};
 /// The KAS `configOptions` id of the thinking toggle (KAS 0.66.8,
 /// `docs/kiro-2.24.0-wire-audit.md` § 7.1).
 pub const THINKING_CONFIG_ID: &str = "thinking";
+/// Shared user-facing text for a model that does not expose a thinking toggle.
+/// Kept in the domain types module so both the command and UI layers use the
+/// same contract without crossing the cyril-ui → commands dependency boundary.
+pub const THINKING_NOT_TOGGLEABLE_MESSAGE: &str = "Thinking can't be toggled on the current model.";
 
 const CONFIG_VALUE_ON: &str = "on";
 const CONFIG_VALUE_OFF: &str = "off";

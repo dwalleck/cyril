@@ -45,7 +45,7 @@ Decision cells:
 
 | Capability | Owner | New seam | Forbidden |
 |---|---|---|---|
-| Thinking-state model + derivation from both snapshot kinds | `cyril-core/src/types/thinking.rs` (create) — `ThinkingState`, `ThinkingLever` | `ThinkingState::apply_notification(&mut self, &Notification) -> bool` (pure, both state machines delegate) | Derivation (`"thinking"` key match, `support` match) anywhere else; any `AgentEngine`/`kind()` match (ADR-0001 rejects engine enum matching — the lever is a fact of the snapshot) |
+| Thinking-state model + derivation from both snapshot kinds | `cyril-core/src/types/thinking.rs` (create) — `ThinkingState`, `ThinkingLever`, `THINKING_NOT_TOGGLEABLE_MESSAGE` | `ThinkingState::apply_notification(&mut self, &Notification) -> bool` (pure, both state machines delegate) | Derivation (`"thinking"` key match, `support` match) anywhere else; any `AgentEngine`/`kind()` match (ADR-0001 rejects engine enum matching — the lever is a fact of the snapshot) |
 | Session-side state for command gating | `SessionController` (field + `thinking()` accessor, delegates) | existing `apply_notification` | Own derivation logic |
 | UI-side state, ack messages | `UiState` (field + delegate; `ThinkingToggled` and `ConfigOptionSet{config_id:"thinking"}` arms add the B2/B3 message) | `TuiState::thinking_enabled() -> Option<bool>` | Mutating via render; wire JSON |
 | `/thinking` command | `commands/builtin.rs` `ThinkingCommand` | existing `Command` trait | Wire strings (`"reasoning"`, `"thinkingEnabled"`, `"on"`) — it sends a typed `BridgeCommand::SetThinking{lever, enabled}` |
@@ -60,7 +60,7 @@ Current cluster (inventory; line counts are signals):
 | Module | Interface / responsibilities | Change |
 |---|---|---|
 | `crates/cyril-core/src/types/session.rs` | `ReasoningInfo`, `ReasoningSupport`, effort types | retain (read only) |
-| `crates/cyril-core/src/types/thinking.rs` | — | create: thinking-state model, derivation, wire vocabulary constants for the thinking config option |
+| `crates/cyril-core/src/types/thinking.rs` | — | create: thinking-state model, derivation, wire vocabulary constants for the thinking config option, shared not-toggleable message |
 | `crates/cyril-core/src/types/event.rs` | `Notification`, `BridgeCommand` enums (declarations) | retain: +1 variant each |
 | `crates/cyril-core/src/session.rs` | `SessionController` session facts | retain: +field/accessor/delegate |
 | `crates/cyril-core/src/commands/builtin.rs` | local builtin commands | deepen: +`ThinkingCommand` |
@@ -83,7 +83,7 @@ Approved module ledger:
 
 | Module/path | Interface | Owns | Hides/reuses | Must not own | Adapters | Tests through | Change |
 |---|---|---|---|---|---|---|---|
-| `crates/cyril-core/src/types/thinking.rs` | `ThinkingState` (+`lever()`, `enabled()`, `apply_notification`), `ThinkingLever` (+`config_value`), `THINKING_CONFIG_ID` | two-source derivation; snapshot replacement rules | `ReasoningInfo`, `ConfigOption` | engine-kind matching; wire JSON | N/A — closed enum, no seam | `apply_notification`, constructors | create |
+| `crates/cyril-core/src/types/thinking.rs` | `ThinkingState` (+`lever()`, `enabled()`, `apply_notification`), `ThinkingLever` (+`config_value`), `THINKING_CONFIG_ID`, `THINKING_NOT_TOGGLEABLE_MESSAGE` | two-source derivation; snapshot replacement rules; shared B1/B3/B4 message contract | `ReasoningInfo`, `ConfigOption` | engine-kind matching; wire JSON | N/A — closed enum, no seam | `apply_notification`, constructors | create |
 | `crates/cyril-core/src/commands/builtin.rs` | `ThinkingCommand: Command` | B1, B4–B6 messages; lever choice from state | `SessionController::thinking` | wire strings; engine kind | N/A | `Command::execute` + bridge channel | deepen |
 | `crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs` | `set_reasoning_thinking` | v2 wire request + ack/failure mapping | `spawn_extension_command` | derivation | N/A | mediator test harness | deepen |
 | `crates/cyril-ui/src/state.rs` | `UiState` + `TuiState::thinking_enabled` | holding state; ack messages | `ThinkingState` | derivation | N/A | `apply_notification` | retain |
@@ -97,7 +97,7 @@ Protected parents:
 | `crates/cyril-core/src/session.rs` | session facts | field, accessor, one delegating call | `"thinking"` literal / support matching in production code | shape oracle S2 |
 | `crates/cyril-ui/src/state.rs` | UI state machine | field, delegate call, two message arms, accessor | `"thinking"` config-key literal / support matching in production code | shape oracle S2 |
 
-Shape fence: `.cyril-k3lz/oracles/shape.py` (issue-local; discovers the base via `git merge-base HEAD <upstream default>`), checks S1 app.rs zero delta; S2 no `"thinking"` literal, `ReasoningSupport::` match, or `thinkingEnabled` in production sections of `session.rs`/`state.rs`/`builtin.rs`; S3 no `AgentEngine`/`.kind()` in `types/thinking.rs` or `ThinkingCommand`; S4 `thinkingEnabled` wire key appears in production code only under `protocol/`. Reports the rule ID and path.
+Shape fence: `.cyril-k3lz/oracles/shape.py` (issue-local; discovers the base via `git merge-base HEAD <upstream default>`), checks S1 app.rs zero delta; S2 no `"thinking"` literal, `ReasoningSupport::` match, or `thinkingEnabled` in production sections of `session.rs`/`state.rs`/`builtin.rs`; S3 no `AgentEngine`/`.kind()` in `types/thinking.rs` or `ThinkingCommand`; S4 `thinkingEnabled` wire key appears in production code only under `protocol/`; S5 cyril-ui does not import `cyril_core::commands::builtin`. Reports the rule ID and path.
 
 ## Claims
 
@@ -152,3 +152,22 @@ Subtractive sweep: purely additive — no guard, serialization point, or validat
 Requester approval (verbatim): "yes, I approve"
 Date: 2026-09-25
 Risk acceptances: None
+
+
+## Final design-conformance review and bounded repair
+
+Independent review method: fresh subagent was given only the production diff (`git diff 0db49e3 -- crates`) first, then this design's Placement and Module shape sections. It reconstructed every changed production module, interface, responsibility cluster, dependency direction, protected parent, and test boundary before comparison.
+
+Initial verdict: **FAIL**, one mismatch only. `crates/cyril-ui/src/state.rs` imported `cyril_core::commands::builtin::THINKING_NOT_TOGGLEABLE_MESSAGE`, adding a cyril-ui → command-layer dependency not present in the approved ledger or the crate boundary rule (cyril-ui depends on cyril-core types, not commands). The reviewer also noted that v2 response parsing belonged at `protocol/convert/kiro.rs`, but treated that as an internal consistency observation rather than a ledger mismatch.
+
+Bounded repair (approved-contract technical correction; no behavior, oracle, ownership, interface, architecture, or accepted-risk decision changed):
+
+1. Moved the shared `THINKING_NOT_TOGGLEABLE_MESSAGE` constant into `cyril-core/src/types/thinking.rs` and re-exported it from `types/mod.rs`; both `commands/builtin.rs` and `cyril-ui/src/state.rs` now consume the domain type constant. This restores the approved types-only dependency direction and gives the message one owner.
+2. Moved v2 `reasoning` response-shape parsing into `cyril-core/src/protocol/convert/kiro.rs::parse_reasoning_command_ack`; the mediator maps the parser result to `ThinkingToggled` / `BridgeError`. This follows the existing Kiro conversion boundary without changing the C8 observable contract.
+3. Extended the shape fence with S5: cyril-ui production code must not import `cyril_core::commands::builtin`. Added `repair1.json` mutations proving S5, S1, and S2 detect their named violations.
+
+Post-repair comparison: **PASS**. The independent ledger comparison now has no mismatches: `types/thinking.rs` owns derivation and the shared message; cyril-ui imports only `cyril_core::types::*`; `app.rs` remains unchanged; no engine-kind matching or duplicated derivation exists; the mediator reuses the Kiro conversion boundary. `python .cyril-k3lz/oracles/shape.py` returns `C13 PASS (base 0db49e3565)` after restoration. The repair retains the original requester approval because it is a technical placement correction under the approved ledger, not a changed decision.
+
+Repair evidence: `python .cyril-k3lz/mutate.py .cyril-k3lz/mutations/repair1.json` → C13-S5, C13-S1, C13-S2 all RED; restored shape fence GREEN. `cargo test --workspace` exits 0; 31 test result lines are green. `cargo clippy -p cyril-core -p cyril-ui -p cyril -- -D warnings`, `cargo fmt --check`, and the shape fence pass. Full `--all-targets` clippy remains blocked only by pre-existing warnings in untouched platform/test code documented in `plan.md`; `cargo check --workspace --all-targets` passes.
+
+Final isolated-review verdict: **PASS**.

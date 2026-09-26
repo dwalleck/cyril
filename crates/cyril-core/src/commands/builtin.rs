@@ -1,7 +1,7 @@
 use crate::commands::{
     Command, CommandContext, CommandResult, MemoryCommandAction, UsageAccountCommandSource,
 };
-use crate::types::BridgeCommand;
+use crate::types::{BridgeCommand, THINKING_NOT_TOGGLEABLE_MESSAGE};
 
 /// /help — show available commands
 pub struct HelpCommand {
@@ -505,11 +505,6 @@ impl Command for PowersCommand {
 }
 
 const THINKING_USAGE: &str = "Usage: /thinking [on|off]";
-
-/// Shown when the current model has no thinking toggle — by `/thinking`
-/// and by the UI when a KAS set is acknowledged with a rebuilt set that no
-/// longer offers one (cyril-k3lz spec B1/B3/B4).
-pub const THINKING_NOT_TOGGLEABLE_MESSAGE: &str = "Thinking can't be toggled on the current model.";
 
 /// `/thinking [on|off]` — report or set extended thinking for the current
 /// model on either engine (cyril-k3lz).

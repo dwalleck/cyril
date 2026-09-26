@@ -31,34 +31,23 @@ pub(super) fn send_extension(
 const REASONING_OPERATION: &str = "Thinking change";
 
 /// Map a v2 `reasoning` command result to its notification (cyril-k3lz C8).
-/// Only an explicit `success: true` is an ack: a missing `success` is a
-/// malformed response, not a default success.
+/// Response parsing is a Kiro wire concern and lives in
+/// `convert::kiro::parse_reasoning_command_ack`; this only maps outcomes.
 fn reasoning_toggle_outcome(
     result: agent_client_protocol::Result<serde_json::Value>,
     enabled: bool,
 ) -> Notification {
-    let failure = |message: String| Notification::BridgeError {
-        operation: REASONING_OPERATION.to_owned(),
-        message,
-    };
-    let response = match result {
-        Ok(response) => response,
-        Err(error) => return failure(error.to_string()),
-    };
-    match response.get("success").and_then(serde_json::Value::as_bool) {
-        Some(true) => Notification::ThinkingToggled { enabled },
-        Some(false) => {
-            let reason = ["error", "message"]
-                .iter()
-                .filter_map(|key| response.get(*key).and_then(serde_json::Value::as_str))
-                .find(|text| !text.is_empty())
-                .unwrap_or("unknown error");
-            failure(reason.to_owned())
-        }
-        None => {
-            tracing::warn!(%response, "reasoning command response has no boolean `success`");
-            failure("response missing success".to_owned())
-        }
+    let parsed = result
+        .map_err(|error| error.to_string())
+        .and_then(|response| {
+            crate::protocol::convert::kiro::parse_reasoning_command_ack(&response)
+        });
+    match parsed {
+        Ok(()) => Notification::ThinkingToggled { enabled },
+        Err(message) => Notification::BridgeError {
+            operation: REASONING_OPERATION.to_owned(),
+            message,
+        },
     }
 }
 

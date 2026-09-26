@@ -1034,8 +1034,7 @@ impl UiState {
                 if thinking_acked {
                     let text = match self.thinking.enabled() {
                         Some(enabled) => thinking_toggled_message(enabled),
-                        None => cyril_core::commands::builtin::THINKING_NOT_TOGGLEABLE_MESSAGE
-                            .to_owned(),
+                        None => THINKING_NOT_TOGGLEABLE_MESSAGE.to_owned(),
                     };
                     self.add_system_message(text);
                 }

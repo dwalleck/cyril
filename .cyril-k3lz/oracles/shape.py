@@ -88,6 +88,14 @@ for path in sorted((ROOT / "crates").rglob("*.rs")):
     if '"thinkingEnabled"' in src:
         fail("S4", rel, "thinkingEnabled wire key outside protocol/")
 
+# S5 (added after the final isolated review found an unfenced edge): cyril-ui
+# takes types, not command-layer internals, from cyril-core.
+for path in sorted((ROOT / "crates/cyril-ui/src").rglob("*.rs")):
+    rel = path.relative_to(ROOT).as_posix()
+    src = production(rel)
+    for m in re.finditer(r"cyril_core::commands::builtin", src):
+        fail("S5", rel, f"line {src.count(chr(10), 0, m.start()) + 1}: imports command-layer internals")
+
 if violations:
     print("\n".join(violations))
     sys.exit(1)

@@ -10,8 +10,8 @@
   {
     "id": "C4",
     "file": "crates/cyril-core/src/commands/builtin.rs",
-    "from": "            ThinkingState::AlwaysOn => \"Thinking is always on for the current model.\",\n            ThinkingState::NotToggleable => \"Thinking can't be toggled on the current model.\",",
-    "to": "            ThinkingState::NotToggleable => \"Thinking is always on for the current model.\",\n            ThinkingState::AlwaysOn => \"Thinking can't be toggled on the current model.\",",
+    "from": "            ThinkingState::AlwaysOn => \"Thinking is always on for the current model.\",\n            ThinkingState::NotToggleable => THINKING_NOT_TOGGLEABLE_MESSAGE,",
+    "to": "            ThinkingState::NotToggleable => \"Thinking is always on for the current model.\",\n            ThinkingState::AlwaysOn => THINKING_NOT_TOGGLEABLE_MESSAGE,",
     "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "thinking_command_tests::thinking_report_messages"],
     "expect": "report for"
   },
