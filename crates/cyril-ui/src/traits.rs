@@ -52,6 +52,11 @@ pub trait TuiState {
     /// agent has reported it. `None` otherwise. Borrowed so a backend-defined
     /// `EffortLevel::Other` string isn't cloned on every frame.
     fn effort(&self) -> Option<&EffortLevel>;
+    /// Extended thinking on/off for the current model (cyril-k3lz) — `Some`
+    /// only when the model is toggleable AND the engine reported the state.
+    /// Unknown, always-on and non-toggleable models are all `None`, so the
+    /// toolbar never presents an unknown state as on.
+    fn thinking_enabled(&self) -> Option<bool>;
     /// Count of un-consumed queued steers (ROADMAP K1b). Drives the toolbar chip.
     fn steering_queued(&self) -> usize;
     /// Current voice-input status (ROADMAP CN2). Defaults to `Idle` for state
@@ -834,6 +839,7 @@ pub mod test_support {
         pub current_mode: Option<String>,
         pub current_model: Option<String>,
         pub effort: Option<EffortLevel>,
+        pub thinking_enabled: Option<bool>,
         pub steering_queued: usize,
         pub memory_status: MemoryStatusView,
         pub context_usage: Option<f64>,
@@ -878,6 +884,7 @@ pub mod test_support {
                 current_mode: None,
                 current_model: None,
                 effort: None,
+                thinking_enabled: None,
                 steering_queued: 0,
                 memory_status: MemoryStatusView::default(),
                 context_usage: None,
@@ -956,6 +963,9 @@ pub mod test_support {
         }
         fn effort(&self) -> Option<&EffortLevel> {
             self.effort.as_ref()
+        }
+        fn thinking_enabled(&self) -> Option<bool> {
+            self.thinking_enabled
         }
         fn steering_queued(&self) -> usize {
             self.steering_queued

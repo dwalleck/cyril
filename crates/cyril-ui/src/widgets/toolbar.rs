@@ -77,6 +77,16 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
         ));
     }
 
+    // Extended thinking on/off (cyril-k3lz B7) — only a toggleable model with a
+    // reported state; unknown is never shown as on.
+    if let Some(enabled) = state.thinking_enabled() {
+        parts.push(Span::raw(" · "));
+        parts.push(Span::styled(
+            if enabled { "think" } else { "no think" },
+            Style::default().fg(theme.emphasis),
+        ));
+    }
+
     // Queued steers (K1b) — mid-turn steers awaiting pickup at a tool boundary.
     let steers = state.steering_queued();
     if steers >= 1 {
@@ -841,5 +851,96 @@ mod tests {
         terminal
             .draw(|frame| render(frame, frame.area(), &state, &cyril_dark()))
             .expect("draw");
+    }
+
+    /// cyril-k3lz C11 / spec B7: the segment appears exactly for toggleable
+    /// on/off and never for unknown, always-on, non-toggleable or unreported.
+    /// Drives a real `UiState` through the notification path so the whole
+    /// state → accessor → widget chain is under test. Oracle: spec B7.
+    #[test]
+    fn thinking_segment_per_state() {
+        use crate::state::UiState;
+        use cyril_core::types::{
+            ConfigOption, EffortUpdate, Notification, ReasoningInfo, ReasoningSupport,
+        };
+
+        let metadata = |support, enabled| Notification::MetadataUpdated {
+            context_usage: None,
+            metering: None,
+            tokens: None,
+            duration_ms: None,
+            effort: EffortUpdate::Unchanged,
+            reasoning: Some(ReasoningInfo::new(support, enabled, None, vec![])),
+            session_id: None,
+            refusal: None,
+        };
+        let config = |value: &str| {
+            Notification::ConfigOptionsUpdated(vec![ConfigOption {
+                key: "thinking".into(),
+                label: "Thinking".into(),
+                value: Some(value.into()),
+                options: vec!["on".into(), "off".into()],
+            }])
+        };
+        // (label, notification, expected segment)
+        let cases: [(&str, Option<Notification>, Option<&str>); 8] = [
+            ("unreported", None, None),
+            (
+                "v2 on",
+                Some(metadata(ReasoningSupport::Toggleable, Some(true))),
+                Some("think"),
+            ),
+            (
+                "v2 off",
+                Some(metadata(ReasoningSupport::Toggleable, Some(false))),
+                Some("no think"),
+            ),
+            (
+                "v2 unknown",
+                Some(metadata(ReasoningSupport::Toggleable, None)),
+                None,
+            ),
+            ("kas on", Some(config("on")), Some("think")),
+            ("kas off", Some(config("off")), Some("no think")),
+            (
+                "always on",
+                Some(metadata(ReasoningSupport::AlwaysOn, None)),
+                None,
+            ),
+            (
+                "not toggleable",
+                Some(metadata(ReasoningSupport::Unavailable, Some(true))),
+                None,
+            ),
+        ];
+        for (label, notification, want) in cases {
+            let mut state = UiState::new(50);
+            if let Some(n) = notification {
+                state.apply_notification(&n);
+            }
+            let backend = TestBackend::new(120, 1);
+            let mut terminal = Terminal::new(backend).expect("test terminal");
+            terminal
+                .draw(|frame| render(frame, frame.area(), &state, &cyril_dark()))
+                .expect("draw");
+            let buf = terminal.backend().buffer();
+            let text: String = (0..120)
+                .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+                .collect();
+            match want {
+                Some("no think") => assert!(
+                    text.contains("· no think"),
+                    "{label}: expected `· no think`, got {text:?}"
+                ),
+                Some(_) => assert!(
+                    text.contains("· think") && !text.contains("no think"),
+                    "{label}: expected `· think`, got {text:?}"
+                ),
+                None => assert!(
+                    !text.contains("think"),
+                    "{label}: expected no thinking segment, got {text:?}"
+                ),
+            }
+        }
     }
 }

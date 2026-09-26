@@ -72,6 +72,9 @@ pub struct UiState {
     /// updated when a metadata frame reports it (frames mid-turn may omit it),
     /// and reset on session change.
     effort: Option<EffortLevel>,
+    /// Extended-thinking state of the current model (cyril-k3lz), derived by
+    /// `ThinkingState::apply_notification`; drives the toolbar segment.
+    thinking: ThinkingState,
     context_usage: Option<f64>,
     /// KAS categorized context breakdown (KAS-2b, cyril-5et2). Retain-last: a
     /// `context_usage` frame that omits the breakdown updates `context_usage`
@@ -262,6 +265,10 @@ impl TuiState for UiState {
         self.effort.as_ref()
     }
 
+    fn thinking_enabled(&self) -> Option<bool> {
+        self.thinking.enabled()
+    }
+
     fn steering_queued(&self) -> usize {
         self.steering_queued
     }
@@ -409,6 +416,7 @@ impl UiState {
             current_mode: None,
             current_model: None,
             effort: None,
+            thinking: ThinkingState::Unreported,
             context_usage: None,
             context_breakdown: None,
             credit_usage: None,
@@ -469,6 +477,9 @@ impl UiState {
                 | Notification::PlanUpdated(_)
                 | Notification::TurnCompleted { .. }
         ) && self.stall.take().is_some();
+        // Thinking state has one owner of its derivation (cyril-k3lz); this
+        // state machine only holds the result for the toolbar and the KAS ack.
+        let thinking_changed = self.thinking.apply_notification(notification);
         let changed = match notification {
             Notification::AgentMessage(msg) => {
                 // Flush any pending user replay so the user turn commits
@@ -1005,14 +1016,30 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options)
             | Notification::ConfigOptionSet { options, .. } => {
-                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
-                    // Route through set_current_model so the "clear effort on a
-                    // real model change" invariant lives in exactly one place.
-                    self.set_current_model(model_opt.value.clone());
-                    true
-                } else {
-                    false
+                let model_changed =
+                    if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                        // Route through set_current_model so the "clear effort on a
+                        // real model change" invariant lives in exactly one place.
+                        self.set_current_model(model_opt.value.clone());
+                        true
+                    } else {
+                        false
+                    };
+                // KAS thinking ack (cyril-k3lz B3): the message follows the
+                // REBUILT set, which `self.thinking` already reflects.
+                let thinking_acked = matches!(
+                    notification,
+                    Notification::ConfigOptionSet { config_id, .. } if config_id == THINKING_CONFIG_ID
+                );
+                if thinking_acked {
+                    let text = match self.thinking.enabled() {
+                        Some(enabled) => thinking_toggled_message(enabled),
+                        None => cyril_core::commands::builtin::THINKING_NOT_TOGGLEABLE_MESSAGE
+                            .to_owned(),
+                    };
+                    self.add_system_message(text);
                 }
+                model_changed || thinking_acked
             }
             // v2 `reasoning` ack (cyril-k3lz B2). The toolbar follows the next
             // metadata snapshot; the message confirms immediately.
@@ -1168,7 +1195,7 @@ impl UiState {
             // "only if already open" rule.
             Notification::PowersChanged { .. } => false,
         };
-        changed || stall_cleared
+        changed || stall_cleared || thinking_changed
     }
 
     /// Flush remaining streaming text and clear active tool call display.
@@ -5597,6 +5624,106 @@ mod tests {
             matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Thinking change failed: nope"),
             "spec B2 failure text"
         );
+    }
+
+    /// cyril-k3lz C3a (UI half): the UI state machine follows the same
+    /// captured sequences as `SessionController` (oracle: the capture lines
+    /// read by hand — same table as the core fence), frame by frame.
+    #[test]
+    fn thinking_follows_captured_sequences() {
+        let (v2, kas) = cyril_core::test_support::thinking_capture_sequences();
+        let v2_expected = [
+            (8, None),
+            (24, Some(true)),
+            (26, Some(true)),
+            (28, Some(true)),
+            (30, Some(false)),
+        ];
+        assert_eq!(v2.len(), v2_expected.len(), "v2 frame count");
+        let mut state = UiState::new(500);
+        for ((line, n), (want_line, want)) in v2.iter().zip(v2_expected) {
+            assert_eq!(*line, want_line, "v2 frame order");
+            state.apply_notification(n);
+            assert_eq!(state.thinking_enabled(), want, "v2 capture line {line}");
+        }
+        let kas_expected = [
+            ("session_new", None),
+            ("cfg_model", Some(true)),
+            ("cfg_effort_max", Some(true)),
+            ("cfg_thinking_off", Some(false)),
+            ("cfg_effort_max2", Some(true)),
+            ("cfg_thinking_bogus", Some(false)),
+            ("cfg_model_gpt", None),
+        ];
+        assert_eq!(kas.len(), kas_expected.len(), "KAS step count");
+        let mut state = UiState::new(500);
+        for ((step, n), (want_step, want)) in kas.iter().zip(kas_expected) {
+            assert_eq!(step, want_step, "KAS step order");
+            state.apply_notification(n);
+            assert_eq!(state.thinking_enabled(), want, "KAS step {step}");
+        }
+    }
+
+    /// cyril-k3lz C10b / spec B3: a KAS `ConfigOptionSet{config_id:"thinking"}`
+    /// adds exactly one message read from the REBUILT set; a set of another
+    /// option adds none.
+    #[test]
+    fn thinking_config_ack_messages() {
+        let thinking = |value: Option<&str>| {
+            value
+                .map(|v| ConfigOption {
+                    key: "thinking".into(),
+                    label: "Thinking".into(),
+                    value: Some(v.into()),
+                    options: vec!["on".into(), "off".into()],
+                })
+                .into_iter()
+                .collect::<Vec<_>>()
+        };
+        let cases: [(&str, Vec<ConfigOption>, Option<&str>); 4] = [
+            (
+                "thinking",
+                thinking(Some("off")),
+                Some("Thinking turned off."),
+            ),
+            (
+                "thinking",
+                thinking(Some("on")),
+                Some("Thinking turned on."),
+            ),
+            (
+                "thinking",
+                thinking(None),
+                Some("Thinking can't be toggled on the current model."),
+            ),
+            ("model", thinking(Some("off")), None),
+        ];
+        for (config_id, options, want) in cases {
+            let mut state = UiState::new(500);
+            let before = state.messages().len();
+            state.apply_notification(&Notification::ConfigOptionSet {
+                config_id: config_id.into(),
+                options,
+            });
+            match want {
+                Some(text) => {
+                    assert_eq!(
+                        state.messages().len(),
+                        before + 1,
+                        "{config_id} ack adds one message"
+                    );
+                    assert!(
+                        matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == text),
+                        "{config_id} ack must read {text:?}"
+                    );
+                }
+                None => assert_eq!(
+                    state.messages().len(),
+                    before,
+                    "a `{config_id}` set adds no thinking message"
+                ),
+            }
+        }
     }
 
     // ── Subagent routing tests ───────────────────────────────────────────

@@ -183,3 +183,29 @@ Caller analysis: `SessionController::apply_notification` body restructured (`let
 10. Parity/reuse: PASS — no-session check reuses the agent-command idiom verbatim (`ctx.session.id().ok_or_else(|| Error::from_kind(ErrorKind::NoSession))`); usage-message style follows `/steer`/`/powers`; registration follows the `names`-before-`HelpCommand` rule. Lever comes from `ThinkingState::lever` (no second state→lever match); `refusal` matches only lever-less states with a `debug_assert!` sanity hint for the toggleable arms. Searched: grep `NoSession`, `Usage: /`, `names.push`.
 11. Preserved enforcement: N/A — no gate or validator touched; `help_lists_every_registered_command` is reused as C12's fence unchanged.
 Lint: clippy (default) clean for cyril-core and cyril-ui; fmt clean; `cargo check --workspace --all-targets` clean.
+
+
+### Slice 4 — gate
+
+Deviation (technical, parity-driven): the not-toggleable text is shared as `commands::builtin::THINKING_NOT_TOGGLEABLE_MESSAGE` so the command (B1/B4) and the UI's KAS ack (B3) cannot drift; approved strings unchanged. This invalidated slice 3's builtin.rs evidence: C4 re-run with a corrected anchor (`C4-recheck` in slice4.json) and C5/C6/C7 re-run from slice3.json — all RED then GREEN.
+
+Caller analysis: `TuiState` gained `thinking_enabled()` — implementors: `UiState`, `MockTuiState` (both updated; compiler-complete). `UiState::apply_notification` config arm now returns `model_changed || thinking_acked`; the thinking state change itself is OR-ed at the end (`changed || stall_cleared || thinking_changed`).
+
+1. Affected unit tests: PASS — `cyril-ui --lib` 608 passed; `cargo test --workspace` all green (cyril 134, cyril-core 992 unified-kas, cyril-ui 608, integration suites); `cyril-core --lib` default 759.
+2. Falsifiers: PASS — C3a-ui per-frame equals the core list; C10b messages per rebuilt set; C11 segment exactly in the two toggleable states.
+3. Stress fixture: PASS — `model` set adds no thinking message; rebuilt set without `thinking` → not-toggleable text; toggleable-unknown renders no segment; `Unavailable` with `thinkingEnabled:true` renders none.
+4. Implementation vs oracle: PASS — as 2.
+5. Module shape: PASS — `C13 PASS (base 0db49e3565)`; app.rs 0 delta; state.rs holds + delegates + two message arms; toolbar one segment.
+6. Budget: PASS — toolbar: one `Option<bool>` read and ≤2 span pushes per frame (same class as the effort badge); no loop.
+7. Fence: PASS — `state::tests::{thinking_follows_captured_sequences, thinking_config_ack_messages}`, `widgets::toolbar::tests::thinking_segment_per_state` green.
+8. Mutation: PASS — `mutate.py …/slice4.json`: C3a-ui RED ("v2 capture line 24"), C10b RED ("a `model` set adds no thinking message"), C11 RED ("unreported: expected no thinking segment"), C4-recheck RED.
+9. Restored: PASS — all GREEN with tests executed.
+10. Parity/reuse: PASS — ack text reuses `thinking_toggled_message` (v2 and KAS share it); not-toggleable text shared from core; toolbar segment mirrors the effort badge's span/style idiom. Symmetry v2 ack vs KAS ack: both add exactly one message; v2 reports the requested value (ack has no session value), KAS reports the rebuilt value (source of truth) — spec B2/B3 divergence by design. Searched: grep `add_system_message(`, `fn effort(`, `"◇`.
+11. Preserved enforcement: N/A — nothing relaxed; the pre-existing model arm behavior is unchanged (its tests green).
+Lint: `cargo clippy -p cyril-core -p cyril-ui -p cyril -- -D warnings` clean; fmt clean.
+
+### Final integration
+
+- Assembled state: `cargo test --workspace` PASS; `cargo test -p cyril-core --lib` (default features, runs the not-kas contract module) PASS 759; `cargo check --workspace --all-targets` PASS; clippy (default, lib targets) PASS; fmt PASS; shape oracle PASS.
+- Diff: 19 files, +1,843/−14 under `crates/` (incl. ~57 KB compact fixture ≈ 8 lines) — within the 2,080 plan budget; one increment.
+- Not verifiable here: Linux/macOS CI legs, `clippy --all-targets` (pre-existing Windows-only failures in untouched test files), and a live kiro-cli session (no kiro-cli on this host). Live wire behavior rests on the committed 2.24.0 captures.

@@ -506,6 +506,11 @@ impl Command for PowersCommand {
 
 const THINKING_USAGE: &str = "Usage: /thinking [on|off]";
 
+/// Shown when the current model has no thinking toggle — by `/thinking`
+/// and by the UI when a KAS set is acknowledged with a rebuilt set that no
+/// longer offers one (cyril-k3lz spec B1/B3/B4).
+pub const THINKING_NOT_TOGGLEABLE_MESSAGE: &str = "Thinking can't be toggled on the current model.";
+
 /// `/thinking [on|off]` — report or set extended thinking for the current
 /// model on either engine (cyril-k3lz).
 ///
@@ -533,7 +538,7 @@ impl ThinkingCommand {
                 "Thinking can be toggled on this model, but its current state hasn't been reported yet."
             }
             ThinkingState::AlwaysOn => "Thinking is always on for the current model.",
-            ThinkingState::NotToggleable => "Thinking can't be toggled on the current model.",
+            ThinkingState::NotToggleable => THINKING_NOT_TOGGLEABLE_MESSAGE,
             ThinkingState::Unreported => "Thinking state hasn't been reported yet.",
         }
     }
@@ -558,7 +563,7 @@ impl ThinkingCommand {
                     matches!(state, ThinkingState::NotToggleable),
                     "refusal requested for a toggleable thinking state"
                 );
-                "Thinking can't be toggled on the current model."
+                THINKING_NOT_TOGGLEABLE_MESSAGE
             }
         }
     }
