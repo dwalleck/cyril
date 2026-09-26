@@ -163,3 +163,23 @@ Caller analysis: new variants `BridgeCommand::SetThinking`, `Notification::Think
 10. Parity/reuse: PASS — searched (grep `spawn_extension_command`, `set_config_option`, `"kiro.dev/commands/execute"`): v2 path reuses `spawn_extension_command` + the existing `execute_command` param shape; KAS path reuses `set_config_option` (and its response validation) rather than a second copy. Symmetry vs `execute_command`: that path forwards any response as `CommandExecuted`; the new path is deliberately stricter (typed ack; missing `success` is a failure, warned) per design C8 / "errors are not default values". No-session handling mirrors `set_config_option` (BridgeError, same wording). Timeout: same `COMMAND_RPC_TIMEOUT`.
 11. Preserved enforcement: PASS — harness change is additive: an empty `config_option_responses` keeps the historical method-not-found answer, and unscripted ext calls still answer `{}` (C5 ledger tests unchanged and green).
 Lint: `cargo clippy -p cyril-core -p cyril-ui -- -D warnings` clean; `--features kas` only the pre-existing `host_io.rs:155`; fmt clean.
+
+
+### Slice 3 — gate
+
+Technical corrections (fence locations only; oracle and mutation meaning unchanged — Approval semantics): the capture replay is a unit test `session::thinking_tests::session_controller_follows_captured_thinking_sequences` fed by a new `test_support::thinking_capture_sequences()` (integration tests cannot reach the crate-private converters; `test_support` is the existing precedent, cf. `kas_capture_to_routed`). Command fences live in `commands::thinking_command_tests::*`. C5's mutation is applied at the lever mapping it guards (`thinking.rs::lever()` gives `AlwaysOn` a lever) — same bug class ("AlwaysOn treated as toggleable → a send appears"). The mutation runner now refuses a restored run that executed zero tests (a first run of C3a-core was a silent skip: its filter named the wrong module; caught, fixed, rerun red).
+
+Caller analysis: `SessionController::apply_notification` body restructured (`let changed = match …; changed || thinking_changed`) — callers unchanged (`app.rs`, tests); the only early `return` (UsageUpdated size 0) cannot coincide with a thinking change. New: `SessionController::thinking`, `builtin::ThinkingCommand`, `test_support::thinking_capture_sequences`.
+
+1. Affected unit tests: PASS — `cyril-core --lib` 759 passed (default), 992 (`--features kas`).
+2. Falsifiers: PASS — C3a-core per-frame states equal the hand-read capture lists; C4–C7 texts/sends equal the spec tables; C12 registered on both registry shapes and listed by `/help`.
+3. Stress fixture: PASS — real captured sequences; `ON`/`  off `/`Off` parse; `maybe`/`on off`/`1`/`enable` → usage; AlwaysOn on vs off texts differ; already-on `on` still sends.
+4. Implementation vs oracle: PASS — as 2.
+5. Module shape: PASS — `C13 PASS (base 0db49e3565)`; `builtin.rs` has no wire strings or engine kind (S2/S3); `session.rs` holds + delegates only; app.rs 0 delta.
+6. Budget: N/A — no new loop; one-off phase.
+7. Fence: PASS — all named fences green.
+8. Mutation: PASS — `mutate.py …/slice3.json`: C3a-core RED ("v2 capture line 8"), C4 RED ("report for AlwaysOn"), C5 RED (refusal replaced by `Dispatched`), C6-case RED, C6-session RED, C7 RED, C12 RED ("`/thinking` is registered but absent from /help").
+9. Restored: PASS — every command GREEN with tests executed.
+10. Parity/reuse: PASS — no-session check reuses the agent-command idiom verbatim (`ctx.session.id().ok_or_else(|| Error::from_kind(ErrorKind::NoSession))`); usage-message style follows `/steer`/`/powers`; registration follows the `names`-before-`HelpCommand` rule. Lever comes from `ThinkingState::lever` (no second state→lever match); `refusal` matches only lever-less states with a `debug_assert!` sanity hint for the toggleable arms. Searched: grep `NoSession`, `Usage: /`, `names.push`.
+11. Preserved enforcement: N/A — no gate or validator touched; `help_lists_every_registered_command` is reused as C12's fence unchanged.
+Lint: clippy (default) clean for cyril-core and cyril-ui; fmt clean; `cargo check --workspace --all-targets` clean.

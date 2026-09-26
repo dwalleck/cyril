@@ -49,11 +49,14 @@ def main():
             print(f"    {l.strip()[:220]}")
         if not red:
             failures += 1
-    # Restored-green check for every command used.
+    # Restored-green check for every command used. A filter that matches no
+    # test exits 0 too — that is a silent skip, not green (receipt rule).
     for cmd in {tuple(m["cmd"]) for m in spec if not only or m["id"] in only}:
-        code, _ = run(list(cmd))
-        print(f"restored {' '.join(cmd)}: {'GREEN' if code == 0 else f'RED (exit {code})'}")
-        failures += code != 0
+        code, out = run(list(cmd))
+        ran = "test result: ok." in out and " 0 passed" not in out
+        verdict = "GREEN" if code == 0 and ran else f"NOT-GREEN (exit {code}, ran={ran})"
+        print(f"restored {' '.join(cmd)}: {verdict}")
+        failures += verdict != "GREEN"
     sys.exit(1 if failures else 0)
 
 

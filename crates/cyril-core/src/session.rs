@@ -50,6 +50,9 @@ pub struct SessionController {
     /// agent reporting that nothing is installed. `/powers` must not tell a
     /// user with zero powers that the agent is still loading, nor the reverse.
     powers: Option<Vec<PowerInfo>>,
+    /// Extended-thinking state of the current model (cyril-k3lz), derived by
+    /// `ThinkingState::apply_notification`; read by `/thinking`.
+    thinking: ThinkingState,
 }
 
 impl SessionController {
@@ -72,6 +75,7 @@ impl SessionController {
             steering_unsupported: false,
             kas_hooks: Vec::new(),
             powers: None,
+            thinking: ThinkingState::Unreported,
         }
     }
 
@@ -138,6 +142,11 @@ impl SessionController {
         self.powers.as_deref()
     }
 
+    /// Extended-thinking state of the current model (cyril-k3lz).
+    pub fn thinking(&self) -> &ThinkingState {
+        &self.thinking
+    }
+
     /// Resolve a user-typed hook reference to the composite id that
     /// `_kiro/hooks/setEnabled` requires.
     ///
@@ -200,7 +209,10 @@ impl SessionController {
 
     /// Apply a notification to session state. Returns whether state changed.
     pub fn apply_notification(&mut self, notification: &Notification) -> bool {
-        match notification {
+        // Thinking state has one owner of its derivation (cyril-k3lz); this
+        // controller only holds the result for `/thinking` gating.
+        let thinking_changed = self.thinking.apply_notification(notification);
+        let changed = match notification {
             // Full-replacement, never a merge: the agent sends its whole
             // registry, so a hook deleted on disk must disappear here too
             // (cyril-gk17).
@@ -387,7 +399,8 @@ impl SessionController {
                 true
             }
             _ => false,
-        }
+        };
+        changed || thinking_changed
     }
 }
 
@@ -1327,5 +1340,82 @@ mod kas_hook_tests {
         // confused (and cannot represent "ambiguous with zero candidates").
         let s = SessionController::new();
         assert_eq!(s.resolve_kas_hook_id("nope"), Err(HookRefError::NotFound));
+    }
+}
+
+#[cfg(test)]
+mod thinking_tests {
+    use super::*;
+
+    /// cyril-k3lz C3a (core half): replaying the captured v2 and KAS
+    /// sequences through the production converters leaves the controller in
+    /// the capture's state after every frame. Oracle: the capture lines read
+    /// by hand (v2 line 8 toggleable without thinkingEnabled; 24/26/28 on;
+    /// 30 off. KAS § 7.1 table).
+    #[test]
+    fn session_controller_follows_captured_thinking_sequences() {
+        use ThinkingState::{NotToggleable, ToggleableByConfigOption, ToggleableByReasoning};
+        let (v2, kas) = crate::test_support::thinking_capture_sequences();
+
+        let v2_expected = [
+            (8, ToggleableByReasoning { enabled: None }),
+            (
+                24,
+                ToggleableByReasoning {
+                    enabled: Some(true),
+                },
+            ),
+            (
+                26,
+                ToggleableByReasoning {
+                    enabled: Some(true),
+                },
+            ),
+            (
+                28,
+                ToggleableByReasoning {
+                    enabled: Some(true),
+                },
+            ),
+            (
+                30,
+                ToggleableByReasoning {
+                    enabled: Some(false),
+                },
+            ),
+        ];
+        assert_eq!(v2.len(), v2_expected.len(), "v2 metadata frame count");
+        let mut ctrl = SessionController::new();
+        for ((line, notification), (want_line, want)) in v2.iter().zip(v2_expected) {
+            assert_eq!(*line, want_line, "v2 frame order");
+            ctrl.apply_notification(notification);
+            assert_eq!(ctrl.thinking(), &want, "v2 capture line {line}");
+        }
+
+        let kas_expected = [
+            ("session_new", NotToggleable),
+            ("cfg_model", ToggleableByConfigOption { enabled: true }),
+            ("cfg_effort_max", ToggleableByConfigOption { enabled: true }),
+            (
+                "cfg_thinking_off",
+                ToggleableByConfigOption { enabled: false },
+            ),
+            (
+                "cfg_effort_max2",
+                ToggleableByConfigOption { enabled: true },
+            ),
+            (
+                "cfg_thinking_bogus",
+                ToggleableByConfigOption { enabled: false },
+            ),
+            ("cfg_model_gpt", NotToggleable),
+        ];
+        assert_eq!(kas.len(), kas_expected.len(), "KAS step count");
+        let mut ctrl = SessionController::new();
+        for ((step, notification), (want_step, want)) in kas.iter().zip(kas_expected) {
+            assert_eq!(step, want_step, "KAS step order");
+            ctrl.apply_notification(notification);
+            assert_eq!(ctrl.thinking(), &want, "KAS step {step}");
+        }
     }
 }

@@ -503,3 +503,103 @@ impl Command for PowersCommand {
         }
     }
 }
+
+const THINKING_USAGE: &str = "Usage: /thinking [on|off]";
+
+/// `/thinking [on|off]` — report or set extended thinking for the current
+/// model on either engine (cyril-k3lz).
+///
+/// Bare `/thinking` is read-only. `on`/`off` sends one typed
+/// `BridgeCommand::SetThinking` whose lever comes from the snapshot that
+/// reported the model toggleable (`ThinkingState::lever`) — never from the
+/// bound engine. When toggleability is not confirmed the command refuses
+/// locally: both engines accept a toggle on a non-toggleable model silently
+/// and do nothing, so sending would fake a success.
+pub struct ThinkingCommand;
+
+impl ThinkingCommand {
+    fn report(state: &crate::types::ThinkingState) -> &'static str {
+        use crate::types::ThinkingState;
+        match state {
+            ThinkingState::ToggleableByReasoning {
+                enabled: Some(true),
+            }
+            | ThinkingState::ToggleableByConfigOption { enabled: true } => "Thinking is on.",
+            ThinkingState::ToggleableByReasoning {
+                enabled: Some(false),
+            }
+            | ThinkingState::ToggleableByConfigOption { enabled: false } => "Thinking is off.",
+            ThinkingState::ToggleableByReasoning { enabled: None } => {
+                "Thinking can be toggled on this model, but its current state hasn't been reported yet."
+            }
+            ThinkingState::AlwaysOn => "Thinking is always on for the current model.",
+            ThinkingState::NotToggleable => "Thinking can't be toggled on the current model.",
+            ThinkingState::Unreported => "Thinking state hasn't been reported yet.",
+        }
+    }
+
+    /// The refusal for a state without a lever (spec B4). Called only when
+    /// `ThinkingState::lever` is `None`, so the toggleable arms are a sanity
+    /// hint, not a live path.
+    fn refusal(state: &crate::types::ThinkingState, enabled: bool) -> &'static str {
+        use crate::types::ThinkingState;
+        match state {
+            ThinkingState::AlwaysOn if enabled => "Thinking is always on for the current model.",
+            ThinkingState::AlwaysOn => {
+                "Thinking is always on for the current model and can't be turned off."
+            }
+            ThinkingState::Unreported => {
+                "Thinking state hasn't been reported yet — try again after the first reply."
+            }
+            ThinkingState::NotToggleable
+            | ThinkingState::ToggleableByReasoning { .. }
+            | ThinkingState::ToggleableByConfigOption { .. } => {
+                debug_assert!(
+                    matches!(state, ThinkingState::NotToggleable),
+                    "refusal requested for a toggleable thinking state"
+                );
+                "Thinking can't be toggled on the current model."
+            }
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl Command for ThinkingCommand {
+    fn name(&self) -> &str {
+        "thinking"
+    }
+
+    fn description(&self) -> &str {
+        "Show or set extended thinking for the current model: /thinking [on|off]"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        let enabled = match args.trim().to_ascii_lowercase().as_str() {
+            "" => {
+                return Ok(CommandResult::system_message(format!(
+                    "{}\n{THINKING_USAGE}",
+                    Self::report(ctx.session.thinking())
+                )));
+            }
+            "on" => true,
+            "off" => false,
+            _ => return Ok(CommandResult::system_message(THINKING_USAGE.to_string())),
+        };
+        // Same no-session error as agent commands (spec B6), checked before
+        // the state so a stale pre-session state can never reach the wire.
+        ctx.session
+            .id()
+            .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;
+        let state = ctx.session.thinking();
+        let Some(lever) = state.lever() else {
+            return Ok(CommandResult::system_message(
+                Self::refusal(state, enabled).to_string(),
+            ));
+        };
+        ctx.bridge
+            .send(BridgeCommand::SetThinking { lever, enabled })
+            .await?;
+        Ok(CommandResult::dispatched())
+    }
+}

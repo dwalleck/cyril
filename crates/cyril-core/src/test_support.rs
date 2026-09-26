@@ -280,3 +280,83 @@ pub fn kas_recording_to_routed(
     }
     kas_capture_to_routed(&capture)
 }
+
+/// Captured thinking-toggle sequences converted through the production
+/// converters (cyril-k3lz C3a), for replay into BOTH state machines.
+///
+/// - v2: the `_kiro.dev/metadata` frames of `v2-reasoning-args2-2.24.0`
+///   (lines 8, 24, 26, 28, 30; the interleaved `reasoning` command responses
+///   are skipped as production never sees them as notifications), converted
+///   by `convert::kiro::to_ext_notification`. Keyed by capture line.
+/// - KAS: the `set_config_option` results of `kas-new-surface-noprompt-0668`
+///   converted by `convert::to_config_options`, wrapped as the mediator wraps
+///   them: `ConfigOptionsUpdated` for the `session/new` snapshot,
+///   `ConfigOptionSet{config_id}` for each set. Keyed by probe step.
+pub fn thinking_capture_sequences() -> (
+    Vec<(u64, crate::types::Notification)>,
+    Vec<(String, crate::types::Notification)>,
+) {
+    use agent_client_protocol::schema::v1 as acp;
+    use serde::Deserialize;
+
+    let v2: serde_json::Value = must_succeed(
+        serde_json::from_str(include_str!(
+            "../tests/fixtures/v2/thinking/reasoning-args2-2.24.0.json"
+        )),
+        "v2 thinking fixture is valid JSON",
+    );
+    let mut v2_out = Vec::new();
+    for entry in v2["frames"].as_array().into_iter().flatten() {
+        let frame = &entry["frame"];
+        let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+            continue; // a command response, not a notification
+        };
+        let normalized = method.strip_prefix('_').unwrap_or(method);
+        let notification = must_succeed(
+            crate::protocol::convert::kiro::to_ext_notification(normalized, &frame["params"]),
+            "captured metadata frame converts",
+        );
+        if let Some(notification) = notification {
+            let line = must_succeed(
+                entry["captureLine"].as_u64().ok_or("missing captureLine"),
+                "fixture frame carries its capture line",
+            );
+            v2_out.push((line, notification));
+        }
+    }
+
+    let kas: serde_json::Value = must_succeed(
+        serde_json::from_str(include_str!(
+            "../tests/fixtures/kas/thinking/set-config-sequence-0668.json"
+        )),
+        "KAS thinking fixture is valid JSON",
+    );
+    let mut kas_out = Vec::new();
+    for step in kas["steps"].as_array().into_iter().flatten() {
+        let name = must_succeed(
+            step["step"].as_str().ok_or("missing step"),
+            "fixture step carries its name",
+        )
+        .to_owned();
+        let options = must_succeed(
+            Vec::<acp::SessionConfigOption>::deserialize(&step["configOptions"]),
+            "captured configOptions deserialize at the acp layer",
+        );
+        let options = crate::protocol::convert::to_config_options(&options);
+        let config_id = match name.as_str() {
+            "session_new" => None,
+            s if s.starts_with("cfg_model") => Some("model"),
+            s if s.starts_with("cfg_effort") => Some("effortLevel"),
+            _ => Some("thinking"),
+        };
+        let notification = match config_id {
+            None => crate::types::Notification::ConfigOptionsUpdated(options),
+            Some(config_id) => crate::types::Notification::ConfigOptionSet {
+                config_id: config_id.to_owned(),
+                options,
+            },
+        };
+        kas_out.push((name, notification));
+    }
+    (v2_out, kas_out)
+}
