@@ -157,6 +157,16 @@ pub struct UiState {
     max_messages: usize,
 }
 
+/// The confirmation for an acknowledged thinking toggle on either engine
+/// (cyril-k3lz spec B2/B3 — exact strings are fenced).
+fn thinking_toggled_message(enabled: bool) -> String {
+    if enabled {
+        "Thinking turned on.".to_owned()
+    } else {
+        "Thinking turned off.".to_owned()
+    }
+}
+
 /// Build the user-facing refusal system message (cyril-h8zb): the wire's
 /// explanation verbatim when present, else a fallback naming cyril's own
 /// commands (`/model`, `/new` — cyril has no `/rewind`, unlike Kiro's
@@ -1003,6 +1013,12 @@ impl UiState {
                 } else {
                     false
                 }
+            }
+            // v2 `reasoning` ack (cyril-k3lz B2). The toolbar follows the next
+            // metadata snapshot; the message confirms immediately.
+            Notification::ThinkingToggled { enabled } => {
+                self.add_system_message(thinking_toggled_message(*enabled));
+                true
             }
             Notification::CommandsUpdated { .. } => {
                 // Consumed by the App layer (registers in CommandRegistry).
@@ -5552,6 +5568,34 @@ mod tests {
         assert!(changed);
         assert!(
             matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t.contains("set_mode") && t.contains("connection refused"))
+        );
+    }
+
+    /// cyril-k3lz C10a / spec B2: a v2 thinking ack adds exactly one message
+    /// with the fenced text; the v2 failure path is the generic BridgeError
+    /// message, which the operation label renders as "Thinking change failed".
+    #[test]
+    fn thinking_toggled_message() {
+        let mut state = UiState::new(500);
+        for (enabled, want) in [
+            (true, "Thinking turned on."),
+            (false, "Thinking turned off."),
+        ] {
+            let before = state.messages().len();
+            assert!(state.apply_notification(&Notification::ThinkingToggled { enabled }));
+            assert_eq!(state.messages().len(), before + 1, "one message per ack");
+            assert!(
+                matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
+                "ack enabled={enabled} must read {want:?}"
+            );
+        }
+        state.apply_notification(&Notification::BridgeError {
+            operation: "Thinking change".into(),
+            message: "nope".into(),
+        });
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Thinking change failed: nope"),
+            "spec B2 failure text"
         );
     }
 

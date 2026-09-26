@@ -67,6 +67,12 @@ pub(super) struct Script {
     /// Set by `fake_agent`: lets a running test flip `emit_turn_end` for the
     /// NEXT prompt (the harness snapshot is taken at agent build time).
     pub(super) emit_turn_end_live: Option<Arc<std::sync::atomic::AtomicBool>>,
+    /// Scripted extension results (cyril-k3lz): the first entry whose method
+    /// matches a call is removed and returned instead of the default `{}`.
+    pub(super) ext_responses: Arc<Mutex<Vec<(String, serde_json::Value)>>>,
+    /// Scripted `session/set_config_option` results, answered in order.
+    /// Empty keeps the historical method-not-found answer.
+    pub(super) config_option_responses: Arc<Mutex<Vec<serde_json::Value>>>,
 }
 
 impl Script {
@@ -118,6 +124,8 @@ fn fake_agent(
     let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
+    let ext_responses = Arc::clone(&script.borrow().ext_responses);
+    let config_option_responses = Arc::clone(&script.borrow().config_option_responses);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
     let emit_chunks = script.borrow().emit_chunks;
     let emit_unknown_update = script.borrow().emit_unknown_update;
@@ -410,6 +418,22 @@ fn fake_agent(
                     return responder
                         .respond_with_error(agent_client_protocol::Error::method_not_found());
                 }
+                if request.method() == "session/set_config_option" {
+                    let scripted = {
+                        let mut queue = lock(&config_option_responses);
+                        (!queue.is_empty()).then(|| queue.remove(0))
+                    };
+                    let Some(result) = scripted else {
+                        return responder
+                            .respond_with_error(agent_client_protocol::Error::method_not_found());
+                    };
+                    record(&received_ext, "set_config_option");
+                    lock(&ext_calls).push((
+                        "session/set_config_option".to_owned(),
+                        request.params.clone(),
+                    ));
+                    return responder.respond(result);
+                }
                 let Some(method) = request.method().strip_prefix('_').map(str::to_owned) else {
                     return responder
                         .respond_with_error(agent_client_protocol::Error::method_not_found());
@@ -420,8 +444,15 @@ fn fake_agent(
                         agent_client_protocol::Error::internal_error().data("scripted failure"),
                     );
                 }
-                lock(&ext_calls).push((method, request.params.clone()));
-                responder.respond(serde_json::json!({}))
+                lock(&ext_calls).push((method.clone(), request.params.clone()));
+                let scripted = {
+                    let mut queue = lock(&ext_responses);
+                    queue
+                        .iter()
+                        .position(|(scripted_method, _)| *scripted_method == method)
+                        .map(|index| queue.remove(index).1)
+                };
+                responder.respond(scripted.unwrap_or_else(|| serde_json::json!({})))
             },
             agent_client_protocol::on_receive_request!(),
         )

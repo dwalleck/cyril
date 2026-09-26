@@ -49,6 +49,8 @@ mod powers;
 mod routing;
 mod saturation;
 mod stall;
+#[cfg(not(feature = "kas"))]
+mod thinking;
 
 fn command_name(command: &BridgeCommand) -> &'static str {
     match command {
@@ -59,6 +61,7 @@ fn command_name(command: &BridgeCommand) -> &'static str {
         BridgeCommand::SetMode { .. } => "SetMode",
         BridgeCommand::SetModel { .. } => "SetModel",
         BridgeCommand::SetConfigOption { .. } => "SetConfigOption",
+        BridgeCommand::SetThinking { .. } => "SetThinking",
         BridgeCommand::ExtMethod { .. } => "ExtMethod",
         BridgeCommand::ListSettings => "ListSettings",
         BridgeCommand::QueryUsageAccount => "QueryUsageAccount",

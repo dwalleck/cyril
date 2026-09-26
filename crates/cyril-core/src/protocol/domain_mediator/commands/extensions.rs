@@ -26,6 +26,42 @@ pub(super) fn send_extension(
     Ok(connection.send_request(request).block_task())
 }
 
+/// `BridgeError.operation` for a failed v2 thinking toggle; the UI renders
+/// `"{operation} failed: {message}"`, i.e. "Thinking change failed: …".
+const REASONING_OPERATION: &str = "Thinking change";
+
+/// Map a v2 `reasoning` command result to its notification (cyril-k3lz C8).
+/// Only an explicit `success: true` is an ack: a missing `success` is a
+/// malformed response, not a default success.
+fn reasoning_toggle_outcome(
+    result: agent_client_protocol::Result<serde_json::Value>,
+    enabled: bool,
+) -> Notification {
+    let failure = |message: String| Notification::BridgeError {
+        operation: REASONING_OPERATION.to_owned(),
+        message,
+    };
+    let response = match result {
+        Ok(response) => response,
+        Err(error) => return failure(error.to_string()),
+    };
+    match response.get("success").and_then(serde_json::Value::as_bool) {
+        Some(true) => Notification::ThinkingToggled { enabled },
+        Some(false) => {
+            let reason = ["error", "message"]
+                .iter()
+                .filter_map(|key| response.get(*key).and_then(serde_json::Value::as_str))
+                .find(|text| !text.is_empty())
+                .unwrap_or("unknown error");
+            failure(reason.to_owned())
+        }
+        None => {
+            tracing::warn!(%response, "reasoning command response has no boolean `success`");
+            failure("response missing success".to_owned())
+        }
+    }
+}
+
 impl DomainMediator {
     /// Send an extension RPC and hand its result to `outcome` on a spawned
     /// task. A send/serialize failure produces the same outcome path with the
@@ -103,6 +139,47 @@ impl DomainMediator {
                 }))
             },
         );
+    }
+
+    /// Toggle thinking through the v2 `reasoning` TUI command (kiro-cli
+    /// 2.23.0+, cyril-k3lz). Not advertised in `commands/available`, so it is
+    /// not an agent command; the args carry ONLY `thinkingEnabled` (unknown
+    /// keys are silently ignored by the agent, and `setAsDefault` is out of
+    /// scope — cyril-v2ol). A `success: true` ack becomes `ThinkingToggled`
+    /// with the requested value; anything else — `success: false`, a missing
+    /// `success`, an RPC error — is a `BridgeError` the UI renders as
+    /// "Thinking change failed: …".
+    pub(super) async fn set_reasoning_thinking(
+        &mut self,
+        connection: &ConnectionTo<Agent>,
+        enabled: bool,
+    ) -> crate::Result<()> {
+        let Some(session_id) = self.active_session_id.clone() else {
+            return self
+                .notify(
+                    Notification::BridgeError {
+                        operation: REASONING_OPERATION.into(),
+                        message: "no active session — run /new or /load first".into(),
+                    }
+                    .into(),
+                )
+                .await;
+        };
+        let params = serde_json::json!({
+            "sessionId": session_id.as_str(),
+            "command": {"command": "reasoning", "args": {"thinkingEnabled": enabled}}
+        });
+        self.spawn_extension_command(
+            connection,
+            "kiro.dev/commands/execute",
+            params,
+            move |result| {
+                Some(CommandOutcome::notify(reasoning_toggle_outcome(
+                    result, enabled,
+                )))
+            },
+        );
+        Ok(())
     }
 
     pub(super) fn execute_command(

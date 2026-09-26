@@ -145,3 +145,21 @@ Caller analysis: brand-new symbols (`ThinkingState`, `ThinkingLever`, `THINKING_
 10. Parity/reuse: PASS — searched (grep `ReasoningSupport::`, `key == "model"`, `from_wire`) for existing thinking/support mapping: none; reuses `ReasoningInfo` accessors and `ConfigOption` as-is. Wire literals `on`/`off`/`thinking` defined once here (`THINKING_CONFIG_ID`, `config_value`). No parallel path.
 11. Preserved enforcement: N/A — no gate, fence, validator, or policy touched.
 Lint: `cargo clippy -p cyril-core -- -D warnings` clean; `cargo fmt --check` clean.
+
+
+### Slice 2 — gate
+
+Caller analysis: new variants `BridgeCommand::SetThinking`, `Notification::ThinkingToggled`; new `DomainMediator::set_reasoning_thinking`, `reasoning_toggle_outcome`. Exhaustive-match sites found by `cargo check --workspace --all-targets` (compiler-complete for enums): `current_runtime_contract/mod.rs::command_name`, `cyril/examples/test_bridge.rs` print match, `cyril-ui/src/state.rs::apply_notification`, mediator `handle_command`. `grep BridgeCommand::SetConfigOption` confirms `saturation.rs` lists commands non-exhaustively (no update owed). Harness `Script` gained two defaulted fields; every existing `Script {..}` literal uses `..Script::default()` or `Default` (compiles).
+
+1. Affected unit tests: PASS — `cyril-core --lib` 753 passed (default) / 986 passed (`--features kas`); `cyril-ui --lib` 605 passed.
+2. Falsifiers: PASS — C8 (5 scripted responses + no-session + RPC error), C9 (captured `cfg_thinking_off`/`cfg_effort_max2` results), C10a.
+3. Stress fixture: PASS — every I11 row maps as planned (`Ok(false)`, `nope`, `denied` (empty `error` skipped), `unknown error`, `response missing success`, RPC error non-empty); KAS rebuilt sets report off then on.
+4. Implementation vs oracle: PASS — outbound params equal the captured request shape; ack/failure equal the spec B2 table; KAS request/ack equal P1.
+5. Module shape: PASS — `C13 PASS (base 0db49e3565)`; app.rs 0 delta; wire strings only in mediator.
+6. Budget: N/A — no loop; one-off phase, bounded by `COMMAND_RPC_TIMEOUT`.
+7. Fence: PASS — `current_runtime_contract::thinking::{set_thinking_reasoning_wire_and_ack, set_thinking_reasoning_rpc_error_is_a_thinking_failure, set_thinking_config_option_wire_and_ack}`, `cyril-ui state::tests::thinking_toggled_message` green.
+8. Mutation: PASS — `python .cyril-k3lz/mutate.py .cyril-k3lz/mutations/slice2.json`: C8-args RED ("args = {thinkingEnabled} only"), C8-missing-success RED (ack assert at the `{message}` row), C9 RED ("exactly one set_config_option per toggle with the on/off literal"), C10a RED.
+9. Restored: PASS — all three commands GREEN.
+10. Parity/reuse: PASS — searched (grep `spawn_extension_command`, `set_config_option`, `"kiro.dev/commands/execute"`): v2 path reuses `spawn_extension_command` + the existing `execute_command` param shape; KAS path reuses `set_config_option` (and its response validation) rather than a second copy. Symmetry vs `execute_command`: that path forwards any response as `CommandExecuted`; the new path is deliberately stricter (typed ack; missing `success` is a failure, warned) per design C8 / "errors are not default values". No-session handling mirrors `set_config_option` (BridgeError, same wording). Timeout: same `COMMAND_RPC_TIMEOUT`.
+11. Preserved enforcement: PASS — harness change is additive: an empty `config_option_responses` keeps the historical method-not-found answer, and unscripted ext calls still answer `{}` (C5 ledger tests unchanged and green).
+Lint: `cargo clippy -p cyril-core -p cyril-ui -- -D warnings` clean; `--features kas` only the pre-existing `host_io.rs:155`; fmt clean.
