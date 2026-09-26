@@ -578,8 +578,9 @@ impl UiState {
                 duration_ms,
                 effort,
                 // `effort` is already derived from the reasoning snapshot
-                // (cyril-q1xs); showing thinking on/off is cyril-k3lz's, so
-                // the full block is not stored yet.
+                // (cyril-q1xs), and thinking on/off is consumed above by
+                // `self.thinking.apply_notification` — its single owner
+                // (cyril-k3lz). Do not derive either again here.
                 reasoning: _,
                 // Routing tag (cyril-fh06): the App has already diverted
                 // subagent-scoped frames before this state machine sees one.
@@ -620,15 +621,13 @@ impl UiState {
                 // ahead of late notifications (cyril-9akh), and the probe
                 // showed the refusal frame lands just before the prompt
                 // response. One alert per turn (Kiro's own consumer dedupes
-                // to the first event). Streaming text flushes first so the
-                // message commits in chronological order (add_steer_echo
-                // idiom).
+                // to the first event). `add_system_message` flushes
+                // streaming text first, so the message commits in
+                // chronological order.
                 if let Some(alert) = refusal {
                     self.pending_refusal = true;
                     if !self.refusal_alerted_this_turn {
                         self.refusal_alerted_this_turn = true;
-                        self.flush_streaming_agent_text();
-                        self.flush_streaming_thought();
                         self.add_system_message(refusal_message(alert));
                     }
                 }
@@ -1265,7 +1264,15 @@ impl UiState {
     }
 
     /// Add a system message to the chat history.
+    ///
+    /// Flushes pending streaming agent text and reasoning first (the
+    /// `add_user_message` idiom), so a message added mid-turn — a thinking
+    /// ack, a bridge error, command output — commits AFTER the text that
+    /// streamed before it rather than ahead of it. Outside a turn both
+    /// buffers are empty and the flushes are no-ops.
     pub fn add_system_message(&mut self, text: String) {
+        self.flush_streaming_agent_text();
+        self.flush_streaming_thought();
         self.messages.push(ChatMessage::system(text));
         self.messages_version += 1;
         self.enforce_message_limit();
@@ -7281,6 +7288,52 @@ mod tests {
             ChatMessageKind::UserText(text) => assert_eq!(text, "next user prompt"),
             other => panic!("expected UserText, got {other:?}"),
         }
+    }
+
+    /// cyril-k3lz review finding 6: a system message added mid-turn (here the
+    /// v2 thinking ack) commits after the thought and text that streamed
+    /// before it, and text streamed after it starts a new message.
+    #[test]
+    fn system_message_flushes_pending_streams_first() {
+        use crate::traits::ChatMessageKind;
+
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::AgentThought(AgentThought {
+            text: "reasoning".into(),
+        }));
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "before the toggle".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::ThinkingToggled { enabled: false });
+        state.apply_notification(&Notification::AgentMessage(AgentMessage {
+            text: "after the toggle".into(),
+            is_streaming: true,
+        }));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: cyril_core::types::StopReason::EndTurn,
+        });
+
+        let committed: Vec<(&str, &str)> = state
+            .messages()
+            .iter()
+            .map(|m| match m.kind() {
+                ChatMessageKind::Thought(t) => ("thought", t.as_str()),
+                ChatMessageKind::AgentText(t) => ("agent", t.as_str()),
+                ChatMessageKind::System(t) => ("system", t.as_str()),
+                other => panic!("unexpected message {other:?}"),
+            })
+            .collect();
+        assert_eq!(
+            committed,
+            [
+                ("thought", "reasoning"),
+                ("agent", "before the toggle"),
+                ("system", "Thinking turned off."),
+                ("agent", "after the toggle"),
+            ],
+            "chronological commit order"
+        );
     }
 
     // ---------- approval_confirm sends the picked option's id (cyril-qo13) ----------

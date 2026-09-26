@@ -275,12 +275,6 @@ fn split_active_label_suffix(label: &str) -> (&str, bool) {
     }
 }
 
-/// Parse a `kiro.dev/commands/options` response into `CommandOption`s.
-///
-/// Handles two response shapes:
-/// - Object with `"options"` array: `{"options": [...]}`
-/// - Bare array: `[...]`
-///
 /// Parse the response to the v2 `reasoning` TUI command (kiro-cli 2.23.0+,
 /// cyril-k3lz): `{success, message, data}`. Only an explicit
 /// `success: true` is an ack — a missing `success` is a malformed response,
@@ -303,6 +297,12 @@ pub(crate) fn parse_reasoning_command_ack(response: &serde_json::Value) -> Resul
     }
 }
 
+/// Parse a `kiro.dev/commands/options` response into `CommandOption`s.
+///
+/// Handles two response shapes:
+/// - Object with `"options"` array: `{"options": [...]}`
+/// - Bare array: `[...]`
+///
 /// `is_current` is set from the option's `current` boolean when the agent
 /// sends one, or from the `[active]` label suffix when it encodes the bit
 /// there instead. kiro-cli 2.14.2 uses neither for `/model`, so the picker
