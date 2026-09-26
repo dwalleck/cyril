@@ -281,6 +281,12 @@ pub fn kas_recording_to_routed(
     kas_capture_to_routed(&capture)
 }
 
+/// v2 thinking-capture notifications, keyed by capture line.
+pub type V2ThinkingSequence = Vec<(u64, crate::types::Notification)>;
+
+/// KAS thinking-capture notifications, keyed by probe step name.
+pub type KasThinkingSequence = Vec<(String, crate::types::Notification)>;
+
 /// Captured thinking-toggle sequences converted through the production
 /// converters (cyril-k3lz C3a), for replay into BOTH state machines.
 ///
@@ -292,10 +298,7 @@ pub fn kas_recording_to_routed(
 ///   converted by `convert::to_config_options`, wrapped as the mediator wraps
 ///   them: `ConfigOptionsUpdated` for the `session/new` snapshot,
 ///   `ConfigOptionSet{config_id}` for each set. Keyed by probe step.
-pub fn thinking_capture_sequences() -> (
-    Vec<(u64, crate::types::Notification)>,
-    Vec<(String, crate::types::Notification)>,
-) {
+pub fn thinking_capture_sequences() -> (V2ThinkingSequence, KasThinkingSequence) {
     use agent_client_protocol::schema::v1 as acp;
     use serde::Deserialize;
 
