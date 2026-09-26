@@ -53,7 +53,7 @@ def main():
     # test exits 0 too — that is a silent skip, not green (receipt rule).
     for cmd in {tuple(m["cmd"]) for m in spec if not only or m["id"] in only}:
         code, out = run(list(cmd))
-        ran = "test result: ok." in out and " 0 passed" not in out
+        ran = cmd[:2] != ("cargo", "test") or ("test result: ok." in out and " 0 passed" not in out)
         verdict = "GREEN" if code == 0 and ran else f"NOT-GREEN (exit {code}, ran={ran})"
         print(f"restored {' '.join(cmd)}: {verdict}")
         failures += verdict != "GREEN"

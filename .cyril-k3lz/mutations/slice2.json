@@ -9,9 +9,9 @@
   },
   {
     "id": "C8-missing-success",
-    "file": "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs",
-    "from": "        Some(true) => Notification::ThinkingToggled { enabled },",
-    "to": "        Some(true) | None => Notification::ThinkingToggled { enabled },",
+    "file": "crates/cyril-core/src/protocol/convert/kiro.rs",
+    "from": "        Some(true) => Ok(()),",
+    "to": "        Some(true) | None => Ok(()),",
     "cmd": ["cargo", "test", "-p", "cyril-core", "--lib", "current_runtime_contract::thinking::set_thinking_reasoning_wire_and_ack"],
     "expect": "response missing success"
   },
