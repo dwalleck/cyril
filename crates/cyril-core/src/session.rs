@@ -1350,7 +1350,7 @@ mod thinking_tests {
     /// cyril-k3lz C3a (core half): replaying the captured v2 and KAS
     /// sequences through the production converters leaves the controller in
     /// the capture's state after every frame. Oracle: the capture lines read
-    /// by hand (v2 line 8 toggleable without thinkingEnabled; 24/26/28 on;
+    /// by hand (v2 line 7 unavailable; 8 toggleable without thinkingEnabled; 24/26/28 on;
     /// 30 off. KAS § 7.1 table).
     #[test]
     fn session_controller_follows_captured_thinking_sequences() {
@@ -1358,6 +1358,7 @@ mod thinking_tests {
         let (v2, kas) = crate::test_support::thinking_capture_sequences();
 
         let v2_expected = [
+            (7, NotToggleable),
             (8, ToggleableByReasoning { enabled: None }),
             (
                 24,

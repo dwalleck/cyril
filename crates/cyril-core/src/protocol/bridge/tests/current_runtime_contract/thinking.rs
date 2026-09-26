@@ -165,13 +165,15 @@ async fn set_thinking_config_option_wire_and_ack() {
     let script = Rc::new(RefCell::new(Script::default()));
     script
         .borrow()
-        .config_option_responses
+        .ext_responses
         .lock()
         .expect_contract("config responses")
-        .extend([
-            captured_config_result("cfg_thinking_off"),
-            captured_config_result("cfg_effort_max2"),
-        ]);
+        .extend(["cfg_thinking_off", "cfg_effort_max2"].map(|step| {
+            (
+                "session/set_config_option".to_owned(),
+                captured_config_result(step),
+            )
+        }));
     let observed = Rc::clone(&script);
     with_harness(
         script,

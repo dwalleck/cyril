@@ -5678,6 +5678,7 @@ mod tests {
     fn thinking_follows_captured_sequences() {
         let (v2, kas) = cyril_core::test_support::thinking_capture_sequences();
         let v2_expected = [
+            (7, None),
             (8, None),
             (24, Some(true)),
             (26, Some(true)),

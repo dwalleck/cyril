@@ -291,7 +291,9 @@ pub type KasThinkingSequence = Vec<(String, crate::types::Notification)>;
 /// converters (cyril-k3lz C3a), for replay into BOTH state machines.
 ///
 /// - v2: the `_kiro.dev/metadata` frames of `v2-reasoning-args2-2.24.0`
-///   (lines 8, 24, 26, 28, 30; the interleaved `reasoning` command responses
+///   (lines 7, 8, 24, 26, 28, 30 — line 7 is the pre-switch `unavailable`
+///   frame, so the replay crosses NotToggleable → toggleable; the
+///   interleaved `reasoning` command responses
 ///   are skipped as production never sees them as notifications), converted
 ///   by `convert::kiro::to_ext_notification`. Keyed by capture line.
 /// - KAS: the `set_config_option` results of `kas-new-surface-noprompt-0668`

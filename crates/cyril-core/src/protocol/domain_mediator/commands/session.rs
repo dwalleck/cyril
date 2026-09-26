@@ -344,6 +344,9 @@ impl DomainMediator {
             acp::SessionConfigId::new(config_id.as_str()),
             acp::SessionConfigValueId::new(value),
         );
+        // The rebuilt options describe THIS session; bind the answer to it
+        // (cyril-k3lz review finding 7).
+        let session_id = session_id.clone();
         // Keep wire order with other commands; only the response wait is spawned.
         let sent = send_standard(connection, "session/set_config_option", request);
         let channels = self.channels.clone();
@@ -395,7 +398,11 @@ impl DomainMediator {
                 },
             };
             channels
-                .enqueue_outcome(CommandOutcome::notify(notification))
+                .enqueue_outcome(CommandOutcome::for_session(
+                    session_id,
+                    operation,
+                    notification,
+                ))
                 .await;
         });
         Ok(())

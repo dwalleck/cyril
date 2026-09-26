@@ -927,20 +927,19 @@ mod tests {
             let text: String = (0..120)
                 .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
                 .collect();
-            match want {
-                Some("no think") => assert!(
-                    text.contains("· no think"),
-                    "{label}: expected `· no think`, got {text:?}"
-                ),
-                Some(_) => assert!(
-                    text.contains("· think") && !text.contains("no think"),
-                    "{label}: expected `· think`, got {text:?}"
-                ),
-                None => assert!(
-                    !text.contains("think"),
-                    "{label}: expected no thinking segment, got {text:?}"
-                ),
-            }
+            // Pin the exact segment label, not a substring: `thinking` or
+            // `no thinking` would pass a `contains("· think")` check
+            // (cyril-k3lz review finding 10).
+            let segments: Vec<&str> = text
+                .split(" · ")
+                .map(str::trim)
+                .filter(|segment| segment.contains("think"))
+                .collect();
+            assert_eq!(
+                segments,
+                want.into_iter().collect::<Vec<_>>(),
+                "{label}: thinking segment in {text:?}"
+            );
         }
     }
 }

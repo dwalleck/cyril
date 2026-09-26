@@ -28,6 +28,9 @@ pub const THINKING_CONFIG_ID: &str = "thinking";
 /// Kept in the domain types module so both the command and UI layers use the
 /// same contract without crossing the cyril-ui → commands dependency boundary.
 pub const THINKING_NOT_TOGGLEABLE_MESSAGE: &str = "Thinking can't be toggled on the current model.";
+/// Shared user-facing text for a model whose thinking cannot be turned off;
+/// both the `/thinking` report and its `on` refusal say it.
+pub const THINKING_ALWAYS_ON_MESSAGE: &str = "Thinking is always on for the current model.";
 
 const CONFIG_VALUE_ON: &str = "on";
 const CONFIG_VALUE_OFF: &str = "off";
@@ -50,6 +53,35 @@ impl ThinkingLever {
             CONFIG_VALUE_ON
         } else {
             CONFIG_VALUE_OFF
+        }
+    }
+}
+
+/// Why a thinking toggle is refused locally (spec B4): the state has no
+/// lever, and both engines would accept the request silently and do nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ThinkingRefusal {
+    /// The model always thinks. `requested_on` distinguishes a harmless
+    /// `on` from an `off` that cannot happen.
+    AlwaysOn { requested_on: bool },
+    /// No snapshot for the current session yet.
+    Unreported,
+    /// The model has no thinking toggle.
+    NotToggleable,
+}
+
+impl ThinkingRefusal {
+    /// The user-facing refusal text.
+    pub fn message(self) -> &'static str {
+        match self {
+            Self::AlwaysOn { requested_on: true } => THINKING_ALWAYS_ON_MESSAGE,
+            Self::AlwaysOn {
+                requested_on: false,
+            } => "Thinking is always on for the current model and can't be turned off.",
+            Self::Unreported => {
+                "Thinking state hasn't been reported yet — try again after the first reply."
+            }
+            Self::NotToggleable => THINKING_NOT_TOGGLEABLE_MESSAGE,
         }
     }
 }
@@ -112,10 +144,21 @@ impl ThinkingState {
 
     /// The lever that changes thinking, when the current model is toggleable.
     pub fn lever(&self) -> Option<ThinkingLever> {
+        self.toggle(true).ok()
+    }
+
+    /// Decide a toggle request: the lever to send, or why it is refused.
+    /// One exhaustive match, so a new state must choose a side here
+    /// (cyril-k3lz review finding 14).
+    pub fn toggle(&self, enabled: bool) -> Result<ThinkingLever, ThinkingRefusal> {
         match self {
-            Self::ToggleableByReasoning { .. } => Some(ThinkingLever::ReasoningCommand),
-            Self::ToggleableByConfigOption { .. } => Some(ThinkingLever::ConfigOption),
-            Self::Unreported | Self::AlwaysOn | Self::NotToggleable => None,
+            Self::ToggleableByReasoning { .. } => Ok(ThinkingLever::ReasoningCommand),
+            Self::ToggleableByConfigOption { .. } => Ok(ThinkingLever::ConfigOption),
+            Self::AlwaysOn => Err(ThinkingRefusal::AlwaysOn {
+                requested_on: enabled,
+            }),
+            Self::Unreported => Err(ThinkingRefusal::Unreported),
+            Self::NotToggleable => Err(ThinkingRefusal::NotToggleable),
         }
     }
 
@@ -380,6 +423,31 @@ mod tests {
             assert_eq!(state.enabled(), enabled, "{state:?}: enabled");
         }
         assert_eq!(ThinkingLever::config_value(true), "on");
+
+        // `toggle` agrees with `lever` and names each refusal.
+        let refusals = [
+            (
+                AlwaysOn,
+                true,
+                ThinkingRefusal::AlwaysOn { requested_on: true },
+            ),
+            (
+                AlwaysOn,
+                false,
+                ThinkingRefusal::AlwaysOn {
+                    requested_on: false,
+                },
+            ),
+            (Unreported, true, ThinkingRefusal::Unreported),
+            (NotToggleable, false, ThinkingRefusal::NotToggleable),
+        ];
+        for (state, enabled, want) in refusals {
+            assert_eq!(state.toggle(enabled), Err(want), "{state:?}/{enabled}");
+        }
+        assert_eq!(
+            ToggleableByConfigOption { enabled: true }.toggle(false),
+            Ok(ThinkingLever::ConfigOption)
+        );
         assert_eq!(ThinkingLever::config_value(false), "off");
     }
 }

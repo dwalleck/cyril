@@ -1,7 +1,7 @@
 use crate::commands::{
     Command, CommandContext, CommandResult, MemoryCommandAction, UsageAccountCommandSource,
 };
-use crate::types::{BridgeCommand, THINKING_NOT_TOGGLEABLE_MESSAGE};
+use crate::types::{BridgeCommand, THINKING_ALWAYS_ON_MESSAGE, THINKING_NOT_TOGGLEABLE_MESSAGE};
 
 /// /help — show available commands
 pub struct HelpCommand {
@@ -511,7 +511,7 @@ const THINKING_USAGE: &str = "Usage: /thinking [on|off]";
 ///
 /// Bare `/thinking` is read-only. `on`/`off` sends one typed
 /// `BridgeCommand::SetThinking` whose lever comes from the snapshot that
-/// reported the model toggleable (`ThinkingState::lever`) — never from the
+/// reported the model toggleable (`ThinkingState::toggle`) — never from the
 /// bound engine. When toggleability is not confirmed the command refuses
 /// locally: both engines accept a toggle on a non-toggleable model silently
 /// and do nothing, so sending would fake a success.
@@ -532,34 +532,9 @@ impl ThinkingCommand {
             ThinkingState::ToggleableByReasoning { enabled: None } => {
                 "Thinking can be toggled on this model, but its current state hasn't been reported yet."
             }
-            ThinkingState::AlwaysOn => "Thinking is always on for the current model.",
+            ThinkingState::AlwaysOn => THINKING_ALWAYS_ON_MESSAGE,
             ThinkingState::NotToggleable => THINKING_NOT_TOGGLEABLE_MESSAGE,
             ThinkingState::Unreported => "Thinking state hasn't been reported yet.",
-        }
-    }
-
-    /// The refusal for a state without a lever (spec B4). Called only when
-    /// `ThinkingState::lever` is `None`, so the toggleable arms are a sanity
-    /// hint, not a live path.
-    fn refusal(state: &crate::types::ThinkingState, enabled: bool) -> &'static str {
-        use crate::types::ThinkingState;
-        match state {
-            ThinkingState::AlwaysOn if enabled => "Thinking is always on for the current model.",
-            ThinkingState::AlwaysOn => {
-                "Thinking is always on for the current model and can't be turned off."
-            }
-            ThinkingState::Unreported => {
-                "Thinking state hasn't been reported yet — try again after the first reply."
-            }
-            ThinkingState::NotToggleable
-            | ThinkingState::ToggleableByReasoning { .. }
-            | ThinkingState::ToggleableByConfigOption { .. } => {
-                debug_assert!(
-                    matches!(state, ThinkingState::NotToggleable),
-                    "refusal requested for a toggleable thinking state"
-                );
-                THINKING_NOT_TOGGLEABLE_MESSAGE
-            }
         }
     }
 }
@@ -591,11 +566,11 @@ impl Command for ThinkingCommand {
         ctx.session
             .id()
             .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;
-        let state = ctx.session.thinking();
-        let Some(lever) = state.lever() else {
-            return Ok(CommandResult::system_message(
-                Self::refusal(state, enabled).to_string(),
-            ));
+        let lever = match ctx.session.thinking().toggle(enabled) {
+            Ok(lever) => lever,
+            Err(refusal) => {
+                return Ok(CommandResult::system_message(refusal.message().to_string()));
+            }
         };
         ctx.bridge
             .send(BridgeCommand::SetThinking { lever, enabled })

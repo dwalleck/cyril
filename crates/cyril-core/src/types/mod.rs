@@ -63,7 +63,8 @@ pub use spawn_environment::SpawnEnvironment;
 pub use steer_receipt::SteerReceipt;
 pub use subagent::{LoopState, PendingStage, SubagentInfo, SubagentStatus};
 pub use thinking::{
-    THINKING_CONFIG_ID, THINKING_NOT_TOGGLEABLE_MESSAGE, ThinkingLever, ThinkingState,
+    THINKING_ALWAYS_ON_MESSAGE, THINKING_CONFIG_ID, THINKING_NOT_TOGGLEABLE_MESSAGE, ThinkingLever,
+    ThinkingRefusal, ThinkingState,
 };
 pub use tool_call::{
     ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,

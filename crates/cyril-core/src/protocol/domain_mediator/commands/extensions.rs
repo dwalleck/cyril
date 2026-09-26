@@ -26,6 +26,24 @@ pub(super) fn send_extension(
     Ok(connection.send_request(request).block_task())
 }
 
+/// The v2 TUI-command RPC.
+const EXECUTE_METHOD: &str = "kiro.dev/commands/execute";
+
+/// Params of a `kiro.dev/commands/execute` request. `command` must be the
+/// adjacently tagged `{command, args}` object — a plain string crashes
+/// kiro-cli — so every call site builds it here (cyril-k3lz review
+/// finding 11).
+fn execute_params(
+    session_id: &SessionId,
+    command: &str,
+    args: serde_json::Value,
+) -> serde_json::Value {
+    serde_json::json!({
+        "sessionId": session_id.as_str(),
+        "command": {"command": command, "args": args}
+    })
+}
+
 /// `BridgeError.operation` for a failed v2 thinking toggle; the UI renders
 /// `"{operation} failed: {message}"`, i.e. "Thinking change failed: …".
 const REASONING_OPERATION: &str = "Thinking change";
@@ -154,20 +172,18 @@ impl DomainMediator {
                 )
                 .await;
         };
-        let params = serde_json::json!({
-            "sessionId": session_id.as_str(),
-            "command": {"command": "reasoning", "args": {"thinkingEnabled": enabled}}
-        });
-        self.spawn_extension_command(
-            connection,
-            "kiro.dev/commands/execute",
-            params,
-            move |result| {
-                Some(CommandOutcome::notify(reasoning_toggle_outcome(
-                    result, enabled,
-                )))
-            },
+        let params = execute_params(
+            &session_id,
+            "reasoning",
+            serde_json::json!({"thinkingEnabled": enabled}),
         );
+        self.spawn_extension_command(connection, EXECUTE_METHOD, params, move |result| {
+            Some(CommandOutcome::for_session(
+                session_id,
+                REASONING_OPERATION,
+                reasoning_toggle_outcome(result, enabled),
+            ))
+        });
         Ok(())
     }
 
@@ -178,28 +194,20 @@ impl DomainMediator {
         session_id: SessionId,
         args: serde_json::Value,
     ) {
-        let params = serde_json::json!({
-            "sessionId": session_id.as_str(),
-            "command": {"command": command, "args": args}
+        let params = execute_params(&session_id, &command, args);
+        self.spawn_extension_command(connection, EXECUTE_METHOD, params, move |result| {
+            let response = match result {
+                Ok(response) => response,
+                Err(error) => serde_json::json!({
+                    "success": false,
+                    "error": error.to_string()
+                }),
+            };
+            Some(CommandOutcome::notify(Notification::CommandExecuted {
+                command,
+                response,
+            }))
         });
-        self.spawn_extension_command(
-            connection,
-            "kiro.dev/commands/execute",
-            params,
-            move |result| {
-                let response = match result {
-                    Ok(response) => response,
-                    Err(error) => serde_json::json!({
-                        "success": false,
-                        "error": error.to_string()
-                    }),
-                };
-                Some(CommandOutcome::notify(Notification::CommandExecuted {
-                    command,
-                    response,
-                }))
-            },
-        );
     }
 
     pub(super) fn list_settings(&mut self, connection: &ConnectionTo<Agent>) {

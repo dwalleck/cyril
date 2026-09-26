@@ -2,6 +2,22 @@
  "source": "experiments/conductor-spike/v2-reasoning-args2-2.24.0-2.24.0.jsonl",
  "frames": [
   {
+   "captureLine": 7,
+   "tag": "set_model",
+   "frame": {
+    "jsonrpc": "2.0",
+    "method": "_kiro.dev/metadata",
+    "params": {
+     "sessionId": "8cd6bd7a-34a6-4843-a603-e25c06b16b7c",
+     "contextUsagePercentage": 3.5799999237060547,
+     "reasoning": {
+      "support": "unavailable",
+      "effortLevels": []
+     }
+    }
+   }
+  },
+  {
    "captureLine": 8,
    "tag": "set_model",
    "frame": {
