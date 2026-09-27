@@ -161,3 +161,7 @@ Isolation record: `ReconstructOwnership` first reconstructed production without 
 Specification and design approvals remain applicable; no required behavior or risk was reduced. README documents the shipped operator controls. Final source/binary hashes and raw runtime evidence are retained locally with this behavior-owning change. Scope authorizes local implementation/commit only: no push, PR publication, or tracker closure is claimed.
 
 Pre-commit size receipt: code/tests/docs/evidence census was **3,882 changed lines in 52 files**, before this closing receipt; the claim is a separate tracker-only commit. The complete atomic increment remains below the 3,950 forecast and 4,000 partition threshold. Only explicitly owned paths are committed; ambient `.rivets/.gitignore` and unrelated untracked files are excluded.
+
+## Post-publication correction — R3 / F5
+
+After the requester authorized publication of PR #131, the isolated `cyril-core --no-default-features` Clippy lane exposed a missing gate on a KAS-only test accessor. The earlier workspace-wide passes were genuine but did not cover that mandatory CI configuration; they must not be interpreted as complete CI coverage. [review-decisions.md](review-decisions.md#atomic-technical-repair-r3--isolated-core-feature-coverage) owns the reproduced failure, narrow repair, replacement qualification and checkpoint. Production behavior, budget and conformance evidence remains applicable; no test field, collection path, lint or CI job is disabled.

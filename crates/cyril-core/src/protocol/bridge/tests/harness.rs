@@ -91,6 +91,7 @@ impl Script {
         lock(&self.ext_calls)
     }
 
+    #[cfg(feature = "kas")]
     pub(super) fn permission_responses(&self) -> MutexGuard<'_, Vec<serde_json::Value>> {
         lock(&self.permission_responses)
     }
