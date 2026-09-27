@@ -1,0 +1,25 @@
+# Review decisions: cyril-ell0 (PR #142)
+
+## Round 1 — independent review, 2026-09-27
+
+Source: independent review of PR #142 (Opus, xhigh), relayed by the batch orchestrator. The reviewer reproduced: zero consumers; deletion completeness (`cargo doc -D warnings` clean); the three nd4h legacy-config files untouched; the oracle mutations (A/B); a clean merge with #132. Verdict: approved with nits. Reviewed revision: `7704e409` (the slice commit).
+
+Landing impact: no `blocking` rows — every finding is a record correction or informational; the branch stays landable throughout.
+
+| finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
+|---|---|---|---|---|---|---|---|
+| F1 | Bug claim: `design.md` "Non-goals and future work" files the `UiState::flush_stream_buffer` no-op stub (`state.rs:2968–2973`) plus its per-tick caller and stale `// Flush stream buffer on tick` comment (`app.rs:874–877`) under "Permanent non-goals (no tracker issue)", while the PR body calls it a follow-up — contradictory taxonomy. Fix claim: relabel as intended future work with a placeholder tracker ID (the orchestrator files at close-out); do not remove the stub in this PR. | Opus xhigh review (via orchestrator) | Verified | Read `.cyril-ell0/design.md` lines 107–113 at `7704e409`: the stub bullet sits under "Permanent non-goals (no tracker issue)" and the section ends "Intended future work: none"; PR #142 body, "Discovered, not fixed" item 1, says "a separate follow-up". The Input-shapes row (line 24) carried the same "permanent non-goal" label. | Accept | `design.md`: the stub bullet moved under a new "Intended future work" list with `Tracker ID: to be filed by orchestrator at close-out`; the Input-shapes row relabeled `N/A — intended future work (…)`; the design-conformance paragraph's "(recorded permanent non-goal …)" aligned. Stub, caller, and comment untouched (fence C5 green after the edit). | non-blocking — taxonomy relabel only. The contract requires a verified tracker ID for deferred work; this session is read-only on rivets by batch instruction, so the placeholder records the deferral owner (orchestrator, close-out) rather than an invented ID — recorded here so the ID is not silently dropped. |
+| F2 | Bug claim: Falsification row C3's Oracle cell records `-E 'test(nd4h)'`, but the command actually run and the PR gate use `-E 'binary(/nd4h/)'` (9/9); `test(nd4h)` filters on test names and may select a different set. Fix claim: make the row match the command run; note that C3 becomes vacuous after merge (the nd4h suite is the durable fence). | Opus xhigh review (via orchestrator) | Verified | `grep -n "test(nd4h)" .cyril-ell0/design.md .cyril-ell0/plan.md` at `7704e409` → `design.md:101` (C3 Oracle cell) and `plan.md:26` (Slice 1 Oracle field) still carried the draft filter; `plan.md:43,76,92` and `scratchpad/ell0/logs/nd4h.log` show `binary(/nd4h/)` ran (9 tests across 2 binaries, 9 passed). | Accept | `design.md` C3 Oracle cell and `plan.md` Slice 1 Oracle field now read `binary(/nd4h/)`, each noting the correction; the post-merge vacuity of the C3 byte-identity fence (already in the C3 Regression-fence cell) is repeated beside the oracle. | non-blocking — record correction only; the oracle's meaning and the proof it cites (`nd4h.log`, 9/9) are unchanged. |
+| F3 | Informational: `docs/plans/2026-03-21-*` lines 354/404 history stays untouched, consistent with `nd4h_source_fences.rs:76` and `.cyril-nd4h/review-decisions.md:32`. No fix claim. | Opus xhigh review (via orchestrator) | Verified | Read `crates/cyril/tests/nd4h_source_fences.rs:76–78` ("`docs/plans/` is deliberately excluded: … an audit trail, not live documentation, and rewriting them would falsify history") and `.cyril-nd4h/review-decisions.md:32` (same rationale) at `7704e409`; `design.md` Input shapes and Non-goals already record the `docs/plans/` mentions as a permanent non-goal with that rationale. | Reject | N/A — informational; nothing to change. | non-blocking — permanent non-goal: dated archived planning documents are an audit trail (nd4h precedent, fenced by `nd4h_source_fences.rs`); no tracker issue. |
+
+## Review errors
+
+None that a row does not cover. One imprecision recorded for the next round: F2 says `test(nd4h)` "may select a different set" — it selects no tests at all (nextest exit 4 "no tests to run", `plan.md` CI-gate table, run 1), which is why the draft filter was corrected at the Slice 1 checkpoint before the PR gate ran.
+
+## Repair re-review
+
+N/A — the round changed only workflow artifacts (`design.md`, `plan.md`, this log): no production code, proof script, or fence changed, so every retained gate result stays valid under Evidence validity. The module-shape fence was re-run after the edits (`.cyril-ell0/**` is in C5's approved set) and is green; receipt in the commit that applies this round.
+
+## Compact repair record
+
+N/A — no behavior-changing or technical-proof repair in this round. F2 corrects the recorded text of an oracle command to the command already run and logged at the Slice 1 gate; the proof itself is unchanged.

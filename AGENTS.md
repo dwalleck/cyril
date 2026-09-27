@@ -151,7 +151,7 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 
 
 **`cyril-ui`** — Rendering and UI state.
-- **Owns:** `UiState` (all mutable UI state), `TuiState` trait (read-only rendering interface), widgets (`widgets/`), markdown rendering, syntax highlighting, file completer, stream buffer
+- **Owns:** `UiState` (all mutable UI state), `TuiState` trait (read-only rendering interface), widgets (`widgets/`), markdown rendering, syntax highlighting, file completer
 - **Responsibility:** Given notifications, update UI state. Given `&dyn TuiState`, render frames. All rendering decisions live here.
 - **Must NOT:** Import `agent-client-protocol`. Know about ACP, JSON-RPC, or the bridge. Send commands to the bridge. Make async calls.
 - **Dependency rule:** Depends on `cyril-core` for types only — never `protocol::`.

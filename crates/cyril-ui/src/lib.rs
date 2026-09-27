@@ -11,7 +11,6 @@ pub mod memory_format;
 pub mod render;
 pub mod spinner;
 pub mod state;
-pub mod stream_buffer;
 pub mod subagent_ui;
 pub mod text;
 pub mod theme;
