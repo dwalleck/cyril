@@ -485,6 +485,20 @@ mod tests {
         // places the temp in $TMPDIR (writable) would fail later at persist
         // with a different message (probe S9 proved that boundary bites).
         use std::os::unix::fs::PermissionsExt as _;
+
+        if nix::unistd::geteuid().is_root() {
+            // Root bypasses permission-bit checks: with euid 0 the r-x parent
+            // is writable anyway, the temp file is created and the write
+            // succeeds, so the expected refusal never occurs. The
+            // unwritable-parent fixture below is meaningless with euid 0
+            // (e.g. a root CI container or a rootless user namespace).
+            eprintln!(
+                "skipping unwritable-parent fixture: euid is 0 and root \
+                 bypasses permission bits"
+            );
+            return;
+        }
+
         let dir = tempfile::tempdir().unwrap();
         let parent = dir.path().join("locked-dir");
         std::fs::create_dir(&parent).unwrap();

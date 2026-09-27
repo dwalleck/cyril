@@ -1,0 +1,19 @@
+# cyril-uu8m fence receipt — ordinary non-root assertion path, AFTER the guard (working tree on top of f9bc81d8), 2026-09-27
+# command: env -u CARGO_TARGET_DIR cargo nextest run -p cyril-core --features kas --success-output immediate write_atomic_unwritable_parent
+# host: Linux 7.2.3-1-cachyos x86_64; id -u -> 1000
+# expectation: PASS with NO skip line (no stderr section at all), proving the r-x parent fixture and its three assertions executed
+# grep -c "skipping unwritable-parent" on the full log -> 0
+# (compile lines trimmed; nextest output verbatim)
+
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.18s
+────────────
+ Nextest run ID d84f533e-0f9c-4889-8008-c0a6e7be4af4 with nextest profile: default
+    Starting 1 test across 9 binaries (1072 tests skipped)
+        PASS [   0.019s] (1/1) cyril-core protocol::kas::host_io::tests::write_atomic_unwritable_parent_errs_target_intact
+  stdout ───
+    running 1 test
+    test protocol::kas::host_io::tests::write_atomic_unwritable_parent_errs_target_intact ... ok
+    test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1052 filtered out; finished in 0.00s
+────────────
+     Summary [   0.024s] 1 test run: 1 passed, 1072 skipped
+GATE-OK-verify-nonroot

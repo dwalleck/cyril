@@ -1,0 +1,20 @@
+# cyril-uu8m fence receipt — root skip path, AFTER the guard (working tree on top of f9bc81d8), 2026-09-27
+# command: unshare -r env -u CARGO_TARGET_DIR cargo nextest run -p cyril-core --features kas --success-output immediate write_atomic_unwritable_parent
+# host: Linux 7.2.3-1-cachyos x86_64; /usr/bin/unshare -r id -u -> 0
+# expectation: PASS, and the captured stderr carries the logged skip reason (visible, never a silent pass)
+# (compile lines trimmed; nextest output verbatim)
+
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.21s
+────────────
+ Nextest run ID 1c6f0a65-c98c-4c31-a4a7-eaac92f8fab6 with nextest profile: default
+    Starting 1 test across 9 binaries (1072 tests skipped)
+        PASS [   0.005s] (1/1) cyril-core protocol::kas::host_io::tests::write_atomic_unwritable_parent_errs_target_intact
+  stdout ───
+    running 1 test
+    test protocol::kas::host_io::tests::write_atomic_unwritable_parent_errs_target_intact ... ok
+    test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1052 filtered out; finished in 0.00s
+  stderr ───
+    skipping unwritable-parent fixture: euid is 0 and root bypasses permission bits
+────────────
+     Summary [   0.006s] 1 test run: 1 passed, 1072 skipped
+GATE-OK-verify-root
