@@ -56,3 +56,5 @@ Empirical route — **holds** (2026-09-27):
 - The live acceptance run remains the recorded **obligation not run** (section above), carried into the PR verbatim.
 
 Bounded repair 1 (2026-09-27): the PR's Windows CI leg failed one retained fence on a `/`-vs-`\` expected-string construction (test-only; production rendering correct). Corrected per the repository's cross-platform fixture rule; kas + default legs re-run green locally (`plan.md` "Bounded repair 1"); the terminal criterion still holds pending the re-run Windows leg, recorded there.
+
+Review round 1 (2026-09-27, `review-decisions.md`): F1/F2 accepted and applied in `ab8e8d15` — the env wrappers are now fenced (claim C7) and platform-gated like kiro-cli's `dirs` build; F3/F4/P1 recorded without change. Terminal criterion still holds: every artifact satisfies its owning stage, no `FAIL` in the checkpoint or the round's repair record, CI green on Linux/macOS/Windows (run 36300873906). The live acceptance run remains the recorded obligation not run.
