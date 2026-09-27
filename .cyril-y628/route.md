@@ -38,4 +38,4 @@ interrogated-spec → falsifiable-design → budgeted-plan → checkpointed-buil
 
 ## Terminal criterion
 
-Structural — satisfied. Specification/design approvals are recorded in their owning artifacts. plan.md's final checkpoint records all eleven gates PASS (with explicit inapplicable budget classes); conformance.md records the isolated structural PASS. No unresolved FAIL or deferred acceptance obligation remains. Publication/tracker closure is outside this local implementation authorization.
+Structural — satisfied. Specification/design approvals are recorded in their owning artifacts. plan.md's checkpoint and review-decisions.md's R3 correction record the completed qualification; conformance.md records the isolated structural PASS. Subsequent explicit requester authorization covers publication of PR #131 and merge only with green CI for its current head; see plan.md for the authorization history. Tracker closure remains outside the authorized scope.
