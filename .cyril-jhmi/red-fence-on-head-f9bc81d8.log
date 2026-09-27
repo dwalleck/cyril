@@ -1,0 +1,43 @@
+# sh cargo-clean.sh test -p cyril format_response_context   (cargo test with CARGO_TARGET_DIR unset)
+# worktree HEAD f9bc81d8 + the new fence only; product code untouched; run 2026-09-27; exit=101
+     Running unittests src/main.rs (target/debug/deps/cyril-65c681568b9d1333)
+
+running 3 tests
+test app::tests::format_response_context_breakdown ... ok
+test app::tests::format_response_context_breakdown_lists_files ... ok
+test app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire ... FAILED
+
+failures:
+
+---- app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire stdout ----
+
+thread 'app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire' (1085279) panicked at crates/cyril/src/app.rs:5378:9:
+expected block:
+  Context files: 3776 tokens (1.4%)
+    /home/dwalleck/.kiro/steering/rivets.md — 1013 tokens (0.4%)
+    /home/dwalleck/.kiro/skills/rust-best-practices/SKILL.md — 317 tokens (0.1%) (auto)
+    /home/dwalleck/.kiro/skills/code-testing-agent/SKILL.md — 130 tokens (0.0%) (auto)
+    AGENTS.md — 0 tokens (0.0%) (unmatched)
+    README.md — 0 tokens (0.0%) (unmatched)
+
+actual output:
+Context: 4.1% used (model: gpt-5.6-terra)
+
+  Context files: 3776 tokens (1.4%)
+    /home/dwalleck/.kiro/steering/rivets.md — 1013 tokens (0.4%)
+    /home/dwalleck/.kiro/skills/rust-best-practices/SKILL.md — 317 tokens (0.1%)
+    /home/dwalleck/.kiro/skills/code-testing-agent/SKILL.md — 130 tokens (0.0%)
+    AGENTS.md — 0 tokens (0.0%) (unmatched)
+    README.md — 0 tokens (0.0%) (unmatched)
+  Tools: 7340 tokens (2.7%)
+  Your prompts: 57 tokens (0.0%)
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 145 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`

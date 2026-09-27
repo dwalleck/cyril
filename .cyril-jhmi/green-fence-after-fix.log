@@ -1,0 +1,10 @@
+# sh cargo-clean.sh test -p cyril format_response_context   (cargo test with CARGO_TARGET_DIR unset)
+# after the fix (autoIncluded read + auto_included fallback); run 2026-09-27; exit=0
+     Running unittests src/main.rs (target/debug/deps/cyril-65c681568b9d1333)
+
+running 3 tests
+test app::tests::format_response_context_breakdown ... ok
+test app::tests::format_response_context_breakdown_lists_files_pre_2_16_snake_case ... ok
+test app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 145 filtered out; finished in 0.00s

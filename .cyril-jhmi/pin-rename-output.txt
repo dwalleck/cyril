@@ -1,0 +1,33 @@
+# python3 .cyril-jhmi/pin-rename.py 2.12.0 2.12.1 2.12.3 2.13.0 2.14.0 2.14.1 2.14.2 2.15.0 2.16.0 2.16.1 2.16.2 2.17.0
+# run 2026-09-27 against ~/.local/share/kiro-research/binaries (worktree HEAD f9bc81d8)
+2.12.0/kiro-cli-chat: size=691MB {'autoIncluded': 0, 'auto_included': 1}
+2.12.0/kiro-cli: size=119MB {'autoIncluded': 0, 'auto_included': 0}
+2.12.1/kiro-cli-chat: size=691MB {'autoIncluded': 0, 'auto_included': 1}
+2.12.1/kiro-cli: size=119MB {'autoIncluded': 0, 'auto_included': 0}
+2.12.3/kiro-cli-chat: size=693MB {'autoIncluded': 0, 'auto_included': 1}
+2.12.3/kiro-cli: size=119MB {'autoIncluded': 0, 'auto_included': 0}
+2.13.0/kiro-cli-chat: size=694MB {'autoIncluded': 0, 'auto_included': 1}
+2.13.0/kiro-cli: size=119MB {'autoIncluded': 0, 'auto_included': 0}
+2.14.0/kiro-cli-chat: size=695MB {'autoIncluded': 0, 'auto_included': 1}
+2.14.0/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.14.1/kiro-cli-chat: size=695MB {'autoIncluded': 0, 'auto_included': 1}
+2.14.1/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.14.2/kiro-cli-chat: size=694MB {'autoIncluded': 0, 'auto_included': 1}
+2.14.2/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.15.0/kiro-cli-chat: size=695MB {'autoIncluded': 0, 'auto_included': 1}
+2.15.0/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.16.0/kiro-cli-chat: size=696MB {'autoIncluded': 1, 'auto_included': 0}
+2.16.0/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.16.1/kiro-cli-chat: size=696MB {'autoIncluded': 1, 'auto_included': 0}
+2.16.1/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.16.2/kiro-cli-chat: size=696MB {'autoIncluded': 1, 'auto_included': 0}
+2.16.2/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+2.17.0/kiro-cli-chat: size=697MB {'autoIncluded': 1, 'auto_included': 0}
+2.17.0/kiro-cli: size=113MB {'autoIncluded': 0, 'auto_included': 0}
+# Verdict: snake_case `auto_included` through 2.15.0; camelCase `autoIncluded` from 2.16.0 on.
+# Corroborating committed live captures with snake_case on /context items:
+#   experiments/conductor-spike/test_bridge-2.1.0.out
+#   experiments/conductor-spike/logs/conductor-2.5.1.log   (raw compact wire frames)
+#   experiments/conductor-spike/test_bridge-conductor-2.7.1.out
+#   experiments/conductor-spike/test_bridge-2.12.0.out
+# Committed live capture with camelCase: experiments/conductor-spike/v2-turn-2.17.0.jsonl (frames 5, 11, 16)

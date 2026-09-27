@@ -2467,9 +2467,14 @@ fn summarize_description(desc: &str) -> String {
 ///
 /// Kiro's `/context` response nests an `items` array under categories like
 /// `contextFiles`/`sessionFiles`, each item carrying `name`, `tokens`,
-/// `percent`, `matched`, and an optional `auto_included` flag. Items are
-/// rendered largest-first so the heaviest contributors surface at the top.
-/// Categories without an `items` array (e.g. `tools`) are left untouched.
+/// `percent`, `matched`, and an optional auto-included flag. kiro-cli 2.16.0
+/// renamed that flag from snake_case `auto_included` to camelCase
+/// `autoIncluded` (binary scan pinned in `.cyril-jhmi/pin-rename-output.txt`;
+/// live captures of both eras under `experiments/conductor-spike/`), so the
+/// camelCase key is read first and the pre-2.16.0 spelling is the fallback.
+/// Items are rendered largest-first so the heaviest contributors surface at
+/// the top. Categories without an `items` array (e.g. `tools`) are left
+/// untouched.
 fn append_context_items(out: &mut String, category: &serde_json::Value) {
     let Some(items) = category.get("items").and_then(|i| i.as_array()) else {
         return;
@@ -2488,9 +2493,13 @@ fn append_context_items(out: &mut String, category: &serde_json::Value) {
         let tokens = item.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
         let pct = item.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
         // Optional flags: surface only when they tell the user something useful.
-        let auto = item
-            .get("auto_included")
-            .and_then(|a| a.as_bool())
+        // `autoIncluded` is the wire key since kiro-cli 2.16.0; `auto_included`
+        // is the pre-2.16.0 spelling (see the fn doc comment). Each spelling is
+        // decoded on its own so a present-but-non-boolean camelCase value never
+        // masks a boolean snake_case one. Both keys absent is the normal shape
+        // for an item that was not auto-included, hence the quiet `false`.
+        let auto = context_item_flag(item, name, "autoIncluded")
+            .or_else(|| context_item_flag(item, name, "auto_included"))
             .unwrap_or(false);
         let matched = item
             .get("matched")
@@ -2505,6 +2514,26 @@ fn append_context_items(out: &mut String, category: &serde_json::Value) {
         }
         out.push_str(&format!("    {name} — {tokens} tokens ({pct:.1}%){tags}\n"));
     }
+}
+
+/// Read the optional boolean flag `key` of a `/context` item.
+///
+/// `None` when the key is absent — the normal case for a flag that is not
+/// set — and also when it is present but not a boolean; that second case is
+/// logged at debug level naming the item and key rather than silently
+/// treated as `false` (CLAUDE.md, "errors are not default values").
+fn context_item_flag(item: &serde_json::Value, item_name: &str, key: &str) -> Option<bool> {
+    let value = item.get(key)?;
+    let flag = value.as_bool();
+    if flag.is_none() {
+        tracing::debug!(
+            item = item_name,
+            key,
+            %value,
+            "/context item flag is not a boolean; ignoring it"
+        );
+    }
+    flag
 }
 
 /// Format a `kiro.dev/commands/execute` response for display as a system message.
@@ -5274,8 +5303,16 @@ mod tests {
         assert!(!result.contains("Kiro responses"));
     }
 
+    /// Legacy fence for the pre-2.16.0 wire: kiro-cli <= 2.15.0 spelled the
+    /// auto-included flag `auto_included` (committed captures such as
+    /// `experiments/conductor-spike/test_bridge-2.12.0.out`; rename pinned in
+    /// `.cyril-jhmi/pin-rename-output.txt`). Only the key spelling is
+    /// capture-backed; the item names and numbers are synthetic. Kept so the
+    /// fallback read keeps rendering `(auto)` for older binaries; the current
+    /// camelCase shape is fenced by
+    /// `format_response_context_items_render_auto_tag_from_camel_case_wire`.
     #[test]
-    fn format_response_context_breakdown_lists_files() {
+    fn format_response_context_breakdown_lists_files_pre_2_16_snake_case() {
         let response = serde_json::json!({
             "success": true,
             "message": "",
@@ -5313,6 +5350,139 @@ mod tests {
         assert!(result.contains("stale.md — 50 tokens (0.0%) (unmatched)"));
         // Categories without items (tools) render no child rows.
         assert!(result.contains("Tools: 6665 tokens (3.3%)"));
+    }
+
+    /// Regression fence for cyril-jhmi, derived from the live wire.
+    ///
+    /// kiro-cli 2.16.0 renamed the `/context` item flag from `auto_included`
+    /// to camelCase `autoIncluded`. The fixture is a verbatim subset of frame 5
+    /// (0-based; JSON-RPC `id: 3`) of the committed raw JSON-RPC capture
+    /// `experiments/conductor-spike/v2-turn-2.17.0.jsonl` (commit b036cbe1,
+    /// 2026-08-11; the file is bare JSON-RPC lines and carries no `ts`
+    /// field). Values, key order, and the wire-only `verbose` /
+    /// `initialExpanded` / `groups` fields are kept as captured so the test
+    /// exercises the real response shape, not a hand-written schema.
+    #[test]
+    fn format_response_context_items_render_auto_tag_from_camel_case_wire() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Context breakdown - 4% used",
+            "data": {
+                "model": "gpt-5.6-terra",
+                "contextUsagePercentage": 4.107720375061035,
+                "verbose": false,
+                "initialExpanded": false,
+                "breakdown": {
+                    "contextFiles": {
+                        "tokens": 3776,
+                        "percent": 1.388235330581665,
+                        "items": [
+                            {"name": "AGENTS.md", "tokens": 0, "matched": false, "percent": 0.0},
+                            {"name": "README.md", "tokens": 0, "matched": false, "percent": 0.0},
+                            {"name": "/home/dwalleck/.kiro/skills/code-testing-agent/SKILL.md", "tokens": 130, "matched": true, "percent": 0.04779411852359772, "autoIncluded": true},
+                            {"name": "/home/dwalleck/.kiro/skills/rust-best-practices/SKILL.md", "tokens": 317, "matched": true, "percent": 0.11654411256313324, "autoIncluded": true},
+                            {"name": "/home/dwalleck/.kiro/steering/rivets.md", "tokens": 1013, "matched": true, "percent": 0.37242648005485535}
+                        ]
+                    },
+                    "tools": {
+                        "tokens": 7340,
+                        "percent": 2.6985292434692383,
+                        "groups": [
+                            {"name": "Built-in", "source": "built-in", "tokens": 7340, "percent": 2.6985292434692383,
+                             "items": [{"name": "code", "tokens": 671, "percent": 0.24669116735458374}]}
+                        ]
+                    },
+                    "kiroResponses": {"tokens": 0, "percent": 0.0},
+                    "yourPrompts": {"tokens": 57, "percent": 0.020955882966518402},
+                    "sessionFiles": {"tokens": 0, "percent": 0.0}
+                }
+            }
+        });
+        let result = format_command_response("context", &response);
+        assert!(result.starts_with("Context: 4.1% used (model: gpt-5.6-terra)\n\n"));
+        // The whole category block, largest-first: the two auto-injected skills
+        // carry the (auto) tag, the steering file carries none, and the two
+        // zero-token entries carry (unmatched). Exact-block matching pins both
+        // the tag and the ordering against the captured shape.
+        let expected_block = concat!(
+            "  Context files: 3776 tokens (1.4%)\n",
+            "    /home/dwalleck/.kiro/steering/rivets.md — 1013 tokens (0.4%)\n",
+            "    /home/dwalleck/.kiro/skills/rust-best-practices/SKILL.md — 317 tokens (0.1%) (auto)\n",
+            "    /home/dwalleck/.kiro/skills/code-testing-agent/SKILL.md — 130 tokens (0.0%) (auto)\n",
+            "    AGENTS.md — 0 tokens (0.0%) (unmatched)\n",
+            "    README.md — 0 tokens (0.0%) (unmatched)\n",
+        );
+        assert!(
+            result.contains(expected_block),
+            "expected block:\n{expected_block}\nactual output:\n{result}"
+        );
+        // `tools` nests its entries under `groups`, not `items`: no child rows.
+        assert!(result.contains("  Tools: 7340 tokens (2.7%)\n  Your prompts: 57 tokens (0.0%)\n"));
+    }
+
+    /// One `contextFiles` item carrying the given auto-included flag entries,
+    /// for the flag-decoding fences below. Synthetic shape: no capture has
+    /// shown a null or non-boolean flag; the fences exist because the read
+    /// must decode each key spelling on its own.
+    fn context_response_with_auto_flags(flags: serde_json::Value) -> serde_json::Value {
+        let mut item = serde_json::json!({
+            "name": "SKILL.md", "tokens": 130, "percent": 0.1, "matched": true
+        });
+        let target = item.as_object_mut().expect("item literal is a JSON object");
+        let extra = flags
+            .as_object()
+            .expect("flags must be a JSON object, or the fence would test nothing");
+        target.extend(extra.clone());
+        serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "contextUsagePercentage": 1.0,
+                "model": "auto",
+                "breakdown": {
+                    "contextFiles": {"tokens": 130, "percent": 0.1, "items": [item]}
+                }
+            }
+        })
+    }
+
+    /// PR #137 review F1: the two key spellings are decoded independently, so
+    /// a camelCase key that is present but not a boolean never masks a
+    /// boolean snake_case one.
+    #[test]
+    fn format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null() {
+        let response = context_response_with_auto_flags(
+            serde_json::json!({"autoIncluded": null, "auto_included": true}),
+        );
+        let result = format_command_response("context", &response);
+        assert!(
+            result.contains("    SKILL.md — 130 tokens (0.1%) (auto)\n"),
+            "actual output:\n{result}"
+        );
+    }
+
+    /// PR #137 review F1: a present-but-non-boolean flag renders no tag and is
+    /// logged at debug level naming the item and key, instead of being
+    /// silently defaulted to `false` (CLAUDE.md, "errors are not default
+    /// values").
+    #[test]
+    fn format_response_context_items_log_non_boolean_auto_flag() {
+        let response =
+            context_response_with_auto_flags(serde_json::json!({"autoIncluded": "true"}));
+        let (result, logs) = with_captured_logs_at(tracing::Level::DEBUG, || {
+            format_command_response("context", &response)
+        });
+        assert!(
+            result.contains("    SKILL.md — 130 tokens (0.1%)\n"),
+            "actual output:\n{result}"
+        );
+        assert!(!result.contains("(auto)"), "actual output:\n{result}");
+        assert!(
+            logs.contains("not a boolean")
+                && logs.contains("SKILL.md")
+                && logs.contains("autoIncluded"),
+            "expected a debug line naming the item and key; captured logs:\n{logs}"
+        );
     }
 
     #[test]
@@ -6832,6 +7002,12 @@ mod tests {
     /// Run `f` under a WARN-level capture subscriber; return its result and
     /// the captured log text.
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        with_captured_logs_at(tracing::Level::WARN, f)
+    }
+
+    /// Run `f` under a capture subscriber admitting events up to `level`;
+    /// return its result and the captured log text.
+    fn with_captured_logs_at<T>(level: tracing::Level, f: impl FnOnce() -> T) -> (T, String) {
         static GLOBAL: std::sync::OnceLock<()> = std::sync::OnceLock::new();
         GLOBAL.get_or_init(|| {
             if let Err(error) = tracing::subscriber::set_global_default(AlwaysInterested) {
@@ -6841,7 +7017,7 @@ mod tests {
         let _capture_lock = cyril_core::test_support::tracing_capture_lock();
         let capture = cyril_core::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::WARN)
+            .with_max_level(level)
             .with_ansi(false)
             .with_writer(capture.clone())
             .finish();
