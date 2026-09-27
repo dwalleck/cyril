@@ -283,10 +283,12 @@ fn list_kas_entries(root: &Path) -> Vec<(String, bool)> {
 /// selection then prefers the newest extraction instead of an exact match,
 /// which is the best available guess when the CLI can't be asked.
 async fn installed_cli_version() -> Option<(u32, u32, u32)> {
-    let step =
-        super::version::kiro_cli_version("kiro-cli", &crate::types::SpawnEnvironment::Inherit)
-            .await
-            .and_then(|v| super::version::parse_semver(&v));
+    let step = super::version::kiro_cli_version(
+        &AgentCommand::new("kiro-cli"),
+        &crate::types::SpawnEnvironment::Inherit,
+    )
+    .await
+    .and_then(|v| super::version::parse_semver(&v));
     match step {
         Ok(v) => Some(v),
         Err(e) => {
