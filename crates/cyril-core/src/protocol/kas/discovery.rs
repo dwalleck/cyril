@@ -768,9 +768,14 @@ mod tests {
             "got {}",
             p.display()
         );
+        // `reason()` renders the path with the host separator (`kiro-cli\kas`
+        // on Windows, where the `/`s come from the POSIX-style fixture
+        // literal), so build the expected substring from the same `Path`
+        // the code renders rather than from a `/`-joined literal.
+        let root = kas_root(Path::new(DATA_DIR)).display().to_string();
         assert!(
-            err.reason().contains(&format!("{DATA_DIR}/{KAS_ROOT_REL}")),
-            "reason must name the searched root: {}",
+            err.reason().contains(&root),
+            "reason must name the searched root {root}: {}",
             err.reason()
         );
     }

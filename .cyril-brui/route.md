@@ -54,3 +54,5 @@ Empirical route — **holds** (2026-09-27):
 - `plan.md`: Slice 1 checkpoint record — eleven gate items `PASS` / contract-backed `N/A`, no `FAIL`; six named mutations red then restored green (`mutation-runs.log`); ten repository gates `PASS` (`gate-summary.txt`).
 - Final T2 recheck: `discovery.rs` production grew by ≈+50 lines inside its existing responsibility; no new module, seam, or dependency direction; no length-review trigger — route unchanged.
 - The live acceptance run remains the recorded **obligation not run** (section above), carried into the PR verbatim.
+
+Bounded repair 1 (2026-09-27): the PR's Windows CI leg failed one retained fence on a `/`-vs-`\` expected-string construction (test-only; production rendering correct). Corrected per the repository's cross-platform fixture rule; kas + default legs re-run green locally (`plan.md` "Bounded repair 1"); the terminal criterion still holds pending the re-run Windows leg, recorded there.
