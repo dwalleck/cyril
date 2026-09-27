@@ -1,0 +1,12 @@
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-ui)
+    Checking cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-voice)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-memory)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-workbench)
+error: could not compile `cyril-voice` (lib test) due to 5 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `cyril-ui` (test "picker_active_marker") due to 3 previous errors
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril)
+error: could not compile `cyril-memory` (lib test) due to 167 previous errors
+error: could not compile `cyril` (bin "cyril" test) due to 44 previous errors
+error: could not compile `cyril-core` (lib test) due to 34 previous errors

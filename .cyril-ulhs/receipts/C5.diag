@@ -1,0 +1,2 @@
+clippy::expect_used | crates/cyril-core/src/lib.rs:23 | used `expect()` on an `Option` value
+# 1 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

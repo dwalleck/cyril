@@ -1,0 +1,7 @@
+clippy::expect_used | src/bin/nontest.rs:12 | used `expect()` on a `Result` value
+clippy::expect_used | src/bin/nontest.rs:7 | used `expect()` on an `Option` value
+clippy::expect_used | tests/helper.rs:11 | used `expect()` on an `Option` value
+clippy::expect_used | tests/helper.rs:15 | used `expect()` on a `Result` value
+clippy::expect_used | tests/helper.rs:19 | used `expect()` on a `Result` value
+unfulfilled_lint_expectations | src/lib.rs:15 | this lint expectation is unfulfilled
+# 6 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

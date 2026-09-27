@@ -1,0 +1,52 @@
+error: used `expect()` on `Some` value
+  --> crates/cyril-core/src/lib.rs:23:5
+   |
+23 |     Some(1u8).expect("probe")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#unnecessary_literal_unwrap
+   = note: `-D clippy::unnecessary-literal-unwrap` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::unnecessary_literal_unwrap)]`
+help: remove the `Some` and `expect()`
+   |
+23 -     Some(1u8).expect("probe")
+23 +     1u8
+   |
+
+error: used `expect()` on an `Option` value
+  --> crates/cyril-core/src/lib.rs:23:5
+   |
+23 |     Some(1u8).expect("probe")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+   = note: `-D clippy::expect-used` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
+error: used `expect()` on `Some` value
+  --> crates/cyril-core/src/lib.rs:23:5
+   |
+23 |     Some(1u8).expect("probe")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#unnecessary_literal_unwrap
+   = note: `-D clippy::unnecessary-literal-unwrap` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::unnecessary_literal_unwrap)]`
+help: remove the `Some` and `expect()`
+   |
+23 -     Some(1u8).expect("probe")
+23 +     1u8
+   |
+
+error: used `expect()` on an `Option` value
+  --> crates/cyril-core/src/lib.rs:23:5
+   |
+23 |     Some(1u8).expect("probe")
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+   = note: `-D clippy::expect-used` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+

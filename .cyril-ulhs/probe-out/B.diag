@@ -1,0 +1,15 @@
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:1659 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:515 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/protocol/source_observer.rs:458 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/types/memory.rs:734 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/voice.rs:76 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/client.rs:278 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/lesson.rs:293 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/paths.rs:213 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/permissions.rs:155 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/project.rs:240 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/runtime.rs:421 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/source_turn.rs:1207 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/wire.rs:1357 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-voice/src/lib.rs:139 | this lint expectation is unfulfilled
+# 14 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

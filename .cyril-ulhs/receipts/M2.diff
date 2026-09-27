@@ -1,0 +1,10 @@
+--- /home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/.cyril-ulhs/receipts/paths.rs.orig	2026-09-27 00:52:32.589661663 -0500
++++ crates/cyril-memory/src/paths.rs	2026-09-27 00:52:39.068677705 -0500
+@@ -210,6 +210,7 @@
+ }
+ 
+ #[cfg(test)]
++#[expect(clippy::expect_used)]
+ mod tests {
+     use super::{MemoryPaths, PathError, resolve_default_from};
+     use std::collections::HashMap;

@@ -1,0 +1,3 @@
+    Checking ulhs-oracle v0.0.0 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/.cyril-ulhs/probe.oracle)
+error: could not compile `ulhs-oracle` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

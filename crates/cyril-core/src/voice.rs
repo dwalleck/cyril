@@ -72,10 +72,6 @@ pub fn create_voice_channels() -> (VoiceHandle, VoiceChannels) {
 }
 
 #[cfg(test)]
-#[expect(
-    clippy::expect_used,
-    reason = "tests legitimately panic on failure; .expect() messages double as assertion context"
-)]
 mod tests {
     use super::*;
 

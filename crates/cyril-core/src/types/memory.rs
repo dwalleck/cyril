@@ -731,7 +731,6 @@ fn bound_text(value: &str) -> String {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 

@@ -797,7 +797,6 @@ fn create_endpoint(runtime_dir: &Path) -> Result<MemoryEndpoint, cyril_memory::I
 /// so `App` tests can observe real lesson injection and drive the
 /// Starting → Ready transition without a child process.
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 pub(crate) mod test_support {
     use super::*;
 
@@ -925,7 +924,6 @@ pub(crate) mod test_support {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 

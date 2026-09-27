@@ -1,0 +1,13 @@
+diff --git a/crates/cyril-core/src/lib.rs b/crates/cyril-core/src/lib.rs
+index 342f90d9..64e994c3 100644
+--- a/crates/cyril-core/src/lib.rs
++++ b/crates/cyril-core/src/lib.rs
+@@ -17,3 +17,8 @@ pub use error::{Error, ErrorKind, Result};
+ /// downstream crate's dev-dependency opts in via the `test-support` feature.
+ #[cfg(any(test, feature = "test-support"))]
+ pub mod test_support;
++
++/// cyril-ulhs P2 probe: a NON-test `.expect()` must still trip `clippy::expect_used`.
++pub fn ulhs_nontest_probe() -> u8 {
++    Some(1u8).expect("probe")
++}

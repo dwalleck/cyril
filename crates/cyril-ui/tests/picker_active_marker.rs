@@ -66,13 +66,6 @@ fn render_text(state: &PickerState) -> String {
         .join("\n")
 }
 
-fn render_open_picker(ui: &UiState) -> String {
-    let Some(state) = ui.picker() else {
-        panic!("show_picker did not open a picker");
-    };
-    render_text(state)
-}
-
 /// The row carrying the marker, with the popup border, the marker and the
 /// selection caret stripped so the assertion is about WHICH option, not about
 /// styling or placement.
@@ -100,7 +93,7 @@ fn picker_marks_active_row_exactly_once_for_model() {
         ],
     );
 
-    let text = render_open_picker(&ui);
+    let text = render_text(ui.picker().expect("show_picker did not open a picker"));
     assert_eq!(
         text.matches(MARK).count(),
         1,
@@ -137,7 +130,7 @@ fn picker_marks_active_row_exactly_once_for_effort() {
         ],
     );
 
-    let text = render_open_picker(&ui);
+    let text = render_text(ui.picker().expect("show_picker did not open a picker"));
     assert_eq!(
         text.matches(MARK).count(),
         1,
@@ -155,7 +148,7 @@ fn picker_marks_active_row_from_wire_current_fallback() {
     options[1].is_current = true;
     ui.show_picker("model".into(), options);
 
-    let text = render_open_picker(&ui);
+    let text = render_text(ui.picker().expect("show_picker did not open a picker"));
     assert_eq!(
         text.matches(MARK).count(),
         1,

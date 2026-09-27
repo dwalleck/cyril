@@ -1,0 +1,20 @@
+# gate on e37000e0791bdbb823b25c3522681e28f9fd0a31 (chore/cyril-ulhs-clippy-expect-in-tests), 2026-09-27T01:32:49-05:00; uncommitted code-path changes: 0
+GATE-OK-fmt | 
+GATE-OK-clippy-all | Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.17s
+GATE-OK-nextest-all | Summary [   6.484s] 2057 tests run: 2057 passed, 13 skipped
+GATE-OK-doctest-all | 
+GATE-OK-clippy-default | Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.22s
+GATE-OK-nextest-default | Summary [   6.571s] 2055 tests run: 2055 passed, 13 skipped
+GATE-OK-clippy-core-nodefault | Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.01s
+GATE-OK-clippy-all-keepgoing | Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.53s
+GATE-OK-clippy-default-keepgoing | Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.02s
+GATE-OK-clippy-core-nodefault-keepgoing | Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.73s
+# nextest totals:
+Summary [   6.484s] 2057 tests run: 2057 passed, 13 skipped
+Summary [   6.571s] 2055 tests run: 2055 passed, 13 skipped
+# picker tests in nextest-all:
+PASS [   0.006s] (1968/2057) cyril-ui::picker_active_marker picker_marks_active_row_exactly_once_for_effort
+PASS [   0.005s] (1969/2057) cyril-ui::picker_active_marker picker_marks_active_row_from_wire_current_fallback
+PASS [   0.008s] (1977/2057) cyril-ui::picker_active_marker picker_marks_active_row_exactly_once_for_model
+GATE-DONE
+gate exit=0

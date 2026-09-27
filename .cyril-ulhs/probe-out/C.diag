@@ -1,0 +1,7 @@
+clippy::expect_used | crates/cyril-core/src/lib.rs:23 | used `expect()` on an `Option` value
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:1659 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:515 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/protocol/source_observer.rs:458 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/types/memory.rs:734 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/voice.rs:76 | this lint expectation is unfulfilled
+# 6 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

@@ -1354,7 +1354,6 @@ fn invalid_response(field: &'static str) -> WireError {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
     use tempfile::TempDir;

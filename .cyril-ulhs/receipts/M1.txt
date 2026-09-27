@@ -1,0 +1,2569 @@
+error: used `expect()` on a `Result` value
+   --> crates/cyril-voice/src/lib.rs:144:9
+    |
+144 | /         handle
+145 | |             .try_send_command(VoiceCommand::Start)
+146 | |             .expect("engine accepts start");
+    | |___________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+    = note: `-D clippy::expect-used` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-voice/src/lib.rs:161:9
+    |
+161 | /         handle
+162 | |             .try_send_command(VoiceCommand::Start)
+163 | |             .expect("engine accepts start");
+    | |___________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-voice/src/lib.rs:164:9
+    |
+164 | /         handle
+165 | |             .try_send_command(VoiceCommand::Stop)
+166 | |             .expect("engine accepts stop");
+    | |__________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-voice/src/lib.rs:191:9
+    |
+191 | /         handle
+192 | |             .try_send_command(VoiceCommand::Start)
+193 | |             .expect("engine accepts start");
+    | |___________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-voice/src/lib.rs:194:9
+    |
+194 | /         handle
+195 | |             .try_send_command(VoiceCommand::Cancel)
+196 | |             .expect("engine accepts cancel");
+    | |____________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-core/src/commands/mod.rs:904:32
+    |
+904 |             let (help, args) = registry.parse("/help").expect("/help is registered");
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+    = note: `-D clippy::expect-used` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-core/src/commands/mod.rs:936:31
+    |
+936 |           let (command, args) = registry
+    |  _______________________________^
+937 | |             .parse("/powers")
+938 | |             .expect("/powers is registered on every engine");
+    | |____________________________________________________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1014:27
+     |
+1014 |         let (cmd, args) = registry.parse("/voice").expect("/voice is registered");
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1034:31
+     |
+1034 |         let (command, args) = registry.parse("/usage").expect("/usage is registered");
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1035:22
+     |
+1035 |         let result = command.execute(&ctx, args).await.expect("/usage executes");
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1073:31
+     |
+1073 |         let (command, args) = registry.parse("/usage").expect("/usage is registered");
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1074:22
+     |
+1074 |         let result = command.execute(&ctx, args).await.expect("/usage executes");
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1356:31
+     |
+1356 |         let (command, args) = registry.parse("/memory status").expect("memory command");
+     |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1357:22
+     |
+1357 |         let result = command.execute(&ctx, args).await.expect("memory status");
+     |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1367:33
+     |
+1367 |         let (_, invalid_args) = registry.parse("/memory other").expect("memory command");
+     |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1368:23
+     |
+1368 |           let invalid = command
+     |  _______________________^
+1369 | |             .execute(&ctx, invalid_args)
+1370 | |             .await
+1371 | |             .expect("memory usage");
+     | |___________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1385:27
+     |
+1385 |           let unavailable = command
+     |  ___________________________^
+1386 | |             .execute(&unavailable_ctx, "status")
+1387 | |             .await
+1388 | |             .expect("missing provider");
+     | |_______________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1463:35
+     |
+1463 |             let (command, args) = registry.parse(input).expect("memory command");
+     |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1464:26
+     |
+1464 |             let result = command.execute(&ctx, args).await.expect("typed action");
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1486:35
+     |
+1486 |             let (command, args) = registry.parse(input).expect("memory command");
+     |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-core/src/commands/mod.rs:1487:26
+     |
+1487 |             let result = command.execute(&ctx, args).await.expect("usage");
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-core/src/commands/mod.rs:1929:35
+     |
+1929 |               let (command, args) = registry
+     |  ___________________________________^
+1930 | |                 .parse("/thinking off")
+1931 | |                 .expect("/thinking is registered on every engine");
+     | |__________________________________________________________________^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/client.rs:283:26
+    |
+283 |         let credential = AdminCredential::generate().expect("credential");
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+    = note: `-D clippy::expect-used` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/client.rs:285:23
+    |
+285 |         let decoded = AdminCredential::from_child_env(OsStr::new(&encoded)).expect("decode");
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/client.rs:293:21
+    |
+293 |         let first = AdminCredential::generate().expect("first");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/client.rs:294:22
+    |
+294 |         let second = AdminCredential::generate().expect("second");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+  --> crates/cyril-ui/tests/picker_active_marker.rs:96:28
+   |
+96 |     let text = render_text(ui.picker().expect("show_picker did not open a picker"));
+   |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+   = note: `-D clippy::expect-used` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-ui/tests/picker_active_marker.rs:133:28
+    |
+133 |     let text = render_text(ui.picker().expect("show_picker did not open a picker"));
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-ui/tests/picker_active_marker.rs:151:28
+    |
+151 |     let text = render_text(ui.picker().expect("show_picker did not open a picker"));
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:297:40
+    |
+297 |         LessonCandidate::new(sequence, LessonText::new(text).expect("lesson text"))
+    |                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:302:20
+    |
+302 |         let text = LessonText::new("  line one\r\nline two\r  ").expect("valid");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:325:21
+    |
+325 |         let error = LessonText::new(&input).expect_err("over the cap after redaction");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:375:24
+    |
+375 |             let text = LessonText::new(input).expect("valid secret-shaped lesson");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:382:13
+    |
+382 |             LessonText::new("use sk-short and ghp_tiny as examples").expect("lookalike");
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:398:24
+    |
+398 |             let text = LessonText::new(input).expect("prose lesson");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:422:24
+    |
+422 |             let text = LessonText::new(input).expect("valid lesson");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:435:24
+    |
+435 |               let once = LessonText::new(input)
+    |  ________________________^
+436 | |                 .expect("first pass")
+    | |_____________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:439:25
+    |
+439 |             let twice = LessonText::new(&once).expect("second pass");
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:449:22
+    |
+449 |         let healed = LessonText::from_stored(raw, hash).expect("integrity holds");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:457:21
+    |
+457 |         let clean = LessonText::new("prefer boring Rust").expect("clean");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/lesson.rs:458:26
+    |
+458 |           let round_trip = LessonText::from_stored(clean.redacted().to_owned(), clean.content_hash())
+    |  __________________________^
+459 | |             .expect("clean row");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-memory/src/lesson.rs:483:20
+    |
+483 |           let full = render_lessons(&candidates, candidates.len(), MAX_LESSON_CONTEXT_CHARS)
+    |  ____________________^
+484 | |             .expect("full block");
+    | |_________________________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-memory/src/lesson.rs:487:17
+    |
+487 |         assert!(full.find("newest").expect("newest") < full.find("older").expect("older"));
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-memory/src/lesson.rs:487:56
+    |
+487 |         assert!(full.find("newest").expect("newest") < full.find("older").expect("older"));
+    |                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-memory/src/lesson.rs:495:23
+    |
+495 |           let bounded = render_lessons(&candidates, candidates.len(), one_lesson_budget)
+    |  _______________________^
+496 | |             .expect("bounded block");
+    | |____________________________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-memory/src/lesson.rs:502:23
+    |
+502 |         let partial = render_lessons(&candidates, 5, MAX_LESSON_CONTEXT_CHARS).expect("partial");
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:230:22
+    |
+230 |         let parent = tempfile::tempdir().expect("tempdir");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:232:21
+    |
+232 |         let paths = MemoryPaths::prepare(Some(&requested)).expect("prepare");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:233:25
+    |
+233 |         let canonical = requested.canonicalize().expect("canonical");
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:246:21
+    |
+246 |           let error = MemoryPaths::prepare(Some(Path::new("relative memory")))
+    |  _____________________^
+247 | |             .expect_err("relative override");
+    | |____________________________________________^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:255:22
+    |
+255 |         let parent = tempfile::tempdir().expect("tempdir");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:257:9
+    |
+257 |         fs::write(&file, b"file").expect("file");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:259:21
+    |
+259 |         let error = MemoryPaths::prepare(Some(&file)).expect_err("file must be rejected");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:266:22
+    |
+266 |         let parent = tempfile::tempdir().expect("tempdir");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:269:9
+    |
+269 |         fs::create_dir(&target).expect("target");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:270:9
+    |
+270 |         std::os::unix::fs::symlink(&target, &link).expect("symlink");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:272:21
+    |
+272 |         let error = MemoryPaths::prepare(Some(&link)).expect_err("symlink must be rejected");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:279:20
+    |
+279 |           let path = resolve_default_from(env(&[
+    |  ____________________^
+280 | |             ("XDG_DATA_HOME", "/tmp/ü data"),
+281 | |             ("HOME", "relative"),
+282 | |         ]))
+283 | |         .expect("absolute XDG");
+    | |_______________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:290:23
+    |
+290 |         let missing = resolve_default_from(env(&[("HOME", "/home/space user")])).expect("HOME");
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:297:13
+    |
+297 | /             resolve_default_from(env(&[("XDG_DATA_HOME", "relative"), ("HOME", "/home/u")]))
+298 | |                 .expect("HOME fallback");
+    | |________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:305:23
+    |
+305 |         let missing = resolve_default_from(env(&[])).expect_err("missing HOME");
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/paths.rs:311:13
+    |
+311 |             resolve_default_from(env(&[("HOME", "relative")])).expect_err("relative HOME");
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:164:20
+    |
+164 |         let root = tempfile::tempdir().expect("tempdir");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:166:9
+    |
+166 |         fs::create_dir(&target).expect("directory");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:167:9
+    |
+167 |         fs::set_permissions(&target, fs::Permissions::from_mode(0o755)).expect("perms");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:169:9
+    |
+169 |         tighten_directory(&target).expect("tighten");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:171:20
+    |
+171 |           let mode = fs::metadata(&target)
+    |  ____________________^
+172 | |             .expect("metadata")
+    | |_______________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:182:20
+    |
+182 |         let root = tempfile::tempdir().expect("tempdir");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:185:9
+    |
+185 |         fs::create_dir(&target).expect("directory");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:186:9
+    |
+186 |         std::os::unix::fs::symlink(&target, &link).expect("symlink");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/permissions.rs:188:21
+    |
+188 |         let error = tighten_directory(&link).expect_err("symlink must be rejected");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:249:20
+    |
+249 |         let root = tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:255:9
+    |
+255 |         fs::create_dir_all(&linked_git_dir).expect("linked git dir");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:256:9
+    |
+256 |         fs::create_dir_all(&nested).expect("nested workspace");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:257:9
+    |
+257 | /         fs::write(
+258 | |             linked.join(".git"),
+259 | |             "gitdir: ../project with space/.git/worktrees/linked\n",
+260 | |         )
+261 | |         .expect("gitdir marker");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:262:9
+    |
+262 |         fs::write(linked_git_dir.join("commondir"), "../..\n").expect("common marker");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:264:29
+    |
+264 |         let primary_scope = ProjectScope::resolve(&primary).expect("primary scope");
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:265:28
+    |
+265 |         let linked_scope = ProjectScope::resolve(&linked).expect("linked scope");
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:266:28
+    |
+266 |         let nested_scope = ProjectScope::resolve(&nested).expect("nested scope");
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:272:13
+    |
+272 |             primary.canonicalize().expect("canonical primary")
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:276:13
+    |
+276 |             linked.canonicalize().expect("canonical linked")
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:285:20
+    |
+285 |         let root = tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:287:9
+    |
+287 |         fs::create_dir(&workspace).expect("workspace");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:288:21
+    |
+288 |         let scope = ProjectScope::resolve(&workspace).expect("scope");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:289:20
+    |
+289 |         let same = ProjectScope::resolve(&workspace.join(".")).expect("same scope");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:293:13
+    |
+293 |             workspace.canonicalize().expect("canonical")
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:299:20
+    |
+299 |         let root = tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:303:9
+    |
+303 |         fs::create_dir(&workspace).expect("workspace");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:304:9
+    |
+304 |         fs::create_dir(&first_git).expect("first git dir");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:305:9
+    |
+305 |         fs::create_dir(&second_git).expect("second git dir");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:306:9
+    |
+306 |         fs::write(workspace.join(".git"), "gitdir: ../first.git\n").expect("first binding");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:307:21
+    |
+307 |         let first = ProjectScope::resolve(&workspace).expect("first scope");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:308:21
+    |
+308 |           let bound = ProjectScope::from_wire(
+    |  _____________________^
+309 | |             &first.project_id().to_string(),
+310 | |             first.display_path().to_str().expect("UTF-8 fixture"),
+311 | |         )
+312 | |         .expect("bound scope");
+    | |______________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-memory/src/project.rs:310:13
+    |
+310 |             first.display_path().to_str().expect("UTF-8 fixture"),
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:314:9
+    |
+314 |         fs::write(workspace.join(".git"), "gitdir: ../second.git\n").expect("retarget binding");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:315:26
+    |
+315 |         let retargeted = ProjectScope::resolve(&workspace).expect("retargeted scope");
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:322:20
+    |
+322 |         let root = tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:323:9
+    |
+323 |         fs::write(root.path().join(".git"), "not a gitdir marker").expect("marker");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:335:20
+    |
+335 |         let root = tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:336:9
+    |
+336 |         fs::create_dir(root.path().join(".git")).expect("ancestor repository");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:338:9
+    |
+338 |         fs::create_dir(&workspace).expect("workspace");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:339:9
+    |
+339 | /         std::os::unix::fs::symlink(
+340 | |             root.path().join("unmounted").join("proj.git"),
+341 | |             workspace.join(".git"),
+342 | |         )
+343 | |         .expect("dangling marker");
+    | |__________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:347:35
+    |
+347 |         let canonical_workspace = workspace.canonicalize().expect("canonical workspace");
+    |                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:348:24
+    |
+348 |         let ancestor = ProjectScope::resolve(root.path()).expect("ancestor scope");
+    |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:349:21
+    |
+349 |         let error = ProjectScope::resolve(&workspace).expect_err("dangling marker");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:358:9
+    |
+358 |         fs::create_dir_all(root.path().join("unmounted").join("proj.git")).expect("mount");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:359:23
+    |
+359 |         let mounted = ProjectScope::resolve(&workspace).expect("mounted scope");
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:371:20
+    |
+371 |         let root = tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:373:9
+    |
+373 |         fs::create_dir(&workspace).expect("non-UTF-8 workspace");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+   --> crates/cyril-memory/src/project.rs:374:21
+    |
+374 |         let error = ProjectScope::resolve(&workspace).expect_err("non-UTF-8 path");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/runtime.rs:426:20
+    |
+426 |         let root = tempfile::tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/runtime.rs:427:21
+    |
+427 |         let paths = MemoryPaths::prepare(Some(root.path())).expect("paths");
+    |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/runtime.rs:429:13
+    |
+429 |             MemoryEndpoint::from_path(&root.path().join("runtime.sock")).expect("endpoint");
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-memory/src/runtime.rs:430:26
+    |
+430 |         let credential = AdminCredential::generate().expect("credential");
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1220:9
+     |
+1220 | /         SourceTurnEvent::new(session.clone(), source_turn_id, sequence, kind)
+1221 | |             .expect("valid source event fixture")
+     | |_________________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1313:23
+     |
+1313 |         let session = SourceSessionId::new("session-1").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1315:21
+     |
+1315 |           let first = CaptureBatch::new(vec![
+     |  _____________________^
+1316 | |             started(&session, id, 1),
+1317 | |             prompt(
+1318 | |                 &session,
+...    |
+1326 | |         ])
+1327 | |         .expect("first batch");
+     | |______________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1328:22
+     |
+1328 |           let second = CaptureBatch::new(vec![
+     |  ______________________^
+1329 | |             assistant(&session, id, 2, 0, "done"),
+1330 | |             finished(&session, id, 3, SourceTurnDisposition::Completed),
+1331 | |         ])
+1332 | |         .expect("second batch");
+     | |_______________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1334:25
+     |
+1334 |         let mut draft = SourceTurnDraft::begin(&first).expect("opened draft");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1340:9
+     |
+1340 |         draft.apply_batch(&first).expect("staged draft");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1346:9
+     |
+1346 |         draft.apply_batch(&second).expect("completed draft");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-memory/src/source_turn.rs:1347:20
+     |
+1347 |         let hash = draft.canonical_hash().expect("terminal hash");
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1354:29
+     |
+1354 |         let mut restarted = SourceTurnDraft::from_stored(stored(&draft)).expect("reload");
+     |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1355:9
+     |
+1355 | /         restarted
+1356 | |             .apply_batch(&first)
+1357 | |             .expect("identical first replay");
+     | |_____________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1358:9
+     |
+1358 | /         restarted
+1359 | |             .apply_batch(&second)
+1360 | |             .expect("identical second replay");
+     | |______________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1364:24
+     |
+1364 |           let conflict = CaptureBatch::new(vec![prompt(&session, id, 1, 0, 0, "different", true)])
+     |  ________________________^
+1365 | |             .expect("conflicting batch shape");
+     | |______________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1376:13
+     |
+1376 |             CaptureBatch::new(vec![assistant(&session, id, 4, 1, "late")]).expect("shape");
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1385:23
+     |
+1385 |         let session = SourceSessionId::new("session-c6").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1387:21
+     |
+1387 |           let batch = CaptureBatch::new(vec![
+     |  _____________________^
+1388 | |             started(&session, id, 1),
+1389 | |             prompt(&session, id, 1, 0, 0, "password=hun", false),
+1390 | |             prompt(&session, id, 2, 0, 1, "ter2 please", true),
+...    |
+1394 | |         ])
+1395 | |         .expect("batch");
+     | |________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1396:25
+     |
+1396 |         let mut draft = SourceTurnDraft::begin(&batch).expect("draft");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1397:9
+     |
+1397 |         draft.apply_batch(&batch).expect("applied");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1410:30
+     |
+1410 |         let mut incomplete = SourceTurnDraft::begin(&batch).expect("draft");
+     |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1411:9
+     |
+1411 | /         incomplete
+1412 | |             .apply_batch(&CaptureBatch::new(batch.events()[..3].to_vec()).expect("prefix batch"))
+1413 | |             .expect("staged");
+     | |_____________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1412:27
+     |
+1412 |             .apply_batch(&CaptureBatch::new(batch.events()[..3].to_vec()).expect("prefix batch"))
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1419:23
+     |
+1419 |         let session = SourceSessionId::new("session-cap").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1423:21
+     |
+1423 |           let first = CaptureBatch::new(vec![
+     |  _____________________^
+1424 | |             started(&session, id, 1),
+1425 | |             prompt(&session, id, 1, 0, 0, &raw, true),
+1426 | |         ])
+1427 | |         .expect("first batch");
+     | |______________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1450:25
+     |
+1450 |         let mut draft = SourceTurnDraft::begin(&first).expect("draft");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1451:9
+     |
+1451 |         draft.apply_batch(&first).expect("staged");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1452:28
+     |
+1452 |         let mut reloaded = SourceTurnDraft::from_stored(stored(&draft)).expect("C6 reload");
+     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1453:9
+     |
+1453 | /         reloaded
+1454 | |             .apply_batch(
+1455 | |                 &CaptureBatch::new(vec![finished(
+1456 | |                     &session,
+...    |
+1463 | |             .expect("C6 terminal after reload");
+     | |_______________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1455:18
+     |
+1455 |                   &CaptureBatch::new(vec![finished(
+     |  __________________^
+1456 | |                     &session,
+1457 | |                     id,
+1458 | |                     2,
+1459 | |                     SourceTurnDisposition::Completed,
+1460 | |                 )])
+1461 | |                 .expect("terminal batch"),
+     | |_________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1465:9
+     |
+1465 | /         reloaded
+1466 | |             .apply_batch(&first)
+1467 | |             .expect("C6 replay after reload");
+     | |_____________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1482:23
+     |
+1482 |         let session = SourceSessionId::new("session-ansi").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1490:26
+     |
+1490 |                 tool_id: SourceToolId::new("t1").expect("tool id"),
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1512:30
+     |
+1512 |                     tool_id: SourceToolId::new("t1").expect("tool id"),
+     |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1526:23
+     |
+1526 |         let session = SourceSessionId::new("session-tools").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1535:30
+     |
+1535 |                     tool_id: SourceToolId::new(tool_id).expect("tool id"),
+     |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1544:21
+     |
+1544 |           let batch = CaptureBatch::new(vec![
+     |  _____________________^
+1545 | |             started(&session, id, 1),
+1546 | |             prompt(&session, id, 1, 0, 0, "query", true),
+1547 | |             tool(2, "tool-1"),
+1548 | |         ])
+1549 | |         .expect("tool batch");
+     | |_____________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1550:25
+     |
+1550 |         let mut draft = SourceTurnDraft::begin(&batch).expect("tool draft");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1551:9
+     |
+1551 |         draft.apply_batch(&batch).expect("applied");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1556:24
+     |
+1556 |         let conflict = CaptureBatch::new(vec![tool(3, "tool-2")]).expect("shape");
+     |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1567:23
+     |
+1567 |         let session = SourceSessionId::new("session-hash").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1572:32
+     |
+1572 |                 let sequence = u64::try_from(index + 1).expect("small index");
+     |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1575:28
+     |
+1575 |             let sequence = u64::try_from(events.len()).expect("small index");
+     |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1577:25
+     |
+1577 |             let batch = CaptureBatch::new(events).expect("batch");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1578:29
+     |
+1578 |             let mut draft = SourceTurnDraft::begin(&batch).expect("draft");
+     |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1579:13
+     |
+1579 |             draft.apply_batch(&batch).expect("applied");
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-memory/src/source_turn.rs:1580:13
+     |
+1580 |             draft.canonical_hash().expect("finished hash")
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1611:23
+     |
+1611 |         let session = SourceSessionId::new("session-reload").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1613:21
+     |
+1613 |           let batch = CaptureBatch::new(vec![
+     |  _____________________^
+1614 | |             started(&session, id, 1),
+1615 | |             prompt(&session, id, 1, 0, 0, "hello", true),
+1616 | |         ])
+1617 | |         .expect("batch");
+     | |________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1618:25
+     |
+1618 |         let mut draft = SourceTurnDraft::begin(&batch).expect("draft");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1619:9
+     |
+1619 |         draft.apply_batch(&batch).expect("applied");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1648:23
+     |
+1648 |         let session = SourceSessionId::new("session-bounds").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1666:23
+     |
+1666 |         let session = SourceSessionId::new("session-redaction").expect("session identity");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1669:21
+     |
+1669 |           let batch = CaptureBatch::new(vec![
+     |  _____________________^
+1670 | |             event(
+1671 | |                 &session,
+1672 | |                 id,
+...    |
+1714 | |         ])
+1715 | |         .expect("redaction batch");
+     | |__________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1706:30
+     |
+1706 |                     tool_id: SourceToolId::new("tool-1").expect("tool id"),
+     |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1716:25
+     |
+1716 |         let mut draft = SourceTurnDraft::begin(&batch).expect("redacted draft");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/source_turn.rs:1717:9
+     |
+1717 |         draft.apply_batch(&batch).expect("applied redacted batch");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1366:21
+     |
+1366 |         let bytes = serde_json::to_vec(&value).expect("request JSON");
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1368:9
+     |
+1368 | /         writer
+1369 | |             .write_all(&(u32::try_from(bytes.len()).expect("bounded length")).to_be_bytes())
+1370 | |             .await
+1371 | |             .expect("length");
+     | |_____________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1369:25
+     |
+1369 |             .write_all(&(u32::try_from(bytes.len()).expect("bounded length")).to_be_bytes())
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1372:9
+     |
+1372 |         writer.write_all(&bytes).await.expect("payload");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1394:26
+     |
+1394 |         let credential = AdminCredential::generate().expect("credential");
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1395:20
+     |
+1395 |         let root = TempDir::new().expect("workspace");
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril-memory/src/wire.rs:1396:25
+     |
+1396 |         let workspace = root.path().to_str().expect("UTF-8 fixture");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1397:23
+     |
+1397 |         let project = ProjectScope::resolve(root.path()).expect("project");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1638:21
+     |
+1638 |           let error = decode_raw_request(
+     |  _____________________^
+1639 | |             &credential,
+1640 | |             request(&credential, "unknown", serde_json::Value::Null),
+...    |
+1643 | |         .expect_err("unknown operation");
+     | |________________________________________^
+     |
+     = note: if this value is an `Ok`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1645:23
+     |
+1645 |           let removed = decode_raw_request(
+     |  _______________________^
+1646 | |             &credential,
+1647 | |             request(&credential, "bind_project", project_payload),
+...    |
+1650 | |         .expect_err("bind_project is not an operation");
+     | |_______________________________________________________^
+     |
+     = note: if this value is an `Ok`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1668:47
+     |
+1668 |           let envelope: ResponseEnvelopeOwned = serde_json::from_value(
+     |  _______________________________________________^
+1669 | |             serde_json::json!({"version": PROTOCOL_VERSION, "id": 1, "payload": payload}),
+1670 | |         )
+1671 | |         .expect("response envelope shape");
+     | |__________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1713:25
+     |
+1713 |               let error = decode_payload_json(serde_json::json!({
+     |  _________________________^
+1714 | |                 "kind": "lessons",
+1715 | |                 "lessons": [lesson_json(&preview)],
+1716 | |                 "omitted_count": 0,
+1717 | |                 "corrupt_count": 0
+1718 | |             }))
+1719 | |             .expect_err(label);
+     | |______________________________^
+     |
+     = note: if this value is an `Ok`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1734:23
+     |
+1734 |           let decoded = decode_payload_json(
+     |  _______________________^
+1735 | |             serde_json::json!({"kind": "lesson", "lesson": lesson_json(skewed)}),
+1736 | |         )
+1737 | |         .expect("skewed row decodes");
+     | |_____________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1743:21
+     |
+1743 |           let error = decode_payload_json(serde_json::json!({
+     |  _____________________^
+1744 | |             "kind": "lesson",
+1745 | |             "lesson": lesson_json("bad\u{0}lesson")
+1746 | |         }))
+1747 | |         .expect_err("control characters stay malformed");
+     | |________________________________________________________^
+     |
+     = note: if this value is an `Ok`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1768:13
+     |
+1768 | /             serde_json::from_value(health("00112233445566778899aabbccddeeff", PROTOCOL_VERSION))
+1769 | |                 .expect("strict health payload");
+     | |________________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1812:17
+     |
+1812 |                 serde_json::from_value(malformed).expect("response envelope shape");
+     |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1818:13
+     |
+1818 |             serde_json::from_value(wrong_shape).expect("response envelope shape");
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1848:23
+     |
+1848 |           let decoded = decode_payload_json(serde_json::json!({
+     |  _______________________^
+1849 | |             "kind": "turn",
+1850 | |             "turn": record(bounded("hello"), "completed", Some(2))
+1851 | |         }))
+1852 | |         .expect("bounded record decodes");
+     | |_________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1918:13
+     |
+1918 |             left.write_all(&length).await.expect("length");
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1919:13
+     |
+1919 |             left.write_all(&bytes).await.expect("frame");
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1922:23
+     |
+1922 |         let decoded = read_frame(&mut boxed).await.expect("exact cap");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1924:9
+     |
+1924 |         writer.await.expect("writer");
+     |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1930:9
+     |
+1930 | /         left.write_all(&((MAX_FRAME_SIZE as u32 + 1).to_be_bytes()))
+1931 | |             .await
+1932 | |             .expect("length");
+     | |_____________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+    --> crates/cyril-memory/src/wire.rs:1934:21
+     |
+1934 |         let error = read_frame(&mut boxed).await.expect_err("oversized frame");
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Ok`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/capture_forwarder.rs:215:25
+    |
+215 |         let workspace = tempfile::tempdir().expect("workspace");
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+    = note: `-D clippy::expect-used` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/capture_forwarder.rs:254:13
+    |
+254 |             tx.send(event).await.expect("source event");
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/capture_forwarder.rs:263:22
+    |
+263 |           let stored = memory
+    |  ______________________^
+264 | |             .inspect_turn(cyril_memory::SourceTurnId::from_bytes(
+265 | |                 source_turn_id.as_bytes(),
+266 | |             ))
+267 | |             .await
+268 | |             .expect("forwarded turn");
+    | |_____________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:820:29
+    |
+820 |             let data_root = tempfile::tempdir().expect("data root");
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:824:32
+    |
+824 |               let runtime_root = tempfile::Builder::new()
+    |  ________________________________^
+825 | |                 .prefix("cyril-m-")
+826 | |                 .tempdir_in("/tmp")
+827 | |                 .expect("runtime root");
+    | |_______________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:830:25
+    |
+830 |             let paths = MemoryPaths::prepare(Some(data_root.path())).expect("memory paths");
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:831:28
+    |
+831 |             let endpoint = create_endpoint(runtime_root.path()).expect("endpoint");
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:832:30
+    |
+832 |             let credential = cyril_memory::AdminCredential::generate().expect("credential");
+    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:879:26
+    |
+879 |                 project: ProjectScope::resolve(workspace).expect("workspace resolves"),
+    |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:902:13
+    |
+902 | /             AdminClient::connect(
+903 | |                 self.endpoint.clone(),
+904 | |                 self.credential.clone(),
+905 | |                 self.request_timeout,
+906 | |             )
+907 | |             .await
+908 | |             .expect("admin client")
+    | |___________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:912:13
+    |
+912 | /             self.client()
+913 | |                 .await
+914 | |                 .shutdown()
+915 | |                 .await
+916 | |                 .expect("graceful shutdown");
+    | |____________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:917:13
+    |
+917 | /             tokio::time::timeout(Duration::from_secs(5), self.task)
+918 | |                 .await
+919 | |                 .expect("runtime task exits")
+920 | |                 .expect("runtime task joins")
+921 | |                 .expect("runtime exits cleanly");
+    | |________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:917:13
+    |
+917 | /             tokio::time::timeout(Duration::from_secs(5), self.task)
+918 | |                 .await
+919 | |                 .expect("runtime task exits")
+920 | |                 .expect("runtime task joins")
+    | |_____________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:917:13
+    |
+917 | /             tokio::time::timeout(Duration::from_secs(5), self.task)
+918 | |                 .await
+919 | |                 .expect("runtime task exits")
+    | |_____________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:934:25
+    |
+934 |         let directory = tempfile::tempdir().expect("directory");
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:950:20
+    |
+950 |         let root = tempfile::tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:952:9
+    |
+952 | /         std::fs::write(
+953 | |             &config_path,
+954 | |             format!(
+955 | |                 "[memory]\nenabled = true\ndata_root = {:?}\nstartup_timeout_ms = 100\nrequest_timeout_ms = 50\n",
+...   |
+959 | |         .expect("config");
+    | |_________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril/src/memory_runtime.rs:986:20
+    |
+986 |         let root = tempfile::tempdir().expect("root");
+    |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:991:9
+     |
+ 991 | /         std::fs::write(
+ 992 | |             &runtime,
+ 993 | |             format!(
+ 994 | |                 "#!/bin/sh\necho \"$#\" > '{}'\necho \"$CYRIL_MEMORY_ADMIN_CREDENTIAL\" > '{}'\nsleep 5 &\necho $! > '{}'\nwait\n",
+...    |
+1000 | |         .expect("runtime fixture");
+     | |__________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1001:9
+     |
+1001 | /         std::fs::set_permissions(&runtime, std::fs::Permissions::from_mode(0o700))
+1002 | |             .expect("runtime mode");
+     | |___________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1004:9
+     |
+1004 | /         std::fs::write(
+1005 | |             &config_path,
+1006 | |             format!(
+1007 | |                 "[memory]\nenabled = true\ndata_root = {:?}\nstartup_timeout_ms = 100\nrequest_timeout_ms = 50\n",
+...    |
+1011 | |         .expect("config");
+     | |_________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1016:28
+     |
+1016 |           let runtime_root = tempfile::Builder::new()
+     |  ____________________________^
+1017 | |             .prefix("cyril-memory-")
+1018 | |             .tempdir_in("/tmp")
+1019 | |             .expect("short runtime root");
+     | |_________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1034:26
+     |
+1034 |         let grandchild = std::fs::read_to_string(&marker).expect("grandchild marker");
+     |                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1036:13
+     |
+1036 | /             std::fs::read_to_string(&args_marker)
+1037 | |                 .expect("argument marker")
+     | |__________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1043:13
+     |
+1043 | /             std::fs::read_to_string(&credential_marker)
+1044 | |                 .expect("credential marker")
+     | |____________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril/src/memory_runtime.rs:1077:24
+     |
+1077 |         let terminal = handle.changed().await.expect("explicit terminal status");
+     |                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1088:25
+     |
+1088 |         let workspace = tempfile::tempdir().expect("workspace");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1089:23
+     |
+1089 |         let project = ProjectScope::resolve(workspace.path()).expect("project");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1133:27
+     |
+1133 |         let runtime_dir = tempfile::tempdir().expect("runtime directory");
+     |                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1135:13
+     |
+1135 |             MemoryEndpoint::from_path(runtime_dir.path()).expect("private test endpoint");
+     |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1138:25
+     |
+1138 |             credential: cyril_memory::AdminCredential::generate().expect("credential"),
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1182:25
+     |
+1182 |         let workspace = tempfile::tempdir().expect("workspace");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril/src/memory_runtime.rs:1194:13
+     |
+1194 | /             disabled
+1195 | |                 .bind_project(workspace.path())
+1196 | |                 .unavailable_message()
+1197 | |                 .expect("disabled message")
+     | |___________________________________________^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1223:21
+     |
+1223 |         let stale = tempfile::tempdir().expect("stale worktree");
+     |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1230:9
+     |
+1230 | /         std::fs::write(
+1231 | |             stale.path().join(".git"),
+1232 | |             format!("gitdir: {}\n", missing_gitdir.display()),
+1233 | |         )
+1234 | |         .expect("stale marker");
+     | |_______________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril/src/memory_runtime.rs:1237:23
+     |
+1237 |         let message = unbound.unavailable_message().expect("unbound message");
+     |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1259:25
+     |
+1259 |         let workspace = tempfile::tempdir().expect("workspace");
+     |                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1262:13
+     |
+1262 | /             memory
+1263 | |                 .first_prompt_context("first query".to_owned())
+1264 | |                 .await
+1265 | |                 .expect("no lessons yet"),
+     | |_________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1268:9
+     |
+1268 | /         memory
+1269 | |             .teach(LessonText::new("prefer boring Rust").expect("lesson"))
+1270 | |             .await
+1271 | |             .expect("teach");
+     | |____________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1269:20
+     |
+1269 |             .teach(LessonText::new("prefer boring Rust").expect("lesson"))
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+    --> crates/cyril/src/memory_runtime.rs:1272:21
+     |
+1272 |           let block = memory
+     |  _____________________^
+1273 | |             .first_prompt_context("prefer boring Rust".to_owned())
+1274 | |             .await
+1275 | |             .expect("context request")
+1276 | |             .expect("one lesson");
+     | |_________________________________^
+     |
+     = note: if this value is `None`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1272:21
+     |
+1272 |           let block = memory
+     |  _____________________^
+1273 | |             .first_prompt_context("prefer boring Rust".to_owned())
+1274 | |             .await
+1275 | |             .expect("context request")
+     | |______________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect_err()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1281:21
+     |
+1281 |           let error = memory
+     |  _____________________^
+1282 | |             .first_prompt_context("prefer boring Rust".to_owned())
+1283 | |             .await
+1284 | |             .expect_err("starting is reported, not swallowed");
+     | |______________________________________________________________^
+     |
+     = note: if this value is an `Ok`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+    --> crates/cyril/src/memory_runtime.rs:1288:13
+     |
+1288 | /             memory
+1289 | |                 .first_prompt_context("prefer boring Rust".to_owned())
+1290 | |                 .await
+1291 | |                 .expect("context request")
+     | |__________________________________________^
+     |
+     = note: if this value is an `Err`, it will panic
+     = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:481:9
+    |
+481 | /         observer
+482 | |             .begin(SessionId::new("main"), TurnId::new(1), &[text])
+483 | |             .expect("source id");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:506:9
+    |
+506 | /         observer
+507 | |             .begin(
+508 | |                 SessionId::new("main"),
+509 | |                 TurnId::new(7),
+...   |
+512 | |             .expect("source id");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:536:13
+    |
+536 | /             observer
+537 | |                 .begin(SessionId::new("main"), TurnId::new(1), &["p".to_owned()])
+538 | |                 .expect("source id");
+    | |____________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:556:9
+    |
+556 | /         observer
+557 | |             .begin(session.clone(), TurnId::new(1), &["prompt".to_owned()])
+558 | |             .expect("source id");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:617:9
+    |
+617 | /         observer
+618 | |             .begin(session.clone(), TurnId::new(1), &["prompt".to_owned()])
+619 | |             .expect("source id");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:622:13
+    |
+622 |             bounded_json(&raw_input, TOOL_INPUT_BYTES).expect("bounded JSON");
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:639:24
+    |
+639 |           let snapshot = events
+    |  ________________________^
+640 | |             .iter()
+641 | |             .find_map(|event| match event.kind() {
+642 | |                 SourceTurnEventKind::ToolSnapshot {
+...   |
+652 | |             })
+653 | |             .expect("tool snapshot");
+    | |____________________________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:674:9
+    |
+674 | /         observer
+675 | |             .begin(session.clone(), TurnId::new(1), &["prompt".to_owned()])
+676 | |             .expect("source id");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:725:17
+    |
+725 | /                 observer
+726 | |                     .begin(
+727 | |                         SessionId::new("main"),
+728 | |                         TurnId::new(1),
+...   |
+731 | |                     .expect("source id");
+    | |________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:733:31
+    |
+733 |                 let started = rx.recv().await.expect("started");
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:738:32
+    |
+738 |                 let terminal = rx.recv().await.expect("overflow terminal");
+    |                                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:775:21
+    |
+775 |           let first = observer
+    |  _____________________^
+776 | |             .begin(session.clone(), TurnId::new(1), &["one".to_owned()])
+777 | |             .expect("first id");
+    | |_______________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/protocol/source_observer.rs:779:22
+    |
+779 |           let second = observer
+    |  ______________________^
+780 | |             .begin(session, TurnId::new(2), &["two".to_owned()])
+781 | |             .expect("second id");
+    | |________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> crates/cyril-core/src/types/memory.rs:795:22
+    |
+795 |         let detail = view.detail().expect("detail");
+    |                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+  --> crates/cyril-core/src/voice.rs:82:9
+   |
+82 | /         handle
+83 | |             .try_send_command(VoiceCommand::Start)
+84 | |             .expect("send should succeed while engine side is alive");
+   | |_____________________________________________________________________^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+  --> crates/cyril-core/src/voice.rs:87:9
+   |
+87 | /         channels
+88 | |             .event_tx
+89 | |             .send(VoiceEvent::Status(VoiceStatus::Listening))
+90 | |             .await
+91 | |             .expect("send should succeed while handle is alive");
+   | |________________________________________________________________^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> crates/cyril-core/src/voice.rs:117:13
+    |
+117 | /             handle
+118 | |                 .try_send_command(VoiceCommand::Start)
+119 | |                 .expect("sends within capacity succeed");
+    | |________________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+

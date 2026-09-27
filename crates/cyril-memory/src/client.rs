@@ -275,7 +275,6 @@ fn map_wire_error(error: WireError) -> ClientError {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 

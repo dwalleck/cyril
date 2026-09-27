@@ -1,0 +1,13 @@
+== oracle no-config: exit=101
+clippy::expect_used | src/lib.rs:12 | used `expect()` on a `Result` value
+clippy::expect_used | src/lib.rs:36 | used `expect()` on an `Option` value
+clippy::expect_used | src/lib.rs:37 | used `expect()` on a `Result` value
+clippy::expect_used | src/lib.rs:6 | used `expect()` on an `Option` value
+# 4 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations
+== oracle with-config: exit=101
+clippy::expect_used | src/lib.rs:12 | used `expect()` on a `Result` value
+clippy::expect_used | src/lib.rs:6 | used `expect()` on an `Option` value
+unfulfilled_lint_expectations | src/lib.rs:19 | this lint expectation is unfulfilled
+# 3 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations
+ORACLE-DONE
+oracle exit=0

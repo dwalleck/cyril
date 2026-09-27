@@ -505,7 +505,6 @@ impl Command for AgentCommand {
 
 #[cfg(test)]
 #[expect(clippy::unwrap_used)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 
@@ -1649,7 +1648,6 @@ mod theme_command_tests {
 // Oracle: the spec B1/B4/B5/B6 strings and the state→lever table,
 // hand-written. States are reached through the public notification path.
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod thinking_command_tests {
     use super::*;
     use crate::types::{

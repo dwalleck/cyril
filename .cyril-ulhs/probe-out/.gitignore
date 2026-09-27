@@ -1,0 +1,5 @@
+# Raw cargo JSON streams (tens of MB, fully derivable by re-running the scripts) and the
+# oracle crate's private target dir. The per-step .diag/.exit/.txt/.stderr/.diff/.log files
+# are the committed evidence.
+*.json
+oracle-target/

@@ -201,8 +201,6 @@ fn event_bytes(event: &CoreEvent) -> usize {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::expect_used)]
-
     use super::CaptureForwarder;
     use cyril_core::types::{
         SessionId, SourceTurnDisposition, SourceTurnEvent, SourceTurnEventKind, SourceTurnId,

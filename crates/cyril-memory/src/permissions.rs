@@ -152,7 +152,6 @@ pub(crate) fn tighten_directory(_path: &Path) -> io::Result<()> {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::tighten_directory;
     use std::fs;

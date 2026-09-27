@@ -1,0 +1,9 @@
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/paths.rs:213:10
+    |
+213 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+

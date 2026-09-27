@@ -1,0 +1,7 @@
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-ui)
+    Checking cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-voice)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-memory)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-workbench)
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.93s

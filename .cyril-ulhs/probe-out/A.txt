@@ -1,0 +1,11 @@
+error: used `expect()` on an `Option` value
+  --> crates/cyril-ui/tests/picker_active_marker.rs:70:17
+   |
+70 |     let state = ui.picker().expect("show_picker did not open a picker");
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#expect_used
+   = note: `-D clippy::expect-used` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::expect_used)]`
+
