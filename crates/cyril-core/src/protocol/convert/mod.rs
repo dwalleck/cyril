@@ -819,39 +819,19 @@ mod tests {
         );
     }
 
-    /// Log-capture writer (cyril-1gim idiom, hoisted for the refusal fences).
-    #[derive(Clone, Default)]
-    struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-    impl std::io::Write for CaptureWriter {
-        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-            self.0.lock().expect("capture lock").extend_from_slice(buf);
-            Ok(buf.len())
-        }
-        fn flush(&mut self) -> std::io::Result<()> {
-            Ok(())
-        }
-    }
-
-    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
-        type Writer = CaptureWriter;
-        fn make_writer(&'a self) -> Self::Writer {
-            self.clone()
-        }
-    }
-
     /// Run `f` under a DEBUG-level capture subscriber; return its result and
-    /// the captured log text.
+    /// the captured log text. The writer is the canonical
+    /// `test_support::CaptureWriter` (cyril-1gim log-capture idiom; the
+    /// private copy that lived here was folded into it in cyril-74ly).
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
         let _capture_lock = crate::test_support::tracing_capture_lock();
-        let capture = CaptureWriter::default();
+        let capture = crate::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_max_level(tracing::Level::DEBUG)
             .with_writer(capture.clone())
             .finish();
         let result = tracing::subscriber::with_default(subscriber, f);
-        let logs =
-            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        let logs = String::from_utf8(capture.captured()).expect("utf8 logs");
         (result, logs)
     }
 
@@ -1607,26 +1587,6 @@ mod tests {
         // cyril-qo13 doc contract on `Selected.option_id` (load-bearing): a
         // foreign id still converts — the UI can only pick real options, so
         // this is state corruption — but the release-surviving warn must fire.
-        #[derive(Clone, Default)]
-        struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
-
-        impl std::io::Write for CaptureWriter {
-            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-                self.0.lock().expect("capture lock").extend_from_slice(buf);
-                Ok(buf.len())
-            }
-            fn flush(&mut self) -> std::io::Result<()> {
-                Ok(())
-            }
-        }
-
-        impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
-            type Writer = CaptureWriter;
-            fn make_writer(&'a self) -> Self::Writer {
-                self.clone()
-            }
-        }
-
         let req = make_permission_request(vec![(
             "opt_allow",
             "Yes",
@@ -1634,7 +1594,7 @@ mod tests {
         )]);
 
         let _capture_lock = crate::test_support::tracing_capture_lock();
-        let capture = CaptureWriter::default();
+        let capture = crate::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
             .with_writer(capture.clone())
             .finish();
@@ -1651,8 +1611,7 @@ mod tests {
 
         let json = serde_json::to_value(&resp).expect("response serializes");
         assert_eq!(json["outcome"]["optionId"], "not-an-offered-option");
-        let logs =
-            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        let logs = String::from_utf8(capture.captured()).expect("utf8 logs");
         assert!(
             logs.contains("not present in the originating request"),
             "foreign-id warn must fire; captured logs: {logs}"
