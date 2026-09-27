@@ -123,15 +123,16 @@ Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<v
 
 ## Architecture
 
-### Five-Crate Workspace
+### Six-Crate Workspace
 
 ```
 crates/
-  cyril-core/     # Library — protocol, types, commands, session, platform
-  cyril-memory/   # Library — strict memory config, private stores, authenticated local runtime
-  cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
-  cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
-  cyril/          # Binary — wires everything together, owns the event loop
+  cyril-core/      # Library — protocol, types, commands, session, platform
+  cyril-memory/    # Library — strict memory config, private stores, authenticated local runtime
+  cyril-ui/        # Library — rendering, widgets, UI state (depends on cyril-core)
+  cyril-voice/     # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
+  cyril-workbench/ # Library — code-review workflow engine (reviewer pipeline)
+  cyril/           # Binary — wires everything together, owns the event loop
 ```
 
 ### Layer Responsibilities
@@ -189,10 +190,12 @@ The crate boundaries enforce dependency rules, but equally important is the sepa
 - Handles cross-cutting concerns: wiring `CommandOptionsReceived` to `show_picker()`, extracting model from `CommandExecuted`
 - The ONLY place where all components interact — if logic can live in a component, it should not be in App.
 
-**`convert/`** (`cyril-core/protocol/convert/`) — Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions.
-- All Kiro protocol quirks live in `kiro.rs`: subagent helpers, `kiro.dev/*` method dispatch, metadata parsing.
-- If a new Kiro deviation is discovered, handle it in `convert/kiro.rs` — never in `mod.rs`.
-- A second vendor (e.g. `convert/claude.rs`) would follow the same pattern.
+**`convert/`** (`cyril-core/protocol/convert/`) — Directory module that imports both `acp::` and internal types. Three production converters:
+- `mod.rs` — generic ACP conversion (standard `session/update` variants, permission requests)
+- `kiro.rs` — v1/v2 Kiro extensions (`kiro.dev/*` method dispatch, subagent helpers, metadata parsing)
+- `kas.rs` — KAS engine extensions (`_kiro/*` dialect, `session_info_update` kinds, host callbacks)
+- `kas/` subdirectory — KAS-specific sub-converters
+- If a new Kiro v2 deviation is discovered, handle it in `kiro.rs`; KAS deviations in `kas.rs` — never in `mod.rs`.
 
 **`TuiState` trait** (`cyril-ui/traits.rs`) — Read-only rendering contract.
 - ~25 methods, all returning references or Copy types
@@ -232,7 +235,7 @@ App event loop (tokio::select!):
 
 **Bridge thread (`protocol/bridge.rs`):** Runs `!Send` ACP types in a quarantined `current_thread` + `LocalSet` runtime. All communication is via three bounded mpsc channels: commands in, notifications out, permission requests out. The bridge MUST send a notification for every command it processes — including error cases — so the App never gets stuck.
 
-**Conversion boundary (`protocol/convert/`):** Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles Kiro-specific extensions. No other file should import `acp::` types.
+**Conversion boundary (`protocol/convert/`):** Directory module that imports both `acp::` and internal types. `mod.rs` handles generic ACP; `kiro.rs` handles v2 Kiro extensions; `kas.rs` handles KAS extensions. No other file should import `acp::` types.
 
 **TuiState trait (`cyril-ui/traits.rs`):** Read-only interface the renderer uses. Every method returns a reference or Copy type — compile-time guarantee that rendering cannot mutate state. The renderer receives `&dyn TuiState`, never `&App` or `&mut UiState`.
 
@@ -341,12 +344,12 @@ For the comprehensive protocol reference with example requests/responses, see **
 > **⚠️ Two engines as of kiro-cli 2.7.1.** Everything in this section describes the **v1/v2 (Rust) engine** — cyril's current default (`kiro-cli acp`). 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. KAS is reachable over ACP today and is the strategic direction. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Full KAS wire reference: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
-- The `agent-client-protocol` crate (v0.10.2; schema `agent-client-protocol-schema` v0.11.2) from crates.io is the source of truth for ACP types. Actual type definitions live in the schema crate (transitive dependency). Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
+- The `agent-client-protocol` crate (v2.0.0, pinned with `=`) from crates.io is the source of truth for ACP types. Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
 - Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
 - **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
 - **Wire format = binary × backend.** What kiro-cli emits depends on both the binary version and the AWS backend's current behavior. Same-day captures with different binaries isolate binary changes; same-binary captures across time isolate backend rollouts. Mixing the axes conflates both — the metering fields appearing on `_kiro.dev/metadata` between April and May 2026 was a backend rollout, not a binary change.
 - **Wire-format audit artifacts:** [`experiments/conductor-spike/`](experiments/conductor-spike/README.md) has same-day 2.1.0/2.2.0 baselines, the `diff_fields.py` structural differ, and reproducible wrapper scripts. Use these for any wire-format investigation rather than rebuilding from scratch.
-- **KAS cloud config (kiro-cli 2.21.0, [audit](docs/kiro-2.21.0-wire-audit.md)):** the kiro-cli launcher now exports `CLOUD_CONFIG_ENDPOINT=https://app.kiro.dev` to the KAS child, and every launcher-path session then emits a deterministic `tool_call` (`title: "Fetching your cloud config"`, `kind: other`, `_meta.kiro.toolId: fetch_cloud_config`) **before the `session/new` response**, completed afterwards with `rawOutput {kind: notEnabled|upToDate|synced|incomplete|fellBackToCache, retracted}`. Cyril's direct `node acp-server.js` spawn sets no endpoint, so cyril sessions never pull org cloud config (cyril-0b8t) and never see the pre-`SessionCreated` frame that would hit the `Drop` arm of `classify_notification_route` (cyril-68ag). The advertised `KIRO_FEATURE_CLOUD_CONFIG_ENABLED` override is not read by KAS 0.54.8. **2.22.0 / KAS 0.66.0 gates that frame** (`cloudConfig.pull.silent`): on an account where sync is not enabled the pre-`session/new` `fetch_cloud_config` tool_call is no longer emitted at all ([audit](docs/kiro-2.22.0-wire-audit.md) § 6). The Rust host also carries a compiled-in rollout registry (18 entries at 2.22.0; `treatment_percent`/`segment`/`channel`, brace-match `"cloud_config": {`) that is a separate audit lane from the KAS flag registry — diff it every release.
+- **KAS cloud config:** cyril's direct `node acp-server.js` spawn does not trigger cloud config fetching (cyril-0b8t). Launcher-path sessions may emit a pre-`session/new` `fetch_cloud_config` tool_call — see [2.21.0](docs/kiro-2.21.0-wire-audit.md) and [2.22.0](docs/kiro-2.22.0-wire-audit.md) audits for version-specific behavior.
 
 ### Session Updates (`session/update`)
 
@@ -402,29 +405,30 @@ These hold for the default v1/v2 (Rust) engine. **KAS implements several of them
 
 ## Adding New Features
 
-### New ACP event type
-1. Add a variant to the appropriate sub-enum in `event.rs` (`ProtocolEvent` for standard ACP, `ExtensionEvent` for Kiro-specific)
-2. Emit it from `KiroClient` in `protocol/client.rs` wrapped in `AppEvent::Protocol(...)` or `AppEvent::Extension(...)`
-3. Handle it in the matching `App::handle_*_event()` method in `app.rs`
+### New notification type
+1. Add a variant to `Notification` in `cyril-core/src/types/event.rs`
+2. Emit it from the conversion layer in `protocol/convert/` — generic ACP in `mod.rs`, Kiro v2 extensions in `kiro.rs`, KAS extensions in `kas.rs`
+3. Handle it in `App::handle_notification()` in `app.rs`, routing to `SessionController` and/or `UiState` as appropriate
 
 ### New slash command
-1. Add the command name to `parse_command()` match in `commands.rs`
-2. Implement the handler as an associated function on `CommandExecutor` — take only what you need as parameters
-3. Call it from the `execute()` dispatch match
+1. Implement a struct with the `Command` trait (`cyril-core/src/commands/`)
+2. Register it in `CommandRegistry` (the `commands` `HashMap` built in `CommandRegistry::new()` in `commands/mod.rs`)
+3. The command receives `CommandContext { workspace, session, bridge, subagent_tracker, workflow_tracker, memory_status }` and returns a `CommandResult`
 
 ### New session state
-1. Add a private field to `SessionContext` in `session.rs` with a getter and setter
+1. Add a private field to `SessionController` in `session.rs` with a getter and setter
 2. If the field has a cache invariant (like `cached_model`), maintain it in the setter
-3. Update from the appropriate event handler in `app.rs`
+3. Update from `SessionController::apply_notification()` or from `App::handle_notification()` for cross-cutting concerns
 
 ### New UI component
-1. Create a module in `cyril/src/ui/` with a `State` struct and `render()` function
-2. Add the state to `App` in `app.rs`
-3. Call the render function from `App::render()`
-4. Handle input in `App::handle_key()` (overlay popups take priority — check approval/picker first)
+1. Create a widget module in `cyril-ui/src/widgets/` with a render function
+2. Add any mutable state to `UiState` in `cyril-ui/src/state.rs`
+3. Expose read-only access through the `TuiState` trait in `cyril-ui/src/traits.rs`
+4. Call the render function from the main render path
+5. Handle input in `App::handle_key()` (overlay popups take priority — check approval/picker first)
 
 ### Channel sends in spawned tasks
-Always use `CommandExecutor::send_or_log()` instead of `let _ = sender.send()`. Silent send failures can freeze the UI (e.g., `toolbar.is_busy` stuck true).
+Never use `let _ = sender.send()` — silent send failures can freeze the UI (e.g., `toolbar.is_busy` stuck true). Log the error: `if let Err(e) = sender.send(...) { warn!(...) }`.
 
 ## Design Principles
 
@@ -482,7 +486,7 @@ Four profiles are configured — use the right one:
 These are project invariants maintained from inception, not aspirations. Maintaining them is dramatically easier than retrofitting.
 
 - **Zero `.unwrap()` in non-test code** — enforced by `clippy::unwrap_used = "deny"` at the workspace level. Propagate with `?`, use `if let` / `match`, or return `Option`/`Result`. `.expect("reason")` is allowed (warning-level) for compile-time invariants like hardcoded regex.
-- **Zero `let _ =` discarded Results** — handle or propagate every `Result`. If truly best-effort, log the error: `if let Err(e) = operation { warn!(...) }`. Use `send_or_log()` for channel sends.
+- **Zero `let _ =` discarded Results** — handle or propagate every `Result`. If truly best-effort, log the error: `if let Err(e) = operation { warn!(...) }`. Channel sends are no exception — log failures so the UI never gets stuck.
 - **Zero `#[allow(...)]` directives** — don't suppress warnings, fix them. When every warning is resolved, new compiler/clippy lints are immediately actionable signal, not buried in noise.
 - **Zero sentinel values** — covered in Design Principles under "Use `Option` for absent values." Restated here: never use magic values (`0.0`, `""`, a catch-all enum variant) to mean "absent."
 
