@@ -183,10 +183,6 @@ Includes `test_support::MockTuiState` for widget testing.
 
 Per-subagent message streams (`SubagentStream`). Manages focused subagent for drill-in view. Routes notifications to the correct subagent stream.
 
-### `stream_buffer.rs` — StreamBuffer
-
-Designed to buffer streaming text and flush at semantic boundaries (newlines, code fences) or after a timeout. **Currently has no production consumer** — nothing constructs it (cyril-ell0).
-
 ### `file_completer.rs` — FileCompleter
 
 Provides `@path/to/file` autocomplete. Loads directory tree asynchronously, respects `.gitignore`.

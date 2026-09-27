@@ -54,7 +54,6 @@
 | `.kiro/` and `.claude/` config | Directory contents mentioned but not detailed | Low | These are external tool configurations, not Cyril source code. |
 | Windows/WSL path translation | `path.rs` documented at module level but individual translation functions not detailed | Low | Well-tested (roundtrip tests visible in codebase overview). |
 | `docs/` directory | Contains `kiro-acp-protocol.md` and large JS reference files — not analyzed | Low | These are reference materials, not Cyril source. |
-| Streaming buffer semantics | `StreamBuffer` documented but boundary detection algorithm not detailed | Low | Small file (149 LOC), easy to read directly. |
 
 ### Documentation vs Old AGENTS.md
 
