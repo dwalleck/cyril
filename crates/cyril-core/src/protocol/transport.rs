@@ -221,8 +221,9 @@ impl AgentProcess {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
-            // Direct-child backstop on every platform (Windows spawns
-            // `wsl kiro-cli acp` and has no Unix process groups).
+            // Direct-child backstop on every platform. Windows has no Unix
+            // process groups, so this is the only cleanup the native spawn
+            // gets there; on Unix it backs up ProcessGroupGuard below.
             .kill_on_drop(true);
         // Fresh group with the agent as leader (pgid == child pid) so
         // ProcessGroupGuard can reach grandchildren like KAS's acp-server.js
