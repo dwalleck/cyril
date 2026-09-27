@@ -2467,9 +2467,14 @@ fn summarize_description(desc: &str) -> String {
 ///
 /// Kiro's `/context` response nests an `items` array under categories like
 /// `contextFiles`/`sessionFiles`, each item carrying `name`, `tokens`,
-/// `percent`, `matched`, and an optional `auto_included` flag. Items are
-/// rendered largest-first so the heaviest contributors surface at the top.
-/// Categories without an `items` array (e.g. `tools`) are left untouched.
+/// `percent`, `matched`, and an optional auto-included flag. kiro-cli 2.16.0
+/// renamed that flag from snake_case `auto_included` to camelCase
+/// `autoIncluded` (binary scan pinned in `.cyril-jhmi/pin-rename-output.txt`;
+/// live captures of both eras under `experiments/conductor-spike/`), so the
+/// camelCase key is read first and the pre-2.16.0 spelling is the fallback.
+/// Items are rendered largest-first so the heaviest contributors surface at
+/// the top. Categories without an `items` array (e.g. `tools`) are left
+/// untouched.
 fn append_context_items(out: &mut String, category: &serde_json::Value) {
     let Some(items) = category.get("items").and_then(|i| i.as_array()) else {
         return;
@@ -2488,8 +2493,11 @@ fn append_context_items(out: &mut String, category: &serde_json::Value) {
         let tokens = item.get("tokens").and_then(|t| t.as_u64()).unwrap_or(0);
         let pct = item.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
         // Optional flags: surface only when they tell the user something useful.
+        // `autoIncluded` is the wire key since kiro-cli 2.16.0; `auto_included`
+        // is the pre-2.16.0 spelling (see the fn doc comment).
         let auto = item
-            .get("auto_included")
+            .get("autoIncluded")
+            .or_else(|| item.get("auto_included"))
             .and_then(|a| a.as_bool())
             .unwrap_or(false);
         let matched = item
@@ -5274,8 +5282,14 @@ mod tests {
         assert!(!result.contains("Kiro responses"));
     }
 
+    /// Legacy fence for the pre-2.16.0 wire: kiro-cli <= 2.15.0 spelled the
+    /// auto-included flag `auto_included` (committed captures such as
+    /// `experiments/conductor-spike/test_bridge-2.12.0.out`; rename pinned in
+    /// `.cyril-jhmi/pin-rename-output.txt`). Kept so the fallback read keeps
+    /// rendering `(auto)` for older binaries; the current camelCase shape is
+    /// fenced by `format_response_context_items_render_auto_tag_from_camel_case_wire`.
     #[test]
-    fn format_response_context_breakdown_lists_files() {
+    fn format_response_context_breakdown_lists_files_pre_2_16_snake_case() {
         let response = serde_json::json!({
             "success": true,
             "message": "",
