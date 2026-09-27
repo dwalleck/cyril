@@ -1,0 +1,16 @@
+⠼ sess_feedback_smoke · 2s                  
+Co┌ Reject with reason ──────────────────┐  
+  │  Preview unavailable                 │  
+Se│Rejecting: Reject once                │  
+  │Reason (Enter submits, Ctrl+J adds a l│  
+Yo│Keepquotes "ok".  @€j█                │  
+  │Request: FEEDBACK_REQUEST_2           │  
+  │Limit: 4096 Unicode characters        │  
+⠼ │                                      │  
+  └──────────────────────────────────────┘  
+┌ > ───────────────────────────────────────┐
+│█                                         │
+│                                          │
+│                                          │
+└──────────────────────────────────────────┘
+cyril                                       

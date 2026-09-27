@@ -1,0 +1,245 @@
+[
+  {
+    "name": "C1_first_option",
+    "claim": "C1",
+    "file": "crates/cyril-core/src/protocol/convert/mod.rs",
+    "old": "let mut selected = acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(\n                option_id.as_str(),\n            ));",
+    "new": "let mut selected = acp::SelectedPermissionOutcome::new(args.options[0].option_id.clone());",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-core",
+      "from_permission_response_selected_exact_id_without_meta"
+    ],
+    "failure": "from_permission_response_selected_exact_id_without_meta.*FAILED"
+  },
+  {
+    "name": "C2_omit_metadata",
+    "claim": "C2",
+    "file": "crates/cyril-core/src/protocol/convert/kas.rs",
+    "old": "    response.meta(meta)",
+    "new": "    drop(meta);\n    response",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-core",
+      "--features",
+      "kas",
+      "rejection_feedback_wire_matrix"
+    ],
+    "failure": "rejection_feedback_wire_matrix.*FAILED"
+  },
+  {
+    "name": "C2_ignore_kind",
+    "claim": "C2",
+    "file": "crates/cyril-core/src/protocol/convert/kas.rs",
+    "old": "&& option.kind == acp::PermissionOptionKind::RejectOnce",
+    "new": "&& true",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-core",
+      "--features",
+      "kas",
+      "rejection_feedback_wire_matrix"
+    ],
+    "failure": "rejection_feedback_wire_matrix.*FAILED"
+  },
+  {
+    "name": "C3_ignore_capability",
+    "claim": "C3",
+    "file": "crates/cyril-ui/src/traits.rs",
+    "old": "self.can_reject_with_reason\n            && matches!",
+    "new": "true\n            && matches!",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_requires_capability_and_reject_once_kind"
+    ],
+    "failure": "rejection_feedback_requires_capability_and_reject_once_kind.*FAILED"
+  },
+  {
+    "name": "C4_allow_large_paste",
+    "claim": "C4",
+    "file": "crates/cyril-ui/src/feedback_editor.rs",
+    "old": "if accepted > remaining {",
+    "new": "if accepted > remaining && false {",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_oversized_paste_is_atomic_after_filtering"
+    ],
+    "failure": "rejection_feedback_oversized_paste_is_atomic_after_filtering.*FAILED"
+  },
+  {
+    "name": "C4_allow_extra_key",
+    "claim": "C4",
+    "file": "crates/cyril-ui/src/feedback_editor.rs",
+    "old": "if self.scalar_count >= MAX_SCALAR_VALUES {",
+    "new": "if self.scalar_count > MAX_SCALAR_VALUES {",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_typed_insertions_obey_scalar_limit"
+    ],
+    "failure": "rejection_feedback_typed_insertions_obey_scalar_limit.*FAILED"
+  },
+  {
+    "name": "C4_lower_limit",
+    "claim": "C4",
+    "file": "crates/cyril-ui/src/feedback_editor.rs",
+    "old": "const MAX_SCALAR_VALUES: usize = 4_096;",
+    "new": "const MAX_SCALAR_VALUES: usize = 4_095;",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_overflow_is_atomic_and_notice_is_visible"
+    ],
+    "failure": "rejection_feedback_overflow_is_atomic_and_notice_is_visible.*FAILED"
+  },
+  {
+    "name": "C4_raise_limit",
+    "claim": "C4",
+    "file": "crates/cyril-ui/src/feedback_editor.rs",
+    "old": "const MAX_SCALAR_VALUES: usize = 4_096;",
+    "new": "const MAX_SCALAR_VALUES: usize = 4_097;",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_overflow_is_atomic_and_notice_is_visible"
+    ],
+    "failure": "rejection_feedback_overflow_is_atomic_and_notice_is_visible.*FAILED"
+  },
+  {
+    "name": "C5_wrong_queue",
+    "claim": "C5",
+    "file": "crates/cyril-ui/src/state.rs",
+    "old": "let mut approval = self.approvals.pop_front()?;",
+    "new": "let mut approval = self.approvals.pop_back()?;",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_queue_is_fifo_across_sessions_with_equal_tool_ids"
+    ],
+    "failure": "rejection_feedback_queue_is_fifo_across_sessions_with_equal_tool_ids.*FAILED"
+  },
+  {
+    "name": "C5_escape_answers",
+    "claim": "C5",
+    "file": "crates/cyril-ui/src/state.rs",
+    "old": "FeedbackAction::Cancel => {\n                self.approval_feedback_cancel();",
+    "new": "FeedbackAction::Cancel => {\n                drop(self.approval_confirm());",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_escape_restores_option_without_response"
+    ],
+    "failure": "rejection_feedback_escape_restores_option_without_response.*FAILED"
+  },
+  {
+    "name": "C6_paste_leaks",
+    "claim": "C6",
+    "file": "crates/cyril/src/app.rs",
+    "old": "if self.ui_state.approval_feedback_paste(&text) {",
+    "new": "if { self.ui_state.insert_text(&text); true } {",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril",
+      "--features",
+      "kas",
+      "rejection_feedback_app_routes_paste_and_voice_without_chat_draft_mutation"
+    ],
+    "failure": "rejection_feedback_app_routes_paste_and_voice_without_chat_draft_mutation.*FAILED"
+  },
+  {
+    "name": "C7_wrong_owner",
+    "claim": "C7",
+    "file": "crates/cyril/src/app.rs",
+    "old": "#[cfg(test)]\nmod tests {",
+    "new": "fn rejection_feedback_policy() {}\n\n#[cfg(test)]\nmod tests {",
+    "command": [
+      "python3",
+      ".cyril-y628/oracles/shape.py"
+    ],
+    "failure": "C7 FAIL crates/cyril/src/app.rs: new responsibility functions"
+  },
+  {
+    "name": "C4_ctrl_j_submits",
+    "claim": "C4",
+    "file": "crates/cyril-ui/src/feedback_editor.rs",
+    "old": "KeyCode::Char('j') if key.modifiers == KeyModifiers::CONTROL => {\n                self.insert_char('\\n');\n                FeedbackAction::Consumed\n            }",
+    "new": "KeyCode::Char('j') if key.modifiers == KeyModifiers::CONTROL => {\n                FeedbackAction::Submit\n            }",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_ctrl_j_inserts_newline_without_submitting"
+    ],
+    "failure": "rejection_feedback_ctrl_j_inserts_newline_without_submitting.*FAILED"
+  },
+  {
+    "name": "C6_hide_editor",
+    "claim": "C6",
+    "file": "crates/cyril-ui/src/widgets/approval.rs",
+    "old": "render_reason_phase(frame, area, input_top, state, session_attribution, theme)",
+    "new": "render_option_phase(frame, area, input_top, state, session_attribution, theme)",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_cursor_visible_in_ordinary_popup"
+    ],
+    "failure": "rejection_feedback_cursor_visible_in_ordinary_popup.*FAILED"
+  },
+  {
+    "name": "C4_drop_altgr",
+    "claim": "C4",
+    "file": "crates/cyril-ui/src/feedback_editor.rs",
+    "old": "if key.modifiers.is_empty()\n                    || key.modifiers == KeyModifiers::SHIFT\n                    || key.modifiers == (KeyModifiers::CONTROL | KeyModifiers::ALT)\n                    || key.modifiers\n                        == (KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT) =>",
+    "new": "if key.modifiers.is_empty() || key.modifiers == KeyModifiers::SHIFT =>",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_accepts_altgr_text_without_accepting_shortcuts"
+    ],
+    "failure": "rejection_feedback_accepts_altgr_text_without_accepting_shortcuts.*FAILED"
+  },
+  {
+    "name": "C6_wrong_phase_entry",
+    "claim": "C6",
+    "file": "crates/cyril-ui/src/state.rs",
+    "old": "approval.phase = ApprovalPhase::EnterReason {\n            chosen_option_id,\n            editor: RejectionFeedback::new(),\n        };",
+    "new": "approval.phase = ApprovalPhase::SelectTrust { chosen_option_id };",
+    "command": [
+      "cargo",
+      "test",
+      "-p",
+      "cyril-ui",
+      "rejection_feedback_cursor_visible_in_ordinary_popup"
+    ],
+    "failure": "rejection_feedback_cursor_visible_in_ordinary_popup.*FAILED"
+  }
+]

@@ -20,7 +20,7 @@
 use agent_client_protocol::schema::v1 as acp;
 
 use super::{from_permission_response, to_permission_options};
-use crate::types::PermissionResponse;
+use crate::types::{AgentEngine, PermissionResponse};
 
 /// Replay every permission request from a raw trace (or synthetic params)
 /// Parse the committed pre-fix recording (`.cyril-qo13/probe-output.txt`) —
@@ -86,6 +86,7 @@ fn assert_exact_choice_for_request(
                 trust_option: None,
             },
             &req,
+            AgentEngine::V2,
         );
         let wire_json =
             serde_json::to_value(&wire).unwrap_or_else(|e| panic!("response serializes: {e}"));

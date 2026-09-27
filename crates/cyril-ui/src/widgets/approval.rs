@@ -17,12 +17,15 @@ pub fn render(
     session_attribution: Option<&str>,
     theme: &Theme,
 ) {
-    match state.phase {
+    match &state.phase {
         ApprovalPhase::SelectOption => {
             render_option_phase(frame, area, input_top, state, session_attribution, theme)
         }
         ApprovalPhase::SelectTrust { .. } => {
             render_trust_phase(frame, area, input_top, state, session_attribution, theme)
+        }
+        ApprovalPhase::EnterReason { .. } => {
+            render_reason_phase(frame, area, input_top, state, session_attribution, theme)
         }
     }
 }
@@ -154,6 +157,7 @@ fn render_option_phase(
     // file path and proposed content. Budget: 1 path line + up to
     // MAX_PREVIEW_LINES of body + blanks; clamped below when space is tight.
     let preview = preview_lines(state, theme);
+    let show_feedback_hint = state.can_reject_with_reason();
     // options.len() is a handful of user-facing choices; the sum stays far
     // below u16::MAX, so try_from is infallible and the saturation is
     // defensive, not an error default (same pattern as the picker).
@@ -162,7 +166,8 @@ fn render_option_phase(
             .options
             .len()
             .saturating_add(preview.len())
-            .saturating_add(6),
+            .saturating_add(6)
+            .saturating_add(usize::from(show_feedback_hint)),
     )
     .unwrap_or(u16::MAX);
     let Some(popup_area) = super::modal::place(area, input_top, 60, desired_height) else {
@@ -177,7 +182,7 @@ fn render_option_phase(
     // the selection). Preview rows are dropped first under clamping: the
     // dialog must stay actionable even when the preview cannot fit.
     let inner = usize::from(popup_area.height.saturating_sub(2));
-    let (show_message, show_blank, preview_rows, option_rows) = match inner {
+    let (show_message, show_blank, preview_rows, mut option_rows) = match inner {
         0 => (false, false, 0, 0),
         1 => (false, false, 0, 1),
         2 => (true, false, 0, 1),
@@ -188,6 +193,10 @@ fn render_option_phase(
             (true, true, preview_rows, remaining - preview_rows)
         }
     };
+    let show_feedback_hint = show_feedback_hint && option_rows > 1;
+    if show_feedback_hint {
+        option_rows -= 1;
+    }
 
     let mut lines: Vec<Line> = Vec::new();
     if show_message {
@@ -218,6 +227,12 @@ fn render_option_phase(
         let prefix = if i == state.selected { "▸ " } else { "  " };
         lines.push(Line::styled(format!("{prefix}{}", opt.label), style));
     }
+    if show_feedback_hint {
+        lines.push(Line::styled(
+            "r  Reject with reason",
+            Style::default().fg(theme.accent_quinary),
+        ));
+    }
 
     let title = attribution_title(" Permission Required ", session_attribution, theme.emphasis);
     let popup = Paragraph::new(lines).block(
@@ -226,7 +241,127 @@ fn render_option_phase(
             .borders(Borders::ALL)
             .border_style(Style::default().fg(theme.emphasis)),
     );
+    frame.render_widget(popup, popup_area);
+}
+fn render_reason_phase(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
+    let ApprovalPhase::EnterReason {
+        chosen_option_id,
+        editor,
+    } = &state.phase
+    else {
+        return;
+    };
+    let preview = preview_lines(state, theme);
+    let selected_label = state
+        .options
+        .iter()
+        .find(|option| option.id == *chosen_option_id)
+        .map_or("Reject", |option| option.label.as_str());
+    let desired_height = u16::try_from(
+        preview
+            .len()
+            .saturating_add(14)
+            .saturating_add(usize::from(editor.notice().is_some())),
+    )
+    .unwrap_or(u16::MAX);
+    let Some(popup_area) = super::modal::place(area, input_top, 64, desired_height) else {
+        return;
+    };
 
+    frame.render_widget(Clear, popup_area);
+    let inner = usize::from(popup_area.height.saturating_sub(2));
+    if inner == 0 {
+        return;
+    }
+
+    // Reserve one row for the editor so even a cramped viewport keeps the
+    // cursor visible. Context and chrome are admitted only when they leave
+    // that row intact; preview rows are the first content to be dropped.
+    let show_limit = inner >= 2;
+    let show_notice = editor.notice().is_some() && inner >= 3;
+    let show_editor_label = inner >= 4;
+    let show_tool_title = inner >= 6;
+    let show_selected = inner >= 7;
+    let show_message = inner >= 8;
+    let show_blank = inner >= 9;
+    let fixed = 1usize
+        .saturating_add(usize::from(show_editor_label))
+        .saturating_add(usize::from(show_limit))
+        .saturating_add(usize::from(show_notice))
+        .saturating_add(usize::from(show_tool_title))
+        .saturating_add(usize::from(show_selected))
+        .saturating_add(usize::from(show_message))
+        .saturating_add(usize::from(show_blank));
+    let preview_rows = preview.len().min(inner.saturating_sub(fixed));
+    let editor_rows = inner
+        .saturating_sub(fixed.saturating_add(preview_rows))
+        .max(1);
+    let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
+    let editor_lines = super::input::text_cursor_lines(
+        editor.text(),
+        editor.cursor(),
+        content_width,
+        editor_rows,
+        theme,
+    );
+
+    let mut lines: Vec<Line> = Vec::with_capacity(inner);
+    if show_message {
+        lines.push(Line::styled(
+            &state.message,
+            Style::default().fg(theme.emphasis),
+        ));
+    }
+    if show_blank {
+        lines.push(Line::default());
+    }
+    lines.extend(preview.into_iter().take(preview_rows));
+    if show_selected {
+        lines.push(Line::styled(
+            format!("Rejecting: {selected_label}"),
+            Style::default().fg(theme.text_secondary),
+        ));
+    }
+    if show_editor_label {
+        lines.push(Line::styled(
+            "Reason (Enter submits, Ctrl+J adds a line, Esc backs out):",
+            Style::default().fg(theme.accent_quinary),
+        ));
+    }
+    lines.extend(editor_lines);
+    if show_tool_title {
+        lines.push(Line::styled(
+            format!("Request: {}", state.tool_call.title()),
+            Style::default().fg(theme.text_secondary),
+        ));
+    }
+    if show_limit {
+        lines.push(Line::styled(
+            format!(
+                "Limit: {} Unicode characters",
+                crate::feedback_editor::RejectionFeedback::max_scalars()
+            ),
+            Style::default().fg(theme.subdued),
+        ));
+    }
+    if show_notice && let Some(notice) = editor.notice() {
+        lines.push(Line::styled(notice, Style::default().fg(theme.warning)));
+    }
+
+    let title = attribution_title(" Reject with reason ", session_attribution, theme.emphasis);
+    let popup = Paragraph::new(lines).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.emphasis)),
+    );
     frame.render_widget(popup, popup_area);
 }
 
@@ -326,6 +461,8 @@ fn render_trust_phase(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::state::UiState;
+    use crate::traits::TuiState;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
@@ -333,9 +470,23 @@ mod tests {
         cyril_core::types::PermissionOption {
             id: cyril_core::types::PermissionOptionId::new(id),
             label: label.into(),
-            kind: cyril_core::types::PermissionOptionKind::AllowOnce,
+            kind: if id == "reject" {
+                cyril_core::types::PermissionOptionKind::RejectOnce
+            } else {
+                cyril_core::types::PermissionOptionKind::AllowOnce
+            },
             is_destructive: false,
         }
+    }
+
+    fn approval_tool_call() -> cyril_core::types::ToolCall {
+        cyril_core::types::ToolCall::new(
+            cyril_core::types::ToolCallId::new("tc_1"),
+            "echo hello".into(),
+            cyril_core::types::ToolKind::Execute,
+            cyril_core::types::ToolCallStatus::Pending,
+            None,
+        )
     }
 
     fn approval_with(
@@ -346,20 +497,35 @@ mod tests {
     ) -> ApprovalState {
         ApprovalState {
             session_id: cyril_core::types::SessionId::new("main"),
-            tool_call: crate::traits::TrackedToolCall::new(cyril_core::types::ToolCall::new(
-                cyril_core::types::ToolCallId::new("tc_1"),
-                "echo hello".into(),
-                cyril_core::types::ToolKind::Execute,
-                cyril_core::types::ToolCallStatus::Pending,
-                None,
-            )),
+            tool_call: crate::traits::TrackedToolCall::new(approval_tool_call()),
             message: "Allow execution?".into(),
             options,
             trust_options,
             selected,
+            can_reject_with_reason: false,
             phase,
             responder: tokio::sync::oneshot::channel().0,
         }
+    }
+
+    fn approval_ui(options: Vec<cyril_core::types::PermissionOption>) -> UiState {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: approval_tool_call(),
+            message: "Allow execution?".into(),
+            options,
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+        });
+        ui
+    }
+
+    fn feedback_ui() -> UiState {
+        let mut ui = approval_ui(vec![option("reject", "Reject")]);
+        assert!(ui.approval_begin_feedback());
+        ui
     }
 
     fn theme() -> Theme {
@@ -392,6 +558,13 @@ mod tests {
         render_at_with_attribution(state, width, height, input_top, None)
     }
 
+    fn render_ui(ui: &UiState, width: u16, height: u16, input_top: u16) -> Terminal<TestBackend> {
+        let Some(approval) = ui.approval() else {
+            panic!("expected front approval");
+        };
+        render_at(approval, width, height, input_top)
+    }
+
     fn render_at_with_attribution(
         state: &ApprovalState,
         width: u16,
@@ -413,6 +586,91 @@ mod tests {
             })
             .expect("draw");
         terminal
+    }
+
+    #[test]
+    fn rejection_feedback_hint_only_for_eligible_option() {
+        let mut ui = approval_ui(vec![
+            option("allow", "Allow Once"),
+            option("reject", "Reject"),
+        ]);
+        let before = render_ui(&ui, 80, 24, 24);
+        assert!(!buffer_text(&before).contains("r  Reject with reason"));
+        ui.approval_select_next();
+        let terminal = render_ui(&ui, 80, 24, 24);
+        assert!(buffer_text(&terminal).contains("r  Reject with reason"));
+    }
+
+    #[test]
+    fn rejection_feedback_renders_limit_and_request_title() {
+        let mut ui = feedback_ui();
+        ui.approval_feedback_paste(&"界".repeat(4096));
+        ui.approval_feedback_paste("x");
+        let terminal = render_ui(&ui, 90, 30, 30);
+        let text = buffer_text(&terminal);
+        assert!(
+            text.contains("Request: echo hello"),
+            "title missing:\n{text}"
+        );
+        assert!(
+            text.contains("Limit: 4096 Unicode characters"),
+            "limit missing:\n{text}"
+        );
+        assert!(
+            text.contains("Reason limit reached"),
+            "limit notice missing:\n{text}"
+        );
+    }
+    #[test]
+    fn rejection_feedback_cursor_visible_in_ordinary_popup() {
+        let mut ui = feedback_ui();
+        ui.approval_feedback_paste("ordinary cursor");
+        let terminal = render_ui(&ui, 90, 30, 30);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("ordinary cursor█"), "cursor missing:\n{text}");
+    }
+
+    #[test]
+    fn rejection_feedback_cursor_visible_when_popup_is_cramped() {
+        let mut ui = feedback_ui();
+        ui.approval_feedback_paste("cramped cursor");
+        let terminal = render_ui(&ui, 30, 16, 6);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("cramped cursor█"), "cursor missing:\n{text}");
+        for row in text.lines().skip(6) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{text}");
+        }
+    }
+
+    #[test]
+    fn rejection_feedback_overflow_keeps_limit_cursor_and_warning_visible() {
+        let mut ui = feedback_ui();
+        ui.approval_feedback_paste(&"界".repeat(4096));
+        let before = render_ui(&ui, 30, 16, 6);
+        let warning = theme().warning;
+        let warning_cells = |terminal: &Terminal<TestBackend>| {
+            terminal
+                .backend()
+                .buffer()
+                .content
+                .iter()
+                .filter(|cell| cell.fg == warning && !cell.symbol().trim().is_empty())
+                .count()
+        };
+        assert_eq!(
+            warning_cells(&before),
+            0,
+            "exact-bound draft has no overflow"
+        );
+        ui.approval_feedback_paste("x");
+        let after = render_ui(&ui, 30, 16, 6);
+        let text = buffer_text(&after);
+        assert!(text.contains("4096"), "limit clipped:\n{text}");
+        assert!(text.contains('█'), "cursor clipped:\n{text}");
+        assert!(
+            warning_cells(&after) > 0,
+            "overflow warning clipped:\n{text}"
+        );
     }
 
     #[test]
@@ -600,6 +858,7 @@ mod tests {
             options: vec![option("accept", "Allow"), option("reject", "Deny")],
             trust_options: vec![],
             selected: 0,
+            can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
         }

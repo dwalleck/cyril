@@ -719,6 +719,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
         };
@@ -811,6 +812,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
         };
@@ -883,6 +885,7 @@ mod tests {
             }],
             trust_options: vec![],
             selected: 0,
+            can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
         };

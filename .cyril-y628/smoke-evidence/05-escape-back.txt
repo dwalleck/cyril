@@ -1,0 +1,32 @@
+⠙ sess_feedback_smoke · 5s                                                                          
+Connecting to agent...                                                                              
+                                                                                                    
+Session created: sess_feedback_smoke                                                                
+                                                                                                    
+You:                                                                                                
+  Exercise rejection feedback                                                                       
+                                                                                                    
+⠙ Thinking... 5s                                                                                    
+                                                                                                    
+                                                                                                    
+                    ┌ Permission Required ─────────────────────────────────────┐                    
+                    │FEEDBACK_REQUEST_5                                        │                    
+                    │                                                          │                    
+                    │  Preview unavailable                                     │                    
+                    │                                                          │                    
+                    │▸ Reject once                                             │                    
+                    │r  Reject with reason                                     │                    
+                    │                                                          │                    
+                    └──────────────────────────────────────────────────────────┘                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                 │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+cyril                                                                                               

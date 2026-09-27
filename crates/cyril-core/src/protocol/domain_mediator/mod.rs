@@ -14,7 +14,7 @@ use crate::protocol::engine::Engine;
 use crate::protocol::source_observer::{IngressTracker, SourceObserver};
 use crate::protocol::turn_mediator::TurnMediator;
 use crate::types::event::{Notification, PermissionRequest, RoutedNotification};
-use crate::types::{PermissionResponse, SessionId};
+use crate::types::{AgentEngine, PermissionResponse, SessionId};
 
 pub(crate) mod commands;
 pub(crate) mod host;
@@ -676,6 +676,8 @@ impl DomainMediator {
             );
             crate::protocol::convert::to_tool_call_from_permission(&args)
         };
+        let engine = self.config.engine.kind();
+        let can_reject_with_reason = cfg!(feature = "kas") && engine == AgentEngine::Kas;
         let (response_tx, response_rx) = oneshot::channel::<PermissionResponse>();
         let request = PermissionRequest {
             session_id,
@@ -683,6 +685,7 @@ impl DomainMediator {
             message: crate::protocol::convert::extract_permission_message(&args),
             options: crate::protocol::convert::to_permission_options(&args),
             trust_options: crate::protocol::convert::extract_trust_options(&args),
+            can_reject_with_reason,
             responder: response_tx,
         };
         let permission_tx = self.bridge.permission_tx.clone();
@@ -702,7 +705,7 @@ impl DomainMediator {
             match response_rx.await {
                 Ok(response) => {
                     let converted =
-                        crate::protocol::convert::from_permission_response(response, &args);
+                        crate::protocol::convert::from_permission_response(response, &args, engine);
                     if responder.respond(converted).is_err() {
                         tracing::debug!("permission responder dropped");
                     }

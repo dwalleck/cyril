@@ -1,0 +1,32 @@
+sess_feedback_smoke                                                                                 
+Connecting to agent...                                                                              
+                                                                                                    
+Session created: sess_feedback_smoke                                                                
+                                                                                                    
+You:                                                                                                
+  Exercise rejection feedback                                                                       
+                                                                                                    
+Kiro:                                                                                               
+FEEDBACK_SMOKE_COMPLETE                                                                             
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                 │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+cyril                                                                                               

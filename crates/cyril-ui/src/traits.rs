@@ -4,6 +4,7 @@ use cyril_core::types::{
     CommandOption, EffortLevel, HookInfo, MemoryStatusView, Plan, PowerInfo, SessionId, VoiceStatus,
 };
 
+pub use crate::feedback_editor::RejectionFeedback;
 use crate::theme::Theme;
 
 /// Activity state derived from UiState — used for adaptive frame rate.
@@ -486,6 +487,11 @@ pub enum ApprovalPhase {
     SelectTrust {
         chosen_option_id: cyril_core::types::PermissionOptionId,
     },
+    /// Phase 3: Enter optional feedback for the selected KAS reject_once.
+    EnterReason {
+        chosen_option_id: cyril_core::types::PermissionOptionId,
+        editor: RejectionFeedback,
+    },
 }
 /// User-facing label for an approval's exact wire-origin session id.
 ///
@@ -526,8 +532,25 @@ pub struct ApprovalState {
     pub options: Vec<cyril_core::types::PermissionOption>,
     pub trust_options: Vec<cyril_core::types::TrustOption>,
     pub selected: usize,
+    /// Immutable request capability derived from the configured engine and
+    /// feature availability. It is intentionally separate from option data:
+    /// option kind and request capability must both gate feedback entry.
+    pub can_reject_with_reason: bool,
     pub phase: ApprovalPhase,
     pub responder: tokio::sync::oneshot::Sender<cyril_core::types::PermissionResponse>,
+}
+
+impl ApprovalState {
+    /// Shared eligibility predicate for the hint, key entry, and state
+    /// transition. A feedback phase can only be entered for the selected
+    /// reject_once option of a capable request.
+    pub fn can_reject_with_reason(&self) -> bool {
+        self.can_reject_with_reason
+            && matches!(self.phase, ApprovalPhase::SelectOption)
+            && self.options.get(self.selected).is_some_and(|option| {
+                option.kind == cyril_core::types::PermissionOptionKind::RejectOnce
+            })
+    }
 }
 
 /// What confirming a picker does (cyril-qaq0).

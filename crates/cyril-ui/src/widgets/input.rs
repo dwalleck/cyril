@@ -75,26 +75,24 @@ pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, us
     rows.push(current);
     (rows, cursor_row, cursor_col)
 }
-
-/// First visible row of the cursor-follow window: as high as possible while
-/// keeping the cursor row inside `visible_rows` rows.
-fn window_start(cursor_row: usize, visible_rows: usize) -> usize {
-    cursor_row.saturating_sub(visible_rows.saturating_sub(1))
-}
-
-/// Render the input area: char-wrapped visual rows with a cursor-follow
-/// window, so the cursor block is visible at every allocated height
-/// (cyril-a14l C2/C3 — this replaces the never-implemented Paragraph
-/// scrolling the previous version's comment promised).
-pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
-    let content_width = usize::from(area.width.saturating_sub(2));
-    let content_height = usize::from(area.height.saturating_sub(2));
-    let (rows, cursor_row, cursor_col) =
-        wrapped_rows(state.input_text(), state.input_cursor(), content_width);
-
-    let start = window_start(cursor_row, content_height);
-    let end = rows.len().min(start.saturating_add(content_height));
-    let lines: Vec<Line> = rows[start..end]
+/// Build bounded-width text rows with a structural cursor span. This concrete
+/// renderer is shared by the chat input and the approval feedback editor so
+/// wrapping, cursor-follow scrolling, and literal cursor-block characters stay
+/// identical in both surfaces.
+pub(crate) fn text_cursor_lines(
+    text: &str,
+    cursor: usize,
+    width: usize,
+    height: usize,
+    theme: &Theme,
+) -> Vec<Line<'static>> {
+    if height == 0 {
+        return Vec::new();
+    }
+    let (rows, cursor_row, cursor_col) = wrapped_rows(text, cursor, width);
+    let start = window_start(cursor_row, height);
+    let end = rows.len().min(start.saturating_add(height));
+    rows[start..end]
         .iter()
         .enumerate()
         .map(|(offset, row)| {
@@ -110,18 +108,40 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
                     .nth(1)
                     .map_or(row.len(), |(offset_bytes, _)| byte + offset_bytes);
                 Line::from(vec![
-                    Span::raw(row[..byte].to_string()),
+                    Span::raw(row[..byte].to_owned()),
                     Span::styled(
-                        row[byte..after_byte].to_string(),
+                        row[byte..after_byte].to_owned(),
                         Style::default().fg(theme.text),
                     ),
-                    Span::raw(row[after_byte..].to_string()),
+                    Span::raw(row[after_byte..].to_owned()),
                 ])
             } else {
                 Line::from(Span::raw(row.clone()))
             }
         })
-        .collect();
+        .collect()
+}
+
+/// First visible row of the cursor-follow window: as high as possible while
+/// keeping the cursor row inside `visible_rows` rows.
+fn window_start(cursor_row: usize, visible_rows: usize) -> usize {
+    cursor_row.saturating_sub(visible_rows.saturating_sub(1))
+}
+
+/// Render the input area: char-wrapped visual rows with a cursor-follow
+/// window, so the cursor block is visible at every allocated height
+/// (cyril-a14l C2/C3 — this replaces the never-implemented Paragraph
+/// scrolling the previous version's comment promised).
+pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
+    let content_width = usize::from(area.width.saturating_sub(2));
+    let content_height = usize::from(area.height.saturating_sub(2));
+    let lines = text_cursor_lines(
+        state.input_text(),
+        state.input_cursor(),
+        content_width,
+        content_height,
+        theme,
+    );
 
     let input_widget = Paragraph::new(lines).block(
         Block::default()

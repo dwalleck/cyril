@@ -1,0 +1,15 @@
+{
+  "jsonrpc": "2.0",
+  "id": 102,
+  "result": {
+    "outcome": {
+      "outcome": "selected",
+      "optionId": "deny-2"
+    },
+    "_meta": {
+      "kiro": {
+        "rejectionReason": "  Use printf — 雪.\nKeep\tquotes \"ok\".  @€j"
+      }
+    }
+  }
+}

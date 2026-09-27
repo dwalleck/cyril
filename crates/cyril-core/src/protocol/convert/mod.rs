@@ -339,47 +339,86 @@ fn parse_trust_option(v: &serde_json::Value) -> Option<TrustOption> {
     })
 }
 
+#[cfg(feature = "kas")]
+fn attach_rejection_metadata(
+    response: acp::RequestPermissionResponse,
+    args: &acp::RequestPermissionRequest,
+    engine: AgentEngine,
+    rejection: Option<(PermissionOptionId, String)>,
+) -> acp::RequestPermissionResponse {
+    let Some((option_id, reason)) = rejection else {
+        return response;
+    };
+    kas::attach_rejection_metadata(response, args, engine, option_id, reason)
+}
+
+#[cfg(not(feature = "kas"))]
+fn attach_rejection_metadata(
+    response: acp::RequestPermissionResponse,
+    _args: &acp::RequestPermissionRequest,
+    _engine: AgentEngine,
+    _rejection: Option<(PermissionOptionId, String)>,
+) -> acp::RequestPermissionResponse {
+    response
+}
+
 /// Convert our `PermissionResponse` back into an ACP `RequestPermissionResponse`.
 /// `Selected` carries the picked option's id verbatim; there is no kind-based
 /// re-derivation — the id IS the answer.
 pub(crate) fn from_permission_response(
     response: PermissionResponse,
     args: &acp::RequestPermissionRequest,
+    engine: AgentEngine,
 ) -> acp::RequestPermissionResponse {
-    let outcome = match &response {
-        PermissionResponse::Cancel => acp::RequestPermissionOutcome::Cancelled,
+    let (outcome, rejection) = match response {
+        PermissionResponse::Cancel => (acp::RequestPermissionOutcome::Cancelled, None),
         PermissionResponse::Selected {
             option_id,
             trust_option,
         } => {
-            // Runtime tripwire for the doc contract on `Selected`: a foreign
-            // id would silently answer the agent with an option it never
-            // offered, so this must survive release builds.
-            if !args
-                .options
-                .iter()
-                .any(|o| o.option_id.to_string() == option_id.as_str())
-            {
-                tracing::warn!(
-                    option_id = %option_id,
-                    "selected permission option not present in the originating request; sending as-is"
-                );
-            }
+            warn_if_foreign_permission_option(args, &option_id);
             let mut selected = acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(
                 option_id.as_str(),
             ));
             if let Some(label) = trust_option {
                 let mut meta = serde_json::Map::new();
-                meta.insert(
-                    "trustOption".to_string(),
-                    serde_json::Value::String(label.clone()),
-                );
+                meta.insert("trustOption".to_string(), serde_json::Value::String(label));
                 selected = selected.meta(meta);
             }
-            acp::RequestPermissionOutcome::Selected(selected)
+            (acp::RequestPermissionOutcome::Selected(selected), None)
+        }
+        PermissionResponse::RejectWithReason { option_id, reason } => {
+            warn_if_foreign_permission_option(args, &option_id);
+            let selected = acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(
+                option_id.as_str(),
+            ));
+            (
+                acp::RequestPermissionOutcome::Selected(selected),
+                Some((option_id, reason)),
+            )
         }
     };
-    acp::RequestPermissionResponse::new(outcome)
+    let response = acp::RequestPermissionResponse::new(outcome);
+    attach_rejection_metadata(response, args, engine, rejection)
+}
+
+fn warn_if_foreign_permission_option(
+    args: &acp::RequestPermissionRequest,
+    option_id: &PermissionOptionId,
+) {
+    // Runtime tripwire for the doc contract on `Selected` and
+    // `RejectWithReason`: a foreign id would silently answer the agent with an
+    // option it never offered, so this must survive release builds.
+    if !args
+        .options
+        .iter()
+        .any(|o| o.option_id.0.as_ref() == option_id.as_str())
+    {
+        tracing::warn!(
+            option_id = %option_id,
+            "selected permission option not present in the originating request; sending as-is"
+        );
+    }
 }
 
 /// Convert an ACP `SessionNotification` to our internal `Notification`.
@@ -1502,7 +1541,7 @@ mod tests {
             acp::PermissionOptionKind::AllowOnce,
         )]);
 
-        let resp = from_permission_response(PermissionResponse::Cancel, &req);
+        let resp = from_permission_response(PermissionResponse::Cancel, &req, AgentEngine::V2);
         assert!(matches!(
             resp.outcome,
             acp::RequestPermissionOutcome::Cancelled
@@ -1526,6 +1565,7 @@ mod tests {
                 trust_option: None,
             },
             &req,
+            AgentEngine::V2,
         );
         let json = serde_json::to_value(&resp).expect("response serializes");
         assert_eq!(json["outcome"]["optionId"], "q-option-1");
@@ -1555,6 +1595,7 @@ mod tests {
                 trust_option: Some(label.to_string()),
             },
             &req,
+            AgentEngine::V2,
         );
         let json = serde_json::to_value(&resp).expect("response serializes");
         assert_eq!(json["outcome"]["optionId"], "always-accept");
@@ -1604,6 +1645,7 @@ mod tests {
                     trust_option: None,
                 },
                 &req,
+                AgentEngine::V2,
             )
         });
 
@@ -1615,6 +1657,145 @@ mod tests {
             logs.contains("not present in the originating request"),
             "foreign-id warn must fire; captured logs: {logs}"
         );
+    }
+
+    #[cfg(feature = "kas")]
+    #[test]
+    fn rejection_feedback_wire_matrix() {
+        let req = make_permission_request(vec![
+            ("allow-once", "Allow", acp::PermissionOptionKind::AllowOnce),
+            (
+                "allow-always",
+                "Always",
+                acp::PermissionOptionKind::AllowAlways,
+            ),
+            (
+                "reject-once",
+                "Reject once",
+                acp::PermissionOptionKind::RejectOnce,
+            ),
+            (
+                "reject-always",
+                "Reject always",
+                acp::PermissionOptionKind::RejectAlways,
+            ),
+        ]);
+        let reason =
+            "Do not use echo. Use printf instead, and include\nthe word PURPLE in the output.";
+        let cases = vec![
+            (
+                "eligible KAS",
+                AgentEngine::Kas,
+                PermissionResponse::RejectWithReason {
+                    option_id: PermissionOptionId::new("reject-once"),
+                    reason: reason.to_string(),
+                },
+                "reject-once",
+                Some(reason),
+            ),
+            (
+                "v2",
+                AgentEngine::V2,
+                PermissionResponse::RejectWithReason {
+                    option_id: PermissionOptionId::new("reject-once"),
+                    reason: reason.to_string(),
+                },
+                "reject-once",
+                None,
+            ),
+            (
+                "allow_once",
+                AgentEngine::Kas,
+                PermissionResponse::RejectWithReason {
+                    option_id: PermissionOptionId::new("allow-once"),
+                    reason: reason.to_string(),
+                },
+                "allow-once",
+                None,
+            ),
+            (
+                "reject_always",
+                AgentEngine::Kas,
+                PermissionResponse::RejectWithReason {
+                    option_id: PermissionOptionId::new("reject-always"),
+                    reason: reason.to_string(),
+                },
+                "reject-always",
+                None,
+            ),
+            (
+                "foreign id",
+                AgentEngine::Kas,
+                PermissionResponse::RejectWithReason {
+                    option_id: PermissionOptionId::new("foreign"),
+                    reason: reason.to_string(),
+                },
+                "foreign",
+                None,
+            ),
+            (
+                "whitespace",
+                AgentEngine::Kas,
+                PermissionResponse::RejectWithReason {
+                    option_id: PermissionOptionId::new("reject-once"),
+                    reason: " \n\t ".to_string(),
+                },
+                "reject-once",
+                None,
+            ),
+            (
+                "ordinary selected",
+                AgentEngine::Kas,
+                PermissionResponse::Selected {
+                    option_id: PermissionOptionId::new("reject-once"),
+                    trust_option: None,
+                },
+                "reject-once",
+                None,
+            ),
+        ];
+
+        for (label, engine, response, expected_id, expected_reason) in cases {
+            let wire = from_permission_response(response, &req, engine);
+            let json = serde_json::to_value(&wire).expect("response serializes");
+            assert_eq!(json["outcome"]["optionId"], expected_id, "{label}");
+            assert!(json["outcome"].get("_meta").is_none(), "{label}");
+            match expected_reason {
+                Some(reason) => assert_eq!(
+                    json["_meta"]["kiro"]["rejectionReason"],
+                    serde_json::Value::String(reason.to_string()),
+                    "{label}"
+                ),
+                None => assert!(json.get("_meta").is_none(), "{label}: no response metadata"),
+            }
+        }
+
+        let cancel = from_permission_response(PermissionResponse::Cancel, &req, AgentEngine::Kas);
+        let json = serde_json::to_value(&cancel).expect("cancel serializes");
+        assert!(
+            json.get("_meta").is_none(),
+            "cancel must not carry metadata"
+        );
+    }
+
+    #[cfg(not(feature = "kas"))]
+    #[test]
+    fn rejection_feedback_default_build_omits_metadata() {
+        let req = make_permission_request(vec![(
+            "reject-once",
+            "Reject once",
+            acp::PermissionOptionKind::RejectOnce,
+        )]);
+        let wire = from_permission_response(
+            PermissionResponse::RejectWithReason {
+                option_id: PermissionOptionId::new("reject-once"),
+                reason: "reason".to_string(),
+            },
+            &req,
+            AgentEngine::Kas,
+        );
+        let json = serde_json::to_value(&wire).expect("response serializes");
+        assert!(json.get("_meta").is_none());
     }
 
     #[test]

@@ -10,13 +10,47 @@ use agent_client_protocol::schema::v1 as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{
-    ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount, Notification, StopReason,
-    TurnMeteringUpdate, UsageAccount, UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit,
-    UsageTurnStatus,
+    AgentEngine, ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount, Notification,
+    PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount, UsageAccountBreakdown,
+    UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
 pub(crate) mod powers;
 pub(crate) mod workflow;
+
+/// Attach KAS rejection feedback to the response-level metadata bag.
+///
+/// The generic permission converter owns the ACP outcome and dispatches here
+/// only for a [`crate::types::PermissionResponse::RejectWithReason`] candidate.
+/// It keeps the KAS key names and all eligibility checks in the KAS wire owner:
+/// the bound engine must be KAS, the offered option ID must be exact and its
+/// kind must be `reject_once`, and the reason must contain non-whitespace.
+/// The accepted reason is moved into the JSON value unchanged.
+pub(crate) fn attach_rejection_metadata(
+    response: acp::RequestPermissionResponse,
+    args: &acp::RequestPermissionRequest,
+    engine: AgentEngine,
+    option_id: PermissionOptionId,
+    reason: String,
+) -> acp::RequestPermissionResponse {
+    if engine != AgentEngine::Kas || reason.trim().is_empty() {
+        return response;
+    }
+    if !args.options.iter().any(|option| {
+        option.option_id.0.as_ref() == option_id.as_str()
+            && option.kind == acp::PermissionOptionKind::RejectOnce
+    }) {
+        return response;
+    }
+    let mut kiro = serde_json::Map::new();
+    kiro.insert(
+        "rejectionReason".to_string(),
+        serde_json::Value::String(reason),
+    );
+    let mut meta = serde_json::Map::new();
+    meta.insert("kiro".to_string(), serde_json::Value::Object(kiro));
+    response.meta(meta)
+}
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum AccountUsageParseError {

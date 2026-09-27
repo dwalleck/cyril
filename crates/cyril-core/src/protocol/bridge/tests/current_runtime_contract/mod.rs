@@ -46,6 +46,8 @@ mod fingerprint_stops;
 mod lifecycle;
 #[cfg(feature = "kas")]
 mod powers;
+#[cfg(feature = "kas")]
+mod rejection_feedback;
 mod routing;
 mod saturation;
 mod stall;

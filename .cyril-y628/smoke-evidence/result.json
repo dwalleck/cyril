@@ -1,0 +1,16 @@
+{
+  "result": "PASS",
+  "binary": "/home/dwalleck/repos/cyril/target/debug/cyril",
+  "seconds": 6.219,
+  "responses": 5,
+  "scenarios": [
+    "plain reject",
+    "multiline paste and edit",
+    "AltGr-shaped raw key events",
+    "cramped viewport",
+    "4096-scalar boundary and overflow",
+    "whitespace plain reject",
+    "Esc-back without decision"
+  ],
+  "source_head": "83b1ee6575091d9ee9432577ea55b5608eb52cf3"
+}
