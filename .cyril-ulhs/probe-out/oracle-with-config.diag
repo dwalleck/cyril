@@ -1,0 +1,2 @@
+unfulfilled_lint_expectations | src/lib.rs:15 | this lint expectation is unfulfilled
+# 1 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

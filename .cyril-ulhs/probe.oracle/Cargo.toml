@@ -1,0 +1,19 @@
+# cyril-ulhs oracle: a standalone crate OUTSIDE cyril's workspace (its own `[workspace]` root),
+# with the same clippy levels declared per-package instead of inherited, no features, no
+# dependencies. It answers the same three questions as probe.sh through clippy alone — if
+# cyril's workspace machinery (lint inheritance, --all-features, dep-info caching) were
+# confounding the probe, this crate would not share the confound.
+[package]
+name = "ulhs-oracle"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+unwrap_used = "deny"
+expect_used = "warn"
+
+[workspace]

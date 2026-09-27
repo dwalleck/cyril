@@ -1,0 +1,96 @@
+error: this lint expectation is unfulfilled
+   --> crates/cyril-voice/src/lib.rs:139:5
+    |
+139 |     clippy::expect_used,
+    |     ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: tests legitimately panic on failure; .expect() messages double as assertion context
+    = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/client.rs:278:10
+    |
+278 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/lesson.rs:293:10
+    |
+293 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/paths.rs:213:10
+    |
+213 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/permissions.rs:155:10
+    |
+155 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/project.rs:240:10
+    |
+240 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/runtime.rs:421:10
+    |
+421 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+    --> crates/cyril-memory/src/source_turn.rs:1207:15
+     |
+1207 |     #![expect(clippy::expect_used)]
+     |               ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+    --> crates/cyril-memory/src/wire.rs:1357:10
+     |
+1357 | #[expect(clippy::expect_used)]
+     |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/commands/mod.rs:515:10
+    |
+515 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+
+error: this lint expectation is unfulfilled
+    --> crates/cyril-core/src/commands/mod.rs:1659:10
+     |
+1659 | #[expect(clippy::expect_used)]
+     |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/protocol/source_observer.rs:458:15
+    |
+458 |     #![expect(clippy::expect_used)]
+    |               ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/types/memory.rs:734:10
+    |
+734 | #[expect(clippy::expect_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+  --> crates/cyril-core/src/voice.rs:76:5
+   |
+76 |     clippy::expect_used,
+   |     ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: tests legitimately panic on failure; .expect() messages double as assertion context
+

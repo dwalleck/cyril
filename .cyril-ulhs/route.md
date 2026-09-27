@@ -1,0 +1,48 @@
+# Route: cyril-ulhs
+
+Change: make the documented test policy for `clippy::expect_used` real — add a workspace-root `clippy.toml` with `allow-expect-in-tests = true`, restore the `Option::expect` that PR #75 had to work around in `crates/cyril-ui/tests/picker_active_marker.rs`, and prove non-test discipline is unchanged.
+Date: 2026-09-27
+
+Requester decisions (approved scope, verbatim from the task brief; they are the spec/design approval the contract's approval semantics require):
+
+- `clippy.toml` at the workspace root containing ONLY `allow-expect-in-tests = true` with a short comment citing the workspace `expect_used = "warn"` intent. `allow-unwrap-in-tests` is NOT approved.
+- Red first, then green: replace the `let ... else { panic!(...) }` workaround in `picker_active_marker.rs` with the `.expect("...")` it stood in for; show `cargo clippy --workspace --all-targets --all-features -- -D warnings` FAILS on it without `clippy.toml` (capture the lint text), PASSES with it. The restored test is the living fence.
+- Non-test discipline unchanged (receipt, not a commit): a deliberate `.expect("probe")` in a non-test function must still trip `clippy::expect_used` under the gate; revert and show `git diff` clean of the probe.
+- Stop if a `clippy.toml` or `[workspace.metadata]` clippy config already exists — checked: none (`ls clippy.toml .clippy.toml` → absent; `grep -n "workspace.metadata\|clippy" Cargo.toml` → only `[workspace.lints.clippy]` at line 22).
+
+## Route tests
+
+| # | Test | Evidence | Verdict |
+|---|------|----------|---------|
+| 1 | Empirical premise | Three design premises rest on clippy 0.1.94 (`rust-toolchain.toml` pins 1.94.0; `cargo clippy --version` → `clippy 0.1.94 (4a4ef493e3 2026-03-02)`) behavior that no repository evidence covers. **P1** — `allow-expect-in-tests = true` in a root `clippy.toml` suppresses `clippy::expect_used` for the `Option::expect` in a non-`#[test]` helper fn of a `tests/` integration crate (`render_open_picker`, `picker_active_marker.rs:69-74`). Not obvious: the issue reports the lint fired ASYMMETRICALLY there (`Option::expect` tripped, `Result::expect` did not), and the baseline run on the unmodified tree is green while that same file's `render_text` helper (lines 48, 57) calls `Result::expect` twice — so whether the config reaches this site at all, and why the two forms differ, is unverified. **P2** — non-test `.expect()` still trips `clippy::expect_used` with the config present (the config is documented as test-scoped, but "documented" is not repository evidence and the requester requires a receipt). **P3** — the repo carries 17 `#[expect(clippy::expect_used)]` / `#![expect(clippy::expect_used)]` attributes, all on `#[cfg(test)]` items (`grep -rn "expect(clippy::expect_used\|clippy::expect_used,$" crates/`: `cyril-core/src/commands/mod.rs:515,1659`, `cyril-core/src/voice.rs:76`, `cyril-core/src/protocol/source_observer.rs:458`, `cyril-core/src/types/memory.rs:734`, `cyril-memory/src/{client.rs:278, wire.rs:1357, project.rs:240, paths.rs:213, permissions.rs:155, runtime.rs:421, lesson.rs:293, source_turn.rs:1207}`, `cyril/src/capture_forwarder.rs:204`, `cyril/src/memory_runtime.rs:800,928`, `cyril-voice/src/lib.rs:139`). If the config suppresses the lint inside `#[cfg(test)]` items, those expectations go unfulfilled and rustc's `unfulfilled_lint_expectations` (warn-by-default) turns the `-D warnings` gate red. Whether that happens, and therefore whether the green gate requires deleting those attributes, is an external-tool question. No `evidence.md` exists for any of P1–P3 (no `.cyril-ulhs/` before this file; `grep -rn allow-expect-in-tests` over the repo → zero hits outside this directory). Baseline evidence gathered for this routing: `env -u CARGO_TARGET_DIR cargo clippy --workspace --all-targets --all-features -- -D warnings` on `f9bc81d8` (unmodified) → exit 0 (`BASELINE-OK`, log `scratchpad/baseline-clippy.log`). | yes |
+| 2 | Structural module shape | No public interface, schema, seam, dependency direction, or responsibility owner changes. Touched: (a) new `clippy.toml` — lint configuration, not a production module; (b) `crates/cyril-ui/tests/picker_active_marker.rs` — a test crate, 169 lines, shrinks by 2; (c) contingent on P3: deletion of dead `#[expect(clippy::expect_used)]` attribute lines on `#[cfg(test)]` items at 17 sites in 16 files — attribute lines only, no production code, no ownership movement. Ownership is unchanged because nothing moves between modules; the lint policy's owner stays root `Cargo.toml` `[workspace.lints.clippy]` (levels untouched — `unwrap_used = "deny"`, `expect_used = "warn"` remain) with `clippy.toml` scoping the existing `expect_used` level to non-test code, which is what its comment already claims. Length review: no repository file-length gate exists (`grep -rn -i "max_lines\|line_budget\|line count\|length gate" crates/cyril/tests/architecture_tests.rs scripts/` → no hits; `scripts/` holds only `session-worktree.sh` and `tests`), and no `.cyril-*` growth ledger names any touched file; projected growth is negative (deletions only), margin irrelevant → no trigger. | no |
+| 3 | Production-scale risk | None. Lint configuration and test-only edits; no runtime path, latency, throughput, memory, concurrency, or data-volume dimension exists for this change. | no |
+| 4 | Explicit behavior | Fully explicit. Observable contract: **B1** given the workspace root holds `clippy.toml` with `allow-expect-in-tests = true`, when `cargo clippy --workspace --all-targets --all-features -- -D warnings` lints test code (a `tests/` crate or a `#[cfg(test)]` item) that calls `Option::expect`/`Result::expect`, then no `clippy::expect_used` diagnostic is emitted and the gate exits 0. **B2** given the same workspace, when a non-test function calls `.expect(...)`, then `clippy::expect_used` is emitted exactly as before the change and the gate exits non-zero (`expect_used = "warn"` promoted by `-D warnings`). **B3** given the same workspace, when any code calls `.unwrap()`, then `clippy::unwrap_used` behaves exactly as before (deny everywhere; `allow-unwrap-in-tests` is not set), so every existing `#[expect(clippy::unwrap_used)]` stays fulfilled. **B4** given `render_open_picker` in `picker_active_marker.rs` is `ui.picker().expect("show_picker did not open a picker")`, when the gate runs WITHOUT `clippy.toml`, then it fails with `clippy::expect_used` at that line (red); WITH `clippy.toml` it passes (green); and the three tests in that file still pass with identical panic wording on the failure path. **B5** given the gate is green after the change, then root `Cargo.toml` lint levels are byte-identical, no `#[allow(...)]`/`#[expect(...)]` was added anywhere, and any `#[expect(clippy::expect_used)]` on a `#[cfg(test)]` item that the config leaves unfulfilled (P3) is deleted rather than kept — the only outcome consistent with the approved config, CI's `-D warnings`, and the repository's zero-`#[allow]` rule (contract: an established repository requirement determines the technical correction; no new behavior, owner, interface, or risk). `marked_row`'s `let ... else { panic!("...{text}") }` stays: its diagnostic interpolates the rendered buffer, which `.expect(&str)` cannot do lazily — it is not the workaround the issue names. No unresolved decisions. | yes |
+
+Unknown tests: none
+
+## Selected route
+
+Empirical — T1 fires: the fix's correctness rests on clippy configuration behavior (P1–P3) with no repository evidence, and P1's reported asymmetry plus P3's `#[expect]` interaction make the outcome non-obvious; precedence Empirical > Structural > Local.
+
+## Required artifacts
+
+| Artifact | Owner | Status |
+|---|---|---|
+| route.md | change-workflow | this file |
+| spec.md | interrogated-spec | N/A — behavior fully explicit (T4 verdict: B1–B5 above are the behavior source) |
+| evidence.md, probe.* | prove-it-prototype | required — Empirical route (T1 verdict: P1, P2, P3) |
+| design.md | falsifiable-design | required — Empirical route; requester decisions above are the approval record to carry |
+| plan.md | budgeted-plan | required — Empirical route |
+
+Oracle checkpoint in `checkpointed-build`: required — Empirical route
+
+## Downstream sequence
+
+prove-it-prototype → falsifiable-design → budgeted-plan → checkpointed-build (interrogated-spec skipped: T4 = yes)
+
+## Terminal criterion
+
+Empirical — `prove-it-prototype` records `PASS` for every empirical premise (P1, P2, P3), every later artifact satisfies its owning stage's completion criterion, and `checkpointed-build` records no `FAIL` in its gate.
+
+Status 2026-09-27: `prove-it-prototype` complete (`evidence.md`: P1–P4 discharged, all `PASS`). P1 discharged **against** the approved fence: `allow-expect-in-tests` covers `#[test]` fns and `#[cfg(test)]` items only, so the `Option::expect` in the non-`#[test]` helper `render_open_picker` keeps firing with the config present (cyril `--keep-going` run and the standalone oracle agree; tool source confirms). The approved behavior B4 ("restore the `.expect()` in the helper → green") is therefore not achievable, and B5's forced deletion of 17 `#[expect]` attributes across 16 files widens the file set in a parallel batch. Both are requester decisions under the contract's approval semantics — hand-off to `falsifiable-design` is blocked pending that decision; no implementation was started.

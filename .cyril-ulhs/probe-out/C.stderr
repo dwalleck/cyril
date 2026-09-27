@@ -1,0 +1,4 @@
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/crates/cyril-core)
+error: could not compile `cyril-core` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `cyril-core` (lib test) due to 7 previous errors

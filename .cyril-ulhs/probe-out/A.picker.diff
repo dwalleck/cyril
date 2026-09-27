@@ -1,0 +1,15 @@
+diff --git a/crates/cyril-ui/tests/picker_active_marker.rs b/crates/cyril-ui/tests/picker_active_marker.rs
+index 5088dcf9..d11e660e 100644
+--- a/crates/cyril-ui/tests/picker_active_marker.rs
++++ b/crates/cyril-ui/tests/picker_active_marker.rs
+@@ -67,9 +67,7 @@ fn render_text(state: &PickerState) -> String {
+ }
+ 
+ fn render_open_picker(ui: &UiState) -> String {
+-    let Some(state) = ui.picker() else {
+-        panic!("show_picker did not open a picker");
+-    };
++    let state = ui.picker().expect("show_picker did not open a picker");
+     render_text(state)
+ }
+ 

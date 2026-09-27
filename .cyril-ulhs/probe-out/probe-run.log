@@ -1,0 +1,35 @@
+== step A: picker Option::expect restored, no clippy.toml (expect RED on expect_used)
+   exit=101
+clippy::expect_used | crates/cyril-ui/tests/picker_active_marker.rs:70 | used `expect()` on an `Option` value
+# 1 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations
+== step B: clippy.toml allow-expect-in-tests=true (expect: no expect_used in tests; P3 = unfulfilled #[expect]?)
+   exit=101
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:1659 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:515 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/protocol/source_observer.rs:458 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/types/memory.rs:734 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/voice.rs:76 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/client.rs:278 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/lesson.rs:293 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/paths.rs:213 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/permissions.rs:155 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/project.rs:240 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/runtime.rs:421 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/source_turn.rs:1207 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/wire.rs:1357 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-voice/src/lib.rs:139 | this lint expectation is unfulfilled
+# 14 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations
+== step C: non-test .expect("probe") in crates/cyril-core/src/lib.rs with clippy.toml (expect RED at that site)
+   exit=101
+clippy::expect_used | crates/cyril-core/src/lib.rs:23 | used `expect()` on an `Option` value
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:1659 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:515 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/protocol/source_observer.rs:458 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/types/memory.rs:734 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/voice.rs:76 | this lint expectation is unfulfilled
+# 6 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations
+== restored; git status for touched paths:
+ M crates/cyril-ui/tests/picker_active_marker.rs
+?? clippy.toml
+PROBE-DONE
+probe exit=0
