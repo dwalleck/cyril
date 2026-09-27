@@ -262,14 +262,31 @@ pub fn wsl_to_win(path: &str) -> PathBuf {
 /// process from `CYRIL_WSL_DISTRO` and the process cwd. Always `None` off
 /// Windows — Linux translation stays a no-op (load-bearing: enforced by the
 /// `cfg!` below and fenced by `tests/win_wsl_wiring.rs`).
+///
+/// The env read precedes the host gate and matches on `VarError` — the
+/// [`bind_agent_location`] mirror (cyril-3br3): a non-Unicode value is corrupt
+/// config, not absence, so it warns with the raw bytes on every host and is
+/// then treated as unset (missing and corrupt stay distinct; the diagnostic is
+/// observable by the Linux fence). The cwd read stays `.ok()` — an unavailable
+/// cwd is not config corruption.
 fn process_wsl_distro() -> Option<&'static str> {
     static DISTRO: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
     DISTRO
         .get_or_init(|| {
+            let env = match std::env::var("CYRIL_WSL_DISTRO") {
+                Ok(v) => Some(v),
+                Err(std::env::VarError::NotPresent) => None,
+                Err(std::env::VarError::NotUnicode(raw)) => {
+                    tracing::warn!(
+                        value = ?raw,
+                        "CYRIL_WSL_DISTRO is not valid Unicode; treating as unset"
+                    );
+                    None
+                }
+            };
             if !cfg!(target_os = "windows") {
                 return None;
             }
-            let env = std::env::var("CYRIL_WSL_DISTRO").ok();
             let cwd = std::env::current_dir().ok();
             resolve_wsl_distro(env.as_deref(), cwd.as_deref())
         })

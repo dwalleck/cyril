@@ -20,6 +20,7 @@ use std::path::{Path, PathBuf};
 
 use cyril_core::platform::path::{
     AgentLocation, agent_location, bind_agent_location, set_agent_location, to_agent, to_native,
+    wsl_to_win,
 };
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::{AgentCommand, Notification};
@@ -105,6 +106,83 @@ fn env_non_unicode_falls_back_via_child_process() {
         &[(
             "CYRIL_AGENT_LOCATION",
             std::ffi::OsStr::from_bytes(b"nat\xffive"),
+        )],
+    );
+}
+
+/// Log-capture writer for the in-child warning assertion (the cyril-1gim
+/// idiom, as in `convert/mod.rs`; `cyril_core::test_support` is behind the
+/// `test-support` feature and so not reachable from a default-features
+/// integration test).
+#[cfg(unix)]
+#[derive(Clone, Default)]
+struct CaptureWriter(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+#[cfg(unix)]
+impl std::io::Write for CaptureWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().expect("capture lock").extend_from_slice(buf);
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+#[cfg(unix)]
+impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
+    type Writer = CaptureWriter;
+    fn make_writer(&'a self) -> Self::Writer {
+        self.clone()
+    }
+}
+
+/// A non-Unicode `CYRIL_WSL_DISTRO` is corrupt config, not absence
+/// (cyril-3br3, the `bind_agent_location` twin above): the child must log a
+/// warning naming the variable and the raw value, then resolve the distro as
+/// unset. The child installs a WARN-level capture subscriber, forces the
+/// distro `OnceLock` to initialize through the public `wsl_to_win` entry
+/// (`to_native` never reaches it off Windows), and asserts on the captured
+/// text in-process. Off Windows the distro is always `None`, so the
+/// passthrough assertion is the `cfg!` no-op and the warning is the
+/// load-bearing check. Unix-only for the same reason as its sibling:
+/// invalid-UTF-8 env bytes are constructible only there.
+#[cfg(unix)]
+#[test]
+fn distro_non_unicode_warns_and_treats_as_unset_via_child_process() {
+    use std::os::unix::ffi::OsStrExt;
+    const MARKER: &str = "CYRIL_3BR3_DISTRO_NON_UNICODE_CHILD";
+    if std::env::var(MARKER).is_ok() {
+        let capture = CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::WARN)
+            .with_ansi(false)
+            .with_writer(capture.clone())
+            .finish();
+        let translated = tracing::subscriber::with_default(subscriber, || wsl_to_win("/home/u"));
+        let logs =
+            String::from_utf8(capture.0.lock().expect("capture lock").clone()).expect("utf8 logs");
+        assert!(
+            logs.contains("CYRIL_WSL_DISTRO is not valid Unicode"),
+            "a non-Unicode CYRIL_WSL_DISTRO must be warned about; captured: {logs:?}"
+        );
+        assert!(
+            logs.contains("Ubu") && logs.contains("ntu"),
+            "the warning must name the raw value; captured: {logs:?}"
+        );
+        assert_eq!(
+            translated,
+            PathBuf::from("/home/u"),
+            "a corrupt distro must degrade to passthrough"
+        );
+        return;
+    }
+    run_child(
+        "distro_non_unicode_warns_and_treats_as_unset_via_child_process",
+        MARKER,
+        &[(
+            "CYRIL_WSL_DISTRO",
+            std::ffi::OsStr::from_bytes(b"Ubu\xffntu"),
         )],
     );
 }
