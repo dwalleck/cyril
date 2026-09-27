@@ -352,6 +352,10 @@ impl TrackedToolCall {
     }
 
     /// Get the primary file path from locations, then from diff content, then from raw_input.
+    ///
+    /// The raw_input probe tries the flat `file_path` / `path` keys first, then
+    /// the v2 `fs_read` shape, which nests the path under `operations[0].path`
+    /// (docs/kiro-2.21.2-wire-audit.md § 6b, cyril-gl0m).
     pub fn primary_path(&self) -> Option<&str> {
         if let Some(loc) = self.inner.locations().first() {
             return Some(&loc.path);
@@ -361,9 +365,10 @@ impl TrackedToolCall {
                 return Some(path);
             }
         }
-        self.inner
-            .raw_input()
-            .and_then(|v| v.get("file_path").or_else(|| v.get("path")))
+        let raw = self.inner.raw_input()?;
+        raw.get("file_path")
+            .or_else(|| raw.get("path"))
+            .or_else(|| raw.get("operations")?.get(0)?.get("path"))
             .and_then(|v| v.as_str())
     }
 
@@ -1152,6 +1157,76 @@ mod tests {
         );
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(tracked.title(), "Reading file");
+    }
+
+    /// A `read` tool call carrying only `rawInput` — no `locations`, no content.
+    fn read_call_with_raw_input(raw_input: serde_json::Value) -> TrackedToolCall {
+        use cyril_core::types::*;
+        TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("tc_read"),
+            "Reading PROBE.txt:1".into(),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            Some(raw_input),
+        ))
+    }
+
+    /// The v2 `fs_read` shape nests the path under `operations[]` and has no
+    /// flat `path`/`file_path` key (docs/kiro-2.21.2-wire-audit.md § 6b,
+    /// cyril-gl0m). With `locations` absent the rawInput fallback must read it.
+    #[test]
+    fn primary_path_resolves_fs_read_operations_path_without_locations() {
+        let tracked = read_call_with_raw_input(serde_json::json!({
+            "__tool_use_purpose": "Read PROBE.txt to get the single word.",
+            "operations": [{"mode": "Line", "path": "/abs/path/PROBE.txt"}]
+        }));
+        assert!(tracked.locations().is_empty());
+        assert_eq!(tracked.primary_path(), Some("/abs/path/PROBE.txt"));
+    }
+
+    #[test]
+    fn primary_path_still_resolves_flat_raw_input_keys() {
+        let by_path = read_call_with_raw_input(serde_json::json!({"path": "/flat/by-path.rs"}));
+        assert_eq!(by_path.primary_path(), Some("/flat/by-path.rs"));
+
+        let by_file_path =
+            read_call_with_raw_input(serde_json::json!({"file_path": "/flat/by-file-path.rs"}));
+        assert_eq!(by_file_path.primary_path(), Some("/flat/by-file-path.rs"));
+    }
+
+    #[test]
+    fn primary_path_is_none_when_operations_entry_lacks_path() {
+        let no_path = read_call_with_raw_input(serde_json::json!({
+            "operations": [{"mode": "Directory"}]
+        }));
+        assert_eq!(no_path.primary_path(), None);
+
+        let empty = read_call_with_raw_input(serde_json::json!({"operations": []}));
+        assert_eq!(empty.primary_path(), None);
+    }
+
+    /// The live 2.21.2 capture carries both `locations` and `operations`;
+    /// branch 1 must keep winning so the fallback stays exactly that.
+    #[test]
+    fn primary_path_prefers_locations_over_operations() {
+        use cyril_core::types::*;
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_read"),
+            "Reading PROBE.txt:1".into(),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            Some(serde_json::json!({
+                "operations": [{"mode": "Line", "path": "/from/raw-input.txt"}]
+            })),
+        )
+        .with_locations(vec![ToolCallLocation {
+            path: "/from/locations.txt".into(),
+            line: Some(1),
+        }]);
+        assert_eq!(
+            TrackedToolCall::new(tc).primary_path(),
+            Some("/from/locations.txt")
+        );
     }
 
     #[test]
