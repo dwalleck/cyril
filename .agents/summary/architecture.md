@@ -116,7 +116,6 @@ graph TB
     REGISTRY[CommandRegistry] -->|lookup| CMD[dyn Command]
     CMD -->|execute| RESULT[CommandResult]
     RESULT -->|variant| SYS[SystemMessage]
-    RESULT -->|variant| PICK[ShowPicker]
     RESULT -->|variant| DISP[Dispatched]
     RESULT -->|variant| QUIT[Quit]
     RESULT -->|variant| NAC[NotACommand]

@@ -166,6 +166,12 @@ pub struct CommandResult {
     pub kind: CommandResultKind,
 }
 
+/// What a command asks the App to do. Several variants carry an intent whose
+/// effect the App owns (`ShowThemePicker`, `Steer`, `ClearSteer`,
+/// `ToggleVoice`, `ShowUsage`, `ShowPowers`): the command layer has no access
+/// to UI state or to App-held handles, so it returns the intent and
+/// `App::handle_command_result` (or the async routing in `App::submit_input`
+/// for `Steer`/`ClearSteer`) performs the effect.
 #[derive(Debug)]
 pub enum CommandResultKind {
     /// Display a system message in chat.
@@ -175,15 +181,14 @@ pub enum CommandResultKind {
     /// Open Cyril's local palette picker (cyril-qaq0). The command layer has no
     /// access to UI state and must not name a palette — the catalog lives in
     /// `cyril-ui` — so it returns only the intent and the App opens the picker.
-    /// Same split as `ToggleVoice`, with the added constraint that
-    /// confirming must never reach the agent.
+    /// Unlike the agent-backed pickers, confirming must never reach the agent.
     ShowThemePicker,
     /// Command dispatched to bridge (already sent).
     Dispatched,
     /// Queue-steer the user's message (ROADMAP K1b, cyril-bm1j). The App routes
     /// this through its async `dispatch_steer` (optimistic echo + `SteerSession`),
     /// because the command layer has no UI access and must not touch the bridge
-    /// directly — same split as `ToggleVoice`.
+    /// directly.
     Steer { text: String },
     /// Drop every queued steer (`/steer clear` → `_session/steer/clear`;
     /// cyril-vgcm C10). The App routes this through `dispatch_clear_steer` —
@@ -192,7 +197,7 @@ pub enum CommandResultKind {
     ClearSteer,
     /// Toggle voice input on/off (ROADMAP CN2 / V1a). The command layer has no
     /// access to the voice engine handle (which the App owns), so it returns
-    /// this and the App flips capture state — same split as `Steer`.
+    /// this and the App flips capture state.
     ToggleVoice,
     /// Open Cyril's local usage dashboard; records whether an async KAS
     /// account query was dispatched before returning.

@@ -130,7 +130,7 @@ Owner of this record: the slice-1 record above. Source state judged: base `f9bc8
 | 10 | Parity and reuse | N/A — reason: the slice adds no production symbol, writes no construction a second time, adds/repairs no parallel path, tightens/relaxes no predicate; the only new artifact is the non-production oracle script. Searches run: `grep -rn 'ShowPicker\|CommandResult::show_picker\|show_picker(' crates/` and tethys (index) — both recorded above. | — |
 | 11 | Preserved enforcement | N/A — reason: the diff repoints, relaxes, deletes, or orphans no gate, fence, validator, oracle, or policy file; the removed arm and constructor were not enforcement artifacts; no CI, lint, or manifest file is touched (`git status` lists only the three files). | — |
 
-**Step 7 — stale-reference sweep.** `commands/mod.rs`: the three reworded citations name `ToggleVoice` / `Steer`, both declared; no other prose names the removed variant. `app.rs`: no comment references it (census). `docs/omp-review-command-analysis.md:96` now names the live path. `CLAUDE.md:190` already names the live path — unchanged. `docs/plans/2026-03-21…:398` and `2026-03-22…:39` are dated history (design non-goal). No tracker phrases in code or the commit message beyond the issue id. Nothing else found.
+**Step 7 — stale-reference sweep.** `commands/mod.rs`: the three reworded citations name `ToggleVoice` / `Steer`, both declared; no other prose names the removed variant. `app.rs`: no comment references it (census). `docs/omp-review-command-analysis.md:96` now names the live path. `CLAUDE.md:190` already names the live path — unchanged. `docs/plans/2026-03-21…:398` and `2026-03-22…:39` are dated history (design non-goal). No tracker phrases in code or the commit message beyond the issue id. **Correction (review round 1, F1):** this sweep missed three bare-name `ShowPicker` mentions in the live `.agents/summary/` surfaces (`architecture.md:119`, `components.md:86`, `interfaces.md:182`) because the C5 census pattern was `CommandResult(Kind)?::ShowPicker` and did not include `.agents/summary/`; both the docs and the oracle were repaired in review round 1 (`review-decisions.md`, repair R1).
 
 **Step 9 — drift check.** `git fetch origin main` → `git rev-list --count f9bc81d8..origin/main` = 0; no upstream movement; nothing to merge.
 
@@ -155,3 +155,25 @@ Single slice ⇒ the assembled implementation is the slice. Fresh proof on the f
 - `Notification::CommandOptionsReceived` handler: `app.rs:1452-1465`; non-empty options → `self.ui_state.show_picker(command.clone(), options.clone())` at `:1462`; empty → system message.
 
 **Comparison with `design.md` (module ledger, protected parent, placement):** interface of `commands/mod.rs` = 12 variants + matching constructors, exactly the approved narrowing (−`ShowPicker`, −`show_picker`); `app.rs` projection arms = one per surviving variant, no new responsibility body; picker opening owned solely by `cyril-ui/state.rs` with the App wiring as its single production caller; dependency direction unchanged; every doc citation resolves; census zero. **Mismatches: none. Result: PASS.**
+
+---
+
+# Review round 1 amendments (2026-09-27, PR #141 review — see `review-decisions.md`)
+
+Bounded repairs R1 (F1, F3) and R2 (F2); no production behavior changed. Gate items reconciled against the post-repair tree (`30efc2b6` + round-1 edits; receipts in `scratchpad/6bwr/cyril-6bwr-review1-verify.out`):
+
+| # | Item | State | Evidence / disposition |
+|---|---|---|---|
+| 1 | Affected unit tests | N/A — reason: the round changes doc comments, docs, and the proof script; no executable behavior changed; slice-1 nextest results retained (production paths untouched: `app.rs`, `state.rs` not in `git status`). |
+| 2 | Falsifiers | PASS — C1 GREEN; C4 GREEN (two surviving citations resolve); C5 GREEN with the widened census; base control 6×C1 + 4×C5; pre-repair control at `30efc2b6` 3×C5. |
+| 3 | Stress fixture | N/A — plan records none. |
+| 4 | Implementation vs oracle | PASS — repaired docs vs widened census agree (GREEN), and the census is proven sighted on the bare name (pre-repair control RED). |
+| 5 | Module shape | PASS — retained: no production path changed; `git status` after the round lists only `.agents/summary/*`, `.cyril-6bwr/*`, and comment-only `commands/mod.rs`; shape fence GREEN. |
+| 6 | Budget | N/A — plan records none. |
+| 7 | Regression fence | PASS — oracle GREEN; `GATE-OK-fmt`, `GATE-OK-clippy-all`. |
+| 8 | Named mutation red | PASS — C4 re-targeted (`Steerr`) red exit 1; C5 new (`components.md:86`) red exit 1; F3 error path: bogus rev → exit 2, missing `CONTEXT.md` → exit 2. Slice-1 C4/C5 receipts superseded; C1/C2/C3 receipts retained. |
+| 9 | Fence restored green | PASS — `C4 RESTORED-OK`, `C5 RESTORED-OK` (sha256), `CONTEXT.md` restored with clean status; GREEN after each. |
+| 10 | Parity and reuse | N/A — reason: no production symbol added; the oracle's `require()` helper is proof-script-local with no in-source sibling. |
+| 11 | Preserved enforcement | PASS — the oracle is extended, not replaced: its C1 and C4 detection sets are unchanged (base control reproduces all six C1 sites; C4 red under a re-targeted mutation), and C5's set is a strict superset (the original omp-doc site is still in the base control). |
+
+Sweep: `plan.md` Step 7 corrected in place; `design.md` S3/S6/C4/C5 and `route.md` B5 re-anchored; oracle header re-anchored. Drift: no upstream movement on `main` (re-fetched); PR #142 (`chore/cyril-ell0-remove-stream-buffer`) also edits `.agents/summary/components.md` — merge-tree check recorded in the round-1 report. Size: +~120 lines of records, docs −3 lines, comments ±8 — still one increment.
