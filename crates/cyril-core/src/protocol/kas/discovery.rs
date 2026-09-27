@@ -87,17 +87,22 @@ const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-serve
 
 /// kiro-cli's data dir (cyril-brui): `$XDG_DATA_HOME/kiro-cli` when
 /// `XDG_DATA_HOME` is set, non-empty and absolute, else
-/// `<home>/.local/share/kiro-cli` — the same `dirs::data_local_dir` rule
-/// kiro-cli resolves through (strace-proven on 2.24.0: `settings list` under
-/// `HOME=<tmp> XDG_DATA_HOME=<x>` opens `<x>/kiro-cli/data.sqlite3` and never
-/// touches `<tmp>/.local/share`; see `.cyril-brui/evidence.md`). An empty or
-/// relative value is invalid under that rule (dirs-sys `is_absolute_path`)
-/// and falls back to `<home>` with a warning naming it — never silently, since
-/// the fallback store may hold a different login than the one kiro-cli uses.
+/// `<home>/.local/share/kiro-cli` — the `dirs::data_local_dir` rule kiro-cli
+/// resolves through on Linux and the BSDs (`dirs-6.0.0/src/lin.rs`; its
+/// macOS/Windows builds never consult `XDG_DATA_HOME`, so
+/// [`kiro_data_dir_from_env`] passes `None` there). Strace-proven on 2.24.0:
+/// `settings list` under `HOME=<tmp> XDG_DATA_HOME=<x>` opens
+/// `<x>/kiro-cli/data.sqlite3` and never touches `<tmp>/.local/share`; see
+/// `.cyril-brui/evidence.md`. An empty or relative value is invalid under that
+/// rule (dirs-sys `is_absolute_path`) and falls back to `<home>` with a
+/// warning naming it — never silently, since the fallback store may hold a
+/// different login than the one kiro-cli uses.
 ///
-/// Pure (no env reads) so every branch is unit-testable without env mutation
-/// (`set_var` is `unsafe` in Rust 2024, forbidden in this workspace);
-/// [`kiro_data_dir_from_env`] is the one production caller.
+/// Pure (no env reads) so every branch is unit-testable on every host
+/// without env mutation (`set_var` is `unsafe` in Rust 2024, forbidden in
+/// this workspace); [`kiro_data_dir_from_env`] is the one production caller,
+/// and `env_wrappers_resolve_xdg_data_home_like_kiro_cli` drives the wrappers
+/// themselves through a re-entered child process with a private environment.
 fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<PathBuf> {
     if let Some(value) = xdg_data_home {
         let xdg = Path::new(value);
@@ -114,11 +119,22 @@ fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<P
 }
 
 /// [`kiro_data_dir`] from the real environment — the single resolution both
-/// the KAS root and the credential store derive from.
+/// the KAS root and the credential store derive from. `XDG_DATA_HOME` is
+/// consulted only where kiro-cli's `dirs` build consults it — every target
+/// except macOS and Windows (`dirs-6.0.0/src/lin.rs` vs `mac.rs`/`win.rs`);
+/// on those two a stray value (dotfiles, MSYS) must not divert cyril from the
+/// HOME default kiro-cli is not using either (PR #140 review F2). That the
+/// HOME default is itself not where macOS/Windows kiro-cli keeps its data
+/// (`~/Library/Application Support`, `LOCALAPPDATA`) is a pre-existing gap
+/// tracked beside cyril-lwpm, not decided here.
 fn kiro_data_dir_from_env() -> Option<PathBuf> {
+    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    let xdg_data_home = std::env::var_os("XDG_DATA_HOME");
+    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    let xdg_data_home: Option<std::ffi::OsString> = None;
     kiro_data_dir(
         crate::kiro_agent_config::home_dir().as_deref(),
-        std::env::var_os("XDG_DATA_HOME").as_deref(),
+        xdg_data_home.as_deref(),
     )
 }
 
@@ -984,6 +1000,99 @@ mod tests {
             err,
             KasMissing::Server(kas_root(&data_dir).join(SERVER_IN_ROOT_REL))
         );
+    }
+
+    /// Where the env wrappers must resolve the kiro data dir on THIS host for
+    /// a private `HOME`/`XDG_DATA_HOME` pair: the XDG dir where kiro-cli's
+    /// `dirs` build consults it, the HOME default on macOS/Windows where it
+    /// never does (review F2). Shared by the parent (which lays the fake
+    /// extraction there) and the child (which asserts against it), so a
+    /// resolver that consults the variable on the wrong platform misses the
+    /// bundle AND reports the wrong store.
+    fn expected_data_dir_on_host(home: &Path, xdg: &Path) -> PathBuf {
+        if cfg!(any(target_os = "macos", target_os = "windows")) {
+            home.join(XDG_DATA_HOME_DEFAULT_REL)
+                .join(KIRO_DATA_DIR_NAME)
+        } else {
+            xdg.join(KIRO_DATA_DIR_NAME)
+        }
+    }
+
+    // Review F1/F2 (PR #140): the env wrappers — `default_store_path` and
+    // `resolve_kas_command` — read the REAL environment, so the pure fences
+    // above cannot see a wrapper that reads the wrong variable (R1:
+    // `XDG_DATA_DIR`) or a store gate that re-derives from HOME (R2); both
+    // reviewer mutations survived all of them. Re-enter this test binary
+    // with a private HOME + XDG_DATA_HOME — never mutating the runner's
+    // environment (the `tests/spawn_isolation.rs` idiom) — and drive both
+    // wrappers. No auth is touched: PATH holds no kiro-cli, no store exists,
+    // and nothing is spawned beyond this binary (the fake node is never run).
+    #[tokio::test]
+    async fn env_wrappers_resolve_xdg_data_home_like_kiro_cli() {
+        const CHILD: &str = "CYRIL_BRUI_XDG_WRAPPER_CHILD";
+        let Some(completed) = std::env::var_os(CHILD) else {
+            // Parent: lay out <home>, <xdg>, a fake node, a fake versioned
+            // extraction under the dir the wrappers must resolve on this
+            // host, then re-run exactly this test in a child process.
+            let root = tempfile::tempdir().expect("tempdir");
+            let home = root.path().join("home");
+            let xdg = root.path().join("xdg");
+            let node = root.path().join("node");
+            std::fs::create_dir_all(&home).expect("home dir");
+            std::fs::write(&node, "").expect("fake node file");
+            let server_dir = kas_root(&expected_data_dir_on_host(&home, &xdg))
+                .join(format!("2.24.0-{SHA_A}"))
+                .join("node_modules/@kiro/agent/dist/server");
+            std::fs::create_dir_all(&server_dir).expect("fake extraction");
+            std::fs::write(server_dir.join("acp-server.js"), "//").expect("fake entry");
+            let completed = root.path().join("completed");
+            let status = std::process::Command::new(
+                std::env::current_exe().expect("current test binary"),
+            )
+            .args([
+                "--exact",
+                "protocol::kas::discovery::tests::env_wrappers_resolve_xdg_data_home_like_kiro_cli",
+                "--nocapture",
+            ])
+            .env(CHILD, &completed)
+            .env("HOME", &home)
+            .env("USERPROFILE", &home)
+            .env("XDG_DATA_HOME", &xdg)
+            .env("KIRO_AGENT_PATH", &node)
+            // No kiro-cli anywhere on PATH: the version probe fails and
+            // selection takes the newest extraction; nothing real can run.
+            .env("PATH", root.path())
+            .env_remove("KIRO_KAS_SERVER_PATH")
+            .status()
+            .expect("re-run this test binary");
+            assert!(status.success(), "child-side wrapper assertions failed");
+            assert_eq!(
+                std::fs::read_to_string(&completed).expect("completion marker"),
+                "wrappers checked"
+            );
+            return;
+        };
+        // Child: the real environment IS the private one the parent set.
+        let home = PathBuf::from(std::env::var_os("HOME").expect("HOME"));
+        let xdg = PathBuf::from(std::env::var_os("XDG_DATA_HOME").expect("XDG_DATA_HOME"));
+        let data_dir = expected_data_dir_on_host(&home, &xdg);
+        assert_eq!(
+            default_store_path(),
+            Some(data_dir.join(STORE_FILE_NAME)),
+            "default_store_path must follow the resolver on this host"
+        );
+        let err = resolve_kas_command()
+            .await
+            .expect_err("no store exists, so the login gate must refuse the spawn");
+        let KasMissing::StoreUnservable { store, .. } = &err else {
+            panic!("expected StoreUnservable (bundle found, store absent), got {err:?}");
+        };
+        assert_eq!(
+            store,
+            &data_dir.join(STORE_FILE_NAME),
+            "the spawn login gate must check the resolver's store, not a HOME-derived one"
+        );
+        std::fs::write(completed, "wrappers checked").expect("completion marker");
     }
 
     // F19b drift fence, kept at the resolution level (cyril-brui): the

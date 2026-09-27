@@ -1,0 +1,24 @@
+revision: 90a83c97 + working tree; date: 2026-09-27T06:38:20Z
+=== R1 (F1) wrapper reads the wrong env var: XDG_DATA_HOME -> XDG_DATA_DIR
+    proof-lines: 1
+exit=100
+    red: env_wrappers_resolve_xdg_data_home_like_kiro_cli
+     Summary [   0.029s] 29 tests run: 28 passed, 1 failed, 1049 skipped
+error: test run failed
+=== R2 (F1) store gate bypasses the resolver with a home-relative literal
+    proof-lines: 1
+exit=100
+    red: env_wrappers_resolve_xdg_data_home_like_kiro_cli
+     Summary [   0.019s] 29 tests run: 28 passed, 1 failed, 1049 skipped
+error: test run failed
+=== F2-sym (F2) wrapper ignores XDG_DATA_HOME on THIS host (the macOS/Windows arm applied everywhere)
+    proof-lines: 1
+exit=100
+    red: env_wrappers_resolve_xdg_data_home_like_kiro_cli
+     Summary [   0.025s] 29 tests run: 28 passed, 1 failed, 1049 skipped
+error: test run failed
+=== restore check
+restored byte-exact
+=== green after restore
+exit=0
+     Summary [   0.016s] 29 tests run: 29 passed, 1049 skipped
