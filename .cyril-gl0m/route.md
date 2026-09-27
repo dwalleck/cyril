@@ -42,3 +42,18 @@ Result: 2026-09-27 | `cargo nextest run -p cyril-ui primary_path --no-fail-fast`
 Result: 2026-09-27 | `cargo nextest run -p cyril-ui primary_path --no-fail-fast` (after the fix) | PASS — 4 tests run: 4 passed
 
 Final T2 recheck: `crates/cyril-ui/src/traits.rs` 1446 → 1521 lines (+78/−3, the only file changed; production delta is the 5-line doc comment plus the `operations[0].path` probe, the rest is the fence module). No new responsibility, interface, seam, or length trigger — no repository length gate exists (see T2 evidence), so no `Length review` applies. Route stands as Local.
+
+### Review round 1 (PR #133; decisions in `review-decisions.md`)
+
+The round changed the production path (per-probe `as_str` fall-through and an empty-path filter inside the same rawInput branch), which invalidates the focused PASS above for that path under the contract's Evidence validity; it is re-recorded here. The route is unchanged: the repair is a technical correction inside the same function, governed by the approved resolution order (T4) and CLAUDE.md "Zero sentinel values" — no new interface, owner, seam, or unresolved decision, so T1–T4 verdicts stand.
+
+Result: 2026-09-27 | `cargo nextest run -p cyril-ui primary_path --no-fail-fast` (three review fences added, product at `1e741638`) | FAIL as intended — `primary_path_falls_through_non_string_flat_key` (`left: None`, `right: Some("/ops/after-null.rs")`) and `primary_path_is_none_for_empty_path_strings` (`left: Some("")`, `right: None`); 5 passed, 2 failed
+Result: 2026-09-27 | `cargo nextest run -p cyril-ui primary_path --no-fail-fast` (after the repair) | PASS — 7 tests run: 7 passed
+Result: 2026-09-27 | `cyril-gl0m-mutate-order.sh` probe-order swap | baseline `1e741638`: mutant survived 4/4 (F1 verified); post-repair: killed — only `primary_path_prefers_flat_key_over_operations` red, 6/7, file restored byte-identical
+
+Final T2 recheck (round 1): `traits.rs` 1521 → 1568 lines (+51/−4 versus `1e741638`; production delta is a 3-line doc-comment extension plus the same 5-line probe chain rewritten, the rest is three fences). Still no length trigger; ownership unchanged. Route stands as Local.
+
+Round 1a (re-review nits N1–N3, doc + fences only, no production behavior change):
+Result: 2026-09-27 | `cargo nextest run -p cyril-ui primary_path --no-fail-fast` | PASS — 9 tests run: 9 passed
+Result: 2026-09-27 | `cyril-gl0m-mutate-nits.sh` (`operations.last()` mutant; per-probe-filter mutant) | each killed by exactly its target fence (8/9), file restored byte-identical both times
+Final T2 recheck (round 1a): two fences and a one-sentence doc qualification added; probe chain unchanged. Route stands as Local.
