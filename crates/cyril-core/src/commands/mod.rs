@@ -7,7 +7,6 @@ use std::sync::Arc;
 
 use crate::protocol::bridge::BridgeSender;
 use crate::session::SessionController;
-use crate::types::CommandOption;
 
 /// Context provided to commands during execution.
 pub struct CommandContext<'a> {
@@ -173,15 +172,10 @@ pub enum CommandResultKind {
     SystemMessage(String),
     /// The input wasn't a command — send as prompt.
     NotACommand(String),
-    /// Open a picker for user selection.
-    ShowPicker {
-        title: String,
-        options: Vec<CommandOption>,
-    },
     /// Open Cyril's local palette picker (cyril-qaq0). The command layer has no
     /// access to UI state and must not name a palette — the catalog lives in
     /// `cyril-ui` — so it returns only the intent and the App opens the picker.
-    /// Same split as `ShowPicker`/`ToggleVoice`, with the added constraint that
+    /// Same split as `ToggleVoice`, with the added constraint that
     /// confirming must never reach the agent.
     ShowThemePicker,
     /// Command dispatched to bridge (already sent).
@@ -189,7 +183,7 @@ pub enum CommandResultKind {
     /// Queue-steer the user's message (ROADMAP K1b, cyril-bm1j). The App routes
     /// this through its async `dispatch_steer` (optimistic echo + `SteerSession`),
     /// because the command layer has no UI access and must not touch the bridge
-    /// directly — same split as `ShowPicker`.
+    /// directly — same split as `ToggleVoice`.
     Steer { text: String },
     /// Drop every queued steer (`/steer clear` → `_session/steer/clear`;
     /// cyril-vgcm C10). The App routes this through `dispatch_clear_steer` —
@@ -198,7 +192,7 @@ pub enum CommandResultKind {
     ClearSteer,
     /// Toggle voice input on/off (ROADMAP CN2 / V1a). The command layer has no
     /// access to the voice engine handle (which the App owns), so it returns
-    /// this and the App flips capture state — same split as `Steer`/`ShowPicker`.
+    /// this and the App flips capture state — same split as `Steer`.
     ToggleVoice,
     /// Open Cyril's local usage dashboard; records whether an async KAS
     /// account query was dispatched before returning.
@@ -233,12 +227,6 @@ impl CommandResult {
     pub fn not_a_command(text: String) -> Self {
         Self {
             kind: CommandResultKind::NotACommand(text),
-        }
-    }
-
-    pub fn show_picker(title: String, options: Vec<CommandOption>) -> Self {
-        Self {
-            kind: CommandResultKind::ShowPicker { title, options },
         }
     }
 

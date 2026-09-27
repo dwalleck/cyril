@@ -2040,9 +2040,6 @@ impl App {
             CommandResultKind::NotACommand(_text) => {
                 // Should not happen since we already checked parse()
             }
-            CommandResultKind::ShowPicker { title, options } => {
-                self.ui_state.show_picker(title, options);
-            }
             CommandResultKind::ShowThemePicker => {
                 // Local: the palette catalog lives in cyril-ui, so the picker
                 // builds its own options. Nothing is sent to the agent here or

@@ -93,7 +93,7 @@ In cyril terms this is a **client-side slash command + picker chain that compose
 
 | Piece | Status |
 |---|---|
-| Slash-command registry, `CommandResult::ShowPicker`, filterable picker overlay | exists |
+| Slash-command registry, notification-driven picker (`Notification::CommandOptionsReceived` → `UiState::show_picker`), filterable picker overlay | exists |
 | Picker confirmation routed to a **local continuation** | **gap** — `App::handle_picker_key` hardcodes Enter → `BridgeCommand::ExecuteCommand { command: <picker title>, args: {value} }`; the picker title doubles as the agent command name. Needs a picker target enum (e.g. `AgentCommand(name)` vs `LocalFlow(step)`) |
 | Multi-step wizard (mode → branch/commit → compose) | **gap** — a small `ReviewFlow` state machine in App; precedent exists in the two-phase approval overlay (`ApprovalPhase`) |
 | Local git execution | **gap** — cyril never shells out today; needs a small async git helper (branch list, log, diff, show). Client concern → `cyril` binary crate or a core `platform` module |
