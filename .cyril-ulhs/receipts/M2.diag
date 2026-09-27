@@ -1,0 +1,2 @@
+unfulfilled_lint_expectations | crates/cyril-memory/src/paths.rs:213 | this lint expectation is unfulfilled
+# 1 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

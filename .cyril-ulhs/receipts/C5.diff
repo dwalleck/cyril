@@ -1,0 +1,11 @@
+--- /home/dwalleck/repos/cyril/.claude/worktrees/agent-a3a14afb5cb47a02e/.cyril-ulhs/receipts/core_lib.rs.orig	2026-09-27 00:52:32.590661666 -0500
++++ crates/cyril-core/src/lib.rs	2026-09-27 00:52:51.407707980 -0500
+@@ -17,3 +17,8 @@
+ /// downstream crate's dev-dependency opts in via the `test-support` feature.
+ #[cfg(any(test, feature = "test-support"))]
+ pub mod test_support;
++
++/// cyril-ulhs C5 receipt: a NON-test `.expect()` must still trip `clippy::expect_used`.
++pub fn ulhs_nontest_probe() -> u8 {
++    Some(1u8).expect("probe")
++}

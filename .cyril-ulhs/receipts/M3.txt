@@ -1,0 +1,57 @@
+error: this lint expectation is unfulfilled
+   --> crates/cyril-memory/src/config.rs:318:10
+    |
+318 | #[expect(clippy::unwrap_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+
+error: this lint expectation is unfulfilled
+    --> crates/cyril-memory/src/store.rs:2082:10
+     |
+2082 | #[expect(clippy::unwrap_used)]
+     |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+  --> crates/cyril-ui/src/stream_buffer.rs:69:10
+   |
+69 | #[expect(clippy::unwrap_used)]
+   |          ^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/commands/subagent.rs:202:10
+    |
+202 | #[expect(clippy::unwrap_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `-D unfulfilled-lint-expectations` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unfulfilled_lint_expectations)]`
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/commands/mod.rs:514:10
+    |
+514 | #[expect(clippy::unwrap_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/kiro_agent_config.rs:288:10
+    |
+288 | #[expect(clippy::unwrap_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/types/config.rs:139:10
+    |
+139 | #[expect(clippy::unwrap_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+
+error: this lint expectation is unfulfilled
+   --> crates/cyril-core/src/types/hook.rs:114:10
+    |
+114 | #[expect(clippy::unwrap_used)]
+    |          ^^^^^^^^^^^^^^^^^^^
+

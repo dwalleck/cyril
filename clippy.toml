@@ -1,0 +1,5 @@
+# Scope the workspace's `expect_used = "warn"` (root Cargo.toml `[workspace.lints.clippy]`,
+# "tests legitimately use .expect()") to non-test code, so CI's `-D warnings` no longer
+# promotes test `.expect()` calls to errors. Covers `#[test]` fns and `#[cfg(test)]` items
+# only; a helper fn in a `tests/*.rs` crate is not "in test" to clippy (cyril-ulhs).
+allow-expect-in-tests = true

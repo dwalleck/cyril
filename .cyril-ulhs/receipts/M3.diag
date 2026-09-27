@@ -1,0 +1,9 @@
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/mod.rs:514 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/commands/subagent.rs:202 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/kiro_agent_config.rs:288 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/types/config.rs:139 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-core/src/types/hook.rs:114 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/config.rs:318 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-memory/src/store.rs:2082 | this lint expectation is unfulfilled
+unfulfilled_lint_expectations | crates/cyril-ui/src/stream_buffer.rs:69 | this lint expectation is unfulfilled
+# 8 diagnostic(s) for codes clippy::expect_used, clippy::unwrap_used, unfulfilled_lint_expectations

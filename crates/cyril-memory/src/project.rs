@@ -237,7 +237,6 @@ fn hash_identity(path: &Path) -> [u8; 32] {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use std::fs;
 

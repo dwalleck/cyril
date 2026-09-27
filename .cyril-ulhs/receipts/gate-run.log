@@ -1,0 +1,17 @@
+# gate on 37452cab (chore/cyril-ulhs-clippy-expect-in-tests), 2026-09-27T00:54:23-05:00
+GATE-OK-fmt
+GATE-OK-clippy-all
+GATE-OK-nextest-all
+GATE-OK-doctest-all
+GATE-OK-clippy-default
+GATE-OK-nextest-default
+GATE-OK-clippy-core-nodefault
+GATE-OK-clippy-all-keepgoing
+GATE-OK-clippy-default-keepgoing
+GATE-OK-clippy-core-nodefault-keepgoing
+# picker tests in nextest-all:
+        PASS [   0.005s] (1968/2057) cyril-ui::picker_active_marker picker_marks_active_row_exactly_once_for_effort
+        PASS [   0.005s] (1969/2057) cyril-ui::picker_active_marker picker_marks_active_row_from_wire_current_fallback
+        PASS [   0.005s] (1970/2057) cyril-ui::picker_active_marker picker_marks_active_row_exactly_once_for_model
+GATE-DONE
+gate exit=0

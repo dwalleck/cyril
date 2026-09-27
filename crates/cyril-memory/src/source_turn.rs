@@ -1204,8 +1204,6 @@ fn put_len(hasher: &mut Sha256, value: usize) {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::expect_used)]
-
     use super::{
         CaptureBatch, MAX_QUERY_CHARS, MAX_SOURCE_EVENT_TEXT_CHARS, MAX_TOOL_CHARS, PromptQuery,
         SourceSessionId, SourceToolId, SourceTurnDisposition, SourceTurnDraft, SourceTurnError,

@@ -455,8 +455,6 @@ fn now_ms() -> i64 {
 
 #[cfg(test)]
 mod tests {
-    #![expect(clippy::expect_used)]
-
     use super::{
         IngressTracker, SourceObserver, TOOL_ID_BYTES, TOOL_INPUT_BYTES, bounded_json,
         utf8_fragments,

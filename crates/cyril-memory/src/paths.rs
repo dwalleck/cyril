@@ -210,7 +210,6 @@ where
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::{MemoryPaths, PathError, resolve_default_from};
     use std::collections::HashMap;

@@ -290,7 +290,6 @@ fn decimal_digits(mut value: usize) -> usize {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 

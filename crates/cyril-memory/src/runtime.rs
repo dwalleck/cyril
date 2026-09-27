@@ -418,7 +418,6 @@ fn log_connection_error(error: &WireError) {
 }
 
 #[cfg(test)]
-#[expect(clippy::expect_used)]
 mod tests {
     use super::*;
 
