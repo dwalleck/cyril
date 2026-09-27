@@ -179,7 +179,6 @@ classDiagram
         <<enum>>
         SystemMessage
         NotACommand
-        ShowPicker
         Dispatched
         Quit
     }

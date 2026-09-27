@@ -83,7 +83,7 @@ The largest file in the codebase. Converts raw ACP protocol messages into typed 
 - **`Command` trait** — `name()`, `description()`, `aliases()`, `is_local()`, `execute()`
 - **`CommandRegistry`** — stores `Arc<dyn Command>`, lookup by name/alias, deduplication
 - **`CommandContext`** — execution context with session, bridge sender, optional subagent tracker
-- **`CommandResult`** / **`CommandResultKind`** — result variants (SystemMessage, ShowPicker, Dispatched, Quit, NotACommand)
+- **`CommandResult`** / **`CommandResultKind`** — result variants (SystemMessage, Dispatched, Quit, NotACommand)
 - `with_builtins()` — registers help, clear, quit, new, load
 - `register_agent_commands()` — dynamically registers server-advertised commands
 - `parse()` — parses `/command args` input, returns command + args
