@@ -88,9 +88,10 @@ const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-serve
 /// kiro-cli's data dir (cyril-brui): `$XDG_DATA_HOME/kiro-cli` when
 /// `XDG_DATA_HOME` is set, non-empty and absolute, else
 /// `<home>/.local/share/kiro-cli` — the `dirs::data_local_dir` rule kiro-cli
-/// resolves through on Linux and the BSDs (`dirs-6.0.0/src/lin.rs`; its
-/// macOS/Windows builds never consult `XDG_DATA_HOME`, so
-/// [`kiro_data_dir_from_env`] passes `None` there). Strace-proven on 2.24.0:
+/// resolves through on the targets `dirs` routes to `lin.rs` (Linux, Android,
+/// the BSDs, illumos, Redox — `dirs-6.0.0/src/lib.rs`); its macOS/iOS and
+/// Windows builds never consult `XDG_DATA_HOME`, so
+/// [`kiro_data_dir_from_env`] passes `None` there. Strace-proven on 2.24.0:
 /// `settings list` under `HOME=<tmp> XDG_DATA_HOME=<x>` opens
 /// `<x>/kiro-cli/data.sqlite3` and never touches `<tmp>/.local/share`; see
 /// `.cyril-brui/evidence.md`. An empty or relative value is invalid under that
@@ -120,17 +121,20 @@ fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<P
 
 /// [`kiro_data_dir`] from the real environment — the single resolution both
 /// the KAS root and the credential store derive from. `XDG_DATA_HOME` is
-/// consulted only where kiro-cli's `dirs` build consults it — every target
-/// except macOS and Windows (`dirs-6.0.0/src/lin.rs` vs `mac.rs`/`win.rs`);
-/// on those two a stray value (dotfiles, MSYS) must not divert cyril from the
-/// HOME default kiro-cli is not using either (PR #140 review F2). That the
-/// HOME default is itself not where macOS/Windows kiro-cli keeps its data
+/// consulted only where kiro-cli's `dirs` build consults it — the targets
+/// `dirs-6.0.0/src/lib.rs` routes to `lin.rs` (Linux, Android, the BSDs,
+/// illumos, Redox); macOS/iOS (`mac.rs`) and Windows (`win.rs`) never do, and
+/// there a stray value (dotfiles, MSYS) must not divert cyril from the HOME
+/// default kiro-cli is not using either (PR #140 review F2, re-review N1).
+/// `dirs` also routes `wasm32` to its own module; cyril cannot target wasm,
+/// so no `target_arch` clause is carried here. That the HOME default is
+/// itself not where macOS/Windows kiro-cli keeps its data
 /// (`~/Library/Application Support`, `LOCALAPPDATA`) is a pre-existing gap
 /// tracked beside cyril-lwpm, not decided here.
 fn kiro_data_dir_from_env() -> Option<PathBuf> {
-    #[cfg(not(any(target_os = "macos", target_os = "windows")))]
+    #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows")))]
     let xdg_data_home = std::env::var_os("XDG_DATA_HOME");
-    #[cfg(any(target_os = "macos", target_os = "windows"))]
+    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
     let xdg_data_home: Option<std::ffi::OsString> = None;
     kiro_data_dir(
         crate::kiro_agent_config::home_dir().as_deref(),
@@ -1004,13 +1008,17 @@ mod tests {
 
     /// Where the env wrappers must resolve the kiro data dir on THIS host for
     /// a private `HOME`/`XDG_DATA_HOME` pair: the XDG dir where kiro-cli's
-    /// `dirs` build consults it, the HOME default on macOS/Windows where it
-    /// never does (review F2). Shared by the parent (which lays the fake
+    /// `dirs` build consults it, the HOME default on macOS/iOS/Windows where
+    /// it never does (review F2, N1). Shared by the parent (which lays the fake
     /// extraction there) and the child (which asserts against it), so a
     /// resolver that consults the variable on the wrong platform misses the
     /// bundle AND reports the wrong store.
     fn expected_data_dir_on_host(home: &Path, xdg: &Path) -> PathBuf {
-        if cfg!(any(target_os = "macos", target_os = "windows")) {
+        if cfg!(any(
+            target_os = "macos",
+            target_os = "ios",
+            target_os = "windows"
+        )) {
             home.join(XDG_DATA_HOME_DEFAULT_REL)
                 .join(KIRO_DATA_DIR_NAME)
         } else {

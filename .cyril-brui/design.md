@@ -63,7 +63,7 @@ N/A — `route.md` T2: ownership, interfaces, and dependency direction unchanged
 
 Wrapper residual — **superseded by review round 1 (F1/F2, `review-decisions.md`)**. The original paragraph claimed the env wrappers `kiro_data_dir_from_env()` / `default_store_path()` "cannot be unit-fenced without env mutation"; that was false — the repository already re-enters the test binary with a private environment (`tests/spawn_isolation.rs`), and the reviewer's mutations R1 (wrong env var) and R2 (store gate re-derived from HOME) survived every fence above. Added claim:
 
-- C7 — under a private `HOME`/`XDG_DATA_HOME`, `default_store_path()` returns `<data dir>/data.sqlite3` and `resolve_kas_command()` fails the login gate with `StoreUnservable { store: <data dir>/data.sqlite3 }` after finding the bundle under `<data dir>/kas`, where `<data dir>` is `<xdg>/kiro-cli` on every target except macOS/Windows and `<home>/.local/share/kiro-cli` there (kiro-cli's `dirs` build never consults the variable on those two).
+- C7 — under a private `HOME`/`XDG_DATA_HOME`, `default_store_path()` returns `<data dir>/data.sqlite3` and `resolve_kas_command()` fails the login gate with `StoreUnservable { store: <data dir>/data.sqlite3 }` after finding the bundle under `<data dir>/kas`, where `<data dir>` is `<xdg>/kiro-cli` on the targets `dirs` routes to `lin.rs` (Linux, Android, the BSDs, illumos, Redox) and `<home>/.local/share/kiro-cli` on macOS/iOS/Windows, which never consult the variable (`dirs-6.0.0/src/lib.rs`; re-review N1 — `wasm32` is routed separately by `dirs` but is not a cyril target).
 
 | # | Claim | Input shape | Falsifier | Oracle | Named mutation | Regression fence | Cost | Status |
 |---|---|---|---|---|---|---|---|---|
