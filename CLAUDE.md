@@ -516,7 +516,7 @@ These are project invariants maintained from inception, not aspirations. Maintai
 
 ## Platform Constraints
 
-- **Every platform:** the default `--agent-command` is `kiro-cli acp` (`crates/cyril/src/main.rs`), and `AgentProcess::spawn` (`crates/cyril-core/src/protocol/transport.rs`) execs it verbatim with no platform-conditional wrapping; requires kiro-cli installed, on PATH, and authenticated (`kiro-cli login`)
+- **Every platform:** the default `--agent-command` is `kiro-cli acp` (`crates/cyril/src/main.rs`), and `AgentProcess::spawn` (`crates/cyril-core/src/protocol/transport.rs`) execs the *resolved* command verbatim with no platform-conditional wrapping — the only rewrite is engine resolution in a `--features kas` build, where KAS Free (the default `kas_spawn`) ignores `--agent-command` and spawns the discovered `node acp-server.js` natively, and KAS Wrapper appends `--agent-engine` to it (**Path Translation** above keys off this post-resolution command); requires kiro-cli installed, on PATH, and authenticated (`kiro-cli login`)
 - **Windows:** `kiro-cli` on PATH resolves to the native `kiro-cli.exe` from the Kiro MSI — no WSL involved. A WSL-hosted agent is opt-in only, via an explicit `--agent-command wsl kiro-cli acp`, and then requires kiro-cli installed and authenticated inside WSL (`wsl kiro-cli login`)
 - Path translation is active only with a WSL-located agent (a `wsl`/`wsl.exe` launcher spawn or `CYRIL_AGENT_LOCATION=wsl`); a native agent gets identity passthrough, and on Linux it is a no-op — the rules live in **Path Translation** above (cyril-jxmv / cyril-8tq6)
 - Terminal commands from the agent run natively on the host OS
