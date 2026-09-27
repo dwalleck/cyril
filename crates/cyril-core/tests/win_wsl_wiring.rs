@@ -20,7 +20,6 @@ use std::path::{Path, PathBuf};
 
 use cyril_core::platform::path::{
     AgentLocation, agent_location, bind_agent_location, set_agent_location, to_agent, to_native,
-    wsl_to_win,
 };
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::{AgentCommand, Notification};
@@ -151,6 +150,10 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
 #[test]
 fn distro_non_unicode_warns_and_treats_as_unset_via_child_process() {
     use std::os::unix::ffi::OsStrExt;
+
+    // Imported here, not at the top: this fence is the only consumer, and a
+    // shared import would be unused on the Windows test build.
+    use cyril_core::platform::path::wsl_to_win;
     const MARKER: &str = "CYRIL_3BR3_DISTRO_NON_UNICODE_CHILD";
     if std::env::var(MARKER).is_ok() {
         let capture = CaptureWriter::default();

@@ -265,10 +265,13 @@ pub fn wsl_to_win(path: &str) -> PathBuf {
 ///
 /// The env read precedes the host gate and matches on `VarError` — the
 /// [`bind_agent_location`] mirror (cyril-3br3): a non-Unicode value is corrupt
-/// config, not absence, so it warns with the raw bytes on every host and is
-/// then treated as unset (missing and corrupt stay distinct; the diagnostic is
-/// observable by the Linux fence). The cwd read stays `.ok()` — an unavailable
-/// cwd is not config corruption.
+/// config, not absence, so it warns with the raw bytes and is then treated as
+/// unset (missing and corrupt stay distinct). Read-before-gate makes the
+/// warning observable on every host through the public [`wsl_to_win`] /
+/// [`win_to_wsl`] entries (the Linux fence's path); production reaches this
+/// function only on Windows, behind the agent-location gate in [`to_native`] /
+/// [`to_agent`]. The cwd read stays `.ok()` — an unavailable cwd is not config
+/// corruption.
 fn process_wsl_distro() -> Option<&'static str> {
     static DISTRO: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
     DISTRO
