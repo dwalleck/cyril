@@ -1,0 +1,33 @@
+=== /home/dwalleck/.local/bin/kiro-cli settings list (HOME=/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/3eae664a-3aa8-48bc-9dc5-496da275da18/scratchpad/xdgprobe-empty/home XDG_DATA_HOME=)
+exit=0
+--- syscalls naming $XDG_DATA_HOME:
+13751
+   3822 <... openat resumed>)            = -1 ENOENT (No such file or directory)
+     82 +++ exited with 0 +++
+     72 <... openat resumed>)            = 21
+     57 <... openat resumed>)            = 20
+     47 <... openat resumed>)            = 41
+     46 newfstatat(AT_FDCWD, "<S>/home/.local/share/kiro-cli/data.sqlite3" <unfinished ...>
+     41 <... openat resumed>)            = 29
+     40 <... openat resumed>)            = 26
+     37 <... openat resumed>)            = 27
+     36 newfstatat(AT_FDCWD, "<S>/home/.local/share/kiro-cli/data.sqlite3", {st_mode=S_IFREG|0600, st_size=69632, ...}, 0) = 0
+     35 <... openat resumed>)            = 30
+     33 <... openat resumed>)            = 42
+     31 <... openat resumed>)            = 33
+     30 <... openat resumed>)            = 31
+     30 <... openat resumed>)            = 25
+     30 <... newfstatat resumed>, {st_mode=S_IFDIR|0755, st_size=16, ...}, AT_SYMLINK_NOFOLLOW) = 0
+     29 <... openat resumed>)            = 45
+     29 <... openat resumed>)            = 34
+     27 <... openat resumed>)            = 43
+     27 <... openat resumed>)            = 40
+--- syscalls naming $HOME/.local/share (expected 0 when XDG wins):
+336
+943458 statx(AT_FDCWD, "<S>/home/.local/share/kiro-cli", AT_STATX_SYNC_AS_STAT, STATX_ALL, 0x7ffe3f0bd4b0) = -1 ENOENT (No such file or directory)
+943458 statx(AT_FDCWD, "<S>/home/.local/share/amazon-q", AT_STATX_SYNC_AS_STAT, STATX_ALL, 0x7ffe3f0bd4b0) = -1 ENOENT (No such file or directory)
+943458 statx(AT_FDCWD, "<S>/home/.local/share/kiro-cli", AT_STATX_SYNC_AS_STAT, STATX_ALL, 0x7ffe3f0bcf70) = -1 ENOENT (No such file or directory)
+943458 mkdir("<S>/home/.local/share/kiro-cli", 0777) = -1 ENOENT (No such file or directory)
+943458 mkdir("<S>/home/.local/share", 0777) = -1 ENOENT (No such file or directory)
+--- what now exists under $XDG_DATA_HOME:
+find: ‘’: No such file or directory

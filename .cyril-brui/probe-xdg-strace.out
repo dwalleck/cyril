@@ -1,0 +1,33 @@
+=== /home/dwalleck/.local/bin/kiro-cli settings list (HOME=/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/3eae664a-3aa8-48bc-9dc5-496da275da18/scratchpad/xdgprobe/home XDG_DATA_HOME=/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/3eae664a-3aa8-48bc-9dc5-496da275da18/scratchpad/xdgprobe/xdg)
+exit=0
+--- syscalls naming $XDG_DATA_HOME:
+348
+     59 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3" <unfinished ...>
+     33 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", {st_mode=S_IFREG|0600, st_size=69632, ...}, 0) = 0
+     26 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli" <unfinished ...>
+     24 newfstatat(AT_FDCWD, "<S>/xdg" <unfinished ...>
+     20 openat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", O_RDWR|O_CREAT|O_NOFOLLOW|O_CLOEXEC, 0644 <unfinished ...>
+     17 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", {st_mode=S_IFREG|0600, st_size=28672, ...}, 0) = 0
+      9 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", {st_mode=S_IFREG|0644, st_size=0, ...}, 0) = 0
+      7 openat(AT_FDCWD, "<S>/xdg/kiro-cli", O_RDONLY|O_CLOEXEC) = 20
+      7 openat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3-journal", O_RDWR|O_CREAT|O_NOFOLLOW|O_CLOEXEC, 0600) = 19
+      6 newfstatat(AT_FDCWD, "<S>/xdg", {st_mode=S_IFDIR|0755, st_size=16, ...}, AT_SYMLINK_NOFOLLOW) = 0
+      4 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", {st_mode=S_IFREG|0600, st_size=69632, ...}, AT_SYMLINK_NOFOLLOW) = 0
+      3 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli", {st_mode=S_IFDIR|0755, st_size=24, ...}, AT_SYMLINK_NOFOLLOW) = 0
+      3 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3-wal", 0x7f7c37d7c7e0, 0) = -1 ENOENT (No such file or directory)
+      3 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3-journal", 0x7f7c37d7c7e0, 0) = -1 ENOENT (No such file or directory)
+      2 statx(AT_FDCWD, "<S>/xdg/kiro-cli", AT_STATX_SYNC_AS_STAT, STATX_ALL, {stx_mask=STATX_ALL|STATX_MNT_ID|STATX_SUBVOL, stx_attributes=0, stx_mode=S_IFDIR|0755, stx_size=24, ...}) = 0
+      2 openat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", O_RDWR|O_CREAT|O_NOFOLLOW|O_CLOEXEC, 0644) = 18
+      2 openat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", O_RDWR|O_CREAT|O_NOFOLLOW|O_CLOEXEC, 0644) = 13
+      2 openat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3", O_RDWR|O_CREAT|O_NOFOLLOW|O_CLOEXEC, 0644) = 11
+      2 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3-wal", 0x7fff059cfdf0, 0) = -1 ENOENT (No such file or directory)
+      2 newfstatat(AT_FDCWD, "<S>/xdg/kiro-cli/data.sqlite3-wal", 0x7fff059cd2b0, 0) = -1 ENOENT (No such file or directory)
+--- syscalls naming $HOME/.local/share (expected 0 when XDG wins):
+0
+--- what now exists under $XDG_DATA_HOME:
+<S>/xdg
+<S>/xdg/kiro-cli
+<S>/xdg/kiro-cli/data.sqlite3
+<S>/xdg/kiro-cli/telemetry-export-drops.lock
+<S>/xdg/kiro-cli/run-receipts
+<S>/xdg/kiro-cli/run-receipts/.reaper.lock

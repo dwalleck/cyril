@@ -1,0 +1,10 @@
+revision: fcbfb7f1 + working tree; branch: fix/cyril-brui-kas-xdg-data-home; date: 2026-09-27T06:01:10Z
+GATE-OK-fmt  (cargo fmt --all -- --check)
+GATE-OK-clippy-kas  (cargo clippy -p cyril -p cyril-core --features kas --all-targets -- -D warnings)
+GATE-OK-nextest-kas  (cargo nextest run -p cyril -p cyril-core --features kas)
+GATE-OK-clippy-default  (cargo clippy --workspace --all-targets -- -D warnings)
+GATE-OK-nextest-default  (cargo nextest run --workspace)
+done: 2026-09-27T06:01:51Z
+GATE-OK count (expect 5): 5
+     Summary [   6.291s] 2059 tests run: 2059 passed, 13 skipped
+     Summary [   5.542s] 1254 tests run: 1254 passed, 10 skipped

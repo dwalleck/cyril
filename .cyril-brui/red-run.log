@@ -1,0 +1,184 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a1375686b0e68df53/crates/cyril-core)
+error[E0425]: cannot find value `KIRO_DATA_DIR_NAME` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:798:31
+    |
+ 72 | const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
+    | -------------------------------------------------------- similarly named constant `KIRO_DATA_DIR_REL` defined here
+...
+798 |                 Some(abs.join(KIRO_DATA_DIR_NAME)),
+    |                               ^^^^^^^^^^^^^^^^^^
+    |
+help: a constant with a similar name exists
+    |
+798 -                 Some(abs.join(KIRO_DATA_DIR_NAME)),
+798 +                 Some(abs.join(KIRO_DATA_DIR_REL)),
+    |
+
+error[E0425]: cannot find value `KIRO_DATA_DIR_NAME` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:806:30
+    |
+ 72 | const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
+    | -------------------------------------------------------- similarly named constant `KIRO_DATA_DIR_REL` defined here
+...
+806 |             Some(spaced.join(KIRO_DATA_DIR_NAME))
+    |                              ^^^^^^^^^^^^^^^^^^
+    |
+help: a constant with a similar name exists
+    |
+806 -             Some(spaced.join(KIRO_DATA_DIR_NAME))
+806 +             Some(spaced.join(KIRO_DATA_DIR_REL))
+    |
+
+error[E0425]: cannot find value `XDG_DATA_HOME_DEFAULT_REL` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:836:48
+    |
+836 |                 let want = home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME));
+    |                                                ^^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find value `KIRO_DATA_DIR_NAME` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:836:80
+    |
+ 72 | const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
+    | -------------------------------------------------------- similarly named constant `KIRO_DATA_DIR_REL` defined here
+...
+836 |                 let want = home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME));
+    |                                                                                ^^^^^^^^^^^^^^^^^^
+    |
+help: a constant with a similar name exists
+    |
+836 -                 let want = home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME));
+836 +                 let want = home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_REL));
+    |
+
+error[E0425]: cannot find value `KIRO_DATA_DIR_NAME` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:887:22
+    |
+ 72 | const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
+    | -------------------------------------------------------- similarly named constant `KIRO_DATA_DIR_REL` defined here
+...
+887 |             abs.join(KIRO_DATA_DIR_NAME).join("kas")
+    |                      ^^^^^^^^^^^^^^^^^^
+    |
+help: a constant with a similar name exists
+    |
+887 -             abs.join(KIRO_DATA_DIR_NAME).join("kas")
+887 +             abs.join(KIRO_DATA_DIR_REL).join("kas")
+    |
+
+error[E0425]: cannot find value `KIRO_DATA_DIR_NAME` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:891:22
+    |
+ 72 | const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
+    | -------------------------------------------------------- similarly named constant `KIRO_DATA_DIR_REL` defined here
+...
+891 |             abs.join(KIRO_DATA_DIR_NAME).join("data.sqlite3")
+    |                      ^^^^^^^^^^^^^^^^^^
+    |
+help: a constant with a similar name exists
+    |
+891 -             abs.join(KIRO_DATA_DIR_NAME).join("data.sqlite3")
+891 +             abs.join(KIRO_DATA_DIR_REL).join("data.sqlite3")
+    |
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:797:17
+    |
+797 |                 kiro_data_dir(home, Some(abs.as_os_str())),
+    |                 ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:805:13
+    |
+805 |             kiro_data_dir(Some(Path::new(HOME_U)), Some(spaced.as_os_str())),
+    |             ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:816:13
+    |
+816 |             kiro_data_dir(Some(Path::new(HOME_U)), None),
+    |             ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:819:20
+    |
+819 |         assert_eq!(kiro_data_dir(None, None), None);
+    |                    ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:834:21
+    |
+834 |                     kiro_data_dir(home, xdg(value))
+    |                     ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:866:13
+    |
+866 |             kiro_data_dir(Some(Path::new(HOME_U)), Some(abs.as_os_str()))
+    |             ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:883:24
+    |
+883 |         let data_dir = kiro_data_dir(Some(Path::new(HOME_U)), Some(abs.as_os_str()))
+    |                        ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kas_root` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:886:13
+    |
+886 |             kas_root(&data_dir),
+    |             ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `store_path` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:890:13
+    |
+890 |             store_path(&data_dir),
+    |             ^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:895:13
+    |
+895 |             kiro_data_dir(Some(Path::new(HOME_U)), None).expect("home fallback resolves");
+    |             ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kas_root` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:897:13
+    |
+897 |             kas_root(&default_dir),
+    |             ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `store_path` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:901:13
+    |
+901 |             store_path(&default_dir),
+    |             ^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kas_root` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:911:32
+    |
+911 |             KasMissing::Server(kas_root(&data_dir).join(SERVER_IN_ROOT_REL))
+    |                                ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kiro_data_dir` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:928:28
+    |
+928 |             let data_dir = kiro_data_dir(home, xdg).expect("branch resolves");
+    |                            ^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `kas_root` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:930:17
+    |
+930 |                 kas_root(&data_dir).parent(),
+    |                 ^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `store_path` in this scope
+   --> crates/cyril-core/src/protocol/kas/discovery.rs:935:17
+    |
+935 |                 store_path(&data_dir).parent(),
+    |                 ^^^^^^^^^^ not found in this scope
+
+For more information about this error, try `rustc --explain E0425`.
+error: could not compile `cyril-core` (lib test) due to 22 previous errors
+error: command `/home/dwalleck/.rustup/toolchains/1.94.0-x86_64-unknown-linux-gnu/bin/cargo test --no-run --message-format json-render-diagnostics --package cyril-core --features kas` exited with code 101
