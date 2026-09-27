@@ -59,3 +59,7 @@ The fence name occurs exactly once in each log (a failure would appear again in 
 
 - macOS/Windows kiro-cli data dir is not `<home>/.local/share/kiro-cli` either (`~/Library/Application Support`, `LOCALAPPDATA` known folder — `dirs-6.0.0/src/{mac,win}.rs`); this round only stops cyril from consulting `XDG_DATA_HOME` where kiro-cli does not. The orchestrator files the mapping beside cyril-lwpm.
 - `home_dir()` accepts `HOME=""` (P1) — pre-existing, shared with agent-config resolution.
+
+### R-2 CI receipt
+
+Head `1ea508a6`, run 36302149699: all 13 checks pass — `Test (ubuntu-latest)` 108571690352, `Test (macos-latest)` 108571690363, `Test (windows-latest)` 108571690326, KAS Feature, Default Features, Lint, Format, Build (ubuntu/windows), Validate Commits, Worktree Tooling, Code Review Tooling (changed?), CI Success. Record reconciliation: post-repair revision for R-2 = `1ea508a6`; every figure above (1255 kas tests, three-leg CI) is anchored to it.
