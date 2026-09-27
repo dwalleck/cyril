@@ -568,14 +568,18 @@ mod tests {
     /// Fence (cyril-0dv4): the params object cyril sends MUST carry
     /// `mcpServers` as a JSON array — empty is fine, absent is not.
     ///
-    /// Failure mode guarded: kiro-cli treats a `session/new` whose params lack
-    /// `mcpServers` as malformed and exits rc=0 with NO stderr — a clean exit
-    /// that reads as "the binary is fine, the spawn is wrong" and is the most
-    /// expensive signature to diagnose (docs/kirocrew-acp-seam-findings.md
-    /// §4.1; KiroCrew `_dispatch.py:70-76`). `session/load` is the same
-    /// family: it RE-INITIALIZES the session's MCP servers, so an omitted
-    /// list would silently un-pool the resumed session for its whole life
-    /// (cyril-rtrh).
+    /// `session/new` failure mode guarded: kiro-cli treats a `session/new`
+    /// whose params lack `mcpServers` as malformed and exits rc=0 with NO
+    /// stderr — a clean exit that reads as "the binary is fine, the spawn is
+    /// wrong" and is the most expensive signature to diagnose
+    /// (docs/kirocrew-acp-seam-findings.md §4.1; KiroCrew `_dispatch.py:70-76`).
+    ///
+    /// `session/load`: the key is required by the ACP schema, and kiro-cli
+    /// RE-INITIALIZES the session's MCP servers from it. Per §4.1 even an
+    /// EMPTY list is applied and un-pools the resumed session for its whole
+    /// life — that is the state cyril sends today, and this fence deliberately
+    /// does NOT guard it; what the list must carry on resume belongs to the
+    /// session resume contract (cyril-rtrh).
     ///
     /// Omission is impossible through today's SDK type: `agent-client-protocol
     /// =2.0.0` re-exports `agent-client-protocol-schema 1.5.0`, whose
@@ -585,12 +589,12 @@ mod tests {
     /// changing that — the schema crate already uses the skip-when-empty
     /// convention on the newer `additional_directories` field, so the drift is
     /// plausible and would otherwise land silently on the wire.
-    fn assert_mcp_servers_is_array(method: &str, params: &serde_json::Value) {
+    fn assert_mcp_servers_is_array(method: &str, why_required: &str, params: &serde_json::Value) {
         let mcp_servers = params.get("mcpServers");
         assert!(
             mcp_servers.is_some_and(serde_json::Value::is_array),
-            "{method} params must carry `mcpServers` as an array (kiro-cli exits rc=0 with \
-             no stderr when it is missing); got {mcp_servers:?} in {params}"
+            "{method} params must carry `mcpServers` as an array ({why_required}); \
+             got {mcp_servers:?} in {params}"
         );
     }
 
@@ -601,7 +605,11 @@ mod tests {
             standard_params("session/new", request),
             "serialize session/new params",
         );
-        assert_mcp_servers_is_array("session/new", &params);
+        assert_mcp_servers_is_array(
+            "session/new",
+            "kiro-cli exits rc=0 with no stderr when it is missing",
+            &params,
+        );
     }
 
     #[test]
@@ -612,6 +620,10 @@ mod tests {
             standard_params("session/load", request),
             "serialize session/load params",
         );
-        assert_mcp_servers_is_array("session/load", &params);
+        assert_mcp_servers_is_array(
+            "session/load",
+            "required by the ACP schema; kiro-cli re-initializes the session's MCP servers from it",
+            &params,
+        );
     }
 }
