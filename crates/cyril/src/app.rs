@@ -2494,11 +2494,12 @@ fn append_context_items(out: &mut String, category: &serde_json::Value) {
         let pct = item.get("percent").and_then(|p| p.as_f64()).unwrap_or(0.0);
         // Optional flags: surface only when they tell the user something useful.
         // `autoIncluded` is the wire key since kiro-cli 2.16.0; `auto_included`
-        // is the pre-2.16.0 spelling (see the fn doc comment).
-        let auto = item
-            .get("autoIncluded")
-            .or_else(|| item.get("auto_included"))
-            .and_then(|a| a.as_bool())
+        // is the pre-2.16.0 spelling (see the fn doc comment). Each spelling is
+        // decoded on its own so a present-but-non-boolean camelCase value never
+        // masks a boolean snake_case one. Both keys absent is the normal shape
+        // for an item that was not auto-included, hence the quiet `false`.
+        let auto = context_item_flag(item, name, "autoIncluded")
+            .or_else(|| context_item_flag(item, name, "auto_included"))
             .unwrap_or(false);
         let matched = item
             .get("matched")
@@ -2513,6 +2514,26 @@ fn append_context_items(out: &mut String, category: &serde_json::Value) {
         }
         out.push_str(&format!("    {name} — {tokens} tokens ({pct:.1}%){tags}\n"));
     }
+}
+
+/// Read the optional boolean flag `key` of a `/context` item.
+///
+/// `None` when the key is absent — the normal case for a flag that is not
+/// set — and also when it is present but not a boolean; that second case is
+/// logged at debug level naming the item and key rather than silently
+/// treated as `false` (CLAUDE.md, "errors are not default values").
+fn context_item_flag(item: &serde_json::Value, item_name: &str, key: &str) -> Option<bool> {
+    let value = item.get(key)?;
+    let flag = value.as_bool();
+    if flag.is_none() {
+        tracing::debug!(
+            item = item_name,
+            key,
+            %value,
+            "/context item flag is not a boolean; ignoring it"
+        );
+    }
+    flag
 }
 
 /// Format a `kiro.dev/commands/execute` response for display as a system message.
@@ -5285,9 +5306,11 @@ mod tests {
     /// Legacy fence for the pre-2.16.0 wire: kiro-cli <= 2.15.0 spelled the
     /// auto-included flag `auto_included` (committed captures such as
     /// `experiments/conductor-spike/test_bridge-2.12.0.out`; rename pinned in
-    /// `.cyril-jhmi/pin-rename-output.txt`). Kept so the fallback read keeps
-    /// rendering `(auto)` for older binaries; the current camelCase shape is
-    /// fenced by `format_response_context_items_render_auto_tag_from_camel_case_wire`.
+    /// `.cyril-jhmi/pin-rename-output.txt`). Only the key spelling is
+    /// capture-backed; the item names and numbers are synthetic. Kept so the
+    /// fallback read keeps rendering `(auto)` for older binaries; the current
+    /// camelCase shape is fenced by
+    /// `format_response_context_items_render_auto_tag_from_camel_case_wire`.
     #[test]
     fn format_response_context_breakdown_lists_files_pre_2_16_snake_case() {
         let response = serde_json::json!({
@@ -5395,6 +5418,71 @@ mod tests {
         );
         // `tools` nests its entries under `groups`, not `items`: no child rows.
         assert!(result.contains("  Tools: 7340 tokens (2.7%)\n  Your prompts: 57 tokens (0.0%)\n"));
+    }
+
+    /// One `contextFiles` item carrying the given auto-included flag entries,
+    /// for the flag-decoding fences below. Synthetic shape: no capture has
+    /// shown a null or non-boolean flag; the fences exist because the read
+    /// must decode each key spelling on its own.
+    fn context_response_with_auto_flags(flags: serde_json::Value) -> serde_json::Value {
+        let mut item = serde_json::json!({
+            "name": "SKILL.md", "tokens": 130, "percent": 0.1, "matched": true
+        });
+        let target = item.as_object_mut().expect("item literal is a JSON object");
+        let extra = flags
+            .as_object()
+            .expect("flags must be a JSON object, or the fence would test nothing");
+        target.extend(extra.clone());
+        serde_json::json!({
+            "success": true,
+            "message": "",
+            "data": {
+                "contextUsagePercentage": 1.0,
+                "model": "auto",
+                "breakdown": {
+                    "contextFiles": {"tokens": 130, "percent": 0.1, "items": [item]}
+                }
+            }
+        })
+    }
+
+    /// PR #137 review F1: the two key spellings are decoded independently, so
+    /// a camelCase key that is present but not a boolean never masks a
+    /// boolean snake_case one.
+    #[test]
+    fn format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null() {
+        let response = context_response_with_auto_flags(
+            serde_json::json!({"autoIncluded": null, "auto_included": true}),
+        );
+        let result = format_command_response("context", &response);
+        assert!(
+            result.contains("    SKILL.md — 130 tokens (0.1%) (auto)\n"),
+            "actual output:\n{result}"
+        );
+    }
+
+    /// PR #137 review F1: a present-but-non-boolean flag renders no tag and is
+    /// logged at debug level naming the item and key, instead of being
+    /// silently defaulted to `false` (CLAUDE.md, "errors are not default
+    /// values").
+    #[test]
+    fn format_response_context_items_log_non_boolean_auto_flag() {
+        let response =
+            context_response_with_auto_flags(serde_json::json!({"autoIncluded": "true"}));
+        let (result, logs) = with_captured_logs_at(tracing::Level::DEBUG, || {
+            format_command_response("context", &response)
+        });
+        assert!(
+            result.contains("    SKILL.md — 130 tokens (0.1%)\n"),
+            "actual output:\n{result}"
+        );
+        assert!(!result.contains("(auto)"), "actual output:\n{result}");
+        assert!(
+            logs.contains("not a boolean")
+                && logs.contains("SKILL.md")
+                && logs.contains("autoIncluded"),
+            "expected a debug line naming the item and key; captured logs:\n{logs}"
+        );
     }
 
     #[test]
@@ -6914,6 +7002,12 @@ mod tests {
     /// Run `f` under a WARN-level capture subscriber; return its result and
     /// the captured log text.
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        with_captured_logs_at(tracing::Level::WARN, f)
+    }
+
+    /// Run `f` under a capture subscriber admitting events up to `level`;
+    /// return its result and the captured log text.
+    fn with_captured_logs_at<T>(level: tracing::Level, f: impl FnOnce() -> T) -> (T, String) {
         static GLOBAL: std::sync::OnceLock<()> = std::sync::OnceLock::new();
         GLOBAL.get_or_init(|| {
             if let Err(error) = tracing::subscriber::set_global_default(AlwaysInterested) {
@@ -6923,7 +7017,7 @@ mod tests {
         let _capture_lock = cyril_core::test_support::tracing_capture_lock();
         let capture = cyril_core::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::WARN)
+            .with_max_level(level)
             .with_ansi(false)
             .with_writer(capture.clone())
             .finish();

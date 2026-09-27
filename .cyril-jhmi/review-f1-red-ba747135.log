@@ -1,0 +1,35 @@
+# sh cyril-jhmi-cargo-clean.sh test -p cyril format_response_context   (cargo test with CARGO_TARGET_DIR unset)
+# PR #137 review round, F1 red half: branch ba747135 + the two new fences and the test-helper level parameter; production read still the or_else-on-absence form; run 2026-09-27; exit=101
+running 5 tests
+test app::tests::format_response_context_breakdown ... ok
+test app::tests::format_response_context_breakdown_lists_files_pre_2_16_snake_case ... ok
+test app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire ... ok
+test app::tests::format_response_context_items_log_non_boolean_auto_flag ... FAILED
+test app::tests::format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null ... FAILED
+
+failures:
+
+---- app::tests::format_response_context_items_log_non_boolean_auto_flag stdout ----
+
+thread 'app::tests::format_response_context_items_log_non_boolean_auto_flag' (4160295) panicked at crates/cyril/src/app.rs:5459:9:
+expected a debug line naming the item and key; captured logs:
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- app::tests::format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null stdout ----
+
+thread 'app::tests::format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null' (4160297) panicked at crates/cyril/src/app.rs:5437:9:
+actual output:
+Context: 1.0% used (model: auto)
+
+  Context files: 130 tokens (0.1%)
+    SKILL.md — 130 tokens (0.1%)
+
+
+
+failures:
+    app::tests::format_response_context_items_log_non_boolean_auto_flag
+    app::tests::format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null
+
+test result: FAILED. 3 passed; 2 failed; 0 ignored; 0 measured; 145 filtered out; finished in 0.00s
+

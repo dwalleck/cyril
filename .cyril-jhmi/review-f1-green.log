@@ -1,0 +1,20 @@
+# sh cyril-jhmi-cargo-clean.sh nextest run -p cyril format_response_context   (CARGO_TARGET_DIR unset)
+# PR #137 review round, R1 green half: branch ba747135 + R1 (context_item_flag, per-key decode) + F2/F3 doc edits; run 2026-09-27; exit=0
+        PASS [   0.004s] (1/5) cyril::bin/cyril app::tests::format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null
+        PASS [   0.004s] (2/5) cyril::bin/cyril app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire
+        PASS [   0.003s] (3/5) cyril::bin/cyril app::tests::format_response_context_breakdown
+        PASS [   0.004s] (4/5) cyril::bin/cyril app::tests::format_response_context_breakdown_lists_files_pre_2_16_snake_case
+        PASS [   0.004s] (5/5) cyril::bin/cyril app::tests::format_response_context_items_log_non_boolean_auto_flag
+     Summary [   0.004s] 5 tests run: 5 passed, 183 skipped
+# cargo clippy -p cyril --all-targets --all-features -- -D warnings: exit=0 (GATE-OK-clippy-cyril)
+# cargo fmt --all -- --check: exit=0 (GATE-OK-fmt)
+
+# Second run on the FINAL tree (F2 sentence reverted to original, F4 expect-hardening applied; R1 unchanged); run 2026-09-27; exit=0
+        PASS [   0.003s] (1/5) cyril::bin/cyril app::tests::format_response_context_items_render_auto_tag_from_camel_case_wire
+        PASS [   0.004s] (2/5) cyril::bin/cyril app::tests::format_response_context_items_log_non_boolean_auto_flag
+        PASS [   0.004s] (3/5) cyril::bin/cyril app::tests::format_response_context_items_prefer_boolean_snake_case_when_camel_case_is_null
+        PASS [   0.004s] (4/5) cyril::bin/cyril app::tests::format_response_context_breakdown
+        PASS [   0.005s] (5/5) cyril::bin/cyril app::tests::format_response_context_breakdown_lists_files_pre_2_16_snake_case
+     Summary [   0.006s] 5 tests run: 5 passed, 183 skipped
+# cargo clippy -p cyril --all-targets --all-features -- -D warnings: exit=0 (GATE-OK-clippy-cyril-2)
+# cargo fmt --all -- --check: exit=0 (GATE-OK-fmt-2)
