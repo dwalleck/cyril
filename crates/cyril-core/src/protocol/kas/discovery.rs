@@ -20,16 +20,17 @@ use crate::types::AgentCommand;
 /// `BridgeDisconnected` (spec B6) instead of a silent hang or a v2 fallback.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum KasMissing {
-    /// Neither `HOME` nor `USERPROFILE` is set and no path override was given.
+    /// No kiro data dir can be resolved — no absolute `XDG_DATA_HOME` and
+    /// neither `HOME` nor `USERPROFILE` set — and no path override was given.
     NoHome,
     /// The KAS server bundle (`acp-server.js`) is not a file at the resolved path.
     Server(PathBuf),
     /// No `node` runtime (`KIRO_AGENT_PATH` unset/missing and none on `PATH`).
     Node,
-    /// No home directory to locate the credential store — distinct from
-    /// [`KasMissing::NoHome`] because it is reachable with the bundle already
-    /// resolved via `KIRO_KAS_SERVER_PATH` (dcc6 review F6), where "set the
-    /// override" would be misleading advice.
+    /// No kiro data dir (see [`KasMissing::NoHome`]) to locate the credential
+    /// store — a distinct variant because it is reachable with the bundle
+    /// already resolved via `KIRO_KAS_SERVER_PATH` (dcc6 review F6), where
+    /// "set the override" would be misleading advice.
     NoHomeForStore,
     /// The credential store cannot serve a login right now; `why` carries the
     /// precise diagnostic (absent/locked/corrupt store, logged out, or expired
@@ -65,18 +66,71 @@ impl KasMissing {
     }
 }
 
-/// `<home>`-relative kiro-cli data dir — the shared prefix of the KAS
-/// extraction root and the credential store ([`default_store_path`]); a unit
-/// test pins [`KAS_ROOT_REL`] to this prefix so the two cannot drift apart
-/// (dcc6 review F19b).
-const KIRO_DATA_DIR_REL: &str = ".local/share/kiro-cli";
-/// `<home>`-relative path of the KAS self-extraction root. kiro ≥2.10.0
-/// extracts into versioned `<semver>-<sha256>/` dirs under it; older releases
-/// extracted the bundle directly at the root (the legacy layout).
-const KAS_ROOT_REL: &str = ".local/share/kiro-cli/kas";
+/// `<home>`-relative default for `$XDG_DATA_HOME` (XDG Base Directory spec) —
+/// the fallback kiro-cli's own `dirs`-based resolution uses.
+const XDG_DATA_HOME_DEFAULT_REL: &str = ".local/share";
+/// kiro-cli's data dir name under the XDG data home. [`kiro_data_dir`]
+/// resolves it; it is the shared parent of the KAS extraction root
+/// ([`kas_root`]) and the credential store ([`store_path`]), and a unit test
+/// pins both to it so the two cannot drift apart (dcc6 review F19b).
+const KIRO_DATA_DIR_NAME: &str = "kiro-cli";
+/// Data-dir-relative KAS self-extraction root. kiro ≥2.10.0 extracts into
+/// versioned `<semver>-<sha256>/` dirs under it; older releases extracted the
+/// bundle directly at the root (the legacy layout).
+const KAS_ROOT_REL: &str = "kas";
+/// Data-dir-relative credential store: the sqlite database `kiro-cli login`
+/// maintains (IdC token in `auth_kv`, active profile in `state`).
+const STORE_FILE_NAME: &str = "data.sqlite3";
 /// Path of the ACP server entry inside one extraction (versioned dir or the
 /// legacy root itself).
 const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-server.js";
+
+/// kiro-cli's data dir (cyril-brui): `$XDG_DATA_HOME/kiro-cli` when
+/// `XDG_DATA_HOME` is set, non-empty and absolute, else
+/// `<home>/.local/share/kiro-cli` — the same `dirs::data_local_dir` rule
+/// kiro-cli resolves through (strace-proven on 2.24.0: `settings list` under
+/// `HOME=<tmp> XDG_DATA_HOME=<x>` opens `<x>/kiro-cli/data.sqlite3` and never
+/// touches `<tmp>/.local/share`; see `.cyril-brui/evidence.md`). An empty or
+/// relative value is invalid under that rule (dirs-sys `is_absolute_path`)
+/// and falls back to `<home>` with a warning naming it — never silently, since
+/// the fallback store may hold a different login than the one kiro-cli uses.
+///
+/// Pure (no env reads) so every branch is unit-testable without env mutation
+/// (`set_var` is `unsafe` in Rust 2024, forbidden in this workspace);
+/// [`kiro_data_dir_from_env`] is the one production caller.
+fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<PathBuf> {
+    if let Some(value) = xdg_data_home {
+        let xdg = Path::new(value);
+        // `is_absolute` is false for the empty string too.
+        if xdg.is_absolute() {
+            return Some(xdg.join(KIRO_DATA_DIR_NAME));
+        }
+        tracing::warn!(
+            value = ?value,
+            "XDG_DATA_HOME is not an absolute path; kiro data dir falls back to <home>/.local/share"
+        );
+    }
+    home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME))
+}
+
+/// [`kiro_data_dir`] from the real environment — the single resolution both
+/// the KAS root and the credential store derive from.
+fn kiro_data_dir_from_env() -> Option<PathBuf> {
+    kiro_data_dir(
+        crate::kiro_agent_config::home_dir().as_deref(),
+        std::env::var_os("XDG_DATA_HOME").as_deref(),
+    )
+}
+
+/// The KAS self-extraction root under `data_dir`.
+fn kas_root(data_dir: &Path) -> PathBuf {
+    data_dir.join(KAS_ROOT_REL)
+}
+
+/// kiro-cli's credential store under `data_dir`.
+fn store_path(data_dir: &Path) -> PathBuf {
+    data_dir.join(STORE_FILE_NAME)
+}
 
 /// Strictly parse a versioned-extraction dir name — `<MAJOR.MINOR.PATCH>-<sha>`
 /// with exactly 64 lowercase hex sha digits (e.g. `2.11.0-05e9…`) — into its
@@ -177,7 +231,7 @@ fn find_on_path(path_var: Option<&OsStr>, exists: impl Fn(&Path) -> bool) -> Opt
 /// missing item must surface as the right typed `Err`, not a later opaque spawn
 /// failure — so they are enforced as runtime returns, not `debug_assert!`.
 fn resolve(
-    home: Option<&Path>,
+    data_dir: Option<&Path>,
     server_override: Option<&str>,
     node_override: Option<&str>,
     path_var: Option<&OsStr>,
@@ -186,11 +240,12 @@ fn resolve(
     exists: impl Fn(&Path) -> bool,
 ) -> Result<AgentCommand, KasMissing> {
     // 1. server.js — override, else the selected versioned dir under
-    //    <home>/<kas root>, else the legacy unversioned layout; must exist.
+    //    <kiro data dir>/<kas root>, else the legacy unversioned layout; must
+    //    exist.
     let server: PathBuf = match server_override {
         Some(s) => PathBuf::from(s),
         None => {
-            let root = home.ok_or(KasMissing::NoHome)?.join(KAS_ROOT_REL);
+            let root = kas_root(data_dir.ok_or(KasMissing::NoHome)?);
             match select_server(kas_entries, cli_version) {
                 Some(dir) => root.join(dir).join(SERVER_IN_ROOT_REL),
                 None => {
@@ -299,24 +354,28 @@ async fn installed_cli_version() -> Option<(u32, u32, u32)> {
 /// Resolve the free-path KAS spawn from the real environment + filesystem.
 /// `KIRO_KAS_SERVER_PATH` / `KIRO_AGENT_PATH` override the defaults.
 pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
-    let home = crate::kiro_agent_config::home_dir();
+    // Resolved ONCE per spawn: the root scan, `resolve`, and the store gate
+    // below all derive from this value (F19b), and an invalid XDG_DATA_HOME
+    // warns once rather than once per consumer.
+    let data_dir = kiro_data_dir_from_env();
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
     let path_var = std::env::var_os("PATH");
     // The dir scan + `kiro-cli --version` subprocess only run when they can
     // influence selection: an override names the server directly (and must win
-    // without paying that cost), and no home means no root to scan (`resolve`
-    // reports `NoHome`). The match makes the home-is-present invariant of the
-    // scanning arm structural (dcc6 review F14 — no dead unwrap_or_default).
-    let (kas_entries, cli_version) = match (server_override.as_deref(), home.as_deref()) {
+    // without paying that cost), and no data dir means no root to scan
+    // (`resolve` reports `NoHome`). The match makes the data-dir-is-present
+    // invariant of the scanning arm structural (dcc6 review F14 — no dead
+    // unwrap_or_default).
+    let (kas_entries, cli_version) = match (server_override.as_deref(), data_dir.as_deref()) {
         (Some(_), _) | (None, None) => (Vec::new(), None),
-        (None, Some(h)) => (
-            list_kas_entries(&h.join(KAS_ROOT_REL)),
+        (None, Some(d)) => (
+            list_kas_entries(&kas_root(d)),
             installed_cli_version().await,
         ),
     };
     let cmd = resolve(
-        home.as_deref(),
+        data_dir.as_deref(),
         server_override.as_deref(),
         node_override.as_deref(),
         path_var.as_deref(),
@@ -328,19 +387,22 @@ pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     // load-bearing for every turn, so an unservable credential store — absent,
     // locked, corrupt, logged out, or holding an expired token — fails the
     // spawn here with its precise diagnostic, instead of as a dead first turn.
-    let db = default_store_path().ok_or(KasMissing::NoHomeForStore)?;
+    let db = data_dir
+        .as_deref()
+        .map(store_path)
+        .ok_or(KasMissing::NoHomeForStore)?;
     if let Some(why) = super::auth::store_unservable_reason(&db, super::auth::now_epoch()) {
         return Err(KasMissing::StoreUnservable { store: db, why });
     }
     Ok(cmd)
 }
 
-/// kiro-cli's credential store (`~/.local/share/kiro-cli/data.sqlite3`) — the
-/// sqlite database `kiro-cli login` maintains (IdC token in `auth_kv`, active
-/// profile in `state`). The auth responder's source: unlike the SSO-cache
+/// kiro-cli's credential store — `<kiro data dir>/data.sqlite3`, i.e.
+/// `$XDG_DATA_HOME/kiro-cli/data.sqlite3` or `~/.local/share/kiro-cli/data.sqlite3`
+/// ([`kiro_data_dir`]). The auth responder's source: unlike the SSO-cache
 /// token file, this is refreshed by every login and deleted-row on logout.
-pub(crate) fn default_store_path() -> Option<std::path::PathBuf> {
-    crate::kiro_agent_config::home_dir().map(|h| h.join(KIRO_DATA_DIR_REL).join("data.sqlite3"))
+pub(crate) fn default_store_path() -> Option<PathBuf> {
+    kiro_data_dir_from_env().map(|d| store_path(&d))
 }
 
 #[cfg(test)]
@@ -359,21 +421,23 @@ mod tests {
         move |p: &Path| set.contains(p)
     }
 
-    const HOME: &str = "/home/u";
+    /// The resolved kiro data dir `resolve` receives (what
+    /// `kiro_data_dir(Some("/home/u"), None)` yields — the pre-brui default).
+    const DATA_DIR: &str = "/home/u/.local/share/kiro-cli";
     fn default_server() -> String {
-        format!("{HOME}/{KAS_ROOT_REL}/{SERVER_IN_ROOT_REL}")
+        format!("{DATA_DIR}/{KAS_ROOT_REL}/{SERVER_IN_ROOT_REL}")
     }
     /// `resolve` with no versioned-dir candidates and no CLI version — the
     /// legacy layout the pre-slice tests exercise.
     fn resolve_legacy(
-        home: Option<&Path>,
+        data_dir: Option<&Path>,
         server_override: Option<&str>,
         node_override: Option<&str>,
         path_var: Option<&OsStr>,
         exists: impl Fn(&Path) -> bool,
     ) -> Result<AgentCommand, KasMissing> {
         resolve(
-            home,
+            data_dir,
             server_override,
             node_override,
             path_var,
@@ -395,7 +459,7 @@ mod tests {
     fn resolve_happy_path_builds_probe_argv() {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server(), &node("/usr/bin")]);
-        let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
+        let cmd = resolve_legacy(Some(Path::new(DATA_DIR)), None, None, Some(&path), exists)
             .expect("all preconditions present");
         // Compare as paths, not strings: on Windows `find_on_path`/`Path::join`
         // yield `\` separators and a `.exe` suffix that an exact string compare
@@ -418,7 +482,7 @@ mod tests {
         use crate::platform::path::{AgentLocation, resolve_agent_location};
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server(), &node("/usr/bin")]);
-        let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
+        let cmd = resolve_legacy(Some(Path::new(DATA_DIR)), None, None, Some(&path), exists)
             .expect("all preconditions present");
         assert_eq!(
             resolve_agent_location(None, cmd.program()),
@@ -437,7 +501,7 @@ mod tests {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&node("/usr/bin")]); // server absent
         let err =
-            resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
+            resolve_legacy(Some(Path::new(DATA_DIR)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Server(PathBuf::from(default_server())));
     }
 
@@ -447,7 +511,7 @@ mod tests {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server()]); // no node on PATH
         let err =
-            resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists).unwrap_err();
+            resolve_legacy(Some(Path::new(DATA_DIR)), None, None, Some(&path), exists).unwrap_err();
         assert_eq!(err, KasMissing::Node);
     }
 
@@ -456,7 +520,7 @@ mod tests {
     fn resolve_node_override_missing_errors() {
         let exists = exists_set(&[&default_server()]);
         let err = resolve_legacy(
-            Some(Path::new(HOME)),
+            Some(Path::new(DATA_DIR)),
             None,
             Some("/no/such/node"),
             None,
@@ -473,7 +537,7 @@ mod tests {
         let exists = exists_set(&[spaced, &node("/usr/bin")]);
         let path = OsString::from("/usr/bin");
         let cmd = resolve_legacy(
-            Some(Path::new(HOME)),
+            Some(Path::new(DATA_DIR)),
             Some(spaced),
             None,
             Some(&path),
@@ -487,7 +551,8 @@ mod tests {
         );
     }
 
-    // Stress: no home and no override → NoHome (can't build the default path).
+    // Stress: no data dir (no home, no absolute XDG_DATA_HOME) and no
+    // override → NoHome (can't build the default path).
     #[test]
     fn resolve_no_home_no_override_errors() {
         let err = resolve_legacy(None, None, None, None, |_| true).unwrap_err();
@@ -632,7 +697,7 @@ mod tests {
     #[test]
     fn versioned_beats_legacy() {
         let dir = format!("2.10.0-{SHA_A}");
-        let versioned = format!("{HOME}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
+        let versioned = format!("{DATA_DIR}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[
             &default_server(), // legacy present too
@@ -640,7 +705,7 @@ mod tests {
             &node("/usr/bin"),
         ]);
         let cmd = resolve(
-            Some(Path::new(HOME)),
+            Some(Path::new(DATA_DIR)),
             None,
             None,
             Some(&path),
@@ -662,12 +727,12 @@ mod tests {
     #[test]
     fn override_beats_versioned() {
         let dir = format!("2.11.0-{SHA_B}");
-        let versioned = format!("{HOME}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
+        let versioned = format!("{DATA_DIR}/{KAS_ROOT_REL}/{dir}/{SERVER_IN_ROOT_REL}");
         let override_path = "/opt/custom/acp-server.js";
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[override_path, &versioned, &node("/usr/bin")]);
         let cmd = resolve(
-            Some(Path::new(HOME)),
+            Some(Path::new(DATA_DIR)),
             Some(override_path),
             None,
             Some(&path),
@@ -686,7 +751,7 @@ mod tests {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&node("/usr/bin")]);
         let err = resolve(
-            Some(Path::new(HOME)),
+            Some(Path::new(DATA_DIR)),
             None,
             None,
             Some(&path),
@@ -699,11 +764,15 @@ mod tests {
             panic!("expected Server, got {err:?}");
         };
         assert!(
-            p.starts_with(format!("{HOME}/{KAS_ROOT_REL}")),
+            p.starts_with(format!("{DATA_DIR}/{KAS_ROOT_REL}")),
             "got {}",
             p.display()
         );
-        assert!(err.reason().contains(KAS_ROOT_REL));
+        assert!(
+            err.reason().contains(&format!("{DATA_DIR}/{KAS_ROOT_REL}")),
+            "reason must name the searched root: {}",
+            err.reason()
+        );
     }
 
     // Real-filesystem listing: complete extraction, partial extraction, and a
@@ -750,7 +819,7 @@ mod tests {
     fn argv_matches_kiro_cli_own_spawn() {
         let path = OsString::from("/usr/bin");
         let exists = exists_set(&[&default_server(), &node("/usr/bin")]);
-        let cmd = resolve_legacy(Some(Path::new(HOME)), None, None, Some(&path), exists)
+        let cmd = resolve_legacy(Some(Path::new(DATA_DIR)), None, None, Some(&path), exists)
             .expect("all preconditions present");
         let flags: Vec<&str> = cmd
             .args()
@@ -769,12 +838,174 @@ mod tests {
         );
     }
 
-    // F19b drift fence: the extraction root and the credential store must
-    // share the kiro-cli data dir — a path change that touches only one of
-    // them fails here.
+    // ── cyril-brui: XDG_DATA_HOME-aware kiro data dir ──────────────────────
+
+    const HOME_U: &str = "/home/u";
+    fn xdg(v: &str) -> Option<&OsStr> {
+        Some(OsStr::new(v))
+    }
+    /// A fake dir that is ABSOLUTE on the host platform: `/<name>` on unix,
+    /// `C:\<name>` on Windows — a bare `/xdg` is drive-relative there, so it
+    /// would fail the resolver's `is_absolute` check and turn a valid-XDG
+    /// fixture into an invalid one on the Windows CI leg.
+    fn abs_fixture(name: &str) -> PathBuf {
+        if cfg!(windows) {
+            PathBuf::from(format!("C:\\{name}"))
+        } else {
+            PathBuf::from(format!("/{name}"))
+        }
+    }
+
+    // C1 fence: an absolute, non-empty XDG_DATA_HOME wins for ANY home —
+    // including no home at all (kills the ignore-XDG / home-first impl).
+    #[test]
+    fn kiro_data_dir_prefers_absolute_xdg_data_home() {
+        let abs = abs_fixture("xdg");
+        for home in [Some(Path::new(HOME_U)), None] {
+            assert_eq!(
+                kiro_data_dir(home, Some(abs.as_os_str())),
+                Some(abs.join(KIRO_DATA_DIR_NAME)),
+                "home={home:?}"
+            );
+        }
+        // Unicode + embedded space survive the join untouched.
+        let spaced = abs_fixture("tmp/ü data");
+        assert_eq!(
+            kiro_data_dir(Some(Path::new(HOME_U)), Some(spaced.as_os_str())),
+            Some(spaced.join(KIRO_DATA_DIR_NAME))
+        );
+    }
+
+    // C2 fence: without XDG_DATA_HOME the default is today's
+    // `<home>/.local/share/kiro-cli`, and no home means no data dir (so
+    // `NoHome` / `NoHomeForStore` still fire). Pins the exact spelling.
+    #[test]
+    fn kiro_data_dir_defaults_to_home_local_share_without_xdg() {
+        assert_eq!(
+            kiro_data_dir(Some(Path::new(HOME_U)), None),
+            Some(PathBuf::from("/home/u/.local/share/kiro-cli"))
+        );
+        assert_eq!(kiro_data_dir(None, None), None);
+    }
+
+    // C3 fence: an EMPTY, whitespace-only, or RELATIVE XDG_DATA_HOME is
+    // invalid under kiro-cli's dirs-sys rule — fall back to
+    // `<home>/.local/share` AND say so exactly once, naming the value (never
+    // a silent fallback onto a store that may hold a different login). Kills
+    // both the silent-fallback and the join-the-relative-value impls.
+    #[test]
+    fn invalid_xdg_data_home_falls_back_to_home_with_warning() {
+        let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
+        for value in ["", "   ", "relative/data"] {
+            for home in [Some(Path::new(HOME_U)), None] {
+                let before = capture.captured().len();
+                let got = tracing::dispatcher::with_default(&dispatch, || {
+                    kiro_data_dir(home, xdg(value))
+                });
+                let want = home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME));
+                assert_eq!(got, want, "value={value:?} home={home:?}");
+                let events = capture.captured();
+                let warns: Vec<_> = events[before..]
+                    .iter()
+                    .filter(|e| e["level"] == "WARN")
+                    .collect();
+                assert_eq!(
+                    warns.len(),
+                    1,
+                    "value={value:?} home={home:?}: expected exactly one WARN, got {events:?}"
+                );
+                let fields = &warns[0]["fields"];
+                assert!(
+                    fields["value"].as_str().is_some_and(|v| v.contains(value)),
+                    "WARN must name the offending value: {fields}"
+                );
+                assert!(
+                    fields["message"]
+                        .as_str()
+                        .is_some_and(|m| m.contains("XDG_DATA_HOME")),
+                    "WARN must name the variable: {fields}"
+                );
+            }
+        }
+        // Positive control for the "exactly one" half: a VALID value emits
+        // no WARN at all under the same capture.
+        let before = capture.captured().len();
+        let abs = abs_fixture("xdg");
+        tracing::dispatcher::with_default(&dispatch, || {
+            kiro_data_dir(Some(Path::new(HOME_U)), Some(abs.as_os_str()))
+        });
+        assert!(
+            capture.captured()[before..]
+                .iter()
+                .all(|e| e["level"] != "WARN"),
+            "valid XDG_DATA_HOME must not warn"
+        );
+    }
+
+    // C4+C5 fence: BOTH consumers follow the resolved data dir — the KAS
+    // extraction root that `resolve` scans and names, and the credential
+    // store — so an XDG user is never told "bundle not found at ~/.local/…"
+    // while kiro-cli itself runs from $XDG_DATA_HOME (cyril-brui).
+    #[test]
+    fn kas_root_and_store_follow_xdg_data_home() {
+        let abs = abs_fixture("xdg");
+        let data_dir = kiro_data_dir(Some(Path::new(HOME_U)), Some(abs.as_os_str()))
+            .expect("absolute XDG resolves");
+        assert_eq!(
+            kas_root(&data_dir),
+            abs.join(KIRO_DATA_DIR_NAME).join("kas")
+        );
+        assert_eq!(
+            store_path(&data_dir),
+            abs.join(KIRO_DATA_DIR_NAME).join("data.sqlite3")
+        );
+        // Unset XDG: today's default for both.
+        let default_dir =
+            kiro_data_dir(Some(Path::new(HOME_U)), None).expect("home fallback resolves");
+        assert_eq!(
+            kas_root(&default_dir),
+            PathBuf::from("/home/u/.local/share/kiro-cli/kas")
+        );
+        assert_eq!(
+            store_path(&default_dir),
+            PathBuf::from("/home/u/.local/share/kiro-cli/data.sqlite3")
+        );
+        // The full resolver searches under the XDG root and NAMES it when
+        // the bundle is absent — the exact wrong message the issue reports.
+        let path = OsString::from("/usr/bin");
+        let exists = exists_set(&[&node("/usr/bin")]);
+        let err = resolve(Some(&data_dir), None, None, Some(&path), &[], None, exists).unwrap_err();
+        assert_eq!(
+            err,
+            KasMissing::Server(kas_root(&data_dir).join(SERVER_IN_ROOT_REL))
+        );
+    }
+
+    // F19b drift fence, kept at the resolution level (cyril-brui): the
+    // extraction root and the credential store derive from ONE kiro data dir
+    // on every env branch — a change that re-homes either of them (a second
+    // resolution, a stray extra segment) fails here.
     #[test]
     fn kas_root_shares_kiro_data_dir() {
-        assert_eq!(KAS_ROOT_REL.strip_suffix("/kas"), Some(KIRO_DATA_DIR_REL));
+        let abs = abs_fixture("xdg");
+        let cases: [(Option<&Path>, Option<&OsStr>); 3] = [
+            (Some(Path::new(HOME_U)), None),
+            (Some(Path::new(HOME_U)), Some(abs.as_os_str())),
+            (None, Some(abs.as_os_str())),
+        ];
+        for (home, xdg) in cases {
+            let data_dir = kiro_data_dir(home, xdg).expect("branch resolves");
+            assert_eq!(
+                kas_root(&data_dir).parent(),
+                Some(data_dir.as_path()),
+                "home={home:?} xdg={xdg:?}"
+            );
+            assert_eq!(
+                store_path(&data_dir).parent(),
+                Some(data_dir.as_path()),
+                "home={home:?} xdg={xdg:?}"
+            );
+        }
     }
 
     // Each KasMissing variant yields a non-empty, actionable reason.

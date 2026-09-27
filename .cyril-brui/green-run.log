@@ -1,0 +1,37 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a1375686b0e68df53/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 29.96s
+────────────
+ Nextest run ID c3034b72-c6dc-41b3-897b-3f4643164804 with nextest profile: default
+    Starting 28 tests across 9 binaries (1049 tests skipped)
+        PASS [   0.004s] ( 1/28) cyril-core protocol::kas::discovery::tests::empty_listing_selects_nothing
+        PASS [   0.004s] ( 2/28) cyril-core protocol::kas::discovery::tests::kas_free_resolved_command_classifies_native
+        PASS [   0.004s] ( 3/28) cyril-core protocol::kas::discovery::tests::kiro_data_dir_prefers_absolute_xdg_data_home
+        PASS [   0.004s] ( 4/28) cyril-core protocol::kas::discovery::tests::duplicate_same_version_is_deterministic
+        PASS [   0.004s] ( 5/28) cyril-core protocol::kas::discovery::tests::invalid_xdg_data_home_falls_back_to_home_with_warning
+        PASS [   0.005s] ( 6/28) cyril-core protocol::kas::discovery::tests::argv_matches_kiro_cli_own_spawn
+        PASS [   0.005s] ( 7/28) cyril-core protocol::kas::discovery::tests::find_on_path_returns_first_match
+        PASS [   0.005s] ( 8/28) cyril-core protocol::kas::discovery::tests::kas_root_shares_kiro_data_dir
+        PASS [   0.005s] ( 9/28) cyril-core protocol::kas::discovery::tests::kas_root_and_store_follow_xdg_data_home
+        PASS [   0.012s] (10/28) cyril-core protocol::kas::discovery::tests::kiro_data_dir_defaults_to_home_local_share_without_xdg
+        PASS [   0.012s] (11/28) cyril-core protocol::kas::discovery::tests::malformed_dir_names_ignored
+        PASS [   0.012s] (12/28) cyril-core protocol::kas::discovery::tests::picks_newest_semver_not_lex
+        PASS [   0.013s] (13/28) cyril-core protocol::kas::discovery::tests::missing_reasons_are_actionable
+        PASS [   0.005s] (14/28) cyril-core protocol::kas::discovery::tests::resolve_missing_node
+        PASS [   0.005s] (15/28) cyril-core protocol::kas::discovery::tests::resolve_node_override_missing_errors
+        PASS [   0.005s] (16/28) cyril-core protocol::kas::discovery::tests::resolve_no_home_no_override_errors
+        PASS [   0.006s] (17/28) cyril-core protocol::kas::discovery::tests::partial_extraction_skipped
+        PASS [   0.006s] (18/28) cyril-core protocol::kas::discovery::tests::no_cli_version_falls_back_newest
+        PASS [   0.015s] (19/28) cyril-core protocol::kas::discovery::tests::nonempty_treats_blank_as_unset
+        PASS [   0.006s] (20/28) cyril-core protocol::kas::discovery::tests::resolve_server_path_with_spaces_is_one_arg
+        PASS [   0.007s] (21/28) cyril-core protocol::kas::discovery::tests::picks_exact_version_match
+        PASS [   0.015s] (22/28) cyril-core protocol::kas::discovery::tests::versioned_beats_legacy
+        PASS [   0.015s] (23/28) cyril-core protocol::kas::discovery::tests::resolve_happy_path_builds_probe_argv
+        PASS [   0.007s] (24/28) cyril-core protocol::kas::discovery::tests::resolve_missing_server_reports_server_not_node
+        PASS [   0.007s] (25/28) cyril-core protocol::kas::discovery::tests::override_beats_versioned
+        PASS [   0.007s] (26/28) cyril-core protocol::kas::discovery::tests::nothing_found_names_search_root
+        PASS [   0.015s] (27/28) cyril-core protocol::kas::discovery::tests::list_kas_entries_real_fs
+        PASS [   0.013s] (28/28) cyril-core::spawn_isolation free_replacement_refuses_before_inherited_discovery
+────────────
+     Summary [   0.022s] 28 tests run: 28 passed, 1049 skipped

@@ -1,0 +1,54 @@
+=== M1 (C1) delete the XDG branch: it is never entered
+    proof-lines: 1
+exit=100
+    red: invalid_xdg_data_home_falls_back_to_home_with_warning
+    red: kas_root_and_store_follow_xdg_data_home
+    red: kas_root_shares_kiro_data_dir
+    red: kiro_data_dir_prefers_absolute_xdg_data_home
+     Summary [   0.021s] 28 tests run: 24 passed, 4 failed, 1049 skipped
+error: test run failed
+=== M2 (C3a) delete the tracing::warn! on invalid XDG_DATA_HOME
+    proof-lines: 0
+exit=100
+    red: invalid_xdg_data_home_falls_back_to_home_with_warning
+     Summary [   0.020s] 28 tests run: 27 passed, 1 failed, 1049 skipped
+error: test run failed
+=== M3 (C3b) treat a relative/empty value as valid: is_absolute() -> true
+    proof-lines: 1
+exit=100
+    red: invalid_xdg_data_home_falls_back_to_home_with_warning
+     Summary [   0.028s] 28 tests run: 27 passed, 1 failed, 1049 skipped
+error: test run failed
+=== M4 (C5/C6) stray extra segment in store_path
+    proof-lines: 1
+exit=100
+    red: kas_root_and_store_follow_xdg_data_home
+    red: kas_root_shares_kiro_data_dir
+     Summary [   0.024s] 28 tests run: 26 passed, 2 failed, 1049 skipped
+error: test run failed
+=== M5 (C2) wrong XDG default: .local/share -> .local/state
+    proof-lines: 1
+exit=100
+    red: kas_root_and_store_follow_xdg_data_home
+    red: kiro_data_dir_defaults_to_home_local_share_without_xdg
+     Summary [   0.018s] 28 tests run: 26 passed, 2 failed, 1049 skipped
+error: test run failed
+=== M6 (C4) resolve re-derives the root with the home-relative default
+    proof-lines: 1
+exit=100
+    red: argv_matches_kiro_cli_own_spawn
+    red: kas_free_resolved_command_classifies_native
+    red: kas_root_and_store_follow_xdg_data_home
+    red: nothing_found_names_search_root
+    red: resolve_happy_path_builds_probe_argv
+    red: resolve_missing_node
+    red: resolve_missing_server_reports_server_not_node
+    red: resolve_node_override_missing_errors
+    red: versioned_beats_legacy
+     Summary [   0.058s] 28 tests run: 19 passed, 9 failed, 1049 skipped
+error: test run failed
+=== restore check
+restored byte-exact
+=== green after restore
+exit=0
+     Summary [   0.029s] 28 tests run: 28 passed, 1049 skipped

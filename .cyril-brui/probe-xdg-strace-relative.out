@@ -1,0 +1,13 @@
+=== /home/dwalleck/.local/bin/kiro-cli settings list (HOME=/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/3eae664a-3aa8-48bc-9dc5-496da275da18/scratchpad/xdgprobe-rel/home XDG_DATA_HOME=relative/data)
+exit=0
+--- syscalls naming $XDG_DATA_HOME:
+0
+--- syscalls naming $HOME/.local/share (expected 0 when XDG wins):
+338
+938543 statx(AT_FDCWD, "<S>/home/.local/share/kiro-cli", AT_STATX_SYNC_AS_STAT, STATX_ALL, 0x7ffc7673e3b0) = -1 ENOENT (No such file or directory)
+938543 statx(AT_FDCWD, "<S>/home/.local/share/amazon-q", AT_STATX_SYNC_AS_STAT, STATX_ALL, 0x7ffc7673e3b0) = -1 ENOENT (No such file or directory)
+938543 statx(AT_FDCWD, "<S>/home/.local/share/kiro-cli", AT_STATX_SYNC_AS_STAT, STATX_ALL, 0x7ffc7673de70) = -1 ENOENT (No such file or directory)
+938543 mkdir("<S>/home/.local/share/kiro-cli", 0777) = -1 ENOENT (No such file or directory)
+938543 mkdir("<S>/home/.local/share", 0777) = -1 ENOENT (No such file or directory)
+--- what now exists under $XDG_DATA_HOME:
+find: ‘relative/data’: No such file or directory
