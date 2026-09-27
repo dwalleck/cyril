@@ -74,3 +74,49 @@ existing "which command answers the version question" responsibility;
 `pub(crate)`, body untouched); no interface beyond the crate-internal
 `kiro_cli_version` parameter changed; no length gate exists for the file.
 No new trigger.
+
+## Amendment — review round 1 (PR #139)
+
+Decisions and receipts: `.cyril-861q/review-decisions.md`.
+
+**T4 behavior contract, tightened (F3).** The approved rule "the kiro-cli
+element is the first non-flag element after the launcher's options" is
+tightened to "…the first non-flag element after the launcher's options,
+which must itself be kiro-cli (basename `kiro-cli`/`kiro-cli.exe`, any
+casing, bare or full path); otherwise `Err` naming the command, no spawn".
+Why: under the original rule `wsl -e env FOO=1 kiro-cli acp` probes
+`env --version` and `wsl bash -lc "kiro-cli acp"` probes `bash --version`,
+and a foreign version string (`bash` → `5.2.21` → `v3`) selects the
+`--agent-engine` flag with no error — a silent failure, which CLAUDE.md's
+silent-failure rule forbids. Non-launcher commands are deliberately
+unchanged (`<program> --version`, args not forwarded). Approval: the sweep
+orchestrator, as the requester's delegate for this round, recorded in the
+round's message; verbatim in `review-decisions.md` F3.
+
+**Launcher grammar completed against its primary source (F1, F2).** The
+option table now cites microsoft/WSL `localization/strings/en-US/
+Resources.resw`: value-taking `-d/--distribution`, `--distribution-id`
+(2.4.4+), `-u/--user`, `--cd`, `--shell-type`; bare `-e/--exec`,
+`--system`, `--`; and the positional `~` is skipped like a bare flag. The
+T4 non-goal for `~` above is superseded.
+
+**F4.** The required-version mismatch names the probed command
+("found {version} via `<probe>`") instead of argv[0].
+
+**Round 1b (repair re-review nits N1–N3).** Test fixture models `wsl ~`
+(quoted `case` pattern) and `--distribution-id`; comments use the bash
+example that is actually silent; the basename rule shared by the launcher
+check and the kiro-cli check now has one definition,
+`platform::path::basename_is` (`pub(crate)`, +8 production lines in
+`path.rs`; `is_wsl_launcher` delegates to it, behavior unchanged and fenced
+by `agent_location_heuristic_table`).
+
+**T2 recheck after the round:** `version.rs` is 623 lines (277 production,
+346 test); the production growth since the base fix (+34) is the launcher
+scan and the `is_kiro_cli` predicate, both inside the same responsibility;
+`kiro_cli_version` keeps its signature and now composes
+`version_probe_command` + the private `run_version_probe`. `basename_is` is
+a crate-internal helper in the module that already owned the launcher
+basename rule — no ownership move, no public interface, no
+dependency-direction change (`kas` → `platform::path` already existed); no
+length gate exists for either file. No new trigger.

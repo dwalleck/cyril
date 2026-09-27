@@ -8,7 +8,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
 use tokio::time::timeout;
 
-use crate::platform::path::is_wsl_launcher;
+use crate::platform::path::{basename_is, is_wsl_launcher};
 use crate::types::AgentCommand;
 
 const VERSION_PROBE_TIMEOUT: Duration = Duration::from_secs(3);
@@ -68,12 +68,15 @@ async fn read_limited(
 }
 
 /// wsl.exe options that consume the following argv element as their value
-/// (`wsl --help`: `--distribution, -d <Distro>`, `--user, -u <UserName>`,
-/// `--cd <Directory>`, `--shell-type <Type>`). Every other `-`-prefixed
-/// element (`--exec`/`-e`, `--system`, `--`) is a bare flag.
-const WSL_VALUE_OPTIONS: [&str; 6] = [
+/// (`wsl --help`, microsoft/WSL `Resources.resw`: `--distribution, -d
+/// <DistroName>`, `--distribution-id <DistroGuid>` (2.4.4+), `--user, -u
+/// <UserName>`, `--cd <Directory>`, `--shell-type <Type>`). Every other
+/// `-`-prefixed element (`--exec`/`-e`, `--system`, `--`) is a bare flag, and
+/// so is the positional `~` ("start in the user's home directory").
+const WSL_VALUE_OPTIONS: [&str; 7] = [
     "-d",
     "--distribution",
+    "--distribution-id",
     "-u",
     "--user",
     "--cd",
@@ -89,16 +92,20 @@ const WSL_VALUE_OPTIONS: [&str; 6] = [
 /// full path — [`is_wsl_launcher`]), kiro-cli lives inside the distro and a
 /// native probe would answer for the wrong binary (wsl.exe's own
 /// `--version`), so the probe runs THROUGH the launcher: the launcher's
-/// options and their values stay in front of the kiro-cli element, which is
-/// the first non-option element after them (`wsl -d Ubuntu kiro-cli acp` →
-/// `wsl -d Ubuntu kiro-cli --version`). `Err` names the command when no
-/// element follows the launcher's options — nothing is spawned for it.
+/// options, their values and its `~` shorthand stay in front of the command
+/// element — the first element after them — which must itself be kiro-cli
+/// ([`is_kiro_cli`]): `wsl -d Ubuntu kiro-cli acp` →
+/// `wsl -d Ubuntu kiro-cli --version`. `Err` names the command when no
+/// element follows the launcher's options, or when that element is something
+/// else (`wsl bash -lc "kiro-cli acp"` would otherwise probe `bash --version`
+/// and read bash's `5.2.21` as a kiro-cli version, silently selecting `v3`)
+/// — nothing is spawned for either.
 pub(crate) fn version_probe_command(agent_command: &AgentCommand) -> Result<AgentCommand, String> {
     let program = agent_command.program();
     let mut probe = Vec::new();
     if is_wsl_launcher(program) {
         let mut args = agent_command.args().iter();
-        loop {
+        let command = loop {
             let Some(arg) = args.next() else {
                 return Err(format!(
                     "cannot determine the kiro-cli version: `{}` routes through the WSL \
@@ -107,18 +114,35 @@ pub(crate) fn version_probe_command(agent_command: &AgentCommand) -> Result<Agen
                 ));
             };
             probe.push(arg.clone());
+            if arg == "~" {
+                continue;
+            }
             if !arg.starts_with('-') {
-                break;
+                break arg;
             }
             if WSL_VALUE_OPTIONS.contains(&arg.as_str())
                 && let Some(value) = args.next()
             {
                 probe.push(value.clone());
             }
+        };
+        if !is_kiro_cli(command) {
+            return Err(format!(
+                "cannot determine the kiro-cli version: `{}` routes through the WSL launcher \
+                 but the command after the launcher's options is `{command}`, not kiro-cli",
+                render(agent_command)
+            ));
         }
     }
     probe.push("--version".to_string());
     Ok(AgentCommand::new(program).with_args(probe))
+}
+
+/// `true` when `element` names kiro-cli — basename `kiro-cli`, optionally
+/// with an `.exe` suffix, any ASCII casing, bare or as a full path — by the
+/// same basename rule as [`is_wsl_launcher`] ([`basename_is`]).
+fn is_kiro_cli(element: &str) -> bool {
+    basename_is(element, "kiro-cli")
 }
 
 /// `program arg1 arg2 …` for diagnostics.
@@ -129,16 +153,25 @@ fn render(command: &AgentCommand) -> String {
         .join(" ")
 }
 
-/// Read the kiro-cli version the agent command would run, via
-/// [`version_probe_command`], through a bounded child lifecycle. One deadline
-/// covers process exit and both pipe EOFs. Cleanup gets a separate bounded
-/// reap; inherited descendant pipes cannot park the bridge indefinitely.
+/// Read the kiro-cli version the agent command would run: the probe from
+/// [`version_probe_command`], executed by [`run_version_probe`].
 pub(crate) async fn kiro_cli_version(
     agent_command: &AgentCommand,
     environment: &crate::types::SpawnEnvironment,
 ) -> Result<String, String> {
     let probe = version_probe_command(agent_command)?;
-    let rendered = render(&probe);
+    run_version_probe(&probe, environment).await
+}
+
+/// Run a version probe through a bounded child lifecycle and parse the
+/// version it prints. One deadline covers process exit and both pipe EOFs.
+/// Cleanup gets a separate bounded reap; inherited descendant pipes cannot
+/// park the bridge indefinitely.
+async fn run_version_probe(
+    probe: &AgentCommand,
+    environment: &crate::types::SpawnEnvironment,
+) -> Result<String, String> {
+    let rendered = render(probe);
     let mut command = Command::new(probe.program());
     environment.apply(command.as_std_mut());
     command
@@ -225,13 +258,14 @@ pub(crate) async fn build_wrapper_command(
     environment: &crate::types::SpawnEnvironment,
     required_version: Option<&str>,
 ) -> Result<AgentCommand, String> {
-    let version = kiro_cli_version(agent_command, environment).await?;
+    let probe = version_probe_command(agent_command)?;
+    let version = run_version_probe(&probe, environment).await?;
     if let Some(required) = required_version
         && version != required
     {
         return Err(format!(
-            "this launch requires kiro-cli {required}, found {version} at {}; install the required version or select its executable",
-            agent_command.program(),
+            "this launch requires kiro-cli {required}, found {version} via `{}`; install the required version or select its executable",
+            render(&probe),
         ));
     }
     let flag = flag_for_version(&version)?;
@@ -367,6 +401,71 @@ mod tests {
         assert!(version_probe_command(&argv(&["wsl", "-d"])).is_err());
     }
 
+    // F1 (review of cyril-861q): wsl.exe's positional `~` ("start in the
+    // home directory") is a launcher token, not the command — skipped like a
+    // bare flag, or the probe degrades to `wsl ~ --version`.
+    #[test]
+    fn version_probe_skips_the_launcher_home_shorthand() {
+        assert_eq!(
+            probe_of(&["wsl", "~", "kiro-cli", "acp"]),
+            ("wsl".to_string(), strings(&["~", "kiro-cli", "--version"]))
+        );
+    }
+
+    // F2 (review of cyril-861q): `--distribution-id <DistroGuid>` (wsl.exe
+    // 2.4.4+) takes a value; treating it as bare would make the GUID the
+    // "command" and the probe `wsl --distribution-id <guid> --version`.
+    #[test]
+    fn version_probe_keeps_a_distribution_id_value_before_kiro_cli() {
+        let guid = "{6a3b1f2c-4d5e-4f60-9a1b-2c3d4e5f6a7b}";
+        assert_eq!(
+            probe_of(&["wsl", "--distribution-id", guid, "kiro-cli", "acp"]).1,
+            strings(&["--distribution-id", guid, "kiro-cli", "--version"])
+        );
+    }
+
+    // F3 (review of cyril-861q): the element the launcher scan lands on must
+    // BE kiro-cli. Probing whatever comes first would ask `env` or `bash` for
+    // their versions: bash's `5.2.21` silently selects `v3`, and coreutils'
+    // two-component `9.4` fails loudly as malformed — both are wrong.
+    #[test]
+    fn version_probe_refuses_a_launcher_whose_command_is_not_kiro_cli() {
+        assert_eq!(
+            version_probe_command(&argv(&["wsl", "-e", "env", "FOO=1", "kiro-cli", "acp"]))
+                .unwrap_err(),
+            "cannot determine the kiro-cli version: `wsl -e env FOO=1 kiro-cli acp` routes \
+             through the WSL launcher but the command after the launcher's options is `env`, \
+             not kiro-cli"
+        );
+        let error =
+            version_probe_command(&argv(&["wsl", "bash", "-lc", "kiro-cli acp"])).unwrap_err();
+        assert!(error.contains("is `bash`, not kiro-cli"), "{error}");
+    }
+
+    // Controls for the kiro-cli check: a full path or `.exe`/casing variant of
+    // kiro-cli still probes through (no new false reject).
+    #[test]
+    fn version_probe_accepts_kiro_cli_by_basename_through_a_launcher() {
+        assert_eq!(
+            probe_of(&["wsl", "-d", "Ubuntu", "/home/u/.local/bin/kiro-cli", "acp"]).1,
+            strings(&["-d", "Ubuntu", "/home/u/.local/bin/kiro-cli", "--version"])
+        );
+        assert_eq!(
+            probe_of(&["wsl", "Kiro-CLI.exe", "acp"]).1,
+            strings(&["Kiro-CLI.exe", "--version"])
+        );
+    }
+
+    // The kiro-cli check applies to launcher-routed commands only: a
+    // non-launcher program keeps today's `<program> --version` unchanged.
+    #[test]
+    fn version_probe_of_a_non_launcher_program_is_not_subject_to_the_kiro_cli_check() {
+        assert_eq!(
+            probe_of(&["env", "FOO=1", "kiro-cli", "acp"]),
+            ("env".to_string(), strings(&["--version"]))
+        );
+    }
+
     // The refusal surfaces from the wrapper build itself, before any spawn:
     // the message is the probe computation's, not a spawn failure's.
     #[tokio::test]
@@ -384,18 +483,15 @@ mod tests {
         );
     }
 
-    // cyril-861q reproduction at the process seam: a `wsl`-named launcher
-    // answers its own `--version` (like the real wsl.exe) and only runs
-    // kiro-cli when the command line is passed through it. The wrapper build
-    // must resolve the flag from kiro-cli's answer, not the launcher's, and
-    // must send the launcher exactly `-d Ubuntu kiro-cli --version`.
+    /// A fake wsl.exe: journals the argv it receives, answers its own
+    /// `--version` like the real launcher, and reports `kiro-cli 2.21.1` only
+    /// when `kiro-cli --version` is passed through it after its options.
+    /// Returns the launcher's path (its basename is `wsl`) and the journal.
     #[cfg(unix)]
-    #[tokio::test]
-    async fn wrapper_probe_asks_kiro_cli_through_the_wsl_launcher() {
+    fn fake_wsl_launcher(root: &std::path::Path) -> (String, std::path::PathBuf) {
         use std::os::unix::fs::PermissionsExt as _;
-        let root = tempfile::tempdir().unwrap();
-        let journal = root.path().join("probe-argv.txt");
-        let launcher = root.path().join("wsl");
+        let journal = root.join("probe-argv.txt");
+        let launcher = root.join("wsl");
         std::fs::write(
             &launcher,
             format!(
@@ -404,9 +500,9 @@ mod tests {
                  if [ \"$1\" = \"--version\" ]; then printf 'WSL version: 2.6.1.0\\n'; exit 0; fi\n\
                  while [ \"$#\" -gt 0 ]; do\n\
                  \tcase \"$1\" in\n\
-                 \t\t-d|-u|--cd|--shell-type|--distribution|--user) shift 2 ;;\n\
+                 \t\t-d|-u|--cd|--shell-type|--distribution|--distribution-id|--user) shift 2 ;;\n\
                  \t\t--) shift; break ;;\n\
-                 \t\t-*) shift ;;\n\
+                 \t\t-*|'~') shift ;;\n\
                  \t\t*) break ;;\n\
                  \tesac\n\
                  done\n\
@@ -418,12 +514,21 @@ mod tests {
         )
         .unwrap();
         std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o700)).unwrap();
-        let program = launcher.to_str().unwrap();
-        let agent_command = AgentCommand::new(program).with_args(
-            ["-d", "Ubuntu", "kiro-cli", "acp"]
-                .map(String::from)
-                .to_vec(),
-        );
+        (launcher.to_str().unwrap().to_string(), journal)
+    }
+
+    // cyril-861q reproduction at the process seam: a `wsl`-named launcher
+    // answers its own `--version` (like the real wsl.exe) and only runs
+    // kiro-cli when the command line is passed through it. The wrapper build
+    // must resolve the flag from kiro-cli's answer, not the launcher's, and
+    // must send the launcher exactly `-d Ubuntu kiro-cli --version`.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn wrapper_probe_asks_kiro_cli_through_the_wsl_launcher() {
+        let root = tempfile::tempdir().unwrap();
+        let (program, journal) = fake_wsl_launcher(root.path());
+        let agent_command =
+            AgentCommand::new(&program).with_args(strings(&["-d", "Ubuntu", "kiro-cli", "acp"]));
 
         let built = build_wrapper_command(
             &agent_command,
@@ -444,7 +549,75 @@ mod tests {
         assert_eq!(built.program(), program);
         assert_eq!(
             built.args(),
-            ["-d", "Ubuntu", "kiro-cli", "acp", "--agent-engine", "v3"].map(String::from)
+            strings(&["-d", "Ubuntu", "kiro-cli", "acp", "--agent-engine", "v3"])
+        );
+    }
+
+    // Process-seam fence for the `~` skip (re-review N1): the fixture must
+    // model `wsl ~` — an unquoted `~` in a POSIX `case` pattern is
+    // tilde-expanded and never matches a literal `~` — and the whole path
+    // must still reach kiro-cli behind it.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn wrapper_probe_passes_the_launcher_home_shorthand_through() {
+        let root = tempfile::tempdir().unwrap();
+        let (program, journal) = fake_wsl_launcher(root.path());
+        let agent_command = AgentCommand::new(&program)
+            .with_args(strings(&["~", "-d", "Ubuntu", "kiro-cli", "acp"]));
+
+        let built = build_wrapper_command(
+            &agent_command,
+            &crate::types::SpawnEnvironment::Inherit,
+            None,
+        )
+        .await;
+
+        assert_eq!(
+            std::fs::read_to_string(&journal).unwrap(),
+            "~\n-d\nUbuntu\nkiro-cli\n--version\n"
+        );
+        let built = match built {
+            Ok(built) => built,
+            Err(error) => panic!("wrapper command should resolve through `wsl ~`: {error}"),
+        };
+        assert_eq!(
+            built.args(),
+            strings(&[
+                "~",
+                "-d",
+                "Ubuntu",
+                "kiro-cli",
+                "acp",
+                "--agent-engine",
+                "v3"
+            ])
+        );
+    }
+
+    // F4 (review of cyril-861q): a required-version mismatch names the command
+    // that was actually probed, not the launcher it went through ("at wsl").
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn wrapper_version_mismatch_names_the_probed_command() {
+        let root = tempfile::tempdir().unwrap();
+        let (program, _journal) = fake_wsl_launcher(root.path());
+        let agent_command =
+            AgentCommand::new(&program).with_args(strings(&["-d", "Ubuntu", "kiro-cli", "acp"]));
+
+        let error = build_wrapper_command(
+            &agent_command,
+            &crate::types::SpawnEnvironment::Inherit,
+            Some("9.9.9"),
+        )
+        .await
+        .unwrap_err();
+
+        assert_eq!(
+            error,
+            format!(
+                "this launch requires kiro-cli 9.9.9, found 2.21.1 via `{program} -d Ubuntu \
+                 kiro-cli --version`; install the required version or select its executable"
+            )
         );
     }
 }
