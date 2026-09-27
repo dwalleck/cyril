@@ -77,11 +77,23 @@ pub fn resolve_agent_location(env: Option<&str>, program: &str) -> AgentLocation
 /// `Path::file_name`, which would split `C:\...\wsl.exe` on Windows but
 /// return the whole string on Linux — cross-platform-divergent detection
 /// would be untestable on Linux CI (the cyril-xi4a lesson).
-fn is_wsl_launcher(program: &str) -> bool {
+///
+/// Crate-visible so the KAS wrapper's version probe routes through the same
+/// launcher this binding recognises (cyril-861q) — one definition of "the
+/// WSL launcher", not two.
+pub(crate) fn is_wsl_launcher(program: &str) -> bool {
+    basename_is(program, "wsl")
+}
+
+/// `true` when `program`'s basename — split manually on BOTH separators, see
+/// [`is_wsl_launcher`] — equals `name` after ASCII lowercasing and stripping
+/// an optional `.exe` suffix. Shared by the launcher check and the KAS
+/// wrapper's kiro-cli check (cyril-861q) so there is one basename rule.
+pub(crate) fn basename_is(program: &str, name: &str) -> bool {
     let base = program.rsplit(['/', '\\']).next().unwrap_or(program);
     let base = base.to_ascii_lowercase();
     let base = base.strip_suffix(".exe").unwrap_or(&base);
-    base == "wsl"
+    base == name
 }
 
 /// Process-global agent location: 0 = unset, 1 = native, 2 = wsl.
