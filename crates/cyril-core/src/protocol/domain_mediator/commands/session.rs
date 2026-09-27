@@ -11,6 +11,21 @@ use crate::types::{
     Notification, RoutedNotification, SessionId, SessionOrigin, SourceTurnDisposition, StopReason,
 };
 
+/// The JSON `params` object a standard-method request goes out as — the one
+/// serialization step between a typed request and the wire frame.
+fn standard_params<Request>(
+    method: &str,
+    request: Request,
+) -> agent_client_protocol::Result<serde_json::Value>
+where
+    Request: serde::Serialize,
+{
+    serde_json::to_value(request).map_err(|error| {
+        agent_client_protocol::Error::internal_error()
+            .data(format!("serialize {method} request: {error}"))
+    })
+}
+
 /// Serialize and send one standard-method request synchronously — the frame
 /// is on the wire (in send order) when this returns — yielding the future
 /// that resolves to the raw JSON response. Awaiting that future belongs on a
@@ -25,12 +40,25 @@ fn send_standard<Request>(
 where
     Request: serde::Serialize,
 {
-    let params = serde_json::to_value(request).map_err(|error| {
-        agent_client_protocol::Error::internal_error()
-            .data(format!("serialize {method} request: {error}"))
-    })?;
+    let params = standard_params(method, request)?;
     let message = UntypedMessage::new(method, params)?;
     Ok(connection.send_request(message).block_task())
+}
+
+/// The `session/new` request cyril sends for `cwd`. Fenced by
+/// `tests::new_session_request_always_carries_mcp_servers` (cyril-0dv4).
+fn new_session_request(cwd: &std::path::Path) -> acp::NewSessionRequest {
+    acp::NewSessionRequest::new(crate::platform::path::to_agent(cwd))
+}
+
+/// The `session/load` request cyril sends to resume `session_id` in `cwd`.
+/// Fenced by `tests::load_session_request_always_carries_mcp_servers`
+/// (cyril-0dv4).
+fn load_session_request(session_id: &SessionId, cwd: &std::path::Path) -> acp::LoadSessionRequest {
+    acp::LoadSessionRequest::new(
+        acp::SessionId::new(session_id.as_str()),
+        crate::platform::path::to_agent(cwd),
+    )
 }
 
 fn parse_standard<Response>(
@@ -84,7 +112,7 @@ impl DomainMediator {
         connection: &ConnectionTo<Agent>,
         cwd: std::path::PathBuf,
     ) -> crate::Result<()> {
-        let request = acp::NewSessionRequest::new(crate::platform::path::to_agent(&cwd));
+        let request = new_session_request(&cwd);
         let engine_kind = self.config.engine.kind();
         let channels = self.channels.clone();
         match send_standard(connection, "session/new", request) {
@@ -141,10 +169,7 @@ impl DomainMediator {
                 .await?;
             return Ok(true);
         }
-        let request = acp::LoadSessionRequest::new(
-            acp::SessionId::new(session_id.as_str()),
-            crate::platform::path::to_agent(&self.config.cwd),
-        );
+        let request = load_session_request(&session_id, &self.config.cwd);
         let channels = self.channels.clone();
         match send_standard(connection, "session/load", request) {
             Ok(sent) => self.spawn_command(async move {
@@ -531,5 +556,74 @@ impl DomainMediator {
         }
         self.prompt_tasks.push(task);
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{load_session_request, new_session_request, standard_params};
+    use crate::test_support::must_succeed;
+    use crate::types::SessionId;
+
+    /// Fence (cyril-0dv4): the params object cyril sends MUST carry
+    /// `mcpServers` as a JSON array — empty is fine, absent is not.
+    ///
+    /// `session/new` failure mode guarded: kiro-cli treats a `session/new`
+    /// whose params lack `mcpServers` as malformed and exits rc=0 with NO
+    /// stderr — a clean exit that reads as "the binary is fine, the spawn is
+    /// wrong" and is the most expensive signature to diagnose
+    /// (docs/kirocrew-acp-seam-findings.md §4.1; KiroCrew `_dispatch.py:70-76`).
+    ///
+    /// `session/load`: the key is required by the ACP schema, and kiro-cli
+    /// RE-INITIALIZES the session's MCP servers from it. Per §4.1 even an
+    /// EMPTY list is applied and un-pools the resumed session for its whole
+    /// life — that is the state cyril sends today, and this fence deliberately
+    /// does NOT guard it; what the list must carry on resume belongs to the
+    /// session resume contract (cyril-rtrh).
+    ///
+    /// Omission is impossible through today's SDK type: `agent-client-protocol
+    /// =2.0.0` re-exports `agent-client-protocol-schema 1.5.0`, whose
+    /// `NewSessionRequest` / `LoadSessionRequest` declare
+    /// `mcp_servers: Vec<McpServer>` with no `skip_serializing_if` and seed it
+    /// with `vec![]` in `::new()`. This test is the tripwire for an SDK bump
+    /// changing that — the schema crate already uses the skip-when-empty
+    /// convention on the newer `additional_directories` field, so the drift is
+    /// plausible and would otherwise land silently on the wire.
+    fn assert_mcp_servers_is_array(method: &str, why_required: &str, params: &serde_json::Value) {
+        let mcp_servers = params.get("mcpServers");
+        assert!(
+            mcp_servers.is_some_and(serde_json::Value::is_array),
+            "{method} params must carry `mcpServers` as an array ({why_required}); \
+             got {mcp_servers:?} in {params}"
+        );
+    }
+
+    #[test]
+    fn new_session_request_always_carries_mcp_servers() {
+        let request = new_session_request(&std::env::temp_dir());
+        let params = must_succeed(
+            standard_params("session/new", request),
+            "serialize session/new params",
+        );
+        assert_mcp_servers_is_array(
+            "session/new",
+            "kiro-cli exits rc=0 with no stderr when it is missing",
+            &params,
+        );
+    }
+
+    #[test]
+    fn load_session_request_always_carries_mcp_servers() {
+        let session_id = SessionId::new("sess_fence-0dv4");
+        let request = load_session_request(&session_id, &std::env::temp_dir());
+        let params = must_succeed(
+            standard_params("session/load", request),
+            "serialize session/load params",
+        );
+        assert_mcp_servers_is_array(
+            "session/load",
+            "required by the ACP schema; kiro-cli re-initializes the session's MCP servers from it",
+            &params,
+        );
     }
 }
