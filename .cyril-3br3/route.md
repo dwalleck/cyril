@@ -67,3 +67,37 @@ Local — focused behavioral verification:
   PR body.
 
 Results are appended below after the hand-off.
+
+### Result
+
+Revision judged: `08b0c6bc` (`fix(platform): warn on non-unicode
+CYRIL_WSL_DISTRO (cyril-3br3)`), branch `fix/cyril-3br3-wsl-distro-non-unicode`.
+Every command below ran with `env -u CARGO_TARGET_DIR` (the shell exports an
+empty `CARGO_TARGET_DIR`), with its own log and its exit code echoed as
+`GATE-OK-<name>`; logs in `/tmp/cyril-3br3-gate-<name>.log` at run time.
+
+Focused behavioral verification (red/green/mutation receipts in
+`red-receipt.md`):
+
+- Result: 2026-09-27 | `cargo nextest run -p cyril-core --test win_wsl_wiring distro_non_unicode` (fence only, pre-fix) | FAIL — expected red, `captured: ""`
+- Result: 2026-09-27 | `cargo nextest run -p cyril-core --test win_wsl_wiring` (post-fix) | PASS — 5/5
+- Result: 2026-09-27 | same fence under the gate-first mutation | FAIL — expected red, `captured: ""`; restored → PASS 5/5
+- Result: 2026-09-27 | `cargo nextest run -p cyril-core --lib -- platform::path` | PASS — 42/42
+
+CI-mirror gate:
+
+- Result: 2026-09-27 | `cargo fmt --all -- --check` | PASS
+- Result: 2026-09-27 | `cargo clippy --workspace --all-targets --all-features -- -D warnings` | PASS
+- Result: 2026-09-27 | `cargo nextest run --workspace --all-features` | PASS — 2058 run, 2058 passed, 13 skipped
+- Result: 2026-09-27 | `cargo test --doc --workspace --all-features` | PASS
+- Result: 2026-09-27 | `cargo clippy --workspace --all-targets -- -D warnings` | PASS
+- Result: 2026-09-27 | `cargo nextest run --workspace` | PASS — 2056 run, 2056 passed, 13 skipped
+- Result: 2026-09-27 | `cargo clippy -p cyril-core --no-default-features --all-targets -- -D warnings` | PASS
+- Result: 2026-09-27 | `cargo nextest run -p cyril-core --no-default-features` | PASS — 783 run, 783 passed, 4 skipped
+
+Final T2 recheck: production delta in `crates/cyril-core/src/platform/path.rs`
+is +19/−1 (11 lines of code — a `match` replacing `.ok()` — plus 7 doc-comment
+lines); the function, its owner, and every public signature are unchanged; no
+length gate exists in the repository, so no trigger was reached and no evasion
+(comment removal, packing, pass-through split) was needed or made. Verdict
+unchanged: no. Terminal criterion holds.
