@@ -5315,6 +5315,74 @@ mod tests {
         assert!(result.contains("Tools: 6665 tokens (3.3%)"));
     }
 
+    /// Regression fence for cyril-jhmi, derived from the live wire.
+    ///
+    /// kiro-cli 2.16.0 renamed the `/context` item flag from `auto_included`
+    /// to camelCase `autoIncluded`. The fixture is a verbatim subset of frame 5
+    /// (0-based; JSON-RPC `id: 3`) of the committed raw JSON-RPC capture
+    /// `experiments/conductor-spike/v2-turn-2.17.0.jsonl` (commit b036cbe1,
+    /// 2026-08-11; the file is bare JSON-RPC lines and carries no `ts`
+    /// field). Values, key order, and the wire-only `verbose` /
+    /// `initialExpanded` / `groups` fields are kept as captured so the test
+    /// exercises the real response shape, not a hand-written schema.
+    #[test]
+    fn format_response_context_items_render_auto_tag_from_camel_case_wire() {
+        let response = serde_json::json!({
+            "success": true,
+            "message": "Context breakdown - 4% used",
+            "data": {
+                "model": "gpt-5.6-terra",
+                "contextUsagePercentage": 4.107720375061035,
+                "verbose": false,
+                "initialExpanded": false,
+                "breakdown": {
+                    "contextFiles": {
+                        "tokens": 3776,
+                        "percent": 1.388235330581665,
+                        "items": [
+                            {"name": "AGENTS.md", "tokens": 0, "matched": false, "percent": 0.0},
+                            {"name": "README.md", "tokens": 0, "matched": false, "percent": 0.0},
+                            {"name": "/home/dwalleck/.kiro/skills/code-testing-agent/SKILL.md", "tokens": 130, "matched": true, "percent": 0.04779411852359772, "autoIncluded": true},
+                            {"name": "/home/dwalleck/.kiro/skills/rust-best-practices/SKILL.md", "tokens": 317, "matched": true, "percent": 0.11654411256313324, "autoIncluded": true},
+                            {"name": "/home/dwalleck/.kiro/steering/rivets.md", "tokens": 1013, "matched": true, "percent": 0.37242648005485535}
+                        ]
+                    },
+                    "tools": {
+                        "tokens": 7340,
+                        "percent": 2.6985292434692383,
+                        "groups": [
+                            {"name": "Built-in", "source": "built-in", "tokens": 7340, "percent": 2.6985292434692383,
+                             "items": [{"name": "code", "tokens": 671, "percent": 0.24669116735458374}]}
+                        ]
+                    },
+                    "kiroResponses": {"tokens": 0, "percent": 0.0},
+                    "yourPrompts": {"tokens": 57, "percent": 0.020955882966518402},
+                    "sessionFiles": {"tokens": 0, "percent": 0.0}
+                }
+            }
+        });
+        let result = format_command_response("context", &response);
+        assert!(result.starts_with("Context: 4.1% used (model: gpt-5.6-terra)\n\n"));
+        // The whole category block, largest-first: the two auto-injected skills
+        // carry the (auto) tag, the steering file carries none, and the two
+        // zero-token entries carry (unmatched). Exact-block matching pins both
+        // the tag and the ordering against the captured shape.
+        let expected_block = concat!(
+            "  Context files: 3776 tokens (1.4%)\n",
+            "    /home/dwalleck/.kiro/steering/rivets.md — 1013 tokens (0.4%)\n",
+            "    /home/dwalleck/.kiro/skills/rust-best-practices/SKILL.md — 317 tokens (0.1%) (auto)\n",
+            "    /home/dwalleck/.kiro/skills/code-testing-agent/SKILL.md — 130 tokens (0.0%) (auto)\n",
+            "    AGENTS.md — 0 tokens (0.0%) (unmatched)\n",
+            "    README.md — 0 tokens (0.0%) (unmatched)\n",
+        );
+        assert!(
+            result.contains(expected_block),
+            "expected block:\n{expected_block}\nactual output:\n{result}"
+        );
+        // `tools` nests its entries under `groups`, not `items`: no child rows.
+        assert!(result.contains("  Tools: 7340 tokens (2.7%)\n  Your prompts: 57 tokens (0.0%)\n"));
+    }
+
     #[test]
     fn format_response_usage_breakdowns() {
         let response = serde_json::json!({
