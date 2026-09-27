@@ -352,6 +352,13 @@ impl TrackedToolCall {
     }
 
     /// Get the primary file path from locations, then from diff content, then from raw_input.
+    ///
+    /// The raw_input probe tries the flat `file_path` / `path` keys first, then
+    /// the v2 `fs_read` shape, which nests the path under `operations[0].path`
+    /// (docs/kiro-2.21.2-wire-audit.md § 6b, cyril-gl0m). Within that probe a
+    /// value that is not a string falls through to the next key, and an empty
+    /// string is reported as absent (`None`) rather than as `Some("")`; the
+    /// `locations` and diff branches return their paths as-is.
     pub fn primary_path(&self) -> Option<&str> {
         if let Some(loc) = self.inner.locations().first() {
             return Some(&loc.path);
@@ -361,10 +368,12 @@ impl TrackedToolCall {
                 return Some(path);
             }
         }
-        self.inner
-            .raw_input()
-            .and_then(|v| v.get("file_path").or_else(|| v.get("path")))
-            .and_then(|v| v.as_str())
+        let raw = self.inner.raw_input()?;
+        raw.get("file_path")
+            .and_then(serde_json::Value::as_str)
+            .or_else(|| raw.get("path").and_then(serde_json::Value::as_str))
+            .or_else(|| raw.get("operations")?.get(0)?.get("path")?.as_str())
+            .filter(|path| !path.is_empty())
     }
 
     /// Extract command string from raw_input for Execute kind.
@@ -1152,6 +1161,145 @@ mod tests {
         );
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(tracked.title(), "Reading file");
+    }
+
+    /// A `read` tool call carrying only `rawInput` — no `locations`, no content.
+    fn read_call_with_raw_input(raw_input: serde_json::Value) -> TrackedToolCall {
+        use cyril_core::types::*;
+        TrackedToolCall::new(ToolCall::new(
+            ToolCallId::new("tc_read"),
+            "Reading PROBE.txt:1".into(),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            Some(raw_input),
+        ))
+    }
+
+    /// The v2 `fs_read` shape nests the path under `operations[]` and has no
+    /// flat `path`/`file_path` key (docs/kiro-2.21.2-wire-audit.md § 6b,
+    /// cyril-gl0m). With `locations` absent the rawInput fallback must read it.
+    #[test]
+    fn primary_path_resolves_fs_read_operations_path_without_locations() {
+        let tracked = read_call_with_raw_input(serde_json::json!({
+            "__tool_use_purpose": "Read PROBE.txt to get the single word.",
+            "operations": [{"mode": "Line", "path": "/abs/path/PROBE.txt"}]
+        }));
+        assert!(tracked.locations().is_empty());
+        assert_eq!(tracked.primary_path(), Some("/abs/path/PROBE.txt"));
+    }
+
+    #[test]
+    fn primary_path_still_resolves_flat_raw_input_keys() {
+        let by_path = read_call_with_raw_input(serde_json::json!({"path": "/flat/by-path.rs"}));
+        assert_eq!(by_path.primary_path(), Some("/flat/by-path.rs"));
+
+        let by_file_path =
+            read_call_with_raw_input(serde_json::json!({"file_path": "/flat/by-file-path.rs"}));
+        assert_eq!(by_file_path.primary_path(), Some("/flat/by-file-path.rs"));
+    }
+
+    #[test]
+    fn primary_path_is_none_when_operations_entry_lacks_path() {
+        let no_path = read_call_with_raw_input(serde_json::json!({
+            "operations": [{"mode": "Directory"}]
+        }));
+        assert_eq!(no_path.primary_path(), None);
+
+        let empty = read_call_with_raw_input(serde_json::json!({"operations": []}));
+        assert_eq!(empty.primary_path(), None);
+    }
+
+    /// The live 2.21.2 capture carries both `locations` and `operations`;
+    /// branch 1 must keep winning so the fallback stays exactly that.
+    #[test]
+    fn primary_path_prefers_locations_over_operations() {
+        use cyril_core::types::*;
+        let tc = ToolCall::new(
+            ToolCallId::new("tc_read"),
+            "Reading PROBE.txt:1".into(),
+            ToolKind::Read,
+            ToolCallStatus::InProgress,
+            Some(serde_json::json!({
+                "operations": [{"mode": "Line", "path": "/from/raw-input.txt"}]
+            })),
+        )
+        .with_locations(vec![ToolCallLocation {
+            path: "/from/locations.txt".into(),
+            line: Some(1),
+        }]);
+        assert_eq!(
+            TrackedToolCall::new(tc).primary_path(),
+            Some("/from/locations.txt")
+        );
+    }
+
+    /// PR #133 review F1: with both a flat key and `operations[]` present the
+    /// flat key wins, so the probe-order-swap mutant is detected.
+    #[test]
+    fn primary_path_prefers_flat_key_over_operations() {
+        let tracked = read_call_with_raw_input(serde_json::json!({
+            "file_path": "/flat/wins.rs",
+            "operations": [{"mode": "Line", "path": "/ops/loses.rs"}]
+        }));
+        assert_eq!(tracked.primary_path(), Some("/flat/wins.rs"));
+    }
+
+    /// PR #133 review F2: a flat key that exists but is not a string falls
+    /// through to the next probe instead of ending the whole lookup.
+    #[test]
+    fn primary_path_falls_through_non_string_flat_key() {
+        let to_operations = read_call_with_raw_input(serde_json::json!({
+            "path": null,
+            "operations": [{"mode": "Line", "path": "/ops/after-null.rs"}]
+        }));
+        assert_eq!(to_operations.primary_path(), Some("/ops/after-null.rs"));
+
+        let to_next_flat_key = read_call_with_raw_input(serde_json::json!({
+            "file_path": 42,
+            "path": "/flat/after-number.rs"
+        }));
+        assert_eq!(
+            to_next_flat_key.primary_path(),
+            Some("/flat/after-number.rs")
+        );
+    }
+
+    /// PR #133 review F3: an empty path is absent, not a sentinel (CLAUDE.md
+    /// "no sentinel values"); both the nested and the flat branch yield `None`.
+    #[test]
+    fn primary_path_is_none_for_empty_path_strings() {
+        let nested = read_call_with_raw_input(serde_json::json!({
+            "operations": [{"mode": "Line", "path": ""}]
+        }));
+        assert_eq!(nested.primary_path(), None);
+
+        let flat = read_call_with_raw_input(serde_json::json!({"path": ""}));
+        assert_eq!(flat.primary_path(), None);
+    }
+
+    /// Re-review N2: with several operations the first entry is the primary
+    /// path — the requester scoped the probe to `operations[0]`.
+    #[test]
+    fn primary_path_uses_first_of_several_operations() {
+        let tracked = read_call_with_raw_input(serde_json::json!({
+            "operations": [
+                {"mode": "Line", "path": "/ops/first.rs"},
+                {"mode": "Line", "path": "/ops/second.rs"}
+            ]
+        }));
+        assert_eq!(tracked.primary_path(), Some("/ops/first.rs"));
+    }
+
+    /// Re-review N3: the empty-path filter is terminal (review F3 as
+    /// approved), so an empty flat key is not skipped in favour of a nested
+    /// path. No known tool sends this shape; revisit here if one appears.
+    #[test]
+    fn primary_path_empty_flat_key_does_not_fall_through_to_operations() {
+        let tracked = read_call_with_raw_input(serde_json::json!({
+            "file_path": "",
+            "operations": [{"mode": "Line", "path": "/ops/masked.rs"}]
+        }));
+        assert_eq!(tracked.primary_path(), None);
     }
 
     #[test]
