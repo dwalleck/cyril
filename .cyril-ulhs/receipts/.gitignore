@@ -1,0 +1,3 @@
+# Full per-leg gate logs (nextest output for ~2k tests, clippy "Checking" lines): regenerable by
+# `bash .cyril-ulhs/gate.sh`; the committed receipt is gate-summary.txt. Review N1.
+gate-logs/
