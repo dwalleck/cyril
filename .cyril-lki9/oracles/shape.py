@@ -12,7 +12,8 @@ hard-coded):
       "agent-initiated ·", "workflow step ·") appear in production string literals
       only in crates/cyril-ui/src/turn_labels.rs (vacuous until that module exists).
   R3  Protected parents: production-line delta vs merge-base
-      crates/cyril/src/app.rs <= +60, crates/cyril-ui/src/state.rs <= +70.
+      crates/cyril/src/app.rs <= +60, crates/cyril-ui/src/state.rs <= +80 (raised from
+      +70 by the approved Length review, design.md 2026-09-30).
   R4  crates/cyril-core/src/protocol/convert/mod.rs production text is unchanged.
   R5  No `acp::` / `agent_client_protocol` in crates/cyril-ui/src production code.
 
@@ -33,7 +34,8 @@ KAS_LITERALS = ["turn_start", "notify-", "agentInitiated", "notificationSeverity
 KAS_OWNER = "crates/cyril-core/src/protocol/convert/kas.rs"
 LABEL_MARKERS = ["⚙", "noted mid-turn", "agent follow-up", "agent-initiated ·", "workflow step ·"]
 LABEL_OWNER = "crates/cyril-ui/src/turn_labels.rs"
-PROTECTED = {"crates/cyril/src/app.rs": 60, "crates/cyril-ui/src/state.rs": 70}
+# state.rs cap raised 70 -> 80 by the approved Length review (design.md, 2026-09-30; reshape deferred to cyril-dgyz).
+PROTECTED = {"crates/cyril/src/app.rs": 60, "crates/cyril-ui/src/state.rs": 80}
 FROZEN = "crates/cyril-core/src/protocol/convert/mod.rs"
 
 def strip_cfg_test(text):

@@ -94,7 +94,9 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 
 ## Module shape
 
-**Length review:** `N/A — no trigger`. No repository length gate exists (inventory Q9: CI runs fmt/clippy/nextest + `.cyril-jlxx/oracles/windows-construction.py` only; `clippy.toml` sets only `allow-expect-in-tests`; no `too_many_lines`; issue-local ledgers `.cyril-gl5s`, `.cyril-y628`, `.cyril-k3lz` are historical and not in CI). Precedent: `.cyril-6bwr`, `.cyril-ell0`. Growth is still bounded by the protected-parent rules below.
+**Length review (2026-09-30, triggered at Slice 8):** `crates/cyril-ui/src/state.rs`, protected parent. Gate owner: this design's C21 fence (`.cyril-lki9/oracles/shape.py` R3; counting = production lines with every `#[cfg(test)]` item removed). Baseline 2,984 at merge-base `bfc498b1`; approved cap +70; observed +75 after Slice 8 (the cyril-5n75 fix inside the existing steer-reconciliation cluster: a shared id-less fallback helper plus corrected docs). Added responsibility: none new — lki9's header/notice methods are thin delegations to `turn_labels`; the growth is inside steer reconciliation. **Disposition: retain and raise to +80**, requester-approved 2026-09-30 ("Retain and raise to +80 (Recommended)"). Deferred reshape (extract steer-echo reconciliation into its own module): **cyril-dgyz**. `app.rs` cap unchanged (+60).
+
+Earlier verdict (design approval): `N/A — no trigger`. No repository length gate exists (inventory Q9: CI runs fmt/clippy/nextest + `.cyril-jlxx/oracles/windows-construction.py` only; `clippy.toml` sets only `allow-expect-in-tests`; no `too_many_lines`; issue-local ledgers `.cyril-gl5s`, `.cyril-y628`, `.cyril-k3lz` are historical and not in CI). Precedent: `.cyril-6bwr`, `.cyril-ell0`. Growth is still bounded by the protected-parent rules below.
 
 ### Inventory (production lines = before the first `#[cfg(test)] mod`, inventory Q10 at `bfc498b1`)
 
@@ -155,7 +157,7 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 | Protected parent | Baseline responsibilities | Allowed change | Forbidden change | Exit condition |
 |---|---|---|---|---|
 | `crates/cyril/src/app.rs` | orchestration, key handling, routing, tracker ownership | ≤ 2 new `match` arms / helper calls routing the two new notifications (call `take_wake_label`, call the two UiState methods); production delta ≤ +60 lines | string literals of header/notice text; any `notify`/`agentInitiated` literal; turn-state fields | shape fence C21: prod delta ≤ 60, forbidden literals absent |
-| `crates/cyril-ui/src/state.rs` | transcript, activity, steering, overlays | two thin methods delegating to `turn_labels`; `TurnStarted` arm; C6 fallback narrowing inside the existing function; production delta ≤ +70 lines | header/notice string construction (`"───"`, `"⚙"`, `"noted mid-turn"` literals); workflow types | shape fence C21 |
+| `crates/cyril-ui/src/state.rs` | transcript, activity, steering, overlays | two thin methods delegating to `turn_labels`; `TurnStarted` arm; C6 fallback narrowing inside the existing function; production delta ≤ +80 lines (raised from +70 by the approved Length review) | header/notice string construction (`"───"`, `"⚙"`, `"noted mid-turn"` literals); workflow types | shape fence C21 |
 
 ## Claims
 
@@ -225,6 +227,7 @@ Intended future work (verified tracker IDs):
 - Step node ids on step-verdict notices; modeling `_kiro/session/notify` — **cyril-fb1m**.
 - Labeling wake turns in replayed history after `session/load` — **cyril-99ds**.
 - A standalone "run finished" notice when no wake happens — **cyril-zd8u**.
+- Extract steer-echo reconciliation from `state.rs` — **cyril-dgyz**.
 - Full snapshot field coverage beyond `runLabel` (`memoryConfig`, `rootConversationId`, recipe rows) — **cyril-4u4a**.
 
 ## Falsifier run log

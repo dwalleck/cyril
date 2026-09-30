@@ -1481,9 +1481,12 @@ impl UiState {
     }
 
     /// Flip the Queued echo a Consumed echo names (cyril-vgcm C9): the chip
-    /// bound to `message_id` when one is, else the OLDEST Queued chip (FIFO —
-    /// covers the id-less old dialect and a dropped/deferred Queued echo). An
-    /// id bound to a TERMINAL chip is a duplicate injected echo: flips nothing
+    /// bound to `message_id` when one is; for an id bound to no chip, the
+    /// OLDEST id-less Queued chip (a steer whose Queued echo was dropped or
+    /// deferred) — never a chip bound to a DIFFERENT id (cyril-5n75: an engine
+    /// `notify-*` injection must not drain the operator's queued steer); for an
+    /// id-less Consumed (old dialect), the oldest Queued chip (FIFO). An id
+    /// bound to a TERMINAL chip is a duplicate injected echo: flips nothing
     /// and does NOT fall back — FIFO there would drain a second, wrong chip.
     /// Returns whether a chip flipped (the caller decrements the counter by
     /// exactly that).
@@ -1504,6 +1507,7 @@ impl UiState {
                     return false;
                 }
             }
+            return self.flip_oldest_idless_queued(SteerEchoStatus::Applied);
         }
         self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true)
     }
@@ -1536,22 +1540,31 @@ impl UiState {
                     break;
                 }
             }
-            if !matched {
-                for msg in self.messages.iter_mut() {
-                    if let ChatMessageKind::SteerEcho {
-                        status: status @ SteerEchoStatus::Queued,
-                        message_id: None,
-                        ..
-                    } = &mut msg.kind
-                    {
-                        *status = SteerEchoStatus::Cleared;
-                        flips += 1;
-                        break;
-                    }
-                }
+            if !matched && self.flip_oldest_idless_queued(SteerEchoStatus::Cleared) {
+                flips += 1;
             }
         }
         flips
+    }
+
+    /// Flip the oldest Queued echo not yet bound to an id to `to` — the one
+    /// fallback for an id that matches no chip, shared by Cleared (cyril-vgcm
+    /// C6) and Consumed (cyril-5n75): such an id can only belong to a steer
+    /// whose Queued echo was dropped or deferred, never to a chip bound to a
+    /// different id. Returns whether a chip flipped.
+    fn flip_oldest_idless_queued(&mut self, to: SteerEchoStatus) -> bool {
+        for msg in self.messages.iter_mut() {
+            if let ChatMessageKind::SteerEcho {
+                status: status @ SteerEchoStatus::Queued,
+                message_id: None,
+                ..
+            } = &mut msg.kind
+            {
+                *status = to;
+                return true;
+            }
+        }
+        false
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -7556,6 +7569,91 @@ mod tests {
         };
         (req, rx)
     }
+    fn lki9_echoes(state: &UiState) -> Vec<(String, SteerEchoStatus, Option<String>)> {
+        state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::SteerEcho {
+                    text,
+                    status,
+                    message_id,
+                    ..
+                } => Some((text.clone(), *status, message_id.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn lki9_consumed(id: Option<&str>) -> Notification {
+        Notification::SteeringConsumed {
+            content: None,
+            message_id: id.map(str::to_owned),
+        }
+    }
+
+    /// cyril-lki9 C6 / cyril-5n75: a Consumed id bound to no chip may only
+    /// drain an id-less chip (a steer whose Queued echo was dropped/deferred) —
+    /// never an operator chip bound to a different id; the counter moves only
+    /// when a chip flips; the id-less legacy Consumed keeps FIFO.
+    #[test]
+    fn lki9_steer_fallback_never_drains_a_bound_chip() {
+        // Bound steer-A + a deferred (id-less) chip: notify-X drains the id-less one.
+        let mut state = UiState::new(500);
+        state.add_steer_echo("first");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-A".into()),
+        });
+        state.add_steer_echo("second");
+        assert_eq!(state.steering_queued(), 2);
+        assert!(state.apply_notification(&lki9_consumed(Some("notify-X"))));
+        assert_eq!(
+            lki9_echoes(&state),
+            [
+                (
+                    "first".into(),
+                    SteerEchoStatus::Queued,
+                    Some("steer-A".into())
+                ),
+                ("second".into(), SteerEchoStatus::Applied, None),
+            ]
+        );
+        assert_eq!(state.steering_queued(), 1);
+
+        // Only a bound chip queued: notify-X flips nothing, counter unchanged.
+        let mut bound_only = UiState::new(500);
+        bound_only.add_steer_echo("first");
+        bound_only.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-A".into()),
+        });
+        assert!(!bound_only.apply_notification(&lki9_consumed(Some("notify-X"))));
+        assert_eq!(
+            lki9_echoes(&bound_only),
+            [(
+                "first".into(),
+                SteerEchoStatus::Queued,
+                Some("steer-A".into())
+            )]
+        );
+        assert_eq!(
+            bound_only.steering_queued(),
+            1,
+            "cyril-7z7u: counter == #Queued chips"
+        );
+
+        // Legacy id-less Consumed: FIFO over Queued chips, as before.
+        let mut legacy = UiState::new(500);
+        legacy.add_steer_echo("only");
+        assert!(legacy.apply_notification(&lki9_consumed(None)));
+        assert_eq!(
+            lki9_echoes(&legacy),
+            [("only".into(), SteerEchoStatus::Applied, None)]
+        );
+        assert_eq!(legacy.steering_queued(), 0);
+    }
+
     fn lki9_streaming(text: &str) -> Notification {
         Notification::AgentMessage(AgentMessage {
             text: text.to_owned(),

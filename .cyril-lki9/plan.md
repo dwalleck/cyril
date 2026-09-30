@@ -25,7 +25,7 @@ Baseline = production lines before the first `#[cfg(test)]` at merge-base `bfc49
 | `cyril-core/src/protocol/convert/kas/workflow.rs` | 1,116 | 1,118–1,130 | + `runLabel` field | snapshot gains `run_label` | N/A |
 | `cyril-ui/src/turn_labels.rs` | 0 | 60–120 | create: all header/notice strings | crate-private fns | N/A |
 | `cyril-ui/src/subagent_ui.rs` | 244 | 255–275 | + header/notice insert per stream | two methods | N/A |
-| `cyril-ui/src/state.rs` | 2,983 | ≤ 3,053 | thin delegation + arms + C6 narrowing | two methods | **protected: ≤ +70 prod; no header/notice literals** |
+| `cyril-ui/src/state.rs` | 2,983 | ≤ 3,064 | thin delegation + arms + C6 narrowing | two methods | **protected: ≤ +80 prod (raised from +70, Length review 2026-09-30, reshape → cyril-dgyz); no header/notice literals** |
 | `crates/cyril/src/app.rs` | 2,939 | ≤ 2,999 | routing arms only | none | **protected: ≤ +60 prod; no `notify`/`agentInitiated`/header literals** |
 | `cyril-core/src/protocol/convert/mod.rs` | 530 | 530 | none | none | shape fence: prod delta 0 |
 | `cyril-ui/src/widgets/chat.rs` | 569 | 569 | none (reuses `System`) | none | N/A |
@@ -342,6 +342,27 @@ Sweep (step 7): the `apply_notification` no-op comment rewritten (the App now re
 **Commands and expected results:**
 - `cargo nextest run -p cyril-ui -E 'test(/steer_fallback/)'` → the three stress rows as specified.
 - M6 → red (`Applied` ≠ `Queued`); restore → green.
+
+### Checkpoint record — Slice 8 (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** `UiState::flip_consumed_steer_echo` (sole caller: the `SteeringConsumed` arm) — semantics narrowed; `flip_cleared_steer_echoes` (sole caller: the `SteeringCleared` arm) — inline id-less fallback extracted into the new `flip_oldest_idless_queued`, behavior unchanged. No signature change.
+
+**Qualification stop → Length review (resolved).** The first gate run failed C21 R3: `state.rs` +75 > +70. Stopped per module-shape; requester approved **retain and raise to +80** (2026-09-30); reshape deferred to **cyril-dgyz**; recorded in design.md (Module shape → Length review), plan growth ledger, and `shape.py` (cap 70 → 80, with a comment citing the approval).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → all passed (22 steer-related UI tests incl. the pre-existing cyril-vgcm/7z7u/nvmh fences unchanged).
+2. Falsifier C6 — PASS: `lki9_steer_fallback_never_drains_a_bound_chip`.
+3. Stress fixture — PASS: bound `steer-A` + id-less chip + `Consumed{notify-X}` → id-less flips, `steer-A` stays Queued, counter 2 → 1; only a bound chip → nothing flips, counter unchanged; legacy `Consumed{None}` → FIFO flip as before.
+4. Implementation vs oracle — PASS: expected states hand-transcribed from the cyril-5n75 acceptance criterion and the existing doc intent (fallback covers dropped/deferred Queued echoes = id-less chips).
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 75)` under the approved +80 cap.
+6. Budget — N/A — reason: existing linear scan over messages, unchanged bound.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M6 (drop the id-less narrowing; old unconditional FIFO) → `left: [("first", Applied, Some("steer-A")), ("second", Queued, None)]` — the cyril-5n75 bug reproduced. **Changed fence (C21 cap) re-proved:** M21b (+6 lines → +81) → `C21 FAIL … prod delta 81 > 80`.
+9. Fence restored — PASS: `state.rs` restored from scratch copy (`cmp` identical); fences green.
+10. Parity and reuse — PASS. Search: `grep` for SteerEcho flip helpers in `state.rs`. The consumed fallback now REUSES the cleared path's id-less rule through one extracted helper (`flip_oldest_idless_queued`) instead of a second copy. Symmetry: Cleared and Consumed now share the same unknown-id fallback (id-less only); Consumed's id-less legacy branch keeps FIFO over all Queued (unchanged) — the divergence is the old-dialect convention both functions already documented. Acceptance change: a Consumed id bound to no chip previously flipped the oldest Queued chip even if bound to another id; now it flips only an id-less chip or nothing — control rows cover both neighbours.
+11. Preserved enforcement — PASS: the C21 R3 cap was RAISED (70 → 80) — authorized by the requester's Length-review approval (design.md, 2026-09-30), deferral cyril-dgyz verified; detection re-proved at the new boundary (M21b +81 red). No other gate touched.
+
+Sweep (step 7): `flip_consumed_steer_echo` doc rewritten (the old "else the OLDEST Queued chip" sentence was the bug); `flip_cleared_steer_echoes` doc still accurate (behavior unchanged).
 
 ## Slice 9: App routes announcements and injections to tracker + UI
 
