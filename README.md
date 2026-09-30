@@ -163,6 +163,15 @@ docs/
   kiro-acp-protocol.md  # Comprehensive Kiro ACP protocol reference
 ```
 
+Core library consumers can construct a safe executable prefix with
+`cyril_core::review::CrtoolPrefix::current(dialect)`. Obtain the dialect from
+`BridgeHandle::review_shell()` before splitting a KAS bridge handle; it reflects
+the host shell already resolved for that bridge, not an OS-based guess. The
+constructor canonicalizes the executable, normalizes Windows drive/UNC spelling,
+and refuses shell-active characters rather than attempting fallback quoting.
+This API constructs a command prefix; it does not add a `/review` command or
+execute a review.
+
 ## License
 
 [MIT](LICENSE)

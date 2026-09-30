@@ -114,6 +114,16 @@ jobs:
       - name: Run doc tests
         run: cargo test --doc --workspace --all-features
 
+      - name: Qualify resolved native prefix
+        shell: bash
+        run: |
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            cargo run -p cyril-core --features kas --profile test --example review_prefix -- powershell windows-powershell
+            cargo run -p cyril-core --features kas --profile test --example review_prefix -- pwsh pwsh
+          else
+            cargo run -p cyril-core --features kas --profile test --example review_prefix -- bash posix
+          fi
+
       - name: Challenge native Windows constructor guards
         if: runner.os == 'Windows'
         run: python .cyril-jlxx/oracles/windows-construction.py
@@ -153,6 +163,37 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Review prefix ownership fence
+        env:
+          REVIEW_BASE: ${{ github.base_ref || github.event.repository.default_branch }}
+          REVIEW_BEFORE: ${{ github.event.before }}
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            base="$REVIEW_BEFORE"
+            comparison="$base..HEAD"
+            base_args=(--exact-base "$base")
+          else
+            base="refs/remotes/origin/$REVIEW_BASE"
+            comparison="$base...HEAD"
+            base_args=(--base "$base")
+          fi
+          git rev-parse --verify "$base^{commit}" >/dev/null
+          # Ticket-specific parent deltas must not freeze unrelated future work.
+          if git diff --quiet "$comparison" -- .cyril-s2hb crates/cyril-core/src/review; then
+            if git diff --quiet "$comparison" -- \
+                crates/cyril-core/src/lib.rs \
+                crates/cyril-core/src/protocol/bridge.rs \
+                crates/cyril-core/src/protocol/kas/host_shell.rs; then
+              echo "No review-prefix ownership changes"
+            else
+              python3 .cyril-s2hb/oracles/check_shape.py --integration-only "${base_args[@]}"
+            fi
+          else
+            python3 .cyril-s2hb/oracles/check_shape.py --phase prefix "${base_args[@]}"
+          fi
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2

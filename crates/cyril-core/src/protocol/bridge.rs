@@ -34,9 +34,15 @@ pub struct BridgeHandle {
     pub(crate) permission_rx: mpsc::Receiver<PermissionRequest>,
     source_rx: mpsc::Receiver<crate::types::SourceTurnEvent>,
     completion_rx: oneshot::Receiver<()>,
+    review_shell: Option<crate::review::ShellDialect>,
 }
 
 impl BridgeHandle {
+    /// Dialect of the same host shell resolved for this bridge's KAS session.
+    pub fn review_shell(&self) -> Option<crate::review::ShellDialect> {
+        self.review_shell
+    }
+
     pub async fn recv_notification(&mut self) -> Option<RoutedNotification> {
         self.notification_rx.recv().await
     }
@@ -73,6 +79,7 @@ impl BridgeHandle {
                 permission_rx,
                 source_rx,
                 completion_rx,
+                review_shell: None,
             },
             command_rx,
         )
@@ -154,6 +161,7 @@ pub(crate) fn create_channel_pair() -> (BridgeHandle, BridgeChannels) {
             permission_rx,
             source_rx,
             completion_rx,
+            review_shell: None,
         },
         BridgeChannels {
             command_rx,
@@ -205,7 +213,17 @@ pub fn spawn_bridge(
     cwd: PathBuf,
 ) -> crate::Result<BridgeHandle> {
     let host_shell = resolve_host_shell(&config)?;
-    let (handle, mut channels) = create_channel_pair();
+    let (mut handle, mut channels) = create_channel_pair();
+    handle.review_shell = {
+        #[cfg(feature = "kas")]
+        {
+            host_shell.as_ref().map(|shell| shell.review_shell())
+        }
+        #[cfg(not(feature = "kas"))]
+        {
+            None
+        }
+    };
     let disconnect_tx = channels.notification_tx.clone();
     let completion_tx = channels.completion_tx.take();
     std::thread::Builder::new()
