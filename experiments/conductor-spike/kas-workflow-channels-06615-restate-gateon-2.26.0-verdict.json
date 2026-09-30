@@ -1,0 +1,2012 @@
+{
+  "capturedOutputs": {
+    "s1": "ALPHA",
+    "s2": "DONE"
+  },
+  "channelA": "ALPHA",
+  "channelA_CORRECT": true,
+  "channelB": "ALPHA",
+  "channelB_CORRECT": true,
+  "diskValue": "ALPHA",
+  "elapsedSec": 17.75,
+  "events": [
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/recipes_changed",
+      "params": {
+        "recipes": [
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "workspace",
+                    "root": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+                  }
+                }
+              }
+            },
+            "builtIn": false,
+            "description": "paired template capture and artifact channel audit",
+            "inputs": {
+              "token": "<REDACTED>",
+              "workdir": "string"
+            },
+            "name": "audit-channels",
+            "plan": [
+              {
+                "agentName": "wf-coder",
+                "effortLevel": "low",
+                "nodeId": "s1",
+                "type": "step"
+              },
+              {
+                "agentName": "wf-coder",
+                "effortLevel": "low",
+                "nodeId": "s2",
+                "type": "step"
+              }
+            ],
+            "source": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/.kiro/workflows/audit-channels.workflow.json"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "workspace",
+                    "root": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+                  }
+                }
+              }
+            },
+            "builtIn": false,
+            "description": "watcher trigger",
+            "name": "late-added",
+            "plan": [
+              {
+                "agentName": "wf-coder",
+                "nodeId": "x",
+                "type": "step"
+              }
+            ],
+            "source": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/.kiro/workflows/late-added.workflow.json"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Repeatedly proposes and applies one experiment at a time, runs the benchmark, and keeps changes only when they beat the current best result.",
+            "inputs": {
+              "benchmark_path": "string",
+              "research_directions": "string"
+            },
+            "name": "autoresearch",
+            "plan": [
+              {
+                "maxIterations": 1000,
+                "nodeId": "experiments",
+                "onMaxIterations": "pause",
+                "steps": [
+                  {
+                    "agentName": "wf-auto-researcher",
+                    "nodeId": "experiment",
+                    "type": "step"
+                  }
+                ],
+                "type": "repeat"
+              }
+            ],
+            "source": "bundled://autoresearch"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Full feature pipeline in the given workdir: requirements, reviewed design loop, plan, implement-and-review loop with two-model review, fail-closed validation gate. Heavy; for hard multi-file tasks.",
+            "inputs": {
+              "task": "prompt",
+              "workdir": "string"
+            },
+            "name": "feature-pipeline",
+            "plan": [
+              {
+                "agentName": "wf-coder",
+                "effortLevel": "low",
+                "nodeId": "setup",
+                "type": "step"
+              },
+              {
+                "agentName": "wf-design",
+                "nodeId": "requirements",
+                "type": "step"
+              },
+              {
+                "maxIterations": 3,
+                "nodeId": "design-loop",
+                "onMaxIterations": "abort",
+                "steps": [
+                  {
+                    "agentName": "wf-design",
+                    "nodeId": "design-draft",
+                    "type": "step"
+                  },
+                  {
+                    "agentName": "wf-design-reviewer",
+                    "nodeId": "design-review",
+                    "type": "step"
+                  }
+                ],
+                "stopCondition": {
+                  "fileCheck": {
+                    "jsonPath": "verdict",
+                    "path": "{{setup.output}}/design-review.json",
+                    "value": "APPROVED"
+                  }
+                },
+                "type": "repeat"
+              },
+              {
+                "agentName": "wf-planner",
+                "nodeId": "plan",
+                "type": "step"
+              },
+              {
+                "maxIterations": 3,
+                "nodeId": "code-loop",
+                "onMaxIterations": "abort",
+                "steps": [
+                  {
+                    "agentName": "wf-coder",
+                    "nodeId": "implement",
+                    "type": "step"
+                  },
+                  {
+                    "branches": [
+                      {
+                        "agentName": "semantic_reviewer",
+                        "effortLevel": "xhigh",
+                        "modelId": "claude-fable-5",
+                        "nodeId": "review-fable",
+                        "type": "step"
+                      },
+                      {
+                        "agentName": "semantic_reviewer",
+                        "effortLevel": "xhigh",
+                        "modelId": "gpt-5.6-sol",
+                        "nodeId": "review-gpt",
+                        "type": "step"
+                      }
+                    ],
+                    "nodeId": "code-reviews",
+                    "type": "parallel"
+                  },
+                  {
+                    "agentName": "wf-review-aggregator",
+                    "nodeId": "code-aggregate",
+                    "type": "step"
+                  }
+                ],
+                "stopCondition": {
+                  "fileCheck": {
+                    "jsonPath": "verdict",
+                    "path": "{{setup.output}}/code-review.json",
+                    "value": "APPROVED"
+                  }
+                },
+                "type": "repeat"
+              },
+              {
+                "maxIterations": 1,
+                "nodeId": "validate-gate",
+                "onMaxIterations": "abort",
+                "steps": [
+                  {
+                    "agentName": "wf-coder",
+                    "nodeId": "validate",
+                    "type": "step"
+                  }
+                ],
+                "stopCondition": {
+                  "fileCheck": {
+                    "jsonPath": "verdict",
+                    "path": "{{setup.output}}/validation.json",
+                    "value": "PASS"
+                  }
+                },
+                "type": "repeat"
+              }
+            ],
+            "source": "bundled://feature-pipeline"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Iterative agent loop toward a single verifiable goal until self-verified complete or the iteration budget is exhausted; no external progress state, each iteration re-derives progress from the repo.",
+            "inputs": {
+              "max_iterations": "string",
+              "prompt": "prompt"
+            },
+            "name": "goal",
+            "plan": [
+              {
+                "maxIterations": 200,
+                "nodeId": "goal-loop",
+                "onMaxIterations": "pause",
+                "steps": [
+                  {
+                    "agentName": "wf-coder",
+                    "nodeId": "work",
+                    "type": "step"
+                  }
+                ],
+                "stopCondition": {
+                  "completionSignal": "success"
+                },
+                "type": "repeat"
+              }
+            ],
+            "source": "bundled://goal"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Single-step read-only investigation. The orchestrator supplies a self-contained brief; a planner agent investigates and writes a findings report.",
+            "inputs": {
+              "brief": "prompt",
+              "report_path": "file"
+            },
+            "name": "investigate",
+            "plan": [
+              {
+                "agentName": "wf-planner",
+                "nodeId": "investigate",
+                "type": "step"
+              }
+            ],
+            "source": "bundled://investigate"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Opens a PR from a branch (reuses an existing open PR), then watches and responds to feedback until a terminal state. run_dir: required per-run artifact dir; repo_dir: target repo (optional).",
+            "inputs": {
+              "branch": "string",
+              "repo_dir": "string",
+              "run_dir": "string"
+            },
+            "name": "publish-pr",
+            "plan": [
+              {
+                "agentName": "wf-pr-submitter",
+                "nodeId": "submit",
+                "type": "step"
+              },
+              {
+                "maxIterations": 200,
+                "nodeId": "pr-loop",
+                "onMaxIterations": "pause",
+                "steps": [
+                  {
+                    "agentName": "github-pr",
+                    "nodeId": "wait",
+                    "type": "watch"
+                  },
+                  {
+                    "agentName": "wf-pr-responder",
+                    "nodeId": "respond",
+                    "type": "step"
+                  }
+                ],
+                "stopWhen": "wait.terminal",
+                "type": "repeat"
+              }
+            ],
+            "source": "bundled://publish-pr"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Loops one coding agent through a JSON checklist file, one item per iteration, until every item is done; progress is durable and inspectable mid-run. For a single non-decomposable outcome, use goal.",
+            "inputs": {
+              "goal": "prompt",
+              "prd_path": "file"
+            },
+            "name": "ralph",
+            "plan": [
+              {
+                "maxIterations": 200,
+                "nodeId": "ralph-loop",
+                "onMaxIterations": "pause",
+                "steps": [
+                  {
+                    "agentName": "wf-coder",
+                    "nodeId": "iterate",
+                    "type": "step"
+                  }
+                ],
+                "stopCondition": {
+                  "fileCheck": {
+                    "jsonPath": "complete",
+                    "path": "{{prd_path}}",
+                    "value": true
+                  }
+                },
+                "type": "repeat"
+              }
+            ],
+            "source": "bundled://ralph"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "workflow",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                }
+              }
+            },
+            "builtIn": true,
+            "description": "Reviews a change with two independent semantic reviewers in parallel on different models, then aggregates into one issues-only report under <workdir>/.agents/reviews/. Reviewers never see each other.",
+            "inputs": {
+              "target": "prompt",
+              "workdir": "string"
+            },
+            "name": "semantic-review-multi-model",
+            "plan": [
+              {
+                "agentName": "wf-coder",
+                "effortLevel": "low",
+                "nodeId": "setup",
+                "type": "step"
+              },
+              {
+                "branches": [
+                  {
+                    "agentName": "semantic_reviewer",
+                    "effortLevel": "xhigh",
+                    "modelId": "claude-opus-5",
+                    "nodeId": "review-opus",
+                    "type": "step"
+                  },
+                  {
+                    "agentName": "semantic_reviewer",
+                    "effortLevel": "xhigh",
+                    "modelId": "gpt-5.6-sol",
+                    "nodeId": "review-gpt",
+                    "type": "step"
+                  }
+                ],
+                "nodeId": "reviews",
+                "type": "parallel"
+              },
+              {
+                "agentName": "wf-coder",
+                "effortLevel": "xhigh",
+                "modelId": "claude-opus-5",
+                "nodeId": "aggregate",
+                "type": "step"
+              }
+            ],
+            "source": "bundled://semantic-review-multi-model"
+          }
+        ],
+        "sessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "workspacePaths": [
+          "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+        ]
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/run_start",
+      "params": {
+        "inputs": {
+          "token": "<REDACTED>",
+          "workdir": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990"
+        },
+        "nodeTree": [
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s1",
+            "type": "step"
+          },
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s2",
+            "type": "step"
+          }
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "workflowId": "wf_44e5ef20a45cc178",
+        "workflowName": "audit-channels-2.26.0"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s1",
+        "nodePath": [
+          "wf_44e5ef20a45cc178",
+          "s1"
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "type": "step",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s1",
+        "nodePath": [
+          "wf_44e5ef20a45cc178",
+          "s1"
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "sessionId": "sess_a9a49934-32a3-42ba-b7c8-0966bdb8714b",
+        "type": "step",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_complete",
+      "params": {
+        "artifacts": {
+          "value": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990/value.txt"
+        },
+        "capturedOutput": "ALPHA",
+        "nodeId": "s1",
+        "nodePath": [
+          "wf_44e5ef20a45cc178",
+          "s1"
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "status": "completed",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s2",
+        "nodePath": [
+          "wf_44e5ef20a45cc178",
+          "s2"
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "type": "step",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_start",
+      "params": {
+        "agentName": "wf-coder",
+        "nodeId": "s2",
+        "nodePath": [
+          "wf_44e5ef20a45cc178",
+          "s2"
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "sessionId": "sess_47b83bc1-c48c-4cd4-b72e-241dd0ccc2ce",
+        "type": "step",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/node_complete",
+      "params": {
+        "capturedOutput": "DONE",
+        "nodeId": "s2",
+        "nodePath": [
+          "wf_44e5ef20a45cc178",
+          "s2"
+        ],
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "status": "completed",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    },
+    {
+      "jsonrpc": "2.0",
+      "method": "_kiro/workflow/run_complete",
+      "params": {
+        "finalState": {
+          "artifacts": {
+            "value": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990/value.txt"
+          },
+          "capturedOutputs": {
+            "s1": "ALPHA",
+            "s2": "DONE"
+          },
+          "createdAt": "2026-09-30T02:06:48.451Z",
+          "inputs": {
+            "token": "<REDACTED>",
+            "workdir": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990"
+          },
+          "memoryConfig": {
+            "mode": "read_write",
+            "reflection": true
+          },
+          "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+          "planRevision": 0,
+          "root": {
+            "children": [
+              {
+                "agentName": "wf-coder",
+                "artifacts": {
+                  "value": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990/value.txt"
+                },
+                "capturedOutput": "ALPHA",
+                "completionSignal": "success",
+                "completionSignalSource": "send_message",
+                "effortLevel": "low",
+                "endedAt": "2026-09-30T02:06:55.445Z",
+                "nodeId": "s1",
+                "sessionId": "sess_a9a49934-32a3-42ba-b7c8-0966bdb8714b",
+                "startedAt": "2026-09-30T02:06:48.479Z",
+                "status": "completed",
+                "type": "step"
+              },
+              {
+                "agentName": "wf-coder",
+                "capturedOutput": "DONE",
+                "completionSignal": "success",
+                "completionSignalSource": "send_message",
+                "effortLevel": "low",
+                "endedAt": "2026-09-30T02:07:06.211Z",
+                "nodeId": "s2",
+                "sessionId": "sess_47b83bc1-c48c-4cd4-b72e-241dd0ccc2ce",
+                "startedAt": "2026-09-30T02:06:55.456Z",
+                "status": "completed",
+                "type": "step"
+              }
+            ],
+            "endedAt": "2026-09-30T02:07:06.215Z",
+            "nodeId": "wf_44e5ef20a45cc178",
+            "startedAt": "2026-09-30T02:06:48.476Z",
+            "status": "completed",
+            "type": "sequence"
+          },
+          "rootConversationId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+          "status": "completed",
+          "workflowId": "wf_44e5ef20a45cc178",
+          "workflowName": "audit-channels-2.26.0",
+          "workspacePath": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+        },
+        "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+        "status": "completed",
+        "workflowId": "wf_44e5ef20a45cc178"
+      }
+    }
+  ],
+  "gate": "on",
+  "initialize": {
+    "agentCapabilities": {
+      "_meta": {
+        "kiro": {
+          "checkpoints": true,
+          "executionTargets": [
+            "local",
+            "cloud-sandbox"
+          ],
+          "extensionMethods": [
+            "_kiro/knowledge",
+            "_kiro/memory/list",
+            "_kiro/memory/get",
+            "_kiro/memory/create",
+            "_kiro/memory/update",
+            "_kiro/memory/delete",
+            "_kiro/codeIntelligence",
+            "_kiro/session/context",
+            "_kiro/session/compact",
+            "_kiro/session/export",
+            "_kiro/session/history",
+            "_kiro/config/template",
+            "_kiro/workflow/new",
+            "_kiro/workflow/invoke",
+            "_kiro/workflow/load",
+            "_kiro/workflow/inspect",
+            "_kiro/workflow/list",
+            "_kiro/workflow/pause",
+            "_kiro/workflow/cancel",
+            "_kiro/workflow/delete",
+            "_kiro/workflow/listRecipes",
+            "_kiro/workflow/listWatchHandlers",
+            "_kiro/workflow/resumeAll",
+            "_kiro/workflow/retry",
+            "_kiro/workflow/update",
+            "_kiro/workflow/resume",
+            "_kiro/sourceProviders/list",
+            "_kiro/sourceProviders/listResources"
+          ],
+          "logging": {
+            "channels": [
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-home-u0_6a5ci/.kiro/logs/20260930T020631223/kiro.log",
+                "name": "kiro"
+              },
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-home-u0_6a5ci/.kiro/logs/20260930T020631223/mcp.log",
+                "name": "mcp"
+              },
+              {
+                "filePath": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-home-u0_6a5ci/.kiro/logs/20260930T020631223/powers.log",
+                "name": "powers"
+              }
+            ],
+            "logDir": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-home-u0_6a5ci/.kiro/logs/20260930T020631223"
+          },
+          "policyNotifications": true,
+          "replayMarking": true,
+          "sessionList": true,
+          "sessionListScopes": [
+            "workspace",
+            "user"
+          ],
+          "sessionSources": [
+            "local",
+            "remote"
+          ],
+          "sourceProviders": true
+        }
+      },
+      "loadSession": true,
+      "mcpCapabilities": {
+        "http": true,
+        "sse": true
+      },
+      "promptCapabilities": {
+        "embeddedContext": true,
+        "image": true
+      },
+      "sessionCapabilities": {
+        "close": {},
+        "delete": {},
+        "fork": {
+          "_meta": {
+            "kiro": {
+              "messageId": true
+            }
+          }
+        },
+        "list": {}
+      }
+    },
+    "authMethods": [
+      {
+        "id": "aws-builder-id",
+        "name": "AWS Builder ID"
+      },
+      {
+        "id": "aws-iam-identity-center",
+        "name": "AWS IAM Identity Center"
+      }
+    ],
+    "protocolVersion": 1
+  },
+  "kasPin": null,
+  "label": "06615",
+  "launcher": "/home/dwalleck/.local/bin/kiro-cli",
+  "listRecipes": {
+    "id": 13,
+    "jsonrpc": "2.0",
+    "result": {
+      "recipes": [
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "workspace",
+                  "root": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+                }
+              }
+            }
+          },
+          "builtIn": false,
+          "description": "paired template capture and artifact channel audit",
+          "inputs": {
+            "token": "<REDACTED>",
+            "workdir": "string"
+          },
+          "name": "audit-channels",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "s1",
+              "type": "step"
+            },
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "s2",
+              "type": "step"
+            }
+          ],
+          "source": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/.kiro/workflows/audit-channels.workflow.json"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "workspace",
+                  "root": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+                }
+              }
+            }
+          },
+          "builtIn": false,
+          "description": "watcher trigger",
+          "name": "late-added",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "nodeId": "x",
+              "type": "step"
+            }
+          ],
+          "source": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/.kiro/workflows/late-added.workflow.json"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Repeatedly proposes and applies one experiment at a time, runs the benchmark, and keeps changes only when they beat the current best result.",
+          "inputs": {
+            "benchmark_path": "string",
+            "research_directions": "string"
+          },
+          "name": "autoresearch",
+          "plan": [
+            {
+              "maxIterations": 1000,
+              "nodeId": "experiments",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "wf-auto-researcher",
+                  "nodeId": "experiment",
+                  "type": "step"
+                }
+              ],
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://autoresearch"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Full feature pipeline in the given workdir: requirements, reviewed design loop, plan, implement-and-review loop with two-model review, fail-closed validation gate. Heavy; for hard multi-file tasks.",
+          "inputs": {
+            "task": "prompt",
+            "workdir": "string"
+          },
+          "name": "feature-pipeline",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "setup",
+              "type": "step"
+            },
+            {
+              "agentName": "wf-design",
+              "nodeId": "requirements",
+              "type": "step"
+            },
+            {
+              "maxIterations": 3,
+              "nodeId": "design-loop",
+              "onMaxIterations": "abort",
+              "steps": [
+                {
+                  "agentName": "wf-design",
+                  "nodeId": "design-draft",
+                  "type": "step"
+                },
+                {
+                  "agentName": "wf-design-reviewer",
+                  "nodeId": "design-review",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "verdict",
+                  "path": "{{setup.output}}/design-review.json",
+                  "value": "APPROVED"
+                }
+              },
+              "type": "repeat"
+            },
+            {
+              "agentName": "wf-planner",
+              "nodeId": "plan",
+              "type": "step"
+            },
+            {
+              "maxIterations": 3,
+              "nodeId": "code-loop",
+              "onMaxIterations": "abort",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "implement",
+                  "type": "step"
+                },
+                {
+                  "branches": [
+                    {
+                      "agentName": "semantic_reviewer",
+                      "effortLevel": "xhigh",
+                      "modelId": "claude-fable-5",
+                      "nodeId": "review-fable",
+                      "type": "step"
+                    },
+                    {
+                      "agentName": "semantic_reviewer",
+                      "effortLevel": "xhigh",
+                      "modelId": "gpt-5.6-sol",
+                      "nodeId": "review-gpt",
+                      "type": "step"
+                    }
+                  ],
+                  "nodeId": "code-reviews",
+                  "type": "parallel"
+                },
+                {
+                  "agentName": "wf-review-aggregator",
+                  "nodeId": "code-aggregate",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "verdict",
+                  "path": "{{setup.output}}/code-review.json",
+                  "value": "APPROVED"
+                }
+              },
+              "type": "repeat"
+            },
+            {
+              "maxIterations": 1,
+              "nodeId": "validate-gate",
+              "onMaxIterations": "abort",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "validate",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "verdict",
+                  "path": "{{setup.output}}/validation.json",
+                  "value": "PASS"
+                }
+              },
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://feature-pipeline"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Iterative agent loop toward a single verifiable goal until self-verified complete or the iteration budget is exhausted; no external progress state, each iteration re-derives progress from the repo.",
+          "inputs": {
+            "max_iterations": "string",
+            "prompt": "prompt"
+          },
+          "name": "goal",
+          "plan": [
+            {
+              "maxIterations": 200,
+              "nodeId": "goal-loop",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "work",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "completionSignal": "success"
+              },
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://goal"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Single-step read-only investigation. The orchestrator supplies a self-contained brief; a planner agent investigates and writes a findings report.",
+          "inputs": {
+            "brief": "prompt",
+            "report_path": "file"
+          },
+          "name": "investigate",
+          "plan": [
+            {
+              "agentName": "wf-planner",
+              "nodeId": "investigate",
+              "type": "step"
+            }
+          ],
+          "source": "bundled://investigate"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Opens a PR from a branch (reuses an existing open PR), then watches and responds to feedback until a terminal state. run_dir: required per-run artifact dir; repo_dir: target repo (optional).",
+          "inputs": {
+            "branch": "string",
+            "repo_dir": "string",
+            "run_dir": "string"
+          },
+          "name": "publish-pr",
+          "plan": [
+            {
+              "agentName": "wf-pr-submitter",
+              "nodeId": "submit",
+              "type": "step"
+            },
+            {
+              "maxIterations": 200,
+              "nodeId": "pr-loop",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "github-pr",
+                  "nodeId": "wait",
+                  "type": "watch"
+                },
+                {
+                  "agentName": "wf-pr-responder",
+                  "nodeId": "respond",
+                  "type": "step"
+                }
+              ],
+              "stopWhen": "wait.terminal",
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://publish-pr"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Loops one coding agent through a JSON checklist file, one item per iteration, until every item is done; progress is durable and inspectable mid-run. For a single non-decomposable outcome, use goal.",
+          "inputs": {
+            "goal": "prompt",
+            "prd_path": "file"
+          },
+          "name": "ralph",
+          "plan": [
+            {
+              "maxIterations": 200,
+              "nodeId": "ralph-loop",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "iterate",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "complete",
+                  "path": "{{prd_path}}",
+                  "value": true
+                }
+              },
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://ralph"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Reviews a change with two independent semantic reviewers in parallel on different models, then aggregates into one issues-only report under <workdir>/.agents/reviews/. Reviewers never see each other.",
+          "inputs": {
+            "target": "prompt",
+            "workdir": "string"
+          },
+          "name": "semantic-review-multi-model",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "setup",
+              "type": "step"
+            },
+            {
+              "branches": [
+                {
+                  "agentName": "semantic_reviewer",
+                  "effortLevel": "xhigh",
+                  "modelId": "claude-opus-5",
+                  "nodeId": "review-opus",
+                  "type": "step"
+                },
+                {
+                  "agentName": "semantic_reviewer",
+                  "effortLevel": "xhigh",
+                  "modelId": "gpt-5.6-sol",
+                  "nodeId": "review-gpt",
+                  "type": "step"
+                }
+              ],
+              "nodeId": "reviews",
+              "type": "parallel"
+            },
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "xhigh",
+              "modelId": "claude-opus-5",
+              "nodeId": "aggregate",
+              "type": "step"
+            }
+          ],
+          "source": "bundled://semantic-review-multi-model"
+        }
+      ]
+    }
+  },
+  "observedResult": {
+    "channelA": "ALPHA",
+    "channelB": "ALPHA"
+  },
+  "recipesChangedAfterWrite": [
+    {
+      "recipes": [
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "workspace",
+                  "root": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+                }
+              }
+            }
+          },
+          "builtIn": false,
+          "description": "paired template capture and artifact channel audit",
+          "inputs": {
+            "token": "<REDACTED>",
+            "workdir": "string"
+          },
+          "name": "audit-channels",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "s1",
+              "type": "step"
+            },
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "s2",
+              "type": "step"
+            }
+          ],
+          "source": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/.kiro/workflows/audit-channels.workflow.json"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "workspace",
+                  "root": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+                }
+              }
+            }
+          },
+          "builtIn": false,
+          "description": "watcher trigger",
+          "name": "late-added",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "nodeId": "x",
+              "type": "step"
+            }
+          ],
+          "source": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/.kiro/workflows/late-added.workflow.json"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Repeatedly proposes and applies one experiment at a time, runs the benchmark, and keeps changes only when they beat the current best result.",
+          "inputs": {
+            "benchmark_path": "string",
+            "research_directions": "string"
+          },
+          "name": "autoresearch",
+          "plan": [
+            {
+              "maxIterations": 1000,
+              "nodeId": "experiments",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "wf-auto-researcher",
+                  "nodeId": "experiment",
+                  "type": "step"
+                }
+              ],
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://autoresearch"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Full feature pipeline in the given workdir: requirements, reviewed design loop, plan, implement-and-review loop with two-model review, fail-closed validation gate. Heavy; for hard multi-file tasks.",
+          "inputs": {
+            "task": "prompt",
+            "workdir": "string"
+          },
+          "name": "feature-pipeline",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "setup",
+              "type": "step"
+            },
+            {
+              "agentName": "wf-design",
+              "nodeId": "requirements",
+              "type": "step"
+            },
+            {
+              "maxIterations": 3,
+              "nodeId": "design-loop",
+              "onMaxIterations": "abort",
+              "steps": [
+                {
+                  "agentName": "wf-design",
+                  "nodeId": "design-draft",
+                  "type": "step"
+                },
+                {
+                  "agentName": "wf-design-reviewer",
+                  "nodeId": "design-review",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "verdict",
+                  "path": "{{setup.output}}/design-review.json",
+                  "value": "APPROVED"
+                }
+              },
+              "type": "repeat"
+            },
+            {
+              "agentName": "wf-planner",
+              "nodeId": "plan",
+              "type": "step"
+            },
+            {
+              "maxIterations": 3,
+              "nodeId": "code-loop",
+              "onMaxIterations": "abort",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "implement",
+                  "type": "step"
+                },
+                {
+                  "branches": [
+                    {
+                      "agentName": "semantic_reviewer",
+                      "effortLevel": "xhigh",
+                      "modelId": "claude-fable-5",
+                      "nodeId": "review-fable",
+                      "type": "step"
+                    },
+                    {
+                      "agentName": "semantic_reviewer",
+                      "effortLevel": "xhigh",
+                      "modelId": "gpt-5.6-sol",
+                      "nodeId": "review-gpt",
+                      "type": "step"
+                    }
+                  ],
+                  "nodeId": "code-reviews",
+                  "type": "parallel"
+                },
+                {
+                  "agentName": "wf-review-aggregator",
+                  "nodeId": "code-aggregate",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "verdict",
+                  "path": "{{setup.output}}/code-review.json",
+                  "value": "APPROVED"
+                }
+              },
+              "type": "repeat"
+            },
+            {
+              "maxIterations": 1,
+              "nodeId": "validate-gate",
+              "onMaxIterations": "abort",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "validate",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "verdict",
+                  "path": "{{setup.output}}/validation.json",
+                  "value": "PASS"
+                }
+              },
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://feature-pipeline"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Iterative agent loop toward a single verifiable goal until self-verified complete or the iteration budget is exhausted; no external progress state, each iteration re-derives progress from the repo.",
+          "inputs": {
+            "max_iterations": "string",
+            "prompt": "prompt"
+          },
+          "name": "goal",
+          "plan": [
+            {
+              "maxIterations": 200,
+              "nodeId": "goal-loop",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "work",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "completionSignal": "success"
+              },
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://goal"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Single-step read-only investigation. The orchestrator supplies a self-contained brief; a planner agent investigates and writes a findings report.",
+          "inputs": {
+            "brief": "prompt",
+            "report_path": "file"
+          },
+          "name": "investigate",
+          "plan": [
+            {
+              "agentName": "wf-planner",
+              "nodeId": "investigate",
+              "type": "step"
+            }
+          ],
+          "source": "bundled://investigate"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Opens a PR from a branch (reuses an existing open PR), then watches and responds to feedback until a terminal state. run_dir: required per-run artifact dir; repo_dir: target repo (optional).",
+          "inputs": {
+            "branch": "string",
+            "repo_dir": "string",
+            "run_dir": "string"
+          },
+          "name": "publish-pr",
+          "plan": [
+            {
+              "agentName": "wf-pr-submitter",
+              "nodeId": "submit",
+              "type": "step"
+            },
+            {
+              "maxIterations": 200,
+              "nodeId": "pr-loop",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "github-pr",
+                  "nodeId": "wait",
+                  "type": "watch"
+                },
+                {
+                  "agentName": "wf-pr-responder",
+                  "nodeId": "respond",
+                  "type": "step"
+                }
+              ],
+              "stopWhen": "wait.terminal",
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://publish-pr"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Loops one coding agent through a JSON checklist file, one item per iteration, until every item is done; progress is durable and inspectable mid-run. For a single non-decomposable outcome, use goal.",
+          "inputs": {
+            "goal": "prompt",
+            "prd_path": "file"
+          },
+          "name": "ralph",
+          "plan": [
+            {
+              "maxIterations": 200,
+              "nodeId": "ralph-loop",
+              "onMaxIterations": "pause",
+              "steps": [
+                {
+                  "agentName": "wf-coder",
+                  "nodeId": "iterate",
+                  "type": "step"
+                }
+              ],
+              "stopCondition": {
+                "fileCheck": {
+                  "jsonPath": "complete",
+                  "path": "{{prd_path}}",
+                  "value": true
+                }
+              },
+              "type": "repeat"
+            }
+          ],
+          "source": "bundled://ralph"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "workflow",
+                "source": {
+                  "origin": "bundled"
+                }
+              }
+            }
+          },
+          "builtIn": true,
+          "description": "Reviews a change with two independent semantic reviewers in parallel on different models, then aggregates into one issues-only report under <workdir>/.agents/reviews/. Reviewers never see each other.",
+          "inputs": {
+            "target": "prompt",
+            "workdir": "string"
+          },
+          "name": "semantic-review-multi-model",
+          "plan": [
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "nodeId": "setup",
+              "type": "step"
+            },
+            {
+              "branches": [
+                {
+                  "agentName": "semantic_reviewer",
+                  "effortLevel": "xhigh",
+                  "modelId": "claude-opus-5",
+                  "nodeId": "review-opus",
+                  "type": "step"
+                },
+                {
+                  "agentName": "semantic_reviewer",
+                  "effortLevel": "xhigh",
+                  "modelId": "gpt-5.6-sol",
+                  "nodeId": "review-gpt",
+                  "type": "step"
+                }
+              ],
+              "nodeId": "reviews",
+              "type": "parallel"
+            },
+            {
+              "agentName": "wf-coder",
+              "effortLevel": "xhigh",
+              "modelId": "claude-opus-5",
+              "nodeId": "aggregate",
+              "type": "step"
+            }
+          ],
+          "source": "bundled://semantic-review-multi-model"
+        }
+      ],
+      "sessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+      "workspacePaths": [
+        "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+      ]
+    }
+  ],
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1,
+    "fs/read_text_file": 5,
+    "fs/write_text_file": 2,
+    "session/request_permission": 2
+  },
+  "sessionNew": {
+    "_meta": {
+      "_meta": {
+        "kiro": {
+          "settings": {
+            "workflows": {
+              "enabled": true
+            }
+          }
+        }
+      },
+      "agentMode": "vibe",
+      "createdAt": "2026-09-30T02:06:31.665Z",
+      "disableAutoCompaction": false,
+      "ftaEnabled": false,
+      "id": "sess_799afddd-9636-486e-b291-7d5929fda973",
+      "lastModifiedAt": "2026-09-30T02:06:31.665Z",
+      "memoryConfig": {
+        "mode": "read_write",
+        "reflection": true
+      },
+      "schemaVersion": "1.0.0",
+      "semanticReviewEnabled": true,
+      "source": "local",
+      "specPlanEnabled": false,
+      "specSkipClarificationEnabled": true,
+      "specWorkflow": "quick",
+      "title": "New Session",
+      "workflowsEnabled": true,
+      "workspacePaths": [
+        "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+      ]
+    },
+    "configOptions": [
+      {
+        "category": "mode",
+        "currentValue": "vibe",
+        "id": "mode",
+        "name": "Mode",
+        "options": [
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "General coding assistance",
+            "name": "Default",
+            "value": "vibe"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Structured feature development",
+            "name": "Spec",
+            "value": "spec"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+            "name": "Quick Spec",
+            "value": "quick-spec"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+            "name": "Bug Fix",
+            "value": "bug-fix"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled",
+                "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+              }
+            },
+            "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+            "name": "Plan",
+            "value": "plan"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Autonomous agent execution",
+            "name": "Autonomous",
+            "value": "autonomous"
+          },
+          {
+            "_meta": {
+              "kiro": {
+                "resource": {
+                  "resourceType": "agent",
+                  "source": {
+                    "origin": "bundled"
+                  }
+                },
+                "source": "bundled"
+              }
+            },
+            "description": "Behavioral, narrative code review of a local or PR diff. Writes a review document and a verdict.",
+            "name": "semantic_reviewer",
+            "value": "semantic_reviewer"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "currentValue": "on",
+        "id": "autopilot",
+        "name": "Autopilot",
+        "options": [
+          {
+            "description": "Agent executes tools without confirmation",
+            "name": "Autopilot",
+            "value": "on"
+          },
+          {
+            "description": "Agent asks for approval before file changes",
+            "name": "Supervised",
+            "value": "off"
+          }
+        ],
+        "type": "select"
+      },
+      {
+        "currentValue": "enabled",
+        "id": "contentCollection",
+        "name": "Content Collection",
+        "options": [
+          {
+            "description": "Allow content to be used for service improvement",
+            "name": "Enabled",
+            "value": "enabled"
+          },
+          {
+            "description": "Opt out of content collection",
+            "name": "Disabled",
+            "value": "disabled"
+          }
+        ],
+        "type": "select"
+      }
+    ],
+    "modes": {
+      "availableModes": [
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "General coding assistance",
+          "id": "vibe",
+          "name": "Default"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Structured feature development",
+          "id": "spec",
+          "name": "Spec"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Fast spec workflow: clarify, then auto-generate requirements, design, and tasks",
+          "id": "quick-spec",
+          "name": "Quick Spec"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Structured bug-fix workflow: investigate, diagnose, and resolve bugs",
+          "id": "bug-fix",
+          "name": "Bug Fix"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled",
+              "welcomeMessage": "Transform any idea into fully working code. What do you want to build today?"
+            }
+          },
+          "description": "Plan-only mode that helps break ideas down into an implementation plan without making any changes",
+          "id": "plan",
+          "name": "Plan"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Autonomous agent execution",
+          "id": "autonomous",
+          "name": "Autonomous"
+        },
+        {
+          "_meta": {
+            "kiro": {
+              "resource": {
+                "resourceType": "agent",
+                "source": {
+                  "origin": "bundled"
+                }
+              },
+              "source": "bundled"
+            }
+          },
+          "description": "Behavioral, narrative code review of a local or PR diff. Writes a review document and a verdict.",
+          "id": "semantic_reviewer",
+          "name": "semantic_reviewer"
+        }
+      ],
+      "currentModeId": "vibe"
+    },
+    "sessionId": "sess_799afddd-9636-486e-b291-7d5929fda973"
+  },
+  "status": "completed",
+  "style": "restate",
+  "workdir": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990",
+  "workflowId": "wf_44e5ef20a45cc178",
+  "workflowNew": {
+    "initialState": {
+      "artifacts": {},
+      "capturedOutputs": {},
+      "createdAt": "2026-09-30T02:06:48.451Z",
+      "inputs": {
+        "token": "<REDACTED>",
+        "workdir": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3/run-1790733990"
+      },
+      "memoryConfig": {
+        "mode": "read_write",
+        "reflection": true
+      },
+      "parentSessionId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+      "planRevision": 0,
+      "root": {
+        "children": [
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s1",
+            "status": "pending",
+            "type": "step"
+          },
+          {
+            "agentName": "wf-coder",
+            "effortLevel": "low",
+            "nodeId": "s2",
+            "status": "pending",
+            "type": "step"
+          }
+        ],
+        "nodeId": "wf_44e5ef20a45cc178",
+        "status": "pending",
+        "type": "sequence"
+      },
+      "rootConversationId": "sess_799afddd-9636-486e-b291-7d5929fda973",
+      "status": "running",
+      "workflowId": "wf_44e5ef20a45cc178",
+      "workflowName": "audit-channels-2.26.0",
+      "workspacePath": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+    },
+    "workflowId": "wf_44e5ef20a45cc178"
+  },
+  "workspace": "/home/dwalleck/.claude/tmp/wf-06615-restate-gateon-2.26.0-ws-d1hk6hu3"
+}
