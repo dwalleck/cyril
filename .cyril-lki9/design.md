@@ -1,6 +1,6 @@
 # Design: cyril-lki9 — agent-initiated turns and engine injections
 
-Status: DRAFT — awaiting requester approval
+Status: APPROVED 2026-09-29
 
 ## Route and inputs
 
@@ -231,6 +231,6 @@ Intended future work (verified tracker IDs):
 
 ## Approval
 
-Requester approval (verbatim): <pending>
-Date: <pending>
-Approved risk acceptances: None proposed.
+Requester approval (verbatim): "yes"
+Date: 2026-09-29
+Approved risk acceptances: None.
