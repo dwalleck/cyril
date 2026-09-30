@@ -1,0 +1,11 @@
+PASS idle-wake                          events=SE       log=['BEGIN server', 'FORWARD_COMPLETE(wire)'] 
+PASS prompt E<R                         events=DSER     log=['BEGIN cyril#0', 'ATTACH', 'FORWARD_COMPLETE(wire)', 'ABSORB synth'] 
+PASS prompt R<E                         events=DSRE     log=['BEGIN cyril#0', 'ATTACH', 'FORWARD_COMPLETE(resp)', 'ABSORB wire'] 
+PASS wake-cancelled                     events=SE       log=['BEGIN server', 'FORWARD_COMPLETE(wire)'] 
+PASS wake-then-dispatch-rejected        events=SDE      log=['BEGIN server', 'REJECT', 'FORWARD_COMPLETE(wire)'] 
+PASS race D@0 tail=SER                  events=DSESER   log=['BEGIN cyril#0', 'ATTACH', 'FORWARD_COMPLETE(wire)', 'BEGIN server', 'FORWARD_COMPLETE(wire)', 'ABSORB synth'] 
+PASS race D@2 tail=SER                  events=SEDSER   log=['BEGIN server', 'FORWARD_COMPLETE(wire)', 'BEGIN cyril#0', 'ATTACH', 'FORWARD_COMPLETE(wire)', 'ABSORB synth'] 
+PASS race D@0 tail=SRE                  events=DSESRE   log=['BEGIN cyril#0', 'ATTACH', 'FORWARD_COMPLETE(wire)', 'BEGIN server', 'ABSORB synth', 'FORWARD_COMPLETE(wire)'] 
+PASS race D@2 tail=SRE                  events=SEDSRE   log=['BEGIN server', 'FORWARD_COMPLETE(wire)', 'BEGIN cyril#0', 'ATTACH', 'FORWARD_COMPLETE(resp)', 'ABSORB wire'] 
+PASS two-wakes                          events=SESE     log=['BEGIN server', 'FORWARD_COMPLETE(wire)', 'BEGIN server', 'FORWARD_COMPLETE(wire)'] 
+== C8 model: 10/10 scenarios PASS
