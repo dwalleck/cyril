@@ -157,12 +157,24 @@ unranked finding is appended, never dropped; an exhausted verify loop uses
 - **`repeat` gives a fresh session per iteration** — confirmed live, not just
   from the 2.16.0 capture: `verify-loop-1/iter-0` and `/iter-1` are distinct
   sessions, and `loop_iteration.stopConditionMet` tracks the queue file.
-- **Model cascade: step `modelId` > agent `model` > parent session (`auto`).**
-  Agent-level `model`/`effortLevel` in a `.md` agent's frontmatter IS honored by
-  workflow step sessions (probe: agent haiku → `claude-haiku-4.5`; same agent +
-  step `modelId` → `claude-sonnet-5`; control → `auto`). Observable per session
-  in `config_option_update`. With `auto`, the wire never names the concrete
-  model the router picked.
+- **Model cascade: step `modelId` > workflow `modelId` > PARENT SESSION model
+  (unless `auto`) > agent `model`** (effort: step > workflow > parent > agent;
+  KAS engine `BU`/`Lvt`). The first probe (agent haiku → `claude-haiku-4.5`; same
+  agent + step `modelId` → `claude-sonnet-5`) ran from an `auto` parent, the one
+  case where the agent file wins. **Corrected 2026-09-30:** with the parent set
+  to `claude-haiku-4.5` (`session/set_config_option {configId: "model"}`), every
+  step, cr-finder included, resolved to haiku — so a launcher whose user picked a
+  model silently replaced the opus-finder/sonnet-verifier tiering.
+  `build_recipe.py` now copies each agent file's `model`/`effortLevel` onto every
+  step (a step pin beats the parent; re-probed: parent haiku → pins hold), and
+  `run_review.py --model/--effort` replace those pins as a whole-run override.
+  Observable per session in `config_option_update`. With `auto`, the wire never
+  names the concrete model the router picked.
+- **`injectOriginalUserRequest: false`.** Default true: every step's first prompt
+  quotes the parent session's user messages verbatim. From an interactive chat
+  that is the whole conversation in every finder and every verifier iteration
+  (each repeat iteration is a fresh session). `context` is the input for naming
+  a review's authorities.
 - **Load-time validation covers nested agents but NOT unknown input templates.**
   A bogus agent three levels deep (`parallel → repeat → step`) is rejected with
   a named error; `{{no_such_input}}` in a nested prompt is ACCEPTED. The skill's
