@@ -1,0 +1,69 @@
+{
+  "busyPromptResult": {
+    "stopReason": "end_turn"
+  },
+  "leg": "busy",
+  "mainKinds": [
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 0.03
+    },
+    {
+      "kind": "steering_injected",
+      "stopReason": null,
+      "t": 35.94
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "end_turn",
+      "t": 38.16
+    },
+    {
+      "kind": "steering_cleared",
+      "stopReason": null,
+      "t": 38.17
+    }
+  ],
+  "mainSessionId": "sess_af7c3a4b-8dde-42ab-afd5-b68f1d9734c3",
+  "mainTurns": [
+    {
+      "end": 38.16,
+      "reasons": [],
+      "start": 0.03,
+      "stopReason": "end_turn",
+      "tagged": 0,
+      "text": "# The History of the Printing Press\n\nThe printing press ranks among the most transformative inventions in human history, a machine that reshaped religion, science, politics, and the very way people understood the world. Its story is not the tale of a single flash of genius but rather a long evolution of ideas, materials, and techniques that spanned continents and centuries. To understand the print",
+      "untagged": 597
+    }
+  ],
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1
+  },
+  "runCompleteSeen": true,
+  "workflowEvents": [
+    {
+      "method": "run_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_complete",
+      "status": "completed"
+    },
+    {
+      "method": "run_complete",
+      "status": "completed"
+    }
+  ],
+  "workflowId": "wf_42ebb047f3d1927f",
+  "workspace": "/home/dwalleck/.claude/tmp/lki9-busy-06615-2.26.0-ws-23r8cuvx"
+}

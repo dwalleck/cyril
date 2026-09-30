@@ -1,0 +1,84 @@
+{
+  "busyPromptResult": {
+    "stopReason": "end_turn"
+  },
+  "leg": "busy",
+  "mainKinds": [
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 0.03
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "end_turn",
+      "t": 33.61
+    },
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 35.67
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "end_turn",
+      "t": 37.89
+    }
+  ],
+  "mainSessionId": "sess_f3c263f3-f391-452f-9d24-d93ec574c38f",
+  "mainTurns": [
+    {
+      "end": 33.61,
+      "reasons": [],
+      "start": 0.03,
+      "stopReason": "end_turn",
+      "tagged": 0,
+      "text": "SLEPT",
+      "untagged": 7
+    },
+    {
+      "end": 37.89,
+      "reasons": [
+        "workflow-complete-wake"
+      ],
+      "start": 35.67,
+      "stopReason": "end_turn",
+      "tagged": 16,
+      "text": "I wasn't waiting on any workflow. The only task I had was running `sleep 30`, which completed, and I already replied with SLEPT. There's nothing further for me to continue. Let me know if there's something specific you'd like me to do.",
+      "untagged": 0
+    }
+  ],
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1,
+    "terminal/create": 1,
+    "terminal/output": 1,
+    "terminal/release": 1,
+    "terminal/wait_for_exit": 1
+  },
+  "runCompleteSeen": false,
+  "workflowEvents": [
+    {
+      "method": "run_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_complete",
+      "status": "completed"
+    },
+    {
+      "method": "run_complete",
+      "status": "completed"
+    }
+  ],
+  "workflowId": "wf_0be12db80b120b59",
+  "workspace": "/home/dwalleck/.claude/tmp/lki9-busy-06615-2.26.0-ws-wnpf7mv3"
+}
