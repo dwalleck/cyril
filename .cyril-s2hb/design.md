@@ -179,7 +179,7 @@ Requester selected “Accept this A1-only exception”: use direct ownership rev
 
 This supersedes the prior F19-only restriction solely for F20's missing automated prefix-responsibility check. Keep the approved production responsibility unchanged and preserve path/count/protected-parent/source-dispatch checks, product/native tests, child-role proof, fresh full review and CI. No other finding is waived; A2/B do not inherit this exception.
 
-Requester also selected “Extend cyril-s2hb to 15 attempts”: five additional implementation/verification cycles for this issue only. Current count remains10; the issue-wide PR-review cap remains5, current3. No counter resets per increment; other issue caps remain5/5. This approval supersedes the earlier cap10 stop, not any acceptance requirement.
+Requester also selected “Extend cyril-s2hb to 15 attempts”: five additional implementation/verification cycles for this issue only. At that authorization, the implementation count was10 and the PR-review count3/5; these are historical counts, not the A2-C publication state. No counter resets per increment; other issue caps remain5/5. This approval supersedes the earlier cap10 stop, not any acceptance requirement. Publication counter history is recorded in `plan.md`, Review partition.
 
 ### Updated Gilfoyle verification decision
 
@@ -211,7 +211,7 @@ Requester correction (verbatim):
 Further requester clarification (verbatim):
 > “The results and output don't have to be byte equivalent”
 
-These latest requester corrections supersede active delegated byte-exact choices. Preserve semantic fields/types and array/file/symbol/usage ordering, meaningful content/snippets, statuses/errors/context, lifecycle/native/security gates, lossless raw captures, and the declared caps/budgets; do not require Python repr/booleans, JSON key order/indentation, host wrapper newlines, native LF-only output, CRCRLF, or exact stdout/stderr prose. Current C1–C4 evidence and outstanding qualification are owned by checkpoint-A2.md; pre-amendment byte captures are historical evidence only. Counters remain unchanged at implementation cycle12/15 (cycle11 historical) and review3/5.
+These latest requester corrections supersede active delegated byte-exact choices. Preserve semantic fields/types and array/file/symbol/usage ordering, meaningful content/snippets, statuses/errors/context, lifecycle/native/security gates, lossless raw captures, and the declared caps/budgets; do not require Python repr/booleans, JSON key order/indentation, host wrapper newlines, native LF-only output, CRCRLF, or exact stdout/stderr prose. A2 acceptance, including C1–C4, is PENDING in this documentation-only increment; its future implementation checkpoint will own results and outstanding qualification. Pre-amendment byte captures are historical evidence only. Publication counter history and the no-reset rule are recorded in `plan.md`, Review partition.
 
 ### Raw Git filename boundary
 

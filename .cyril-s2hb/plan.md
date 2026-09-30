@@ -21,7 +21,7 @@ Four independently mergeable PR increments under delegated Gilfoyle partition ap
 3. **S2HB-A2 native evidence**: the complete gather/facts leaf and hidden CLI, all permanent functional/error fences, runtime documentation, implementation receipts and CI. Based on merged A2-C; independently useful without diagnostics.
 4. **S2HB-B native diagnostics**: complete synchronous diagnostics operation, based on merged A2 and executable through its library consumer without /review.
 
-The issue remains in_progress until all executable increments and the contract amendment satisfy their review/CI/merge gates. The requester extended s2hb to15 implementation attempts; R15 used cycle13 and R16 starts cycle14. Full PR reviews remain3/5; a documentation PR consumes a review normally, never resets or evades the issue-wide cap. Every other issue retains five/five caps. No dependent issue starts before closure; no unrelated primary-checkout work is staged.
+The issue remains in_progress until all executable increments and the contract amendment satisfy their review/CI/merge gates. At A2-C PR opening, R15 had completed implementation cycle13/15 and R16 was allocated cycle14/15; cycle12 is historical. Three full PR reviews preceded A2-C; PR150's initial full review is round4/5. These are opening-history pins, not a live remaining-budget claim: subsequent review consumption must be recorded in the PR review thread. A documentation PR consumes a review normally, never resets or evades the issue-wide cap. Every other issue retains five/five caps. No dependent issue starts before closure; no unrelated primary-checkout work is staged.
 
 ## Module growth ledger
 
@@ -103,6 +103,8 @@ The sum of range upper bounds is not the diff estimate: it includes whole files 
 | 9 restored fence | N/A — item8 requires no mutation. |
 | 10 parity/reuse | PASS — shared contract wording is updated in its existing owners; formatting-only distinctions change while semantic fields/order/content/status/safety remain required. |
 | 11 preserved enforcement | PASS — requester quotations authorize the normative byte-to-functional amendment; no code/checker/CI rule is removed, and A1's two explicitly scoped exceptions are unchanged. |
+
+**A2-C review repair:** F27 Verified/Accept — pinned head `8b748154` has no A2 checkpoint, so this normative increment now records C1–C4 as PENDING and assigns evidence to the future implementation checkpoint, not an absent current artifact. F28 Verified/Modify — stale cycle12/current-count claims are removed; Review partition owns explicit historical opening pins (13 completed,14 allocated; initial PR review4/5), while later review consumption belongs to the PR thread. No cap, acceptance requirement or executable behavior changes.
 
 ## Slice A2: gather and inspect native review evidence
 
@@ -196,4 +198,4 @@ Further requester clarification (verbatim):
 
 This supersedes active byte/text-wrapper parity requirements. A2 checks preserve semantic JSON fields/types and array order, file/symbol/usage sequence, meaningful content, stamps/refusals, exit/status/error/context, page budgets/caps, patch content, and native safety/lifecycle gates. Scope parsing/trimming uses Rust standard Unicode whitespace; generated text uses UTF-8 without a host-specific adapter or native LF-only gate. B uses functional command/status/content checks with lossless raw captures, not Python wrapper-byte parity. The C1 formatting-only manifest-key-order/newline mutant is replaced by manifest data corruption; no format-only mutation is required.
 
-Pre-amendment byte comparisons, host-specific CRLF/CRCRLF checks, and exact stdout/stderr wording are historical evidence only. Current functional evidence and outstanding checks are owned by checkpoint-A2.md. The run-owner projection is now 180–230 lines with a 300-line tripwire, without changing ownership. Counters remain unchanged at implementation cycle12/15 (cycle11 historical) and review3/5.
+Pre-amendment byte comparisons, host-specific CRLF/CRCRLF checks, and exact stdout/stderr wording are historical evidence only. A2 acceptance, including C1–C4, is PENDING in this documentation-only increment; its future implementation checkpoint will own results and outstanding qualification. The run-owner projection is now 180–230 lines with a 300-line tripwire, without changing ownership. Publication counter history and the no-reset rule are recorded in Review partition above.
