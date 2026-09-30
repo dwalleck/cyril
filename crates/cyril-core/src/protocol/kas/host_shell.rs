@@ -153,6 +153,16 @@ impl HostShell {
         }
     }
 
+    pub(crate) fn review_shell(&self) -> crate::review::ShellDialect {
+        use crate::review::ShellDialect;
+        match self.kind {
+            ShellKind::Posix => ShellDialect::Posix,
+            ShellKind::Fish => ShellDialect::Fish,
+            ShellKind::Pwsh => ShellDialect::Pwsh,
+            ShellKind::WindowsPowerShell => ShellDialect::WindowsPowerShell,
+        }
+    }
+
     pub(crate) fn wire_name(&self) -> &'static str {
         match self.kind {
             ShellKind::Posix => "posix",

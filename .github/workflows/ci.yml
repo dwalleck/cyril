@@ -153,6 +153,20 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Review prefix ownership fence
+        env:
+          REVIEW_BASE: ${{ github.base_ref || github.event.repository.default_branch }}
+        run: |
+          base="refs/remotes/origin/$REVIEW_BASE"
+          # Ticket-specific parent deltas must not freeze unrelated future work.
+          if git diff --quiet "$base"...HEAD -- .cyril-s2hb crates/cyril-core/src/review; then
+            echo "No review-prefix ownership changes"
+          else
+            python3 .cyril-s2hb/oracles/check_shape.py --phase prefix --base "$base"
+          fi
 
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2

@@ -3,6 +3,7 @@ pub mod error;
 pub mod kiro_agent_config;
 pub mod platform;
 pub mod protocol;
+pub mod review;
 pub mod session;
 pub mod subagent;
 pub mod types;

@@ -1,0 +1,201 @@
+#!/usr/bin/env python3
+"""C10: independent source/dependency census for the approved s2hb ledger."""
+import argparse
+import os
+from pathlib import Path
+import re
+import subprocess
+import sys
+import tomllib
+
+ROOT = Path(__file__).resolve().parents[2]
+REVIEW = "crates/cyril-review/"
+LIMITS = {
+    REVIEW + "src/lib.rs": 180,
+    REVIEW + "src/run.rs": 300,
+    REVIEW + "src/clock.rs": 150,
+    REVIEW + "src/git.rs": 240,
+    REVIEW + "src/gather.rs": 260,
+    REVIEW + "src/facts.rs": 420,
+    "crates/cyril-core/src/review/mod.rs": 190,
+    "crates/cyril/src/crtool.rs": 130,
+}
+DIAGNOSTICS = {
+    REVIEW + "src/diagnostics/mod.rs": 280,
+    REVIEW + "src/diagnostics/process.rs": 250,
+    REVIEW + "src/diagnostics/command.rs": 230,
+}
+PARENTS = {
+    "crates/cyril/src/main.rs": (20, 360),
+    "crates/cyril-core/src/lib.rs": (2, 25),
+    "crates/cyril-core/src/protocol/bridge.rs": (30, 490),
+    "crates/cyril-core/src/protocol/kas/host_shell.rs": (15, 530),
+}
+
+
+def git(*args):
+    result = subprocess.run(["git", *args], cwd=ROOT, capture_output=True)
+    if result.returncode:
+        raise RuntimeError(f"git {args}: {result.stderr.decode(errors='replace')}")
+    return result.stdout.decode("utf-8")
+
+
+def production(text):
+    return re.split(r"(?m)^#\[cfg\(test\)\]\nmod tests\b", text, maxsplit=1)[0]
+
+
+def lines(text):
+    return len(production(text).splitlines())
+
+
+def normalized(text):
+    return "\n".join(line.strip() for line in text.splitlines() if line.strip())
+
+
+def remove_function(text, name):
+    """Remove only the approved simple projection/getter, with balanced braces."""
+    pattern = rf"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?fn {name}\b[^{{]*\{{"
+    match = re.search(pattern, text)
+    if not match:
+        return text, None
+    depth = 1
+    end = match.end()
+    while depth and end < len(text):
+        depth += (text[end] == "{") - (text[end] == "}")
+        end += 1
+    if depth:
+        raise RuntimeError(f"unbalanced approved function {name}")
+    body = text[match.end():end - 1]
+    return text[:match.start()] + text[end:], body
+
+
+def parent_without_wiring(path, text):
+    text = production(text)
+    if path.endswith("/main.rs"):
+        text = text.replace("mod crtool;\n", "")
+        text = re.sub(r"\s*#\[command\(subcommand\)\]\s*command: Option<crtool::Command>,", "", text)
+        text = re.sub(r"\s*if let Some\(command\) = cli.command \{\s*std::process::exit\(command.run\(\)\);\s*\}", "", text)
+    elif path == "crates/cyril-core/src/lib.rs":
+        text = text.replace("pub mod review;\n", "")
+    elif path.endswith("/bridge.rs"):
+        text, body = remove_function(text, "review_shell")
+        if body is not None and normalized(body) != "self.review_shell":
+            raise RuntimeError(f"{path}: review_shell owns more than a projection")
+        text = re.sub(r"(?m)^\s*/// Dialect of the same host shell resolved for this bridge's KAS session\.\n", "", text)
+        text = re.sub(r"(?m)^\s*review_shell: (?:Option<crate::review::ShellDialect>|None),\n", "", text)
+        assignment = r"\s*handle.review_shell = \{\s*#\[cfg\(feature = \"kas\"\)\]\s*\{\s*host_shell.as_ref\(\).map\(\|shell\| shell.review_shell\(\)\)\s*\}\s*#\[cfg\(not\(feature = \"kas\"\)\)\]\s*\{\s*None\s*\}\s*\};"
+        text = re.sub(assignment, "", text)
+        text = text.replace("let (mut handle, mut channels)", "let (handle, mut channels)")
+    else:
+        text, body = remove_function(text, "review_shell")
+        expected = """use crate::review::ShellDialect;
+        match self.kind {
+            ShellKind::Posix => ShellDialect::Posix,
+            ShellKind::Fish => ShellDialect::Fish,
+            ShellKind::Pwsh => ShellDialect::Pwsh,
+            ShellKind::WindowsPowerShell => ShellDialect::WindowsPowerShell,
+        }"""
+        if body is not None and normalized(body) != normalized(expected):
+            raise RuntimeError(f"{path}: review_shell is not the approved exhaustive projection")
+    return normalized(text)
+
+
+def dependency_names(table):
+    result = set()
+    for key in ("dependencies", "build-dependencies"):
+        for name, value in table.get(key, {}).items():
+            result.add(value.get("package", name) if isinstance(value, dict) else name)
+    for target in table.get("target", {}).values():
+        result.update(dependency_names(target))
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--phase", choices=("prefix", "gather", "diagnostics"), required=True)
+    parser.add_argument("--base", help="Explicit review base; otherwise discover PR/default upstream")
+    args = parser.parse_args()
+    base = args.base
+    if not base:
+        branch = os.environ.get("GITHUB_BASE_REF")
+        base = f"refs/remotes/origin/{branch}" if branch else git("symbolic-ref", "refs/remotes/origin/HEAD").strip()
+    base = git("merge-base", "HEAD", base).strip()
+    errors = []
+    limits = dict(LIMITS)
+    if args.phase == "prefix":
+        limits = {path: limit for path, limit in limits.items()
+                  if path == "crates/cyril-core/src/review/mod.rs"}
+    if args.phase == "diagnostics":
+        limits.update(DIAGNOSTICS)
+    expected_sources = {p for p in limits if p.startswith(REVIEW)}
+    actual_sources = {p.relative_to(ROOT).as_posix() for p in (ROOT / REVIEW / "src").rglob("*.rs")}
+    for missing in sorted(set(limits) - {p for p in limits if (ROOT / p).is_file()}):
+        errors.append(f"{missing}: required owner missing")
+    for extra in sorted(actual_sources - expected_sources):
+        errors.append(f"{extra}: unapproved production module; return to design")
+    for source_root in ("crates/cyril/src", "crates/cyril-core/src"):
+        baseline_sources = set(git("ls-tree", "-r", "--name-only", base, "--", source_root).splitlines())
+        for source in (ROOT / source_root).rglob("*.rs"):
+            path = source.relative_to(ROOT).as_posix()
+            if path not in baseline_sources and path not in limits:
+                errors.append(f"{path}: unapproved new production owner; return to design")
+    for path, limit in limits.items():
+        if not (ROOT / path).is_file():
+            continue
+        text = (ROOT / path).read_text(encoding="utf-8")
+        count = lines(text)
+        if count > limit:
+            errors.append(f"{path}: {count} production-region lines > {limit}; Length review required")
+        print(f"C10 census {path}: {count}/{limit}")
+    for path, (delta_limit, limit) in PARENTS.items():
+        current = (ROOT / path).read_text(encoding="utf-8")
+        before = git("show", f"{base}:{path}")
+        if args.phase == "prefix" and path == "crates/cyril/src/main.rs":
+            if production(current) != production(before):
+                errors.append(f"{path}: prefix increment must not change binary startup")
+        delta = lines(current) - lines(before)
+        if delta > delta_limit or lines(current) > limit:
+            errors.append(f"{path}: production delta +{delta} (max +{delta_limit}), size {lines(current)} (max {limit}); Length review required")
+        try:
+            if parent_without_wiring(path, current) != parent_without_wiring(path, before):
+                errors.append(f"{path}: protected-parent body changed outside approved wiring")
+        except RuntimeError as error:
+            errors.append(str(error))
+    manifest_path = ROOT / REVIEW / "Cargo.toml"
+    if manifest_path.is_file():
+        if args.phase == "prefix":
+            errors.append(f"{manifest_path.relative_to(ROOT)}: leaf belongs to the gather increment")
+        manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+        deps = dependency_names(manifest)
+        if deps != {"serde", "serde_json", "regex", "thiserror"}:
+            errors.append(f"{manifest_path.relative_to(ROOT)}: forbidden/missing runtime dependencies {sorted(deps)}")
+        if manifest.get("lints") != {"workspace": True}:
+            errors.append(f"{manifest_path.relative_to(ROOT)}: workspace lints must be inherited unchanged")
+    lib_path = ROOT / REVIEW / "src/lib.rs"
+    if lib_path.is_file():
+        lib = production(lib_path.read_text(encoding="utf-8"))
+        if re.search(r"(?m)^pub mod ", lib):
+            errors.append(f"{lib_path.relative_to(ROOT)}: internal modules exposed instead of operation interface")
+    if args.phase != "prefix":
+        cli = (ROOT / "crates/cyril/src/crtool.rs").read_text(encoding="utf-8")
+        if re.search(r"\bDiagnostics\b|cyril_core::|serde_json::|tokio::", production(cli)):
+            errors.append("crates/cyril/src/crtool.rs: forbidden diagnostics verb or business/runtime ownership")
+        main_source = (ROOT / "crates/cyril/src/main.rs").read_text(encoding="utf-8")
+        dispatch = main_source.find("std::process::exit(command.run());")
+        startup = main_source.find("    setup_logging();")
+        if dispatch < 0 or startup < 0 or dispatch > startup:
+            errors.append("crates/cyril/src/main.rs: hidden dispatch must precede ordinary startup")
+    if errors:
+        for error in errors:
+            print(f"FAIL C10: {error}", file=sys.stderr)
+        return 1
+    print(f"PASS C10: {args.phase} ledger, dependencies, protected parents; base={base}")
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        sys.exit(main())
+    except (OSError, RuntimeError, ValueError) as error:
+        print(f"FAIL C10: cannot complete source census: {error}", file=sys.stderr)
+        sys.exit(1)
