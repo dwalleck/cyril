@@ -384,6 +384,25 @@ Sweep (step 7): `flip_consumed_steer_echo` doc rewritten (the old "else the OLDE
 - M14 → red (label consumed on `send-message-wake`); restore → green.
 - `python3 .cyril-lki9/oracles/shape.py` → PASS (app.rs delta ≤ 60).
 
+### Checkpoint record — Slice 9 (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** New private `App::annotate_transcript` (no prior callers); called from the three routing points of `handle_notification_inner`: the `Workflow` and `Subagent` route arms (before the stream apply) and the main path (after `ui_state.apply_notification`). `Transcript` imported from `cyril_ui::traits`. Consumers of the new behavior: `UiState::{begin_agent_initiated_turn, show_engine_injection}` (Slice 7), `WorkflowTracker::take_wake_label` (Slice 6). Pending-route frames replay through the same path later, so they are annotated at replay (label order preserved by the in-order replay).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2110 passed, 13 skipped.
+2. Falsifier C14 — PASS: `lki9_wake_header_and_injection_routing`, `lki9_step_wake_leaves_main_label`.
+3. Stress fixture — PASS: two completions pending + generic wake + workflow wake + busy injection + step verdict → generic header (no label taken), workflow header names the OLDER run, notice names the NEWER, step verdict formatted, tracker drained; a `send-message-wake` on a step session → header in the step's stream only, main's pending label untouched.
+4. Implementation vs oracle — PASS: expected lines hand-transcribed from spec B1/B3/B5 and the spec FIFO row; tracker state inspected directly (`take_wake_label` after the run).
+5. Module shape — PASS: `C21 PASS (… app.rs: 54, state.rs: 75)` — `app.rs` +54 of +60: routing only (the helper calls tracker + UiState; no text, no FIFO, no turn rules).
+6. Budget — N/A — reason: O(1) routing per notification.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M14 (take a label for every reason) → `lki9_wake_header_and_injection_routing` FAIL (workflow header names `recipe-wf-new`; the notice degrades to "workflow ended").
+9. Fence restored — PASS: `app.rs` restored from scratch copy (`cmp` identical); both fences green.
+10. Parity and reuse — PASS. Search: `grep` for App route arms and test builders. Reused `test_app`, `session_created_frame`, `workflow_snapshot_frame` (to seed the run), `workflow_id`/`workflow_node_id`; the new `lki9_completion_frame` mirrors `workflow_snapshot_frame`'s shape as a `run_complete` event (the existing completion builder deliberately builds an invalid duplicate-path snapshot). Stream access via the existing `subagent_ui().streams()` (no new accessor on the protected parent). Symmetry: the three route arms call the same helper with their own `Transcript` target; main uses the frame's own session for the label (falling back to the controller's main id for an unscoped frame).
+11. Preserved enforcement — N/A — reason: nothing relaxed.
+
+Sweep (step 7): App `origin` binding comment still accurate (announcements are per turn from the bridge); UiState no-op comment names the two methods the App now calls.
+
 ## Slice 10: end-to-end replay of the committed captures
 
 **Claim IDs:** C20
