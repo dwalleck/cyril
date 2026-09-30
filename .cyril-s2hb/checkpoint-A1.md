@@ -51,14 +51,14 @@ Native builds reported existing Windows-only unused imports/mutability/helpers i
 
 ## Resolved-dialect runtime proof
 
-The retained `.cyril-s2hb/probe_resolved_prefix.rs` was temporarily compiled as the core example `resolved_prefix_smoke`. It calls actual `spawn_bridge`, observes the getter before split, then drops all channel owners and awaits bridge completion. A private empty temporary workspace and intentionally invalid Free/replacement-environment combination prevent launching an agent; this proves shell resolution/carry and shutdown, not ACP connectivity or authentication.
+At this historical checkpoint, `.cyril-s2hb/probe_resolved_prefix.rs` was temporarily compiled as `resolved_prefix_smoke`. It called actual `spawn_bridge`, observed the getter before split, dropped all channel owners and awaited completion. A private empty temporary workspace and intentionally invalid Free/replacement-environment combination prevented launching an agent; this proved resolution/carry and shutdown, not ACP connectivity/authentication. Attempt9 promotes and extends this probe as the permanent `examples/review_prefix.rs` consumer; its fresh receipts belong to review-decisions.md.
 
 - Linux KAS build: configured `bash` → `Some(Posix)`, `fish` → `Some(Fish)`; V2 → `None` for both. All four bridges completed.
 - Linux non-KAS build: both Kas and V2 inputs → `None`; both bridges completed.
 - Native Windows KAS build: configured `powershell` → `Some(WindowsPowerShell)`, portable pwsh directory on the process-local PATH and configured `pwsh` → `Some(Pwsh)`; V2 → `None` for both. All four bridges completed.
 - Initial smoke arguments incorrectly supplied executable paths where the existing resolver accepts choice names. Both hosts returned the existing typed Unsupported error. The corrected arguments above exercised the real resolver unchanged.
 
-`.cyril-s2hb/probe_prefix.rs` retains the exact public-current-executable consumer compiled on both hosts. To reproduce, copy it temporarily to the absent `crates/cyril-core/examples/prefix_smoke.rs`, and copy `probe_resolved_prefix.rs` to the absent `crates/cyril-core/examples/resolved_prefix_smoke.rs`; build/run the named examples with the recorded native shell inputs, then remove only those owned copies. Do not overwrite an existing example. No probe is an installed command or production runtime override.
+`.cyril-s2hb/probe_prefix.rs` retains the separate native path-stress consumer. To repeat that historical path matrix, temporarily copy it to an absent core `examples/prefix_smoke.rs`, execute the recorded shell inputs, then remove only that owned copy. Current resolved-prefix qualification instead runs `cargo run -p cyril-core --features kas --profile test --example review_prefix -- <shell> <dialect>` directly; it also executes the generated prefix. No probe is installed as a Cyril command or overrides production behavior.
 
 ## Reuse and symmetry dispositions
 

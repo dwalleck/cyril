@@ -8,6 +8,8 @@ import subprocess
 import sys
 import tomllib
 
+from rust_source import RustSource, SourceError, token_texts
+
 ROOT = Path(__file__).resolve().parents[2]
 REVIEW = "crates/cyril-review/"
 LIB_PATH = "crates/cyril-core/src/lib.rs"
@@ -51,6 +53,30 @@ APPROVED_BRIDGE_ASSIGNMENT = (
     r'#\[cfg\(not\(feature = "kas"\)\)\]\s*\{\s*None\s*\}\s*'
     r"\};"
 )
+# Compare tokens only after finding the live, owned statement. These nested
+# cfg arms are the approved KAS/non-KAS split, not conditional wiring.
+APPROVED_BRIDGE_ASSIGNMENT_SOURCE = """handle.review_shell = {
+    #[cfg(feature = "kas")]
+    {
+        host_shell.as_ref().map(|shell| shell.review_shell())
+    }
+    #[cfg(not(feature = "kas"))]
+    {
+        None
+    }
+};"""
+EXPECTED_REVIEW_EXPORT = token_texts("pub mod review;")
+EXPECTED_BRIDGE_FIELD = token_texts(BRIDGE_FIELD)
+EXPECTED_BRIDGE_OWNER = token_texts("pub struct BridgeHandle {")
+EXPECTED_BRIDGE_GETTER_HEADER = token_texts(
+    "pub fn review_shell(&self) -> Option<crate::review::ShellDialect> {"
+)
+EXPECTED_BRIDGE_GETTER_BODY = token_texts("self.review_shell")
+EXPECTED_ASSIGNMENT = token_texts(APPROVED_BRIDGE_ASSIGNMENT_SOURCE)
+EXPECTED_HOST_GETTER_HEADER = token_texts(
+    "pub(crate) fn review_shell(&self) -> crate::review::ShellDialect {"
+)
+EXPECTED_HOST_GETTER_BODY = token_texts(APPROVED_REVIEW_SHELL_BODY)
 
 
 def git(*args):
@@ -93,93 +119,136 @@ def remove_function(text, name):
     return text[:match.start()] + text[match.end() + len(body) + 1:], body
 
 
-def extract_block(text, pattern, label):
-    match = re.search(pattern, text)
-    if not match:
+def _live_source(path, text, errors):
+    try:
+        return RustSource(text)
+    except SourceError as error:
+        errors.append(f"{path}: cannot inspect live Rust items: {error}")
         return None
-    return balanced_body(text, match.end(), label)
 
 
 def current_wiring_errors():
-    """Validate only the stable core-to-review integration surface."""
+    """Check explicit live owners, not comments, literals or nested items.
+
+    Read whole files: lexical scopes exclude test modules without mistaking a
+    test-marker-looking literal for a production boundary. Required owners
+    carrying cfg/cfg_attr are rejected; this does not evaluate cfg or macros.
+    """
     errors = []
 
     lib_path = ROOT / LIB_PATH
     if not lib_path.is_file():
         errors.append(f"{LIB_PATH}: required owner missing")
     else:
-        lib = production(lib_path.read_text(encoding="utf-8"))
-        exports = re.findall(r"(?m)^pub mod review;\s*$", lib)
-        if len(exports) != 1:
-            errors.append(f"{LIB_PATH}: expected exactly one `pub mod review;` export")
+        lib = _live_source(LIB_PATH, lib_path.read_text(encoding="utf-8"), errors)
+        if lib is not None:
+            exports = lib.top_level_mods("review")
+            if not (
+                len(exports) == 1
+                and not exports[0].conditional
+                and not lib.has_attribute_before(exports[0].keyword, {"path"})
+                and lib.item_header(exports[0]) == EXPECTED_REVIEW_EXPORT
+            ):
+                errors.append(f"{LIB_PATH}: expected exactly one unconditional default-path `pub mod review;` export")
 
     bridge_path = ROOT / BRIDGE_PATH
     if not bridge_path.is_file():
         errors.append(f"{BRIDGE_PATH}: required owner missing")
     else:
-        bridge = production(bridge_path.read_text(encoding="utf-8"))
-        handle = extract_block(
-            bridge,
-            r"(?m)^pub struct BridgeHandle\s*\{",
-            f"{BRIDGE_PATH} BridgeHandle",
-        )
-        if handle is None:
-            errors.append(f"{BRIDGE_PATH}: BridgeHandle owner missing")
-        else:
-            fields = re.findall(
-                rf"(?m)^\s*{re.escape(BRIDGE_FIELD)}\s*$",
-                handle,
-            )
-            if len(fields) != 1:
-                errors.append(
-                    f"{BRIDGE_PATH}: BridgeHandle must contain one private typed `{BRIDGE_FIELD}` field"
-                )
+        bridge = _live_source(BRIDGE_PATH, bridge_path.read_text(encoding="utf-8"), errors)
+        if bridge is not None:
+            owners = bridge.top_level_structs("BridgeHandle")
+            if len(owners) != 1:
+                errors.append(f"{BRIDGE_PATH}: BridgeHandle owner missing or duplicated")
+            else:
+                owner = owners[0]
+                if bridge.item_header(owner) != EXPECTED_BRIDGE_OWNER:
+                    errors.append(f"{BRIDGE_PATH}: expected the exact nongeneric public BridgeHandle owner")
+                fields = bridge.direct_fields(owner, "review_shell")
+                valid_fields = [
+                    field for field in fields
+                    if not field.conditional
+                    and not owner.conditional
+                    and not field.visible
+                    and bridge.values(field.name, field.end) == EXPECTED_BRIDGE_FIELD
+                ]
+                if len(valid_fields) != 1 or len(fields) != 1:
+                    errors.append(
+                        f"{BRIDGE_PATH}: BridgeHandle must contain one private typed `{BRIDGE_FIELD}` field"
+                    )
+                if owner.conditional or any(field.conditional for field in fields):
+                    errors.append(f"{BRIDGE_PATH}: BridgeHandle review_shell field must be unconditional")
 
-        getter_headers = re.findall(
-            r"(?m)^\s*pub fn review_shell\(&self\) -> Option<crate::review::ShellDialect>\s*\{",
-            bridge,
-        )
-        if len(getter_headers) != 1:
-            errors.append(
-                f"{BRIDGE_PATH}: expected one exact `review_shell` getter signature"
-            )
-        else:
-            _, body = remove_function(bridge, "review_shell")
-            if body is None or normalized(body) != "self.review_shell":
-                errors.append(
-                    f"{BRIDGE_PATH}: review_shell getter must return the private field exactly"
-                )
+            getters = [
+                (impl, method)
+                for impl in bridge.top_level_impls("BridgeHandle")
+                for method in bridge.direct_methods(impl, "review_shell")
+            ]
+            valid_getters = [
+                (impl, method) for impl, method in getters
+                if not impl.conditional
+                and not method.conditional
+                and bridge.item_header(method) == EXPECTED_BRIDGE_GETTER_HEADER
+                and bridge.item_body(method) == EXPECTED_BRIDGE_GETTER_BODY
+            ]
+            if len(valid_getters) != 1 or len(getters) != 1:
+                errors.append(f"{BRIDGE_PATH}: expected one exact unconditional `review_shell` getter signature")
+            if any(impl.conditional or method.conditional for impl, method in getters):
+                errors.append(f"{BRIDGE_PATH}: review_shell getter must be an unconditional BridgeHandle method")
 
-        assignments = re.findall(r"(?m)^\s*handle\.review_shell\s*=", bridge)
-        if len(assignments) != 1:
-            errors.append(
-                f"{BRIDGE_PATH}: expected one resolved-shell assignment to handle.review_shell"
-            )
-        approved = re.findall(APPROVED_BRIDGE_ASSIGNMENT, bridge)
-        if len(approved) != 1:
-            errors.append(
-                f"{BRIDGE_PATH}: resolved-shell assignment is not the approved single KAS/non-KAS projection"
-            )
+            functions = bridge.top_level_functions("spawn_bridge")
+            assignments = [
+                (function, statement)
+                for function in functions
+                for statement in bridge.direct_assignments(function, "handle", "review_shell")
+            ]
+            valid_assignments = [
+                (function, statement) for function, statement in assignments
+                if not function.conditional
+                and not statement.conditional
+                and statement.end is not None
+                and bridge.values(statement.start, statement.end) == EXPECTED_ASSIGNMENT
+            ]
+            if len(valid_assignments) != 1 or len(assignments) != 1 or len(functions) != 1:
+                errors.append(f"{BRIDGE_PATH}: expected one resolved-shell assignment to handle.review_shell")
+            if any(function.conditional or statement.conditional for function, statement in assignments):
+                errors.append(f"{BRIDGE_PATH}: resolved-shell assignment must be unconditional spawn_bridge code")
+            if len(assignments) == 1:
+                function, statement = assignments[0]
+                if (
+                    not function.conditional
+                    and not statement.conditional
+                    and statement.end is not None
+                    and bridge.values(statement.start, statement.end) != EXPECTED_ASSIGNMENT
+                ):
+                    errors.append(
+                        f"{BRIDGE_PATH}: resolved-shell assignment is not the approved single KAS/non-KAS projection"
+                    )
 
     host_path = ROOT / HOST_SHELL_PATH
     if not host_path.is_file():
         errors.append(f"{HOST_SHELL_PATH}: required owner missing")
     else:
-        host = production(host_path.read_text(encoding="utf-8"))
-        getter_headers = re.findall(
-            r"(?m)^\s*pub\(crate\) fn review_shell\(&self\) -> crate::review::ShellDialect\s*\{",
-            host,
-        )
-        if len(getter_headers) != 1:
-            errors.append(
-                f"{HOST_SHELL_PATH}: expected one exact exhaustive review_shell projection"
-            )
-        else:
-            _, body = remove_function(host, "review_shell")
-            if body is None or normalized(body) != normalized(APPROVED_REVIEW_SHELL_BODY):
+        host = _live_source(HOST_SHELL_PATH, host_path.read_text(encoding="utf-8"), errors)
+        if host is not None:
+            getters = [
+                (impl, method)
+                for impl in host.top_level_impls("HostShell")
+                for method in host.direct_methods(impl, "review_shell")
+            ]
+            valid_getters = [
+                (impl, method) for impl, method in getters
+                if not impl.conditional
+                and not method.conditional
+                and host.item_header(method) == EXPECTED_HOST_GETTER_HEADER
+                and host.item_body(method) == EXPECTED_HOST_GETTER_BODY
+            ]
+            if len(valid_getters) != 1 or len(getters) != 1:
                 errors.append(
-                    f"{HOST_SHELL_PATH}: review_shell must retain the exhaustive ShellKind mapping"
+                    f"{HOST_SHELL_PATH}: expected one exact unconditional exhaustive review_shell projection"
                 )
+            if any(impl.conditional or method.conditional for impl, method in getters):
+                errors.append(f"{HOST_SHELL_PATH}: HostShell review_shell projection must be unconditional")
 
     return errors
 
@@ -225,7 +294,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=("prefix", "gather", "diagnostics"))
     parser.add_argument("--integration-only", action="store_true")
-    parser.add_argument("--base", help="Explicit review base; otherwise discover PR/default upstream")
+    bases = parser.add_mutually_exclusive_group()
+    bases.add_argument("--base", help="Review branch; compare from its merge base with HEAD")
+    bases.add_argument("--exact-base", help="Exact before revision for a push endpoint comparison")
     args = parser.parse_args()
     if args.integration_only:
         if args.phase is not None:
@@ -240,11 +311,14 @@ def main():
     if args.phase is None:
         parser.error("--phase is required unless --integration-only is used")
 
-    base = args.base
-    if not base:
-        branch = os.environ.get("GITHUB_BASE_REF")
-        base = f"refs/remotes/origin/{branch}" if branch else git("symbolic-ref", "refs/remotes/origin/HEAD").strip()
-    base = git("merge-base", "HEAD", base).strip()
+    if args.exact_base is not None:
+        base = git("rev-parse", "--verify", f"{args.exact_base}^{{commit}}").strip()
+    else:
+        base = args.base
+        if not base:
+            branch = os.environ.get("GITHUB_BASE_REF")
+            base = f"refs/remotes/origin/{branch}" if branch else git("symbolic-ref", "refs/remotes/origin/HEAD").strip()
+        base = git("merge-base", "HEAD", base).strip()
     errors = current_wiring_errors()
     limits = dict(LIMITS)
     if args.phase == "prefix":
