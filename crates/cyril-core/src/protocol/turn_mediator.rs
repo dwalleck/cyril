@@ -395,6 +395,43 @@ impl TurnMediator {
         }
     }
 
+    /// The bridge's whole decision for one inbound frame (cyril-lki9): its
+    /// disposition, plus what to forward, in order — the agent-initiated
+    /// announcement first when this frame opens one, then the frame itself —
+    /// or nothing when it is absorbed or dropped. The async loop keeps the side
+    /// effects (liveness, source capture, sending); the sequence lives here, so
+    /// a capture replay drives the same code the bridge does.
+    pub(crate) fn mediate(
+        &mut self,
+        routed: RoutedNotification,
+        main: Option<&SessionId>,
+    ) -> Mediated {
+        let disposition = self.observe(&routed, main);
+        if matches!(
+            disposition,
+            Disposition::Absorb { .. } | Disposition::DropStale { .. } | Disposition::DropUnowned
+        ) {
+            return Mediated {
+                disposition,
+                forward: Vec::new(),
+            };
+        }
+        let mut forward = Vec::with_capacity(2);
+        if self.announce(&routed)
+            && let (Some(origin), Some(session)) = (&routed.origin, &routed.session_id)
+        {
+            forward.push(RoutedNotification::scoped(
+                session.clone(),
+                Notification::AgentInitiatedTurn(origin.clone()),
+            ));
+        }
+        forward.push(routed);
+        Mediated {
+            disposition,
+            forward,
+        }
+    }
+
     /// Should the bridge announce this frame's turn as agent-initiated before
     /// forwarding it (cyril-lki9 C10)? `true` exactly once per session per
     /// turn: on the first frame carrying an `origin` since that session's turn
@@ -469,6 +506,14 @@ impl TurnMediator {
             None
         }
     }
+}
+
+/// Outcome of [`TurnMediator::mediate`]: the frame's disposition and the
+/// notifications to forward for it, in order (empty when absorbed/dropped).
+#[derive(Debug)]
+pub(crate) struct Mediated {
+    pub(crate) disposition: Disposition,
+    pub(crate) forward: Vec<RoutedNotification>,
 }
 
 /// An absorb decision waiting for its second `{source, reason}` half.

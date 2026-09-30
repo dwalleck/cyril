@@ -423,6 +423,27 @@ Sweep (step 7): App `origin` binding comment still accurate (announcements are p
 - M20 → tail replay red (no `TurnCompleted`, activity stuck); restore → green.
 - full gate: `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo nextest run --workspace --all-features` → clean/green.
 
+### Checkpoint record — Slice 10 (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** Production refactor to create the replay seam without a parallel dispatcher: new `TurnMediator::mediate(routed, main) -> Mediated { disposition, forward }` holds the per-frame sequence (observe → drop/forward → announcement before the frame) that `inbound.rs::handle_routed_with_source_disposition` previously inlined; `inbound.rs` now consumes it and keeps only the side effects (liveness, source capture, sending). Callers of `observe`/`announce`: `mediate` (production) + unit tests. Behavior-preserving: the full suite (incl. every bridge-harness fence on the real inbound path) passed unchanged before any new test was added. New `test_support::{ReplayFrame, kas_trace_replay}` (feature-gated).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2115 passed, 13 skipped.
+2. Falsifier C20 — PASS: `lki9_replay_{tail_wake_header_and_busy_span, gate_on_label_permission_and_step_header, busy_parent_notice, step_verdict_notice, silent_wake_is_busy_without_header}`.
+3. Stress fixture — PASS: gate-on (two chained wakes across two sessions, runLabel naming, a permission raised mid-wake) and prompt (silent wake pre-empted by a prompt — busy with zero frames, no header, two completions).
+4. Implementation vs oracle — PASS: every expected value comes from the traces (P1–P7 probe outputs: main/step session ids, run names, the injected wake text, the per-turn tagging table); spec success criteria B1, B2 (busy span + single TurnCompleted + idle after), B2-approvals, B5 (busy + step), B7 all hold on the committed captures.
+5. Module shape — PASS: `C21 PASS (… app.rs: 54, state.rs: 75)`; `mediate` deepens the turn mediator (same owner) — no ownership move; the ledger's `TurnMediator` interface gains one composed method.
+6. Budget — N/A — reason: test-only replay; production refactor adds no loop (one `Vec` of ≤ 2 frames per inbound frame).
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M20 — applied at the replay's real seam (the mediator: an idle `TurnStarted` no longer begins a server turn = the original P3 defect; the design text named "the `BeginServerTurn` application in `inbound.rs`", which after the `mediate` extraction no longer decides turn ownership — technical correction, same defect) → tail, silent-wake and busy-parent replays FAIL.
+9. Fence restored — PASS: `turn_mediator.rs` restored from scratch copy (`cmp` identical); five replays green.
+10. Parity and reuse — PASS. Search: `grep` for replay helpers in `test_support.rs` and App tests. Replay reuses `kas_capture_routed` (production conversion) and the production `mediate`; permission requests are assembled from the production converter functions without the ledger-merge/responder side effects (justified in the helper doc). App side reuses `test_app_with_engine_and_command_rx`, `session_created_frame`, `lki9_system_lines`. Symmetry: `mediate` is the ONE decision path for both live inbound and replay.
+11. Preserved enforcement — N/A — reason: no gate relaxed; the refactor kept every pre-existing fence green.
+
+**Fixture correction.** `lki9_replay_step_verdict_notice` first asserted the verdict AFTER the header; the replay showed the verdict arrives right after `turn_start` and before the first tagged frame (evidence P6), so it correctly lands ahead of the header. Assertion corrected to the spec (header before the first text; notice at its arrival point) + wire order; code unchanged.
+
+Sweep (step 7): `inbound.rs` comment now points at `mediate`; the design's C20/M20 wording superseded by this record (the replay seam is `mediate`).
+
 ---
 
 ## Self-review

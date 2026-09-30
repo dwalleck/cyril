@@ -40,10 +40,9 @@ impl DomainMediator {
         {
             self.turn_liveness.stamp(now_std());
         }
-        let completed_turn = match self
-            .turn_mediator
-            .observe(&routed, self.active_session_id.as_ref())
-        {
+        let main = self.active_session_id.clone();
+        let mediated = self.turn_mediator.mediate(routed, main.as_ref());
+        let completed_turn = match mediated.disposition {
             Disposition::Absorb { .. }
             | Disposition::DropStale { .. }
             | Disposition::DropUnowned => return Ok(false),
@@ -61,7 +60,9 @@ impl DomainMediator {
         // forwarded foreign-session terminal (a KAS workflow step or subagent
         // peer ending its turn) must not steal the single active slot and
         // truncate the main turn's record mid-stream.
-        if completed_turn && let Notification::TurnCompleted { stop_reason } = &routed.notification
+        if completed_turn
+            && let Some(Notification::TurnCompleted { stop_reason }) =
+                mediated.forward.last().map(|frame| &frame.notification)
         {
             self.source_observer.finish(
                 terminal_disposition
@@ -71,19 +72,12 @@ impl DomainMediator {
         if completed_turn {
             self.turn_liveness.end();
         }
-        // cyril-lki9 C10: the first agent-initiated frame of a turn is
-        // preceded by one announcement, scoped like the frame itself so it
-        // routes to the same transcript (main or a woken step's stream).
-        if self.turn_mediator.announce(&routed)
-            && let (Some(origin), Some(session)) = (&routed.origin, &routed.session_id)
-        {
-            self.notify(RoutedNotification::scoped(
-                session.clone(),
-                Notification::AgentInitiatedTurn(origin.clone()),
-            ))
-            .await?;
+        // cyril-lki9 C10: `mediate` put the turn's agent-initiated
+        // announcement (when this frame opens one) ahead of the frame, scoped
+        // like it so it routes to the same transcript.
+        for frame in mediated.forward {
+            self.notify(frame).await?;
         }
-        self.notify(routed).await?;
         Ok(completed_turn)
     }
 
