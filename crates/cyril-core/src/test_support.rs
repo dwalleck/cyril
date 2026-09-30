@@ -281,6 +281,34 @@ pub fn kas_recording_to_routed(
     kas_capture_to_routed(&capture)
 }
 
+/// Replays agent-to-client frames from a probe trace in the `{ts, dir, msg}`
+/// JSONL shape the Python raw JSON-RPC probes write (cyril-lki9 captures under
+/// `experiments/conductor-spike/` and `.cyril-lki9/`). Only `dir ==
+/// "agent->client"` rows are inputs; each row's `msg` is the raw frame, handed
+/// to [`kas_capture_to_routed`] so conversion is the production path.
+#[cfg(feature = "kas")]
+pub fn kas_trace_to_routed(
+    trace: &str,
+) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    let mut capture = String::new();
+    for line in trace.lines().filter(|line| !line.is_empty()) {
+        let row: serde_json::Value =
+            must_succeed(serde_json::from_str(line), "trace row is valid JSON");
+        if row.get("dir").and_then(serde_json::Value::as_str) != Some("agent->client") {
+            continue;
+        }
+        let frame = row
+            .get("msg")
+            .unwrap_or_else(|| panic!("agent->client trace row carries msg"));
+        capture.push_str(&must_succeed(
+            serde_json::to_string(frame),
+            "trace frame serializes",
+        ));
+        capture.push('\n');
+    }
+    kas_capture_to_routed(&capture)
+}
+
 /// v2 thinking-capture notifications, keyed by capture line.
 pub type V2ThinkingSequence = Vec<(u64, crate::types::Notification)>;
 

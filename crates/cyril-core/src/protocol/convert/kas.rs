@@ -280,6 +280,9 @@ pub(crate) enum WorkflowFrameOutcome {
 /// KAS multiplexes turn lifecycle, metering, context telemetry, and steering
 /// echoes through one `session_info_update` envelope, discriminated by
 /// `_meta.kiro.kind`. Sub-kinds surfaced today:
+/// - **`turn_start`** — the opening lifecycle signal of every KAS turn, cyril's
+///   own and agent-initiated (workflow auto-wakes) alike →
+///   [`Notification::TurnStarted`] (cyril-lki9 B7).
 /// - **`turn_end`** — the terminal lifecycle signal → [`Notification::TurnCompleted`]
 ///   (KAS-2a), stop reason from `_meta.kiro.stopReason`.
 /// - **`context_usage`** — the proactively-pushed per-category breakdown
@@ -291,6 +294,11 @@ pub(crate) enum WorkflowFrameOutcome {
 ///   *injected*, not v2's `steering_consumed`, and Cleared fires BOTH on
 ///   explicit `_session/steer/clear` and routinely post-injection (findings
 ///   F4) — which is why [`Notification::SteeringCleared`] must stay id-scoped.
+///   KAS also injects ENGINE messages through the same buffer (cyril-lki9 P6):
+///   a `steering_injected` whose id starts `notify-` becomes
+///   [`Notification::EngineMessageInjected`], never a steer consumption, and
+///   `notify-` ids are stripped from `steering_cleared` (a list that named
+///   only engine injections converts to nothing, not to the drain-all).
 ///
 /// Every other sub-kind (`user_message_id_assigned`, `steering_inclusion`
 /// fileMatch catalog, …) returns `None` — matching is exact on the `kind`
@@ -343,6 +351,11 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
         Some("turn_completion") => Some(Notification::TurnMeteringUpdated(turn_metering_update(
             kiro,
         ))),
+        // cyril-lki9 B7: the opening bracket of every KAS turn — cyril's own
+        // prompt turns AND agent-initiated ones (workflow auto-wakes) that no
+        // client prompt precedes. The frame carries no origin; the turn
+        // mediator decides ownership.
+        Some("turn_start") => Some(Notification::TurnStarted),
         Some("turn_end") => Some(Notification::TurnCompleted {
             stop_reason: turn_end_stop_reason(kiro),
         }),
@@ -413,15 +426,64 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             message: steering_text(Some(kiro), "content", "KAS steering_queued", None),
             message_id: steering_message_id(Some(kiro)),
         }),
-        Some("steering_injected") => Some(Notification::SteeringConsumed {
-            content: steering_text(Some(kiro), "content", "KAS steering_injected", None),
-            message_id: steering_message_id(Some(kiro)),
-        }),
-        Some("steering_cleared") => Some(Notification::SteeringCleared {
-            message_ids: steering_message_ids(Some(kiro), "KAS steering_cleared", None),
-        }),
+        // cyril-lki9 B5/B6: KAS also injects ENGINE messages through the
+        // steering buffer (busy-case workflow completion, relayed step
+        // verdicts), marked by a `notify-` id. Classified on the id, never the
+        // content: an operator steer may legitimately say anything.
+        Some("steering_injected") => {
+            let content = steering_text(Some(kiro), "content", "KAS steering_injected", None);
+            match steering_message_id(Some(kiro)) {
+                Some(message_id) if is_engine_injection(&message_id) => {
+                    Some(Notification::EngineMessageInjected {
+                        message_id,
+                        content,
+                        severity: kiro
+                            .get("notificationSeverity")
+                            .and_then(serde_json::Value::as_str)
+                            .filter(|s| !s.is_empty())
+                            .map(str::to_string),
+                    })
+                }
+                message_id => Some(Notification::SteeringConsumed {
+                    content,
+                    message_id,
+                }),
+            }
+        }
+        Some("steering_cleared") => {
+            let message_ids = steering_message_ids(Some(kiro), "KAS steering_cleared", None);
+            // An empty list already means "clear everything" (absent,
+            // empty, or all-corrupt ids — the v2 drain-all convention) and is
+            // kept as-is. A list naming ONLY engine injections concerns no
+            // operator steer: stripping it must not collapse into that
+            // drain-all, so the frame converts to nothing.
+            if message_ids.is_empty() {
+                return Some(Notification::SteeringCleared { message_ids });
+            }
+            let operator_ids: Vec<String> = message_ids
+                .into_iter()
+                .filter(|id| !is_engine_injection(id))
+                .collect();
+            if operator_ids.is_empty() {
+                tracing::debug!("KAS steering_cleared named only engine injections; not forwarded");
+                return None;
+            }
+            Some(Notification::SteeringCleared {
+                message_ids: operator_ids,
+            })
+        }
         _ => None,
     }
+}
+
+/// `messageId` prefix KAS gives messages the engine itself injects into a turn
+/// through the steering buffer (cyril-lki9 evidence P6: `notify-<uuid>` step
+/// verdicts, `notify-wf-<uuid>` busy-session workflow completions). Operator
+/// steers carry `steer-<uuid>`.
+const ENGINE_INJECTION_ID_PREFIX: &str = "notify-";
+
+fn is_engine_injection(message_id: &str) -> bool {
+    message_id.starts_with(ENGINE_INJECTION_ID_PREFIX)
 }
 
 fn turn_metering_update(kiro: &serde_json::Value) -> TurnMeteringUpdate {
@@ -1436,5 +1498,174 @@ mod tests {
             matches!(r, Ok(None)),
             "unknown _kiro/* frame must drop to Ok(None), got {r:?}"
         );
+    }
+
+    // ---- cyril-lki9 Slice 1: turn_start and engine injections ----------------
+
+    /// C1: `turn_start` opens every KAS turn; the v2 engine never produces it.
+    #[test]
+    fn turn_start_converts_to_turn_started() {
+        let sn = kiro_frame(json!({
+            "kind": "turn_start", "messageId": "m-turn-start", "turnStart": true
+        }));
+        assert!(matches!(
+            session_info_to_notification(info_update(&sn)),
+            Some(Notification::TurnStarted)
+        ));
+        let v2 = crate::protocol::engine::V2Engine.convert_session_update(&sn);
+        assert!(
+            !matches!(v2, Some(Notification::TurnStarted)),
+            "v2 must never yield TurnStarted, got {v2:?}"
+        );
+    }
+
+    /// C4: a `notify-` id marks an engine injection; classification is on the
+    /// id, never the content. Stress rows: a `steer-` id whose content LOOKS like
+    /// a notification, a bare `notify` id (no dash), an empty id (legacy), and
+    /// severity absent / empty.
+    #[test]
+    fn notify_injection_is_engine_message() {
+        let convert =
+            |kiro: serde_json::Value| session_info_to_notification(info_update(&kiro_frame(kiro)));
+        match convert(json!({
+            "kind": "steering_injected", "messageId": "notify-wf-1",
+            "content": "A workflow you launched (\"x\") completed.",
+            "notificationSeverity": "info"
+        })) {
+            Some(Notification::EngineMessageInjected {
+                message_id,
+                content,
+                severity,
+            }) => {
+                assert_eq!(message_id, "notify-wf-1");
+                assert_eq!(
+                    content.as_deref(),
+                    Some("A workflow you launched (\"x\") completed.")
+                );
+                assert_eq!(severity.as_deref(), Some("info"));
+            }
+            other => panic!("notify-wf- must be an engine injection, got {other:?}"),
+        }
+        match convert(json!({
+            "kind": "steering_injected", "messageId": "notify-2",
+            "content": "[notification/success] OK", "notificationSeverity": ""
+        })) {
+            Some(Notification::EngineMessageInjected {
+                message_id,
+                severity: None,
+                ..
+            }) => {
+                assert_eq!(message_id, "notify-2");
+            }
+            other => panic!(
+                "notify- with empty severity must be an engine injection with severity None, got {other:?}"
+            ),
+        }
+        for (kiro, want_id) in [
+            (
+                json!({ "kind": "steering_injected", "messageId": "steer-1",
+                     "content": "[notification/success] fake" }),
+                Some("steer-1"),
+            ),
+            (
+                json!({ "kind": "steering_injected", "messageId": "notify",
+                     "content": "bare prefix" }),
+                Some("notify"),
+            ),
+            (
+                json!({ "kind": "steering_injected", "messageId": "",
+                     "content": "legacy" }),
+                None,
+            ),
+        ] {
+            match convert(kiro) {
+                Some(Notification::SteeringConsumed { message_id, .. }) => {
+                    assert_eq!(message_id.as_deref(), want_id);
+                }
+                other => {
+                    panic!("operator steer ({want_id:?}) must stay SteeringConsumed, got {other:?}")
+                }
+            }
+        }
+    }
+
+    /// C5: `notify-` ids are stripped from `steering_cleared`; a list that named
+    /// only engine injections converts to nothing — never to the empty
+    /// drain-all — while an originally empty list keeps drain-all.
+    #[test]
+    fn cleared_strips_notify_ids() {
+        let convert = |ids: serde_json::Value| {
+            session_info_to_notification(info_update(&kiro_frame(
+                json!({ "kind": "steering_cleared", "messageIds": ids }),
+            )))
+        };
+        assert!(
+            convert(json!(["notify-a", "notify-wf-b"])).is_none(),
+            "a clear naming only engine injections must not become drain-all"
+        );
+        assert!(matches!(
+            convert(json!(["notify-a", "steer-b"])),
+            Some(Notification::SteeringCleared { message_ids }) if message_ids == ["steer-b"]
+        ));
+        assert!(matches!(
+            convert(json!(["steer-b"])),
+            Some(Notification::SteeringCleared { message_ids }) if message_ids == ["steer-b"]
+        ));
+        assert!(matches!(
+            convert(json!([])),
+            Some(Notification::SteeringCleared { message_ids }) if message_ids.is_empty()
+        ));
+    }
+
+    /// C1/C4/C5 against live wire: every committed cyril-lki9 trace converts
+    /// (through the production KAS path) to exactly the counts the independent
+    /// `grep` census of the raw frames gives (plan.md Slice 1 oracle table).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn lki9_traces_match_raw_frame_census() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        // (trace, TurnStarted, EngineMessageInjected, SteeringConsumed, SteeringCleared)
+        let census = [
+            (
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+                3,
+                2,
+                0,
+                0,
+            ),
+            (
+                "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+                4,
+                1,
+                0,
+                0,
+            ),
+            (".cyril-lki9/lki9-live-busy-06615-2.26.0.jsonl", 2, 1, 0, 0),
+            (
+                ".cyril-lki9/lki9-live-cancel-06615-2.26.0.jsonl",
+                2,
+                1,
+                0,
+                0,
+            ),
+            (".cyril-lki9/lki9-live-steer-06615-2.26.0.jsonl", 2, 0, 1, 1),
+        ];
+        for (rel, want_started, want_injected, want_consumed, want_cleared) in census {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            let routed = crate::test_support::kas_trace_to_routed(&trace);
+            let count =
+                |pred: fn(&Notification) -> bool| routed.iter().filter(|(_, n)| pred(n)).count();
+            let got = (
+                count(|n| matches!(n, Notification::TurnStarted)),
+                count(|n| matches!(n, Notification::EngineMessageInjected { .. })),
+                count(|n| matches!(n, Notification::SteeringConsumed { .. })),
+                count(|n| matches!(n, Notification::SteeringCleared { .. })),
+            );
+            assert_eq!(
+                got,
+                (want_started, want_injected, want_consumed, want_cleared),
+                "{rel}: (TurnStarted, EngineMessageInjected, SteeringConsumed, SteeringCleared)"
+            );
+        }
     }
 }

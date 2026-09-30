@@ -73,6 +73,25 @@ Branch discovery: the default branch is resolved with `git symbolic-ref refs/rem
 - `python3 .cyril-lki9/oracles/shape.py` → C21 PASS; apply M21 → `C21 FAIL crates/cyril/src/app.rs:<n> forbidden literal "notify-"`; restore → PASS.
 - `env -u CARGO_TARGET_DIR cargo clippy --all-targets --all-features -- -D warnings` → clean.
 
+### Checkpoint record — Slice 1 (2026-09-29, branch `fix/cyril-lki9-i1-core-turns`)
+
+**Impact analysis (step 1).** `session_info_to_notification` — sole caller `KasEngine::convert_session_update` (`protocol/engine.rs:315`); signature unchanged, outputs widened. New `Notification` variants: exhaustive matches found by `cargo check --workspace --all-targets --all-features` — `crates/cyril-ui/src/state.rs` `apply_notification` (explicit no-op arm added) and `crates/cyril/examples/test_bridge.rs` printer (arms added); `SessionController` and App route through existing documented catch-alls (no change). Semantic change for `SteeringConsumed` consumers (`UiState::flip_consumed_steer_echo`, App): they no longer receive `notify-*` ids — intended (C4, cyril-5n75).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2087 passed, 13 skipped (incl. the existing `steering_kinds_degrade_never_drop`).
+2. Falsifiers C1/C4/C5 — PASS: `turn_start_converts_to_turn_started`, `notify_injection_is_engine_message`, `cleared_strips_notify_ids`, `lki9_traces_match_raw_frame_census`. C21 — PASS (`shape.py`).
+3. Stress fixture — PASS: `steer-` id with `[notification/success]` content → `SteeringConsumed{steer-1}`; bare `notify` id → `SteeringConsumed`; empty id → `SteeringConsumed{None}`; empty severity → `None`; `[notify-a, notify-wf-b]` → `None`; `[]` → drain-all kept.
+4. Implementation vs oracle — PASS: converter counts over the 5 committed traces equal the independent `grep` census exactly — (TurnStarted, EngineMessageInjected, SteeringConsumed, SteeringCleared) = tail (3,2,0,0), gate-on (4,1,0,0), busy (2,1,0,0), cancel (2,1,0,0), steer (2,0,1,1). Shape: script deltas (app.rs 0, state.rs +5) = `git diff --numstat`; `git grep` literal hits outside `kas.rs` are a doc comment and `hook.rs` test code only.
+5. Module shape — PASS: `python3 .cyril-lki9/oracles/shape.py` → `C21 PASS (base bfc498b1 on origin/main; protected-parent prod deltas {app.rs: 0, state.rs: 5})`.
+6. Budget — N/A — reason: plan records no production-scale or wall budget for this slice (O(k) id filter, k ≤ ids per frame).
+7. Regression fence — PASS (same runs as item 2).
+8. Named mutation — PASS (red): M1 (delete `turn_start` arm) → `turn_start_converts_to_turn_started` + census FAIL; M4 (`if false &&` on the notify branch) → `notify_injection_is_engine_message` + census FAIL; M5 (forward filtered empty list) → `cleared_strips_notify_ids` + census FAIL; M21 (`"notify-"` const in `app.rs`) → `C21 FAIL crates/cyril/src/app.rs:32 R1`; M21b (+80 lines `state.rs`) → `C21 FAIL … R3: prod delta 85 > 70`.
+9. Fence restored — PASS: files restored from scratch copies (`cmp` identical, never `git checkout`); all four tests + shape fence green.
+10. Parity and reuse — PASS. Search: `grep` over `crates/` + manifests. Reused: `steering_text` / `steering_message_id` / `steering_message_ids` (`convert/kiro.rs`, shared degrade discipline) for the new branch; `crate::test_support::must_succeed`; new `test_support::kas_trace_to_routed` is a thin sibling of `kas_recording_to_routed` delegating to the production `kas_capture_to_routed` (envelope differs: `{ts,dir,msg}` vs recorder `parsed`) — `capture_frames` (private to `convert/kas/workflow.rs` tests, `parsed` unwrap only) not reused because it does not convert. Severity read uses `.filter(|s| !s.is_empty())`, the same empty-means-absent rule `steering_message_id` applies. Symmetry audit (new engine-injection branch beside `SteeringConsumed`): error handling — same `steering_text` degrade for content; logging — the notify-only `steering_cleared` drop logs at `debug` (an expected frame, not drift), while the helper's existing drift warns are unchanged; fallback — id absent/empty keeps the legacy operator path; caller observability — distinct variant; guard parity — classification on id only, content never consulted (stress row). Acceptance change: `steering_cleared` naming only `notify-*` ids was previously accepted as an id-scoped clear (whose unknown ids fell back to id-less chips); now it is dropped — control rows `[notify-a, steer-b]` and `[]` fence both neighbours.
+11. Preserved enforcement — N/A — reason: no gate, fence, validator, oracle or policy file repointed, relaxed or deleted; the existing steering tests run unchanged.
+
+Sweep (step 7): `session_info_to_notification` doc list updated (`turn_start`, engine injections); no forward references; tracker phrases in code cite cyril-lki9/cyril-5n75 only via design claim ids. New intra-doc links resolve (`cargo doc … | grep TurnStarted|EngineMessageInjected` empty; the crate's pre-existing broken links elsewhere are unrelated).
+
 ## Slice 2: agent-initiated tag carried as envelope metadata
 
 **Claim IDs:** C2, C3, C19

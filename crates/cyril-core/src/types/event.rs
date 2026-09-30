@@ -244,6 +244,19 @@ pub enum Notification {
         content: Option<String>,
         message_id: Option<String>,
     },
+    /// The agent injected an engine-originated message into the running turn
+    /// through its steering buffer — NOT an operator steer (cyril-lki9 B5/B6).
+    /// KAS marks these with a `notify-` `messageId`: `notify-wf-<uuid>` is a
+    /// workflow completion delivered while the session was busy (instead of an
+    /// auto-wake turn); any other `notify-<uuid>` is a relayed step verdict
+    /// (`content` = `"[notification/<severity>] <message>"`). Never routed to the
+    /// operator-steer reconciler. `content` is `None` when the echo omitted it;
+    /// `severity` is KAS's `notificationSeverity`, `None` when absent.
+    EngineMessageInjected {
+        message_id: String,
+        content: Option<String>,
+        severity: Option<String>,
+    },
     /// Queued steers were dropped before pickup (via `_session/steer/clear`, or
     /// KAS's routine post-injection cleanup). `message_ids` names which queue
     /// entries were dropped; EMPTY means "everything still queued" — the old
@@ -403,6 +416,12 @@ pub enum Notification {
         /// `unstable_session_model` ACP feature). Empty otherwise.
         available_models: Vec<ModelInfo>,
     },
+    /// A turn began on the session — KAS `session_info_update{kind:"turn_start"}`
+    /// (cyril-lki9 B7). Carries no origin: it opens both cyril's own prompt turns
+    /// and agent-initiated turns (workflow auto-wakes), which cyril never
+    /// requested and which can stay silent for a minute before their first
+    /// frame. The v2 engine never emits it (v2 turns begin with cyril's prompt).
+    TurnStarted,
     TurnCompleted {
         stop_reason: StopReason,
     },

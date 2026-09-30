@@ -1193,6 +1193,11 @@ impl UiState {
             // decision this method cannot express without duplicating the App's
             // "only if already open" rule.
             Notification::PowersChanged { .. } => false,
+            // cyril-lki9: turn-start activity and inline engine-injection
+            // notices are rendered by the I2 increment (spec B5/B7); until
+            // then they change nothing here. Listed explicitly, never a
+            // catch-all.
+            Notification::TurnStarted | Notification::EngineMessageInjected { .. } => false,
         };
         changed || stall_cleared || thinking_changed
     }

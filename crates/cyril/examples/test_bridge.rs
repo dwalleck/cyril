@@ -366,6 +366,9 @@ fn print_notification(n: &Notification) {
                 current_model.as_deref().unwrap_or("(none)")
             );
         }
+        Notification::TurnStarted => {
+            println!("  [TurnStarted]");
+        }
         Notification::TurnCompleted { .. } => {
             println!("  [TurnCompleted]");
         }
@@ -717,6 +720,17 @@ fn print_notification(n: &Notification) {
                 "  [SteeringConsumed] {} (id={})",
                 content.as_deref().unwrap_or("<no text>"),
                 message_id.as_deref().unwrap_or("<none>")
+            );
+        }
+        Notification::EngineMessageInjected {
+            message_id,
+            content,
+            severity,
+        } => {
+            println!(
+                "  [EngineMessageInjected] {} (id={message_id}, severity={})",
+                content.as_deref().unwrap_or("<no text>"),
+                severity.as_deref().unwrap_or("<none>")
             );
         }
         Notification::SteeringCleared { message_ids } => {
