@@ -41,6 +41,10 @@ pub(super) struct Script {
     /// `Some({"kiro": {"agentInitiated": true, …}})` reproduces an
     /// agent-initiated turn's frames; `None` keeps the historical untagged chunk.
     pub(super) chunk_meta: Option<serde_json::Value>,
+    /// The `sessionId` of every `session/cancel` the agent received, in order
+    /// (cyril-lki9 C12). Kept apart from `received` so the exact call-order
+    /// ledgers other fences assert are unchanged.
+    pub(super) cancelled_sessions: Arc<Mutex<Vec<String>>>,
     pub(super) inbound: Option<InboundProbe>,
     pub(super) emit_unknown_update: bool,
     pub(super) request_extension_during_initialize: bool,
@@ -135,6 +139,7 @@ fn fake_agent(
     let received_new = Arc::clone(&script.borrow().received);
     let received_prompt = Arc::clone(&script.borrow().received);
     let received_cancel = Arc::clone(&script.borrow().received);
+    let cancelled_sessions = Arc::clone(&script.borrow().cancelled_sessions);
     let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
@@ -437,8 +442,9 @@ fn fake_agent(
             agent_client_protocol::on_receive_request!(),
         )
         .on_receive_notification(
-            async move |_notification: acp::CancelNotification, _connection| {
+            async move |notification: acp::CancelNotification, _connection| {
                 record(&received_cancel, "cancel");
+                record(&cancelled_sessions, notification.session_id.to_string());
                 cancel_tx.send_replace(true);
                 Ok(())
             },

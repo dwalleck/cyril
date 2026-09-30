@@ -72,3 +72,137 @@ async fn origin_is_stamped_on_the_frame_it_came_on() {
     let untagged = chunk_origin(None).await;
     assert_eq!(untagged, None, "an untagged chunk must carry no origin");
 }
+
+/// Inject a wire-shaped frame (post-conversion, the path live frames take into
+/// the loop) and wait until the App receiver has seen it — proof the mediator
+/// processed it before the test's next command.
+async fn inject_and_see(
+    script: &Rc<RefCell<Script>>,
+    rx: &mut mpsc::Receiver<RoutedNotification>,
+    routed: RoutedNotification,
+) {
+    let inbound = script
+        .borrow()
+        .inbound
+        .clone()
+        .expect_contract("lki9 harness exposes the inbound sender");
+    let want = std::mem::discriminant(&routed.notification);
+    inbound.send(routed).await.expect_contract("lki9 inject");
+    for _ in 0..10 {
+        let seen = recv_notif(rx, 5)
+            .await
+            .expect_contract("lki9 injected frame reaches the App");
+        if std::mem::discriminant(&seen) == want {
+            return;
+        }
+    }
+    panic!("lki9: injected frame never reached the App receiver");
+}
+
+/// Which session a `CancelRequest` reached, with or without a server turn in
+/// flight on the FIRST session while the loop's main has moved to a second.
+async fn cancel_target(with_server_turn: bool) -> Vec<String> {
+    let script = Rc::new(RefCell::new(Script::default()));
+    let probe = Rc::clone(&script);
+    with_harness(
+        Rc::clone(&script),
+        |sender, mut rx, _permission_rx, _gate, _loop_handle| async move {
+            let first = start_session(&sender, &mut rx).await;
+            if with_server_turn {
+                inject_and_see(
+                    &probe,
+                    &mut rx,
+                    RoutedNotification::scoped(first.clone(), Notification::TurnStarted),
+                )
+                .await;
+            }
+            let _second = start_session(&sender, &mut rx).await;
+            sender
+                .send(BridgeCommand::CancelRequest)
+                .await
+                .expect_contract("lki9 C12 cancel send");
+            assert!(
+                wait_for_received(&probe, "cancel", 5).await,
+                "lki9 C12: the agent never received session/cancel"
+            );
+        },
+    )
+    .await;
+    let ledger = std::sync::Arc::clone(&script.borrow().cancelled_sessions);
+    let sessions = ledger.lock().map(|v| v.clone());
+    sessions.expect_contract("cancelled_sessions lock")
+}
+
+/// C12: Esc during a server turn cancels THAT turn's session (the turn's
+/// snapshot), not whatever the loop's main session has become. Positive
+/// control: with no turn in flight the cancel falls back to the current main —
+/// so the two answers differ and the assertion is decisive.
+#[tokio::test]
+async fn cancel_targets_server_turn() {
+    assert_eq!(
+        cancel_target(true).await,
+        ["fake-0"],
+        "server turn on fake-0 must be the cancel target"
+    );
+    assert_eq!(
+        cancel_target(false).await,
+        ["fake-1"],
+        "control: with no turn, cancel falls back to the current main session"
+    );
+}
+
+/// C22: a silent server turn raises `TurnStalled` scoped to the main session
+/// once the threshold elapses; after its `turn_end`, silence raises nothing.
+#[tokio::test(start_paused = true)]
+async fn stall_fires_during_server_turn() {
+    let script = Rc::new(RefCell::new(Script::default()));
+    let probe = Rc::clone(&script);
+    with_harness(
+        script,
+        |sender, mut rx, _permission_rx, _gate, _loop_handle| async move {
+            let main = start_session(&sender, &mut rx).await;
+            inject_and_see(
+                &probe,
+                &mut rx,
+                RoutedNotification::scoped(main.clone(), Notification::TurnStarted),
+            )
+            .await;
+            let routed = tokio::time::timeout(Duration::from_secs(60), rx.recv())
+                .await
+                .expect_contract("lki9 C22 stall within 60 virtual seconds")
+                .expect_contract("lki9 C22 channel open");
+            match &routed.notification {
+                Notification::TurnStalled { quiet } => {
+                    assert!(
+                        *quiet >= DEFAULT_STALL_THRESHOLD,
+                        "quiet {quiet:?} below threshold"
+                    );
+                    assert_eq!(
+                        routed.session_id.as_ref(),
+                        Some(&main),
+                        "stall scoped to main"
+                    );
+                }
+                other => panic!(
+                    "lki9 C22: expected TurnStalled during a silent server turn, got {other:?}"
+                ),
+            }
+            inject_and_see(
+                &probe,
+                &mut rx,
+                RoutedNotification::scoped(
+                    main.clone(),
+                    Notification::TurnCompleted {
+                        stop_reason: StopReason::EndTurn,
+                    },
+                ),
+            )
+            .await;
+            assert!(
+                recv_notif(&mut rx, 120).await.is_none(),
+                "lki9 C22: no stall may fire after the server turn ended"
+            );
+        },
+    )
+    .await;
+}
