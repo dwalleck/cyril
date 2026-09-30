@@ -26,7 +26,9 @@ use cyril_core::usage::{
 };
 use cyril_core::workflow::WorkflowTracker;
 use cyril_ui::state::{AutocompleteAction, UiState};
-use cyril_ui::traits::{Activity, Overlay, PickerKind, TuiState, approval_origin_label};
+use cyril_ui::traits::{
+    Activity, Overlay, PickerKind, Transcript, TuiState, approval_origin_label,
+};
 
 use cyril_core::types::code_panel::CodeCommandResponse;
 
@@ -1153,6 +1155,52 @@ impl App {
         self.handle_notification_inner(routed, true)
     }
 
+    /// cyril-lki9 C13/C14: the transcript side of agent-initiated turns. A
+    /// turn start claims the session's queued workflow completions; an
+    /// announcement opens the turn's header, named — for a workflow completion
+    /// only — by the newest completion that turn claimed; an engine-injected
+    /// message shows as an inline notice, a `notify-wf` one named by the newest
+    /// completion since the turn started. The tracker owns the queue, the UI
+    /// builds all text.
+    fn annotate_transcript(
+        &mut self,
+        transcript: Transcript<'_>,
+        session: &SessionId,
+        notification: &Notification,
+    ) {
+        match notification {
+            Notification::TurnStarted => self.workflow_tracker.claim_wake_labels(session),
+            Notification::AgentInitiatedTurn(origin) => {
+                let label = origin
+                    .is_workflow_completion()
+                    .then(|| self.workflow_tracker.take_wake_label(session))
+                    .flatten();
+                self.ui_state
+                    .begin_agent_initiated_turn(transcript, origin, label.as_ref());
+                self.redraw_needed = true;
+            }
+            Notification::EngineMessageInjected {
+                content,
+                severity,
+                workflow_completion,
+                ..
+            } => {
+                let label = workflow_completion
+                    .then(|| self.workflow_tracker.take_injection_label(session))
+                    .flatten();
+                self.ui_state.show_engine_injection(
+                    transcript,
+                    content.as_deref(),
+                    severity.as_deref(),
+                    *workflow_completion,
+                    label.as_ref(),
+                );
+                self.redraw_needed = true;
+            }
+            _ => {}
+        }
+    }
+
     /// Route one notification, optionally observing usage.
     ///
     /// `observe_usage` is `false` only for frames replayed out of
@@ -1325,6 +1373,7 @@ impl App {
             {
                 NotificationRoute::Workflow => {
                     self.record_workflow_stream_apply();
+                    self.annotate_transcript(Transcript::Workflow(sid), sid, &notification);
                     self.ui_state
                         .apply_workflow_notification(sid, &notification);
                     self.redraw_needed = true;
@@ -1341,6 +1390,7 @@ impl App {
                         );
                     }
                     self.record_subagent_ui_apply();
+                    self.annotate_transcript(Transcript::Subagent(sid), sid, &notification);
                     self.ui_state
                         .apply_subagent_notification(sid, &notification);
                     self.redraw_needed = true;
@@ -1380,6 +1430,9 @@ impl App {
         let session_changed = self.session.apply_notification(&notification);
         self.record_ui_apply();
         let ui_changed = self.ui_state.apply_notification(&notification);
+        if let Some(main) = session_id.as_ref().or(self.session.id()).cloned() {
+            self.annotate_transcript(Transcript::Main, &main, &notification);
+        }
 
         // Register agent commands when they arrive
         if let Notification::CommandsUpdated {
@@ -3791,14 +3844,7 @@ mod tests {
             "10,000 prompt coordination cycles exceeded 1ms/event: {elapsed:?}"
         );
     }
-    /// cyril-14ou C9 (plumbing half; the live half — engine honors the cancel
-    /// — passed at design time, archived in .cyril-14ou/findings.md). Four
-    /// arms: Esc during a stalled busy turn sends CancelRequest AND escalates
-    /// the chip; Esc while busy-but-not-stalled cancels without touching stall
-    /// state; Esc while the approval overlay owns input does neither (the
-    /// key-layer priority holds). Buggy implementations these fail under:
-    /// unconditional cancel-sent marking, marking wired before the busy guard,
-    /// Esc bypassing the overlay layer.
+
     /// cyril-lki9 C11 (App level): a turn the agent started itself (KAS
     /// workflow auto-wake) makes Enter STEER — a `SendPrompt` would pre-empt the
     /// wake (evidence P5) — and Esc cancel it. Positive control: with no
@@ -3845,6 +3891,14 @@ mod tests {
         );
     }
 
+    /// cyril-14ou C9 (plumbing half; the live half — engine honors the cancel
+    /// — passed at design time, archived in .cyril-14ou/findings.md). Four
+    /// arms: Esc during a stalled busy turn sends CancelRequest AND escalates
+    /// the chip; Esc while busy-but-not-stalled cancels without touching stall
+    /// state; Esc while the approval overlay owns input does neither (the
+    /// key-layer priority holds). Buggy implementations these fail under:
+    /// unconditional cancel-sent marking, marking wired before the busy guard,
+    /// Esc bypassing the overlay layer.
     #[tokio::test]
     async fn esc_marks_cancel_sent_during_stall() {
         use cyril_ui::traits::Activity;
@@ -7281,6 +7335,215 @@ mod tests {
             ),
             WorkflowSnapshotMetadata::new("2026-08-13T00:00:00Z".to_owned(), 0),
         )))
+    }
+
+    /// A completed run parented to `parent` (cyril-lki9 C14 fixture): the
+    /// `workflow_snapshot_frame` shape as a `run_complete` event, so it reaches
+    /// the tracker's completion path (the only path that queues wake labels).
+    fn lki9_completion_frame(id: &str, parent: &SessionId) -> Notification {
+        let snapshot = WorkflowSnapshot::new(
+            workflow_id(id),
+            format!("recipe-{id}"),
+            WorkflowRunStatus::Completed,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(workflow_node_id("root"), Vec::new()),
+                WorkflowNodeStatus::Completed,
+                Vec::new(),
+            ),
+            WorkflowSnapshotMetadata::new("2026-09-30T00:00:00Z".to_owned(), 0)
+                .with_parent_session_id(parent.clone()),
+        );
+        match WorkflowRunCompleted::new(
+            workflow_id(id),
+            WorkflowCompletionStatus::Completed,
+            snapshot,
+        ) {
+            Ok(completion) => {
+                Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
+            }
+            Err(error) => panic!("valid completion fixture rejected: {error}"),
+        }
+    }
+
+    fn lki9_system_lines(messages: &[cyril_ui::traits::ChatMessage]) -> Vec<String> {
+        messages
+            .iter()
+            .filter_map(|m| match m.kind() {
+                cyril_ui::traits::ChatMessageKind::System(text) => Some(text.clone()),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn lki9_seed_completion(app: &mut App, id: &str, parent: &SessionId) {
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            id,
+            WorkflowRunStatus::Running,
+        )));
+        app.handle_notification(RoutedNotification::global(lki9_completion_frame(
+            id, parent,
+        )));
+    }
+
+    fn lki9_on(main: &SessionId, notification: Notification) -> RoutedNotification {
+        RoutedNotification::scoped(main.clone(), notification)
+    }
+
+    /// cyril-lki9 C14 (claim at turn start): a turn start claims the session's
+    /// pending completions; a generic header takes none; the workflow header
+    /// names the NEWEST claimed run; a completion during the turn is named by
+    /// its `notify-wf` injection; a step verdict is formatted bare.
+    #[test]
+    fn lki9_wake_header_and_injection_routing() {
+        use cyril_core::types::AgentInitiation;
+        let mut app = test_app();
+        let main = SessionId::new("main");
+        app.handle_notification(session_created_frame(&main));
+        lki9_seed_completion(&mut app, "wf-old", &main);
+        lki9_seed_completion(&mut app, "wf-new", &main);
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("send-message-wake".into()),
+                false,
+            )),
+        ));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("workflow-complete-wake".into()),
+                true,
+            )),
+        ));
+        lki9_seed_completion(&mut app, "wf-late", &main);
+        let wake = "A workflow you launched (\"recipe-wf-late\") completed.";
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::EngineMessageInjected {
+                message_id: "notify-wf-1".into(),
+                content: Some(wake.into()),
+                severity: Some("info".into()),
+                workflow_completion: true,
+            },
+        ));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::EngineMessageInjected {
+                message_id: "notify-2".into(),
+                content: Some("OK".into()),
+                severity: Some("success".into()),
+                workflow_completion: false,
+            },
+        ));
+        let lines = lki9_system_lines(app.ui_state.messages());
+        let tail: Vec<&str> = lines
+            .iter()
+            .rev()
+            .take(4)
+            .rev()
+            .map(String::as_str)
+            .collect();
+        assert_eq!(
+            tail,
+            [
+                "─── ⚙ agent-initiated · send-message-wake ───",
+                "─── ⚙ workflow \"recipe-wf-new\" completed · agent follow-up ───",
+                "⚙ workflow \"recipe-wf-late\" completed (noted mid-turn):\nA workflow you launched (\"recipe-wf-late\") completed.",
+                "⚙ workflow step · success: OK",
+            ]
+        );
+        assert!(app.workflow_tracker.take_injection_label(&main).is_none());
+        app.workflow_tracker.claim_wake_labels(&main);
+        assert!(
+            app.workflow_tracker.take_wake_label(&main).is_none(),
+            "every label consumed or discarded"
+        );
+    }
+
+    /// cyril-lki9 regression (conformance review, 2026-09-30): a wake that
+    /// never renders a header (silent, pre-empted — evidence P5) must not
+    /// leave its run to misname the NEXT wake.
+    #[test]
+    fn lki9_silent_wake_label_never_names_next_wake() {
+        use cyril_core::types::AgentInitiation;
+        let mut app = test_app();
+        let main = SessionId::new("main");
+        app.handle_notification(session_created_frame(&main));
+        lki9_seed_completion(&mut app, "wf-a", &main);
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::TurnCompleted {
+                stop_reason: StopReason::Cancelled,
+            },
+        ));
+        lki9_seed_completion(&mut app, "wf-b", &main);
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("workflow-complete-wake".into()),
+                true,
+            )),
+        ));
+        let lines = lki9_system_lines(app.ui_state.messages());
+        assert_eq!(
+            lines.last().map(String::as_str),
+            Some("─── ⚙ workflow \"recipe-wf-b\" completed · agent follow-up ───"),
+            "the second wake names its own run, not the silent wake's: {lines:?}"
+        );
+    }
+
+    /// cyril-lki9 C14 stress: a step session woken by a message gets its
+    /// generic header in ITS stream; the main session's pending completion is
+    /// untouched (still claimable by main's next turn) and nothing lands in
+    /// the main transcript.
+    #[test]
+    fn lki9_step_wake_leaves_main_label() {
+        use cyril_core::types::AgentInitiation;
+        let mut app = test_app();
+        let main = SessionId::new("main");
+        let step = SessionId::new("child-9");
+        app.handle_notification(session_created_frame(&main));
+        lki9_seed_completion(&mut app, "wf-1", &main);
+        let before = lki9_system_lines(app.ui_state.messages()).len();
+        app.handle_notification(lki9_on(&step, Notification::TurnStarted));
+        app.handle_notification(lki9_on(
+            &step,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("send-message-wake".into()),
+                false,
+            )),
+        ));
+        assert_eq!(
+            lki9_system_lines(app.ui_state.messages()).len(),
+            before,
+            "a step session's header never lands in the main transcript"
+        );
+        let stream = app
+            .ui_state
+            .subagent_ui()
+            .streams()
+            .get(&step)
+            .unwrap_or_else(|| panic!("step stream created on first contact"));
+        assert_eq!(
+            lki9_system_lines(stream.messages()),
+            ["─── ⚙ agent-initiated · send-message-wake ───"]
+        );
+        app.workflow_tracker.claim_wake_labels(&main);
+        assert_eq!(
+            app.workflow_tracker
+                .take_wake_label(&main)
+                .map(|l| l.name().to_owned()),
+            Some("recipe-wf-1".to_owned()),
+            "the main session's completion is still there for main's next turn"
+        );
     }
 
     /// cyril-0qe6 C4: an attach snapshot seeds the tracker exactly once and

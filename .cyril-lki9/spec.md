@@ -17,7 +17,7 @@ When a workflow run launched from cyril ends, KAS starts a model turn on the par
 ### B1 — Workflow wake turn is labeled
 - **Given**: cyril is connected to KAS; the main session is idle; a run launched from that session (`_kiro/workflow/new` with `parentSessionId` = the session) reaches `_kiro/workflow/run_complete` with `status` ∈ {completed, failed, aborted}.
 - **When**: KAS emits frames on that session carrying `_meta.kiro.agentInitiated: true, agentInitiatedReason: "workflow-complete-wake"` (no preceding cyril `session/prompt`).
-- **Then**: the transcript shows exactly one header line `─── ⚙ workflow "<name>" <status> · agent follow-up ───` immediately before the turn's first agent text or tool-call block, where `<name>` = the run's `runLabel`, else `workflowName`, else `workflowId` (KAS's own precedence), taken from that run's `run_complete`; the turn's agent text and tool calls then render exactly as in an operator-started turn.
+- **Then**: the transcript shows exactly one header line `─── ⚙ workflow "<name>" <status> · agent follow-up ───` immediately before the turn's first agent text or tool-call block, where `<name>` = the run's `runLabel`, else `workflowName`, else `workflowId` (KAS's own precedence), of the run whose `run_complete` triggered this wake: the NEWEST completion for that session claimed when this turn started (evidence P8: a wake's `run_complete` always precedes its `turn_start`); the turn's agent text and tool calls then render exactly as in an operator-started turn.
 
 ### B2 — Wake turn has full turn parity
 - **Given**: a wake turn (B1 or B3) is in progress.
@@ -38,7 +38,7 @@ When a workflow run launched from cyril ends, KAS starts a model turn on the par
 - **Given**: any turn is in progress on a session cyril renders (operator-started or agent-initiated).
 - **When**: a `session_info_update{kind: steering_injected}` arrives whose `messageId` starts with `notify-` (an engine injection, not an operator steer).
 - **Then**: the transcript shows one dim notice at that position in the turn:
-  - `messageId` starting `notify-wf-` (workflow completion while the session was busy): `⚙ workflow "<name>" <status> (noted mid-turn):` followed by the injected `content` verbatim, where `<name>`/`<status>` come from the oldest unconsumed `run_complete` for that session (same FIFO as B1; consumes it), or `⚙ workflow ended (noted mid-turn):` when none is known;
+  - `messageId` starting `notify-wf-` (workflow completion while the session was busy): `⚙ workflow "<name>" <status> (noted mid-turn):` followed by the injected `content` verbatim, where `<name>`/`<status>` come from the newest completion for that session that arrived AFTER the running turn started (consuming it), or `⚙ workflow ended (noted mid-turn):` when none is known;
   - any other `notify-` id (a relayed step verdict): `⚙ workflow step · <severity>: <message>`, where `<severity>` = `notificationSeverity` (or `info` when absent) and `<message>` = `content` with a leading `[notification/<severity>] ` prefix removed when present.
 
 ### B6 — Engine injections never touch operator steers
@@ -99,7 +99,7 @@ This change does NOT include:
 | How is a wake turn labeled in the transcript? | **One header line** before the turn: `─── ⚙ workflow "<name>" <status> · agent follow-up ───`. The agent's text and tool calls render normally beneath it. No reconstructed prompt, no per-block tags. | Requester selected "Header line" (2026-09-29). Rejected: the reconstructed prompt (cyril would be inventing text it never received; drifts if KAS changes wording) and per-block tags. | The label is built from cyril-side data only: the `run_complete` that triggered the wake (name, status) plus the wake frames' `_meta.kiro.agentInitiatedReason`. The wake prompt text is never displayed (it is not on the wire). |
 | While a wake turn runs, does cyril treat it like an operator-started turn? | **Full parity**: busy indicator shown, Esc cancels it, stall watchdog armed, tool approvals prompted normally, operator typing takes the existing mid-turn steering path. Only the header label differs. | Requester selected "Yes, full parity" (2026-09-29). | One turn model for both origins. Empirical premises for the probe stage: KAS's response to `session/cancel` and to a mid-turn prompt/steer during a server-started turn. |
 | What does cyril do with agent-initiated turns whose reason is not `workflow-complete-wake`? | **Generic header** `─── ⚙ agent-initiated · <reason> ───`, same parity treatment, debug log. | Requester selected "Generic header" (2026-09-29). | B3. Future engine wake reasons are always visible, never silent. |
-| Which run names the header when several `run_complete`s are pending? | The oldest unconsumed `run_complete` for that session (FIFO); each header consumes one. | Consistency: KAS wakes once per terminal run while the parent is idle; a run that ends while the parent is busy goes to steering and produces no wake. | B1 correlation rule. |
+| Which run names the header when several `run_complete`s are pending? | **Claim at turn start (re-decided 2026-09-30):** each `TurnStarted` on a session claims every completion queued for it so far, discarding any claimed by an earlier turn; the turn's header names the NEWEST claimed completion. A `notify-wf` injection names the newest completion that arrived after the running turn started. | Supersedes the approved FIFO row ("the oldest unconsumed `run_complete` … each header consumes one"): the isolated conformance review showed FIFO leaves the label of a wake that never renders a header (silent / pre-empted, P5) to misname the NEXT wake, and misattributes an injection that arrives before the wake's first tagged frame (P6). Requester approval below. | B1/B5 correlation rule; the queue is pruned at every turn start. |
 | Null/missing: a workflow wake with no known run. | Nameless header `─── ⚙ workflow ended · agent follow-up ───` + debug log. | Label must never be dropped; no invented name. | B4. |
 | Null/missing: `agentInitiatedReason` absent but `agentInitiated: true`. | Generic header with reason `unspecified`. | Same as B3. | B3. |
 | Which sessions do headers apply to? | Any session whose transcript cyril renders (main, and step/subagent drill-in streams). | Parity with where frames already render. | B1 and B3 are per-session. |
@@ -120,3 +120,7 @@ Requester approval (verbatim): "yes"
 Date: 2026-09-29
 
 Scope of approval: every Decisions row and behaviors B1–B7, including the re-opened rows (injection notices, cyril-5n75 folded in, step-verdict format without node id, silent-wake handling).
+
+Amendment approval (verbatim): "Yes, claim at turn start (Recommended)"
+Date: 2026-09-30
+Scope: the wake-label correlation row above and the matching B1/B5 wording (FIFO → claim at turn start).

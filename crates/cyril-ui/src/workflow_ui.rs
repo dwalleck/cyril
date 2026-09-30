@@ -42,6 +42,15 @@ impl WorkflowUiState {
         stream.apply_notification(notification)
     }
 
+    /// Append a system line to `session_id`'s stream, creating it on first
+    /// contact like [`Self::apply_notification`].
+    pub fn add_system_message(&mut self, session_id: &SessionId, text: String) {
+        self.streams
+            .entry(session_id.clone())
+            .or_insert_with(SubagentStream::new)
+            .push_system(text);
+    }
+
     /// Adopt a re-parented optimistic stream, history intact.
     ///
     /// The vacant-key case is the mainline (the sweep runs before any frame

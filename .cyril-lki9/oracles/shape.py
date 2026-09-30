@@ -6,13 +6,15 @@ with the repository's default branch (discovered via `origin/HEAD`, never
 hard-coded):
 
   R1  KAS wire literals ("turn_start", "notify-", "notify-wf-", "agentInitiated",
-      "agentInitiatedReason", "notificationSeverity") appear in PRODUCTION string
+      "agentInitiatedReason", "notificationSeverity", "[notification/",
+      "workflow-complete-wake") appear in PRODUCTION string
       literals only in crates/cyril-core/src/protocol/convert/kas.rs.
   R2  Header / notice text markers ("⚙", "noted mid-turn", "agent follow-up",
       "agent-initiated ·", "workflow step ·") appear in production string literals
       only in crates/cyril-ui/src/turn_labels.rs (vacuous until that module exists).
   R3  Protected parents: production-line delta vs merge-base
-      crates/cyril/src/app.rs <= +60, crates/cyril-ui/src/state.rs <= +70.
+      crates/cyril/src/app.rs <= +60, crates/cyril-ui/src/state.rs <= +80 (raised from
+      +70 by the approved Length review, design.md 2026-09-30).
   R4  crates/cyril-core/src/protocol/convert/mod.rs production text is unchanged.
   R5  No `acp::` / `agent_client_protocol` in crates/cyril-ui/src production code.
 
@@ -29,11 +31,14 @@ ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], tex
 DEFAULT = subprocess.check_output(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=ROOT, text=True).strip()
 BASE = subprocess.check_output(["git", "merge-base", "HEAD", DEFAULT], cwd=ROOT, text=True).strip()
 
-KAS_LITERALS = ["turn_start", "notify-", "agentInitiated", "notificationSeverity"]
+# "[notification/" added 2026-09-30: the isolated conformance review found the
+# step-verdict severity marker (a KAS literal) stripped in cyril-ui; the fence had missed it.
+KAS_LITERALS = ["turn_start", "notify-", "agentInitiated", "notificationSeverity", "[notification/", "workflow-complete-wake"]
 KAS_OWNER = "crates/cyril-core/src/protocol/convert/kas.rs"
 LABEL_MARKERS = ["⚙", "noted mid-turn", "agent follow-up", "agent-initiated ·", "workflow step ·"]
 LABEL_OWNER = "crates/cyril-ui/src/turn_labels.rs"
-PROTECTED = {"crates/cyril/src/app.rs": 60, "crates/cyril-ui/src/state.rs": 70}
+# state.rs cap raised 70 -> 80 by the approved Length review (design.md, 2026-09-30; reshape deferred to cyril-dgyz).
+PROTECTED = {"crates/cyril/src/app.rs": 60, "crates/cyril-ui/src/state.rs": 80}
 FROZEN = "crates/cyril-core/src/protocol/convert/mod.rs"
 
 def strip_cfg_test(text):

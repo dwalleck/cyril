@@ -277,8 +277,12 @@ async fn announce_trace(frames: Vec<RoutedNotification>) -> Vec<String> {
 }
 
 fn tagged(session: &str, text: &str, reason: &str) -> RoutedNotification {
-    RoutedNotification::scoped(crate::types::SessionId::new(session), message(text))
-        .with_origin(crate::types::AgentInitiation::new(Some(reason.to_owned())))
+    RoutedNotification::scoped(crate::types::SessionId::new(session), message(text)).with_origin(
+        crate::types::AgentInitiation::new(
+            Some(reason.to_owned()),
+            reason == "workflow-complete-wake",
+        ),
+    )
 }
 
 fn plain(session: &str, text: &str) -> RoutedNotification {

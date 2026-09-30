@@ -7,7 +7,7 @@ Status: APPROVED 2026-09-29
 - Route: **Empirical** (`route.md`: T1 yes, T2 yes, T3 no, T4 no).
 - Behavior set: `spec.md` B1–B7, signed "yes" 2026-09-29 (re-signed after the prove-it stage re-opened it).
   - B1 workflow wake header · B2 full turn parity · B3 generic header for other reasons · B4 nameless header without a known run · B5 inline notices for `notify-*` injections · B6 injections never touch operator steers (cyril-5n75) · B7 busy from `turn_start`.
-- Edge decisions: `spec.md` Decisions (FIFO naming per session; nameless fallback; `unspecified` reason; headers per rendered session; KAS owns concurrent admission; no retry of a failed wake; step-verdict notice without node id; silent wake = busy, no header).
+- Edge decisions: `spec.md` Decisions (claim-at-turn-start naming per session — amended 2026-09-30, was FIFO; nameless fallback; `unspecified` reason; headers per rendered session; KAS owns concurrent admission; no retry of a failed wake; step-verdict notice without node id; silent wake = busy, no header).
 - Empirical premises (`evidence.md`, all PASS):
   - P1 tag on every chunk/tool_call/tool_call_update of an agent-initiated turn, never on `turn_start`/`turn_end`; wakes also occur on step sessions (`send-message-wake`); engine-started step turns are untagged.
   - P2 `agent-client-protocol 2.0.0` (`schema::v1`) retains `_meta` on all three update kinds.
@@ -44,7 +44,7 @@ Status: APPROVED 2026-09-29
 | S18 | `steering_cleared` with a mix of `notify-*` and `steer-*` ids | schema-possible | claim (B6: only the `steer-*` ids reach the operator-steer reconciler) |
 | S19 | `steering_cleared` with an empty id list (old v2 dialect "clear all") | existing | claim (unchanged) |
 | S20 | `_kiro/workflow/run_complete` for a run parented to the session, before the wake | P7 | claim (B1 name source) |
-| S21 | several `run_complete`s pending for one session | spec FIFO row | claim (FIFO) |
+| S21 | several `run_complete`s pending for one session | spec claim row (amended 2026-09-30) | claim (the turn claims all; the header names the newest; the rest are discarded) |
 | S22 | wake with no pending `run_complete` for the session | spec B4 | claim (nameless) |
 | S23 | `run_complete` name fields: `runLabel` present / only `workflowName` / only `workflowId` | KAS precedence | claim (B1 precedence) |
 | S24 | `run_complete` status `completed` / `failed` / `aborted` | wake policy | claim (status word) |
@@ -87,14 +87,16 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 | Carry the tag with the frame | `types/event.rs` `RoutedNotification` gains `origin: Option<AgentInitiation>` + `with_origin` (envelope metadata beside `session_id`, `turn`) | N/A — existing envelope | a wrapper `Notification` variant |
 | Own server-started turns; forward their terminal; announce once per turn | `protocol/turn_mediator.rs` (deepened) + wiring in `domain_mediator/inbound.rs` | N/A — existing seam: `observe()` → `Disposition` gains `BeginServerTurn` and an announce decision | a second module deciding busy (Alternatives B); App/UiState inferring turn boundaries |
 | Session busy during a server turn | `cyril-core/src/session.rs` `SessionController::apply_notification` (`TurnStarted` → Busy) | N/A — existing seam | App setting Busy on `TurnStarted` |
-| Oldest-unconsumed completed run per parent session | `cyril-core/src/workflow.rs` `WorkflowTracker::take_wake_label` (+ `runLabel` parsed in `convert/kas/workflow.rs`) | method on the existing tracker (Alternatives C) | a second consumer of `Notification::Workflow`; App-held run queues |
+| Completions claimed per parent session at turn start (amended 2026-09-30; was oldest-unconsumed) | `cyril-core/src/workflow.rs` `WorkflowTracker::{claim_wake_labels, take_wake_label, take_injection_label}` (+ `runLabel` parsed in `convert/kas/workflow.rs`, carried by `types/workflow.rs`) | method on the existing tracker (Alternatives C) | a second consumer of `Notification::Workflow`; App-held run queues |
 | Header / notice text | new `cyril-ui/src/turn_labels.rs` (pure formatting) | module-private fns called by `UiState` / `SubagentUiState` | rendering decisions in `cyril-core` or `cyril` (App) |
 | Insert header/notice into a session's transcript; activity on `TurnStarted`; steer fallback narrowing (B6) | `cyril-ui/src/state.rs` (protected parent: thin methods + arms), `subagent_ui.rs` for non-main streams | N/A — existing seams (`apply_notification`, `add_system_message`) | formatting logic in `state.rs`; any new render path in `widgets/chat.rs` (reuses `ChatMessageKind::System`) |
-| Route the new notifications; resolve wake labels | `crates/cyril/src/app.rs` (protected parent: routing arms only) | N/A | label/text formatting, FIFO bookkeeping, or turn-boundary logic in App |
+| Route the new notifications; resolve wake labels | `crates/cyril/src/app.rs` (protected parent: routing arms only) | N/A | label/text formatting, wake-label bookkeeping, or turn-boundary logic in App |
 
 ## Module shape
 
-**Length review:** `N/A — no trigger`. No repository length gate exists (inventory Q9: CI runs fmt/clippy/nextest + `.cyril-jlxx/oracles/windows-construction.py` only; `clippy.toml` sets only `allow-expect-in-tests`; no `too_many_lines`; issue-local ledgers `.cyril-gl5s`, `.cyril-y628`, `.cyril-k3lz` are historical and not in CI). Precedent: `.cyril-6bwr`, `.cyril-ell0`. Growth is still bounded by the protected-parent rules below.
+**Length review (2026-09-30, triggered at Slice 8):** `crates/cyril-ui/src/state.rs`, protected parent. Gate owner: this design's C21 fence (`.cyril-lki9/oracles/shape.py` R3; counting = production lines with every `#[cfg(test)]` item removed). Baseline 2,984 at merge-base `bfc498b1`; approved cap +70; observed +75 after Slice 8 (the cyril-5n75 fix inside the existing steer-reconciliation cluster: a shared id-less fallback helper plus corrected docs). Added responsibility: none new — lki9's header/notice methods are thin delegations to `turn_labels`; the growth is inside steer reconciliation. **Disposition: retain and raise to +80**, requester-approved 2026-09-30 ("Retain and raise to +80 (Recommended)"). Deferred reshape (extract steer-echo reconciliation into its own module): **cyril-dgyz**. `app.rs` cap unchanged (+60).
+
+Earlier verdict (design approval): `N/A — no trigger`. No repository length gate exists (inventory Q9: CI runs fmt/clippy/nextest + `.cyril-jlxx/oracles/windows-construction.py` only; `clippy.toml` sets only `allow-expect-in-tests`; no `too_many_lines`; issue-local ledgers `.cyril-gl5s`, `.cyril-y628`, `.cyril-k3lz` are historical and not in CI). Precedent: `.cyril-6bwr`, `.cyril-ell0`. Growth is still bounded by the protected-parent rules below.
 
 ### Inventory (production lines = before the first `#[cfg(test)] mod`, inventory Q10 at `bfc498b1`)
 
@@ -128,7 +130,7 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 2. *Separate `wire_turns.rs` beside `TurnMediator`:* tracks wire brackets; `DomainMediator` composes both for busy. Locality test fails: two modules decide "is a turn active", and the race needs them to agree atomically.
 3. *Deepen `TurnMediator` (selected):* one module owns "what each inbound frame does to the active turn", now including server-owned turns (C7), bracket attachment for cyril turns (C8), and the once-per-turn announce (C10). Busy stays single-sourced (`is_busy`). Model-verified (10/10).
 
-**C — naming the wake's run (FIFO over completed runs per parent):**
+**C — naming the wake's run (FIFO over completed runs per parent; the rule was later amended to claim-at-turn-start — see the approved amendments; the placement choice below is unchanged):**
 1. *App keeps a FIFO fed from `Notification::Workflow`:* forbidden (CLAUDE.md: workflow notifications are consumed exactly once, by the tracker).
 2. *UiState keeps a FIFO fed by App-forwarded completion summaries:* a second consumer by proxy; UI gains workflow bookkeeping.
 3. *`WorkflowTracker::take_wake_label(session)` (selected):* the tracker already owns every run's parent and terminal status; it adds an arrival-ordered completion log per parent with a consumed mark. App calls one method; no new consumer.
@@ -143,19 +145,20 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 | `protocol/turn_mediator.rs` | `observe()` → `Disposition::{…, BeginServerTurn}`; `announce(&RoutedNotification) -> bool` | server turns, bracket attach, announce-once per session | companion ledger | notification conversion, UI | N/A | table tests in `turn_mediator.rs` | deepen |
 | `domain_mediator/inbound.rs` | existing | stamping `origin`; applying `BeginServerTurn` (liveness begin); emitting `AgentInitiatedTurn` before the first tagged frame | — | turn rules | N/A | bridge harness tests | deepen |
 | `session.rs` | `apply_notification` | `TurnStarted` → Busy | — | UI | N/A | unit | deepen |
-| `workflow.rs` | `WorkflowTracker::take_wake_label(&SessionId) -> Option<WakeLabel>` | completion log + consumption | run map | UI text | N/A | unit | deepen |
+| `workflow.rs` | `WorkflowTracker::claim_wake_labels(&SessionId)`; `WorkflowTracker::{take_wake_label, take_injection_label}(&SessionId) -> Option<WakeLabel>` (amended 2026-09-30) | per-parent completion queue, turn-start claim, consumption | run map | UI text | N/A | unit | deepen |
 | `convert/kas/workflow.rs` | `WireSnapshot.run_label` | parse `runLabel` | — | — | N/A | unit | deepen |
+| `types/workflow.rs` (amendment N1, 2026-09-30) | `run_label: Option<String>` on `WorkflowSnapshotMetadata` (+ `with_run_label`, `run_label()`), `WorkflowSnapshot::run_label()`, `WorkflowSnapshotParts.run_label` | carry the parsed `runLabel` from the converter to the tracker (domain field only) | — | parsing; naming precedence | N/A | converter + tracker unit tests | deepen |
 | `cyril-ui/src/turn_labels.rs` | `header_text(..)`, `notice_text(..)` (crate-private) | all header/notice strings (B1/B3/B4/B5) | — | state, rendering | N/A | unit tests in the module | create |
 | `cyril-ui/src/state.rs` | `UiState::{begin_agent_initiated_turn, show_engine_injection}` + arms | calling `turn_labels`, `add_system_message`; `TurnStarted` activity; C6 fallback narrowing | existing steer echo machinery | string formatting; workflow data | N/A | UiState tests | protected parent |
 | `cyril-ui/src/subagent_ui.rs` | same two operations per stream | non-main transcripts | — | formatting | N/A | unit | deepen |
-| `crates/cyril/src/app.rs` | existing | routing `AgentInitiatedTurn` / `EngineMessageInjected` to tracker + UI | — | text, FIFO, turn rules | N/A | App tests | protected parent |
+| `crates/cyril/src/app.rs` | existing | routing `TurnStarted` / `AgentInitiatedTurn` / `EngineMessageInjected` to tracker + UI | — | text, label bookkeeping, turn rules | N/A | App tests | protected parent |
 
 ### Protected parents
 
 | Protected parent | Baseline responsibilities | Allowed change | Forbidden change | Exit condition |
 |---|---|---|---|---|
-| `crates/cyril/src/app.rs` | orchestration, key handling, routing, tracker ownership | ≤ 2 new `match` arms / helper calls routing the two new notifications (call `take_wake_label`, call the two UiState methods); production delta ≤ +60 lines | string literals of header/notice text; any `notify`/`agentInitiated` literal; turn-state fields | shape fence C21: prod delta ≤ 60, forbidden literals absent |
-| `crates/cyril-ui/src/state.rs` | transcript, activity, steering, overlays | two thin methods delegating to `turn_labels`; `TurnStarted` arm; C6 fallback narrowing inside the existing function; production delta ≤ +70 lines | header/notice string construction (`"───"`, `"⚙"`, `"noted mid-turn"` literals); workflow types | shape fence C21 |
+| `crates/cyril/src/app.rs` | orchestration, key handling, routing, tracker ownership | ≤ 2 new `match` arms / helper calls routing the two new notifications (call `claim_wake_labels` / `take_wake_label` / `take_injection_label`, call the two UiState methods — amended 2026-09-30); production delta ≤ +60 lines | string literals of header/notice text; any `notify`/`agentInitiated` literal; turn-state fields | shape fence C21: prod delta ≤ 60, forbidden literals absent |
+| `crates/cyril-ui/src/state.rs` | transcript, activity, steering, overlays | two thin methods delegating to `turn_labels`; `TurnStarted` arm; C6 fallback narrowing inside the existing function; production delta ≤ +80 lines (raised from +70 by the approved Length review) | header/notice string construction (`"───"`, `"⚙"`, `"noted mid-turn"` literals); workflow types | shape fence C21 |
 
 ## Claims
 
@@ -171,7 +174,7 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 - **C10** — For each session and each wire turn, exactly one `AgentInitiatedTurn{reason}` is forwarded, immediately before that turn's first origin-tagged frame; untagged turns produce none.
 - **C11** — `SessionController` is Busy from `TurnStarted` until `TurnCompleted`, so Enter during a server turn dispatches `SteerSession` (not `SendPrompt`) and Esc dispatches `CancelRequest`.
 - **C12** — `CancelRequest` during a server turn sends `session/cancel` for that turn's session.
-- **C13** — `WorkflowTracker::take_wake_label(s)` returns the oldest not-yet-taken terminal completion whose parent is `s`, as `{name: runLabel → workflowName → workflowId, status}`, and `None` when none remains.
+- **C13** — (amended 2026-09-30) Terminal completions queue per parent session; each `TurnStarted` on `s` claims the queue (discarding earlier claims); `take_wake_label(s)` returns the NEWEST claimed completion and `take_injection_label(s)` the newest unclaimed, each as `{name: runLabel → workflowName → workflowId, status}`, else `None`.
 - **C14** — App: `AgentInitiatedTurn{reason:"workflow-complete-wake"}` on session `s` takes one wake label from the tracker and inserts the B1 header (B4 when `None`); any other or absent reason inserts the B3 header without taking a label; `EngineMessageInjected` with `notify-wf-` takes one label and inserts the B5 workflow notice; any other `notify-` inserts the B5 step notice.
 - **C15** — `turn_labels` produces exactly the approved strings for B1, B3 (incl. `unspecified`), B4, B5 (both kinds; `[notification/<sev>] ` prefix stripped; severity default `info`).
 - **C16** — Headers and notices enter the target session's transcript as system-style lines at the current position, after flushing streaming text, for the main transcript and for subagent/step streams.
@@ -198,7 +201,7 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 | C10 | announce once | D6, S4–S7 | per session: 57 tagged frames in one wire turn → exactly 1 `AgentInitiatedTurn`, positioned before the first tagged frame; next turn re-arms; untagged turn → 0; two sessions interleaved → one each. Absence control: an untagged capture turn yields 0 while tagged yields 1. | P1 probe per-turn table (`probe_p1_p7.py` output: tagged turns per session) | M10: never reset the announced flag at `turn_end` → `two-wakes` row red (1 ≠ 2) | bridge harness test | minutes | PENDING — checkpointed-build |
 | C11 | busy → steer / cancel | D1, D2 | SessionController: `TurnStarted` → Busy; `TurnCompleted` → Active; App test: after `TurnStarted`, Enter with text → `SteerSession` sent (not `SendPrompt`); Esc → `CancelRequest`. | P5 live: steer accepted during a wake; prompt pre-empts (the behaviour being prevented) | M11: remove the `TurnStarted` arm from `SessionController::apply_notification` → App test red (`SendPrompt` observed) | unit + App test | minutes | PENDING — checkpointed-build |
 | C12 | cancel targets server turn | D2 | bridge harness: server turn active on `s`; `CancelRequest` → fake agent receives `session/cancel{sessionId: s}`. | P4 live leg (cancel ends wake) + harness recorded calls | M12: make `cancel_active` ignore server turns (use only cyril-owned sessions) → harness red (no cancel / wrong session) | bridge harness test | minutes | PENDING — checkpointed-build |
-| C13 | FIFO wake label | S20–S24, B4 | tracker: runs A(parent s, completed t1), B(parent s, failed t2), C(parent other) → take(s)=A, take(s)=B, take(s)=None; name precedence rows; non-terminal runs never returned. | hand table from spec FIFO row + KAS precedence (`runLabel||workflowName||workflowId`, bundle static) | M13: return the newest instead of the oldest → fence red (B ≠ A) | unit test in `workflow.rs` | minutes | PENDING — checkpointed-build |
+| C13 | wake label claimed at turn start (amended 2026-09-30; was FIFO) | S20–S24, B4 | tracker: completions for `s` a, b (runLabel), c (parent other) → claim(s), take(s) names the NEWEST claimed (b) and discards a; a completion after the claim is named by take_injection_label(s), not by the next take; a claim with no unconsumed completion → None; name precedence rows; non-terminal runs never returned; a silent wake's claim never names the next wake. | hand table from the amended spec claim row + P8 + KAS precedence (`runLabel||workflowName||workflowId`, bundle static) | M13: take the OLDEST claimed instead of the newest → fence red; M13b: drop the `TurnStarted` claim in App → silent-wake regression red | unit test in `workflow.rs` + App tests | minutes | PENDING — checkpointed-build |
 | C14 | App routing | S20–S24, B1/B3/B4/B5 | App test: tracker holds completion for `s`; route `AgentInitiatedTurn{workflow-complete-wake}` → header with name; `{send-message-wake}` → generic header and tracker label still available; `EngineMessageInjected{notify-wf-…}` → notice with name. | spec B1/B3/B5 strings (hand-written expected) | M14: take a label for every reason → `send-message-wake` row red (label consumed) | App test | minutes | PENDING — checkpointed-build |
 | C15 | exact strings | B1, B3, B4, B5 | table test over every format branch. | spec text (approved literals) copied into expected values by hand | M15: drop the `[notification/<sev>] ` strip → step-notice row red | unit tests in `turn_labels.rs` | minutes | PENDING — checkpointed-build |
 | C16 | insertion position | B1/B5 position | UiState: streaming "abc" then notice then "def" + `TurnCompleted` → messages `[AgentText abc, System notice, AgentText def]`; subagent stream same. | P6 busy trace order (injection mid-turn) | M16: append the notice without flushing streaming first → order row red | UiState + subagent_ui tests | minutes | PENDING — checkpointed-build |
@@ -214,6 +217,29 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 - **C10 / M10 (2026-09-29, Slice 4):** the turn-START reset of the announced set masks removal of the turn-END reset whenever every turn is bracketed, so M10 alone stayed green on a fully bracketed fixture. The fence now carries two isolating rows (a turn with no START after an announced turn's END; a turn whose previous END was missed) and a companion mutation **M10b** (drop the turn-START reset); both M10 and M10b are red, restored green. Approved behavior ("re-armed at `turn_start`/`turn_end`") unchanged.
 - **C8 / M8 (Slice 3):** the scenario table originally inferred `ATTACH` from the pre-state (blind to M8); repaired to judge the effect. Asserted behavior unchanged.
 
+### Isolated design-conformance review (2026-09-30) and approved amendments
+
+Reviewer: fresh-context agent, production tree only (Phase 1 written before reading this file); record `.cyril-lki9/conformance-review.md`. RESULT: FAIL with 7 ledger mismatches + 3 defects. Dispositions:
+
+**Code restored to the ledger (no decision change):**
+- M1 — `turn_labels` made crate-private (`pub(crate) mod`, `pub(crate) fn`), per the ledger; the ledger's single `notice_text` is two functions (`workflow_notice_text`, `step_notice_text`) — recorded here.
+- M6 — the `[notification/<sev>] ` prefix strip (a KAS literal) moved from `turn_labels.rs` into `convert/kas.rs`; C21 R1 gains the `[notification/` literal (the fence had missed it).
+- M3 (optional part) — `announce` made private to the mediator; the capture census drives `mediate` instead of re-sequencing observe/announce.
+- Defects — `annotate_transcript`'s doc no longer splits `handle_notification_inner`'s doc; one test doc restored; stale `state.rs` comment fixed.
+
+**Ledger amendments — requester approved "Approve all five (Recommended)", 2026-09-30:**
+- M2 — `Notification::AgentInitiatedTurn(AgentInitiation)` (not `{reason}`); `AgentInitiation::is_workflow_completion` and `EngineMessageInjected.workflow_completion` carry the converter's classification so no KAS literal leaves `convert/kas.rs`.
+- M3 — the announcement is built by `TurnMediator::mediate` (returns `Mediated { disposition, forward }`); `inbound.rs` only applies side effects and forwards; `observe` takes `main`.
+- M4 — `cyril-ui/src/traits.rs::Transcript` (App-decided target) and `add_system_message(session, text)` on `SubagentUiState` and `WorkflowUiState` (via `SubagentStream::push_system`) are ledger rows (owner: cyril-ui transcript insertion; tests through `UiState`).
+- M5 — `cyril_core::workflow::WakeLabel` appears in two `state.rs` method signatures as an opaque pass-through to `turn_labels` (never stored or inspected in `state.rs`): allowed exception to the protected-parent "no workflow types" rule.
+- M7 — `app.rs` calls its one helper from three route arms (Main, Workflow, Subagent) instead of "≤ 2 arms"; the +60 production-line cap holds.
+
+**Spec rule change (from the review's "wake-label queue never pruned" note) — requester approved "Yes, claim at turn start (Recommended)", 2026-09-30:** C13 becomes "claim at turn start": `WorkflowTracker::claim_wake_labels(session)` (App, on each `TurnStarted`) moves the session's queued completions into its claimed set, discarding earlier claims; `take_wake_label(session)` (header) returns the NEWEST claimed; `take_injection_label(session)` (`notify-wf`) returns the newest unclaimed. New premise P8 (evidence.md) grounds it. C14 row updated accordingly; new regression fence: a silent wake's unused label never names the next wake.
+
+**Second isolated conformance review (fresh context, 2026-09-30) — FAIL on N1/N2, resolved:**
+- N1 — `crates/cyril-core/src/types/workflow.rs` (the `run_label` domain field) had no ledger row, and the claim-rule amendment had left FIFO wording in the Decisions summary, S21, the placement row, the `workflow.rs`/App rows and C13/M13. Disposition: ledger amendment (the `types/workflow.rs` row above; stale text conformed to the approved claim rule; M13 restated as "take the oldest claimed"). Requester approved "Approve the amendment (Recommended)", 2026-09-30.
+- N2 — spec B3/B4 "debug log" clauses were unimplemented. Disposition: code fix — `TurnMediator::announce` logs a generic wake's reason once per announced turn (B3); `WorkflowTracker::take_wake_label` logs a run-less workflow wake (B4). Fences `generic_wake_reason_is_logged`, `nameless_wake_label_is_logged`; mutations MB3/MB4 (delete the log) → red.
+
 ## Non-goals and future work
 
 Permanent non-goals (rationale in `spec.md` Decisions / Out of scope):
@@ -225,6 +251,7 @@ Intended future work (verified tracker IDs):
 - Step node ids on step-verdict notices; modeling `_kiro/session/notify` — **cyril-fb1m**.
 - Labeling wake turns in replayed history after `session/load` — **cyril-99ds**.
 - A standalone "run finished" notice when no wake happens — **cyril-zd8u**.
+- Extract steer-echo reconciliation from `state.rs` — **cyril-dgyz**.
 - Full snapshot field coverage beyond `runLabel` (`memoryConfig`, `rootConversationId`, recipe rows) — **cyril-4u4a**.
 
 ## Falsifier run log

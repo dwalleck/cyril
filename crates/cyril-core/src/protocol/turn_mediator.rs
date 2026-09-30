@@ -395,14 +395,62 @@ impl TurnMediator {
         }
     }
 
+    /// The bridge's whole decision for one inbound frame (cyril-lki9): its
+    /// disposition, plus what to forward, in order — the agent-initiated
+    /// announcement first when this frame opens one, then the frame itself —
+    /// or nothing when it is absorbed or dropped. The async loop keeps the side
+    /// effects (liveness, source capture, sending); the sequence lives here, so
+    /// a capture replay drives the same code the bridge does.
+    pub(crate) fn mediate(
+        &mut self,
+        routed: RoutedNotification,
+        main: Option<&SessionId>,
+    ) -> Mediated {
+        let disposition = self.observe(&routed, main);
+        if matches!(
+            disposition,
+            Disposition::Absorb { .. } | Disposition::DropStale { .. } | Disposition::DropUnowned
+        ) {
+            return Mediated {
+                disposition,
+                forward: Vec::new(),
+            };
+        }
+        let mut forward = Vec::with_capacity(2);
+        if self.announce(&routed)
+            && let (Some(origin), Some(session)) = (&routed.origin, &routed.session_id)
+        {
+            forward.push(RoutedNotification::scoped(
+                session.clone(),
+                Notification::AgentInitiatedTurn(origin.clone()),
+            ));
+        }
+        forward.push(routed);
+        Mediated {
+            disposition,
+            forward,
+        }
+    }
+
     /// Should the bridge announce this frame's turn as agent-initiated before
     /// forwarding it (cyril-lki9 C10)? `true` exactly once per session per
     /// turn: on the first frame carrying an `origin` since that session's turn
     /// start (or since it was last announced and ended). Frames without an
     /// origin, or with no session scope, never announce.
-    pub(crate) fn announce(&mut self, routed: &RoutedNotification) -> bool {
+    fn announce(&mut self, routed: &RoutedNotification) -> bool {
         match (&routed.origin, &routed.session_id) {
-            (Some(_), Some(session)) => self.announced.insert(session.clone()),
+            (Some(origin), Some(session)) => {
+                let first = self.announced.insert(session.clone());
+                if first && !origin.is_workflow_completion() {
+                    // Spec B3: a reason cyril has no specific header for.
+                    tracing::debug!(
+                        session = %session,
+                        reason = origin.reason().unwrap_or("unspecified"),
+                        "agent-initiated turn with a non-workflow reason; generic header"
+                    );
+                }
+                first
+            }
             _ => false,
         }
     }
@@ -471,6 +519,14 @@ impl TurnMediator {
     }
 }
 
+/// Outcome of [`TurnMediator::mediate`]: the frame's disposition and the
+/// notifications to forward for it, in order (empty when absorbed/dropped).
+#[derive(Debug)]
+pub(crate) struct Mediated {
+    pub(crate) disposition: Disposition,
+    pub(crate) forward: Vec<RoutedNotification>,
+}
+
 /// An absorb decision waiting for its second `{source, reason}` half.
 struct PendingAbsorb {
     owner: TurnId,
@@ -522,6 +578,54 @@ mod tests {
     /// The KAS wire `turn_end` shape: identity-free, session-scoped.
     fn wire_end(s: &str) -> RoutedNotification {
         RoutedNotification::scoped(sid(s), end_turn())
+    }
+
+    /// cyril-lki9 spec B3: announcing a turn whose reason has no specific
+    /// header logs the reason once; a workflow-completion wake logs nothing.
+    #[test]
+    fn generic_wake_reason_is_logged() {
+        use crate::types::{AgentInitiation, AgentMessage};
+        let tagged = |reason: &str, workflow_completion: bool| {
+            RoutedNotification::scoped(
+                sid("main"),
+                Notification::AgentMessage(AgentMessage {
+                    text: "x".into(),
+                    is_streaming: true,
+                }),
+            )
+            .with_origin(AgentInitiation::new(
+                Some(reason.into()),
+                workflow_completion,
+            ))
+        };
+        let capture_mediate = |frames: Vec<RoutedNotification>| {
+            let _capture_lock = crate::test_support::tracing_capture_lock();
+            let capture = crate::test_support::CaptureWriter::default();
+            let subscriber = tracing_subscriber::fmt()
+                .with_max_level(tracing::Level::DEBUG)
+                .with_ansi(false)
+                .with_writer(capture.clone())
+                .finish();
+            tracing::subscriber::with_default(subscriber, || {
+                let mut m = TurnMediator::new();
+                for frame in frames {
+                    m.mediate(frame, Some(&sid("main")));
+                }
+            });
+            String::from_utf8(capture.captured()).expect("captured logs are UTF-8")
+        };
+        let logs = capture_mediate(vec![
+            tagged("send-message-wake", false),
+            tagged("send-message-wake", false),
+        ]);
+        assert_eq!(
+            logs.matches("non-workflow reason").count(),
+            1,
+            "logged once per announced turn: {logs}"
+        );
+        assert!(logs.contains("send-message-wake"), "{logs}");
+        let logs = capture_mediate(vec![tagged("workflow-complete-wake", true)]);
+        assert!(!logs.contains("non-workflow reason"), "{logs}");
     }
 
     /// cyril-14ou C6 fence: `TurnStalled` is information, never a terminal.
@@ -1226,23 +1330,22 @@ mod tests {
             let main = sid(main);
             let mut m = TurnMediator::new();
             let mut got: Vec<(String, String)> = Vec::new();
+            // Through `mediate` — the bridge's own per-frame sequence — so the
+            // census sees exactly the announcements the App would receive.
             for routed in crate::test_support::kas_trace_routed(&trace) {
-                m.observe(&routed, Some(&main));
-                if m.announce(&routed) {
-                    let session = routed
-                        .session_id
-                        .as_ref()
-                        .map(ToString::to_string)
-                        .unwrap_or_default();
-                    let reason = routed
-                        .origin
-                        .as_ref()
-                        .and_then(crate::types::AgentInitiation::reason)
-                        .unwrap_or("<none>")
-                        .to_owned();
-                    got.push((session, reason));
+                for frame in m.mediate(routed, Some(&main)).forward {
+                    if let Notification::AgentInitiatedTurn(origin) = &frame.notification {
+                        let session = frame
+                            .session_id
+                            .as_ref()
+                            .map(ToString::to_string)
+                            .unwrap_or_default();
+                        let reason = origin.reason().unwrap_or("<none>").to_owned();
+                        got.push((session, reason));
+                    }
                 }
             }
+
             let want: Vec<(String, String)> = want
                 .iter()
                 .map(|(s, r)| ((*s).to_owned(), (*r).to_owned()))

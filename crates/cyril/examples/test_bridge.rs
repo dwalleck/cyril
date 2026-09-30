@@ -732,6 +732,7 @@ fn print_notification(n: &Notification) {
             message_id,
             content,
             severity,
+            ..
         } => {
             println!(
                 "  [EngineMessageInjected] {} (id={message_id}, severity={})",

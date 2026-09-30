@@ -1193,13 +1193,24 @@ impl UiState {
             // decision this method cannot express without duplicating the App's
             // "only if already open" rule.
             Notification::PowersChanged { .. } => false,
-            // cyril-lki9: turn-start activity, the agent-initiated header and
-            // inline engine-injection notices are rendered by the I2
-            // increment (spec B1/B5/B7); until then they change nothing here.
-            // Listed explicitly, never a catch-all.
-            Notification::TurnStarted
-            | Notification::AgentInitiatedTurn(_)
-            | Notification::EngineMessageInjected { .. } => false,
+            // cyril-lki9 C17 (B7): a turn began — possibly one the agent
+            // started itself, which may stay silent for a minute — so an idle
+            // indicator becomes busy now, not at the first chunk. A turn that
+            // is already busy (cyril's own dispatch) is left as it is.
+            Notification::TurnStarted => {
+                if matches!(self.activity, Activity::Idle | Activity::Ready) {
+                    self.set_activity(Activity::Waiting);
+                    true
+                } else {
+                    false
+                }
+            }
+            // The header and inline notices need the App-owned wake label, so
+            // the App renders them via `begin_agent_initiated_turn` /
+            // `show_engine_injection` (cyril-lki9 C14); nothing to do here.
+            Notification::AgentInitiatedTurn(_) | Notification::EngineMessageInjected { .. } => {
+                false
+            }
         };
         changed || stall_cleared || thinking_changed
     }
@@ -1284,6 +1295,46 @@ impl UiState {
         self.messages.push(ChatMessage::system(text));
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Open an agent-initiated turn with its header line in `transcript`
+    /// (cyril-lki9 B1/B3/B4); text from [`crate::turn_labels::header_text`].
+    pub fn begin_agent_initiated_turn(
+        &mut self,
+        transcript: Transcript<'_>,
+        origin: &cyril_core::types::AgentInitiation,
+        label: Option<&cyril_core::workflow::WakeLabel>,
+    ) {
+        let text = crate::turn_labels::header_text(origin, label);
+        self.push_transcript_system(transcript, text);
+    }
+
+    /// Show a message the engine injected into a running turn (cyril-lki9
+    /// B5): a busy-session workflow completion, or a relayed step verdict.
+    pub fn show_engine_injection(
+        &mut self,
+        transcript: Transcript<'_>,
+        content: Option<&str>,
+        severity: Option<&str>,
+        workflow_completion: bool,
+        label: Option<&cyril_core::workflow::WakeLabel>,
+    ) {
+        let text = if workflow_completion {
+            crate::turn_labels::workflow_notice_text(label, content)
+        } else {
+            crate::turn_labels::step_notice_text(severity, content)
+        };
+        self.push_transcript_system(transcript, text);
+    }
+
+    fn push_transcript_system(&mut self, transcript: Transcript<'_>, text: String) {
+        match transcript {
+            Transcript::Main => self.add_system_message(text),
+            Transcript::Workflow(session_id) => {
+                self.workflow_streams.add_system_message(session_id, text)
+            }
+            Transcript::Subagent(session_id) => self.subagents.add_system_message(session_id, text),
+        }
     }
 
     /// Append an optimistic queue-steer echo (ROADMAP K1b, cyril-bm1j). Added the
@@ -1426,9 +1477,12 @@ impl UiState {
     }
 
     /// Flip the Queued echo a Consumed echo names (cyril-vgcm C9): the chip
-    /// bound to `message_id` when one is, else the OLDEST Queued chip (FIFO —
-    /// covers the id-less old dialect and a dropped/deferred Queued echo). An
-    /// id bound to a TERMINAL chip is a duplicate injected echo: flips nothing
+    /// bound to `message_id` when one is; for an id bound to no chip, the
+    /// OLDEST id-less Queued chip (a steer whose Queued echo was dropped or
+    /// deferred) — never a chip bound to a DIFFERENT id (cyril-5n75: an engine
+    /// `notify-*` injection must not drain the operator's queued steer); for an
+    /// id-less Consumed (old dialect), the oldest Queued chip (FIFO). An id
+    /// bound to a TERMINAL chip is a duplicate injected echo: flips nothing
     /// and does NOT fall back — FIFO there would drain a second, wrong chip.
     /// Returns whether a chip flipped (the caller decrements the counter by
     /// exactly that).
@@ -1449,6 +1503,7 @@ impl UiState {
                     return false;
                 }
             }
+            return self.flip_oldest_idless_queued(SteerEchoStatus::Applied);
         }
         self.flip_queued_steer_echoes(SteerEchoStatus::Applied, true)
     }
@@ -1481,22 +1536,31 @@ impl UiState {
                     break;
                 }
             }
-            if !matched {
-                for msg in self.messages.iter_mut() {
-                    if let ChatMessageKind::SteerEcho {
-                        status: status @ SteerEchoStatus::Queued,
-                        message_id: None,
-                        ..
-                    } = &mut msg.kind
-                    {
-                        *status = SteerEchoStatus::Cleared;
-                        flips += 1;
-                        break;
-                    }
-                }
+            if !matched && self.flip_oldest_idless_queued(SteerEchoStatus::Cleared) {
+                flips += 1;
             }
         }
         flips
+    }
+
+    /// Flip the oldest Queued echo not yet bound to an id to `to` — the one
+    /// fallback for an id that matches no chip, shared by Cleared (cyril-vgcm
+    /// C6) and Consumed (cyril-5n75): such an id can only belong to a steer
+    /// whose Queued echo was dropped or deferred, never to a chip bound to a
+    /// different id. Returns whether a chip flipped.
+    fn flip_oldest_idless_queued(&mut self, to: SteerEchoStatus) -> bool {
+        for msg in self.messages.iter_mut() {
+            if let ChatMessageKind::SteerEcho {
+                status: status @ SteerEchoStatus::Queued,
+                message_id: None,
+                ..
+            } = &mut msg.kind
+            {
+                *status = to;
+                return true;
+            }
+        }
+        false
     }
 
     /// Reconcile optimistic steer echoes in place (ROADMAP K1b, cyril-bm1j).
@@ -7501,6 +7565,207 @@ mod tests {
         };
         (req, rx)
     }
+    fn lki9_echoes(state: &UiState) -> Vec<(String, SteerEchoStatus, Option<String>)> {
+        state
+            .messages()
+            .iter()
+            .filter_map(|m| match m.kind() {
+                ChatMessageKind::SteerEcho {
+                    text,
+                    status,
+                    message_id,
+                    ..
+                } => Some((text.clone(), *status, message_id.clone())),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn lki9_consumed(id: Option<&str>) -> Notification {
+        Notification::SteeringConsumed {
+            content: None,
+            message_id: id.map(str::to_owned),
+        }
+    }
+
+    /// cyril-lki9 C6 / cyril-5n75: a Consumed id bound to no chip may only
+    /// drain an id-less chip (a steer whose Queued echo was dropped/deferred) —
+    /// never an operator chip bound to a different id; the counter moves only
+    /// when a chip flips; the id-less legacy Consumed keeps FIFO.
+    #[test]
+    fn lki9_steer_fallback_never_drains_a_bound_chip() {
+        // Bound steer-A + a deferred (id-less) chip: notify-X drains the id-less one.
+        let mut state = UiState::new(500);
+        state.add_steer_echo("first");
+        state.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-A".into()),
+        });
+        state.add_steer_echo("second");
+        assert_eq!(state.steering_queued(), 2);
+        assert!(state.apply_notification(&lki9_consumed(Some("notify-X"))));
+        assert_eq!(
+            lki9_echoes(&state),
+            [
+                (
+                    "first".into(),
+                    SteerEchoStatus::Queued,
+                    Some("steer-A".into())
+                ),
+                ("second".into(), SteerEchoStatus::Applied, None),
+            ]
+        );
+        assert_eq!(state.steering_queued(), 1);
+
+        // Only a bound chip queued: notify-X flips nothing, counter unchanged.
+        let mut bound_only = UiState::new(500);
+        bound_only.add_steer_echo("first");
+        bound_only.apply_notification(&Notification::SteeringQueued {
+            message: Some("first".into()),
+            message_id: Some("steer-A".into()),
+        });
+        assert!(!bound_only.apply_notification(&lki9_consumed(Some("notify-X"))));
+        assert_eq!(
+            lki9_echoes(&bound_only),
+            [(
+                "first".into(),
+                SteerEchoStatus::Queued,
+                Some("steer-A".into())
+            )]
+        );
+        assert_eq!(
+            bound_only.steering_queued(),
+            1,
+            "cyril-7z7u: counter == #Queued chips"
+        );
+
+        // Legacy id-less Consumed: FIFO over Queued chips, as before.
+        let mut legacy = UiState::new(500);
+        legacy.add_steer_echo("only");
+        assert!(legacy.apply_notification(&lki9_consumed(None)));
+        assert_eq!(
+            lki9_echoes(&legacy),
+            [("only".into(), SteerEchoStatus::Applied, None)]
+        );
+        assert_eq!(legacy.steering_queued(), 0);
+    }
+
+    fn lki9_streaming(text: &str) -> Notification {
+        Notification::AgentMessage(AgentMessage {
+            text: text.to_owned(),
+            is_streaming: true,
+        })
+    }
+
+    fn lki9_system_texts(messages: &[ChatMessage]) -> Vec<String> {
+        messages
+            .iter()
+            .map(|m| match m.kind() {
+                ChatMessageKind::System(t) => format!("SYS:{t}"),
+                ChatMessageKind::AgentText(t) => format!("AGENT:{t}"),
+                other => format!("{other:?}"),
+            })
+            .collect()
+    }
+
+    /// cyril-lki9 C16: an injected notice lands where it arrived — the text
+    /// streamed before it is committed first, the text after it continues as
+    /// a new block — in the main transcript and in a workflow step's stream;
+    /// a notice before any streamed text commits no empty text block.
+    #[test]
+    fn lki9_notice_lands_in_arrival_order() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&lki9_streaming("abc"));
+        state.show_engine_injection(Transcript::Main, Some("OK"), Some("success"), false, None);
+        state.apply_notification(&lki9_streaming("def"));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            lki9_system_texts(state.messages()),
+            [
+                "AGENT:abc",
+                "SYS:⚙ workflow step · success: OK",
+                "AGENT:def"
+            ]
+        );
+
+        let mut fresh = UiState::new(500);
+        let wake =
+            cyril_core::types::AgentInitiation::new(Some("workflow-complete-wake".into()), true);
+        let label = cyril_core::workflow::WakeLabel::new(
+            "audit-channels-2.26.0".into(),
+            cyril_core::types::WorkflowRunStatus::Completed,
+        );
+        fresh.begin_agent_initiated_turn(Transcript::Main, &wake, Some(&label));
+        assert_eq!(
+            lki9_system_texts(fresh.messages()),
+            ["SYS:─── ⚙ workflow \"audit-channels-2.26.0\" completed · agent follow-up ───"],
+            "no empty text block before a header"
+        );
+
+        let step = SessionId::new("step-1");
+        let mut streams = UiState::new(500);
+        streams.apply_workflow_notification(&step, &lki9_streaming("xyz"));
+        streams.begin_agent_initiated_turn(
+            Transcript::Workflow(&step),
+            &cyril_core::types::AgentInitiation::new(Some("send-message-wake".into()), false),
+            None,
+        );
+        let stream = streams
+            .workflow_streams()
+            .get(&step)
+            .unwrap_or_else(|| panic!("step stream exists"));
+        assert_eq!(
+            lki9_system_texts(stream.messages()),
+            [
+                "AGENT:xyz",
+                "SYS:─── ⚙ agent-initiated · send-message-wake ───"
+            ],
+            "per-session header lands in that session's stream, after its text"
+        );
+        assert!(
+            lki9_system_texts(streams.messages()).is_empty(),
+            "a step session's header never lands in the main transcript"
+        );
+    }
+
+    /// cyril-lki9 C17: `TurnStarted` makes an idle indicator busy (a wake may
+    /// be silent for a minute); a streaming turn is left as it is; the turn's
+    /// completion returns to Ready.
+    #[test]
+    fn lki9_turn_started_sets_busy_indicator() {
+        let mut state = UiState::new(500);
+        assert_eq!(state.activity(), Activity::Idle);
+        assert!(state.apply_notification(&Notification::TurnStarted));
+        assert_eq!(state.activity(), Activity::Waiting);
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(state.activity(), Activity::Ready);
+        state.apply_notification(&lki9_streaming("mid"));
+        assert!(!state.apply_notification(&Notification::TurnStarted));
+        assert_eq!(state.activity(), Activity::Streaming, "busy turn untouched");
+    }
+
+    /// cyril-lki9 C18: a permission request during an agent-initiated turn
+    /// takes the approval overlay exactly as in an operator turn.
+    #[test]
+    fn lki9_approval_during_server_turn() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::TurnStarted);
+        assert_eq!(state.activity(), Activity::Waiting);
+        let (request, _receiver) =
+            make_approval_request(vec![cyril_core::types::PermissionOption {
+                id: cyril_core::types::PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: cyril_core::types::PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }]);
+        state.show_approval(request);
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Approval));
+    }
+
     #[test]
     fn rejection_feedback_sends_exact_reason() {
         use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};

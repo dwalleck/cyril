@@ -25,7 +25,7 @@ Baseline = production lines before the first `#[cfg(test)]` at merge-base `bfc49
 | `cyril-core/src/protocol/convert/kas/workflow.rs` | 1,116 | 1,118–1,130 | + `runLabel` field | snapshot gains `run_label` | N/A |
 | `cyril-ui/src/turn_labels.rs` | 0 | 60–120 | create: all header/notice strings | crate-private fns | N/A |
 | `cyril-ui/src/subagent_ui.rs` | 244 | 255–275 | + header/notice insert per stream | two methods | N/A |
-| `cyril-ui/src/state.rs` | 2,983 | ≤ 3,053 | thin delegation + arms + C6 narrowing | two methods | **protected: ≤ +70 prod; no header/notice literals** |
+| `cyril-ui/src/state.rs` | 2,983 | ≤ 3,064 | thin delegation + arms + C6 narrowing | two methods | **protected: ≤ +80 prod (raised from +70, Length review 2026-09-30, reshape → cyril-dgyz); no header/notice literals** |
 | `crates/cyril/src/app.rs` | 2,939 | ≤ 2,999 | routing arms only | none | **protected: ≤ +60 prod; no `notify`/`agentInitiated`/header literals** |
 | `cyril-core/src/protocol/convert/mod.rs` | 530 | 530 | none | none | shape fence: prod delta 0 |
 | `cyril-ui/src/widgets/chat.rs` | 569 | 569 | none (reuses `System`) | none | N/A |
@@ -305,6 +305,25 @@ Sweep (step 7): nothing falsified; the new fields' docs cite cyril-lki9.
 - M15/M16/M17/M18 → the named test red; restore → green.
 - `python3 .cyril-lki9/oracles/shape.py` → PASS; M21b (+80 lines to `state.rs`) → `C21 FAIL crates/cyril-ui/src/state.rs prod delta 150 > 70`.
 
+### Checkpoint record — Slice 7 (2026-09-29, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** New module `cyril-ui/src/turn_labels.rs` (no callers before this slice). New `UiState::{begin_agent_initiated_turn, show_engine_injection}` (callers arrive in Slice 9). New `Transcript` enum in `traits.rs`; `SubagentStream::push_system`, `SubagentUiState::add_system_message`, `WorkflowUiState::add_system_message`. `UiState::apply_notification`: `TurnStarted` now has its own arm (was a no-op group member). **Core classification added (placement already approved: KAS literals only in `convert/kas.rs`):** `AgentInitiation::new(reason, workflow_completion)` + `is_workflow_completion()`; `EngineMessageInjected.workflow_completion` — callers: `convert/kas.rs` (producer), `agent_initiated.rs` test helper, `test_bridge` printer (`..`), kas.rs tests. `WakeLabel::new` made public (plain value type; tracker uses it).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2107 passed, 13 skipped.
+2. Falsifiers C15/C16/C17/C18 — PASS: `turn_labels::tests::{header_strings, notice_strings}`, `state::tests::{lki9_notice_lands_in_arrival_order, lki9_turn_started_sets_busy_indicator, lki9_approval_during_server_turn}`; classification fenced in `turn_origin_table` / `turn_origin_matches_tagged_frame_census` / `notify_injection_is_engine_message` (workflow-completion flag agrees with the raw reason / `notify-wf-` id on every row and every captured frame).
+3. Stress fixture — PASS: Unicode + quotes in a run name shown as given; empty content adds no blank line; content without the `[notification/…] ` prefix shown verbatim; absent/empty severity → `info`; absent reason → `unspecified`; a label never renames a non-workflow wake; header before any streamed text commits no empty text block; a step session's header never lands in the main transcript.
+4. Implementation vs oracle — PASS: every expected string transcribed by hand from spec B1/B3/B4/B5 (approved literals) and the P6 busy-trace wake text; arrival order matches the P6 busy trace (injection mid-turn).
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 62)` — every header/notice literal is in `turn_labels.rs` (R2); `state.rs` +62 of its +70 cap (Slice 8's remaining steer change is planned to net ≈ +6 via a shared helper — see Slice 8).
+6. Budget — N/A — reason: string formatting O(len(content)); no loop over collections added.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M15 (no prefix strip) → `notice_strings` + `lki9_notice_lands_in_arrival_order`; M16 (append without flush) → `lki9_notice_lands_in_arrival_order`; M17 (disable the `TurnStarted` arm) → `lki9_turn_started_sets_busy_indicator` + `lki9_approval_during_server_turn`; M18 (drop approvals while `Waiting`) → `lki9_approval_during_server_turn`.
+9. Fence restored — PASS: `turn_labels.rs`, `state.rs` restored from scratch copies (`cmp` identical); all green.
+10. Parity and reuse — PASS. Search: `grep` in `cyril-ui/src`. `turn_labels` follows the `workflow_format` pure-formatter pattern; status words reuse `WorkflowRunStatus::as_str` (cyril's existing spelling); main-transcript insertion reuses `UiState::add_system_message` (flush discipline); stream insertion mirrors it in `SubagentStream::push_system`; both stream owners reuse the existing `entry().or_insert_with(SubagentStream::new)` first-contact pattern. Symmetry: main vs stream insertion — same flush-then-push order, same `ChatMessage::system` kind; streams do not get the `TurnStarted` activity arm (C17 is scoped to the main indicator by the design).
+11. Preserved enforcement — N/A — reason: nothing relaxed.
+
+Sweep (step 7): the `apply_notification` no-op comment rewritten (the App now renders header/notices via the two methods); `turn_labels` module doc names its fence rule.
+
 ## Slice 8: unknown steer ids never flip a bound operator chip
 
 **Claim IDs:** C6
@@ -323,6 +342,27 @@ Sweep (step 7): nothing falsified; the new fields' docs cite cyril-lki9.
 **Commands and expected results:**
 - `cargo nextest run -p cyril-ui -E 'test(/steer_fallback/)'` → the three stress rows as specified.
 - M6 → red (`Applied` ≠ `Queued`); restore → green.
+
+### Checkpoint record — Slice 8 (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** `UiState::flip_consumed_steer_echo` (sole caller: the `SteeringConsumed` arm) — semantics narrowed; `flip_cleared_steer_echoes` (sole caller: the `SteeringCleared` arm) — inline id-less fallback extracted into the new `flip_oldest_idless_queued`, behavior unchanged. No signature change.
+
+**Qualification stop → Length review (resolved).** The first gate run failed C21 R3: `state.rs` +75 > +70. Stopped per module-shape; requester approved **retain and raise to +80** (2026-09-30); reshape deferred to **cyril-dgyz**; recorded in design.md (Module shape → Length review), plan growth ledger, and `shape.py` (cap 70 → 80, with a comment citing the approval).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → all passed (22 steer-related UI tests incl. the pre-existing cyril-vgcm/7z7u/nvmh fences unchanged).
+2. Falsifier C6 — PASS: `lki9_steer_fallback_never_drains_a_bound_chip`.
+3. Stress fixture — PASS: bound `steer-A` + id-less chip + `Consumed{notify-X}` → id-less flips, `steer-A` stays Queued, counter 2 → 1; only a bound chip → nothing flips, counter unchanged; legacy `Consumed{None}` → FIFO flip as before.
+4. Implementation vs oracle — PASS: expected states hand-transcribed from the cyril-5n75 acceptance criterion and the existing doc intent (fallback covers dropped/deferred Queued echoes = id-less chips).
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 75)` under the approved +80 cap.
+6. Budget — N/A — reason: existing linear scan over messages, unchanged bound.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M6 (drop the id-less narrowing; old unconditional FIFO) → `left: [("first", Applied, Some("steer-A")), ("second", Queued, None)]` — the cyril-5n75 bug reproduced. **Changed fence (C21 cap) re-proved:** M21b (+6 lines → +81) → `C21 FAIL … prod delta 81 > 80`.
+9. Fence restored — PASS: `state.rs` restored from scratch copy (`cmp` identical); fences green.
+10. Parity and reuse — PASS. Search: `grep` for SteerEcho flip helpers in `state.rs`. The consumed fallback now REUSES the cleared path's id-less rule through one extracted helper (`flip_oldest_idless_queued`) instead of a second copy. Symmetry: Cleared and Consumed now share the same unknown-id fallback (id-less only); Consumed's id-less legacy branch keeps FIFO over all Queued (unchanged) — the divergence is the old-dialect convention both functions already documented. Acceptance change: a Consumed id bound to no chip previously flipped the oldest Queued chip even if bound to another id; now it flips only an id-less chip or nothing — control rows cover both neighbours.
+11. Preserved enforcement — PASS: the C21 R3 cap was RAISED (70 → 80) — authorized by the requester's Length-review approval (design.md, 2026-09-30), deferral cyril-dgyz verified; detection re-proved at the new boundary (M21b +81 red). No other gate touched.
+
+Sweep (step 7): `flip_consumed_steer_echo` doc rewritten (the old "else the OLDEST Queued chip" sentence was the bug); `flip_cleared_steer_echoes` doc still accurate (behavior unchanged).
 
 ## Slice 9: App routes announcements and injections to tracker + UI
 
@@ -344,6 +384,25 @@ Sweep (step 7): nothing falsified; the new fields' docs cite cyril-lki9.
 - M14 → red (label consumed on `send-message-wake`); restore → green.
 - `python3 .cyril-lki9/oracles/shape.py` → PASS (app.rs delta ≤ 60).
 
+### Checkpoint record — Slice 9 (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** New private `App::annotate_transcript` (no prior callers); called from the three routing points of `handle_notification_inner`: the `Workflow` and `Subagent` route arms (before the stream apply) and the main path (after `ui_state.apply_notification`). `Transcript` imported from `cyril_ui::traits`. Consumers of the new behavior: `UiState::{begin_agent_initiated_turn, show_engine_injection}` (Slice 7), `WorkflowTracker::take_wake_label` (Slice 6). Pending-route frames replay through the same path later, so they are annotated at replay (label order preserved by the in-order replay).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2110 passed, 13 skipped.
+2. Falsifier C14 — PASS: `lki9_wake_header_and_injection_routing`, `lki9_step_wake_leaves_main_label`.
+3. Stress fixture — PASS: two completions pending + generic wake + workflow wake + busy injection + step verdict → generic header (no label taken), workflow header names the OLDER run, notice names the NEWER, step verdict formatted, tracker drained; a `send-message-wake` on a step session → header in the step's stream only, main's pending label untouched.
+4. Implementation vs oracle — PASS: expected lines hand-transcribed from spec B1/B3/B5 and the spec FIFO row; tracker state inspected directly (`take_wake_label` after the run).
+5. Module shape — PASS: `C21 PASS (… app.rs: 54, state.rs: 75)` — `app.rs` +54 of +60: routing only (the helper calls tracker + UiState; no text, no FIFO, no turn rules).
+6. Budget — N/A — reason: O(1) routing per notification.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M14 (take a label for every reason) → `lki9_wake_header_and_injection_routing` FAIL (workflow header names `recipe-wf-new`; the notice degrades to "workflow ended").
+9. Fence restored — PASS: `app.rs` restored from scratch copy (`cmp` identical); both fences green.
+10. Parity and reuse — PASS. Search: `grep` for App route arms and test builders. Reused `test_app`, `session_created_frame`, `workflow_snapshot_frame` (to seed the run), `workflow_id`/`workflow_node_id`; the new `lki9_completion_frame` mirrors `workflow_snapshot_frame`'s shape as a `run_complete` event (the existing completion builder deliberately builds an invalid duplicate-path snapshot). Stream access via the existing `subagent_ui().streams()` (no new accessor on the protected parent). Symmetry: the three route arms call the same helper with their own `Transcript` target; main uses the frame's own session for the label (falling back to the controller's main id for an unscoped frame).
+11. Preserved enforcement — N/A — reason: nothing relaxed.
+
+Sweep (step 7): App `origin` binding comment still accurate (announcements are per turn from the bridge); UiState no-op comment names the two methods the App now calls.
+
 ## Slice 10: end-to-end replay of the committed captures
 
 **Claim IDs:** C20
@@ -363,6 +422,61 @@ Sweep (step 7): nothing falsified; the new fields' docs cite cyril-lki9.
 - `cargo nextest run --workspace -E 'test(/lki9_replay/)'` → every spec success-criterion observable holds; counts agree with `probe_p1_p7.py`.
 - M20 → tail replay red (no `TurnCompleted`, activity stuck); restore → green.
 - full gate: `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo nextest run --workspace --all-features` → clean/green.
+
+### Checkpoint record — Slice 10 (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** Production refactor to create the replay seam without a parallel dispatcher: new `TurnMediator::mediate(routed, main) -> Mediated { disposition, forward }` holds the per-frame sequence (observe → drop/forward → announcement before the frame) that `inbound.rs::handle_routed_with_source_disposition` previously inlined; `inbound.rs` now consumes it and keeps only the side effects (liveness, source capture, sending). Callers of `observe`/`announce`: `mediate` (production) + unit tests. Behavior-preserving: the full suite (incl. every bridge-harness fence on the real inbound path) passed unchanged before any new test was added. New `test_support::{ReplayFrame, kas_trace_replay}` (feature-gated).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2115 passed, 13 skipped.
+2. Falsifier C20 — PASS: `lki9_replay_{tail_wake_header_and_busy_span, gate_on_label_permission_and_step_header, busy_parent_notice, step_verdict_notice, silent_wake_is_busy_without_header}`.
+3. Stress fixture — PASS: gate-on (two chained wakes across two sessions, runLabel naming, a permission raised mid-wake) and prompt (silent wake pre-empted by a prompt — busy with zero frames, no header, two completions).
+4. Implementation vs oracle — PASS: every expected value comes from the traces (P1–P7 probe outputs: main/step session ids, run names, the injected wake text, the per-turn tagging table); spec success criteria B1, B2 (busy span + single TurnCompleted + idle after), B2-approvals, B5 (busy + step), B7 all hold on the committed captures.
+5. Module shape — PASS: `C21 PASS (… app.rs: 54, state.rs: 75)`; `mediate` deepens the turn mediator (same owner) — no ownership move; the ledger's `TurnMediator` interface gains one composed method.
+6. Budget — N/A — reason: test-only replay; production refactor adds no loop (one `Vec` of ≤ 2 frames per inbound frame).
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M20 — applied at the replay's real seam (the mediator: an idle `TurnStarted` no longer begins a server turn = the original P3 defect; the design text named "the `BeginServerTurn` application in `inbound.rs`", which after the `mediate` extraction no longer decides turn ownership — technical correction, same defect) → tail, silent-wake and busy-parent replays FAIL.
+9. Fence restored — PASS: `turn_mediator.rs` restored from scratch copy (`cmp` identical); five replays green.
+10. Parity and reuse — PASS. Search: `grep` for replay helpers in `test_support.rs` and App tests. Replay reuses `kas_capture_routed` (production conversion) and the production `mediate`; permission requests are assembled from the production converter functions without the ledger-merge/responder side effects (justified in the helper doc). App side reuses `test_app_with_engine_and_command_rx`, `session_created_frame`, `lki9_system_lines`. Symmetry: `mediate` is the ONE decision path for both live inbound and replay.
+11. Preserved enforcement — N/A — reason: no gate relaxed; the refactor kept every pre-existing fence green.
+
+**Fixture correction.** `lki9_replay_step_verdict_notice` first asserted the verdict AFTER the header; the replay showed the verdict arrives right after `turn_start` and before the first tagged frame (evidence P6), so it correctly lands ahead of the header. Assertion corrected to the spec (header before the first text; notice at its arrival point) + wire order; code unchanged.
+
+Sweep (step 7): `inbound.rs` comment now points at `mediate`; the design's C20/M20 wording superseded by this record (the replay seam is `mediate`).
+
+---
+
+## Repair: isolated design-conformance review (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+Inherited plan references: design.md § "Isolated design-conformance review (2026-09-30) and approved amendments" and § "Second isolated conformance review"; spec.md Decisions (claim row); evidence.md P8. Not a new slice — one bounded repair returning its gate states to this record.
+
+**Trigger.** Review 1 (`.cyril-lki9/conformance-review.md`, fresh context, full production diff) → FAIL: M1–M7 + three non-ledger defects. Requester approved M2–M5, M7 as ledger amendments ("Approve all five (Recommended)") and the wake-label rule change ("Yes, claim at turn start (Recommended)"). Review 2 (`conformance-review-2.md`, fresh context, full diff) → FAIL on N1 (`types/workflow.rs` unledgered + stale FIFO text) and N2 (spec B3/B4 debug logs unimplemented). Requester approved N1 ("Approve the amendment (Recommended)"); N2 fixed in code. Review 3 (`conformance-review-3.md`, fresh context, affected ownership only, retaining review 2 for the rest with cited evidence) → **PASS**.
+
+**Code changes.** M1: `pub(crate) mod turn_labels` + crate-private fns. M3: `TurnMediator::announce` private; census test drives `mediate`. M6: `[notification/<sev>] ` strip moved into `convert/kas.rs` (`strip_notification_prefix`); C21 R1 gains `[notification/`. Claim rule: `WorkflowTracker::{claim_wake_labels, take_wake_label (newest claimed), take_injection_label (newest unclaimed)}`; App claims on every routed `TurnStarted`; the unclaimed queue drains at each turn start (resolves "never pruned"). Defects: `annotate_transcript` / `enter_steers_during_server_turn` doc misattachment fixed; stale `state.rs` comment removed. N2: B3 log in `TurnMediator::announce`, B4 log in `take_wake_label`. Review-3 notes taken: `wake_label` logs an untracked run and `take_injection_label` goes through it (R4); `label_for_run` flattened to a plain fn; C13 doc re-attached to its test (R5); ledger `claim_wake_labels` signature corrected (R1).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features --no-fail-fast` → 2113 passed, 13 skipped; default features → 2111 passed.
+2. Falsifiers — PASS: `wake_labels_claim_at_turn_start` (C13, incl. newest-first injection row and silent-wake regression), `lki9_wake_header_and_injection_routing`, `lki9_silent_wake_label_never_names_next_wake`, `lki9_step_wake_leaves_main_label` (C14), `notify_injection_is_engine_message` (M6 strip), `generic_wake_reason_is_logged` (B3), `nameless_wake_label_is_logged` (B4).
+3. Stress fixture — PASS: silent/pre-empted wake then a new wake; two completions in one busy turn; step-session wake with a pending main completion.
+4. Implementation vs oracle — PASS: expected values hand-written from the amended spec rows and P8 (run_complete precedes the wake's turn_start in all five captured wakes).
+5. Module shape — PASS: `C21 PASS (app.rs +58, state.rs +71)`; review 3 PASS.
+6. Budget — N/A — reason: no new loop beyond the per-session claim move (bounded by pending completions).
+7. Regression fence — PASS (item 2).
+8. Named mutations — PASS (red): M13 oldest-claimed → tracker + App routing red; M13b no `TurnStarted` claim → routing + silent-wake red; M13c injection oldest-first (`pop_front`) → tracker red (first run SURVIVED — fence gap; newest-first row added, then red); M14 label for every reason → routing red; M15 no strip → converter red; M6 FIFO fallback → C6 red; MB3/MB4 delete log → log fences red; C21 R1 `"[notification/"` planted in `turn_labels.rs` → `C21 FAIL … R1`.
+9. Fences restored — PASS: every mutation restored from a scratch copy (`cmp` identical), fences green.
+10. Parity and reuse — PASS: both logs reuse the crate's `tracing_capture_lock`/`CaptureWriter`; `take_injection_label` reuses `wake_label` (one naming path).
+11. Preserved enforcement — PASS: no lint relaxed; C21 strengthened (R1 literal); state.rs cap +80 per the approved Length review.
+
+**Retention note.** The post-review-3 edits (R4 log + `label_for_run` flatten, test doc move, test row) stay inside `workflow.rs` private code with no interface or ownership change, so review 3's reconstruction still applies.
+
+**Unrelated flake.** `spawn_isolation::version_deadline_includes_exited_wrappers_inherited_pipes` failed once under full-suite load, passed 3/3 alone and in every later full run → filed cyril-n3ju.
+
+## Final integration (2026-09-30)
+
+- Assembled tree = I0 (#144) + I1 (#145) + I2 (this branch). Lanes: fmt, clippy (`--all-features`, `--features kas`, default), nextest (all-features, default), doc tests, C21 — all PASS on the tree above.
+- Design conformance: review 3 `RESULT: PASS` (reviewer: fresh-context general-purpose subagent; isolation: no implementation transcript, blind Phase 1 before `.cyril-lki9/`).
+- Every design claim C1–C22 discharged by its slice record or this repair record.
+- Open: cyril-lki9 and cyril-5n75 close only when the stack merges (human approval).
 
 ---
 

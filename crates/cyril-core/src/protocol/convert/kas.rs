@@ -434,7 +434,18 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             let content = steering_text(Some(kiro), "content", "KAS steering_injected", None);
             match steering_message_id(Some(kiro)) {
                 Some(message_id) if is_engine_injection(&message_id) => {
+                    let workflow_completion =
+                        message_id.starts_with(ENGINE_WORKFLOW_INJECTION_ID_PREFIX);
+                    // A relayed step verdict carries KAS's own severity marker
+                    // (`[notification/<sev>] <message>`); the severity is its
+                    // own field, so the message is forwarded bare.
+                    let content = if workflow_completion {
+                        content
+                    } else {
+                        content.map(|c| strip_notification_prefix(&c).to_owned())
+                    };
                     Some(Notification::EngineMessageInjected {
+                        workflow_completion,
                         message_id,
                         content,
                         severity: kiro
@@ -495,11 +506,12 @@ pub(crate) fn agent_initiation(update: &acp::SessionUpdate) -> Option<AgentIniti
     if kiro.get("agentInitiated") != Some(&serde_json::Value::Bool(true)) {
         return None;
     }
-    Some(AgentInitiation::new(
-        kiro.get("agentInitiatedReason")
-            .and_then(serde_json::Value::as_str)
-            .map(str::to_string),
-    ))
+    let reason = kiro
+        .get("agentInitiatedReason")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_string);
+    let workflow_completion = reason.as_deref() == Some(WORKFLOW_COMPLETION_WAKE_REASON);
+    Some(AgentInitiation::new(reason, workflow_completion))
 }
 
 /// `messageId` prefix KAS gives messages the engine itself injects into a turn
@@ -508,8 +520,25 @@ pub(crate) fn agent_initiation(update: &acp::SessionUpdate) -> Option<AgentIniti
 /// steers carry `steer-<uuid>`.
 const ENGINE_INJECTION_ID_PREFIX: &str = "notify-";
 
+/// Among engine injections, the id prefix of a workflow completion delivered
+/// into a busy session instead of an auto-wake turn (P6: `notify-wf-<uuid>`).
+const ENGINE_WORKFLOW_INJECTION_ID_PREFIX: &str = "notify-wf-";
+
+/// `agentInitiatedReason` of KAS's parent auto-wake on a terminal
+/// `run_complete` (`autoWakeParentOnComplete`, evidence P1).
+const WORKFLOW_COMPLETION_WAKE_REASON: &str = "workflow-complete-wake";
+
 fn is_engine_injection(message_id: &str) -> bool {
     message_id.starts_with(ENGINE_INJECTION_ID_PREFIX)
+}
+
+/// Removes KAS's leading `[notification/<severity>] ` marker from a relayed
+/// step verdict (evidence P6), if present; other content is returned as is.
+fn strip_notification_prefix(content: &str) -> &str {
+    content
+        .strip_prefix("[notification/")
+        .and_then(|rest| rest.split_once("] "))
+        .map_or(content, |(_, message)| message)
 }
 
 fn turn_metering_update(kiro: &serde_json::Value) -> TurnMeteringUpdate {
@@ -1562,7 +1591,9 @@ mod tests {
                 message_id,
                 content,
                 severity,
+                workflow_completion,
             }) => {
+                assert!(workflow_completion, "notify-wf- is a workflow completion");
                 assert_eq!(message_id, "notify-wf-1");
                 assert_eq!(
                     content.as_deref(),
@@ -1578,14 +1609,41 @@ mod tests {
         })) {
             Some(Notification::EngineMessageInjected {
                 message_id,
+                content,
                 severity: None,
-                ..
+                workflow_completion: false,
             }) => {
                 assert_eq!(message_id, "notify-2");
+                assert_eq!(
+                    content.as_deref(),
+                    Some("OK"),
+                    "KAS's severity marker stripped"
+                );
             }
             other => panic!(
                 "notify- with empty severity must be an engine injection with severity None, got {other:?}"
             ),
+        }
+        // A step verdict without the marker passes through verbatim; a
+        // workflow-completion text is never stripped (it is not a verdict).
+        for (kiro, want) in [
+            (
+                json!({ "kind": "steering_injected", "messageId": "notify-3",
+                        "content": "plain verdict" }),
+                "plain verdict",
+            ),
+            (
+                json!({ "kind": "steering_injected", "messageId": "notify-wf-4",
+                        "content": "[notification/info] not a verdict" }),
+                "[notification/info] not a verdict",
+            ),
+        ] {
+            match convert(kiro) {
+                Some(Notification::EngineMessageInjected { content, .. }) => {
+                    assert_eq!(content.as_deref(), Some(want));
+                }
+                other => panic!("engine injection expected, got {other:?}"),
+            }
         }
         for (kiro, want_id) in [
             (
@@ -1771,6 +1829,14 @@ mod tests {
                     *want,
                     "{kind} with _meta {meta:?}"
                 );
+                // The engine's own classification: only the workflow
+                // completion reason is a workflow completion.
+                assert_eq!(
+                    got.as_ref()
+                        .map(crate::types::AgentInitiation::is_workflow_completion),
+                    want.map(|reason| reason == Some("workflow-complete-wake")),
+                    "{kind} with _meta {meta:?}: workflow-completion flag"
+                );
             }
         }
         // A tagged frame of a kind KAS never tags (and cyril never labels).
@@ -1826,6 +1892,11 @@ mod tests {
                 *reasons
                     .entry(origin.reason().unwrap_or("<none>").to_string())
                     .or_default() += 1;
+                assert_eq!(
+                    origin.is_workflow_completion(),
+                    origin.reason() == Some("workflow-complete-wake"),
+                    "{rel}: classification agrees with the raw reason"
+                );
             }
             assert_eq!(
                 (chunks, tool_calls, updates),

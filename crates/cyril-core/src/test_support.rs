@@ -335,6 +335,73 @@ pub fn kas_trace_routed(trace: &str) -> Vec<crate::types::RoutedNotification> {
     kas_capture_routed(&capture)
 }
 
+/// One step of a mediated capture replay (cyril-lki9 C20).
+#[cfg(feature = "kas")]
+#[derive(Debug)]
+pub enum ReplayFrame {
+    /// What the bridge would forward to the App, after turn mediation.
+    Notification(crate::types::RoutedNotification),
+    /// A `session/request_permission` the bridge would hand the approval
+    /// overlay.
+    Permission(crate::types::PermissionRequest),
+}
+
+/// Replays a `{ts, dir, msg}` probe trace the way the bridge presents it to
+/// the App: each agent->client notification converts through the production
+/// KAS path ([`kas_capture_routed`]) and then through the production
+/// [`TurnMediator::mediate`](crate::protocol::turn_mediator::TurnMediator)
+/// with `main` as the main session — so absorbed/dropped terminals vanish and
+/// agent-initiated announcements appear exactly as live. Each
+/// `session/request_permission` becomes the [`PermissionRequest`](crate::types::PermissionRequest)
+/// the approval overlay receives, assembled from the same production
+/// converters the bridge uses (without its tool-call-ledger preview merge and
+/// responder task, which are side effects a replay does not need).
+#[cfg(feature = "kas")]
+pub fn kas_trace_replay(trace: &str, main: &str) -> Vec<ReplayFrame> {
+    use agent_client_protocol::schema::v1 as acp;
+
+    use crate::protocol::convert;
+    use crate::protocol::turn_mediator::TurnMediator;
+    use crate::types::{PermissionRequest, SessionId};
+
+    let main = SessionId::new(main);
+    let mut mediator = TurnMediator::new();
+    let mut out = Vec::new();
+    for line in trace.lines().filter(|line| !line.is_empty()) {
+        let row: serde_json::Value =
+            must_succeed(serde_json::from_str(line), "trace row is valid JSON");
+        if row.get("dir").and_then(serde_json::Value::as_str) != Some("agent->client") {
+            continue;
+        }
+        let frame = &row["msg"];
+        if frame.get("method").and_then(serde_json::Value::as_str)
+            == Some("session/request_permission")
+        {
+            let args: acp::RequestPermissionRequest = must_succeed(
+                serde_json::from_value(frame["params"].clone()),
+                "request_permission params deserialize",
+            );
+            let (responder, _unused) = tokio::sync::oneshot::channel();
+            out.push(ReplayFrame::Permission(PermissionRequest {
+                session_id: SessionId::new(args.session_id.to_string()),
+                tool_call: convert::to_tool_call_from_permission(&args),
+                message: convert::extract_permission_message(&args),
+                options: convert::to_permission_options(&args),
+                trust_options: convert::extract_trust_options(&args),
+                can_reject_with_reason: true,
+                responder,
+            }));
+            continue;
+        }
+        let single = must_succeed(serde_json::to_string(frame), "trace frame serializes");
+        for routed in kas_capture_routed(&single) {
+            let mediated = mediator.mediate(routed, Some(&main));
+            out.extend(mediated.forward.into_iter().map(ReplayFrame::Notification));
+        }
+    }
+    out
+}
+
 /// v2 thinking-capture notifications, keyed by capture line.
 pub type V2ThinkingSequence = Vec<(u64, crate::types::Notification)>;
 

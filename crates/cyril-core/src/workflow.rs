@@ -452,9 +452,14 @@ pub struct WorkflowTracker {
     runs: HashMap<WorkflowId, WorkflowRun>,
     /// cyril-lki9 C13: runs that reached a terminal status through a
     /// `run_complete` event, per parent session, in arrival order, not yet
-    /// named by an agent-initiated turn header. KAS auto-wakes the parent once
-    /// per such completion, so each wake header takes the oldest entry.
+    /// claimed by a turn. A `notify-wf` injection (a completion delivered into
+    /// an already-running turn) names the newest of these.
     wake_labels: HashMap<SessionId, std::collections::VecDeque<WorkflowId>>,
+    /// Completions claimed by the session's CURRENT turn at its start (KAS
+    /// wakes the parent right after the triggering `run_complete`, evidence
+    /// P8). The turn's header names the newest; the rest belonged to wakes that
+    /// never rendered a header and are discarded at the next claim.
+    claimed_wake_labels: HashMap<SessionId, Vec<WorkflowId>>,
 }
 
 /// What an agent-initiated turn header names (cyril-lki9 C13): a completed
@@ -467,6 +472,13 @@ pub struct WakeLabel {
 }
 
 impl WakeLabel {
+    /// A label for a completed run. The tracker builds these via
+    /// [`WorkflowTracker::take_wake_label`]; the constructor exists so
+    /// presentation code can be exercised with a label directly.
+    pub fn new(name: String, status: WorkflowRunStatus) -> Self {
+        Self { name, status }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -838,29 +850,49 @@ impl WorkflowTracker {
         Ok(changed)
     }
 
-    /// The oldest completed run parented to `session` that no agent-initiated
-    /// turn header has named yet, consuming it (cyril-lki9 C13); `None` when
-    /// none remains. Name precedence mirrors KAS's wake message:
-    /// `runLabel`, else `workflowName`, else the workflow id.
+    /// A turn began on `session` (cyril-lki9 C13): it claims every completion
+    /// queued for the session so far — the wake a completion triggers starts
+    /// right after it — discarding whatever an earlier turn claimed and never
+    /// named (a silent or pre-empted wake).
+    pub fn claim_wake_labels(&mut self, session: &SessionId) {
+        let queued = self.wake_labels.remove(session).unwrap_or_default();
+        self.claimed_wake_labels
+            .insert(session.clone(), queued.into_iter().collect());
+    }
+
+    /// The header label for the current turn on `session`: the NEWEST
+    /// completion it claimed at its start (the run whose completion triggered
+    /// the wake), consuming the claim; `None` when it claimed none. Only
+    /// workflow-completion wakes ask, so `None` is spec B4's run-less wake and
+    /// is logged.
     pub fn take_wake_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
-        let queue = self.wake_labels.get_mut(session)?;
-        while let Some(workflow_id) = queue.pop_front() {
-            let Some(run) = self.runs.get(&workflow_id) else {
-                tracing::debug!(workflow_id = %workflow_id, "wake label for an evicted run skipped");
-                continue;
-            };
-            let Some(status) = run.status else {
-                continue;
-            };
-            let name = run
-                .run_label()
-                .filter(|l| !l.is_empty())
-                .or_else(|| Some(run.workflow_name()).filter(|n| !n.is_empty()))
-                .unwrap_or(workflow_id.as_str())
-                .to_owned();
-            return Some(WakeLabel { name, status });
+        let label = self
+            .claimed_wake_labels
+            .remove(session)
+            .and_then(|claimed| claimed.iter().rev().find_map(|id| self.wake_label(id)));
+        if label.is_none() {
+            tracing::debug!(session = %session, "workflow wake with no known run; header left nameless");
+        }
+        label
+    }
+
+    /// The label for a `notify-wf` injection on `session`: the newest
+    /// completion that arrived after its current turn started, consuming it.
+    pub fn take_injection_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        while let Some(workflow_id) = self.wake_labels.get_mut(session)?.pop_back() {
+            if let Some(label) = self.wake_label(&workflow_id) {
+                return Some(label);
+            }
         }
         None
+    }
+
+    fn wake_label(&self, workflow_id: &WorkflowId) -> Option<WakeLabel> {
+        let Some(run) = self.runs.get(workflow_id) else {
+            tracing::debug!(workflow_id = %workflow_id, "wake label for an untracked run skipped");
+            return None;
+        };
+        label_for_run(workflow_id, run)
     }
 
     fn preserve_event_only(&self, workflow_id: &WorkflowId, incoming: &mut WorkflowRun) {
@@ -1099,6 +1131,23 @@ fn canonicalize_snapshot(
     ))
 }
 
+/// Names a completed run for an agent-initiated turn (cyril-lki9 C13) by
+/// KAS's own precedence — `runLabel`, else `workflowName`, else the workflow
+/// id — with its status; `None` (debug-logged) for a run with no status.
+fn label_for_run(workflow_id: &WorkflowId, run: &WorkflowRun) -> Option<WakeLabel> {
+    let Some(status) = run.status else {
+        tracing::debug!(workflow_id = %workflow_id, "wake label for a run without status skipped");
+        return None;
+    };
+    let name = run
+        .run_label()
+        .filter(|l| !l.is_empty())
+        .or_else(|| Some(run.workflow_name()).filter(|n| !n.is_empty()))
+        .unwrap_or(workflow_id.as_str())
+        .to_owned();
+    Some(WakeLabel::new(name, status))
+}
+
 fn sparse_opening_run(
     workflow_name: String,
     inputs: serde_json::Value,
@@ -1262,10 +1311,14 @@ mod tests {
     }
 
     fn with_captured_warnings<T>(f: impl FnOnce() -> T) -> (T, String) {
+        with_captured_logs(tracing::Level::WARN, f)
+    }
+
+    fn with_captured_logs<T>(level: tracing::Level, f: impl FnOnce() -> T) -> (T, String) {
         let _capture_lock = crate::test_support::tracing_capture_lock();
         let capture = crate::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
-            .with_max_level(tracing::Level::WARN)
+            .with_max_level(level)
             .with_ansi(false)
             .with_writer(capture.clone())
             .finish();
@@ -4000,21 +4053,57 @@ mod tests {
         ))
     }
 
-    /// C13: wake labels come out oldest-first per parent session, each once,
-    /// named `runLabel → workflowName`, with the terminal status; a non-terminal
-    /// (paused) completion, another parent's completion, and an exact duplicate
-    /// completion never add a label.
+    /// cyril-lki9 spec B4: a workflow wake with no known run is logged (the
+    /// header stays nameless); a resolved label logs nothing.
     #[test]
-    fn wake_labels_are_fifo_per_parent() {
+    fn nameless_wake_label_is_logged() {
         let s = SessionId::new("s");
         let mut tracker = WorkflowTracker::new();
-        for id in ["a", "b", "c", "d", "e", "f"] {
+        let (label, logs) = with_captured_logs(tracing::Level::DEBUG, || {
+            tracker.claim_wake_labels(&s);
+            tracker.take_wake_label(&s)
+        });
+        assert!(label.is_none());
+        assert!(
+            logs.contains("workflow wake with no known run"),
+            "B4 debug log missing: {logs}"
+        );
+        seed(&mut tracker, "a", "seeded");
+        if let Err(err) = tracker.apply_event(parented_completion(
+            "a",
+            WorkflowRunStatus::Completed,
+            "A",
+            "s",
+            None,
+        )) {
+            panic!("fixture rejected: {err}");
+        }
+        let (label, logs) = with_captured_logs(tracing::Level::DEBUG, || {
+            tracker.claim_wake_labels(&s);
+            tracker.take_wake_label(&s)
+        });
+        assert!(label.is_some());
+        assert!(!logs.contains("workflow wake with no known run"), "{logs}");
+    }
+
+    /// C13 (claim at turn start, 2026-09-30): a turn start claims the
+    /// session's pending completions and its header names the NEWEST; an
+    /// injection names the newest completion since the turn started; a claim
+    /// never named (silent / pre-empted wake) is discarded at the next claim,
+    /// so it can never misname a later wake. Another parent's queue, a paused
+    /// (non-terminal) completion and an exact duplicate never add a label.
+    #[test]
+    fn wake_labels_claim_at_turn_start() {
+        let s = SessionId::new("s");
+        let mut tracker = WorkflowTracker::new();
+        for id in ["a", "b", "c", "d", "e", "f", "g", "h", "i"] {
             seed(&mut tracker, id, "seeded");
         }
         let apply = |t: &mut WorkflowTracker, e: WorkflowEvent| {
             t.apply_event(e)
                 .unwrap_or_else(|err| panic!("fixture rejected: {err}"))
         };
+        let named = |l: Option<WakeLabel>| l.map(|l| (l.name().to_owned(), l.status()));
         assert!(apply(
             &mut tracker,
             parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
@@ -4031,42 +4120,79 @@ mod tests {
             &mut tracker,
             parented_completion("d", WorkflowRunStatus::Paused, "D", "s", None)
         ));
+        assert!(
+            !apply(
+                &mut tracker,
+                parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
+            ),
+            "exact duplicate absorbed"
+        );
+
+        // No turn has started: nothing is claimed yet.
+        assert_eq!(named(tracker.take_wake_label(&s)), None);
+        // A turn starts: it claims [a, b]; its header names the newest.
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            named(tracker.take_wake_label(&s)),
+            Some(("labelled-b".into(), WorkflowRunStatus::Failed))
+        );
+        assert_eq!(
+            named(tracker.take_wake_label(&s)),
+            None,
+            "the claim is consumed"
+        );
+        // A completion during the running turn: the injection names it.
         assert!(apply(
             &mut tracker,
             parented_completion("e", WorkflowRunStatus::Aborted, "E", "s", Some(""))
         ));
-        // Exact duplicate of a's completion: absorbed, no second label.
-        assert!(!apply(
-            &mut tracker,
-            parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
-        ));
-
-        let take = |t: &mut WorkflowTracker, sid: &SessionId| {
-            t.take_wake_label(sid)
-                .map(|l| (l.name().to_owned(), l.status()))
-        };
         assert_eq!(
-            take(&mut tracker, &s),
-            Some(("recipe-A".to_owned(), WorkflowRunStatus::Completed))
-        );
-        assert_eq!(
-            take(&mut tracker, &s),
-            Some(("labelled-b".to_owned(), WorkflowRunStatus::Failed))
-        );
-        assert_eq!(
-            take(&mut tracker, &s),
-            Some(("recipe-E".to_owned(), WorkflowRunStatus::Aborted)),
+            named(tracker.take_injection_label(&s)),
+            Some(("recipe-E".into(), WorkflowRunStatus::Aborted)),
             "an empty runLabel falls back to the workflow name"
         );
+        assert_eq!(named(tracker.take_injection_label(&s)), None);
+        // Two completions during one busy turn: injections name the newest
+        // first (spec B5 "newest that arrived after the turn started").
+        assert!(apply(
+            &mut tracker,
+            parented_completion("h", WorkflowRunStatus::Completed, "H", "s", None)
+        ));
+        assert!(apply(
+            &mut tracker,
+            parented_completion("i", WorkflowRunStatus::Failed, "I", "s", None)
+        ));
         assert_eq!(
-            take(&mut tracker, &s),
-            None,
-            "paused d never queued; queue drained"
+            named(tracker.take_injection_label(&s)),
+            Some(("recipe-I".into(), WorkflowRunStatus::Failed))
         );
         assert_eq!(
-            take(&mut tracker, &SessionId::new("other")),
-            Some(("recipe-C".to_owned(), WorkflowRunStatus::Completed))
+            named(tracker.take_injection_label(&s)),
+            Some(("recipe-H".into(), WorkflowRunStatus::Completed))
         );
-        assert_eq!(take(&mut tracker, &SessionId::new("never")), None);
+        assert_eq!(named(tracker.take_injection_label(&s)), None);
+        // Regression: a silent wake claims f and never names it; the next
+        // turn claims g — the header must name g, never the stale f.
+        assert!(apply(
+            &mut tracker,
+            parented_completion("f", WorkflowRunStatus::Completed, "F", "s", None)
+        ));
+        tracker.claim_wake_labels(&s);
+        assert!(apply(
+            &mut tracker,
+            parented_completion("g", WorkflowRunStatus::Completed, "G", "s", None)
+        ));
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            named(tracker.take_wake_label(&s)),
+            Some(("recipe-G".into(), WorkflowRunStatus::Completed))
+        );
+        // Another parent's completion is its own.
+        let other = SessionId::new("other");
+        tracker.claim_wake_labels(&other);
+        assert_eq!(
+            named(tracker.take_wake_label(&other)),
+            Some(("recipe-C".into(), WorkflowRunStatus::Completed))
+        );
     }
 }
