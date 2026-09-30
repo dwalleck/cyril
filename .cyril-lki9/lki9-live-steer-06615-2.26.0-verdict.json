@@ -1,0 +1,83 @@
+{
+  "actionAt": 2.69,
+  "leg": "steer",
+  "mainKinds": [
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 1.43
+    },
+    {
+      "kind": "steering_queued",
+      "stopReason": null,
+      "t": 2.69
+    },
+    {
+      "kind": "steering_injected",
+      "stopReason": null,
+      "t": 4.67
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "end_turn",
+      "t": 9.59
+    },
+    {
+      "kind": "steering_cleared",
+      "stopReason": null,
+      "t": 9.59
+    }
+  ],
+  "mainSessionId": "sess_23480a16-8274-4532-a3e6-24626547d83b",
+  "mainTurns": [
+    {
+      "end": 9.59,
+      "reasons": [
+        "workflow-complete-wake"
+      ],
+      "start": 1.43,
+      "stopReason": "end_turn",
+      "tagged": 75,
+      "text": "I don't have any record of a workflow I launched in this session, and there's no prior task I was waiting on. This is the start of our conversation from my side.\n\nCould you clarify what you'd like me to do? For example:\n- Is there a specific task or feature you want me to work on?\n- Should I look at the results of \"lki9-quick\" somewhere in the workspace (a file, log, or output directory)?\n\nIf you ",
+      "untagged": 0
+    }
+  ],
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1
+  },
+  "runCompleteSeen": true,
+  "steerResponse": {
+    "id": 15,
+    "jsonrpc": "2.0",
+    "result": {
+      "messageId": "steer-5837fa40-f64d-43fd-a634-bd4595debef3",
+      "queued": true
+    }
+  },
+  "wakeTaggedSeen": true,
+  "workflowEvents": [
+    {
+      "method": "run_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_complete",
+      "status": "completed"
+    },
+    {
+      "method": "run_complete",
+      "status": "completed"
+    }
+  ],
+  "workflowId": "wf_dfabda105dcbcfcf",
+  "workspace": "/home/dwalleck/.claude/tmp/lki9-steer-06615-2.26.0-ws-ng526z2r"
+}
