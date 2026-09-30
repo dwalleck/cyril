@@ -1,7 +1,7 @@
 use super::*;
 use crate::types::SessionId;
 
-fn message(text: &str) -> Notification {
+pub(super) fn message(text: &str) -> Notification {
     Notification::AgentMessage(crate::types::AgentMessage {
         text: text.to_owned(),
         is_streaming: true,

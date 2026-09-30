@@ -207,9 +207,22 @@ impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for CaptureWriter {
 pub fn kas_capture_to_routed(
     capture: &str,
 ) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    kas_capture_routed(capture)
+        .into_iter()
+        .map(|routed| (routed.session_id, routed.notification))
+        .collect()
+}
+
+/// [`kas_capture_to_routed`] with the full envelope kept: each forwarded
+/// frame as the [`RoutedNotification`](crate::types::RoutedNotification) the
+/// bridge's inbound path builds — scope plus the engine's agent-initiated
+/// `origin` (cyril-lki9), which turn-mediation replays need.
+#[cfg(feature = "kas")]
+pub fn kas_capture_routed(capture: &str) -> Vec<crate::types::RoutedNotification> {
     use agent_client_protocol::schema::v1 as acp;
 
     use crate::protocol::engine::{Engine, KasEngine};
+    use crate::types::RoutedNotification;
 
     let engine = KasEngine::default();
     let mut forwarded = Vec::new();
@@ -231,7 +244,11 @@ pub fn kas_capture_to_routed(
             );
             let session_id = crate::types::SessionId::new(args.session_id.to_string());
             if let Some(notification) = engine.convert_session_update(&args) {
-                forwarded.push((Some(session_id), notification));
+                let mut routed = RoutedNotification::scoped(session_id, notification);
+                if let Some(origin) = engine.turn_origin(&args) {
+                    routed = routed.with_origin(origin);
+                }
+                forwarded.push(routed);
             }
             continue;
         }
@@ -239,7 +256,7 @@ pub fn kas_capture_to_routed(
             continue; // not an extension notification
         };
         match engine.convert_ext_notification(normalized, &frame["params"]) {
-            Ok(Some(notification)) => forwarded.push((None, notification)),
+            Ok(Some(notification)) => forwarded.push(RoutedNotification::global(notification)),
             Ok(None) => {}
             Err(error) => {
                 tracing::warn!(%error, method, "malformed extension notification in capture");
@@ -290,6 +307,15 @@ pub fn kas_recording_to_routed(
 pub fn kas_trace_to_routed(
     trace: &str,
 ) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    kas_trace_routed(trace)
+        .into_iter()
+        .map(|routed| (routed.session_id, routed.notification))
+        .collect()
+}
+
+/// [`kas_trace_to_routed`] with the full envelope kept (scope + `origin`).
+#[cfg(feature = "kas")]
+pub fn kas_trace_routed(trace: &str) -> Vec<crate::types::RoutedNotification> {
     let mut capture = String::new();
     for line in trace.lines().filter(|line| !line.is_empty()) {
         let row: serde_json::Value =
@@ -306,7 +332,7 @@ pub fn kas_trace_to_routed(
         ));
         capture.push('\n');
     }
-    kas_capture_to_routed(&capture)
+    kas_capture_routed(&capture)
 }
 
 /// v2 thinking-capture notifications, keyed by capture line.

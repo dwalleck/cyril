@@ -195,6 +195,11 @@ pub(crate) struct TurnMediator {
     /// cyril-a71q C6: at most ONE outstanding companion expectation. See
     /// [`Companion`].
     companion: Option<Companion>,
+    /// cyril-lki9 C10: sessions whose CURRENT turn has already been announced
+    /// as agent-initiated. Cleared for a session at its turn start and turn
+    /// end, so each turn announces once. Bounded by the sessions with an
+    /// agent-initiated turn in flight (observed ≤ 2: main + one woken step).
+    announced: std::collections::HashSet<SessionId>,
 }
 
 impl TurnMediator {
@@ -211,6 +216,7 @@ impl TurnMediator {
             active: None,
             alloc,
             companion: None,
+            announced: std::collections::HashSet::new(),
         }
     }
 
@@ -267,7 +273,15 @@ impl TurnMediator {
         main: Option<&SessionId>,
     ) -> Disposition {
         if matches!(routed.notification, Notification::TurnStarted) {
+            if let Some(session) = &routed.session_id {
+                self.announced.remove(session);
+            }
             return self.observe_turn_start(routed.session_id.as_ref(), main);
+        }
+        if matches!(routed.notification, Notification::TurnCompleted { .. })
+            && let Some(session) = &routed.session_id
+        {
+            self.announced.remove(session);
         }
         let Notification::TurnCompleted {
             stop_reason: reason,
@@ -378,6 +392,18 @@ impl TurnMediator {
                     }
                 }
             }
+        }
+    }
+
+    /// Should the bridge announce this frame's turn as agent-initiated before
+    /// forwarding it (cyril-lki9 C10)? `true` exactly once per session per
+    /// turn: on the first frame carrying an `origin` since that session's turn
+    /// start (or since it was last announced and ended). Frames without an
+    /// origin, or with no session scope, never announce.
+    pub(crate) fn announce(&mut self, routed: &RoutedNotification) -> bool {
+        match (&routed.origin, &routed.session_id) {
+            (Some(_), Some(session)) => self.announced.insert(session.clone()),
+            _ => false,
         }
     }
 
@@ -1157,5 +1183,71 @@ mod tests {
         let mut fresh = TurnMediator::new();
         assert_eq!(fresh.observe(&turn_start("s"), None), Disposition::Forward);
         assert!(!fresh.is_busy());
+    }
+
+    /// C10 against live wire: replaying both committed captures through the
+    /// production conversion (with origins) and this mediator announces
+    /// exactly the agent-initiated turns the independent per-turn probe table
+    /// found (`.cyril-lki9/probe_p1_p7.py`): tail — one, on main; gate-on —
+    /// one on main (workflow-complete-wake) and one on the woken creator step
+    /// (send-message-wake).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn announce_matches_tagged_turn_census() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        // (trace, main session, expected announcements as (session, reason))
+        type CensusRow<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)]);
+        let census: [CensusRow; 2] = [
+            (
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+                "sess_dd72baef-6822-4fd0-81c8-c9e37e291bbc",
+                &[(
+                    "sess_dd72baef-6822-4fd0-81c8-c9e37e291bbc",
+                    "workflow-complete-wake",
+                )],
+            ),
+            (
+                "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+                "sess_f6407f82-f87d-42e3-a302-9dff0970c09c",
+                &[
+                    (
+                        "sess_f6407f82-f87d-42e3-a302-9dff0970c09c",
+                        "workflow-complete-wake",
+                    ),
+                    (
+                        "sess_f7800342-47dd-48a6-b17f-3d38f8edf23e",
+                        "send-message-wake",
+                    ),
+                ],
+            ),
+        ];
+        for (rel, main, want) in census {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            let main = sid(main);
+            let mut m = TurnMediator::new();
+            let mut got: Vec<(String, String)> = Vec::new();
+            for routed in crate::test_support::kas_trace_routed(&trace) {
+                m.observe(&routed, Some(&main));
+                if m.announce(&routed) {
+                    let session = routed
+                        .session_id
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .unwrap_or_default();
+                    let reason = routed
+                        .origin
+                        .as_ref()
+                        .and_then(crate::types::AgentInitiation::reason)
+                        .unwrap_or("<none>")
+                        .to_owned();
+                    got.push((session, reason));
+                }
+            }
+            let want: Vec<(String, String)> = want
+                .iter()
+                .map(|(s, r)| ((*s).to_owned(), (*r).to_owned()))
+                .collect();
+            assert_eq!(got, want, "{rel}: announcements (session, reason) in order");
+        }
     }
 }

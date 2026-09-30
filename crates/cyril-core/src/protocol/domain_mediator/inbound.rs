@@ -71,6 +71,18 @@ impl DomainMediator {
         if completed_turn {
             self.turn_liveness.end();
         }
+        // cyril-lki9 C10: the first agent-initiated frame of a turn is
+        // preceded by one announcement, scoped like the frame itself so it
+        // routes to the same transcript (main or a woken step's stream).
+        if self.turn_mediator.announce(&routed)
+            && let (Some(origin), Some(session)) = (&routed.origin, &routed.session_id)
+        {
+            self.notify(RoutedNotification::scoped(
+                session.clone(),
+                Notification::AgentInitiatedTurn(origin.clone()),
+            ))
+            .await?;
+        }
         self.notify(routed).await?;
         Ok(completed_turn)
     }

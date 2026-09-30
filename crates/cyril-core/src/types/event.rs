@@ -416,6 +416,13 @@ pub enum Notification {
         /// `unstable_session_model` ACP feature). Empty otherwise.
         available_models: Vec<ModelInfo>,
     },
+    /// The agent started this turn itself, with no client prompt (cyril-lki9
+    /// C10) — e.g. a KAS workflow auto-wake (`reason` = `workflow-complete-wake`)
+    /// or a step woken by a message (`send-message-wake`). Emitted by the
+    /// bridge exactly once per session per turn, immediately before the turn's
+    /// first agent-initiated frame, scoped to that frame's session, so it routes
+    /// exactly as the turn's content does.
+    AgentInitiatedTurn(AgentInitiation),
     /// A turn began on the session — KAS `session_info_update{kind:"turn_start"}`
     /// (cyril-lki9 B7). Carries no origin: it opens both cyril's own prompt turns
     /// and agent-initiated turns (workflow auto-wakes), which cyril never
@@ -478,10 +485,10 @@ pub struct RoutedNotification {
     /// The agent started this frame's turn itself (cyril-lki9): `Some` exactly
     /// when the engine reported the frame as agent-initiated — KAS tags every
     /// chunk and tool frame of such a turn with `_meta.kiro.agentInitiated`.
-    /// Envelope metadata beside `session_id` and `turn`, never content: it
-    /// exists for the turn mediator's once-per-turn agent-initiated
-    /// announcement (design C10, plan Slice 4); content consumers never need
-    /// it. `None` for everything else, and always on the v2 engine.
+    /// Envelope metadata beside `session_id` and `turn`, never content: the
+    /// turn mediator reads it to emit one [`Notification::AgentInitiatedTurn`]
+    /// per turn (cyril-lki9 C10); content consumers never need it. `None` for
+    /// everything else, and always on the v2 engine.
     pub origin: Option<AgentInitiation>,
 }
 

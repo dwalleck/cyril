@@ -209,6 +209,11 @@ Still-safe: subagent/step-session terminals (`Forward` as foreign) — unchanged
 | C22 | stall watchdog armed | D4 | bridge harness with a short `stall_threshold`: inject `TurnStarted` (main, no dispatch), then silence → `TurnStalled` scoped to main within threshold + one tick; control: after its `turn_end`, silence emits no `TurnStalled`. Other cause: a stale cyril turn still active → excluded by starting from a fresh session with no dispatch. | P5 prompt leg: a real wake silent ≥ 60 s (the condition the watchdog exists for) | M22: skip `turn_liveness.begin` when applying `BeginServerTurn` → no `TurnStalled` (stamp is a no-op without begin) → fence red | bridge harness test (`stall.rs` pattern) | minutes | PENDING — checkpointed-build |
 | C21 | module shape | ledger + protected parents | `.cyril-lki9/oracles/shape.py`: literal census, prod-line deltas vs merge-base, `acp::` in cyril-ui, `convert/mod.rs` delta 0. | `git diff --numstat` + `git grep` computed independently of the script's own parsing | M21: add `"notify-"` literal to `app.rs` → shape red `C21 FAIL app.rs:<n> forbidden literal`; M21b: add 80 lines to `state.rs` → delta red | `.cyril-lki9/oracles/shape.py` | seconds | PENDING — checkpointed-build (every slice) |
 
+### Technical proof corrections (checkpointed-build, no approved decision changed)
+
+- **C10 / M10 (2026-09-29, Slice 4):** the turn-START reset of the announced set masks removal of the turn-END reset whenever every turn is bracketed, so M10 alone stayed green on a fully bracketed fixture. The fence now carries two isolating rows (a turn with no START after an announced turn's END; a turn whose previous END was missed) and a companion mutation **M10b** (drop the turn-START reset); both M10 and M10b are red, restored green. Approved behavior ("re-armed at `turn_start`/`turn_end`") unchanged.
+- **C8 / M8 (Slice 3):** the scenario table originally inferred `ATTACH` from the pre-state (blind to M8); repaired to judge the effect. Asserted behavior unchanged.
+
 ## Non-goals and future work
 
 Permanent non-goals (rationale in `spec.md` Decisions / Out of scope):

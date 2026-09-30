@@ -228,6 +228,25 @@ Sweep (step 7): no prose describes "Busy only after dispatch"; the new arm's com
 - `cargo nextest run -p cyril-core -E 'test(/announce_once/)'` → counts and positions as in the stress fixture; agreement with the probe's per-turn table for both captures.
 - M10 → `two-wakes` row red (1 ≠ 2); restore → green.
 
+### Checkpoint record — Slice 4 (2026-09-29, branch `fix/cyril-lki9-i1-core-turns`)
+
+**Impact analysis (step 1).** New `Notification::AgentInitiatedTurn(AgentInitiation)`: exhaustive matches — `UiState::apply_notification` (joined the explicit lki9 no-op group) and the `test_bridge` printer; App/SessionController/subagent routing use catch-alls (routing by scope unchanged). `TurnMediator` gained `announced` + `announce()`; `observe` now clears the set on `TurnStarted`/`TurnCompleted` (no disposition change). `inbound.rs` emits the announcement before forwarding a frame. `test_support`: `kas_capture_to_routed` / `kas_trace_to_routed` now map over new routed cores `kas_capture_routed` / `kas_trace_routed` (origin kept); signatures unchanged; 40 existing capture-replay consumers re-run green.
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2100 passed, 13 skipped.
+2. Falsifier C10 — PASS: `announce_once_per_turn` (bridge harness, real inbound path), `announce_matches_tagged_turn_census`.
+3. Stress fixture — PASS: tag first on a turn's 3rd frame → ANNOUNCE lands after p1/p2, before t0; 57 tagged frames → one ANNOUNCE; next turn re-armed; start-less turn re-armed by the previous END (its own END is unowned → dropped, as before); a turn after a missed END re-armed by its START; untagged turn → none; main and `child-7` interleaved → one each, scoped to its own session, in order.
+4. Implementation vs oracle — PASS: announcements replayed from both committed captures equal the `probe_p1_p7.py` per-turn table — tail `[(sess_dd72baef…, workflow-complete-wake)]`; gate-on `[(sess_f6407f82… main, workflow-complete-wake), (sess_f7800342… step, send-message-wake)]`.
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 7)`.
+6. Budget — PASS: per-session `HashSet`, O(1) per frame; entries = sessions with an announced turn in flight (≤ 2 in every capture); cleared at turn start/end.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M10 (drop the END reset) → `announce_once_per_turn` FAIL; **M10b (added; drop the START reset)** → FAIL. First M10 run stayed green on a fully bracketed fixture (START reset masked it) — blind fixture repaired with two isolating rows; recorded as a technical proof correction in design.md. An intermediate fixture expectation (x1's END forwarded) was wrong — the mediator correctly drops an unowned END; expectation corrected with a comment, code unchanged.
+9. Fence restored — PASS: `turn_mediator.rs` restored from scratch copy (`cmp` identical); both fences green.
+10. Parity and reuse — PASS. Search: `grep` in `bridge/tests/`, `test_support.rs`. Reused `routing::message` (widened to `pub(super)`, not copied); `InboundProbe`, `start_session`, `recv`; `test_support` refactor makes one routed core serve both pair-returning helpers (no duplicated JSON-RPC walk). Symmetry: the announcement is scoped exactly like the frame it precedes (same session routing as content); no new error path (`notify` failure propagates like the frame's own `notify`).
+11. Preserved enforcement — N/A — reason: nothing repointed or relaxed; `routing::message` visibility widened within the test module only.
+
+Sweep (step 7): `RoutedNotification.origin` doc now present tense (announcement implemented); App binding comment already cites C10.
+
 ## Slice 6: tracker yields the oldest unconsumed wake label per parent session
 
 **Claim IDs:** C13

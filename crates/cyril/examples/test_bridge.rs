@@ -369,6 +369,12 @@ fn print_notification(n: &Notification) {
         Notification::TurnStarted => {
             println!("  [TurnStarted]");
         }
+        Notification::AgentInitiatedTurn(origin) => {
+            println!(
+                "  [AgentInitiatedTurn] reason={}",
+                origin.reason().unwrap_or("<none>")
+            );
+        }
         Notification::TurnCompleted { .. } => {
             println!("  [TurnCompleted]");
         }
