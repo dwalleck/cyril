@@ -39,6 +39,7 @@ impl<T: std::fmt::Debug, E> ExpectErrContract<E> for Result<T, E> {
 // of these commands (hooks, workflow) through different `run_loop` arms with
 // different outcomes, so the module only exists in default builds. The
 // default-features CI lane is what keeps it running.
+mod agent_initiated;
 #[cfg(not(feature = "kas"))]
 mod commands;
 mod death;

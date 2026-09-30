@@ -116,7 +116,12 @@ impl DomainMediator {
             );
         }
         if let Some(notification) = converted {
-            let routed = RoutedNotification::scoped(session_id, notification);
+            let mut routed = RoutedNotification::scoped(session_id, notification);
+            // cyril-lki9 C3: the agent-initiated tag rides the frame it came
+            // on, as envelope metadata the turn mediator reads.
+            if let Some(origin) = self.config.engine.turn_origin(&args) {
+                routed = routed.with_origin(origin);
+            }
             self.source_observer.observe(&routed);
             self.handle_routed(routed).await
         } else {

@@ -17,7 +17,7 @@
 use agent_client_protocol::schema::v1 as acp;
 
 use crate::protocol::convert;
-use crate::types::{AgentEngine, Notification};
+use crate::types::{AgentEngine, AgentInitiation, Notification};
 
 /// The bound engine's capability-adapter set (ADR-0001 amendment): which
 /// host-callback families this engine installs. `KiroClient` dispatch consults
@@ -184,6 +184,21 @@ pub(crate) trait Engine {
     /// Returns `None` for updates this engine does not surface to the UI.
     fn convert_session_update(&self, args: &acp::SessionNotification) -> Option<Notification>;
 
+    /// Whether this `session/update` frame belongs to a turn the agent started
+    /// itself, with no client prompt (cyril-lki9) — reported as envelope
+    /// metadata ([`RoutedNotification::origin`](crate::types::RoutedNotification)),
+    /// never as content.
+    ///
+    /// Defaulted to `None`, unlike [`Engine::emits_wire_turn_end`]: an engine
+    /// that inherits the default here only loses the agent-initiated *label*;
+    /// turn ownership never depends on it (the approved design keys server
+    /// turns on `TurnStarted`, design C7), so a wrong inherited answer cannot
+    /// freeze or eat a turn.
+    /// v2 has no agent-initiated turns and keeps the default.
+    fn turn_origin(&self, _args: &acp::SessionNotification) -> Option<AgentInitiation> {
+        None
+    }
+
     /// Convert an engine-dialect ext notification (v2: `kiro.dev/*`) to an
     /// internal one. `Err` on a malformed-but-recognized frame; `Ok(None)` for
     /// recognized-but-not-surfaced frames — with one carve-out: a malformed
@@ -318,6 +333,13 @@ impl Engine for KasEngine {
         // (cyril-0qe6 C8) — a KAS dialect quirk, filtered in the dialect.
         convert::session_update_to_notification(args)
             .map(convert::kas::suppress_workflow_gate_commands)
+    }
+
+    /// cyril-lki9: KAS tags every chunk and tool frame of an agent-initiated
+    /// turn (workflow auto-wake) with `_meta.kiro.agentInitiated`; the dialect
+    /// parse lives with the rest of the KAS literals in `convert::kas`.
+    fn turn_origin(&self, args: &acp::SessionNotification) -> Option<AgentInitiation> {
+        convert::kas::agent_initiation(&args.update)
     }
 
     fn convert_ext_notification(
@@ -897,5 +919,26 @@ mod tests {
                 "default v2 build must preserve unknown workflow method {method}"
             );
         }
+    }
+
+    /// cyril-lki9 C19: v2 inherits the default — a KAS-tagged frame is never
+    /// agent-initiated on the v2 engine.
+    #[test]
+    fn v2_turn_origin_is_always_none() {
+        let tagged: acp::SessionNotification = serde_json::from_value(json!({
+            "sessionId": "s",
+            "update": {
+                "sessionUpdate": "agent_message_chunk",
+                "content": { "type": "text", "text": "x" },
+                "_meta": { "kiro": { "agentInitiated": true,
+                    "agentInitiatedReason": "workflow-complete-wake" } }
+            }
+        }))
+        .expect("tagged chunk deserializes");
+        assert_eq!(V2Engine.turn_origin(&tagged), None);
+        assert!(
+            KasEngine::default().turn_origin(&tagged).is_some(),
+            "positive control: the same frame IS agent-initiated on KAS"
+        );
     }
 }

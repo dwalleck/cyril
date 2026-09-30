@@ -475,6 +475,37 @@ pub struct RoutedNotification {
     /// `Option` for genuinely-absent, never a sentinel: a `TurnId(0)` stand-in
     /// would collide with the first id the allocator ever issues.
     pub turn: Option<TurnId>,
+    /// The agent started this frame's turn itself (cyril-lki9): `Some` exactly
+    /// when the engine reported the frame as agent-initiated — KAS tags every
+    /// chunk and tool frame of such a turn with `_meta.kiro.agentInitiated`.
+    /// Envelope metadata beside `session_id` and `turn`, never content: it
+    /// exists for the turn mediator's once-per-turn agent-initiated
+    /// announcement (design C10, plan Slice 4); content consumers never need
+    /// it. `None` for everything else, and always on the v2 engine.
+    pub origin: Option<AgentInitiation>,
+}
+
+/// A frame of a turn the agent started without a client prompt (cyril-lki9) —
+/// e.g. a KAS workflow auto-wake. `reason` is the engine's stated reason
+/// (`agentInitiatedReason`, e.g. `"workflow-complete-wake"`), `None` when the
+/// frame did not say.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentInitiation {
+    reason: Option<String>,
+}
+
+impl AgentInitiation {
+    /// An empty reason is treated as absent, like every other optional wire
+    /// string cyril reads (CLAUDE.md "Guard partial updates").
+    pub fn new(reason: Option<String>) -> Self {
+        Self {
+            reason: reason.filter(|r| !r.is_empty()),
+        }
+    }
+
+    pub fn reason(&self) -> Option<&str> {
+        self.reason.as_deref()
+    }
 }
 
 impl RoutedNotification {
@@ -484,6 +515,7 @@ impl RoutedNotification {
             session_id: None,
             notification,
             turn: None,
+            origin: None,
         }
     }
 
@@ -493,6 +525,7 @@ impl RoutedNotification {
             session_id: Some(session_id),
             notification,
             turn: None,
+            origin: None,
         }
     }
 
@@ -503,6 +536,14 @@ impl RoutedNotification {
     #[must_use]
     pub fn with_turn(mut self, turn: TurnId) -> Self {
         self.turn = Some(turn);
+        self
+    }
+
+    /// Mark this frame as belonging to an agent-initiated turn (cyril-lki9).
+    /// Set only by the bridge's inbound path, from the engine's report.
+    #[must_use]
+    pub fn with_origin(mut self, origin: AgentInitiation) -> Self {
+        self.origin = Some(origin);
         self
     }
 }

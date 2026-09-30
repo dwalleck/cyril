@@ -111,6 +111,25 @@ Sweep (step 7): `session_info_to_notification` doc list updated (`turn_start`, e
 - `cargo nextest run -p cyril-core -E 'test(/turn_origin|origin_is_stamped/)'` → table rows as specified; capture counts equal 57/2/4 and 292/6/8 exactly.
 - M2 → capture-count row red (tool_call_update 4 ≠ 0); M3 → harness red; M19 → v2 row red; each restored → green.
 
+### Checkpoint record — Slice 2 (2026-09-29, branch `fix/cyril-lki9-i1-core-turns`)
+
+**Impact analysis (step 1).** New trait method `Engine::turn_origin` (defaulted): implementors `V2Engine` (inherits `None`), `KasEngine` (override) — `grep 'impl Engine for'` finds only these two. `RoutedNotification` gained a `pub origin` field: struct-literal / exhaustive-pattern sites found by `cargo check --workspace --all-targets --all-features` — `crates/cyril/src/app.rs:1221` (destructure; bound explicitly per the file's no-`..` convention) and `:1363` (pending-buffer re-queue; origin preserved); `domain_mediator/mod.rs:586` uses a `..`-free match on `DomainWork::Routed` and compiled unchanged; constructors `global`/`scoped` set `None`. New stamp site: `domain_mediator/inbound.rs::handle_session` (sole session/update conversion site).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2091 passed, 13 skipped.
+2. Falsifiers C2/C3/C19 — PASS: `turn_origin_table`, `turn_origin_matches_tagged_frame_census`, `origin_is_stamped_on_the_frame_it_came_on`, `v2_turn_origin_is_always_none`.
+3. Stress fixture — PASS: string `"true"` → None; `kiro` array → None; reason without flag → None; empty reason → `Some(reason None)`; tagged `agent_thought_chunk` → Some; tagged `session_info_update` → None; v2 on a tagged frame → None (positive control: KAS → Some).
+4. Implementation vs oracle — PASS: `turn_origin` over every agent->client `session/update` in the two committed captures equals the P1/P2 grep census exactly — tail (57 chunk, 2 tool_call, 4 tool_call_update; workflow-complete-wake 63), gate-on (292, 6, 8; send-message-wake 105, workflow-complete-wake 201).
+5. Module shape — PASS: `python3 .cyril-lki9/oracles/shape.py` → `C21 PASS (… app.rs: 5, state.rs: 5)`; `agentInitiated` literals only in `convert/kas.rs` production code.
+6. Budget — N/A — reason: O(1) fixed-path lookups; plan records no budget.
+7. Regression fence — PASS (same runs as item 2).
+8. Named mutation — PASS (red): M2 (drop `ToolCallUpdate` arm) → `turn_origin_table` + census FAIL; M3 (`let _ = origin` instead of `with_origin`) → `origin_is_stamped_on_the_frame_it_came_on` FAIL; M19 (default `turn_origin` parses `_meta`) → `v2_turn_origin_is_always_none` FAIL.
+9. Fence restored — PASS: three files restored from scratch copies (`cmp` identical); four fences green.
+10. Parity and reuse — PASS. Search: `grep` for `_meta`/`agentInitiated` readers in `convert/` (only `SessionMode.welcomeMessage`, trust options — none reusable) and `test_support` loaders. `AgentInitiation::new` applies the empty-means-absent rule shared with `steering_message_id`; the census test deserializes at the acp layer exactly as `kas_capture_to_routed` does (no origin is exposed by that helper, so it could not be reused for the origin tally — divergence justified by C2's need to observe `turn_origin`, not the converted content). Harness: `Script.chunk_meta` extends the existing chunk emitter rather than adding a second emitter. Symmetry: the new `turn_origin` hook parallels `convert_session_update` (same `&acp::SessionNotification` input, same engine dispatch); the defaulted-vs-undefaulted divergence from `emits_wire_turn_end` is justified in the trait doc (a wrong inherited `None` loses only a label).
+11. Preserved enforcement — N/A — reason: no gate/fence/policy repointed, relaxed or removed.
+
+Sweep (step 7): three forward-looking statements rewritten to cite their design claims (event.rs `origin` doc → C10/Slice 4; engine.rs default rationale → C7; app.rs binding comment → C10) — comment-only, evidence retained.
+
 ## Slice 3: mediator owns server-started turns (fixes the dropped wake completion)
 
 **Claim IDs:** C7, C8, C9, C12, C22

@@ -10,9 +10,9 @@ use agent_client_protocol::schema::v1 as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{
-    AgentEngine, ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount, Notification,
-    PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount, UsageAccountBreakdown,
-    UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
+    AgentEngine, AgentInitiation, ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount,
+    Notification, PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount,
+    UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
 pub(crate) mod powers;
@@ -474,6 +474,32 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
         }
         _ => None,
     }
+}
+
+/// The agent-initiated tag of a KAS chunk / tool frame (cyril-lki9 P1/P2):
+/// `Some` exactly when `_meta.kiro.agentInitiated` is the boolean `true` on an
+/// agent message/thought chunk, `tool_call` or `tool_call_update`; the reason
+/// is `_meta.kiro.agentInitiatedReason` (`None` when absent or empty). Any
+/// other update kind, an absent or non-object `_meta.kiro`, or a non-`true`
+/// flag is not agent-initiated. KAS never tags `turn_start` / `turn_end`
+/// (P1), so origin is known only from a turn's first tagged frame.
+pub(crate) fn agent_initiation(update: &acp::SessionUpdate) -> Option<AgentInitiation> {
+    let meta = match update {
+        acp::SessionUpdate::AgentMessageChunk(chunk)
+        | acp::SessionUpdate::AgentThoughtChunk(chunk) => chunk.meta.as_ref(),
+        acp::SessionUpdate::ToolCall(tool_call) => tool_call.meta.as_ref(),
+        acp::SessionUpdate::ToolCallUpdate(update) => update.meta.as_ref(),
+        _ => None,
+    }?;
+    let kiro = meta.get("kiro")?.as_object()?;
+    if kiro.get("agentInitiated") != Some(&serde_json::Value::Bool(true)) {
+        return None;
+    }
+    Some(AgentInitiation::new(
+        kiro.get("agentInitiatedReason")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string),
+    ))
 }
 
 /// `messageId` prefix KAS gives messages the engine itself injects into a turn
@@ -1666,6 +1692,151 @@ mod tests {
                 (want_started, want_injected, want_consumed, want_cleared),
                 "{rel}: (TurnStarted, EngineMessageInjected, SteeringConsumed, SteeringCleared)"
             );
+        }
+    }
+
+    // ---- cyril-lki9 Slice 2: agent-initiated tag extraction ---------------------
+
+    fn update_with_meta(update: serde_json::Value) -> acp::SessionNotification {
+        serde_json::from_value(json!({ "sessionId": "sess_x", "update": update }))
+            .expect("session/update deserializes")
+    }
+
+    /// C2: `turn_origin` is `Some` exactly when `_meta.kiro.agentInitiated` is
+    /// the boolean `true` on a chunk / thought / tool_call / tool_call_update.
+    /// Stress rows: string `"true"`, a non-object `kiro`, a reason with no flag,
+    /// an empty reason, and a tagged frame of another update kind.
+    #[test]
+    fn turn_origin_table() {
+        let engine = KasEngine::default();
+        let bodies = [
+            (
+                "agent_message_chunk",
+                json!({ "sessionUpdate": "agent_message_chunk",
+                "content": { "type": "text", "text": "x" } }),
+            ),
+            (
+                "agent_thought_chunk",
+                json!({ "sessionUpdate": "agent_thought_chunk",
+                "content": { "type": "text", "text": "x" } }),
+            ),
+            (
+                "tool_call",
+                json!({ "sessionUpdate": "tool_call", "toolCallId": "t1",
+                "title": "Read", "kind": "read", "status": "pending" }),
+            ),
+            (
+                "tool_call_update",
+                json!({ "sessionUpdate": "tool_call_update",
+                "toolCallId": "t1", "status": "completed" }),
+            ),
+        ];
+        // (meta, expected: None = not agent-initiated, Some(reason))
+        let metas: [(Option<serde_json::Value>, Option<Option<&str>>); 8] = [
+            (
+                Some(json!({ "kiro": { "agentInitiated": true,
+                "agentInitiatedReason": "workflow-complete-wake" } })),
+                Some(Some("workflow-complete-wake")),
+            ),
+            (
+                Some(json!({ "kiro": { "agentInitiated": true } })),
+                Some(None),
+            ),
+            (
+                Some(json!({ "kiro": { "agentInitiated": true, "agentInitiatedReason": "" } })),
+                Some(None),
+            ),
+            (
+                Some(json!({ "kiro": { "agentInitiated": false,
+                "agentInitiatedReason": "workflow-complete-wake" } })),
+                None,
+            ),
+            (Some(json!({ "kiro": { "agentInitiated": "true" } })), None),
+            (
+                Some(json!({ "kiro": { "agentInitiatedReason": "workflow-complete-wake" } })),
+                None,
+            ),
+            (Some(json!({ "kiro": ["agentInitiated", true] })), None),
+            (None, None),
+        ];
+        for (kind, body) in &bodies {
+            for (meta, want) in &metas {
+                let mut update = body.clone();
+                if let Some(meta) = meta {
+                    update["_meta"] = meta.clone();
+                }
+                let got = engine.turn_origin(&update_with_meta(update));
+                assert_eq!(
+                    got.as_ref().map(crate::types::AgentInitiation::reason),
+                    *want,
+                    "{kind} with _meta {meta:?}"
+                );
+            }
+        }
+        // A tagged frame of a kind KAS never tags (and cyril never labels).
+        let siu = update_with_meta(json!({ "sessionUpdate": "session_info_update",
+            "_meta": { "kiro": { "kind": "turn_start", "agentInitiated": true } } }));
+        assert_eq!(
+            engine.turn_origin(&siu),
+            None,
+            "session_info_update is never agent-initiated"
+        );
+    }
+
+    /// C2 against live wire: `turn_origin` over every committed agent->client
+    /// `session/update` equals the independent `grep` census of tagged frames
+    /// (evidence.md P1/P2): tail 57 / 2 / 4, gate-on 292 / 6 / 8, and reasons
+    /// workflow-complete-wake 63 (tail) / 201 + send-message-wake 105 (gate-on).
+    #[test]
+    fn turn_origin_matches_tagged_frame_census() {
+        let engine = KasEngine::default();
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let census = [
+            (
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+                (57, 2, 4),
+                vec![("workflow-complete-wake", 63)],
+            ),
+            (
+                "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+                (292, 6, 8),
+                vec![("send-message-wake", 105), ("workflow-complete-wake", 201)],
+            ),
+        ];
+        for (rel, want_kinds, want_reasons) in census {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            let (mut chunks, mut tool_calls, mut updates) = (0, 0, 0);
+            let mut reasons = std::collections::BTreeMap::<String, usize>::new();
+            for line in trace.lines().filter(|l| !l.is_empty()) {
+                let row: serde_json::Value = serde_json::from_str(line).expect("trace row");
+                if row["dir"] != "agent->client" || row["msg"]["method"] != "session/update" {
+                    continue;
+                }
+                let sn: acp::SessionNotification =
+                    serde_json::from_value(row["msg"]["params"].clone()).expect("session/update");
+                let Some(origin) = engine.turn_origin(&sn) else {
+                    continue;
+                };
+                match &sn.update {
+                    acp::SessionUpdate::AgentMessageChunk(_) => chunks += 1,
+                    acp::SessionUpdate::ToolCall(_) => tool_calls += 1,
+                    acp::SessionUpdate::ToolCallUpdate(_) => updates += 1,
+                    other => panic!("{rel}: origin on an unexpected update kind {other:?}"),
+                }
+                *reasons
+                    .entry(origin.reason().unwrap_or("<none>").to_string())
+                    .or_default() += 1;
+            }
+            assert_eq!(
+                (chunks, tool_calls, updates),
+                want_kinds,
+                "{rel}: tagged (chunk, tool_call, tool_call_update)"
+            );
+            let want: std::collections::BTreeMap<String, usize> = want_reasons
+                .into_iter()
+                .map(|(r, n)| (r.to_string(), n))
+                .collect();
+            assert_eq!(reasons, want, "{rel}: reasons");
         }
     }
 }

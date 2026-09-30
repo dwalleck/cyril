@@ -1227,6 +1227,10 @@ impl App {
             // make and deliberately ignores the stamp. Bound explicitly rather
             // than `..` so a rename breaks loudly here.
             turn,
+            // cyril-lki9: the App reads no per-frame origin — agent-initiated
+            // turns are announced once per turn by the bridge (design C10); it
+            // is bound only to carry it through the pending buffer.
+            origin,
         } = routed;
 
         if usage_only {
@@ -1364,6 +1368,7 @@ impl App {
                             session_id,
                             notification,
                             turn,
+                            origin,
                         });
                     return Vec::new();
                 }

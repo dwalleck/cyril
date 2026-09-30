@@ -37,6 +37,10 @@ pub(super) struct Script {
     pub(super) negotiated_protocol:
         Arc<Mutex<Option<agent_client_protocol::schema::ProtocolVersion>>>,
     pub(super) emit_chunks: usize,
+    /// `_meta` attached to every emitted `agent_message_chunk` (cyril-lki9 C3):
+    /// `Some({"kiro": {"agentInitiated": true, …}})` reproduces an
+    /// agent-initiated turn's frames; `None` keeps the historical untagged chunk.
+    pub(super) chunk_meta: Option<serde_json::Value>,
     pub(super) inbound: Option<InboundProbe>,
     pub(super) emit_unknown_update: bool,
     pub(super) request_extension_during_initialize: bool,
@@ -138,6 +142,7 @@ fn fake_agent(
     let ext_responses = Arc::clone(&script.borrow().ext_responses);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
     let emit_chunks = script.borrow().emit_chunks;
+    let chunk_meta = script.borrow().chunk_meta.clone();
     let emit_unknown_update = script.borrow().emit_unknown_update;
     let request_extension_during_initialize = script.borrow().request_extension_during_initialize;
     let request_malformed_standard_during_initialize =
@@ -369,13 +374,17 @@ fn fake_agent(
                     connection.send_notification(notification)?;
                 }
                 for index in 0..emit_chunks {
+                    let mut update = serde_json::json!({
+                        "sessionUpdate": "agent_message_chunk",
+                        "content": {"type": "text", "text": format!("c{index}")}
+                    });
+                    if let Some(meta) = &chunk_meta {
+                        update["_meta"] = meta.clone();
+                    }
                     let notification: acp::SessionNotification =
                         serde_json::from_value(serde_json::json!({
                             "sessionId": request.session_id.to_string(),
-                            "update": {
-                                "sessionUpdate": "agent_message_chunk",
-                                "content": {"type": "text", "text": format!("c{index}")}
-                            }
+                            "update": update
                         }))
                         .map_err(|error| {
                             agent_client_protocol::Error::internal_error().data(error.to_string())
