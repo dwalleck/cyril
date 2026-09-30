@@ -46,6 +46,8 @@ Baseline = production lines before the first `#[cfg(test)]` at merge-base `bfc49
 
 S3 and S5 must share an increment: S3 alone makes the mediator busy during a wake while `SessionController` is not, so Enter would dispatch `SendPrompt` into the busy guard (error) instead of today's pre-emption.
 
+Scoped shipping authorization (2026-09-29, requester selected "Draft PR per increment"): open a **draft** PR for each increment at its boundary — I0 from `fix/cyril-lki9-workflow-auto-wake`, I1 and I2 on stacked branches; **no merge without requester approval**; tracker records to close on the final merge: cyril-lki9, cyril-5n75.
+
 Branch discovery: the default branch is resolved with `git symbolic-ref refs/remotes/origin/HEAD` at PR time (not hard-coded).
 
 ---
