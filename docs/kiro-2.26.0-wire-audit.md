@@ -129,8 +129,10 @@ does not consume `_kiro/session/notify`; no `deny_unknown_fields` on any ACP pat
 
 ## 6. Consequences for cyril
 
-1. **Nothing breaks.** ADR-0011 (never set the gate) still holds at GA; the
-   client-owned `/workflow` control plane works unchanged.
+1. **Nothing in the wire contract breaks.** ADR-0011 (never set the gate) still
+   holds at GA; the client-owned `/workflow` control plane works unchanged.
+   **But see § 8:** a long-standing KAS auto-wake gives every cyril-invoked run
+   an unsolicited, billed model turn on the main session (cyril-lki9).
 2. **Gate-off costs `recipes_changed`.** If cyril wants live recipe-catalog
    refresh it must either set `workflows.enabled` (which also hands the model
    `run_workflow` et al. — the thing ADR-0011 avoids) or keep polling
@@ -153,3 +155,60 @@ does not consume `_kiro/session/notify`; no `deny_unknown_fields` on any ACP pat
 consent, untrusted shell starts each time, stale approvals rejected) are
 approval-policy changes in KAS; 2.25.0 notably fixes "Loading a v2 or classic
 session over ACP on the v3 engine now replays its history".
+
+## 8. Addendum (same day) — `/workflow new` authoring and parent auto-wake
+
+Issues filed from this section: **cyril-lki9** (auto-wake bug, P1) and
+**cyril-0asq** (authoring design, blocked on lki9).
+
+### 8a. The TUI's creation menu is a canned prompt
+
+The V3 TUI's `/workflow` subcommands are `new | list | run | retry` (plus
+`pause | resume | status | cancel`). All except `new` map onto `_kiro/workflow/*`.
+**`/workflow new <description>` sends a plain `session/prompt`** (tui.js `jCn`),
+extracted verbatim to
+`experiments/conductor-spike/tui-workflow-new-prompt-2.26.0.txt` (bundle sha256
+`df77898749d0f3fb…`). It tells the model to delegate to the bundled
+`wf-workflow-creator` agent, have it validate via `save_workflow_definition` and
+return the full JSON, then write `.kiro/workflows/<name>.workflow.json`. If the
+creator is unavailable, the prompt falls back to authoring and running
+`validate_workflow` itself. The creator and the other 8 `wf-*` agents, plus the
+validate/save tools, exist only when `workflowsEnabled` is true.
+
+Row visibility: `/settings → Features → Workflows` shows only when
+`Qn("workflows") && engine === "kas"`. It is **hidden on V2**, and the
+"relaunch with --v3" hint is `KIRO_INTERNAL`-only.
+
+### 8b. Live: authoring (`probe-kas-workflow-new-2.26.0.py`, `analyze-workflow-new-2.26.0.py`)
+
+| | gate on (TUI) | gate off (cyril) |
+|---|---|---|
+| delegation | `run_workflow{workflowPath:"agent://wf-workflow-creator"}`: **async** run | Sub-agent `wf-workflow-creator` → **failed** (unregistered) |
+| turns on main | 2 (1 client prompt + **1 server wake**) | 1 |
+| JSON handoff | `send_message` carried a 204-char summary only; JSON only in `capturedOutputs.run` (2,905 chars) | n/a |
+| recovery | wake turn: `send_message` to the finished step (dead letter), `validate_workflow` itself, Write File (permission request mid-wake) | wrote the file **unvalidated**, reported success |
+| `listRecipes` | `summarize-notes` **valid** | `summarize-notes` **INVALID**: `inputs.notes_dir: Expected string, received object (+4 more issues)` |
+| elapsed | 109 s | 117 s |
+
+`listRecipes` returns `validationError` per recipe **with the gate off**, so
+cyril can verify authored recipes without the gate.
+
+### 8c. Live: KAS auto-wakes the parent on every terminal run
+
+`probe-kas-workflow-channels-2.26.0.py` with `WF_GATE=off WF_TAIL=60`, i.e. a run
+started exactly as cyril starts one (`new` with `parentSessionId` = main session,
+then `invoke`). At `run_complete: completed` **+0.0 s**, KAS opened a turn on the
+main session (`turn_start`). The model read two files and streamed a results
+summary, then `turn_end` at +13.1 s. There was **no client `session/prompt`**, the
+injected wake text never reaches the client (no `user_message_chunk`), and there
+is no prompt response; `turn_end` is the only end marker.
+
+Static (0.66.15, present at least since 0.66.0 / 2.22.0): `autoWakeParentOnComplete`
+fires on any terminal `run_complete` whose parent resolves
+(`parentSessionId ?? finalState.parentSessionId ?? registry`). The default
+`wakePolicy.decide` **always** returns `wake:true`: "A workflow you launched
+("X") completed/failed/aborted. Review its results and continue if you were
+waiting on it.", with softer text when the user stopped or completed the run. It
+loads an unloaded parent on demand. `rewakeWithInfo` also wakes an idle session
+when a step's `send_message` arrives. No client setting disables either path.
+Earlier audits missed this because every workflow probe stopped at `run_complete`.

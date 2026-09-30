@@ -1,0 +1,118 @@
+{
+  "elapsedSec": 109.1,
+  "firstTurnSec": 13.4,
+  "gate": "on",
+  "goal": "for every Markdown file in the notes/ directory, write a one-paragraph summary, then combine the summaries into notes/SUMMARY.md",
+  "label": "06615",
+  "mainSessionId": "sess_f6407f82-f87d-42e3-a302-9dff0970c09c",
+  "mainTurns": {
+    "end": 2,
+    "start": 2
+  },
+  "promptResult": {
+    "stopReason": "end_turn"
+  },
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 2,
+    "fs/read_text_file": 2,
+    "fs/write_text_file": 1,
+    "session/request_permission": 1
+  },
+  "runsTerminalSec": 37.3,
+  "wfAgentsAdvertised": [],
+  "workflowEvents": [
+    {
+      "method": "_kiro/workflow/run_start",
+      "status": null,
+      "workflowId": "wf_07416731f212206d"
+    },
+    {
+      "method": "_kiro/workflow/node_start",
+      "status": null,
+      "workflowId": "wf_07416731f212206d"
+    },
+    {
+      "method": "_kiro/workflow/node_start",
+      "status": null,
+      "workflowId": "wf_07416731f212206d"
+    },
+    {
+      "method": "_kiro/workflow/node_complete",
+      "status": "completed",
+      "workflowId": "wf_07416731f212206d"
+    },
+    {
+      "method": "_kiro/workflow/run_complete",
+      "status": "completed",
+      "workflowId": "wf_07416731f212206d"
+    },
+    {
+      "method": "_kiro/workflow/recipes_changed",
+      "status": null,
+      "workflowId": null
+    }
+  ],
+  "workflowFiles": [
+    "summarize-notes.workflow.json"
+  ],
+  "workflowJson": {
+    "summarize-notes.workflow.json": {
+      "description": "For every Markdown file in a notes directory, write a one-paragraph summary, then combine all summaries into SUMMARY.md.",
+      "inputs": {
+        "notes_dir": "string"
+      },
+      "name": "summarize-notes",
+      "steps": [
+        {
+          "agent": "wf-coder",
+          "id": "summarize",
+          "prompt": "Goal: for every Markdown file in the directory {{notes_dir}} (workspace-relative; resolve it against the workspace root), write a concise one-paragraph summary of that file's content.\n\nSteps:\n1. List every Markdown file (*.md) directly in {{notes_dir}}. Exclude SUMMARY.md itself if it already exists, so re-runs don't summarize the combined output.\n2. Read each Markdown file's full content.\n3. For each file, write exactly one paragraph (a few sentences) that summarizes what that file is about. Do not use bullet points; keep it to a single prose paragraph per file.\n4. Record the per-file summaries so the next step can combine them. Write each summary to a scratch file at {{notes_dir}}/.summaries/<original-filename>.summary.txt, creating the {{notes_dir}}/.summaries directory if needed. Each scratch file contains the original Markdown filename on the first line, followed by the one-paragraph summary.\n\nDo not create or modify notes/SUMMARY.md in this step. Verify by listing the .summaries directory and confirming one .summary.txt file exists per source Markdown file.",
+          "type": "step"
+        },
+        {
+          "agent": "wf-coder",
+          "id": "combine",
+          "prompt": "Goal: combine the per-file summaries produced in the previous step into a single Markdown file at {{notes_dir}}/SUMMARY.md.\n\nSteps:\n1. Read every scratch summary file in {{notes_dir}}/.summaries/ (files named <original-filename>.summary.txt; the first line is the original Markdown filename, the rest is the one-paragraph summary).\n2. Create {{notes_dir}}/SUMMARY.md with a top-level heading (e.g. '# Notes Summary'). For each source file, add a section with the original filename as a subheading (## <filename>) followed by its one-paragraph summary. Order the sections alphabetically by filename for stable, reproducible output.\n3. Remove the {{notes_dir}}/.summaries scratch directory once SUMMARY.md is written.\n\nVerify by reading {{notes_dir}}/SUMMARY.md and confirming it contains one section per source Markdown file with its summary paragraph.",
+          "type": "step"
+        }
+      ]
+    }
+  },
+  "workflowsEnabled": true,
+  "workspace": "/home/dwalleck/.claude/tmp/wfnew-06615-gateon-2.26.0-ws-11ffp2j3",
+  "workspaceRecipes": [
+    {
+      "_meta": {
+        "kiro": {
+          "resource": {
+            "resourceType": "workflow",
+            "source": {
+              "origin": "workspace",
+              "root": "/home/dwalleck/.claude/tmp/wfnew-06615-gateon-2.26.0-ws-11ffp2j3"
+            }
+          }
+        }
+      },
+      "builtIn": false,
+      "description": "For every Markdown file in a notes directory, write a one-paragraph summary, then combine all summaries into SUMMARY.md.",
+      "inputs": {
+        "notes_dir": "string"
+      },
+      "name": "summarize-notes",
+      "plan": [
+        {
+          "agentName": "wf-coder",
+          "nodeId": "summarize",
+          "type": "step"
+        },
+        {
+          "agentName": "wf-coder",
+          "nodeId": "combine",
+          "type": "step"
+        }
+      ],
+      "source": "/home/dwalleck/.claude/tmp/wfnew-06615-gateon-2.26.0-ws-11ffp2j3/.kiro/workflows/summarize-notes.workflow.json"
+    }
+  ]
+}

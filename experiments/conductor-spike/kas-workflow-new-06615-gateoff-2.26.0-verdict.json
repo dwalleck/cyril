@@ -1,0 +1,84 @@
+{
+  "elapsedSec": 116.8,
+  "firstTurnSec": 26.8,
+  "gate": "off",
+  "goal": "for every Markdown file in the notes/ directory, write a one-paragraph summary, then combine the summaries into notes/SUMMARY.md",
+  "label": "06615",
+  "mainSessionId": "sess_69b30a40-239e-432f-b842-6c6f8b8eca25",
+  "mainTurns": {
+    "end": 1,
+    "start": 1
+  },
+  "promptResult": {
+    "stopReason": "end_turn"
+  },
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1,
+    "fs/read_text_file": 2,
+    "fs/write_text_file": 1,
+    "session/request_permission": 2
+  },
+  "runsTerminalSec": 26.8,
+  "wfAgentsAdvertised": [],
+  "workflowEvents": [],
+  "workflowFiles": [
+    "summarize-notes.workflow.json"
+  ],
+  "workflowJson": {
+    "summarize-notes.workflow.json": {
+      "description": "For every Markdown file in the notes/ directory, write a one-paragraph summary, then combine the summaries into notes/SUMMARY.md.",
+      "inputs": {
+        "notes_dir": {
+          "default": "notes",
+          "description": "Path to the directory containing the Markdown notes to summarize.",
+          "type": "string"
+        },
+        "output_file": {
+          "default": "notes/SUMMARY.md",
+          "description": "Path where the combined summary document will be written.",
+          "type": "string"
+        }
+      },
+      "name": "summarize-notes",
+      "steps": [
+        {
+          "id": "list_markdown_files",
+          "name": "List Markdown files",
+          "prompt": "List every Markdown file (files ending in .md) in the {{inputs.notes_dir}} directory. Exclude {{inputs.output_file}} itself if present. Return the result as a plain list of file paths, one per line."
+        },
+        {
+          "id": "summarize_each_file",
+          "name": "Summarize each Markdown file",
+          "prompt": "For each Markdown file listed below, read its contents and write a single concise one-paragraph summary that captures the main points. Label each summary with the file name.\n\nFiles to summarize:\n{{steps.list_markdown_files.output}}"
+        },
+        {
+          "id": "combine_summaries",
+          "name": "Combine summaries into SUMMARY.md",
+          "prompt": "Combine the per-file summaries below into a single Markdown document and write it to {{inputs.output_file}}. Use a top-level heading (for example '# Notes Summary'), then a section for each source file with its file name as a subheading followed by that file's one-paragraph summary.\n\nSummaries:\n{{steps.summarize_each_file.output}}"
+        }
+      ]
+    }
+  },
+  "workflowsEnabled": false,
+  "workspace": "/home/dwalleck/.claude/tmp/wfnew-06615-gateoff-2.26.0-ws-pmbo3c_8",
+  "workspaceRecipes": [
+    {
+      "_meta": {
+        "kiro": {
+          "resource": {
+            "resourceType": "workflow",
+            "source": {
+              "origin": "workspace",
+              "root": "/home/dwalleck/.claude/tmp/wfnew-06615-gateoff-2.26.0-ws-pmbo3c_8"
+            }
+          }
+        }
+      },
+      "builtIn": false,
+      "name": "summarize-notes",
+      "source": "/home/dwalleck/.claude/tmp/wfnew-06615-gateoff-2.26.0-ws-pmbo3c_8/.kiro/workflows/summarize-notes.workflow.json",
+      "validationError": "Invalid workflow: inputs.notes_dir: Expected string, received object (+4 more issues)"
+    }
+  ]
+}

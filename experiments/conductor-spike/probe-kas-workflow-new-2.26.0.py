@@ -1,75 +1,48 @@
 #!/usr/bin/env python3
-"""Workflow GA probe for the 2.26.0 audit (KAS 0.66.8 -> 0.66.15; `workflows` rollout internal -> all).
+"""Live probe of the 2.26.0 TUI `/workflow new <description>` authoring flow over ACP.
 
-WF_GATE=off (cyril's ADR-0011 stance: no settings) | on (session/new _meta.kiro.settings
-workflows.enabled, the TUI's /settings features shape). The on leg also writes a second
-recipe mid-session to exercise the new `_kiro/workflow/recipes_changed` watcher.
+The TUI implements `/workflow new` as a canned session/prompt (tui.js `jCn`, bundle
+sha256 df77898749d0f3fb...), extracted verbatim to tui-workflow-new-prompt-2.26.0.txt.
+This probe replays that exact prompt on a KAS session and records whether the model
+delegates to `wf-workflow-creator`, which workflow tools it calls, and whether a valid
+`.kiro/workflows/<name>.workflow.json` lands.
 
-Set LABEL=2.21.0 or 2.21.1, KIRO_BIN to that version's CLI, and optionally
-KIRO_KAS_SERVER_PATH to a pinned acp-server.js.  WF_STYLE=restate|terse.
-Auth values are redacted before capture; all sessions/workspaces are temporary.
+WF_GATE=on  (TUI shape: session/new _meta.kiro.settings.workflows.enabled=true)
+WF_GATE=off (cyril ADR-0011 shape: no settings -> wf-* agents and tools unregistered)
+Temp HOME + workspace, real XDG_DATA_HOME, auth redacted. Run legs serially.
 """
 import json, os, queue, re, signal, sqlite3, subprocess, tempfile, threading, time
 
-OUT = os.environ.get("PROBE_OUT", os.path.dirname(os.path.abspath(__file__)))
-LABEL = os.environ.get("LABEL", "2.22.0")
-STYLE = os.environ.get("WF_STYLE", "restate")
-GATE = os.environ.get("WF_GATE", "off")
-TAIL = int(os.environ.get("WF_TAIL", "0"))  # seconds to keep listening after run_complete (parent auto-wake)
+HERE = os.path.dirname(os.path.abspath(__file__))
+OUT = os.environ.get("PROBE_OUT", HERE)
+GATE = os.environ.get("WF_GATE", "on")
+LABEL = os.environ.get("LABEL", "06615")
 KIRO = os.environ.get("KIRO_BIN", os.path.expanduser("~/.local/bin/kiro-cli"))
 DATA_HOME = os.environ.get("KIRO_XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
 AUTH_DB = os.environ.get("KIRO_AUTH_DB", os.path.join(DATA_HOME, "kiro-cli", "data.sqlite3"))
 PIN = os.environ.get("KIRO_KAS_SERVER_PATH")
-TAG = f"{LABEL}-{STYLE}-gate{GATE}{'-tail' if TAIL else ''}-2.26.0"
-TRACE = os.path.join(OUT, f"kas-workflow-channels-{TAG}.jsonl")
-VERDICT = os.path.join(OUT, f"kas-workflow-channels-{TAG}-verdict.json")
-STDERR = os.path.join(OUT, f"kas-workflow-channels-{TAG}-stderr.log")
-os.makedirs(OUT, exist_ok=True)
+GOAL = os.environ.get("WF_GOAL", "for every Markdown file in the notes/ directory, write a one-paragraph summary, then combine the summaries into notes/SUMMARY.md")
+TAG = f"{LABEL}-gate{GATE}-2.26.0"
+TRACE = os.path.join(OUT, f"kas-workflow-new-{TAG}.jsonl")
+VERDICT = os.path.join(OUT, f"kas-workflow-new-{TAG}-verdict.json")
+STDERR = os.path.join(OUT, f"kas-workflow-new-{TAG}-stderr.log")
+TEMPLATE = open(os.path.join(HERE, "tui-workflow-new-prompt-2.26.0.txt"), encoding="utf-8").read()
+PROMPT = TEMPLATE.replace("__GOAL__", GOAL)
 
-FAKE_HOME = tempfile.mkdtemp(prefix=f"wf-{TAG}-home-")
-WS = tempfile.mkdtemp(prefix=f"wf-{TAG}-ws-")
-RUNTIME = tempfile.mkdtemp(prefix=f"wf-{TAG}-runtime-")
-TMP = tempfile.mkdtemp(prefix=f"wf-{TAG}-tmp-")
+FAKE_HOME = tempfile.mkdtemp(prefix=f"wfnew-{TAG}-home-")
+WS = tempfile.mkdtemp(prefix=f"wfnew-{TAG}-ws-")
+RUNTIME = tempfile.mkdtemp(prefix=f"wfnew-{TAG}-runtime-")
+TMP = tempfile.mkdtemp(prefix=f"wfnew-{TAG}-tmp-")
 os.makedirs(os.path.join(WS, ".kiro", "workflows"), exist_ok=True)
-WORKDIR = os.path.join(WS, "run-" + str(int(time.time())))
-RESULT = os.path.join(WORKDIR, "result.json")
-RECIPE = os.path.join(WS, ".kiro", "workflows", "audit-channels.workflow.json")
-
-with open(RECIPE, "w", encoding="utf-8") as f:
-    json.dump({
-        "name": "audit-channels-2.26.0",
-        "description": "paired template capture and artifact channel audit",
-        "inputs": {"token": "string", "workdir": "string"},
-        "steps": [
-            {"type": "step", "id": "s1", "agent": "wf-coder", "effortLevel": "low",
-             "artifacts": {"value": "{{workdir}}/value.txt"},
-             "prompt": (("Create the directory {{workdir}} if it does not exist. "
-                         "Write exactly the single word {{token}} to the file "
-                         "{{workdir}}/value.txt with no other text. "
-                         "Then reply with exactly this single word and nothing else: {{token}}")
-                        if STYLE == "restate" else
-                        ("Create the directory {{workdir}} if it does not exist. "
-                         "Write exactly the single word {{token}} to the file "
-                         "{{workdir}}/value.txt with no other text. "
-                         "That is the entire task. Do not write any summary, explanation or "
-                         "closing message; signal completion and stop."))},
-            {"type": "step", "id": "s2", "agent": "wf-coder", "effortLevel": "low",
-             "prompt": ("Two independent channels are under test; report what you ACTUALLY see.\n"
-                        "CHANNEL A (template): between the markers here is A_BEGIN{{s1.output}}A_END. "
-                        "If there is nothing between the markers, channelA is the empty string.\n"
-                        "CHANNEL B (file): read the file {{artifacts.value}} and note its exact contents.\n"
-                        "Write a JSON file to {{workdir}}/result.json containing exactly the keys "
-                        "channelA and channelB, whose values are the two things you saw, verbatim. "
-                        "Do not guess or copy one channel into the other. Then reply with exactly: DONE")},
-        ],
-    }, f, indent=1)
+os.makedirs(os.path.join(WS, "notes"), exist_ok=True)
+for n, body in (("alpha.md", "# Alpha\nAlpha covers onboarding."), ("beta.md", "# Beta\nBeta covers billing.")):
+    open(os.path.join(WS, "notes", n), "w").write(body)
 
 env = dict(os.environ)
 env.update({"HOME": FAKE_HOME, "XDG_DATA_HOME": DATA_HOME, "XDG_RUNTIME_DIR": RUNTIME, "TMPDIR": TMP})
 if PIN:
     env["KIRO_KAS_SERVER_PATH"] = PIN
-print(f"== label={LABEL} style={STYLE} launcher={KIRO} kas_pin={PIN or '<launcher-resolved>'}")
-print(f"== workspace={WS} workdir={WORKDIR}")
+print(f"== gate={GATE} launcher={KIRO} workspace={WS}")
 
 def profile_arn():
     explicit = os.environ.get("KIRO_PROFILE_ARN")
@@ -200,58 +173,72 @@ def cleanup():
             except Exception: pass
     trace.close(); stderr.close()
 
-verdict = {"label": LABEL, "style": STYLE, "gate": GATE, "launcher": KIRO, "kasPin": PIN, "workspace": WS, "workdir": WORKDIR}
+
+
+verdict = {"gate": GATE, "label": LABEL, "goal": GOAL, "workspace": WS}
 try:
-    iid = req("initialize", {"protocolVersion": 1, "clientInfo": {"name": "cyril-2.26.0-workflow-audit", "version": "2.26.0"}, "clientCapabilities": {"fs": {"readTextFile": True, "writeTextFile": True}, "terminal": True}})
+    iid = req("initialize", {"protocolVersion": 1, "clientInfo": {"name": "cyril-2.26.0-workflow-new-audit", "version": "2.26.0"}, "clientCapabilities": {"fs": {"readTextFile": True, "writeTextFile": True}, "terminal": True}})
     init = pump(iid, 90) or {}
     snp = {"cwd": WS, "mcpServers": []}
     if GATE == "on": snp["_meta"] = {"kiro": {"settings": {"workflows": {"enabled": True}}}}
     nid = req("session/new", snp)
     new = pump(nid, 120) or {}; sid = (new.get("result") or {}).get("sessionId")
-    pump(timeout=6)  # session-start recipes_changed (gate on)
-    n_before = len(EVENTS)
-    with open(os.path.join(WS, ".kiro", "workflows", "late-added.workflow.json"), "w") as lf:
-        json.dump({"name": "late-added", "description": "watcher trigger", "steps": [{"type": "step", "id": "x", "agent": "wf-coder", "prompt": "noop"}]}, lf)
-    pump(timeout=10)  # watcher-driven recipes_changed (gate on)
-    verdict["recipesChangedAfterWrite"] = [e.get("params") for e in EVENTS[n_before:] if e.get("method", "").endswith("recipes_changed")]
-    lr = req("_kiro/workflow/listRecipes", {"sessionId": sid, "workspacePaths": [WS]})
-    verdict["listRecipes"] = pump(lr, 30)
-    wreq = req("_kiro/workflow/new", {"workflowPath": RECIPE, "inputs": {"token": "ALPHA", "workdir": WORKDIR}, "parentSessionId": sid, "workspacePaths": [WS]})
-    wnew = pump(wreq, 90) or {}
-    if "error" in wnew:
-        verdict.update({"initialize": init.get("result"), "sessionNew": new.get("result"), "workflowNew": wnew, "events": EVENTS})
-        raise RuntimeError("workflow/new failed")
-    wid = (wnew.get("result") or {}).get("workflowId")
-    inv = req("_kiro/workflow/invoke", {"workflowId": wid})
-    t0 = time.time(); pump(inv, 30)
-    def done(): return any(e.get("method", "").endswith("run_complete") and (e.get("params") or {}).get("status") in ("completed", "failed", "aborted") for e in EVENTS)
-    pump(timeout=720, stop=done)
-    if TAIL:
-        pump(timeout=TAIL)
-        wakes = []
+    verdict["workflowsEnabled"] = ((new.get("result") or {}).get("_meta") or {}).get("workflowsEnabled")
+    modes = ((new.get("result") or {}).get("modes") or {}).get("availableModes") or []
+    verdict["wfAgentsAdvertised"] = sorted(m.get("id") for m in modes if str(m.get("id", "")).startswith("wf-"))
+    t0 = time.time()
+    pid = req("session/prompt", {"sessionId": sid, "prompt": [{"type": "text", "text": PROMPT}]})
+    resp = pump(pid, 900) or {}
+    verdict["firstTurnSec"] = round(time.time() - t0, 1)
+    verdict["promptResult"] = resp.get("result") or resp.get("error")
+    # Follow-through: with the gate on, the model delegates via run_workflow(agent://wf-workflow-creator),
+    # which is ASYNC -- the creator reports back later via send_message relayed to this parent session.
+    # Keep pumping until every launched run is terminal, then wait for any wake-up turn(s) on the main
+    # session to finish (turn_start/turn_end session_info_update kinds), bounded by idle + hard limits.
+    MAIN_TURNS = {"start": 0, "end": 0}
+    def main_turn_counts():
+        c = {"start": 0, "end": 0}
         with open(TRACE, encoding="utf-8") as tf:
             for line in tf:
-                o = json.loads(line)["msg"]; pp = o.get("params") if isinstance(o.get("params"), dict) else {}
-                k = ((pp.get("update") or {}).get("_meta") or {}).get("kiro", {}).get("kind")
-                if pp.get("sessionId") == sid and k in ("turn_start", "turn_end"): wakes.append(k)
-        verdict["mainSessionTurnKinds"] = wakes
-    rc = next((e for e in EVENTS if e.get("method", "").endswith("run_complete")), None)
-    status = (rc.get("params") or {}).get("status") if rc else None
-    captured = ((rc.get("params") or {}).get("finalState") or {}).get("capturedOutputs") if rc else None
-    observed = None
-    if os.path.exists(RESULT):
-        try: observed = json.load(open(RESULT, encoding="utf-8"))
-        except Exception as e: observed = {"_parse_error": str(e), "_raw": open(RESULT, encoding="utf-8").read()[:400]}
-    disk_value = open(os.path.join(WORKDIR, "value.txt"), encoding="utf-8").read() if os.path.exists(os.path.join(WORKDIR, "value.txt")) else None
-    verdict.update({"initialize": init.get("result"), "sessionNew": new.get("result"), "workflowNew": wnew.get("result"), "workflowId": wid,
-                    "status": status, "elapsedSec": round(time.time() - t0, 2), "capturedOutputs": captured,
-                    "observedResult": observed, "diskValue": disk_value, "events": EVENTS, "requests": REQUESTS,
-                    "channelA": (observed or {}).get("channelA"), "channelB": (observed or {}).get("channelB"),
-                    "channelA_CORRECT": (observed or {}).get("channelA", "").strip() == "ALPHA",
-                    "channelB_CORRECT": (observed or {}).get("channelB", "").strip() == "ALPHA"})
-    print("== workflow status:", status, "elapsed:", verdict["elapsedSec"], "events:", len(EVENTS))
-    print("== captured:", json.dumps(captured), "observed:", json.dumps(observed))
+                if sid and sid in line and '"session_info_update"' in line:
+                    k = ((json.loads(line)["msg"].get("params") or {}).get("update") or {}).get("_meta", {}).get("kiro", {}).get("kind")
+                    if (json.loads(line)["msg"].get("params") or {}).get("sessionId") == sid and k in ("turn_start", "turn_end"):
+                        c["start" if k == "turn_start" else "end"] += 1
+        return c
+    def runs_terminal():
+        started = {(e.get("params") or {}).get("workflowId") for e in EVENTS if e.get("method", "").endswith("run_start")}
+        done = {(e.get("params") or {}).get("workflowId") for e in EVENTS if e.get("method", "").endswith("run_complete") and (e.get("params") or {}).get("status") in ("completed", "failed", "aborted")}
+        return started <= done  # vacuously true when no run was launched (gate-off: nothing to wait for)
+    hard = time.time() + 1200
+    pump(timeout=900, stop=runs_terminal)
+    verdict["runsTerminalSec"] = round(time.time() - t0, 1)
+    idle_until = time.time() + 90
+    last = main_turn_counts()
+    while time.time() < min(hard, idle_until):
+        pump(timeout=10)
+        cur = main_turn_counts()
+        if cur != last:
+            last = cur; idle_until = time.time() + 90
+        if cur["start"] > 1 and cur["start"] == cur["end"] and time.time() > idle_until - 75:
+            break
+    verdict["mainTurns"] = last
+    verdict["elapsedSec"] = round(time.time() - t0, 1)
+    verdict["workflowEvents"] = [{"method": e.get("method"), "workflowId": (e.get("params") or {}).get("workflowId"), "status": (e.get("params") or {}).get("status")} for e in EVENTS]
+    wfdir = os.path.join(WS, ".kiro", "workflows")
+    files = sorted(os.listdir(wfdir))
+    verdict["workflowFiles"] = files
+    parsed = {}
+    for f in files:
+        try: parsed[f] = json.load(open(os.path.join(wfdir, f), encoding="utf-8"))
+        except Exception as e: parsed[f] = {"_parse_error": str(e)}
+    verdict["workflowJson"] = parsed
+    lr = req("_kiro/workflow/listRecipes", {"sessionId": sid, "workspacePaths": [WS]})
+    lrr = pump(lr, 30) or {}
+    verdict["workspaceRecipes"] = [r for r in ((lrr.get("result") or {}).get("recipes") or []) if not r.get("builtIn")]
+    verdict["requests"] = REQUESTS
+    verdict["mainSessionId"] = sid
 finally:
     cleanup()
 with open(VERDICT, "w") as f: json.dump(scrub(verdict), f, indent=2, sort_keys=True)
+print("== firstTurn", verdict.get("firstTurnSec"), "elapsed", verdict.get("elapsedSec"), "mainTurns", verdict.get("mainTurns"), "files", verdict.get("workflowFiles"), "stop", json.dumps(verdict.get("promptResult"))[:200])
 print("== trace:", TRACE); print("== verdict:", VERDICT)

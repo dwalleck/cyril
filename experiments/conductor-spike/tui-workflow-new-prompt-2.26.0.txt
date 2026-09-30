@@ -1,0 +1,25 @@
+Create a reusable workflow recipe for this goal: __GOAL__
+
+Your FIRST action must be delegating to the `wf-workflow-creator`
+agent — do not investigate the codebase, plan the workflow yourself, or
+write anything before delegating. It owns the workflow schema. Pass it
+the goal verbatim (plus any context I gave above) and these
+instructions: author the workflow, validate it with
+save_workflow_definition, then return the complete validated workflow
+JSON as the final response — the JSON itself, not just a `generated://`
+reference, because the caller cannot read server-side references.
+Declare any inputs the recipe needs in its `inputs` block, and pass
+step data through `{{...}}` references in each step `prompt` — there
+is no step-level `input` field.
+
+When the delegation returns, write the returned JSON verbatim to
+`.kiro/workflows/<name>.workflow.json` in the workspace (kebab-case
+`<name>` from the workflow's `name` field). It is already validated —
+do not edit, reformat, or re-validate it.
+
+Only if `wf-workflow-creator` is unavailable: author the
+definition yourself under the same constraints, validate it with the
+validate_workflow tool, and write it to the same path.
+
+End with one short sentence naming the recipe and that I can launch it
+with `/workflow run <name>`.
