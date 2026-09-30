@@ -6,7 +6,8 @@ with the repository's default branch (discovered via `origin/HEAD`, never
 hard-coded):
 
   R1  KAS wire literals ("turn_start", "notify-", "notify-wf-", "agentInitiated",
-      "agentInitiatedReason", "notificationSeverity") appear in PRODUCTION string
+      "agentInitiatedReason", "notificationSeverity", "[notification/",
+      "workflow-complete-wake") appear in PRODUCTION string
       literals only in crates/cyril-core/src/protocol/convert/kas.rs.
   R2  Header / notice text markers ("⚙", "noted mid-turn", "agent follow-up",
       "agent-initiated ·", "workflow step ·") appear in production string literals
@@ -30,7 +31,9 @@ ROOT = Path(subprocess.check_output(["git", "rev-parse", "--show-toplevel"], tex
 DEFAULT = subprocess.check_output(["git", "symbolic-ref", "--short", "refs/remotes/origin/HEAD"], cwd=ROOT, text=True).strip()
 BASE = subprocess.check_output(["git", "merge-base", "HEAD", DEFAULT], cwd=ROOT, text=True).strip()
 
-KAS_LITERALS = ["turn_start", "notify-", "agentInitiated", "notificationSeverity"]
+# "[notification/" added 2026-09-30: the isolated conformance review found the
+# step-verdict severity marker (a KAS literal) stripped in cyril-ui; the fence had missed it.
+KAS_LITERALS = ["turn_start", "notify-", "agentInitiated", "notificationSeverity", "[notification/", "workflow-complete-wake"]
 KAS_OWNER = "crates/cyril-core/src/protocol/convert/kas.rs"
 LABEL_MARKERS = ["⚙", "noted mid-turn", "agent follow-up", "agent-initiated ·", "workflow step ·"]
 LABEL_OWNER = "crates/cyril-ui/src/turn_labels.rs"

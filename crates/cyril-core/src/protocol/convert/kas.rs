@@ -434,9 +434,18 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             let content = steering_text(Some(kiro), "content", "KAS steering_injected", None);
             match steering_message_id(Some(kiro)) {
                 Some(message_id) if is_engine_injection(&message_id) => {
+                    let workflow_completion =
+                        message_id.starts_with(ENGINE_WORKFLOW_INJECTION_ID_PREFIX);
+                    // A relayed step verdict carries KAS's own severity marker
+                    // (`[notification/<sev>] <message>`); the severity is its
+                    // own field, so the message is forwarded bare.
+                    let content = if workflow_completion {
+                        content
+                    } else {
+                        content.map(|c| strip_notification_prefix(&c).to_owned())
+                    };
                     Some(Notification::EngineMessageInjected {
-                        workflow_completion: message_id
-                            .starts_with(ENGINE_WORKFLOW_INJECTION_ID_PREFIX),
+                        workflow_completion,
                         message_id,
                         content,
                         severity: kiro
@@ -521,6 +530,15 @@ const WORKFLOW_COMPLETION_WAKE_REASON: &str = "workflow-complete-wake";
 
 fn is_engine_injection(message_id: &str) -> bool {
     message_id.starts_with(ENGINE_INJECTION_ID_PREFIX)
+}
+
+/// Removes KAS's leading `[notification/<severity>] ` marker from a relayed
+/// step verdict (evidence P6), if present; other content is returned as is.
+fn strip_notification_prefix(content: &str) -> &str {
+    content
+        .strip_prefix("[notification/")
+        .and_then(|rest| rest.split_once("] "))
+        .map_or(content, |(_, message)| message)
 }
 
 fn turn_metering_update(kiro: &serde_json::Value) -> TurnMeteringUpdate {
@@ -1591,15 +1609,41 @@ mod tests {
         })) {
             Some(Notification::EngineMessageInjected {
                 message_id,
+                content,
                 severity: None,
                 workflow_completion: false,
-                ..
             }) => {
                 assert_eq!(message_id, "notify-2");
+                assert_eq!(
+                    content.as_deref(),
+                    Some("OK"),
+                    "KAS's severity marker stripped"
+                );
             }
             other => panic!(
                 "notify- with empty severity must be an engine injection with severity None, got {other:?}"
             ),
+        }
+        // A step verdict without the marker passes through verbatim; a
+        // workflow-completion text is never stripped (it is not a verdict).
+        for (kiro, want) in [
+            (
+                json!({ "kind": "steering_injected", "messageId": "notify-3",
+                        "content": "plain verdict" }),
+                "plain verdict",
+            ),
+            (
+                json!({ "kind": "steering_injected", "messageId": "notify-wf-4",
+                        "content": "[notification/info] not a verdict" }),
+                "[notification/info] not a verdict",
+            ),
+        ] {
+            match convert(kiro) {
+                Some(Notification::EngineMessageInjected { content, .. }) => {
+                    assert_eq!(content.as_deref(), Some(want));
+                }
+                other => panic!("engine injection expected, got {other:?}"),
+            }
         }
         for (kiro, want_id) in [
             (

@@ -15,7 +15,7 @@ pub mod subagent_ui;
 pub mod text;
 pub mod theme;
 pub mod traits;
-pub mod turn_labels;
+pub(crate) mod turn_labels;
 pub mod widgets;
 pub mod workflow_format;
 pub mod workflow_ui;

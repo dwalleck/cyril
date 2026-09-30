@@ -1193,10 +1193,6 @@ impl UiState {
             // decision this method cannot express without duplicating the App's
             // "only if already open" rule.
             Notification::PowersChanged { .. } => false,
-            // cyril-lki9: turn-start activity, the agent-initiated header and
-            // inline engine-injection notices are rendered by the I2
-            // increment (spec B1/B5/B7); until then they change nothing here.
-            // Listed explicitly, never a catch-all.
             // cyril-lki9 C17 (B7): a turn began — possibly one the agent
             // started itself, which may stay silent for a minute — so an idle
             // indicator becomes busy now, not at the first chunk. A turn that
@@ -7680,13 +7676,7 @@ mod tests {
     fn lki9_notice_lands_in_arrival_order() {
         let mut state = UiState::new(500);
         state.apply_notification(&lki9_streaming("abc"));
-        state.show_engine_injection(
-            Transcript::Main,
-            Some("[notification/success] OK"),
-            Some("success"),
-            false,
-            None,
-        );
+        state.show_engine_injection(Transcript::Main, Some("OK"), Some("success"), false, None);
         state.apply_notification(&lki9_streaming("def"));
         state.apply_notification(&Notification::TurnCompleted {
             stop_reason: StopReason::EndTurn,

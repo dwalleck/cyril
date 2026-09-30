@@ -446,6 +446,40 @@ Sweep (step 7): `inbound.rs` comment now points at `mediate`; the design's C20/M
 
 ---
 
+## Repair: isolated design-conformance review (2026-09-30, branch `fix/cyril-lki9-i2-labels`)
+
+Inherited plan references: design.md § "Isolated design-conformance review (2026-09-30) and approved amendments" and § "Second isolated conformance review"; spec.md Decisions (claim row); evidence.md P8. Not a new slice — one bounded repair returning its gate states to this record.
+
+**Trigger.** Review 1 (`.cyril-lki9/conformance-review.md`, fresh context, full production diff) → FAIL: M1–M7 + three non-ledger defects. Requester approved M2–M5, M7 as ledger amendments ("Approve all five (Recommended)") and the wake-label rule change ("Yes, claim at turn start (Recommended)"). Review 2 (`conformance-review-2.md`, fresh context, full diff) → FAIL on N1 (`types/workflow.rs` unledgered + stale FIFO text) and N2 (spec B3/B4 debug logs unimplemented). Requester approved N1 ("Approve the amendment (Recommended)"); N2 fixed in code. Review 3 (`conformance-review-3.md`, fresh context, affected ownership only, retaining review 2 for the rest with cited evidence) → **PASS**.
+
+**Code changes.** M1: `pub(crate) mod turn_labels` + crate-private fns. M3: `TurnMediator::announce` private; census test drives `mediate`. M6: `[notification/<sev>] ` strip moved into `convert/kas.rs` (`strip_notification_prefix`); C21 R1 gains `[notification/`. Claim rule: `WorkflowTracker::{claim_wake_labels, take_wake_label (newest claimed), take_injection_label (newest unclaimed)}`; App claims on every routed `TurnStarted`; the unclaimed queue drains at each turn start (resolves "never pruned"). Defects: `annotate_transcript` / `enter_steers_during_server_turn` doc misattachment fixed; stale `state.rs` comment removed. N2: B3 log in `TurnMediator::announce`, B4 log in `take_wake_label`. Review-3 notes taken: `wake_label` logs an untracked run and `take_injection_label` goes through it (R4); `label_for_run` flattened to a plain fn; C13 doc re-attached to its test (R5); ledger `claim_wake_labels` signature corrected (R1).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features --no-fail-fast` → 2113 passed, 13 skipped; default features → 2111 passed.
+2. Falsifiers — PASS: `wake_labels_claim_at_turn_start` (C13, incl. newest-first injection row and silent-wake regression), `lki9_wake_header_and_injection_routing`, `lki9_silent_wake_label_never_names_next_wake`, `lki9_step_wake_leaves_main_label` (C14), `notify_injection_is_engine_message` (M6 strip), `generic_wake_reason_is_logged` (B3), `nameless_wake_label_is_logged` (B4).
+3. Stress fixture — PASS: silent/pre-empted wake then a new wake; two completions in one busy turn; step-session wake with a pending main completion.
+4. Implementation vs oracle — PASS: expected values hand-written from the amended spec rows and P8 (run_complete precedes the wake's turn_start in all five captured wakes).
+5. Module shape — PASS: `C21 PASS (app.rs +58, state.rs +71)`; review 3 PASS.
+6. Budget — N/A — reason: no new loop beyond the per-session claim move (bounded by pending completions).
+7. Regression fence — PASS (item 2).
+8. Named mutations — PASS (red): M13 oldest-claimed → tracker + App routing red; M13b no `TurnStarted` claim → routing + silent-wake red; M13c injection oldest-first (`pop_front`) → tracker red (first run SURVIVED — fence gap; newest-first row added, then red); M14 label for every reason → routing red; M15 no strip → converter red; M6 FIFO fallback → C6 red; MB3/MB4 delete log → log fences red; C21 R1 `"[notification/"` planted in `turn_labels.rs` → `C21 FAIL … R1`.
+9. Fences restored — PASS: every mutation restored from a scratch copy (`cmp` identical), fences green.
+10. Parity and reuse — PASS: both logs reuse the crate's `tracing_capture_lock`/`CaptureWriter`; `take_injection_label` reuses `wake_label` (one naming path).
+11. Preserved enforcement — PASS: no lint relaxed; C21 strengthened (R1 literal); state.rs cap +80 per the approved Length review.
+
+**Retention note.** The post-review-3 edits (R4 log + `label_for_run` flatten, test doc move, test row) stay inside `workflow.rs` private code with no interface or ownership change, so review 3's reconstruction still applies.
+
+**Unrelated flake.** `spawn_isolation::version_deadline_includes_exited_wrappers_inherited_pipes` failed once under full-suite load, passed 3/3 alone and in every later full run → filed cyril-n3ju.
+
+## Final integration (2026-09-30)
+
+- Assembled tree = I0 (#144) + I1 (#145) + I2 (this branch). Lanes: fmt, clippy (`--all-features`, `--features kas`, default), nextest (all-features, default), doc tests, C21 — all PASS on the tree above.
+- Design conformance: review 3 `RESULT: PASS` (reviewer: fresh-context general-purpose subagent; isolation: no implementation transcript, blind Phase 1 before `.cyril-lki9/`).
+- Every design claim C1–C22 discharged by its slice record or this repair record.
+- Open: cyril-lki9 and cyril-5n75 close only when the stack merges (human approval).
+
+---
+
 ## Self-review
 
 1. Every design row C1–C22 is assigned to exactly one slice (C21 created in S1, rerun every slice); every PENDING falsifier is discharged by its implementing slice. ✓

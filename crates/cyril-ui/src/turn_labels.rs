@@ -16,7 +16,7 @@ use cyril_core::workflow::WakeLabel;
 /// - any other reason → `─── ⚙ agent-initiated · <reason> ───`, `unspecified`
 ///   when the engine gave none (B3)
 #[must_use]
-pub fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -> String {
+pub(crate) fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -> String {
     if !origin.is_workflow_completion() {
         return format!(
             "─── ⚙ agent-initiated · {} ───",
@@ -38,7 +38,7 @@ pub fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -> Strin
 /// (noted mid-turn):` when the run is unknown — followed by the engine's text
 /// verbatim on the next line(s), when it sent any.
 #[must_use]
-pub fn workflow_notice_text(label: Option<&WakeLabel>, content: Option<&str>) -> String {
+pub(crate) fn workflow_notice_text(label: Option<&WakeLabel>, content: Option<&str>) -> String {
     let head = match label {
         Some(label) => format!(
             "⚙ workflow \"{}\" {} (noted mid-turn):",
@@ -54,22 +54,13 @@ pub fn workflow_notice_text(label: Option<&WakeLabel>, content: Option<&str>) ->
 }
 
 /// The notice for a step verdict KAS relayed into a turn (B5):
-/// `⚙ workflow step · <severity>: <message>`. Severity defaults to `info`;
-/// KAS's own `[notification/<severity>] ` prefix is removed from the message
-/// (it would repeat the severity), and content without it is shown verbatim.
+/// `⚙ workflow step · <severity>: <message>`. Severity defaults to `info`.
+/// The message arrives bare — the converter removes KAS's own severity
+/// prefix (a dialect literal) before it reaches the UI.
 #[must_use]
-pub fn step_notice_text(severity: Option<&str>, content: Option<&str>) -> String {
+pub(crate) fn step_notice_text(severity: Option<&str>, content: Option<&str>) -> String {
     let severity = severity.filter(|s| !s.is_empty()).unwrap_or("info");
-    let message = content.map_or("", strip_notification_prefix);
-    format!("⚙ workflow step · {severity}: {message}")
-}
-
-/// Removes a leading `[notification/<anything>] ` marker, if present.
-fn strip_notification_prefix(content: &str) -> &str {
-    content
-        .strip_prefix("[notification/")
-        .and_then(|rest| rest.split_once("] "))
-        .map_or(content, |(_, message)| message)
+    format!("⚙ workflow step · {severity}: {}", content.unwrap_or(""))
 }
 
 fn status_word(status: WorkflowRunStatus) -> &'static str {
@@ -153,7 +144,7 @@ mod tests {
             "empty content adds no blank line"
         );
         assert_eq!(
-            step_notice_text(Some("success"), Some("[notification/success] OK")),
+            step_notice_text(Some("success"), Some("OK")),
             "⚙ workflow step · success: OK"
         );
         assert_eq!(
@@ -161,7 +152,7 @@ mod tests {
             "⚙ workflow step · error: plain message, no prefix"
         );
         assert_eq!(
-            step_notice_text(None, Some("[notification/success] OK")),
+            step_notice_text(None, Some("OK")),
             "⚙ workflow step · info: OK",
             "absent severity defaults to info"
         );
