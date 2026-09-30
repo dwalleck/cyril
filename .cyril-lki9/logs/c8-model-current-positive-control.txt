@@ -1,0 +1,11 @@
+FAIL idle-wake                          events=SE       log=['IGNORED (no turn_start arm)', 'DROP_UNOWNED'] I2 forwarded=0 expected=1
+PASS prompt E<R                         events=DSER     log=['BEGIN cyril#0', 'IGNORED (no turn_start arm)', 'FORWARD_COMPLETE(wire)', 'ABSORB synth'] 
+PASS prompt R<E                         events=DSRE     log=['BEGIN cyril#0', 'IGNORED (no turn_start arm)', 'FORWARD_COMPLETE(resp)', 'ABSORB wire'] 
+FAIL wake-cancelled                     events=SE       log=['IGNORED (no turn_start arm)', 'DROP_UNOWNED'] I2 forwarded=0 expected=1
+FAIL wake-then-dispatch-rejected        events=SDE      log=['IGNORED (no turn_start arm)', 'BEGIN cyril#0', 'FORWARD_COMPLETE(wire)'] I3 dangling companion=('Synth', 0)
+FAIL race D@0 tail=SER                  events=DSESER   log=['BEGIN cyril#0', 'IGNORED (no turn_start arm)', 'FORWARD_COMPLETE(wire)', 'IGNORED (no turn_start arm)', 'DROP_UNOWNED', 'ABSORB synth'] I2 forwarded=1 expected=2
+FAIL race D@2 tail=SER                  events=SEDSER   log=['IGNORED (no turn_start arm)', 'DROP_UNOWNED', 'BEGIN cyril#0', 'IGNORED (no turn_start arm)', 'FORWARD_COMPLETE(wire)', 'ABSORB synth'] I2 forwarded=1 expected=2
+FAIL race D@0 tail=SRE                  events=DSESRE   log=['BEGIN cyril#0', 'IGNORED (no turn_start arm)', 'FORWARD_COMPLETE(wire)', 'IGNORED (no turn_start arm)', 'ABSORB synth', 'DROP_UNOWNED'] I2 forwarded=1 expected=2
+FAIL race D@2 tail=SRE                  events=SEDSRE   log=['IGNORED (no turn_start arm)', 'DROP_UNOWNED', 'BEGIN cyril#0', 'IGNORED (no turn_start arm)', 'FORWARD_COMPLETE(resp)', 'ABSORB wire'] I2 forwarded=1 expected=2
+FAIL two-wakes                          events=SESE     log=['IGNORED (no turn_start arm)', 'DROP_UNOWNED', 'IGNORED (no turn_start arm)', 'DROP_UNOWNED'] I2 forwarded=0 expected=2
+== C8 model: 2/10 scenarios PASS

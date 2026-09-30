@@ -1,0 +1,70 @@
+{
+  "actionAt": 4.61,
+  "leg": "cancel",
+  "mainKinds": [
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 3.29
+    },
+    {
+      "kind": "steering_injected",
+      "stopReason": null,
+      "t": 3.3
+    },
+    {
+      "kind": "steering_cleared",
+      "stopReason": null,
+      "t": 4.62
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "cancelled",
+      "t": 4.62
+    }
+  ],
+  "mainSessionId": "sess_88f0336d-c663-4f4d-9583-f7c9b66f2c9a",
+  "mainTurns": [
+    {
+      "end": 4.62,
+      "reasons": [
+        "workflow-complete-wake"
+      ],
+      "start": 3.29,
+      "stopReason": "cancelled",
+      "tagged": 1,
+      "text": "It",
+      "untagged": 0
+    }
+  ],
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1
+  },
+  "runCompleteSeen": true,
+  "wakeTaggedSeen": true,
+  "workflowEvents": [
+    {
+      "method": "run_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_complete",
+      "status": "completed"
+    },
+    {
+      "method": "run_complete",
+      "status": "completed"
+    }
+  ],
+  "workflowId": "wf_160639083698c721",
+  "workspace": "/home/dwalleck/.claude/tmp/lki9-cancel-06615-2.26.0-ws-8husw9c1"
+}

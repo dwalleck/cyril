@@ -1,0 +1,81 @@
+{
+  "actionAt": 61.79,
+  "leg": "prompt",
+  "mainKinds": [
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 1.62
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "cancelled",
+      "t": 61.8
+    },
+    {
+      "kind": "turn_start",
+      "stopReason": null,
+      "t": 61.82
+    },
+    {
+      "kind": "turn_end",
+      "stopReason": "end_turn",
+      "t": 63.27
+    }
+  ],
+  "mainSessionId": "sess_19080411-f323-49f9-b524-1ae4b55c9085",
+  "mainTurns": [
+    {
+      "end": 61.8,
+      "reasons": [],
+      "start": 1.62,
+      "stopReason": "cancelled",
+      "tagged": 0,
+      "text": "",
+      "untagged": 0
+    },
+    {
+      "end": 63.27,
+      "reasons": [],
+      "start": 61.82,
+      "stopReason": "end_turn",
+      "tagged": 0,
+      "text": "PINEAPPLE",
+      "untagged": 2
+    }
+  ],
+  "promptResponse": {
+    "stopReason": "end_turn"
+  },
+  "promptResponseAt": 63.27,
+  "requests": {
+    "_kiro/auth/getAccessToken": "<REDACTED>",
+    "_kiro/terminal/shell_type": 1
+  },
+  "runCompleteSeen": true,
+  "wakeTaggedSeen": false,
+  "workflowEvents": [
+    {
+      "method": "run_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_start",
+      "status": null
+    },
+    {
+      "method": "node_complete",
+      "status": "completed"
+    },
+    {
+      "method": "run_complete",
+      "status": "completed"
+    }
+  ],
+  "workflowId": "wf_b83cda2abf578119",
+  "workspace": "/home/dwalleck/.claude/tmp/lki9-prompt-06615-2.26.0-ws-b4kkvu0n"
+}
