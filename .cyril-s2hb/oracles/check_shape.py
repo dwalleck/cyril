@@ -10,6 +10,9 @@ import tomllib
 
 ROOT = Path(__file__).resolve().parents[2]
 REVIEW = "crates/cyril-review/"
+LIB_PATH = "crates/cyril-core/src/lib.rs"
+BRIDGE_PATH = "crates/cyril-core/src/protocol/bridge.rs"
+HOST_SHELL_PATH = "crates/cyril-core/src/protocol/kas/host_shell.rs"
 LIMITS = {
     REVIEW + "src/lib.rs": 180,
     REVIEW + "src/run.rs": 300,
@@ -27,10 +30,27 @@ DIAGNOSTICS = {
 }
 PARENTS = {
     "crates/cyril/src/main.rs": (20, 360),
-    "crates/cyril-core/src/lib.rs": (2, 25),
-    "crates/cyril-core/src/protocol/bridge.rs": (30, 490),
-    "crates/cyril-core/src/protocol/kas/host_shell.rs": (15, 530),
+    LIB_PATH: (2, 25),
+    BRIDGE_PATH: (30, 490),
+    HOST_SHELL_PATH: (15, 530),
 }
+
+BRIDGE_FIELD = "review_shell: Option<crate::review::ShellDialect>,"
+APPROVED_REVIEW_SHELL_BODY = """use crate::review::ShellDialect;
+match self.kind {
+    ShellKind::Posix => ShellDialect::Posix,
+    ShellKind::Fish => ShellDialect::Fish,
+    ShellKind::Pwsh => ShellDialect::Pwsh,
+    ShellKind::WindowsPowerShell => ShellDialect::WindowsPowerShell,
+}"""
+APPROVED_BRIDGE_ASSIGNMENT = (
+    r"handle\.review_shell\s*=\s*\{\s*"
+    r'#\[cfg\(feature = "kas"\)\]\s*\{\s*'
+    r"host_shell\.as_ref\(\)\.map\(\|shell\| shell\.review_shell\(\)\)\s*"
+    r"\}\s*"
+    r'#\[cfg\(not\(feature = "kas"\)\)\]\s*\{\s*None\s*\}\s*'
+    r"\};"
+)
 
 
 def git(*args):
@@ -52,21 +72,116 @@ def normalized(text):
     return "\n".join(line.strip() for line in text.splitlines() if line.strip())
 
 
+def balanced_body(text, opening, label):
+    depth = 1
+    end = opening
+    while depth and end < len(text):
+        depth += (text[end] == "{") - (text[end] == "}")
+        end += 1
+    if depth:
+        raise RuntimeError(f"unbalanced {label}")
+    return text[opening:end - 1]
+
+
 def remove_function(text, name):
     """Remove only the approved simple projection/getter, with balanced braces."""
     pattern = rf"(?m)^\s*(?:pub(?:\([^)]*\))?\s+)?fn {name}\b[^{{]*\{{"
     match = re.search(pattern, text)
     if not match:
         return text, None
-    depth = 1
-    end = match.end()
-    while depth and end < len(text):
-        depth += (text[end] == "{") - (text[end] == "}")
-        end += 1
-    if depth:
-        raise RuntimeError(f"unbalanced approved function {name}")
-    body = text[match.end():end - 1]
-    return text[:match.start()] + text[end:], body
+    body = balanced_body(text, match.end(), f"approved function {name}")
+    return text[:match.start()] + text[match.end() + len(body) + 1:], body
+
+
+def extract_block(text, pattern, label):
+    match = re.search(pattern, text)
+    if not match:
+        return None
+    return balanced_body(text, match.end(), label)
+
+
+def current_wiring_errors():
+    """Validate only the stable core-to-review integration surface."""
+    errors = []
+
+    lib_path = ROOT / LIB_PATH
+    if not lib_path.is_file():
+        errors.append(f"{LIB_PATH}: required owner missing")
+    else:
+        lib = production(lib_path.read_text(encoding="utf-8"))
+        exports = re.findall(r"(?m)^pub mod review;\s*$", lib)
+        if len(exports) != 1:
+            errors.append(f"{LIB_PATH}: expected exactly one `pub mod review;` export")
+
+    bridge_path = ROOT / BRIDGE_PATH
+    if not bridge_path.is_file():
+        errors.append(f"{BRIDGE_PATH}: required owner missing")
+    else:
+        bridge = production(bridge_path.read_text(encoding="utf-8"))
+        handle = extract_block(
+            bridge,
+            r"(?m)^pub struct BridgeHandle\s*\{",
+            f"{BRIDGE_PATH} BridgeHandle",
+        )
+        if handle is None:
+            errors.append(f"{BRIDGE_PATH}: BridgeHandle owner missing")
+        else:
+            fields = re.findall(
+                rf"(?m)^\s*{re.escape(BRIDGE_FIELD)}\s*$",
+                handle,
+            )
+            if len(fields) != 1:
+                errors.append(
+                    f"{BRIDGE_PATH}: BridgeHandle must contain one private typed `{BRIDGE_FIELD}` field"
+                )
+
+        getter_headers = re.findall(
+            r"(?m)^\s*pub fn review_shell\(&self\) -> Option<crate::review::ShellDialect>\s*\{",
+            bridge,
+        )
+        if len(getter_headers) != 1:
+            errors.append(
+                f"{BRIDGE_PATH}: expected one exact `review_shell` getter signature"
+            )
+        else:
+            _, body = remove_function(bridge, "review_shell")
+            if body is None or normalized(body) != "self.review_shell":
+                errors.append(
+                    f"{BRIDGE_PATH}: review_shell getter must return the private field exactly"
+                )
+
+        assignments = re.findall(r"(?m)^\s*handle\.review_shell\s*=", bridge)
+        if len(assignments) != 1:
+            errors.append(
+                f"{BRIDGE_PATH}: expected one resolved-shell assignment to handle.review_shell"
+            )
+        approved = re.findall(APPROVED_BRIDGE_ASSIGNMENT, bridge)
+        if len(approved) != 1:
+            errors.append(
+                f"{BRIDGE_PATH}: resolved-shell assignment is not the approved single KAS/non-KAS projection"
+            )
+
+    host_path = ROOT / HOST_SHELL_PATH
+    if not host_path.is_file():
+        errors.append(f"{HOST_SHELL_PATH}: required owner missing")
+    else:
+        host = production(host_path.read_text(encoding="utf-8"))
+        getter_headers = re.findall(
+            r"(?m)^\s*pub\(crate\) fn review_shell\(&self\) -> crate::review::ShellDialect\s*\{",
+            host,
+        )
+        if len(getter_headers) != 1:
+            errors.append(
+                f"{HOST_SHELL_PATH}: expected one exact exhaustive review_shell projection"
+            )
+        else:
+            _, body = remove_function(host, "review_shell")
+            if body is None or normalized(body) != normalized(APPROVED_REVIEW_SHELL_BODY):
+                errors.append(
+                    f"{HOST_SHELL_PATH}: review_shell must retain the exhaustive ShellKind mapping"
+                )
+
+    return errors
 
 
 def parent_without_wiring(path, text):
@@ -75,27 +190,23 @@ def parent_without_wiring(path, text):
         text = text.replace("mod crtool;\n", "")
         text = re.sub(r"\s*#\[command\(subcommand\)\]\s*command: Option<crtool::Command>,", "", text)
         text = re.sub(r"\s*if let Some\(command\) = cli.command \{\s*std::process::exit\(command.run\(\)\);\s*\}", "", text)
-    elif path == "crates/cyril-core/src/lib.rs":
+    elif path == LIB_PATH:
         text = text.replace("pub mod review;\n", "")
     elif path.endswith("/bridge.rs"):
         text, body = remove_function(text, "review_shell")
         if body is not None and normalized(body) != "self.review_shell":
             raise RuntimeError(f"{path}: review_shell owns more than a projection")
         text = re.sub(r"(?m)^\s*/// Dialect of the same host shell resolved for this bridge's KAS session\.\n", "", text)
-        text = re.sub(r"(?m)^\s*review_shell: (?:Option<crate::review::ShellDialect>|None),\n", "", text)
-        assignment = r"\s*handle.review_shell = \{\s*#\[cfg\(feature = \"kas\"\)\]\s*\{\s*host_shell.as_ref\(\).map\(\|shell\| shell.review_shell\(\)\)\s*\}\s*#\[cfg\(not\(feature = \"kas\"\)\)\]\s*\{\s*None\s*\}\s*\};"
-        text = re.sub(assignment, "", text)
+        text = re.sub(
+            rf"(?m)^\s*(?:{re.escape(BRIDGE_FIELD)}|review_shell: None,)\n",
+            "",
+            text,
+        )
+        text = re.sub(APPROVED_BRIDGE_ASSIGNMENT, "", text)
         text = text.replace("let (mut handle, mut channels)", "let (handle, mut channels)")
     else:
         text, body = remove_function(text, "review_shell")
-        expected = """use crate::review::ShellDialect;
-        match self.kind {
-            ShellKind::Posix => ShellDialect::Posix,
-            ShellKind::Fish => ShellDialect::Fish,
-            ShellKind::Pwsh => ShellDialect::Pwsh,
-            ShellKind::WindowsPowerShell => ShellDialect::WindowsPowerShell,
-        }"""
-        if body is not None and normalized(body) != normalized(expected):
+        if body is not None and normalized(body) != normalized(APPROVED_REVIEW_SHELL_BODY):
             raise RuntimeError(f"{path}: review_shell is not the approved exhaustive projection")
     return normalized(text)
 
@@ -112,15 +223,29 @@ def dependency_names(table):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", choices=("prefix", "gather", "diagnostics"), required=True)
+    parser.add_argument("--phase", choices=("prefix", "gather", "diagnostics"))
+    parser.add_argument("--integration-only", action="store_true")
     parser.add_argument("--base", help="Explicit review base; otherwise discover PR/default upstream")
     args = parser.parse_args()
+    if args.integration_only:
+        if args.phase is not None:
+            parser.error("--integration-only cannot be combined with --phase")
+        errors = current_wiring_errors()
+        if errors:
+            for error in errors:
+                print(f"FAIL C10: {error}", file=sys.stderr)
+            return 1
+        print("PASS C10: integration wiring only; core export, bridge projection, assignment, and HostShell mapping")
+        return 0
+    if args.phase is None:
+        parser.error("--phase is required unless --integration-only is used")
+
     base = args.base
     if not base:
         branch = os.environ.get("GITHUB_BASE_REF")
         base = f"refs/remotes/origin/{branch}" if branch else git("symbolic-ref", "refs/remotes/origin/HEAD").strip()
     base = git("merge-base", "HEAD", base).strip()
-    errors = []
+    errors = current_wiring_errors()
     limits = dict(LIMITS)
     if args.phase == "prefix":
         limits = {path: limit for path, limit in limits.items()
@@ -148,7 +273,11 @@ def main():
             errors.append(f"{path}: {count} production-region lines > {limit}; Length review required")
         print(f"C10 census {path}: {count}/{limit}")
     for path, (delta_limit, limit) in PARENTS.items():
-        current = (ROOT / path).read_text(encoding="utf-8")
+        current_path = ROOT / path
+        if not current_path.is_file():
+            errors.append(f"{path}: required protected parent missing")
+            continue
+        current = current_path.read_text(encoding="utf-8")
         before = git("show", f"{base}:{path}")
         if args.phase == "prefix" and path == "crates/cyril/src/main.rs":
             if production(current) != production(before):

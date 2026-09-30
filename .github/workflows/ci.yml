@@ -163,7 +163,14 @@ jobs:
           base="refs/remotes/origin/$REVIEW_BASE"
           # Ticket-specific parent deltas must not freeze unrelated future work.
           if git diff --quiet "$base"...HEAD -- .cyril-s2hb crates/cyril-core/src/review; then
-            echo "No review-prefix ownership changes"
+            if git diff --quiet "$base"...HEAD -- \
+                crates/cyril-core/src/lib.rs \
+                crates/cyril-core/src/protocol/bridge.rs \
+                crates/cyril-core/src/protocol/kas/host_shell.rs; then
+              echo "No review-prefix ownership changes"
+            else
+              python3 .cyril-s2hb/oracles/check_shape.py --integration-only --base "$base"
+            fi
           else
             python3 .cyril-s2hb/oracles/check_shape.py --phase prefix --base "$base"
           fi

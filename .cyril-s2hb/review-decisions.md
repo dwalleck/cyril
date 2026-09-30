@@ -1,12 +1,11 @@
-# PR146 native-fixture review decisions
-
-Atomic receipt for F1/F3 and Q1. F2 lands separately; this is not a full-round completion receipt.
+# PR146 review decisions
 
 Reviewed head: `1dae375f2b0e3131de8dee2689f2e3fd414e43c4`. Reviewer: fresh isolated PrefixPrReview1. Issue-wide PR review round1/5. Attempt2 produced the first repair; attempt3 refines its argv fence and corrects the observed executable-fixture race. No counter resets for A2/B.
 
 | finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
 |---|---|---|---|---|---|---|---|
 | F1 | Unix native smoke assumes `/bin/printf`; use an owned portable fixture. | PrefixPrReview1 | Verified | macOS job109788629393 in run36684976118 fails the native-prefix test's exit-status assertion; source uses `/bin/printf`; all other eight prefix tests passed. | Accept | R1: `review::tests::generated_posix_prefix_runs_as_a_native_shell_command` executes a per-test alias of `tests/fixtures/native-prefix.sh` through the generated prefix and checks exact argv/output. | blocking — preserve native execution rather than skip macOS or weaken assertions. |
+| F2 | CI skips bridge/lib/HostShell-only changes; watch the integration surface without freezing unrelated parent edits. | PrefixPrReview1 | Verified | Committed CI selector lists only `.cyril-s2hb` and core review directory. Bridge/HostShell-only mutations cannot select the checker, and the checker has no separate current-wiring mode. | Accept | R2: current-wiring validation plus `--integration-only` in `oracles/check_shape.py`; CI selects full increment checks for owned changes, wiring-only checks for the three integration files. | blocking — close the actual trigger gap while preserving unrelated shared-parent work. |
 | F3 | R1's interpreter operand does not establish ordinary executable argv; use an executable fixture that rejects extra arguments. | PortableFixtureReview | Verified | Native replay of both `"/bin/sh" crtool` and `"/bin/sh" -e crtool` exited0 with exact `crtool` output under the first R1 script. | Accept | R1 refinement: a private executable alias whose immutable script requires argc1 and argv1=`crtool`. | blocking — the first replacement fixture was portable but its exact-argv claim was too broad. |
 
 ## R1 — portable native execution fixture
@@ -61,9 +60,51 @@ Reuse/symmetry: targeted helper searches covered the two Rust modules, existing 
 
 Independent staging proof: the original checker from1dae375 was also executed against the native-repair tree using its original CLI and the discovered base; it passed145/190 and all protected-parent checks. The native-fixture commit therefore does not depend on the separate R2 checker changes for its green source gate. Upstream fetch found no movement from76bfb1e. Sweep found no temporary DEBUG marker, TODO, obsolete `/bin/printf` executable use or generated handoff left in source; remaining `/bin/printf` prose is explicitly historical evidence.
 
+## R2 — integration-trigger and current-wiring guard
+
+Ownership: F2, C10, plan slice A1. Keep the full increment census as the default. Add `--integration-only` for the already-established integration surface: require the core export, typed private bridge field, exact getter, one approved resolved-shell assignment and exhaustive HostShell projection. This mode must not compare unrelated parent bodies or discover unrelated new modules. It reports only the wiring conclusion, never a full-ledger PASS. Full mode also runs these presence/value checks, closing deletion/vacuity holes.
+
+CI watches the three integration files in addition to existing owned paths. Owned-path changes select full mode; integration-only changes select wiring-only mode; unrelated changes skip. All pre-existing CI gates remain. This technical correction preserves the approved source ownership and consumer behavior; it changes which proof is run, not product behavior or accepted risk.
+
+Executed proof: `python3 .cyril-s2hb/oracles/mutation_f2.py`, old checker/CI from1dae375 versus checker SHA256 `21b896cef900722525976ee1dd358347ce1ab8483ad8640e30041abbe6a143c5`, CI `ba7c2b707b6b0a11cf3d27f96de10a311786a5f056cd95c4320a4df819bb9e8b`, harness `e2b8c4ac93022a0a2c4a5f1daca980205e387a0617d9545f30ff51d9a44921c8`. Fresh Git fixtures use the same reviewed production source and exactly one mutation; actual old/new CI shell bodies are extracted, not retyped. Printed results:
+
+| Single mutation | Old CI | Repaired CI | Old/repaired full checker |
+|---|---|---|---|
+| Bridge getter returns None | SKIP0 | FAIL1: private-field getter | FAIL1 / FAIL1 |
+| Resolved assignment becomes None | SKIP0 | FAIL1: approved KAS/non-KAS assignment missing | FAIL1 / FAIL1 |
+| Posix/Fish projection swapped | SKIP0 | FAIL1: exhaustive mapping | FAIL1 / FAIL1 |
+| Unrelated command-capacity constant changes | SKIP0 | PASS0: integration wiring only | FAIL1 / FAIL1: forbidden parent delta |
+| Original `review_gather_body` added to main | SKIP0 | SKIP0 (unchanged scope) | FAIL1 / FAIL1: startup and parent-body violations |
+
+The real unchanged production tree passed both `check_shape.py --phase prefix --base 76bfb1efb45e96f5efe41f0a8be434768da0ddc3` (145/190 census) and `--integration-only`. No full-ledger conclusion is attributed to wiring-only mode. Main-only CI selection is intentionally unchanged; the original named mutation still fails the full increment fence.
+
+Independent repair review: fresh GateRepairReview inspected the applied checker/CI/harness diff and record read-only, with no execution. Verdict: correct, zero findings; full detection retained, correct mode precedence, isolated frozen-source replay. Native/runtime behavior is not claimed by this source-gate review.
+
+### Source-gate checkpoint (R2)
+
+Reuse receipt: `LIB_PATH`, `BRIDGE_PATH`, `HOST_SHELL_PATH`, `BRIDGE_FIELD` and the two approved-body constants are shared by current checks and existing stripping; `balanced_body` extracts the old balanced-brace mechanism, reused by `remove_function`/`extract_block`. `current_wiring_errors` reuses `production`/`normalized`. The targeted helper search found the old checker Git runner is bound to its ROOT; the independent A/B script's `run_process`/`git`/`git_show` instead accept per-case roots and must not import the candidate checker into its own oracle. `Case`/CASES, frozen archive/setup, real-step extraction, execution and reporting functions are qualification-only; their repeated owner paths are independent oracle inputs, not a second production convention. All imports remain Python stdlib.
+
+Symmetry: both checker modes use the same current-wiring predicate, localized FAIL format and fail-closed errors. Wiring-only deliberately omits whole-parent delta, new-owner and growth comparisons under F2's established obligation to allow unrelated shared-parent work; its PASS explicitly names that narrower result. Full mode preserves those checks. The replay covers accepted unrelated input and refused wiring defects through both modes, plus the old named ownership violation.
+
+| Checkpointed-build obligation | Judgment / evidence |
+|---|---|
+| 1. Affected execution | PASS — both checker modes ran successfully on the actual repaired tree; no Rust behavior changes in R2. |
+| 2. Falsifiers | PASS — five-case same-source A/B receipt above; CI now selects the guard for each changed integration owner. |
+| 3. Stress fixture | PASS — distinct missing-value/mapping defects, unrelated parent control and original forbidden-owner mutation, each in a fresh Git tree. |
+| 4. Independent oracle | PASS — approved wiring/ownership expectations agree with localized real checker/CI verdicts; no runtime proof is inferred. |
+| 5. Module shape | PASS — full145/190 census, existing protected-parent deltas and retained frozen production conformance. |
+| 6. Production budget | N/A — proof tooling only; R2 introduces no production loop, latency SLA or always-on phase. |
+| 7. Regression fence | PASS — both modes green on actual source, correct CI selection demonstrated. |
+| 8. Named mutations | PASS — all three previously skipped wiring defects now fail CI; both full checkers still reject the original main-owner mutation. |
+| 9. Restored green | PASS — fresh isolated cases never altered the real production tree; both modes were rerun afterward and passed. |
+| 10. Parity/reuse | PASS — helper/constant census and seven symmetry dispositions above; predicate shared, verdict scope explicit. |
+| 11. Preserved enforcement | PASS — full source gate's original mutation remains red; unrelated-parent acceptance belongs only to the new mode. Existing CI jobs/dependencies are unchanged. |
+
+GateRepairReview's independent zero-findings pass covers this repair. Plan.md records the affected-only2,800+20% A1 forecast; no production placement or partition decision changed.
+
 ## Evidence disposition and remaining gates
 
-The R1/Q1 local checkpoint and fresh independent repair review pass. Retained production/native Windows conclusions remain applicable because production bytes are unchanged and fixture changes are Unix-gated. F2 is a separate pending commit. Required current-head hosted CI and a fresh full PR review remain publication gates; no merge or issue completion is claimed. No tracker delta is included.
+Initial checkpoint-A1.md remains historical evidence. Native Windows and production prefix/bridge smoke conclusions remain applicable because both Rust production regions are unchanged and the fixture changes are Unix-gated. The current local repair checkpoints and both independent repair reviews pass. Required current-head hosted CI and a fresh full PR review remain publication gates; no merge or cyril-s2hb completion is claimed here. The measured assembled delta before final review-receipt prose was2,596 lines, below the revised3,360 allowance and4,000 partition limit; final committed size is checked at publication. No tracker delta is included.
 
 ## Review errors
 
