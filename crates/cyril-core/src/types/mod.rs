@@ -32,8 +32,8 @@ pub use agent_engine::AgentEngine;
 pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatus};
 pub use command::{CommandInfo, CommandOption, ConfigOption};
 pub use event::{
-    BridgeCommand, Notification, PermissionOption, PermissionOptionId, PermissionOptionKind,
-    PermissionRequest, PermissionResponse, RoutedNotification, TrustOption,
+    AgentInitiation, BridgeCommand, Notification, PermissionOption, PermissionOptionId,
+    PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification, TrustOption,
 };
 pub use hook::HookInfo;
 pub use kas_spawn::KasSpawn;

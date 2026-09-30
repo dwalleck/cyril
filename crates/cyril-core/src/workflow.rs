@@ -301,6 +301,9 @@ pub struct WorkflowRun {
     plan_revision: Option<u32>,
     parent_session_id: Option<SessionId>,
     workspace_path: Option<String>,
+    /// KAS `finalState.runLabel` (cyril-lki9): set by a completion snapshot of
+    /// a run launched with a label; `None` otherwise.
+    run_label: Option<String>,
     opening_plan: Option<Vec<WorkflowNodeDescriptor>>,
     snapshot_plan: Option<WorkflowNodeDescriptor>,
     nodes: HashMap<WorkflowNodePath, WorkflowNodeState>,
@@ -358,6 +361,11 @@ impl WorkflowRun {
     /// Returns the parent session when supplied.
     pub fn parent_session_id(&self) -> Option<&SessionId> {
         self.parent_session_id.as_ref()
+    }
+
+    /// Returns the run label when a completion snapshot supplied one.
+    pub fn run_label(&self) -> Option<&str> {
+        self.run_label.as_deref()
     }
 
     /// Returns the opaque workspace path when supplied.
@@ -442,6 +450,30 @@ impl WorkflowRun {
 #[derive(Debug, Default)]
 pub struct WorkflowTracker {
     runs: HashMap<WorkflowId, WorkflowRun>,
+    /// cyril-lki9 C13: runs that reached a terminal status through a
+    /// `run_complete` event, per parent session, in arrival order, not yet
+    /// named by an agent-initiated turn header. KAS auto-wakes the parent once
+    /// per such completion, so each wake header takes the oldest entry.
+    wake_labels: HashMap<SessionId, std::collections::VecDeque<WorkflowId>>,
+}
+
+/// What an agent-initiated turn header names (cyril-lki9 C13): a completed
+/// run, by KAS's own precedence `runLabel → workflowName → workflowId`, and
+/// its terminal status.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WakeLabel {
+    name: String,
+    status: WorkflowRunStatus,
+}
+
+impl WakeLabel {
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn status(&self) -> WorkflowRunStatus {
+        self.status
+    }
 }
 
 impl WorkflowTracker {
@@ -790,7 +822,45 @@ impl WorkflowTracker {
         }
         let (snapshot_id, mut incoming) = canonicalize_snapshot(completion.into_final_state())?;
         self.preserve_event_only(&workflow_id, &mut incoming);
-        self.replace_if_changed(snapshot_id, incoming)
+        let wake_parent = incoming
+            .status
+            .filter(|status| is_terminal(Some(*status)))
+            .and(incoming.parent_session_id.clone());
+        let changed = self.replace_if_changed(snapshot_id.clone(), incoming)?;
+        // Only a first terminal transition is a completion KAS wakes for; the
+        // absorbing branch above has already returned for any repeat.
+        if changed && let Some(parent) = wake_parent {
+            self.wake_labels
+                .entry(parent)
+                .or_default()
+                .push_back(snapshot_id);
+        }
+        Ok(changed)
+    }
+
+    /// The oldest completed run parented to `session` that no agent-initiated
+    /// turn header has named yet, consuming it (cyril-lki9 C13); `None` when
+    /// none remains. Name precedence mirrors KAS's wake message:
+    /// `runLabel`, else `workflowName`, else the workflow id.
+    pub fn take_wake_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        let queue = self.wake_labels.get_mut(session)?;
+        while let Some(workflow_id) = queue.pop_front() {
+            let Some(run) = self.runs.get(&workflow_id) else {
+                tracing::debug!(workflow_id = %workflow_id, "wake label for an evicted run skipped");
+                continue;
+            };
+            let Some(status) = run.status else {
+                continue;
+            };
+            let name = run
+                .run_label()
+                .filter(|l| !l.is_empty())
+                .or_else(|| Some(run.workflow_name()).filter(|n| !n.is_empty()))
+                .unwrap_or(workflow_id.as_str())
+                .to_owned();
+            return Some(WakeLabel { name, status });
+        }
+        None
     }
 
     fn preserve_event_only(&self, workflow_id: &WorkflowId, incoming: &mut WorkflowRun) {
@@ -951,6 +1021,7 @@ fn canonicalize_snapshot(
         plan_revision,
         parent_session_id,
         workspace_path,
+        run_label,
     } = snapshot.into_parts();
     let root_path = WorkflowNodePath::try_new(&workflow_id, vec![workflow_id.as_str().to_owned()])
         .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
@@ -1016,6 +1087,7 @@ fn canonicalize_snapshot(
             plan_revision: Some(plan_revision),
             parent_session_id,
             workspace_path,
+            run_label,
             opening_plan: None,
             snapshot_plan: Some(snapshot_plan),
             pending_steps: None,
@@ -1043,6 +1115,7 @@ fn sparse_opening_run(
         plan_revision: None,
         parent_session_id,
         workspace_path: None,
+        run_label: None,
         opening_plan: Some(opening_plan),
         snapshot_plan: None,
         nodes: HashMap::new(),
@@ -1289,6 +1362,7 @@ mod tests {
                 plan_revision: None,
                 parent_session_id: None,
                 workspace_path: None,
+                run_label: None,
                 opening_plan: None,
                 snapshot_plan: None,
                 pending_steps: None,
@@ -3897,5 +3971,102 @@ mod tests {
             started_at.elapsed() <= Duration::from_secs(2),
             "10k session_owner queries over 200 nodes exceeded the 2 s CI ceiling"
         );
+    }
+
+    /// A terminal (or paused) completion snapshot parented to `parent`, with an
+    /// optional `runLabel` — `snapshot_with_status` plus the metadata the wake
+    /// label reads (cyril-lki9 C13).
+    fn parented_completion(
+        id: &str,
+        status: WorkflowRunStatus,
+        marker: &str,
+        parent: &str,
+        run_label: Option<&str>,
+    ) -> WorkflowEvent {
+        let base = snapshot_with_status(id, status, marker);
+        let mut metadata = WorkflowSnapshotMetadata::new(format!("created-{marker}"), 1)
+            .with_parent_session_id(SessionId::new(parent));
+        if let Some(label) = run_label {
+            metadata = metadata.with_run_label(label.to_owned());
+        }
+        let parts = base.into_parts();
+        completion(WorkflowSnapshot::new(
+            parts.workflow_id,
+            parts.workflow_name,
+            parts.status,
+            WorkflowSnapshotData::new(parts.inputs, parts.artifacts, parts.captured_outputs),
+            parts.root,
+            metadata,
+        ))
+    }
+
+    /// C13: wake labels come out oldest-first per parent session, each once,
+    /// named `runLabel → workflowName`, with the terminal status; a non-terminal
+    /// (paused) completion, another parent's completion, and an exact duplicate
+    /// completion never add a label.
+    #[test]
+    fn wake_labels_are_fifo_per_parent() {
+        let s = SessionId::new("s");
+        let mut tracker = WorkflowTracker::new();
+        for id in ["a", "b", "c", "d", "e", "f"] {
+            seed(&mut tracker, id, "seeded");
+        }
+        let apply = |t: &mut WorkflowTracker, e: WorkflowEvent| {
+            t.apply_event(e)
+                .unwrap_or_else(|err| panic!("fixture rejected: {err}"))
+        };
+        assert!(apply(
+            &mut tracker,
+            parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
+        ));
+        assert!(apply(
+            &mut tracker,
+            parented_completion("b", WorkflowRunStatus::Failed, "B", "s", Some("labelled-b"))
+        ));
+        assert!(apply(
+            &mut tracker,
+            parented_completion("c", WorkflowRunStatus::Completed, "C", "other", None)
+        ));
+        assert!(apply(
+            &mut tracker,
+            parented_completion("d", WorkflowRunStatus::Paused, "D", "s", None)
+        ));
+        assert!(apply(
+            &mut tracker,
+            parented_completion("e", WorkflowRunStatus::Aborted, "E", "s", Some(""))
+        ));
+        // Exact duplicate of a's completion: absorbed, no second label.
+        assert!(!apply(
+            &mut tracker,
+            parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
+        ));
+
+        let take = |t: &mut WorkflowTracker, sid: &SessionId| {
+            t.take_wake_label(sid)
+                .map(|l| (l.name().to_owned(), l.status()))
+        };
+        assert_eq!(
+            take(&mut tracker, &s),
+            Some(("recipe-A".to_owned(), WorkflowRunStatus::Completed))
+        );
+        assert_eq!(
+            take(&mut tracker, &s),
+            Some(("labelled-b".to_owned(), WorkflowRunStatus::Failed))
+        );
+        assert_eq!(
+            take(&mut tracker, &s),
+            Some(("recipe-E".to_owned(), WorkflowRunStatus::Aborted)),
+            "an empty runLabel falls back to the workflow name"
+        );
+        assert_eq!(
+            take(&mut tracker, &s),
+            None,
+            "paused d never queued; queue drained"
+        );
+        assert_eq!(
+            take(&mut tracker, &SessionId::new("other")),
+            Some(("recipe-C".to_owned(), WorkflowRunStatus::Completed))
+        );
+        assert_eq!(take(&mut tracker, &SessionId::new("never")), None);
     }
 }

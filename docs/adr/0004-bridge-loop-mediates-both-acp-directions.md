@@ -179,6 +179,16 @@ exhaustion), and cancel-target snapshot are `begin_turn` / `cancel_target` /
 "Turn owner", "Companion terminal" — *turn mediation* is distinct from this
 ADR's host-callback mediator; both live behind the bridge.
 
+**Amendment (cyril-lki9, 2026-09-29).** A turn is no longer always begun by
+cyril's dispatch: KAS starts turns on its own (workflow auto-wakes). The call is
+now `TurnMediator::observe(&RoutedNotification, main) → Disposition`, where
+`main` is the loop's main session; a wire `TurnStarted` on `main` with no turn
+in flight begins a *server-owned* turn (`Disposition::BeginServerTurn`, liveness
+armed), whose wire `turn_end` is its only terminal and registers no companion.
+The first `TurnStarted` on a dispatched turn's session is attached to that turn.
+At most one active turn still holds; evidence and the interleaving model are in
+`.cyril-lki9/` (`evidence.md` P3/P5, `oracles/mediator_model.py`).
+
 ### Terminal-source authority is an Engine fact
 
 Which wire event ends a turn belongs to the bound engine (CONTEXT.md

@@ -35,6 +35,8 @@ impl<T: std::fmt::Debug, E> ExpectErrContract<E> for Result<T, E> {
     }
 }
 
+mod agent_initiated;
+
 // C5 freezes the default-engine dispatch surface; `kas` builds route several
 // of these commands (hooks, workflow) through different `run_loop` arms with
 // different outcomes, so the module only exists in default builds. The

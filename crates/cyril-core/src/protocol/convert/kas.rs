@@ -10,9 +10,9 @@ use agent_client_protocol::schema::v1 as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{
-    AgentEngine, ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount, Notification,
-    PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount, UsageAccountBreakdown,
-    UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
+    AgentEngine, AgentInitiation, ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount,
+    Notification, PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount,
+    UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
 pub(crate) mod powers;
@@ -280,6 +280,9 @@ pub(crate) enum WorkflowFrameOutcome {
 /// KAS multiplexes turn lifecycle, metering, context telemetry, and steering
 /// echoes through one `session_info_update` envelope, discriminated by
 /// `_meta.kiro.kind`. Sub-kinds surfaced today:
+/// - **`turn_start`** — the opening lifecycle signal of every KAS turn, cyril's
+///   own and agent-initiated (workflow auto-wakes) alike →
+///   [`Notification::TurnStarted`] (cyril-lki9 B7).
 /// - **`turn_end`** — the terminal lifecycle signal → [`Notification::TurnCompleted`]
 ///   (KAS-2a), stop reason from `_meta.kiro.stopReason`.
 /// - **`context_usage`** — the proactively-pushed per-category breakdown
@@ -291,6 +294,11 @@ pub(crate) enum WorkflowFrameOutcome {
 ///   *injected*, not v2's `steering_consumed`, and Cleared fires BOTH on
 ///   explicit `_session/steer/clear` and routinely post-injection (findings
 ///   F4) — which is why [`Notification::SteeringCleared`] must stay id-scoped.
+///   KAS also injects ENGINE messages through the same buffer (cyril-lki9 P6):
+///   a `steering_injected` whose id starts `notify-` becomes
+///   [`Notification::EngineMessageInjected`], never a steer consumption, and
+///   `notify-` ids are stripped from `steering_cleared` (a list that named
+///   only engine injections converts to nothing, not to the drain-all).
 ///
 /// Every other sub-kind (`user_message_id_assigned`, `steering_inclusion`
 /// fileMatch catalog, …) returns `None` — matching is exact on the `kind`
@@ -343,6 +351,11 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
         Some("turn_completion") => Some(Notification::TurnMeteringUpdated(turn_metering_update(
             kiro,
         ))),
+        // cyril-lki9 B7: the opening bracket of every KAS turn — cyril's own
+        // prompt turns AND agent-initiated ones (workflow auto-wakes) that no
+        // client prompt precedes. The frame carries no origin; the turn
+        // mediator decides ownership.
+        Some("turn_start") => Some(Notification::TurnStarted),
         Some("turn_end") => Some(Notification::TurnCompleted {
             stop_reason: turn_end_stop_reason(kiro),
         }),
@@ -413,15 +426,90 @@ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Opti
             message: steering_text(Some(kiro), "content", "KAS steering_queued", None),
             message_id: steering_message_id(Some(kiro)),
         }),
-        Some("steering_injected") => Some(Notification::SteeringConsumed {
-            content: steering_text(Some(kiro), "content", "KAS steering_injected", None),
-            message_id: steering_message_id(Some(kiro)),
-        }),
-        Some("steering_cleared") => Some(Notification::SteeringCleared {
-            message_ids: steering_message_ids(Some(kiro), "KAS steering_cleared", None),
-        }),
+        // cyril-lki9 B5/B6: KAS also injects ENGINE messages through the
+        // steering buffer (busy-case workflow completion, relayed step
+        // verdicts), marked by a `notify-` id. Classified on the id, never the
+        // content: an operator steer may legitimately say anything.
+        Some("steering_injected") => {
+            let content = steering_text(Some(kiro), "content", "KAS steering_injected", None);
+            match steering_message_id(Some(kiro)) {
+                Some(message_id) if is_engine_injection(&message_id) => {
+                    Some(Notification::EngineMessageInjected {
+                        message_id,
+                        content,
+                        severity: kiro
+                            .get("notificationSeverity")
+                            .and_then(serde_json::Value::as_str)
+                            .filter(|s| !s.is_empty())
+                            .map(str::to_string),
+                    })
+                }
+                message_id => Some(Notification::SteeringConsumed {
+                    content,
+                    message_id,
+                }),
+            }
+        }
+        Some("steering_cleared") => {
+            let message_ids = steering_message_ids(Some(kiro), "KAS steering_cleared", None);
+            // An empty list already means "clear everything" (absent,
+            // empty, or all-corrupt ids — the v2 drain-all convention) and is
+            // kept as-is. A list naming ONLY engine injections concerns no
+            // operator steer: stripping it must not collapse into that
+            // drain-all, so the frame converts to nothing.
+            if message_ids.is_empty() {
+                return Some(Notification::SteeringCleared { message_ids });
+            }
+            let operator_ids: Vec<String> = message_ids
+                .into_iter()
+                .filter(|id| !is_engine_injection(id))
+                .collect();
+            if operator_ids.is_empty() {
+                tracing::debug!("KAS steering_cleared named only engine injections; not forwarded");
+                return None;
+            }
+            Some(Notification::SteeringCleared {
+                message_ids: operator_ids,
+            })
+        }
         _ => None,
     }
+}
+
+/// The agent-initiated tag of a KAS chunk / tool frame (cyril-lki9 P1/P2):
+/// `Some` exactly when `_meta.kiro.agentInitiated` is the boolean `true` on an
+/// agent message/thought chunk, `tool_call` or `tool_call_update`; the reason
+/// is `_meta.kiro.agentInitiatedReason` (`None` when absent or empty). Any
+/// other update kind, an absent or non-object `_meta.kiro`, or a non-`true`
+/// flag is not agent-initiated. KAS never tags `turn_start` / `turn_end`
+/// (P1), so origin is known only from a turn's first tagged frame.
+pub(crate) fn agent_initiation(update: &acp::SessionUpdate) -> Option<AgentInitiation> {
+    let meta = match update {
+        acp::SessionUpdate::AgentMessageChunk(chunk)
+        | acp::SessionUpdate::AgentThoughtChunk(chunk) => chunk.meta.as_ref(),
+        acp::SessionUpdate::ToolCall(tool_call) => tool_call.meta.as_ref(),
+        acp::SessionUpdate::ToolCallUpdate(update) => update.meta.as_ref(),
+        _ => None,
+    }?;
+    let kiro = meta.get("kiro")?.as_object()?;
+    if kiro.get("agentInitiated") != Some(&serde_json::Value::Bool(true)) {
+        return None;
+    }
+    Some(AgentInitiation::new(
+        kiro.get("agentInitiatedReason")
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_string),
+    ))
+}
+
+/// `messageId` prefix KAS gives messages the engine itself injects into a turn
+/// through the steering buffer (cyril-lki9 evidence P6: `notify-<uuid>` step
+/// verdicts, `notify-wf-<uuid>` busy-session workflow completions). Operator
+/// steers carry `steer-<uuid>`.
+const ENGINE_INJECTION_ID_PREFIX: &str = "notify-";
+
+fn is_engine_injection(message_id: &str) -> bool {
+    message_id.starts_with(ENGINE_INJECTION_ID_PREFIX)
 }
 
 fn turn_metering_update(kiro: &serde_json::Value) -> TurnMeteringUpdate {
@@ -1436,5 +1524,319 @@ mod tests {
             matches!(r, Ok(None)),
             "unknown _kiro/* frame must drop to Ok(None), got {r:?}"
         );
+    }
+
+    // ---- cyril-lki9 Slice 1: turn_start and engine injections ----------------
+
+    /// C1: `turn_start` opens every KAS turn; the v2 engine never produces it.
+    #[test]
+    fn turn_start_converts_to_turn_started() {
+        let sn = kiro_frame(json!({
+            "kind": "turn_start", "messageId": "m-turn-start", "turnStart": true
+        }));
+        assert!(matches!(
+            session_info_to_notification(info_update(&sn)),
+            Some(Notification::TurnStarted)
+        ));
+        let v2 = crate::protocol::engine::V2Engine.convert_session_update(&sn);
+        assert!(
+            !matches!(v2, Some(Notification::TurnStarted)),
+            "v2 must never yield TurnStarted, got {v2:?}"
+        );
+    }
+
+    /// C4: a `notify-` id marks an engine injection; classification is on the
+    /// id, never the content. Stress rows: a `steer-` id whose content LOOKS like
+    /// a notification, a bare `notify` id (no dash), an empty id (legacy), and
+    /// severity absent / empty.
+    #[test]
+    fn notify_injection_is_engine_message() {
+        let convert =
+            |kiro: serde_json::Value| session_info_to_notification(info_update(&kiro_frame(kiro)));
+        match convert(json!({
+            "kind": "steering_injected", "messageId": "notify-wf-1",
+            "content": "A workflow you launched (\"x\") completed.",
+            "notificationSeverity": "info"
+        })) {
+            Some(Notification::EngineMessageInjected {
+                message_id,
+                content,
+                severity,
+            }) => {
+                assert_eq!(message_id, "notify-wf-1");
+                assert_eq!(
+                    content.as_deref(),
+                    Some("A workflow you launched (\"x\") completed.")
+                );
+                assert_eq!(severity.as_deref(), Some("info"));
+            }
+            other => panic!("notify-wf- must be an engine injection, got {other:?}"),
+        }
+        match convert(json!({
+            "kind": "steering_injected", "messageId": "notify-2",
+            "content": "[notification/success] OK", "notificationSeverity": ""
+        })) {
+            Some(Notification::EngineMessageInjected {
+                message_id,
+                severity: None,
+                ..
+            }) => {
+                assert_eq!(message_id, "notify-2");
+            }
+            other => panic!(
+                "notify- with empty severity must be an engine injection with severity None, got {other:?}"
+            ),
+        }
+        for (kiro, want_id) in [
+            (
+                json!({ "kind": "steering_injected", "messageId": "steer-1",
+                     "content": "[notification/success] fake" }),
+                Some("steer-1"),
+            ),
+            (
+                json!({ "kind": "steering_injected", "messageId": "notify",
+                     "content": "bare prefix" }),
+                Some("notify"),
+            ),
+            (
+                json!({ "kind": "steering_injected", "messageId": "",
+                     "content": "legacy" }),
+                None,
+            ),
+        ] {
+            match convert(kiro) {
+                Some(Notification::SteeringConsumed { message_id, .. }) => {
+                    assert_eq!(message_id.as_deref(), want_id);
+                }
+                other => {
+                    panic!("operator steer ({want_id:?}) must stay SteeringConsumed, got {other:?}")
+                }
+            }
+        }
+    }
+
+    /// C5: `notify-` ids are stripped from `steering_cleared`; a list that named
+    /// only engine injections converts to nothing — never to the empty
+    /// drain-all — while an originally empty list keeps drain-all.
+    #[test]
+    fn cleared_strips_notify_ids() {
+        let convert = |ids: serde_json::Value| {
+            session_info_to_notification(info_update(&kiro_frame(
+                json!({ "kind": "steering_cleared", "messageIds": ids }),
+            )))
+        };
+        assert!(
+            convert(json!(["notify-a", "notify-wf-b"])).is_none(),
+            "a clear naming only engine injections must not become drain-all"
+        );
+        assert!(matches!(
+            convert(json!(["notify-a", "steer-b"])),
+            Some(Notification::SteeringCleared { message_ids }) if message_ids == ["steer-b"]
+        ));
+        assert!(matches!(
+            convert(json!(["steer-b"])),
+            Some(Notification::SteeringCleared { message_ids }) if message_ids == ["steer-b"]
+        ));
+        assert!(matches!(
+            convert(json!([])),
+            Some(Notification::SteeringCleared { message_ids }) if message_ids.is_empty()
+        ));
+    }
+
+    /// C1/C4/C5 against live wire: every committed cyril-lki9 trace converts
+    /// (through the production KAS path) to exactly the counts the independent
+    /// `grep` census of the raw frames gives (plan.md Slice 1 oracle table).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn lki9_traces_match_raw_frame_census() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        // (trace, TurnStarted, EngineMessageInjected, SteeringConsumed, SteeringCleared)
+        let census = [
+            (
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+                3,
+                2,
+                0,
+                0,
+            ),
+            (
+                "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+                4,
+                1,
+                0,
+                0,
+            ),
+            (".cyril-lki9/lki9-live-busy-06615-2.26.0.jsonl", 2, 1, 0, 0),
+            (
+                ".cyril-lki9/lki9-live-cancel-06615-2.26.0.jsonl",
+                2,
+                1,
+                0,
+                0,
+            ),
+            (".cyril-lki9/lki9-live-steer-06615-2.26.0.jsonl", 2, 0, 1, 1),
+        ];
+        for (rel, want_started, want_injected, want_consumed, want_cleared) in census {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            let routed = crate::test_support::kas_trace_to_routed(&trace);
+            let count =
+                |pred: fn(&Notification) -> bool| routed.iter().filter(|(_, n)| pred(n)).count();
+            let got = (
+                count(|n| matches!(n, Notification::TurnStarted)),
+                count(|n| matches!(n, Notification::EngineMessageInjected { .. })),
+                count(|n| matches!(n, Notification::SteeringConsumed { .. })),
+                count(|n| matches!(n, Notification::SteeringCleared { .. })),
+            );
+            assert_eq!(
+                got,
+                (want_started, want_injected, want_consumed, want_cleared),
+                "{rel}: (TurnStarted, EngineMessageInjected, SteeringConsumed, SteeringCleared)"
+            );
+        }
+    }
+
+    // ---- cyril-lki9 Slice 2: agent-initiated tag extraction ---------------------
+
+    fn update_with_meta(update: serde_json::Value) -> acp::SessionNotification {
+        serde_json::from_value(json!({ "sessionId": "sess_x", "update": update }))
+            .expect("session/update deserializes")
+    }
+
+    /// C2: `turn_origin` is `Some` exactly when `_meta.kiro.agentInitiated` is
+    /// the boolean `true` on a chunk / thought / tool_call / tool_call_update.
+    /// Stress rows: string `"true"`, a non-object `kiro`, a reason with no flag,
+    /// an empty reason, and a tagged frame of another update kind.
+    #[test]
+    fn turn_origin_table() {
+        let engine = KasEngine::default();
+        let bodies = [
+            (
+                "agent_message_chunk",
+                json!({ "sessionUpdate": "agent_message_chunk",
+                "content": { "type": "text", "text": "x" } }),
+            ),
+            (
+                "agent_thought_chunk",
+                json!({ "sessionUpdate": "agent_thought_chunk",
+                "content": { "type": "text", "text": "x" } }),
+            ),
+            (
+                "tool_call",
+                json!({ "sessionUpdate": "tool_call", "toolCallId": "t1",
+                "title": "Read", "kind": "read", "status": "pending" }),
+            ),
+            (
+                "tool_call_update",
+                json!({ "sessionUpdate": "tool_call_update",
+                "toolCallId": "t1", "status": "completed" }),
+            ),
+        ];
+        // (meta, expected: None = not agent-initiated, Some(reason))
+        let metas: [(Option<serde_json::Value>, Option<Option<&str>>); 8] = [
+            (
+                Some(json!({ "kiro": { "agentInitiated": true,
+                "agentInitiatedReason": "workflow-complete-wake" } })),
+                Some(Some("workflow-complete-wake")),
+            ),
+            (
+                Some(json!({ "kiro": { "agentInitiated": true } })),
+                Some(None),
+            ),
+            (
+                Some(json!({ "kiro": { "agentInitiated": true, "agentInitiatedReason": "" } })),
+                Some(None),
+            ),
+            (
+                Some(json!({ "kiro": { "agentInitiated": false,
+                "agentInitiatedReason": "workflow-complete-wake" } })),
+                None,
+            ),
+            (Some(json!({ "kiro": { "agentInitiated": "true" } })), None),
+            (
+                Some(json!({ "kiro": { "agentInitiatedReason": "workflow-complete-wake" } })),
+                None,
+            ),
+            (Some(json!({ "kiro": ["agentInitiated", true] })), None),
+            (None, None),
+        ];
+        for (kind, body) in &bodies {
+            for (meta, want) in &metas {
+                let mut update = body.clone();
+                if let Some(meta) = meta {
+                    update["_meta"] = meta.clone();
+                }
+                let got = engine.turn_origin(&update_with_meta(update));
+                assert_eq!(
+                    got.as_ref().map(crate::types::AgentInitiation::reason),
+                    *want,
+                    "{kind} with _meta {meta:?}"
+                );
+            }
+        }
+        // A tagged frame of a kind KAS never tags (and cyril never labels).
+        let siu = update_with_meta(json!({ "sessionUpdate": "session_info_update",
+            "_meta": { "kiro": { "kind": "turn_start", "agentInitiated": true } } }));
+        assert_eq!(
+            engine.turn_origin(&siu),
+            None,
+            "session_info_update is never agent-initiated"
+        );
+    }
+
+    /// C2 against live wire: `turn_origin` over every committed agent->client
+    /// `session/update` equals the independent `grep` census of tagged frames
+    /// (evidence.md P1/P2): tail 57 / 2 / 4, gate-on 292 / 6 / 8, and reasons
+    /// workflow-complete-wake 63 (tail) / 201 + send-message-wake 105 (gate-on).
+    #[test]
+    fn turn_origin_matches_tagged_frame_census() {
+        let engine = KasEngine::default();
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let census = [
+            (
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+                (57, 2, 4),
+                vec![("workflow-complete-wake", 63)],
+            ),
+            (
+                "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+                (292, 6, 8),
+                vec![("send-message-wake", 105), ("workflow-complete-wake", 201)],
+            ),
+        ];
+        for (rel, want_kinds, want_reasons) in census {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            let (mut chunks, mut tool_calls, mut updates) = (0, 0, 0);
+            let mut reasons = std::collections::BTreeMap::<String, usize>::new();
+            for line in trace.lines().filter(|l| !l.is_empty()) {
+                let row: serde_json::Value = serde_json::from_str(line).expect("trace row");
+                if row["dir"] != "agent->client" || row["msg"]["method"] != "session/update" {
+                    continue;
+                }
+                let sn: acp::SessionNotification =
+                    serde_json::from_value(row["msg"]["params"].clone()).expect("session/update");
+                let Some(origin) = engine.turn_origin(&sn) else {
+                    continue;
+                };
+                match &sn.update {
+                    acp::SessionUpdate::AgentMessageChunk(_) => chunks += 1,
+                    acp::SessionUpdate::ToolCall(_) => tool_calls += 1,
+                    acp::SessionUpdate::ToolCallUpdate(_) => updates += 1,
+                    other => panic!("{rel}: origin on an unexpected update kind {other:?}"),
+                }
+                *reasons
+                    .entry(origin.reason().unwrap_or("<none>").to_string())
+                    .or_default() += 1;
+            }
+            assert_eq!(
+                (chunks, tool_calls, updates),
+                want_kinds,
+                "{rel}: tagged (chunk, tool_call, tool_call_update)"
+            );
+            let want: std::collections::BTreeMap<String, usize> = want_reasons
+                .into_iter()
+                .map(|(r, n)| (r.to_string(), n))
+                .collect();
+            assert_eq!(reasons, want, "{rel}: reasons");
+        }
     }
 }

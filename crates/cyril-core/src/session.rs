@@ -302,6 +302,23 @@ impl SessionController {
                 self.status = SessionStatus::Active;
                 true
             }
+            // cyril-lki9 C11: a turn began — cyril's own (already Busy from
+            // dispatch; no transition) or one the agent started itself (a KAS
+            // workflow auto-wake), which must be Busy so Enter steers and Esc
+            // cancels instead of dispatching a prompt that would pre-empt it.
+            // Only idle states move: a wire turn start must not paper over a
+            // connection or compaction phase that has its own exit path.
+            Notification::TurnStarted => {
+                if matches!(
+                    self.status,
+                    SessionStatus::Active | SessionStatus::Error { .. }
+                ) {
+                    self.status = SessionStatus::Busy;
+                    true
+                } else {
+                    false
+                }
+            }
             Notification::TurnCompleted { stop_reason } => {
                 // Reconcile (cyril-h8zb): metadata refusal + ambiguous ACP
                 // EndTurn => the turn was refused. std::mem::take resets the
@@ -1195,6 +1212,60 @@ mod tests {
         assert_eq!(ctrl.modes()[0].id().as_str(), "new");
         assert_eq!(ctrl.models().len(), 1);
         assert_eq!(ctrl.models()[0].id().as_str(), "new-model");
+    }
+
+    /// cyril-lki9 C11: `TurnStarted` makes an idle session Busy (a turn the
+    /// agent started itself); a dispatched turn is already Busy (no change);
+    /// connection / compaction phases are not overridden; `TurnCompleted`
+    /// returns to Active as before. v2 never emits `TurnStarted`, so its
+    /// prompt path (Busy at dispatch, Active on completion) is untouched.
+    #[test]
+    fn turn_started_busy_transitions() {
+        let started = Notification::TurnStarted;
+        let mut ctrl = SessionController::new();
+        ctrl.set_session(SessionId::new("s"), SessionStatus::Active);
+        assert!(
+            ctrl.apply_notification(&started),
+            "idle -> Busy is a change"
+        );
+        assert_eq!(ctrl.status(), &SessionStatus::Busy);
+        assert!(
+            !ctrl.apply_notification(&started),
+            "already Busy (a dispatched turn's own start): no double transition"
+        );
+        assert_eq!(ctrl.status(), &SessionStatus::Busy);
+        ctrl.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(ctrl.status(), &SessionStatus::Active);
+
+        let mut errored = SessionController::new();
+        errored.set_session(
+            SessionId::new("s"),
+            SessionStatus::Error {
+                message: "earlier failure".into(),
+            },
+        );
+        assert!(errored.apply_notification(&started));
+        assert_eq!(
+            errored.status(),
+            &SessionStatus::Busy,
+            "a new turn clears a prior error"
+        );
+
+        for held in [
+            SessionStatus::Disconnected,
+            SessionStatus::Initializing,
+            SessionStatus::Compacting,
+        ] {
+            let mut ctrl = SessionController::new();
+            ctrl.set_status(held.clone());
+            assert!(
+                !ctrl.apply_notification(&started),
+                "{held:?} is not overridden"
+            );
+            assert_eq!(ctrl.status(), &held);
+        }
     }
 }
 

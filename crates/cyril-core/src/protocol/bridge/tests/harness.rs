@@ -37,6 +37,14 @@ pub(super) struct Script {
     pub(super) negotiated_protocol:
         Arc<Mutex<Option<agent_client_protocol::schema::ProtocolVersion>>>,
     pub(super) emit_chunks: usize,
+    /// `_meta` attached to every emitted `agent_message_chunk` (cyril-lki9 C3):
+    /// `Some({"kiro": {"agentInitiated": true, …}})` reproduces an
+    /// agent-initiated turn's frames; `None` keeps the historical untagged chunk.
+    pub(super) chunk_meta: Option<serde_json::Value>,
+    /// The `sessionId` of every `session/cancel` the agent received, in order
+    /// (cyril-lki9 C12). Kept apart from `received` so the exact call-order
+    /// ledgers other fences assert are unchanged.
+    pub(super) cancelled_sessions: Arc<Mutex<Vec<String>>>,
     pub(super) inbound: Option<InboundProbe>,
     pub(super) emit_unknown_update: bool,
     pub(super) request_extension_during_initialize: bool,
@@ -131,6 +139,7 @@ fn fake_agent(
     let received_new = Arc::clone(&script.borrow().received);
     let received_prompt = Arc::clone(&script.borrow().received);
     let received_cancel = Arc::clone(&script.borrow().received);
+    let cancelled_sessions = Arc::clone(&script.borrow().cancelled_sessions);
     let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
@@ -138,6 +147,7 @@ fn fake_agent(
     let ext_responses = Arc::clone(&script.borrow().ext_responses);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
     let emit_chunks = script.borrow().emit_chunks;
+    let chunk_meta = script.borrow().chunk_meta.clone();
     let emit_unknown_update = script.borrow().emit_unknown_update;
     let request_extension_during_initialize = script.borrow().request_extension_during_initialize;
     let request_malformed_standard_during_initialize =
@@ -369,13 +379,17 @@ fn fake_agent(
                     connection.send_notification(notification)?;
                 }
                 for index in 0..emit_chunks {
+                    let mut update = serde_json::json!({
+                        "sessionUpdate": "agent_message_chunk",
+                        "content": {"type": "text", "text": format!("c{index}")}
+                    });
+                    if let Some(meta) = &chunk_meta {
+                        update["_meta"] = meta.clone();
+                    }
                     let notification: acp::SessionNotification =
                         serde_json::from_value(serde_json::json!({
                             "sessionId": request.session_id.to_string(),
-                            "update": {
-                                "sessionUpdate": "agent_message_chunk",
-                                "content": {"type": "text", "text": format!("c{index}")}
-                            }
+                            "update": update
                         }))
                         .map_err(|error| {
                             agent_client_protocol::Error::internal_error().data(error.to_string())
@@ -428,8 +442,9 @@ fn fake_agent(
             agent_client_protocol::on_receive_request!(),
         )
         .on_receive_notification(
-            async move |_notification: acp::CancelNotification, _connection| {
+            async move |notification: acp::CancelNotification, _connection| {
                 record(&received_cancel, "cancel");
+                record(&cancelled_sessions, notification.session_id.to_string());
                 cancel_tx.send_replace(true);
                 Ok(())
             },

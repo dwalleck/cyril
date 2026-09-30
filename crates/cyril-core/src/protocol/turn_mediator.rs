@@ -109,6 +109,11 @@ pub(crate) enum Disposition {
     /// Pass through; the active turn released on this signal. The loop's
     /// deferred-disconnect handling keys off this variant.
     ForwardTurnComplete,
+    /// Pass through; a turn the AGENT started on the main session (cyril-lki9
+    /// C7 — a KAS workflow auto-wake, or any `turn_start` cyril did not
+    /// dispatch) is now the active turn. The loop arms turn liveness for it,
+    /// exactly as it does for an accepted dispatch.
+    BeginServerTurn,
     /// The expected companion terminal — consumed, not forwarded. Carries the
     /// cyril-pnwb `{source, reason}` evidence pair for both signals.
     Absorb {
@@ -128,7 +133,8 @@ pub(crate) enum Disposition {
 /// The turn currently occupying the bridge (cyril-a71q).
 ///
 /// Holds the per-turn `owner` identity, the terminal-source shape the bound
-/// engine declared at dispatch, and the session the turn was dispatched on.
+/// engine declared at dispatch (a server turn's only terminal is the wire
+/// `turn_end`), the session the turn runs on, and who began it.
 /// `session` is deliberately a snapshot: the loop's `active_session_id` can
 /// be retargeted mid-turn by a `NewSession`/`LoadSession`, and cancel must
 /// still reach the turn that is actually running.
@@ -142,6 +148,26 @@ struct ActiveTurn {
     owner: TurnId,
     expects_wire_terminal: bool,
     session: SessionId,
+    origin: TurnOrigin,
+    /// Whether this turn's wire `turn_start` has been observed (cyril-lki9
+    /// C8). A dispatched turn opens unbracketed; the first `turn_start` on its
+    /// session is attached to it — its own start, or a wake KAS began just
+    /// before cyril's prompt reached it (the wake is then pre-empted and its
+    /// `turn_end{cancelled}` releases this turn, leaving the prompt's own
+    /// bracket to begin a server turn). A server turn opens bracketed.
+    bracket_open: bool,
+}
+
+/// Who began the active turn (cyril-lki9). ADR-0004's single active turn no
+/// longer implies "cyril dispatched it": KAS starts turns on its own.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TurnOrigin {
+    /// cyril's own `SendPrompt`: two terminal sources (the prompt RPC result
+    /// and, on KAS, the wire `turn_end`).
+    Dispatched,
+    /// The agent's own `turn_start` with no dispatch in flight: the wire
+    /// `turn_end` is its only terminal — there is no prompt RPC to answer it.
+    Server,
 }
 
 /// Outcome of [`TurnMediator::begin_turn`].
@@ -169,6 +195,11 @@ pub(crate) struct TurnMediator {
     /// cyril-a71q C6: at most ONE outstanding companion expectation. See
     /// [`Companion`].
     companion: Option<Companion>,
+    /// cyril-lki9 C10: sessions whose CURRENT turn has already been announced
+    /// as agent-initiated. Cleared for a session at its turn start and turn
+    /// end, so each turn announces once. Bounded by the sessions with an
+    /// agent-initiated turn in flight (observed ≤ 2: main + one woken step).
+    announced: std::collections::HashSet<SessionId>,
 }
 
 impl TurnMediator {
@@ -185,6 +216,7 @@ impl TurnMediator {
             active: None,
             alloc,
             companion: None,
+            announced: std::collections::HashSet::new(),
         }
     }
 
@@ -205,6 +237,8 @@ impl TurnMediator {
             owner,
             expects_wire_terminal,
             session,
+            origin: TurnOrigin::Dispatched,
+            bracket_open: false,
         });
         BeginTurn::Accepted(owner)
     }
@@ -229,8 +263,26 @@ impl TurnMediator {
     /// is what makes single drift safe — a stale signal is absorbed by the
     /// expectation it belongs to instead of clearing the newer turn
     /// (cyril-a71q falsifier mutation M3 fails the other order; probe cell
-    /// f9). Non-terminal notifications pass through untouched.
-    pub(crate) fn observe(&mut self, routed: &RoutedNotification) -> Disposition {
+    /// f9). Non-terminal notifications pass through untouched, except a wire
+    /// `TurnStarted` (cyril-lki9 C7/C8/C9): on `main` with no turn in flight it
+    /// begins a server turn; on the dispatched turn's session it opens that
+    /// turn's bracket. `main` is the loop's current main session.
+    pub(crate) fn observe(
+        &mut self,
+        routed: &RoutedNotification,
+        main: Option<&SessionId>,
+    ) -> Disposition {
+        if matches!(routed.notification, Notification::TurnStarted) {
+            if let Some(session) = &routed.session_id {
+                self.announced.remove(session);
+            }
+            return self.observe_turn_start(routed.session_id.as_ref(), main);
+        }
+        if matches!(routed.notification, Notification::TurnCompleted { .. })
+            && let Some(session) = &routed.session_id
+        {
+            self.announced.remove(session);
+        }
         let Notification::TurnCompleted {
             stop_reason: reason,
         } = routed.notification
@@ -286,17 +338,31 @@ impl TurnMediator {
                     return d.second(CompanionSource::Wire, reason);
                 }
                 match self.active.as_ref() {
-                    // Scoped to the ACTIVE turn's own session -> release. The
-                    // synthesized twin is always still owed (every turn has a
-                    // prompt RPC), so this registration is unconditional.
+                    // Scoped to the ACTIVE turn's own session -> release. A
+                    // dispatched turn still owes its synthesized twin (the
+                    // prompt RPC result), registered here. A server turn has
+                    // no prompt RPC, so it registers nothing — and it must
+                    // not CLEAR the ledger either: after a wake pre-empted
+                    // cyril's dispatch, the dispatch's synthesized twin is
+                    // still owed while the prompt's own turn runs as a server
+                    // turn (race `D@0` in the C8 model), and wiping it here
+                    // would drop that response as stale instead of absorbing
+                    // it. The owed entry is id-matched, so it cannot eat a
+                    // wire terminal.
                     Some(active) if routed.session_id.as_ref() == Some(&active.session) => {
-                        self.companion = Some(Companion::after_arrival(
-                            active.owner,
-                            active.session.clone(),
-                            CompanionSource::Wire,
-                            reason,
-                        ));
-                        tracing::debug!(owner = %active.owner, "turn completed (wire turn_end)");
+                        if active.origin == TurnOrigin::Dispatched {
+                            self.companion = Some(Companion::after_arrival(
+                                active.owner,
+                                active.session.clone(),
+                                CompanionSource::Wire,
+                                reason,
+                            ));
+                        }
+                        tracing::debug!(
+                            owner = %active.owner,
+                            origin = ?active.origin,
+                            "turn completed (wire turn_end)"
+                        );
                         self.active = None;
                         Disposition::ForwardTurnComplete
                     }
@@ -326,6 +392,66 @@ impl TurnMediator {
                     }
                 }
             }
+        }
+    }
+
+    /// Should the bridge announce this frame's turn as agent-initiated before
+    /// forwarding it (cyril-lki9 C10)? `true` exactly once per session per
+    /// turn: on the first frame carrying an `origin` since that session's turn
+    /// start (or since it was last announced and ended). Frames without an
+    /// origin, or with no session scope, never announce.
+    pub(crate) fn announce(&mut self, routed: &RoutedNotification) -> bool {
+        match (&routed.origin, &routed.session_id) {
+            (Some(_), Some(session)) => self.announced.insert(session.clone()),
+            _ => false,
+        }
+    }
+
+    /// A wire `turn_start` (cyril-lki9 C7/C8/C9). Never a terminal and never
+    /// dropped: every arm forwards, and only the main-session idle arm changes
+    /// ownership.
+    fn observe_turn_start(
+        &mut self,
+        session: Option<&SessionId>,
+        main: Option<&SessionId>,
+    ) -> Disposition {
+        let Some(session) = session else {
+            tracing::debug!("TurnStarted with no session scope; forwarded");
+            return Disposition::Forward;
+        };
+        match self.active.as_mut() {
+            None if main == Some(session) => {
+                let Some(owner) = self.alloc.allocate() else {
+                    // Same refusal as `BeginTurn::Exhausted`: never run a turn
+                    // whose completions could match somebody else's.
+                    tracing::warn!(session = %session, "turn id space exhausted; server turn not tracked");
+                    return Disposition::Forward;
+                };
+                self.active = Some(ActiveTurn {
+                    owner,
+                    expects_wire_terminal: true,
+                    session: session.clone(),
+                    origin: TurnOrigin::Server,
+                    bracket_open: true,
+                });
+                tracing::debug!(owner = %owner, session = %session, "server turn began (wire TurnStarted)");
+                Disposition::BeginServerTurn
+            }
+            Some(active) if &active.session == session && !active.bracket_open => {
+                active.bracket_open = true;
+                tracing::debug!(owner = %active.owner, "TurnStarted attached to dispatched turn");
+                Disposition::Forward
+            }
+            Some(active) if &active.session == session => {
+                // KAS pre-empts rather than nests; a second start inside an
+                // open bracket is unexpected wire drift, not a new owner.
+                tracing::warn!(owner = %active.owner, "TurnStarted inside an open turn bracket; forwarded");
+                Disposition::Forward
+            }
+            // A foreign session's turn (workflow step, subagent) or a main
+            // turn_start while another session's turn is active: never
+            // touches the main turn.
+            _ => Disposition::Forward,
         }
     }
 
@@ -421,12 +547,12 @@ mod tests {
             m.begin_turn(sid("s"), true),
             BeginTurn::Accepted(_)
         ));
-        assert_eq!(m.observe(&stalled("s")), Disposition::Forward);
+        assert_eq!(m.observe(&stalled("s"), None), Disposition::Forward);
         assert!(m.is_busy(), "stall must not release the turn");
 
         // (b) no active turn: forwarded (not dropped as unowned).
         let mut idle = TurnMediator::new();
-        assert_eq!(idle.observe(&stalled("s")), Disposition::Forward);
+        assert_eq!(idle.observe(&stalled("s"), None), Disposition::Forward);
         assert!(!idle.is_busy());
 
         // (c) between a wire turn_end and its owed companion: forwarded, and
@@ -436,13 +562,13 @@ mod tests {
             panic!("begin_turn refused");
         };
         assert_eq!(
-            owed.observe(&wire_end("s")),
+            owed.observe(&wire_end("s"), None),
             Disposition::ForwardTurnComplete
         );
-        assert_eq!(owed.observe(&stalled("s")), Disposition::Forward);
+        assert_eq!(owed.observe(&stalled("s"), None), Disposition::Forward);
         let twin = RoutedNotification::global(end_turn()).with_turn(owner);
         assert!(
-            matches!(owed.observe(&twin), Disposition::Absorb { .. }),
+            matches!(owed.observe(&twin, None), Disposition::Absorb { .. }),
             "companion must still be owed after a stall passed through"
         );
     }
@@ -466,9 +592,12 @@ mod tests {
             kas.begin_turn(sid("s"), true),
             BeginTurn::Accepted(TurnId::new(0))
         );
-        assert_eq!(kas.observe(&stamped(0)), Disposition::ForwardTurnComplete);
+        assert_eq!(
+            kas.observe(&stamped(0), None),
+            Disposition::ForwardTurnComplete
+        );
         assert!(matches!(
-            kas.observe(&wire_end("s")),
+            kas.observe(&wire_end("s"), None),
             Disposition::Absorb { .. }
         ));
 
@@ -479,8 +608,11 @@ mod tests {
             v2.begin_turn(sid("s"), false),
             BeginTurn::Accepted(TurnId::new(0))
         );
-        assert_eq!(v2.observe(&stamped(0)), Disposition::ForwardTurnComplete);
-        assert_eq!(v2.observe(&wire_end("s")), Disposition::DropUnowned);
+        assert_eq!(
+            v2.observe(&stamped(0), None),
+            Disposition::ForwardTurnComplete
+        );
+        assert_eq!(v2.observe(&wire_end("s"), None), Disposition::DropUnowned);
     }
 
     /// STRESS FIXTURE (plan S3c, probe f3): a stale stamp is dropped and the
@@ -495,7 +627,10 @@ mod tests {
             m.begin_turn(sid("a"), false),
             BeginTurn::Accepted(TurnId::new(0))
         );
-        assert_eq!(m.observe(&stamped(0)), Disposition::ForwardTurnComplete);
+        assert_eq!(
+            m.observe(&stamped(0), None),
+            Disposition::ForwardTurnComplete
+        );
         assert_eq!(
             m.active_turn_session(),
             None,
@@ -507,7 +642,7 @@ mod tests {
             BeginTurn::Accepted(TurnId::new(1))
         );
         assert_eq!(
-            m.observe(&stamped(0)),
+            m.observe(&stamped(0), None),
             Disposition::DropStale {
                 stale: TurnId::new(0)
             }
@@ -530,14 +665,17 @@ mod tests {
             m.begin_turn(sid("s"), true),
             BeginTurn::Accepted(TurnId::new(0))
         );
-        assert_eq!(m.observe(&wire_end("s")), Disposition::ForwardTurnComplete);
+        assert_eq!(
+            m.observe(&wire_end("s"), None),
+            Disposition::ForwardTurnComplete
+        );
         assert_eq!(
             m.begin_turn(sid("s"), true),
             BeginTurn::Accepted(TurnId::new(1))
         );
 
         assert_eq!(
-            m.observe(&stamped(0)),
+            m.observe(&stamped(0), None),
             Disposition::Absorb {
                 owner: TurnId::new(0),
                 first: ev(CompanionSource::Wire),
@@ -575,12 +713,12 @@ mod tests {
             "p1"
         );
         assert_eq!(
-            m.observe(&wire_end(s)),
+            m.observe(&wire_end(s), None),
             Disposition::ForwardTurnComplete,
             "f1"
         );
         assert_eq!(
-            m.observe(&stamped(0)),
+            m.observe(&stamped(0), None),
             Disposition::Absorb {
                 owner: TurnId::new(0),
                 first: ev(CompanionSource::Wire),
@@ -596,7 +734,7 @@ mod tests {
             "p2"
         );
         assert_eq!(
-            m.observe(&stamped(0)),
+            m.observe(&stamped(0), None),
             Disposition::DropStale {
                 stale: TurnId::new(0)
             },
@@ -604,7 +742,7 @@ mod tests {
         );
         // C5 fence: a foreign terminal forwards but is NOT a turn completion.
         assert_eq!(
-            m.observe(&wire_end("sess_foreign")),
+            m.observe(&wire_end("sess_foreign"), None),
             Disposition::Forward,
             "f4"
         );
@@ -613,12 +751,12 @@ mod tests {
             "f4: the foreign terminal must not touch the main turn"
         );
         assert_eq!(
-            m.observe(&stamped(1)),
+            m.observe(&stamped(1), None),
             Disposition::ForwardTurnComplete,
             "f5"
         );
         assert_eq!(
-            m.observe(&wire_end(s)),
+            m.observe(&wire_end(s), None),
             Disposition::Absorb {
                 owner: TurnId::new(1),
                 first: ev(CompanionSource::Synthesized),
@@ -626,7 +764,11 @@ mod tests {
             },
             "f6"
         );
-        assert_eq!(m.observe(&wire_end(s)), Disposition::DropUnowned, "f7");
+        assert_eq!(
+            m.observe(&wire_end(s), None),
+            Disposition::DropUnowned,
+            "f7"
+        );
 
         // Turn 3 + turn 4 — the absorb-first precedence block: turn#2's Wire
         // expectation dangles on the SAME session as live turn#3.
@@ -636,7 +778,7 @@ mod tests {
             "p3"
         );
         assert_eq!(
-            m.observe(&stamped(2)),
+            m.observe(&stamped(2), None),
             Disposition::ForwardTurnComplete,
             "f8"
         );
@@ -646,7 +788,7 @@ mod tests {
             "p4"
         );
         assert_eq!(
-            m.observe(&wire_end(s)),
+            m.observe(&wire_end(s), None),
             Disposition::Absorb {
                 owner: TurnId::new(2),
                 first: ev(CompanionSource::Synthesized),
@@ -656,12 +798,12 @@ mod tests {
         );
         assert!(m.is_busy(), "f9: live turn#3 must survive the absorb");
         assert_eq!(
-            m.observe(&wire_end(s)),
+            m.observe(&wire_end(s), None),
             Disposition::ForwardTurnComplete,
             "f10 (M2: an Absorb here means f9 did not clear the ledger)"
         );
         assert_eq!(
-            m.observe(&RoutedNotification::global(end_turn())),
+            m.observe(&RoutedNotification::global(end_turn()), None),
             Disposition::DropUnowned,
             "f11 (session-None scope, idle, only a Synthesized owed)"
         );
@@ -671,7 +813,7 @@ mod tests {
             "p5"
         );
         assert_eq!(
-            m.observe(&stamped(3)),
+            m.observe(&stamped(3), None),
             Disposition::Absorb {
                 owner: TurnId::new(3),
                 first: ev(CompanionSource::Wire),
@@ -695,7 +837,7 @@ mod tests {
             BeginTurn::Accepted(TurnId::new(0))
         );
         assert_eq!(
-            m.observe(&RoutedNotification::global(end_turn())),
+            m.observe(&RoutedNotification::global(end_turn()), None),
             Disposition::Forward
         );
         assert!(m.is_busy());
@@ -711,12 +853,12 @@ mod tests {
             })
         };
         let mut m = TurnMediator::new();
-        assert_eq!(m.observe(&note()), Disposition::Forward);
+        assert_eq!(m.observe(&note(), None), Disposition::Forward);
         assert_eq!(
             m.begin_turn(sid("s"), true),
             BeginTurn::Accepted(TurnId::new(0))
         );
-        assert_eq!(m.observe(&note()), Disposition::Forward);
+        assert_eq!(m.observe(&note(), None), Disposition::Forward);
         assert!(m.is_busy());
     }
 
@@ -779,5 +921,333 @@ mod tests {
             BeginTurn::Accepted(TurnId::new(0))
         );
         assert_eq!(m.active_turn_session(), Some(&sid("s1")));
+    }
+
+    // ---- cyril-lki9 Slice 3: server-started turns ------------------------------
+
+    fn turn_start(s: &str) -> RoutedNotification {
+        RoutedNotification::scoped(sid(s), Notification::TurnStarted)
+    }
+
+    /// Drive one scenario of `.cyril-lki9/oracles/mediator_model.py` through the
+    /// real mediator on main session `s`, logging each step in the model's own
+    /// vocabulary. `D` dispatch, `S`/`E` wire turn_start/turn_end, `R` the
+    /// dispatch's stamped prompt response. Returns (log, final state).
+    fn run_scenario(events: &str) -> (Vec<String>, bool, bool) {
+        let main = sid("s");
+        let mut m = TurnMediator::new();
+        let mut owner: Option<TurnId> = None;
+        let mut log = Vec::new();
+        for event in events.chars() {
+            match event {
+                'D' => match m.begin_turn(main.clone(), true) {
+                    BeginTurn::Accepted(id) => {
+                        owner = Some(id);
+                        log.push("BEGIN cyril".to_owned());
+                    }
+                    BeginTurn::Busy => log.push("REJECT".to_owned()),
+                    BeginTurn::Exhausted => panic!("unexpected exhaustion"),
+                },
+                'S' => {
+                    // ATTACH is judged on the EFFECT (this frame opened a
+                    // dispatched turn's bracket), never inferred from the
+                    // pre-state: a mediator that skipped attachment would
+                    // otherwise log the same line while warning "nested
+                    // turn_start" on every ordinary prompt (mutation M8).
+                    let was_unbracketed = m
+                        .active
+                        .as_ref()
+                        .is_some_and(|a| a.origin == TurnOrigin::Dispatched && !a.bracket_open);
+                    let disposition = m.observe(&turn_start("s"), Some(&main));
+                    let now_bracketed = m
+                        .active
+                        .as_ref()
+                        .is_some_and(|a| a.origin == TurnOrigin::Dispatched && a.bracket_open);
+                    match disposition {
+                        Disposition::BeginServerTurn => log.push("BEGIN server".to_owned()),
+                        Disposition::Forward if was_unbracketed && now_bracketed => {
+                            log.push("ATTACH".to_owned())
+                        }
+                        Disposition::Forward => log.push("FORWARD nested-start".to_owned()),
+                        other => panic!("turn_start must never be {other:?}"),
+                    }
+                }
+                'E' => log.push(match m.observe(&wire_end("s"), Some(&main)) {
+                    Disposition::ForwardTurnComplete => "FORWARD_COMPLETE(wire)".to_owned(),
+                    Disposition::Absorb { .. } => "ABSORB wire".to_owned(),
+                    Disposition::DropUnowned => "DROP_UNOWNED".to_owned(),
+                    other => format!("{other:?}"),
+                }),
+                'R' => {
+                    // A rejected dispatch never reaches KAS: it has no response.
+                    let Some(id) = owner.filter(|_| !log.contains(&"REJECT".to_owned())) else {
+                        continue;
+                    };
+                    let response =
+                        RoutedNotification::scoped(main.clone(), end_turn()).with_turn(id);
+                    log.push(match m.observe(&response, Some(&main)) {
+                        Disposition::ForwardTurnComplete => "FORWARD_COMPLETE(resp)".to_owned(),
+                        Disposition::Absorb { .. } => "ABSORB synth".to_owned(),
+                        Disposition::DropStale { .. } => "DROP_STALE".to_owned(),
+                        other => format!("{other:?}"),
+                    });
+                }
+                other => panic!("unknown event {other}"),
+            }
+        }
+        (log, m.is_busy(), m.companion.is_some())
+    }
+
+    /// C8 (+ C7): every scenario of the independent Python model ends idle,
+    /// with one forwarded completion per wire bracket, no dangling companion,
+    /// and a disposition log equal to the model's item by item
+    /// (`.cyril-lki9/logs/c8-model-proposed.txt`; `cyril#N` ids normalized —
+    /// the model allocates ids only for dispatches, the mediator also for
+    /// server turns).
+    #[test]
+    fn server_turn_scenarios_match_the_model() {
+        let scenarios: [(&str, &str, usize, &[&str]); 10] = [
+            (
+                "idle-wake",
+                "SE",
+                1,
+                &["BEGIN server", "FORWARD_COMPLETE(wire)"],
+            ),
+            (
+                "prompt E<R",
+                "DSER",
+                1,
+                &[
+                    "BEGIN cyril",
+                    "ATTACH",
+                    "FORWARD_COMPLETE(wire)",
+                    "ABSORB synth",
+                ],
+            ),
+            (
+                "prompt R<E",
+                "DSRE",
+                1,
+                &[
+                    "BEGIN cyril",
+                    "ATTACH",
+                    "FORWARD_COMPLETE(resp)",
+                    "ABSORB wire",
+                ],
+            ),
+            (
+                "wake-cancelled",
+                "SE",
+                1,
+                &["BEGIN server", "FORWARD_COMPLETE(wire)"],
+            ),
+            (
+                "wake-then-dispatch-rejected",
+                "SDE",
+                1,
+                &["BEGIN server", "REJECT", "FORWARD_COMPLETE(wire)"],
+            ),
+            (
+                "race D@0 tail=SER",
+                "DSESER",
+                2,
+                &[
+                    "BEGIN cyril",
+                    "ATTACH",
+                    "FORWARD_COMPLETE(wire)",
+                    "BEGIN server",
+                    "FORWARD_COMPLETE(wire)",
+                    "ABSORB synth",
+                ],
+            ),
+            (
+                "race D@2 tail=SER",
+                "SEDSER",
+                2,
+                &[
+                    "BEGIN server",
+                    "FORWARD_COMPLETE(wire)",
+                    "BEGIN cyril",
+                    "ATTACH",
+                    "FORWARD_COMPLETE(wire)",
+                    "ABSORB synth",
+                ],
+            ),
+            (
+                "race D@0 tail=SRE",
+                "DSESRE",
+                2,
+                &[
+                    "BEGIN cyril",
+                    "ATTACH",
+                    "FORWARD_COMPLETE(wire)",
+                    "BEGIN server",
+                    "ABSORB synth",
+                    "FORWARD_COMPLETE(wire)",
+                ],
+            ),
+            (
+                "race D@2 tail=SRE",
+                "SEDSRE",
+                2,
+                &[
+                    "BEGIN server",
+                    "FORWARD_COMPLETE(wire)",
+                    "BEGIN cyril",
+                    "ATTACH",
+                    "FORWARD_COMPLETE(resp)",
+                    "ABSORB wire",
+                ],
+            ),
+            (
+                "two-wakes",
+                "SESE",
+                2,
+                &[
+                    "BEGIN server",
+                    "FORWARD_COMPLETE(wire)",
+                    "BEGIN server",
+                    "FORWARD_COMPLETE(wire)",
+                ],
+            ),
+        ];
+        for (name, events, brackets, want_log) in scenarios {
+            let (log, busy, companion) = run_scenario(events);
+            let forwarded = log
+                .iter()
+                .filter(|l| l.starts_with("FORWARD_COMPLETE"))
+                .count();
+            assert!(
+                !busy && !companion && forwarded == brackets && log == want_log,
+                "C8 scenario {name:?} ({events}): busy={busy} companion={companion} \
+                 forwarded={forwarded} (want {brackets})\n  got  {log:?}\n  want {want_log:?}"
+            );
+        }
+    }
+
+    /// C7 stress: a duplicate `turn_end` after a server turn released is
+    /// dropped (nothing owed), and the server turn's release left no companion
+    /// that could eat the NEXT turn's terminal.
+    #[test]
+    fn server_turn_owes_no_companion() {
+        let main = sid("s");
+        let mut m = TurnMediator::new();
+        assert_eq!(
+            m.observe(&turn_start("s"), Some(&main)),
+            Disposition::BeginServerTurn
+        );
+        assert!(m.is_busy());
+        assert_eq!(
+            m.active_turn_session(),
+            Some(&main),
+            "cancel must target the server turn"
+        );
+        assert_eq!(
+            m.observe(&wire_end("s"), Some(&main)),
+            Disposition::ForwardTurnComplete
+        );
+        assert!(
+            m.companion.is_none(),
+            "a server turn owes no prompt-RPC companion"
+        );
+        assert_eq!(
+            m.observe(&wire_end("s"), Some(&main)),
+            Disposition::DropUnowned
+        );
+    }
+
+    /// C9: a `turn_start` on a session other than main never begins or alters
+    /// the main turn — idle, or while a main server turn is active.
+    #[test]
+    fn foreign_turn_start_is_forwarded() {
+        let main = sid("s");
+        let mut m = TurnMediator::new();
+        assert_eq!(
+            m.observe(&turn_start("child-7"), Some(&main)),
+            Disposition::Forward
+        );
+        assert!(
+            !m.is_busy(),
+            "a step session's turn must not make main busy"
+        );
+        assert_eq!(
+            m.observe(&turn_start("s"), Some(&main)),
+            Disposition::BeginServerTurn
+        );
+        assert_eq!(
+            m.observe(&turn_start("child-7"), Some(&main)),
+            Disposition::Forward
+        );
+        assert_eq!(m.active_turn_session(), Some(&main));
+        // No main session known yet (before the first session): never a server turn.
+        let mut fresh = TurnMediator::new();
+        assert_eq!(fresh.observe(&turn_start("s"), None), Disposition::Forward);
+        assert!(!fresh.is_busy());
+    }
+
+    /// C10 against live wire: replaying both committed captures through the
+    /// production conversion (with origins) and this mediator announces
+    /// exactly the agent-initiated turns the independent per-turn probe table
+    /// found (`.cyril-lki9/probe_p1_p7.py`): tail — one, on main; gate-on —
+    /// one on main (workflow-complete-wake) and one on the woken creator step
+    /// (send-message-wake).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn announce_matches_tagged_turn_census() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        // (trace, main session, expected announcements as (session, reason))
+        type CensusRow<'a> = (&'a str, &'a str, &'a [(&'a str, &'a str)]);
+        let census: [CensusRow; 2] = [
+            (
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+                "sess_dd72baef-6822-4fd0-81c8-c9e37e291bbc",
+                &[(
+                    "sess_dd72baef-6822-4fd0-81c8-c9e37e291bbc",
+                    "workflow-complete-wake",
+                )],
+            ),
+            (
+                "experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl",
+                "sess_f6407f82-f87d-42e3-a302-9dff0970c09c",
+                &[
+                    (
+                        "sess_f6407f82-f87d-42e3-a302-9dff0970c09c",
+                        "workflow-complete-wake",
+                    ),
+                    (
+                        "sess_f7800342-47dd-48a6-b17f-3d38f8edf23e",
+                        "send-message-wake",
+                    ),
+                ],
+            ),
+        ];
+        for (rel, main, want) in census {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            let main = sid(main);
+            let mut m = TurnMediator::new();
+            let mut got: Vec<(String, String)> = Vec::new();
+            for routed in crate::test_support::kas_trace_routed(&trace) {
+                m.observe(&routed, Some(&main));
+                if m.announce(&routed) {
+                    let session = routed
+                        .session_id
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .unwrap_or_default();
+                    let reason = routed
+                        .origin
+                        .as_ref()
+                        .and_then(crate::types::AgentInitiation::reason)
+                        .unwrap_or("<none>")
+                        .to_owned();
+                    got.push((session, reason));
+                }
+            }
+            let want: Vec<(String, String)> = want
+                .iter()
+                .map(|(s, r)| ((*s).to_owned(), (*r).to_owned()))
+                .collect();
+            assert_eq!(got, want, "{rel}: announcements (session, reason) in order");
+        }
     }
 }

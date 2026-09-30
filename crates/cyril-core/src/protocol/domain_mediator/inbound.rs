@@ -40,11 +40,21 @@ impl DomainMediator {
         {
             self.turn_liveness.stamp(now_std());
         }
-        let completed_turn = match self.turn_mediator.observe(&routed) {
+        let completed_turn = match self
+            .turn_mediator
+            .observe(&routed, self.active_session_id.as_ref())
+        {
             Disposition::Absorb { .. }
             | Disposition::DropStale { .. }
             | Disposition::DropUnowned => return Ok(false),
             Disposition::ForwardTurnComplete => true,
+            // cyril-lki9 C7/C22: an agent-started turn is a turn — its
+            // liveness window opens here, as a dispatch's opens at acceptance,
+            // so the stall watchdog covers a silent wake.
+            Disposition::BeginServerTurn => {
+                self.turn_liveness.begin(now_std());
+                false
+            }
             Disposition::Forward => false,
         };
         // Only the MAIN turn's own release finalizes source capture: a
@@ -60,6 +70,18 @@ impl DomainMediator {
         }
         if completed_turn {
             self.turn_liveness.end();
+        }
+        // cyril-lki9 C10: the first agent-initiated frame of a turn is
+        // preceded by one announcement, scoped like the frame itself so it
+        // routes to the same transcript (main or a woken step's stream).
+        if self.turn_mediator.announce(&routed)
+            && let (Some(origin), Some(session)) = (&routed.origin, &routed.session_id)
+        {
+            self.notify(RoutedNotification::scoped(
+                session.clone(),
+                Notification::AgentInitiatedTurn(origin.clone()),
+            ))
+            .await?;
         }
         self.notify(routed).await?;
         Ok(completed_turn)
@@ -116,7 +138,12 @@ impl DomainMediator {
             );
         }
         if let Some(notification) = converted {
-            let routed = RoutedNotification::scoped(session_id, notification);
+            let mut routed = RoutedNotification::scoped(session_id, notification);
+            // cyril-lki9 C3: the agent-initiated tag rides the frame it came
+            // on, as envelope metadata the turn mediator reads.
+            if let Some(origin) = self.config.engine.turn_origin(&args) {
+                routed = routed.with_origin(origin);
+            }
             self.source_observer.observe(&routed);
             self.handle_routed(routed).await
         } else {

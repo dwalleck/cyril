@@ -244,6 +244,19 @@ pub enum Notification {
         content: Option<String>,
         message_id: Option<String>,
     },
+    /// The agent injected an engine-originated message into the running turn
+    /// through its steering buffer — NOT an operator steer (cyril-lki9 B5/B6).
+    /// KAS marks these with a `notify-` `messageId`: `notify-wf-<uuid>` is a
+    /// workflow completion delivered while the session was busy (instead of an
+    /// auto-wake turn); any other `notify-<uuid>` is a relayed step verdict
+    /// (`content` = `"[notification/<severity>] <message>"`). Never routed to the
+    /// operator-steer reconciler. `content` is `None` when the echo omitted it;
+    /// `severity` is KAS's `notificationSeverity`, `None` when absent.
+    EngineMessageInjected {
+        message_id: String,
+        content: Option<String>,
+        severity: Option<String>,
+    },
     /// Queued steers were dropped before pickup (via `_session/steer/clear`, or
     /// KAS's routine post-injection cleanup). `message_ids` names which queue
     /// entries were dropped; EMPTY means "everything still queued" — the old
@@ -403,6 +416,19 @@ pub enum Notification {
         /// `unstable_session_model` ACP feature). Empty otherwise.
         available_models: Vec<ModelInfo>,
     },
+    /// The agent started this turn itself, with no client prompt (cyril-lki9
+    /// C10) — e.g. a KAS workflow auto-wake (`reason` = `workflow-complete-wake`)
+    /// or a step woken by a message (`send-message-wake`). Emitted by the
+    /// bridge exactly once per session per turn, immediately before the turn's
+    /// first agent-initiated frame, scoped to that frame's session, so it routes
+    /// exactly as the turn's content does.
+    AgentInitiatedTurn(AgentInitiation),
+    /// A turn began on the session — KAS `session_info_update{kind:"turn_start"}`
+    /// (cyril-lki9 B7). Carries no origin: it opens both cyril's own prompt turns
+    /// and agent-initiated turns (workflow auto-wakes), which cyril never
+    /// requested and which can stay silent for a minute before their first
+    /// frame. The v2 engine never emits it (v2 turns begin with cyril's prompt).
+    TurnStarted,
     TurnCompleted {
         stop_reason: StopReason,
     },
@@ -456,6 +482,37 @@ pub struct RoutedNotification {
     /// `Option` for genuinely-absent, never a sentinel: a `TurnId(0)` stand-in
     /// would collide with the first id the allocator ever issues.
     pub turn: Option<TurnId>,
+    /// The agent started this frame's turn itself (cyril-lki9): `Some` exactly
+    /// when the engine reported the frame as agent-initiated — KAS tags every
+    /// chunk and tool frame of such a turn with `_meta.kiro.agentInitiated`.
+    /// Envelope metadata beside `session_id` and `turn`, never content: the
+    /// turn mediator reads it to emit one [`Notification::AgentInitiatedTurn`]
+    /// per turn (cyril-lki9 C10); content consumers never need it. `None` for
+    /// everything else, and always on the v2 engine.
+    pub origin: Option<AgentInitiation>,
+}
+
+/// A frame of a turn the agent started without a client prompt (cyril-lki9) —
+/// e.g. a KAS workflow auto-wake. `reason` is the engine's stated reason
+/// (`agentInitiatedReason`, e.g. `"workflow-complete-wake"`), `None` when the
+/// frame did not say.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AgentInitiation {
+    reason: Option<String>,
+}
+
+impl AgentInitiation {
+    /// An empty reason is treated as absent, like every other optional wire
+    /// string cyril reads (CLAUDE.md "Guard partial updates").
+    pub fn new(reason: Option<String>) -> Self {
+        Self {
+            reason: reason.filter(|r| !r.is_empty()),
+        }
+    }
+
+    pub fn reason(&self) -> Option<&str> {
+        self.reason.as_deref()
+    }
 }
 
 impl RoutedNotification {
@@ -465,6 +522,7 @@ impl RoutedNotification {
             session_id: None,
             notification,
             turn: None,
+            origin: None,
         }
     }
 
@@ -474,6 +532,7 @@ impl RoutedNotification {
             session_id: Some(session_id),
             notification,
             turn: None,
+            origin: None,
         }
     }
 
@@ -484,6 +543,14 @@ impl RoutedNotification {
     #[must_use]
     pub fn with_turn(mut self, turn: TurnId) -> Self {
         self.turn = Some(turn);
+        self
+    }
+
+    /// Mark this frame as belonging to an agent-initiated turn (cyril-lki9).
+    /// Set only by the bridge's inbound path, from the engine's report.
+    #[must_use]
+    pub fn with_origin(mut self, origin: AgentInitiation) -> Self {
+        self.origin = Some(origin);
         self
     }
 }
