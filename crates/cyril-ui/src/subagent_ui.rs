@@ -71,6 +71,14 @@ impl SubagentStream {
         self.messages = earlier.messages;
     }
 
+    /// Append a system line after committing any streaming text, so it lands
+    /// at its chronological position (cyril-lki9 C16 — same discipline as
+    /// `UiState::add_system_message`).
+    pub(crate) fn push_system(&mut self, text: String) {
+        self.flush_streaming_text();
+        self.messages.push(ChatMessage::system(text));
+    }
+
     fn flush_streaming_text(&mut self) {
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
@@ -158,6 +166,15 @@ impl SubagentUiState {
             .entry(session_id.clone())
             .or_insert_with(SubagentStream::new);
         stream.apply_notification(notification)
+    }
+
+    /// Append a system line to `session_id`'s stream, creating it on first
+    /// contact like [`Self::apply_notification`].
+    pub fn add_system_message(&mut self, session_id: &SessionId, text: String) {
+        self.streams
+            .entry(session_id.clone())
+            .or_insert_with(SubagentStream::new)
+            .push_system(text);
     }
 
     /// Update streams when a `SubagentListUpdated` arrives. For each stream

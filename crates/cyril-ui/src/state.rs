@@ -1197,9 +1197,24 @@ impl UiState {
             // inline engine-injection notices are rendered by the I2
             // increment (spec B1/B5/B7); until then they change nothing here.
             // Listed explicitly, never a catch-all.
-            Notification::TurnStarted
-            | Notification::AgentInitiatedTurn(_)
-            | Notification::EngineMessageInjected { .. } => false,
+            // cyril-lki9 C17 (B7): a turn began — possibly one the agent
+            // started itself, which may stay silent for a minute — so an idle
+            // indicator becomes busy now, not at the first chunk. A turn that
+            // is already busy (cyril's own dispatch) is left as it is.
+            Notification::TurnStarted => {
+                if matches!(self.activity, Activity::Idle | Activity::Ready) {
+                    self.set_activity(Activity::Waiting);
+                    true
+                } else {
+                    false
+                }
+            }
+            // The header and inline notices need the App-owned wake label, so
+            // the App renders them via `begin_agent_initiated_turn` /
+            // `show_engine_injection` (cyril-lki9 C14); nothing to do here.
+            Notification::AgentInitiatedTurn(_) | Notification::EngineMessageInjected { .. } => {
+                false
+            }
         };
         changed || stall_cleared || thinking_changed
     }
@@ -1284,6 +1299,46 @@ impl UiState {
         self.messages.push(ChatMessage::system(text));
         self.messages_version += 1;
         self.enforce_message_limit();
+    }
+
+    /// Open an agent-initiated turn with its header line in `transcript`
+    /// (cyril-lki9 B1/B3/B4); text from [`crate::turn_labels::header_text`].
+    pub fn begin_agent_initiated_turn(
+        &mut self,
+        transcript: Transcript<'_>,
+        origin: &cyril_core::types::AgentInitiation,
+        label: Option<&cyril_core::workflow::WakeLabel>,
+    ) {
+        let text = crate::turn_labels::header_text(origin, label);
+        self.push_transcript_system(transcript, text);
+    }
+
+    /// Show a message the engine injected into a running turn (cyril-lki9
+    /// B5): a busy-session workflow completion, or a relayed step verdict.
+    pub fn show_engine_injection(
+        &mut self,
+        transcript: Transcript<'_>,
+        content: Option<&str>,
+        severity: Option<&str>,
+        workflow_completion: bool,
+        label: Option<&cyril_core::workflow::WakeLabel>,
+    ) {
+        let text = if workflow_completion {
+            crate::turn_labels::workflow_notice_text(label, content)
+        } else {
+            crate::turn_labels::step_notice_text(severity, content)
+        };
+        self.push_transcript_system(transcript, text);
+    }
+
+    fn push_transcript_system(&mut self, transcript: Transcript<'_>, text: String) {
+        match transcript {
+            Transcript::Main => self.add_system_message(text),
+            Transcript::Workflow(session_id) => {
+                self.workflow_streams.add_system_message(session_id, text)
+            }
+            Transcript::Subagent(session_id) => self.subagents.add_system_message(session_id, text),
+        }
     }
 
     /// Append an optimistic queue-steer echo (ROADMAP K1b, cyril-bm1j). Added the
@@ -7501,6 +7556,128 @@ mod tests {
         };
         (req, rx)
     }
+    fn lki9_streaming(text: &str) -> Notification {
+        Notification::AgentMessage(AgentMessage {
+            text: text.to_owned(),
+            is_streaming: true,
+        })
+    }
+
+    fn lki9_system_texts(messages: &[ChatMessage]) -> Vec<String> {
+        messages
+            .iter()
+            .map(|m| match m.kind() {
+                ChatMessageKind::System(t) => format!("SYS:{t}"),
+                ChatMessageKind::AgentText(t) => format!("AGENT:{t}"),
+                other => format!("{other:?}"),
+            })
+            .collect()
+    }
+
+    /// cyril-lki9 C16: an injected notice lands where it arrived — the text
+    /// streamed before it is committed first, the text after it continues as
+    /// a new block — in the main transcript and in a workflow step's stream;
+    /// a notice before any streamed text commits no empty text block.
+    #[test]
+    fn lki9_notice_lands_in_arrival_order() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&lki9_streaming("abc"));
+        state.show_engine_injection(
+            Transcript::Main,
+            Some("[notification/success] OK"),
+            Some("success"),
+            false,
+            None,
+        );
+        state.apply_notification(&lki9_streaming("def"));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(
+            lki9_system_texts(state.messages()),
+            [
+                "AGENT:abc",
+                "SYS:⚙ workflow step · success: OK",
+                "AGENT:def"
+            ]
+        );
+
+        let mut fresh = UiState::new(500);
+        let wake =
+            cyril_core::types::AgentInitiation::new(Some("workflow-complete-wake".into()), true);
+        let label = cyril_core::workflow::WakeLabel::new(
+            "audit-channels-2.26.0".into(),
+            cyril_core::types::WorkflowRunStatus::Completed,
+        );
+        fresh.begin_agent_initiated_turn(Transcript::Main, &wake, Some(&label));
+        assert_eq!(
+            lki9_system_texts(fresh.messages()),
+            ["SYS:─── ⚙ workflow \"audit-channels-2.26.0\" completed · agent follow-up ───"],
+            "no empty text block before a header"
+        );
+
+        let step = SessionId::new("step-1");
+        let mut streams = UiState::new(500);
+        streams.apply_workflow_notification(&step, &lki9_streaming("xyz"));
+        streams.begin_agent_initiated_turn(
+            Transcript::Workflow(&step),
+            &cyril_core::types::AgentInitiation::new(Some("send-message-wake".into()), false),
+            None,
+        );
+        let stream = streams
+            .workflow_streams()
+            .get(&step)
+            .unwrap_or_else(|| panic!("step stream exists"));
+        assert_eq!(
+            lki9_system_texts(stream.messages()),
+            [
+                "AGENT:xyz",
+                "SYS:─── ⚙ agent-initiated · send-message-wake ───"
+            ],
+            "per-session header lands in that session's stream, after its text"
+        );
+        assert!(
+            lki9_system_texts(streams.messages()).is_empty(),
+            "a step session's header never lands in the main transcript"
+        );
+    }
+
+    /// cyril-lki9 C17: `TurnStarted` makes an idle indicator busy (a wake may
+    /// be silent for a minute); a streaming turn is left as it is; the turn's
+    /// completion returns to Ready.
+    #[test]
+    fn lki9_turn_started_sets_busy_indicator() {
+        let mut state = UiState::new(500);
+        assert_eq!(state.activity(), Activity::Idle);
+        assert!(state.apply_notification(&Notification::TurnStarted));
+        assert_eq!(state.activity(), Activity::Waiting);
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        assert_eq!(state.activity(), Activity::Ready);
+        state.apply_notification(&lki9_streaming("mid"));
+        assert!(!state.apply_notification(&Notification::TurnStarted));
+        assert_eq!(state.activity(), Activity::Streaming, "busy turn untouched");
+    }
+
+    /// cyril-lki9 C18: a permission request during an agent-initiated turn
+    /// takes the approval overlay exactly as in an operator turn.
+    #[test]
+    fn lki9_approval_during_server_turn() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::TurnStarted);
+        assert_eq!(state.activity(), Activity::Waiting);
+        let (request, _receiver) =
+            make_approval_request(vec![cyril_core::types::PermissionOption {
+                id: cyril_core::types::PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: cyril_core::types::PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }]);
+        state.show_approval(request);
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Approval));
+    }
+
     #[test]
     fn rejection_feedback_sends_exact_reason() {
         use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};

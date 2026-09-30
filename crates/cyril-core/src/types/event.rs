@@ -252,10 +252,13 @@ pub enum Notification {
     /// (`content` = `"[notification/<severity>] <message>"`). Never routed to the
     /// operator-steer reconciler. `content` is `None` when the echo omitted it;
     /// `severity` is KAS's `notificationSeverity`, `None` when absent.
+    /// `workflow_completion` is the engine's classification (a `notify-wf-`
+    /// id): the dialect literal stays in the converter.
     EngineMessageInjected {
         message_id: String,
         content: Option<String>,
         severity: Option<String>,
+        workflow_completion: bool,
     },
     /// Queued steers were dropped before pickup (via `_session/steer/clear`, or
     /// KAS's routine post-injection cleanup). `message_ids` names which queue
@@ -499,19 +502,29 @@ pub struct RoutedNotification {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AgentInitiation {
     reason: Option<String>,
+    workflow_completion: bool,
 }
 
 impl AgentInitiation {
     /// An empty reason is treated as absent, like every other optional wire
     /// string cyril reads (CLAUDE.md "Guard partial updates").
-    pub fn new(reason: Option<String>) -> Self {
+    /// `workflow_completion` is the engine's own classification of the reason
+    /// (KAS: `workflow-complete-wake`), so no consumer matches dialect strings.
+    pub fn new(reason: Option<String>, workflow_completion: bool) -> Self {
         Self {
             reason: reason.filter(|r| !r.is_empty()),
+            workflow_completion,
         }
     }
 
     pub fn reason(&self) -> Option<&str> {
         self.reason.as_deref()
+    }
+
+    /// The turn is the engine's follow-up to a workflow run ending — the one
+    /// reason whose header names a run (cyril-lki9 B1).
+    pub fn is_workflow_completion(&self) -> bool {
+        self.workflow_completion
     }
 }
 

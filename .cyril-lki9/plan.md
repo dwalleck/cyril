@@ -305,6 +305,25 @@ Sweep (step 7): nothing falsified; the new fields' docs cite cyril-lki9.
 - M15/M16/M17/M18 → the named test red; restore → green.
 - `python3 .cyril-lki9/oracles/shape.py` → PASS; M21b (+80 lines to `state.rs`) → `C21 FAIL crates/cyril-ui/src/state.rs prod delta 150 > 70`.
 
+### Checkpoint record — Slice 7 (2026-09-29, branch `fix/cyril-lki9-i2-labels`)
+
+**Impact analysis (step 1).** New module `cyril-ui/src/turn_labels.rs` (no callers before this slice). New `UiState::{begin_agent_initiated_turn, show_engine_injection}` (callers arrive in Slice 9). New `Transcript` enum in `traits.rs`; `SubagentStream::push_system`, `SubagentUiState::add_system_message`, `WorkflowUiState::add_system_message`. `UiState::apply_notification`: `TurnStarted` now has its own arm (was a no-op group member). **Core classification added (placement already approved: KAS literals only in `convert/kas.rs`):** `AgentInitiation::new(reason, workflow_completion)` + `is_workflow_completion()`; `EngineMessageInjected.workflow_completion` — callers: `convert/kas.rs` (producer), `agent_initiated.rs` test helper, `test_bridge` printer (`..`), kas.rs tests. `WakeLabel::new` made public (plain value type; tracker uses it).
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2107 passed, 13 skipped.
+2. Falsifiers C15/C16/C17/C18 — PASS: `turn_labels::tests::{header_strings, notice_strings}`, `state::tests::{lki9_notice_lands_in_arrival_order, lki9_turn_started_sets_busy_indicator, lki9_approval_during_server_turn}`; classification fenced in `turn_origin_table` / `turn_origin_matches_tagged_frame_census` / `notify_injection_is_engine_message` (workflow-completion flag agrees with the raw reason / `notify-wf-` id on every row and every captured frame).
+3. Stress fixture — PASS: Unicode + quotes in a run name shown as given; empty content adds no blank line; content without the `[notification/…] ` prefix shown verbatim; absent/empty severity → `info`; absent reason → `unspecified`; a label never renames a non-workflow wake; header before any streamed text commits no empty text block; a step session's header never lands in the main transcript.
+4. Implementation vs oracle — PASS: every expected string transcribed by hand from spec B1/B3/B4/B5 (approved literals) and the P6 busy-trace wake text; arrival order matches the P6 busy trace (injection mid-turn).
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 62)` — every header/notice literal is in `turn_labels.rs` (R2); `state.rs` +62 of its +70 cap (Slice 8's remaining steer change is planned to net ≈ +6 via a shared helper — see Slice 8).
+6. Budget — N/A — reason: string formatting O(len(content)); no loop over collections added.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M15 (no prefix strip) → `notice_strings` + `lki9_notice_lands_in_arrival_order`; M16 (append without flush) → `lki9_notice_lands_in_arrival_order`; M17 (disable the `TurnStarted` arm) → `lki9_turn_started_sets_busy_indicator` + `lki9_approval_during_server_turn`; M18 (drop approvals while `Waiting`) → `lki9_approval_during_server_turn`.
+9. Fence restored — PASS: `turn_labels.rs`, `state.rs` restored from scratch copies (`cmp` identical); all green.
+10. Parity and reuse — PASS. Search: `grep` in `cyril-ui/src`. `turn_labels` follows the `workflow_format` pure-formatter pattern; status words reuse `WorkflowRunStatus::as_str` (cyril's existing spelling); main-transcript insertion reuses `UiState::add_system_message` (flush discipline); stream insertion mirrors it in `SubagentStream::push_system`; both stream owners reuse the existing `entry().or_insert_with(SubagentStream::new)` first-contact pattern. Symmetry: main vs stream insertion — same flush-then-push order, same `ChatMessage::system` kind; streams do not get the `TurnStarted` activity arm (C17 is scoped to the main indicator by the design).
+11. Preserved enforcement — N/A — reason: nothing relaxed.
+
+Sweep (step 7): the `apply_notification` no-op comment rewritten (the App now renders header/notices via the two methods); `turn_labels` module doc names its fence rule.
+
 ## Slice 8: unknown steer ids never flip a bound operator chip
 
 **Claim IDs:** C6

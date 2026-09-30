@@ -467,6 +467,13 @@ pub struct WakeLabel {
 }
 
 impl WakeLabel {
+    /// A label for a completed run. The tracker builds these via
+    /// [`WorkflowTracker::take_wake_label`]; the constructor exists so
+    /// presentation code can be exercised with a label directly.
+    pub fn new(name: String, status: WorkflowRunStatus) -> Self {
+        Self { name, status }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -858,7 +865,7 @@ impl WorkflowTracker {
                 .or_else(|| Some(run.workflow_name()).filter(|n| !n.is_empty()))
                 .unwrap_or(workflow_id.as_str())
                 .to_owned();
-            return Some(WakeLabel { name, status });
+            return Some(WakeLabel::new(name, status));
         }
         None
     }

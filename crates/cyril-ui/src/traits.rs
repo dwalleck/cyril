@@ -7,6 +7,16 @@ use cyril_core::types::{
 pub use crate::feedback_editor::RejectionFeedback;
 use crate::theme::Theme;
 
+/// Which transcript a line belongs in (cyril-lki9): the main conversation, or
+/// the stream of a workflow step / subagent session. The App decides which —
+/// it owns session routing — and the UI renders into it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Transcript<'a> {
+    Main,
+    Workflow(&'a cyril_core::types::SessionId),
+    Subagent(&'a cyril_core::types::SessionId),
+}
+
 /// Activity state derived from UiState — used for adaptive frame rate.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Activity {
