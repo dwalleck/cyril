@@ -1,0 +1,470 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/dwalleck/cyril/docs/kiro-kas-workflow-recipe-schema-2.26.0.json",
+  "title": "Kiro KAS workflow recipe (.workflow.json / .workflow.yaml)",
+  "description": "A declarative multi-agent workflow: a tree of step, sequence, repeat, parallel and watch nodes.",
+  "$comment": "Reconstructed 2026-09-30 from the @kiro/agent (KAS 0.66.15) bundle shipped inside kiro-cli 2.26.0 (workflow definition zod + watch-handler configSchemas), cross-checked against the official docs (kiro.dev/docs/workflows/authoring). NOT an official Kiro artifact. Recipe files: `.kiro/workflows/*.workflow.{json,yaml,yml}` (project) and `~/.kiro/workflows/` (user). Runtime parsing is TOLERANT: z.object without .strict() silently strips unknown keys, so additionalProperties stays permissive to mirror runtime (only fileCheck is strict); set it to false locally for typo-linting. NOT expressible here and enforced at load/creation time instead: at most 50 static step nodes and 8 nesting levels; node ids unique across the tree; stopWhen grammar and watch-id references; template happens-before (`{{<id>.output}}` / `{{artifacts.x}}` must come from an earlier producer, no `{{previous.output}}` in a container's first node or inside a parallel branch); `completion` steps not inside parallel; fileCheck paths inside the workspace roots; agent and handler registry lookups. The kiro-workflow-authoring skill's validate_workflow.py checks the static ones.",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Stable recipe name. Name precedence: project > user > synced account > bundled."
+    },
+    "description": {
+      "description": "Purpose shown by recipe selectors (listRecipes).",
+      "type": "string"
+    },
+    "inputs": {
+      "default": {},
+      "description": "Launch inputs: name -> free-form type hint (`prompt`, `file`, `string`, ...). Hints only guide launch UIs; values reach the recipe as text. Every bare `{{name}}` must be declared here and supplied at launch: an undeclared one is only a WARNING and stays literal in the prompt.",
+      "type": "object",
+      "propertyNames": {
+        "type": "string"
+      },
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/WorkflowNode"
+      },
+      "description": "The workflow tree. Top-level nodes run in order (an implicit sequence)."
+    },
+    "modelId": {
+      "description": "Default model for every step (see StepNode.modelId).",
+      "type": "string"
+    },
+    "effortLevel": {
+      "description": "Default reasoning effort for every step.",
+      "type": "string"
+    },
+    "injectOriginalUserRequest": {
+      "description": "Undocumented on kiro.dev. Default TRUE: every step's first prompt opens with an `<original_user_request>` block quoting the PARENT session's user messages verbatim, so steps check their work against the user's own words. Set false when the parent conversation is unrelated to the run or private.",
+      "type": "boolean"
+    },
+    "planRevision": {
+      "description": "Runtime bookkeeping for plan revisions (copied into run state). Accepted, but do not author it.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    }
+  },
+  "required": [
+    "name",
+    "steps"
+  ],
+  "$defs": {
+    "WorkflowNode": {
+      "oneOf": [
+        {
+          "description": "Runs one named agent in its own session with fresh context. The agent signals its outcome with `send_message` (success completes, warning pauses for user input, error fails); a turn that ends with no signal and no unmet `completion` completes the step.",
+          "$ref": "#/$defs/StepNode"
+        },
+        {
+          "description": "Runs child nodes in order. The root `steps` array is already an implicit sequence.",
+          "$ref": "#/$defs/SequenceNode"
+        },
+        {
+          "description": "Runs child nodes until a stop condition matches or maxIterations is reached. Each iteration gets fresh node state, so a static id appears once per iteration at runtime.",
+          "$ref": "#/$defs/RepeatNode"
+        },
+        {
+          "description": "Schedules independent branches and joins their results. Use it for isolation and join semantics, not assumed speed.",
+          "$ref": "#/$defs/ParallelNode"
+        },
+        {
+          "description": "Polls an external system through a handler without spending model turns while nothing changes. On new activity its JSON payload becomes `{{<id>.output}}`; a terminal result latches for `stopWhen: \"<id>.terminal\"`. Delivery is at-least-once across interruptions.",
+          "$ref": "#/$defs/WatchNode"
+        }
+      ]
+    },
+    "FileCheck": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "JSON file to read. Relative paths resolve from the primary workspace root; `{{...}}` templates resolve to bare values. A path outside every allowed workspace root FAILS the node."
+        },
+        "jsonPath": {
+          "type": "string",
+          "description": "Dot path into the parsed JSON (e.g. `verdict`, `result.complete`)."
+        },
+        "value": {
+          "description": "Deep-equality target. An ARRAY is an any-of list of candidates; to match a literal array, wrap it: `[[\"ready\", \"reviewed\"]]` (and `[[]]` for a literal empty array). Required.",
+          "not": {
+            "type": "array",
+            "maxItems": 0
+          }
+        }
+      },
+      "required": [
+        "path",
+        "jsonPath",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "StopCondition": {
+      "type": "object",
+      "properties": {
+        "containsText": {
+          "description": "Matches when the latest captured output contains this text.",
+          "type": "string"
+        },
+        "fileCheck": {
+          "description": "Matches when the JSON value at `jsonPath` in `path` deep-equals `value`. A missing or unreadable file, invalid JSON, missing path, or mismatch does not match (the repeat continues). STRICT: keys other than path, jsonPath, value are rejected.",
+          "$ref": "#/$defs/FileCheck"
+        },
+        "completionSignal": {
+          "description": "Matches when the latest step signal equals this value.",
+          "type": "string",
+          "enum": [
+            "success",
+            "need_input",
+            "error"
+          ]
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "containsText"
+          ]
+        },
+        {
+          "required": [
+            "fileCheck"
+          ]
+        },
+        {
+          "required": [
+            "completionSignal"
+          ]
+        }
+      ]
+    },
+    "StepNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "step"
+        },
+        "id": {
+          "type": "string",
+          "description": "Node id. Must be unique across the whole static recipe (load-time check, not expressible here)."
+        },
+        "agent": {
+          "type": "string",
+          "description": "Exact, case-sensitive name of a workflow-capable agent: a bundled `wf-*` agent (wf-planner, wf-coder, wf-design, wf-design-reviewer, wf-review-aggregator, wf-pr-submitter, wf-pr-responder, wf-auto-researcher), `semantic_reviewer`, or a custom agent from `.kiro/agents/`. `wf-workflow-creator` is orchestrator-only. A built-in sub-agent is rejected. Custom-agent existence is checked at run creation, not by validate_workflow."
+        },
+        "prompt": {
+          "type": "string",
+          "description": "The step session's user message. `{{...}}` templates interpolate: `{{input}}`, `{{<id>.output}}`, `{{steps.<id>.output}}` (legacy alias), `{{previous.output}}`, `{{artifacts.<name>}}`. Captured outputs are injected wrapped in tamper-resistant delimiters; make the deliverable the step's final response."
+        },
+        "artifacts": {
+          "description": "Maps logical names to files this step produces; later steps reference `{{artifacts.<name>}}`. A path registry only: the engine never reads or writes the files. Relative paths resolve from the primary workspace root; values are templated.",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "captureOutput": {
+          "description": "Capture the step's final assistant message for `{{<id>.output}}`. Defaults to true.",
+          "type": "boolean"
+        },
+        "completion": {
+          "description": "Makes the step INTERACTIVE: after each turn the condition is evaluated and, while false, the step waits for another message in its session. Not allowed inside `parallel` (load-time check).",
+          "$ref": "#/$defs/StopCondition"
+        },
+        "modelId": {
+          "type": "string",
+          "description": "Model override. `auto` or omission inherits (step -> workflow -> parent session captured at run creation -> the step agent's default). An unknown id passes validation with only a warning and then fails at the step's first model call with no fallback."
+        },
+        "effortLevel": {
+          "type": "string",
+          "description": "Reasoning-effort override (model-dependent, e.g. low/medium/high/xhigh/max). An unsupported value is reconciled to the model's default when the step session is created."
+        },
+        "input": {
+          "description": "REMOVED. Runtime error: \"The step-level `input` field was removed; embed the data in `prompt` via {{...}} template references\". (On 2.16.0 it was an alternative to prompt that took precedence.)",
+          "not": {}
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "agent",
+        "prompt"
+      ]
+    },
+    "SequenceNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "sequence"
+        },
+        "id": {
+          "type": "string",
+          "description": "Node id. Must be unique across the whole static recipe (load-time check, not expressible here)."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowNode"
+          },
+          "description": "Child nodes, run in order."
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "steps"
+      ]
+    },
+    "RepeatNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "repeat"
+        },
+        "id": {
+          "type": "string",
+          "description": "Node id. Must be unique across the whole static recipe (load-time check, not expressible here)."
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowNode"
+          },
+          "description": "The loop body. Always runs at least once."
+        },
+        "maxIterations": {
+          "type": "integer",
+          "exclusiveMinimum": 0,
+          "maximum": 1000,
+          "description": "Iteration cap, 1-1000. Repeat iterations do not consume extra static step slots."
+        },
+        "stopCondition": {
+          "description": "Evaluated AFTER each iteration; a match completes the repeat. At most one of stopCondition / stopWhen; with neither, the repeat runs to maxIterations.",
+          "$ref": "#/$defs/StopCondition"
+        },
+        "stopWhen": {
+          "description": "Sugar form: `\"<watchId>.terminal\"` (a watch inside the loop latched a terminal outcome) or `\"{{expr}} contains <text>\"`. The watch id must exist (load-time check).",
+          "type": "string"
+        },
+        "onMaxIterations": {
+          "type": "string",
+          "enum": [
+            "abort",
+            "continue",
+            "pause"
+          ],
+          "description": "What a repeat does when it reaches maxIterations without its stop condition matching: `abort` aborts the repeat AND the run (status `aborted`); `continue` completes the repeat and moves to its next sibling; `pause` parks the run for a human decision. A plain resume of a cap-paused repeat pauses again immediately; `_kiro/workflow/resume` with `extendRepeat {nodeId, additionalIterations}` (KAS 0.66.15+) grants more iterations."
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "steps",
+        "maxIterations",
+        "onMaxIterations"
+      ],
+      "not": {
+        "required": [
+          "stopCondition",
+          "stopWhen"
+        ]
+      }
+    },
+    "ParallelNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "parallel"
+        },
+        "id": {
+          "type": "string",
+          "description": "Node id. Must be unique across the whole static recipe (load-time check, not expressible here)."
+        },
+        "branches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/WorkflowNode"
+          },
+          "description": "Independent branches, started concurrently, each with its own context. A branch cannot reference another branch's outputs or artifacts, and `{{previous.output}}` is invalid inside one."
+        },
+        "joinPolicy": {
+          "type": "string",
+          "enum": [
+            "all",
+            "allSettled",
+            "any"
+          ],
+          "description": "When the parallel node settles and whether one branch failing cancels its siblings: `all` = every branch must succeed, the first failure aborts the rest; `allSettled` = wait for every branch regardless of failures; `any` = the first completion wins and the rest are aborted. A PAUSED branch never cancels its siblings."
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "branches",
+        "joinPolicy"
+      ]
+    },
+    "WatchNode": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "watch"
+        },
+        "id": {
+          "type": "string",
+          "description": "Node id. Must be unique across the whole static recipe (load-time check, not expressible here)."
+        },
+        "handler": {
+          "type": "string",
+          "description": "Watch handler id. Built in (KAS 0.66.15): `github-pr`, `command`. (`crux-cr` existed on 2.16.0 and is gone.) Handler availability is checked at run creation, not by validate_workflow."
+        },
+        "config": {
+          "description": "Handler configuration, validated at run creation. Common keys: `pollIntervalSec` (positive; default 60; below the handler minimum is rejected) and `commandTimeoutSec` (positive). Top-level string values are templated when the watch is entered (except `command`).",
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {}
+        },
+        "idleTimeoutSec": {
+          "description": "On the NODE, not in config. After this many idle seconds the watch ends with a terminal outcome and an EMPTY output. The idle clock restarts each time a repeat re-enters the watch. Unset = wait forever.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "handler"
+      ],
+      "allOf": [
+        {
+          "properties": {
+            "config": {
+              "properties": {
+                "pollIntervalSec": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "commandTimeoutSec": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "handler": {
+                "const": "github-pr"
+              }
+            },
+            "required": [
+              "handler"
+            ]
+          },
+          "then": {
+            "required": [
+              "config"
+            ],
+            "properties": {
+              "config": {
+                "anyOf": [
+                  {
+                    "required": [
+                      "prRef"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "url"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "prRef": {
+                    "type": "string",
+                    "description": "Workspace JSON file with a top-level `url` (confined to the workspace roots)."
+                  },
+                  "url": {
+                    "type": "string",
+                    "description": "PR URL `https://<host>/<owner>/<repo>/pull/<n>`, or a bare PR number (checked when polling)."
+                  },
+                  "pollIntervalSec": {
+                    "minimum": 30
+                  },
+                  "includeOwnActivity": {
+                    "type": "boolean",
+                    "description": "Let the authenticated gh identity's comments wake the watch. Default false."
+                  },
+                  "ignoreAuthors": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Logins whose activity never wakes the watch."
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "handler": {
+                "const": "command"
+              }
+            },
+            "required": [
+              "handler"
+            ]
+          },
+          "then": {
+            "required": [
+              "config"
+            ],
+            "properties": {
+              "config": {
+                "required": [
+                  "command"
+                ],
+                "properties": {
+                  "command": {
+                    "type": "string",
+                    "minLength": 1,
+                    "not": {
+                      "pattern": "\\{\\{"
+                    },
+                    "description": "One static command line, run by the session's default shell ($SHELL; PowerShell on Windows) in the workspace. No `{{...}}` templates."
+                  },
+                  "args": false,
+                  "pollIntervalSec": {
+                    "minimum": 10
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

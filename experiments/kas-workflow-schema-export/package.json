@@ -1,0 +1,14 @@
+{
+  "name": "kas-workflow-schema-export",
+  "private": true,
+  "description": "Regenerates docs/kiro-kas-workflow-recipe-schema-<ver>.json from the zod workflow-recipe definitions carved out of the @kiro/agent (KAS) bundle, and validates it against fixture recipes.",
+  "scripts": {
+    "generate": "node generate.js ../../docs/kiro-kas-workflow-recipe-schema-2.26.0.json",
+    "validate": "node validate.js ../../docs/kiro-kas-workflow-recipe-schema-2.26.0.json"
+  },
+  "dependencies": {
+    "ajv": "^8",
+    "js-yaml": "^4",
+    "zod": "^4"
+  }
+}

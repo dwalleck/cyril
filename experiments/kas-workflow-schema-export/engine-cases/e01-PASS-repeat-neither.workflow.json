@@ -1,0 +1,25 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "step",
+      "id": "a",
+      "agent": "cr-clerk",
+      "prompt": "p"
+    },
+    {
+      "type": "repeat",
+      "id": "loop",
+      "maxIterations": 3,
+      "onMaxIterations": "continue",
+      "steps": [
+        {
+          "type": "step",
+          "id": "b",
+          "agent": "cr-clerk",
+          "prompt": "p"
+        }
+      ]
+    }
+  ]
+}

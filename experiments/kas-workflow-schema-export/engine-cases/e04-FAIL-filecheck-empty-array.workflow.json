@@ -1,0 +1,26 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "repeat",
+      "id": "loop",
+      "maxIterations": 3,
+      "onMaxIterations": "continue",
+      "steps": [
+        {
+          "type": "step",
+          "id": "b",
+          "agent": "cr-clerk",
+          "prompt": "p"
+        }
+      ],
+      "stopCondition": {
+        "fileCheck": {
+          "path": "s.json",
+          "jsonPath": "l",
+          "value": []
+        }
+      }
+    }
+  ]
+}

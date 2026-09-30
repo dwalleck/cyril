@@ -1,0 +1,14 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "step",
+      "id": "a",
+      "agent": "cr-clerk",
+      "prompt": "p"
+    }
+  ],
+  "_comment": "x",
+  "injectOriginalUserRequest": false,
+  "planRevision": 0
+}

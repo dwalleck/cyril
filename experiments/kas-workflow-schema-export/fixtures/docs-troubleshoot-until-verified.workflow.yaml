@@ -1,0 +1,22 @@
+name: troubleshoot-until-verified
+inputs:
+  issue: prompt
+  result_path: file
+steps:
+  - type: repeat
+    id: fix-loop
+    maxIterations: 10
+    onMaxIterations: pause
+    stopCondition:
+      fileCheck:
+        path: "{{result_path}}"
+        jsonPath: verified
+        value: true
+    steps:
+      - type: step
+        id: diagnose-and-fix
+        agent: wf-coder
+        prompt: >
+          Reproduce {{issue}}. Inspect the latest result at {{result_path}} if it exists.
+          Test one hypothesis, apply the smallest justified change, rerun the reproduction,
+          and write JSON with verified, evidence, and remaining_risk fields.

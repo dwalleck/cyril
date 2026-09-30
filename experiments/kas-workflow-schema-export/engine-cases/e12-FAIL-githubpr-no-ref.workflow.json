@@ -1,0 +1,13 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "watch",
+      "id": "w",
+      "handler": "github-pr",
+      "config": {
+        "pollIntervalSec": 60
+      }
+    }
+  ]
+}

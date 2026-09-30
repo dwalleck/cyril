@@ -1,0 +1,29 @@
+name: publish-and-respond
+inputs:
+  branch: string
+  run_dir: string
+steps:
+  - type: step
+    id: submit
+    agent: wf-pr-submitter
+    prompt: >
+      Publish {{branch}} as a pull request, or reuse its open PR.
+      Write its URL and metadata to {{run_dir}}/pr.json.
+  - type: repeat
+    id: pr-loop
+    maxIterations: 200
+    onMaxIterations: pause
+    stopWhen: wait.terminal
+    steps:
+      - type: watch
+        id: wait
+        handler: github-pr
+        config:
+          prRef: "{{run_dir}}/pr.json"
+      - type: step
+        id: respond
+        agent: wf-pr-responder
+        prompt: >
+          Respond to the new PR activity in {{wait.output}}.
+          Address feedback that is safe and in scope. Ask before changing the design,
+          expanding scope, or altering the user experience.

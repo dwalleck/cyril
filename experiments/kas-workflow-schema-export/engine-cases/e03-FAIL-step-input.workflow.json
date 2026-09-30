@@ -1,0 +1,12 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "step",
+      "id": "a",
+      "agent": "cr-clerk",
+      "prompt": "p",
+      "input": "x"
+    }
+  ]
+}

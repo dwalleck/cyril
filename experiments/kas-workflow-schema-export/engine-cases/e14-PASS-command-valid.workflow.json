@@ -1,0 +1,16 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "watch",
+      "id": "w",
+      "handler": "command",
+      "config": {
+        "command": "node w.mjs",
+        "reviewFile": "r.json",
+        "pollIntervalSec": 10,
+        "commandTimeoutSec": 5
+      }
+    }
+  ]
+}

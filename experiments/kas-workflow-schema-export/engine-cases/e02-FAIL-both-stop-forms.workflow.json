@@ -1,0 +1,23 @@
+{
+  "name": "engine-diff",
+  "steps": [
+    {
+      "type": "repeat",
+      "id": "loop",
+      "maxIterations": 3,
+      "onMaxIterations": "continue",
+      "steps": [
+        {
+          "type": "step",
+          "id": "b",
+          "agent": "cr-clerk",
+          "prompt": "p"
+        }
+      ],
+      "stopWhen": "{{a.output}} contains X",
+      "stopCondition": {
+        "containsText": "x"
+      }
+    }
+  ]
+}
