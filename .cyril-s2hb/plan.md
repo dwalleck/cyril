@@ -2,7 +2,7 @@
 
 ## Inputs and design verification
 
-Consumes route/spec/evidence and approved design dated 2026-09-30. F0 has observed native Linux/Windows proof; C1–C10 have complete falsifiers, independent oracles, named mutations and named checkpoint owners. File-backed capture's descriptor tradeoff is explicitly approved in spec/design. No FAIL or waived fence is carried. This plan declares no implementation complete.
+Consumes route/spec/evidence and approved design dated 2026-09-30. F0 has observed native Linux/Windows proof; C1–C10 have complete falsifiers, independent oracles, named mutations and named checkpoint owners. File-backed capture's descriptor tradeoff is explicitly approved in spec/design. At initial approval no failed or waived fence was carried; the later explicit A1-only F19/F20 exceptions are owned by design.md and review-decisions.md. This plan declares no implementation complete.
 
 Three atomic slices: A1 delivers complete resolved-shell prefix construction; A2 delivers complete hidden gather/facts; B delivers complete cancellable diagnostics. This repartition replaces the original two-slice forecast after observing the complete source/harness sizes. No diagnostics declaration/stub appears before B. C10's standalone fence is introduced by A1, then extended and reverified for A2/B ownership; C8 is discharged by A1, C1–C4/C9 by A2, and C5–C7 by B. F0 remains retained mechanism evidence for B.
 
@@ -19,7 +19,7 @@ Three independently mergeable PR increments under the delegated Gilfoyle review 
 2. **S2HB-A2 native evidence**: gather/facts leaf and hidden CLI, with same-host byte parity and compact complete canonical goldens. Based on merged A1; independently useful without diagnostics.
 3. **S2HB-B native diagnostics**: complete synchronous diagnostics operation, based on merged A2 and executable through its library consumer without /review.
 
-The issue remains in_progress until all three increments satisfy joint acceptance, clean reviews, CI and merge. After attempt5 the user explicitly selected “Extend this issue to 10 attempts”: s2hb now has an issue-wide ten-implementation-attempt cap; its five-PR-review-round cap and every other issue's five/five caps remain unchanged. Counters never reset per increment. No dependent issue starts before closure. Isolated increment worktrees preserve the uncommitted downstream draft; no unrelated primary-checkout work is staged.
+The issue remains in_progress until all three increments satisfy joint acceptance, clean reviews, CI and merge. After attempt10 the requester explicitly selected “Extend cyril-s2hb to 15 attempts”: s2hb now has an issue-wide fifteen-implementation-attempt cap; current count remains10, its five-PR-review-round cap remains unchanged, current3, and every other issue retains five/five caps. Counters never reset per increment. No dependent issue starts before closure. Isolated increment worktrees preserve the uncommitted downstream draft; no unrelated primary-checkout work is staged.
 
 ## Module growth ledger
 
@@ -64,7 +64,7 @@ The sum of range upper bounds is not the diff estimate: it includes whole files 
 **Commands and expected results:**
 - `cargo test -p cyril-core --features kas review::` → exact valid prefixes and typed hazard/namespace refusals; actual POSIX fixture emits `crtool`.
 - Native `review_prefix` through bash/fish and installed Windows PowerShell5.1/pwsh7.6.6 → resolved dialect, generated command, exact child argv and shutdown. CI also executes bash on macOS. Retained separate native path-hazard/drive/UNC proof remains applicable to unchanged production bytes.
-- `python3 .cyril-s2hb/oracles/check_shape.py --phase prefix` → only approved prefix/projection ownership and protected-parent deltas; C10 mutation red/restored green.
+- `python3 .cyril-s2hb/oracles/check_shape.py --phase prefix` → approved path/count/protected-parent checks; C10 mutation red/restored green. Prefix responsibility remains directly reviewed; its missing automated enforcement is **N/A — approved risk: F20 bypassed for A1 only**, not proved by this command.
 - C8 focused tests under each named mutation → localized red; exact restoration → green.
 - `cargo fmt --check`, `cargo test`, `cargo clippy -- -D warnings`, `cargo check -p cyril --features kas` → independently green prefix-only tree, with no leaf/CLI draft dependency.
 - Native smoke, isolated production reconstruction/ledger comparison, fresh PR review and required current-head CI precede merge.
