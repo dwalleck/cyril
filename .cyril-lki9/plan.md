@@ -266,6 +266,25 @@ Sweep (step 7): `RoutedNotification.origin` doc now present tense (announcement 
 - `cargo nextest run -p cyril-core -E 'test(/wake_label|run_label/)'` → A, B, C, None; precedence rows as specified.
 - M13 → red (B ≠ A); restore → green.
 
+### Checkpoint record — Slice 6 (2026-09-29, branch `fix/cyril-lki9-i1-core-turns`)
+
+**Impact analysis (step 1).** `runLabel` plumbed wire → `WireSnapshot.run_label` → `WorkflowSnapshotMetadata::with_run_label` / `run_label()` → `WorkflowSnapshotParts.run_label` → `WorkflowRun.run_label` (+ `WorkflowSnapshot::run_label()` flat accessor, matching `parent_session_id`/`workspace_path`). `WorkflowRun` struct literals: `canonicalize_snapshot`, `sparse_opening_run`, test `seed` — all updated (compiler-enumerated). `WorkflowRun` equality now includes `run_label` (terminal duplicate detection compares whole runs — a label change on a repeat completion is a conflict, consistent with every other field). `apply_completion` records `(parent, workflow_id)` on a first terminal transition; new `WorkflowTracker::take_wake_label` + `WakeLabel`. No existing caller changed.
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2102 passed, 13 skipped (all workflow tracker/converter tests unchanged and green).
+2. Falsifier C13 — PASS: `wake_labels_are_fifo_per_parent`, `run_label_parsed_from_final_state`.
+3. Stress fixture — PASS: completions for `s` (Completed, Failed w/ label, Aborted w/ empty label) + another parent + a Paused "completion" + an exact duplicate → take(s) = recipe-A/Completed, labelled-b/Failed, recipe-E/Aborted (empty label falls back), None; take(other) = recipe-C; take(never) = None.
+4. Implementation vs oracle — PASS: FIFO/precedence expectations hand-derived from spec (FIFO row) and KAS's static wake policy (`runLabel || workflowName || workflowId`); the live gate-on capture's `finalState.runLabel` = `create-notes-summary-recipe` parses; the cyril-style tail capture has none.
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 7)`.
+6. Budget — PASS: per-parent `VecDeque`, O(1) push/pop; entries = completions awaiting a header (one per KAS wake); an entry for an evicted run is skipped with a debug log.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M13 (`pop_back` instead of `pop_front`) → `left: Some(("recipe-E", Aborted)) right: Some(("recipe-A", Completed))`.
+9. Fence restored — PASS: `workflow.rs` restored from scratch copy (`cmp` identical); green.
+10. Parity and reuse — PASS. Search: `grep` in `workflow.rs` / `types/workflow.rs` tests and accessors. `run_label` follows the existing optional-metadata builder pattern exactly (`with_*` / accessor / parts field / flat snapshot accessor); empty-means-absent applied at the wire (like the other lki9 reads) and again at naming. Test builder `parented_completion` reuses `snapshot_with_status` + `completion` and only rebuilds the metadata (the existing builders cannot set parent/label) — justified divergence. Symmetry: wake labels are fed ONLY from `run_complete` events, not fetched snapshots (`apply_snapshot`) — deliberate: KAS auto-wakes only on `run_complete` (evidence P3/P7); a terminal status learned from a fetched snapshot has no wake to name.
+11. Preserved enforcement — N/A — reason: no gate relaxed; terminal-duplicate absorption unchanged.
+
+Sweep (step 7): nothing falsified; the new fields' docs cite cyril-lki9.
+
 ## Slice 7: header and notice text; insertion into transcripts; activity on TurnStarted
 
 **Claim IDs:** C15, C16, C17, C18

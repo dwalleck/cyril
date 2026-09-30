@@ -795,6 +795,7 @@ pub struct WorkflowSnapshotMetadata {
     plan_revision: u32,
     parent_session_id: Option<SessionId>,
     workspace_path: Option<String>,
+    run_label: Option<String>,
 }
 
 impl WorkflowSnapshotMetadata {
@@ -805,7 +806,17 @@ impl WorkflowSnapshotMetadata {
             plan_revision,
             parent_session_id: None,
             workspace_path: None,
+            run_label: None,
         }
+    }
+
+    /// Sets the run's label (KAS `finalState.runLabel`, cyril-lki9): the name
+    /// its launcher gave this run — KAS's own wake message prefers it over the
+    /// recipe name. Present only for runs launched with one (model
+    /// `run_workflow`); cyril's own launches carry none.
+    pub fn with_run_label(mut self, run_label: String) -> Self {
+        self.run_label = Some(run_label);
+        self
     }
 
     /// Sets the optional parent session.
@@ -828,6 +839,11 @@ impl WorkflowSnapshotMetadata {
     /// Returns the opaque workspace path when supplied.
     pub fn workspace_path(&self) -> Option<&str> {
         self.workspace_path.as_deref()
+    }
+
+    /// Returns the run label when supplied.
+    pub fn run_label(&self) -> Option<&str> {
+        self.run_label.as_deref()
     }
 }
 
@@ -855,6 +871,7 @@ pub(crate) struct WorkflowSnapshotParts {
     pub(crate) plan_revision: u32,
     pub(crate) parent_session_id: Option<SessionId>,
     pub(crate) workspace_path: Option<String>,
+    pub(crate) run_label: Option<String>,
 }
 
 impl WorkflowSnapshot {
@@ -932,6 +949,11 @@ impl WorkflowSnapshot {
         self.metadata.workspace_path()
     }
 
+    /// Returns the run label when supplied (cyril-lki9).
+    pub fn run_label(&self) -> Option<&str> {
+        self.metadata.run_label()
+    }
+
     /// Moves every field into the workflow state canonicalizer.
     pub(crate) fn into_parts(self) -> WorkflowSnapshotParts {
         WorkflowSnapshotParts {
@@ -946,6 +968,7 @@ impl WorkflowSnapshot {
             plan_revision: self.metadata.plan_revision,
             parent_session_id: self.metadata.parent_session_id,
             workspace_path: self.metadata.workspace_path,
+            run_label: self.metadata.run_label,
         }
     }
 }

@@ -388,6 +388,9 @@ struct WireSnapshot {
     parent_session_id: OptionalField<String>,
     #[serde(default)]
     workspace_path: OptionalField<String>,
+    /// cyril-lki9: KAS `finalState.runLabel` — only on runs launched with one.
+    #[serde(default)]
+    run_label: OptionalField<String>,
 }
 
 #[derive(Deserialize)]
@@ -1008,6 +1011,10 @@ impl WireSnapshot {
         }
         if let Some(workspace_path) = self.workspace_path.into_option() {
             metadata = metadata.with_workspace_path(workspace_path);
+        }
+        // Empty means absent (CLAUDE.md "Guard partial updates").
+        if let Some(run_label) = self.run_label.into_option().filter(|l| !l.is_empty()) {
+            metadata = metadata.with_run_label(run_label);
         }
         Ok(WorkflowSnapshot::new(
             workflow_id(self.workflow_id, "finalState.workflowId")?,
@@ -5665,6 +5672,46 @@ mod tests {
         assert!(
             error.to_string().contains("root"),
             "error must name the missing field: {error}"
+        );
+    }
+
+    /// cyril-lki9 C13: `finalState.runLabel` is parsed from the live gate-on
+    /// capture (a model-launched run), absent on cyril-style launches, and an
+    /// empty label is absent.
+    #[test]
+    fn run_label_parsed_from_final_state() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let final_label = |rel: &str| -> Option<String> {
+            let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+            for line in trace.lines().filter(|l| !l.is_empty()) {
+                let row: serde_json::Value = serde_json::from_str(line).expect("trace row");
+                if row["msg"]["method"] == "_kiro/workflow/run_complete" {
+                    return match to_notification(
+                        "kiro/workflow/run_complete",
+                        &row["msg"]["params"],
+                    ) {
+                        WorkflowFrameOutcome::Converted(event) => match *event {
+                            WorkflowEvent::RunCompleted(c) => {
+                                c.final_state().run_label().map(str::to_owned)
+                            }
+                            other => panic!("{rel}: not a completion: {other:?}"),
+                        },
+                        _ => panic!("{rel}: run_complete did not convert"),
+                    };
+                }
+            }
+            panic!("{rel}: no run_complete");
+        };
+        assert_eq!(
+            final_label("experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl")
+                .as_deref(),
+            Some("create-notes-summary-recipe")
+        );
+        assert_eq!(
+            final_label(
+                "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl"
+            ),
+            None
         );
     }
 }
