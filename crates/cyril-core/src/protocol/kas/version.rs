@@ -489,31 +489,18 @@ mod tests {
     /// Returns the launcher's path (its basename is `wsl`) and the journal.
     #[cfg(unix)]
     fn fake_wsl_launcher(root: &std::path::Path) -> (String, std::path::PathBuf) {
-        use std::os::unix::fs::PermissionsExt as _;
         let journal = root.join("probe-argv.txt");
         let launcher = root.join("wsl");
-        std::fs::write(
-            &launcher,
-            format!(
-                "#!/bin/sh\n\
-                 printf '%s\\n' \"$@\" > '{}'\n\
-                 if [ \"$1\" = \"--version\" ]; then printf 'WSL version: 2.6.1.0\\n'; exit 0; fi\n\
-                 while [ \"$#\" -gt 0 ]; do\n\
-                 \tcase \"$1\" in\n\
-                 \t\t-d|-u|--cd|--shell-type|--distribution|--distribution-id|--user) shift 2 ;;\n\
-                 \t\t--) shift; break ;;\n\
-                 \t\t-*|'~') shift ;;\n\
-                 \t\t*) break ;;\n\
-                 \tesac\n\
-                 done\n\
-                 if [ \"$1\" = \"kiro-cli\" ] && [ \"$2\" = \"--version\" ]; then printf 'kiro-cli 2.21.1\\n'; exit 0; fi\n\
-                 printf 'unexpected command line: %s\\n' \"$*\" >&2\n\
-                 exit 3\n",
-                journal.display()
+        // Keep executable bytes immutable: another test's fork can retain a
+        // writable descriptor even after fs::write returns in this thread.
+        std::os::unix::fs::symlink(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/wsl-launcher.sh"
             ),
+            &launcher,
         )
         .unwrap();
-        std::fs::set_permissions(&launcher, std::fs::Permissions::from_mode(0o700)).unwrap();
         (launcher.to_str().unwrap().to_string(), journal)
     }
 
@@ -536,16 +523,16 @@ mod tests {
             None,
         )
         .await;
+        let built = match built {
+            Ok(built) => built,
+            Err(error) => panic!("wrapper command should resolve from kiro-cli's version: {error}"),
+        };
 
         assert_eq!(
             std::fs::read_to_string(&journal).unwrap(),
             "-d\nUbuntu\nkiro-cli\n--version\n",
             "the launcher must receive its own options, then `kiro-cli --version`"
         );
-        let built = match built {
-            Ok(built) => built,
-            Err(error) => panic!("wrapper command should resolve from kiro-cli's version: {error}"),
-        };
         assert_eq!(built.program(), program);
         assert_eq!(
             built.args(),
@@ -571,15 +558,15 @@ mod tests {
             None,
         )
         .await;
+        let built = match built {
+            Ok(built) => built,
+            Err(error) => panic!("wrapper command should resolve through `wsl ~`: {error}"),
+        };
 
         assert_eq!(
             std::fs::read_to_string(&journal).unwrap(),
             "~\n-d\nUbuntu\nkiro-cli\n--version\n"
         );
-        let built = match built {
-            Ok(built) => built,
-            Err(error) => panic!("wrapper command should resolve through `wsl ~`: {error}"),
-        };
         assert_eq!(
             built.args(),
             strings(&[

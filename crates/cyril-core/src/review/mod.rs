@@ -349,15 +349,31 @@ mod tests {
     fn generated_posix_prefix_runs_as_a_native_shell_command() {
         use std::process::Command;
 
-        let command = prefix(Path::new("/bin/printf"), ShellDialect::Posix);
-        let output = match Command::new("/bin/sh")
-            .args(["-c", command.as_str()])
-            .output()
-        {
-            Ok(value) => value,
-            Err(error) => panic!("native shell fixture failed to start: {error}"),
-        };
-        assert!(output.status.success());
+        let directory = crate::test_support::must_succeed(
+            tempfile::tempdir(),
+            "create native shell fixture directory",
+        );
+        let executable = directory.path().join("prefix fixture");
+        // An immutable fixture avoids fork-inherited writable executable
+        // descriptors while preserving real argv checks in parallel tests.
+        crate::test_support::must_succeed(
+            std::os::unix::fs::symlink(
+                concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/fixtures/native-prefix.sh"
+                ),
+                &executable,
+            ),
+            "link native shell fixture",
+        );
+        let command = prefix(&executable, ShellDialect::Posix);
+        let output = crate::test_support::must_succeed(
+            Command::new("/bin/sh")
+                .args(["-c", command.as_str()])
+                .output(),
+            "start native shell fixture",
+        );
+        assert!(output.status.success(), "native prefix failed: {output:?}");
         assert_eq!(output.stdout, b"crtool");
         assert!(output.stderr.is_empty());
     }

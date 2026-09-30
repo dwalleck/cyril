@@ -2,6 +2,8 @@
 
 Governing claims: C8 and A1's C10 scope in design.md. Plan: S2HB-A1. Issue-wide implementation attempt1/5; PR review rounds0/5 at this checkpoint. All eleven A1 obligations below pass; this is not completion of cyril-s2hb or its later increments.
 
+This is the original pre-PR checkpoint, not a current-head CI receipt. Post-review qualification corrections and their superseding source pins, mutation proofs and gate judgments are owned by [review-decisions.md](review-decisions.md).
+
 ## Entry and source state
 
 The original A draft exceeded its projected review size. The plan owner split prefix from gather/facts without reducing coverage. This worktree contains only prefix production and core wiring; the downstream leaf/CLI draft remains in its original worktree. Discovered upstream baseline: `76bfb1efb45e96f5efe41f0a8be434768da0ddc3`. The existing core files had byte-identical base contents to original design baseline `cc5eba260572e08fd20a58c8b0cdd1aaec782484` before integration. No changed resolver, process or formatting premise invalidates the retained empirical probes.

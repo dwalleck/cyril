@@ -9,10 +9,10 @@ Three atomic slices: A1 delivers complete resolved-shell prefix construction; A2
 ## Review partition
 
 Revised projections include artifacts and fixtures:
-- A1 prefix: production/wiring 180 + behavioral tests 220 + shape oracle 220 + shared design/evidence/probe/checkpoint artifacts 1,180 = **1,800**; 20% margin360 → **2,160**.
+- A1 prefix: measured1,948 changed lines at1dae375 plus an850-line qualification-repair forecast, rounded to **2,800**; 20% margin560 → **3,360**. This supersedes the original1,800 forecast. The increase covers immutable native fixtures, current-wiring/CI guard repair, rerunnable A/B evidence and bounded repair records; no production interface or partition changes.
 - A2 gather/facts: leaf/binary production and wiring 1,550 + tests/driver 370 + parity harness 800 + compact canonical goldens/CI/docs/receipts 380 = **3,100**; 20% margin620 → **3,720**. The broad live differential matrix remains complete; retained goldens use a complete small helper/caller/NOTES scenario rather than redundantly snapshotting the large >40-usage stress fixture.
 - B diagnostics: production650 + tests/fixture330 + oracle220 + documentation/receipts170 = **1,370**; 20% margin274 → **1,644**.
-- Sum **6,270**; churn margin **1,254**; total **7,524 > 4,000**. Actual assembled source already measures1,412 leaf lines,184 integration-test lines,184 fixture-driver lines and775 parity-harness lines, replacing the underestimated forecasts. Final staged diff still decides each increment's size gate.
+- Sum **7,270**; churn margin **1,454**; total **8,724 > 4,000**. Actual assembled source already measures1,412 leaf lines,184 integration-test lines,184 fixture-driver lines and775 parity-harness lines, replacing the underestimated forecasts. Final staged diff still decides each increment's size gate.
 
 Three independently mergeable PR increments under the delegated Gilfoyle review partition:
 1. **S2HB-A1 native prefix**: prefix constructor, existing resolved-shell projection/carry, native shell proof and shared design/evidence. It builds and verifies against the discovered upstream without the uncommitted leaf/CLI draft.
@@ -57,9 +57,9 @@ The sum of range upper bounds is not the diff estimate: it includes whole files 
 **Complexity/production scale:** validation and spelling are O(N) path bytes, with one output allocation sized for normalized path plus fixed opening/suffix; no subprocess per character and no new persistent loop. The long-path case verifies exact output and actual execution, while source census verifies one reserved String and append-only construction. Accepted storage/work are linear, not a constant input cap.
 **Wall budget/phase:** one-off prefix creation; N/A — no latency SLA. Existing bridge resolution remains once per startup.
 **Module shape:** core review owns spelling; HostShell only projects its kind; BridgeHandle only carries the optional dialect. Core lib <=2, bridge <=30, HostShell <=15 production-line growth; main unchanged. Prefix retain-and-raise disposition is in design.md's C8 Length review.
-**Files:** new core `src/review/mod.rs`; existing core lib.rs/protocol/bridge.rs/protocol/kas/host_shell.rs; shared issue-local route/spec/evidence/design/plan/probes, prefix checkpoint and shape oracle; existing CI KAS lane gains the standalone prefix ownership gate with full checkout history. Leaf/CLI/parity draft files are excluded from this increment.
+**Files:** new core `src/review/mod.rs`; existing core lib.rs/protocol/bridge.rs/protocol/kas/host_shell.rs; shared issue-local route/spec/evidence/design/plan/probes, prefix checkpoint and shape oracle; existing CI KAS lane gains the standalone prefix ownership gate with full checkout history. PR146's bounded qualification repairs additionally change the cfg(unix) version.rs fixtures and add two executable fixture scripts plus the A/B replay harness, as owned by review-decisions.md. Leaf/CLI/parity draft files are excluded from this increment.
 **Estimate:** one implementation/verification cycle; estimate is not a gate.
-**Diff estimate:**1,800 plus20% margin.
+**Diff estimate:**2,800 plus20% margin; affected-only budget update for PR146 qualification repairs under the existing approved partition.
 **PR increment:** S2HB-A1 native prefix.
 **Commands and expected results:**
 - `cargo test -p cyril-core --features kas review::` → exact valid prefixes and typed hazard/namespace refusals; actual POSIX fixture emits `crtool`.
