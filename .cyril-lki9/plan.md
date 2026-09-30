@@ -190,6 +190,25 @@ Sweep (step 7): `ActiveTurn` doc updated; CONTEXT.md "Turn owner" / "Companion t
 - `cargo nextest run -p cyril-core -p cyril -E 'test(/turn_started_busy|enter_steers_during_server_turn/)'` → Busy/Active transitions; `SteerSession` dispatched, no `SendPrompt`.
 - M11 → App test red (`SendPrompt` observed); restore → green.
 
+### Checkpoint record — Slice 5 (2026-09-29, branch `fix/cyril-lki9-i1-core-turns`)
+
+**Impact analysis (step 1).** `SessionController::apply_notification` gained a `TurnStarted` arm (before: the catch-all). Consumers of `SessionStatus::Busy`: `classify_submit` (`app.rs:2321`, Enter → steer vs prompt), the Esc arm (`app.rs:1729`, cancel), and the App's own `set_status` calls at dispatch (unchanged). No signature change.
+
+**Gate.**
+1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2098 passed, 13 skipped.
+2. Falsifier C11 — PASS: `session::tests::turn_started_busy_transitions`, `app::tests::enter_steers_during_server_turn`.
+3. Stress fixture — PASS: `TurnStarted` while Busy → no transition (`false`); `TurnCompleted` without a prior `TurnStarted` (v2 path) → Active as before; Error → Busy (a new turn clears a prior failure); Disconnected / Initializing / Compacting not overridden.
+4. Implementation vs oracle — PASS: evidence P5 (live, `.cyril-lki9/lki9-live-{steer,prompt}-06615-2.26.0.jsonl`) — `_session/steer` during a wake is accepted and honored, `session/prompt` pre-empts it; after this slice the App dispatches `SteerSession` during a server turn (the accepted path), never `SendPrompt` (the pre-empting one); control run dispatches `SendPrompt` when idle.
+5. Module shape — PASS: `C21 PASS (… app.rs: 5, state.rs: 5)` — `app.rs` production unchanged by this slice (the test is in `mod tests`).
+6. Budget — N/A — reason: no loop; state transition only.
+7. Regression fence — PASS (item 2).
+8. Named mutation — PASS (red): M11 (`if false && …` on the `TurnStarted` arm) → both fences FAIL (the App fence observes a non-steer dispatch).
+9. Fence restored — PASS: `session.rs` restored from scratch copy (`cmp` identical); both green.
+10. Parity and reuse — PASS. Search: `grep` for `SessionStatus::Busy` setters. The new arm mirrors `TurnCompleted`'s unconditional `Active` with a guarded `Busy` (divergence justified in the arm comment: connection/compaction phases have their own exit paths). App test reuses `test_app_with_command_rx`, `session_created_frame`, `key`, `insert_text` (the `esc_marks_cancel_sent_during_stall` pattern). Symmetry: Enter/Esc paths are the existing `classify_submit` / Esc arm, now reachable during server turns — no new branch.
+11. Preserved enforcement — N/A — reason: nothing repointed or relaxed.
+
+Sweep (step 7): no prose describes "Busy only after dispatch"; the new arm's comment states the current rule. Placement note: the unit test was first appended into `thinking_tests`, then `kas_hook_tests`, by an end-of-file insertion; relocated to `session::tests` before commit.
+
 ## Slice 4: announce the agent-initiated turn once
 
 **Claim IDs:** C10

@@ -3799,6 +3799,52 @@ mod tests {
     /// key-layer priority holds). Buggy implementations these fail under:
     /// unconditional cancel-sent marking, marking wired before the busy guard,
     /// Esc bypassing the overlay layer.
+    /// cyril-lki9 C11 (App level): a turn the agent started itself (KAS
+    /// workflow auto-wake) makes Enter STEER — a `SendPrompt` would pre-empt the
+    /// wake (evidence P5) — and Esc cancel it. Positive control: with no
+    /// `TurnStarted`, the same Enter dispatches `SendPrompt`, so the two paths
+    /// are observably different and the fence can go red (mutation M11).
+    #[tokio::test]
+    async fn enter_steers_during_server_turn() {
+        let main = SessionId::new("main");
+        let drain =
+            |rx: &mut tokio::sync::mpsc::Receiver<BridgeCommand>| while rx.try_recv().is_ok() {};
+
+        // Control: idle session -> Enter sends a prompt.
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.handle_notification(session_created_frame(&main));
+        drain(&mut rx);
+        app.ui_state.insert_text("hello");
+        app.handle_key(key(KeyCode::Enter)).await.expect("enter");
+        assert!(
+            matches!(rx.try_recv(), Ok(BridgeCommand::SendPrompt { .. })),
+            "control: an idle session's Enter must dispatch SendPrompt"
+        );
+
+        // Server turn: Enter steers, Esc cancels.
+        let (mut app, mut rx) = test_app_with_command_rx();
+        app.handle_notification(session_created_frame(&main));
+        app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            Notification::TurnStarted,
+        ));
+        drain(&mut rx);
+        assert_eq!(app.session.status(), &SessionStatus::Busy);
+        app.ui_state.insert_text("also check the notes dir");
+        app.handle_key(key(KeyCode::Enter)).await.expect("enter");
+        match rx.try_recv() {
+            Ok(BridgeCommand::SteerSession { message, .. }) => {
+                assert_eq!(message, "also check the notes dir")
+            }
+            other => panic!("Enter during a server turn must steer, got {other:?}"),
+        }
+        app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+        assert!(
+            matches!(rx.try_recv(), Ok(BridgeCommand::CancelRequest)),
+            "Esc during a server turn must dispatch CancelRequest"
+        );
+    }
+
     #[tokio::test]
     async fn esc_marks_cancel_sent_during_stall() {
         use cyril_ui::traits::Activity;
