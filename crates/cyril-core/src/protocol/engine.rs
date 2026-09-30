@@ -936,6 +936,7 @@ mod tests {
         }))
         .expect("tagged chunk deserializes");
         assert_eq!(V2Engine.turn_origin(&tagged), None);
+        #[cfg(feature = "kas")]
         assert!(
             KasEngine::default().turn_origin(&tagged).is_some(),
             "positive control: the same frame IS agent-initiated on KAS"

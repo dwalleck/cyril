@@ -12,6 +12,7 @@ use super::*;
 
 /// Drive one prompt whose single chunk carries `chunk_meta`, and return the
 /// `origin` the App-facing receiver saw on that chunk.
+#[cfg(feature = "kas")]
 async fn chunk_origin(
     chunk_meta: Option<serde_json::Value>,
 ) -> Option<crate::types::AgentInitiation> {
@@ -57,6 +58,7 @@ async fn chunk_origin(
 
 /// C3: a tagged chunk reaches the App with `origin` set from ITS OWN `_meta`;
 /// the untagged control chunk (the historical shape) arrives with `None`.
+#[cfg(feature = "kas")]
 #[tokio::test]
 async fn origin_is_stamped_on_the_frame_it_came_on() {
     let tagged = chunk_origin(Some(serde_json::json!({
