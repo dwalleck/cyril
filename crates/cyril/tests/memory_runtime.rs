@@ -520,12 +520,16 @@ mod unix_protocol {
         let length = u32::try_from(body.len()).context("test frame length exceeds u32")?;
         stream.write_all(&length.to_be_bytes()).await?;
         if !body.is_empty() {
+            // Oversized-header rejection can close the peer before the body upload completes.
+            // Callers still validate the exact reply and follow-up runtime health.
             match stream.write_all(body).await {
                 Ok(()) => {}
                 Err(error)
                     if matches!(
                         error.kind(),
-                        std::io::ErrorKind::BrokenPipe | std::io::ErrorKind::ConnectionReset
+                        std::io::ErrorKind::BrokenPipe
+                            | std::io::ErrorKind::ConnectionReset
+                            | std::io::ErrorKind::NotConnected
                     ) => {}
                 Err(error) => return Err(error.into()),
             }

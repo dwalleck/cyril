@@ -1,6 +1,6 @@
 # B diagnostics checkpoint — cyril-s2hb
 
-**PASS for the atomic B local/native checkpoint and assembled structural conformance.** This is implementation16/20 with full PR reviews6/10 consumed; neither counter resets. All eleven scoped gates below pass. Fresh full PR review7 and current-head required CI, including macOS, remain mandatory before merge and issue acceptance. This record accompanies the behavior-owning B commit; it is not final shipping acceptance.
+**PASS for the atomic B local/native checkpoint and assembled structural conformance.** B was implementation16/20; the test-only required-CI repair17 is recorded below. Full PR review7 is in progress. B's three-host native review-tool CI qualification passed, but required macOS workspace CI failed in an unchanged memory fixture. Repaired-head CI, zero unresolved independent-review findings, merge and issue acceptance remain mandatory; this record is not final shipping acceptance.
 
 ## Authority and checked scope
 
@@ -129,3 +129,40 @@ All scoped B gates are complete and the evidence travels with this behavior-owni
 | Cargo manifests | Workspace/dependency registration; no extra leaf runtime dependency or weakened lint. |
 
 No code/design mismatch remains. The comparison resolved shortened Bridge/HostShell citations to their canonical paths; confirmed that no diagnostics CLI is required; and verified that later App consumption of the inherited prefix/getter is the approved subsequent workflow handoff, not missing wiring in this slice. Concrete adapters, private JSON artifact tests, named private decision/reader/page fences, two-domain clock, raw/display path storage and cohesive owners are expressly permitted by the governing rows. No new waiver, copied backend, hypothetical seam or size-driven split was accepted. Full citations and individual dispositions remain in the frozen comparison.
+
+## Required-CI fixture repair17
+
+**Local repair checkpoint PASS; native macOS and repaired-head publication gates remain unresolved.** `evidence-B.json::qualification_repair_17` owns the revision, source hash, failed CI job, exact command and results. The governing obligation is required repository CI with unchanged memory-protocol acceptance, not a new review-tool capability or baseline-failure waiver. Scope expansion is permitted by the active goal; this technical correction follows the contract's established-quality-obligation route.
+
+### Cause and correction
+
+CI's observed error is Darwin `ENOTCONN` in the fixture's body write. `cyril-memory/src/wire.rs:988-994` rejects an oversized length before reading its body; `runtime.rs:205-217` sends the typed error and closes that connection. The fixture can therefore encounter a closed peer while still uploading the oversized body. `send_body` already admits `BrokenPipe` and `ConnectionReset`; repair17 adds the corresponding `NotConnected` condition. The protocol, transmitted inputs, limits, timeout, platform gates and expected replies do not change.
+
+Main selected the existing error boundary rather than a new header-only probe: it preserves the original adversarial input and all assertions without another helper or alternate fixture path. An admitted write error is not a successful verdict: `read_response` still runs, each caller requires its exact typed reply, and a fresh authenticated health request must pass. Every other write error still propagates; connection and header-write errors remain unchanged.
+
+### Impact, reuse, symmetry and preserved enforcement
+
+- **Caller analysis:** at pre-repair head73ad9aa3, `crates/cyril/tests/memory_runtime.rs:593` (`offender_matrix_keeps_runtime_healthy`) is the only caller of private `send_body`, with eight invocations: malformed JSON, exact cap, oversized, missing/wrong auth, zero ID, unsupported version and unknown operation. LSP was ready but returned no references; bounded source search and caller inspection supplied the actual inventory.
+- **Reuse:** retain `send_body`, the existing typed `ErrorKind` match, `read_response`, `response_code` and `followup_health`. Bounded searches of binary sources/tests found no additional peer-close helper to reuse. No new dependency, symbol, duplicated body, validator, limit, fallback or logger is introduced.
+- **Changed predicate:** only `NotConnected` moves from immediate write-error propagation to reply validation. `BrokenPipe`/`ConnectionReset` retain their behavior; other errors still propagate. Exact response code/message/retryable and listener health remain required, so disconnect without a valid reply still fails. There is no new logging policy or resource path: the same socket, body writes, bounded reads and cleanup apply.
+- **Preserved enforcement:** all eight reply/health pairs remain. Duplicate request, truncated frame, dropped connection and idle connection controls remain. No assertion, input, timeout, native gate or required CI job is removed or relaxed. Neighboring Unix fixture operations were inspected for the same assumption; they retain their existing protocol roles rather than receiving blanket error suppression.
+- **Ownership and size:** production owners, interfaces, dependency direction, protected-parent bodies and all inherited size gates are unchanged. This is one existing fixture boundary, not a module split or size-driven change.
+- **Sweep:** the edit has no stub, deferred implementation, new tracker deferral or changed production behavior requiring operator documentation. Its inline explanation and this owning record document the fixture correction. No unrelated tracker or skill change belongs to the repair.
+
+### Eleven local repair judgments
+
+| Gate | Judgment |
+|---|---|
+| 1 Affected tests | **PASS:** all eight actual companion-process integration tests pass on Linux, including the repaired offender matrix; all-target workspace Clippy and fmt pass. Native macOS execution remains a post-publication requirement, not inferred from Linux. |
+| 2 Falsifiers | **PASS, retained:** B's declared falsifiers and three-host native review-tool qualification cover unchanged product and fixture source. No new product claim is introduced by the socket-test correction. |
+| 3 Stress | **PASS:** the memory matrix still executes exact-cap and oversized bodies; B's unchanged scale/lifecycle evidence remains valid. |
+| 4 Independent comparison | **PASS, retained:** B's reference/native comparisons remain applicable. **N/A for a new fixture-only algorithm comparison:** this changes one established typed error boundary, not a second implementation of memory framing. |
+| 5 Module shape | **PASS, retained:** B16's isolated reconstruction/comparison and census remain applicable; no production or module ownership changed. |
+| 6 Budgets | **PASS, retained:** B resource/deadline conclusions remain applicable. **N/A for a new fixture budget:** no new loop, allocation, wait or resource path is introduced. |
+| 7 Regression fences | **PASS, local:** existing exact protocol/error/health assertions execute against real companion processes. Repaired-head native macOS CI remains required before merge. |
+| 8 Named mutations | **PASS, retained:** B's declared mutation evidence is unaffected. **N/A for a new fixture mutation:** no applicable design mutation is assigned to this ordinary repository integration-test correction. |
+| 9 Restoration | **PASS, retained:** the unchanged B restored-source/fence receipts apply. **N/A for fixture restoration:** no new mutation was required or applied. |
+| 10 Parity/reuse | **PASS:** caller, helper, predicate, error, observability and resource inventory above covers the only changed symbol. |
+| 11 Preserved enforcement | **PASS, local receipt:** exact inputs/replies and healthy-listener requirements survive; only the observed peer-close error reaches existing validation. Native macOS/current-head CI remains an unresolved overall merge obligation. |
+
+The new fixture hash is separate from B16's source manifest. B production, proof fixtures, isolated conformance, mutation/restoration and now-successful native review-tool jobs retain their evidence. Main must publish this atomic repair, obtain required current-head CI and fresh independent review, then verify the merge before closing s2hb. No failed CI job is reclassified as passing.

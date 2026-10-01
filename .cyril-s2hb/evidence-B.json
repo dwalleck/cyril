@@ -2733,5 +2733,46 @@
     "verdict": "PASS",
     "approved_rows": 13,
     "active_mismatches": []
+  },
+  "qualification_repair_17": {
+    "governing_obligation": "Required current-head repository CI; preserve the memory protocol offender matrix's exact error replies and follow-up health checks.",
+    "source_head_before_repair": "73ad9aa38c671537f93f5fb9f4b57e6ba007ed03",
+    "source_file": "crates/cyril/tests/memory_runtime.rs",
+    "repaired_source_sha256": "fcaad1a30d9b5e530ac4c67a793b31a2caefc188940056480b87570288982ab1",
+    "prior_ci": {
+      "run": 36822912969,
+      "url": "https://github.com/dwalleck/cyril/actions/runs/36822912969",
+      "head": "73ad9aa38c671537f93f5fb9f4b57e6ba007ed03",
+      "conclusion": "failure",
+      "passed_jobs": 14,
+      "failed_test_job": 110242160675,
+      "failed_test": "memory_runtime::unix_protocol::offender_matrix_keeps_runtime_healthy",
+      "error": "Socket is not connected (os error 57)",
+      "location": "crates/cyril/tests/memory_runtime.rs:530, send_body write_all",
+      "macos_tests_passed": 27,
+      "macos_tests_failed": 1,
+      "macos_tests_not_run": 2120,
+      "native_review_tooling_jobs_passed": {
+        "linux": 110242203065,
+        "windows": 110242203067,
+        "macos": 110242203100
+      },
+      "source_provenance": "The fixture and cyril-memory source diff is empty from d6955ab73090d0ae80b2aa08c8cb32679acb430a to this head and to upstream5c1bf67c29b1eccba847d1ea185adec6c5ddf2a0. This is source attribution, not an untouched-base execution or failure waiver."
+    },
+    "correction": "Admit NotConnected alongside BrokenPipe and ConnectionReset at the existing body-write peer-close boundary. Preserve transmitted bodies, limits, every exact reply assertion and every follow-up health assertion. No production, retry, timeout, platform-gate or expected-value change.",
+    "verification": {
+      "host": "Linux",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril --test memory_runtime && env -u CARGO_TARGET_DIR cargo clippy --workspace --all-targets -- -D warnings && env -u CARGO_TARGET_DIR cargo fmt --check",
+      "exit_code": 0,
+      "runtime_tests_passed": 8,
+      "runtime_tests_failed": 0,
+      "runtime_tests_ignored": 0,
+      "runtime_tests_filtered": 0,
+      "runtime_seconds": 0.38,
+      "wall_seconds": 23.02,
+      "test_receipt": "All eight actual companion-process tests passed, including unix_protocol::offender_matrix_keeps_runtime_healthy; workspace all-target Clippy passed and fmt exited successfully without output.",
+      "native_macos": "PENDING: Main must publish the repair and obtain passing current-head macOS workspace CI; Linux does not establish Darwin execution."
+    },
+    "evidence_disposition": "B production and its proof fixtures are unchanged. Retain B16 reconstruction, conformance, mutation/restoration and runtime results, including three-host native review-tool CI above. The memory fixture's Linux execution is refreshed; repaired-head required CI and independent review remain merge gates."
   }
 }

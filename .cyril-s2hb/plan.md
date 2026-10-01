@@ -165,7 +165,7 @@ C9 integration: the complete hidden CLI adapter, startup/help/real-clock smoke a
 
 **Module shape:** create diagnostics/{mod,process,command}.rs; lib gains only exports/error variants; run owns unchanged stamp/semantic JSON/native text implementation. No protected-parent production changes are required. `python3 .cyril-s2hb/oracles/check_shape.py --phase diagnostics` verifies final ledger/dependencies and growth; re-run affected C10 mutations if fence changes. Return to design before changing ownership or thresholds.
 
-**Files:** create `crates/cyril-review/src/diagnostics/{mod,process,command}.rs` and `tests/diagnostics.rs`; extend leaf lib.rs and verification example; extend parity/shape oracle and native CI phase; update existing docs after actual diagnostics smoke. No crtool clap diagnostics variant.
+**Files:** create `crates/cyril-review/src/diagnostics/{mod,process,command}.rs` and `tests/diagnostics.rs`; extend leaf lib.rs and verification example; extend parity/shape oracle and native CI phase; update existing docs after actual diagnostics smoke. No crtool clap diagnostics variant. Required-CI repair17 additionally corrects the existing peer-close filter in `crates/cyril/tests/memory_runtime.rs`; no memory production change. `checkpoint-B.md` owns that bounded repair and its evidence disposition under the unchanged required-CI obligation.
 
 **Estimate:** one substantive implementation/verification cycle, potentially several hours of native qualification; not a completion gate.
 
