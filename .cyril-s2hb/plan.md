@@ -178,7 +178,7 @@ The sum of range upper bounds is not the diff estimate: it includes whole files 
 - Native Windows equivalent → raw command-tail argv semantics, Windows exit-code treatment, lossless child evidence, meaningful rendered content, cancellation and holder-cleanup observations. CI macOS executes its own host fixture.
 - Each mutation's focused case → named red output; restore → green. Record source hash/environment and observed terminal values.
 - `python3 .cyril-s2hb/oracles/check_shape.py --phase diagnostics`, `cargo fmt --check`, `cargo test`, `cargo clippy -- -D warnings` → final assembled gate passes; no source fence runs from production tests.
-- Actual library consumer smoke, independent production reconstruction/ledger comparison, fresh PR review and current-head CI must pass before merge. Verify all three merge revisions and all acceptance; close cyril-s2hb without changing parent cyril-5gb3.
+- Actual library consumer smoke, independent production reconstruction/ledger comparison, fresh PR review and current-head CI must pass before merge. Verify every planned increment's merge revision (A1, A2-C, A2 and B) and all acceptance; close cyril-s2hb without changing parent cyril-5gb3.
 
 ## Self-review and handoff
 
