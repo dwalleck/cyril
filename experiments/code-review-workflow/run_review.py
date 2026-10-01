@@ -50,6 +50,7 @@ from typing import NoReturn
 IS_WINDOWS = os.name == "nt"
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import review_policy as policy  # noqa: E402  (next to this file; the pure, tested decisions)
+import build_recipe  # noqa: E402  (agent-pin overrides for --model / --effort)
 
 policy.utf8_stdio()
 
@@ -69,8 +70,10 @@ ap.add_argument("--scope", default=".", help="space-separated git pathspecs")
 ap.add_argument("--validate-only", action="store_true", help="_kiro/workflow/new without invoke: zero credits")
 ap.add_argument("--install", action="store_true", help="copy recipe/agents/crtool from this repo into the workspace")
 ap.add_argument("--recipe", help="alternate recipe JSON, sent inline (e.g. a negative control)")
-ap.add_argument("--model", help="workflow-wide modelId override (sent as an inline recipe)")
-ap.add_argument("--effort", help="workflow-wide effortLevel override")
+ap.add_argument("--model", help="whole-run modelId override, replacing the per-step agent pins "
+                                "(sent as an inline recipe)")
+ap.add_argument("--effort", help="whole-run effortLevel override, replacing the per-step agent pins; "
+                                 "the low-effort bookkeeping steps keep low")
 ap.add_argument("--retry", metavar="WORKFLOW_ID", help="retry a failed run instead of starting one")
 ap.add_argument("--resume", metavar="WORKFLOW_ID", help="resume a paused run instead of starting one")
 ap.add_argument("--context", default="", help="free text naming the documents authoritative for this change "
@@ -769,10 +772,12 @@ try:
                   "parentSessionId": sid, "workspacePaths": [WS]}
         if args.recipe or args.model or args.effort:
             recipe = json.load(open(args.recipe or os.path.join(WS, RECIPE_REL), encoding="utf-8"))
+            # Steps carry pinned agent model/effort (build_recipe.py), and a step pin
+            # outranks the workflow level: apply_override replaces the pins too.
             if args.model:
-                recipe["modelId"] = args.model
+                build_recipe.apply_override(recipe, "modelId", args.model)
             if args.effort:
-                recipe["effortLevel"] = args.effort
+                build_recipe.apply_override(recipe, "effortLevel", args.effort)
             params["workflow"] = recipe
         else:
             params["workflowPath"] = os.path.join(WS, RECIPE_REL)
