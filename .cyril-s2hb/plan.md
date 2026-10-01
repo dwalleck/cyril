@@ -18,6 +18,8 @@ Publication outcomes:
 
 The issue closes only after A1's merge and the final complete PR150 merge satisfy every criterion. Requester authorization extends only s2hb to20 implementation attempts/10 PR reviews without resetting counts. Historical opening counters at the R17 amendment were14/5; the later PR record is15 implementation attempts/6 PR reviews before the next full PR review, and subsequent live consumption belongs in the PR thread. Documentation opening context confers no implementation acceptance; every other issue retains5/5. No dependent issue starts before closure; no unrelated primary-checkout work is staged.
 
+Historical A2-C opening pins: R15 had completed implementation cycle13/15 and R16 was allocated cycle14/15; cycle12 is historical. Three full PR reviews preceded A2-C; PR150's initial full review was round4/5. These are opening-history pins, not a live remaining-budget claim. A documentation PR consumes a review normally and never resets or evades the issue-wide cap.
+
 ## Module growth ledger
 
 Production-region convention and tripwire review procedure are in design.md. Ranges are forecasts, not targets to reach by compressing code. Baselines count retained existing cfg-test helper methods outside the terminal test module.
@@ -99,6 +101,7 @@ Publication merge pins: three-way ancestor `422d16467aa48d8956d11dcc3b752fa91d53
 **Stress fixture:** retain assembled A2's language/Unicode, caps, binary/deleted/empty, scope, stamp, pages and precedence cases. Strengthen raw/look-alike names with identical symbol names, exact cross-file usages, colon/LF path framing, unscoped raw document sizes, typed raw/display coherence refusals, persisted-run facts rebuilding, invalid ordinary config, nonexistent agent command, startup markers, repeated gather/facts and unsupported diagnostics verb. The full CLI harness remains intact; no waiver narrows it.
 
 **Regression fence:** leaf/public operation and full hidden-CLI cases through the existing qualified flag-based `parity_driver`/CLI harness; `.cyril-s2hb/oracles/parity.py --phase gather`; `check_shape.py --phase gather`; actual native library and binary consumers. C1–C4 and C9 fixtures remain in this single A2 increment.
+The differential run is permanent functional-equivalence tooling, not a production source-string test. The fixture driver is verification-only and is not installed as a Cyril command.
 
 **Named mutation:** retained C1 data corruption, C2 precedence/exit classification, C3 stamp refusal, C4 stored-usage cap and R17 identity/framing mutations; dispatch-after-config and forbidden protected-parent body mutations fail the A2 fences. Preserve valid negative receipts for unchanged mechanisms with renewed positive proof; no assertion, fixture, oracle, or guard is dropped.
 
@@ -108,7 +111,7 @@ Publication merge pins: three-way ancestor `422d16467aa48d8956d11dcc3b752fa91d53
 
 **Module shape:** existing leaf run/Git/gather/facts/clock owners plus the approved binary adapter and <=20-line main wiring; no domain logic in main, no new leaf owner/dependency, no public operation or executor change. R17 private representation/framing stays in run/gather/facts; module-specific gather350/facts620/run300 and binary/core ownership checks remain independent of commit-size planning.
 
-**Files:** `crates/cyril-review/{Cargo.toml,src/{lib,run,clock,git,gather,facts}.rs,examples/parity_driver.rs,tests/evidence.rs}`, `crates/cyril/src/{crtool,main}.rs`, root Cargo manifests/lockfile, functional oracle, shape phases, full CLI harness and native CI. Preserve the complete flag-based driver/CLI hunks; no size-driven JSON transport or missing-binary fallback. Only s2hb's tracker row may change; parent5gb3 and unrelated records remain unchanged.
+**Files:** `crates/cyril-review/{Cargo.toml,src/{lib,run,clock,git,gather,facts}.rs,examples/parity_driver.rs,tests/evidence.rs}`, `crates/cyril/src/{crtool,main}.rs`, root Cargo manifests/lockfile, functional oracle, shape phases, full CLI harness and native CI. Preserve the complete flag-based driver/CLI hunks; no size-driven JSON transport or missing-binary fallback. Only s2hb's tracker row may change; parent5gb3 and unrelated records remain unchanged. Existing core prefix/projection files are inherited from merged A1, not reintroduced. Update `README.md` and `AGENTS.md` after smoke; no unrelated skills or primary-checkout changes.
 
 **Estimate:** one implementation/verification cycle, potentially several hours of native qualification; not a completion gate.
 

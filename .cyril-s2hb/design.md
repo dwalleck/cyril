@@ -181,7 +181,7 @@ Requester selected “Accept this A1-only exception”: use direct ownership rev
 
 This supersedes the prior F19-only restriction solely for F20's missing automated prefix-responsibility check. Keep the approved production responsibility unchanged and preserve path/count/protected-parent/source-dispatch checks, product/native tests, child-role proof, fresh full review and CI. No other finding is waived; A2/B do not inherit this exception.
 
-Requester also selected “Extend cyril-s2hb to 15 attempts”: five additional implementation/verification cycles for this issue only. At that authorization, the implementation count was10 and the PR-review count3/5; these are historical counts, not the A2-C publication state. No counter resets per increment; other issue caps remain5/5. This approval superseded the earlier cap10 stop, not any acceptance requirement.
+Requester also selected “Extend cyril-s2hb to 15 attempts”: five additional implementation/verification cycles for this issue only. At that authorization, the implementation count was10 and the PR-review count3/5; these are historical counts, not the A2-C publication state. No counter resets per increment; other issue caps remain5/5. This approval superseded the earlier cap10 stop, not any acceptance requirement. Publication counter history is recorded in `plan.md`, Publication and checkpoint sequence.
 
 ### Updated Gilfoyle verification decision
 
