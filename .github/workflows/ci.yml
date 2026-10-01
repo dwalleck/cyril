@@ -194,7 +194,7 @@ jobs:
           else
             phase=prefix
             if [[ -f crates/cyril-review/Cargo.toml ]]; then
-              phase=gather
+              phase=diagnostics
             fi
             python3 .cyril-s2hb/oracles/check_shape.py --phase "$phase" "${base_args[@]}"
           fi
@@ -319,14 +319,14 @@ jobs:
       - name: Build native cyril and review consumer
         shell: bash
         run: |
-          cargo build -p cyril
-          cargo build -p cyril-review --example parity_driver
+          cargo build -p cyril --target-dir target
+          cargo build -p cyril-review --example parity_driver --target-dir target
 
-      - name: Test native review library
+      - name: Test complete native review library (gather, facts, diagnostics)
         shell: bash
-        run: cargo test -p cyril-review
+        run: cargo test -p cyril-review --target-dir target
 
-      - name: Native gather, facts, and hidden-CLI parity
+      - name: Native gather, facts, diagnostics, and hidden-CLI qualification
         shell: bash
         run: |
           suffix=""
@@ -334,6 +334,9 @@ jobs:
             suffix=".exe"
           fi
           uv run --script .cyril-s2hb/oracles/parity.py --phase gather \
+            --cyril "target/debug/cyril$suffix" \
+            --driver "target/debug/examples/parity_driver$suffix"
+          uv run --script .cyril-s2hb/oracles/parity.py --phase diagnostics \
             --cyril "target/debug/cyril$suffix" \
             --driver "target/debug/examples/parity_driver$suffix"
 

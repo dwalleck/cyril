@@ -129,7 +129,7 @@ Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<v
 crates/
   cyril-core/     # Library — protocol, types, commands, session, platform
   cyril-memory/   # Library — strict memory config, private stores, authenticated local runtime
-  cyril-review/   # Library — native review run artifacts, gather, facts, clock seam
+  cyril-review/   # Library — native review artifacts, gather, facts, diagnostics, clock seam
   cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
   cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
   cyril/          # Binary — wires everything together, owns the event loop
@@ -151,10 +151,10 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Dependency rule:** `cyril` may depend on `cyril-memory`; core and UI remain persistence-free.
 
 **`cyril-review`** — Native review evidence.
-- **Owns:** Run-directory layout and version/identity guards, explicit-argv Git operations, gather/facts transformations, and the review clock seam.
-- **Responsibility:** Produce the selected diff, patches, manifest and symbol/usage evidence. Preserve functional results against the Python reference, not its representation: JSON object order, diagnostic wording and host text newline conventions are not compatibility requirements. Python is verification-only.
+- **Owns:** Run-directory layout and version/identity guards, explicit-argv Git operations, gather/facts transformations, cancellable native diagnostics with direct-child/file-capture ownership, and the review clock seam.
+- **Responsibility:** Produce selected diff, patch, symbol/usage and diagnostic evidence. Diagnostics is a blocking library API; callers keep it off the event loop. Preserve functional results against the Python reference, not its representation: JSON object order, diagnostic wording and host text newline conventions are not compatibility requirements. Python is verification-only.
 - **Must NOT:** Import `cyril-core`, ACP, UI crates or Tokio. Own the chat `/review` lifecycle or parse host-shell configuration.
-- **Dependency rule:** Production dependencies are std, serde, serde_json, regex and thiserror. The binary's thin `crtool` dispatcher invokes this leaf before logging, config, agent or terminal startup.
+- **Dependency rule:** Production dependencies are std, serde, serde_json, regex and thiserror. The binary's thin `crtool` dispatcher invokes gather/facts before logging, config, agent or terminal startup; diagnostics has no CLI verb.
 
 
 **`cyril-ui`** — Rendering and UI state.

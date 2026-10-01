@@ -159,7 +159,7 @@ older KAS may ignore it. The action is not shown for v2 or always-reject options
 crates/
   cyril/          # TUI application (binary)
   cyril-core/     # Protocol logic, path translation, session state
-  cyril-review/   # Native review evidence: run artifacts, gather, facts
+  cyril-review/   # Native review evidence: run artifacts, gather, facts, diagnostics
 docs/
   kiro-acp-protocol.md  # Comprehensive Kiro ACP protocol reference
 ```
@@ -189,6 +189,24 @@ selecting another file.
 An empty diff exits 3; other operation errors exit 2.
 The Python tool is a functional reference for verification, not a byte-format
 contract: JSON formatting, diagnostic wording, and text newlines may differ.
+
+Library callers can run a configured check with `cyril_review::diagnostics`,
+`DiagnosticsOptions`, `Cancellation`, and `SystemReviewClock`. This is a blocking
+operation; async callers must use a worker. There is no diagnostics CLI verb.
+The default timeout is 1,800 seconds. Results distinguish clean, failed (with the
+native exit code), timed-out, and cancelled checks. Pre-launch errors and
+cancellation before launch leave diagnostics artifacts unchanged.
+
+Started checks save lossless stdout/stderr in `facts/diagnostics-raw.txt`, plus a
+report containing the first 200 changed-path matches and last 15 nonempty lines.
+Cancellation and timeout terminate only the directly spawned child, with a
+one-second termination/reap deadline; descendants are not targeted. Fixed-length
+file snapshots avoid waiting for inherited output handles to reach EOF. That
+deadline is not a filesystem I/O latency guarantee.
+POSIX commands use shell-style argument parsing without an implicit shell.
+Windows uses native executable/argument parsing; explicitly selected `.cmd` and
+`.bat` files follow native batch dispatch, without wrapping arbitrary command
+text in a shell.
 
 ## License
 

@@ -1,8 +1,14 @@
 # A2 qualification record: cyril-s2hb
 
-Status: incomplete; no slice/checkpoint PASS or publication authorization is claimed. Base `422d16467aa48d8956d11dcc3b752fa91d53bd6f`; cycle13/R15 is implemented and behaviorally qualified on Linux/native Windows; fresh isolated conformance is outstanding. Full PR review count remains3/5. A1 is merged; B and all downstream issues remain open.
+Status: the atomic A2 checkpoint passed its scoped Linux/Windows and isolated-conformance gates and was committed as `e4870f73`; the R17 judgment below owns that result. The subsequent macOS fixture correction is recorded here and travels with the B integration. Final assembled conformance, full PR review and current-head CI remain publication gates; this is not issue acceptance. Current counters and publication authority belong to `plan.md`, not the historical cycle counts below.
 
-## Current workflow authority
+## Admitted-path fixture correction during B integration
+
+Published macOS CI36809923523 at `01e436f0` failed before product execution: APFS refused the malformed-UTF8 physical filename with OS92. The complete malformed-byte/replacement-look-alike test remains Linux-only. A separate Unix admitted-Unicode colon/LF test exercises the public operation with independently selected Git patches, exact file identities, same-symbol/own-definition/caller records, distinct document sizes and persisted facts rebuilding. Existing all-platform Unicode and malformed-manifest coverage remains.
+
+This changes the fixture's admitted filesystem inputs, not production identity/framing behavior or the reference contract. Linux's final leaf suite exercises both the raw-byte and admitted-Unicode paths; native Windows's applicable leaf cases and complete A2 library/hidden-CLI matrix pass. `evidence-B.json` owns these assembled qualification receipts. Current-head macOS CI must execute the admitted-path case before merge; no Mac success is inferred from Linux or Windows. The original raw-identity and NUL-framing mutation conclusions remain applicable to unchanged production mechanisms and retained Linux cases.
+
+## Workflow authority at the original A2 checkpoint
 
 The requester again directed rereading `~/repos/gilfoyle/skills/gilfoyle/`. Read its current entry, CONTRACT, checkpointed-build, falsifiable-design, module-shape, tdd-scoped, assessing-review-feedback, budgeted-plan, prove-it-prototype and change-workflow; these are uncommitted local updates over skill-repository commit `c70e41beaaa0bbaedb8aa512ec4a8ecd7f40d78c`. Do not substitute the older vendored skill.
 
@@ -11,11 +17,11 @@ Applied decisions: qualification failures stay in checkpointed-build's bounded r
 ## Integration and source decisions
 
 - Parent integrated only the explicit leaf, CLI and parity ownership slices. An old writer continued after a completed result; it was stopped. Its later run.rs tests were not imported; a separate test owner replaced the draft evidence tests with isolated tempfile/real-Git consumer checks. No writer claimed execution.
-- The staged clock contract now exposes only the used gather timestamp method. B adds diagnostics elapsed time with its actual consumer. Removed the unused Encoding error variant; no diagnostics stub ships in A2.
+- The A2 clock contract exposed only the used gather timestamp method; the diagnostic elapsed-time extension and its actual consumer belong to B. A2 removed the unused Encoding error variant and shipped no diagnostics stub.
 - Source inspection and the reuse inventory identified repeated work. Parent reused semantic serde serialization, cached definition regexes per operation, borrowed page slices, moved document values, updated facts metadata in place, and shared language/diff/Git helpers. Functional Linux qualification below covers the resulting field/array/order contracts.
-- The original size census included unnecessary rich byte goldens; the functional amendment removed all21 owned goldens while retaining live canonical/stress scenarios. R15's pre-record census is3,912 changed/new lines across27 files, excluding the unrelated `.rivets/.gitignore` hunk and untracked skill symlink. Final assembled publication size still applies.
+- The original size census included unnecessary rich byte goldens; the functional amendment removed all21 owned goldens while retaining live canonical/stress scenarios. R15's historical pre-record census was3,912 changed/new lines across27 files, excluding the unrelated `.rivets/.gitignore` hunk and untracked skill symlink. That pre-waiver figure is not an active publication gate; `plan.md` owns the requester's current aggregate-size decision.
 
-## Observed checks
+## Historical R15 observed checks
 
 - Pre-A2 actual Cyril: `env -u CARGO_TARGET_DIR cargo run -p cyril --bin cyril -- crtool --help` in the A1 worktree returned2, `unexpected argument 'crtool' found`. Earlier invocations failed before execution because the inherited CARGO_TARGET_DIR was empty and the package has two binaries; neither is claimed as behavioral RED.
 - Native Windows preflight: resourcefs-win11/RFS-WIN11, Cargo1.94.0, Git2.56.0.windows.1, Python3.14.7, MSVC setup present; about15.9GB free. No native Rust A2 result yet.

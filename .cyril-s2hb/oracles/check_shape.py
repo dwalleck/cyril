@@ -28,8 +28,8 @@ LIMITS = {
 }
 DIAGNOSTICS = {
     REVIEW + "src/diagnostics/mod.rs": 280,
-    REVIEW + "src/diagnostics/process.rs": 250,
-    REVIEW + "src/diagnostics/command.rs": 230,
+    REVIEW + "src/diagnostics/process.rs": 300,
+    REVIEW + "src/diagnostics/command.rs": 270,
 }
 PARENTS = {
     "crates/cyril/src/main.rs": (20, 360),
@@ -291,6 +291,49 @@ def dependency_names(table):
     return result
 
 
+
+def diagnostics_owner_errors():
+    """Narrow B placement/private-owner tripwires, not behavioral proof."""
+    errors = []
+    modules = [(REVIEW + "src/lib.rs", "diagnostics"),
+               (REVIEW + "src/diagnostics/mod.rs", "command"),
+               (REVIEW + "src/diagnostics/mod.rs", "process")]
+    for path, name in modules:
+        current = ROOT / path
+        if not current.is_file():
+            errors.append(f"{path}: required B owner missing")
+            continue
+        source = _live_source(path, current.read_text(encoding="utf-8"), errors)
+        if source is None:
+            continue
+        declarations = source.top_level_mods(name)
+        if not (len(declarations) == 1 and not declarations[0].conditional
+                and not source.has_attribute_before(declarations[0].keyword, {"path"})
+                and source.item_header(declarations[0]) == token_texts(f"mod {name};")):
+            errors.append(f"{path}: `{name}` must have one private unconditional default-path owner")
+    for path in (REVIEW + "src/diagnostics/command.rs", REVIEW + "src/diagnostics/process.rs"):
+        current = ROOT / path
+        if not current.is_file():
+            continue
+        source = _live_source(path, current.read_text(encoding="utf-8"), errors)
+        if source is None:
+            continue
+        for index, token in enumerate(source.tokens):
+            if source.depth_before[index] != 0 or token.text != "pub":
+                continue
+            # pub(crate)/pub(super) are private implementation cooperation.
+            if index + 1 < len(source.tokens) and source.tokens[index + 1].text != "(":
+                errors.append(f"{path}: unrestricted public helper/item outside the operation facade")
+    facade = ROOT / REVIEW / "src/lib.rs"
+    if facade.is_file():
+        source = _live_source(REVIEW + "src/lib.rs", facade.read_text(encoding="utf-8"), errors)
+        if source is not None:
+            for index, token in enumerate(source.tokens):
+                if source.depth_before[index] == 0 and token.text in {"Manifest", "ManifestFile"}:
+                    errors.append(f"{REVIEW}src/lib.rs: private manifest representation exposed by facade")
+    return errors
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--phase", choices=("prefix", "gather", "diagnostics"))
@@ -327,6 +370,7 @@ def main():
                   if path == "crates/cyril-core/src/review/mod.rs"}
     if args.phase == "diagnostics":
         limits.update(DIAGNOSTICS)
+        errors.extend(diagnostics_owner_errors())
     expected_sources = {p for p in limits if p.startswith(REVIEW)}
     actual_sources = {p.relative_to(ROOT).as_posix() for p in (ROOT / REVIEW / "src").rglob("*.rs")}
     for missing in sorted(set(limits) - {p for p in limits if (ROOT / p).is_file()}):

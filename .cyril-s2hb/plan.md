@@ -2,21 +2,21 @@
 
 ## Inputs and design verification
 
-Consumes route/spec/evidence and approved design dated 2026-09-30. F0 has observed native Linux/Windows proof; C1–C10 have complete falsifiers, independent oracles, named mutations and named checkpoint owners. File-backed capture's descriptor tradeoff is explicitly approved in spec/design. At initial approval no failed or waived fence was carried; the later explicit A1-only F19/F20 exceptions are owned by design.md and review-decisions.md. This plan declares no implementation complete.
+Consumes route/spec/evidence and the approved design. F0 has observed native Linux/Windows mechanism proof; C1–C10 retain complete falsifiers, independent oracles, named mutations and checkpoint owners. File-backed capture's descriptor tradeoff remains approved. A2 and B implementation/runtime qualification is complete on Linux/Windows, with quality and mutation evidence owned by `checkpoint-A2.md`, `checkpoint-B.md` and `evidence-B.json`. The explicit A1-only F19/F20 exceptions remain owned by design.md and review-decisions.md. Final isolated conformance is PASS in `checkpoint-B.md`. Full PR review7, current-head macOS plus required CI, publication/merge and issue acceptance remain PENDING under the parent’s final assembled qualification; this is not issue acceptance.
 
 Publication scope is A1 already merged plus the existing PR150 carrying all remaining s2hb work: A2-C is its normative opening context, followed by atomic A2 gather/facts+hiddenCLI and B diagnostics checkpoints in the same PR. F29/F30's complete identity repair and all acceptance remain in scope; no behavior is dropped.
 
 ## Publication and checkpoint sequence
 
-The user's exact waiver is recorded here: “Ignore the 4000 line commit limit”. It removes the active aggregate commit/publication-size gate and all size-only fit claims; it does not waive acceptance, review, CI, native, lifecycle, safety, fixture, assertion, cap, or raw-content requirements. No future size-driven partition is planned. Module-specific/per-file tripwires remain independent: if any such size gate blocks progress, report the measured size and options/tradeoffs and obtain the user's choice before restructuring, changing a gate, partitioning, or seeking another waiver. No such blocker is known here.
+The requester’s aggregate publication-size waiver is quoted once below. It removes the active aggregate commit/publication-size gate and size-only fit claims; it does not waive acceptance, review, CI, native, lifecycle, safety, fixture, assertion, cap or raw-content requirements. No future size-driven partition is planned. Module-specific/per-file tripwires remain independent: if another size gate blocks progress, report the measured size and options/tradeoffs and obtain the requester’s choice before restructuring, changing a gate, partitioning or seeking another waiver. No such blocker is known here.
 > "Ignore the 4000 line commit limit"
 
 
 Publication outcomes:
 1. **A1 native prefix** remains already merged with its acceptance retained.
-2. **Existing PR150 final scope** contains the A2-C normative opening context, a separately verified atomic A2 gather/facts+hiddenCLI checkpoint, and a separately verified atomic B diagnostics checkpoint. The previously qualified flag-based driver and full CLI harness remain authoritative. Final assembled qualification, full PR review, native proof and required CI run after both checkpoints.
+2. **Existing PR150 final scope** contains the A2-C normative opening context and atomic A2 gather/facts+hiddenCLI and B diagnostics checkpoints. A2/B runtime, quality and mutation qualification is complete on Linux/Windows; the owning checkpoint/evidence records retain exact results. The qualified flag-based driver and full CLI harness remain authoritative. Final isolated conformance is PASS in `checkpoint-B.md`. Full PR review7, current-head macOS plus required CI and publication remain pending before merge/issue acceptance.
 
-The issue closes only after A1's merge and the final complete PR150 merge satisfy every criterion. Requester authorization extends only s2hb to20 implementation attempts/10 PR reviews without resetting counts. Historical opening counters at the R17 amendment were14/5; the later PR record is15 implementation attempts/6 PR reviews before the next full PR review, and subsequent live consumption belongs in the PR thread. Documentation opening context confers no implementation acceptance; every other issue retains5/5. No dependent issue starts before closure; no unrelated primary-checkout work is staged.
+The issue closes only after A1's merge and the final complete PR150 merge satisfy every criterion. Requester authorization extends only s2hb to20 implementation attempts/10 PR reviews without resetting counts. Historical opening counters at the R17 amendment were14/5, followed by15/6; the current recorded consumption is16/20 implementation attempts and6/10 PR reviews. Subsequent live consumption belongs in the PR thread. Documentation opening context confers no implementation acceptance; every other issue retains5/5 and parent cyril-5gb3 remains untouched. No dependent issue starts before closure; no unrelated primary-checkout work is staged.
 
 Historical A2-C opening pins: R15 had completed implementation cycle13/15 and R16 was allocated cycle14/15; cycle12 is historical. Three full PR reviews preceded A2-C; PR150's initial full review was round4/5. These are opening-history pins, not a live remaining-budget claim. A documentation PR consumes a review normally and never resets or evades the issue-wide cap.
 
@@ -24,26 +24,29 @@ Historical A2-C opening pins: R15 had completed implementation cycle13/15 and R1
 
 Production-region convention and tripwire review procedure are in design.md. Ranges are forecasts, not targets to reach by compressing code. Baselines count retained existing cfg-test helper methods outside the terminal test module.
 
-| Module | Baseline | Projected final | Responsibility/interface delta | Protected-parent rule |
-|---|---:|---:|---|---|
-| review lib.rs | 0 | 90–150 | exports and structured errors | no algorithms |
-| review run.rs | 0 | 210–250 | run anchors, stamp, semantic manifest I/O, raw path provenance/coherence, atomic replacement and UTF-8 text | A2 run-owner tripwire300 |
-| review clock.rs | 0 | 70–120 | clock seam and UTC conversion | two actual adapters |
-| review git.rs | 0 | 140–190 | explicit argv/target/error behavior | no shell |
-| review gather.rs | 0 | 300–320 | gather orchestration | delegate facts/I/O; A2 Length review tripwire350 |
-| review facts.rs | 0 | 533–560 | symbols/usages/docs/pages | no diagnostics/workflow; A2 Length review tripwire620 |
-| review diagnostics/mod.rs | 0 | 170–220 | typed operation/report | reuse run I/O |
-| review diagnostics/process.rs | 0 | 160–200 | direct child/captures/snapshots | no descendants/read threads |
-| review diagnostics/command.rs | 0 | 130–185 | host command plan/environment | no implicit shell |
-| core review/mod.rs | 0 | 140–160 | dialect/prefix; C8 Length review retained one owner | no resolver; tripwire190 |
-| binary crtool.rs | 0 | 65–100 | clap and output/exit mapping | no run implementation |
-| binary main.rs | 304 | 312–320 | early dispatch only | +20 maximum |
-| core lib.rs | 19 | 20 | export only | +2 maximum |
-| bridge.rs | 417 | 433–442 | resolved dialect carry/getter | +30 maximum |
-| host_shell.rs | 478 | 486–492 | exhaustive dialect projection | +15 maximum |
-| root/leaf/binary Cargo manifests | existing | +20 combined plus leaf metadata | leaf registration, semantic JSON and Unicode regex features | no weakened lints/extra runtime dependencies |
+| Module | Baseline | Forecast | Actual production lines at this atomic checkpoint | Responsibility/interface delta | Protected-parent rule |
+|---|---:|---:|---:|---|---|
+| review lib.rs | 0 | 145–170 | 139 | exports and structured errors | no algorithms; ceiling180 unchanged |
+| review run.rs | 0 | 210–250 | 237 | run anchors, stamp, semantic manifest I/O, raw path provenance/coherence, atomic replacement and UTF-8 text | A2 run-owner tripwire300 |
+| review clock.rs | 0 | 70–120 | 61 | clock seam and UTC conversion | two actual adapters; ceiling150 unchanged |
+| review git.rs | 0 | 140–190 | 134 | explicit argv/target/error behavior | no shell |
+| review gather.rs | 0 | 300–320 | 236 | gather orchestration | delegate facts/I/O; A2 tripwire350 |
+| review facts.rs | 0 | 533–560 | 515 | symbols/usages/docs/pages | no diagnostics/workflow; A2 tripwire620 |
+| review diagnostics/mod.rs | 0 | 200–225 | 213 | typed operation/report | reuse run I/O; ceiling280 unchanged |
+| review diagnostics/process.rs | 0 | 230–270 | 276 | direct child/captures/snapshots | no descendants/read threads; selected ceiling300 |
+| review diagnostics/command.rs | 0 | 200–235 | 217 | host command plan/environment | no arbitrary-text shell wrapper; explicit native Windows batch dispatch per spec; selected ceiling270 |
+| core review/mod.rs | 0 | 140–160 | 145 | dialect/prefix; C8 retains one owner | no resolver; tripwire190 |
+| binary crtool.rs | 0 | 65–100 | 66 | clap and output/exit mapping | no run implementation |
+| binary main.rs | 304 | 312–320 | A2/current source; unchanged by B | early dispatch only | +20 maximum |
+| core lib.rs | 19 | 20 | A1/current source; unchanged by B | export only | +2 maximum |
+| bridge.rs | 417 | 433–442 | A1/current source; unchanged by B | resolved dialect carry/getter | +30 maximum |
+| host_shell.rs | 478 | 486–492 | A1/current source; unchanged by B | exhaustive dialect projection | +15 maximum |
+| root/leaf/binary Cargo manifests | existing | +20 combined plus leaf metadata | N/A — metadata, not a production-region module count | leaf registration, semantic JSON and Unicode regex features | no weakened lints/extra runtime dependencies |
 
 Module-specific tripwires and ownership checks govern growth; they are not an aggregate commit-size gate. No shared acceptance gate is replaced.
+
+Design.md’s selected B owner/budget decision owns the requester’s choice and current ceilings; this ledger adopts it without a second decision. Actual counts above are the authoritative restored diagnostics-phase C10 measurements for this atomic checkpoint, using design.md’s physical raw-file production-region convention, including the production/test separator rather than declaration-expanded `read` rendering. `checkpoint-B.md` and `evidence-B.json` own checked-source provenance and gate results. Process exceeds its initial forecast but remains below its approved ceiling; forecasts are not squeezing/splitting/compaction targets. The aggregate waiver authorizes no module-ceiling change, and all other gates remain.
+
 
 ## Slice A1: construct safe native executable prefixes
 
@@ -98,7 +101,10 @@ Publication merge pins: three-way ancestor `422d16467aa48d8956d11dcc3b752fa91d53
 
 **Oracle:** design C1/C2/C4 independent Python functional reference with shared timestamp/version, direct raw Git and independently specified semantic helper/caller/document expectations where Python shares a defect, C3 categories/context and unchanged-artifact observations, C9 actual process/filesystem observations, retained C8, and C10 compiler/dependency/ownership checks. No semantic field/type/array order/content is normalized away.
 
-**Stress fixture:** retain assembled A2's language/Unicode, caps, binary/deleted/empty, scope, stamp, pages and precedence cases. Strengthen raw/look-alike names with identical symbol names, exact cross-file usages, colon/LF path framing, unscoped raw document sizes, typed raw/display coherence refusals, persisted-run facts rebuilding, invalid ordinary config, nonexistent agent command, startup markers, repeated gather/facts and unsupported diagnostics verb. The full CLI harness remains intact; no waiver narrows it.
+**Stress fixture:** retain assembled A2's language/Unicode, caps, binary/deleted/empty, scope, stamp, pages and precedence cases. Linux malformed-byte/replacement-look-alike collisions retain identical symbol names, exact cross-file usages, independent Git patches, raw document sizes and persisted facts rebuilding. Actual Unix admitted-Unicode colon/LF paths prove framing, same-symbol/own-definition/caller hits, distinct documents and persisted rebuild on Linux/macOS. Existing all-platform Unicode and raw metadata type/range/display-coherence malformed-manifest cases remain unchanged. Retain invalid ordinary config, nonexistent agent command, startup markers, repeated gather/facts and unsupported diagnostics verb. The full CLI harness remains intact; no waiver narrows it.
+
+**A2 admitted-input correction:** the fixture-domain repair described in design.md, A2 admitted-input fixture correction, is implemented. Complete malformed-byte identity proof remains Linux-only; the actual Unix admitted-Unicode colon/LF same-symbol/document/rebuild consumer covers the admitted Linux/macOS domain, and existing all-platform Unicode/malformed-manifest cases remain unchanged. The owning checkpoints record Linux/Windows qualification and the historical pre-product APFS fixture failure; current-head macOS plus required CI remains pending. No production error is silenced and no native macOS behavior is dropped.
+
 
 **Regression fence:** leaf/public operation and full hidden-CLI cases through the existing qualified flag-based `parity_driver`/CLI harness; `.cyril-s2hb/oracles/parity.py --phase gather`; `check_shape.py --phase gather`; actual native library and binary consumers. C1–C4 and C9 fixtures remain in this single A2 increment.
 The differential run is permanent functional-equivalence tooling, not a production source-string test. The fixture driver is verification-only and is not installed as a Cyril command.
@@ -140,19 +146,22 @@ C9 integration: the complete hidden CLI adapter, startup/help/real-clock smoke a
 
 **Claim IDs:** C5, C6, C7; C1/C3/C10 retained/extended and reverified for the new consumer. F0 retained mechanism proof applies because the same std file-handle strategy is selected.
 
-**Expected behavior:** public diagnostics executes the explicit native command, preserves lossless raw captures and meaningful filtered evidence, and returns typed clean/nonzero/timeout/cancelled outcomes; cannot-start/parse/stamp failures write no reports; pre-cancel does not launch; live cancellation kills/reaps only its owned direct child. No diagnostics CLI verb exists.
+**Expected behavior:** public diagnostics executes the explicit native command, preserves lossless raw captures and meaningful filtered evidence, and returns typed clean/nonzero/timeout/cancelled outcomes; cannot-start/parse/stamp failures write no reports; pre-cancel does not launch; live cancellation kills/reaps only its owned direct child. POSIX shlex/no-shell semantics remain; Windows preserves normal executable arguments and permits explicit `.bat`/`.cmd` normal Windows/std `cmd.exe` dispatch with native batch parsing under spec.md's Windows command decision. Arbitrary command text is never shell-wrapped, and batch dispatch does not extend cancellation to descendants. No diagnostics CLI verb exists.
 
 **Oracle:** C5 uses functional command/argv/environment behavior plus literal child receipts; C6 uses meaningful evidence/status/content and report limits; C7 uses OS process status and independently controlled handshakes/holder; deterministic deadline/first-observation cases are not fake real-time success.
 
 **Stress fixture:** 131,073 bytes on each stream including invalid UTF-8; 201 changed-path matches and 16 tail lines; child-emitted CRLF, if present, remains raw capture data; hostile quoted argument shapes; failed exit and signal; zero/default timeout; cancel before launch/after ready/after exit; descendant still writing after direct child exits; spawn failure and cleanup errors. Expected partial snapshots contain only bytes before sampled lengths, and holder survives until fixture-owned release.
 
-**Regression fence:** `crates/cyril-review/tests/diagnostics.rs` with a native fixture child mode in the verification driver; `.cyril-s2hb/oracles/parity.py --phase diagnostics`; permanent native owned-process cancellation qualification. Checks assert functional statuses/content and lossless raw captures. No test kills processes by name or relies on a shared current directory/environment mutation.
+**Regression fence:** standalone `crates/cyril-review/tests/diagnostics.rs` uses per-host runnable fixtures and works without a prebuilt example; the explicitly built verification driver's native child/holder/sentinel modes serve `.cyril-s2hb/oracles/parity.py --phase diagnostics`. Public native qualification independently proves cancellation, direct-child reaping, live inherited holder/unrelated sentinel, no EOF wait, late holder writes after return, capture contents and cleanup. The observer uses the standard temporary-file collection decision in design.md and waits for the exact driver process, not inherited pipe EOF. A private production bounded-read test samples a real file, appends known late bytes, invokes the actual reader and asserts the exact sampled prefix. Private terminal-decision tests prove deadline/precedence. No new production seam/backend/clock hook/private filename convention is added. Checks assert functional statuses/content and lossless raw captures without process-name killing or shared cwd/environment mutation; checkpoint-B.md and evidence-B.json own qualification.
 
-**Named mutation:** C5 splits Windows raw tail/removes nonempty CARGO_ value; C6 reverses stream order or uses a199 match cap; C7 omits direct-child kill/reads past snapshot length. Deterministic terminal-decision tests also invert exit/cancel observation order. Native control proves holder/unrelated sentinel are live, so absence assertions cannot pass vacuously.
+**F0 capture-mode fence:** Unix ephemeral captures request0600 through std Unix `OpenOptionsExt`; Windows retains native inherited temporary-directory ACLs. The private actual-creator/metadata fence under permissive umask000 must detect group/other access, while a real public child `fstat` probe observes the actual inherited capture modes. These are source-mode/file-creation proofs, distinct from native lifecycle mutation attribution; persistent run-artifact permissions and universal Windows ACL hardening are not claimed. No interface, dependency, lifecycle, gate or waiver changes.
+
+
+**Named mutation:** C5 splits Windows executable raw tail/removes nonempty CARGO_ value; C6 reverses stream order or uses a199 match cap; C7 omits direct-child kill/reads past snapshot length. The kill fault is attributed to the native lifecycle fence; removing the actual reader's take cap must compile and fail the deterministic private real-file boundary fence, not falsely qualify through a native fixture that releases its holder only after the operation returns. Inverting exit/cancel observation order is attributed to the private terminal-decision fence. Native controls prove holder/unrelated sentinel are live, so absence assertions cannot pass vacuously. This approved layered proof preserves every C7 obligation under delegated Gilfoyle verification decisions; it adds no production seam/backend/clock hook/private filename convention or acceptance waiver.
 
 **Complexity/production scale:** command parsing O(C) characters; Windows executable candidates bounded by whitespace positions in C, with no successful-launch retry. Capture is O(B) disk/output bytes, two distinct files, zero reader threads, one direct child. Polling uses a fixed 10 ms sleep while live; terminal deadline decisions use monotonic samples, no busy-spin. Snapshot reads are capped by two sampled lengths even if holders keep appending. Filtering O(L×F) for L output lines/F changed paths (matching functional path semantics); reports retain at most200 matches/15 nonempty tail lines; no raw-output cap. Scale fixture 32 MiB dual-stream output and100 changed paths; accepted bound is two capture files, no reader thread, one spawn, at most sampled stdout+stderr+separator bytes and source report limits. It does not promise bounded disk cost for arbitrary input volume.
 
-**Wall budget/phase:** one-off diagnostics operation; user/default timeout is the running deadline and direct-child termination/reap has the approved one-second deadline. Deterministic virtual observation tests enforce deadline/precedence decisions; real native process fixtures establish actual reaping/cleanup, with outer timeout solely a hang guard. N/A — no separate latency SLA for filesystem output, no always-on background task.
+**Wall budget/phase:** one-off diagnostics operation; user/default timeout is the running deadline and direct-child termination/reap has the approved one-second decision deadline, not an arbitrary filesystem syscall latency bound. Narrow private deterministic terminal-decision tests enforce deadline/precedence decisions; real public native process fixtures independently establish actual reaping/cleanup, with outer timeout solely a hang guard. N/A — no separate latency SLA for filesystem output, no always-on background task.
 
 **Module shape:** create diagnostics/{mod,process,command}.rs; lib gains only exports/error variants; run owns unchanged stamp/semantic JSON/native text implementation. No protected-parent production changes are required. `python3 .cyril-s2hb/oracles/check_shape.py --phase diagnostics` verifies final ledger/dependencies and growth; re-run affected C10 mutations if fence changes. Return to design before changing ownership or thresholds.
 
@@ -167,14 +176,14 @@ C9 integration: the complete hidden CLI adapter, startup/help/real-clock smoke a
 **Commands and expected results:**
 - `cargo test -p cyril-review --test diagnostics` → typed statuses, lossless raw captures, meaningful rendered content, no report on prelaunch errors, deadline/terminal precedence, owned lifecycle assertions.
 - `cargo build -p cyril-review --examples` then `python3 .cyril-s2hb/oracles/parity.py --phase diagnostics --cyril target/debug/cyril --driver target/debug/examples/parity_driver` → functional status/content/record equivalence for identical clock/command/manifest inputs, lossless raw-capture checks, and separate actual-system-clock library smoke.
-- Native Windows equivalent → raw command-tail argv semantics, Windows exit-code treatment, lossless child evidence, meaningful rendered content, cancellation and holder-cleanup observations. CI macOS executes its own host fixture.
+- Native Windows equivalent → raw executable command-tail argv semantics, explicit native `.bat`/`.cmd` batch parsing, Windows exit-code treatment, lossless child evidence, meaningful rendered content, cancellation and holder-cleanup observations. Completed native qualification belongs to `checkpoint-B.md` and `evidence-B.json`; its prior batch preflight is not a substitute for those results. Current-head macOS CI must execute its own host fixture.
 - Each mutation's focused case → named red output; restore → green. Record source hash/environment and observed terminal values.
 - `python3 .cyril-s2hb/oracles/check_shape.py --phase diagnostics`, `cargo fmt --check`, `cargo test`, `cargo clippy -- -D warnings` → final assembled gate passes; no source fence runs from production tests.
 - Actual library consumer smoke, independent production reconstruction/ledger comparison, fresh full PR review and current-head CI must pass after both A2 and B checkpoints are assembled. Verify A1's merge plus the final complete PR150 merge and every acceptance criterion; close cyril-s2hb without changing parent cyril-5gb3.
 
 ## Self-review and handoff
 
-Scoped R17 self-review: C1–C4 and C9 remain owned by the atomic A2 checkpoint, C5–C7 by the atomic B checkpoint, with inherited A1 claims and per-checkpoint C10 checks. The sole A2 evidence owner, `.cyril-s2hb/checkpoint-A2.md`, qualifies current A2 C1–C4, C9 and applicable C10; C1/C3/C10 remain subject to their B extension, while C5–C7 remain pending because B is unimplemented. The A2 and B checkpoints remain separately reviewable inside the existing PR150, while final full review/native/CI, merge and issue acceptance remain pending. Existing module seams and independent tripwires remain; byte/record loops retain explicit linear/input-size bounds and no new wall-time claim. No final PASS receipt is claimed by this plan.
+Scoped self-review: atomic A2 owns C1–C4/C9 and applicable C10; atomic B owns C5–C7 and the C1/C3/C10 extension, while inherited A1 claims retain their applicable proof. Linux/Windows runtime, quality, mutation, source-mode and corrected observer/lifecycle qualification is complete and owned by `checkpoint-A2.md`, `checkpoint-B.md` and `evidence-B.json`; changing job outputs, figures and hashes are not copied into this plan. Existing module seams/tripwires and linear/input-size bounds remain, with no new wall-time claim. Final isolated conformance is PASS in `checkpoint-B.md`. Full PR review7, current-head macOS plus required CI, publication/merge and issue acceptance remain PENDING under the parent’s final assembled qualification. No issue acceptance or final PASS is claimed here.
 
 ## Planning amendments, 2026-09-30
 
@@ -182,12 +191,8 @@ C8 Length review in design.md retains the cohesive prefix owner and raises its t
 
 ## Functional-equivalence amendment — 2026-09-30
 
-Requester correction (verbatim):
-> “It didn't need to be a 1 to 1 copy of the python script, just functionally the same”
-
-Further requester clarification (verbatim):
-> “The results and output don't have to be byte equivalent”
+The requester’s verbatim reference-fidelity correction is owned by `spec.md`, Functional-equivalence amendment; this plan adopts that decision.
 
 This supersedes active byte/text-wrapper parity requirements. A2 checks preserve semantic JSON fields/types and array order, file/symbol/usage sequence, meaningful content, stamps/refusals, exit/status/error/context, page budgets/caps, patch content, and native safety/lifecycle gates. Scope parsing/trimming uses Rust standard Unicode whitespace; generated text uses UTF-8 without a host-specific adapter or native LF-only gate. B uses functional command/status/content checks with lossless raw captures, not Python wrapper-byte parity. The C1 formatting-only manifest-key-order/newline mutant is replaced by manifest data corruption; no format-only mutation is required.
 
-Pre-amendment byte comparisons, host-specific CRLF/CRCRLF checks, and exact stdout/stderr wording are historical evidence only. The A2-C text is historical PR150 opening context, not a restriction on final scope; no implementation-success receipt is claimed there. The sole A2 evidence owner, `.cyril-s2hb/checkpoint-A2.md`, qualifies current A2 C1–C4, C9 and applicable C10; C1/C3/C10 remain subject to their B extension, while C5–C7 remain pending because B is unimplemented. Final full-PR review, native qualification, required CI, merge and issue acceptance remain pending. Historical opening counters remain distinct from live PR consumption: R15 completed implementation cycle13/15 and R16 was allocated cycle14/15 at A2-C opening; PR150's initial full review was round4/5, later review consumption is in the PR thread, and R17 authorization is20 implementation attempts/10 PR reviews without reset. The user's exact size waiver removes only the aggregate commit/publication-size gate; it does not waive any cr…
+Pre-amendment byte comparisons, host-specific CRLF/CRCRLF checks and exact stdout/stderr wording remain historical evidence only. A2-C is historical PR150 opening context, not a restriction on final scope or implementation acceptance. Current Linux/Windows A2/B runtime, quality and mutation qualification is owned by the checkpoint/evidence records; the final assembled obligations named in Self-review and handoff remain pending. Publication and checkpoint sequence owns issue-wide authorization, current consumption and historical opening counters without reset. The aggregate exception removes only its named publication-size gate; no criterion, native/CI proof, safety obligation, fixture, cap or independently approved module ceiling is waived.

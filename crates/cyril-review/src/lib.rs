@@ -1,3 +1,4 @@
+mod diagnostics;
 mod facts;
 mod gather;
 mod git;
@@ -6,6 +7,9 @@ mod run;
 mod clock;
 
 pub use clock::{ReviewClock, SystemReviewClock};
+pub use diagnostics::{
+    Cancellation, DiagnosticsOptions, DiagnosticsOutcome, DiagnosticsResult, diagnostics,
+};
 pub use facts::facts;
 pub use gather::gather;
 pub use run::ReviewRun;
@@ -77,6 +81,8 @@ pub enum ReviewError {
     },
     #[error("clock error: {message}")]
     Clock { message: String },
+    #[error(transparent)]
+    Diagnostics(#[from] DiagnosticsError),
 }
 
 impl ReviewError {
@@ -88,6 +94,25 @@ impl ReviewError {
             _ => 2,
         }
     }
+}
+
+/// Command and direct-child failures from the diagnostics operation.
+#[derive(Debug, thiserror::Error)]
+pub enum DiagnosticsError {
+    #[error("invalid diagnostics command: {message}")]
+    InvalidCommand { message: String },
+    #[error("cannot run diagnostics command {command:?}: {source}")]
+    CannotStart {
+        command: String,
+        #[source]
+        source: io::Error,
+    },
+    #[error("diagnostics lifecycle failure during {operation}: {source}")]
+    Lifecycle {
+        operation: String,
+        #[source]
+        source: io::Error,
+    },
 }
 
 pub(crate) fn io_error(

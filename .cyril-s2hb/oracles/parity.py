@@ -2,7 +2,7 @@
 # /// script
 # requires-python = ">=3.12"
 # ///
-"""Functional differential evidence for the slice-A native crtool port.
+"""Functional differential evidence for native gather, facts and diagnostics.
 
 This is verification tooling, not a replacement implementation.  The Python
 oracle is imported from ``.kiro/code-review/crtool.py`` without modifying its
@@ -22,6 +22,8 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import signal
+import time
 import subprocess
 import sys
 import tempfile
@@ -1344,17 +1346,817 @@ def cli_smoke(cyril: Path) -> None:
             fail("forbidden diagnostics command was accepted or wrote artifacts")
 
 
+
+# B uses the same compiled flag-based consumer and the unmodified reference.
+DIAGNOSTICS_ELAPSED = 2.6
+DIAGNOSTICS_SCALE_BYTES = 32 * 1024 * 1024
+
+
+def native_command(argv: list[str]) -> str:
+    if os.name == "nt":
+        return subprocess.list2cmdline(argv)
+    import shlex
+    return shlex.join(argv)
+
+
+def native_units(value: str) -> list[int]:
+    if os.name == "nt":
+        raw = value.encode("utf-16-le", errors="surrogatepass")
+        return [int.from_bytes(raw[index:index + 2], "little") for index in range(0, len(raw), 2)]
+    return list(os.fsencode(value))
+
+
+def native_units_text(units: list[int]) -> str:
+    if os.name == "nt":
+        raw = b"".join(unit.to_bytes(2, "little") for unit in units)
+        return raw.decode("utf-16-le", errors="surrogatepass")
+    return os.fsdecode(bytes(units))
+
+
+def wait_file(path: Path, process: subprocess.Popen | None = None, seconds: float = 10) -> bytes:
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        try:
+            value = path.read_bytes()
+            if value:
+                return value
+        except FileNotFoundError:
+            pass
+        if process is not None and process.poll() is not None:
+            fail(f"fixture exited before handshake {path.name}: {process.returncode}")
+        time.sleep(0.002)
+    fail(f"fixture handshake deadline: {path}")
+
+
+def challenge(root: Path, role: str) -> None:
+    token = os.urandom(24).hex().encode("ascii")
+    put(root / f"{role}.challenge", token)
+    deadline = time.monotonic() + 5
+    while time.monotonic() < deadline:
+        try:
+            if (root / f"{role}.response").read_bytes() == token:
+                return
+        except FileNotFoundError:
+            pass
+        time.sleep(0.002)
+    fail(f"{role} did not answer a fresh live challenge")
+
+
+
+
+def native_pid_exists(pid: int) -> bool:
+    if os.name != "nt":
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+    kernel.WaitForSingleObject.restype = wintypes.DWORD
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.OpenProcess(0x00100000, False, pid)
+    if not handle:
+        error = ctypes.get_last_error()
+        if error == 87:  # ERROR_INVALID_PARAMETER: PID no longer exists.
+            return False
+        fail(f"cannot observe fixture cleanup PID {pid}: Windows error {error}")
+    try:
+        result = kernel.WaitForSingleObject(handle, 0)
+        if result == 0xFFFFFFFF:
+            fail(f"cannot wait for fixture cleanup PID {pid}")
+        return result == 0x102
+    finally:
+        if not kernel.CloseHandle(handle):
+            fail(f"cannot close cleanup observation handle for {pid}")
+
+
+class FixtureCleanup:
+    """Release fixture-owned roles before removing their isolated source tree.
+
+    A release is cooperative, including on an assertion or outer-guard failure.
+    It is not implicit descendant termination. The bounded fixture modes have
+    their own 30-second guard; no role waits for inherited stream EOF.
+    """
+    def __init__(self):
+        self.root: Path | None = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, traceback):
+        if self.root is None or not self.root.exists():
+            return False
+        root = self.root
+        for role in ("child", "holder", "sentinel"):
+            put(root / f"{role}.release", b"fixture teardown release")
+        if (root / "child.ready").exists():
+            pid = receipt_value(root / "child.receipt")["pid"]
+            deadline = time.monotonic() + 35
+            while not (root / "child.exiting").exists() and native_pid_exists(pid):
+                if time.monotonic() >= deadline:
+                    fail("fixture-owned direct child did not accept teardown release")
+                time.sleep(0.002)
+        for ready, done in (("holder.ready", "holder.done"), ("sentinel.ready", "sentinel.done")):
+            if (root / ready).exists():
+                wait_file(root / done, seconds=35)
+        return False
+
+
+class NativeProcess:
+    """Own one native process handle; never names or process trees."""
+    def __init__(self, pid: int):
+        self.pid = pid
+        self.handle = None
+        if os.name == "nt":
+            import ctypes
+            from ctypes import wintypes
+            self.kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+            self.kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            self.kernel.OpenProcess.restype = wintypes.HANDLE
+            self.kernel.WaitForSingleObject.argtypes = [wintypes.HANDLE, wintypes.DWORD]
+            self.kernel.WaitForSingleObject.restype = wintypes.DWORD
+            self.kernel.TerminateProcess.argtypes = [wintypes.HANDLE, wintypes.UINT]
+            self.kernel.TerminateProcess.restype = wintypes.BOOL
+            self.kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+            self.kernel.CloseHandle.restype = wintypes.BOOL
+            self.handle = self.kernel.OpenProcess(0x00100001, False, pid)
+            if not self.handle:
+                fail(f"cannot acquire live fixture process {pid}: {ctypes.get_last_error()}")
+
+    def alive(self) -> bool:
+        if os.name == "nt":
+            result = self.kernel.WaitForSingleObject(self.handle, 0)
+            if result == 0xFFFFFFFF:
+                fail(f"cannot observe native process {self.pid}")
+            return result == 0x102
+        try:
+            os.kill(self.pid, 0)
+            return True  # Includes zombies: direct child must actually be reaped.
+        except ProcessLookupError:
+            return False
+
+    def terminate(self) -> None:
+        if not self.alive():
+            return
+        if os.name == "nt":
+            if not self.kernel.TerminateProcess(self.handle, 99):
+                fail(f"owned fixture cleanup could not terminate {self.pid}")
+        else:
+            try:
+                os.kill(self.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+
+    def close(self) -> None:
+        if self.handle is not None:
+            if not self.kernel.CloseHandle(self.handle):
+                fail(f"could not close owned process handle {self.pid}")
+            self.handle = None
+
+
+def fixture_data(root: Path, stdout: bytes = b"", stderr: bytes = b"", *, code: int = 0, sleep_ms: int = 0) -> None:
+    root.mkdir(parents=True)
+    put(root / "stdout.bin", stdout)
+    put(root / "stderr.bin", stderr)
+    put(root / "config.json", json.dumps({"exit_code": code, "sleep_ms": sleep_ms}))
+
+
+def fixture_argv(driver: Path, root: Path, kind: str = "emit", args: tuple[str, ...] = ()) -> list[str]:
+    return [str(driver), "fixture", "--root", str(root), "--kind", kind, "--", *args]
+
+
+def diagnostics_argv(driver: Path, workspace: Path, run_dir: Path, command: str, receipt: Path,
+                     *, timeout: str = "5", clock: str = "fixed", elapsed: float = DIAGNOSTICS_ELAPSED,
+                     cancel: str = "none", ready: Path | None = None) -> list[str]:
+    argv = [str(driver), "diagnostics", "--workspace", str(workspace), "--rundir", str(run_dir),
+            "--command", command, "--receipt", str(receipt), "--clock", clock,
+            "--timeout-seconds", timeout, "--cancel", cancel]
+    if clock == "fixed":
+        argv += ["--elapsed-seconds", str(elapsed)]
+    if ready is not None:
+        argv += ["--cancel-ready", str(ready)]
+    return argv
+
+
+def diagnostics_call(argv: list[str], workspace: Path, env: dict[str, str] | None = None) -> Captured:
+    try:
+        result = subprocess.run(argv, cwd=workspace, env=env, capture_output=True, timeout=40)
+    except subprocess.TimeoutExpired:
+        fail("diagnostics outer hang guard expired (not a latency qualification)")
+    return Captured(result.returncode, result.stdout, result.stderr)
+
+
+def seed_diagnostics(driver: Path, root: Path, *, scale: bool = False) -> tuple[Path, Path]:
+    workspace, run_dir = root / "workspace", root / "rundir"
+    build_canonical(workspace)
+    if scale:
+        for index in range(SCALE_FILES):
+            put(workspace / "scale" / f"path-{index:03d}.txt", f"changed-{index}\n")
+        finish_feature(workspace)
+    gathered = invoke_driver(driver, "gather", workspace, run_dir, "main...HEAD", "scale" if scale else "src")
+    if gathered.returncode != 0:
+        fail(f"diagnostics gather prerequisite failed: {gathered.stderr!r}")
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    manifest["facts"]["fixture_unrelated"] = {"nested": [7, "unchanged"]}
+    put(run_dir / "manifest.json", json.dumps(manifest))
+    return workspace, run_dir
+
+
+def receipt_value(path: Path) -> dict:
+    value = json_bytes("diagnostics receipt", path.read_bytes())
+    if not isinstance(value, dict):
+        fail("diagnostics receipt is not an object")
+    return value
+
+
+def assert_outcome(receipt: dict, outcome: str, *, started: bool = True, code: int | None = None) -> None:
+    if receipt.get("outcome") != outcome or receipt.get("started") is not started or receipt.get("exit_code") != code:
+        fail(f"typed diagnostics result differs: {receipt!r}; wanted {outcome}/{started}/{code}")
+
+
+def assert_raw(run_dir: Path, stdout: bytes, stderr: bytes) -> bytes:
+    raw = (run_dir / "facts" / "diagnostics-raw.txt").read_bytes()
+    # Only the generated separator is presentation. Child bytes are literal.
+    if raw not in (stdout + b"\n" + stderr, stdout + b"\r\n" + stderr):
+        fail(f"lossless ordered raw capture differs: received {len(raw)}, streams {len(stdout)}/{len(stderr)}")
+    return raw
+
+
+def status_meaning(status: object) -> tuple[str, int | None]:
+    if not isinstance(status, str):
+        fail("diagnostics status is not text")
+    lower = status.casefold()
+    if "cancel" in lower:
+        return "Cancelled", None
+    if "tim" in lower and "out" in lower:
+        return "TimedOut", None
+    if "clean" in lower:
+        return "Clean", 0
+    if "fail" in lower:
+        match = re.search(r"exit(?:[_ ]code)?\s*[=:]?\s*(-?\d+)", status, re.IGNORECASE)
+        if match is not None:
+            return "Failed", int(match[1])
+    fail(f"diagnostics status lacks terminal meaning: {status!r}")
+
+
+def assert_diagnostics_artifacts(run_dir: Path, before: dict, command: str, outcome: str, code: int | None,
+                                 elapsed: float, source_lines: list[str], expected_lines: list[str], matches: int) -> None:
+    manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+    facts = manifest.get("facts")
+    if not isinstance(facts, dict) or facts.get("diagnostics") != "facts/diagnostics.txt":
+        fail("diagnostics report metadata is absent")
+    if status_meaning(facts.get("diagnostics_status")) != (outcome, code):
+        fail("manifest diagnostics status disagrees with typed/native outcome")
+    restored = dict(manifest)
+    restored["facts"] = dict(facts)
+    restored["facts"].pop("diagnostics")
+    restored["facts"].pop("diagnostics_status")
+    if restored != before:
+        fail("diagnostics changed unrelated manifest/facts metadata")
+    text = normalize_frame((run_dir / "facts" / "diagnostics.txt").read_bytes(), "filtered diagnostics")
+    rendered = text.splitlines()
+    if command not in text or before["head"][:12] not in text:
+        fail("filtered report lost command or manifest HEAD context")
+    source_set = set(source_lines)
+    selected = [line for line in rendered if line in source_set]
+    if selected != expected_lines:
+        fail(f"meaningful diagnostics evidence/order/caps differs: {selected[:3]!r}... ({len(selected)} lines)")
+    headers = [line for line in rendered if line not in source_set and command not in line]
+    if not any(re.search(rf"(?<!\d){matches}(?!\d)", line) and
+               re.search(r"file|path|match", line, re.IGNORECASE) for line in headers):
+        fail(f"filtered report lost total changed-path match count {matches}")
+    seconds = [float(value) for line in headers for value in re.findall(r"(?<![\w.])(\d+(?:\.\d+)?)\s*s(?:econds)?\b", line)]
+    expected_seconds = float(format(elapsed, ".0f"))
+    if expected_seconds not in seconds:
+        fail(f"filtered report lost rounded elapsed sample {elapsed}: {seconds!r}")
+    if not any(status_meaning(line) == (outcome, code) for line in headers if
+               re.search(r"clean|fail|cancel|tim.*out", line, re.IGNORECASE)):
+        fail("filtered report lost meaningful terminal status")
+
+
+def reference_diagnostics(module, workspace: Path, run_dir: Path, command: str, timeout: float,
+                          elapsed: float, env: dict[str, str] | None) -> Captured:
+    original_cwd, original_time = Path.cwd(), module.time
+    original_env = os.environ.copy()
+    samples = iter((100.0, 100.0 + elapsed))
+    module.time = SimpleNamespace(time=lambda: next(samples))
+    try:
+        os.chdir(workspace)
+        if env is not None:
+            os.environ.clear()
+            os.environ.update(env)
+        return capture_oracle_call(lambda: module.cmd_diagnostics(SimpleNamespace(
+            rundir=str(run_dir), command=command, timeout=timeout)))
+    finally:
+        os.chdir(original_cwd)
+        module.time = original_time
+        os.environ.clear()
+        os.environ.update(original_env)
+
+
+def compare_environment(receipt: dict, expected: dict, names: list[str]) -> None:
+    actual = {tuple(entry["name"]): entry["value"] for entry in receipt["env"]}
+    wanted = {tuple(entry["name"]): entry["value"] for entry in expected["env"]}
+    for name in names:
+        key = tuple(native_units(name.upper() if os.name == "nt" else name))
+        if actual.get(key) != wanted.get(key):
+            fail(f"native environment preservation/filtering differs for {name!r}")
+
+
+def diagnostics_pair(driver: Path, label: str, *, stdout: bytes = b"", stderr: bytes = b"", code: int = 0,
+                     args: tuple[str, ...] = (), timeout: str = "5", sleep_ms: int = 0,
+                     elapsed: float = DIAGNOSTICS_ELAPSED, source_lines: list[str] | None = None,
+                     expected_lines: list[str] | None = None, matches: int = 0,
+                     executable: str = "absolute", raw_tail: str | None = None, scale: bool = False) -> None:
+    with tempfile.TemporaryDirectory(prefix="cyril-s2hb-diagnostics-") as temporary, FixtureCleanup() as cleanup:
+        root = Path(temporary)
+        workspace, run_dir = seed_diagnostics(driver, root, scale=scale)
+        fixture = root / "fixture with spaces"
+        cleanup.root = fixture
+        fixture_data(fixture, stdout, stderr, code=code, sleep_ms=sleep_ms)
+        chosen = driver
+        env = os.environ.copy()
+        names = ["CARGO_S2HB_EMPTY", "RUST_S2HB_EMPTY", "RUSTUP_S2HB_EMPTY", "CARGO_S2HB_KEEP",
+                 "RUST_S2HB_KEEP", "S2HB_EMPTY", "S2HB_KEEP", "cargo_s2hb_lower", "rust_s2hb_lower"]
+        env.update(dict(zip(names, ["", "", "", "cargo-nonempty", "rust-nonempty", "", "ordinary", "", ""])))
+        if os.name != "nt":
+            names += ["CARGO_\udcff", "\udcff_NATIVE", "NATIVE_VALUE"]
+            env.update({"CARGO_\udcff": "", "\udcff_NATIVE": "native", "NATIVE_VALUE": "\udcfe"})
+        if executable in ("quoted-space", "unquoted-space"):
+            chosen = root / "has space" / driver.name
+            chosen.parent.mkdir()
+            shutil.copy2(driver, chosen)
+        elif executable in ("relative", "path"):
+            chosen = workspace / driver.name
+            shutil.copy2(driver, chosen)
+        elif executable in ("batch-cmd", "batch-bat"):
+            if os.name != "nt":
+                fail("explicit batch invocation is a native Windows qualification case")
+            extension = "cmd" if executable == "batch-cmd" else "bat"
+            chosen = root / "has space" / f"fixture.{extension}"
+            chosen.parent.mkdir()
+            # Requester-approved explicit native batch selection. The product
+            # does not wrap arbitrary command strings in a shell. Its direct
+            # child follows the normal std/Windows batch-dispatch semantics.
+            child_prefix = subprocess.list2cmdline(fixture_argv(driver, fixture)[:-1])
+            script = "@echo off\r\n" + child_prefix + " -- %*\r\nexit /b %errorlevel%\r\n"
+            put(chosen, script.encode("utf-8"))
+        argv = ([str(chosen), *args] if executable in ("batch-cmd", "batch-bat")
+                else fixture_argv(chosen, fixture, args=args))
+        if executable == "relative":
+            argv[0] = "./" + chosen.name
+        elif executable == "path":
+            env["PATH"] = str(workspace) + os.pathsep + env.get("PATH", "")
+            argv[0] = chosen.name
+        command = native_command(argv)
+        if executable == "unquoted-space":
+            if os.name != "nt":
+                fail("unquoted spaced executable is a Windows native command case")
+            command = str(chosen) + " " + subprocess.list2cmdline(argv[1:])
+        if raw_tail is not None:
+            command += " " + raw_tail
+        before = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        before_names = set(snapshot(run_dir))
+        reference_dir = root / "reference"
+        shutil.copytree(run_dir, reference_dir)
+        module = load_oracle()
+        reference = reference_diagnostics(module, workspace, reference_dir, command,
+                                         1800 if timeout == "default" else float(timeout), elapsed, env)
+        if reference.returncode != 0:
+            fail(f"{label}: reference diagnostics failed: {reference.stderr!r}")
+        reference_receipt = receipt_value(fixture / "child.receipt") if (fixture / "child.receipt").exists() else None
+        reference_launches = (fixture / "launches").read_text().splitlines() if (fixture / "launches").exists() else []
+        if timeout != "0" and len(reference_launches) != 1:
+            fail(f"{label}: reference did not launch exactly once")
+        for name in ("child.receipt", "launches", "child.ready", "child.exiting", "emit.pid"):
+            path = fixture / name
+            if path.exists():
+                path.unlink()
+        result_path = root / "outcome.json"
+        native = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, result_path,
+                                                   timeout=timeout, elapsed=elapsed), root, env)
+        if native.returncode != 0:
+            fail(f"{label}: native diagnostics failed: {native.stderr!r}")
+        result = receipt_value(result_path)
+        reference_manifest = json.loads((reference_dir / "manifest.json").read_text(encoding="utf-8"))
+        outcome, expected_code = status_meaning(reference_manifest["facts"]["diagnostics_status"])
+        assert_outcome(result, outcome, code=expected_code)
+        if result.get("elapsed_seconds") != elapsed or result.get("timeout_seconds") != (1800 if timeout == "default" else float(timeout)):
+            fail(f"{label}: explicit/default clock or timeout option receipt differs")
+        if timeout != "0":
+            child = receipt_value(fixture / "child.receipt")
+            if len((fixture / "launches").read_text().splitlines()) != 1:
+                fail(f"{label}: native successful command was launched more than once")
+            if child["argv"] != reference_receipt["argv"] or (raw_tail is None and child["argv"] != list(args)):
+                fail(f"{label}: native argv differs from independent/native reference")
+            for role, observed in (("native", child), ("reference", reference_receipt)):
+                cwd = Path(native_units_text(observed["cwd"]))
+                try:
+                    same_workspace = cwd.samefile(workspace)
+                except OSError as exc:
+                    fail(f"{label}: {role} cwd {str(cwd)!r} cannot be compared to reviewed workspace {str(workspace)!r}: {exc}")
+                if not same_workspace:
+                    fail(f"{label}: {role} cwd {str(cwd)!r} is not reviewed workspace {str(workspace)!r}")
+            compare_environment(child, reference_receipt, names)
+            assert_raw(run_dir, stdout, stderr)
+        elif result["outcome"] != "TimedOut":
+            fail("zero timeout did not produce a started timeout")
+        native_text = normalize_frame((run_dir / "facts/diagnostics.txt").read_bytes(), label)
+        reference_text = normalize_frame((reference_dir / "facts/diagnostics.txt").read_bytes(), label)
+        source_lines = source_lines or []
+        expected_lines = expected_lines or []
+        if [line for line in reference_text.splitlines() if line in set(source_lines)] != expected_lines:
+            fail(f"{label}: reference meaningful fixture evidence differs")
+        assert_diagnostics_artifacts(run_dir, before, command, outcome, expected_code, elapsed,
+                                     source_lines, expected_lines, matches)
+        reference_after = json.loads((reference_dir / "manifest.json").read_text(encoding="utf-8"))
+        native_after = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        native_after["facts"]["diagnostics_status"] = reference_after["facts"]["diagnostics_status"]
+        if native_after != reference_after:
+            fail(f"{label}: functional reference manifest differs")
+        expected_names = before_names | {"facts/diagnostics.txt", "facts/diagnostics-raw.txt"}
+        if set(snapshot(run_dir)) != expected_names:
+            fail(f"{label}: owned temporary capture cleanup left files in run directory")
+        print(f"PASS B {label}: {outcome}; reference/native argv, metadata and literal raw evidence")
+
+
+
+def diagnostics_no_write(driver: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="cyril-s2hb-prelaunch-") as temporary, FixtureCleanup() as cleanup:
+        root = Path(temporary)
+        workspace, run_dir = seed_diagnostics(driver, root)
+        fixture = root / "fixture"
+        cleanup.root = fixture
+        fixture_data(fixture, b"would-launch-out", b"would-launch-err")
+        valid_command = native_command(fixture_argv(driver, fixture))
+        seed = snapshot(run_dir)
+        seed_dirs = directory_snapshot(run_dir)
+        errors = [("empty", "", "InvalidCommand", None),
+                  ("space-tab-only", " \t ", "InvalidCommand", None),
+                  ("blank", " \t\r\n", "CannotStart" if os.name == "nt" else "InvalidCommand", None),
+                  ("cannot-start", str(root / "guaranteed-missing-program"), "CannotStart", None),
+                  ("missing-stamp", valid_command, "MissingStamp", "remove-stamp"),
+                  ("wrong-stamp", valid_command, "StampMismatch", "wrong-stamp"),
+                  ("bad-facts", valid_command, "InvalidManifest", "bad-facts"),
+                  ("missing-manifest", valid_command, "Io", "missing-manifest"),
+                  ("corrupt-manifest", valid_command, "Json", "corrupt-manifest")]
+        if os.name != "nt":
+            errors += [("unterminated-single", "'broken", "InvalidCommand", None),
+                       ("unterminated-double", '"broken', "InvalidCommand", None),
+                       ("trailing-escape", "missing\\", "InvalidCommand", None)]
+        for label, command, kind, mutation in errors:
+            clear_tree(run_dir)
+            for name, data in seed.items():
+                put(run_dir / name, data)
+            for name in seed_dirs:
+                (run_dir / name).mkdir(parents=True, exist_ok=True)
+            manifest_path = run_dir / "manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if mutation == "remove-stamp":
+                manifest.pop("crtool_version")
+            elif mutation == "wrong-stamp":
+                manifest["crtool_version"] = "fixture-mismatch"
+            elif mutation == "bad-facts":
+                manifest["facts"] = ["not-an-object"]
+            if mutation in ("remove-stamp", "wrong-stamp", "bad-facts"):
+                put(manifest_path, json.dumps(manifest))
+            elif mutation == "missing-manifest":
+                manifest_path.unlink()
+            elif mutation == "corrupt-manifest":
+                put(manifest_path, b"{broken")
+            before, before_dirs = snapshot(run_dir), directory_snapshot(run_dir)
+            receipt = root / "result.json"
+            result = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, receipt), workspace)
+            value = receipt_value(receipt)
+            if result.returncode != 2 or value.get("error_kind") != kind or not result.stderr or result.stdout:
+                fail(f"{label}: typed prelaunch refusal/context differs: {result!r}, {value!r}")
+            if snapshot(run_dir) != before or directory_snapshot(run_dir) != before_dirs or (fixture / "launches").exists():
+                fail(f"{label}: prelaunch error wrote reports/captures or launched a child")
+            print(f"PASS B prelaunch-{label}: {kind}; no writes, no launch")
+        clear_tree(run_dir)
+        for name, data in seed.items():
+            put(run_dir / name, data)
+        for name in seed_dirs:
+            (run_dir / name).mkdir(parents=True, exist_ok=True)
+        result_path = root / "pre-cancel.json"
+        before, before_dirs = snapshot(run_dir), directory_snapshot(run_dir)
+        result = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, valid_command, result_path,
+                                                   cancel="pre"), workspace)
+        value = receipt_value(result_path)
+        if result.returncode != 0:
+            fail("prelaunch cancellation unexpectedly became an error")
+        assert_outcome(value, "Cancelled", started=False)
+        if snapshot(run_dir) != before or directory_snapshot(run_dir) != before_dirs or (fixture / "launches").exists():
+            fail("pre-cancel wrote artifacts or launched fixture")
+        if not value.get("cancelled"):
+            fail("pre-cancel control was not set")
+        # Positive control on the identical command/root prevents vacuous no-launch.
+        positive_path = root / "positive.json"
+        positive = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, valid_command, positive_path), workspace)
+        if positive.returncode != 0 or not (fixture / "launches").exists():
+            fail("pre-cancel positive command failed to launch")
+        assert_outcome(receipt_value(positive_path), "Clean", code=0)
+        assert_raw(run_dir, b"would-launch-out", b"would-launch-err")
+        print("PASS B pre-cancel: false started, no writes; identical command positive control launched")
+
+
+def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
+                          cancel: str = "none", timeout: str = "5", code: int = 0) -> None:
+    with (
+        tempfile.TemporaryDirectory(prefix="cyril-s2hb-owned-process-") as temporary,
+        tempfile.TemporaryFile() as outer_stdout,
+        tempfile.TemporaryFile() as outer_stderr,
+        FixtureCleanup() as cleanup,
+    ):
+        root = Path(temporary)
+        workspace, run_dir = seed_diagnostics(driver, root)
+        fixture = root / "fixture"
+        cleanup.root = fixture
+        holder_case = kind in ("exit-holder", "live-holder")
+        fixture_data(fixture, b"direct-out", b"direct-err", code=code,
+                     sleep_ms=300 if kind == "emit" else 0)
+        sentinel = subprocess.Popen([str(driver), "fixture", "--root", str(fixture), "--kind", "sentinel"],
+                                    cwd=workspace, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                                    stderr=subprocess.DEVNULL)
+        runner = None
+        controls: list[NativeProcess] = []
+        direct = None
+        try:
+            wait_file(fixture / "sentinel.ready", sentinel)
+            sentinel_control = NativeProcess(int(wait_file(fixture / "sentinel.pid", sentinel)))
+            controls.append(sentinel_control)
+            challenge(fixture, "sentinel")
+            before = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+            before_names = set(snapshot(run_dir))
+            before_dirs = directory_snapshot(run_dir)
+            command = native_command(fixture_argv(driver, fixture, kind=kind))
+            receipt = root / "result.json"
+            argv = diagnostics_argv(driver, workspace, run_dir, command, receipt, timeout=timeout,
+                                    cancel=cancel, ready=fixture / "cancel-now" if cancel == "live" else None)
+            # Observe the same compiled consumer's exit, not inherited outer pipe EOF.
+            # File-backed collection leaves holder/sentinel liveness proof independent.
+            runner = subprocess.Popen(argv, cwd=workspace, stdin=subprocess.DEVNULL,
+                                      stdout=outer_stdout, stderr=outer_stderr)
+            wait_file(fixture / "child.ready", runner)
+            direct_pid = int(wait_file(fixture / f"{kind}.pid", runner))
+            if kind != "exit-holder":
+                direct = NativeProcess(direct_pid)
+                controls.append(direct)
+                if not direct.alive():
+                    fail("direct child was not live before cancellation/timeout control")
+            holder = None
+            if holder_case:
+                wait_file(fixture / "holder.ready")
+                holder = NativeProcess(int(wait_file(fixture / "holder.pid")))
+                controls.append(holder)
+                challenge(fixture, "holder")
+                if not holder.alive():
+                    fail("inherited holder is absent before terminal observation")
+            challenge(fixture, "sentinel")
+            if cancel == "live":
+                challenge(fixture, "child")
+                put(fixture / "cancel-now", b"cancel after all live controls")
+            if label == "signal":
+                os.kill(direct_pid, signal.SIGTERM)
+            try:
+                runner.wait(timeout=40)
+            except subprocess.TimeoutExpired:
+                fail("owned diagnostics native fixture hit outer hang guard")
+            outer_stdout.seek(0)
+            outer_stderr.seek(0)
+            stdout, stderr = outer_stdout.read(), outer_stderr.read()
+            if runner.returncode != 0:
+                fail(f"{label}: diagnostics native lifecycle failed: {stderr!r}")
+            value = receipt_value(receipt)
+            assert_outcome(value, outcome, code=code if outcome == "Failed" else 0 if outcome == "Clean" else None)
+            if cancel == "after-exit" and not value.get("cancelled"):
+                fail("after-exit cancellation control was not exercised")
+            if direct is not None and direct.alive():
+                fail("direct child was not terminated/reaped when diagnostics returned")
+            if os.name != "nt":
+                try:
+                    os.kill(direct_pid, 0)
+                except ProcessLookupError:
+                    pass
+                else:
+                    fail("Unix direct child still exists (including unreaped zombie)")
+            if not sentinel_control.alive():
+                fail("diagnostics terminated the unrelated sentinel")
+            challenge(fixture, "sentinel")
+            expected_out = b"direct-out" + (b"holder-out" if holder_case else b"")
+            expected_err = b"direct-err" + (b"holder-err" if holder_case else b"")
+            raw = assert_raw(run_dir, expected_out, expected_err)
+            source_lines = [expected_out.decode(), expected_err.decode()]
+            assert_diagnostics_artifacts(run_dir, before, command, outcome,
+                                         code if outcome == "Failed" else 0 if outcome == "Clean" else None,
+                                         DIAGNOSTICS_ELAPSED, source_lines, source_lines, 0)
+            if set(snapshot(run_dir)) != before_names | {"facts/diagnostics.txt", "facts/diagnostics-raw.txt"}:
+                fail("owned capture files remained in run directory after terminal result")
+            if directory_snapshot(run_dir) != before_dirs:
+                fail("capture cleanup changed the owned run layout")
+            if holder is not None:
+                if not holder.alive():
+                    fail("direct-child termination also killed inherited holder")
+                challenge(fixture, "holder")
+                put(fixture / "holder.release", b"fixture owned release after diagnostics return")
+                wait_file(fixture / "holder.done")
+                if (run_dir / "facts/diagnostics-raw.txt").read_bytes() != raw:
+                    fail("late inherited writes mutated retained raw evidence")
+            put(fixture / "sentinel.release", b"fixture owned release")
+            if sentinel.wait(timeout=10) != 0:
+                fail("sentinel failed cooperative fixture cleanup")
+            print(f"PASS B {label}: {outcome}; direct child gone; live sentinel/holder controls; independent streams/cleanup")
+        finally:
+            # These are fixture-owned releases, not product descendant killing.
+            for role in ("holder", "sentinel", "child"):
+                put(fixture / f"{role}.release", b"error-path fixture release")
+            if runner is not None and runner.poll() is None:
+                runner.kill()
+                runner.wait(timeout=10)
+            if sentinel.poll() is None:
+                try:
+                    sentinel.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    sentinel.kill()
+                    sentinel.wait(timeout=10)
+            for control in controls:
+                try:
+                    if control is direct and control.alive():
+                        control.terminate()
+                finally:
+                    control.close()
+
+
+def diagnostics_system_clock(driver: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="cyril-s2hb-system-clock-") as temporary, FixtureCleanup() as cleanup:
+        root = Path(temporary)
+        workspace, run_dir = seed_diagnostics(driver, root)
+        fixture = root / "fixture"
+        cleanup.root = fixture
+        fixture_data(fixture, b"actual-clock-out", b"actual-clock-err", sleep_ms=1200)
+        command = native_command(fixture_argv(driver, fixture))
+        receipt = root / "clock.json"
+        before = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        started = time.monotonic()
+        result = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, receipt,
+                                                   clock="system"), workspace)
+        outer_elapsed = time.monotonic() - started
+        value = receipt_value(receipt)
+        if result.returncode != 0:
+            fail(f"actual system-clock diagnostics failed: {result.stderr!r}")
+        assert_outcome(value, "Clean", code=0)
+        elapsed = value.get("elapsed_seconds")
+        if value.get("clock") != "system" or not isinstance(elapsed, (int, float)) or not 1.2 <= elapsed <= outer_elapsed:
+            fail(f"actual SystemReviewClock sample outside native process bounds: {value!r}, outer={outer_elapsed}")
+        assert_raw(run_dir, b"actual-clock-out", b"actual-clock-err")
+        assert_diagnostics_artifacts(run_dir, before, command, "Clean", 0, elapsed,
+                                     ["actual-clock-out", "actual-clock-err"], ["actual-clock-out", "actual-clock-err"], 0)
+        print(f"PASS B actual-system-clock: child delay 1.2s <= real elapsed {elapsed:.3f}s <= outer {outer_elapsed:.3f}s")
+
+
+
+
+
+def diagnostics_explicit_shell(driver: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix="cyril-s2hb-explicit-shell-") as temporary, FixtureCleanup() as cleanup:
+        root = Path(temporary)
+        workspace, run_dir = seed_diagnostics(driver, root)
+        fixture = root / "fixture"
+        cleanup.root = fixture
+        fixture_data(fixture, b"explicit-shell-out", b"explicit-shell-err")
+        child_command = native_command(fixture_argv(driver, fixture, args=("shell selected explicitly",)))
+        if os.name == "nt":
+            shell = shutil.which("powershell.exe")
+            if shell is None:
+                fail("native Windows explicit-shell prerequisite powershell.exe is missing")
+            # Explicit PowerShell selects the program; diagnostics adds no shell.
+            arguments = fixture_argv(driver, fixture, args=("shell selected explicitly",))
+            script = "& " + " ".join("'" + value.replace("'", "''") + "'" for value in arguments)
+            script += "; exit $LASTEXITCODE"
+            command = native_command([shell, "-NoProfile", "-NonInteractive", "-Command", script])
+        else:
+            command = native_command(["/bin/sh", "-c", "exec " + child_command])
+        before = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        reference_dir = root / "reference"
+        shutil.copytree(run_dir, reference_dir)
+        reference = reference_diagnostics(load_oracle(), workspace, reference_dir, command, 5, DIAGNOSTICS_ELAPSED, None)
+        if reference.returncode != 0:
+            fail(f"explicit native shell reference failed: {reference.stderr!r}")
+        reference_child = receipt_value(fixture / "child.receipt")
+        (fixture / "launches").unlink()
+        receipt = root / "outcome.json"
+        native = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, receipt), workspace)
+        if native.returncode != 0:
+            fail(f"explicit native shell diagnostics failed: {native.stderr!r}")
+        assert_outcome(receipt_value(receipt), "Clean", code=0)
+        child = receipt_value(fixture / "child.receipt")
+        if child["argv"] != ["shell selected explicitly"] or child["argv"] != reference_child["argv"]:
+            fail("explicit native shell did not receive literal fixture arguments")
+        if len((fixture / "launches").read_text().splitlines()) != 1:
+            fail("explicit native shell fixture launched more than once")
+        assert_raw(run_dir, b"explicit-shell-out", b"explicit-shell-err")
+        assert_diagnostics_artifacts(run_dir, before, command, "Clean", 0, DIAGNOSTICS_ELAPSED,
+                                     ["explicit-shell-out", "explicit-shell-err"],
+                                     ["explicit-shell-out", "explicit-shell-err"], 0)
+        print("PASS B explicit-native-shell: explicitly selected shell/reference, once-only literal child receipt")
+
+
+def diagnostics_matrix(driver: Path) -> None:
+    hostile = ("", "two words", 'quote"inside', "back\\slash", "semi;colon", "$HOME", "a|b", "*", "#literal", "nonascii-λ")
+    for executable in ("absolute", "relative", "path", "quoted-space"):
+        diagnostics_pair(driver, f"native-command-{executable}", args=hostile, executable=executable)
+    if os.name == "nt":
+        diagnostics_pair(driver, "native-command-unquoted-space", args=hostile, executable="unquoted-space")
+        diagnostics_pair(driver, "untouched-windows-tail", raw_tail=r'"one two" "" "quote\"inside" tail\\')
+        diagnostics_pair(driver, "unsigned-windows-status", code=-1073741819)
+        diagnostics_pair(driver, "explicit-native-cmd-batch", executable="batch-cmd", code=23,
+                         args=("one two", "literal"), stdout=b"batch-cmd-out", stderr=b"batch-cmd-err",
+                         source_lines=["batch-cmd-out", "batch-cmd-err"],
+                         expected_lines=["batch-cmd-out", "batch-cmd-err"])
+        diagnostics_pair(driver, "explicit-native-bat-batch", executable="batch-bat", code=23,
+                         args=("one two", "literal"), stdout=b"batch-bat-out", stderr=b"batch-bat-err",
+                         source_lines=["batch-bat-out", "batch-bat-err"],
+                         expected_lines=["batch-bat-out", "batch-bat-err"])
+    else:
+        diagnostics_pair(driver, "posix-shlex-grammar", raw_tail='\'\' "" \'two words\' "back\\\\slash" escaped\\ space a\\;b \'#literal\' "line\nbreak"')
+    diagnostics_explicit_shell(driver)
+    diagnostics_pair(driver, "clean-empty-default", timeout="default")
+    diagnostics_pair(driver, "stdout-only", stdout=b"only-out", source_lines=["only-out"], expected_lines=["only-out"])
+    diagnostics_pair(driver, "stderr-only", stderr=b"only-err", source_lines=["only-err"], expected_lines=["only-err"])
+    diagnostics_pair(driver, "failed-nonzero", stdout=b"failed-out", stderr=b"failed-err", code=7,
+                     source_lines=["failed-out", "failed-err"], expected_lines=["failed-out", "failed-err"])
+    invalid_out, invalid_err = b"x" * 131_072 + b"\xff", b"y" * 131_072 + b"\xfe"
+    decoded = [invalid_out.decode(errors="replace"), invalid_err.decode(errors="replace")]
+    diagnostics_pair(driver, "dual-131073-invalid-utf8", stdout=invalid_out, stderr=invalid_err,
+                     source_lines=decoded, expected_lines=decoded)
+    path = "src/helper.rs"
+    match_lines = [f"B-MATCH-{index:03d} {path if index % 2 == 0 else path.replace('/', chr(92))}:{index}" for index in range(201)]
+    tail = [f"B-TAIL-{index:02d}" for index in range(16)]
+    all_lines = match_lines + tail
+    diagnostics_pair(driver, "201-matches-16-tail", stdout=("\r\n".join(match_lines) + "\r\n").encode(),
+                     stderr=("\n".join(tail) + "\n").encode(), source_lines=all_lines,
+                     expected_lines=match_lines[:200] + tail[-15:], matches=201)
+    boundaries = ["B-CR src/helper.rs:1", "B-CRLF src/helper.rs:2", "B-NEL src/helper.rs:3", "B-LS src/helper.rs:4", "B-PS src/helper.rs:5", "B-LAST"]
+    boundary_bytes = (boundaries[0] + "\r" + boundaries[1] + "\r\n" + boundaries[2] + "\u0085" +
+                      boundaries[3] + "\u2028" + boundaries[4] + "\u2029" + boundaries[5]).encode()
+    diagnostics_pair(driver, "unicode-cr-crlf-line-boundaries", stdout=boundary_bytes,
+                     source_lines=boundaries, expected_lines=boundaries[:5] + boundaries, matches=5)
+    for count in (1, 200):
+        lines = [f"B-BOUNDARY-{index:03d} src/helper.rs:{index}" for index in range(count)]
+        diagnostics_pair(driver, f"match-boundary-{count}", stdout=("\n".join(lines) + "\n").encode(),
+                         source_lines=lines, expected_lines=lines + lines[-15:], matches=count)
+    for count in (1, 15, 16):
+        lines = [f"B-TAIL-BOUNDARY-{index:02d}" for index in range(count)]
+        diagnostics_pair(driver, f"tail-boundary-{count}", stdout=("\n".join(lines) + "\n").encode(),
+                         source_lines=lines, expected_lines=lines[-15:])
+    for elapsed in (0.0, 0.4, 0.5, 1.5, 123456.7):
+        diagnostics_pair(driver, f"elapsed-{elapsed}", elapsed=elapsed)
+    diagnostics_pair(driver, "zero-timeout", timeout="0", sleep_ms=1000)
+    diagnostics_pair(driver, "explicit-timeout-partial", timeout="1.5", sleep_ms=3000,
+                     stdout=b"partial-out", stderr=b"partial-err", source_lines=["partial-out", "partial-err"],
+                     expected_lines=["partial-out", "partial-err"])
+    scale_lines = [f"B-SCALE-{index:03d} scale/path-{index:03d}.txt:{index}" for index in range(SCALE_FILES)]
+    scale_tail = [f"B-SCALE-TAIL-{index:02d}" for index in range(16)]
+    prefix = ("\n".join(scale_lines) + "\n").encode()
+    ending = ("\n" + "\n".join(scale_tail) + "\n").encode()
+    scale_out = prefix + b"O" * (DIAGNOSTICS_SCALE_BYTES - len(prefix) - 1) + b"\n"
+    scale_err = b"E" * (DIAGNOSTICS_SCALE_BYTES - len(ending)) + ending
+    diagnostics_pair(driver, "32MiB-each-stream-100paths", stdout=scale_out, stderr=scale_err, scale=True,
+                     source_lines=scale_lines + scale_tail, expected_lines=scale_lines + scale_tail[-15:], matches=100)
+    diagnostics_no_write(driver)
+    diagnostics_lifecycle(driver, "live-cancel", kind="wait", outcome="Cancelled", cancel="live")
+    diagnostics_lifecycle(driver, "after-exit-cancel", kind="emit", outcome="Clean", cancel="after-exit")
+    diagnostics_lifecycle(driver, "cancel-inherited-holder", kind="live-holder", outcome="Cancelled", cancel="live")
+    diagnostics_lifecycle(driver, "timeout-inherited-holder", kind="live-holder", outcome="TimedOut", timeout="3")
+    diagnostics_lifecycle(driver, "exited-inherited-holder", kind="exit-holder", outcome="Failed", code=7)
+    if os.name != "nt":
+        diagnostics_lifecycle(driver, "signal", kind="wait", outcome="Failed", code=-signal.SIGTERM)
+    diagnostics_system_clock(driver)
+    print("B diagnostics matrix completed; bounded-read mutation attribution belongs to actual private helper test")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--phase", choices=("gather",), required=True)
+    parser.add_argument("--phase", choices=("gather", "diagnostics"), required=True)
     parser.add_argument("--cyril")
     parser.add_argument("--driver")
     args = parser.parse_args()
     if not args.cyril or not args.driver:
-        fail("--phase gather requires --cyril and --driver")
+        fail("both phases require --cyril and --driver")
     driver, cyril = Path(os.path.abspath(args.driver)), Path(os.path.abspath(args.cyril))
     if not driver.exists() or not cyril.exists():
         fail("--driver and --cyril must name existing executables")
+
+    if args.phase == "diagnostics":
+        diagnostics_matrix(driver)
+        cli_smoke(cyril)
+        return 0
 
     pair_gather("canonical", build_canonical, driver, "auto", "src src")
     pair_gather("rich-scoped", build_rich, driver, "auto", "src src")

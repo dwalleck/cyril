@@ -5,7 +5,7 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Native code-review gather and facts operations"
+description = "Native code-review gather, facts, and diagnostics operations"
 
 [lints]
 workspace = true

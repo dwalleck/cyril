@@ -5,10 +5,11 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::time::{Duration, Instant};
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use std::ffi::OsString;
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use std::os::unix::ffi::OsStringExt;
 
 struct FixedClock {
@@ -18,6 +19,11 @@ struct FixedClock {
 impl ReviewClock for FixedClock {
     fn gathered_at_utc(&self) -> cyril_review::Result<String> {
         Ok(self.gathered.clone())
+    }
+
+    fn diagnostics_elapsed(&self, _started: Instant) -> Duration {
+        // These gather-only fixtures use an explicit zero elapsed sample.
+        Duration::ZERO
     }
 }
 
@@ -382,7 +388,139 @@ fn gather_public_operation_preserves_valid_unicode_filename_identity() -> Result
     Ok(())
 }
 
+// APFS rejects malformed UTF-8 before gather can run. This native Unix
+// consumer keeps the NUL-framing, same-symbol and document-lookup obligations
+// on admitted Unicode paths; Linux separately proves lossy-label collisions.
 #[cfg(unix)]
+#[test]
+fn gather_public_operation_preserves_unicode_filename_framing() -> Result<(), Box<dyn Error>> {
+    let tree = tempfile::tempdir()?;
+    let repo = tree.path().join("repo");
+    init_repo(&repo)?;
+    fs::create_dir_all(repo.join("docs"))?;
+
+    let definition_name = "src/λ:\nhelper.rs";
+    let other_name = "src/\u{fffd}:\nhelper.rs";
+    let caller_name = "src/use:\nfile.rs";
+    let document_name = "docs/λ:\nnotes.md";
+    let other_document_name = "docs/\u{fffd}:\nnotes.md";
+    let own_body = "pub fn shared() { unicode_body(); }";
+    let other_body = "pub fn shared() { replacement_body(); }";
+    let document = "updated Unicode document\n";
+    let other_document = "replacement changed document with more bytes\n";
+
+    fs::write(repo.join(definition_name), "pub fn shared() {}\n")?;
+    fs::write(repo.join(document_name), "Unicode baseline\n")?;
+    fs::write(repo.join(other_document_name), "replacement baseline\n")?;
+    git(&repo, &["add", "--all"])?;
+    git(
+        &repo,
+        &["commit", "--no-gpg-sign", "--no-verify", "-qm", "baseline"],
+    )?;
+
+    fs::write(repo.join(definition_name), format!("{own_body}\n"))?;
+    fs::write(repo.join(other_name), format!("{other_body}\n"))?;
+    fs::write(repo.join(caller_name), "shared();\n")?;
+    fs::write(repo.join(document_name), document)?;
+    fs::write(repo.join(other_document_name), other_document)?;
+    git(&repo, &["add", "--all"])?;
+
+    let expected_definition_patch = git_diff_for_path(&repo, OsStr::new(definition_name))?;
+    let expected_other_patch = git_diff_for_path(&repo, OsStr::new(other_name))?;
+    let expected_caller_patch = git_diff_for_path(&repo, OsStr::new(caller_name))?;
+    let run = gathered_run(&repo, &tree.path().join("run"))?;
+    let manifest: Value =
+        serde_json::from_slice(&fs::read(run.directory().join("manifest.json"))?)?;
+    let files = manifest["files"]
+        .as_array()
+        .ok_or_else(|| std::io::Error::other("manifest files is not an array"))?;
+    assert_eq!(files.len(), 3);
+    for (name, status, expected_patch) in [
+        (definition_name, "M", &expected_definition_patch),
+        (other_name, "A", &expected_other_patch),
+        (caller_name, "A", &expected_caller_patch),
+    ] {
+        let mut matching_files = files
+            .iter()
+            .filter(|file| file["path"].as_str() == Some(name));
+        let file = matching_files
+            .next()
+            .unwrap_or_else(|| panic!("missing native path identity: {name:?}"));
+        assert!(matching_files.next().is_none(), "duplicate path: {name:?}");
+        assert_eq!(file["status"], json!(status));
+        let patch_name = file["patch"]
+            .as_str()
+            .ok_or_else(|| std::io::Error::other("file patch is not a string"))?;
+        let patch = fs::read(run.directory().join(patch_name))?;
+        assert_eq!(file["patch_bytes"], json!(patch.len()));
+        assert_eq!(&patch, expected_patch);
+    }
+
+    let change_docs = manifest["change_docs"]
+        .as_array()
+        .ok_or_else(|| std::io::Error::other("change docs is not an array"))?;
+    assert_eq!(change_docs.len(), 2);
+    for (name, content) in [
+        (document_name, document),
+        (other_document_name, other_document),
+    ] {
+        assert!(change_docs.iter().any(|entry| {
+            entry["path"] == json!(name) && entry["bytes"] == json!(content.len())
+        }));
+    }
+
+    let symbols: Value =
+        serde_json::from_slice(&fs::read(run.directory().join("facts/symbols.json"))?)?;
+    let symbols = symbols
+        .as_array()
+        .ok_or_else(|| std::io::Error::other("symbols is not an array"))?;
+    assert_eq!(symbols.len(), 2);
+    for (name, own_body, other_name, other_body) in [
+        (definition_name, own_body, other_name, other_body),
+        (other_name, other_body, definition_name, own_body),
+    ] {
+        let mut matching_symbols = symbols
+            .iter()
+            .filter(|symbol| symbol["file"].as_str() == Some(name));
+        let symbol = matching_symbols
+            .next()
+            .unwrap_or_else(|| panic!("missing same-name definition: {name:?}"));
+        assert!(
+            matching_symbols.next().is_none(),
+            "duplicate symbol: {name:?}"
+        );
+        assert_eq!(symbol["name"], json!("shared"));
+        assert_eq!(symbol["status"], json!("added"));
+        assert_eq!(symbol["line"], json!(1));
+        assert_eq!(symbol["usage_count"], json!(2));
+        let usages = symbol["usages"]
+            .as_array()
+            .ok_or_else(|| std::io::Error::other("symbol usages is not an array"))?;
+        assert_eq!(usages.len(), 2);
+        assert!(!usages.iter().any(|usage| usage["text"] == json!(own_body)));
+        assert!(usages.iter().any(|usage| {
+            usage["file"] == json!(other_name)
+                && usage["line"] == json!(1)
+                && usage["text"] == json!(other_body)
+        }));
+        assert!(usages.iter().any(|usage| {
+            usage["file"] == json!(caller_name)
+                && usage["line"] == json!(1)
+                && usage["text"] == json!("shared();")
+        }));
+    }
+
+    fs::remove_file(run.directory().join("facts/symbols.json"))?;
+    facts(&run)?;
+    let rebuilt: Value =
+        serde_json::from_slice(&fs::read(run.directory().join("facts/symbols.json"))?)?;
+    assert_eq!(rebuilt.as_array(), Some(symbols));
+    Ok(())
+}
+
+// Linux admits both raw FF and valid U+FFFD names as distinct physical files.
+// This collision proof must not claim native raw-file lookup on macOS/APFS.
+#[cfg(target_os = "linux")]
 #[test]
 fn gather_public_operation_preserves_raw_filename_identity() -> Result<(), Box<dyn Error>> {
     let tree = tempfile::tempdir()?;

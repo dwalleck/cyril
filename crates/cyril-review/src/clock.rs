@@ -1,12 +1,13 @@
 use crate::{Result, ReviewError};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-/// The wall-clock seam used to timestamp gathered evidence.
+/// Wall-clock timestamps and elapsed diagnostics report durations.
 pub trait ReviewClock {
     fn gathered_at_utc(&self) -> Result<String>;
+    fn diagnostics_elapsed(&self, started: Instant) -> Duration;
 }
 
-/// Production clock backed by the host wall clock.
+/// Production clock backed by host wall and monotonic clocks.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SystemReviewClock;
 
@@ -19,6 +20,10 @@ impl ReviewClock for SystemReviewClock {
                 message: format!("system time precedes Unix epoch: {source}"),
             })?;
         format_utc(elapsed)
+    }
+
+    fn diagnostics_elapsed(&self, started: Instant) -> Duration {
+        started.elapsed()
     }
 }
 
