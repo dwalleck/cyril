@@ -1,9 +1,11 @@
 mod command;
 mod process;
 
-use crate::run::{facts_dir, manifest_path, read_manifest, write_binary, write_json, write_text};
-use crate::{Result, ReviewError, ReviewRun, StepOutput};
-use serde_json::{Map, Value};
+use crate::run::{
+    facts_dir, facts_metadata, manifest_path, read_manifest, write_binary, write_json, write_text,
+};
+use crate::{Result, ReviewRun, StepOutput};
+use serde_json::Value;
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::sync::{
@@ -87,20 +89,7 @@ pub fn diagnostics(
         });
     }
     let mut manifest = read_manifest(run)?;
-    // Match facts' existing missing/null/object policy, before any child or write.
-    let facts = manifest
-        .metadata
-        .entry("facts".to_owned())
-        .or_insert_with(|| Value::Object(Map::new()));
-    if facts.is_null() {
-        *facts = Value::Object(Map::new());
-    }
-    let facts = facts
-        .as_object_mut()
-        .ok_or_else(|| ReviewError::InvalidManifest {
-            path: manifest_path(run),
-            message: "facts is not an object".to_owned(),
-        })?;
+    facts_metadata(run, &mut manifest)?;
     let prepared = command::prepare(command, run.workspace())?;
     // A cancellation observed during validation is still a prelaunch cancellation.
     if cancel.is_cancelled() {
@@ -148,6 +137,7 @@ pub fn diagnostics(
     let directory = facts_dir(run);
     write_binary(&directory.join("diagnostics-raw.txt"), &raw)?;
     write_text(&directory.join("diagnostics.txt"), &report)?;
+    let facts = facts_metadata(run, &mut manifest)?;
     facts.insert(
         "diagnostics".to_owned(),
         Value::from("facts/diagnostics.txt"),

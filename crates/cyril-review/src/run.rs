@@ -172,8 +172,8 @@ pub(crate) fn write_json(path: &Path, value: &impl Serialize) -> Result<()> {
 }
 
 pub(crate) fn read_json(path: &Path) -> Result<Value> {
-    let text = read_text(path)?;
-    serde_json::from_str(&text).map_err(|source| json_error(path, source))
+    let bytes = read_binary(path)?;
+    serde_json::from_slice(&bytes).map_err(|source| json_error(path, source))
 }
 
 pub(crate) fn read_manifest(run: &ReviewRun) -> Result<Manifest> {
@@ -188,6 +188,30 @@ pub(crate) fn read_manifest(run: &ReviewRun) -> Result<Manifest> {
     })?;
     validate_raw_paths(&manifest.files, &path)?;
     Ok(manifest)
+}
+
+pub(crate) fn facts_metadata<'a>(
+    run: &ReviewRun,
+    manifest: &'a mut Manifest,
+) -> Result<&'a mut Map<String, Value>> {
+    if !manifest.metadata.contains_key("facts") {
+        manifest
+            .metadata
+            .insert("facts".to_owned(), Value::Object(Map::new()));
+    }
+    manifest
+        .metadata
+        .get_mut("facts")
+        .and_then(|facts| {
+            if facts.is_null() {
+                *facts = Value::Object(Map::new());
+            }
+            facts.as_object_mut()
+        })
+        .ok_or_else(|| ReviewError::InvalidManifest {
+            path: manifest_path(run),
+            message: "facts is not an object".to_owned(),
+        })
 }
 
 fn validate_raw_paths(files: &[ManifestFile], path: &Path) -> Result<()> {

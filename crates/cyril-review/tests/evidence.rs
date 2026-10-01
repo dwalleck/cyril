@@ -834,6 +834,131 @@ fn malformed_manifests_refuse_both_operations_before_replacing_artifacts()
     Ok(())
 }
 
+fn seed_prior_facts(run: &ReviewRun) -> Result<(), Box<dyn Error>> {
+    fs::write(
+        run.directory().join("facts/symbols.json"),
+        br#"[{"name":"prior-symbol-not-in-current-source"}]"#,
+    )?;
+    fs::write(
+        run.directory().join("facts/usages-1.txt"),
+        b"prior first-page evidence, not regenerated output",
+    )?;
+    fs::write(
+        run.directory().join("facts/usages-99.txt"),
+        b"prior stale-page evidence that must not be deleted",
+    )?;
+    Ok(())
+}
+
+fn facts_shape_refusal(rebuild_through_gather: bool) -> Result<(), Box<dyn Error>> {
+    let tree = tempfile::tempdir()?;
+    let repo = prepared_repo(
+        &tree,
+        "// baseline marker\n",
+        "// baseline marker\npub fn helper() {}\npub fn caller() { helper(); }\n",
+    )?;
+    for (index, shape) in [json!(17), json!(["not an object"])]
+        .into_iter()
+        .enumerate()
+    {
+        let run = gathered_run(&repo, &tree.path().join(format!("run-{index}")))?;
+        seed_prior_facts(&run)?;
+        let path = run.directory().join("manifest.json");
+        let mut manifest: Value = serde_json::from_slice(&fs::read(&path)?)?;
+        manifest["facts"] = shape;
+        fs::write(&path, serde_json::to_vec(&manifest)?)?;
+        let mut expected = artifact_snapshot(&run)?;
+        let stale_page = run.directory().join("facts/usages-99.txt");
+        expected.push((stale_page.clone(), fs::read(&stale_page)?));
+        let symbols = run.directory().join("facts/symbols.json");
+        if rebuild_through_gather {
+            fs::remove_file(&symbols)?;
+            expected.retain(|(path, _)| path != &symbols);
+        }
+        let result = if rebuild_through_gather {
+            gather(
+                &run,
+                "HEAD",
+                "src",
+                &FixedClock {
+                    gathered: "2026-09-30T12:34:56+00:00".to_owned(),
+                },
+            )
+        } else {
+            facts(&run)
+        };
+        assert_snapshot(&expected)?;
+        if rebuild_through_gather {
+            assert!(!symbols.exists(), "refusal created replacement symbols");
+        }
+        assert!(matches!(result, Err(ReviewError::InvalidManifest { .. })));
+    }
+    Ok(())
+}
+
+#[test]
+fn facts_refuses_nonobject_metadata_before_replacing_symbols_or_deleting_pages()
+-> Result<(), Box<dyn Error>> {
+    facts_shape_refusal(false)
+}
+
+#[test]
+fn gather_rebuild_refuses_nonobject_metadata_before_creating_symbols_or_deleting_pages()
+-> Result<(), Box<dyn Error>> {
+    facts_shape_refusal(true)
+}
+
+fn invalid_utf8_manifest_refusal(reuse_through_gather: bool) -> Result<(), Box<dyn Error>> {
+    let tree = tempfile::tempdir()?;
+    let repo = prepared_repo(
+        &tree,
+        "// baseline marker\n",
+        "// baseline marker\npub fn helper() {}\npub fn caller() { helper(); }\n",
+    )?;
+    let run = gathered_run(&repo, &tree.path().join("run"))?;
+    seed_prior_facts(&run)?;
+    let path = run.directory().join("manifest.json");
+    let mut manifest: Value = serde_json::from_slice(&fs::read(&path)?)?;
+    manifest["later_step"] = json!("invalid-utf8-marker");
+    let mut bytes = serde_json::to_vec(&manifest)?;
+    let offset = bytes
+        .windows(b"invalid-utf8-marker".len())
+        .position(|window| window == b"invalid-utf8-marker")
+        .ok_or("invalid UTF-8 fixture marker missing from serialized JSON")?;
+    bytes[offset] = 0xff;
+    fs::write(&path, &bytes)?;
+    let mut expected = artifact_snapshot(&run)?;
+    let stale_page = run.directory().join("facts/usages-99.txt");
+    expected.push((stale_page.clone(), fs::read(&stale_page)?));
+    let result = if reuse_through_gather {
+        gather(
+            &run,
+            "HEAD",
+            "src",
+            &FixedClock {
+                gathered: "2026-09-30T12:34:56+00:00".to_owned(),
+            },
+        )
+    } else {
+        facts(&run)
+    };
+    assert_snapshot(&expected)?;
+    assert!(matches!(result, Err(ReviewError::Json { .. })));
+    Ok(())
+}
+
+#[test]
+fn facts_refuses_invalid_utf8_unknown_metadata_without_replacing_artifacts()
+-> Result<(), Box<dyn Error>> {
+    invalid_utf8_manifest_refusal(false)
+}
+
+#[test]
+fn gather_reuse_refuses_invalid_utf8_unknown_metadata_without_replacing_artifacts()
+-> Result<(), Box<dyn Error>> {
+    invalid_utf8_manifest_refusal(true)
+}
+
 #[test]
 fn facts_preserves_unknown_later_step_metadata_when_rewriting_manifest()
 -> Result<(), Box<dyn Error>> {
@@ -843,25 +968,58 @@ fn facts_preserves_unknown_later_step_metadata_when_rewriting_manifest()
         "// baseline marker\n",
         "// baseline marker\npub fn helper() {}\npub fn caller() { helper(); }\n",
     )?;
-    let run = gathered_run(&repo, &tree.path().join("run"))?;
-    let manifest_path = run.directory().join("manifest.json");
-    let mut manifest: Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
     let later_step = json!({
         "status": "pending",
         "attempt": 2,
-        "records": ["kept", "as-is"]
+        "records": ["café", "東京", "\u{20000}"]
     });
-    manifest["later_step"] = later_step.clone();
-    manifest["files"][0]["later_step"] = later_step.clone();
-    manifest["facts"]["later_step"] = later_step.clone();
-    fs::write(&manifest_path, serde_json::to_vec(&manifest)?)?;
-
-    facts(&run)?;
-
-    let rewritten: Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
-    assert_eq!(rewritten["later_step"], later_step);
-    assert_eq!(rewritten["files"][0]["later_step"], later_step);
-    assert_eq!(rewritten["facts"]["later_step"], later_step);
+    for (index, facts_metadata) in [
+        None,
+        Some(Value::Null),
+        Some(json!({"later_step": later_step})),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        for rebuild_through_gather in [false, true] {
+            let run = gathered_run(
+                &repo,
+                &tree
+                    .path()
+                    .join(format!("run-{index}-{rebuild_through_gather}")),
+            )?;
+            let manifest_path = run.directory().join("manifest.json");
+            let mut manifest: Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
+            manifest["later_step"] = later_step.clone();
+            manifest["files"][0]["later_step"] = later_step.clone();
+            mutate_manifest(&mut manifest, "facts", facts_metadata.clone())?;
+            fs::write(&manifest_path, serde_json::to_vec(&manifest)?)?;
+            if rebuild_through_gather {
+                fs::remove_file(run.directory().join("facts/symbols.json"))?;
+                gather(
+                    &run,
+                    "HEAD",
+                    "src",
+                    &FixedClock {
+                        gathered: "2026-09-30T12:34:56+00:00".to_owned(),
+                    },
+                )?;
+            } else {
+                facts(&run)?;
+            }
+            let rewritten: Value = serde_json::from_slice(&fs::read(&manifest_path)?)?;
+            assert_eq!(rewritten["later_step"], later_step);
+            assert_eq!(rewritten["files"][0]["later_step"], later_step);
+            if facts_metadata.as_ref().is_some_and(Value::is_object) {
+                assert_eq!(rewritten["facts"]["later_step"], later_step);
+            }
+            assert_eq!(rewritten["facts"]["symbols"], json!(2));
+            assert_eq!(
+                rewritten["facts"]["usages_pages"],
+                json!(["facts/usages-1.txt"])
+            );
+        }
+    }
     Ok(())
 }
 

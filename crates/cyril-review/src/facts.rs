@@ -1,9 +1,9 @@
 use crate::git;
 use crate::run::{
-    Manifest, ManifestFile, ReviewRun, facts_dir, manifest_path, read_manifest, read_text,
-    write_json, write_text,
+    Manifest, ManifestFile, ReviewRun, facts_dir, facts_metadata, manifest_path, read_manifest,
+    read_text, write_json, write_text,
 };
-use crate::{Result, ReviewError, StepOutput, regex_error};
+use crate::{Result, StepOutput, regex_error};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{Map, Value};
@@ -53,6 +53,7 @@ pub fn facts(run: &ReviewRun) -> Result<StepOutput> {
 }
 
 pub(crate) fn build_facts(run: &ReviewRun, manifest: &mut Manifest) -> Result<String> {
+    facts_metadata(run, manifest)?;
     let documents = changed_documents(run, &manifest.target)?;
     let mut seeds = changed_symbols(run, &manifest.files)?;
     seeds.retain(|seed| !(seed.kind == "mod" && is_common(&seed.name)));
@@ -105,19 +106,7 @@ pub(crate) fn build_facts(run: &ReviewRun, manifest: &mut Manifest) -> Result<St
         "change_docs".to_owned(),
         Value::Array(documents.into_iter().take(40).map(Value::Object).collect()),
     );
-    let facts_value = manifest
-        .metadata
-        .entry("facts".to_owned())
-        .or_insert_with(|| Value::Object(Map::new()));
-    if facts_value.is_null() {
-        *facts_value = Value::Object(Map::new());
-    }
-    let facts_map = facts_value
-        .as_object_mut()
-        .ok_or_else(|| ReviewError::InvalidManifest {
-            path: manifest_path(run),
-            message: "facts is not an object".to_owned(),
-        })?;
+    let facts_map = facts_metadata(run, manifest)?;
     facts_map.insert("symbols".to_owned(), Value::from(symbols.len() as u64));
     facts_map.insert(
         "usages_pages".to_owned(),

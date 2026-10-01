@@ -40,7 +40,7 @@ impl Fixture {
         fs::create_dir_all(&workspace)?;
         fs::create_dir_all(directory.join("facts"))?;
         let run = ReviewRun::new(workspace, directory)?;
-        let metadata = json!({"status": "pending", "records": ["kept", "unchanged"]});
+        let metadata = json!({"status": "pending", "records": ["café", "東京", "\u{20000}"]});
         let manifest = json!({
             "requested_target": "HEAD",
             "target": "HEAD",
@@ -132,7 +132,13 @@ impl Fixture {
     }
 
     fn snapshot(&self) -> Result<ArtifactSnapshot, Box<dyn Error>> {
-        ["manifest.json", "facts/symbols.json", "facts/usages-1.txt"]
+        let mut paths = vec!["manifest.json", "facts/symbols.json", "facts/usages-1.txt"];
+        paths.extend(
+            ["facts/diagnostics.txt", "facts/diagnostics-raw.txt"]
+                .into_iter()
+                .filter(|relative| self.run.directory().join(relative).exists()),
+        );
+        paths
             .into_iter()
             .map(|relative| {
                 let path = self.run.directory().join(relative);
@@ -151,10 +157,10 @@ impl Fixture {
             );
         }
         for relative in ["facts/diagnostics.txt", "facts/diagnostics-raw.txt"] {
-            assert!(
-                !self.run.directory().join(relative).exists(),
-                "created {relative}"
-            );
+            let path = self.run.directory().join(relative);
+            if !snapshot.iter().any(|(artifact, _)| artifact == &path) {
+                assert!(!path.exists(), "created {relative}");
+            }
         }
         assert!(
             !self.tree.path().join("ready").exists(),
@@ -350,19 +356,39 @@ fn clean_and_nonzero_preserve_lossless_streams_context_and_metadata() -> Result<
 
 #[test]
 fn empty_streams_are_clean_evidence_not_a_missing_report() -> Result<(), Box<dyn Error>> {
-    let fixture = Fixture::new()?;
-    let command = fixture.script(b"", b"", 0, false)?;
-    let result = run_diagnostics(
-        &fixture,
-        &command,
-        Duration::from_secs(20),
-        &Cancellation::default(),
-    )?;
-    assert_eq!(result.outcome(), DiagnosticsOutcome::Clean);
-    assert!(result.started());
-    fixture.assert_raw(b"", b"")?;
-    assert_status(&fixture.manifest()?, DiagnosticsOutcome::Clean)?;
-    assert!(fixture.report()?.contains(&HEAD[..12]));
+    for facts_metadata in [None, Some(Value::Null), Some(json!({}))] {
+        let fixture = Fixture::new()?;
+        let mut manifest = fixture.manifest()?;
+        if let Some(value) = facts_metadata {
+            manifest["facts"] = value;
+        } else {
+            drop(manifest.as_object_mut().expect("object").remove("facts"));
+        }
+        fixture.write_manifest(&manifest)?;
+        let command = fixture.script(b"", b"", 0, false)?;
+        let result = run_diagnostics(
+            &fixture,
+            &command,
+            Duration::from_secs(20),
+            &Cancellation::default(),
+        )?;
+        assert_eq!(result.outcome(), DiagnosticsOutcome::Clean);
+        assert!(result.started());
+        fixture.assert_raw(b"", b"")?;
+        let rewritten = fixture.manifest()?;
+        assert_status(&rewritten, DiagnosticsOutcome::Clean)?;
+        assert_eq!(rewritten["later_step"], manifest["later_step"]);
+        assert_eq!(rewritten["files"], manifest["files"]);
+        assert_eq!(
+            fs::read(fixture.run.directory().join("facts/symbols.json"))?,
+            b"symbols sentinel"
+        );
+        assert_eq!(
+            fs::read(fixture.run.directory().join("facts/usages-1.txt"))?,
+            b"usage sentinel"
+        );
+        assert!(fixture.report()?.contains(&HEAD[..12]));
+    }
     Ok(())
 }
 
@@ -433,7 +459,7 @@ fn changed_path_matches_keep_first_200_and_tail_keeps_last_15_nonempty_lines()
 #[test]
 fn invalid_stamps_manifest_and_facts_refuse_before_launch_or_reports() -> Result<(), Box<dyn Error>>
 {
-    for case in 0..7 {
+    for case in 0..8 {
         let fixture = Fixture::new()?;
         let command = fixture.script(b"should never launch", b"", 0, false)?;
         let mut manifest = fixture.manifest()?;
@@ -454,6 +480,7 @@ fn invalid_stamps_manifest_and_facts_refuse_before_launch_or_reports() -> Result
             6 => {
                 drop(manifest.as_object_mut().expect("object").remove("head"));
             }
+            7 => manifest["facts"] = json!(17),
             _ => unreachable!("bounded case matrix"),
         }
         fixture.write_manifest(&manifest)?;
@@ -468,7 +495,7 @@ fn invalid_stamps_manifest_and_facts_refuse_before_launch_or_reports() -> Result
         match case {
             0 | 1 => assert!(matches!(error, ReviewError::MissingStamp)),
             2 | 3 => assert!(matches!(error, ReviewError::StampMismatch { .. })),
-            4..=6 => assert!(matches!(error, ReviewError::InvalidManifest { .. })),
+            4..=7 => assert!(matches!(error, ReviewError::InvalidManifest { .. })),
             _ => unreachable!("bounded case matrix"),
         }
         fixture.assert_no_reports(&snapshot)?;
@@ -526,16 +553,36 @@ fn cannot_start_and_empty_command_are_errors_without_reports() -> Result<(), Box
 #[test]
 fn missing_and_corrupt_manifest_refuse_without_diagnostic_artifacts() -> Result<(), Box<dyn Error>>
 {
-    for missing in [true, false] {
+    for case in 0..3 {
         let fixture = Fixture::new()?;
         let command = fixture.script(b"must not launch", b"", 0, false)?;
         let path = fixture.run.directory().join("manifest.json");
         let mut snapshot = fixture.snapshot()?;
-        if missing {
+        if case == 0 {
             fs::remove_file(&path)?;
             snapshot.retain(|(artifact, _)| artifact != &path);
         } else {
-            fs::write(&path, b"{ invalid JSON")?;
+            if case == 1 {
+                fs::write(&path, b"{ invalid JSON")?;
+            } else {
+                let mut manifest = fixture.manifest()?;
+                manifest["later_step"]["unknown"] = json!("invalid-utf8-marker");
+                let mut bytes = serde_json::to_vec(&manifest)?;
+                let offset = bytes
+                    .windows(b"invalid-utf8-marker".len())
+                    .position(|window| window == b"invalid-utf8-marker")
+                    .expect("unknown string is encoded literally");
+                bytes[offset] = 0xff;
+                fs::write(&path, bytes)?;
+                fs::write(
+                    fixture.run.directory().join("facts/diagnostics.txt"),
+                    b"prior diagnostics report, not child output",
+                )?;
+                fs::write(
+                    fixture.run.directory().join("facts/diagnostics-raw.txt"),
+                    b"prior raw diagnostics, not child output",
+                )?;
+            }
             snapshot = fixture.snapshot()?;
         }
         let error = run_diagnostics(
@@ -545,7 +592,7 @@ fn missing_and_corrupt_manifest_refuse_without_diagnostic_artifacts() -> Result<
             &Cancellation::default(),
         )
         .expect_err("missing or corrupt manifest must refuse");
-        if missing {
+        if case == 0 {
             assert!(
                 matches!(error, ReviewError::Io { source, .. } if source.kind() == io::ErrorKind::NotFound)
             );

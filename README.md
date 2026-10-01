@@ -181,6 +181,9 @@ Gather writes the diff, per-file patches, manifest, and symbol/usage facts.
 An existing matching run is reused; a different target/scope or missing/stale
 version stamp is refused. Required manifest fields are validated before reuse or
 facts rebuilding. Git search errors are reported rather than treated as no usages.
+Manifest JSON must be valid UTF-8. Before changing evidence, facts and diagnostics
+reject non-object `facts` metadata; a missing or null value is initialized as an
+object, and unknown object fields are preserved.
 Raw Git names retain their identity for status, patches, persisted symbol/usage
 facts, and document lookup, even when display labels need replacement characters.
 Colons and line feeds inside filenames are not treated as Git record delimiters.
