@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/cyril-core",
     "crates/cyril-memory",
+    "crates/cyril-review",
     "crates/cyril-ui",
     "crates/cyril-voice",
     "crates/cyril-workbench",

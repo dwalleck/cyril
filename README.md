@@ -159,6 +159,7 @@ older KAS may ignore it. The action is not shown for v2 or always-reject options
 crates/
   cyril/          # TUI application (binary)
   cyril-core/     # Protocol logic, path translation, session state
+  cyril-review/   # Native review evidence: run artifacts, gather, facts
 docs/
   kiro-acp-protocol.md  # Comprehensive Kiro ACP protocol reference
 ```
@@ -171,6 +172,23 @@ constructor canonicalizes the executable, normalizes Windows drive/UNC spelling,
 and refuses shell-active characters rather than attempting fallback quoting.
 This API constructs a command prefix; it does not add a `/review` command or
 execute a review.
+
+The internal `cyril crtool gather <rundir> <target> [scope]` and
+`cyril crtool facts <rundir>` commands run without Python, an agent, or TUI startup.
+Run them from the repository root; `auto` selects the gather target, and scope
+is a whitespace-separated list of paths (not shell-quoted path syntax).
+Gather writes the diff, per-file patches, manifest, and symbol/usage facts.
+An existing matching run is reused; a different target/scope or missing/stale
+version stamp is refused. Required manifest fields are validated before reuse or
+facts rebuilding. Git search errors are reported rather than treated as no usages.
+Raw Git names retain their identity for status, patches, persisted symbol/usage
+facts, and document lookup, even when display labels need replacement characters.
+Colons and line feeds inside filenames are not treated as Git record delimiters.
+If the host cannot represent a Git filename, gather refuses it rather than
+selecting another file.
+An empty diff exits 3; other operation errors exit 2.
+The Python tool is a functional reference for verification, not a byte-format
+contract: JSON formatting, diagnostic wording, and text newlines may differ.
 
 ## License
 

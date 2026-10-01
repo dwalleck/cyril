@@ -1,0 +1,20 @@
+[package]
+name = "cyril-review"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Native code-review gather and facts operations"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+regex = { workspace = true, features = ["unicode"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile.workspace = true

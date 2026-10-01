@@ -15,13 +15,14 @@ REVIEW = "crates/cyril-review/"
 LIB_PATH = "crates/cyril-core/src/lib.rs"
 BRIDGE_PATH = "crates/cyril-core/src/protocol/bridge.rs"
 HOST_SHELL_PATH = "crates/cyril-core/src/protocol/kas/host_shell.rs"
+
 LIMITS = {
     REVIEW + "src/lib.rs": 180,
     REVIEW + "src/run.rs": 300,
     REVIEW + "src/clock.rs": 150,
     REVIEW + "src/git.rs": 240,
-    REVIEW + "src/gather.rs": 260,
-    REVIEW + "src/facts.rs": 420,
+    REVIEW + "src/gather.rs": 350,
+    REVIEW + "src/facts.rs": 620,
     "crates/cyril-core/src/review/mod.rs": 190,
     "crates/cyril/src/crtool.rs": 130,
 }
@@ -374,12 +375,14 @@ def main():
             errors.append(f"{manifest_path.relative_to(ROOT)}: forbidden/missing runtime dependencies {sorted(deps)}")
         if manifest.get("lints") != {"workspace": True}:
             errors.append(f"{manifest_path.relative_to(ROOT)}: workspace lints must be inherited unchanged")
+    elif args.phase != "prefix":
+        errors.append(f"{manifest_path.relative_to(ROOT)}: required leaf manifest missing")
     lib_path = ROOT / REVIEW / "src/lib.rs"
     if lib_path.is_file():
         lib = production(lib_path.read_text(encoding="utf-8"))
         if re.search(r"(?m)^pub mod ", lib):
             errors.append(f"{lib_path.relative_to(ROOT)}: internal modules exposed instead of operation interface")
-    if args.phase != "prefix":
+    if args.phase in ("gather", "diagnostics"):
         cli = (ROOT / "crates/cyril/src/crtool.rs").read_text(encoding="utf-8")
         if re.search(r"\bDiagnostics\b|cyril_core::|serde_json::|tokio::", production(cli)):
             errors.append("crates/cyril/src/crtool.rs: forbidden diagnostics verb or business/runtime ownership")

@@ -123,12 +123,13 @@ Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<v
 
 ## Architecture
 
-### Five-Crate Workspace
+### Workspace Crates
 
 ```
 crates/
   cyril-core/     # Library — protocol, types, commands, session, platform
   cyril-memory/   # Library — strict memory config, private stores, authenticated local runtime
+  cyril-review/   # Library — native review run artifacts, gather, facts, clock seam
   cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
   cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
   cyril/          # Binary — wires everything together, owns the event loop
@@ -148,6 +149,12 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Responsibility:** Hide lesson history/audit, storage, framing, authentication, migrations, and platform IPC behind typed `AdminClient` project operations plus health/shutdown and the companion runtime entrypoint.
 - **Must NOT:** Import ACP, MCP, ratatui, or native-model types. Add retrieval/content/job schema before a production consumer. Define a backend trait or selector while local is the only implementation.
 - **Dependency rule:** `cyril` may depend on `cyril-memory`; core and UI remain persistence-free.
+
+**`cyril-review`** — Native review evidence.
+- **Owns:** Run-directory layout and version/identity guards, explicit-argv Git operations, gather/facts transformations, and the review clock seam.
+- **Responsibility:** Produce the selected diff, patches, manifest and symbol/usage evidence. Preserve functional results against the Python reference, not its representation: JSON object order, diagnostic wording and host text newline conventions are not compatibility requirements. Python is verification-only.
+- **Must NOT:** Import `cyril-core`, ACP, UI crates or Tokio. Own the chat `/review` lifecycle or parse host-shell configuration.
+- **Dependency rule:** Production dependencies are std, serde, serde_json, regex and thiserror. The binary's thin `crtool` dispatcher invokes this leaf before logging, config, agent or terminal startup.
 
 
 **`cyril-ui`** — Rendering and UI state.

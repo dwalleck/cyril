@@ -683,6 +683,7 @@ dependencies = [
  "crossterm",
  "cyril-core",
  "cyril-memory",
+ "cyril-review",
  "cyril-ui",
  "cyril-voice",
  "futures-util",
@@ -752,6 +753,17 @@ dependencies = [
  "widestring",
  "win-security-identifier",
  "windows-permissions",
+]
+
+[[package]]
+name = "cyril-review"
+version = "0.2.0-alpha.1"
+dependencies = [
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

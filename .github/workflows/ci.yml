@@ -182,7 +182,7 @@ jobs:
           fi
           git rev-parse --verify "$base^{commit}" >/dev/null
           # Ticket-specific parent deltas must not freeze unrelated future work.
-          if git diff --quiet "$comparison" -- .cyril-s2hb crates/cyril-core/src/review; then
+          if git diff --quiet "$comparison" -- .cyril-s2hb crates/cyril-core/src/review crates/cyril-review crates/cyril/src/crtool.rs; then
             if git diff --quiet "$comparison" -- \
                 crates/cyril-core/src/lib.rs \
                 crates/cyril-core/src/protocol/bridge.rs \
@@ -192,7 +192,11 @@ jobs:
               python3 .cyril-s2hb/oracles/check_shape.py --integration-only "${base_args[@]}"
             fi
           else
-            python3 .cyril-s2hb/oracles/check_shape.py --phase prefix "${base_args[@]}"
+            phase=prefix
+            if [[ -f crates/cyril-review/Cargo.toml ]]; then
+              phase=gather
+            fi
+            python3 .cyril-s2hb/oracles/check_shape.py --phase "$phase" "${base_args[@]}"
           fi
 
       - name: Setup Rust cache
@@ -279,7 +283,7 @@ jobs:
           fi
           git fetch origin "$BASE"
           if git diff --name-only "origin/$BASE...HEAD" \
-              | grep -qE '^(experiments/code-review-workflow/|\.kiro/|\.github/workflows/ci\.yml$)'; then
+              | grep -qE '^(experiments/code-review-workflow/|\.kiro/|\.cyril-s2hb/|crates/cyril-review/|crates/cyril/src/(main|crtool)\.rs$|crates/cyril/Cargo\.toml$|Cargo\.(toml|lock)$|\.github/workflows/ci\.yml$)'; then
             echo "run=true" >> "$GITHUB_OUTPUT"
           else
             echo "run=false" >> "$GITHUB_OUTPUT"
@@ -308,6 +312,30 @@ jobs:
       # shell (PowerShell on Windows, as KAS does there) and every crtool subcommand.
       - name: crtool self-test
         run: uv run --script experiments/code-review-workflow/selftest_crtool.py
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build native cyril and review consumer
+        shell: bash
+        run: |
+          cargo build -p cyril
+          cargo build -p cyril-review --example parity_driver
+
+      - name: Test native review library
+        shell: bash
+        run: cargo test -p cyril-review
+
+      - name: Native gather, facts, and hidden-CLI parity
+        shell: bash
+        run: |
+          suffix=""
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            suffix=".exe"
+          fi
+          uv run --script .cyril-s2hb/oracles/parity.py --phase gather \
+            --cyril "target/debug/cyril$suffix" \
+            --driver "target/debug/examples/parity_driver$suffix"
 
   # Summary job that requires all other jobs to pass — use this as the single
   # required status check in branch protection.
