@@ -12,7 +12,10 @@
    path containment, the permission policy (including every known way around a
    blacklist: redirects, newlines, subexpressions, a smuggled `cd`, a command in
    another field), crtool-command and input validation.
-1. The recipe regenerates from build_recipe.py at the node cap, and every crtool
+1. The recipe regenerates from build_recipe.py at the node cap; every step pins
+   its agent file's model/effort (a parent session's model outranks an agent
+   file, never a step pin), the parent's user messages are not injected, and a
+   driver --model/--effort override replaces the pins. Every crtool
    command line in it is double-quoted (single quotes mean nothing to cmd.exe and
    a bare `a,b,c` becomes an array in PowerShell).
 2. Every one of those command lines, with {{crtool}} filled in exactly as the
@@ -42,6 +45,7 @@ RECIPE = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow.json
 IS_WINDOWS = os.name == "nt"
 sys.path.insert(0, HERE)
 import review_policy as policy  # noqa: E402
+import build_recipe  # noqa: E402
 
 policy.utf8_stdio()
 ANGLES = ["a-line-scan", "b-removed-behavior", "c-cross-file", "d-language-pitfalls", "e-wrapper-proxy",
@@ -238,6 +242,34 @@ def argv_probe(lines):
             check(got == want, f"[{node}] {line.split()[1]}: the shell passed {len(got)} args as parsed")
 
 
+def recipe_pins():
+    step("recipe pins agent model/effort per step; no parent-request injection")
+    with open(RECIPE, encoding="utf-8") as f:
+        recipe = json.load(f)
+    check(recipe.get("injectOriginalUserRequest") is False, "injectOriginalUserRequest is false")
+    steps = list(build_recipe.walk_steps(recipe["steps"]))
+    explicit = {"setup": "low", "ballots": "low"}  # role choices that differ from the agent file
+    for s in steps:
+        pins = build_recipe.agent_defaults(s["agent"])
+        check("modelId" in pins, f"agent {s['agent']} declares a model")
+        check(s.get("modelId") == pins["modelId"], f"[{s['id']}] modelId pinned to {pins['modelId']}")
+        want = explicit.get(s["id"], pins.get("effortLevel"))
+        check(s.get("effortLevel") == want, f"[{s['id']}] effortLevel is {want!r} (got {s.get('effortLevel')!r})")
+    finders = [s for s in steps if s["agent"] == "cr-finder"]
+    check(finders and all(s["modelId"] != steps[0]["modelId"] for s in finders),
+          "the finders keep a model tier distinct from the clerk's")
+
+    step("driver --model / --effort override replaces the pins")
+    over = json.loads(json.dumps(recipe))
+    build_recipe.apply_override(over, "modelId", "m-override")
+    build_recipe.apply_override(over, "effortLevel", "e-override")
+    check(over["modelId"] == "m-override" and over["effortLevel"] == "e-override", "workflow level set")
+    for s in build_recipe.walk_steps(over["steps"]):
+        check(s["modelId"] == "m-override", f"[{s['id']}] model overridden")
+        want = explicit.get(s["id"], "e-override" if "effortLevel" in build_recipe.agent_defaults(s["agent"]) else None)
+        check(s.get("effortLevel") == want, f"[{s['id']}] effort after override is {want!r} (got {s.get('effortLevel')!r})")
+
+
 def main():
     ws = os.path.join(TMP, "ws")
     os.makedirs(os.path.join(ws, "src"))
@@ -257,6 +289,7 @@ def main():
 
     policy_tests()
     lines = recipe_commands()
+    recipe_pins()
     # The driver's crtool commands are relative to the workspace root, so crtool lives there.
     os.makedirs(os.path.join(ws, ".kiro", "code-review"))
     shutil.copy2(CRTOOL, os.path.join(ws, ".kiro", "code-review", "crtool.py"))
