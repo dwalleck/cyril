@@ -1,105 +1,197 @@
 use super::{Cancellation, DiagnosticsOutcome};
 use crate::{DiagnosticsError, Result};
-use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read};
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, ExitStatus};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::thread;
+use std::io;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::time::{Duration, Instant};
+use tokio::io::{AsyncRead, ReadBuf};
 
 const POLL: Duration = Duration::from_millis(10);
 const REAP_DEADLINE: Duration = Duration::from_secs(1);
-static CAPTURE_ID: AtomicU64 = AtomicU64::new(0);
+const DRAIN_DEADLINE: Duration = Duration::from_secs(1);
+const READ_QUANTUM: usize = 16 * 1024;
 
-pub(super) fn capture(
-    mut command: Command,
+#[cfg(not(windows))]
+type Command = tokio::process::Command;
+#[cfg(windows)]
+type Command = subprocess::Exec;
+#[cfg(not(windows))]
+type Child = tokio::process::Child;
+#[cfg(windows)]
+type Child = subprocess::Job;
+
+struct OwnedChild {
+    inner: Child,
+    cleanup_attempted: bool,
+}
+
+impl OwnedChild {
+    fn poll(&mut self) -> io::Result<Option<i64>> {
+        #[cfg(not(windows))]
+        {
+            use std::os::unix::process::ExitStatusExt;
+            self.inner
+                .try_wait()?
+                .map(|status| {
+                    status
+                        .code()
+                        .map(i64::from)
+                        .or_else(|| status.signal().map(|signal| -i64::from(signal)))
+                        .ok_or_else(|| io::Error::other("missing child exit status"))
+                })
+                .transpose()
+        }
+        #[cfg(windows)]
+        {
+            self.inner
+                .wait_timeout(Duration::ZERO)?
+                .map(|status| {
+                    status
+                        .code()
+                        .map(i64::from)
+                        .ok_or_else(|| io::Error::other("missing child exit status"))
+                })
+                .transpose()
+        }
+    }
+
+    fn kill(&mut self) -> io::Result<()> {
+        #[cfg(not(windows))]
+        {
+            self.inner.start_kill()
+        }
+        #[cfg(windows)]
+        {
+            self.inner.kill()
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for OwnedChild {
+    fn drop(&mut self) {
+        // Jobs are detached at launch: neither errors nor future-drop may wait.
+        match self.poll() {
+            Ok(Some(_)) => return,
+            Ok(None) => {}
+            Err(error) => tracing::warn!(%error, "polling dropped diagnostics child failed"),
+        }
+        if let Err(error) = self.kill() {
+            tracing::warn!(%error, "killing dropped diagnostics child failed");
+        }
+    }
+}
+
+pub(super) async fn capture(
+    command: Command,
     text: &str,
     timeout: Duration,
     cancel: &Cancellation,
-) -> Result<(DiagnosticsOutcome, Vec<u8>)> {
-    let (stdout_path, stdout) = create_capture()?;
-    let (stderr_path, stderr) = match create_capture() {
-        Ok(capture) => capture,
-        Err(error) => {
-            drop(stdout);
-            return finish(Err(error), &[stdout_path]);
+) -> Result<(DiagnosticsOutcome, Vec<u8>, bool)> {
+    let (mut child, streams) = spawn(command, text)?;
+    let result = match streams {
+        Ok((mut stdout, mut stderr)) => {
+            observe(&mut child, &mut stdout, &mut stderr, timeout, cancel).await
         }
+        Err(error) => Err(error),
     };
-    command.stdout(stdout).stderr(stderr);
-    let spawned = command.spawn();
-    // Command retains its Stdio owners after spawn; release them before polling.
-    drop(command);
-    let paths = [stdout_path, stderr_path];
-    let result = match spawned {
-        Ok(mut child) => observe(&mut child, timeout, cancel)
-            .and_then(|outcome| snapshot(&paths).map(|bytes| (outcome, bytes))),
-        Err(source) => Err(DiagnosticsError::CannotStart {
-            command: text.to_owned(),
-            source,
-        }
-        .into()),
-    };
-    finish(result, &paths)
-}
-
-fn create_capture() -> Result<(PathBuf, File)> {
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        options.mode(0o600);
-    }
-    loop {
-        let id = CAPTURE_ID.fetch_add(1, Ordering::Relaxed);
-        let path =
-            std::env::temp_dir().join(format!("cyril-review-{}-{id}.capture", std::process::id()));
-        match options.open(&path) {
-            Ok(file) => return Ok((path, file)),
-            Err(source) if source.kind() == io::ErrorKind::AlreadyExists => continue,
-            Err(source) => return Err(lifecycle("create capture", source)),
-        }
+    match result {
+        Ok(captured) => Ok(captured),
+        Err(error) if child.cleanup_attempted => Err(error),
+        Err(error) => match terminate(&mut child).await {
+            Ok(()) => Err(error),
+            Err(cleanup) => Err(lifecycle(
+                &format!("{error}; direct-child cleanup also failed"),
+                io::Error::other(cleanup),
+            )),
+        },
     }
 }
 
-fn finish<T>(result: Result<T>, paths: &[PathBuf]) -> Result<T> {
-    let mut failure = None;
-    for path in paths {
-        if let Err(source) = fs::remove_file(path) {
-            match &mut failure {
-                None => failure = Some((format!("remove capture {}", path.display()), source)),
-                Some((operation, _)) => operation.push_str(&format!(
-                    "; also failed removing {}: {source}",
-                    path.display()
-                )),
-            }
-        }
-    }
-    if let Some((mut operation, source)) = failure {
-        if let Err(error) = result {
-            operation.push_str(&format!(" after {error}"));
-        }
-        return Err(lifecycle(&operation, source));
-    }
-    result
+#[cfg(not(windows))]
+fn spawn(
+    mut command: Command,
+    text: &str,
+) -> Result<(
+    OwnedChild,
+    Result<(tokio::process::ChildStdout, tokio::process::ChildStderr)>,
+)> {
+    use std::process::Stdio;
+    command
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .kill_on_drop(true);
+    let mut child = command
+        .spawn()
+        .map_err(|source| cannot_start(text, source))?;
+    let streams = match (child.stdout.take(), child.stderr.take()) {
+        (Some(stdout), Some(stderr)) => Ok((stdout, stderr)),
+        _ => Err(lifecycle(
+            "take capture pipes",
+            io::Error::other("missing pipe"),
+        )),
+    };
+    Ok((
+        OwnedChild {
+            inner: child,
+            cleanup_attempted: false,
+        },
+        streams,
+    ))
+}
+
+#[cfg(windows)]
+type Reader = interprocess::os::windows::named_pipe::tokio::RecvPipeStream<
+    interprocess::os::windows::named_pipe::pipe_mode::Bytes,
+>;
+
+#[cfg(windows)]
+fn spawn(command: Command, text: &str) -> Result<(OwnedChild, Result<(Reader, Reader)>)> {
+    use subprocess::Redirection;
+    static LAUNCH: std::sync::Mutex<()> = std::sync::Mutex::new(());
+    let _guard = LAUNCH
+        .lock()
+        .map_err(|error| lifecycle("lock capture launch", io::Error::other(error.to_string())))?;
+    let job = command
+        .stdin(Redirection::Null)
+        .stdout(Redirection::Pipe)
+        .stderr(Redirection::Pipe)
+        .detached()
+        .start()
+        .map_err(|source| cannot_start(text, source))?;
+    let mut child = OwnedChild {
+        inner: job,
+        cleanup_attempted: false,
+    };
+    let streams = pipe(child.inner.stdout.take())
+        .and_then(|stdout| pipe(child.inner.stderr.take()).map(|stderr| (stdout, stderr)));
+    Ok((child, streams))
+}
+
+#[cfg(windows)]
+fn pipe(file: Option<std::fs::File>) -> Result<Reader> {
+    let file =
+        file.ok_or_else(|| lifecycle("take capture pipe", io::Error::other("missing pipe")))?;
+    Reader::try_from(std::os::windows::io::OwnedHandle::from(file))
+        .map_err(|error| lifecycle("register capture pipe", io::Error::from(error)))
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Terminal {
-    Exit(ExitStatus),
+    Exit(i64),
     Cancelled,
     TimedOut,
 }
 
 fn terminal_decision(
-    status: Option<ExitStatus>,
+    status: Option<i64>,
     cancelled: bool,
     elapsed: Duration,
     timeout: Duration,
 ) -> Option<Terminal> {
-    if let Some(status) = status {
-        Some(Terminal::Exit(status))
+    if let Some(code) = status {
+        Some(Terminal::Exit(code))
     } else if cancelled {
         Some(Terminal::Cancelled)
     } else if elapsed >= timeout {
@@ -109,161 +201,157 @@ fn terminal_decision(
     }
 }
 
-fn observe(
-    child: &mut Child,
+async fn observe(
+    child: &mut OwnedChild,
+    stdout: &mut (impl AsyncRead + Unpin),
+    stderr: &mut (impl AsyncRead + Unpin),
     timeout: Duration,
     cancel: &Cancellation,
-) -> Result<DiagnosticsOutcome> {
+) -> Result<(DiagnosticsOutcome, Vec<u8>, bool)> {
     let started = Instant::now();
+    let mut terminal = None;
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let (mut out_eof, mut err_eof) = (false, false);
+    let mut buffer = [0; READ_QUANTUM];
     loop {
-        let status = match child.try_wait() {
-            Ok(status) => status,
-            Err(source) => {
-                let error = lifecycle("poll child", source);
-                return match terminate(child) {
-                    Ok(()) => Err(error),
-                    Err(cleanup) => Err(lifecycle(
-                        &format!("poll child failed: {error}; cleanup also failed"),
-                        io::Error::other(cleanup),
-                    )),
-                };
-            }
-        };
-        match terminal_decision(status, cancel.is_cancelled(), started.elapsed(), timeout) {
-            Some(Terminal::Exit(status)) => return classify(status),
-            Some(Terminal::Cancelled) => {
-                terminate(child)?;
-                return Ok(DiagnosticsOutcome::Cancelled);
-            }
-            Some(Terminal::TimedOut) => {
-                terminate(child)?;
-                return Ok(DiagnosticsOutcome::TimedOut);
-            }
-            None => thread::sleep(POLL),
-        }
-    }
-}
-
-#[derive(Debug, Eq, PartialEq)]
-enum ReapDecision {
-    Reaped,
-    Waiting,
-    Expired,
-}
-
-fn reap_decision(reaped: bool, elapsed: Duration) -> ReapDecision {
-    if reaped {
-        ReapDecision::Reaped
-    } else if elapsed >= REAP_DEADLINE {
-        ReapDecision::Expired
-    } else {
-        ReapDecision::Waiting
-    }
-}
-
-fn terminate(child: &mut Child) -> Result<()> {
-    let started = Instant::now();
-    let mut kill_error = match child.kill() {
-        Ok(()) => None,
-        Err(source) => {
-            // Natural exit can race kill; an already-reaped child needs no kill.
-            if child
-                .try_wait()
-                .map_err(|error| lifecycle("reap after failed kill", error))?
-                .is_some()
+        if terminal.is_none() {
+            let status = child
+                .poll()
+                .map_err(|source| lifecycle("poll child", source))?;
+            if let Some(decision) =
+                terminal_decision(status, cancel.is_cancelled(), started.elapsed(), timeout)
             {
+                let outcome = match decision {
+                    Terminal::Exit(0) => DiagnosticsOutcome::Clean,
+                    Terminal::Exit(exit_code) => DiagnosticsOutcome::Failed { exit_code },
+                    Terminal::Cancelled | Terminal::TimedOut => {
+                        terminate(child).await?;
+                        if decision == Terminal::Cancelled {
+                            DiagnosticsOutcome::Cancelled
+                        } else {
+                            DiagnosticsOutcome::TimedOut
+                        }
+                    }
+                };
+                terminal = Some((outcome, Instant::now()));
+            }
+        }
+        let mut quantum = POLL;
+        if let Some((outcome, ended)) = terminal {
+            if drain_finished(out_eof, err_eof, ended.elapsed()) {
+                out.try_reserve(1 + err.len())
+                    .map_err(|error| lifecycle("combine capture", io::Error::other(error)))?;
+                out.push(b'\n');
+                out.extend_from_slice(&err);
+                return Ok((outcome, out, out_eof && err_eof));
+            }
+            quantum = quantum.min(DRAIN_DEADLINE.saturating_sub(ended.elapsed()));
+        }
+        // Poll each stream once per turn; a cold stream never holds up a ready
+        // one. Bytes are retained before yielding or cancelling this future.
+        let reads = std::future::poll_fn(|cx| -> Poll<Result<()>> {
+            let a = read_chunk(stdout, &mut out, &mut buffer, out_eof, cx);
+            let b = read_chunk(stderr, &mut err, &mut buffer, err_eof, cx);
+            let ready = a.is_ready() || b.is_ready();
+            if let Poll::Ready(eof) = a {
+                out_eof = eof?;
+            }
+            if let Poll::Ready(eof) = b {
+                err_eof = eof?;
+            }
+            if ready {
+                Poll::Ready(Ok(()))
+            } else {
+                Poll::Pending
+            }
+        });
+        tokio::select! {
+            biased;
+            () = tokio::time::sleep(quantum) => {}
+            result = reads => result?,
+        }
+        tokio::task::yield_now().await;
+    }
+}
+
+fn read_chunk(
+    reader: &mut (impl AsyncRead + Unpin),
+    bytes: &mut Vec<u8>,
+    buffer: &mut [u8],
+    eof: bool,
+    cx: &mut Context<'_>,
+) -> Poll<Result<bool>> {
+    if eof {
+        return Poll::Pending;
+    }
+    let mut buffer = ReadBuf::new(buffer);
+    match Pin::new(reader).poll_read(cx, &mut buffer) {
+        Poll::Ready(Ok(())) => {
+            let collected = buffer.filled();
+            bytes
+                .try_reserve(collected.len())
+                .map_err(|error| lifecycle("grow capture", io::Error::other(error)))?;
+            bytes.extend_from_slice(collected);
+            Poll::Ready(Ok(collected.is_empty()))
+        }
+        Poll::Ready(Err(source)) => Poll::Ready(Err(lifecycle("read capture", source))),
+        Poll::Pending => Poll::Pending,
+    }
+}
+
+fn drain_finished(stdout_eof: bool, stderr_eof: bool, elapsed: Duration) -> bool {
+    (stdout_eof && stderr_eof) || elapsed >= DRAIN_DEADLINE
+}
+
+fn reap_deadline_reached(elapsed: Duration) -> bool {
+    elapsed >= REAP_DEADLINE
+}
+
+async fn terminate(child: &mut OwnedChild) -> Result<()> {
+    child.cleanup_attempted = true;
+    let started = Instant::now();
+    let mut poll_error = match child.poll() {
+        Ok(Some(_)) => return Ok(()),
+        Ok(None) => None,
+        Err(source) => Some(source),
+    };
+    let kill = child.kill();
+    let mut live_after_kill = false;
+    loop {
+        match child.poll() {
+            Ok(Some(_)) => {
+                if let Some(source) = poll_error {
+                    return Err(lifecycle("poll child during cleanup", source));
+                }
+                if live_after_kill {
+                    kill.map_err(|source| lifecycle("kill child", source))?;
+                }
+                // An immediately observed exit can race a failed kill.
                 return Ok(());
             }
-            Some(source)
-        }
-    };
-    loop {
-        let status = child
-            .try_wait()
-            .map_err(|source| lifecycle("reap child", source))?;
-        match reap_decision(status.is_some(), started.elapsed()) {
-            ReapDecision::Reaped => {
-                return match kill_error.take() {
-                    Some(source) => Err(lifecycle("kill child", source)),
-                    None => Ok(()),
-                };
+            Ok(None) => live_after_kill = true,
+            Err(source) => {
+                poll_error.get_or_insert(source);
             }
-            ReapDecision::Expired => {
-                return Err(match kill_error.take() {
-                    Some(source) => {
-                        lifecycle("kill failed; child not reaped within one second", source)
-                    }
-                    None => lifecycle(
-                        "reap child",
-                        io::Error::new(
-                            io::ErrorKind::TimedOut,
-                            "child not reaped within one second",
-                        ),
-                    ),
-                });
-            }
-            ReapDecision::Waiting => thread::sleep(POLL),
         }
+        if reap_deadline_reached(started.elapsed()) {
+            return Err(lifecycle(
+                "reap child within one second",
+                poll_error.or_else(|| kill.err()).unwrap_or_else(|| {
+                    io::Error::new(io::ErrorKind::TimedOut, "direct child not reaped")
+                }),
+            ));
+        }
+        tokio::time::sleep(POLL.min(REAP_DEADLINE.saturating_sub(started.elapsed()))).await;
     }
 }
 
-fn classify(status: ExitStatus) -> Result<DiagnosticsOutcome> {
-    if status.success() {
-        return Ok(DiagnosticsOutcome::Clean);
+fn cannot_start(command: &str, source: io::Error) -> crate::ReviewError {
+    DiagnosticsError::CannotStart {
+        command: command.to_owned(),
+        source,
     }
-    #[cfg(unix)]
-    let code = {
-        use std::os::unix::process::ExitStatusExt;
-        match (status.code(), status.signal()) {
-            (Some(code), _) => i64::from(code),
-            (_, Some(signal)) => -i64::from(signal),
-            _ => {
-                return Err(lifecycle(
-                    "classify child exit",
-                    io::Error::other("missing exit status"),
-                ));
-            }
-        }
-    };
-    #[cfg(windows)]
-    let code = i64::from(status.code().ok_or_else(|| {
-        lifecycle(
-            "classify child exit",
-            io::Error::other("missing exit status"),
-        )
-    })? as u32);
-    Ok(DiagnosticsOutcome::Failed { exit_code: code })
-}
-
-fn snapshot(paths: &[PathBuf; 2]) -> Result<Vec<u8>> {
-    let mut stdout = open_reader(&paths[0])?;
-    let mut stderr = open_reader(&paths[1])?;
-    // Sample BOTH independent readers before consuming either stream.
-    let stdout_length = stdout
-        .metadata()
-        .map_err(|source| lifecycle("sample stdout", source))?
-        .len();
-    let stderr_length = stderr
-        .metadata()
-        .map_err(|source| lifecycle("sample stderr", source))?
-        .len();
-    let mut bytes = Vec::new();
-    bounded_read(&mut stdout, stdout_length, &mut bytes)?;
-    bytes.push(b'\n');
-    bounded_read(&mut stderr, stderr_length, &mut bytes)?;
-    Ok(bytes)
-}
-
-fn open_reader(path: &Path) -> Result<File> {
-    File::open(path).map_err(|source| lifecycle("open capture reader", source))
-}
-
-fn bounded_read(reader: &mut File, length: u64, bytes: &mut Vec<u8>) -> Result<()> {
-    reader
-        .take(length)
-        .read_to_end(bytes)
-        .map_err(|source| lifecycle("read capture snapshot", source))?;
-    Ok(())
+    .into()
 }
 
 fn lifecycle(operation: &str, source: io::Error) -> crate::ReviewError {
@@ -277,57 +365,49 @@ fn lifecycle(operation: &str, source: io::Error) -> crate::ReviewError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
 
-    #[cfg(unix)]
     #[test]
-    fn capture_files_do_not_expose_child_output_to_other_users() -> Result<()> {
-        use std::os::unix::fs::PermissionsExt;
-        let (path, file) = create_capture()?;
-        let permissions = file
-            .metadata()
-            .map(|metadata| metadata.permissions().mode());
-        drop(file);
-        finish(Ok(()), &[path])?;
-        let permissions = permissions.map_err(|source| lifecycle("inspect capture", source))?;
-        assert_eq!(
-            permissions & 0o077,
-            0,
-            "temporary diagnostics output must not be readable or writable by other users"
-        );
-        Ok(())
+    fn drain_finishes_at_both_eof_or_exactly_one_second() {
+        let deadline = Duration::from_secs(1);
+        for (stdout_eof, stderr_eof) in [(false, false), (true, false), (false, true)] {
+            assert!(!drain_finished(stdout_eof, stderr_eof, Duration::ZERO));
+            assert!(!drain_finished(
+                stdout_eof,
+                stderr_eof,
+                deadline - Duration::from_nanos(1)
+            ));
+            assert!(drain_finished(stdout_eof, stderr_eof, deadline));
+            assert!(drain_finished(
+                stdout_eof,
+                stderr_eof,
+                deadline + Duration::from_nanos(1)
+            ));
+        }
+        for elapsed in [Duration::ZERO, deadline, deadline + Duration::from_nanos(1)] {
+            assert!(drain_finished(true, true, elapsed));
+        }
     }
 
     #[test]
-    fn bounded_read_excludes_bytes_appended_after_length_sample()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let mut capture = tempfile::NamedTempFile::new()?;
-        capture.write_all(b"known prefix\0\xff")?;
-        capture.flush()?;
-        let sampled = capture.as_file().metadata()?.len();
-        capture.write_all(b"late bytes must not be retained")?;
-        capture.flush()?;
-        let mut reader = File::open(capture.path())?;
-        let mut bytes = Vec::new();
-        bounded_read(&mut reader, sampled, &mut bytes)?;
-        assert_eq!(bytes, b"known prefix\0\xff");
-        Ok(())
+    fn reap_deadline_is_exactly_one_second() {
+        let deadline = Duration::from_secs(1);
+        assert!(!reap_deadline_reached(Duration::ZERO));
+        assert!(!reap_deadline_reached(deadline - Duration::from_nanos(1)));
+        assert!(reap_deadline_reached(deadline));
+        assert!(reap_deadline_reached(deadline + Duration::from_nanos(1)));
     }
 
     #[test]
     fn terminal_observations_prioritize_exit_then_live_cancel_then_timeout() {
-        #[cfg(unix)]
-        use std::os::unix::process::ExitStatusExt;
-        #[cfg(windows)]
-        use std::os::windows::process::ExitStatusExt;
-        let status = ExitStatus::from_raw(0);
         let timeout = Duration::from_secs(2);
-        for cancelled in [false, true] {
-            for elapsed in [Duration::ZERO, timeout, timeout + POLL] {
-                assert_eq!(
-                    terminal_decision(Some(status), cancelled, elapsed, timeout),
-                    Some(Terminal::Exit(status))
-                );
+        for code in [0, 7, -9, 4_294_967_295] {
+            for cancelled in [false, true] {
+                for elapsed in [Duration::ZERO, timeout, timeout + POLL] {
+                    assert_eq!(
+                        terminal_decision(Some(code), cancelled, elapsed, timeout),
+                        Some(Terminal::Exit(code))
+                    );
+                }
             }
         }
         for elapsed in [Duration::ZERO, timeout, timeout + POLL] {
@@ -340,84 +420,99 @@ mod tests {
             terminal_decision(None, false, timeout - Duration::from_nanos(1), timeout),
             None
         );
-        assert_eq!(
-            terminal_decision(None, false, timeout, timeout),
-            Some(Terminal::TimedOut)
-        );
-        assert_eq!(
-            terminal_decision(None, false, timeout + POLL, timeout),
-            Some(Terminal::TimedOut)
-        );
+        for elapsed in [timeout, timeout + POLL] {
+            assert_eq!(
+                terminal_decision(None, false, elapsed, timeout),
+                Some(Terminal::TimedOut)
+            );
+        }
         assert_eq!(
             terminal_decision(None, false, Duration::ZERO, Duration::ZERO),
             Some(Terminal::TimedOut)
         );
     }
 
-    #[test]
-    fn reap_deadline_is_exact_and_an_observed_exit_still_wins() {
-        // Contract input, independent of the production deadline constant.
-        let deadline = Duration::from_secs(1);
-        assert_eq!(
-            reap_decision(false, deadline - Duration::from_nanos(1)),
-            ReapDecision::Waiting
+    #[tokio::test]
+    async fn bounded_reads_retain_binary_bytes_across_quantum_and_eof() -> Result<()> {
+        let expected: Vec<u8> = (0..READ_QUANTUM + 17).map(|i| (i % 256) as u8).collect();
+        let mut reader = expected.as_slice();
+        let mut bytes = Vec::new();
+        let mut buffer = [0; READ_QUANTUM];
+        assert!(
+            !std::future::poll_fn(|cx| {
+                read_chunk(&mut reader, &mut bytes, &mut buffer, false, cx)
+            })
+            .await?
         );
-        assert_eq!(reap_decision(false, deadline), ReapDecision::Expired);
-        assert_eq!(reap_decision(false, deadline + POLL), ReapDecision::Expired);
-        for elapsed in [Duration::ZERO, deadline, deadline + POLL] {
-            assert_eq!(reap_decision(true, elapsed), ReapDecision::Reaped);
-        }
+        assert_eq!(bytes, expected[..READ_QUANTUM]);
+        assert!(
+            !std::future::poll_fn(|cx| {
+                read_chunk(&mut reader, &mut bytes, &mut buffer, false, cx)
+            })
+            .await?
+        );
+        assert_eq!(bytes, expected);
+        assert!(
+            std::future::poll_fn(|cx| {
+                read_chunk(&mut reader, &mut bytes, &mut buffer, false, cx)
+            })
+            .await?
+        );
+        assert_eq!(bytes, expected);
+        Ok(())
     }
 
-    #[test]
-    fn cleanup_failure_is_typed_and_does_not_skip_the_other_capture()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let directory = tempfile::tempdir()?;
-        let blocked = directory.path().join("not-a-file");
-        fs::create_dir(&blocked)?;
-        let removable = directory.path().join("owned-capture");
-        fs::write(&removable, b"capture")?;
-        let error = finish(Ok(()), &[blocked.clone(), removable.clone()])
-            .expect_err("directory cannot be removed as a capture file");
-        match error {
-            crate::ReviewError::Diagnostics(DiagnosticsError::Lifecycle { operation, .. }) => {
-                assert!(operation.contains(&blocked.display().to_string()));
+    #[tokio::test]
+    async fn pending_stream_is_not_eof_and_read_failure_is_lifecycle() -> Result<()> {
+        struct Broken;
+        impl AsyncRead for Broken {
+            fn poll_read(
+                self: std::pin::Pin<&mut Self>,
+                _: &mut std::task::Context<'_>,
+                _: &mut tokio::io::ReadBuf<'_>,
+            ) -> std::task::Poll<io::Result<()>> {
+                std::task::Poll::Ready(Err(io::Error::new(
+                    io::ErrorKind::PermissionDenied,
+                    "denied",
+                )))
             }
-            other => panic!("cleanup error was not lifecycle: {other:?}"),
         }
-        assert!(blocked.is_dir());
-        assert!(
-            !removable.exists(),
-            "cleanup skipped second path after first error"
-        );
+        let (mut reader, _writer) = tokio::io::duplex(1);
+        let mut bytes = b"prior bytes".to_vec();
+        let mut buffer = [0; READ_QUANTUM];
+        let pending =
+            std::future::poll_fn(|cx| read_chunk(&mut reader, &mut bytes, &mut buffer, false, cx));
+        assert!(tokio::time::timeout(Duration::ZERO, pending).await.is_err());
+        let result =
+            std::future::poll_fn(|cx| read_chunk(&mut Broken, &mut bytes, &mut buffer, false, cx))
+                .await;
+        match result {
+            Err(crate::ReviewError::Diagnostics(DiagnosticsError::Lifecycle {
+                source, ..
+            })) => {
+                assert_eq!(source.kind(), io::ErrorKind::PermissionDenied);
+            }
+            other => panic!("expected capture lifecycle failure, got {other:?}"),
+        }
+        assert_eq!(bytes, b"prior bytes");
         Ok(())
     }
 
     #[cfg(unix)]
-    #[test]
-    fn unix_status_preserves_the_negative_signal_number() -> Result<()> {
-        use std::os::unix::process::ExitStatusExt;
-        assert_eq!(
-            classify(ExitStatus::from_raw(9))?,
-            DiagnosticsOutcome::Failed { exit_code: -9 }
-        );
-        assert_eq!(
-            classify(ExitStatus::from_raw(7 << 8))?,
-            DiagnosticsOutcome::Failed { exit_code: 7 }
-        );
-        Ok(())
-    }
-
-    #[cfg(windows)]
-    #[test]
-    fn windows_status_preserves_all_unsigned_exit_bits() -> Result<()> {
-        use std::os::windows::process::ExitStatusExt;
-        assert_eq!(
-            classify(ExitStatus::from_raw(0xffff_ffff))?,
-            DiagnosticsOutcome::Failed {
-                exit_code: 4_294_967_295
-            }
-        );
+    #[tokio::test]
+    async fn native_signal_exit_remains_negative() -> Result<()> {
+        let mut command = Command::new("/bin/sh");
+        command.args(["-c", "kill -TERM $$"]);
+        let (outcome, bytes, complete) = capture(
+            command,
+            "/bin/sh -c 'kill -TERM $$'",
+            Duration::from_secs(2),
+            &Cancellation::default(),
+        )
+        .await?;
+        assert_eq!(outcome, DiagnosticsOutcome::Failed { exit_code: -15 });
+        assert_eq!(bytes, b"\n");
+        assert!(complete);
         Ok(())
     }
 }

@@ -4,7 +4,8 @@ mod process;
 use crate::run::{
     facts_dir, facts_metadata, manifest_path, read_manifest, write_binary, write_json, write_text,
 };
-use crate::{Result, ReviewRun, StepOutput};
+use crate::{Result, ReviewRun, StepOutput, regex_error};
+use regex::RegexSetBuilder;
 use serde_json::Value;
 use std::borrow::Cow;
 use std::collections::VecDeque;
@@ -14,7 +15,7 @@ use std::sync::{
 };
 use std::time::{Duration, Instant};
 
-/// Execution timeout for one blocking check.
+/// Execution timeout for one native check.
 #[derive(Clone, Copy, Debug)]
 pub struct DiagnosticsOptions {
     pub timeout: Duration,
@@ -55,7 +56,7 @@ pub enum DiagnosticsOutcome {
 #[derive(Debug)]
 pub struct DiagnosticsResult {
     outcome: DiagnosticsOutcome,
-    started: bool,
+    capture_complete: Option<bool>,
     output: StepOutput,
 }
 
@@ -65,7 +66,11 @@ impl DiagnosticsResult {
     }
 
     pub fn started(&self) -> bool {
-        self.started
+        self.capture_complete.is_some()
+    }
+
+    pub fn capture_complete(&self) -> Option<bool> {
+        self.capture_complete
     }
 
     pub fn output(&self) -> &StepOutput {
@@ -74,17 +79,17 @@ impl DiagnosticsResult {
 }
 
 /// Execute one native check, capturing and reporting its terminal evidence.
-pub fn diagnostics(
+pub async fn diagnostics(
     run: &ReviewRun,
     command: &str,
     options: &DiagnosticsOptions,
     cancel: &Cancellation,
-    clock: &dyn crate::ReviewClock,
+    clock: &(dyn crate::ReviewClock + Sync),
 ) -> Result<DiagnosticsResult> {
     if cancel.is_cancelled() {
         return Ok(DiagnosticsResult {
             outcome: DiagnosticsOutcome::Cancelled,
-            started: false,
+            capture_complete: None,
             output: StepOutput::default(),
         });
     }
@@ -95,12 +100,18 @@ pub fn diagnostics(
     if cancel.is_cancelled() {
         return Ok(DiagnosticsResult {
             outcome: DiagnosticsOutcome::Cancelled,
-            started: false,
+            capture_complete: None,
             output: StepOutput::default(),
         });
     }
     let started = Instant::now();
-    let (outcome, raw) = process::capture(prepared, command, options.timeout, cancel)?;
+    let (outcome, mut raw, capture_complete) =
+        process::capture(prepared, command, options.timeout, cancel).await?;
+    let capture_status = if capture_complete {
+        "complete"
+    } else {
+        "incomplete (final-drain deadline reached before EOF)"
+    };
     let took = format!("{:.0}", clock.diagnostics_elapsed(started).as_secs_f64());
     let status = match outcome {
         DiagnosticsOutcome::Clean => "clean".to_owned(),
@@ -114,7 +125,7 @@ pub fn diagnostics(
         .map(|file| slash_normalized(&file.path))
         .collect();
     let decoded = String::from_utf8_lossy(&raw);
-    let lines = filter_lines(&decoded, &changed);
+    let lines = filter_lines(&decoded, &changed)?;
     let matches = lines.total;
     let head_end = manifest
         .head
@@ -122,7 +133,7 @@ pub fn diagnostics(
         .nth(12)
         .map_or(manifest.head.len(), |(index, _)| index);
     let mut report = format!(
-        "command: {command}\nresult: {status} in {took}s, on HEAD {}\n{matches} output line(s) mention a changed file\n",
+        "capture: {capture_status}\ncommand: {command}\nresult: {status} in {took}s, on HEAD {}\n{matches} output line(s) mention a changed file\n",
         &manifest.head[..head_end],
     );
     for line in lines.matches {
@@ -133,6 +144,11 @@ pub fn diagnostics(
     for line in lines.tail {
         report.push_str(line);
         report.push('\n');
+    }
+    if !capture_complete {
+        raw.extend_from_slice(
+            b"\n[capture: incomplete (final-drain deadline reached before EOF)]\n",
+        );
     }
     let directory = facts_dir(run);
     write_binary(&directory.join("diagnostics-raw.txt"), &raw)?;
@@ -146,12 +162,16 @@ pub fn diagnostics(
         "diagnostics_status".to_owned(),
         Value::from(status.as_str()),
     );
+    facts.insert(
+        "diagnostics_capture_complete".to_owned(),
+        Value::Bool(capture_complete),
+    );
     write_json(&manifest_path(run), &manifest)?;
     Ok(DiagnosticsResult {
         outcome,
-        started: true,
+        capture_complete: Some(capture_complete),
         output: StepOutput::from_text(format!(
-            "diagnostics: {status} in {took}s; {matches} line(s) on changed files -> facts/diagnostics.txt\n"
+            "diagnostics: {status} in {took}s; capture: {capture_status}; {matches} line(s) on changed files -> facts/diagnostics.txt\n"
         )),
     })
 }
@@ -170,7 +190,11 @@ struct FilteredLines<'a> {
     total: usize,
 }
 
-fn filter_lines<'a>(text: &'a str, changed: &[Cow<'_, str>]) -> FilteredLines<'a> {
+fn filter_lines<'a>(text: &'a str, changed: &[Cow<'_, str>]) -> Result<FilteredLines<'a>> {
+    let changed = RegexSetBuilder::new(changed.iter().map(|path| regex::escape(path)))
+        .size_limit(usize::MAX)
+        .build()
+        .map_err(regex_error)?;
     let mut lines = FilteredLines {
         matches: Vec::with_capacity(200),
         tail: VecDeque::with_capacity(15),
@@ -184,10 +208,7 @@ fn filter_lines<'a>(text: &'a str, changed: &[Cow<'_, str>]) -> FilteredLines<'a
             continue;
         }
         let normalized = slash_normalized(line);
-        if changed
-            .iter()
-            .any(|path| normalized.contains(path.as_ref()))
-        {
+        if changed.is_match(&normalized) {
             lines.total += 1;
             if lines.matches.len() < 200 {
                 lines.matches.push(line);
@@ -198,7 +219,7 @@ fn filter_lines<'a>(text: &'a str, changed: &[Cow<'_, str>]) -> FilteredLines<'a
         }
         lines.tail.push_back(line);
     }
-    lines
+    Ok(lines)
 }
 
 #[cfg(test)]
@@ -206,14 +227,59 @@ mod tests {
     use super::*;
 
     #[test]
-    fn nonempty_unicode_lines_and_native_slashes_preserve_original_evidence() {
+    fn nonempty_unicode_lines_and_native_slashes_preserve_original_evidence() -> Result<()> {
         let text = "\r\n  \u{2028}src\\lib.rs: one\r\nsrc/lib.rs: two\u{85}last\u{2029}";
-        let lines = filter_lines(text, &[Cow::Borrowed("src/lib.rs")]);
+        let lines = filter_lines(text, &[Cow::Borrowed("src/lib.rs")])?;
         assert_eq!(lines.total, 2);
         assert_eq!(lines.matches, ["src\\lib.rs: one", "src/lib.rs: two"]);
         assert_eq!(
             lines.tail.into_iter().collect::<Vec<_>>(),
             ["src\\lib.rs: one", "src/lib.rs: two", "last"]
         );
+        Ok(())
+    }
+
+    #[test]
+    fn changed_paths_are_literal_substrings_and_each_line_counts_once() -> Result<()> {
+        let text = "src/aaa.rs: decoy\nprefix/src/[a]+.rs.suffix: literal\n目录/模块.rs: Unicode";
+        let changed = [
+            Cow::Borrowed("src/[a]+.rs"),
+            Cow::Borrowed("src/[a]+.rs"),
+            Cow::Borrowed("目录/模块.rs"),
+        ];
+        let lines = filter_lines(text, &changed)?;
+        assert_eq!(lines.total, 2);
+        assert_eq!(
+            lines.matches,
+            [
+                "prefix/src/[a]+.rs.suffix: literal",
+                "目录/模块.rs: Unicode"
+            ]
+        );
+        assert_eq!(
+            lines.tail.into_iter().collect::<Vec<_>>(),
+            [
+                "src/aaa.rs: decoy",
+                "prefix/src/[a]+.rs.suffix: literal",
+                "目录/模块.rs: Unicode"
+            ]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn empty_path_set_and_empty_literal_preserve_matching_semantics() -> Result<()> {
+        let text = "first\n \nlast";
+        let absent = filter_lines(text, &[])?;
+        assert_eq!(absent.total, 0);
+        assert!(absent.matches.is_empty());
+        assert_eq!(
+            absent.tail.into_iter().collect::<Vec<_>>(),
+            ["first", "last"]
+        );
+        let empty_literal = filter_lines(text, &[Cow::Borrowed("")])?;
+        assert_eq!(empty_literal.total, 2);
+        assert_eq!(empty_literal.matches, ["first", "last"]);
+        Ok(())
     }
 }

@@ -84,8 +84,9 @@ def run(
     return Captured(result.returncode, result.stdout, result.stderr)
 
 
-def git(cwd: Path, *args: str, check: bool = True) -> bytes:
-    result = run(["git", *args], cwd)
+def git(cwd: Path, *args: str, check: bool = True, env: dict[str, str] | None = None,
+        input_data: bytes | None = None) -> bytes:
+    result = run(["git", *args], cwd, env, input_data)
     if check and result.returncode != 0:
         fail(f"git {' '.join(args)} failed: {result.stderr.decode(errors='replace').strip()}")
     return result.stdout
@@ -383,35 +384,18 @@ def validate_artifact_sizes(label: str, files: dict[str, bytes], workspace: Path
                 )
 
 
-def git_patch_id(cwd: Path, patch: bytes, label: str) -> str:
-    result = run(["git", "patch-id", "--verbatim"], cwd, input_data=patch)
-    if result.returncode != 0:
-        fail(f"{label}: git patch-id failed: {normalize_frame(result.stderr, label).strip()}")
-    fields = result.stdout.decode("ascii", errors="replace").split()
-    if not fields:
-        fail(f"{label}: git patch-id produced no identity")
-    return fields[0]
-
-
-def compare_patch_meaning(label: str, native: dict[str, bytes], oracle: dict[str, bytes], cwd: Path) -> None:
-    names = {"diff.patch"}
-    for files in (native, oracle):
-        manifest = json_bytes(f"{label} patch manifest", files.get("manifest.json", b""))
-        if isinstance(manifest, dict) and isinstance(manifest.get("files"), list):
-            names.update(
-                entry["patch"]
-                for entry in manifest["files"]
-                if isinstance(entry, dict) and isinstance(entry.get("patch"), str)
-            )
-    for name in sorted(names):
-        native_patch = native.get(name)
-        oracle_patch = oracle.get(name)
-        if native_patch is None or oracle_patch is None:
-            fail(f"{label}: patch {name!r} is missing on one side")
-        native_id = git_patch_id(cwd, native_patch, f"{label} native {name}")
-        oracle_id = git_patch_id(cwd, oracle_patch, f"{label} oracle {name}")
-        if native_id != oracle_id:
-            fail(f"{label}: patch meaning differs for {name!r}: {native_id} != {oracle_id}")
+def git_patch_trees(cwd: Path, patch: bytes) -> tuple[bytes, bytes]:
+    """Let Git reconstruct changed paths, contents and modes, independent of patch spelling."""
+    with tempfile.TemporaryDirectory(prefix="cyril-s2hb-patch-index-") as temporary:
+        index = str(Path(temporary) / "index")
+        # Pure mode changes need the real index's blob during ancestor creation.
+        # Only subsequent operations select the private index; none writes the real index.
+        git(cwd, "apply", f"--build-fake-ancestor={index}", input_data=patch)
+        env = {**os.environ, "GIT_INDEX_FILE": index}
+        before = git(cwd, "write-tree", env=env)
+        git(cwd, "apply", "--cached", "--binary", env=env, input_data=patch)
+        after = git(cwd, "write-tree", env=env)
+        return before, after
 
 
 def compare_json_nodes(
@@ -523,6 +507,8 @@ def error_category(label: str, result: Captured) -> str:
     if not text.casefold().startswith("crtool: error:"):
         fail(f"{label}: error output lacks crtool error category prefix")
     lower = text.casefold()
+    if "invalid target" in lower:
+        return "invalid-target"
     if "empty diff" in lower:
         return "empty-diff"
     if "crtool_version" in lower or "unstamped" in lower or "stamp" in lower:
@@ -604,7 +590,7 @@ def compare_results(
     if native.returncode == 0:
         validate_artifact_sizes(f"{label} native", native_files, workspace)
         validate_artifact_sizes(f"{label} oracle", oracle_files, workspace)
-        compare_patch_meaning(label, native_files, oracle_files, workspace or Path.cwd())
+        assert_direct_git_semantics(workspace or Path.cwd(), native_files)
 
 
 def commit(cwd: Path, message: str, env: dict[str, str]) -> None:
@@ -845,14 +831,20 @@ def pair_facts(label: str, builder: Callable[[Path], None], driver: Path, target
         compare_results(label, native, oracle, native_files, snapshot(run_dir), operation="facts", workspace=workspace)
 
 
-def assert_direct_git_semantics(workspace: Path, files: dict[str, bytes], scope: str) -> None:
+def assert_direct_git_semantics(workspace: Path, files: dict[str, bytes], scope: str | None = None) -> None:
     manifest = json_bytes("direct Git manifest", files.get("manifest.json", b""))
     if not isinstance(manifest, dict) or not isinstance(manifest.get("target"), str):
         fail("direct Git manifest lacks target")
-    pathspec = scope.split() or ["."]
-    full = git(workspace, "diff", "--no-renames", manifest["target"], "--", *pathspec)
+    pathspec = scope.split() if scope is not None else manifest.get("scope")
+    if not isinstance(pathspec, list) or not all(isinstance(path, str) for path in pathspec):
+        fail("direct Git manifest lacks scope paths")
+    root = Path(os.fsdecode(git(workspace, "rev-parse", "--show-toplevel")[:-1]))
+    diff_args = ("diff", "--no-renames", "--no-relative", "--no-color", "--no-ext-diff",
+                 "--no-textconv", "--binary", "--full-index", "--src-prefix=a/", "--dst-prefix=b/",
+                 manifest["target"], "--")
+    full = git(workspace, *diff_args, *(pathspec or ["."]))
     stored = files.get("diff.patch")
-    if stored is None or git_patch_id(workspace, stored, "stored full patch") != git_patch_id(workspace, full, "direct full patch"):
+    if stored is None or git_patch_trees(root, stored) != git_patch_trees(root, full):
         fail("stored diff.patch does not represent the direct Git diff")
     entries = manifest.get("files")
     if not isinstance(entries, list):
@@ -860,11 +852,10 @@ def assert_direct_git_semantics(workspace: Path, files: dict[str, bytes], scope:
     for entry in entries:
         if not isinstance(entry, dict) or not isinstance(entry.get("path"), str) or not isinstance(entry.get("patch"), str):
             fail("direct Git manifest file record is malformed")
-        expected = git(workspace, "diff", "--no-renames", manifest["target"], "--", entry["path"])
+        path = os.fsdecode(bytes(entry["_raw_path_bytes"])) if "_raw_path_bytes" in entry else entry["path"]
+        expected = git(root, *diff_args, ":(literal)" + path)
         actual = files.get(entry["patch"])
-        if actual is None or git_patch_id(workspace, actual, f"stored patch {entry['path']}") != git_patch_id(
-            workspace, expected, f"direct patch {entry['path']}"
-        ):
+        if actual is None or git_patch_trees(root, actual) != git_patch_trees(root, expected):
             fail(f"stored Git patch does not represent the direct diff for {entry['path']!r}")
 
 def assert_git_trace_budget(path: Path) -> None:
@@ -1222,7 +1213,7 @@ def checker_sensitivity() -> None:
 
         def rejected(label: str, mutated: dict[str, bytes]) -> None:
             try:
-                compare_results(label, result, result, baseline, mutated, workspace=workspace)
+                compare_results(label, result, result, mutated, baseline, workspace=workspace)
             except HarnessError:
                 return
             fail(f"{label}: checker accepted a meaningful mutation")
@@ -1244,12 +1235,17 @@ def checker_sensitivity() -> None:
         rejected("checker-sensitivity-array-order", mutated)
 
         patch = baseline["diff.patch"]
-        altered = patch.replace(b"pub fn helper", b"pub fn hxxxxx", 1)
-        if altered == patch:
-            fail("checker sensitivity fixture lacks patch source content")
-        mutated = dict(baseline)
-        mutated["diff.patch"] = altered
-        rejected("checker-sensitivity-patch-content", mutated)
+        for kind, original, replacement in (
+            ("content", b"pub fn helper", b"pub fn hxxxxx"),
+            ("path", b"src/helper.rs", b"src/hxxxxx.rs"),
+            ("mode", b"new file mode 100644", b"new file mode 100755"),
+        ):
+            altered = patch.replace(original, replacement)
+            if altered == patch:
+                fail(f"checker sensitivity fixture lacks patch {kind} control")
+            mutated = dict(baseline)
+            mutated["diff.patch"] = altered
+            rejected(f"checker-sensitivity-patch-{kind}", mutated)
 
         entries = manifest.get("files")
         if not isinstance(entries, list) or not entries:
@@ -1344,6 +1340,140 @@ def cli_smoke(cyril: Path) -> None:
         forbidden = run([str(cyril), "crtool", "diagnostics", str(run_dir), "true"], workspace, env)
         if forbidden.returncode == 0 or snapshot(run_dir):
             fail("forbidden diagnostics command was accepted or wrote artifacts")
+        invalid_run = root / "invalid-target-run"
+        outside_output = root / "option-target-output.patch"
+        invalid = run(
+            [str(cyril), "crtool", "gather", str(invalid_run),
+             f"--output={outside_output}", "src"],
+            workspace, env,
+        )
+        assert_error_output("CLI option-shaped target", invalid, 2, "invalid-target",
+                            ("--output=", outside_output.name))
+        if invalid_run.exists() or outside_output.exists():
+            fail("CLI option-shaped target created run layout or injected Git output")
+
+        leading_workspace = root / "leading-hyphen-workspace"
+        leading_run = root / "leading-hyphen-run"
+        base_repo(leading_workspace)
+        put(leading_workspace / "-leading.rs", "// baseline\n")
+        commit(leading_workspace, "track leading-hyphen scope", env)
+        put(leading_workspace / "-leading.rs", "// baseline\npub fn leading_scope() {}\n")
+        home_before = snapshot(home)
+        leading = run(
+            [str(cyril), "crtool", "gather", str(leading_run), "HEAD", "-leading.rs"],
+            leading_workspace, env,
+        )
+        if leading.returncode != 0:
+            fail(f"CLI leading-hyphen scope was not treated as path data: {leading.stderr!r}")
+        leading_files = snapshot(leading_run)
+        assert_gather_output("CLI leading-hyphen scope", leading, leading_files, repeated=False)
+        leading_manifest = json_bytes("CLI leading-hyphen manifest", leading_files["manifest.json"])
+        if (leading_manifest["scope"] != ["-leading.rs"] or leading_manifest["total_files"] != 1
+                or [(entry["path"], entry["status"]) for entry in leading_manifest["files"]] != [("-leading.rs", "M")]):
+            fail("CLI leading-hyphen scope selected the wrong tracked change")
+        assert_direct_git_semantics(leading_workspace, leading_files, "-leading.rs")
+        if snapshot(home) != home_before or (leading_workspace / "cyril.log").exists():
+            fail("CLI leading-hyphen scope crossed ordinary startup")
+        cli_cwd_smoke(cyril, root, workspace, home, env)
+
+
+def cli_cwd_smoke(cyril: Path, root: Path, workspace: Path, home: Path, env: dict[str, str]) -> None:
+    """Exercise the real hidden dispatcher, including its workspace/run mapping."""
+    outside = root / "outside"
+    outside.mkdir()
+    home_before = snapshot(home)
+
+    def invoke(label: str, launch: Path, flags: list[str], operation: str, rundir: str, scope: str = "") -> Captured:
+        argv = [
+            str(cyril),
+            "--agent-command=cyril-s2hb-nonexistent-91904",
+            "--agent-engine=v2",
+            *flags,
+            "crtool",
+            operation,
+            rundir,
+        ]
+        if operation == "gather":
+            argv.extend(["auto", scope])
+        result = run(argv, launch, env)
+        if snapshot(home) != home_before or any(
+            path.name in {"cyril.log", "usage.sqlite3"} for path in root.rglob("*")
+        ):
+            fail(f"{label}: hidden CLI crossed ordinary logging/config/usage startup")
+        return result
+
+    cases = (
+        ("cwd-relative", outside, ["--cwd", "../workspace"], workspace, "selected-relative", "src"),
+        ("cwd-absolute", outside, ["-d", str(workspace)], workspace, str(root / "selected-absolute"), "src"),
+        ("cwd-subdirectory", outside, ["--cwd", "../workspace/src"], workspace / "src", "selected-subdir", "."),
+        ("cwd-default", workspace, [], workspace, "selected-default", "src"),
+    )
+    for label, launch, flags, selected, argument, scope in cases:
+        run_path = Path(argument)
+        expected = run_path if run_path.is_absolute() else selected / run_path
+        misplaced = launch / run_path if not run_path.is_absolute() else selected / run_path.name
+        result = invoke(label, launch, flags, "gather", argument, scope)
+        if result.returncode != 0:
+            fail(f"{label}: selected-workspace CLI gather failed: {result.stderr!r}")
+        if not (expected / "manifest.json").is_file():
+            fail(f"{label}: run directory was not anchored at {expected}")
+        if misplaced != expected and misplaced.exists():
+            fail(f"{label}: CLI wrote a second run directory at {misplaced}")
+        files = snapshot(expected)
+        assert_run_layout(expected)
+        assert_gather_output(label, result, files, repeated=False)
+        manifest = json_bytes(f"{label} manifest", files["manifest.json"])
+        if not isinstance(manifest, dict) or not isinstance(manifest.get("target"), str):
+            fail(f"{label}: CLI manifest lacks target")
+        if not isinstance(manifest.get("files"), list):
+            fail(f"{label}: CLI manifest lacks file records")
+        recorded = [entry.get("path") for entry in manifest["files"] if isinstance(entry, dict)]
+        if not recorded or not all(isinstance(path, str) for path in recorded):
+            fail(f"{label}: CLI manifest file records are malformed")
+        scoped_names = {
+            os.fsdecode(path)
+            for path in git(selected, "diff", "--no-renames", "--name-only", "-z", manifest["target"], "--", scope).split(b"\0")
+            if path
+        }
+        if not set(recorded) <= scoped_names:
+            fail(f"{label}: CLI recorded paths outside selected caller-relative scope: {sorted(set(recorded) - scoped_names)!r}")
+        assert_direct_git_semantics(selected, files, scope)
+
+        repeated = invoke(label, launch, flags, "gather", argument, scope)
+        if repeated.returncode != 0:
+            fail(f"{label}: selected-workspace reuse failed: {repeated.stderr!r}")
+        assert_gather_output(f"{label} reuse", repeated, snapshot(expected), repeated=True)
+        if snapshot(expected) != files:
+            fail(f"{label}: selected-workspace reuse rewrote artifacts")
+        facts = invoke(label, launch, flags, "facts", argument)
+        if facts.returncode != 0:
+            fail(f"{label}: selected-workspace CLI facts failed: {facts.stderr!r}")
+        facts_files = snapshot(expected)
+        assert_run_layout(expected)
+        assert_facts_output(f"{label} facts", facts, facts_files)
+        if facts_files["diff.patch"] != files["diff.patch"]:
+            fail(f"{label}: facts changed the selected gather patch")
+        facts_manifest = json_bytes(f"{label} facts manifest", facts_files["manifest.json"])
+        if not isinstance(facts_manifest, dict) or facts_manifest.get("files") != manifest["files"]:
+            fail(f"{label}: facts changed the selected gather file records")
+
+    nondirectory = root / "selected-file"
+    put(nondirectory, "not a directory\n")
+    for kind, selected, flag in (
+        ("missing", root / "selected-missing", "--cwd"),
+        ("nondirectory", nondirectory, "-d"),
+    ):
+        for operation in ("gather", "facts"):
+            label = f"cwd-refusal-{kind}-{operation}"
+            run_path = root / label
+            before_files, before_dirs = snapshot(root), directory_snapshot(root)
+            result = invoke(label, outside, [flag, str(selected)], operation, str(run_path), "src")
+            text = normalize_frame(result.stderr, f"{label} stderr")
+            if result.returncode != 2 or str(selected) not in text:
+                fail(f"{label}: invalid selected cwd did not refuse with exit2 naming {str(selected)!r}: {result.returncode}, {result.stderr!r}")
+            if run_path.exists() or snapshot(root) != before_files or directory_snapshot(root) != before_dirs:
+                fail(f"{label}: invalid selected cwd refusal wrote artifacts")
+    print("PASS CLI cwd: outside launch, relative/absolute/default/subdirectory scope, gather reuse/facts symmetry, directory refusal and no ordinary startup")
 
 
 
@@ -1533,7 +1663,7 @@ def fixture_argv(driver: Path, root: Path, kind: str = "emit", args: tuple[str, 
 
 def diagnostics_argv(driver: Path, workspace: Path, run_dir: Path, command: str, receipt: Path,
                      *, timeout: str = "5", clock: str = "fixed", elapsed: float = DIAGNOSTICS_ELAPSED,
-                     cancel: str = "none", ready: Path | None = None) -> list[str]:
+                     cancel: str = "none", ready: Path | None = None, linger: Path | None = None) -> list[str]:
     argv = [str(driver), "diagnostics", "--workspace", str(workspace), "--rundir", str(run_dir),
             "--command", command, "--receipt", str(receipt), "--clock", clock,
             "--timeout-seconds", timeout, "--cancel", cancel]
@@ -1541,12 +1671,16 @@ def diagnostics_argv(driver: Path, workspace: Path, run_dir: Path, command: str,
         argv += ["--elapsed-seconds", str(elapsed)]
     if ready is not None:
         argv += ["--cancel-ready", str(ready)]
+    if linger is not None:
+        argv += ["--linger", str(linger)]
     return argv
 
 
-def diagnostics_call(argv: list[str], workspace: Path, env: dict[str, str] | None = None) -> Captured:
+def diagnostics_call(argv: list[str], workspace: Path, env: dict[str, str] | None = None,
+                     input_data: bytes | None = None) -> Captured:
     try:
-        result = subprocess.run(argv, cwd=workspace, env=env, capture_output=True, timeout=40)
+        result = subprocess.run(argv, cwd=workspace, env=env, input=input_data,
+                                capture_output=True, timeout=40)
     except subprocess.TimeoutExpired:
         fail("diagnostics outer hang guard expired (not a latency qualification)")
     return Captured(result.returncode, result.stdout, result.stderr)
@@ -1575,16 +1709,46 @@ def receipt_value(path: Path) -> dict:
     return value
 
 
-def assert_outcome(receipt: dict, outcome: str, *, started: bool = True, code: int | None = None) -> None:
+def assert_outcome(receipt: dict, outcome: str, *, started: bool = True, code: int | None = None,
+                   complete: bool | None = True) -> None:
     if receipt.get("outcome") != outcome or receipt.get("started") is not started or receipt.get("exit_code") != code:
         fail(f"typed diagnostics result differs: {receipt!r}; wanted {outcome}/{started}/{code}")
+    if "capture_complete" not in receipt or receipt["capture_complete"] is not complete:
+        fail(f"capture completeness receipt differs: {receipt.get('capture_complete')!r}; wanted {complete!r}")
 
 
-def assert_raw(run_dir: Path, stdout: bytes, stderr: bytes) -> bytes:
+# The generated status caption, not arbitrary prose: child output may
+# legitimately contain either word, so completeness is checked where the
+# operation itself states it.
+CAPTURE_COMPLETE_CAPTION = "capture: complete"
+CAPTURE_INCOMPLETE_CAPTION = "capture: incomplete"
+
+
+def assert_capture_text(label: str, text: str, complete: bool) -> None:
+    header = text.splitlines()[0].casefold() if text else ""
+    expected = CAPTURE_COMPLETE_CAPTION if complete else CAPTURE_INCOMPLETE_CAPTION
+    opposite = CAPTURE_INCOMPLETE_CAPTION if complete else CAPTURE_COMPLETE_CAPTION
+    if expected not in header or opposite in header:
+        fail(f"{label}: generated header has missing/conflicting capture status: {header!r}")
+
+
+def assert_raw(run_dir: Path, stdout: bytes, stderr: bytes, *, complete: bool = True) -> bytes:
     raw = (run_dir / "facts" / "diagnostics-raw.txt").read_bytes()
-    # Only the generated separator is presentation. Child bytes are literal.
-    if raw not in (stdout + b"\n" + stderr, stdout + b"\r\n" + stderr):
-        fail(f"lossless ordered raw capture differs: received {len(raw)}, streams {len(stdout)}/{len(stderr)}")
+    prefix = None
+    for separator in (b"\n", b"\r\n"):
+        candidate = stdout + separator + stderr
+        if raw.startswith(candidate):
+            prefix = candidate
+            break
+    if prefix is None:
+        fail(f"ordered raw capture lost stdout+separator+stderr: received {len(raw)}, streams {len(stdout)}/{len(stderr)}")
+    if complete:
+        if raw != prefix:
+            fail(f"complete raw capture carries generated bytes: {len(raw)} != {len(prefix)}")
+    else:
+        marker = raw[len(prefix):]
+        if not marker or b"incomplete" not in marker.lower():
+            fail(f"incomplete raw capture lacks its generated marker: {marker[:120]!r}")
     return raw
 
 
@@ -1606,20 +1770,25 @@ def status_meaning(status: object) -> tuple[str, int | None]:
 
 
 def assert_diagnostics_artifacts(run_dir: Path, before: dict, command: str, outcome: str, code: int | None,
-                                 elapsed: float, source_lines: list[str], expected_lines: list[str], matches: int) -> None:
+                                 elapsed: float, source_lines: list[str], expected_lines: list[str], matches: int,
+                                 *, complete: bool = True) -> None:
     manifest = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
     facts = manifest.get("facts")
     if not isinstance(facts, dict) or facts.get("diagnostics") != "facts/diagnostics.txt":
         fail("diagnostics report metadata is absent")
     if status_meaning(facts.get("diagnostics_status")) != (outcome, code):
         fail("manifest diagnostics status disagrees with typed/native outcome")
+    if facts.get("diagnostics_capture_complete") is not complete:
+        fail(f"manifest capture completeness differs: {facts.get('diagnostics_capture_complete')!r}; wanted {complete!r}")
     restored = dict(manifest)
     restored["facts"] = dict(facts)
     restored["facts"].pop("diagnostics")
     restored["facts"].pop("diagnostics_status")
+    restored["facts"].pop("diagnostics_capture_complete")
     if restored != before:
         fail("diagnostics changed unrelated manifest/facts metadata")
     text = normalize_frame((run_dir / "facts" / "diagnostics.txt").read_bytes(), "filtered diagnostics")
+    assert_capture_text("filtered diagnostics", text, complete)
     rendered = text.splitlines()
     if command not in text or before["head"][:12] not in text:
         fail("filtered report lost command or manifest HEAD context")
@@ -1673,7 +1842,8 @@ def diagnostics_pair(driver: Path, label: str, *, stdout: bytes = b"", stderr: b
                      args: tuple[str, ...] = (), timeout: str = "5", sleep_ms: int = 0,
                      elapsed: float = DIAGNOSTICS_ELAPSED, source_lines: list[str] | None = None,
                      expected_lines: list[str] | None = None, matches: int = 0,
-                     executable: str = "absolute", raw_tail: str | None = None, scale: bool = False) -> None:
+                     executable: str = "absolute", raw_tail: str | None = None, scale: bool = False,
+                     driver_stdin: bytes | None = None) -> None:
     with tempfile.TemporaryDirectory(prefix="cyril-s2hb-diagnostics-") as temporary, FixtureCleanup() as cleanup:
         root = Path(temporary)
         workspace, run_dir = seed_diagnostics(driver, root, scale=scale)
@@ -1734,23 +1904,30 @@ def diagnostics_pair(driver: Path, label: str, *, stdout: bytes = b"", stderr: b
         reference_launches = (fixture / "launches").read_text().splitlines() if (fixture / "launches").exists() else []
         if timeout != "0" and len(reference_launches) != 1:
             fail(f"{label}: reference did not launch exactly once")
+        if driver_stdin is not None:
+            control = run(fixture_argv(driver, fixture, args=args), workspace, env, input_data=driver_stdin)
+            if control.returncode != 0 or receipt_value(fixture / "child.receipt").get("stdin") != "data":
+                fail(f"{label}: nonempty-input control did not reach the fixture's stdin")
         for name in ("child.receipt", "launches", "child.ready", "child.exiting", "emit.pid"):
             path = fixture / name
             if path.exists():
                 path.unlink()
         result_path = root / "outcome.json"
         native = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, result_path,
-                                                   timeout=timeout, elapsed=elapsed), root, env)
+                                                   timeout=timeout, elapsed=elapsed), root, env, driver_stdin)
         if native.returncode != 0:
             fail(f"{label}: native diagnostics failed: {native.stderr!r}")
         result = receipt_value(result_path)
         reference_manifest = json.loads((reference_dir / "manifest.json").read_text(encoding="utf-8"))
         outcome, expected_code = status_meaning(reference_manifest["facts"]["diagnostics_status"])
-        assert_outcome(result, outcome, code=expected_code)
+        assert_outcome(result, outcome, code=expected_code, complete=True)
+        assert_capture_text(f"{label} native stdout", normalize_frame(native.stdout, f"{label} native stdout"), True)
         if result.get("elapsed_seconds") != elapsed or result.get("timeout_seconds") != (1800 if timeout == "default" else float(timeout)):
             fail(f"{label}: explicit/default clock or timeout option receipt differs")
         if timeout != "0":
             child = receipt_value(fixture / "child.receipt")
+            if child.get("stdin") != "eof":
+                fail(f"{label}: native child did not observe null stdin EOF: {child.get('stdin')!r}")
             if len((fixture / "launches").read_text().splitlines()) != 1:
                 fail(f"{label}: native successful command was launched more than once")
             if child["argv"] != reference_receipt["argv"] or (raw_tail is None and child["argv"] != list(args)):
@@ -1767,8 +1944,7 @@ def diagnostics_pair(driver: Path, label: str, *, stdout: bytes = b"", stderr: b
             assert_raw(run_dir, stdout, stderr)
         elif result["outcome"] != "TimedOut":
             fail("zero timeout did not produce a started timeout")
-        native_text = normalize_frame((run_dir / "facts/diagnostics.txt").read_bytes(), label)
-        reference_text = normalize_frame((reference_dir / "facts/diagnostics.txt").read_bytes(), label)
+        reference_text = normalize_frame((reference_dir / "facts" / "diagnostics.txt").read_bytes(), label)
         source_lines = source_lines or []
         expected_lines = expected_lines or []
         if [line for line in reference_text.splitlines() if line in set(source_lines)] != expected_lines:
@@ -1777,6 +1953,10 @@ def diagnostics_pair(driver: Path, label: str, *, stdout: bytes = b"", stderr: b
                                      source_lines, expected_lines, matches)
         reference_after = json.loads((reference_dir / "manifest.json").read_text(encoding="utf-8"))
         native_after = json.loads((run_dir / "manifest.json").read_text(encoding="utf-8"))
+        # Capture completeness is a new native contract fact the functional
+        # reference predates; its exact value is asserted above instead.
+        native_after["facts"].pop("diagnostics_capture_complete", None)
+        reference_after["facts"].pop("diagnostics_capture_complete", None)
         native_after["facts"]["diagnostics_status"] = reference_after["facts"]["diagnostics_status"]
         if native_after != reference_after:
             fail(f"{label}: functional reference manifest differs")
@@ -1834,7 +2014,8 @@ def diagnostics_no_write(driver: Path) -> None:
             receipt = root / "result.json"
             result = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, receipt), workspace)
             value = receipt_value(receipt)
-            if result.returncode != 2 or value.get("error_kind") != kind or not result.stderr or result.stdout:
+            if (result.returncode != 2 or value.get("error_kind") != kind or not result.stderr or result.stdout
+                    or value.get("capture_complete") is not None):
                 fail(f"{label}: typed prelaunch refusal/context differs: {result!r}, {value!r}")
             if snapshot(run_dir) != before or directory_snapshot(run_dir) != before_dirs or (fixture / "launches").exists():
                 fail(f"{label}: prelaunch error wrote reports/captures or launched a child")
@@ -1851,7 +2032,7 @@ def diagnostics_no_write(driver: Path) -> None:
         value = receipt_value(result_path)
         if result.returncode != 0:
             fail("prelaunch cancellation unexpectedly became an error")
-        assert_outcome(value, "Cancelled", started=False)
+        assert_outcome(value, "Cancelled", started=False, complete=None)
         if snapshot(run_dir) != before or directory_snapshot(run_dir) != before_dirs or (fixture / "launches").exists():
             fail("pre-cancel wrote artifacts or launched fixture")
         if not value.get("cancelled"):
@@ -1866,8 +2047,26 @@ def diagnostics_no_write(driver: Path) -> None:
         print("PASS B pre-cancel: false started, no writes; identical command positive control launched")
 
 
+def wait_receipt(path: Path, runner: subprocess.Popen, label: str) -> dict:
+    """Collect the consumer's receipt while it is still alive.
+
+    The lingering consumer is the only owner able to prove its capture read
+    ends closed; waiting for its exit first would make that observation
+    vacuous, so the receipt is polled with an exit guard instead.
+    """
+    deadline = time.monotonic() + 40
+    while time.monotonic() < deadline:
+        if path.exists():
+            return receipt_value(path)
+        if runner.poll() is not None:
+            fail(f"{label}: driver exited before writing its result receipt")
+        time.sleep(0.002)
+    fail(f"{label}: driver result receipt deadline")
+
+
 def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
-                          cancel: str = "none", timeout: str = "5", code: int = 0) -> None:
+                          cancel: str = "none", timeout: str = "5", code: int = 0,
+                          complete: bool = True) -> None:
     with (
         tempfile.TemporaryDirectory(prefix="cyril-s2hb-owned-process-") as temporary,
         tempfile.TemporaryFile() as outer_stdout,
@@ -1897,13 +2096,18 @@ def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
             before_dirs = directory_snapshot(run_dir)
             command = native_command(fixture_argv(driver, fixture, kind=kind))
             receipt = root / "result.json"
+            late_receipt = fixture / "holder.late"
+            driver_release = fixture / "driver.release"
             argv = diagnostics_argv(driver, workspace, run_dir, command, receipt, timeout=timeout,
-                                    cancel=cancel, ready=fixture / "cancel-now" if cancel == "live" else None)
+                                    cancel=cancel, ready=fixture / "cancel-now" if cancel == "live" else None,
+                                    linger=driver_release if holder_case else None)
             # Observe the same compiled consumer's exit, not inherited outer pipe EOF.
             # File-backed collection leaves holder/sentinel liveness proof independent.
             runner = subprocess.Popen(argv, cwd=workspace, stdin=subprocess.DEVNULL,
                                       stdout=outer_stdout, stderr=outer_stderr)
             wait_file(fixture / "child.ready", runner)
+            if receipt_value(fixture / "child.receipt").get("stdin") != "eof":
+                fail(f"{label}: direct child did not observe null stdin EOF")
             direct_pid = int(wait_file(fixture / f"{kind}.pid", runner))
             if kind != "exit-holder":
                 direct = NativeProcess(direct_pid)
@@ -1924,6 +2128,29 @@ def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
                 put(fixture / "cancel-now", b"cancel after all live controls")
             if label == "signal":
                 os.kill(direct_pid, signal.SIGTERM)
+            expected_out = b"direct-out" + (b"holder-out" if holder_case else b"")
+            expected_err = b"direct-err" + (b"holder-err" if holder_case else b"")
+            raw = None
+            if holder_case:
+                returned = wait_receipt(receipt, runner, label)
+                if "error_kind" in returned:
+                    fail(f"{label}: incomplete holder case refused instead of returning a result: {returned!r}")
+                raw = assert_raw(run_dir, expected_out, expected_err, complete=False)
+                if holder is None or not holder.alive():
+                    fail("inherited holder died before the late-write observation")
+                challenge(fixture, "holder")
+                put(fixture / "holder.append", b"late write after the operation returned")
+                wait_file(late_receipt, runner)
+                late = receipt_value(late_receipt)
+                if runner.poll() is not None:
+                    fail(f"{label}: consumer exited before capture resource-release proof")
+                if late.get("stdout") != "broken-pipe" or late.get("stderr") != "broken-pipe":
+                    fail(f"{label}: late holder write did not observe released capture read ends: {late!r}")
+                if (run_dir / "facts/diagnostics-raw.txt").read_bytes() != raw:
+                    fail("late holder writes mutated retained raw evidence")
+                if b"LATE-HOLDER-OUT" in raw or b"LATE-HOLDER-ERR" in raw:
+                    fail("post-return holder output was collected into the retained capture")
+                put(driver_release, b"closure observed while consumer remained alive")
             try:
                 runner.wait(timeout=40)
             except subprocess.TimeoutExpired:
@@ -1934,7 +2161,9 @@ def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
             if runner.returncode != 0:
                 fail(f"{label}: diagnostics native lifecycle failed: {stderr!r}")
             value = receipt_value(receipt)
-            assert_outcome(value, outcome, code=code if outcome == "Failed" else 0 if outcome == "Clean" else None)
+            assert_outcome(value, outcome, code=code if outcome == "Failed" else 0 if outcome == "Clean" else None,
+                           complete=complete)
+            assert_capture_text(f"{label} native stdout", normalize_frame(stdout, f"{label} native stdout"), complete)
             if cancel == "after-exit" and not value.get("cancelled"):
                 fail("after-exit cancellation control was not exercised")
             if direct is not None and direct.alive():
@@ -1949,13 +2178,12 @@ def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
             if not sentinel_control.alive():
                 fail("diagnostics terminated the unrelated sentinel")
             challenge(fixture, "sentinel")
-            expected_out = b"direct-out" + (b"holder-out" if holder_case else b"")
-            expected_err = b"direct-err" + (b"holder-err" if holder_case else b"")
-            raw = assert_raw(run_dir, expected_out, expected_err)
+            if raw is None:
+                raw = assert_raw(run_dir, expected_out, expected_err, complete=complete)
             source_lines = [expected_out.decode(), expected_err.decode()]
             assert_diagnostics_artifacts(run_dir, before, command, outcome,
                                          code if outcome == "Failed" else 0 if outcome == "Clean" else None,
-                                         DIAGNOSTICS_ELAPSED, source_lines, source_lines, 0)
+                                         DIAGNOSTICS_ELAPSED, source_lines, source_lines, 0, complete=complete)
             if set(snapshot(run_dir)) != before_names | {"facts/diagnostics.txt", "facts/diagnostics-raw.txt"}:
                 fail("owned capture files remained in run directory after terminal result")
             if directory_snapshot(run_dir) != before_dirs:
@@ -1966,6 +2194,9 @@ def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
                 challenge(fixture, "holder")
                 put(fixture / "holder.release", b"fixture owned release after diagnostics return")
                 wait_file(fixture / "holder.done")
+                released = receipt_value(fixture / "holder.release-late")
+                if released.get("stdout") != "broken-pipe" or released.get("stderr") != "broken-pipe":
+                    fail(f"holder release writes did not observe closed read ends: {released!r}")
                 if (run_dir / "facts/diagnostics-raw.txt").read_bytes() != raw:
                     fail("late inherited writes mutated retained raw evidence")
             put(fixture / "sentinel.release", b"fixture owned release")
@@ -1976,6 +2207,7 @@ def diagnostics_lifecycle(driver: Path, label: str, *, kind: str, outcome: str,
             # These are fixture-owned releases, not product descendant killing.
             for role in ("holder", "sentinel", "child"):
                 put(fixture / f"{role}.release", b"error-path fixture release")
+            put(fixture / "driver.release", b"error-path consumer release")
             if runner is not None and runner.poll() is None:
                 runner.kill()
                 runner.wait(timeout=10)
@@ -2010,13 +2242,15 @@ def diagnostics_system_clock(driver: Path) -> None:
         value = receipt_value(receipt)
         if result.returncode != 0:
             fail(f"actual system-clock diagnostics failed: {result.stderr!r}")
-        assert_outcome(value, "Clean", code=0)
+        assert_outcome(value, "Clean", code=0, complete=True)
+        assert_capture_text("system-clock stdout", normalize_frame(result.stdout, "system-clock stdout"), True)
         elapsed = value.get("elapsed_seconds")
         if value.get("clock") != "system" or not isinstance(elapsed, (int, float)) or not 1.2 <= elapsed <= outer_elapsed:
             fail(f"actual SystemReviewClock sample outside native process bounds: {value!r}, outer={outer_elapsed}")
-        assert_raw(run_dir, b"actual-clock-out", b"actual-clock-err")
+        assert_raw(run_dir, b"actual-clock-out", b"actual-clock-err", complete=True)
         assert_diagnostics_artifacts(run_dir, before, command, "Clean", 0, elapsed,
-                                     ["actual-clock-out", "actual-clock-err"], ["actual-clock-out", "actual-clock-err"], 0)
+                                     ["actual-clock-out", "actual-clock-err"], ["actual-clock-out", "actual-clock-err"], 0,
+                                     complete=True)
         print(f"PASS B actual-system-clock: child delay 1.2s <= real elapsed {elapsed:.3f}s <= outer {outer_elapsed:.3f}s")
 
 
@@ -2054,16 +2288,19 @@ def diagnostics_explicit_shell(driver: Path) -> None:
         native = diagnostics_call(diagnostics_argv(driver, workspace, run_dir, command, receipt), workspace)
         if native.returncode != 0:
             fail(f"explicit native shell diagnostics failed: {native.stderr!r}")
-        assert_outcome(receipt_value(receipt), "Clean", code=0)
+        assert_outcome(receipt_value(receipt), "Clean", code=0, complete=True)
+        assert_capture_text("explicit-shell stdout", normalize_frame(native.stdout, "explicit-shell stdout"), True)
         child = receipt_value(fixture / "child.receipt")
+        if child.get("stdin") != "eof":
+            fail(f"explicit native shell child did not observe null stdin EOF: {child.get('stdin')!r}")
         if child["argv"] != ["shell selected explicitly"] or child["argv"] != reference_child["argv"]:
             fail("explicit native shell did not receive literal fixture arguments")
         if len((fixture / "launches").read_text().splitlines()) != 1:
             fail("explicit native shell fixture launched more than once")
-        assert_raw(run_dir, b"explicit-shell-out", b"explicit-shell-err")
+        assert_raw(run_dir, b"explicit-shell-out", b"explicit-shell-err", complete=True)
         assert_diagnostics_artifacts(run_dir, before, command, "Clean", 0, DIAGNOSTICS_ELAPSED,
                                      ["explicit-shell-out", "explicit-shell-err"],
-                                     ["explicit-shell-out", "explicit-shell-err"], 0)
+                                     ["explicit-shell-out", "explicit-shell-err"], 0, complete=True)
         print("PASS B explicit-native-shell: explicitly selected shell/reference, once-only literal child receipt")
 
 
@@ -2087,8 +2324,13 @@ def diagnostics_matrix(driver: Path) -> None:
         diagnostics_pair(driver, "posix-shlex-grammar", raw_tail='\'\' "" \'two words\' "back\\\\slash" escaped\\ space a\\;b \'#literal\' "line\nbreak"')
     diagnostics_explicit_shell(driver)
     diagnostics_pair(driver, "clean-empty-default", timeout="default")
+    diagnostics_pair(driver, "noninteractive-stdin-with-nonempty-driver-input",
+                     driver_stdin=b"must-not-reach-diagnostics-child\n")
     diagnostics_pair(driver, "stdout-only", stdout=b"only-out", source_lines=["only-out"], expected_lines=["only-out"])
     diagnostics_pair(driver, "stderr-only", stderr=b"only-err", source_lines=["only-err"], expected_lines=["only-err"])
+    captions = ["child says capture: incomplete", "child says capture: complete"]
+    diagnostics_pair(driver, "child-capture-caption-decoys", stdout=("\n".join(captions) + "\n").encode(),
+                     source_lines=captions, expected_lines=captions)
     diagnostics_pair(driver, "failed-nonzero", stdout=b"failed-out", stderr=b"failed-err", code=7,
                      source_lines=["failed-out", "failed-err"], expected_lines=["failed-out", "failed-err"])
     invalid_out, invalid_err = b"x" * 131_072 + b"\xff", b"y" * 131_072 + b"\xfe"
@@ -2132,9 +2374,12 @@ def diagnostics_matrix(driver: Path) -> None:
     diagnostics_no_write(driver)
     diagnostics_lifecycle(driver, "live-cancel", kind="wait", outcome="Cancelled", cancel="live")
     diagnostics_lifecycle(driver, "after-exit-cancel", kind="emit", outcome="Clean", cancel="after-exit")
-    diagnostics_lifecycle(driver, "cancel-inherited-holder", kind="live-holder", outcome="Cancelled", cancel="live")
-    diagnostics_lifecycle(driver, "timeout-inherited-holder", kind="live-holder", outcome="TimedOut", timeout="3")
-    diagnostics_lifecycle(driver, "exited-inherited-holder", kind="exit-holder", outcome="Failed", code=7)
+    diagnostics_lifecycle(driver, "cancel-inherited-holder", kind="live-holder", outcome="Cancelled",
+                          cancel="live", complete=False)
+    diagnostics_lifecycle(driver, "timeout-inherited-holder", kind="live-holder", outcome="TimedOut",
+                          timeout="3", complete=False)
+    diagnostics_lifecycle(driver, "exited-inherited-holder", kind="exit-holder", outcome="Failed", code=7,
+                          complete=False)
     if os.name != "nt":
         diagnostics_lifecycle(driver, "signal", kind="wait", outcome="Failed", code=-signal.SIGTERM)
     diagnostics_system_clock(driver)

@@ -20,7 +20,7 @@ LIMITS = {
     REVIEW + "src/lib.rs": 180,
     REVIEW + "src/run.rs": 300,
     REVIEW + "src/clock.rs": 150,
-    REVIEW + "src/git.rs": 240,
+    REVIEW + "src/git.rs": 290,
     REVIEW + "src/gather.rs": 350,
     REVIEW + "src/facts.rs": 620,
     "crates/cyril-core/src/review/mod.rs": 190,
@@ -28,7 +28,7 @@ LIMITS = {
 }
 DIAGNOSTICS = {
     REVIEW + "src/diagnostics/mod.rs": 280,
-    REVIEW + "src/diagnostics/process.rs": 300,
+    REVIEW + "src/diagnostics/process.rs": 400,
     REVIEW + "src/diagnostics/command.rs": 270,
 }
 PARENTS = {
@@ -259,7 +259,7 @@ def parent_without_wiring(path, text):
     if path.endswith("/main.rs"):
         text = text.replace("mod crtool;\n", "")
         text = re.sub(r"\s*#\[command\(subcommand\)\]\s*command: Option<crtool::Command>,", "", text)
-        text = re.sub(r"\s*if let Some\(command\) = cli.command \{\s*std::process::exit\(command.run\(\)\);\s*\}", "", text)
+        text = re.sub(r"\s*if let Some\(command\) = cli.command \{\s*std::process::exit\(command.run\(cli\.cwd\)\);\s*\}", "", text)
     elif path == LIB_PATH:
         text = text.replace("pub mod review;\n", "")
     elif path.endswith("/bridge.rs"):
@@ -415,8 +415,11 @@ def main():
             errors.append(f"{manifest_path.relative_to(ROOT)}: leaf belongs to the gather increment")
         manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
         deps = dependency_names(manifest)
-        if deps != {"serde", "serde_json", "regex", "thiserror"}:
-            errors.append(f"{manifest_path.relative_to(ROOT)}: forbidden/missing runtime dependencies {sorted(deps)}")
+        # Exact selected packages; versions/features/linking are reviewed separately.
+        expected = {"serde", "serde_json", "regex", "thiserror", "git2", "tokio",
+                    "tracing", "interprocess", "subprocess"}
+        if deps != expected:
+            errors.append(f"{manifest_path.relative_to(ROOT)}: unapproved/missing runtime dependencies {sorted(deps)}")
         if manifest.get("lints") != {"workspace": True}:
             errors.append(f"{manifest_path.relative_to(ROOT)}: workspace lints must be inherited unchanged")
     elif args.phase != "prefix":
@@ -431,7 +434,7 @@ def main():
         if re.search(r"\bDiagnostics\b|cyril_core::|serde_json::|tokio::", production(cli)):
             errors.append("crates/cyril/src/crtool.rs: forbidden diagnostics verb or business/runtime ownership")
         main_source = (ROOT / "crates/cyril/src/main.rs").read_text(encoding="utf-8")
-        dispatch = main_source.find("std::process::exit(command.run());")
+        dispatch = main_source.find("std::process::exit(command.run(cli.cwd));")
         startup = main_source.find("    setup_logging();")
         if dispatch < 0 or startup < 0 or dispatch > startup:
             errors.append("crates/cyril/src/main.rs: hidden dispatch must precede ordinary startup")

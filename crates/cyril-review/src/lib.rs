@@ -64,6 +64,10 @@ pub enum ReviewError {
         #[source]
         source: io::Error,
     },
+    #[error("Git operation {operation} failed: {message}")]
+    GitOperation { operation: String, message: String },
+    #[error("invalid target {target:?}: a revision must not start with '-'")]
+    InvalidTarget { target: String },
     #[error("empty diff for target={target:?} scope={scope:?}")]
     EmptyDiff { target: String, scope: Vec<String> },
     #[error("{path} already holds a different gathered run; use a fresh run directory")]

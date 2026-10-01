@@ -1,13 +1,13 @@
 use crate::git;
 use crate::run::{
-    Manifest, ManifestFile, ReviewRun, facts_dir, facts_metadata, manifest_path, read_manifest,
-    read_text, write_json, write_text,
+    Manifest, ManifestFile, ReviewRun, facts_dir, facts_metadata, manifest_path, read_binary,
+    read_manifest, write_json, write_text,
 };
 use crate::{Result, StepOutput, regex_error};
 use regex::Regex;
 use serde::Serialize;
 use serde_json::{Map, Value};
-use std::collections::{BTreeMap, btree_map::Entry};
+use std::collections::{BTreeMap, HashSet, btree_map::Entry};
 use std::fs;
 
 const PAGE_BUDGET: usize = 20_000;
@@ -44,6 +44,21 @@ struct SymbolSeed<'a> {
     file: &'a ManifestFile,
     line: Option<usize>,
     status: String,
+    declaration: Option<ModifiedDeclaration>,
+}
+
+#[derive(Debug)]
+struct ModifiedDeclaration {
+    header: String,
+    new_before: usize,
+    removed_before: Option<usize>,
+    added_lines: HashSet<usize>,
+}
+
+struct RemovedDeclaration<'a> {
+    old_line: u32,
+    new_before: usize,
+    text: &'a [u8],
 }
 
 pub fn facts(run: &ReviewRun) -> Result<StepOutput> {
@@ -53,6 +68,7 @@ pub fn facts(run: &ReviewRun) -> Result<StepOutput> {
 }
 
 pub(crate) fn build_facts(run: &ReviewRun, manifest: &mut Manifest) -> Result<String> {
+    git::admit_target(&manifest.target)?;
     facts_metadata(run, manifest)?;
     let documents = changed_documents(run, &manifest.target)?;
     let mut seeds = changed_symbols(run, &manifest.files)?;
@@ -151,8 +167,6 @@ fn definition_pattern(path: &str) -> Option<DefinitionPattern> {
 }
 
 fn changed_symbols<'a>(run: &ReviewRun, files: &'a [ManifestFile]) -> Result<Vec<SymbolSeed<'a>>> {
-    let hunk_regex =
-        Regex::new(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@ ?(.*)").map_err(regex_error)?;
     let test_attr =
         Regex::new(r"#\[(?:[a-z_:]+::)?test\b|@pytest|\bit\(|\btest\(").map_err(regex_error)?;
     let mut found = BTreeMap::<(&'a [u8], String), SymbolSeed<'a>>::new();
@@ -169,81 +183,120 @@ fn changed_symbols<'a>(run: &ReviewRun, files: &'a [ManifestFile]) -> Result<Vec
             Entry::Vacant(entry) => entry.insert(Regex::new(pattern.regex).map_err(regex_error)?),
         };
         let patch_path = run.directory().join(&file.patch);
-        let patch = read_text(&patch_path)?;
-        let mut new_line = 0usize;
-        let mut previous_added = String::new();
-        for line in patch.lines() {
-            if let Some(captures) = hunk_regex.captures(line) {
-                let Some(start) = captures.get(1) else {
-                    continue;
-                };
-                let Ok(start) = start.as_str().parse::<usize>() else {
-                    continue;
-                };
-                new_line = start.saturating_sub(1);
-                if let Some(context) = captures.get(2)
-                    && let Some(definition_match) = definition.captures(context.as_str())
-                {
-                    let Some(name) = definition_match.get(2) else {
-                        continue;
-                    };
-                    let Some(kind) = definition_match.get(1) else {
-                        continue;
-                    };
-                    let key = (file.path_bytes(), name.as_str().to_owned());
-                    found.entry(key).or_insert_with(|| SymbolSeed {
-                        name: name.as_str().to_owned(),
-                        kind: kind.as_str().to_owned(),
-                        file,
-                        line: None,
-                        status: "modified".to_owned(),
-                    });
-                }
-                previous_added.clear();
-                continue;
-            }
-            if line.starts_with("+++")
-                || line.starts_with("---")
-                || (new_line == 0 && !line.starts_with('+') && !line.starts_with(' '))
-            {
-                continue;
-            }
-            if line.starts_with('-') {
-                continue;
-            }
-            new_line += 1;
-            if let Some(added) = line.strip_prefix('+') {
-                let candidate = added.trim_start();
-                if let Some(definition_match) = definition.captures(candidate)
-                    && definition_match
-                        .get(0)
-                        .is_some_and(|matched| matched.start() == 0)
-                    && !test_attr.is_match(&previous_added)
-                {
-                    let Some(name) = definition_match.get(2) else {
-                        continue;
-                    };
-                    let Some(kind) = definition_match.get(1) else {
-                        continue;
-                    };
-                    let key = (file.path_bytes(), name.as_str().to_owned());
-                    found.insert(
-                        key,
-                        SymbolSeed {
-                            name: name.as_str().to_owned(),
-                            kind: kind.as_str().to_owned(),
+        let bytes = read_binary(&patch_path)?;
+        let diff = git::parse_patch(&bytes, &file.patch)?;
+        let mut added_lines = BTreeMap::<String, HashSet<usize>>::new();
+        for delta_index in 0..diff.deltas().len() {
+            let patch = git::patch(&diff, delta_index)?;
+            let mut removed = BTreeMap::<(String, String), Vec<RemovedDeclaration<'_>>>::new();
+            for hunk_index in 0..patch.num_hunks() {
+                let (hunk, line_count) = patch
+                    .hunk(hunk_index)
+                    .map_err(|error| git::operation("read stored patch hunk", error))?;
+                let old_before = hunk
+                    .old_start()
+                    .saturating_sub(u32::from(hunk.old_lines() > 0));
+                let mut new_before = hunk
+                    .new_start()
+                    .saturating_sub(u32::from(hunk.new_lines() > 0))
+                    as usize;
+                let header = String::from_utf8_lossy(hunk.header());
+                let context = header.split_once(" @@").map_or("", |(_, context)| {
+                    context
+                        .strip_prefix(' ')
+                        .unwrap_or(context)
+                        .trim_end_matches('\n')
+                });
+                if let Some(captures) = definition.captures(context) {
+                    let (_, [kind, name]) = captures.extract();
+                    if let Entry::Vacant(entry) = found.entry((file.path_bytes(), name.to_owned()))
+                    {
+                        let removed_before = removed
+                            .get(&(kind.to_owned(), name.to_owned()))
+                            .and_then(|lines| {
+                                lines.iter().rev().find(|line| {
+                                    line.old_line <= old_before
+                                        && line.text.starts_with(context.as_bytes())
+                                })
+                            })
+                            .map(|line| line.new_before);
+                        entry.insert(SymbolSeed {
+                            name: name.to_owned(),
+                            kind: kind.to_owned(),
                             file,
-                            line: Some(new_line),
-                            status: "added".to_owned(),
-                        },
-                    );
+                            line: None,
+                            status: "modified".to_owned(),
+                            declaration: Some(ModifiedDeclaration {
+                                header: context.to_owned(),
+                                new_before,
+                                removed_before,
+                                added_lines: HashSet::new(),
+                            }),
+                        });
+                    }
                 }
-                let trimmed = added.trim();
-                if !trimmed.is_empty() {
-                    previous_added = trimmed.to_owned();
+                let mut previous_added: &[u8] = &[];
+                for line_index in 0..line_count {
+                    let line = patch
+                        .line_in_hunk(hunk_index, line_index)
+                        .map_err(|error| git::operation("read stored patch line", error))?;
+                    let content = String::from_utf8_lossy(line.content());
+                    if matches!(line.origin(), '-' | '+')
+                        && let Some(captures) = definition.captures(content.trim_start())
+                        && captures.get(0).is_some_and(|matched| matched.start() == 0)
+                    {
+                        let (_, [kind, name]) = captures.extract();
+                        if line.origin() == '-' {
+                            let old_line = line.old_lineno().ok_or_else(|| {
+                                git::operation("read removed declaration", "missing old coordinate")
+                            })?;
+                            removed
+                                .entry((kind.to_owned(), name.to_owned()))
+                                .or_default()
+                                .push(RemovedDeclaration {
+                                    old_line,
+                                    new_before,
+                                    text: line.content(),
+                                });
+                        } else {
+                            let number = line.new_lineno().ok_or_else(|| {
+                                git::operation("read added declaration", "missing new coordinate")
+                            })? as usize;
+                            added_lines
+                                .entry(name.to_owned())
+                                .or_default()
+                                .insert(number);
+                            if !test_attr.is_match(&String::from_utf8_lossy(previous_added)) {
+                                found.insert(
+                                    (file.path_bytes(), name.to_owned()),
+                                    SymbolSeed {
+                                        name: name.to_owned(),
+                                        kind: kind.to_owned(),
+                                        file,
+                                        line: Some(number),
+                                        status: "added".to_owned(),
+                                        declaration: None,
+                                    },
+                                );
+                            }
+                        }
+                    }
+                    if let Some(number) = line.new_lineno() {
+                        new_before = number as usize;
+                    }
+                    if line.origin() == '+' && !content.trim().is_empty() {
+                        previous_added = line.content();
+                    } else if line.origin() == ' ' {
+                        previous_added = &[];
+                    }
                 }
-            } else {
-                previous_added.clear();
+            }
+        }
+        for (name, lines) in added_lines {
+            if let Some(seed) = found.get_mut(&(file.path_bytes(), name))
+                && let Some(declaration) = &mut seed.declaration
+            {
+                declaration.added_lines = lines;
             }
         }
     }
@@ -270,58 +323,31 @@ fn usages(run: &ReviewRun, symbol: &SymbolSeed<'_>) -> Result<Vec<Usage>> {
         return Ok(Vec::new());
     };
     let mut args = vec![
-        "grep".to_owned(),
-        "-n".to_owned(),
-        "-z".to_owned(),
-        "-w".to_owned(),
-        "-F".to_owned(),
-        "-I".to_owned(),
-        "--".to_owned(),
-        symbol.name.clone(),
-        "--".to_owned(),
+        "grep",
+        "--no-color",
+        "--no-column",
+        "--full-name",
+        "-z",
+        "-n",
+        "-w",
+        "-F",
+        "-I",
+        "-e",
+        &symbol.name,
+        "--",
     ];
-    args.extend(pattern.usage_globs.iter().map(|glob| (*glob).to_owned()));
+    args.extend_from_slice(pattern.usage_globs);
     let output = git::grep(run, &args)?;
+    let own_line = if let Some(declaration) = &symbol.declaration {
+        let definition = Regex::new(pattern.regex).map_err(regex_error)?;
+        resolve_declaration_line(symbol, declaration, &definition, &output)
+    } else {
+        symbol.line
+    };
     let mut hits = Vec::new();
-    let mut cursor = 0usize;
-    while cursor < output.len() {
-        let Some(path_offset) = output[cursor..].iter().position(|byte| *byte == 0) else {
-            break;
-        };
-        let path_end = cursor + path_offset;
-        let path = &output[cursor..path_end];
-        cursor = path_end + 1;
-
-        let Some(line_offset) = output[cursor..].iter().position(|byte| *byte == 0) else {
-            break;
-        };
-        let line_end = cursor + line_offset;
-        let number = &output[cursor..line_end];
-        cursor = line_end + 1;
-
-        let text_end = cursor
-            + output[cursor..]
-                .iter()
-                .position(|byte| *byte == b'\n')
-                .unwrap_or(output.len() - cursor);
-        let text = &output[cursor..text_end];
-        cursor = if text_end < output.len() {
-            text_end + 1
-        } else {
-            text_end
-        };
-
-        let Ok(number) = std::str::from_utf8(number) else {
-            continue;
-        };
-        let Ok(line) = number.parse::<usize>() else {
-            continue;
-        };
+    for (path, line, text) in grep_hits(&output) {
         if path.starts_with(b".code-review/")
-            || (path == symbol.file.path_bytes()
-                && symbol
-                    .line
-                    .is_some_and(|definition_line| definition_line == line))
+            || (path == symbol.file.path_bytes() && own_line == Some(line))
         {
             continue;
         }
@@ -338,20 +364,64 @@ fn usages(run: &ReviewRun, symbol: &SymbolSeed<'_>) -> Result<Vec<Usage>> {
     Ok(hits)
 }
 
-fn changed_documents(run: &ReviewRun, target: &str) -> Result<Vec<Map<String, Value>>> {
-    let args = vec![
-        "diff".to_owned(),
-        "--no-renames".to_owned(),
-        "--name-only".to_owned(),
-        "-z".to_owned(),
-        target.to_owned(),
-    ];
-    let names = git::bytes(run, &args)?;
-    let mut docs = Vec::new();
-    for path in names.split(|byte| *byte == 0) {
-        if path.is_empty() {
-            continue;
+fn resolve_declaration_line(
+    symbol: &SymbolSeed<'_>,
+    declaration: &ModifiedDeclaration,
+    definition: &Regex,
+    output: &[u8],
+) -> Option<usize> {
+    let candidate = grep_hits(output)
+        .filter(|(path, line, text)| {
+            *path == symbol.file.path_bytes()
+                && *line <= declaration.new_before
+                && !declaration.added_lines.contains(line)
+                && text.starts_with(declaration.header.as_bytes())
+                && definition
+                    .find(String::from_utf8_lossy(text).trim_start())
+                    .is_some_and(|matched| matched.start() == 0)
+        })
+        .map(|(_, line, _)| line)
+        .max()?;
+    declaration
+        .removed_before
+        .is_none_or(|barrier| candidate > barrier)
+        .then_some(candidate)
+}
+
+fn grep_hits(mut bytes: &[u8]) -> impl Iterator<Item = (&[u8], usize, &[u8])> {
+    std::iter::from_fn(move || {
+        loop {
+            let path_end = bytes.iter().position(|byte| *byte == 0)?;
+            let path = &bytes[..path_end];
+            bytes = &bytes[path_end + 1..];
+            let number_end = bytes.iter().position(|byte| *byte == 0)?;
+            let number = &bytes[..number_end];
+            bytes = &bytes[number_end + 1..];
+            let text_end = bytes
+                .iter()
+                .position(|byte| *byte == b'\n')
+                .unwrap_or(bytes.len());
+            let text = &bytes[..text_end];
+            bytes = &bytes[(text_end + 1).min(bytes.len())..];
+            if let Ok(number) = std::str::from_utf8(number)
+                && let Ok(line) = number.parse()
+            {
+                return Some((path, line, text));
+            }
         }
+    })
+}
+
+fn changed_documents(run: &ReviewRun, target: &str) -> Result<Vec<Map<String, Value>>> {
+    let repo = git::repository(run)?;
+    let root = repo
+        .workdir()
+        .ok_or_else(|| git::operation("locate worktree root", "repository has no worktree"))?;
+    let diff = git::target_diff(&repo, target)?;
+    let mut docs = Vec::new();
+    let mut seen = HashSet::new();
+    for (index, delta) in diff.deltas().enumerate() {
+        let path = git::delta_path(&delta)?;
         if path.starts_with(b".code-review/")
             || !DOCUMENT_EXTENSIONS.iter().any(|extension| {
                 path.len() >= extension.len()
@@ -361,8 +431,17 @@ fn changed_documents(run: &ReviewRun, target: &str) -> Result<Vec<Map<String, Va
         {
             continue;
         }
+        let patch = git::patch(&diff, index)?;
+        let delta = patch.delta();
+        if (!delta.new_file().id().is_zero()
+            && delta.old_file().id() == delta.new_file().id()
+            && delta.old_file().mode() == delta.new_file().mode())
+            || !seen.insert(path)
+        {
+            continue;
+        }
         let path_arg = git::raw_path_arg(path)?;
-        let source = run.workspace().join(path_arg);
+        let source = root.join(path_arg);
         if !source.is_file() {
             continue;
         }

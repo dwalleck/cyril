@@ -1,17 +1,30 @@
 use crate::{DiagnosticsError, Result};
 use std::ffi::OsStr;
 use std::path::Path;
-use std::process::Command;
+#[cfg(windows)]
+use subprocess::{Exec as Command, ExecExt};
+#[cfg(not(windows))]
+use tokio::process::Command;
 
 pub(super) fn prepare(text: &str, workspace: &Path) -> Result<Command> {
     if text.contains('\0') {
         return Err(invalid("command contains a NUL character"));
     }
     let mut command = native_command(text, workspace)?;
+    #[cfg(not(windows))]
     command.current_dir(workspace);
+    #[cfg(windows)]
+    {
+        command = command.cwd(workspace);
+    }
     for (name, value) in std::env::vars_os() {
         if value.is_empty() && toolchain_name(&name) {
+            #[cfg(not(windows))]
             command.env_remove(name);
+            #[cfg(windows)]
+            {
+                command = command.env_remove(name);
+            }
         }
     }
     Ok(command)
@@ -109,7 +122,6 @@ fn split_posix(text: &str) -> Result<Vec<String>> {
 
 #[cfg(windows)]
 fn native_command(text: &str, workspace: &Path) -> Result<Command> {
-    use std::os::windows::process::CommandExt;
     let original = text;
     let text = text.trim_start_matches([' ', '\t']);
     if text.is_empty() {
@@ -150,11 +162,7 @@ fn native_command(text: &str, workspace: &Path) -> Result<Command> {
             std::io::Error::new(std::io::ErrorKind::NotFound, "executable not found"),
         )
     })?;
-    let mut command = Command::new(program);
-    // Raw tail is never tokenized or reconstructed. Named batch files retain
-    // native std/cmd.exe dispatch; arbitrary text never gains a shell wrapper.
-    command.raw_arg(tail);
-    Ok(command)
+    Ok(Command::cmd(program).raw_arg(tail))
 }
 
 #[cfg(windows)]
@@ -165,10 +173,14 @@ fn find_executable(
 ) -> std::io::Result<Option<std::path::PathBuf>> {
     use std::path::PathBuf;
     let mut name = PathBuf::from(candidate);
+    let explicit = name.components().count() > 1 || name.is_absolute();
+    if explicit && let Some(path) = existing_file(workspace.join(&name))? {
+        return Ok(Some(path));
+    }
     if name.extension().is_none() && !candidate.ends_with('.') {
         name.as_mut_os_string().push(".exe");
     }
-    if name.components().count() > 1 || name.is_absolute() {
+    if explicit {
         return existing_file(workspace.join(name));
     }
     let directories = match search {
@@ -190,8 +202,13 @@ fn find_executable(
         }
     };
     for directory in directories {
-        if let Some(path) = existing_file(directory.join(&name))? {
-            return Ok(Some(path));
+        match existing_file(directory.join(&name)) {
+            Ok(Some(path)) => return Ok(Some(path)),
+            Ok(None) => {}
+            // SearchPath skips malformed directory entries; a selected image's
+            // launch failure is never retried.
+            Err(error) if error.raw_os_error() == Some(123) => {}
+            Err(error) => return Err(error),
         }
     }
     Ok(None)
@@ -280,5 +297,52 @@ mod tests {
             assert!(!toolchain_name(OsStr::from_bytes(b"OTHER_\xff")));
             assert!(toolchain_name(OsStr::from_bytes(b"RUST\xff")));
         }
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn explicit_extensionless_selection_keeps_literal_before_exe()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let literal = directory.path().join("check");
+        let exe = directory.path().join("check.exe");
+        std::fs::write(&literal, b"literal image")?;
+        std::fs::write(&exe, b"exe image")?;
+        let mut search = None;
+        let candidate = literal.to_str().ok_or("fixture path is not Unicode")?;
+        assert_eq!(
+            find_executable(candidate, directory.path(), &mut search)?,
+            Some(literal.clone())
+        );
+        std::fs::remove_file(&literal)?;
+        assert_eq!(
+            find_executable(candidate, directory.path(), &mut search)?,
+            Some(exe)
+        );
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn path_search_skips_malformed_entries_but_only_selects_exe()
+    -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let directory = tempfile::tempdir()?;
+        let literal = directory.path().join("check");
+        let exe = directory.path().join("check.exe");
+        std::fs::write(&literal, b"literal image")?;
+        let mut search = Some(vec![
+            directory.path().join("invalid*directory"),
+            directory.path().to_owned(),
+        ]);
+        assert_eq!(
+            find_executable("check", directory.path(), &mut search)?,
+            None
+        );
+        std::fs::write(&exe, b"exe image")?;
+        assert_eq!(
+            find_executable("check", directory.path(), &mut search)?,
+            Some(exe)
+        );
+        Ok(())
     }
 }

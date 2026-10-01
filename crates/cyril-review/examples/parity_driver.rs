@@ -4,10 +4,10 @@
 //! the differential harness a real Rust caller while keeping the production
 //! CLI on `SystemReviewClock`.
 
-use std::cell::Cell;
 use std::env;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::path::PathBuf;
+use std::sync::OnceLock;
 use std::time::{Duration, Instant};
 
 use cyril_review::{
@@ -201,7 +201,16 @@ fn write_receipt(
     value: &serde_json::Value,
 ) -> std::result::Result<(), DriverError> {
     let bytes = serde_json::to_vec(value).map_err(fixture_error)?;
-    std::fs::write(path, bytes).map_err(fixture_error)
+    // The harness polls for receipt existence, so publish the finished file
+    // with one rename instead of exposing a partially written document.
+    let temporary = path.with_file_name(format!(
+        "{}.tmp",
+        path.file_name()
+            .and_then(std::ffi::OsStr::to_str)
+            .unwrap_or("receipt")
+    ));
+    std::fs::write(&temporary, bytes).map_err(fixture_error)?;
+    std::fs::rename(&temporary, path).map_err(fixture_error)
 }
 
 #[cfg(unix)]
@@ -224,6 +233,32 @@ fn handshake(root: &std::path::Path, name: &str) -> std::result::Result<(), Driv
     std::fs::write(root.join(name), b"ready").map_err(fixture_error)
 }
 
+/// Attempt one write and report whether the capture reader still accepted it.
+/// After the operation returns, the consumer must have released its read end,
+/// so the fixture records `broken-pipe` rather than treating the failure as an
+/// error or letting an unobserved successful write pass as closure.
+fn stream_write_outcome(stream: &mut dyn Write, bytes: &[u8]) -> String {
+    match stream.write_all(bytes).and_then(|()| stream.flush()) {
+        Ok(()) => "accepted".to_owned(),
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => "broken-pipe".to_owned(),
+        Err(error) => format!("error:{:?}", error.kind()),
+    }
+}
+
+fn write_late_receipt(
+    root: &std::path::Path,
+    name: &str,
+    stdout: &str,
+    stderr: &str,
+) -> std::result::Result<(), DriverError> {
+    write_receipt(
+        &root.join(name),
+        &serde_json::json!({
+            "stdout": stdout, "stderr": stderr, "pid": std::process::id()
+        }),
+    )
+}
+
 fn serve_fixture(
     root: &std::path::Path,
     role: &str,
@@ -234,6 +269,7 @@ fn serve_fixture(
     let response = root.join(format!("{role}.response"));
     let release = root.join(format!("{role}.release"));
     let mut previous = Vec::new();
+    let mut late_attempted = false;
     while !release.exists() {
         if Instant::now() >= deadline {
             return Err(fixture_error(format!("{role} release deadline")));
@@ -247,25 +283,47 @@ fn serve_fixture(
             Err(error) if error.kind() == io::ErrorKind::NotFound => {}
             Err(error) => return Err(fixture_error(error)),
         }
-        if append && root.join("holder.append").exists() {
-            io::stderr()
-                .write_all(b"LATE-HOLDER\n")
-                .map_err(fixture_error)?;
-            io::stderr().flush().map_err(fixture_error)?;
+        if append && !late_attempted && root.join("holder.append").exists() {
+            let stdout = stream_write_outcome(&mut io::stdout(), b"LATE-HOLDER-OUT\n");
+            let stderr = stream_write_outcome(&mut io::stderr(), b"LATE-HOLDER-ERR\n");
+            write_late_receipt(root, "holder.late", &stdout, &stderr)?;
+            late_attempted = true;
         }
         std::thread::sleep(Duration::from_millis(2));
     }
+    if role == "holder" && !late_attempted {
+        // An error-path release must not leave the lingering consumer waiting
+        // for an observation the fixture never attempted.
+        write_late_receipt(root, "holder.late", "not-attempted", "not-attempted")?;
+    }
     if role == "holder" {
-        io::stdout()
-            .write_all(b"released-out")
-            .map_err(fixture_error)?;
-        io::stderr()
-            .write_all(b"released-err")
-            .map_err(fixture_error)?;
-        io::stdout().flush().map_err(fixture_error)?;
-        io::stderr().flush().map_err(fixture_error)?;
+        let stdout = stream_write_outcome(&mut io::stdout(), b"released-out");
+        let stderr = stream_write_outcome(&mut io::stderr(), b"released-err");
+        write_late_receipt(root, "holder.release-late", &stdout, &stderr)?;
     }
     handshake(root, &format!("{role}.done"))
+}
+
+/// Observe this child's stdin without ever blocking the fixture: diagnostics
+/// must provide null stdin, so the read reaches EOF instead of inherited
+/// terminal/pipe input. A blocked read is recorded, not waited on.
+fn stdin_state() -> String {
+    let (sender, receiver) = std::sync::mpsc::channel();
+    std::thread::spawn(move || {
+        let mut byte = [0u8; 1];
+        let state = match io::stdin().read(&mut byte) {
+            Ok(0) => "eof",
+            Ok(_) => "data",
+            Err(_) => "error",
+        };
+        if let Err(error) = sender.send(state) {
+            eprintln!("stdin fixture receiver closed: {error}");
+        }
+    });
+    receiver
+        .recv_timeout(Duration::from_millis(500))
+        .unwrap_or("blocked")
+        .to_owned()
 }
 
 fn fixture_main() -> std::result::Result<i32, DriverError> {
@@ -310,7 +368,7 @@ fn fixture_main() -> std::result::Result<i32, DriverError> {
         &root.join("child.receipt"),
         &serde_json::json!({
             "argv": user_args, "cwd": native_units(cwd.as_os_str()), "env": environment,
-            "pid": std::process::id()
+            "stdin": stdin_state(), "pid": std::process::id()
         }),
     )?;
     let launches = std::fs::OpenOptions::new()
@@ -373,7 +431,7 @@ struct DiagnosticsClock {
     fixed: Option<Duration>,
     cancel_after_exit: bool,
     cancel: Cancellation,
-    elapsed: Cell<Option<Duration>>,
+    elapsed: OnceLock<Duration>,
 }
 
 impl ReviewClock for DiagnosticsClock {
@@ -385,12 +443,25 @@ impl ReviewClock for DiagnosticsClock {
         if self.cancel_after_exit {
             self.cancel.cancel();
         }
-        let elapsed = self
-            .fixed
-            .unwrap_or_else(|| SystemReviewClock.diagnostics_elapsed(started));
-        self.elapsed.set(Some(elapsed));
-        elapsed
+        *self.elapsed.get_or_init(|| {
+            self.fixed
+                .unwrap_or_else(|| SystemReviewClock.diagnostics_elapsed(started))
+        })
     }
+}
+
+async fn linger_until(path: &std::path::Path) -> std::result::Result<(), DriverError> {
+    let deadline = Instant::now() + Duration::from_secs(20);
+    while !path.exists() {
+        if Instant::now() >= deadline {
+            return Err(fixture_error(format!(
+                "linger deadline waiting for {}",
+                path.display()
+            )));
+        }
+        tokio::time::sleep(Duration::from_millis(2)).await;
+    }
+    Ok(())
 }
 
 fn diagnostics_driver() -> std::result::Result<(), DriverError> {
@@ -411,6 +482,7 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
                 | "--timeout-seconds"
                 | "--cancel"
                 | "--cancel-ready"
+                | "--linger"
         ) {
             return Err(DriverError::usage(format!(
                 "unknown diagnostics argument: {flag}"
@@ -432,6 +504,7 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
     let run_dir = required("--rundir")?;
     let command = required("--command")?;
     let receipt = PathBuf::from(required("--receipt")?);
+    let linger = flags.get("--linger").map(PathBuf::from);
     let duration = |flag: &str| -> std::result::Result<Duration, DriverError> {
         let value: f64 = required(flag)?.parse().map_err(fixture_error)?;
         Duration::try_from_secs_f64(value).map_err(fixture_error)
@@ -463,7 +536,7 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
         fixed,
         cancel_after_exit: mode == "after-exit",
         cancel: cancel.clone(),
-        elapsed: Cell::new(None),
+        elapsed: OnceLock::new(),
     };
     let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let worker = if mode == "live" {
@@ -493,8 +566,15 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
     } else {
         None
     };
+    // The caller owns the runtime: this verification consumer assembles a
+    // current-thread executor and awaits the public async operation. The
+    // library constructs no runtime of its own.
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .map_err(fixture_error)?;
     let invocation = ReviewRun::new(workspace, run_dir)
-        .and_then(|run| diagnostics(&run, &command, &options, &cancel, &clock));
+        .and_then(|run| runtime.block_on(diagnostics(&run, &command, &options, &cancel, &clock)));
     stop.store(true, std::sync::atomic::Ordering::Release);
     let cancellation_result = match worker {
         Some(worker) => worker
@@ -510,15 +590,22 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
                 DiagnosticsOutcome::TimedOut => ("TimedOut", None),
                 DiagnosticsOutcome::Cancelled => ("Cancelled", None),
             };
-            let elapsed = clock.elapsed.get();
+            let elapsed = clock.elapsed.get().copied();
             write_receipt(
                 &receipt,
                 &serde_json::json!({
                     "outcome": outcome, "exit_code": exit_code, "started": result.started(),
+                    "capture_complete": result.capture_complete(),
                     "cancelled": cancel.is_cancelled(), "elapsed_seconds": elapsed.map(|value| value.as_secs_f64()),
                     "timeout_seconds": options.timeout.as_secs_f64(), "clock": if fixed.is_some() { "fixed" } else { "system" }
                 }),
             )?;
+            // Keep both the consumer and its executor alive for the late-write
+            // challenge: exiting closes handles, while blocking the executor
+            // prevents Windows asynchronous handle cleanup from completing.
+            if let Some(path) = &linger {
+                runtime.block_on(linger_until(path))?;
+            }
             cancellation_result?;
             io::stdout()
                 .write_all(result.output().stdout())
@@ -532,6 +619,8 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
                 }
                 ReviewError::Diagnostics(DiagnosticsError::CannotStart { .. }) => "CannotStart",
                 ReviewError::Diagnostics(DiagnosticsError::Lifecycle { .. }) => "Lifecycle",
+                ReviewError::GitOperation { .. } => "GitOperation",
+                ReviewError::InvalidTarget { .. } => "InvalidTarget",
                 ReviewError::MissingStamp => "MissingStamp",
                 ReviewError::StampMismatch { .. } => "StampMismatch",
                 ReviewError::InvalidManifest { .. } => "InvalidManifest",
@@ -541,7 +630,10 @@ fn diagnostics_driver() -> std::result::Result<(), DriverError> {
             };
             write_receipt(
                 &receipt,
-                &serde_json::json!({"error_kind": kind, "message": error.to_string()}),
+                &serde_json::json!({
+                    "error_kind": kind, "capture_complete": null,
+                    "message": error.to_string()
+                }),
             )?;
             cancellation_result?;
             Err(DriverError::review(error))

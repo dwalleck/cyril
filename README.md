@@ -175,8 +175,11 @@ execute a review.
 
 The internal `cyril crtool gather <rundir> <target> [scope]` and
 `cyril crtool facts <rundir>` commands run without Python, an agent, or TUI startup.
-Run them from the repository root; `auto` selects the gather target, and scope
-is a whitespace-separated list of paths (not shell-quoted path syntax).
+Git must be on `PATH` for driver-aware patch generation and source searches.
+Use `cyril --cwd <workspace> crtool ...` to select the workspace; relative run
+directories resolve beneath it. Scope is relative to that workspace, while
+artifact filenames remain repository-root-relative. `auto` selects the gather
+target. Scope is whitespace-separated Git pathspecs, not shell-quoted syntax.
 Gather writes the diff, per-file patches, manifest, and symbol/usage facts.
 An existing matching run is reused; a different target/scope or missing/stale
 version stamp is refused. Required manifest fields are validated before reuse or
@@ -194,18 +197,31 @@ The Python tool is a functional reference for verification, not a byte-format
 contract: JSON formatting, diagnostic wording, and text newlines may differ.
 
 Library callers can run a configured check with `cyril_review::diagnostics`,
-`DiagnosticsOptions`, `Cancellation`, and `SystemReviewClock`. This is a blocking
-operation; async callers must use a worker. There is no diagnostics CLI verb.
+`DiagnosticsOptions`, `Cancellation`, and `SystemReviewClock`. Await this async
+operation on a caller-owned Tokio runtime; the library creates no runtime.
+Keep the runtime driven while the application remains active; Windows
+asynchronous capture cleanup needs its executor to continue running.
+There is no diagnostics CLI verb. Commands receive null stdin.
 The default timeout is 1,800 seconds. Results distinguish clean, failed (with the
 native exit code), timed-out, and cancelled checks. Pre-launch errors and
 cancellation before launch leave diagnostics artifacts unchanged.
 
-Started checks save lossless stdout/stderr in `facts/diagnostics-raw.txt`, plus a
-report containing the first 200 changed-path matches and last 15 nonempty lines.
-Cancellation and timeout terminate only the directly spawned child, with a
-one-second termination/reap deadline; descendants are not targeted. Fixed-length
-file snapshots avoid waiting for inherited output handles to reach EOF. That
-deadline is not a filesystem I/O latency guarantee.
+Started checks save all collected stdout/stderr bytes in
+`facts/diagnostics-raw.txt`, plus a report containing the first 200 nonempty output
+lines mentioning any changed path and the last 15 nonempty lines. Paths match as
+literal substrings, not regular expressions; slash normalization affects matching
+only, not saved bytes. Cancellation and timeout terminate only the
+directly spawned child, with a one-second termination/reap deadline; descendants
+are not targeted. After the child reaches a terminal state, capture drains until
+both streams reach EOF or a separate one-second deadline expires.
+
+`DiagnosticsResult::capture_complete()` is `None` before launch and `Some(bool)`
+after launch. A stream without EOF at the final-drain deadline produces
+`Some(false)`, `facts.diagnostics_capture_complete: false` in the manifest, and
+an explicit incomplete status in the output and report, with a marker appended
+to raw evidence. Collected bytes are preserved; unread queued bytes may be
+omitted. Capture completeness is independent of clean/failed/timed-out/cancelled
+outcome. These deadlines do not bound filesystem I/O or scheduler latency.
 POSIX commands use shell-style argument parsing without an implicit shell.
 Windows uses native executable/argument parsing; explicitly selected `.cmd` and
 `.bat` files follow native batch dispatch, without wrapping arbitrary command

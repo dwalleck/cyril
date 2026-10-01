@@ -44,7 +44,7 @@ struct Cli {
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
     if let Some(command) = cli.command {
-        std::process::exit(command.run());
+        std::process::exit(command.run(cli.cwd));
     }
 
     setup_logging();

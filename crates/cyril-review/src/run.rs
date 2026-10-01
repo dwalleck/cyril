@@ -146,11 +146,6 @@ pub(crate) fn read_binary(path: &Path) -> Result<Vec<u8>> {
     fs::read(path).map_err(|source| io_error("read file", path, source))
 }
 
-pub(crate) fn read_text(path: &Path) -> Result<String> {
-    let bytes = read_binary(path)?;
-    Ok(String::from_utf8_lossy(&bytes).into_owned())
-}
-
 pub(crate) fn write_text(path: &Path, text: &str) -> Result<()> {
     write_binary(path, text.as_bytes())
 }
