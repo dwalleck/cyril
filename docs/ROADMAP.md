@@ -452,7 +452,8 @@ decision); proxying Kiro's four slash commands; cyril executing DAGs itself (tha
   command run once, and one chat summary on completion. `/review resume` asks for consent again
   and retries or resumes a failed or paused run, including after a restart.
 - crtool is ported to Rust as the hidden `cyril crtool` subcommand (new leaf crate
-  `cyril-review`) and proven byte-identical to the Python crtool. The port blocks shipping.
+  `cyril-review`) and meets [`docs/crtool-contract.md`](crtool-contract.md): identical
+  model-read text, value-equal JSON, on ordinary inputs. The port blocks shipping.
 
 **Non-goals:** a vendor-neutral review engine; an in-TUI findings view or follow-up actions;
 targets not checked out at HEAD. Still fog: PR mode, effort presets.
