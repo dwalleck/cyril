@@ -14,6 +14,15 @@ All four paths may be relative; they are resolved before cyril starts.
 The run refuses to start unless the stored Kiro token outlives --minutes: it
 only reads the expiry (as .cyril-0qe6/live-sweep.py does) and never renews —
 a second renewer racing kiro-cli's own can log the user out.
+--skip-token-check skips that read when the login was confirmed another way.
+
+--action drives one interruption: esc-during-check (Esc once "running check…"
+shows; snapshot cancelled.txt), cancel-after-launch (`/review cancel` 20 s
+after the run starts; cancelled.txt) or kill-after-launch (kill cyril and KAS
+60 s after the run starts; killed.txt), so a later `--command "/review resume"`
+run can pick the run up, or chat-after-launch (ask the main agent for a shell
+command 20 s after the run starts; chat-approval.txt shows its ordinary
+approval, which is approved once, then chat.txt the answer).
 
 --until launch stops once the workflow is invoked (or refused); --until end
 waits for this run's "review: run ended" line in cyril.log. A launch that
@@ -30,8 +39,9 @@ import pyte
 COLS, ROWS = 200, 60
 # cyril's own lines for a launch that ends without a run.
 LAUNCH_FAILED = ("could not run", "was not created", "did not start", "nothing was started",
-                 "nothing to review", "run /review from the repo root")
-LAUNCHED = "is running —"
+                 "nothing to review", "run /review from the repo root", "review resume:")
+# A launch, or a resume, that started its run.
+LAUNCHED = ("is running —", "continues —")
 PROMPT_TITLE = " Permission Required "
 
 parser = argparse.ArgumentParser()
@@ -40,6 +50,16 @@ for name in ("binary", "repo", "home", "out"):
 parser.add_argument("--until", choices=("launch", "end"), default="end")
 parser.add_argument("--minutes", type=float, default=80)
 parser.add_argument("--command", default="/review")
+parser.add_argument("--skip-token-check", action="store_true",
+                    help="start without reading the token expiry (the login was checked another way)")
+parser.add_argument(
+    "--action",
+    choices=("none", "esc-during-check", "cancel-after-launch", "kill-after-launch",
+             "chat-after-launch"),
+    default="none",
+    help="esc-during-check: Esc once the check runs; cancel-after-launch: /review cancel "
+    "once the run is invoked; kill-after-launch: kill cyril and KAS once it is invoked",
+)
 args = parser.parse_args()
 binary, repo, home, out = (os.path.abspath(path) for path in
                            (args.binary, args.repo, args.home, args.out))
@@ -69,8 +89,10 @@ def token_seconds_left():
     return (expires - datetime.now(timezone.utc)).total_seconds()
 
 
-left = token_seconds_left()
-if left is None or left < args.minutes * 60:
+left = None if args.skip_token_check else token_seconds_left()
+if args.skip_token_check:
+    note("token check skipped")
+elif left is None or left < args.minutes * 60:
     shown = "no token" if left is None else f"{round(left / 60)} min left on the token"
     note(f"{shown}; run `kiro-cli login` first (need {args.minutes:g} min)")
     sys.exit(3)
@@ -118,6 +140,21 @@ def send(data):
     os.write(master, data.encode())
 
 
+def processes(name):
+    """cyril's descendants now, so an interruption that leaves a child alive shows."""
+    rows = [line.split(None, 2) for line in subprocess.run(
+        ["ps", "-e", "-o", "pid=,ppid=,args="], capture_output=True, text=True).stdout.splitlines()]
+    tree, found = {proc.pid}, True
+    while found:
+        found = False
+        for pid, ppid, *_ in rows:
+            if int(ppid) in tree and int(pid) not in tree:
+                tree.add(int(pid)); found = True
+    with open(os.path.join(out, name), "w") as f:
+        f.writelines(f"{pid} {rest[0] if rest else ''}\n" for pid, _, *rest in rows
+                     if int(pid) in tree)
+
+
 def drive():
     for _ in range(120):
         pump(1)
@@ -152,13 +189,46 @@ def drive():
                 prompted = True
                 snap("approval.txt")
                 note("an ordinary permission prompt appeared during the run")
+            if args.action == "esc-during-check" and "running check…" in screen_text:
+                pump(2); send("\x1b"); pump(15)
+                snap("cancelled.txt"); processes("processes.txt"); note("Esc during the check")
+                return 0
             failed = next((line for line in LAUNCH_FAILED if line in screen_text), None)
             if failed:
                 pump(2); snap("launch.txt"); note(f"launch ended: {failed}")
                 return 5
-            if args.until == "launch" and LAUNCHED in screen_text:
-                pump(2); snap("launch.txt"); note("launch ended: running")
-                return 0
+            if any(line in screen_text for line in LAUNCHED):
+                if args.action == "cancel-after-launch":
+                    pump(20)
+                    for ch in "/review cancel":
+                        send(ch); pump(0.05)
+                    pump(1); send("\r"); pump(30)
+                    snap("cancelled.txt"); processes("processes.txt")
+                    note("/review cancel after launch")
+                    return 0
+                if args.action == "chat-after-launch":
+                    pump(20)
+                    for ch in "Run the shell command `echo cyril-ild0-chat` and tell me its output.":
+                        send(ch); pump(0.02)
+                    pump(1); send("\r")
+                    for _ in range(90):
+                        pump(2)
+                        if PROMPT_TITLE in text():
+                            break
+                    else:
+                        snap("chat.txt"); note("no approval for the main-session command")
+                        return 8
+                    snap("chat-approval.txt"); note("main-session approval shown during the run")
+                    send("\r"); pump(30)
+                    snap("chat.txt"); note("approved once; chat answered")
+                    return 0
+                if args.action == "kill-after-launch":
+                    pump(60)
+                    snap("killed.txt"); note("killing cyril and KAS mid-run")
+                    return 0
+                if args.until == "launch":
+                    pump(2); snap("launch.txt"); note("launch ended: running")
+                    return 0
             if args.until == "end":
                 if handle is None and os.path.exists(cyril_log):
                     handle = open(cyril_log, errors="replace")
