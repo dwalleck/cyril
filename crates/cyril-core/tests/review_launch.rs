@@ -164,7 +164,7 @@ fn below_the_root_names_the_root() -> TestResult {
             error.to_string(),
             format!(
                 "run /review from the repo root ({})",
-                fixture.repo.canonicalize()?.display()
+                fixture.repo.display()
             )
         ),
         other => return Err(format!("expected NotRoot, got {other:?}").into()),

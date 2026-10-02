@@ -9,7 +9,7 @@ use serde_json::{Map, Value};
 use std::fs;
 use std::hash::{BuildHasher, Hasher};
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 /// The repository-local directory every run directory lives under.
 pub const RUNS_DIR: &str = ".code-review";
@@ -89,14 +89,27 @@ pub enum Prepared {
 pub fn probe(workspace: &Path, target: &str, scope: &[String]) -> Result<usize, LaunchError> {
     let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
     match touched_files(&run, target, &scope.join(" ")) {
-        Err(ReviewError::NotRepositoryRoot { cdup }) => {
-            let root = workspace.join(cdup);
-            Err(LaunchError::NotRoot {
-                root: root.canonicalize().unwrap_or(root),
-            })
-        }
+        Err(ReviewError::NotRepositoryRoot { cdup }) => Err(LaunchError::NotRoot {
+            root: up(workspace, &cdup),
+        }),
         other => Ok(other?),
     }
+}
+
+/// `workspace` with git's `--show-cdup` (`../../`) applied lexically, so the
+/// root reads in the same form as the directory the user launched from.
+fn up(workspace: &Path, cdup: &str) -> PathBuf {
+    let mut root = workspace.to_path_buf();
+    for part in Path::new(cdup).components() {
+        match part {
+            Component::ParentDir => {
+                root.pop();
+            }
+            Component::CurDir => {}
+            other => root.push(other),
+        }
+    }
+    root
 }
 
 /// Recheck the diff, then install the assets, create the run directory and

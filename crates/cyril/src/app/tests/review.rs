@@ -67,6 +67,11 @@ fn repo(changed: bool) -> Repo {
     }
 }
 
+/// The recipe's forward-slash `rundir` as the native path the App reports.
+fn native(rundir: &str) -> PathBuf {
+    PathBuf::from(rundir.replace('/', std::path::MAIN_SEPARATOR_STR))
+}
+
 fn prefix() -> CrtoolPrefix {
     let exe = if cfg!(windows) {
         "C:/bin/cyril.exe"
@@ -282,7 +287,7 @@ async fn launch(
     assert_eq!(workspace_paths, vec![repo.root.clone()]);
     assert_eq!(inputs["target"], "auto");
     assert_eq!(inputs["crtool"], prefix().as_str());
-    let run_dir = PathBuf::from(inputs["rundir"].as_str().expect("rundir"));
+    let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
     assert!(
         run_dir.join("manifest.json").is_file(),
         "gathered before New"
@@ -337,10 +342,7 @@ async fn refuses_below_the_repository_root() {
     assert!(app.ui_state.review_form().is_none());
     assert_eq!(
         last_message(&app),
-        format!(
-            "run /review from the repo root ({})",
-            repo.root.canonicalize().expect("root").display()
-        )
+        format!("run /review from the repo root ({})", repo.root.display())
     );
     assert!(rx.try_recv().is_err());
 }
@@ -608,7 +610,7 @@ async fn an_unrecorded_run_is_never_invoked() {
     else {
         panic!("Enter must send workflow/new");
     };
-    let run_dir = PathBuf::from(inputs["rundir"].as_str().expect("rundir"));
+    let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
     // A directory where run.json belongs: the atomic rename cannot land.
     fs::create_dir(run_dir.join("run.json")).expect("block run.json");
 
