@@ -1821,6 +1821,11 @@ async fn cancel_while_minting_cancels_the_workflow_when_it_appears() {
         last_message(&app),
         "review: cancelled before the workflow started"
     );
+    // A new review waits until the cancelled New has answered, so its run
+    // can never be mistaken for the new review's.
+    app.handle_command_result(CommandResult::review());
+    assert!(app.ui_state.review_form().is_none());
+    assert!(last_message(&app).starts_with("review: waiting for the cancelled review"));
     app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
         workflow_id: run_id(),
         name: "cyril-review".into(),
@@ -1833,6 +1838,76 @@ async fn cancel_while_minting_cancels_the_workflow_when_it_appears() {
     );
     assert!(rx.try_recv().is_err(), "and never invoked");
     assert!(!run_dir.join("run.json").exists(), "nor armed or recorded");
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_some(), "then /review is free");
+}
+
+/// Outside a review, a Minted (the user's own /workflow new) is never touched;
+/// and a cancelled launch whose New failed frees /review.
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_never_touches_runs_it_did_not_create() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
+        workflow_id: WorkflowId::try_from("wf_mine".to_owned()).expect("id"),
+        name: "mine".into(),
+    }));
+    app.review.flush_delays_for_tests().await;
+    assert!(
+        rx.try_recv().is_err(),
+        "a run the review did not create is left alone"
+    );
+
+    confirm(&mut app).await;
+    assert!(next_new(&mut app, &mut rx).await.is_ok(), "New");
+    app.handle_command_result(CommandResult::review_cancel());
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow new".into(),
+        workflow_id: None,
+        code: None,
+        details: "no".into(),
+    }));
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(
+        app.ui_state.review_form().is_some(),
+        "the failed New freed /review"
+    );
+}
+
+/// Every cancel's answer is reported, not only the latest one's.
+#[tokio::test(flavor = "multi_thread")]
+async fn each_cancel_reports_its_own_answer() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    launch(&mut app, &mut rx, &repo).await;
+    app.handle_command_result(CommandResult::review_cancel());
+    deliver_cancel(&mut app).await;
+    assert_eq!(cancel_sent(&mut rx), Some(run_id()));
+    // A second run is created and cancelled before the first answer lands.
+    confirm(&mut app).await;
+    assert!(next_new(&mut app, &mut rx).await.is_ok(), "New B");
+    let second = WorkflowId::try_from("wf_second".to_owned()).expect("id");
+    app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
+        workflow_id: second.clone(),
+        name: "cyril-review".into(),
+    }));
+    settle(&mut app).await;
+    assert!(rx.try_recv().is_ok(), "Invoke B");
+    app.handle_command_result(CommandResult::review_cancel());
+    deliver_cancel(&mut app).await;
+    assert_eq!(cancel_sent(&mut rx), Some(second.clone()));
+    app.handle_notification(outcome(WorkflowCommandOutcome::Cancelled {
+        workflow_id: run_id(),
+        previous_status: None,
+    }));
+    assert_eq!(last_message(&app), format!("review: {RUN} cancelled"));
+    app.handle_notification(outcome(WorkflowCommandOutcome::Cancelled {
+        workflow_id: second,
+        previous_status: None,
+    }));
+    assert_eq!(last_message(&app), "review: wf_second cancelled");
 }
 
 #[tokio::test(flavor = "multi_thread")]

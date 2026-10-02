@@ -167,7 +167,7 @@ impl Command for ReviewCommand {
     }
 
     fn description(&self) -> &str {
-        "Review changes with a multi-agent workflow; /review resume continues a failed or paused one"
+        "Review changes with a multi-agent workflow; /review resume continues one, /review cancel stops it"
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
@@ -177,7 +177,8 @@ impl Command for ReviewCommand {
         let result = match words.as_slice() {
             ["resume"] => CommandResult::review_resume(None),
             ["resume", selector] => CommandResult::review_resume(Some((*selector).to_owned())),
-            ["cancel"] => CommandResult::review_cancel(),
+            // Stopping a review needs no session: a check may be running.
+            ["cancel"] => return Ok(CommandResult::review_cancel()),
             ["resume" | "cancel", ..] => {
                 return Ok(CommandResult::system_message(USAGE.into()));
             }
@@ -409,6 +410,11 @@ mod tests {
         let mut sessionless = self::harness(false);
         let result = run_with(&ReviewCommand, &mut sessionless, "").await;
         assert!(message_text(&result).contains("No active session"));
+        let result = run_with(&ReviewCommand, &mut sessionless, "cancel").await;
+        assert!(
+            matches!(result.kind, CommandResultKind::ReviewCancel),
+            "stopping a review needs no session"
+        );
     }
 
     #[tokio::test]

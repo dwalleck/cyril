@@ -59,12 +59,9 @@ pub(super) struct ReviewState {
     launch: Option<Launch>,
     /// A `/review resume` in progress (its id comes from the same counter).
     resume: Option<resume::Resume>,
-    /// `/review cancel` came while `workflow/new` was out: the run it creates
-    /// is cancelled as soon as it appears, never left runnable.
-    cancel_on_mint: bool,
-    /// The review run a `/review cancel` is cancelling, until the agent
-    /// answers; only then is success (or failure) reported.
-    cancelling: Option<WorkflowId>,
+    /// Review runs a `/review cancel` is cancelling, until the agent answers;
+    /// only then is success (or failure) reported.
+    cancelling: HashSet<WorkflowId>,
     /// The id the next launch gets.
     next_launch: u64,
     /// Every run this process armed, live or ended. An ended run is kept so
@@ -128,6 +125,9 @@ enum Stage {
     },
     Recording(WorkflowId),
     Invoking(WorkflowId),
+    /// `/review cancel` came while `workflow/new` was out: the run it creates
+    /// is cancelled as soon as it appears, and `/review` waits for it.
+    CancelledMint,
 }
 
 struct ArmedRun {
@@ -208,8 +208,7 @@ impl ReviewState {
             recount_delay: RECOUNT_DELAY,
             launch: None,
             resume: None,
-            cancel_on_mint: false,
-            cancelling: None,
+            cancelling: HashSet::new(),
             next_launch: 0,
             runs: HashMap::new(),
             tx,
@@ -340,6 +339,17 @@ impl App {
                 format!("review: {id} is still running — /workflow status {id}")
             };
             self.ui_state.add_system_message(text);
+            return;
+        }
+        if let Some(Launch {
+            stage: Stage::CancelledMint,
+            ..
+        }) = &self.review.launch
+        {
+            self.ui_state.add_system_message(
+                "review: waiting for the cancelled review's workflow to be created and cancelled"
+                    .to_owned(),
+            );
             return;
         }
         if self.review.launch.is_some() || self.review.resume.is_some() {
@@ -640,7 +650,9 @@ impl App {
                     },
                 );
                 match self.bridge_sender.send(cancel).await {
-                    Ok(()) => self.review.cancelling = Some(workflow_id),
+                    Ok(()) => {
+                        self.review.cancelling.insert(workflow_id);
+                    }
                     Err(error) => self.ui_state.add_system_message(format!(
                         "review: could not cancel {workflow_id} — {error}"
                     )),
@@ -966,15 +978,6 @@ impl App {
     /// outcome itself still renders through normal routing.
     pub(super) fn observe_review_outcome(&mut self, outcome: &WorkflowCommandOutcome) {
         match outcome {
-            WorkflowCommandOutcome::Minted { workflow_id, .. } if self.review.launch.is_none() => {
-                if std::mem::take(&mut self.review.cancel_on_mint) {
-                    self.ui_state.add_system_message(format!(
-                        "review: {workflow_id} was created after /review cancel; cancelling it"
-                    ));
-                    self.review
-                        .after(Duration::ZERO, ReviewTask::SendCancel(workflow_id.clone()));
-                }
-            }
             WorkflowCommandOutcome::Minted { workflow_id, .. } => self.arm_review(workflow_id),
             WorkflowCommandOutcome::Invoked { workflow_id } => {
                 let invoking = matches!(
@@ -1001,13 +1004,21 @@ impl App {
                 details,
                 ..
             } => {
-                if operation == "workflow new" {
-                    self.review.cancel_on_mint = false;
+                if operation == "workflow new"
+                    && matches!(
+                        self.review.launch,
+                        Some(Launch {
+                            stage: Stage::CancelledMint,
+                            ..
+                        })
+                    )
+                {
+                    // The cancelled launch's New failed: nothing to clean up.
+                    self.review.launch = None;
                 }
                 if operation == "workflow cancel"
-                    && let Some(workflow_id) = self.review.cancelling.take_if(|cancelling| {
-                        failed.as_ref().is_none_or(|failed| failed == cancelling)
-                    })
+                    && let Some(workflow_id) = failed.clone()
+                    && self.review.cancelling.remove(&workflow_id)
                 {
                     self.ui_state.add_system_message(format!(
                         "review: cancelling {workflow_id} failed — {details}; its authorization stays withdrawn"
@@ -1031,8 +1042,7 @@ impl App {
                 }
             }
             WorkflowCommandOutcome::Cancelled { workflow_id, .. } => {
-                if self.review.cancelling.as_ref() == Some(workflow_id) {
-                    self.review.cancelling = None;
+                if self.review.cancelling.remove(workflow_id) {
                     self.ui_state
                         .add_system_message(format!("review: {workflow_id} cancelled"));
                 }
@@ -1103,9 +1113,21 @@ impl App {
         let Some(launch) = self.review.launch.take() else {
             return;
         };
-        let Stage::Minting { ready, .. } = launch.stage else {
-            self.review.launch = Some(launch);
-            return;
+        let ready = match launch.stage {
+            Stage::Minting { ready, .. } => ready,
+            // Cancelled while New was out: cancel what it created, never arm.
+            Stage::CancelledMint => {
+                self.ui_state.add_system_message(format!(
+                    "review: {workflow_id} was created after /review cancel; cancelling it"
+                ));
+                self.review
+                    .after(Duration::ZERO, ReviewTask::SendCancel(workflow_id.clone()));
+                return;
+            }
+            stage => {
+                self.review.launch = Some(Launch { stage, ..launch });
+                return;
+            }
         };
         let Ok(crtool) = self.review.prefix.as_ref() else {
             return;
@@ -1260,22 +1282,29 @@ impl App {
         let mut acted = self.cancel_resume();
         if let Some(launch) = self.review.launch.take() {
             acted = true;
-            self.ui_state.close_review_form();
             match launch.stage {
-                Stage::Minting { .. } | Stage::Loading { .. } => {
-                    // New may be out (or about to go): whatever it creates is
-                    // cancelled when it appears.
-                    self.review.cancel_on_mint = matches!(launch.stage, Stage::Minting { .. });
+                // New is out: keep the launch, marked, until the reply comes —
+                // what it creates is cancelled, and /review waits meanwhile.
+                Stage::Minting { .. } => {
+                    self.ui_state.close_review_form();
+                    self.review.launch = Some(Launch {
+                        stage: Stage::CancelledMint,
+                        ..launch
+                    });
                     self.ui_state.add_system_message(
                         "review: cancelled before the workflow started".to_owned(),
                     );
                 }
+                Stage::CancelledMint => {
+                    self.review.launch = Some(launch);
+                    self.ui_state
+                        .add_system_message("review: already cancelling".to_owned());
+                }
                 Stage::Recording(workflow_id) | Stage::Invoking(workflow_id) => {
+                    self.ui_state.close_review_form();
                     self.stop_run(&workflow_id);
                 }
-                _ => self
-                    .ui_state
-                    .add_system_message("review: cancelled; nothing was started".to_owned()),
+                _ => self.abandon_launch("review: cancelled; nothing was started".to_owned()),
             }
         }
         if !acted {
@@ -1308,6 +1337,7 @@ impl App {
     /// disarm everything and end any launch in flight.
     pub(super) fn review_agent_gone(&mut self) {
         self.review.disarm("the agent disconnected");
+        self.review.cancelling.clear();
         if self.review.resume.take().is_some() {
             self.ui_state.close_review_form();
             self.ui_state.add_system_message(
