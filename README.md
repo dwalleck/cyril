@@ -173,14 +173,21 @@ and refuses shell-active characters rather than attempting fallback quoting.
 This API constructs a command prefix; it does not add a `/review` command or
 execute a review.
 
-The internal `cyril crtool gather <rundir> <target> [scope]` and
-`cyril crtool facts <rundir>` commands are the native crtool that the
-`code-review-max` workflow runs. They need Git on `PATH`, run from the
+The internal `cyril crtool` subcommands (`gather`, `facts`, `merge`, `shard`,
+`ballots`, `collate`, `finalize`, `comments`) are the native crtool that the
+review workflow runs. They need Git on `PATH`, run from the
 repository root (anywhere else is refused), and are hidden from `--help`.
 [`docs/crtool-contract.md`](docs/crtool-contract.md) specifies their outputs:
 the same text the Python `crtool.py` gives the models, value-equal JSON, and the
 same exit codes (3 for an empty diff, 2 for any other error). Every run is
 stamped with the cyril version, and a run stamped by another version is refused.
+
+`cyril_review::ASSETS` embeds the canonical review workflow
+(`cyril-review.workflow.json`) and its four `cyril-review-*` agents, and
+`cyril_review::read_findings` reads a finished run's `findings.json`, keeping a
+missing file and a corrupt one as distinct errors. The experiment's
+`code-review-max` recipe and `cr-*` agents are generated from the same sources
+by `experiments/code-review-workflow/build_recipe.py`.
 
 `cyril_review::run_check` runs a repository's check command once for a review,
 on the caller's Tokio runtime, and writes `facts/diagnostics.txt` and

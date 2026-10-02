@@ -123,19 +123,11 @@ pub fn finalize(run: &ReviewRun) -> Result<String> {
     let findings: Vec<Finding> = top.iter().map(|record| finding(record)).collect();
     write_json(&run.path("findings.json"), &findings)?;
 
-    let stats = verified
-        .get("stats")
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default();
+    let stats = object(verified.get("stats"));
     let list = |key: &str| strings(stats.get(key));
     let number = |key: &str| stats.get(key).map(text).unwrap_or_else(|| "?".to_owned());
     let missing = list("angles_missing");
-    let verdicts = stats
-        .get("verdicts")
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default();
+    let verdicts = object(stats.get("verdicts"));
     let balloted = stats.get("balloted").and_then(Value::as_u64).unwrap_or(0);
     let mut md = vec![
         format!("# Code review — `{}`", manifest.target),
@@ -178,11 +170,7 @@ pub fn finalize(run: &ReviewRun) -> Result<String> {
         "| # | Id | Location | Verdict | Issue |".to_owned(),
         "|---|---|---|---|---|".to_owned(),
     ];
-    for (number, record) in ranked
-        .iter()
-        .enumerate()
-        .map(|(index, record)| (index + 1, record))
-    {
+    for (number, record) in (1..).zip(&ranked) {
         md.push(format!(
             "| {number} | {} | {} | {} | {} |",
             id(record),
@@ -197,11 +185,7 @@ pub fn finalize(run: &ReviewRun) -> Result<String> {
         }
     }
     md.extend(["".to_owned(), "## Findings".to_owned(), String::new()]);
-    for (number, record) in ranked
-        .iter()
-        .enumerate()
-        .map(|(index, record)| (index + 1, record))
-    {
+    for (number, record) in (1..).zip(&ranked) {
         let verification = verification(record);
         let failure = record
             .get("failure_scenario")
@@ -282,11 +266,7 @@ pub fn finalize(run: &ReviewRun) -> Result<String> {
     // Everything the commenter needs, in one place, so it never has to find a
     // verdict file or page through verified.json.
     let mut brief = Vec::new();
-    for (rank, record) in top
-        .iter()
-        .enumerate()
-        .map(|(index, record)| (index + 1, record))
-    {
+    for (rank, record) in (1..).zip(top) {
         let verification = verification(record);
         let angles = angles(record);
         let votes = strings(record.get("votes"));
@@ -392,17 +372,9 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
             written = None;
         }
         let mut parsed = written.and_then(|written| {
-            let label = written
-                .get("label")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .trim()
-                .to_lowercase();
+            let label = str_field(&written, "label").trim().to_lowercase();
             let label = label.trim_end_matches(':').to_owned();
-            let subject = written
-                .get("subject")
-                .and_then(Value::as_str)
-                .unwrap_or_default()
+            let subject = str_field(&written, "subject")
                 .split_whitespace()
                 .collect::<Vec<_>>()
                 .join(" ");
@@ -456,9 +428,7 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
         let confirmed = finding.verdict == "CONFIRMED";
         // This pipeline does not block a merge on a claim it could not confirm
         // or that the author documented, nor on a label the spec calls non-blocking.
-        if decorations
-            .iter()
-            .any(|decoration| decoration == "blocking")
+        if has_decoration(&decorations, "blocking")
             && (NEVER_BLOCKING.contains(&label.as_str()) || !confirmed || by_design)
         {
             for decoration in &mut decorations {
@@ -473,17 +443,10 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
                 if by_design { ", by design" } else { "" }
             ));
         }
-        if decorations
-            .iter()
-            .any(|decoration| decoration == "blocking")
-        {
+        if has_decoration(&decorations, "blocking") {
             decorations.retain(|decoration| decoration != "non-blocking");
         }
-        if (!confirmed || by_design)
-            && !decorations
-                .iter()
-                .any(|decoration| decoration == "non-blocking")
-        {
+        if (!confirmed || by_design) && !has_decoration(&decorations, "non-blocking") {
             // Say so explicitly: a bare label reads as "must fix".
             decorations.push("non-blocking".to_owned());
         }
@@ -500,31 +463,17 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
             format!("**{label} ({}):** {subject}", decorations.join(","))
         };
         let votes = strings(record.get("votes"));
-        let footer = format!(
-            "_Automated review · {}{}{} · {}_",
-            finding.verdict.to_lowercase(),
-            if votes.is_empty() {
-                String::new()
-            } else {
-                format!(
-                    " by vote ({})",
-                    votes
-                        .iter()
-                        .map(|vote| vote.to_lowercase())
-                        .collect::<Vec<_>>()
-                        .join(", ")
-                )
-            },
-            if finding.angles.len() > 1 {
-                format!(
-                    " · raised independently by {} review angles",
-                    finding.angles.len()
-                )
-            } else {
-                String::new()
-            },
-            finding.id
-        );
+        let mut footer = format!("_Automated review · {}", finding.verdict.to_lowercase());
+        if !votes.is_empty() {
+            footer += &format!(" by vote ({})", votes.join(", ").to_lowercase());
+        }
+        if finding.angles.len() > 1 {
+            footer += &format!(
+                " · raised independently by {} review angles",
+                finding.angles.len()
+            );
+        }
+        footer += &format!(" · {}_", finding.id);
         let body = [
             Some(head),
             (!discussion.is_empty()).then(|| discussion.clone()),
@@ -534,10 +483,7 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
         .flatten()
         .collect::<Vec<_>>()
         .join("\n\n");
-        if decorations
-            .iter()
-            .any(|decoration| decoration == "blocking")
-        {
+        if has_decoration(&decorations, "blocking") {
             blocking += 1;
         }
         match labels.iter_mut().find(|(name, _)| *name == label) {
@@ -569,11 +515,7 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
             .to_owned(),
         String::new(),
     ];
-    for (number, entry) in out
-        .iter()
-        .enumerate()
-        .map(|(index, entry)| (index + 1, entry))
-    {
+    for (number, entry) in (1..).zip(&out) {
         let file = entry["file"].as_str().unwrap_or("?");
         let at = match entry["line"].as_i64() {
             Some(line) if line != 0 => format!("`{file}:{line}`"),
@@ -617,6 +559,23 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
     }
     stdout += " -> comments.json, comments.md\n";
     Ok(stdout)
+}
+
+/// An object field, or empty when it is absent or not an object.
+fn object(value: Option<&Value>) -> Record {
+    value
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default()
+}
+
+fn has_decoration(decorations: &[String], wanted: &str) -> bool {
+    decorations.iter().any(|decoration| decoration == wanted)
+}
+
+/// A string field of an agent's record; anything else reads as empty.
+fn str_field<'a>(record: &'a Record, key: &str) -> &'a str {
+    record.get(key).and_then(Value::as_str).unwrap_or_default()
 }
 
 /// The commenter's file for one finding, or `None` (with a warning when it
@@ -689,14 +648,7 @@ fn ranking(run: &ReviewRun, warnings: &mut Vec<String>) -> (Vec<String>, Record)
         return (Vec::new(), Record::new());
     }
     match read_json::<Value>(&path) {
-        Ok(Value::Object(ranking)) => (
-            strings(ranking.get("order")),
-            ranking
-                .get("notes")
-                .and_then(Value::as_object)
-                .cloned()
-                .unwrap_or_default(),
-        ),
+        Ok(Value::Object(ranking)) => (strings(ranking.get("order")), object(ranking.get("notes"))),
         Ok(_) => {
             warnings.push(
                 "ranking.json unreadable (not a JSON object); findings are in discovery order"
@@ -753,11 +705,7 @@ fn field(record: &Record, key: &str) -> String {
 }
 
 fn verification(record: &Record) -> Record {
-    record
-        .get("verification")
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default()
+    object(record.get("verification"))
 }
 
 /// The finding's own angle followed by every angle that raised it too.

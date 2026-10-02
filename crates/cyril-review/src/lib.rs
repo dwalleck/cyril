@@ -2,6 +2,7 @@
 //! workflow. `docs/crtool-contract.md` is the specification; the Python
 //! `.kiro/code-review/crtool.py` is the reference implementation.
 
+mod assets;
 mod check;
 mod facts;
 mod gather;
@@ -12,6 +13,7 @@ mod report;
 mod run;
 mod verdicts;
 
+pub use assets::{ASSETS, Asset, AssetKind, WORKFLOW_NAME};
 pub use check::{CheckOutcome, CheckResult, run_check};
 pub use facts::facts;
 pub use gather::gather;

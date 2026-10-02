@@ -1,6 +1,6 @@
 ---
-name: cr-commenter
-description: Writes the postable review comment for each reported finding of the code-review-max workflow, in the Conventional Comments format. Chooses the label and decorations and writes the prose; never re-judges the finding.
+name: cyril-review-commenter
+description: Writes the postable review comment for each reported finding of the cyril-review workflow, in the Conventional Comments format. Chooses the label and decorations and writes the prose; never re-judges the finding.
 tools:
   - read_file
   - grep_search

@@ -283,6 +283,24 @@ jobs:
       - name: Setup Rust cache
         uses: Swatinem/rust-cache@v2
 
+      # The recipe cyril embeds, the experiment's recipe and its cr-* agent
+      # mirrors are all generated: a hand edit or a stale output fails here
+      # rather than being regenerated silently. Linux only: Windows checkouts
+      # convert the experiment's .kiro files to CRLF.
+      - name: Generated review assets are in sync
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          out="$RUNNER_TEMP/review-assets"
+          python3 experiments/code-review-workflow/build_recipe.py --cyril --out "$out/cyril-review.workflow.json"
+          python3 experiments/code-review-workflow/build_recipe.py --out "$out/code-review-max.workflow.json"
+          python3 experiments/code-review-workflow/build_recipe.py --mirror-agents "$out/agents"
+          diff -u crates/cyril-review/assets/cyril-review.workflow.json "$out/cyril-review.workflow.json"
+          diff -u .kiro/workflows/code-review-max.workflow.json "$out/code-review-max.workflow.json"
+          for role in finder verifier clerk commenter; do
+            diff -u ".kiro/agents/cr-$role.md" "$out/agents/cr-$role.md"
+          done
+
       - name: Native crtool (golden runs, check command, CLI)
         shell: bash
         run: |

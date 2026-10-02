@@ -1,0 +1,2 @@
+# Embedded verbatim with include_str!: never convert line endings.
+* -text

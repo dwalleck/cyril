@@ -1,6 +1,6 @@
 ---
-name: cr-clerk
-description: Bookkeeping agent for the code-review-max workflow. Runs crtool, the review's deterministic data step, and makes the small judgment calls it cannot (which candidates are duplicates, how findings rank).
+name: cyril-review-clerk
+description: Bookkeeping agent for the cyril-review workflow. Runs crtool, the review's deterministic data step, and makes the small judgment calls it cannot (which candidates are duplicates, how findings rank).
 tools:
   - read_file
   - fs_write
