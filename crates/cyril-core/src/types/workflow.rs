@@ -215,10 +215,13 @@ workflow_enum! {
 }
 
 workflow_enum! {
-    /// Action taken when a repeat node exhausts its iteration budget.
+    /// Action taken when a repeat node exhausts its iteration budget. KAS
+    /// 2.26.0 accepts `abort | continue | pause`; `continue` goes on with the
+    /// next node (the `/review` recipe uses it).
     pub enum WorkflowRepeatExhaustion as "workflow repeat exhaustion action" {
         Pause => "pause",
         Abort => "abort",
+        Continue => "continue",
     }
 }
 
@@ -2144,6 +2147,7 @@ mod tests {
             &[
                 WorkflowRepeatExhaustion::Pause.as_str(),
                 WorkflowRepeatExhaustion::Abort.as_str(),
+                WorkflowRepeatExhaustion::Continue.as_str(),
             ],
         );
 

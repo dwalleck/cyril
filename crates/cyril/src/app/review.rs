@@ -588,6 +588,13 @@ impl App {
         let Some(run) = self.review.run_for(workflow_id) else {
             return;
         };
+        tracing::info!(
+            %workflow_id,
+            ?status,
+            allowed = run.authorization.allowed_count(),
+            denied = run.authorization.denials().len(),
+            "review: run ended"
+        );
         let ending = match status {
             WorkflowCompletionStatus::Paused => {
                 run.authorization.pause();
@@ -607,6 +614,12 @@ impl App {
                             source: std::io::Error::other(error.to_string()),
                         })
                         .and_then(|run| cyril_review::read_findings(&run));
+                    match &findings {
+                        Ok(findings) => {
+                            tracing::info!(findings = findings.len(), "review: summary ready");
+                        }
+                        Err(error) => tracing::warn!(%error, "review: findings unreadable"),
+                    }
                     let ending = RunEnding::Completed(findings);
                     Some(ReviewTask::Finished(summary(&ending, &run_dir, &denials)))
                 });
