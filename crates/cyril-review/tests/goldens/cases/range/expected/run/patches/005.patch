@@ -1,0 +1,15 @@
+diff --git a/src/util.py b/src/util.py
+index 13511dd..cb9bc22 100644
+--- a/src/util.py
++++ b/src/util.py
+@@ -1,2 +1,10 @@
+ def helper(x):
+     return x + 1
++
++
++def get(key):
++    return helper(key)
++
++
++class Parser:
++    pass

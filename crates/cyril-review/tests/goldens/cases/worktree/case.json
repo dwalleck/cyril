@@ -1,0 +1,30 @@
+{
+  "commits": [
+    {
+      "message": "baseline",
+      "files": {
+        "web/app.ts": "export function render(x: number) {\n  return x;\n}\n",
+        "tools/run.py": "def main():\n    pass\n"
+      }
+    }
+  ],
+  "worktree": {
+    "files": {
+      "web/app.ts": "export function render(x: number) {\n  return x;\n}\n\nexport class Store {}\nexport const LIMIT = 10;\nexport function formatTotal(n: number) {\n  return render(n) + LIMIT;\n}\n",
+      "tools/run.py": "def main():\n    pass\n\n\ndef get(key):\n    return key\n\n\nclass Loader:\n    pass\n",
+      "web/untracked.ts": "export function notInTheDiff() {}\n"
+    }
+  },
+  "steps": [
+    [
+      "gather",
+      "HEAD",
+      ""
+    ],
+    [
+      "gather",
+      "HEAD",
+      "web"
+    ]
+  ]
+}

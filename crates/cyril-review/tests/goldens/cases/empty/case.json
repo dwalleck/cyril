@@ -1,0 +1,17 @@
+{
+  "commits": [
+    {
+      "message": "baseline",
+      "files": {
+        "README.md": "hello\n"
+      }
+    }
+  ],
+  "steps": [
+    [
+      "gather",
+      "HEAD",
+      "."
+    ]
+  ]
+}

@@ -1,0 +1,65 @@
+diff --git a/assets/logo.bin b/assets/logo.bin
+index 2c4121b..40642b8 100644
+Binary files a/assets/logo.bin and b/assets/logo.bin differ
+diff --git a/src/caller.rs b/src/caller.rs
+new file mode 100644
+index 0000000..ca3205c
+--- /dev/null
++++ b/src/caller.rs
+@@ -0,0 +1,5 @@
++use crate::compute_total;
++
++pub fn sum_all() -> u32 {
++    compute_total(&[4, 5])
++}
+diff --git a/src/lib.rs b/src/lib.rs
+index d965204..48d9012 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -4,7 +4,23 @@ pub fn render_page(title: &str) -> String {
+     let b = 2;
+     let c = 3;
+     let d = a + b + c;
+-    format!("<h1>{title}</h1>{d}")
++    let total = compute_total(&[a, b, c]);
++    format!("<h1>{title}</h1>{d} ({total})")
+ }
+ 
+ pub fn unchanged() {}
++
++pub fn compute_total(values: &[u32]) -> u32 {
++    values.iter().sum()
++}
++
++pub fn orphan_symbol() {}
++
++pub struct Widget;
++
++#[test]
++fn compute_total_counts() {
++    assert_eq!(compute_total(&[1]), 1);
++}
++
++mod tests {}
+diff --git a/src/old.rs b/src/old.rs
+deleted file mode 100644
+index 2bf6270..0000000
+--- a/src/old.rs
++++ /dev/null
+@@ -1 +0,0 @@
+-pub fn retired() {}
+diff --git a/src/util.py b/src/util.py
+index 13511dd..cb9bc22 100644
+--- a/src/util.py
++++ b/src/util.py
+@@ -1,2 +1,10 @@
+ def helper(x):
+     return x + 1
++
++
++def get(key):
++    return helper(key)
++
++
++class Parser:
++    pass

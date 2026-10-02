@@ -1,0 +1,7 @@
+# usages of every symbol this diff adds or changes — textual (git grep -w, same language), so a comment or a same-named symbol counts. Start here for callers instead of grepping. -- page 1 of 1
+## Extra  (func, added, lib/core.go:7) — 1 usages
+lib/use.go:4: return Extra()
+
+## defined or changed by this diff, used NOWHERE else in code (tests have no callers; for anything else this is worth a look):
+Config (type, lib/core.go:11); UseExtra (func, lib/use.go:3)
+

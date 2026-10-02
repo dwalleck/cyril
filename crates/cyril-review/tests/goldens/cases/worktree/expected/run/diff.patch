@@ -1,0 +1,29 @@
+diff --git a/tools/run.py b/tools/run.py
+index 336e825..013d6cb 100644
+--- a/tools/run.py
++++ b/tools/run.py
+@@ -1,2 +1,10 @@
+ def main():
+     pass
++
++
++def get(key):
++    return key
++
++
++class Loader:
++    pass
+diff --git a/web/app.ts b/web/app.ts
+index 47c6218..797222a 100644
+--- a/web/app.ts
++++ b/web/app.ts
+@@ -1,3 +1,9 @@
+ export function render(x: number) {
+   return x;
+ }
++
++export class Store {}
++export const LIMIT = 10;
++export function formatTotal(n: number) {
++  return render(n) + LIMIT;
++}

@@ -2,7 +2,7 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 use clap::Subcommand;
-use cyril_review::{ReviewRun, StepOutput, SystemReviewClock};
+use cyril_review::ReviewRun;
 
 #[derive(Subcommand)]
 pub(crate) enum Command {
@@ -65,7 +65,7 @@ impl Command {
         let rundir = anchored(&workspace, step.rundir());
         let result = match step {
             Step::Gather { target, scope, .. } => ReviewRun::new(&workspace, rundir)
-                .and_then(|run| cyril_review::gather(&run, &target, &scope, &SystemReviewClock)),
+                .and_then(|run| cyril_review::gather(&run, &target, &scope)),
             Step::Facts { .. } => {
                 ReviewRun::new(&workspace, rundir).and_then(|run| cyril_review::facts(&run))
             }
@@ -77,8 +77,8 @@ impl Command {
     }
 }
 
-fn write_output(output: &StepOutput) -> i32 {
-    match io::stdout().lock().write_all(output.stdout()) {
+fn write_output(output: &str) -> i32 {
+    match io::stdout().lock().write_all(output.as_bytes()) {
         Ok(()) => 0,
         Err(error) => report_error(&error, 2),
     }

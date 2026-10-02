@@ -1,0 +1,11 @@
+[
+  {
+    "step": [
+      "gather",
+      "HEAD",
+      "."
+    ],
+    "exit": 3,
+    "stdout": ""
+  }
+]

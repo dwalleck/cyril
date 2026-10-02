@@ -159,7 +159,7 @@ older KAS may ignore it. The action is not shown for v2 or always-reject options
 crates/
   cyril/          # TUI application (binary)
   cyril-core/     # Protocol logic, path translation, session state
-  cyril-review/   # Native review evidence: run artifacts, gather, facts, diagnostics
+  cyril-review/   # Native crtool (gather, facts) and the review check command
 docs/
   kiro-acp-protocol.md  # Comprehensive Kiro ACP protocol reference
 ```
@@ -174,64 +174,19 @@ This API constructs a command prefix; it does not add a `/review` command or
 execute a review.
 
 The internal `cyril crtool gather <rundir> <target> [scope]` and
-`cyril crtool facts <rundir>` commands run without Python, an agent, or TUI startup.
-Git must be on `PATH` for driver-aware patch generation and source searches.
-Use `cyril --cwd <workspace> crtool ...` to select the workspace; relative run
-directories resolve beneath it. Scope is relative to that workspace, while
-artifact filenames remain repository-root-relative. `auto` selects the gather
-target. Scope is whitespace-separated Git pathspecs, not shell-quoted syntax.
-Gather writes the diff, per-file patches, manifest, and symbol/usage facts.
-Usages are searched across the whole repository, not only the workspace subdirectory.
-An existing matching run is reused; a different target/scope or missing/stale
-version stamp is refused. Required manifest fields are validated before reuse or
-facts rebuilding. Git search errors are reported rather than treated as no usages.
-Manifest JSON must be valid UTF-8. Before changing evidence, facts and diagnostics
-reject non-object `facts` metadata; a missing or null value is initialized as an
-object, and unknown object fields are preserved.
-Raw Git names retain their identity for status, patches, persisted symbol/usage
-facts, and document lookup, even when display labels need replacement characters.
-Colons and line feeds inside filenames are not treated as Git record delimiters.
-If the host cannot represent a Git filename, gather refuses it rather than
-selecting another file.
-An empty diff exits 3; other operation errors exit 2.
-The Python tool is a functional reference for verification, not a byte-format
-contract: JSON formatting, diagnostic wording, and text newlines may differ.
+`cyril crtool facts <rundir>` commands are the native crtool that the
+`code-review-max` workflow runs. They need Git on `PATH`, run from the
+repository root (anywhere else is refused), and are hidden from `--help`.
+[`docs/crtool-contract.md`](docs/crtool-contract.md) specifies their outputs:
+the same text the Python `crtool.py` gives the models, value-equal JSON, and the
+same exit codes (3 for an empty diff, 2 for any other error). Every run is
+stamped with the cyril version, and a run stamped by another version is refused.
 
-Library callers can run a configured check with `cyril_review::diagnostics`,
-`DiagnosticsOptions`, `Cancellation`, and `SystemReviewClock`. Await this async
-operation on a caller-owned Tokio runtime; the library creates no runtime.
-Keep the runtime driven while the application remains active; Windows
-asynchronous capture cleanup needs its executor to continue running.
-There is no diagnostics CLI verb. Commands receive null stdin.
-The default timeout is 1,800 seconds. Results distinguish clean, failed (with the
-native exit code), timed-out, and cancelled checks. Pre-launch errors and
-cancellation before launch leave diagnostics artifacts unchanged.
-
-Started checks save all collected stdout/stderr bytes in
-`facts/diagnostics-raw.txt`, plus a report containing the first 200 nonempty output
-lines mentioning any changed path and the last 15 nonempty lines. Paths match as
-literal substrings, not regular expressions; slash normalization affects matching
-only, not saved bytes. Cancellation and timeout terminate only the
-directly spawned child, with a one-second termination/reap deadline; descendants
-are not targeted. After the child reaches a terminal state, capture drains until
-both streams reach EOF or a separate one-second deadline expires.
-If killing or reaping a timed-out or cancelled child fails, the collected evidence
-is still written; `DiagnosticsResult::cleanup_failure()`, the report, and
-`facts.diagnostics_cleanup_error` record the failure. Diagnostics merges its keys
-into the manifest as it exists when the check finishes, under a run lock, so
-manifest updates made by other steps during the check are kept.
-
-`DiagnosticsResult::capture_complete()` is `None` before launch and `Some(bool)`
-after launch. A stream without EOF at the final-drain deadline produces
-`Some(false)`, `facts.diagnostics_capture_complete: false` in the manifest, and
-an explicit incomplete status in the output and report, with a marker appended
-to raw evidence. Collected bytes are preserved; unread queued bytes may be
-omitted. Capture completeness is independent of clean/failed/timed-out/cancelled
-outcome. These deadlines do not bound filesystem I/O or scheduler latency.
-POSIX commands use shell-style argument parsing without an implicit shell.
-Windows uses native executable/argument parsing; explicitly selected `.cmd` and
-`.bat` files follow native batch dispatch, without wrapping arbitrary command
-text in a shell.
+`cyril_review::run_check` runs a repository's check command once for a review,
+on the caller's Tokio runtime, and writes `facts/diagnostics.txt` and
+`facts/diagnostics-raw.txt`. It is not a crtool subcommand. It reports clean,
+failed (with the exit code), timed out or cancelled; a timeout or cancellation
+kills the command and keeps the output collected so far.
 
 ## License
 

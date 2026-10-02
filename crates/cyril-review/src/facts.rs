@@ -1,29 +1,50 @@
-use crate::git;
+//! Code intelligence computed once per review: every symbol the diff adds or
+//! changes, with its textual usages (`git grep -w`, same language).
+
+use crate::git::{self, DIFF};
 use crate::run::{
-    Manifest, ManifestFile, ReviewRun, facts_dir, facts_metadata, read_binary, read_manifest,
-    update_manifest, write_json, write_text,
+    Manifest, ManifestFile, ReviewRun, read_manifest, text_size, write_json, write_pages,
 };
-use crate::{Result, StepOutput, regex_error};
+use crate::{Result, io_error};
 use regex::Regex;
 use serde::Serialize;
-use serde_json::{Map, Value};
-use std::collections::{BTreeMap, HashSet, btree_map::Entry};
+use serde_json::Value;
+use std::collections::HashMap;
+use std::collections::hash_map::Entry;
 use std::fs;
 
-const PAGE_BUDGET: usize = 20_000;
-const DOCUMENT_EXTENSIONS: [&str; 4] = [".md", ".rst", ".adoc", ".txt"];
+const DOC_EXTENSIONS: [&str; 4] = [".md", ".rst", ".adoc", ".txt"];
+const MAX_CHANGE_DOCS: usize = 40;
+const USAGE_TEXT_CHARS: usize = 140;
+const USAGE_CAPS: [usize; 4] = [25, 12, 6, 3];
+/// The usage map shrinks its per-symbol cap until it fits in this many pages.
+const USAGE_PAGES: usize = 4;
+/// Patterns per `git grep` call, which keeps every command line short.
+const GREP_BATCH_CHARS: usize = 8_000;
+
+/// Names that match half the codebase: their usages are listed short and flagged.
 const COMMON: [&str; 25] = [
     "new", "default", "fmt", "from", "into", "main", "run", "get", "set", "render", "update",
     "init", "len", "is_empty", "clone", "drop", "build", "name", "id", "parse", "apply", "handle",
     "tests", "test", "value",
 ];
 
-#[derive(Debug, Serialize)]
-struct Usage {
-    file: String,
-    line: usize,
-    text: String,
-}
+/// Definition patterns per language: group 1 is the kind, group 2 the name.
+const LANGUAGES: [(&[&str], &str); 4] = [
+    (
+        &[".rs"],
+        r#"(?:pub(?:\([^)]*\))?\s+)?(?:(?:async|const|unsafe|default)\s+)*(?:extern\s+"[^"]*"\s+)?(fn|struct|enum|trait|type|const|static|mod|union)\s+([A-Za-z_][A-Za-z0-9_]*)"#,
+    ),
+    (&[".py"], r"(?:async\s+)?(def|class)\s+([A-Za-z_]\w*)"),
+    (
+        &[".js", ".jsx", ".ts", ".tsx", ".mjs"],
+        r"(?:export\s+)?(?:default\s+)?(?:async\s+)?(function|class|interface|type|enum|const)\s+([A-Za-z_$][\w$]*)",
+    ),
+    (&[".go"], r"(func|type)\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)"),
+];
+const TEST_ATTRIBUTE: &str = r"#\[(?:[a-z_:]+::)?test\b|@pytest|\bit\(|\btest\(";
+const HUNK: &str = r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@ ?(.*)";
+const USAGE_HEADER: &str = "usages of every symbol this diff adds or changes — textual (git grep -w, same language), so a comment or a same-named symbol counts. Start here for callers instead of grepping.";
 
 #[derive(Debug, Serialize)]
 struct Symbol {
@@ -31,585 +52,433 @@ struct Symbol {
     kind: String,
     file: String,
     line: Option<usize>,
-    status: String,
+    status: &'static str,
     ambiguous: bool,
     usage_count: usize,
     usages: Vec<Usage>,
+    #[serde(skip)]
+    language: usize,
 }
 
-#[derive(Debug)]
-struct SymbolSeed<'a> {
-    name: String,
-    kind: String,
-    file: &'a ManifestFile,
-    line: Option<usize>,
-    status: String,
-    declaration: Option<ModifiedDeclaration>,
+#[derive(Clone, Debug, Serialize)]
+struct Usage {
+    file: String,
+    line: usize,
+    text: String,
 }
 
-#[derive(Debug)]
-struct ModifiedDeclaration {
-    header: String,
-    new_before: usize,
-    removed_before: Option<usize>,
-    added_lines: HashSet<usize>,
+struct Language {
+    extensions: &'static [&'static str],
+    search: Regex,
+    anchored: Regex,
 }
 
-struct RemovedDeclaration<'a> {
-    old_line: u32,
-    new_before: usize,
-    text: &'a [u8],
-}
-
-pub fn facts(run: &ReviewRun) -> Result<StepOutput> {
+/// `crtool facts <rundir>`: rebuild the facts of a gathered run.
+pub fn facts(run: &ReviewRun) -> Result<String> {
+    crate::git::require_root(run)?;
     let mut manifest = read_manifest(run)?;
-    let line = build_facts(run, &mut manifest)?;
-    Ok(StepOutput::from_text(line))
+    build_facts(run, &mut manifest)
 }
 
+/// Write `facts/symbols.json` and the usage pages, record them and the
+/// change's own documents in the manifest, and return the step's stdout line.
 pub(crate) fn build_facts(run: &ReviewRun, manifest: &mut Manifest) -> Result<String> {
-    git::admit_target(&manifest.target)?;
-    facts_metadata(run, manifest)?;
-    let documents = changed_documents(run, &manifest.target)?;
-    let mut seeds = changed_symbols(run, &manifest.files)?;
-    seeds.retain(|seed| !(seed.kind == "mod" && is_common(&seed.name)));
+    let facts_dir = run.path("facts");
+    fs::create_dir_all(&facts_dir)
+        .map_err(|source| io_error("create directory", facts_dir, source))?;
+    let skip = run.repo_prefix();
+    let is_review_artifact = |path: &str| {
+        skip.as_deref()
+            .is_some_and(|prefix| path.starts_with(prefix))
+    };
 
-    let mut symbols = Vec::with_capacity(seeds.len());
-    for seed in seeds {
-        let usages = usages(run, &seed)?;
-        let ambiguous = is_common(&seed.name) || seed.name.chars().count() < 4;
-        let usage_count = usages.len();
-        symbols.push(Symbol {
-            name: seed.name,
-            kind: seed.kind,
-            file: seed.file.path.clone(),
-            line: seed.line,
-            status: seed.status,
-            ambiguous,
-            usage_count,
-            usages,
-        });
+    // The change's own documents: what the same diff says about its intent. A
+    // narrow review scope hides them from the patches; verifiers need them.
+    let mut args: Vec<&str> = DIFF.to_vec();
+    args.extend(["--name-only", "-z", &manifest.target]);
+    let names = git::git(run, &args)?;
+    let mut docs = Vec::new();
+    for path in git::nul_records(&names)? {
+        let lower = path.to_lowercase();
+        if !DOC_EXTENSIONS
+            .iter()
+            .any(|extension| lower.ends_with(extension))
+            || is_review_artifact(path)
+        {
+            continue;
+        }
+        if let Ok(metadata) = fs::metadata(run.workspace().join(path))
+            && metadata.is_file()
+        {
+            docs.push(serde_json::json!({"path": path, "bytes": metadata.len()}));
+        }
     }
+    manifest.rest.insert(
+        "change_docs".to_owned(),
+        Value::Array(docs.iter().take(MAX_CHANGE_DOCS).cloned().collect()),
+    );
 
-    let symbols_path = facts_dir(run).join("symbols.json");
-    write_json(&symbols_path, &symbols)?;
+    let languages = languages()?;
+    let mut symbols: Vec<Symbol> = changed_symbols(run, &manifest.files, &languages)?
+        .into_iter()
+        .filter(|symbol| !(symbol.kind == "mod" && COMMON.contains(&symbol.name.as_str())))
+        .collect();
+    let usages = usages(run, &symbols, &languages, &is_review_artifact)?;
+    for symbol in &mut symbols {
+        let hits: Vec<Usage> = usages
+            .get(&(symbol.language, symbol.name.clone()))
+            .into_iter()
+            .flatten()
+            .filter(|usage| !(usage.file == symbol.file && Some(usage.line) == symbol.line))
+            .cloned()
+            .collect();
+        symbol.ambiguous =
+            COMMON.contains(&symbol.name.as_str()) || symbol.name.chars().count() < 4;
+        symbol.usage_count = hits.len();
+        symbol.usages = hits;
+    }
+    write_json(&run.path("facts/symbols.json"), &symbols)?;
 
-    let mut chosen_cap = 25;
+    let mut cap = USAGE_CAPS[0];
     let mut body = Vec::new();
-    for cap in [25, 12, 6, 3] {
+    for candidate in USAGE_CAPS {
+        cap = candidate;
         body = render(&symbols, cap);
-        chosen_cap = cap;
-        if body_characters(&body) <= 4 * PAGE_BUDGET || cap == 3 {
+        if text_size(&body) <= USAGE_PAGES * crate::run::PAGE_BUDGET {
             break;
         }
     }
-    let pages = write_pages(run, &body)?;
-
-    let document_count = documents.len();
-    let mut output = format!(
-        "facts: {} changed symbols (usages capped at {chosen_cap} each), {document_count} change docs -> ",
+    let pages = write_pages(run, "facts/usages", USAGE_HEADER, &body)?;
+    manifest.update_facts(|facts| {
+        facts.insert("symbols".to_owned(), Value::from(symbols.len()));
+        facts.insert(
+            "usages_pages".to_owned(),
+            Value::Array(pages.iter().cloned().map(Value::String).collect()),
+        );
+    });
+    write_json(&run.path("manifest.json"), manifest)?;
+    Ok(format!(
+        "facts: {} changed symbols (usages capped at {cap} each), {} change docs -> {}\n",
         symbols.len(),
-    );
-    for (index, page) in pages.iter().enumerate() {
-        if index > 0 {
-            output.push(' ');
-        }
-        output.push_str(page);
-    }
-    output.push('\n');
-
-    let change_docs = Value::Array(documents.into_iter().take(40).map(Value::Object).collect());
-    let symbol_count = Value::from(symbols.len() as u64);
-    let usages_pages = Value::Array(pages.into_iter().map(Value::String).collect());
-    let record = |manifest: &mut Manifest| -> Result<()> {
-        manifest
-            .metadata
-            .insert("change_docs".to_owned(), change_docs.clone());
-        let facts_map = facts_metadata(run, manifest)?;
-        facts_map.insert("symbols".to_owned(), symbol_count.clone());
-        facts_map.insert("usages_pages".to_owned(), usages_pages.clone());
-        Ok(())
-    };
-    record(manifest)?;
-    update_manifest(run, record)?;
-    Ok(output)
+        docs.len(),
+        pages.join(" ")
+    ))
 }
 
-struct DefinitionPattern {
-    regex: &'static str,
-    usage_globs: &'static [&'static str],
+fn languages() -> Result<Vec<Language>> {
+    LANGUAGES
+        .iter()
+        .map(|(extensions, pattern)| {
+            Ok(Language {
+                extensions,
+                search: Regex::new(pattern)?,
+                anchored: Regex::new(&format!("^(?:{pattern})"))?,
+            })
+        })
+        .collect()
 }
 
-fn definition_pattern(path: &str) -> Option<DefinitionPattern> {
-    let (regex, usage_globs): (&'static str, &'static [&'static str]) = if path.ends_with(".rs") {
-        (
-            r#"(?:pub(?:\([^)]*\))?\s+)?(?:(?:async|const|unsafe|default)\s+)*(?:extern\s+"[^"]*"\s+)?(fn|struct|enum|trait|type|const|static|mod|union)\s+([A-Za-z_][A-Za-z0-9_]*)"#,
-            &["*.rs"],
-        )
-    } else if path.ends_with(".py") {
-        (r#"(?:async\s+)?(def|class)\s+([A-Za-z_]\w*)"#, &["*.py"])
-    } else if path.ends_with(".js")
-        || path.ends_with(".jsx")
-        || path.ends_with(".ts")
-        || path.ends_with(".tsx")
-        || path.ends_with(".mjs")
-    {
-        (
-            r#"(?:export\s+)?(?:default\s+)?(?:async\s+)?(function|class|interface|type|enum|const)\s+([A-Za-z_$][\w$]*)"#,
-            &["*.js", "*.jsx", "*.ts", "*.tsx", "*.mjs"],
-        )
-    } else if path.ends_with(".go") {
-        (
-            r#"(func|type)\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)"#,
-            &["*.go"],
-        )
-    } else {
-        return None;
-    };
-    Some(DefinitionPattern { regex, usage_globs })
+fn language_of(path: &str, languages: &[Language]) -> Option<usize> {
+    languages.iter().position(|language| {
+        language
+            .extensions
+            .iter()
+            .any(|extension| path.ends_with(extension))
+    })
 }
 
-fn changed_symbols<'a>(run: &ReviewRun, files: &'a [ManifestFile]) -> Result<Vec<SymbolSeed<'a>>> {
-    let test_attr =
-        Regex::new(r"#\[(?:[a-z_:]+::)?test\b|@pytest|\bit\(|\btest\(").map_err(regex_error)?;
-    let mut found = BTreeMap::<(&'a [u8], String), SymbolSeed<'a>>::new();
-    let mut definitions = BTreeMap::new();
+/// Symbols the diff ADDS (a `+` definition line) or MODIFIES (a hunk's
+/// enclosing definition), sorted by file, line and name.
+fn changed_symbols(
+    run: &ReviewRun,
+    files: &[ManifestFile],
+    languages: &[Language],
+) -> Result<Vec<Symbol>> {
+    let test_attribute = Regex::new(TEST_ATTRIBUTE)?;
+    let hunk = Regex::new(HUNK)?;
+    let mut found: HashMap<(String, String), Symbol> = HashMap::new();
     for file in files {
+        let Some(language) = language_of(&file.path, languages) else {
+            continue;
+        };
         if file.binary {
             continue;
         }
-        let Some(pattern) = definition_pattern(&file.path) else {
-            continue;
+        let rules = &languages[language];
+        let path = run.path(&file.patch);
+        let bytes = fs::read(&path).map_err(|source| io_error("read", path, source))?;
+        let text = String::from_utf8_lossy(&bytes);
+        let symbol = |name: &str, kind: &str, line: Option<usize>, status: &'static str| Symbol {
+            name: name.to_owned(),
+            kind: kind.to_owned(),
+            file: file.path.clone(),
+            line,
+            status,
+            ambiguous: false,
+            usage_count: 0,
+            usages: Vec::new(),
+            language,
         };
-        let definition = match definitions.entry(pattern.regex) {
-            Entry::Occupied(entry) => entry.into_mut(),
-            Entry::Vacant(entry) => entry.insert(Regex::new(pattern.regex).map_err(regex_error)?),
-        };
-        let patch_path = run.directory().join(&file.patch);
-        let bytes = read_binary(&patch_path)?;
-        let diff = git::parse_patch(&bytes, &file.patch)?;
-        let mut added_lines = BTreeMap::<String, HashSet<usize>>::new();
-        for delta_index in 0..diff.deltas().len() {
-            let patch = git::patch(&diff, delta_index)?;
-            let mut removed = BTreeMap::<(String, String), Vec<RemovedDeclaration<'_>>>::new();
-            for hunk_index in 0..patch.num_hunks() {
-                let (hunk, line_count) = patch
-                    .hunk(hunk_index)
-                    .map_err(|error| git::operation("read stored patch hunk", error))?;
-                let old_before = hunk
-                    .old_start()
-                    .saturating_sub(u32::from(hunk.old_lines() > 0));
-                let mut new_before = hunk
-                    .new_start()
-                    .saturating_sub(u32::from(hunk.new_lines() > 0))
-                    as usize;
-                let header = String::from_utf8_lossy(hunk.header());
-                let context = header.split_once(" @@").map_or("", |(_, context)| {
-                    context
-                        .strip_prefix(' ')
-                        .unwrap_or(context)
-                        .trim_end_matches('\n')
-                });
-                if let Some(captures) = definition.captures(context) {
-                    let (_, [kind, name]) = captures.extract();
-                    if let Entry::Vacant(entry) = found.entry((file.path_bytes(), name.to_owned()))
-                    {
-                        let removed_before = removed
-                            .get(&(kind.to_owned(), name.to_owned()))
-                            .and_then(|lines| {
-                                lines.iter().rev().find(|line| {
-                                    line.old_line <= old_before
-                                        && line.text.starts_with(context.as_bytes())
-                                })
-                            })
-                            .map(|line| line.new_before);
-                        entry.insert(SymbolSeed {
-                            name: name.to_owned(),
-                            kind: kind.to_owned(),
-                            file,
-                            line: None,
-                            status: "modified".to_owned(),
-                            declaration: Some(ModifiedDeclaration {
-                                header: context.to_owned(),
-                                new_before,
-                                removed_before,
-                                added_lines: HashSet::new(),
-                            }),
-                        });
+        let mut new_line = 0usize;
+        let mut previous_added = String::new();
+        for line in text.lines() {
+            if let Some(header) = hunk.captures(line) {
+                new_line = header[1].parse::<usize>().unwrap_or(1).saturating_sub(1);
+                if let Some(definition) = rules.search.captures(&header[2]) {
+                    let key = (file.path.clone(), definition[2].to_owned());
+                    if let Entry::Vacant(slot) = found.entry(key) {
+                        slot.insert(symbol(&definition[2], &definition[1], None, "modified"));
                     }
                 }
-                let mut previous_added: &[u8] = &[];
-                for line_index in 0..line_count {
-                    let line = patch
-                        .line_in_hunk(hunk_index, line_index)
-                        .map_err(|error| git::operation("read stored patch line", error))?;
-                    let content = String::from_utf8_lossy(line.content());
-                    if matches!(line.origin(), '-' | '+')
-                        && let Some(captures) = definition.captures(content.trim_start())
-                        && captures.get(0).is_some_and(|matched| matched.start() == 0)
-                    {
-                        let (_, [kind, name]) = captures.extract();
-                        if line.origin() == '-' {
-                            let old_line = line.old_lineno().ok_or_else(|| {
-                                git::operation("read removed declaration", "missing old coordinate")
-                            })?;
-                            removed
-                                .entry((kind.to_owned(), name.to_owned()))
-                                .or_default()
-                                .push(RemovedDeclaration {
-                                    old_line,
-                                    new_before,
-                                    text: line.content(),
-                                });
-                        } else {
-                            let number = line.new_lineno().ok_or_else(|| {
-                                git::operation("read added declaration", "missing new coordinate")
-                            })? as usize;
-                            added_lines
-                                .entry(name.to_owned())
-                                .or_default()
-                                .insert(number);
-                            if !test_attr.is_match(&String::from_utf8_lossy(previous_added)) {
-                                found.insert(
-                                    (file.path_bytes(), name.to_owned()),
-                                    SymbolSeed {
-                                        name: name.to_owned(),
-                                        kind: kind.to_owned(),
-                                        file,
-                                        line: Some(number),
-                                        status: "added".to_owned(),
-                                        declaration: None,
-                                    },
-                                );
-                            }
-                        }
-                    }
-                    if let Some(number) = line.new_lineno() {
-                        new_before = number as usize;
-                    }
-                    if line.origin() == '+' && !content.trim().is_empty() {
-                        previous_added = line.content();
-                    } else if line.origin() == ' ' {
-                        previous_added = &[];
-                    }
-                }
+                previous_added.clear();
+                continue;
             }
-        }
-        for (name, lines) in added_lines {
-            if let Some(seed) = found.get_mut(&(file.path_bytes(), name))
-                && let Some(declaration) = &mut seed.declaration
+            if line.starts_with("+++")
+                || line.starts_with("---")
+                || (new_line == 0 && !line.starts_with('+') && !line.starts_with(' '))
+                || line.starts_with('-')
             {
-                declaration.added_lines = lines;
+                continue;
+            }
+            new_line += 1;
+            if let Some(added) = line.strip_prefix('+') {
+                if let Some(definition) = rules.anchored.captures(added.trim_start())
+                    && !test_attribute.is_match(&previous_added)
+                {
+                    let key = (file.path.clone(), definition[2].to_owned());
+                    found.insert(
+                        key,
+                        symbol(&definition[2], &definition[1], Some(new_line), "added"),
+                    );
+                }
+                if !added.trim().is_empty() {
+                    previous_added = added.trim().to_owned();
+                }
+            } else {
+                previous_added.clear();
             }
         }
     }
-    let mut symbols = found.into_values().collect::<Vec<_>>();
-    symbols.sort_by(|left, right| {
-        (
-            left.file.path.as_str(),
-            left.line.unwrap_or(0),
-            left.name.as_str(),
-            left.file.index,
-        )
-            .cmp(&(
-                right.file.path.as_str(),
-                right.line.unwrap_or(0),
-                right.name.as_str(),
-                right.file.index,
-            ))
+    let mut symbols: Vec<Symbol> = found.into_values().collect();
+    symbols.sort_by(|a, b| {
+        (&a.file, a.line.unwrap_or(0), &a.name).cmp(&(&b.file, b.line.unwrap_or(0), &b.name))
     });
     Ok(symbols)
 }
 
-fn usages(run: &ReviewRun, symbol: &SymbolSeed<'_>) -> Result<Vec<Usage>> {
-    let Some(pattern) = definition_pattern(&symbol.file.path) else {
-        return Ok(Vec::new());
-    };
-    // Callers anywhere in the repository count, not just under the workspace cwd.
-    let globs: Vec<String> = pattern
-        .usage_globs
-        .iter()
-        .map(|glob| format!(":(top){glob}"))
-        .collect();
-    let mut args = vec![
-        "grep",
-        "--no-color",
-        "--no-column",
-        "--full-name",
-        "-z",
-        "-n",
-        "-w",
-        "-F",
-        "-I",
-        "-e",
-        &symbol.name,
-        "--",
-    ];
-    args.extend(globs.iter().map(String::as_str));
-    let output = git::grep(run, &args)?;
-    let own_line = if let Some(declaration) = &symbol.declaration {
-        let definition = Regex::new(pattern.regex).map_err(regex_error)?;
-        resolve_declaration_line(symbol, declaration, &definition, &output)
-    } else {
-        symbol.line
-    };
-    let mut hits = Vec::new();
-    for (path, line, text) in grep_hits(&output) {
-        if path.starts_with(b".code-review/")
-            || (path == symbol.file.path_bytes() && own_line == Some(line))
-        {
-            continue;
-        }
-        hits.push(Usage {
-            file: String::from_utf8_lossy(path).into_owned(),
-            line,
-            text: String::from_utf8_lossy(text)
-                .trim()
-                .chars()
-                .take(140)
-                .collect(),
-        });
-    }
-    Ok(hits)
-}
-
-fn resolve_declaration_line(
-    symbol: &SymbolSeed<'_>,
-    declaration: &ModifiedDeclaration,
-    definition: &Regex,
-    output: &[u8],
-) -> Option<usize> {
-    let candidate = grep_hits(output)
-        .filter(|(path, line, text)| {
-            *path == symbol.file.path_bytes()
-                && *line <= declaration.new_before
-                && !declaration.added_lines.contains(line)
-                && text.starts_with(declaration.header.as_bytes())
-                && definition
-                    .find(String::from_utf8_lossy(text).trim_start())
-                    .is_some_and(|matched| matched.start() == 0)
-        })
-        .map(|(_, line, _)| line)
-        .max()?;
-    declaration
-        .removed_before
-        .is_none_or(|barrier| candidate > barrier)
-        .then_some(candidate)
-}
-
-fn grep_hits(mut bytes: &[u8]) -> impl Iterator<Item = (&[u8], usize, &[u8])> {
-    std::iter::from_fn(move || {
-        loop {
-            let path_end = bytes.iter().position(|byte| *byte == 0)?;
-            let path = &bytes[..path_end];
-            bytes = &bytes[path_end + 1..];
-            let number_end = bytes.iter().position(|byte| *byte == 0)?;
-            let number = &bytes[..number_end];
-            bytes = &bytes[number_end + 1..];
-            let text_end = bytes
-                .iter()
-                .position(|byte| *byte == b'\n')
-                .unwrap_or(bytes.len());
-            let text = &bytes[..text_end];
-            bytes = &bytes[(text_end + 1).min(bytes.len())..];
-            if let Ok(number) = std::str::from_utf8(number)
-                && let Ok(line) = number.parse()
-            {
-                return Some((path, line, text));
+/// Usages of every symbol name, per language: a few batched `git grep -w -F`
+/// calls over the whole repository, hits assigned to names afterwards.
+fn usages(
+    run: &ReviewRun,
+    symbols: &[Symbol],
+    languages: &[Language],
+    is_review_artifact: &dyn Fn(&str) -> bool,
+) -> Result<HashMap<(usize, String), Vec<Usage>>> {
+    let mut found: HashMap<(usize, String), Vec<Usage>> = HashMap::new();
+    for (index, language) in languages.iter().enumerate() {
+        let mut names: Vec<&str> = symbols
+            .iter()
+            .filter(|symbol| symbol.language == index)
+            .map(|symbol| symbol.name.as_str())
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        for batch in batches(&names) {
+            let mut args = vec![
+                "-c".to_owned(),
+                "grep.column=false".to_owned(),
+                "grep".to_owned(),
+                "-n".to_owned(),
+                "-w".to_owned(),
+                "-F".to_owned(),
+                "-I".to_owned(),
+                "-z".to_owned(),
+                "--full-name".to_owned(),
+                "--no-color".to_owned(),
+            ];
+            for name in batch {
+                args.push("-e".to_owned());
+                args.push((*name).to_owned());
+            }
+            args.push("--".to_owned());
+            args.extend(
+                language
+                    .extensions
+                    .iter()
+                    .map(|extension| format!(":(top)*{extension}")),
+            );
+            let output = git::git_output(run, &args)?;
+            // grep exits 1 for "no match"; anything else is a real failure.
+            if !matches!(output.status.code(), Some(0 | 1)) {
+                return Err(git::failure(&args, &output));
+            }
+            for (path, line, text) in grep_hits(&output.stdout) {
+                if is_review_artifact(&path) {
+                    continue;
+                }
+                // Match on the whole line, as `git grep -w` did; store it shortened.
+                let shown: String = text.trim().chars().take(USAGE_TEXT_CHARS).collect();
+                for name in batch.iter().filter(|name| contains_word(&text, name)) {
+                    found
+                        .entry((index, (*name).to_owned()))
+                        .or_default()
+                        .push(Usage {
+                            file: path.clone(),
+                            line,
+                            text: shown.clone(),
+                        });
+                }
             }
         }
+    }
+    Ok(found)
+}
+
+fn batches<'a>(names: &'a [&'a str]) -> Vec<&'a [&'a str]> {
+    let mut batches = Vec::new();
+    let mut start = 0;
+    let mut size = 0;
+    for (index, name) in names.iter().enumerate() {
+        if index > start && size + name.len() > GREP_BATCH_CHARS {
+            batches.push(&names[start..index]);
+            start = index;
+            size = 0;
+        }
+        size += name.len() + 4;
+    }
+    if start < names.len() {
+        batches.push(&names[start..]);
+    }
+    batches
+}
+
+/// `git grep -z -n` records: `path NUL line NUL text LF`.
+fn grep_hits(bytes: &[u8]) -> Vec<(String, usize, String)> {
+    let mut hits = Vec::new();
+    for record in bytes.split(|byte| *byte == b'\n') {
+        let mut fields = record.splitn(3, |byte| *byte == 0);
+        let (Some(path), Some(number), Some(text)) = (fields.next(), fields.next(), fields.next())
+        else {
+            continue;
+        };
+        let Some(line) = std::str::from_utf8(number)
+            .ok()
+            .and_then(|number| number.parse().ok())
+        else {
+            continue;
+        };
+        hits.push((
+            String::from_utf8_lossy(path).into_owned(),
+            line,
+            String::from_utf8_lossy(text).into_owned(),
+        ));
+    }
+    hits
+}
+
+/// Whether `text` contains `name` as git grep `-w` matches it: bounded by
+/// non-word bytes, where a word byte is an ASCII letter, digit or `_`.
+fn contains_word(text: &str, name: &str) -> bool {
+    let is_word = |byte: u8| byte.is_ascii_alphanumeric() || byte == b'_';
+    let bytes = text.as_bytes();
+    text.match_indices(name).any(|(start, _)| {
+        let end = start + name.len();
+        (start == 0 || !is_word(bytes[start - 1])) && (end == bytes.len() || !is_word(bytes[end]))
     })
 }
 
-fn changed_documents(run: &ReviewRun, target: &str) -> Result<Vec<Map<String, Value>>> {
-    let repo = git::repository(run)?;
-    let root = repo
-        .workdir()
-        .ok_or_else(|| git::operation("locate worktree root", "repository has no worktree"))?;
-    let diff = git::target_diff(&repo, target)?;
-    let mut docs = Vec::new();
-    let mut seen = HashSet::new();
-    for (index, delta) in diff.deltas().enumerate() {
-        let path = git::delta_path(&delta)?;
-        if path.starts_with(b".code-review/")
-            || !DOCUMENT_EXTENSIONS.iter().any(|extension| {
-                path.len() >= extension.len()
-                    && path[path.len() - extension.len()..]
-                        .eq_ignore_ascii_case(extension.as_bytes())
-            })
-        {
-            continue;
-        }
-        let patch = git::patch(&diff, index)?;
-        let delta = patch.delta();
-        if (!delta.new_file().id().is_zero()
-            && delta.old_file().id() == delta.new_file().id()
-            && delta.old_file().mode() == delta.new_file().mode())
-            || !seen.insert(path)
-        {
-            continue;
-        }
-        let path_arg = git::raw_path_arg(path)?;
-        let source = root.join(path_arg);
-        if !source.is_file() {
-            continue;
-        }
-        let bytes = fs::metadata(&source)
-            .map_err(|error| crate::io_error("read document metadata", source.as_path(), error))?
-            .len();
-        let mut document = Map::new();
-        document.insert(
-            "path".to_owned(),
-            Value::String(String::from_utf8_lossy(path).into_owned()),
-        );
-        document.insert("bytes".to_owned(), Value::from(bytes));
-        docs.push(document);
-    }
-    Ok(docs)
-}
-
 fn render(symbols: &[Symbol], cap: usize) -> Vec<String> {
-    let mut output = Vec::new();
+    let mut out = Vec::new();
     let mut unused = Vec::new();
     let mut common = Vec::new();
     for symbol in symbols {
-        let location = match symbol.line {
-            Some(line) => format!("{}:{line}", symbol.file),
-            None => symbol.file.clone(),
+        let at = match symbol.line {
+            Some(line) if line > 0 => format!("{}:{line}", symbol.file),
+            _ => symbol.file.clone(),
         };
         if symbol.ambiguous {
             common.push(format!(
-                "{} ({location}, {} textual hits)",
+                "{} ({at}, {} textual hits)",
                 symbol.name, symbol.usage_count
             ));
         } else if symbol.usages.is_empty() {
-            unused.push(format!("{} ({}, {location})", symbol.name, symbol.kind));
+            unused.push(format!("{} ({}, {at})", symbol.name, symbol.kind));
         } else {
             let more = if symbol.usage_count > cap {
                 format!(", first {cap} shown")
             } else {
                 String::new()
             };
-            output.push(format!(
-                "## {}  ({}, {}, {location}) — {} usages{more}",
+            out.push(format!(
+                "## {}  ({}, {}, {at}) — {} usages{more}",
                 symbol.name, symbol.kind, symbol.status, symbol.usage_count
             ));
-            output.extend(
+            out.extend(
                 symbol
                     .usages
                     .iter()
                     .take(cap)
                     .map(|usage| format!("{}:{}: {}", usage.file, usage.line, usage.text)),
             );
-            output.push(String::new());
+            out.push(String::new());
         }
     }
     if !unused.is_empty() {
-        output.push(
+        out.push(
             "## defined or changed by this diff, used NOWHERE else in code (tests have no callers; for anything else this is worth a look):"
                 .to_owned(),
         );
-        output.push(unused.join("; "));
-        output.push(String::new());
+        out.push(unused.join("; "));
+        out.push(String::new());
     }
     if !common.is_empty() {
-        output.push(
+        out.push(
             "## names too common for a textual map to mean anything — search these yourself:"
                 .to_owned(),
         );
-        output.push(common.join("; "));
+        out.push(common.join("; "));
     }
-    if output.is_empty() {
-        output.push("(no symbols detected)".to_owned());
+    if out.is_empty() {
+        out.push("(no symbols detected)".to_owned());
     }
-    output
-}
-
-fn body_characters(lines: &[String]) -> usize {
-    lines.iter().map(|line| line.chars().count() + 1).sum()
-}
-
-fn write_pages(run: &ReviewRun, lines: &[String]) -> Result<Vec<String>> {
-    let directory = facts_dir(run);
-    fs::create_dir_all(&directory)
-        .map_err(|source| crate::io_error("create facts directory", directory.as_path(), source))?;
-    for entry in fs::read_dir(&directory)
-        .map_err(|source| crate::io_error("read facts directory", directory.as_path(), source))?
-    {
-        let entry = entry.map_err(|source| {
-            crate::io_error("read facts directory entry", directory.as_path(), source)
-        })?;
-        let name = entry.file_name().to_string_lossy().into_owned();
-        if let Some(number) = name
-            .strip_prefix("usages-")
-            .and_then(|rest| rest.strip_suffix(".txt"))
-            && !number.is_empty()
-            && number.chars().all(|character| character.is_ascii_digit())
-        {
-            fs::remove_file(entry.path()).map_err(|source| {
-                crate::io_error("remove stale facts page", entry.path(), source)
-            })?;
-        }
-    }
-
-    let mut pages = Vec::new();
-    let mut start = 0;
-    let mut size = 0usize;
-    for (index, line) in lines.iter().enumerate() {
-        let line_size = line.chars().count() + 1;
-        if index > start && size + line_size > PAGE_BUDGET {
-            pages.push(&lines[start..index]);
-            start = index;
-            size = 0;
-        }
-        size += line_size;
-    }
-    pages.push(&lines[start..]);
-
-    let header = "usages of every symbol this diff adds or changes — textual (git grep -w, same language), so a comment or a same-named symbol counts. Start here for callers instead of grepping.";
-    let total = pages.len();
-    let mut paths = Vec::with_capacity(total);
-    for (index, page) in pages.into_iter().enumerate() {
-        let relative = format!("facts/usages-{}.txt", index + 1);
-        let mut text = format!("# {header} -- page {} of {total}\n", index + 1);
-        text.reserve(page.iter().map(|line| line.len() + 1).sum());
-        for (line_index, line) in page.iter().enumerate() {
-            if line_index > 0 {
-                text.push('\n');
-            }
-            text.push_str(line);
-        }
-        text.push('\n');
-        write_text(&run.directory().join(&relative), &text)?;
-        paths.push(relative);
-    }
-    Ok(paths)
-}
-
-fn is_common(name: &str) -> bool {
-    COMMON.contains(&name)
+    out
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{body_characters, write_pages};
-    use crate::ReviewRun;
+    use super::*;
 
     #[test]
-    fn pages_pack_unicode_scalars_greedily_without_losing_content()
-    -> Result<(), Box<dyn std::error::Error>> {
-        let tree = tempfile::tempdir()?;
-        let run = ReviewRun::new(tree.path(), tree.path().join("run"))?;
-        let lines = ["λ".repeat(9_999), "x".repeat(9_999), "after".to_owned()];
-        assert_eq!(body_characters(&lines), 20_006);
+    fn whole_words_follow_git_grep_w() {
+        assert!(contains_word("helper();", "helper"));
+        assert!(contains_word("x = a.helper", "helper"));
+        assert!(!contains_word("helpers()", "helper"));
+        assert!(!contains_word("my_helper()", "helper"));
+        assert!(contains_word("my_helper() helper", "helper"));
+        assert!(contains_word("é helper", "helper"));
+    }
 
-        let pages = write_pages(&run, &lines)?;
-        assert_eq!(pages, ["facts/usages-1.txt", "facts/usages-2.txt"]);
-        let first = std::fs::read_to_string(run.directory().join(&pages[0]))?;
-        let second = std::fs::read_to_string(run.directory().join(&pages[1]))?;
-        let first_lines = first.trim_end().lines().collect::<Vec<_>>();
-        assert!(first_lines.ends_with(&[lines[0].as_str(), lines[1].as_str()]));
-        assert_eq!(second.trim_end().lines().last(), Some("after"));
-        Ok(())
+    #[test]
+    fn grep_records_split_on_nul_and_newline() {
+        let hits = grep_hits(b"src/a.rs\x003\x00    helper(); // a:b\nsrc/b.rs\x0010\x00x\n");
+        assert_eq!(
+            hits,
+            [
+                ("src/a.rs".to_owned(), 3, "    helper(); // a:b".to_owned()),
+                ("src/b.rs".to_owned(), 10, "x".to_owned()),
+            ]
+        );
+    }
+
+    #[test]
+    fn batches_cover_every_name_once() {
+        let names: Vec<String> = (0..3_000).map(|n| format!("symbol_{n}")).collect();
+        let names: Vec<&str> = names.iter().map(String::as_str).collect();
+        let batches = batches(&names);
+        assert!(batches.len() > 1);
+        assert_eq!(
+            batches.iter().map(|batch| batch.len()).sum::<usize>(),
+            names.len()
+        );
     }
 }

@@ -1,0 +1,69 @@
+{
+  "commits": [
+    {
+      "message": "baseline",
+      "files": {
+        "src/lib.rs": "// Rendering helpers.\npub fn render_page(title: &str) -> String {\n    let a = 1;\n    let b = 2;\n    let c = 3;\n    let d = a + b + c;\n    format!(\"<h1>{title}</h1>{d}\")\n}\n\npub fn unchanged() {}\n",
+        "src/old.rs": "pub fn retired() {}\n",
+        "src/util.py": "def helper(x):\n    return x + 1\n",
+        "docs/NOTES.md": "# Notes\n\nInitial.\n"
+      },
+      "binary": {
+        "assets/logo.bin": [
+          0,
+          1,
+          2,
+          80,
+          78,
+          71,
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "message": "change",
+      "files": {
+        "src/lib.rs": "// Rendering helpers.\npub fn render_page(title: &str) -> String {\n    let a = 1;\n    let b = 2;\n    let c = 3;\n    let d = a + b + c;\n    let total = compute_total(&[a, b, c]);\n    format!(\"<h1>{title}</h1>{d} ({total})\")\n}\n\npub fn unchanged() {}\n\npub fn compute_total(values: &[u32]) -> u32 {\n    values.iter().sum()\n}\n\npub fn orphan_symbol() {}\n\npub struct Widget;\n\n#[test]\nfn compute_total_counts() {\n    assert_eq!(compute_total(&[1]), 1);\n}\n\nmod tests {}\n",
+        "src/caller.rs": "use crate::compute_total;\n\npub fn sum_all() -> u32 {\n    compute_total(&[4, 5])\n}\n",
+        "src/util.py": "def helper(x):\n    return x + 1\n\n\ndef get(key):\n    return helper(key)\n\n\nclass Parser:\n    pass\n",
+        "docs/NOTES.md": "# Notes\n\nInitial.\n\nAdded compute_total.\n"
+      },
+      "binary": {
+        "assets/logo.bin": [
+          0,
+          1,
+          2,
+          80,
+          78,
+          71,
+          0,
+          254,
+          7
+        ]
+      },
+      "delete": [
+        "src/old.rs"
+      ]
+    }
+  ],
+  "steps": [
+    [
+      "gather",
+      "HEAD~1..HEAD",
+      "src assets"
+    ],
+    [
+      "gather",
+      "HEAD~1..HEAD",
+      "src assets"
+    ],
+    [
+      "diagnostics",
+      "git -c color.ui=never diff --name-only HEAD~1 HEAD"
+    ],
+    [
+      "facts"
+    ]
+  ]
+}

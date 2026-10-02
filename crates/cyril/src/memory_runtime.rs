@@ -795,8 +795,12 @@ fn create_endpoint(runtime_dir: &Path) -> Result<MemoryEndpoint, cyril_memory::I
 
 /// An in-process `cyril-memory` runtime plus a hand-driven status channel,
 /// so `App` tests can observe real lesson injection and drive the
-/// Starting → Ready transition without a child process.
+/// Starting → Ready transition without a child process. Unix-only, like every
+/// test that uses it: the runtime binds a unix-domain socket.
+// Two attributes, not `all(test, unix)`: clippy only treats a literal
+// `cfg(test)` as test code (allow-expect-in-tests).
 #[cfg(test)]
+#[cfg(unix)]
 pub(crate) mod test_support {
     use super::*;
 
@@ -820,13 +824,10 @@ pub(crate) mod test_support {
             let data_root = tempfile::tempdir().expect("data root");
             // Unix sockets need a short path; `/tmp` keeps macOS's long
             // per-user temp roots out of the 100-byte limit.
-            #[cfg(unix)]
             let runtime_root = tempfile::Builder::new()
                 .prefix("cyril-m-")
                 .tempdir_in("/tmp")
                 .expect("runtime root");
-            #[cfg(not(unix))]
-            let runtime_root = tempfile::tempdir().expect("runtime root");
             let paths = MemoryPaths::prepare(Some(data_root.path())).expect("memory paths");
             let endpoint = create_endpoint(runtime_root.path()).expect("endpoint");
             let credential = cyril_memory::AdminCredential::generate().expect("credential");

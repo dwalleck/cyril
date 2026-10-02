@@ -1,0 +1,9 @@
+# usages of every symbol this diff adds or changes — textual (git grep -w, same language), so a comment or a same-named symbol counts. Start here for callers instead of grepping. -- page 1 of 1
+## LIMIT  (const, added, web/app.ts:6) — 1 usages
+web/app.ts:8: return render(n) + LIMIT;
+
+## defined or changed by this diff, used NOWHERE else in code (tests have no callers; for anything else this is worth a look):
+Loader (class, tools/run.py:9); Store (class, web/app.ts:5); formatTotal (function, web/app.ts:7)
+
+## names too common for a textual map to mean anything — search these yourself:
+get (tools/run.py:5, 0 textual hits)

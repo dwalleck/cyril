@@ -1,0 +1,42 @@
+{
+  "requested_target": "HEAD",
+  "target": "HEAD",
+  "scope": [
+    "."
+  ],
+  "head": "0b9449119aacc2b4f42feb8065f6f1a242bd1836",
+  "worktree_matches_diff_head": true,
+  "gathered_at": "2026-10-02T02:41:42+00:00",
+  "total_files": 2,
+  "total_patch_bytes": 508,
+  "warnings": [],
+  "files": [
+    {
+      "index": 1,
+      "path": "tools/run.py",
+      "status": "M",
+      "insertions": 8,
+      "deletions": 0,
+      "binary": false,
+      "patch": "patches/001.patch",
+      "patch_bytes": 213
+    },
+    {
+      "index": 2,
+      "path": "web/app.ts",
+      "status": "M",
+      "insertions": 6,
+      "deletions": 0,
+      "binary": false,
+      "patch": "patches/002.patch",
+      "patch_bytes": 295
+    }
+  ],
+  "change_docs": [],
+  "facts": {
+    "symbols": 5,
+    "usages_pages": [
+      "facts/usages-1.txt"
+    ]
+  }
+}

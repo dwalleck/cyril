@@ -1,15 +1,14 @@
-mod diagnostics;
+//! Native crtool: the deterministic data movement of the `code-review-max`
+//! workflow. `docs/crtool-contract.md` is the specification; the Python
+//! `.kiro/code-review/crtool.py` is the reference implementation.
+
+mod check;
 mod facts;
 mod gather;
 mod git;
 mod run;
 
-mod clock;
-
-pub use clock::{ReviewClock, SystemReviewClock};
-pub use diagnostics::{
-    Cancellation, DiagnosticsOptions, DiagnosticsOutcome, DiagnosticsResult, diagnostics,
-};
+pub use check::{CheckOutcome, CheckResult, run_check};
 pub use facts::facts;
 pub use gather::gather;
 pub use run::ReviewRun;
@@ -17,81 +16,64 @@ pub use run::ReviewRun;
 use std::io;
 use std::path::PathBuf;
 
-/// The leaf's default error type.  Callers may supply a different error type
-/// when using the alias for small internal helpers.
 pub type Result<T, E = ReviewError> = std::result::Result<T, E>;
 
-/// Bytes printed by one native crtool operation.
-#[derive(Clone, Debug, Default, Eq, PartialEq)]
-pub struct StepOutput {
-    stdout: Vec<u8>,
-}
-
-impl StepOutput {
-    pub(crate) fn from_text(text: String) -> Self {
-        Self {
-            stdout: text.into_bytes(),
-        }
-    }
-
-    /// Return the operation's UTF-8 stdout bytes.
-    pub fn stdout(&self) -> &[u8] {
-        &self.stdout
-    }
-}
-
-/// Contextual errors returned by the native leaf.
+/// Errors from crtool steps and the check command.
 #[derive(Debug, thiserror::Error)]
 pub enum ReviewError {
     #[error("{operation} {path}: {source}")]
     Io {
-        operation: String,
+        operation: &'static str,
         path: PathBuf,
         #[source]
         source: io::Error,
     },
-    #[error("failed to parse JSON at {path}: {source}")]
+    #[error("cannot parse JSON {path}: {source}")]
     Json {
         path: PathBuf,
         #[source]
         source: serde_json::Error,
     },
-    #[error("git {args} failed: {message}")]
-    GitFailure { args: String, message: String },
-    #[error("git could not start for {args}: {source}")]
+    #[error("cannot run git: {source}")]
     GitSpawn {
-        args: String,
         #[source]
         source: io::Error,
     },
-    #[error("Git operation {operation} failed: {message}")]
-    GitOperation { operation: String, message: String },
+    #[error("git {args} failed: {message}")]
+    Git { args: String, message: String },
+    #[error("crtool must run from the repository root ({cdup} from here)")]
+    NotRepositoryRoot { cdup: String },
     #[error("invalid target {target:?}: a revision must not start with '-'")]
     InvalidTarget { target: String },
+    #[error("unsupported file name {name:?}: crtool needs UTF-8 paths")]
+    NonUtf8Path { name: String },
     #[error("empty diff for target={target:?} scope={scope:?}")]
     EmptyDiff { target: String, scope: Vec<String> },
     #[error("{path} already holds a different gathered run; use a fresh run directory")]
     ExistingRun { path: PathBuf },
-    #[error("manifest.json has no crtool_version; refusing unstamped run")]
-    MissingStamp,
-    #[error("crtool_version mismatch: run={run}, current={current}")]
-    StampMismatch { run: String, current: String },
-    #[error("invalid manifest at {path}: {message}")]
-    InvalidManifest { path: PathBuf, message: String },
-    #[error("invalid regular expression: {source}")]
-    Regex {
-        #[source]
-        source: regex::Error,
+    #[error("{path} was gathered by crtool {found}, this is crtool {current}; start a new review")]
+    StampMismatch {
+        path: PathBuf,
+        found: String,
+        current: &'static str,
     },
-    #[error("clock error: {message}")]
-    Clock { message: String },
-    #[error(transparent)]
-    Diagnostics(#[from] DiagnosticsError),
+    #[error("invalid check command {command:?}: {message}")]
+    InvalidCommand {
+        command: String,
+        message: &'static str,
+    },
+    #[error("cannot run {command:?}: {source}")]
+    CannotStart {
+        command: String,
+        #[source]
+        source: io::Error,
+    },
+    #[error("invalid regular expression: {0}")]
+    Regex(#[from] regex::Error),
 }
 
 impl ReviewError {
-    /// Return crtool's process exit classification (2 for errors, 3 for an
-    /// intentionally empty diff).
+    /// crtool's process exit status for this error: 3 for an empty diff, else 2.
     pub fn exit_code(&self) -> i32 {
         match self {
             Self::EmptyDiff { .. } => 3,
@@ -100,44 +82,14 @@ impl ReviewError {
     }
 }
 
-/// Command and direct-child failures from the diagnostics operation.
-#[derive(Debug, thiserror::Error)]
-pub enum DiagnosticsError {
-    #[error("invalid diagnostics command: {message}")]
-    InvalidCommand { message: String },
-    #[error("cannot run diagnostics command {command:?}: {source}")]
-    CannotStart {
-        command: String,
-        #[source]
-        source: io::Error,
-    },
-    #[error("diagnostics lifecycle failure during {operation}: {source}")]
-    Lifecycle {
-        operation: String,
-        #[source]
-        source: io::Error,
-    },
-}
-
 pub(crate) fn io_error(
-    operation: impl Into<String>,
+    operation: &'static str,
     path: impl Into<PathBuf>,
     source: io::Error,
 ) -> ReviewError {
     ReviewError::Io {
-        operation: operation.into(),
+        operation,
         path: path.into(),
         source,
     }
-}
-
-pub(crate) fn json_error(path: impl Into<PathBuf>, source: serde_json::Error) -> ReviewError {
-    ReviewError::Json {
-        path: path.into(),
-        source,
-    }
-}
-
-pub(crate) fn regex_error(source: regex::Error) -> ReviewError {
-    ReviewError::Regex { source }
 }

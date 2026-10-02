@@ -1,4 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
+#[cfg(unix)]
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
@@ -18,11 +20,14 @@ const ATTEMPT_TIMEOUT: Duration = Duration::from_millis(250);
 // Only the Unix-socket raw-wire helpers use this; Windows builds it dead otherwise.
 #[cfg(unix)]
 const RAW_TIMEOUT: Duration = Duration::from_secs(2);
+#[cfg(unix)]
 const FRAME_CAP: usize = 1_048_576;
 
 struct RunningRuntime {
     data_root: TempDir,
     runtime_root: TempDir,
+    // Read only by the Unix-socket raw-wire tests.
+    #[cfg(unix)]
     endpoint_path: PathBuf,
     endpoint: MemoryEndpoint,
     credential: AdminCredential,
@@ -54,6 +59,7 @@ impl RunningRuntime {
         let mut runtime = Self {
             data_root,
             runtime_root,
+            #[cfg(unix)]
             endpoint_path,
             endpoint,
             credential,

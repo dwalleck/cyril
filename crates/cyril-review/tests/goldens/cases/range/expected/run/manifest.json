@@ -1,0 +1,80 @@
+{
+  "requested_target": "HEAD~1..HEAD",
+  "target": "HEAD~1..HEAD",
+  "scope": [
+    "src",
+    "assets"
+  ],
+  "head": "74bcf496d29e9e035160ebc49b3edb0a8bad5cfa",
+  "worktree_matches_diff_head": true,
+  "gathered_at": "2026-10-02T02:41:42+00:00",
+  "total_files": 5,
+  "total_patch_bytes": 1340,
+  "warnings": [],
+  "files": [
+    {
+      "index": 1,
+      "path": "assets/logo.bin",
+      "status": "M",
+      "insertions": null,
+      "deletions": null,
+      "binary": true,
+      "patch": "patches/001.patch",
+      "patch_bytes": 137
+    },
+    {
+      "index": 2,
+      "path": "src/caller.rs",
+      "status": "A",
+      "insertions": 5,
+      "deletions": 0,
+      "binary": false,
+      "patch": "patches/002.patch",
+      "patch_bytes": 224
+    },
+    {
+      "index": 3,
+      "path": "src/lib.rs",
+      "status": "M",
+      "insertions": 17,
+      "deletions": 1,
+      "binary": false,
+      "patch": "patches/003.patch",
+      "patch_bytes": 600
+    },
+    {
+      "index": 4,
+      "path": "src/old.rs",
+      "status": "D",
+      "insertions": 0,
+      "deletions": 1,
+      "binary": false,
+      "patch": "patches/004.patch",
+      "patch_bytes": 151
+    },
+    {
+      "index": 5,
+      "path": "src/util.py",
+      "status": "M",
+      "insertions": 8,
+      "deletions": 0,
+      "binary": false,
+      "patch": "patches/005.patch",
+      "patch_bytes": 228
+    }
+  ],
+  "change_docs": [
+    {
+      "path": "docs/NOTES.md",
+      "bytes": 40
+    }
+  ],
+  "facts": {
+    "symbols": 7,
+    "usages_pages": [
+      "facts/usages-1.txt"
+    ],
+    "diagnostics": "facts/diagnostics.txt",
+    "diagnostics_status": "clean"
+  }
+}

@@ -199,7 +199,12 @@ fn event_bytes(event: &CoreEvent) -> usize {
         .saturating_add(payload)
 }
 
+// Its only test drives the in-process memory runtime, which binds a
+// unix-domain socket.
+// Two attributes, not `all(test, unix)`: clippy only treats a literal
+// `cfg(test)` as test code (allow-expect-in-tests).
 #[cfg(test)]
+#[cfg(unix)]
 mod tests {
     use super::CaptureForwarder;
     use cyril_core::types::{
@@ -208,7 +213,6 @@ mod tests {
     use std::time::{Duration, Instant};
     use tokio::sync::mpsc;
 
-    #[cfg(unix)]
     #[tokio::test]
     async fn c9_forwarder_batches_and_drains_before_runtime_shutdown() {
         let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
