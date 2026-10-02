@@ -73,6 +73,11 @@ pub enum ReviewError {
         #[source]
         source: io::Error,
     },
+    #[error("{path} is corrupt: {message}")]
+    CorruptRunFile {
+        path: PathBuf,
+        message: &'static str,
+    },
     #[error("invalid argument: {message}")]
     InvalidArgument { message: &'static str },
     #[error("invalid regular expression: {0}")]

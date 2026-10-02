@@ -2,8 +2,8 @@
 //! duplicate decisions, assigns final ids and splits them into verifier queues.
 
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line, text,
-    to_line, unreadable,
+    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line,
+    required_records, text, to_line, unreadable,
 };
 use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
 use crate::{Result, ReviewError, io_error};
@@ -139,17 +139,9 @@ pub fn shard(run: &ReviewRun, shards: usize) -> Result<String> {
             message: "--shards must be at least 1",
         });
     }
-    let merged: Record = read_json(&run.path("candidates/all.json"))?;
-    let mut candidates: Vec<Record> = merged
-        .get("candidates")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_object().cloned())
-                .collect()
-        })
-        .unwrap_or_default();
+    let merged_path = run.path("candidates/all.json");
+    let merged: Record = read_json(&merged_path)?;
+    let mut candidates = required_records(&merged, &merged_path)?;
     let order: HashMap<String, usize> = candidates
         .iter()
         .enumerate()
@@ -282,9 +274,17 @@ pub fn shard(run: &ReviewRun, shards: usize) -> Result<String> {
                 "angle": candidates[index].get("angle").cloned().unwrap_or(Value::Null),
                 "summary": field_or_empty(&candidates[index], "summary"),
             });
+            let keeper_pid = pid(&candidates[keeper]);
             let also = candidates[keeper]
                 .entry("also_flagged_by")
-                .or_insert_with(|| Value::Array(Vec::new()));
+                .or_insert_with(|| json!([]));
+            if !also.is_array() {
+                // A finder wrote its own value here; the duplicates must not vanish.
+                warnings.push(format!(
+                    "{keeper_pid}: also_flagged_by was not a list; replaced"
+                ));
+                *also = json!([]);
+            }
             if let Value::Array(also) = also {
                 also.push(flagged);
             }
@@ -385,9 +385,20 @@ pub(crate) fn write_queue(
         &json!({
             "done": ids.is_empty(),
             "ids": ids,
-            "verdict_dir": directory.to_string_lossy().replace('\\', "/"),
+            "verdict_dir": forward_slashes(&directory),
         }),
     )
+}
+
+/// A path with `/` separators, as queue files spell it. Only Windows
+/// separators are converted: on Unix a backslash belongs to the name.
+fn forward_slashes(path: &std::path::Path) -> String {
+    let path = path.to_string_lossy();
+    if cfg!(windows) {
+        path.replace('\\', "/")
+    } else {
+        path.into_owned()
+    }
 }
 
 fn objects(value: Option<&Value>) -> impl Iterator<Item = &Record> {
@@ -434,15 +445,96 @@ pub(crate) fn also_count(record: &Record) -> usize {
         .map_or(0, Vec::len)
 }
 
+/// The file as the digest prints it: an absent or null file is `?`.
+fn file_key(record: &Record) -> String {
+    match record.get("file") {
+        None | Some(Value::Null) => "?".to_owned(),
+        Some(file) => text(file),
+    }
+}
+
 /// Digest order: file, line (absent as 0), pid.
 fn sort_key(record: &Record) -> (String, i64, String) {
-    let file = record.get("file").map(text).unwrap_or_default();
+    let file = file_key(record);
     let line = record.get("line").and_then(Value::as_i64).unwrap_or(0);
     (file, line, pid(record))
 }
 
 /// What counts as "the same location" in the digest.
 fn place(record: &Record) -> (String, Option<i64>) {
-    let file = record.get("file").map(text).unwrap_or_default();
+    let file = file_key(record);
     (file, record.get("line").and_then(Value::as_i64))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::run::stamped_run;
+
+    fn record(value: Value) -> Record {
+        value.as_object().cloned().unwrap_or_default()
+    }
+
+    #[test]
+    fn an_absent_or_null_file_sorts_and_groups_as_printed() {
+        assert_eq!(file_key(&record(json!({}))), "?");
+        assert_eq!(file_key(&record(json!({"file": null}))), "?");
+        assert_eq!(
+            place(&record(json!({"line": 3}))),
+            place(&record(json!({"file": null, "line": 3})))
+        );
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_unix_backslash_stays_in_the_verdict_dir() {
+        assert_eq!(
+            forward_slashes(std::path::Path::new("/r/a\\b/verdicts/q1")),
+            "/r/a\\b/verdicts/q1"
+        );
+    }
+
+    #[test]
+    fn a_corrupt_all_json_is_an_error_not_zero_candidates() -> Result<()> {
+        let (_tree, run) = stamped_run()?;
+        crate::run::write_json(&run.path("candidates/all.json"), &json!({"raw_count": 2}))?;
+        assert!(matches!(
+            shard(&run, 3),
+            Err(ReviewError::CorruptRunFile { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn a_keeper_with_a_non_list_also_flagged_by_keeps_its_duplicates() -> Result<()> {
+        let (_tree, run) = stamped_run()?;
+        let candidate = |pid: &str, also: Option<&str>| {
+            let mut value = json!({"pid": pid, "angle": "a", "file": "x.rs", "line": 1, "failure_scenario": "f"});
+            if let Some(also) = also {
+                value["also_flagged_by"] = json!(also);
+                value["failure_scenario"] = json!("the longest failure scenario wins");
+            }
+            value
+        };
+        crate::run::write_json(
+            &run.path("candidates/all.json"),
+            &json!({"angles_reported": ["a"], "angles_missing": [], "raw_count": 2,
+                    "candidates": [candidate("a-1", Some("conventions")), candidate("a-2", None)]}),
+        )?;
+        crate::run::write_json(
+            &run.path("deduped/decisions.json"),
+            &json!({"groups": [{"pids": ["a-1", "a-2"]}]}),
+        )?;
+        let stdout = shard(&run, 1)?;
+        assert!(
+            stdout.contains("a-1: also_flagged_by was not a list; replaced"),
+            "{stdout}"
+        );
+        let kept: Record = crate::run::read_json(&run.path("deduped/C01.json"))?;
+        assert_eq!(
+            kept["also_flagged_by"],
+            json!([{"pid": "a-2", "angle": "a", "summary": ""}])
+        );
+        Ok(())
+    }
 }

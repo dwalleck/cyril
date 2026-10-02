@@ -3,12 +3,13 @@
 
 use crate::merge::{also_count, id, write_queue};
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, text, to_line, unreadable,
+    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, plain_id, required_records,
+    text, to_line, unreadable,
 };
 use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
 use crate::{Result, io_error};
 use serde_json::{Map, Value, json};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -23,10 +24,11 @@ const BALLOT_TAGS: [(&str, &str); 2] = [("r1", "v2"), ("r2", "v3")];
 pub fn ballots(run: &ReviewRun) -> Result<String> {
     read_manifest(run)?;
     let (_, candidates, _) = all_candidates(run, None)?;
+    let verdicts = Verdicts::index(run)?;
     let mut chosen = Vec::new();
     for candidate in &candidates {
         let candidate_id = id(candidate);
-        let first = verdict_of(&load_verdict(run, &candidate_id)?);
+        let first = verdict_of(&verdicts.load(&candidate_id));
         let mut why = Vec::new();
         if first == "REFUTED" {
             why.push("first vote REFUTED");
@@ -79,6 +81,7 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
     read_manifest(run)?;
     let mut sweep_warnings = Vec::new();
     let (index, candidates, sweep_count) = all_candidates(run, Some(&mut sweep_warnings))?;
+    let verdicts = Verdicts::index(run)?;
     let mut warnings: Vec<Value> = index
         .get("warnings")
         .and_then(Value::as_array)
@@ -102,10 +105,10 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
     for candidate in &candidates {
         let candidate_id = id(candidate);
         let is_balloted = balloted.contains(&candidate_id);
-        let mut ballots = vec![load_verdict(run, &candidate_id)?];
+        let mut ballots = vec![verdicts.load(&candidate_id)];
         if is_balloted {
             for (_, tag) in BALLOT_TAGS {
-                ballots.push(load_verdict(run, &format!("{candidate_id}.{tag}"))?);
+                ballots.push(verdicts.load(&format!("{candidate_id}.{tag}")));
             }
         }
         let votes: Vec<String> = ballots.iter().map(verdict_of).collect();
@@ -128,10 +131,9 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
             "raw_verdict",
         ]
         .into_iter()
-        .filter_map(|key| match shown.get(key) {
-            None | Some(Value::Null) => None,
-            Some(Value::String(text)) if text.is_empty() => None,
-            Some(value) => Some((key.to_owned(), value.clone())),
+        .filter_map(|key| {
+            let value = shown.get(key);
+            (!blank(value)).then(|| (key.to_owned(), value.cloned().unwrap_or(Value::Null)))
         })
         .collect();
         record.insert("verification".to_owned(), Value::Object(verification));
@@ -268,32 +270,35 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
 /// sweep count). A sweep problem is noted in `warnings` when one is given.
 fn all_candidates(
     run: &ReviewRun,
-    warnings: Option<&mut Vec<String>>,
+    mut warnings: Option<&mut Vec<String>>,
 ) -> Result<(Record, Vec<Record>, usize)> {
-    let index: Record = read_json(&run.path("deduped/index.json"))?;
-    let mut candidates: Vec<Record> = index
-        .get("candidates")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_object().cloned())
-                .collect()
-        })
-        .unwrap_or_default();
+    let index_path = run.path("deduped/index.json");
+    let index: Record = read_json(&index_path)?;
+    let mut candidates = required_records(&index, &index_path)?;
     let sweep_path = run.path("candidates/sweep.json");
     let mut sweep_count = 0;
     if sweep_path.exists() {
         let (items, problem) = load_candidates(&sweep_path);
-        if let (Some(problem), Some(warnings)) = (problem, warnings) {
+        if let (Some(problem), Some(warnings)) = (problem, warnings.as_deref_mut()) {
             warnings.push(format!("sweep.json: {problem}"));
         }
         for (number, item) in items.into_iter().take(MAX_PER_ANGLE).enumerate() {
             let line = to_line(item.get("line"));
             let mut record = item;
-            record
-                .entry("id")
-                .or_insert_with(|| json!(format!("S{:02}", number + 1)));
+            let fallback = format!("S{:02}", number + 1);
+            // The id names ballot and verdict files, so only a plain name is kept.
+            match record.get("id").map(text) {
+                Some(id) if plain_id(&id) => {}
+                given => {
+                    if let (Some(given), Some(warnings)) = (given, warnings.as_deref_mut()) {
+                        warnings.push(format!(
+                            "sweep.json: id {} is not a plain name; using {fallback}",
+                            quoted(&given)
+                        ));
+                    }
+                    record.insert("id".to_owned(), json!(fallback));
+                }
+            }
             record.insert("angle".to_owned(), json!("sweep"));
             record.insert("line".to_owned(), line);
             candidates.push(record);
@@ -303,6 +308,10 @@ fn all_candidates(
         warnings.push("candidates/sweep.json missing: the gap sweep did not report".to_owned());
     }
     Ok((index, candidates, sweep_count))
+}
+
+fn quoted(value: &str) -> String {
+    format!("'{value}'")
 }
 
 fn is_conventions(candidate: &Record) -> bool {
@@ -318,81 +327,103 @@ fn verdict_of(verdict: &Record) -> String {
     verdict.get("verdict").map(text).unwrap_or_default()
 }
 
-/// A verdict file, wherever under a `verdicts` directory a loop wrote it,
-/// normalized: an unknown verdict becomes UNVERIFIED with the raw value kept.
-fn load_verdict(run: &ReviewRun, candidate_id: &str) -> Result<Record> {
-    let name = format!("{candidate_id}.json");
-    let mut path = run.path(&format!("verdicts/{name}"));
-    if !path.exists()
-        && let Some(found) = find_verdict(run.dir(), run.dir(), &name, false)?
-    {
-        path = found;
-    }
-    let unverified = |reasoning: String| {
-        let mut verdict = Record::new();
-        verdict.insert("verdict".to_owned(), json!(UNVERIFIED));
-        verdict.insert("reasoning".to_owned(), json!(reasoning));
-        verdict
-    };
-    if !path.exists() {
-        return Ok(unverified("no verdict file was written".to_owned()));
-    }
-    let mut verdict = match read_json::<Value>(&path) {
-        Ok(Value::Object(verdict)) => verdict,
-        Ok(_) => return Ok(unverified("verdict file is not a JSON object".to_owned())),
-        Err(error) => {
-            return Ok(unverified(format!(
-                "verdict file unreadable: {}",
-                unreadable(&error)
-            )));
-        }
-    };
-    let raw = verdict.get("verdict").cloned().unwrap_or(Value::Null);
-    let normalized = match &raw {
-        Value::String(verdict) => verdict.trim().to_uppercase(),
-        _ => String::new(),
-    };
-    if VERDICTS.contains(&normalized.as_str()) {
-        verdict.insert("verdict".to_owned(), json!(normalized));
-    } else {
-        verdict.insert("raw_verdict".to_owned(), raw);
-        verdict.insert("verdict".to_owned(), json!(UNVERIFIED));
-    }
-    Ok(verdict)
+/// Every verdict file in the run, by file name: wherever under a `verdicts`
+/// directory a loop wrote it. Built once per command.
+struct Verdicts {
+    files: HashMap<String, PathBuf>,
 }
 
-/// Depth-first, in name order, like `os.walk`: the first `name` inside a
-/// directory whose path below the run has a `verdicts` component.
-fn find_verdict(
+impl Verdicts {
+    /// Files directly in `verdicts/` win; then the first match in a
+    /// depth-first walk in name order. Symlinks are never followed.
+    fn index(run: &ReviewRun) -> Result<Self> {
+        let mut files = HashMap::new();
+        walk(run.dir(), run.dir(), false, &mut files)?;
+        let top = run.path("verdicts");
+        for (name, path) in files.iter_mut() {
+            let direct = top.join(name);
+            if direct.is_file() {
+                *path = direct;
+            }
+        }
+        Ok(Self { files })
+    }
+
+    /// The candidate's verdict, normalized: an unknown verdict becomes
+    /// UNVERIFIED with the raw value kept.
+    fn load(&self, candidate_id: &str) -> Record {
+        let unverified = |reasoning: String| {
+            let mut verdict = Record::new();
+            verdict.insert("verdict".to_owned(), json!(UNVERIFIED));
+            verdict.insert("reasoning".to_owned(), json!(reasoning));
+            verdict
+        };
+        let Some(path) = self.files.get(&format!("{candidate_id}.json")) else {
+            return unverified("no verdict file was written".to_owned());
+        };
+        let mut verdict = match read_json::<Value>(path) {
+            Ok(Value::Object(verdict)) => verdict,
+            Ok(_) => return unverified("verdict file is not a JSON object".to_owned()),
+            Err(error) => {
+                return unverified(format!("verdict file unreadable: {}", unreadable(&error)));
+            }
+        };
+        let raw = verdict.get("verdict").cloned().unwrap_or(Value::Null);
+        let normalized = match &raw {
+            Value::String(verdict) => verdict.trim().to_uppercase(),
+            _ => String::new(),
+        };
+        if VERDICTS.contains(&normalized.as_str()) {
+            verdict.insert("verdict".to_owned(), json!(normalized));
+        } else {
+            verdict.insert("raw_verdict".to_owned(), raw);
+            verdict.insert("verdict".to_owned(), json!(UNVERIFIED));
+        }
+        verdict
+    }
+}
+
+fn walk(
     root: &Path,
     directory: &Path,
-    name: &str,
     under_verdicts: bool,
-) -> Result<Option<PathBuf>> {
-    let candidate = directory.join(name);
-    if under_verdicts && candidate.is_file() {
-        return Ok(Some(candidate));
-    }
+    files: &mut HashMap<String, PathBuf>,
+) -> Result<()> {
     let entries = match fs::read_dir(directory) {
         Ok(entries) => entries,
         Err(error) if directory == root => return Err(io_error("list", directory, error)),
-        Err(_) => return Ok(None),
+        Err(error) => {
+            tracing::warn!(directory = %directory.display(), %error, "cannot list a run directory; its verdicts read as missing");
+            return Ok(());
+        }
     };
-    let mut subdirectories: Vec<PathBuf> = entries
-        .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-        .filter(|path| path.is_dir())
+    let mut entries: Vec<fs::DirEntry> = entries
+        .filter_map(|entry| match entry {
+            Ok(entry) => Some(entry),
+            Err(error) => {
+                tracing::warn!(directory = %directory.display(), %error, "unreadable run directory entry");
+                None
+            }
+        })
         .collect();
-    subdirectories.sort();
-    for subdirectory in subdirectories {
-        let verdicts = under_verdicts
-            || subdirectory
-                .file_name()
-                .is_some_and(|name| name == "verdicts");
-        if let Some(found) = find_verdict(root, &subdirectory, name, verdicts)? {
-            return Ok(Some(found));
+    entries.sort_by_key(fs::DirEntry::file_name);
+    let mut subdirectories = Vec::new();
+    for entry in entries {
+        // file_type() does not follow symlinks: a link never leads the walk out.
+        let Ok(kind) = entry.file_type() else {
+            continue;
+        };
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if kind.is_dir() {
+            subdirectories.push((entry.path(), under_verdicts || name == "verdicts"));
+        } else if kind.is_file() && under_verdicts && name.ends_with(".json") {
+            files.entry(name).or_insert_with(|| entry.path());
         }
     }
-    Ok(None)
+    for (subdirectory, verdicts) in subdirectories {
+        walk(root, &subdirectory, verdicts, files)?;
+    }
+    Ok(())
 }
 
 /// Final verdict from 1-3 votes. REFUTED needs two; so does CONFIRMED; a
@@ -421,6 +452,87 @@ mod tests {
 
     fn votes(names: &[&str]) -> Vec<String> {
         names.iter().map(|name| (*name).to_owned()).collect()
+    }
+
+    #[test]
+    fn verdicts_are_found_in_any_verdicts_directory_and_top_level_wins() -> Result<()> {
+        let (_tree, run) = crate::run::stamped_run()?;
+        crate::run::write(
+            &run.path("verdicts/q1/C01.json"),
+            b"{\"verdict\": \"REFUTED\"}",
+        )?;
+        crate::run::write(
+            &run.path("verdicts/q2/C02.json"),
+            b"{\"verdict\": \"PLAUSIBLE\"}",
+        )?;
+        crate::run::write(
+            &run.path("verdicts/C02.json"),
+            b"{\"verdict\": \"CONFIRMED\"}",
+        )?;
+        crate::run::write(
+            &run.path("deduped/C03.json"),
+            b"{\"verdict\": \"CONFIRMED\"}",
+        )?;
+        let verdicts = Verdicts::index(&run)?;
+        assert_eq!(verdict_of(&verdicts.load("C01")), "REFUTED");
+        assert_eq!(verdict_of(&verdicts.load("C02")), "CONFIRMED");
+        // Only files under a `verdicts` directory are verdicts.
+        assert_eq!(verdict_of(&verdicts.load("C03")), "UNVERIFIED");
+        Ok(())
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn the_verdict_walk_never_follows_symlinks() -> Result<()> {
+        let (tree, run) = crate::run::stamped_run()?;
+        crate::run::write(
+            &run.path("verdicts/q1/C01.json"),
+            b"{\"verdict\": \"REFUTED\"}",
+        )?;
+        crate::run::write(
+            &tree.path().join("outside/verdicts/C09.json"),
+            b"{\"verdict\": \"CONFIRMED\"}",
+        )?;
+        let link = |target: &Path, at: &str| {
+            std::os::unix::fs::symlink(target, run.path(at))
+                .map_err(|source| io_error("symlink", at, source))
+        };
+        link(Path::new(".."), "verdicts/q1/loop")?;
+        link(&tree.path().join("outside"), "verdicts/elsewhere")?;
+        let verdicts = Verdicts::index(&run)?;
+        assert_eq!(verdict_of(&verdicts.load("C01")), "REFUTED");
+        assert_eq!(verdict_of(&verdicts.load("C09")), "UNVERIFIED");
+        Ok(())
+    }
+
+    #[test]
+    fn a_sweep_id_that_is_not_a_plain_name_is_replaced() -> Result<()> {
+        let (_tree, run) = crate::run::stamped_run()?;
+        crate::run::write_json(&run.path("deduped/index.json"), &json!({"candidates": []}))?;
+        crate::run::write_json(
+            &run.path("candidates/sweep.json"),
+            &json!({"candidates": [{"id": "../../escape", "file": "a.rs"}, {"id": "S07", "file": "b.rs"}]}),
+        )?;
+        let mut warnings = Vec::new();
+        let (_, candidates, _) = all_candidates(&run, Some(&mut warnings))?;
+        let ids: Vec<String> = candidates.iter().map(crate::merge::id).collect();
+        assert_eq!(ids, ["S01", "S07"]);
+        assert_eq!(
+            warnings,
+            ["sweep.json: id '../../escape' is not a plain name; using S01"]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a_corrupt_index_is_an_error_not_zero_candidates() -> Result<()> {
+        let (_tree, run) = crate::run::stamped_run()?;
+        crate::run::write_json(&run.path("deduped/index.json"), &json!({"raw_count": 3}))?;
+        assert!(matches!(
+            all_candidates(&run, None),
+            Err(crate::ReviewError::CorruptRunFile { .. })
+        ));
+        Ok(())
     }
 
     #[test]
