@@ -158,6 +158,11 @@ continues after `Enter` (failed runs are retried, paused runs resumed). It
 never gathers or checks again, and refuses a run started by a different cyril
 binary or version.
 
+`/review cancel` stops the review at any phase. Before the workflow exists
+it abandons the launch, killing a running check; once the workflow exists it
+withdraws the run's authorization at once and cancels the workflow, and says
+whether the agent confirmed it.
+
 A repository can commit settings for every reviewer in `.cyril/config.toml`:
 
 ```toml
@@ -200,7 +205,7 @@ findings and the path to `report.md`.
 | `/memory teach --replace <id> <text>` | Supersede one lesson with new text |
 | `/memory list` | List active project lessons (newest first) |
 | `/memory inspect <id>` | Show one lesson, active or replaced |
-| `/review` | Review this branch's changes with a multi-agent workflow (KAS) |
+| `/review` | Review changes with a multi-agent workflow (KAS); `/review resume`, `/review cancel` |
 | `/quit` | Quit |
 
 **Agent commands** (forwarded to Kiro via ACP):

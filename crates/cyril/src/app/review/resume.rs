@@ -353,6 +353,22 @@ impl App {
         ));
     }
 
+    /// `/review cancel` during a resume. Returns whether one was in progress.
+    pub(super) fn cancel_resume(&mut self) -> bool {
+        let Some(resume) = self.review.resume.take() else {
+            return false;
+        };
+        self.ui_state.close_review_form();
+        match resume.stage {
+            // retry/resume is out: the run may be executing again.
+            ResumeStage::Continuing { workflow_id, .. } => self.stop_run(&workflow_id),
+            _ => self
+                .ui_state
+                .add_system_message("review resume: cancelled; nothing was continued".to_owned()),
+        }
+        true
+    }
+
     /// Esc leaves everything as it was (a paused run stays armed); Enter
     /// installs the assets and continues.
     pub(super) fn handle_resume_key(&mut self, key: crossterm::event::KeyEvent) {

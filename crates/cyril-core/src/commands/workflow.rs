@@ -167,7 +167,7 @@ impl Command for ReviewCommand {
     }
 
     fn description(&self) -> &str {
-        "Review changes with a multi-agent workflow; /review resume continues a failed or paused one"
+        "Review changes with a multi-agent workflow; /review resume continues one, /review cancel stops it"
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
@@ -177,9 +177,12 @@ impl Command for ReviewCommand {
             (Some("resume"), selector, None) => {
                 CommandResult::review_resume(selector.map(str::to_owned))
             }
+            // Stopping a review needs no session: a check may be running.
+            (Some("cancel"), None, None) => return Ok(CommandResult::review_cancel()),
             _ => {
                 return Ok(CommandResult::system_message(
-                    "Usage: /review | /review resume [<run dir | workflow id>]".into(),
+                    "Usage: /review | /review resume [<run dir | workflow id>] | /review cancel"
+                        .into(),
                 ));
             }
         };
@@ -374,7 +377,7 @@ mod tests {
         let result = run_with(&ReviewCommand, &mut harness, "main").await;
         assert_eq!(
             message_text(&result),
-            "Usage: /review | /review resume [<run dir | workflow id>]"
+            "Usage: /review | /review resume [<run dir | workflow id>] | /review cancel"
         );
         let result = run_with(&ReviewCommand, &mut harness, "resume").await;
         assert!(matches!(
@@ -390,6 +393,11 @@ mod tests {
         let mut sessionless = self::harness(false);
         let result = run_with(&ReviewCommand, &mut sessionless, "").await;
         assert!(message_text(&result).contains("No active session"));
+        let result = run_with(&ReviewCommand, &mut sessionless, "cancel").await;
+        assert!(
+            matches!(result.kind, CommandResultKind::ReviewCancel),
+            "stopping a review needs no session"
+        );
     }
 
     #[tokio::test]
