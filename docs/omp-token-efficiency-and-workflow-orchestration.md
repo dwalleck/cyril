@@ -1,6 +1,6 @@
 # OMP token efficiency and workflow orchestration
 
-Status: investigation record and current decisions as of 2026-08-23.
+Status: investigation record from 2026-08-23; writer-isolation policy updated on 2026-09-30. Other measurements and proposals retain their original scope.
 
 This document records the evidence, corrections, configuration changes, and workflow-design options from the Cyril/Gilfoyle token-efficiency investigation. It separates measured facts from proposed changes and identifies which controls exist in OMP today.
 
@@ -13,7 +13,7 @@ The strongest measured control is earlier context maintenance. The supervisor is
 Two project controls are now active:
 
 - Mid-turn compaction at 250,000 tokens, retaining 20,000 recent tokens.
-- Fail-safe OMP Task isolation for every non-plan task subagent, enforced by a pre-tool hook.
+- Native OMP Task isolation remains available on explicit request. The blanket pre-tool hook was removed on 2026-09-30 because writers are now serialized; see [Writer isolation investigation](#writer-isolation-investigation).
 
 Timeout and request-budget controls exist but have not yet been changed. A balanced future setting would be a 60-minute hard runtime and a 150-request soft budget per subagent. True inactivity-based stall detection is not currently an OMP setting.
 
@@ -308,23 +308,38 @@ OMP does not currently expose a `task.stallTimeoutMs` setting. A proper implemen
 
 Those controls do not prevent two processes from editing the same linked worktree before commit. Git hooks are commit-time backstops, not write isolation.
 
-### OMP Task isolation
+### Current policy: native opt-in isolation
 
-OMP supports per-spawn isolation when:
+As of 2026-09-30, Cyril uses serialized writers rather than concurrent writers sharing a checkout. Blanket subagent isolation is no longer required: ordinary research and serialized writing tasks may use the current checkout; request `isolated: true` when a separate workspace is useful.
+
+OMP's native isolation remains enabled. The existing project setting `task.isolation.mode: auto` is legacy syntax; OMP 18.4.4 resolves it to:
 
 ```yaml
 task:
   isolation:
-    mode: auto
+    enabled: true
+isolation:
+  backend: auto
 ```
 
-An isolated task runs in a separate workspace, returns a patch/branch result, and is torn down afterward.
+This enables the per-spawn option, not an isolating default. Without an explicit `isolated: true`, a child uses the current checkout. An explicit isolation request while isolation is disabled fails preflight.
 
-### Applied project hook
+An isolated task returns patch/branch results, but completion does not necessarily tear down its workspace. OMP 18.4.4 keeps isolation resources for resumable children: the idle timeout parks/disposes the child session without releasing its workspace or captured baseline. Explicit lifecycle release runs cleanup; one-shot runs clean up after capture, and capture/persistence failures can preserve workspaces for recovery.
 
-Project file: `.omp/hooks/pre/isolate-writers.ts`
+The resource investigation found 417 MiB of non-ignored untracked files in the primary checkout, including a large exported session, generated reports, and media. OMP buffers uncommitted content as in-memory patch strings and clones the baseline per isolated child. Repeated baseline retention is a plausible contributor to the measured private-memory growth, not a heap-proven attribution of the entire footprint. Filesystem copies can share Btrfs extents, so ordinary `du` totals do not measure their exclusive disk cost.
 
-Current policy:
+Release-specific implementation references:
+
+- [Task request forwarding](https://github.com/can1357/oh-my-pi/blob/v18.4.4/packages/coding-agent/src/task/index.ts) and [explicit isolation selection](https://github.com/can1357/oh-my-pi/blob/v18.4.4/packages/coding-agent/src/task/structured-subagent.ts).
+- [Baseline capture](https://github.com/can1357/oh-my-pi/blob/v18.4.4/packages/coding-agent/src/task/worktree.ts), [per-child baseline and cleanup ownership](https://github.com/can1357/oh-my-pi/blob/v18.4.4/packages/coding-agent/src/task/isolation-runner.ts), and [park versus release](https://github.com/can1357/oh-my-pi/blob/v18.4.4/packages/coding-agent/src/registry/agent-lifecycle.ts).
+
+### Removed project hook: historical record
+
+On 2026-09-30, the user approved deleting `.omp/hooks/pre/isolate-writers.ts` and the generated `enforce-omp-writer-isolation` skill because concurrent writers are no longer part of this workflow. Keep native isolation opt-in; the historical enforcement below is not a policy to restore.
+
+Removal does not free resources retained by an already-running OMP session. Start a fresh session to load the hook-free configuration; preserve ongoing work before gracefully restarting an old session. Audit orphaned workspaces for unapplied work before cleanup.
+
+The former hook enforced:
 
 - Intercept every `task` tool call.
 - Outside plan mode, force `isolated: true` for every flat or batched task item.
@@ -332,15 +347,15 @@ Current policy:
 - Treat agent names as untrusted; project/user definitions can override bundled names.
 - In plan mode, leave task input unchanged because OMP restricts children to read-only tools and rejects per-spawn isolation controls.
 
-The hook determines plan mode from the latest active-branch `mode_change` entry.
+The hook determined plan mode from the latest active-branch `mode_change` entry.
 
-Why the policy changed during review:
+Why the original policy changed during review:
 
 1. The initial read-only-name allowlist was unsafe because OMP agent discovery is first-wins; a custom writable agent could shadow `scout` or `reviewer`.
 2. Isolating every task without a plan-mode exception broke plan-mode task spawning because OMP rejects isolation controls there.
-3. The final policy isolates all non-plan task subagents and exempts current plan mode.
+3. The final historical policy isolated all non-plan task subagents and exempted current plan mode.
 
-Behavioral verification:
+Historical behavioral verification of the removed hook:
 
 - Default writer received `isolated: true`.
 - Explicit `isolated: false` was overridden.
@@ -352,11 +367,11 @@ Behavioral verification:
 - Real scout path after fail-safe change: `/home/dwalleck/.omp/wt/t99c28e52b/m`.
 - Real `--plan-yolo` scout completed without an isolation-parameter rejection.
 
-Scope limitation:
+Scope limitations of the removed hook:
 
-- Covers OMP `task` subagents.
-- Does not stop the main agent, another independently launched process, a human, or non-OMP tooling from modifying the primary checkout.
-- Hard enforcement for arbitrary writers requires launch/OS isolation.
+- Covered OMP `task` subagents.
+- Did not stop the main agent, another independently launched process, a human, or non-OMP tooling from modifying the primary checkout.
+- Hard enforcement for arbitrary writers would require launch/OS isolation; that is not a requirement of the current serialized-writer workflow.
 
 ## OMP workflow layers
 
@@ -501,7 +516,7 @@ Therefore:
 - OMP port version is `0.1.0`, with a very small current user signal.
 - `package.json` is marked private.
 - No `LICENSE` file or package license declaration was found. Clarify permission before copying, modifying, or redistributing.
-- Worktree isolation is documented as best effort and continues unisolated on failure. Gilfoyle writers require fail-closed isolation.
+- Worktree isolation is documented as best effort and continues unisolated on failure. If a future workflow requires isolation for correctness, audit this behavior before relying on it; blanket writer isolation is no longer current Cyril policy.
 - Run persistence catches/logs failures and continues in memory. Load-bearing workflow transitions should fail or pause when persistence fails.
 - `checkpoint()` confirm/headless paths exist, while declared input/select/timeout paths are not fully wired.
 - Per-agent timeout exists; inactivity-based stall timeout does not.
@@ -521,7 +536,7 @@ The lineage's maturity does not automatically transfer to the young OMP port.
 
 1. Project compaction at 250,000 tokens.
 2. Mid-turn compaction enabled.
-3. All non-plan OMP Task subagents isolated through a fail-safe hook.
+3. Native opt-in OMP Task isolation retained; the blanket hook and generated enforcement skill removed on 2026-09-30.
 
 ### Proposed configuration experiment
 
@@ -536,7 +551,7 @@ The lineage's maturity does not automatically transfer to the young OMP port.
 2. Resolve its licensing status.
 3. Run a non-destructive local proof.
 4. Encode Gilfoyle as a trusted saved workflow while retaining stage runbooks as separate prompt assets.
-5. Make writer isolation and workflow persistence fail closed.
+5. Make workflow persistence fail closed. Reassess writer isolation only if concurrent writers are reintroduced.
 6. Add inactivity detection if real runs still stall.
 7. Add a generic OMP core subagent controller only if duplicated lifecycle maintenance becomes a demonstrated problem.
 
@@ -547,6 +562,7 @@ The lineage's maturity does not automatically transfer to the young OMP port.
 - Short polling was a return/latency symptom. Completion-driven waits plus runtime enforcement are the fix.
 - Advisors review correctness; they are not silent-stall watchdogs.
 - OMP has configurable hard runtime and request budgets, but no inactivity watchdog.
+- Cyril writers are serialized; native task isolation is opt-in, and the former blanket enforcement hook and generated skill are retired.
 - OMP has workflow primitives but no first-party durable declarative DAG engine.
 - KAS W1 is a useful persisted-workflow reference but is KAS-only and does not solve cross-vendor Gilfoyle.
 - A third-party OMP workflow extension already solves most of the target problem and should be evaluated before new core work.
