@@ -2,7 +2,9 @@ use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::path::PathBuf;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use crossterm::event::{Event, EventStream, KeyCode, KeyEvent, KeyModifiers, MouseEventKind};
+use crossterm::event::{
+    Event, EventStream, KeyCode, KeyEvent, KeyEventKind, KeyModifiers, MouseEventKind,
+};
 use futures_util::{FutureExt, StreamExt};
 use ratatui::DefaultTerminal;
 use ratatui::Terminal;
@@ -1783,6 +1785,12 @@ impl App {
     }
 
     async fn handle_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
+        // Windows reports key-up as well as key-down. Releases must not edit
+        // text or trigger actions; repeats still support held-key editing.
+        if key.kind == KeyEventKind::Release {
+            return Ok(());
+        }
+
         // Layer 1: Global shortcuts
         match (key.modifiers, key.code) {
             (KeyModifiers::CONTROL, KeyCode::Char('c'))
@@ -3488,6 +3496,54 @@ mod tests {
             ),
             rx,
         )
+    }
+
+    #[tokio::test]
+    async fn key_press_release_pair_inserts_one_chat_character() {
+        let mut app = test_app();
+        let press = Event::Key(KeyEvent::new_with_kind(
+            KeyCode::Char('a'),
+            KeyModifiers::NONE,
+            KeyEventKind::Press,
+        ));
+        let mut release = Some(Event::Key(KeyEvent::new_with_kind(
+            KeyCode::Char('a'),
+            KeyModifiers::NONE,
+            KeyEventKind::Release,
+        )));
+
+        app.handle_terminal_event_batch(press, || release.take())
+            .await
+            .expect("dispatch key press and buffered release");
+
+        assert_eq!(app.ui_state.input_text(), "a");
+    }
+
+    #[tokio::test]
+    async fn key_repeats_edit_chat_but_releases_do_not() {
+        let mut app = test_app();
+        for (code, kind) in [
+            (KeyCode::Char('a'), KeyEventKind::Press),
+            (KeyCode::Char('a'), KeyEventKind::Repeat),
+            (KeyCode::Char('a'), KeyEventKind::Repeat),
+            (KeyCode::Char('a'), KeyEventKind::Release),
+            (KeyCode::Backspace, KeyEventKind::Press),
+            (KeyCode::Backspace, KeyEventKind::Repeat),
+            (KeyCode::Backspace, KeyEventKind::Release),
+        ] {
+            app.handle_terminal_event(Event::Key(KeyEvent::new_with_kind(
+                code,
+                KeyModifiers::NONE,
+                kind,
+            )))
+            .await
+            .expect("dispatch repeated editing key");
+            if code == KeyCode::Char('a') && kind == KeyEventKind::Release {
+                assert_eq!(app.ui_state.input_text(), "aaa");
+            }
+        }
+
+        assert_eq!(app.ui_state.input_text(), "a");
     }
 
     fn app_with_snapshot_handle(handle: UsageSnapshotHandle) -> App {

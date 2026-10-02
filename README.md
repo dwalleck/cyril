@@ -101,6 +101,11 @@ out without them; chat never waits on memory.
 | `Ctrl+M` | Toggle mouse capture (off = copy mode) |
 | `Ctrl+C` / `Ctrl+Q` | Quit |
 
+Key presses and held-key repeats are handled; key releases are ignored to prevent
+duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
+because Crossterm reports those characters only on release. Paste the character
+instead; Unicode paste remains supported.
+
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
