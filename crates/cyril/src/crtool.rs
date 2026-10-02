@@ -42,6 +42,15 @@ pub(crate) enum Step {
     Ballots { rundir: PathBuf },
     /// Tally every vote into kept and refuted findings.
     Collate { rundir: PathBuf },
+    /// Rank the findings into findings.json, report.md and comment briefs.
+    Finalize { rundir: PathBuf },
+    /// Render the commenter's files as postable review comments.
+    Comments {
+        rundir: PathBuf,
+        /// Omit the provenance line under each comment.
+        #[arg(long)]
+        no_trailer: bool,
+    },
 }
 
 impl Step {
@@ -53,7 +62,9 @@ impl Step {
             | Self::Merge { rundir, .. }
             | Self::Shard { rundir, .. }
             | Self::Ballots { rundir }
-            | Self::Collate { rundir } => rundir,
+            | Self::Collate { rundir }
+            | Self::Finalize { rundir }
+            | Self::Comments { rundir, .. } => rundir,
         }
     }
 }
@@ -91,6 +102,8 @@ impl Command {
             Step::Shard { shards, .. } => cyril_review::shard(&run, shards),
             Step::Ballots { .. } => cyril_review::ballots(&run),
             Step::Collate { .. } => cyril_review::collate(&run),
+            Step::Finalize { .. } => cyril_review::finalize(&run),
+            Step::Comments { no_trailer, .. } => cyril_review::comments(&run, !no_trailer),
         });
         match result {
             Ok(output) => write_output(&output),

@@ -52,6 +52,12 @@
     ],
     [
       "collate"
+    ],
+    [
+      "finalize"
+    ],
+    [
+      "comments"
     ]
   ]
 }

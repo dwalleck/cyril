@@ -175,27 +175,6 @@
       }
     },
     {
-      "file": "src/lib.rs",
-      "line": 3,
-      "summary": "unwrap in non-test code",
-      "failure_scenario": "CLAUDE.md forbids it",
-      "category": "conventions",
-      "evidence": "CLAUDE.md: Zero `.unwrap()` in non-test code",
-      "pid": "conventions-1",
-      "angle": "conventions",
-      "id": "C10",
-      "verdict": "CONFIRMED",
-      "verification": {
-        "evidence": "evidence for C10",
-        "reasoning": "reasoning for C10"
-      },
-      "votes": [
-        "CONFIRMED",
-        "UNVERIFIED",
-        "UNVERIFIED"
-      ]
-    },
-    {
       "file": "src/io.rs",
       "line": 40,
       "summary": "Leaked file handle on the error path",
@@ -229,7 +208,29 @@
       }
     }
   ],
-  "refuted": [],
+  "refuted": [
+    {
+      "file": "src/lib.rs",
+      "line": 3,
+      "summary": "unwrap in non-test code",
+      "failure_scenario": "CLAUDE.md forbids it",
+      "category": "conventions",
+      "evidence": "CLAUDE.md: Zero `.unwrap()` in non-test code",
+      "pid": "conventions-1",
+      "angle": "conventions",
+      "id": "C10",
+      "verdict": "REFUTED",
+      "verification": {
+        "evidence": "evidence for C10.v2",
+        "reasoning": "reasoning for C10.v2"
+      },
+      "votes": [
+        "CONFIRMED",
+        "REFUTED",
+        "REFUTED"
+      ]
+    }
+  ],
   "stats": {
     "angles_reported": [
       "a-line-scan",
@@ -247,14 +248,15 @@
     "after_dedup": 10,
     "sweep_candidates": 2,
     "verdicts": {
-      "CONFIRMED": 5,
+      "CONFIRMED": 4,
       "PLAUSIBLE": 2,
-      "REFUTED": 0,
+      "REFUTED": 1,
       "UNVERIFIED": 5
     },
     "balloted": 3,
     "overturned_by_vote": [
       "C03: REFUTED -> CONFIRMED (REFUTED, CONFIRMED, CONFIRMED)",
+      "C10: CONFIRMED -> REFUTED (CONFIRMED, REFUTED, REFUTED)",
       "S01: REFUTED -> PLAUSIBLE (REFUTED, PLAUSIBLE, UNVERIFIED)"
     ],
     "candidates_per_angle_after_dedup": {

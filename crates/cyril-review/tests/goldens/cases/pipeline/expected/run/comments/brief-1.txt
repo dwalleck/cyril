@@ -1,0 +1,79 @@
+# one block per reported finding, in rank order -- page 1 of 1
+===== C03  (rank 1)  src/lib.rs:10
+verdict: CONFIRMED  votes: REFUTED, CONFIRMED, CONFIRMED  | category: correctness  | raised by 2 angle(s): b-removed-behavior, a-line-scan
+summary: Loop bound excludes the last item
+failure scenario: last element skipped when n > 0, and the total under-counts by one
+finder evidence: 0..=n vs 0..n
+verifier evidence: evidence for C03.v2
+verifier reasoning: reasoning for C03.v2
+
+===== C08  (rank 2)  src/util.rs:8
+verdict: CONFIRMED  | category: cleanup  | raised by 1 angle(s): cleanup
+summary: Duplicate helper 8
+failure scenario: the copies drift apart
+verifier evidence: evidence for C08
+verifier reasoning: reasoning for C08
+ACCEPTED BY DESIGN (the author documented this): docs/x.md: accepted on purpose
+
+===== C01  (rank 3)  src/lib.rs:22
+verdict: CONFIRMED  | category: correctness  | raised by 1 angle(s): a-line-scan
+summary: Unchecked unwrap / on parse
+failure scenario: non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written,
+finder evidence: x.unwrap()
+verifier evidence: evidence for C01
+verifier reasoning: reasoning for C01
+
+===== S01  (rank 4)  src/io.rs:40
+verdict: PLAUSIBLE  votes: REFUTED, PLAUSIBLE, UNVERIFIED  | category: correctness  | raised by 1 angle(s): sweep
+summary: Leaked file handle on the error path
+failure scenario: an early return skips close
+verifier evidence: evidence for S01.v2
+verifier reasoning: reasoning for S01.v2
+ACCEPTED BY DESIGN (the author documented this): README: accepted limitation
+
+===== C06  (rank 5)  src/util.rs:7
+verdict: PLAUSIBLE  | category: cleanup  | raised by 2 angle(s): cleanup, cleanup
+summary: Duplicate helper 5
+failure scenario: the copies drift apart
+verifier evidence: evidence for C06
+verifier reasoning: reasoning for C06
+would confirm: run it on an empty list
+
+===== C02  (rank 6)  src/io.rs:?
+verdict: UNVERIFIED  | category: correctness  | raised by 1 angle(s): a-line-scan
+summary: Missing fsync before rename
+failure scenario: 
+verifier reasoning: no verdict file was written
+
+===== C04  (rank 7)  src/util.rs:2
+verdict: UNVERIFIED  | category: cleanup  | raised by 2 angle(s): cleanup, cleanup
+summary: Duplicate helper 2
+failure scenario: the copies drift apart
+verifier evidence: evidence for C04
+verifier reasoning: reasoning for C04
+
+===== C05  (rank 8)  src/util.rs:3
+verdict: UNVERIFIED  | category: cleanup  | raised by 2 angle(s): cleanup, cleanup
+summary: Duplicate helper 3
+failure scenario: the copies drift apart
+verifier reasoning: verdict file unreadable: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+
+===== C07  (rank 9)  src/util.rs:7
+verdict: UNVERIFIED  | category: cleanup  | raised by 1 angle(s): cleanup
+summary: Duplicate helper 7
+failure scenario: the copies drift apart
+verifier reasoning: verdict file is not a JSON object
+
+===== C09  (rank 10)  src/app.rs:5
+verdict: CONFIRMED  | category: altitude  | raised by 1 angle(s): altitude
+summary: Special case bolted onto the shared parser
+failure scenario: every new flag adds a branch
+verifier evidence: evidence for C09
+verifier reasoning: reasoning for C09
+
+===== S02  (rank 11)  src/io.rs:?
+verdict: UNVERIFIED  | category: correctness  | raised by 1 angle(s): sweep
+summary: Sweep candidate without an id
+failure scenario: the finder forgot the id
+verifier reasoning: no verdict file was written
+

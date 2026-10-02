@@ -1,0 +1,9 @@
+{
+  "label": "suggestion",
+  "decorations": [
+    "Not A Word",
+    "if-minor"
+  ],
+  "subject": "Reuse the existing helper",
+  "discussion": ""
+}

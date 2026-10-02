@@ -1,0 +1,9 @@
+{
+  "label": "Issue:",
+  "decorations": [
+    "blocking",
+    "test"
+  ],
+  "subject": "Loop  bound   skips the last item",
+  "discussion": "With `n > 0` the last element is never visited.\n\nUse `0..n`."
+}

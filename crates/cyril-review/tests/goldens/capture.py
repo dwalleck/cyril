@@ -25,6 +25,14 @@ CRTOOL = HERE.parents[3] / ".kiro" / "code-review" / "crtool.py"
 RUN = "<RUN>"
 GATHERED_AT = b"2026-01-01T00:00:00+00:00"
 
+# Where docs/crtool-contract.md deliberately departs from crtool.py, the golden
+# holds the contract's output: Python's, rewritten by these rules. Each names
+# its deviation row; never add one to paper over a native bug.
+DEVIATIONS = [
+    # "Odd values in agent records": an absent line prints `?`, not Python's `None`.
+    ("comments/brief-*.txt", rb"^(===== .*):None$", rb"\1:?"),
+]
+
 
 def git_env(home):
     config = home / "gitconfig"
@@ -111,6 +119,9 @@ def capture(case_dir):
                         # The time of the run, which tests/goldens.rs ignores: fixed so
                         # that recapturing leaves unchanged cases unchanged.
                         data = re.sub(rb'"gathered_at": "[^"]*"', b'"gathered_at": "' + GATHERED_AT + b'"', data)
+                    for pattern, regex, replacement in DEVIATIONS:
+                        if path.match(pattern):
+                            data = re.sub(regex, replacement, data, flags=re.MULTILINE)
                     path.write_bytes(data)
         (expected / "steps.json").write_text(json.dumps(steps, indent=2, ensure_ascii=False) + "\n",
                                              encoding="utf-8")

@@ -1,0 +1,152 @@
+[
+  {
+    "id": "C03",
+    "file": "src/lib.rs",
+    "line": 10,
+    "verdict": "CONFIRMED",
+    "label": "issue",
+    "decorations": [
+      "blocking",
+      "test"
+    ],
+    "subject": "Loop bound skips the last item",
+    "discussion": "With `n > 0` the last element is never visited.\n\nUse `0..n`.",
+    "body": "**issue (blocking,test):** Loop bound skips the last item\n\nWith `n > 0` the last element is never visited.\n\nUse `0..n`.",
+    "source": "model"
+  },
+  {
+    "id": "C08",
+    "file": "src/util.rs",
+    "line": 8,
+    "verdict": "CONFIRMED",
+    "label": "issue",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Duplicate helper drifts from the original",
+    "discussion": "Reuse `util::helper`.",
+    "body": "**issue (non-blocking):** Duplicate helper drifts from the original\n\nReuse `util::helper`.",
+    "source": "model"
+  },
+  {
+    "id": "C01",
+    "file": "src/lib.rs",
+    "line": 22,
+    "verdict": "CONFIRMED",
+    "duplicate_of": "C03",
+    "source": "model"
+  },
+  {
+    "id": "S01",
+    "file": "src/io.rs",
+    "line": 40,
+    "verdict": "PLAUSIBLE",
+    "label": "thought",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Leaked file handle on the error path",
+    "discussion": "an early return skips close\n\nThis looks deliberate: README: accepted limitation",
+    "body": "**thought (non-blocking):** Leaked file handle on the error path\n\nan early return skips close\n\nThis looks deliberate: README: accepted limitation",
+    "source": "template"
+  },
+  {
+    "id": "C06",
+    "file": "src/util.rs",
+    "line": 7,
+    "verdict": "PLAUSIBLE",
+    "label": "question",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Duplicate helper 5",
+    "discussion": "the copies drift apart",
+    "body": "**question (non-blocking):** Duplicate helper 5\n\nthe copies drift apart",
+    "source": "template"
+  },
+  {
+    "id": "C02",
+    "file": "src/io.rs",
+    "line": null,
+    "verdict": "UNVERIFIED",
+    "label": "question",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Missing fsync before rename",
+    "discussion": "",
+    "body": "**question (non-blocking):** Missing fsync before rename",
+    "source": "template"
+  },
+  {
+    "id": "C04",
+    "file": "src/util.rs",
+    "line": 2,
+    "verdict": "UNVERIFIED",
+    "label": "suggestion",
+    "decorations": [
+      "if-minor",
+      "non-blocking"
+    ],
+    "subject": "Reuse the existing helper",
+    "discussion": "",
+    "body": "**suggestion (if-minor,non-blocking):** Reuse the existing helper",
+    "source": "model"
+  },
+  {
+    "id": "C05",
+    "file": "src/util.rs",
+    "line": 3,
+    "verdict": "UNVERIFIED",
+    "label": "question",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Duplicate helper 3",
+    "discussion": "the copies drift apart",
+    "body": "**question (non-blocking):** Duplicate helper 3\n\nthe copies drift apart",
+    "source": "template"
+  },
+  {
+    "id": "C07",
+    "file": "src/util.rs",
+    "line": 7,
+    "verdict": "UNVERIFIED",
+    "label": "question",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Duplicate helper 7",
+    "discussion": "the copies drift apart",
+    "body": "**question (non-blocking):** Duplicate helper 7\n\nthe copies drift apart",
+    "source": "template"
+  },
+  {
+    "id": "C09",
+    "file": "src/app.rs",
+    "line": 5,
+    "verdict": "CONFIRMED",
+    "label": "suggestion",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Special case bolted onto the shared parser",
+    "discussion": "every new flag adds a branch",
+    "body": "**suggestion (non-blocking):** Special case bolted onto the shared parser\n\nevery new flag adds a branch",
+    "source": "template"
+  },
+  {
+    "id": "S02",
+    "file": "src/io.rs",
+    "line": null,
+    "verdict": "UNVERIFIED",
+    "label": "question",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "Sweep candidate without an id",
+    "discussion": "the finder forgot the id",
+    "body": "**question (non-blocking):** Sweep candidate without an id\n\nthe finder forgot the id",
+    "source": "template"
+  }
+]

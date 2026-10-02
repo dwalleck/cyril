@@ -1,0 +1,7 @@
+# one block per reported finding, in rank order -- page 1 of 1
+===== C01  (rank 1)  src/lib.rs:2
+verdict: UNVERIFIED  votes: UNVERIFIED, UNVERIFIED, UNVERIFIED  | category: Rule CONVENTIONS check  | raised by 1 angle(s): a-line-scan
+summary: New function never called
+failure scenario: dead code ships
+verifier reasoning: no verdict file was written
+

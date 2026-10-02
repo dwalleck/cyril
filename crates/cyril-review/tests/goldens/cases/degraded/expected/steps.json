@@ -66,5 +66,19 @@
     ],
     "exit": 0,
     "stdout": "digest pages (read these, not verified.json): verified-digest-1.txt\ncollated: kept 1 (CONFIRMED=0, PLAUSIBLE=0, UNVERIFIED=1), refuted 0\n"
+  },
+  {
+    "step": [
+      "finalize"
+    ],
+    "exit": 0,
+    "stdout": "comment briefs (one block per reported finding): comments/brief-1.txt\nfinalized: 1 findings reported, 0 below the cap, 0 refuted -> findings.json, report.md\n"
+  },
+  {
+    "step": [
+      "comments"
+    ],
+    "exit": 0,
+    "stdout": "comments: 1 findings -> 0 model-written, 1 template, 0 marked duplicate | labels {'question': 1} | blocking: 0 -> comments.json, comments.md\n"
   }
 ]

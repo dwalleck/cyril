@@ -8,6 +8,7 @@ mod gather;
 mod git;
 mod merge;
 mod record;
+mod report;
 mod run;
 mod verdicts;
 
@@ -15,6 +16,7 @@ pub use check::{CheckOutcome, CheckResult, run_check};
 pub use facts::facts;
 pub use gather::gather;
 pub use merge::{merge, shard};
+pub use report::{Finding, FindingsError, comments, finalize, read_findings};
 pub use run::ReviewRun;
 pub use verdicts::{ballots, collate};
 

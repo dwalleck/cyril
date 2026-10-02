@@ -382,20 +382,6 @@
   {
     "step": [
       "write",
-      "verdicts/q2/C11.json",
-      {
-        "id": "C11",
-        "verdict": "CONFIRMED",
-        "evidence": "evidence for C11",
-        "reasoning": "reasoning for C11"
-      }
-    ],
-    "exit": 0,
-    "stdout": ""
-  },
-  {
-    "step": [
-      "write",
       "candidates/sweep.json",
       {
         "angle": "sweep",
@@ -473,12 +459,12 @@
   {
     "step": [
       "write",
-      "verdicts/r1/C11.v2.json",
+      "verdicts/r1/C10.v2.json",
       {
-        "id": "C11.v2",
+        "id": "C10.v2",
         "verdict": "REFUTED",
-        "evidence": "evidence for C11.v2",
-        "reasoning": "reasoning for C11.v2"
+        "evidence": "evidence for C10.v2",
+        "reasoning": "reasoning for C10.v2"
       }
     ],
     "exit": 0,
@@ -487,12 +473,12 @@
   {
     "step": [
       "write",
-      "verdicts/r2/C11.v3.json",
+      "verdicts/r2/C10.v3.json",
       {
-        "id": "C11.v3",
+        "id": "C10.v3",
         "verdict": "REFUTED",
-        "evidence": "evidence for C11.v3",
-        "reasoning": "reasoning for C11.v3",
+        "evidence": "evidence for C10.v3",
+        "reasoning": "reasoning for C10.v3",
         "by_design": "CLAUDE.md: rule waived for generated code"
       }
     ],
@@ -519,6 +505,152 @@
       "collate"
     ],
     "exit": 0,
-    "stdout": "digest pages (read these, not verified.json): verified-digest-1.txt\nvotes changed the outcome: C03: REFUTED -> CONFIRMED (REFUTED, CONFIRMED, CONFIRMED); S01: REFUTED -> PLAUSIBLE (REFUTED, PLAUSIBLE, UNVERIFIED)\ncollated: kept 12 (CONFIRMED=5, PLAUSIBLE=2, UNVERIFIED=5), refuted 0\n"
+    "stdout": "digest pages (read these, not verified.json): verified-digest-1.txt\nvotes changed the outcome: C03: REFUTED -> CONFIRMED (REFUTED, CONFIRMED, CONFIRMED); C10: CONFIRMED -> REFUTED (CONFIRMED, REFUTED, REFUTED); S01: REFUTED -> PLAUSIBLE (REFUTED, PLAUSIBLE, UNVERIFIED)\ncollated: kept 11 (CONFIRMED=4, PLAUSIBLE=2, UNVERIFIED=5), refuted 1\n"
+  },
+  {
+    "step": [
+      "write",
+      "ranking.json",
+      {
+        "order": [
+          "C03",
+          "C08",
+          "C01",
+          "C99",
+          "C03",
+          "S01",
+          "C06"
+        ],
+        "notes": {
+          "C08": "real, but the author accepted it"
+        }
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "finalize"
+    ],
+    "exit": 0,
+    "stdout": "comment briefs (one block per reported finding): comments/brief-1.txt\nfinalized: 11 findings reported, 0 below the cap, 1 refuted -> findings.json, report.md\n"
+  },
+  {
+    "step": [
+      "write",
+      "comments/C03.json",
+      {
+        "label": "Issue:",
+        "decorations": [
+          "blocking",
+          "test"
+        ],
+        "subject": "Loop  bound   skips the last item",
+        "discussion": "With `n > 0` the last element is never visited.\n\nUse `0..n`."
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/C08.json",
+      {
+        "label": "issue",
+        "decorations": [
+          "(blocking)"
+        ],
+        "subject": "Duplicate helper drifts from the original",
+        "discussion": "Reuse `util::helper`."
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/C01.json",
+      {
+        "duplicate_of": "C03"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/S01.json",
+      {
+        "duplicate_of": "C42"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/C06.json",
+      {
+        "label": "wish",
+        "subject": "make it nicer"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/C02.json",
+      "{broken"
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/C04.json",
+      {
+        "label": "suggestion",
+        "decorations": [
+          "Not A Word",
+          "if-minor"
+        ],
+        "subject": "Reuse the existing helper",
+        "discussion": ""
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "comments/C09.json",
+      []
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "comments"
+    ],
+    "exit": 0,
+    "stdout": "comments: 11 findings -> 3 model-written, 7 template, 1 marked duplicate | labels {'issue': 2, 'thought': 1, 'question': 5, 'suggestion': 2} | blocking: 1 | WARNINGS: C08: `blocking` downgraded (label issue, verdict CONFIRMED, by design); S01: duplicate_of names 'C42', which is not a reported finding; template used; C06: label 'wish' or subject invalid; template used; C02: comment file unreadable (Expecting property name enclosed in double quotes: line 1 column 2 (char 1)); template used; C04: decoration 'not a word' dropped (not a lowercase word); C09: comment file unreadable (not a JSON object); template used -> comments.json, comments.md\n"
+  },
+  {
+    "step": [
+      "comments",
+      "--no-trailer"
+    ],
+    "exit": 0,
+    "stdout": "comments: 11 findings -> 3 model-written, 7 template, 1 marked duplicate | labels {'issue': 2, 'thought': 1, 'question': 5, 'suggestion': 2} | blocking: 1 | WARNINGS: C08: `blocking` downgraded (label issue, verdict CONFIRMED, by design); S01: duplicate_of names 'C42', which is not a reported finding; template used; C06: label 'wish' or subject invalid; template used; C02: comment file unreadable (Expecting property name enclosed in double quotes: line 1 column 2 (char 1)); template used; C04: decoration 'not a word' dropped (not a lowercase word); C09: comment file unreadable (not a JSON object); template used -> comments.json, comments.md\n"
   }
 ]
