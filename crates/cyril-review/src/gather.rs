@@ -130,6 +130,20 @@ pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<St
     Ok(out)
 }
 
+/// How many files the diff `gather` would write touches: what `/review`
+/// shows before consent. Refuses anywhere but the repository root.
+pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<usize> {
+    git::admit_target(requested_target)?;
+    git::require_root(run)?;
+    let (target, _) = resolve_target(run, requested_target)?;
+    git::admit_target(&target)?;
+    let names = git::git(
+        run,
+        &diff_args(&target, &["--name-only", "-z"], &split_scope(scope)),
+    )?;
+    Ok(git::nul_records(&names)?.len())
+}
+
 /// Scope as the recipe passes it: one string of space-separated pathspecs.
 pub(crate) fn split_scope(scope: &str) -> Vec<String> {
     let parts: Vec<String> = scope.split_whitespace().map(str::to_owned).collect();

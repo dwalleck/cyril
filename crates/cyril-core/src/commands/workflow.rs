@@ -156,6 +156,33 @@ impl Command for WorkflowCommand {
     }
 }
 
+/// `/review` — review the branch's changes with the `cyril-review` workflow.
+/// Registered with `/workflow`: it needs the KAS workflow surface.
+pub struct ReviewCommand;
+
+#[async_trait::async_trait]
+impl Command for ReviewCommand {
+    fn name(&self) -> &str {
+        "review"
+    }
+
+    fn description(&self) -> &str {
+        "Review this branch's changes with a multi-agent code-review workflow"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        if !args.trim().is_empty() {
+            return Ok(CommandResult::system_message("Usage: /review".into()));
+        }
+        if ctx.session.id().is_none() {
+            return Ok(CommandResult::system_message(
+                "No active session — /review needs one.".into(),
+            ));
+        }
+        Ok(CommandResult::review())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
@@ -198,6 +225,10 @@ mod tests {
     }
 
     async fn run(harness: &mut Harness, args: &str) -> CommandResult {
+        run_with(&command(), harness, args).await
+    }
+
+    async fn run_with(command: &dyn Command, harness: &mut Harness, args: &str) -> CommandResult {
         let ctx = CommandContext {
             workspace: std::path::Path::new("."),
             session: &harness.session,
@@ -206,7 +237,7 @@ mod tests {
             workflow_tracker: Some(&harness.tracker),
             memory_status: None,
         };
-        match command().execute(&ctx, args).await {
+        match command.execute(&ctx, args).await {
             Ok(result) => result,
             Err(error) => panic!("command must not error: {error}"),
         }
@@ -322,6 +353,21 @@ mod tests {
         );
         assert_eq!(inputs["k"], "v");
         assert_nothing_sent(&mut harness);
+    }
+
+    /// `/review` only states the intent: the App owns the form and the
+    /// launch, so the command never reaches the bridge.
+    #[tokio::test]
+    async fn review_returns_the_intent_and_sends_nothing() {
+        let mut harness = harness(true);
+        let result = run_with(&ReviewCommand, &mut harness, "").await;
+        assert!(matches!(result.kind, CommandResultKind::Review));
+        let result = run_with(&ReviewCommand, &mut harness, "main").await;
+        assert_eq!(message_text(&result), "Usage: /review");
+        assert_nothing_sent(&mut harness);
+        let mut sessionless = self::harness(false);
+        let result = run_with(&ReviewCommand, &mut sessionless, "").await;
+        assert!(message_text(&result).contains("No active session"));
     }
 
     #[tokio::test]

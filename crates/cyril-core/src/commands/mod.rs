@@ -214,6 +214,9 @@ pub enum CommandResultKind {
     ShowPowers {
         powers: Vec<crate::types::PowerInfo>,
     },
+    /// Open the `/review` consent form. The App owns the form, the git probes
+    /// and the launch, so the command returns only the intent.
+    Review,
     /// Return Cyril's current typed memory runtime status.
     MemoryStatus(crate::types::MemoryStatusView),
     /// Execute one typed project-memory operation in the binary orchestrator.
@@ -246,6 +249,13 @@ impl CommandResult {
     pub fn show_powers(powers: Vec<crate::types::PowerInfo>) -> Self {
         Self {
             kind: CommandResultKind::ShowPowers { powers },
+        }
+    }
+
+    /// Open the `/review` consent form.
+    pub fn review() -> Self {
+        Self {
+            kind: CommandResultKind::Review,
         }
     }
 
@@ -370,7 +380,9 @@ impl CommandRegistry {
         }
         if let WorkflowCommandSource::Kas { workspace_root } = workflows {
             names.push("workflow");
+            names.push("review");
             registry.register(Arc::new(workflow::WorkflowCommand::new(workspace_root)));
+            registry.register(Arc::new(workflow::ReviewCommand));
         }
         // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
         // advertises 25 commands and `powers` is not among them, and KAS
@@ -1517,6 +1529,10 @@ mod hooks_source_tests {
             v2.parse("/workflow list").is_none(),
             "no /workflow under v2 — nothing would answer it"
         );
+        assert!(
+            v2.parse("/review").is_none(),
+            "nor /review, which is a workflow"
+        );
 
         let kas = CommandRegistry::with_builtins(
             HooksCommandSource::Agent,
@@ -1529,6 +1545,8 @@ mod hooks_source_tests {
             .expect("registered under KAS");
         assert_eq!(cmd.name(), "workflow");
         assert_eq!(args, "status wf_1");
+        let (cmd, _) = kas.parse("/review").expect("registered with /workflow");
+        assert_eq!(cmd.name(), "review");
     }
 
     #[test]

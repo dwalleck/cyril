@@ -76,12 +76,18 @@ impl RunAuthorization {
         } else {
             decide(consent, &self.scope)
         };
+        self.record(&decision);
+        decision
+    }
+
+    /// Count a decision made off the event loop with [`decide`] and this
+    /// run's [`scope`](Self::scope).
+    pub fn record(&mut self, decision: &Decision) {
         if decision.allowed() {
             self.allowed += 1;
         } else {
             self.denials.push(decision.reason().to_owned());
         }
-        decision
     }
 
     pub fn allowed_count(&self) -> usize {

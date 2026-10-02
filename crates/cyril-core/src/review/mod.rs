@@ -7,6 +7,7 @@
 pub mod authorization;
 pub mod consent;
 pub mod inputs;
+pub mod launch;
 pub mod policy;
 pub mod run_record;
 pub mod summary;
