@@ -602,8 +602,10 @@ pub struct ReviewForm {
     pub base_choice: Option<String>,
     /// Which field ←/→ changes.
     pub focus: ReviewField,
-    /// Git pathspecs; `.` is everything.
-    pub scope: Vec<String>,
+    /// The Review scope as checkboxes; the checked paths are the pathspecs.
+    pub paths: Vec<cyril_core::review::scope::PathChoice>,
+    /// The path Space toggles while the paths field has focus.
+    pub path_cursor: usize,
     /// Files the target's diff touches in scope; `None` while counting.
     pub file_count: Option<usize>,
     /// Why the current choice cannot be reviewed; Enter is refused while set.
@@ -639,6 +641,8 @@ pub enum ReviewField {
     Target,
     /// Shown, and focusable, only in base-branch mode.
     Base,
+    /// The scope checkboxes: ←/→ move, Space toggles.
+    Paths,
 }
 
 impl ReviewForm {
@@ -649,7 +653,8 @@ impl ReviewForm {
             branches: Vec::new(),
             base_choice: None,
             focus: ReviewField::Target,
-            scope: Vec::new(),
+            paths: Vec::new(),
+            path_cursor: 0,
             file_count: None,
             problem: None,
             note: None,
@@ -662,12 +667,36 @@ impl ReviewForm {
     /// A read-only form to continue the stored run `view`.
     pub fn resuming(view: ReviewResumeView, scope: Vec<String>, files: usize) -> Self {
         Self {
-            scope,
+            paths: scope
+                .into_iter()
+                .map(|path| cyril_core::review::scope::PathChoice {
+                    path,
+                    files: 0,
+                    checked: true,
+                })
+                .collect(),
             file_count: Some(files),
             check: ReviewCheck::NotRerun,
             resume: Some(view),
             ..Self::opening(cyril_core::review::target::ReviewTarget::Auto)
         }
+    }
+
+    /// The checked pathspecs.
+    pub fn scope(&self) -> Vec<String> {
+        cyril_core::review::scope::selected(&self.paths)
+    }
+
+    /// The focusable fields, in Tab order.
+    pub fn fields(&self) -> Vec<ReviewField> {
+        let mut fields = vec![ReviewField::Target];
+        if self.shows_base() {
+            fields.push(ReviewField::Base);
+        }
+        if !self.paths.is_empty() {
+            fields.push(ReviewField::Paths);
+        }
+        fields
     }
 
     /// Whether the base field is on the form.

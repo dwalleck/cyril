@@ -96,11 +96,16 @@ pub enum Prepared {
 /// Files the request's diff touches; refuses outside the repository root.
 pub fn probe(workspace: &Path, target: &str, scope: &[String]) -> Result<usize, LaunchError> {
     let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
-    match touched_files(&run, target, &scope.join(" ")) {
-        Err(ReviewError::NotRepositoryRoot { cdup }) => Err(LaunchError::NotRoot {
+    touched_files(&run, target, &scope.join(" ")).map_err(|error| root_error(workspace, error))
+}
+
+/// The refusal outside the root names the root in the operator's terms.
+fn root_error(workspace: &Path, error: ReviewError) -> LaunchError {
+    match error {
+        ReviewError::NotRepositoryRoot { cdup } => LaunchError::NotRoot {
             root: up(workspace, &cdup),
-        }),
-        other => Ok(other?),
+        },
+        other => other.into(),
     }
 }
 
@@ -126,10 +131,23 @@ pub fn base_branches(workspace: &Path) -> Result<Vec<String>, LaunchError> {
     Ok(cyril_review::base_branches(&run)?)
 }
 
-/// Whether tracked files in `scope` have uncommitted changes.
-pub fn uncommitted(workspace: &Path, scope: &[String]) -> Result<bool, LaunchError> {
+/// What a target's diff touches across the whole repository, and which
+/// tracked files have uncommitted changes: the form derives its path groups,
+/// counts and notes from these without asking git again.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Touched {
+    pub files: Vec<String>,
+    pub uncommitted: Vec<String>,
+}
+
+pub fn touched(workspace: &Path, target: &str) -> Result<Touched, LaunchError> {
     let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
-    Ok(cyril_review::uncommitted_in_scope(&run, &scope.join(" "))?)
+    let files = cyril_review::changed_paths(&run, target, ".")
+        .map_err(|error| root_error(workspace, error))?;
+    Ok(Touched {
+        files,
+        uncommitted: cyril_review::uncommitted_paths(&run)?,
+    })
 }
 
 /// Recheck the diff, then install the assets, create the run directory and

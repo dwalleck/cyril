@@ -1,6 +1,8 @@
 //! `touched_files`: the count `/review` shows before consent.
 
-use cyril_review::{ReviewError, ReviewRun, base_branches, touched_files, uncommitted_in_scope};
+use cyril_review::{
+    ReviewError, ReviewRun, base_branches, changed_paths, touched_files, uncommitted_paths,
+};
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -46,6 +48,7 @@ fn counts_the_auto_diff_and_refuses_below_the_root() -> TestResult {
     fs::write(repo.join("b.md"), "b, changed\n")?;
     assert_eq!(touched_files(&run, "auto", "")?, 2);
     assert_eq!(touched_files(&run, "auto", "src")?, 1);
+    assert_eq!(changed_paths(&run, "auto", "")?, ["b.md", "src/a.rs"]);
 
     let below = ReviewRun::new(repo.join("src"), repo.join(".code-review/r"))?;
     assert!(matches!(
@@ -86,9 +89,8 @@ fn base_branches_leave_out_the_checked_out_branch() -> TestResult {
     let run = ReviewRun::new(&repo, repo.join(".code-review/r"))?;
     assert_eq!(base_branches(&run)?, ["main", "release", "origin/main"]);
 
-    assert!(!uncommitted_in_scope(&run, "")?);
+    assert!(uncommitted_paths(&run)?.is_empty());
     fs::write(repo.join("a.txt"), "edited\n")?;
-    assert!(uncommitted_in_scope(&run, "")?);
-    assert!(!uncommitted_in_scope(&run, "elsewhere")?);
+    assert_eq!(uncommitted_paths(&run)?, ["a.txt"]);
     Ok(())
 }

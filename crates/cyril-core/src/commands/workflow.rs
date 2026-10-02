@@ -171,19 +171,24 @@ impl Command for ReviewCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
-        let mut words = args.split_whitespace();
-        let result = match (words.next(), words.next(), words.next()) {
-            (None, _, _) => CommandResult::review(),
-            (Some("resume"), selector, None) => {
-                CommandResult::review_resume(selector.map(str::to_owned))
+        const USAGE: &str = "Usage: /review [auto | uncommitted | head | base [<branch>]] [-- <path>…] \
+             | /review resume [<run dir | workflow id>] | /review cancel";
+        let words: Vec<&str> = args.split_whitespace().collect();
+        let result = match words.as_slice() {
+            ["resume"] => CommandResult::review_resume(None),
+            ["resume", selector] => CommandResult::review_resume(Some((*selector).to_owned())),
+            ["cancel"] => CommandResult::review_cancel(),
+            ["resume" | "cancel", ..] => {
+                return Ok(CommandResult::system_message(USAGE.into()));
             }
-            (Some("cancel"), None, None) => CommandResult::review_cancel(),
-            _ => {
-                return Ok(CommandResult::system_message(
-                    "Usage: /review | /review resume [<run dir | workflow id>] | /review cancel"
-                        .into(),
-                ));
-            }
+            words => match crate::review::target::ReviewArgs::parse(words) {
+                Ok(args) => CommandResult::review_with(args),
+                Err(problem) => {
+                    return Ok(CommandResult::system_message(format!(
+                        "review: {problem}\n{USAGE}"
+                    )));
+                }
+            },
         };
         if ctx.session.id().is_none() {
             return Ok(CommandResult::system_message(
@@ -372,12 +377,24 @@ mod tests {
     async fn review_returns_the_intent_and_sends_nothing() {
         let mut harness = harness(true);
         let result = run_with(&ReviewCommand, &mut harness, "").await;
-        assert!(matches!(result.kind, CommandResultKind::Review));
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::Review { ref args } if *args == crate::review::target::ReviewArgs::default()
+        ));
+        let result = run_with(&ReviewCommand, &mut harness, "base main -- src").await;
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::Review { ref args }
+                if args.paths.as_deref() == Some(&["src".to_owned()][..])
+        ));
         let result = run_with(&ReviewCommand, &mut harness, "main").await;
-        assert_eq!(
-            message_text(&result),
-            "Usage: /review | /review resume [<run dir | workflow id>] | /review cancel"
+        assert!(
+            message_text(&result).starts_with("review: unknown target \"main\"\nUsage: /review"),
+            "{}",
+            message_text(&result)
         );
+        let result = run_with(&ReviewCommand, &mut harness, "cancel").await;
+        assert!(matches!(result.kind, CommandResultKind::ReviewCancel));
         let result = run_with(&ReviewCommand, &mut harness, "resume").await;
         assert!(matches!(
             result.kind,

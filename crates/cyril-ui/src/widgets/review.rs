@@ -144,15 +144,7 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
         ]));
     }
     lines.extend([
-        Line::from(vec![
-            label("Scope"),
-            value(if form.scope.is_empty() {
-                "…".to_owned()
-            } else {
-                form.scope.join(" ")
-            }),
-            detail(files),
-        ]),
+        scope_line(form, theme, label("Scope"), detail(files)),
         Line::from(vec![label("Runs"), detail(EXPECTED_RUN.to_owned())]),
         Line::from(vec![label("Check"), value(check)]),
     ]);
@@ -169,13 +161,45 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
         match (form.busy, &form.resume) {
             (true, _) => "Starting the review…",
             (false, Some(_)) => "Enter continues the run · Esc cancels",
-            (false, None) => "←/→ change · Tab next field · Enter starts the review · Esc cancels",
+            (false, None) => "←/→ change · Space toggle · Tab next · Enter starts · Esc cancels",
         },
         Style::default()
             .fg(theme.subdued)
             .add_modifier(Modifier::ITALIC),
     ));
     lines
+}
+
+/// The scope: read-only pathspecs on a resume form, else checkboxes with
+/// their file counts and, while focused, the cursor on one of them.
+fn scope_line<'a>(form: &ReviewForm, theme: &Theme, lead: Span<'a>, files: Span<'a>) -> Line<'a> {
+    let mut spans = vec![lead];
+    if form.paths.is_empty() {
+        spans.push(Span::styled("…", Style::default().fg(theme.text)));
+    } else if form.resume.is_some() {
+        spans.push(Span::styled(
+            form.scope().join(" "),
+            Style::default().fg(theme.text),
+        ));
+    } else {
+        let focused = !form.busy && form.focus == ReviewField::Paths;
+        for (index, choice) in form.paths.iter().enumerate() {
+            if index > 0 {
+                spans.push(Span::raw("  "));
+            }
+            let mark = if choice.checked { "[x]" } else { "[ ]" };
+            let mut style = Style::default().fg(theme.text);
+            if focused && index == form.path_cursor {
+                style = style.add_modifier(Modifier::REVERSED);
+            }
+            spans.push(Span::styled(
+                format!("{mark} {} ({})", choice.path, choice.files),
+                style,
+            ));
+        }
+    }
+    spans.push(files);
+    Line::from(spans)
 }
 
 #[cfg(test)]
@@ -187,7 +211,11 @@ mod tests {
 
     fn form() -> ReviewForm {
         ReviewForm {
-            scope: vec![".".to_owned()],
+            paths: vec![cyril_core::review::scope::PathChoice {
+                path: ".".to_owned(),
+                files: 12,
+                checked: true,
+            }],
             file_count: Some(12),
             check: ReviewCheck::NotConfigured,
             ..ReviewForm::opening(ReviewTarget::Auto)
@@ -229,14 +257,14 @@ mod tests {
         for expected in [
             " Review ",
             "Target   auto  (auto) ◂ ▸",
-            "Scope    . — 12 files",
+            "Scope    [x] . (12) — 12 files",
             "Runs     about 50–65 model sessions, about 40–50 minutes",
             "Check    no check configured",
             "May do   • read files inside this repository",
             "• run this review's own crtool steps (no other shell command)",
             "• write only under its run directory, .code-review/<run>/",
             "• everything else is denied and logged, never asked",
-            "Enter starts the review · Esc cancels",
+            "Enter starts · Esc cancels",
         ] {
             assert!(text.contains(expected), "missing {expected:?} in\n{text}");
         }
@@ -252,13 +280,16 @@ mod tests {
         };
         busy.busy = true;
         let text = rendered(&busy);
-        assert!(text.contains("Scope    . — counting files…"), "{text}");
+        assert!(
+            text.contains("Scope    [x] . (12) — counting files…"),
+            "{text}"
+        );
         assert!(
             text.contains("Check    will run: cargo check (timeout 1800s)"),
             "{text}"
         );
         assert!(text.contains("Starting the review…"), "{text}");
-        assert!(!text.contains("Enter starts the review"), "{text}");
+        assert!(!text.contains("Enter starts"), "{text}");
     }
 
     /// The base field exists only in base-branch mode, and the focus marker
@@ -334,5 +365,32 @@ mod tests {
             assert!(text.contains(expected), "missing {expected:?} in\n{text}");
         }
         assert!(!text.contains("◂ ▸"), "no field takes ←/→:\n{text}");
+    }
+
+    /// The scope is checkboxes with counts; the focused one is highlighted
+    /// and an empty selection says so.
+    #[test]
+    fn the_scope_renders_as_checkboxes() {
+        let mut paths = form();
+        paths.paths = vec![
+            cyril_core::review::scope::PathChoice {
+                path: "crates".to_owned(),
+                files: 9,
+                checked: true,
+            },
+            cyril_core::review::scope::PathChoice {
+                path: "README.md".to_owned(),
+                files: 1,
+                checked: false,
+            },
+        ];
+        paths.file_count = Some(9);
+        paths.focus = ReviewField::Paths;
+        paths.path_cursor = 1;
+        let text = rendered(&paths);
+        assert!(
+            text.contains("Scope    [x] crates (9)  [ ] README.md (1) — 9 files"),
+            "{text}"
+        );
     }
 }

@@ -11,13 +11,15 @@ mod resume;
 
 use super::App;
 use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
+use cyril_core::review::config::scope_problem;
 use cyril_core::review::config::{CheckCommand, ReviewConfig};
 use cyril_core::review::consent::PermissionConsent;
 use cyril_core::review::launch::{self, LaunchError, LaunchRequest, Prepared, ReadyRun};
 use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide, input_problem};
 use cyril_core::review::run_record::{RunRecord, RunRecordError};
+use cyril_core::review::scope;
 use cyril_core::review::summary::{RunEnding, summary};
-use cyril_core::review::target::ReviewTarget;
+use cyril_core::review::target::{ReviewArgs, ReviewTarget, TargetArg};
 use cyril_core::review::{CrtoolPrefix, ShellDialect};
 use cyril_core::types::{
     BridgeCommand, PermissionOptionKind, PermissionRequest, PermissionResponse, SessionId,
@@ -25,7 +27,7 @@ use cyril_core::types::{
     WorkflowRunTarget,
 };
 use cyril_review::{CheckResult, FindingsError, ReviewError, ReviewRun, read_findings, run_check};
-use cyril_ui::traits::{ReviewCheck, ReviewField, ReviewForm};
+use cyril_ui::traits::{ReviewCheck, ReviewField, ReviewForm, TuiState};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::io::Write;
@@ -88,7 +90,16 @@ struct Plan {
     target: ReviewTarget,
     /// Bumped on every target change: only the latest count is applied.
     recount: u64,
+    /// The checked pathspecs: what the probe, gather, the workflow and
+    /// `run.json` receive.
     scope: Vec<String>,
+    /// What the current target's diff touches, for counting without git.
+    touched: launch::Touched,
+    /// The paths `[review] scope` or `/review -- <paths>` preselected.
+    preset: Option<Vec<String>>,
+    /// Why the current target cannot be reviewed (a git error, a name the
+    /// recipe would refuse); Enter is refused while set.
+    target_problem: Option<String>,
     /// The `[review]` settings the form showed: what consent covers.
     config: ReviewConfig,
 }
@@ -131,8 +142,9 @@ struct ArmedRun {
 /// What the form opens with.
 pub(super) struct Opened {
     config: ReviewConfig,
-    scope: Vec<String>,
-    files: usize,
+    target: ReviewTarget,
+    target_problem: Option<String>,
+    touched: launch::Touched,
     branches: Vec<String>,
     branch_note: Option<String>,
 }
@@ -148,7 +160,7 @@ pub(super) enum LaunchStep {
     /// number `recount`.
     Recounted {
         recount: u64,
-        files: Result<(usize, bool), LaunchError>,
+        files: Result<launch::Touched, LaunchError>,
     },
     Prepared(Result<Prepared, LaunchError>),
     Checked(Result<CheckResult, ReviewError>),
@@ -319,7 +331,7 @@ impl ReviewState {
 impl App {
     /// `/review`: open the consent form, then read the repository's
     /// `[review]` settings and count the diff off-loop.
-    pub(super) fn open_review(&mut self) {
+    pub(super) fn open_review(&mut self, args: ReviewArgs) {
         if let Some(run) = self.review.live_run() {
             let id = run.authorization.workflow_id();
             let text = if run.authorization.state() == AuthorizationState::Paused {
@@ -340,46 +352,53 @@ impl App {
             self.ui_state.add_system_message(text);
             return;
         }
-        let target = ReviewTarget::Auto;
+        if let Some(problem) = args
+            .paths
+            .iter()
+            .flatten()
+            .find_map(|path| scope_problem(path))
+        {
+            self.ui_state
+                .add_system_message(format!("review: scope {problem}"));
+            return;
+        }
+        // The field the arguments left open gets the focus.
+        let focus = match &args.target {
+            None => ReviewField::Target,
+            Some(TargetArg::Base(None)) => ReviewField::Base,
+            Some(_) if args.paths.is_none() => ReviewField::Paths,
+            Some(_) => ReviewField::Target,
+        };
+        let shown = match &args.target {
+            None | Some(TargetArg::Auto) => ReviewTarget::Auto,
+            Some(TargetArg::Uncommitted) => ReviewTarget::Uncommitted,
+            Some(TargetArg::HeadCommit) => ReviewTarget::HeadCommit,
+            Some(TargetArg::Base(Some(base))) => ReviewTarget::Base(base.clone()),
+            // The branch is picked once the branch list is read.
+            Some(TargetArg::Base(None)) => ReviewTarget::Auto,
+        };
         let id = self.review.next_launch;
         self.review.next_launch += 1;
         self.review.launch = Some(Launch {
             id,
             plan: Plan {
-                target: target.clone(),
+                target: shown.clone(),
                 recount: 0,
                 scope: Vec::new(),
+                touched: launch::Touched::default(),
+                preset: args.paths.clone(),
+                target_problem: None,
                 config: ReviewConfig::default(),
             },
             stage: Stage::Opening,
         });
-        self.ui_state
-            .show_review_form(ReviewForm::opening(target.clone()));
+        self.ui_state.show_review_form(ReviewForm {
+            focus,
+            ..ReviewForm::opening(shown)
+        });
         let workspace = self.cwd.clone();
         self.review.spawn_step(id, move || {
-            let opened = ReviewConfig::load(&workspace)
-                .map_err(LaunchError::from)
-                .and_then(|config| {
-                    let scope = config.scope.clone().unwrap_or_else(|| vec![".".to_owned()]);
-                    let files = launch::probe(&workspace, &target.spec(), &scope)?;
-                    // Without a branch list the form offers no base mode and
-                    // says why; the other targets still work.
-                    let (branches, branch_note) = match launch::base_branches(&workspace) {
-                        Ok(branches) => (branches, None),
-                        Err(error) => {
-                            tracing::warn!(%error, "review: cannot list base branches");
-                            (Vec::new(), Some(format!("no base branches: {error}")))
-                        }
-                    };
-                    Ok(Opened {
-                        config,
-                        scope,
-                        files,
-                        branches,
-                        branch_note,
-                    })
-                });
-            LaunchStep::Opened(opened)
+            LaunchStep::Opened(open_launch(&workspace, args.target))
         });
     }
 
@@ -407,10 +426,27 @@ impl App {
             _ if form.busy => {}
             KeyCode::Enter if form.ready() => self.confirm_review(),
             KeyCode::Tab | KeyCode::BackTab | KeyCode::Up | KeyCode::Down => {
-                form.focus = match form.focus {
-                    ReviewField::Target if form.shows_base() => ReviewField::Base,
-                    _ => ReviewField::Target,
+                let fields = form.fields();
+                let here = fields.iter().position(|field| *field == form.focus);
+                let back = matches!(key.code, KeyCode::BackTab | KeyCode::Up);
+                form.focus = match here {
+                    Some(here) if back => fields[(here + fields.len() - 1) % fields.len()],
+                    Some(here) => fields[(here + 1) % fields.len()],
+                    None => ReviewField::Target,
                 };
+            }
+            KeyCode::Left | KeyCode::Right if form.focus == ReviewField::Paths => {
+                let last = form.paths.len().saturating_sub(1);
+                form.path_cursor = match key.code {
+                    KeyCode::Left => form.path_cursor.saturating_sub(1),
+                    _ => (form.path_cursor + 1).min(last),
+                };
+            }
+            KeyCode::Char(' ') if form.focus == ReviewField::Paths => {
+                if let Some(choice) = form.paths.get_mut(form.path_cursor) {
+                    choice.checked = !choice.checked;
+                }
+                self.refresh_scope();
             }
             KeyCode::Left | KeyCode::Right => {
                 let back = key.code == KeyCode::Left;
@@ -420,6 +456,7 @@ impl App {
                             .cycle(&form.branches, form.base_choice.as_deref(), back)
                     }
                     ReviewField::Base => form.target.cycle_base(&form.branches, back),
+                    ReviewField::Paths => form.target.clone(),
                 };
                 if target != form.target {
                     self.choose_target(target);
@@ -427,6 +464,42 @@ impl App {
             }
             _ => {}
         }
+    }
+
+    /// The checked paths changed (or the touched files did): the plan's
+    /// scope, the count, the problem and the note all follow, without git.
+    fn refresh_scope(&mut self) {
+        let Some(launch) = self.review.launch.as_mut() else {
+            return;
+        };
+        let Some(form) = self.ui_state.review_form_mut() else {
+            return;
+        };
+        // Nothing touched means nothing to choose: the whole repository, so
+        // Enter reports "nothing to review" rather than an empty selection.
+        launch.plan.scope = if form.paths.is_empty() {
+            vec![".".to_owned()]
+        } else {
+            scope::selected(&form.paths)
+        };
+        let touched = &launch.plan.touched;
+        form.file_count = Some(scope::count(&form.paths, &touched.files));
+        form.problem = launch.plan.target_problem.clone().or_else(|| {
+            launch
+                .plan
+                .scope
+                .is_empty()
+                .then(|| "select at least one path".to_owned())
+        });
+        let dirty = touched.uncommitted.iter().any(|file| {
+            launch
+                .plan
+                .scope
+                .iter()
+                .any(|path| scope::covers(path, file))
+        });
+        form.note =
+            (dirty && launch.plan.target.ends_at_head_commit()).then(|| DIRTY_NOTE.to_owned());
     }
 
     /// The form's target changed. A target the recipe would refuse is shown
@@ -445,6 +518,7 @@ impl App {
         launch.plan.recount += 1;
         let (id, recount) = (launch.id, launch.plan.recount);
         let problem = input_problem("target", &target.spec());
+        launch.plan.target_problem = problem.clone();
         if let Some(form) = self.ui_state.review_form_mut() {
             if let ReviewTarget::Base(base) = &target {
                 form.base_choice = Some(base.clone());
@@ -453,7 +527,7 @@ impl App {
             form.file_count = None;
             form.note = None;
             form.problem = problem.clone();
-            if !form.shows_base() {
+            if form.focus == ReviewField::Base && !form.shows_base() {
                 form.focus = ReviewField::Target;
             }
         }
@@ -627,8 +701,9 @@ impl App {
                 match result {
                     Ok(Opened {
                         config,
-                        scope,
-                        files,
+                        target,
+                        target_problem,
+                        touched,
                         branches,
                         branch_note,
                     }) => {
@@ -639,15 +714,33 @@ impl App {
                             },
                             None => ReviewCheck::NotConfigured,
                         };
-                        launch.plan.scope = scope.clone();
+                        if launch.plan.preset.is_none() {
+                            launch.plan.preset.clone_from(&config.scope);
+                        }
+                        let paths = scope::choices(&touched.files, launch.plan.preset.as_deref());
+                        launch.plan.target = target.clone();
+                        launch.plan.touched = touched;
+                        launch.plan.target_problem = target_problem;
                         launch.plan.config = config;
                         launch.stage = Stage::Form;
                         if let Some(form) = self.ui_state.review_form_mut() {
-                            form.scope = scope;
-                            form.file_count = Some(files);
+                            if let ReviewTarget::Base(base) = &target {
+                                form.base_choice = Some(base.clone());
+                            }
+                            form.target = target;
+                            form.paths = paths;
                             form.branches = branches;
-                            form.note = branch_note;
                             form.check = check;
+                            if !form.fields().contains(&form.focus) {
+                                form.focus = ReviewField::Target;
+                            }
+                        }
+                        self.refresh_scope();
+                        if let (Some(note), Some(form)) =
+                            (branch_note, self.ui_state.review_form_mut())
+                            && form.note.is_none()
+                        {
+                            form.note = Some(note);
                         }
                     }
                     Err(error) => self.abandon_launch(launch_message(&error)),
@@ -664,33 +757,48 @@ impl App {
                 };
                 let workspace = self.cwd.clone();
                 let spec = launch.plan.target.spec();
-                let scope = launch.plan.scope.clone();
-                self.review.spawn_step(id, move || {
-                    let files = launch::probe(&workspace, &spec, &scope)
-                        .and_then(|files| Ok((files, launch::uncommitted(&workspace, &scope)?)));
-                    LaunchStep::Recounted { recount, files }
+                self.review.spawn_step(id, move || LaunchStep::Recounted {
+                    recount,
+                    files: launch::touched(&workspace, &spec),
                 });
             }
             LaunchStep::Recounted { recount, files } => {
                 let Some(launch) = self
                     .review
                     .launch
-                    .as_ref()
+                    .as_mut()
                     .filter(|launch| launch.plan.recount == recount)
                 else {
                     return;
                 };
-                let dirty_head = launch.plan.target.ends_at_head_commit();
-                let Some(form) = self.ui_state.review_form_mut() else {
-                    return;
-                };
                 match files {
-                    Ok((files, dirty)) => {
-                        form.file_count = Some(files);
-                        form.problem = None;
-                        form.note = (dirty && dirty_head).then(|| DIRTY_NOTE.to_owned());
+                    Ok(touched) => {
+                        // The form is open while the launch is in the form stage.
+                        let Some(previous) =
+                            self.ui_state.review_form().map(|form| form.paths.clone())
+                        else {
+                            return;
+                        };
+                        let paths = scope::rebuild(
+                            &previous,
+                            &touched.files,
+                            launch.plan.preset.as_deref(),
+                        );
+                        launch.plan.touched = touched;
+                        launch.plan.target_problem = None;
+                        if let Some(form) = self.ui_state.review_form_mut() {
+                            form.paths = paths;
+                            form.path_cursor =
+                                form.path_cursor.min(form.paths.len().saturating_sub(1));
+                        }
+                        self.refresh_scope();
                     }
-                    Err(error) => form.problem = Some(error.to_string()),
+                    Err(error) => {
+                        launch.plan.target_problem = Some(error.to_string());
+                        if let Some(form) = self.ui_state.review_form_mut() {
+                            form.problem = Some(error.to_string());
+                        }
+                    }
                 }
             }
             LaunchStep::Prepared(result) => {
@@ -1278,6 +1386,62 @@ impl App {
         }
         None
     }
+}
+
+/// The blocking half of opening the form: settings, branches, the target the
+/// arguments asked for, and what its diff touches.
+fn open_launch(workspace: &Path, requested: Option<TargetArg>) -> Result<Opened, LaunchError> {
+    let config = ReviewConfig::load(workspace)?;
+    // Without a branch list the form offers no base mode and says why; the
+    // other targets still work.
+    let (branches, branch_note) = match launch::base_branches(workspace) {
+        Ok(branches) => (branches, None),
+        Err(error) => {
+            tracing::warn!(%error, "review: cannot list base branches");
+            (Vec::new(), Some(format!("no base branches: {error}")))
+        }
+    };
+    let (target, target_problem) = match requested {
+        None | Some(TargetArg::Auto) => (ReviewTarget::Auto, None),
+        Some(TargetArg::Uncommitted) => (ReviewTarget::Uncommitted, None),
+        Some(TargetArg::HeadCommit) => (ReviewTarget::HeadCommit, None),
+        Some(TargetArg::Base(Some(base))) => {
+            let problem = (!branches.contains(&base))
+                .then(|| format!("there is no branch {base:?} to compare against"));
+            (ReviewTarget::Base(base), problem)
+        }
+        Some(TargetArg::Base(None)) => match ReviewTarget::Auto.cycle(&branches, None, false) {
+            base @ ReviewTarget::Base(_) => (base, None),
+            _ => (
+                ReviewTarget::Auto,
+                Some("there is no other branch to compare against".to_owned()),
+            ),
+        },
+    };
+    let target_problem = target_problem.or_else(|| input_problem("target", &target.spec()));
+    // A target the operator named but cannot be diffed is a problem on the
+    // form; outside the repository root the review cannot open at all.
+    let touched = if target_problem.is_some() {
+        Ok(launch::Touched::default())
+    } else {
+        launch::touched(workspace, &target.spec())
+    };
+    let (touched, target_problem) = match touched {
+        Ok(touched) => (touched, target_problem),
+        Err(error @ LaunchError::NotRoot { .. }) => return Err(error),
+        Err(error) if target != ReviewTarget::Auto => {
+            (launch::Touched::default(), Some(error.to_string()))
+        }
+        Err(error) => return Err(error),
+    };
+    Ok(Opened {
+        config,
+        target,
+        target_problem,
+        touched,
+        branches,
+        branch_note,
+    })
 }
 
 /// The refusal outside the root is quoted as the spec words it.

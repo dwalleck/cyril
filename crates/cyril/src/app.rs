@@ -2227,7 +2227,7 @@ impl App {
                     }
                 }
             }
-            CommandResultKind::Review => self.open_review(),
+            CommandResultKind::Review { args } => self.open_review(args),
             CommandResultKind::ReviewResume { selector } => self.open_resume(selector),
             CommandResultKind::ReviewCancel => self.cancel_review(),
             CommandResultKind::Quit => {
@@ -6432,7 +6432,11 @@ mod tests {
         let (mut app, _rx) = test_app_with_command_rx();
         app.ui_state.insert_text("draft");
         app.ui_state.show_review_form(cyril_ui::traits::ReviewForm {
-            scope: vec![".".into()],
+            paths: vec![cyril_core::review::scope::PathChoice {
+                path: ".".into(),
+                files: 3,
+                checked: true,
+            }],
             file_count: Some(3),
             check: cyril_ui::traits::ReviewCheck::NotConfigured,
             ..cyril_ui::traits::ReviewForm::opening(cyril_core::review::target::ReviewTarget::Auto)

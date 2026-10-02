@@ -130,9 +130,10 @@ pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<St
     Ok(out)
 }
 
-/// How many files the diff `gather` would write touches: what `/review`
-/// shows before consent. Refuses anywhere but the repository root.
-pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<usize> {
+/// The files the diff `gather` would write touches, in git's order: what
+/// `/review` shows (and lets the operator narrow) before consent. Refuses
+/// anywhere but the repository root.
+pub fn changed_paths(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<Vec<String>> {
     git::admit_target(requested_target)?;
     git::require_root(run)?;
     let (target, _) = resolve_target(run, requested_target)?;
@@ -141,7 +142,15 @@ pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Re
         run,
         &diff_args(&target, &["--name-only", "-z"], &split_scope(scope)),
     )?;
-    Ok(git::nul_records(&names)?.len())
+    Ok(git::nul_records(&names)?
+        .into_iter()
+        .map(str::to_owned)
+        .collect())
+}
+
+/// How many files the diff `gather` would write touches.
+pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<usize> {
+    Ok(changed_paths(run, requested_target, scope)?.len())
 }
 
 /// Branches `/review` offers as a base: local and remote-tracking, without
@@ -168,18 +177,25 @@ pub fn base_branches(run: &ReviewRun) -> Result<Vec<String>> {
         .collect())
 }
 
-/// Whether the working tree has uncommitted changes to tracked files in
-/// `scope`: a target that ends at the HEAD commit does not review them, but
-/// the reviewers read the working tree.
-pub fn uncommitted_in_scope(run: &ReviewRun, scope: &str) -> Result<bool> {
-    let mut args = vec![
-        "status".to_owned(),
-        "--porcelain".to_owned(),
-        "--untracked-files=no".to_owned(),
-        "--".to_owned(),
-    ];
-    args.extend(split_scope(scope));
-    Ok(!git::git_text(run, &args)?.trim().is_empty())
+/// Tracked files with uncommitted changes: a target that ends at the HEAD
+/// commit does not review them, but the reviewers read the working tree.
+pub fn uncommitted_paths(run: &ReviewRun) -> Result<Vec<String>> {
+    let status = git::git(
+        run,
+        &[
+            "status",
+            "--porcelain",
+            "-z",
+            "--untracked-files=no",
+            "--no-renames",
+        ],
+    )?;
+    // Each record is "XY <path>".
+    Ok(git::nul_records(&status)?
+        .into_iter()
+        .filter_map(|record| record.get(3..))
+        .map(str::to_owned)
+        .collect())
 }
 
 /// Scope as the recipe passes it: one string of space-separated pathspecs.

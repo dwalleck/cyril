@@ -214,9 +214,12 @@ pub enum CommandResultKind {
     ShowPowers {
         powers: Vec<crate::types::PowerInfo>,
     },
-    /// Open the `/review` consent form. The App owns the form, the git probes
-    /// and the launch, so the command returns only the intent.
-    Review,
+    /// Open the `/review` consent form, prefilled from the arguments. The App
+    /// owns the form, the git probes and the launch, so the command returns
+    /// only the intent.
+    Review {
+        args: crate::review::target::ReviewArgs,
+    },
     /// `/review resume [<run dir | workflow id>]`: continue a failed or
     /// paused review run after fresh consent.
     ReviewResume { selector: Option<String> },
@@ -259,8 +262,13 @@ impl CommandResult {
 
     /// Open the `/review` consent form.
     pub fn review() -> Self {
+        Self::review_with(crate::review::target::ReviewArgs::default())
+    }
+
+    /// Open the `/review` consent form prefilled from `args`.
+    pub fn review_with(args: crate::review::target::ReviewArgs) -> Self {
         Self {
-            kind: CommandResultKind::Review,
+            kind: CommandResultKind::Review { args },
         }
     }
 

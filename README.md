@@ -132,11 +132,19 @@ workflow engine. The form picks the Review target with ←/→:
 - `the commit at HEAD` — that commit alone.
 
 Every target ends at the checked-out HEAD, because the reviewers read the
-working tree. The form also shows the scope, the number of files (recounted
-whenever the target changes), the expected cost (about 50–65 model sessions
-and 40–50 minutes) and what the run may do. `Esc` backs out without writing
-anything; `Enter` starts it. An empty diff stops there with "nothing to
-review".
+working tree. The scope is a row of checkboxes: one per top-level directory
+the diff touches, plus each touched root file, all checked unless the
+repository's `[review] scope` says otherwise. Tab moves between the target, the
+base branch and the paths; on the paths ←/→ moves and Space toggles, with the
+file count following. Unchecking every path is refused ("select at least one
+path"). The form also shows the expected cost (about 50–65 model sessions and
+40–50 minutes) and what the run may do. `Esc` backs out without writing
+anything; `Enter` starts it. An empty diff for the chosen target and paths
+stops there with "nothing to review".
+
+Arguments prefill the form, which still asks for `Enter`:
+`/review [auto | uncommitted | head | base [<branch>]] [-- <path>…]`. The
+cursor starts on the first field the arguments left out.
 
 Starting installs the `cyril-review` recipe and its four agents into
 `~/.kiro/workflows` and `~/.kiro/agents`, rewriting only files that differ.

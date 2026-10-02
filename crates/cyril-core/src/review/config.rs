@@ -116,17 +116,9 @@ impl ReviewConfig {
                         let toml::Value::String(path) = item else {
                             return Err(wrong_type(key, "an array of paths"));
                         };
-                        // The recipe passes the scope as one space-separated
-                        // string, so a path may not contain whitespace.
-                        if path.is_empty() || path.chars().any(char::is_whitespace) {
-                            return Err(invalid(format!(
-                                "`scope` path {path:?} is empty or contains whitespace"
-                            )));
+                        if let Some(problem) = scope_problem(path) {
+                            return Err(invalid(format!("`scope` {problem}")));
                         }
-                        if let Some(problem) = input_problem("scope", path) {
-                            return Err(invalid(format!("`scope` path {path:?}: {problem}")));
-                        }
-                        inside_workspace(key, path)?;
                         paths.push(path.clone());
                     }
                     if paths.is_empty() {
@@ -192,6 +184,21 @@ impl ReviewConfig {
             }
         }
     }
+}
+
+/// Why `path` cannot be a scope pathspec, or `None`: the recipe passes the
+/// scope as one space-separated string inside double quotes, and every path
+/// stays inside the repository. Shared by `[review] scope` and `/review --`.
+pub fn scope_problem(path: &str) -> Option<String> {
+    if path.is_empty() || path.chars().any(char::is_whitespace) {
+        return Some(format!("path {path:?} is empty or contains whitespace"));
+    }
+    if let Some(problem) = input_problem("scope", path) {
+        return Some(format!("path {path:?}: {problem}"));
+    }
+    inside_workspace("scope", path)
+        .err()
+        .map(|_| format!("path {path:?} is outside the repository"))
 }
 
 fn wrong_type(key: &str, expected: &str) -> ConfigError {
