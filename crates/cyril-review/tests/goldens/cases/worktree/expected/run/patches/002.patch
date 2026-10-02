@@ -1,0 +1,14 @@
+diff --git a/web/app.ts b/web/app.ts
+index 47c6218..797222a 100644
+--- a/web/app.ts
++++ b/web/app.ts
+@@ -1,3 +1,9 @@
+ export function render(x: number) {
+   return x;
+ }
++
++export class Store {}
++export const LIMIT = 10;
++export function formatTotal(n: number) {
++  return render(n) + LIMIT;
++}

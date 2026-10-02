@@ -1,0 +1,15 @@
+diff --git a/tools/run.py b/tools/run.py
+index 336e825..013d6cb 100644
+--- a/tools/run.py
++++ b/tools/run.py
+@@ -1,2 +1,10 @@
+ def main():
+     pass
++
++
++def get(key):
++    return key
++
++
++class Loader:
++    pass

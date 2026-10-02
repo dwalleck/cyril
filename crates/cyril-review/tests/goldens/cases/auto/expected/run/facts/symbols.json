@@ -1,0 +1,38 @@
+[
+  {
+    "name": "Extra",
+    "kind": "func",
+    "file": "lib/core.go",
+    "line": 7,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 1,
+    "usages": [
+      {
+        "file": "lib/use.go",
+        "line": 4,
+        "text": "return Extra()"
+      }
+    ]
+  },
+  {
+    "name": "Config",
+    "kind": "type",
+    "file": "lib/core.go",
+    "line": 11,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "UseExtra",
+    "kind": "func",
+    "file": "lib/use.go",
+    "line": 3,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  }
+]

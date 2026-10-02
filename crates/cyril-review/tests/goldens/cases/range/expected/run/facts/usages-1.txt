@@ -1,0 +1,15 @@
+# usages of every symbol this diff adds or changes — textual (git grep -w, same language), so a comment or a same-named symbol counts. Start here for callers instead of grepping. -- page 1 of 1
+## render_page  (fn, modified, src/lib.rs) — 1 usages
+src/lib.rs:2: pub fn render_page(title: &str) -> String {
+
+## compute_total  (fn, added, src/lib.rs:13) — 4 usages
+src/caller.rs:1: use crate::compute_total;
+src/caller.rs:4: compute_total(&[4, 5])
+src/lib.rs:7: let total = compute_total(&[a, b, c]);
+src/lib.rs:23: assert_eq!(compute_total(&[1]), 1);
+
+## defined or changed by this diff, used NOWHERE else in code (tests have no callers; for anything else this is worth a look):
+sum_all (fn, src/caller.rs:3); orphan_symbol (fn, src/lib.rs:17); Widget (struct, src/lib.rs:19); Parser (class, src/util.py:9)
+
+## names too common for a textual map to mean anything — search these yourself:
+get (src/util.py:5, 0 textual hits)

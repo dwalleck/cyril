@@ -1,0 +1,35 @@
+[
+  {
+    "step": [
+      "gather",
+      "HEAD~1..HEAD",
+      "src assets"
+    ],
+    "exit": 0,
+    "stdout": "facts: 7 changed symbols (usages capped at 25 each), 1 change docs -> facts/usages-1.txt\ngathered 5 files, 1340 patch bytes, target=HEAD~1..HEAD\n"
+  },
+  {
+    "step": [
+      "gather",
+      "HEAD~1..HEAD",
+      "src assets"
+    ],
+    "exit": 0,
+    "stdout": "already gathered: 5 files, target=HEAD~1..HEAD\n"
+  },
+  {
+    "step": [
+      "diagnostics",
+      "git -c color.ui=never diff --name-only HEAD~1 HEAD"
+    ],
+    "exit": 0,
+    "stdout": "diagnostics: clean in 0s; 5 line(s) on changed files -> facts/diagnostics.txt\n"
+  },
+  {
+    "step": [
+      "facts"
+    ],
+    "exit": 0,
+    "stdout": "facts: 7 changed symbols (usages capped at 25 each), 1 change docs -> facts/usages-1.txt\n"
+  }
+]

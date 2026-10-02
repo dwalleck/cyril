@@ -1,0 +1,99 @@
+[
+  {
+    "name": "sum_all",
+    "kind": "fn",
+    "file": "src/caller.rs",
+    "line": 3,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "render_page",
+    "kind": "fn",
+    "file": "src/lib.rs",
+    "line": null,
+    "status": "modified",
+    "ambiguous": false,
+    "usage_count": 1,
+    "usages": [
+      {
+        "file": "src/lib.rs",
+        "line": 2,
+        "text": "pub fn render_page(title: &str) -> String {"
+      }
+    ]
+  },
+  {
+    "name": "compute_total",
+    "kind": "fn",
+    "file": "src/lib.rs",
+    "line": 13,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 4,
+    "usages": [
+      {
+        "file": "src/caller.rs",
+        "line": 1,
+        "text": "use crate::compute_total;"
+      },
+      {
+        "file": "src/caller.rs",
+        "line": 4,
+        "text": "compute_total(&[4, 5])"
+      },
+      {
+        "file": "src/lib.rs",
+        "line": 7,
+        "text": "let total = compute_total(&[a, b, c]);"
+      },
+      {
+        "file": "src/lib.rs",
+        "line": 23,
+        "text": "assert_eq!(compute_total(&[1]), 1);"
+      }
+    ]
+  },
+  {
+    "name": "orphan_symbol",
+    "kind": "fn",
+    "file": "src/lib.rs",
+    "line": 17,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "Widget",
+    "kind": "struct",
+    "file": "src/lib.rs",
+    "line": 19,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "get",
+    "kind": "def",
+    "file": "src/util.py",
+    "line": 5,
+    "status": "added",
+    "ambiguous": true,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "Parser",
+    "kind": "class",
+    "file": "src/util.py",
+    "line": 9,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  }
+]

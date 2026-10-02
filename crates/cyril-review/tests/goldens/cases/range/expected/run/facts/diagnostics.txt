@@ -1,0 +1,16 @@
+command: git -c color.ui=never diff --name-only HEAD~1 HEAD
+result: clean in 0s, on HEAD 74bcf496d29e
+5 output line(s) mention a changed file:
+assets/logo.bin
+src/caller.rs
+src/lib.rs
+src/old.rs
+src/util.py
+
+last lines of output:
+assets/logo.bin
+docs/NOTES.md
+src/caller.rs
+src/lib.rs
+src/old.rs
+src/util.py

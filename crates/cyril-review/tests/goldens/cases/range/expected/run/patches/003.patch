@@ -1,0 +1,29 @@
+diff --git a/src/lib.rs b/src/lib.rs
+index d965204..48d9012 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -4,7 +4,23 @@ pub fn render_page(title: &str) -> String {
+     let b = 2;
+     let c = 3;
+     let d = a + b + c;
+-    format!("<h1>{title}</h1>{d}")
++    let total = compute_total(&[a, b, c]);
++    format!("<h1>{title}</h1>{d} ({total})")
+ }
+ 
+ pub fn unchanged() {}
++
++pub fn compute_total(values: &[u32]) -> u32 {
++    values.iter().sum()
++}
++
++pub fn orphan_symbol() {}
++
++pub struct Widget;
++
++#[test]
++fn compute_total_counts() {
++    assert_eq!(compute_total(&[1]), 1);
++}
++
++mod tests {}

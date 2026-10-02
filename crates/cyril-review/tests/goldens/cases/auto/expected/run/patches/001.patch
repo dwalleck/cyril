@@ -1,0 +1,14 @@
+diff --git a/lib/core.go b/lib/core.go
+index a43d3c8..a218f43 100644
+--- a/lib/core.go
++++ b/lib/core.go
+@@ -3,3 +3,9 @@ package lib
+ func Base() int {
+ 	return 1
+ }
++
++func Extra() int {
++	return Base() + 1
++}
++
++type Config struct{}

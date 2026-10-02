@@ -1,0 +1,30 @@
+{
+  "commits": [
+    {
+      "message": "baseline",
+      "files": {
+        "lib/core.go": "package lib\n\nfunc Base() int {\n\treturn 1\n}\n"
+      }
+    },
+    {
+      "branch": "feature",
+      "message": "extra",
+      "files": {
+        "lib/core.go": "package lib\n\nfunc Base() int {\n\treturn 1\n}\n\nfunc Extra() int {\n\treturn Base() + 1\n}\n\ntype Config struct{}\n"
+      }
+    },
+    {
+      "message": "use",
+      "files": {
+        "lib/use.go": "package lib\n\nfunc UseExtra() int {\n\treturn Extra()\n}\n"
+      }
+    }
+  ],
+  "steps": [
+    [
+      "gather",
+      "auto",
+      "."
+    ]
+  ]
+}

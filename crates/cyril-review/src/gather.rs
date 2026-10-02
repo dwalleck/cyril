@@ -1,184 +1,256 @@
-use crate::clock::ReviewClock;
-use crate::facts;
-use crate::git;
-use crate::run::{
-    Manifest, ManifestFile, ReviewRun, ensure_layout, facts_dir, manifest_path, package_version,
-    read_manifest, write_binary, write_json, write_text,
-};
-use crate::{Result, ReviewError, StepOutput};
-use std::borrow::Cow;
+use crate::git::{self, DIFF, PATCH_CONTEXT};
+use crate::run::{Manifest, ManifestFile, ReviewRun, VERSION, read_manifest, write, write_json};
+use crate::{Result, ReviewError, facts, io_error};
+use std::collections::HashMap;
+use std::fs;
 
-/// Gather a scoped Git diff and build its source facts.
-pub fn gather(
-    run: &ReviewRun,
-    target: &str,
-    scope: &str,
-    clock: &dyn ReviewClock,
-) -> Result<StepOutput> {
-    git::admit_target(target)?;
-    let requested_scope = split_scope(scope);
-    let manifest_file = manifest_path(run);
-    if manifest_file.exists() {
+const RUN_DIRS: [&str; 6] = [
+    "patches",
+    "candidates",
+    "deduped",
+    "queues",
+    "verdicts",
+    "facts",
+];
+
+/// `crtool gather <rundir> <target> [<scope>]`: write the diff, per-file
+/// patches and manifest, then the facts. Returns the step's stdout.
+pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<String> {
+    git::admit_target(requested_target)?;
+    git::require_root(run)?;
+    let scope = split_scope(scope);
+    let manifest_path = run.path("manifest.json");
+    if manifest_path.exists() {
+        // `/review` gathers before the workflow starts, so the recipe's setup
+        // step normally finds its work done.
         let mut prior = read_manifest(run)?;
-        if prior.requested_target != target || prior.scope != requested_scope {
+        if prior.requested_target != requested_target || prior.scope != scope {
             return Err(ReviewError::ExistingRun {
-                path: run.directory().to_path_buf(),
+                path: run.dir().to_path_buf(),
             });
         }
-        let mut stdout = String::new();
-        let symbols = facts_dir(run).join("symbols.json");
-        if !symbols.exists() {
-            stdout.push_str(&facts::build_facts(run, &mut prior)?);
+        let mut out = String::new();
+        if !run.path("facts/symbols.json").exists() {
+            out += &facts::build_facts(run, &mut prior)?;
         }
-        stdout.push_str(&format!(
+        out += &format!(
             "already gathered: {} files, target={}\n",
             prior.total_files, prior.target
-        ));
-        return Ok(StepOutput::from_text(stdout));
+        );
+        return Ok(out);
+    }
+    for name in RUN_DIRS {
+        let path = run.path(name);
+        fs::create_dir_all(&path).map_err(|source| io_error("create directory", path, source))?;
     }
 
-    ensure_layout(run)?;
-    let repo = git::repository(run)?;
-    let (resolved_target, target_warning) = git::resolve_target(&repo, target)?;
-    let head_id = git::commit_id(&repo, "HEAD")?;
-    let mut warnings = Vec::new();
-    if let Some(note) = target_warning {
-        warnings.push(note);
-    }
-
-    let matches_head = match git::head_side(&resolved_target) {
-        Some(head) => {
-            let matches = git::commit_id(&repo, head)? == head_id;
-            if !matches {
-                warnings.push(format!(
-                    "working tree (HEAD) is not at the diff's head ({head}); source files may not match the patches"
-                ));
-            }
-            matches
+    let (target, note) = resolve_target(run, requested_target)?;
+    git::admit_target(&target)?;
+    let mut warnings: Vec<String> = note.into_iter().collect();
+    let head = git::commit_id(run, "HEAD")?;
+    let mut matches_head = true;
+    if let Some(side) = head_side(&target) {
+        matches_head = git::commit_id(run, side)? == head;
+        if !matches_head {
+            warnings.push(format!(
+                "working tree (HEAD) is not at the diff's head ({side}); source files may not match the patches"
+            ));
         }
-        None => true,
-    };
+    }
 
-    let full = git::scoped_patch(run, &resolved_target, &requested_scope)?;
+    let full = git::git(run, &diff_args(&target, &[PATCH_CONTEXT], &scope))?;
     if full.iter().all(u8::is_ascii_whitespace) {
-        return Err(ReviewError::EmptyDiff {
-            target: resolved_target,
-            scope: requested_scope,
-        });
+        return Err(ReviewError::EmptyDiff { target, scope });
     }
-    write_binary(&run.directory().join("diff.patch"), &full)?;
+    write(&run.path("diff.patch"), &full)?;
 
-    let diff = git::parse_patch(&full, &resolved_target)?;
-    let mut files = Vec::with_capacity(diff.deltas().len());
-    let mut changed_files = String::new();
-    let mut deltas = diff.deltas().enumerate().peekable();
-    while let Some((delta_index, delta)) = deltas.next() {
-        let path = git::delta_path(&delta)?;
-        let mut status = git::delta_status(delta.status())?;
-        let mut patch = git::patch(&diff, delta_index)?;
-        let (_, mut insertions, mut deletions) = patch
-            .line_stats()
-            .map_err(|error| git::operation("read per-file patch statistics", error))?;
-        let mut binary = patch.delta().flags().is_binary();
-        let first_bytes = patch
-            .to_buf()
-            .map_err(|error| git::operation("serialize per-file patch", error))?;
-        let mut bytes = Cow::Borrowed(&first_bytes[..]);
-        // Git represents a typechange as adjacent deletion/addition patches.
-        if let Some((next_index, next)) = deltas.peek()
-            && git::delta_path(next)? == path
-        {
-            if !matches!(
-                (delta.status(), next.status()),
-                (git2::Delta::Deleted, git2::Delta::Added)
-                    | (git2::Delta::Added, git2::Delta::Deleted)
-            ) {
-                return Err(git::operation(
-                    "combine file deltas",
-                    "unexpected duplicate path",
-                ));
-            }
-            let mut next_patch = git::patch(&diff, *next_index)?;
-            let (_, added, removed) = next_patch
-                .line_stats()
-                .map_err(|error| git::operation("read typechange statistics", error))?;
-            insertions += added;
-            deletions += removed;
-            binary |= next_patch.delta().flags().is_binary();
-            let next_bytes = next_patch
-                .to_buf()
-                .map_err(|error| git::operation("serialize typechange patch", error))?;
-            let mut combined = Vec::with_capacity(first_bytes.len() + next_bytes.len());
-            combined.extend_from_slice(&first_bytes);
-            combined.extend_from_slice(&next_bytes);
-            bytes = Cow::Owned(combined);
-            status = "T";
-            deltas.next();
-        }
-        let index = files.len() + 1;
-        let patch_rel = format!("patches/{index:03}.patch");
-        write_binary(&run.directory().join(&patch_rel), &bytes)?;
-        let (display_path, raw_path_bytes) = match String::from_utf8_lossy(path) {
-            Cow::Borrowed(display_path) => (display_path.to_owned(), None),
-            Cow::Owned(display_path) => (display_path, Some(path.to_vec())),
+    let name_status = git::git(run, &diff_args(&target, &["--name-status", "-z"], &scope))?;
+    let mut status: HashMap<&str, &str> = HashMap::new();
+    for pair in git::nul_records(&name_status)?.chunks_exact(2) {
+        status.insert(pair[1], pair[0]);
+    }
+    let numstat = git::git(run, &diff_args(&target, &["--numstat", "-z"], &scope))?;
+    let mut files = Vec::new();
+    for record in git::nul_records(&numstat)? {
+        let mut fields = record.splitn(3, '\t');
+        let (Some(insertions), Some(deletions), Some(path)) =
+            (fields.next(), fields.next(), fields.next())
+        else {
+            continue;
         };
-        changed_files.push_str(&display_path);
-        changed_files.push('\n');
-
+        let index = files.len() + 1;
+        let patch_name = format!("patches/{index:03}.patch");
+        let patch = git::git(
+            run,
+            &diff_args(&target, &[PATCH_CONTEXT], &[format!(":(literal){path}")]),
+        )?;
+        write(&run.path(&patch_name), &patch)?;
+        let binary = insertions == "-";
         files.push(ManifestFile {
             index: index as u64,
-            path: display_path,
-            raw_path_bytes,
-            status: status.to_owned(),
-            insertions: (!binary).then_some(insertions as u64),
-            deletions: (!binary).then_some(deletions as u64),
+            path: path.to_owned(),
+            status: status.get(path).copied().unwrap_or("?").to_owned(),
+            insertions: count(binary, insertions),
+            deletions: count(binary, deletions),
             binary,
-            patch: patch_rel,
-            patch_bytes: bytes.len() as u64,
-            metadata: Default::default(),
+            patch: patch_name,
+            patch_bytes: patch.len() as u64,
         });
     }
-    let total_files = files.len() as u64;
-    write_text(&run.directory().join("changed-files.txt"), &changed_files)?;
+    let changed: String = files
+        .iter()
+        .map(|file| format!("{}\n", file.path))
+        .collect();
+    write(&run.path("changed-files.txt"), changed.as_bytes())?;
 
-    let gathered_at = clock.gathered_at_utc()?;
-    let mut manifest_value = Manifest {
-        requested_target: target.to_owned(),
-        target: resolved_target,
-        scope: requested_scope,
-        head: head_id.to_string(),
+    let mut manifest = Manifest {
+        requested_target: requested_target.to_owned(),
+        target,
+        scope,
+        head,
         worktree_matches_diff_head: matches_head,
-        gathered_at,
-        crtool_version: package_version().to_owned(),
-        total_files,
+        gathered_at: gathered_at(),
+        crtool_version: Some(VERSION.to_owned()),
+        total_files: files.len() as u64,
         total_patch_bytes: full.len() as u64,
         warnings,
         files,
-        metadata: Default::default(),
+        rest: Default::default(),
     };
-    write_json(&manifest_file, &manifest_value)?;
-
-    let facts_line = facts::build_facts(run, &mut manifest_value)?;
-    let warning_suffix = if manifest_value.warnings.is_empty() {
-        String::new()
-    } else {
-        format!(" | WARNINGS: {}", manifest_value.warnings.join("; "))
-    };
-    let gathered_line = format!(
-        "gathered {total_files} files, {} patch bytes, target={}{warning_suffix}\n",
-        full.len(),
-        manifest_value.target,
+    write_json(&manifest_path, &manifest)?;
+    let mut out = facts::build_facts(run, &mut manifest)?;
+    out += &format!(
+        "gathered {} files, {} patch bytes, target={}",
+        manifest.total_files, manifest.total_patch_bytes, manifest.target
     );
-    Ok(StepOutput::from_text(facts_line + &gathered_line))
+    if !manifest.warnings.is_empty() {
+        out += &format!(" | WARNINGS: {}", manifest.warnings.join("; "));
+    }
+    out.push('\n');
+    Ok(out)
 }
 
+/// Scope as the recipe passes it: one string of space-separated pathspecs.
 pub(crate) fn split_scope(scope: &str) -> Vec<String> {
-    let mut parts = scope
-        .split_whitespace()
-        .map(ToOwned::to_owned)
-        .collect::<Vec<_>>();
+    let parts: Vec<String> = scope.split_whitespace().map(str::to_owned).collect();
     if parts.is_empty() {
-        parts.push(".".to_owned());
+        vec![".".to_owned()]
+    } else {
+        parts
     }
-    parts
+}
+
+fn diff_args(target: &str, extra: &[&str], pathspecs: &[String]) -> Vec<String> {
+    let mut args: Vec<String> = DIFF.iter().map(|arg| (*arg).to_owned()).collect();
+    args.extend(extra.iter().map(|arg| (*arg).to_owned()));
+    args.push(target.to_owned());
+    args.push("--".to_owned());
+    args.extend(pathspecs.iter().cloned());
+    args
+}
+
+fn count(binary: bool, field: &str) -> Option<u64> {
+    if binary {
+        return None;
+    }
+    let parsed = field.parse().ok();
+    if parsed.is_none() {
+        tracing::warn!(field, "unparseable git numstat count");
+    }
+    parsed
+}
+
+/// Pick the diff when the caller says `auto` (phase 0 of the review prompt).
+fn resolve_target(run: &ReviewRun, requested: &str) -> Result<(String, Option<String>)> {
+    if requested != "auto" {
+        return Ok((requested.to_owned(), None));
+    }
+    let mut base = None;
+    for candidate in ["@{upstream}", "main", "master"] {
+        if git::is_commit(run, candidate)? {
+            base = Some(candidate);
+            break;
+        }
+    }
+    let dirty = !git::git_text(run, &["status", "--porcelain", "--untracked-files=no"])?
+        .trim()
+        .is_empty();
+    let Some(base) = base else {
+        let target = if dirty { "HEAD" } else { "HEAD~1" };
+        return Ok((
+            target.to_owned(),
+            Some(format!("no upstream/main: fell back to {target}")),
+        ));
+    };
+    let range = format!("{base}...HEAD");
+    let empty = git::git_text(run, &diff_args(&range, &["--name-only"], &[]))?
+        .trim()
+        .is_empty();
+    if dirty || empty {
+        let merge_base = git::git_text(run, &["merge-base", base, "HEAD"])?
+            .trim()
+            .to_owned();
+        let short: String = merge_base.chars().take(12).collect();
+        let warning = format!(
+            "working tree included (dirty={}, empty_range={}); diffing against merge-base {short}",
+            py_bool(dirty),
+            py_bool(empty)
+        );
+        return Ok((merge_base, Some(warning)));
+    }
+    Ok((range, None))
+}
+
+/// The revision the diff ends at, or `None` when it ends at the working tree.
+fn head_side(target: &str) -> Option<&str> {
+    ["...", ".."].into_iter().find_map(|separator| {
+        target
+            .split_once(separator)
+            .map(|(_, side)| if side.is_empty() { "HEAD" } else { side })
+    })
+}
+
+/// Python's spelling of a bool, which the warnings have always used.
+fn py_bool(value: bool) -> &'static str {
+    if value { "True" } else { "False" }
+}
+
+/// Now, in UTC, to the second: `2026-10-02T01:49:29+00:00`.
+fn gathered_at() -> String {
+    let now = time::OffsetDateTime::now_utc();
+    format!(
+        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}+00:00",
+        now.year(),
+        u8::from(now.month()),
+        now.day(),
+        now.hour(),
+        now.minute(),
+        now.second()
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn head_side_reads_ranges_and_defaults_an_open_end_to_head() {
+        assert_eq!(head_side("main...feature"), Some("feature"));
+        assert_eq!(head_side("a..b"), Some("b"));
+        assert_eq!(head_side("main..."), Some("HEAD"));
+        assert_eq!(head_side("HEAD~1"), None);
+    }
+
+    #[test]
+    fn empty_scope_means_everything() {
+        assert_eq!(split_scope(""), ["."]);
+        assert_eq!(split_scope(" src  docs "), ["src", "docs"]);
+    }
+
+    #[test]
+    fn timestamp_has_python_isoformat_shape() {
+        let stamp = gathered_at();
+        assert_eq!(stamp.len(), "2026-10-02T01:49:29+00:00".len());
+        assert!(stamp.ends_with("+00:00"));
+    }
 }

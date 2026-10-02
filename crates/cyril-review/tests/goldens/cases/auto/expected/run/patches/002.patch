@@ -1,0 +1,11 @@
+diff --git a/lib/use.go b/lib/use.go
+new file mode 100644
+index 0000000..7295228
+--- /dev/null
++++ b/lib/use.go
+@@ -0,0 +1,5 @@
++package lib
++
++func UseExtra() int {
++	return Extra()
++}

@@ -1,0 +1,58 @@
+[
+  {
+    "name": "get",
+    "kind": "def",
+    "file": "tools/run.py",
+    "line": 5,
+    "status": "added",
+    "ambiguous": true,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "Loader",
+    "kind": "class",
+    "file": "tools/run.py",
+    "line": 9,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "Store",
+    "kind": "class",
+    "file": "web/app.ts",
+    "line": 5,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  },
+  {
+    "name": "LIMIT",
+    "kind": "const",
+    "file": "web/app.ts",
+    "line": 6,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 1,
+    "usages": [
+      {
+        "file": "web/app.ts",
+        "line": 8,
+        "text": "return render(n) + LIMIT;"
+      }
+    ]
+  },
+  {
+    "name": "formatTotal",
+    "kind": "function",
+    "file": "web/app.ts",
+    "line": 7,
+    "status": "added",
+    "ambiguous": false,
+    "usage_count": 0,
+    "usages": []
+  }
+]

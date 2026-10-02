@@ -1,0 +1,7 @@
+diff --git a/src/old.rs b/src/old.rs
+deleted file mode 100644
+index 2bf6270..0000000
+--- a/src/old.rs
++++ /dev/null
+@@ -1 +0,0 @@
+-pub fn retired() {}

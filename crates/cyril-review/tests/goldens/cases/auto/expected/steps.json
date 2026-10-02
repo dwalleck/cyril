@@ -1,0 +1,11 @@
+[
+  {
+    "step": [
+      "gather",
+      "auto",
+      "."
+    ],
+    "exit": 0,
+    "stdout": "facts: 3 changed symbols (usages capped at 25 each), 0 change docs -> facts/usages-1.txt\ngathered 2 files, 421 patch bytes, target=main...HEAD\n"
+  }
+]

@@ -1,0 +1,11 @@
+diff --git a/src/caller.rs b/src/caller.rs
+new file mode 100644
+index 0000000..ca3205c
+--- /dev/null
++++ b/src/caller.rs
+@@ -0,0 +1,5 @@
++use crate::compute_total;
++
++pub fn sum_all() -> u32 {
++    compute_total(&[4, 5])
++}

@@ -45,6 +45,7 @@ mode would write CRLF there). Decoding git output and agent files uses
 | Usage search cost | One `git grep` per symbol | One `git grep -e … -e …` for all symbols |
 | Diff output | Affected by user config (`diff.submodule`, `diff.relative`, color, ext-diff) | Independent of user diff config (with the git CLI: `--no-relative --no-color --no-ext-diff --no-textconv --submodule=short`) |
 | Self-exclusion | Skips hits under `.code-review/` | Skips hits under the actual run directory |
+| Per-file patch | `git diff -- <path>`, read as a glob (`src/[id].tsx` matches `src/i.tsx`) | `:(literal)<path>` |
 | `scope` | One space-split string | Same on the command line (the recipe passes one string); pathspecs containing spaces are unsupported |
 
 Adding a deviation requires a row here.
@@ -66,7 +67,8 @@ cyril crtool comments <rundir> [--no-trailer]
 - The argv grammar must match the recipe's command lines exactly: the review
   policy allowlists shell commands by parsing them.
 - **cwd is the repository root.** `/review` refuses to start anywhere else, and
-  the recipe runs every command "from the workspace root". Paths in all outputs
+  the recipe runs every command "from the workspace root". crtool refuses to
+  run anywhere else (exit 2). Paths in all outputs
   are repository-root-relative with forward slashes. `verdict_dir` values in
   queue files are absolute, with forward slashes.
 - **Exit codes:** `0` success; `2` any error, printed as one line
@@ -127,6 +129,9 @@ arbitrary command.
   cancel. On timeout or cancel, kill the direct child and keep the output
   collected so far. A failure to kill is reported in the result; it never
   discards that output.
+- A stream still open 2 seconds after the command ended (a background
+  grandchild holding the pipe) is abandoned rather than waited on; the output
+  read so far is kept and the report says so.
 - Writes `facts/diagnostics-raw.txt` (stdout, newline, stderr) and
   `facts/diagnostics.txt` (command, status, elapsed, HEAD; up to 200 lines
   mentioning a changed file; the last 15 lines), and sets `facts.diagnostics`

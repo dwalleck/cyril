@@ -1,0 +1,20 @@
+[
+  {
+    "step": [
+      "gather",
+      "HEAD",
+      ""
+    ],
+    "exit": 0,
+    "stdout": "facts: 5 changed symbols (usages capped at 25 each), 0 change docs -> facts/usages-1.txt\ngathered 2 files, 508 patch bytes, target=HEAD\n"
+  },
+  {
+    "step": [
+      "gather",
+      "HEAD",
+      "web"
+    ],
+    "exit": 2,
+    "stdout": ""
+  }
+]
