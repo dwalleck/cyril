@@ -177,9 +177,11 @@ impl Command for ReviewCommand {
             (Some("resume"), selector, None) => {
                 CommandResult::review_resume(selector.map(str::to_owned))
             }
+            (Some("cancel"), None, None) => CommandResult::review_cancel(),
             _ => {
                 return Ok(CommandResult::system_message(
-                    "Usage: /review | /review resume [<run dir | workflow id>]".into(),
+                    "Usage: /review | /review resume [<run dir | workflow id>] | /review cancel"
+                        .into(),
                 ));
             }
         };
@@ -374,7 +376,7 @@ mod tests {
         let result = run_with(&ReviewCommand, &mut harness, "main").await;
         assert_eq!(
             message_text(&result),
-            "Usage: /review | /review resume [<run dir | workflow id>]"
+            "Usage: /review | /review resume [<run dir | workflow id>] | /review cancel"
         );
         let result = run_with(&ReviewCommand, &mut harness, "resume").await;
         assert!(matches!(

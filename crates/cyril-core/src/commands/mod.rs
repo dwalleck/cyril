@@ -220,6 +220,8 @@ pub enum CommandResultKind {
     /// `/review resume [<run dir | workflow id>]`: continue a failed or
     /// paused review run after fresh consent.
     ReviewResume { selector: Option<String> },
+    /// `/review cancel`: stop the review at any phase.
+    ReviewCancel,
     /// Return Cyril's current typed memory runtime status.
     MemoryStatus(crate::types::MemoryStatusView),
     /// Execute one typed project-memory operation in the binary orchestrator.
@@ -259,6 +261,13 @@ impl CommandResult {
     pub fn review() -> Self {
         Self {
             kind: CommandResultKind::Review,
+        }
+    }
+
+    /// Stop the review at any phase.
+    pub fn review_cancel() -> Self {
+        Self {
+            kind: CommandResultKind::ReviewCancel,
         }
     }
 

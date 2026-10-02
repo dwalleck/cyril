@@ -2227,6 +2227,7 @@ impl App {
             }
             CommandResultKind::Review => self.open_review(),
             CommandResultKind::ReviewResume { selector } => self.open_resume(selector),
+            CommandResultKind::ReviewCancel => self.cancel_review(),
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }

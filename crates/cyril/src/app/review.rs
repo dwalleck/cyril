@@ -57,6 +57,12 @@ pub(super) struct ReviewState {
     launch: Option<Launch>,
     /// A `/review resume` in progress (its id comes from the same counter).
     resume: Option<resume::Resume>,
+    /// `/review cancel` came while `workflow/new` was out: the run it creates
+    /// is cancelled as soon as it appears, never left runnable.
+    cancel_on_mint: bool,
+    /// The review run a `/review cancel` is cancelling, until the agent
+    /// answers; only then is success (or failure) reported.
+    cancelling: Option<WorkflowId>,
     /// The id the next launch gets.
     next_launch: u64,
     /// Every run this process armed, live or ended. An ended run is kept so
@@ -167,6 +173,8 @@ pub(super) enum ReviewTask {
         decision: Decision,
     },
     Finished(String),
+    /// Send `workflow/cancel` for a review run `/review cancel` stopped.
+    SendCancel(WorkflowId),
     /// Off-loop work panicked. A launch's work abandons that launch.
     Crashed {
         launch: Option<u64>,
@@ -188,6 +196,8 @@ impl ReviewState {
             recount_delay: RECOUNT_DELAY,
             launch: None,
             resume: None,
+            cancel_on_mint: false,
+            cancelling: None,
             next_launch: 0,
             runs: HashMap::new(),
             tx,
@@ -542,6 +552,26 @@ impl App {
                 }
             }
             ReviewTask::Finished(text) => self.ui_state.add_system_message(text),
+            ReviewTask::SendCancel(workflow_id) => {
+                let Some(session_id) = self.session.id().cloned() else {
+                    self.ui_state.add_system_message(format!(
+                        "review: cannot cancel {workflow_id} — no active session"
+                    ));
+                    return;
+                };
+                let cancel = self.workflow_command(
+                    session_id,
+                    WorkflowOp::Cancel {
+                        id: workflow_id.clone(),
+                    },
+                );
+                match self.bridge_sender.send(cancel).await {
+                    Ok(()) => self.review.cancelling = Some(workflow_id),
+                    Err(error) => self.ui_state.add_system_message(format!(
+                        "review: could not cancel {workflow_id} — {error}"
+                    )),
+                }
+            }
             ReviewTask::Crashed { launch, error } => {
                 tracing::error!(%error, "review: off-loop work panicked");
                 if launch.is_some()
@@ -828,6 +858,15 @@ impl App {
     /// outcome itself still renders through normal routing.
     pub(super) fn observe_review_outcome(&mut self, outcome: &WorkflowCommandOutcome) {
         match outcome {
+            WorkflowCommandOutcome::Minted { workflow_id, .. } if self.review.launch.is_none() => {
+                if std::mem::take(&mut self.review.cancel_on_mint) {
+                    self.ui_state.add_system_message(format!(
+                        "review: {workflow_id} was created after /review cancel; cancelling it"
+                    ));
+                    self.review
+                        .after(Duration::ZERO, ReviewTask::SendCancel(workflow_id.clone()));
+                }
+            }
             WorkflowCommandOutcome::Minted { workflow_id, .. } => self.arm_review(workflow_id),
             WorkflowCommandOutcome::Invoked { workflow_id } => {
                 let invoking = matches!(
@@ -848,7 +887,19 @@ impl App {
                     ));
                 }
             }
-            WorkflowCommandOutcome::Failed { operation, .. } => {
+            WorkflowCommandOutcome::Failed {
+                operation, details, ..
+            } => {
+                if operation == "workflow new" {
+                    self.review.cancel_on_mint = false;
+                }
+                if operation == "workflow cancel"
+                    && let Some(workflow_id) = self.review.cancelling.take()
+                {
+                    self.ui_state.add_system_message(format!(
+                        "review: cancelling {workflow_id} failed — {details}; its authorization stays withdrawn"
+                    ));
+                }
                 let stage = self.review.launch.as_ref().map(|launch| &launch.stage);
                 match (operation.as_str(), stage) {
                     ("workflow new", Some(Stage::Minting { .. })) => {
@@ -865,6 +916,11 @@ impl App {
                 }
             }
             WorkflowCommandOutcome::Cancelled { workflow_id, .. } => {
+                if self.review.cancelling.as_ref() == Some(workflow_id) {
+                    self.review.cancelling = None;
+                    self.ui_state
+                        .add_system_message(format!("review: {workflow_id} cancelled"));
+                }
                 if let Some(run) = self.review.run_for(workflow_id)
                     && run.authorization.is_live()
                 {
@@ -1079,6 +1135,58 @@ impl App {
             .runs
             .get(workflow_id)
             .map(|run| run.run_dir.clone())
+    }
+
+    /// `/review cancel`: stop the review at whatever phase it is in. Before
+    /// a workflow exists the launch is abandoned (a running check is killed);
+    /// once one exists its authorization is withdrawn at once and the owned
+    /// workflow is cancelled. Success is reported only when the agent says so.
+    pub(super) fn cancel_review(&mut self) {
+        let mut acted = self.cancel_resume();
+        if let Some(launch) = self.review.launch.take() {
+            acted = true;
+            self.ui_state.close_review_form();
+            match launch.stage {
+                Stage::Minting { .. } | Stage::Loading { .. } => {
+                    // New may be out (or about to go): whatever it creates is
+                    // cancelled when it appears.
+                    self.review.cancel_on_mint = matches!(launch.stage, Stage::Minting { .. });
+                    self.ui_state.add_system_message(
+                        "review: cancelled before the workflow started".to_owned(),
+                    );
+                }
+                Stage::Recording(workflow_id) | Stage::Invoking(workflow_id) => {
+                    self.stop_run(&workflow_id);
+                }
+                _ => self
+                    .ui_state
+                    .add_system_message("review: cancelled; nothing was started".to_owned()),
+            }
+        }
+        if !acted {
+            match self
+                .review
+                .live_run()
+                .map(|run| run.authorization.workflow_id().clone())
+            {
+                Some(workflow_id) => self.stop_run(&workflow_id),
+                None => self
+                    .ui_state
+                    .add_system_message("review: nothing to cancel".to_owned()),
+            }
+        }
+    }
+
+    /// Withdraw a workflow's authorization now and cancel the workflow.
+    fn stop_run(&mut self, workflow_id: &WorkflowId) {
+        if let Some(run) = self.review.run_for(workflow_id) {
+            run.authorization.disarm();
+        }
+        self.ui_state.add_system_message(format!(
+            "review: cancelling {workflow_id}; its authorization is withdrawn"
+        ));
+        self.review
+            .after(Duration::ZERO, ReviewTask::SendCancel(workflow_id.clone()));
     }
 
     /// The agent connection is gone: no run can finish or ask again, so

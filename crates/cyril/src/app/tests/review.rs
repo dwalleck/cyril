@@ -1673,3 +1673,196 @@ async fn resume_refuses_while_another_review_is_running() {
         format!("review resume: {RUN} is still running — /workflow status {RUN}")
     );
 }
+
+// --- cyril-4o1u: /review cancel ---
+
+fn cancel_sent(rx: &mut tokio::sync::mpsc::Receiver<BridgeCommand>) -> Option<WorkflowId> {
+    match rx.try_recv() {
+        Ok(BridgeCommand::Workflow {
+            op: WorkflowOp::Cancel { id },
+            ..
+        }) => Some(id),
+        _ => None,
+    }
+}
+
+/// Deliver the scheduled cancel send.
+async fn deliver_cancel(app: &mut App) {
+    settle(app).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_during_the_check_kills_it_and_starts_nothing() {
+    let repo = repo(true);
+    configure(&repo, &[check_cmd(slow_command())]);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    assert_eq!(last_message(&app), "review: running check…");
+    let started = std::time::Instant::now();
+    app.handle_command_result(CommandResult::review_cancel());
+    assert!(app.ui_state.review_form().is_none());
+    assert_eq!(last_message(&app), "review: cancelled; nothing was started");
+    settle(&mut app).await; // the killed check reports, and is dropped
+    assert!(
+        started.elapsed() < Duration::from_secs(20),
+        "the check was killed"
+    );
+    app.review.flush_delays_for_tests().await;
+    assert!(rx.try_recv().is_err(), "no workflow");
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(
+        app.ui_state.review_form().is_some(),
+        "/review is usable again"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_while_minting_cancels_the_workflow_when_it_appears() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    let Ok(BridgeCommand::Workflow {
+        op: WorkflowOp::New { inputs, .. },
+        ..
+    }) = next_new(&mut app, &mut rx).await
+    else {
+        panic!("New");
+    };
+    let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
+    app.handle_command_result(CommandResult::review_cancel());
+    assert_eq!(
+        last_message(&app),
+        "review: cancelled before the workflow started"
+    );
+    app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
+        workflow_id: run_id(),
+        name: "cyril-review".into(),
+    }));
+    deliver_cancel(&mut app).await;
+    assert_eq!(
+        cancel_sent(&mut rx),
+        Some(run_id()),
+        "the orphan is cancelled"
+    );
+    assert!(rx.try_recv().is_err(), "and never invoked");
+    assert!(!run_dir.join("run.json").exists(), "nor armed or recorded");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_between_record_and_invoke_withdraws_and_cancels() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    assert!(next_new(&mut app, &mut rx).await.is_ok(), "New");
+    app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
+        workflow_id: run_id(),
+        name: "cyril-review".into(),
+    }));
+    settle(&mut app).await; // recorded → Invoke sent
+    assert!(rx.try_recv().is_ok(), "Invoke");
+    app.handle_command_result(CommandResult::review_cancel());
+    deliver_cancel(&mut app).await;
+    assert_eq!(cancel_sent(&mut rx), Some(run_id()));
+    // A late Invoked starts nothing, and the run's requests are denied.
+    app.handle_notification(outcome(WorkflowCommandOutcome::Invoked {
+        workflow_id: run_id(),
+    }));
+    assert!(!last_message(&app).contains("is running"));
+    app.handle_notification(RoutedNotification::global(workflow_run_started_frame(RUN)));
+    app.handle_notification(RoutedNotification::global(workflow_node_claim_frame(
+        RUN,
+        "alpha",
+        &SessionId::new("sess_step"),
+    )));
+    let (late, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, late).await;
+    assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_of_a_running_review_reports_what_the_agent_says() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    launch(&mut app, &mut rx, &repo).await;
+    app.handle_command_result(CommandResult::review_cancel());
+    assert_eq!(
+        last_message(&app),
+        format!("review: cancelling {RUN}; its authorization is withdrawn")
+    );
+    deliver_cancel(&mut app).await;
+    assert_eq!(cancel_sent(&mut rx), Some(run_id()));
+    // Withdrawn at once: a request racing the cancel is denied.
+    let (request, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, request).await;
+    assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
+    // The main session keeps ordinary approval.
+    let (main, _main_answer) = step_request("sess_main", read("src/a.rs"), &KAS_OPTIONS);
+    assert!(app.route_review_permission(main).is_some());
+
+    // A failed cancel is reported as a failure, not success.
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow cancel".into(),
+        code: Some(-32603),
+        details: "boom".into(),
+    }));
+    assert_eq!(
+        last_message(&app),
+        format!("review: cancelling {RUN} failed — boom; its authorization stays withdrawn")
+    );
+    app.handle_command_result(CommandResult::review_cancel());
+    assert_eq!(last_message(&app), "review: nothing to cancel");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_of_a_paused_review_succeeds_when_the_agent_confirms() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    launch(&mut app, &mut rx, &repo).await;
+    app.handle_notification(completion(WorkflowRunStatus::Paused));
+    app.handle_command_result(CommandResult::review_cancel());
+    deliver_cancel(&mut app).await;
+    assert_eq!(cancel_sent(&mut rx), Some(run_id()));
+    app.handle_notification(outcome(WorkflowCommandOutcome::Cancelled {
+        workflow_id: run_id(),
+        previous_status: Some(WorkflowRunStatus::Paused),
+    }));
+    assert_eq!(last_message(&app), format!("review: {RUN} cancelled"));
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(
+        app.ui_state.review_form().is_some(),
+        "a new review may start"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_with_nothing_running_says_so() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review_cancel());
+    assert_eq!(last_message(&app), "review: nothing to cancel");
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn cancel_during_a_resume_drops_it() {
+    let repo = repo(true);
+    write_run(&repo, "20261001-100000-bbbb", "wf_b");
+    let (mut app, mut rx) = review_app(&repo);
+    resume_to_form(
+        &mut app,
+        &mut rx,
+        None,
+        &[("wf_b", WorkflowRunStatus::Failed)],
+    )
+    .await;
+    assert!(resume_view(&app).is_some());
+    app.handle_command_result(CommandResult::review_cancel());
+    assert!(app.ui_state.review_form().is_none());
+    assert_eq!(
+        last_message(&app),
+        "review resume: cancelled; nothing was continued"
+    );
+    assert!(!repo.home.join(".kiro").exists());
+}
