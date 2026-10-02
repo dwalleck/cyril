@@ -846,6 +846,46 @@ fn live_cancellation_after_ready_retains_partial_evidence() -> Result<(), Box<dy
     })
 }
 
+#[test]
+fn manifest_written_while_check_runs_survives_diagnostics() -> Result<(), Box<dyn Error>> {
+    let fixture = Fixture::new()?;
+    let command = fixture.script(b"src/lib.rs:1: out\n", b"err", 0, true)?;
+    thread::scope(|scope| -> Result<(), Box<dyn Error>> {
+        let release = CooperativeRelease {
+            root: fixture.tree.path().to_path_buf(),
+        };
+        let worker = scope.spawn(|| {
+            run_diagnostics(
+                &fixture,
+                &command,
+                Duration::from_secs(20),
+                &Cancellation::default(),
+            )
+        });
+        wait_for_file(&fixture.tree.path().join("ready"), Duration::from_secs(5))?;
+        // Another step (e.g. a facts rebuild) rewrites the manifest mid-check.
+        let mut manifest = fixture.manifest()?;
+        manifest["facts"]["symbols"] = json!(42);
+        manifest["concurrent_step"] = json!("kept");
+        fs::write(
+            fixture.run.directory().join("manifest.json"),
+            serde_json::to_vec(&manifest)?,
+        )?;
+        release.release()?;
+        let result = worker
+            .join()
+            .map_err(|_| io::Error::other("diagnostics worker panicked"))??;
+        assert_eq!(result.outcome(), DiagnosticsOutcome::Clean);
+        assert!(result.cleanup_failure().is_none());
+        let manifest = fixture.manifest()?;
+        assert_eq!(manifest["facts"]["symbols"], json!(42));
+        assert_eq!(manifest["concurrent_step"], json!("kept"));
+        assert_status(&manifest, DiagnosticsOutcome::Clean, true)?;
+        assert!(manifest["facts"].get("diagnostics_cleanup_error").is_none());
+        Ok(())
+    })
+}
+
 #[cfg(unix)]
 fn null_stdin_command() -> Result<String, Box<dyn Error>> {
     // A successful `read` (inherited input) exits 9, a blocking read would hit

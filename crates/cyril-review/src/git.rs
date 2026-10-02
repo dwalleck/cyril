@@ -80,6 +80,8 @@ pub(crate) fn scoped_patch(run: &ReviewRun, target: &str, scope: &[String]) -> R
         "--no-color",
         "--no-ext-diff",
         "--no-textconv",
+        // diff.submodule=log|diff emits headerless records libgit2 drops.
+        "--submodule=short",
         "--binary",
         "--src-prefix=a/",
         "--dst-prefix=b/",

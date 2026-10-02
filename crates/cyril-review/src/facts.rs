@@ -1,7 +1,7 @@
 use crate::git;
 use crate::run::{
-    Manifest, ManifestFile, ReviewRun, facts_dir, facts_metadata, manifest_path, read_binary,
-    read_manifest, write_json, write_text,
+    Manifest, ManifestFile, ReviewRun, facts_dir, facts_metadata, read_binary, read_manifest,
+    update_manifest, write_json, write_text,
 };
 use crate::{Result, StepOutput, regex_error};
 use regex::Regex;
@@ -118,17 +118,20 @@ pub(crate) fn build_facts(run: &ReviewRun, manifest: &mut Manifest) -> Result<St
     }
     output.push('\n');
 
-    manifest.metadata.insert(
-        "change_docs".to_owned(),
-        Value::Array(documents.into_iter().take(40).map(Value::Object).collect()),
-    );
-    let facts_map = facts_metadata(run, manifest)?;
-    facts_map.insert("symbols".to_owned(), Value::from(symbols.len() as u64));
-    facts_map.insert(
-        "usages_pages".to_owned(),
-        Value::Array(pages.into_iter().map(Value::String).collect()),
-    );
-    write_json(&manifest_path(run), manifest)?;
+    let change_docs = Value::Array(documents.into_iter().take(40).map(Value::Object).collect());
+    let symbol_count = Value::from(symbols.len() as u64);
+    let usages_pages = Value::Array(pages.into_iter().map(Value::String).collect());
+    let record = |manifest: &mut Manifest| -> Result<()> {
+        manifest
+            .metadata
+            .insert("change_docs".to_owned(), change_docs.clone());
+        let facts_map = facts_metadata(run, manifest)?;
+        facts_map.insert("symbols".to_owned(), symbol_count.clone());
+        facts_map.insert("usages_pages".to_owned(), usages_pages.clone());
+        Ok(())
+    };
+    record(manifest)?;
+    update_manifest(run, record)?;
     Ok(output)
 }
 
@@ -322,6 +325,12 @@ fn usages(run: &ReviewRun, symbol: &SymbolSeed<'_>) -> Result<Vec<Usage>> {
     let Some(pattern) = definition_pattern(&symbol.file.path) else {
         return Ok(Vec::new());
     };
+    // Callers anywhere in the repository count, not just under the workspace cwd.
+    let globs: Vec<String> = pattern
+        .usage_globs
+        .iter()
+        .map(|glob| format!(":(top){glob}"))
+        .collect();
     let mut args = vec![
         "grep",
         "--no-color",
@@ -336,7 +345,7 @@ fn usages(run: &ReviewRun, symbol: &SymbolSeed<'_>) -> Result<Vec<Usage>> {
         &symbol.name,
         "--",
     ];
-    args.extend_from_slice(pattern.usage_globs);
+    args.extend(globs.iter().map(String::as_str));
     let output = git::grep(run, &args)?;
     let own_line = if let Some(declaration) = &symbol.declaration {
         let definition = Regex::new(pattern.regex).map_err(regex_error)?;

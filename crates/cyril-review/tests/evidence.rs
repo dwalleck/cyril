@@ -1320,6 +1320,27 @@ fn gather_selects_generated_bracket_paths_literally_without_changing_caller_glob
     Ok(())
 }
 
+// The diff is workspace-scoped, but callers outside the workspace subdirectory
+// are still callers: the usage search must cover the whole repository.
+fn assert_repository_wide_helper_usages(run: &ReviewRun) -> Result<(), Box<dyn Error>> {
+    let symbols = review_json(run, "facts/symbols.json")?;
+    let helper = symbols
+        .as_array()
+        .and_then(|symbols| symbols.iter().find(|symbol| symbol["name"] == "helper"))
+        .ok_or("helper symbol is missing")?;
+    assert_eq!(helper["file"], json!("app/src/lib.rs"));
+    assert_eq!(helper["line"], json!(2));
+    assert_eq!(helper["usage_count"], json!(2));
+    assert_eq!(
+        helper["usages"],
+        json!([
+            {"file": "app/src/lib.rs", "line": 3, "text": "pub fn caller() { helper(); }"},
+            {"file": "src/outside.rs", "line": 1, "text": "pub fn outside_source() { helper(); }"}
+        ])
+    );
+    Ok(())
+}
+
 fn subdirectory_evidence(repo: &Path, directory: &Path) -> Result<(), Box<dyn Error>> {
     init_repo(repo)?;
     git(repo, &["config", "core.autocrlf", "false"])?;
@@ -1386,13 +1407,63 @@ fn subdirectory_evidence(repo: &Path, directory: &Path) -> Result<(), Box<dyn Er
         manifest["change_docs"],
         json!([{"path": "NOTES.md", "bytes": 30}])
     );
-    assert_helper_identity(&run, "app/src/lib.rs")?;
+    assert_repository_wide_helper_usages(&run)?;
     facts(&run)?;
-    assert_helper_identity(&run, "app/src/lib.rs")?;
+    assert_repository_wide_helper_usages(&run)?;
     assert_eq!(
         review_json(&run, "manifest.json")?["change_docs"],
         json!([{"path": "NOTES.md", "bytes": 30}])
     );
+    Ok(())
+}
+
+#[test]
+fn gather_lists_submodule_pointer_change_despite_diff_submodule_config()
+-> Result<(), Box<dyn Error>> {
+    let tree = tempfile::tempdir()?;
+    let repo = tree.path().join("repo");
+    init_repo(&repo)?;
+    let mut commits = Vec::new();
+    for body in ["// first\n", "// second\n"] {
+        fs::write(repo.join("src/lib.rs"), body)?;
+        commit(&repo, body)?;
+        let id = git(&repo, &["rev-parse", "HEAD"])?.stdout;
+        commits.push(String::from_utf8(id)?.trim().to_owned());
+    }
+    // A gitlink needs no checked-out submodule: point it at the repo's own commits.
+    for (message, id) in [("add sub", &commits[0]), ("bump sub", &commits[1])] {
+        let cacheinfo = format!("160000,{id},sub");
+        git(
+            &repo,
+            &["update-index", "--add", "--cacheinfo", cacheinfo.as_str()],
+        )?;
+        git(
+            &repo,
+            &["commit", "--no-gpg-sign", "--no-verify", "-qm", message],
+        )?;
+    }
+    git(&repo, &["config", "diff.submodule", "log"])?;
+    // Positive control: the config really rewrites the record without a header.
+    let control = git(&repo, &["diff", "HEAD~1..HEAD"])?.stdout;
+    assert_patch_contains(&control, &["Submodule sub "]);
+    assert_patch_excludes(&control, &["diff --git"]);
+
+    let run = ReviewRun::new(repo.clone(), tree.path().join("run"))?;
+    gather(
+        &run,
+        "HEAD~1..HEAD",
+        ".",
+        &FixedClock {
+            gathered: "2026-09-30T12:34:56+00:00".to_owned(),
+        },
+    )?;
+    let bumped = format!("+Subproject commit {}", commits[1]);
+    let full = fs::read(run.directory().join("diff.patch"))?;
+    assert_patch_contains(&full, &["diff --git a/sub b/sub", bumped.as_str()]);
+    let manifest = review_json(&run, "manifest.json")?;
+    assert_eq!(manifest["total_files"], json!(1));
+    assert_eq!(manifest["files"][0]["path"], json!("sub"));
+    assert_eq!(manifest["files"][0]["status"], json!("M"));
     Ok(())
 }
 

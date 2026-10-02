@@ -181,6 +181,7 @@ directories resolve beneath it. Scope is relative to that workspace, while
 artifact filenames remain repository-root-relative. `auto` selects the gather
 target. Scope is whitespace-separated Git pathspecs, not shell-quoted syntax.
 Gather writes the diff, per-file patches, manifest, and symbol/usage facts.
+Usages are searched across the whole repository, not only the workspace subdirectory.
 An existing matching run is reused; a different target/scope or missing/stale
 version stamp is refused. Required manifest fields are validated before reuse or
 facts rebuilding. Git search errors are reported rather than treated as no usages.
@@ -214,6 +215,11 @@ only, not saved bytes. Cancellation and timeout terminate only the
 directly spawned child, with a one-second termination/reap deadline; descendants
 are not targeted. After the child reaches a terminal state, capture drains until
 both streams reach EOF or a separate one-second deadline expires.
+If killing or reaping a timed-out or cancelled child fails, the collected evidence
+is still written; `DiagnosticsResult::cleanup_failure()`, the report, and
+`facts.diagnostics_cleanup_error` record the failure. Diagnostics merges its keys
+into the manifest as it exists when the check finishes, under a run lock, so
+manifest updates made by other steps during the check are kept.
 
 `DiagnosticsResult::capture_complete()` is `None` before launch and `Some(bool)`
 after launch. A stream without EOF at the final-drain deadline produces

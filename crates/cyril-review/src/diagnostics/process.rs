@@ -82,12 +82,25 @@ impl Drop for OwnedChild {
     }
 }
 
+/// Terminal evidence of one check run.
+#[derive(Debug)]
+pub(super) struct Capture {
+    pub(super) outcome: DiagnosticsOutcome,
+    /// stdout, a newline, then stderr.
+    pub(super) bytes: Vec<u8>,
+    /// Both streams reached EOF before the final-drain deadline.
+    pub(super) complete: bool,
+    /// Killing or reaping a timed-out/cancelled child failed. The bytes above
+    /// are still the child's real output and must be reported, not dropped.
+    pub(super) cleanup_failure: Option<crate::ReviewError>,
+}
+
 pub(super) async fn capture(
     command: Command,
     text: &str,
     timeout: Duration,
     cancel: &Cancellation,
-) -> Result<(DiagnosticsOutcome, Vec<u8>, bool)> {
+) -> Result<Capture> {
     let (mut child, streams) = spawn(command, text)?;
     let result = match streams {
         Ok((mut stdout, mut stderr)) => {
@@ -207,9 +220,10 @@ async fn observe(
     stderr: &mut (impl AsyncRead + Unpin),
     timeout: Duration,
     cancel: &Cancellation,
-) -> Result<(DiagnosticsOutcome, Vec<u8>, bool)> {
+) -> Result<Capture> {
     let started = Instant::now();
     let mut terminal = None;
+    let mut cleanup_failure = None;
     let (mut out, mut err) = (Vec::new(), Vec::new());
     let (mut out_eof, mut err_eof) = (false, false);
     let mut buffer = [0; READ_QUANTUM];
@@ -225,7 +239,10 @@ async fn observe(
                     Terminal::Exit(0) => DiagnosticsOutcome::Clean,
                     Terminal::Exit(exit_code) => DiagnosticsOutcome::Failed { exit_code },
                     Terminal::Cancelled | Terminal::TimedOut => {
-                        terminate(child).await?;
+                        if let Err(error) = terminate(child).await {
+                            tracing::warn!(%error, "diagnostics child cleanup failed; keeping captured output");
+                            cleanup_failure = Some(error);
+                        }
                         if decision == Terminal::Cancelled {
                             DiagnosticsOutcome::Cancelled
                         } else {
@@ -243,7 +260,12 @@ async fn observe(
                     .map_err(|error| lifecycle("combine capture", io::Error::other(error)))?;
                 out.push(b'\n');
                 out.extend_from_slice(&err);
-                return Ok((outcome, out, out_eof && err_eof));
+                return Ok(Capture {
+                    outcome,
+                    bytes: out,
+                    complete: out_eof && err_eof,
+                    cleanup_failure,
+                });
             }
             quantum = quantum.min(DRAIN_DEADLINE.saturating_sub(ended.elapsed()));
         }
@@ -503,7 +525,12 @@ mod tests {
     async fn native_signal_exit_remains_negative() -> Result<()> {
         let mut command = Command::new("/bin/sh");
         command.args(["-c", "kill -TERM $$"]);
-        let (outcome, bytes, complete) = capture(
+        let Capture {
+            outcome,
+            bytes,
+            complete,
+            cleanup_failure,
+        } = capture(
             command,
             "/bin/sh -c 'kill -TERM $$'",
             Duration::from_secs(2),
@@ -513,6 +540,7 @@ mod tests {
         assert_eq!(outcome, DiagnosticsOutcome::Failed { exit_code: -15 });
         assert_eq!(bytes, b"\n");
         assert!(complete);
+        assert!(cleanup_failure.is_none());
         Ok(())
     }
 }

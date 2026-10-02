@@ -4,6 +4,7 @@ use serde_json::{Map, Value};
 use std::env;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -158,12 +159,46 @@ pub(crate) fn write_json(path: &Path, value: &impl Serialize) -> Result<()> {
         fs::create_dir_all(parent)
             .map_err(|source| io_error("create output directory", parent, source))?;
     }
+    // Unique per writer: concurrent steps must never rename each other's temp file.
+    static TEMPORARY: AtomicU64 = AtomicU64::new(0);
     let mut temporary = path.as_os_str().to_os_string();
-    temporary.push(".tmp");
+    temporary.push(format!(
+        ".{}.{}.tmp",
+        std::process::id(),
+        TEMPORARY.fetch_add(1, Ordering::Relaxed)
+    ));
     let temporary = PathBuf::from(temporary);
     fs::write(&temporary, encoded)
         .map_err(|source| io_error("write temporary JSON", temporary.as_path(), source))?;
-    fs::rename(&temporary, path).map_err(|source| io_error("replace JSON", path, source))
+    fs::rename(&temporary, path).map_err(|source| {
+        if let Err(error) = fs::remove_file(&temporary) {
+            tracing::warn!(path = %temporary.display(), %error, "removing orphaned temporary JSON failed");
+        }
+        io_error("replace JSON", path, source)
+    })
+}
+
+/// Read-modify-write the manifest under an exclusive run lock, so a long step
+/// (diagnostics) merges its keys into the current manifest instead of writing
+/// back the copy it read at launch over keys other steps added meanwhile.
+pub(crate) fn update_manifest<T>(
+    run: &ReviewRun,
+    change: impl FnOnce(&mut Manifest) -> Result<T>,
+) -> Result<T> {
+    let lock_path = run.directory.join("manifest.lock");
+    let lock = fs::OpenOptions::new()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(&lock_path)
+        .map_err(|source| io_error("open manifest lock", lock_path.as_path(), source))?;
+    lock.lock()
+        .map_err(|source| io_error("lock manifest", lock_path.as_path(), source))?;
+    let mut manifest = read_manifest(run)?;
+    let value = change(&mut manifest)?;
+    write_json(&manifest_path(run), &manifest)?;
+    // Dropping the handle releases the lock.
+    Ok(value)
 }
 
 pub(crate) fn read_json(path: &Path) -> Result<Value> {

@@ -2,7 +2,7 @@ mod command;
 mod process;
 
 use crate::run::{
-    facts_dir, facts_metadata, manifest_path, read_manifest, write_binary, write_json, write_text,
+    facts_dir, facts_metadata, read_manifest, update_manifest, write_binary, write_text,
 };
 use crate::{Result, ReviewRun, StepOutput, regex_error};
 use regex::RegexSetBuilder;
@@ -57,6 +57,7 @@ pub enum DiagnosticsOutcome {
 pub struct DiagnosticsResult {
     outcome: DiagnosticsOutcome,
     capture_complete: Option<bool>,
+    cleanup_failure: Option<crate::ReviewError>,
     output: StepOutput,
 }
 
@@ -71,6 +72,12 @@ impl DiagnosticsResult {
 
     pub fn capture_complete(&self) -> Option<bool> {
         self.capture_complete
+    }
+
+    /// Killing or reaping a timed-out or cancelled check failed. The captured
+    /// output was still written; the child may outlive this call.
+    pub fn cleanup_failure(&self) -> Option<&crate::ReviewError> {
+        self.cleanup_failure.as_ref()
     }
 
     pub fn output(&self) -> &StepOutput {
@@ -90,6 +97,7 @@ pub async fn diagnostics(
         return Ok(DiagnosticsResult {
             outcome: DiagnosticsOutcome::Cancelled,
             capture_complete: None,
+            cleanup_failure: None,
             output: StepOutput::default(),
         });
     }
@@ -101,12 +109,18 @@ pub async fn diagnostics(
         return Ok(DiagnosticsResult {
             outcome: DiagnosticsOutcome::Cancelled,
             capture_complete: None,
+            cleanup_failure: None,
             output: StepOutput::default(),
         });
     }
     let started = Instant::now();
-    let (outcome, mut raw, capture_complete) =
-        process::capture(prepared, command, options.timeout, cancel).await?;
+    let process::Capture {
+        outcome,
+        bytes: mut raw,
+        complete: capture_complete,
+        cleanup_failure,
+    } = process::capture(prepared, command, options.timeout, cancel).await?;
+    let cleanup = cleanup_failure.as_ref().map(ToString::to_string);
     let capture_status = if capture_complete {
         "complete"
     } else {
@@ -132,8 +146,12 @@ pub async fn diagnostics(
         .char_indices()
         .nth(12)
         .map_or(manifest.head.len(), |(index, _)| index);
+    let cleanup_line = cleanup
+        .as_deref()
+        .map(|error| format!("cleanup: FAILED ({error}); the check may still be running\n"))
+        .unwrap_or_default();
     let mut report = format!(
-        "capture: {capture_status}\ncommand: {command}\nresult: {status} in {took}s, on HEAD {}\n{matches} output line(s) mention a changed file\n",
+        "capture: {capture_status}\ncommand: {command}\nresult: {status} in {took}s, on HEAD {}\n{cleanup_line}{matches} output line(s) mention a changed file\n",
         &manifest.head[..head_end],
     );
     for line in lines.matches {
@@ -153,25 +171,42 @@ pub async fn diagnostics(
     let directory = facts_dir(run);
     write_binary(&directory.join("diagnostics-raw.txt"), &raw)?;
     write_text(&directory.join("diagnostics.txt"), &report)?;
-    let facts = facts_metadata(run, &mut manifest)?;
-    facts.insert(
-        "diagnostics".to_owned(),
-        Value::from("facts/diagnostics.txt"),
-    );
-    facts.insert(
-        "diagnostics_status".to_owned(),
-        Value::from(status.as_str()),
-    );
-    facts.insert(
-        "diagnostics_capture_complete".to_owned(),
-        Value::Bool(capture_complete),
-    );
-    write_json(&manifest_path(run), &manifest)?;
+    // Merge into the manifest as it is now: other steps may have written it
+    // while the check ran.
+    update_manifest(run, |manifest| {
+        let facts = facts_metadata(run, manifest)?;
+        facts.insert(
+            "diagnostics".to_owned(),
+            Value::from("facts/diagnostics.txt"),
+        );
+        facts.insert(
+            "diagnostics_status".to_owned(),
+            Value::from(status.as_str()),
+        );
+        facts.insert(
+            "diagnostics_capture_complete".to_owned(),
+            Value::Bool(capture_complete),
+        );
+        match &cleanup {
+            Some(error) => facts.insert(
+                "diagnostics_cleanup_error".to_owned(),
+                Value::from(error.as_str()),
+            ),
+            None => facts.remove("diagnostics_cleanup_error"),
+        };
+        Ok(())
+    })?;
+    let cleanup_note = if cleanup.is_some() {
+        "; child cleanup FAILED"
+    } else {
+        ""
+    };
     Ok(DiagnosticsResult {
         outcome,
         capture_complete: Some(capture_complete),
+        cleanup_failure,
         output: StepOutput::from_text(format!(
-            "diagnostics: {status} in {took}s; capture: {capture_status}; {matches} line(s) on changed files -> facts/diagnostics.txt\n"
+            "diagnostics: {status} in {took}s; capture: {capture_status}{cleanup_note}; {matches} line(s) on changed files -> facts/diagnostics.txt\n"
         )),
     })
 }
