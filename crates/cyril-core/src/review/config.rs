@@ -3,6 +3,7 @@
 //! type or a path escaping the workspace refuses the review with a named
 //! error instead of falling back to a plausible default.
 
+use super::policy::{input_problem, under};
 use std::fs;
 use std::io;
 use std::path::{Component, Path, PathBuf};
@@ -12,6 +13,8 @@ use std::time::Duration;
 pub const CONFIG_FILE: &str = ".cyril/config.toml";
 /// How long the check may run when `check_timeout_s` is not set.
 pub const DEFAULT_CHECK_TIMEOUT: Duration = Duration::from_secs(1800);
+/// The largest `context_file`: its text goes into every verifier's prompt.
+pub const MAX_CONTEXT_BYTES: u64 = 64 * 1024;
 
 /// The check command run once before the workflow starts.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -113,6 +116,16 @@ impl ReviewConfig {
                         let toml::Value::String(path) = item else {
                             return Err(wrong_type(key, "an array of paths"));
                         };
+                        // The recipe passes the scope as one space-separated
+                        // string, so a path may not contain whitespace.
+                        if path.is_empty() || path.chars().any(char::is_whitespace) {
+                            return Err(invalid(format!(
+                                "`scope` path {path:?} is empty or contains whitespace"
+                            )));
+                        }
+                        if let Some(problem) = input_problem("scope", path) {
+                            return Err(invalid(format!("`scope` path {path:?}: {problem}")));
+                        }
                         inside_workspace(key, path)?;
                         paths.push(path.clone());
                     }
@@ -162,15 +175,20 @@ impl ReviewConfig {
                     source,
                 };
                 // A symlink may still lead out of the workspace.
-                let resolved = path.canonicalize().map_err(unreadable)?;
-                let root = workspace.canonicalize().map_err(unreadable)?;
-                if !resolved.starts_with(&root) {
+                if !under(&path, workspace) {
                     return Err(invalid(format!(
                         "`context_file` {} leads outside the repository",
                         relative.display()
                     )));
                 }
-                fs::read_to_string(&resolved).map(Some).map_err(unreadable)
+                let size = fs::metadata(&path).map_err(unreadable)?.len();
+                if size > MAX_CONTEXT_BYTES {
+                    return Err(invalid(format!(
+                        "`context_file` {} is {size} bytes; the limit is {MAX_CONTEXT_BYTES}",
+                        relative.display()
+                    )));
+                }
+                fs::read_to_string(&path).map(Some).map_err(unreadable)
             }
         }
     }
@@ -301,6 +319,14 @@ mod tests {
                 "[review]\nscope = []\n",
                 "`scope` must name at least one path",
             ),
+            (
+                "[review]\nscope = [\"my docs\"]\n",
+                "`scope` path \"my docs\" is empty or contains whitespace",
+            ),
+            (
+                "[review]\nscope = [\"\"]\n",
+                "`scope` path \"\" is empty or contains whitespace",
+            ),
             ("review = 1\n", "`review` must be a table"),
         ] {
             assert_eq!(problem(text), format!("{prefix}{expected}"), "{text:?}");
@@ -332,6 +358,27 @@ mod tests {
                 .expect("read again")
                 .as_deref(),
             Some("second")
+        );
+    }
+
+    #[test]
+    fn an_oversized_context_file_is_refused() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let too_big = usize::try_from(MAX_CONTEXT_BYTES).expect("fits") + 1;
+        fs::write(dir.path().join("big.md"), vec![b'x'; too_big]).expect("write");
+        let config = ReviewConfig {
+            context: Some(ContextSource::File(PathBuf::from("big.md"))),
+            ..ReviewConfig::default()
+        };
+        assert_eq!(
+            config
+                .context_text(dir.path())
+                .expect_err("too big")
+                .to_string(),
+            format!(
+                "[review] in .cyril/config.toml: `context_file` big.md is {too_big} bytes; \
+                 the limit is {MAX_CONTEXT_BYTES}"
+            )
         );
     }
 

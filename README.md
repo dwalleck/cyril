@@ -148,7 +148,7 @@ A repository can commit settings for every reviewer in `.cyril/config.toml`:
 check_cmd = "cargo clippy --workspace --all-targets -- -D warnings"
 check_timeout_s = 900          # default 1800
 context_file = "docs/review-context.md"   # or: context = "..."
-scope = ["crates", "docs"]     # default: everything
+scope = ["crates", "docs"]     # default: everything; no spaces in paths
 ```
 
 The settings are read fresh on every `/review`. An unknown key, a wrong
@@ -158,8 +158,9 @@ shows the check as `will run: <command>`, or `no check configured`; it never
 guesses a check. The check runs once, after gathering and before the workflow
 starts ("review: running check…"). A failing or timed-out check is recorded
 for the reviewers and the review goes on. A command that cannot start stops
-the review before any workflow exists. `Esc` during the check kills it and
-abandons the launch. `context_file` is read when the review starts and its
+the review before any workflow exists. `Esc` during the check abandons the launch and kills
+the check command's own process (not processes it started in the
+background). `context_file` is read when the review starts and its
 contents go to the verifiers. The
 chat stays usable throughout, and `/workflow status <id>` shows progress.
 When the run ends, one message lists the verdict counts, the top ten

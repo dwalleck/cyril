@@ -609,8 +609,13 @@ pub struct ReviewForm {
 /// The repository check command shown on the consent form.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ReviewCheck {
+    /// The repository's settings are still being read.
+    Reading,
     NotConfigured,
-    WillRun { command: String, timeout_secs: u64 },
+    WillRun {
+        command: String,
+        timeout_secs: u64,
+    },
 }
 
 /// Selection picker dialog state.

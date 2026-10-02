@@ -352,8 +352,10 @@ async fn refuses_below_the_repository_root() {
     app.cwd = repo.root.join("src");
     app.handle_command_result(CommandResult::review());
     assert!(
-        app.ui_state.review_form().is_none(),
-        "the form opens once the settings are read and the diff counted"
+        app.ui_state
+            .review_form()
+            .is_some_and(|form| form.file_count.is_none()),
+        "the form opens at once, counting"
     );
     settle(&mut app).await;
     assert!(app.ui_state.review_form().is_none());
@@ -849,7 +851,15 @@ async fn a_panicking_launch_step_is_reported() {
     let (mut app, _rx) = review_app(&repo);
     app.handle_command_result(CommandResult::review());
     settle(&mut app).await;
-    app.review.spawn(|| panic!("boom"));
+    // A panic in work that belongs to no launch is logged, not fatal to one.
+    app.review.spawn(|| panic!("unrelated"));
+    settle(&mut app).await;
+    assert!(
+        app.ui_state.review_form().is_some(),
+        "an unrelated panic abandons nothing"
+    );
+    let launch = app.review.current_launch().expect("a launch");
+    app.review.spawn_step(launch, || panic!("boom"));
     settle(&mut app).await;
     assert!(app.ui_state.review_form().is_none());
     assert!(
@@ -1100,4 +1110,47 @@ async fn context_file_is_reread_for_every_review() {
         }));
     }
     assert_eq!(contexts, ["first authorities", "second authorities"]);
+}
+
+/// An abandoned launch's late check result cannot drive a newer launch. A's
+/// result is held back and delivered once B is checking: the ordering that
+/// a slow kill (a grandchild holding the pipes) produces.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stale_check_result_cannot_drive_a_newer_launch() {
+    let repo = repo(true);
+    configure(&repo, &[check_cmd(slow_command())]);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    let stale = tokio::time::timeout(Duration::from_secs(30), app.review.rx.recv())
+        .await
+        .expect("A's cancelled check reports")
+        .expect("open channel");
+    confirm(&mut app).await;
+    assert_eq!(last_message(&app), "review: running check…");
+    app.handle_review_task(stale).await;
+    assert!(
+        app.ui_state.review_form().is_some_and(|form| form.busy),
+        "launch B is still waiting for its own check"
+    );
+    app.review.flush_delays_for_tests().await;
+    assert!(rx.try_recv().is_err(), "no workflow from A's late result");
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc B");
+}
+
+/// Esc while the settings are still being read closes the form; the late
+/// result is dropped.
+#[tokio::test(flavor = "multi_thread")]
+async fn esc_while_opening_closes_and_drops_the_late_result() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    assert_eq!(
+        app.ui_state.review_form().map(|form| form.check.clone()),
+        Some(cyril_ui::traits::ReviewCheck::Reading)
+    );
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_none());
+    assert!(rx.try_recv().is_err());
 }
