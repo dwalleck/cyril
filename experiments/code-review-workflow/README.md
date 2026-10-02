@@ -25,6 +25,11 @@ assembled max-effort `/code-review` prompt (`code-review-assembled-max.md` in th
 
 ## Running it
 
+cyril's `/review` (KAS) now runs this workflow natively: embedded recipe and
+`cyril-review-*` agents, `cyril crtool`, and the same permission policy (see
+the main README). The Python driver below remains the reference and the
+differential oracle.
+
 ```sh
 python3 experiments/code-review-workflow/build_recipe.py            # regenerate (--shards N, --split-cleanup)
 python3 experiments/code-review-workflow/run_review.py --workspace . --validate-only   # zero credits

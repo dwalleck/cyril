@@ -31,6 +31,21 @@ pub enum WorkflowOp {
         /// Run inputs; string-valued in v1 (typed values: cyril-2ibk).
         inputs: serde_json::Map<String, serde_json::Value>,
     },
+    /// `_kiro/workflow/new` alone: create the run and report its id
+    /// ([`WorkflowCommandOutcome::Minted`]) without starting it, so the caller
+    /// can persist the run's identity and arm its authorization first
+    /// (`/review`).
+    New {
+        /// Where the engine finds the recipe.
+        target: WorkflowRunTarget,
+        /// Run inputs.
+        inputs: serde_json::Map<String, serde_json::Value>,
+    },
+    /// `_kiro/workflow/invoke`: start a run created by [`WorkflowOp::New`].
+    Invoke {
+        /// The minted run.
+        id: WorkflowId,
+    },
     /// `/workflow attach <id>` → `_kiro/workflow/inspect` (read-only; the
     /// ownership-taking act is [`WorkflowOp::Resume`]).
     Attach {
@@ -64,6 +79,8 @@ impl WorkflowOp {
             Self::ListRecipes => "workflow recipes",
             Self::ListRuns => "workflow list",
             Self::Run { .. } => "workflow run",
+            Self::New { .. } => "workflow new",
+            Self::Invoke { .. } => "workflow invoke",
             Self::Attach { .. } => "workflow attach",
             Self::Status { .. } => "workflow status",
             Self::Cancel { .. } => "workflow cancel",
@@ -243,6 +260,19 @@ pub enum WorkflowCommandOutcome {
         workflow_id: WorkflowId,
         /// The workflow name the engine reported.
         name: String,
+    },
+    /// `new` alone succeeded; the run exists but has not started. Its
+    /// snapshot seeds the tracker separately (sent first).
+    Minted {
+        /// The freshly minted run.
+        workflow_id: WorkflowId,
+        /// The workflow name the engine reported.
+        name: String,
+    },
+    /// `invoke` succeeded for a minted run.
+    Invoked {
+        /// The run that started.
+        workflow_id: WorkflowId,
     },
     /// `cancel` succeeded (`{ok, previousStatus}` reply shape).
     Cancelled {

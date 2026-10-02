@@ -130,7 +130,7 @@
     "queue_outcome": ["applied", "rejected", "dropped"],
     "completion_signal": ["success", "need_input", "error"],
     "completion_source": ["send_message", "status_update"],
-    "repeat_exhaustion": ["pause", "abort"]
+    "repeat_exhaustion": ["pause", "abort", "continue"]
   },
   "identifier_cases": {
     "accepted": ["id", "識別子", "with space", "#", "/", "\\", "large-65536-bytes"],

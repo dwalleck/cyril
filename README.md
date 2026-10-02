@@ -119,6 +119,31 @@ truncated. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
 
+### Reviewing a branch (KAS)
+
+`/review`, run from the repository root, reviews the branch's changes with
+Kiro's workflow engine. The form shows the target (`auto`: HEAD against its
+upstream, `main` or `master`, plus uncommitted changes), the scope, the
+number of files, the expected cost (about 50–65 model sessions and 40–50
+minutes) and what the run may do. `Esc` backs out without writing anything;
+`Enter` starts it. An empty diff stops there with "nothing to review".
+
+Starting installs the `cyril-review` recipe and its four agents into
+`~/.kiro/workflows` and `~/.kiro/agents`, rewriting only files that differ.
+It refuses if the workspace defines an agent with one of those names. Results
+go to a new `.code-review/<YYYYMMDD-HHMMSS>-<hex>/` directory, whose parent
+ignores itself in git. While the review runs, cyril answers its step
+sessions' permission requests itself:
+
+- reads only inside the workspace;
+- writes only inside the run directory;
+- shell only for the run's own `cyril crtool` step calls.
+
+Everything else is denied, without a prompt, and listed in `denied.log`. The
+chat stays usable throughout, and `/workflow status <id>` shows progress.
+When the run ends, one message lists the verdict counts, the top ten
+findings and the path to `report.md`.
+
 ### Slash commands
 
 **Local commands** (handled by Cyril):
@@ -136,6 +161,7 @@ older KAS may ignore it. The action is not shown for v2 or always-reject options
 | `/memory teach --replace <id> <text>` | Supersede one lesson with new text |
 | `/memory list` | List active project lessons (newest first) |
 | `/memory inspect <id>` | Show one lesson, active or replaced |
+| `/review` | Review this branch's changes with a multi-agent workflow (KAS) |
 | `/quit` | Quit |
 
 **Agent commands** (forwarded to Kiro via ACP):

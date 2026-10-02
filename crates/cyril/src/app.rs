@@ -61,6 +61,8 @@ fn spawn_voice_engine() -> Option<cyril_core::voice::VoiceHandle> {
     None
 }
 
+mod review;
+
 pub struct App {
     bridge_sender: BridgeSender,
     notification_rx: mpsc::Receiver<RoutedNotification>,
@@ -130,6 +132,8 @@ pub struct App {
     /// value — before any SessionController/UiState consumer sees it, and
     /// workflow frames are never forwarded onward.
     workflow_tracker: WorkflowTracker,
+    /// `/review`'s launch and its armed run (cyril-iowg).
+    review: review::ReviewState,
     /// Test-only dispatch counters (cyril-6beh slice 22): incremented at the
     /// actual tracker/session/UI call sites so App tests can prove a workflow
     /// frame branches before every other consumer and is consumed exactly
@@ -402,6 +406,7 @@ impl App {
             ref theme,
             ref color_mode,
         } = ui;
+        let review = review::ReviewState::new(bridge.review_shell());
         let (bridge_sender, notification_rx, permission_rx, source_rx, bridge_completion_rx) =
             bridge.split();
         let (usage_enrichment, usage_enrichment_rx) = spawn_usage_enrichment_worker();
@@ -479,6 +484,7 @@ impl App {
             startup_prompt: None,
             pending_session_notifications: VecDeque::new(),
             workflow_tracker: WorkflowTracker::new(),
+            review,
             #[cfg(test)]
             workflow_apply_calls: 0,
             #[cfg(test)]
@@ -844,8 +850,16 @@ impl App {
 
                 // Priority 3: Permission requests from bridge
                 Some(request) = self.permission_rx.recv() => {
-                    self.ui_state.show_approval(request);
+                    // An armed review decides its own step sessions' requests.
+                    if let Some(request) = self.route_review_permission(request) {
+                        self.ui_state.show_approval(request);
+                    }
                     self.redraw_needed = true;
+                }
+
+                // `/review` work that ran off-loop. The App holds the sender.
+                Some(task) = self.review.rx.recv() => {
+                    self.handle_review_task(task).await;
                 }
 
                 // Priority 4: Voice engine events (CN2). Resolves to `pending`
@@ -908,6 +922,7 @@ impl App {
             }
 
             if self.ui_state.should_quit() {
+                self.review.disarm("cyril is exiting");
                 if let Err(e) = self.bridge_sender.send(BridgeCommand::Shutdown).await {
                     tracing::warn!(error = %e, "failed to send shutdown to bridge");
                 }
@@ -1152,7 +1167,31 @@ impl App {
     }
 
     fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
-        self.handle_notification_inner(routed, true)
+        // `/review` follows its own New/Invoke/cancel outcomes after they
+        // render, so its own line reads after the generic one.
+        let review_outcome = match &routed.notification {
+            Notification::WorkflowCommand(
+                outcome @ (WorkflowCommandOutcome::Minted { .. }
+                | WorkflowCommandOutcome::Invoked { .. }
+                | WorkflowCommandOutcome::Failed { .. }
+                | WorkflowCommandOutcome::Cancelled { .. }
+                | WorkflowCommandOutcome::Resumed { .. }),
+            ) => Some(outcome.clone()),
+            _ => None,
+        };
+        if let Some(outcome) = &review_outcome
+            && self.absorb_review_retry(outcome)
+        {
+            return Vec::new();
+        }
+        if matches!(routed.notification, Notification::BridgeDisconnected { .. }) {
+            self.review_agent_gone();
+        }
+        let commands = self.handle_notification_inner(routed, true);
+        if let Some(outcome) = review_outcome {
+            self.observe_review_outcome(&outcome);
+        }
+        commands
     }
 
     /// cyril-lki9 C13/C14: the transcript side of agent-initiated turns. A
@@ -1297,6 +1336,14 @@ impl App {
             // consumes the event by value.
             let event_kind = event.method_name();
             let workflow_id = event.workflow_id().as_str().to_owned();
+            let completion = match &*event {
+                cyril_core::types::WorkflowEvent::RunCompleted(completed) => {
+                    Some((completed.workflow_id().clone(), completed.status()))
+                }
+                _ => None,
+            };
+            let event_workflow = event.workflow_id().clone();
+            self.remember_review_sessions(&event_workflow);
             match self.workflow_tracker.apply_event(*event) {
                 // A state change may carry a session claim (node_start
                 // re-emit, resume first-emit, or snapshot-borne node state),
@@ -1318,6 +1365,10 @@ impl App {
                     );
                 }
             }
+            self.remember_review_sessions(&event_workflow);
+            if let Some((workflow_id, status)) = completion {
+                self.review_run_completed(&workflow_id, status);
+            }
             return Vec::new();
         }
 
@@ -1329,12 +1380,16 @@ impl App {
         // node paths) leaves the tracker unchanged and is warning-only.
         if let Notification::WorkflowSnapshot(snapshot) = notification {
             let workflow_id = snapshot.workflow_id().as_str().to_owned();
+            let snapshot_run = (snapshot.workflow_id().clone(), snapshot.status());
+            self.remember_review_sessions(&snapshot_run.0);
             match self.workflow_tracker.apply_snapshot(*snapshot) {
                 Ok(changed) => {
+                    self.remember_review_sessions(&snapshot_run.0);
                     if changed {
                         // Snapshot-borne node state can carry session claims
                         // (cyril-jxfu C5) — same sweep as lifecycle frames.
                         self.reparent_claimed_subagent_streams();
+                        self.review_snapshot_status(&snapshot_run.0, snapshot_run.1);
                     }
                 }
                 Err(error) => {
@@ -1756,6 +1811,7 @@ impl App {
             match overlay {
                 Overlay::Approval => self.handle_approval_key(key),
                 Overlay::Picker => self.handle_picker_key(key).await?,
+                Overlay::Review => self.handle_review_key(key),
                 Overlay::Hooks => self.handle_hooks_panel_key(key),
                 Overlay::Powers => dispatch_powers_panel_key(key, &mut self.ui_state),
                 Overlay::Code => self.handle_code_panel_key(key).await?,
@@ -2165,6 +2221,7 @@ impl App {
                     }
                 }
             }
+            CommandResultKind::Review => self.open_review(),
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }
@@ -3994,6 +4051,7 @@ mod tests {
                 }],
                 can_reject_with_reason: false,
                 responder,
+                consent: None,
             },
             receiver,
         )
@@ -4026,6 +4084,7 @@ mod tests {
                 trust_options: vec![],
                 can_reject_with_reason: true,
                 responder,
+                consent: None,
             },
             receiver,
         )
@@ -6358,6 +6417,50 @@ mod tests {
         );
     }
 
+    /// The `/review` consent form is modal: until Esc closes it, typing,
+    /// Enter, a paste and a dictation all stay out of the chat input behind it.
+    #[tokio::test]
+    async fn review_form_owns_the_keyboard_until_esc() {
+        let (mut app, _rx) = test_app_with_command_rx();
+        app.ui_state.insert_text("draft");
+        app.ui_state.show_review_form(cyril_ui::traits::ReviewForm {
+            target: "auto".into(),
+            scope: vec![".".into()],
+            file_count: Some(3),
+            check: cyril_ui::traits::ReviewCheck::NotConfigured,
+            busy: false,
+        });
+
+        for code in [KeyCode::Char('x'), KeyCode::Enter, KeyCode::Backspace] {
+            app.handle_key(KeyEvent::new(code, KeyModifiers::NONE))
+                .await
+                .expect("key under the form");
+        }
+        app.handle_terminal_event(Event::Paste("pasted".into()))
+            .await
+            .expect("paste under the form");
+        app.handle_voice_event(VoiceEvent::Transcript("dictated".into()));
+        assert_eq!(
+            app.ui_state.input_text(),
+            "draft",
+            "nothing may reach the input the form is covering"
+        );
+        assert!(app.ui_state.review_form().is_some(), "only Esc closes it");
+
+        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+            .await
+            .expect("Esc");
+        assert!(app.ui_state.review_form().is_none());
+        app.handle_key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE))
+            .await
+            .expect("key after the form");
+        assert_eq!(
+            app.ui_state.input_text(),
+            "draftx",
+            "typing reaches the input again"
+        );
+    }
+
     /// REGRESSION FENCE (round-3 review finding 5). The other half of the
     /// guard's repair: a paste dropped by an overlay used to be discarded with
     /// no record at all. The logs are the only account of a paste that never
@@ -7972,6 +8075,7 @@ mod tests {
         );
     }
     mod current_runtime_contract;
+    mod review;
 
     // ── cyril-qaq0: /theme command and picker session ───────────────────────
 

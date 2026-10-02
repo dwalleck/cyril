@@ -29,8 +29,10 @@ kas = ["tokio/fs", "tokio/io-util", "dep:serde_path_to_error", "dep:tempfile"]
 test-support = ["dep:tracing-subscriber"]
 
 [dependencies]
+cyril-review = { path = "../cyril-review" }
 regex = { workspace = true }
 thiserror = { workspace = true }
+time = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

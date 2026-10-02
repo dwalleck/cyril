@@ -53,6 +53,11 @@ pub(super) struct Script {
     pub(super) request_permission_on_prompt: bool,
     /// Raw ACP option array used for a scripted permission request.
     pub(super) permission_options: Option<serde_json::Value>,
+    /// `_meta` of the scripted permission request: KAS sends
+    /// `{"kiro": {"toolId", "command", "consent": {...}}}` (cyril-iowg).
+    pub(super) permission_meta: Option<serde_json::Map<String, serde_json::Value>>,
+    /// `rawInput` of the scripted permission request's tool call.
+    pub(super) permission_raw_input: Option<serde_json::Value>,
     pub(super) fail_extensions: Vec<String>,
     pub(super) fail_new_session: bool,
     /// Park the prompt response until the harness gate is notified.
@@ -157,6 +162,8 @@ fn fake_agent(
     let next_session = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let request_permission_on_prompt = script.borrow().request_permission_on_prompt;
     let permission_options = script.borrow().permission_options.clone();
+    let permission_meta = script.borrow().permission_meta.clone();
+    let permission_raw_input = script.borrow().permission_raw_input.clone();
     let fail_extensions = script.borrow().fail_extensions.clone();
     let fail_new_session = script.borrow().fail_new_session;
     let new_session_config_options = script.borrow().new_session_config_options.clone();
@@ -341,14 +348,16 @@ fn fake_agent(
                         })
                         .transpose()?
                         .unwrap_or_default();
+                    let mut fields = acp::ToolCallUpdateFields::new();
+                    if let Some(raw_input) = permission_raw_input.clone() {
+                        fields = fields.raw_input(raw_input);
+                    }
                     let permission = acp::RequestPermissionRequest::new(
                         request.session_id.clone(),
-                        acp::ToolCallUpdate::new(
-                            "permission-tool",
-                            acp::ToolCallUpdateFields::new(),
-                        ),
+                        acp::ToolCallUpdate::new("permission-tool", fields),
                         options,
-                    );
+                    )
+                    .meta(permission_meta.clone());
                     let permission_connection = connection.clone();
                     let permission_responses = Arc::clone(&permission_responses);
                     connection.spawn(async move {

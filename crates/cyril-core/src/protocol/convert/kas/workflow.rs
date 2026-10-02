@@ -1496,6 +1496,37 @@ mod tests {
         }
     }
 
+    /// Every exhaustion action KAS 2.26.0 accepts (`abort | continue |
+    /// pause`) converts; `continue` used to drop the `/review` recipe's
+    /// whole `run_start` as malformed.
+    #[test]
+    fn every_kas_repeat_exhaustion_action_converts() {
+        for (wire, expected) in [
+            ("pause", WorkflowRepeatExhaustion::Pause),
+            ("abort", WorkflowRepeatExhaustion::Abort),
+            ("continue", WorkflowRepeatExhaustion::Continue),
+        ] {
+            let params = serde_json::json!({
+                "workflowId": "wf-repeat",
+                "workflowName": "repeat",
+                "inputs": {},
+                "nodeTree": [{
+                    "nodeId": "loop",
+                    "type": "repeat",
+                    "steps": [],
+                    "maxIterations": 2,
+                    "onMaxIterations": wire
+                }]
+            });
+            let WorkflowEvent::RunStarted(opening) =
+                event(to_notification("kiro/workflow/run_start", &params), wire)
+            else {
+                panic!("expected run_start for {wire}");
+            };
+            assert_eq!(opening.node_tree()[0].on_max_iterations(), Some(expected));
+        }
+    }
+
     #[test]
     fn field_rich_run_start_preserves_descriptor_tree() {
         let params = serde_json::json!({
@@ -3823,7 +3854,7 @@ mod tests {
             ("queue_outcome", &["applied", "rejected", "dropped"][..]),
             ("completion_signal", &["success", "need_input", "error"][..]),
             ("completion_source", &["send_message", "status_update"][..]),
-            ("repeat_exhaustion", &["pause", "abort"][..]),
+            ("repeat_exhaustion", &["pause", "abort", "continue"][..]),
         ];
         let domains = must_object(&manifest["enum_domains"], "enum domains");
         assert_eq!(domains.len(), expected_domains.len());

@@ -600,6 +600,10 @@ pub struct PermissionRequest {
     /// build features; it is not inferred from request payloads.
     pub can_reject_with_reason: bool,
     pub responder: tokio::sync::oneshot::Sender<PermissionResponse>,
+    /// What a KAS request asks for (`_meta.kiro`), typed at the conversion
+    /// boundary; `None` when the agent sends no consent metadata. An armed
+    /// `/review` decides its step sessions' requests from this alone.
+    pub consent: Option<crate::review::consent::PermissionConsent>,
 }
 
 /// The semantic kind of a permission option. Mirrors `acp::PermissionOptionKind`.

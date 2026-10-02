@@ -390,6 +390,7 @@ pub fn kas_trace_replay(trace: &str, main: &str) -> Vec<ReplayFrame> {
                 trust_options: convert::extract_trust_options(&args),
                 can_reject_with_reason: true,
                 responder,
+                consent: None,
             }));
             continue;
         }

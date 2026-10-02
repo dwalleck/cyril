@@ -1,6 +1,17 @@
+//! `/review`: the crtool prefix, the permission policy of an armed run, its
+//! inputs, `run.json` and completion summary.
+//!
 //! Safe shell spelling for hidden `cyril crtool`.
 //! HostShell owns terminal rendering; this module keeps the pinned,
 //! double-quoted, forward-slash prefix and rejects unsafe fallback forms.
+pub mod authorization;
+pub mod consent;
+pub mod inputs;
+pub mod launch;
+pub mod policy;
+pub mod run_record;
+pub mod summary;
+
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};

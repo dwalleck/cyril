@@ -116,6 +116,7 @@ pub struct UiState {
     // Overlays
     approvals: VecDeque<ApprovalState>,
     picker: Option<PickerState>,
+    review_form: Option<crate::traits::ReviewForm>,
     hooks_panel: Option<HooksPanelState>,
     powers_panel: Option<PowersPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
@@ -313,6 +314,10 @@ impl TuiState for UiState {
         self.approvals.front()
     }
 
+    fn review_form(&self) -> Option<&crate::traits::ReviewForm> {
+        self.review_form.as_ref()
+    }
+
     fn picker(&self) -> Option<&PickerState> {
         self.picker.as_ref()
     }
@@ -433,6 +438,7 @@ impl UiState {
             workflow_streams: crate::workflow_ui::WorkflowUiState::new(),
             approvals: VecDeque::new(),
             picker: None,
+            review_form: None,
             hooks_panel: None,
             powers_panel: None,
             code_panel: None,
@@ -1714,6 +1720,21 @@ impl UiState {
         !self.approvals.is_empty()
     }
 
+    /// Open the `/review` consent form.
+    pub fn show_review_form(&mut self, form: crate::traits::ReviewForm) {
+        self.review_form = Some(form);
+    }
+
+    /// The open form, to update its file count or mark it busy.
+    pub fn review_form_mut(&mut self) -> Option<&mut crate::traits::ReviewForm> {
+        self.review_form.as_mut()
+    }
+
+    /// Close the form; returns whether one was open.
+    pub fn close_review_form(&mut self) -> bool {
+        self.review_form.take().is_some()
+    }
+
     /// Check if there is an active picker dialog.
     pub fn has_picker(&self) -> bool {
         self.picker.is_some()
@@ -1751,6 +1772,7 @@ impl UiState {
         match overlay {
             Overlay::Approval => self.has_approval(),
             Overlay::Picker => self.has_picker(),
+            Overlay::Review => self.review_form.is_some(),
             Overlay::Hooks => self.has_hooks_panel(),
             Overlay::Powers => self.has_powers_panel(),
             Overlay::Code => self.has_code_panel(),
@@ -6429,9 +6451,22 @@ mod tests {
         state.show_approval(request);
         assert_eq!(state.topmost_overlay(), Some(Overlay::Approval));
 
+        // The review form sits under a permission request: a review's own
+        // workflow can ask for permission while the form is still open.
+        state.show_review_form(crate::traits::ReviewForm {
+            target: "auto".into(),
+            scope: vec![".".into()],
+            file_count: None,
+            check: crate::traits::ReviewCheck::NotConfigured,
+            busy: false,
+        });
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Approval));
+
         // Closing the top layer hands the keyboard to the next one down, and
         // the last layer out clears the predicate entirely.
         state.approval_cancel();
+        assert_eq!(state.topmost_overlay(), Some(Overlay::Review));
+        state.close_review_form();
         assert_eq!(state.topmost_overlay(), Some(Overlay::Hooks));
         state.hide_hooks_panel();
         assert_eq!(state.topmost_overlay(), Some(Overlay::Usage));
@@ -6448,6 +6483,7 @@ mod tests {
                 Overlay::Powers,
                 Overlay::Hooks,
                 Overlay::Picker,
+                Overlay::Review,
                 Overlay::Approval,
             ]
         );
@@ -7562,6 +7598,7 @@ mod tests {
             trust_options: Vec::new(),
             can_reject_with_reason: false,
             responder: tx,
+            consent: None,
         };
         (req, rx)
     }
@@ -8054,6 +8091,7 @@ mod tests {
                 trust_options: Vec::new(),
                 can_reject_with_reason: false,
                 responder: tx,
+                consent: None,
             };
             (req, rx)
         }
@@ -8142,6 +8180,7 @@ mod tests {
                     .collect(),
                 can_reject_with_reason: false,
                 responder,
+                consent: None,
             });
             if matches!(index, 10 | 20) {
                 drop(receiver);
@@ -8278,6 +8317,7 @@ mod tests {
             trust_options: Vec::new(),
             can_reject_with_reason: false,
             responder: tx,
+            consent: None,
         };
         let mut state = UiState::new(500);
         state.show_approval(req);
@@ -8465,6 +8505,7 @@ mod tests {
             trust_options,
             can_reject_with_reason: false,
             responder: tx,
+            consent: None,
         };
         (req, rx)
     }

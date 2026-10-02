@@ -518,6 +518,7 @@ mod tests {
             trust_options: vec![],
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         });
         ui
     }
