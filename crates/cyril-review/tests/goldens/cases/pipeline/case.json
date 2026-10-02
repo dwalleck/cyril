@@ -404,6 +404,104 @@
     ],
     [
       "collate"
+    ],
+    [
+      "write",
+      "ranking.json",
+      {
+        "order": [
+          "C03",
+          "C08",
+          "C01",
+          "C99",
+          "C03",
+          "S01",
+          "C06"
+        ],
+        "notes": {
+          "C08": "real, but the author accepted it"
+        }
+      }
+    ],
+    [
+      "finalize"
+    ],
+    [
+      "write",
+      "comments/C03.json",
+      {
+        "label": "Issue:",
+        "decorations": [
+          "blocking",
+          "test"
+        ],
+        "subject": "Loop  bound   skips the last item",
+        "discussion": "With `n > 0` the last element is never visited.\n\nUse `0..n`."
+      }
+    ],
+    [
+      "write",
+      "comments/C08.json",
+      {
+        "label": "issue",
+        "decorations": [
+          "(blocking)"
+        ],
+        "subject": "Duplicate helper drifts from the original",
+        "discussion": "Reuse `util::helper`."
+      }
+    ],
+    [
+      "write",
+      "comments/C01.json",
+      {
+        "duplicate_of": "C03"
+      }
+    ],
+    [
+      "write",
+      "comments/S01.json",
+      {
+        "duplicate_of": "C42"
+      }
+    ],
+    [
+      "write",
+      "comments/C06.json",
+      {
+        "label": "wish",
+        "subject": "make it nicer"
+      }
+    ],
+    [
+      "write",
+      "comments/C02.json",
+      "{broken"
+    ],
+    [
+      "write",
+      "comments/C04.json",
+      {
+        "label": "suggestion",
+        "decorations": [
+          "Not A Word",
+          "if-minor"
+        ],
+        "subject": "Reuse the existing helper",
+        "discussion": ""
+      }
+    ],
+    [
+      "write",
+      "comments/C09.json",
+      []
+    ],
+    [
+      "comments"
+    ],
+    [
+      "comments",
+      "--no-trailer"
     ]
   ]
 }

@@ -26,7 +26,7 @@ Shape (step nodes count toward the engine's hard cap of 20):
 
 With the comment step the recipe needs 3 verify shards to fit the cap (4 would be 21 nodes).
 
-Model and effort are PINNED per step from the cr-* agent files' frontmatter.
+Model and effort are PINNED per step from the agent files' frontmatter.
 The engine resolves a step's model as step > workflow > PARENT SESSION (unless
 `auto`) > agent file, and effort as step > workflow > parent > agent, so an
 agent-file-only tiering is silently replaced by whatever model the launching
@@ -44,7 +44,15 @@ Data flows through files under {{rundir}} only. `{{id.output}}` is never used:
 the engine captures a step's LAST message, which for a step that writes a file
 and signs off is the sign-off (cyril-srp6).
 
-Usage: build_recipe.py [--shards 3] [--split-cleanup] [--replay] [--only ID[,ID]] [--out PATH]
+The agent prose is canonical in crates/cyril-review/assets/agents/
+(cyril-review-*.md, embedded in cyril). `--cyril` writes the recipe cyril embeds,
+crates/cyril-review/assets/cyril-review.workflow.json; the default writes this
+experiment's recipe, whose cr-* agents are mirrors that `--mirror-agents`
+generates from the canonical files. CI regenerates all three and fails on any
+difference: edit the canonical agents or this script, never the outputs.
+
+Usage: build_recipe.py [--cyril] [--shards 3] [--split-cleanup] [--replay] [--only ID[,ID]] [--out PATH]
+       build_recipe.py --mirror-agents [DIR]
 """
 import argparse
 import json
@@ -59,18 +67,37 @@ DEFAULT_OUT = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow
 # single quotes mean nothing to cmd.exe; double quotes work in bash, pwsh and cmd.
 TOOL = "{{crtool}}"
 STEP_CAP = 20
-AGENTS_DIR = os.path.join(REPO, ".kiro", "agents")
+ASSETS_DIR = os.path.join(REPO, "crates", "cyril-review", "assets")
+CANONICAL_AGENTS = os.path.join(ASSETS_DIR, "agents")
+CYRIL_OUT = os.path.join(ASSETS_DIR, "cyril-review.workflow.json")
+MIRROR_DIR = os.path.join(REPO, ".kiro", "agents")
+ROLES = ("finder", "verifier", "clerk", "commenter")
+# The experiment can also be started from Kiro's own workflow UI, where nobody fills
+# the crtool input: its mirrors keep the Python fallback that cyril's agents drop.
+MIRROR_FALLBACK = """## If the crtool command is missing
+
+The command that runs `crtool.py` is the workflow input `crtool`, which whoever
+started this review fills in. If a command in your step prompt starts with a
+blank or with a literal `{{crtool}}` instead of a program, that input was never
+set: use `uv run --script .kiro/code-review/crtool.py` when `uv` is installed,
+otherwise `python .kiro/code-review/crtool.py` on Windows and
+`python3 .kiro/code-review/crtool.py` elsewhere — then the rest of the command
+exactly as given.
+"""
+# Agent names per recipe: cyril's own, and the experiment's mirrors.
+CYRIL_PREFIX, MIRROR_PREFIX = "cyril-review-", "cr-"
 PINNED = ("model", "effortLevel")  # agent frontmatter key -> step field (model -> modelId)
 
 
-def agent_defaults(agent, agents_dir=AGENTS_DIR):
-    """The `model` / `effortLevel` a cr-* agent file declares, as step fields.
+def agent_defaults(agent):
+    """The `model` / `effortLevel` an agent's canonical file declares, as step fields.
 
     Only flat `key: value` frontmatter lines are read; list-valued keys (tools)
     are skipped. A missing agent file is an error, not an empty pin set: the
     recipe would silently fall back to the parent session's model.
     """
-    path = os.path.join(agents_dir, f"{agent}.md")
+    role = agent.rsplit("-", 1)[-1]
+    path = os.path.join(CANONICAL_AGENTS, f"{CYRIL_PREFIX}{role}.md")
     try:
         with open(path, encoding="utf-8") as f:
             text = f.read()
@@ -95,16 +122,16 @@ def walk_steps(nodes):
         yield from walk_steps(node.get("branches", []))
 
 
-def pin_agent_defaults(steps, agents_dir=AGENTS_DIR):
+def pin_agent_defaults(steps):
     """Copy each step's agent model/effort onto the step, keeping explicit step values."""
     cache = {}
     for step in walk_steps(steps):
-        pins = cache.setdefault(step["agent"], agent_defaults(step["agent"], agents_dir))
+        pins = cache.setdefault(step["agent"], agent_defaults(step["agent"]))
         for field, value in pins.items():
             step.setdefault(field, value)
 
 
-def apply_override(recipe, field, value, agents_dir=AGENTS_DIR):
+def apply_override(recipe, field, value):
     """A whole-run `modelId` / `effortLevel` override (run_review.py --model / --effort).
 
     Sets the workflow-level field, which reaches steps with no pin, AND replaces
@@ -115,7 +142,7 @@ def apply_override(recipe, field, value, agents_dir=AGENTS_DIR):
     recipe[field] = value
     cache = {}
     for step in walk_steps(recipe["steps"]):
-        pins = cache.setdefault(step["agent"], agent_defaults(step["agent"], agents_dir))
+        pins = cache.setdefault(step["agent"], agent_defaults(step["agent"]))
         if field in pins and step.get(field) == pins[field]:
             step[field] = value
 
@@ -239,9 +266,9 @@ def akey(key):
     return key.replace("-", "_")
 
 
-def finder_step(key, title, text):
+def finder_step(prefix, key, title, text):
     return {
-        "type": "step", "id": f"find-{key}", "agent": "cr-finder",
+        "type": "step", "id": f"find-{key}", "agent": f"{prefix}finder",
         "prompt": (f"ANGLE KEY: {key}\nANGLE: {title}\n\n{text}\n\n"
                    "Run directory: {{rundir}}\n"
                    f"Write your candidates to: {{{{rundir}}}}/candidates/{key}.json"),
@@ -249,7 +276,7 @@ def finder_step(key, title, text):
     }
 
 
-def verify_loop(name, max_iterations):
+def verify_loop(prefix, name, max_iterations):
     return {
         "type": "repeat", "id": f"verify-loop-{name}",
         "maxIterations": max_iterations,
@@ -259,7 +286,7 @@ def verify_loop(name, max_iterations):
         "stopCondition": {"fileCheck": {"path": f"{{{{rundir}}}}/queues/queue-{name}.json",
                                         "jsonPath": "done", "value": True}},
         "steps": [{
-            "type": "step", "id": f"verify-{name}", "agent": "cr-verifier",
+            "type": "step", "id": f"verify-{name}", "agent": f"{prefix}verifier",
             "prompt": ("Run directory: {{rundir}}\n"
                        f"Queue file: {{{{rundir}}}}/queues/queue-{name}.json\n\n"
                        "Verify the first unfinished candidate in your queue, following your protocol.\n\n"
@@ -269,7 +296,8 @@ def verify_loop(name, max_iterations):
     }
 
 
-def build(shards, split_cleanup, replay=False, only=()):
+def build(shards, split_cleanup, replay=False, only=(), cyril=False):
+    prefix = CYRIL_PREFIX if cyril else MIRROR_PREFIX
     ang = angles(split_cleanup)
     keys = ",".join(k for k, _, _ in ang)
     # 8 candidates per angle, round-robin over the shards, plus slack for an
@@ -277,7 +305,7 @@ def build(shards, split_cleanup, replay=False, only=()):
     per_shard = -(-len(ang) * 8 // shards) + 2
 
     steps = [
-        {"type": "step", "id": "setup", "agent": "cr-clerk", "effortLevel": "low",
+        {"type": "step", "id": "setup", "agent": f"{prefix}clerk", "effortLevel": "low",
          "prompt": ("You are the setup step of a code review. From the workspace root, run exactly "
                     "this one command:\n\n"
                     f"{TOOL} gather \"{{{{rundir}}}}\" \"{{{{target}}}}\" \"{{{{scope}}}}\"\n\n"
@@ -289,9 +317,9 @@ def build(shards, split_cleanup, replay=False, only=()):
         # allSettled: one throttled or failed angle must not abort the others.
         # `crtool merge` records which angles never reported.
         {"type": "parallel", "id": "find", "joinPolicy": "allSettled",
-         "branches": [finder_step(*a) for a in ang]},
+         "branches": [finder_step(prefix, *a) for a in ang]},
 
-        {"type": "step", "id": "dedup", "agent": "cr-clerk",
+        {"type": "step", "id": "dedup", "agent": f"{prefix}clerk",
          "prompt": ("Merge and dedup the finders' candidates.\n\n"
                     f"1. Run: {TOOL} merge \"{{{{rundir}}}}\" --expect \"{keys}\"\n"
                     "2. Read EVERY digest page the command names ({{rundir}}/candidates/digest-1.txt, ...). "
@@ -315,9 +343,9 @@ def build(shards, split_cleanup, replay=False, only=()):
          "artifacts": {"deduped_index": "{{rundir}}/deduped/index.json"}},
 
         {"type": "parallel", "id": "verify", "joinPolicy": "allSettled",
-         "branches": [verify_loop(str(k), per_shard) for k in range(1, shards + 1)]},
+         "branches": [verify_loop(prefix, str(k), per_shard) for k in range(1, shards + 1)]},
 
-        {"type": "step", "id": "sweep", "agent": "cr-finder",
+        {"type": "step", "id": "sweep", "agent": f"{prefix}finder",
          "prompt": ("ANGLE KEY: sweep\nANGLE: Phase 3 — sweep for gaps\n\n" + SWEEP + "\n\n"
                     "Run directory: {{rundir}}\n"
                     "Write your candidates to: {{rundir}}/candidates/sweep.json\n"
@@ -328,9 +356,9 @@ def build(shards, split_cleanup, replay=False, only=()):
                     "instead."),
          "artifacts": {"candidates_sweep": "{{rundir}}/candidates/sweep.json"}},
 
-        verify_loop("sweep", 10),
+        verify_loop(prefix, "sweep", 10),
 
-        {"type": "step", "id": "ballots", "agent": "cr-clerk", "effortLevel": "low",
+        {"type": "step", "id": "ballots", "agent": f"{prefix}clerk", "effortLevel": "low",
          "prompt": ("One vote proved unstable exactly where it matters: a REFUTED verdict, and any claim that "
                     "turns on how a written rule is read. Those candidates get two more independent votes. From "
                     "the workspace root, run exactly this one command:\n\n"
@@ -342,9 +370,9 @@ def build(shards, split_cleanup, replay=False, only=()):
         # Same verifier, same protocol, fresh sessions that cannot see the first vote:
         # one loop per extra ballot, so a candidate's second and third votes run side by side.
         {"type": "parallel", "id": "revote", "joinPolicy": "allSettled",
-         "branches": [verify_loop("r1", 30), verify_loop("r2", 30)]},
+         "branches": [verify_loop(prefix, "r1", 30), verify_loop(prefix, "r2", 30)]},
 
-        {"type": "step", "id": "rank", "agent": "cr-clerk",
+        {"type": "step", "id": "rank", "agent": f"{prefix}clerk",
          "prompt": ("Final phase of a code review: rank the verified findings.\n\n"
                     f"1. Run: {TOOL} collate \"{{{{rundir}}}}\"\n"
                     "2. Read EVERY digest page the command names ({{rundir}}/verified-digest-1.txt, ...): "
@@ -370,7 +398,7 @@ def build(shards, split_cleanup, replay=False, only=()):
                     f"4. Run: {TOOL} finalize \"{{{{rundir}}}}\""),
          "artifacts": {"findings": "{{rundir}}/findings.json", "report": "{{rundir}}/report.md"}},
 
-        {"type": "step", "id": "comment", "agent": "cr-commenter",
+        {"type": "step", "id": "comment", "agent": f"{prefix}commenter",
          "prompt": ("Write the review comment for every reported finding.\n\n"
                     "1. Read EVERY brief page: {{rundir}}/comments/brief-1.txt (and brief-2.txt, ... if present). One "
                     "block per finding, in rank order.\n"
@@ -389,30 +417,41 @@ def build(shards, split_cleanup, replay=False, only=()):
         # review comments of a finished run for the price of one session.
         steps = [n for n in steps if n["id"] in only]
         if not steps:
-            raise SystemExit(f"--only matched no top-level node; ids are {[n['id'] for n in build(shards, split_cleanup)['steps']]}")
+            raise SystemExit(f"--only matched no top-level node; ids are {[n['id'] for n in build(shards, split_cleanup, cyril=cyril)['steps']]}")
     elif replay:
         # Everything downstream of the finders and the sweep, for re-testing the
         # bookkeeping against an existing run's candidates/*.json and sweep.json.
         steps = [n for n in steps if n["id"] not in ("setup", "find", "sweep")]
 
     pin_agent_defaults(steps)
+    common = ("Max-effort, recall-mode code review: one peer session per finder angle, "
+              "one fresh session per candidate verification, a gap sweep, then ranked findings. "
+              "Inputs: rundir = fresh ABSOLUTE run directory inside the workspace (client-minted, "
+              "e.g. <ws>/.code-review/<timestamp>); context = free text naming the documents that are "
+              "authoritative for this change (its spec/design docs, protocol references) — verifiers "
+              "consult them before confirming; ")
+    results = ("target = a git diff target such as "
+               "`main...HEAD`, `<base>...<head>`, a commit, or `auto`; scope = space-separated git "
+               "pathspecs (`.` for everything). Results: <rundir>/findings.json and "
+               "<rundir>/report.md, plus <rundir>/comments.json and comments.md — one postable review "
+               "comment per reported finding in the Conventional Comments format. ")
+    if cyril:
+        name = "cyril-review"
+        description = (common + "crtool = the command that runs cyril's crtool, which cyril fills in; " + results
+                       + "Requires the cyril-review-finder, cyril-review-verifier, cyril-review-clerk and "
+                       "cyril-review-commenter agents. Generated by experiments/code-review-workflow/build_recipe.py "
+                       "--cyril — edit that, not this file.")
+    else:
+        name = ("code-review-" + "-".join(only)) if only else ("code-review-replay" if replay else "code-review-max")
+        description = (common + "crtool = the command that runs .kiro/code-review/crtool.py "
+                       "on this machine, e.g. `uv run --script .kiro/code-review/crtool.py` or "
+                       "`python .kiro/code-review/crtool.py`; " + results + "Requires "
+                       ".kiro/code-review/crtool.py and the cr-finder, cr-verifier, cr-clerk, cr-commenter agents. "
+                       "Generated by "
+                       "experiments/code-review-workflow/build_recipe.py — edit that, not this file.")
     return {
-        "name": ("code-review-" + "-".join(only)) if only else ("code-review-replay" if replay else "code-review-max"),
-        "description": ("Max-effort, recall-mode code review: one peer session per finder angle, "
-                        "one fresh session per candidate verification, a gap sweep, then ranked findings. "
-                        "Inputs: rundir = fresh ABSOLUTE run directory inside the workspace (client-minted, "
-                        "e.g. <ws>/.code-review/<timestamp>); context = free text naming the documents that are "
-                        "authoritative for this change (its spec/design docs, protocol references) — verifiers "
-                        "consult them before confirming; crtool = the command that runs .kiro/code-review/crtool.py "
-                        "on this machine, e.g. `uv run --script .kiro/code-review/crtool.py` or "
-                        "`python .kiro/code-review/crtool.py`; target = a git diff target such as "
-                        "`main...HEAD`, `<base>...<head>`, a commit, or `auto`; scope = space-separated git "
-                        "pathspecs (`.` for everything). Results: <rundir>/findings.json and "
-                        "<rundir>/report.md, plus <rundir>/comments.json and comments.md — one postable review "
-                        "comment per reported finding in the Conventional Comments format. Requires "
-                        ".kiro/code-review/crtool.py and the cr-finder, cr-verifier, cr-clerk, cr-commenter agents. "
-                        "Generated by "
-                        "experiments/code-review-workflow/build_recipe.py — edit that, not this file."),
+        "name": name,
+        "description": description,
         "inputs": {"rundir": "string", "target": "string", "scope": "string", "context": "prompt", "crtool": "string"},
         "injectOriginalUserRequest": False,
         "steps": steps,
@@ -428,8 +467,28 @@ def count_steps(nodes):
     return n
 
 
+def mirror_agents(directory):
+    """Write the experiment's cr-* agents from the canonical cyril-review-* files."""
+    os.makedirs(directory, exist_ok=True)
+    for role in ROLES:
+        with open(os.path.join(CANONICAL_AGENTS, f"{CYRIL_PREFIX}{role}.md"), encoding="utf-8", newline="") as f:
+            text = f.read()
+        text, n = re.subn(rf"^name: {CYRIL_PREFIX}{role}$", f"name: {MIRROR_PREFIX}{role}", text, count=1, flags=re.M)
+        if n != 1:
+            raise SystemExit(f"canonical {role} agent has no `name: {CYRIL_PREFIX}{role}` line")
+        text = text.replace("the cyril-review workflow", "the code-review-max workflow")
+        text = re.sub(r"## The crtool command\n.*?(?=\n## )", MIRROR_FALLBACK.rstrip("\n"), text, count=1, flags=re.S)
+        with open(os.path.join(directory, f"{MIRROR_PREFIX}{role}.md"), "w", encoding="utf-8", newline="") as f:
+            f.write(text)
+    print(f"mirrored {len(ROLES)} agents into {directory}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--cyril", action="store_true",
+                   help="write the recipe cyril embeds (cyril-review-* agents) instead of the experiment's")
+    p.add_argument("--mirror-agents", nargs="?", const=MIRROR_DIR, metavar="DIR",
+                   help="write the cr-* agent mirrors (default .kiro/agents) and exit")
     p.add_argument("--shards", type=int, default=3,
                    help="parallel verify loops (default 3: with the comment step, 4 would be 21 of 20 nodes)")
     p.add_argument("--only", default="", help="emit only these top-level node ids, comma-separated (e.g. comment)")
@@ -438,18 +497,24 @@ def main():
     p.add_argument("--replay", action="store_true",
                    help="emit only dedup -> verify -> verify-sweep -> rank, to re-run the bookkeeping over "
                         "an existing run directory's finder and sweep outputs (no opus sessions)")
-    p.add_argument("--out", default=DEFAULT_OUT)
+    p.add_argument("--out")
     a = p.parse_args()
+    if a.mirror_agents:
+        mirror_agents(a.mirror_agents)
+        return
+    if a.cyril and (a.only or a.replay):
+        raise SystemExit("--cyril builds the full recipe cyril embeds; it cannot be combined with --only or --replay")
+    out = a.out or (CYRIL_OUT if a.cyril else DEFAULT_OUT)
 
-    recipe = build(a.shards, a.split_cleanup, a.replay, tuple(x for x in a.only.split(',') if x))
+    recipe = build(a.shards, a.split_cleanup, a.replay, tuple(x for x in a.only.split(',') if x), a.cyril)
     n = count_steps(recipe["steps"])
     if n > STEP_CAP:
         raise SystemExit(f"{n} step nodes exceeds the engine cap of {STEP_CAP}; lower --shards")
-    os.makedirs(os.path.dirname(a.out), exist_ok=True)
-    with open(a.out, "w", encoding="utf-8") as f:
+    os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
+    with open(out, "w", encoding="utf-8", newline="") as f:
         json.dump(recipe, f, indent=2, ensure_ascii=False)
         f.write("\n")
-    print(f"wrote {a.out}: {n}/{STEP_CAP} step nodes")
+    print(f"wrote {out}: {n}/{STEP_CAP} step nodes")
 
 
 if __name__ == "__main__":

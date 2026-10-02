@@ -111,6 +111,11 @@ fn crtool_gathers_refuses_and_reports_empty_diffs_with_crtool_exit_codes() -> Te
         (vec!["shard", &*run, "--shards", "3"], "digest pages"),
         (vec!["ballots", &*run], "ballots: 0 of 1 candidates"),
         (vec!["collate", &*run], "digest pages"),
+        (vec!["finalize", &*run], "comment briefs"),
+        (
+            vec!["comments", &*run, "--no-trailer"],
+            "comments: 1 findings",
+        ),
     ] {
         let mut argv = vec!["crtool"];
         argv.extend(args);

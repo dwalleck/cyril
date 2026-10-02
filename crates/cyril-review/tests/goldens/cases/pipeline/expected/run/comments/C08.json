@@ -1,0 +1,8 @@
+{
+  "label": "issue",
+  "decorations": [
+    "(blocking)"
+  ],
+  "subject": "Duplicate helper drifts from the original",
+  "discussion": "Reuse `util::helper`."
+}

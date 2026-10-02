@@ -1,0 +1,16 @@
+[
+  {
+    "id": "C01",
+    "file": "src/lib.rs",
+    "line": 2,
+    "verdict": "UNVERIFIED",
+    "label": "question",
+    "decorations": [
+      "non-blocking"
+    ],
+    "subject": "New function never called",
+    "discussion": "dead code ships",
+    "body": "**question (non-blocking):** New function never called\n\ndead code ships\n\n_Automated review · unverified by vote (unverified, unverified, unverified) · C01_",
+    "source": "template"
+  }
+]

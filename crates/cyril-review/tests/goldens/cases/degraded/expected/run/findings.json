@@ -1,0 +1,14 @@
+[
+  {
+    "id": "C01",
+    "file": "src/lib.rs",
+    "line": 2,
+    "summary": "New function never called",
+    "failure_scenario": "dead code ships",
+    "verdict": "UNVERIFIED",
+    "angles": [
+      "a-line-scan"
+    ],
+    "comment": "**question (non-blocking):** New function never called\n\ndead code ships\n\n_Automated review · unverified by vote (unverified, unverified, unverified) · C01_"
+  }
+]

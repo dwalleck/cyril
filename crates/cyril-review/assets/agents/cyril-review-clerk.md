@@ -1,6 +1,6 @@
 ---
-name: cr-clerk
-description: Bookkeeping agent for the code-review-max workflow. Runs crtool, the review's deterministic data step, and makes the small judgment calls it cannot (which candidates are duplicates, how findings rank).
+name: cyril-review-clerk
+description: Bookkeeping agent for the cyril-review workflow. Runs crtool, the review's deterministic data step, and makes the small judgment calls it cannot (which candidates are duplicates, how findings rank).
 tools:
   - read_file
   - fs_write
@@ -16,15 +16,14 @@ leave JSON files in a run directory; crtool (the crtool command given in this
 workflow's crtool input) does every mechanical transformation between them.
 You run crtool and make only the judgment calls it cannot.
 
-## If the crtool command is missing
+## The crtool command
 
-The command that runs `crtool.py` is the workflow input `crtool`, which whoever
-started this review fills in. If a command in your step prompt starts with a
-blank or with a literal `{{crtool}}` instead of a program, that input was never
-set: use `uv run --script .kiro/code-review/crtool.py` when `uv` is installed,
-otherwise `python .kiro/code-review/crtool.py` on Windows and
-`python3 .kiro/code-review/crtool.py` elsewhere — then the rest of the command
-exactly as given.
+Every crtool command you run is the crtool command given in this workflow's
+crtool input; your step prompt spells it out in full. If a command in your
+step prompt starts with a blank or with a literal `{{crtool}}` instead of a
+program, that input was never set: report that and signal failure. Do not
+guess another command.
+
 ## Rules
 
 - **Never retype candidate or verdict records by hand.** The script moves data

@@ -45,10 +45,12 @@ mode would write CRLF there). Decoding git output and agent files uses
 | Usage search cost | One `git grep` per symbol | One `git grep -e … -e …` for all symbols |
 | Diff output | Affected by user config (`diff.submodule`, `diff.relative`, color, ext-diff) | Independent of user diff config (with the git CLI: `--no-relative --no-color --no-ext-diff --no-textconv --submodule=short`) |
 | Self-exclusion | Skips hits under `.code-review/` | Skips hits under the actual run directory |
-| Odd values in agent records | Python `str()`/`repr()`/truthiness: `None`, `0` and `[]` count as empty, a float line is truncated | Strings and integers as agents are told to write them; any other value prints as its JSON text; only absent, `null` and `""` count as empty; a line is an integer or an integer string |
+| Odd values in agent records | Python `str()`/`repr()`/truthiness: `None`, `0` and `[]` count as empty, a float line is truncated | Strings and integers as agents are told to write them; any other value prints as its JSON text; only absent, `null` and `""` count as empty; a line is an integer or an integer string; an absent file or line prints `?` |
+| Comment decorations | A repeated decoration is warned about as "not a lowercase word" | A repeated decoration is dropped silently |
 | Sweep candidate ids | Any id the sweep finder writes, used in file names as is | Only a plain name (letters, digits, `.`, `_`, `-`, never `..`) is kept; any other id gets its `S` number, with a warning |
 | Candidates without a file | Sort and group as `None` in the merge digest | Sort and group as `?`, which is what the digest prints for them |
 | `shard --shards 0` | Exit 0 with no candidates, a crash otherwise | Always refused (exit 2) |
+| `duplicate_of` in a comment file | Any other reported finding, so a mutual pair leaves the defect uncommented | Only a better-ranked finding that has its own comment; otherwise the template is used, with a warning |
 | Parse-error text | Python `json` messages inside `unreadable` warnings | serde_json messages |
 | Per-file patch | `git diff -- <path>`, read as a glob (`src/[id].tsx` matches `src/i.tsx`) | `:(literal)<path>` |
 | `scope` | One space-split string | Same on the command line (the recipe passes one string); pathspecs containing spaces are unsupported |
@@ -162,12 +164,14 @@ cancel path can interrupt by killing the child.
   splitting from the `shlex` crate and timestamps from a time crate, rather than
   copying Python's behaviour by hand.
 - No Windows-only crates. The same code runs on every OS.
-- Size budget: about 3,000 lines of non-test Rust, counted after rustfmt, for
-  all eight subcommands and the check function. A change that would exceed it
-  needs a stated reason. (Raised from 2,000 with cyril-7vrl: merge, shard,
-  ballots and collate are mostly dict reshaping that Python writes in one line
-  and rustfmt lays out over five to ten. At that slice the crate was 2,424
-  lines with finalize and comments still to come.)
+- Size budget: about 3,300 lines of non-test Rust, counted after rustfmt, for
+  all eight subcommands, the check function and the embedded-asset module. A
+  change that would exceed it needs a stated reason. History: set at 2,000,
+  raised to 3,000 with cyril-7vrl, and closed at 3,300 with cyril-m139, when
+  the complete port measured 3,248. The excess over the first estimate is
+  layout, not logic: the aggregation and reporting steps are dict reshaping
+  and Markdown that Python writes in one line and rustfmt lays out over five
+  to ten.
 
 ## Testing
 

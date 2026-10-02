@@ -1,0 +1,14 @@
+{
+  "order": [
+    "C03",
+    "C08",
+    "C01",
+    "C99",
+    "C03",
+    "S01",
+    "C06"
+  ],
+  "notes": {
+    "C08": "real, but the author accepted it"
+  }
+}

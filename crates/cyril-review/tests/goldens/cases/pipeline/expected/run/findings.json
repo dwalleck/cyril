@@ -1,0 +1,138 @@
+[
+  {
+    "id": "C03",
+    "file": "src/lib.rs",
+    "line": 10,
+    "summary": "Loop bound excludes the last item",
+    "failure_scenario": "last element skipped when n > 0, and the total under-counts by one",
+    "verdict": "CONFIRMED",
+    "angles": [
+      "b-removed-behavior",
+      "a-line-scan"
+    ],
+    "comment": "**issue (blocking,test):** Loop bound skips the last item\n\nWith `n > 0` the last element is never visited.\n\nUse `0..n`."
+  },
+  {
+    "id": "C08",
+    "file": "src/util.rs",
+    "line": 8,
+    "summary": "Duplicate helper 8",
+    "failure_scenario": "the copies drift apart",
+    "verdict": "CONFIRMED",
+    "angles": [
+      "cleanup"
+    ],
+    "comment": "**issue (non-blocking):** Duplicate helper drifts from the original\n\nReuse `util::helper`."
+  },
+  {
+    "id": "C01",
+    "file": "src/lib.rs",
+    "line": 22,
+    "summary": "Unchecked unwrap | on parse",
+    "failure_scenario": "non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, ",
+    "verdict": "CONFIRMED",
+    "angles": [
+      "a-line-scan"
+    ],
+    "duplicate_of": "C03"
+  },
+  {
+    "id": "S01",
+    "file": "src/io.rs",
+    "line": 40,
+    "summary": "Leaked file handle on the error path",
+    "failure_scenario": "an early return skips close",
+    "verdict": "PLAUSIBLE",
+    "angles": [
+      "sweep"
+    ],
+    "comment": "**thought (non-blocking):** Leaked file handle on the error path\n\nan early return skips close\n\nThis looks deliberate: README: accepted limitation"
+  },
+  {
+    "id": "C06",
+    "file": "src/util.rs",
+    "line": 7,
+    "summary": "Duplicate helper 5",
+    "failure_scenario": "the copies drift apart",
+    "verdict": "PLAUSIBLE",
+    "angles": [
+      "cleanup",
+      "cleanup"
+    ],
+    "comment": "**question (non-blocking):** Duplicate helper 5\n\nthe copies drift apart"
+  },
+  {
+    "id": "C02",
+    "file": "src/io.rs",
+    "line": null,
+    "summary": "Missing fsync before rename",
+    "failure_scenario": "",
+    "verdict": "UNVERIFIED",
+    "angles": [
+      "a-line-scan"
+    ],
+    "comment": "**question (non-blocking):** Missing fsync before rename"
+  },
+  {
+    "id": "C04",
+    "file": "src/util.rs",
+    "line": 2,
+    "summary": "Duplicate helper 2",
+    "failure_scenario": "the copies drift apart",
+    "verdict": "UNVERIFIED",
+    "angles": [
+      "cleanup",
+      "cleanup"
+    ],
+    "comment": "**suggestion (if-minor,non-blocking):** Reuse the existing helper"
+  },
+  {
+    "id": "C05",
+    "file": "src/util.rs",
+    "line": 3,
+    "summary": "Duplicate helper 3",
+    "failure_scenario": "the copies drift apart",
+    "verdict": "UNVERIFIED",
+    "angles": [
+      "cleanup",
+      "cleanup"
+    ],
+    "comment": "**question (non-blocking):** Duplicate helper 3\n\nthe copies drift apart"
+  },
+  {
+    "id": "C07",
+    "file": "src/util.rs",
+    "line": 7,
+    "summary": "Duplicate helper 7",
+    "failure_scenario": "the copies drift apart",
+    "verdict": "UNVERIFIED",
+    "angles": [
+      "cleanup"
+    ],
+    "comment": "**question (non-blocking):** Duplicate helper 7\n\nthe copies drift apart"
+  },
+  {
+    "id": "C09",
+    "file": "src/app.rs",
+    "line": 5,
+    "summary": "Special case bolted onto the shared parser",
+    "failure_scenario": "every new flag adds a branch",
+    "verdict": "CONFIRMED",
+    "angles": [
+      "altitude"
+    ],
+    "comment": "**suggestion (non-blocking):** Special case bolted onto the shared parser\n\nevery new flag adds a branch"
+  },
+  {
+    "id": "S02",
+    "file": "src/io.rs",
+    "line": null,
+    "summary": "Sweep candidate without an id",
+    "failure_scenario": "the finder forgot the id",
+    "verdict": "UNVERIFIED",
+    "angles": [
+      "sweep"
+    ],
+    "comment": "**question (non-blocking):** Sweep candidate without an id\n\nthe finder forgot the id"
+  }
+]

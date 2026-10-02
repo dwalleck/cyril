@@ -2,19 +2,23 @@
 //! workflow. `docs/crtool-contract.md` is the specification; the Python
 //! `.kiro/code-review/crtool.py` is the reference implementation.
 
+mod assets;
 mod check;
 mod facts;
 mod gather;
 mod git;
 mod merge;
 mod record;
+mod report;
 mod run;
 mod verdicts;
 
+pub use assets::{ASSETS, Asset, AssetKind, WORKFLOW_NAME};
 pub use check::{CheckOutcome, CheckResult, run_check};
 pub use facts::facts;
 pub use gather::gather;
 pub use merge::{merge, shard};
+pub use report::{Finding, FindingsError, comments, finalize, read_findings};
 pub use run::ReviewRun;
 pub use verdicts::{ballots, collate};
 
@@ -74,10 +78,7 @@ pub enum ReviewError {
         source: io::Error,
     },
     #[error("{path} is corrupt: {message}")]
-    CorruptRunFile {
-        path: PathBuf,
-        message: &'static str,
-    },
+    CorruptRunFile { path: PathBuf, message: String },
     #[error("invalid argument: {message}")]
     InvalidArgument { message: &'static str },
     #[error("invalid regular expression: {0}")]

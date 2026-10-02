@@ -77,6 +77,34 @@ fn outputs_ignore_hostile_git_config() -> TestResult {
 }
 
 #[test]
+fn unreadable_normalization_keeps_neighbouring_text() {
+    // A parser message is normalized; crtool's own wording is not.
+    assert_eq!(
+        normalize_unreadable_text(
+            "a: x unreadable (Expecting value: line 1 column 2 (char 1)); used; b: y unreadable (not a JSON object); used"
+        ),
+        "a: x unreadable (<error>); used; b: y unreadable (not a JSON object); used"
+    );
+    assert_eq!(
+        normalize_unreadable_text("unreadable: Expecting value: line 1 column 1 (char 0)"),
+        "unreadable: <error>"
+    );
+    assert_eq!(
+        normalize_unreadable_text(
+            "x unreadable: bad at line 1 column 3\nthe next line is still compared"
+        ),
+        "x unreadable: <error>\nthe next line is still compared"
+    );
+    assert_eq!(
+        normalize_unreadable_text(
+            "decisions.json unreadable (top level is not an object); no dedup"
+        ),
+        "decisions.json unreadable (top level is not an object); no dedup"
+    );
+    assert_eq!(normalize_unreadable_text("readable"), "readable");
+}
+
+#[test]
 fn every_case_directory_has_a_test() -> TestResult {
     let mut names: Vec<String> = fs::read_dir(cases_dir())?
         .map(|entry| entry.map(|entry| entry.file_name().to_string_lossy().into_owned()))
@@ -122,8 +150,8 @@ fn check_case_with(name: &str, config: &[(&str, &str)]) -> TestResult {
         if exit == 0 {
             let want = expected["stdout"].as_str().ok_or("expected stdout")?;
             assert_eq!(
-                normalize_elapsed(&run_placeholder(&run, &stdout)),
-                normalize_elapsed(want),
+                normalize_unreadable_text(&normalize_elapsed(&run_placeholder(&run, &stdout))),
+                normalize_unreadable_text(&normalize_elapsed(want)),
                 "{name}: stdout of {step}"
             );
         }
@@ -162,6 +190,12 @@ fn check_case_with(name: &str, config: &[(&str, &str)]) -> TestResult {
             assert_eq!(
                 normalize_elapsed(&String::from_utf8_lossy(got)),
                 normalize_elapsed(&String::from_utf8_lossy(want)),
+                "{name}: {relative}"
+            );
+        } else if let (Ok(got), Ok(want)) = (std::str::from_utf8(got), std::str::from_utf8(want)) {
+            assert_eq!(
+                normalize_unreadable_text(got),
+                normalize_unreadable_text(want),
                 "{name}: {relative}"
             );
         } else {
@@ -206,6 +240,9 @@ fn run_step(run: &ReviewRun, step: &Value) -> TestResult<(i32, String)> {
         }
         "ballots" => cyril_review::ballots(run),
         "collate" => cyril_review::collate(run),
+        "finalize" => cyril_review::finalize(run),
+        // ["comments"] or ["comments", "--no-trailer"]
+        "comments" => cyril_review::comments(run, parts.len() == 1),
         "diagnostics" => {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
@@ -248,21 +285,49 @@ fn run_placeholder(run: &ReviewRun, text: &str) -> String {
 
 /// Parse-error wording is the JSON parser's own (Python's `json` there,
 /// serde_json here): keep that something was unreadable, not the words.
-fn normalize_unreadable(value: &mut Value) {
-    match value {
-        Value::String(text) => {
-            if let Some(at) = text.find("unreadable") {
-                let end = at + "unreadable".len();
-                let rest = &text[end..];
-                if rest.starts_with(": ") {
-                    *text = format!("{}: <error>", &text[..end]);
-                } else if rest.starts_with(" (")
-                    && let Some(close) = text.rfind(')')
-                {
-                    *text = format!("{} (<error>){}", &text[..end], &text[close + 1..]);
+/// Handles `unreadable: <error>` (to the end) and `unreadable (<error>)`
+/// (to the balancing parenthesis), everywhere in the text.
+fn normalize_unreadable_text(text: &str) -> String {
+    const MARK: &str = "unreadable";
+    // Only a parser's message, which names a position; crtool's own wording
+    // ("not a JSON object", "top level is not an object") is compared exactly.
+    let parser_message = |message: &str| message.contains("line ") && message.contains(" column ");
+    let mut out = String::with_capacity(text.len());
+    let mut rest = text;
+    while let Some(at) = rest.find(MARK) {
+        let (head, tail) = rest.split_at(at + MARK.len());
+        out.push_str(head);
+        rest = tail;
+        if let Some(after) = tail.strip_prefix(": ") {
+            // The error runs to the end of its line, never further.
+            let end = after.find('\n').unwrap_or(after.len());
+            if parser_message(&after[..end]) {
+                out.push_str(": <error>");
+                rest = &after[end..];
+            }
+        } else if let Some(inner) = tail.strip_prefix(" (") {
+            let mut depth = 1;
+            let close = inner.char_indices().find_map(|(index, character)| {
+                match character {
+                    '(' => depth += 1,
+                    ')' => depth -= 1,
+                    _ => {}
                 }
+                (depth == 0).then_some(index)
+            });
+            if let Some(close) = close.filter(|close| parser_message(&inner[..*close])) {
+                out.push_str(" (<error>)");
+                rest = &inner[close + 1..];
             }
         }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn normalize_unreadable(value: &mut Value) {
+    match value {
+        Value::String(text) => *text = normalize_unreadable_text(text),
         Value::Array(items) => items.iter_mut().for_each(normalize_unreadable),
         Value::Object(fields) => fields.values_mut().for_each(normalize_unreadable),
         _ => {}

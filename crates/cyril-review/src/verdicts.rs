@@ -3,8 +3,8 @@
 
 use crate::merge::{also_count, id, write_queue};
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, plain_id, required_records,
-    text, to_line, unreadable,
+    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, plain_id, quoted,
+    required_records, text, to_line, unreadable,
 };
 use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
 use crate::{Result, io_error};
@@ -274,7 +274,8 @@ fn all_candidates(
 ) -> Result<(Record, Vec<Record>, usize)> {
     let index_path = run.path("deduped/index.json");
     let index: Record = read_json(&index_path)?;
-    let mut candidates = required_records(&index, &index_path)?;
+    let mut candidates = required_records(&index, "candidates", &index_path)?;
+    let mut seen: HashSet<String> = candidates.iter().map(crate::merge::id).collect();
     let sweep_path = run.path("candidates/sweep.json");
     let mut sweep_count = 0;
     if sweep_path.exists() {
@@ -285,20 +286,32 @@ fn all_candidates(
         for (number, item) in items.into_iter().take(MAX_PER_ANGLE).enumerate() {
             let line = to_line(item.get("line"));
             let mut record = item;
-            let fallback = format!("S{:02}", number + 1);
-            // The id names ballot and verdict files, so only a plain name is kept.
-            match record.get("id").map(text) {
-                Some(id) if plain_id(&id) => {}
-                given => {
-                    if let (Some(given), Some(warnings)) = (given, warnings.as_deref_mut()) {
-                        warnings.push(format!(
-                            "sweep.json: id {} is not a plain name; using {fallback}",
-                            quoted(&given)
-                        ));
-                    }
-                    record.insert("id".to_owned(), json!(fallback));
+            // The id names ballot and verdict files and keys every later step,
+            // so it must be a plain name no other candidate uses.
+            let given = record.get("id").map(text);
+            let problem = match &given {
+                Some(id) if !plain_id(id) => Some("is not a plain name"),
+                Some(id) if seen.contains(id) => Some("is already used"),
+                _ => None,
+            };
+            if given.is_none() || problem.is_some() {
+                let mut fallback = format!("S{:02}", number + 1);
+                let mut attempt = 1;
+                while seen.contains(&fallback) {
+                    attempt += 1;
+                    fallback = format!("S{:02}-{attempt}", number + 1);
                 }
+                if let (Some(given), Some(problem), Some(warnings)) =
+                    (&given, problem, warnings.as_deref_mut())
+                {
+                    warnings.push(format!(
+                        "sweep.json: id {} {problem}; using {fallback}",
+                        quoted(given)
+                    ));
+                }
+                record.insert("id".to_owned(), json!(fallback));
             }
+            seen.insert(crate::merge::id(&record));
             record.insert("angle".to_owned(), json!("sweep"));
             record.insert("line".to_owned(), line);
             candidates.push(record);
@@ -308,10 +321,6 @@ fn all_candidates(
         warnings.push("candidates/sweep.json missing: the gap sweep did not report".to_owned());
     }
     Ok((index, candidates, sweep_count))
-}
-
-fn quoted(value: &str) -> String {
-    format!("'{value}'")
 }
 
 fn is_conventions(candidate: &Record) -> bool {
@@ -508,18 +517,25 @@ mod tests {
     #[test]
     fn a_sweep_id_that_is_not_a_plain_name_is_replaced() -> Result<()> {
         let (_tree, run) = crate::run::stamped_run()?;
-        crate::run::write_json(&run.path("deduped/index.json"), &json!({"candidates": []}))?;
+        crate::run::write_json(
+            &run.path("deduped/index.json"),
+            &json!({"candidates": [{"id": "C01", "file": "z.rs"}]}),
+        )?;
         crate::run::write_json(
             &run.path("candidates/sweep.json"),
-            &json!({"candidates": [{"id": "../../escape", "file": "a.rs"}, {"id": "S07", "file": "b.rs"}]}),
+            &json!({"candidates": [{"id": "../../escape", "file": "a.rs"}, {"id": "S07", "file": "b.rs"},
+                                   {"id": "C01", "file": "c.rs"}]}),
         )?;
         let mut warnings = Vec::new();
         let (_, candidates, _) = all_candidates(&run, Some(&mut warnings))?;
         let ids: Vec<String> = candidates.iter().map(crate::merge::id).collect();
-        assert_eq!(ids, ["S01", "S07"]);
+        assert_eq!(ids, ["C01", "S01", "S07", "S03"]);
         assert_eq!(
             warnings,
-            ["sweep.json: id '../../escape' is not a plain name; using S01"]
+            [
+                "sweep.json: id '../../escape' is not a plain name; using S01",
+                "sweep.json: id 'C01' is already used; using S03",
+            ]
         );
         Ok(())
     }
