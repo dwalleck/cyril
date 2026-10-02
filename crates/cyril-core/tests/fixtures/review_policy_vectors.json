@@ -1,0 +1,269 @@
+{
+  "about": "Review policy vectors shared by cyril-core (tests/review_policy_vectors.rs) and experiments/code-review-workflow/selftest_crtool.py. Placeholders: <WS> the workspace, <RUN> its run directory (<WS>/.code-review/r), <CRTOOL> the crtool prefix below; paths use forward slashes.",
+  "crtool": "\"/opt/cyril/bin/cyril\" crtool",
+  "cases": [
+    {
+      "name": "a write into the run directory",
+      "allow": true,
+      "request": {
+        "capability": "fs_write",
+        "tool_id": "fs_write",
+        "resource": "<RUN>/a.json",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "a write to source",
+      "allow": false,
+      "request": {
+        "capability": "fs_write",
+        "tool_id": "fs_write",
+        "resource": "<WS>/src/lib.rs",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "a write named only by its tool id",
+      "allow": true,
+      "request": {
+        "tool_id": "fs_write",
+        "resource": "<RUN>/b.json"
+      }
+    },
+    {
+      "name": "a relative read in the workspace",
+      "allow": true,
+      "request": {
+        "capability": "fs_read",
+        "tool_id": "read_file",
+        "resource": "src/lib.rs",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "a read outside the workspace",
+      "allow": false,
+      "request": {
+        "capability": "fs_read",
+        "tool_id": "read_file",
+        "resource": "<WS>/../outside.txt",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "a recipe line",
+      "allow": true,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> merge \"<RUN>\" --expect \"a,b\"",
+        "command": "<CRTOOL> merge \"<RUN>\" --expect \"a,b\""
+      }
+    },
+    {
+      "name": "cd <workspace> && before a recipe line",
+      "allow": true,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "cd \"<WS>\" && <CRTOOL> collate \"<RUN>\"",
+        "command": "cd \"<WS>\" && <CRTOOL> collate \"<RUN>\""
+      }
+    },
+    {
+      "name": "execute_bash named only by its tool id",
+      "allow": true,
+      "request": {
+        "tool_id": "execute_bash",
+        "raw_command": "<CRTOOL> gather \"<RUN>\""
+      }
+    },
+    {
+      "name": "a chained command",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\"; rm -rf /",
+        "command": "<CRTOOL> gather \"<RUN>\"; rm -rf /"
+      }
+    },
+    {
+      "name": "an output redirect",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\" > src/lib.rs",
+        "command": "<CRTOOL> gather \"<RUN>\" > src/lib.rs"
+      }
+    },
+    {
+      "name": "a redirect on an unquoted word",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather x > src/lib.rs",
+        "command": "<CRTOOL> gather x > src/lib.rs"
+      }
+    },
+    {
+      "name": "a second line",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\"\nrm -rf src",
+        "command": "<CRTOOL> gather \"<RUN>\"\nrm -rf src"
+      }
+    },
+    {
+      "name": "a PowerShell subexpression",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\" (Remove-Item -Recurse -Force src)",
+        "command": "<CRTOOL> gather \"<RUN>\" (Remove-Item -Recurse -Force src)"
+      }
+    },
+    {
+      "name": "a command substitution in quotes",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\" \"$(rm -rf src)\"",
+        "command": "<CRTOOL> gather \"<RUN>\" \"$(rm -rf src)\""
+      }
+    },
+    {
+      "name": "a redirect hidden in the cd prefix",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "cd . > src/lib.rs && <CRTOOL> merge \"<RUN>\"",
+        "command": "cd . > src/lib.rs && <CRTOOL> merge \"<RUN>\""
+      }
+    },
+    {
+      "name": "a second line hidden in the cd prefix",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "cd x\nrm -rf src && <CRTOOL> merge \"<RUN>\"",
+        "command": "cd x\nrm -rf src && <CRTOOL> merge \"<RUN>\""
+      }
+    },
+    {
+      "name": "a cd outside the workspace",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "cd / && <CRTOOL> merge \"<RUN>\"",
+        "command": "cd / && <CRTOOL> merge \"<RUN>\""
+      }
+    },
+    {
+      "name": "another program before the crtool name",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "rm -rf src <CRTOOL> gather \"<RUN>\"",
+        "command": "rm -rf src <CRTOOL> gather \"<RUN>\""
+      }
+    },
+    {
+      "name": "the check command is never a step",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> diagnostics \"<RUN>\" \"rm -rf src\"",
+        "command": "<CRTOOL> diagnostics \"<RUN>\" \"rm -rf src\""
+      }
+    },
+    {
+      "name": "another run directory",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<WS>/src\"",
+        "command": "<CRTOOL> gather \"<WS>/src\""
+      }
+    },
+    {
+      "name": "an escaped closing quote",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\" \"a\\\"",
+        "command": "<CRTOOL> gather \"<RUN>\" \"a\\\""
+      }
+    },
+    {
+      "name": "a word glued to a quoted string",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\"x",
+        "command": "<CRTOOL> gather \"<RUN>\"x"
+      }
+    },
+    {
+      "name": "a command elsewhere than the title is what gets checked",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "rm -rf src",
+        "command": "rm -rf src"
+      }
+    },
+    {
+      "name": "every command field must hold an allowed call",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\"",
+        "command": "rm -rf src"
+      }
+    },
+    {
+      "name": "a raw input command is checked too",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command",
+        "resource": "<CRTOOL> gather \"<RUN>\"",
+        "command": "<CRTOOL> gather \"<RUN>\"",
+        "raw_command": "rm -rf src"
+      }
+    },
+    {
+      "name": "a shell request with no command field",
+      "allow": false,
+      "request": {
+        "capability": "shell",
+        "tool_id": "run_command"
+      }
+    },
+    {
+      "name": "an unknown capability",
+      "allow": false,
+      "request": {
+        "capability": "web_fetch",
+        "resource": "https://example.invalid"
+      }
+    }
+  ]
+}

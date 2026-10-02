@@ -184,11 +184,36 @@ def policy_tests():
           "toolId": "run_command", "consent": {"capability": "shell"}}}}, ws, rundir, crt)[0],
           "decide: a shell request with no command field is refused")
 
+    shared_policy_vectors(ws, rundir)
+
     check(policy.input_problem("rundir", "C:/w/r") is None, "input: a forward-slash path is fine")
     check(policy.input_problem("rundir", "//wsl$/Ubuntu/home/u/r") is None, "input: a \\\\wsl$ share path is fine")
     for bad in ("", "a$b", "a$", "a`b", 'a"b', "a\u201db", "C:\\w", "a\nb"):
         check(policy.input_problem("x", bad) is not None, f"input: {bad!r} is refused")
     check("\\" not in policy.posix_path(TMP), "posix_path uses forward slashes")
+
+
+def shared_policy_vectors(ws, rundir):
+    """The vectors cyril's native policy runs too (crates/cyril-core/tests/review_policy_vectors.rs):
+    the two implementations must decide every case the same way."""
+    path = os.path.join(REPO, "crates", "cyril-core", "tests", "fixtures", "review_policy_vectors.json")
+    with open(path, encoding="utf-8") as f:
+        vectors = json.load(f)
+    os.makedirs(os.path.join(ws, "src"), exist_ok=True)
+    crt = vectors["crtool"]
+    fill = lambda text: (text.replace("<WS>", policy.posix_path(ws)).replace("<RUN>", policy.posix_path(rundir))
+                         .replace("<CRTOOL>", crt))
+    for case in vectors["cases"]:
+        req = {k: fill(v) for k, v in case["request"].items()}
+        consent = {k: req[f] for k, f in (("capability", "capability"), ("resource", "resource"),
+                                          ("workspaceRoot", "workspace_root")) if f in req}
+        raw = {k: req[f] for k, f in (("command", "raw_command"), ("cmd", "raw_cmd")) if f in req}
+        p = {"toolCall": {"rawInput": raw}, "_meta": {"kiro": {"consent": consent}}}
+        for key, field in (("toolId", "tool_id"), ("command", "command")):
+            if field in req:
+                p["_meta"]["kiro"][key] = req[field]
+        allow, why = policy.decide(p, ws, rundir, crt)
+        check(allow == case["allow"], f"shared vector: {case['name']} ({why})")
 
 
 def recipe_commands():
