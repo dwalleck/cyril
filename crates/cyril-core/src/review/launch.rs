@@ -120,6 +120,18 @@ fn up(workspace: &Path, cdup: &str) -> PathBuf {
     root
 }
 
+/// Branches the form offers as a base for a `base...HEAD` review.
+pub fn base_branches(workspace: &Path) -> Result<Vec<String>, LaunchError> {
+    let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
+    Ok(cyril_review::base_branches(&run)?)
+}
+
+/// Whether tracked files in `scope` have uncommitted changes.
+pub fn uncommitted(workspace: &Path, scope: &[String]) -> Result<bool, LaunchError> {
+    let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
+    Ok(cyril_review::uncommitted_in_scope(&run, &scope.join(" "))?)
+}
+
 /// Recheck the diff, then install the assets, create the run directory and
 /// gather. An empty diff stops before any write.
 pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {

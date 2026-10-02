@@ -12,9 +12,10 @@ use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
 use cyril_core::review::config::{CheckCommand, ReviewConfig};
 use cyril_core::review::consent::PermissionConsent;
 use cyril_core::review::launch::{self, LaunchError, LaunchRequest, Prepared, ReadyRun};
-use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide};
+use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide, input_problem};
 use cyril_core::review::run_record::{RunRecord, RunRecordError};
 use cyril_core::review::summary::{RunEnding, summary};
+use cyril_core::review::target::ReviewTarget;
 use cyril_core::review::{CrtoolPrefix, ShellDialect};
 use cyril_core::types::{
     BridgeCommand, PermissionOptionKind, PermissionRequest, PermissionResponse, SessionId,
@@ -22,7 +23,7 @@ use cyril_core::types::{
     WorkflowRunTarget,
 };
 use cyril_review::{CheckResult, FindingsError, ReviewError, ReviewRun, read_findings, run_check};
-use cyril_ui::traits::{ReviewCheck, ReviewForm};
+use cyril_ui::traits::{ReviewCheck, ReviewField, ReviewForm};
 use std::collections::{HashMap, HashSet};
 use std::future::Future;
 use std::io::Write;
@@ -30,14 +31,14 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
 
-/// The only target this slice offers: HEAD against its upstream or main.
-const TARGET: &str = "auto";
 /// KAS loads agent files from a watcher (300 ms debounce, 1 s rechecks for a
 /// directory it saw appear), so a freshly installed agent is not registered
 /// at once. Wait this long before creating the workflow, and double it per
 /// retry while KAS still reports a review agent as unregistered.
 const AGENT_LOAD_DELAY: Duration = Duration::from_secs(2);
 const AGENT_LOAD_RETRIES: u32 = 3;
+const RECOUNT_DELAY: Duration = Duration::from_millis(150);
+const DIRTY_NOTE: &str = "uncommitted changes in scope are not part of this diff, but the reviewers read the working tree";
 /// KAS's `WorkflowAgentNotFoundError` text (2.26.0): "Workflow references
 /// custom agent '<name>' which is not registered."
 const AGENT_NOT_REGISTERED: &str = "which is not registered";
@@ -48,6 +49,9 @@ pub(super) struct ReviewState {
     /// Where the assets install: Node's home directory.
     home: Option<PathBuf>,
     agent_load_delay: Duration,
+    /// How long the form waits after a change before counting, so holding
+    /// an arrow key does not start a git process per step.
+    recount_delay: Duration,
     launch: Option<Launch>,
     /// The id the next launch gets.
     next_launch: u64,
@@ -68,9 +72,12 @@ struct Launch {
     stage: Stage,
 }
 
-/// What the review is of. Fixed once the form opens.
+/// What the review is of. The target follows the form until Enter; the plan,
+/// not the form, is what the launch uses.
 struct Plan {
-    target: String,
+    target: ReviewTarget,
+    /// Bumped on every target change: only the latest count is applied.
+    recount: u64,
     scope: Vec<String>,
     /// The `[review]` settings the form showed: what consent covers.
     config: ReviewConfig,
@@ -116,11 +123,23 @@ pub(super) struct Opened {
     config: ReviewConfig,
     scope: Vec<String>,
     files: usize,
+    branches: Vec<String>,
+    branch_note: Option<String>,
 }
 
 /// A step of one launch, tagged with that launch's id.
 pub(super) enum LaunchStep {
     Opened(Result<Opened, LaunchError>),
+    /// The form settled on a new target: count it if still current.
+    RecountDue {
+        recount: u64,
+    },
+    /// The count (and whether scope has uncommitted changes) for recount
+    /// number `recount`.
+    Recounted {
+        recount: u64,
+        files: Result<(usize, bool), LaunchError>,
+    },
     Prepared(Result<Prepared, LaunchError>),
     Checked(Result<CheckResult, ReviewError>),
     /// The agent-load wait is over: send `workflow/new`.
@@ -160,6 +179,7 @@ impl ReviewState {
             prefix,
             home: launch::node_home(),
             agent_load_delay: AGENT_LOAD_DELAY,
+            recount_delay: RECOUNT_DELAY,
             launch: None,
             next_launch: 0,
             runs: HashMap::new(),
@@ -173,6 +193,7 @@ impl ReviewState {
         self.prefix = Ok(prefix);
         self.home = Some(home);
         self.agent_load_delay = Duration::from_millis(10);
+        self.recount_delay = Duration::from_millis(1);
     }
 
     #[cfg(test)]
@@ -302,36 +323,43 @@ impl App {
             self.ui_state.add_system_message(text);
             return;
         }
-        let target = TARGET.to_owned();
+        let target = ReviewTarget::Auto;
         let id = self.review.next_launch;
         self.review.next_launch += 1;
         self.review.launch = Some(Launch {
             id,
             plan: Plan {
                 target: target.clone(),
+                recount: 0,
                 scope: Vec::new(),
                 config: ReviewConfig::default(),
             },
             stage: Stage::Opening,
         });
-        self.ui_state.show_review_form(ReviewForm {
-            target: target.clone(),
-            scope: Vec::new(),
-            file_count: None,
-            check: ReviewCheck::Reading,
-            busy: false,
-        });
+        self.ui_state
+            .show_review_form(ReviewForm::opening(target.clone()));
         let workspace = self.cwd.clone();
         self.review.spawn_step(id, move || {
             let opened = ReviewConfig::load(&workspace)
                 .map_err(LaunchError::from)
                 .and_then(|config| {
                     let scope = config.scope.clone().unwrap_or_else(|| vec![".".to_owned()]);
-                    let files = launch::probe(&workspace, &target, &scope)?;
+                    let files = launch::probe(&workspace, &target.spec(), &scope)?;
+                    // Without a branch list the form offers no base mode and
+                    // says why; the other targets still work.
+                    let (branches, branch_note) = match launch::base_branches(&workspace) {
+                        Ok(branches) => (branches, None),
+                        Err(error) => {
+                            tracing::warn!(%error, "review: cannot list base branches");
+                            (Vec::new(), Some(format!("no base branches: {error}")))
+                        }
+                    };
                     Ok(Opened {
                         config,
                         scope,
                         files,
+                        branches,
+                        branch_note,
                     })
                 });
             LaunchStep::Opened(opened)
@@ -355,8 +383,67 @@ impl App {
                 self.ui_state.close_review_form();
                 self.review.launch = None;
             }
-            KeyCode::Enter if !form.busy && form.file_count.is_some() => self.confirm_review(),
+            _ if form.busy => {}
+            KeyCode::Enter if form.ready() => self.confirm_review(),
+            KeyCode::Tab | KeyCode::BackTab | KeyCode::Up | KeyCode::Down => {
+                form.focus = match form.focus {
+                    ReviewField::Target if form.shows_base() => ReviewField::Base,
+                    _ => ReviewField::Target,
+                };
+            }
+            KeyCode::Left | KeyCode::Right => {
+                let back = key.code == KeyCode::Left;
+                let target = match form.focus {
+                    ReviewField::Target => {
+                        form.target
+                            .cycle(&form.branches, form.base_choice.as_deref(), back)
+                    }
+                    ReviewField::Base => form.target.cycle_base(&form.branches, back),
+                };
+                if target != form.target {
+                    self.choose_target(target);
+                }
+            }
             _ => {}
+        }
+    }
+
+    /// The form's target changed. A target the recipe would refuse is shown
+    /// as a problem at once; otherwise the diff is recounted off-loop after a
+    /// short pause, and only the latest count is applied.
+    fn choose_target(&mut self, target: ReviewTarget) {
+        let Some(launch) = self
+            .review
+            .launch
+            .as_mut()
+            .filter(|launch| matches!(launch.stage, Stage::Form))
+        else {
+            return;
+        };
+        launch.plan.target = target.clone();
+        launch.plan.recount += 1;
+        let (id, recount) = (launch.id, launch.plan.recount);
+        let problem = input_problem("target", &target.spec());
+        if let Some(form) = self.ui_state.review_form_mut() {
+            if let ReviewTarget::Base(base) = &target {
+                form.base_choice = Some(base.clone());
+            }
+            form.target = target;
+            form.file_count = None;
+            form.note = None;
+            form.problem = problem.clone();
+            if !form.shows_base() {
+                form.focus = ReviewField::Target;
+            }
+        }
+        if problem.is_none() {
+            self.review.after(
+                self.review.recount_delay,
+                ReviewTask::Launch {
+                    launch: id,
+                    step: LaunchStep::RecountDue { recount },
+                },
+            );
         }
     }
 
@@ -379,7 +466,7 @@ impl App {
         }
         let request = LaunchRequest {
             workspace: self.cwd.clone(),
-            target: launch.plan.target.clone(),
+            target: launch.plan.target.spec(),
             scope: launch.plan.scope.clone(),
             crtool,
             home: self.review.home.clone(),
@@ -480,6 +567,8 @@ impl App {
                         config,
                         scope,
                         files,
+                        branches,
+                        branch_note,
                     }) => {
                         let check = match &config.check {
                             Some(check) => ReviewCheck::WillRun {
@@ -491,16 +580,55 @@ impl App {
                         launch.plan.scope = scope.clone();
                         launch.plan.config = config;
                         launch.stage = Stage::Form;
-                        let target = launch.plan.target.clone();
-                        self.ui_state.show_review_form(ReviewForm {
-                            target,
-                            scope,
-                            file_count: Some(files),
-                            check,
-                            busy: false,
-                        });
+                        if let Some(form) = self.ui_state.review_form_mut() {
+                            form.scope = scope;
+                            form.file_count = Some(files);
+                            form.branches = branches;
+                            form.note = branch_note;
+                            form.check = check;
+                        }
                     }
                     Err(error) => self.abandon_launch(launch_message(&error)),
+                }
+            }
+            LaunchStep::RecountDue { recount } => {
+                let Some(launch) = self
+                    .review
+                    .launch
+                    .as_ref()
+                    .filter(|launch| launch.plan.recount == recount)
+                else {
+                    return;
+                };
+                let workspace = self.cwd.clone();
+                let spec = launch.plan.target.spec();
+                let scope = launch.plan.scope.clone();
+                self.review.spawn_step(id, move || {
+                    let files = launch::probe(&workspace, &spec, &scope)
+                        .and_then(|files| Ok((files, launch::uncommitted(&workspace, &scope)?)));
+                    LaunchStep::Recounted { recount, files }
+                });
+            }
+            LaunchStep::Recounted { recount, files } => {
+                let Some(launch) = self
+                    .review
+                    .launch
+                    .as_ref()
+                    .filter(|launch| launch.plan.recount == recount)
+                else {
+                    return;
+                };
+                let dirty_head = launch.plan.target.ends_at_head_commit();
+                let Some(form) = self.ui_state.review_form_mut() else {
+                    return;
+                };
+                match files {
+                    Ok((files, dirty)) => {
+                        form.file_count = Some(files);
+                        form.problem = None;
+                        form.note = (dirty && dirty_head).then(|| DIRTY_NOTE.to_owned());
+                    }
+                    Err(error) => form.problem = Some(error.to_string()),
                 }
             }
             LaunchStep::Prepared(result) => {
@@ -512,7 +640,7 @@ impl App {
                         self.ui_state.close_review_form();
                         self.ui_state.add_system_message(format!(
                             "review: nothing to review — {} in {}",
-                            launch.plan.target,
+                            launch.plan.target.spec(),
                             launch.plan.scope.join(" ")
                         ));
                     }
@@ -788,7 +916,7 @@ impl App {
             workflow_id: workflow_id.to_string(),
             crtool_prefix: crtool.as_str().to_owned(),
             cyril_version: env!("CARGO_PKG_VERSION").to_owned(),
-            target: launch.plan.target.clone(),
+            target: launch.plan.target.spec(),
             scope: launch.plan.scope.clone(),
         };
         self.review.runs.insert(

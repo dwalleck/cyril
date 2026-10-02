@@ -12,6 +12,7 @@ pub mod launch;
 pub mod policy;
 pub mod run_record;
 pub mod summary;
+pub mod target;
 
 use std::env;
 use std::io;

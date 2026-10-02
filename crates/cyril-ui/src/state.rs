@@ -6453,13 +6453,9 @@ mod tests {
 
         // The review form sits under a permission request: a review's own
         // workflow can ask for permission while the form is still open.
-        state.show_review_form(crate::traits::ReviewForm {
-            target: "auto".into(),
-            scope: vec![".".into()],
-            file_count: None,
-            check: crate::traits::ReviewCheck::NotConfigured,
-            busy: false,
-        });
+        state.show_review_form(crate::traits::ReviewForm::opening(
+            cyril_core::review::target::ReviewTarget::Auto,
+        ));
         assert_eq!(state.topmost_overlay(), Some(Overlay::Approval));
 
         // Closing the top layer hands the keyboard to the next one down, and

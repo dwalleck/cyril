@@ -121,12 +121,22 @@ older KAS may ignore it. The action is not shown for v2 or always-reject options
 
 ### Reviewing a branch (KAS)
 
-`/review`, run from the repository root, reviews the branch's changes with
-Kiro's workflow engine. The form shows the target (`auto`: HEAD against its
-upstream, `main` or `master`, plus uncommitted changes), the scope, the
-number of files, the expected cost (about 50–65 model sessions and 40–50
-minutes) and what the run may do. `Esc` backs out without writing anything;
-`Enter` starts it. An empty diff stops there with "nothing to review".
+`/review`, run from the repository root, reviews changes with Kiro's
+workflow engine. The form picks the Review target with ←/→:
+
+- `auto` — HEAD against its upstream, `main` or `master`, plus uncommitted
+  changes;
+- `vs <branch>` — what a PR would contain, `<branch>...HEAD` (Tab moves to the
+  branch field, ←/→ picks the branch);
+- `uncommitted changes` — HEAD against the working tree;
+- `the commit at HEAD` — that commit alone.
+
+Every target ends at the checked-out HEAD, because the reviewers read the
+working tree. The form also shows the scope, the number of files (recounted
+whenever the target changes), the expected cost (about 50–65 model sessions
+and 40–50 minutes) and what the run may do. `Esc` backs out without writing
+anything; `Enter` starts it. An empty diff stops there with "nothing to
+review".
 
 Starting installs the `cyril-review` recipe and its four agents into
 `~/.kiro/workflows` and `~/.kiro/agents`, rewriting only files that differ.
