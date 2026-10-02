@@ -25,6 +25,17 @@ pub fn format_workflow_outcome(outcome: &WorkflowCommandOutcome) -> String {
         WorkflowCommandOutcome::Minted { workflow_id, name } => {
             format!("Created {name} — run {workflow_id} (not started yet).")
         }
+        WorkflowCommandOutcome::Loaded {
+            workflow_id,
+            status,
+        } => format!("Loaded run {workflow_id} ({status})."),
+        WorkflowCommandOutcome::Retried {
+            workflow_id,
+            status,
+        } => format!(
+            "Retrying run {workflow_id} (now {}).",
+            status_or_dash(*status)
+        ),
         WorkflowCommandOutcome::Invoked { workflow_id } => format!(
             "Started run {workflow_id}. Lifecycle events stream as it executes; \
              /workflow status shows what is known."

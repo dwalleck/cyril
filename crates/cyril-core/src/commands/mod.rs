@@ -217,6 +217,9 @@ pub enum CommandResultKind {
     /// Open the `/review` consent form. The App owns the form, the git probes
     /// and the launch, so the command returns only the intent.
     Review,
+    /// `/review resume [<run dir | workflow id>]`: continue a failed or
+    /// paused review run after fresh consent.
+    ReviewResume { selector: Option<String> },
     /// Return Cyril's current typed memory runtime status.
     MemoryStatus(crate::types::MemoryStatusView),
     /// Execute one typed project-memory operation in the binary orchestrator.
@@ -256,6 +259,13 @@ impl CommandResult {
     pub fn review() -> Self {
         Self {
             kind: CommandResultKind::Review,
+        }
+    }
+
+    /// Continue a failed or paused review run.
+    pub fn review_resume(selector: Option<String>) -> Self {
+        Self {
+            kind: CommandResultKind::ReviewResume { selector },
         }
     }
 

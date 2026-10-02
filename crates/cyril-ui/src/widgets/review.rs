@@ -74,6 +74,7 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
     };
     let check = match &form.check {
         ReviewCheck::Reading => "reading .cyril/config.toml…".to_owned(),
+        ReviewCheck::NotRerun => "not rerun — the run keeps the results it recorded".to_owned(),
         ReviewCheck::NotConfigured => "no check configured".to_owned(),
         ReviewCheck::WillRun {
             command,
@@ -87,13 +88,40 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
             Span::raw("")
         }
     };
-    let mut lines = vec![Line::from(vec![
-        label("Target"),
-        value(form.target.label()),
-        detail(format!("  ({}) ", form.target.spec())),
-        marker(ReviewField::Target),
-    ])];
-    if let cyril_core::review::target::ReviewTarget::Base(base) = &form.target {
+    let mut lines = match &form.resume {
+        Some(resume) => {
+            let mut lines = vec![
+                Line::from(vec![
+                    label("Resume"),
+                    value(resume.run.clone()),
+                    detail(format!("  ({})", resume.status)),
+                ]),
+                Line::from(vec![label("Target"), value(resume.target.clone())]),
+            ];
+            if !resume.unreadable.is_empty() {
+                lines.push(Line::from(vec![
+                    label(""),
+                    Span::styled(
+                        format!(
+                            "skipped unreadable run.json in {}",
+                            resume.unreadable.join(", ")
+                        ),
+                        Style::default().fg(theme.warning),
+                    ),
+                ]));
+            }
+            lines
+        }
+        None => vec![Line::from(vec![
+            label("Target"),
+            value(form.target.label()),
+            detail(format!("  ({}) ", form.target.spec())),
+            marker(ReviewField::Target),
+        ])],
+    };
+    if let (None, cyril_core::review::target::ReviewTarget::Base(base)) =
+        (&form.resume, &form.target)
+    {
         lines.push(Line::from(vec![
             label("Base"),
             value(base.clone()),
@@ -138,10 +166,10 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
     }
     lines.push(Line::default());
     lines.push(Line::styled(
-        if form.busy {
-            "Starting the review…"
-        } else {
-            "←/→ change · Tab next field · Enter starts the review · Esc cancels"
+        match (form.busy, &form.resume) {
+            (true, _) => "Starting the review…",
+            (false, Some(_)) => "Enter continues the run · Esc cancels",
+            (false, None) => "←/→ change · Tab next field · Enter starts the review · Esc cancels",
         },
         Style::default()
             .fg(theme.subdued)
@@ -278,5 +306,33 @@ mod tests {
             text.contains("Esc cancels"),
             "the key hint is visible:\n{text}"
         );
+    }
+
+    /// A resume form is read-only: the stored run, its status and target,
+    /// no choice markers.
+    #[test]
+    fn a_resume_form_shows_the_stored_run_read_only() {
+        let resume = ReviewForm::resuming(
+            crate::traits::ReviewResumeView {
+                run: "20261002-010203-abcd".to_owned(),
+                status: "failed".to_owned(),
+                target: "main...HEAD".to_owned(),
+                unreadable: vec!["20261002-020000-dead".to_owned()],
+            },
+            vec!["crates".to_owned()],
+            4,
+        );
+        let text = rendered(&resume);
+        for expected in [
+            "Resume   20261002-010203-abcd  (failed)",
+            "Target   main...HEAD",
+            "skipped unreadable run.json in 20261002-020000-dead",
+            "Scope    crates — 4 files",
+            "Check    not rerun — the run keeps the results it recorded",
+            "Enter continues the run · Esc cancels",
+        ] {
+            assert!(text.contains(expected), "missing {expected:?} in\n{text}");
+        }
+        assert!(!text.contains("◂ ▸"), "no field takes ←/→:\n{text}");
     }
 }

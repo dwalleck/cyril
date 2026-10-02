@@ -151,6 +151,13 @@ sessions' permission requests itself:
 
 Everything else is denied, without a prompt, and listed in `denied.log`.
 
+`/review resume` continues a failed or paused run, also after restarting
+cyril: with no argument the newest run the agent reports as failed or paused,
+or a run directory name or workflow id. It shows the stored run read-only and
+continues after `Enter` (failed runs are retried, paused runs resumed). It
+never gathers or checks again, and refuses a run started by a different cyril
+binary or version.
+
 A repository can commit settings for every reviewer in `.cyril/config.toml`:
 
 ```toml

@@ -7,6 +7,8 @@
 //! policy's path checks, reading findings — runs on `spawn_blocking` and
 //! reports back through [`ReviewState::rx`]; the event loop only routes.
 
+mod resume;
+
 use super::App;
 use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
 use cyril_core::review::config::{CheckCommand, ReviewConfig};
@@ -53,6 +55,8 @@ pub(super) struct ReviewState {
     /// an arrow key does not start a git process per step.
     recount_delay: Duration,
     launch: Option<Launch>,
+    /// A `/review resume` in progress (its id comes from the same counter).
+    resume: Option<resume::Resume>,
     /// The id the next launch gets.
     next_launch: u64,
     /// Every run this process armed, live or ended. An ended run is kept so
@@ -144,6 +148,8 @@ pub(super) enum LaunchStep {
     Checked(Result<CheckResult, ReviewError>),
     /// The agent-load wait is over: send `workflow/new`.
     SendNew,
+    /// A step of a `/review resume`.
+    Resume(resume::ResumeStep),
 }
 
 /// A result from off-loop work, back on the event loop.
@@ -181,6 +187,7 @@ impl ReviewState {
             agent_load_delay: AGENT_LOAD_DELAY,
             recount_delay: RECOUNT_DELAY,
             launch: None,
+            resume: None,
             next_launch: 0,
             runs: HashMap::new(),
             tx,
@@ -313,7 +320,7 @@ impl App {
             self.ui_state.add_system_message(text);
             return;
         }
-        if self.review.launch.is_some() {
+        if self.review.launch.is_some() || self.review.resume.is_some() {
             self.ui_state
                 .add_system_message("review: a review is already starting".to_owned());
             return;
@@ -372,6 +379,10 @@ impl App {
     /// nothing reaches the chat behind the form.
     pub(super) fn handle_review_key(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
+        if self.review.resume.is_some() {
+            self.handle_resume_key(key);
+            return;
+        }
         let Some(form) = self.ui_state.review_form_mut() else {
             return;
         };
@@ -538,6 +549,14 @@ impl App {
                 {
                     self.abandon_launch(format!("review: internal error — {error}"));
                 }
+                if launch.is_some()
+                    && launch == self.review.resume.as_ref().map(|current| current.id)
+                {
+                    self.review.resume = None;
+                    self.ui_state.close_review_form();
+                    self.ui_state
+                        .add_system_message(format!("review resume: internal error — {error}"));
+                }
             }
         }
     }
@@ -545,6 +564,17 @@ impl App {
     /// One step of a launch. A step of any launch but the current one is
     /// stale (that launch was abandoned) and is dropped.
     async fn handle_launch_step(&mut self, id: u64, step: LaunchStep) {
+        if let LaunchStep::Resume(step) = step {
+            if self.review.resume.as_ref().map(|resume| resume.id) == Some(id) {
+                self.handle_resume_step(step).await;
+            } else {
+                tracing::debug!(
+                    launch = id,
+                    "review: dropping a step of an abandoned resume"
+                );
+            }
+            return;
+        }
         if self.review.launch.as_ref().map(|launch| launch.id) != Some(id) {
             tracing::debug!(
                 launch = id,
@@ -553,6 +583,8 @@ impl App {
             return;
         }
         match step {
+            // Routed to the resume above.
+            LaunchStep::Resume(_) => {}
             LaunchStep::Opened(result) => {
                 let Some(launch) = self
                     .review
@@ -1053,6 +1085,12 @@ impl App {
     /// disarm everything and end any launch in flight.
     pub(super) fn review_agent_gone(&mut self) {
         self.review.disarm("the agent disconnected");
+        if self.review.resume.take().is_some() {
+            self.ui_state.close_review_form();
+            self.ui_state.add_system_message(
+                "review resume: the agent disconnected; nothing was continued".to_owned(),
+            );
+        }
         if self.review.launch.is_some() {
             self.abandon_launch(
                 "review: the agent disconnected; the launch was abandoned".to_owned(),
