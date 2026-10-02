@@ -3,6 +3,7 @@
 //! `spawn_blocking`; nothing here touches the event loop.
 
 use super::CrtoolPrefix;
+use super::config::{ConfigError, ReviewConfig};
 use super::inputs::{InputProblem, recipe_inputs};
 use cyril_review::{ASSETS, AssetKind, ReviewError, ReviewRun, gather, touched_files};
 use serde_json::{Map, Value};
@@ -44,6 +45,8 @@ pub enum LaunchError {
     Review(#[from] ReviewError),
     #[error(transparent)]
     Inputs(#[from] InputProblem),
+    #[error(transparent)]
+    Config(#[from] ConfigError),
 }
 
 fn io_error(action: &'static str, path: &Path) -> impl FnOnce(io::Error) -> LaunchError {
@@ -65,6 +68,8 @@ pub struct LaunchRequest {
     /// Where Kiro looks for global workflows and agents: Node's home
     /// directory, see [`node_home`].
     pub home: Option<PathBuf>,
+    /// The `[review]` settings the operator consented to.
+    pub config: ReviewConfig,
 }
 
 /// A run ready for `_kiro/workflow/new`.
@@ -124,14 +129,23 @@ pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {
         scope,
         crtool,
         home,
+        config,
     } = request;
     let files = probe(workspace, target, scope)?;
     if files == 0 {
         return Ok(Prepared::Nothing);
     }
+    // `context_file` is read now, not when the form opened.
+    let context = config.context_text(workspace)?;
     // The inputs are checked before anything is written; the run directory's
     // own name is only digits, `-` and hex.
-    recipe_inputs(&workspace.join(RUNS_DIR), target, scope, None, crtool)?;
+    recipe_inputs(
+        &workspace.join(RUNS_DIR),
+        target,
+        scope,
+        context.as_deref(),
+        crtool,
+    )?;
     let reserved = reserved_agents(workspace)?;
     if !reserved.is_empty() {
         return Err(LaunchError::ReservedAgents { paths: reserved });
@@ -143,7 +157,7 @@ pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {
         run_dir: run_dir.clone(),
         source,
     })?;
-    let inputs = recipe_inputs(&run_dir, target, scope, None, crtool)?;
+    let inputs = recipe_inputs(&run_dir, target, scope, context.as_deref(), crtool)?;
     Ok(Prepared::Ready(ReadyRun {
         run_dir,
         recipe: installed.recipe,

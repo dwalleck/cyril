@@ -139,7 +139,28 @@ sessions' permission requests itself:
 - writes only inside the run directory;
 - shell only for the run's own `cyril crtool` step calls.
 
-Everything else is denied, without a prompt, and listed in `denied.log`. The
+Everything else is denied, without a prompt, and listed in `denied.log`.
+
+A repository can commit settings for every reviewer in `.cyril/config.toml`:
+
+```toml
+[review]
+check_cmd = "cargo clippy --workspace --all-targets -- -D warnings"
+check_timeout_s = 900          # default 1800
+context_file = "docs/review-context.md"   # or: context = "..."
+scope = ["crates", "docs"]     # default: everything
+```
+
+The settings are read fresh on every `/review`. An unknown key, a wrong
+type, setting both `context` and `context_file`, or a path outside the
+repository refuses the review with an error naming the problem. The form
+shows the check as `will run: <command>`, or `no check configured`; it never
+guesses a check. The check runs once, after gathering and before the workflow
+starts ("review: running check…"). A failing or timed-out check is recorded
+for the reviewers and the review goes on. A command that cannot start stops
+the review before any workflow exists. `Esc` during the check kills it and
+abandons the launch. `context_file` is read when the review starts and its
+contents go to the verifiers. The
 chat stays usable throughout, and `/workflow status <id>` shows progress.
 When the run ends, one message lists the verdict counts, the top ten
 findings and the path to `report.md`.

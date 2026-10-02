@@ -5,6 +5,7 @@
 //! HostShell owns terminal rendering; this module keeps the pinned,
 //! double-quoted, forward-slash prefix and rejects unsafe fallback forms.
 pub mod authorization;
+pub mod config;
 pub mod consent;
 pub mod inputs;
 pub mod launch;
