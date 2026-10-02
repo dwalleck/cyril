@@ -6,7 +6,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 
 use crate::theme::Theme;
-use crate::traits::{ReviewCheck, ReviewForm};
+use crate::traits::{ReviewCheck, ReviewField, ReviewForm};
 use crate::widgets::modal;
 
 /// Measured on full runs of the recipe: 50 sessions in 39.4 min and 64
@@ -67,8 +67,34 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
             timeout_secs,
         } => format!("will run: {command} (timeout {timeout_secs}s)"),
     };
-    let mut lines = vec![
-        Line::from(vec![label("Target"), value(form.target.clone())]),
+    let marker = |field: ReviewField| {
+        if !form.busy && form.focus == field {
+            Span::styled("◂ ▸", Style::default().fg(theme.accent_quinary))
+        } else {
+            Span::raw("")
+        }
+    };
+    let mut lines = vec![Line::from(vec![
+        label("Target"),
+        value(form.target.label()),
+        detail(format!("  ({}) ", form.target.spec())),
+        marker(ReviewField::Target),
+    ])];
+    if let cyril_core::review::target::ReviewTarget::Base(base) = &form.target {
+        lines.push(Line::from(vec![
+            label("Base"),
+            value(base.clone()),
+            detail(format!("  ({} branches) ", form.branches.len())),
+            marker(ReviewField::Base),
+        ]));
+    }
+    if let Some(problem) = &form.problem {
+        lines.push(Line::from(vec![
+            label(""),
+            Span::styled(problem.clone(), Style::default().fg(theme.danger)),
+        ]));
+    }
+    lines.extend([
         Line::from(vec![
             label("Scope"),
             value(if form.scope.is_empty() {
@@ -80,7 +106,7 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
         ]),
         Line::from(vec![label("Runs"), detail(EXPECTED_RUN.to_owned())]),
         Line::from(vec![label("Check"), value(check)]),
-    ];
+    ]);
     for (index, permission) in MAY_DO.iter().enumerate() {
         let lead = if index == 0 {
             label("May do")
@@ -94,7 +120,7 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
         if form.busy {
             "Starting the review…"
         } else {
-            "Enter starts the review · Esc cancels"
+            "←/→ change · Tab next field · Enter starts the review · Esc cancels"
         },
         Style::default()
             .fg(theme.subdued)
@@ -106,16 +132,16 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cyril_core::review::target::ReviewTarget;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
 
     fn form() -> ReviewForm {
         ReviewForm {
-            target: "auto".to_owned(),
             scope: vec![".".to_owned()],
             file_count: Some(12),
             check: ReviewCheck::NotConfigured,
-            busy: false,
+            ..ReviewForm::opening(ReviewTarget::Auto)
         }
     }
 
@@ -153,7 +179,7 @@ mod tests {
         let text = rendered(&form());
         for expected in [
             " Review ",
-            "Target   auto",
+            "Target   auto  (auto) ◂ ▸",
             "Scope    . — 12 files",
             "Runs     about 50–65 model sessions, about 40–50 minutes",
             "Check    no check configured",
@@ -184,5 +210,29 @@ mod tests {
         );
         assert!(text.contains("Starting the review…"), "{text}");
         assert!(!text.contains("Enter starts the review"), "{text}");
+    }
+
+    /// The base field exists only in base-branch mode, and the focus marker
+    /// follows Tab.
+    #[test]
+    fn the_base_field_shows_only_in_base_mode() {
+        let auto = rendered(&form());
+        assert!(!auto.contains("Base "), "{auto}");
+        let mut base = form();
+        base.target = ReviewTarget::Base("main".to_owned());
+        base.branches = vec!["main".to_owned(), "release".to_owned()];
+        base.focus = ReviewField::Base;
+        let text = rendered(&base);
+        assert!(text.contains("Target   vs main  (main...HEAD)"), "{text}");
+        assert!(text.contains("Base     main  (2 branches) ◂ ▸"), "{text}");
+        let mut broken = form();
+        broken.target = ReviewTarget::HeadCommit;
+        broken.problem = Some("HEAD has no parent commit".to_owned());
+        let text = rendered(&broken);
+        assert!(
+            text.contains("Target   the commit at HEAD  (HEAD~1..HEAD)"),
+            "{text}"
+        );
+        assert!(text.contains("HEAD has no parent commit"), "{text}");
     }
 }

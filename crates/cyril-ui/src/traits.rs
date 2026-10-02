@@ -594,16 +594,60 @@ pub enum PickerKind {
 /// may do, so that Enter is informed consent.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ReviewForm {
-    /// The diff target, e.g. `auto`.
-    pub target: String,
+    /// What the review compares; every choice ends at HEAD.
+    pub target: cyril_core::review::target::ReviewTarget,
+    /// Branches a base-branch review can compare against.
+    pub branches: Vec<String>,
+    /// Which field ←/→ changes.
+    pub focus: ReviewField,
     /// Git pathspecs; `.` is everything.
     pub scope: Vec<String>,
     /// Files the target's diff touches in scope; `None` while counting.
     pub file_count: Option<usize>,
+    /// Why the current choice cannot be reviewed; Enter is refused while set.
+    pub problem: Option<String>,
     /// What runs before the workflow starts.
     pub check: ReviewCheck,
     /// Enter was pressed and the launch is under way.
     pub busy: bool,
+}
+
+/// A field of the `/review` form that takes ←/→.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ReviewField {
+    #[default]
+    Target,
+    /// Shown, and focusable, only in base-branch mode.
+    Base,
+}
+
+impl ReviewForm {
+    /// A form for `target`, still reading settings and counting.
+    pub fn opening(target: cyril_core::review::target::ReviewTarget) -> Self {
+        Self {
+            target,
+            branches: Vec::new(),
+            focus: ReviewField::Target,
+            scope: Vec::new(),
+            file_count: None,
+            problem: None,
+            check: ReviewCheck::Reading,
+            busy: false,
+        }
+    }
+
+    /// Whether the base field is on the form.
+    pub fn shows_base(&self) -> bool {
+        matches!(
+            self.target,
+            cyril_core::review::target::ReviewTarget::Base(_)
+        )
+    }
+
+    /// Enter starts the review: the count is in and nothing is wrong.
+    pub fn ready(&self) -> bool {
+        !self.busy && self.problem.is_none() && self.file_count.is_some()
+    }
 }
 
 /// The repository check command shown on the consent form.

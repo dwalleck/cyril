@@ -374,7 +374,7 @@ async fn esc_closes_the_form_without_writes() {
     settle(&mut app).await;
     let form = app.ui_state.review_form().expect("the form is open");
     assert_eq!(form.file_count, Some(1));
-    assert_eq!(form.target, "auto");
+    assert_eq!(form.target, cyril_core::review::target::ReviewTarget::Auto);
     app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
     assert!(app.ui_state.review_form().is_none());
     assert!(!repo.root.join(".code-review").exists());
@@ -1153,4 +1153,157 @@ async fn esc_while_opening_closes_and_drops_the_late_result() {
     settle(&mut app).await;
     assert!(app.ui_state.review_form().is_none());
     assert!(rx.try_recv().is_err());
+}
+
+// --- cyril-9akg: HEAD-anchored targets ---
+
+/// `main` holds a.rs and b.rs. `feature` (checked out) changes b.rs in one
+/// commit and adds c.rs in the commit at HEAD; a.rs is edited uncommitted.
+fn history() -> Repo {
+    let repo = repo(false);
+    fs::write(repo.root.join("src/b.rs"), "fn b() {}\n").expect("b.rs");
+    git(&repo.root, &["add", "-A"]);
+    git(&repo.root, &["commit", "-q", "-m", "b on main"]);
+    git(&repo.root, &["checkout", "-q", "-b", "feature"]);
+    fs::write(repo.root.join("src/b.rs"), "fn b() { todo!() }\n").expect("b.rs");
+    git(&repo.root, &["commit", "-q", "-am", "branch change"]);
+    fs::write(repo.root.join("src/c.rs"), "fn c() {}\n").expect("c.rs");
+    git(&repo.root, &["add", "-A"]);
+    git(&repo.root, &["commit", "-q", "-m", "head commit"]);
+    fs::write(repo.root.join("src/a.rs"), "fn a() { /* wip */ }\n").expect("a.rs");
+    repo
+}
+
+fn form(app: &App) -> cyril_ui::traits::ReviewForm {
+    app.ui_state
+        .review_form()
+        .expect("the form is open")
+        .clone()
+}
+
+/// Press `code` on the form and wait for the recount.
+async fn change(app: &mut App, code: KeyCode) {
+    app.handle_key(key(code)).await.expect("key");
+    assert_eq!(form(app).file_count, None, "a change recounts");
+    settle(app).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn each_target_counts_gathers_and_sends_its_own_diff() {
+    let repo = history();
+    let (mut app, mut rx) = review_app(&repo);
+    let expectations: [(ReviewTargetCase, &str, &[&str]); 4] = [
+        (
+            ReviewTargetCase::Auto,
+            "auto",
+            &["src/a.rs", "src/b.rs", "src/c.rs"],
+        ),
+        (
+            ReviewTargetCase::Base,
+            "main...HEAD",
+            &["src/b.rs", "src/c.rs"],
+        ),
+        (ReviewTargetCase::Uncommitted, "HEAD", &["src/a.rs"]),
+        (ReviewTargetCase::HeadCommit, "HEAD~1..HEAD", &["src/c.rs"]),
+    ];
+    for (presses, (case, spec, files)) in expectations.into_iter().enumerate() {
+        app.handle_command_result(CommandResult::review());
+        settle(&mut app).await;
+        assert_eq!(form(&app).branches, ["main"], "feature is checked out");
+        for _ in 0..presses {
+            change(&mut app, KeyCode::Right).await;
+        }
+        let shown = form(&app);
+        assert_eq!(shown.target.spec(), spec, "{case:?}");
+        assert_eq!(shown.file_count, Some(files.len()), "{case:?} count");
+        assert_eq!(shown.shows_base(), case == ReviewTargetCase::Base);
+
+        app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+        settle(&mut app).await;
+        let Ok(BridgeCommand::Workflow {
+            op: WorkflowOp::New { inputs, .. },
+            ..
+        }) = next_new(&mut app, &mut rx).await
+        else {
+            panic!("{case:?} creates the workflow");
+        };
+        assert_eq!(
+            inputs["target"], spec,
+            "{case:?}: the workflow gets the form's target"
+        );
+        let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
+        let gathered = fs::read_to_string(run_dir.join("changed-files.txt")).expect("files");
+        assert_eq!(gathered.lines().collect::<Vec<_>>(), files, "{case:?}");
+        assert_eq!(manifest(&run_dir)["requested_target"], spec, "{case:?}");
+        app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+            operation: "workflow new".into(),
+            code: None,
+            details: "end this launch".into(),
+        }));
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ReviewTargetCase {
+    Auto,
+    Base,
+    Uncommitted,
+    HeadCommit,
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_base_field_takes_focus_only_in_base_mode() {
+    let repo = history();
+    git(&repo.root, &["branch", "release", "main"]);
+    let (mut app, _rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    assert_eq!(
+        form(&app).focus,
+        cyril_ui::traits::ReviewField::Target,
+        "no base field in auto mode"
+    );
+    change(&mut app, KeyCode::Right).await;
+    assert_eq!(form(&app).target.spec(), "main...HEAD");
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    assert_eq!(form(&app).focus, cyril_ui::traits::ReviewField::Base);
+    change(&mut app, KeyCode::Right).await;
+    assert_eq!(form(&app).target.spec(), "release...HEAD");
+    // Leaving base mode moves the focus back with it.
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    change(&mut app, KeyCode::Right).await;
+    assert_eq!(form(&app).target.spec(), "HEAD");
+    assert_eq!(form(&app).focus, cyril_ui::traits::ReviewField::Target);
+    assert!(
+        !repo.root.join(".code-review").exists(),
+        "changing modes writes nothing"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_target_that_cannot_be_diffed_is_reported_and_refused() {
+    // One commit: HEAD has no parent, so "the commit at HEAD" has no diff base.
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    // auto → (no base branch: main is checked out) uncommitted → HEAD commit.
+    change(&mut app, KeyCode::Right).await;
+    change(&mut app, KeyCode::Right).await;
+    let shown = form(&app);
+    assert_eq!(shown.target.spec(), "HEAD~1..HEAD");
+    let problem = shown.problem.expect("the problem is shown");
+    assert!(problem.contains("HEAD~1"), "{problem}");
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    assert!(
+        !form(&app).busy,
+        "Enter is refused while the target has a problem"
+    );
+    app.review.flush_delays_for_tests().await;
+    assert!(rx.try_recv().is_err());
+    // Choosing a reviewable target clears it.
+    change(&mut app, KeyCode::Left).await;
+    assert_eq!(form(&app).problem, None);
+    assert_eq!(form(&app).file_count, Some(1));
 }

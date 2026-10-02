@@ -144,6 +144,28 @@ pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Re
     Ok(git::nul_records(&names)?.len())
 }
 
+/// Branches `/review` offers as a base: local and remote-tracking, without
+/// the checked-out branch and the symbolic `<remote>/HEAD` entries.
+pub fn base_branches(run: &ReviewRun) -> Result<Vec<String>> {
+    let current = git::git_output(run, &["symbolic-ref", "--short", "-q", "HEAD"])?;
+    // Exit 1 means a detached HEAD: no branch to leave out.
+    let current = String::from_utf8_lossy(&current.stdout).trim().to_owned();
+    let refs = git::git_text(
+        run,
+        &[
+            "for-each-ref",
+            "--format=%(refname:short)",
+            "refs/heads",
+            "refs/remotes",
+        ],
+    )?;
+    Ok(refs
+        .lines()
+        .filter(|name| !name.is_empty() && *name != current && !name.ends_with("/HEAD"))
+        .map(str::to_owned)
+        .collect())
+}
+
 /// Scope as the recipe passes it: one string of space-separated pathspecs.
 pub(crate) fn split_scope(scope: &str) -> Vec<String> {
     let parts: Vec<String> = scope.split_whitespace().map(str::to_owned).collect();

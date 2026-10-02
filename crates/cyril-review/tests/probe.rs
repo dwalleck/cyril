@@ -1,6 +1,6 @@
 //! `touched_files`: the count `/review` shows before consent.
 
-use cyril_review::{ReviewError, ReviewRun, touched_files};
+use cyril_review::{ReviewError, ReviewRun, base_branches, touched_files};
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -52,5 +52,23 @@ fn counts_the_auto_diff_and_refuses_below_the_root() -> TestResult {
         touched_files(&below, "auto", ""),
         Err(ReviewError::NotRepositoryRoot { .. })
     ));
+    Ok(())
+}
+
+#[test]
+fn base_branches_leave_out_the_checked_out_branch() -> TestResult {
+    let tree = tempfile::tempdir()?;
+    let config = tree.path().join("gitconfig");
+    fs::write(&config, "")?;
+    let repo = tree.path().join("repo");
+    fs::create_dir_all(&repo)?;
+    fs::write(repo.join("a.txt"), "a\n")?;
+    git(&repo, &config, &["init", "-q", "-b", "main"])?;
+    git(&repo, &config, &["add", "-A"])?;
+    git(&repo, &config, &["commit", "-q", "-m", "first"])?;
+    git(&repo, &config, &["branch", "release"])?;
+    git(&repo, &config, &["checkout", "-q", "-b", "feature"])?;
+    let run = ReviewRun::new(&repo, repo.join(".code-review/r"))?;
+    assert_eq!(base_branches(&run)?, ["main", "release"]);
     Ok(())
 }

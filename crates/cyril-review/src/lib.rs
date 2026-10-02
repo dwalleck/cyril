@@ -16,7 +16,7 @@ mod verdicts;
 pub use assets::{ASSETS, Asset, AssetKind, WORKFLOW_NAME};
 pub use check::{CheckOutcome, CheckResult, run_check};
 pub use facts::facts;
-pub use gather::{gather, touched_files};
+pub use gather::{base_branches, gather, touched_files};
 pub use merge::{merge, shard};
 pub use report::{Finding, FindingsError, comments, finalize, read_findings};
 pub use run::ReviewRun;

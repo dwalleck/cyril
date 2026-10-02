@@ -6424,11 +6424,10 @@ mod tests {
         let (mut app, _rx) = test_app_with_command_rx();
         app.ui_state.insert_text("draft");
         app.ui_state.show_review_form(cyril_ui::traits::ReviewForm {
-            target: "auto".into(),
             scope: vec![".".into()],
             file_count: Some(3),
             check: cyril_ui::traits::ReviewCheck::NotConfigured,
-            busy: false,
+            ..cyril_ui::traits::ReviewForm::opening(cyril_core::review::target::ReviewTarget::Auto)
         });
 
         for code in [KeyCode::Char('x'), KeyCode::Enter, KeyCode::Backspace] {
