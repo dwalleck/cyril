@@ -797,7 +797,10 @@ fn create_endpoint(runtime_dir: &Path) -> Result<MemoryEndpoint, cyril_memory::I
 /// so `App` tests can observe real lesson injection and drive the
 /// Starting → Ready transition without a child process. Unix-only, like every
 /// test that uses it: the runtime binds a unix-domain socket.
-#[cfg(all(test, unix))]
+// Two attributes, not `all(test, unix)`: clippy only treats a literal
+// `cfg(test)` as test code (allow-expect-in-tests).
+#[cfg(test)]
+#[cfg(unix)]
 pub(crate) mod test_support {
     use super::*;
 

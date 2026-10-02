@@ -201,7 +201,10 @@ fn event_bytes(event: &CoreEvent) -> usize {
 
 // Its only test drives the in-process memory runtime, which binds a
 // unix-domain socket.
-#[cfg(all(test, unix))]
+// Two attributes, not `all(test, unix)`: clippy only treats a literal
+// `cfg(test)` as test code (allow-expect-in-tests).
+#[cfg(test)]
+#[cfg(unix)]
 mod tests {
     use super::CaptureForwarder;
     use cyril_core::types::{
