@@ -352,8 +352,10 @@ async fn refuses_below_the_repository_root() {
     app.cwd = repo.root.join("src");
     app.handle_command_result(CommandResult::review());
     assert!(
-        app.ui_state.review_form().is_some(),
-        "the form opens while counting"
+        app.ui_state
+            .review_form()
+            .is_some_and(|form| form.file_count.is_none()),
+        "the form opens at once, counting"
     );
     settle(&mut app).await;
     assert!(app.ui_state.review_form().is_none());
@@ -481,6 +483,7 @@ async fn an_armed_run_decides_its_own_steps_and_reports_its_findings() {
 
     // And the next review may start.
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(app.ui_state.review_form().is_some());
 }
 
@@ -545,6 +548,7 @@ async fn pause_stays_armed_and_failure_disarms() {
     decide(&mut app, late).await;
     assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(
         app.ui_state.review_form().is_some(),
         "a failed run frees /review"
@@ -581,12 +585,12 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
         "the failure is reported"
     );
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(
         app.ui_state.review_form().is_some(),
         "a new launch may start"
     );
     app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
-    settle(&mut app).await;
 
     // workflow/invoke fails: authorization is withdrawn; late requests are
     // denied rather than prompted.
@@ -657,6 +661,7 @@ async fn an_unrecorded_run_is_never_invoked() {
         "{text}"
     );
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(app.ui_state.review_form().is_some(), "the launch is over");
 }
 
@@ -720,6 +725,7 @@ async fn unloaded_agents_retry_workflow_new_then_report() {
     );
     assert!(rx.try_recv().is_err(), "no fifth attempt");
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(app.ui_state.review_form().is_some(), "the launch is over");
 }
 
@@ -754,6 +760,7 @@ async fn a_terminal_snapshot_ends_the_run_once() {
         "the run_complete after it is not a second ending"
     );
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(
         app.ui_state.review_form().is_some(),
         "the run no longer blocks /review"
@@ -776,6 +783,7 @@ async fn a_disconnect_disarms_the_run() {
     decide(&mut app, late).await;
     assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(app.ui_state.review_form().is_some());
 }
 
@@ -831,6 +839,7 @@ async fn esc_while_preparing_abandons_the_launch() {
         "no workflow after an abandoned launch"
     );
     app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
     assert!(app.ui_state.review_form().is_some());
 }
 
@@ -842,7 +851,15 @@ async fn a_panicking_launch_step_is_reported() {
     let (mut app, _rx) = review_app(&repo);
     app.handle_command_result(CommandResult::review());
     settle(&mut app).await;
-    app.review.spawn(|| panic!("boom"));
+    // A panic in work that belongs to no launch is logged, not fatal to one.
+    app.review.spawn(|| panic!("unrelated"));
+    settle(&mut app).await;
+    assert!(
+        app.ui_state.review_form().is_some(),
+        "an unrelated panic abandons nothing"
+    );
+    let launch = app.review.current_launch().expect("a launch");
+    app.review.spawn_step(launch, || panic!("boom"));
     settle(&mut app).await;
     assert!(app.ui_state.review_form().is_none());
     assert!(
@@ -850,4 +867,290 @@ async fn a_panicking_launch_step_is_reported() {
         "{}",
         last_message(&app)
     );
+}
+
+// --- cyril-305w: repository settings and the preflight check ---
+
+/// Write `.cyril/config.toml` with a `[review]` table built from `pairs`.
+fn configure(repo: &Repo, pairs: &[(&str, toml::Value)]) {
+    let mut review = toml::Table::new();
+    for (key, value) in pairs {
+        review.insert((*key).to_owned(), value.clone());
+    }
+    let mut document = toml::Table::new();
+    document.insert("review".to_owned(), toml::Value::Table(review));
+    fs::create_dir_all(repo.root.join(".cyril")).expect(".cyril");
+    fs::write(
+        repo.root.join(".cyril/config.toml"),
+        toml::to_string(&document).expect("toml"),
+    )
+    .expect("config");
+}
+
+fn check_cmd(command: &str) -> (&'static str, toml::Value) {
+    ("check_cmd", toml::Value::String(command.to_owned()))
+}
+
+/// Prints `early`, then runs for 30 seconds.
+fn slow_command() -> &'static str {
+    if cfg!(windows) {
+        "powershell -NoProfile -Command \"Write-Output early; Start-Sleep -Seconds 30\""
+    } else {
+        "sh -c 'echo early; sleep 30'"
+    }
+}
+
+fn manifest(run_dir: &Path) -> serde_json::Value {
+    serde_json::from_slice(&fs::read(run_dir.join("manifest.json")).expect("manifest"))
+        .expect("manifest parses")
+}
+
+/// `/review`, the form settled, Enter pressed, and the launch steps done:
+/// the check (if any) is running, or `workflow/new` is due.
+async fn confirm(app: &mut App) {
+    app.handle_command_result(CommandResult::review());
+    settle(app).await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(app).await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn the_form_shows_the_configured_check_and_scope_without_running_it() {
+    let repo = repo(true);
+    fs::write(repo.root.join("README.md"), "changed\n").expect("untracked");
+    configure(
+        &repo,
+        &[
+            check_cmd("git diff --name-only HEAD"),
+            ("check_timeout_s", toml::Value::Integer(90)),
+            (
+                "scope",
+                toml::Value::Array(vec![toml::Value::String("src".into())]),
+            ),
+        ],
+    );
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    let form = app.ui_state.review_form().expect("form").clone();
+    assert_eq!(form.scope, ["src"]);
+    assert_eq!(form.file_count, Some(1));
+    assert_eq!(
+        form.check,
+        cyril_ui::traits::ReviewCheck::WillRun {
+            command: "git diff --name-only HEAD".into(),
+            timeout_secs: 90,
+        }
+    );
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    assert!(
+        !repo.root.join(".code-review").exists(),
+        "opening ran nothing"
+    );
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_clean_or_red_check_is_evidence_and_the_review_goes_on() {
+    for (command, status) in [
+        ("git diff --name-only HEAD", "clean"),
+        ("git rev-parse --verify no-such-ref", "FAILED (exit 128)"),
+    ] {
+        let repo = repo(true);
+        configure(&repo, &[check_cmd(command)]);
+        let (mut app, mut rx) = review_app(&repo);
+        confirm(&mut app).await;
+        assert!(
+            app.ui_state.review_form().is_some_and(|form| form.busy),
+            "the form stays up while the check runs"
+        );
+        assert_eq!(last_message(&app), "review: running check…");
+        settle(&mut app).await;
+        assert!(app.ui_state.review_form().is_none());
+        let Ok(BridgeCommand::Workflow {
+            op: WorkflowOp::New { inputs, .. },
+            ..
+        }) = next_new(&mut app, &mut rx).await
+        else {
+            panic!("a {status} check still creates the workflow");
+        };
+        let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
+        assert_eq!(manifest(&run_dir)["facts"]["diagnostics_status"], status);
+        assert!(run_dir.join("facts/diagnostics.txt").is_file());
+        assert!(
+            app.ui_state.messages().iter().any(|message| matches!(
+                message.kind(),
+                ChatMessageKind::System(text)
+                    if text == &format!("review: check {status} — recorded for the reviewers")
+            )),
+            "{status}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_timed_out_check_is_evidence_too() {
+    let repo = repo(true);
+    configure(
+        &repo,
+        &[
+            check_cmd(slow_command()),
+            ("check_timeout_s", toml::Value::Integer(1)),
+        ],
+    );
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    settle(&mut app).await;
+    let Ok(BridgeCommand::Workflow {
+        op: WorkflowOp::New { inputs, .. },
+        ..
+    }) = next_new(&mut app, &mut rx).await
+    else {
+        panic!("a timed-out check still creates the workflow");
+    };
+    let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
+    assert_eq!(
+        manifest(&run_dir)["facts"]["diagnostics_status"],
+        "TIMED OUT"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_check_that_cannot_start_stops_before_any_workflow() {
+    let repo = repo(true);
+    configure(&repo, &[check_cmd("cyril-no-such-program-x")]);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_none());
+    let text = last_message(&app);
+    assert!(
+        text.starts_with("review: the check could not run — ")
+            && text.ends_with("; nothing was started"),
+        "{text}"
+    );
+    app.review.flush_delays_for_tests().await;
+    assert!(rx.try_recv().is_err(), "no workflow");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn esc_during_the_check_kills_it_and_abandons_the_launch() {
+    let repo = repo(true);
+    configure(&repo, &[check_cmd(slow_command())]);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    assert_eq!(last_message(&app), "review: running check…");
+    let started = std::time::Instant::now();
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    assert!(app.ui_state.review_form().is_none());
+    // The check reports back promptly (killed, not run to its 30 s end), and
+    // its late result creates nothing.
+    settle(&mut app).await;
+    assert!(
+        started.elapsed() < Duration::from_secs(20),
+        "the check was killed"
+    );
+    app.review.flush_delays_for_tests().await;
+    assert!(rx.try_recv().is_err(), "no workflow after cancelling");
+    let runs = repo.root.join(".code-review");
+    let run_dir = fs::read_dir(&runs)
+        .expect("runs")
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| path.is_dir())
+        .expect("a run directory");
+    assert_eq!(
+        manifest(&run_dir)["facts"]["diagnostics_status"],
+        "CANCELLED"
+    );
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_some(), "/review works again");
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn invalid_settings_refuse_the_review_by_name() {
+    let repo = repo(true);
+    configure(&repo, &[("chek_cmd", toml::Value::String("x".into()))]);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_none());
+    assert_eq!(
+        last_message(&app),
+        "review: [review] in .cyril/config.toml: unknown key `chek_cmd`"
+    );
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn context_file_is_reread_for_every_review() {
+    let repo = repo(true);
+    configure(
+        &repo,
+        &[("context_file", toml::Value::String("REVIEW.md".into()))],
+    );
+    let (mut app, mut rx) = review_app(&repo);
+    let mut contexts = Vec::new();
+    for text in ["first authorities", "second authorities"] {
+        fs::write(repo.root.join("REVIEW.md"), text).expect("context");
+        confirm(&mut app).await;
+        let Ok(BridgeCommand::Workflow {
+            op: WorkflowOp::New { inputs, .. },
+            ..
+        }) = next_new(&mut app, &mut rx).await
+        else {
+            panic!("New");
+        };
+        contexts.push(inputs["context"].as_str().expect("context").to_owned());
+        app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+            operation: "workflow new".into(),
+            code: None,
+            details: "end this launch".into(),
+        }));
+    }
+    assert_eq!(contexts, ["first authorities", "second authorities"]);
+}
+
+/// An abandoned launch's late check result cannot drive a newer launch. A's
+/// result is held back and delivered once B is checking: the ordering that
+/// a slow kill (a grandchild holding the pipes) produces.
+#[tokio::test(flavor = "multi_thread")]
+async fn a_stale_check_result_cannot_drive_a_newer_launch() {
+    let repo = repo(true);
+    configure(&repo, &[check_cmd(slow_command())]);
+    let (mut app, mut rx) = review_app(&repo);
+    confirm(&mut app).await;
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    let stale = tokio::time::timeout(Duration::from_secs(30), app.review.rx.recv())
+        .await
+        .expect("A's cancelled check reports")
+        .expect("open channel");
+    confirm(&mut app).await;
+    assert_eq!(last_message(&app), "review: running check…");
+    app.handle_review_task(stale).await;
+    assert!(
+        app.ui_state.review_form().is_some_and(|form| form.busy),
+        "launch B is still waiting for its own check"
+    );
+    app.review.flush_delays_for_tests().await;
+    assert!(rx.try_recv().is_err(), "no workflow from A's late result");
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc B");
+}
+
+/// Esc while the settings are still being read closes the form; the late
+/// result is dropped.
+#[tokio::test(flavor = "multi_thread")]
+async fn esc_while_opening_closes_and_drops_the_late_result() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    assert_eq!(
+        app.ui_state.review_form().map(|form| form.check.clone()),
+        Some(cyril_ui::traits::ReviewCheck::Reading)
+    );
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_none());
+    assert!(rx.try_recv().is_err());
 }

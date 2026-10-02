@@ -9,6 +9,7 @@
 
 use super::App;
 use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
+use cyril_core::review::config::{CheckCommand, ReviewConfig};
 use cyril_core::review::consent::PermissionConsent;
 use cyril_core::review::launch::{self, LaunchError, LaunchRequest, Prepared, ReadyRun};
 use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide};
@@ -20,12 +21,14 @@ use cyril_core::types::{
     WorkflowCommandOutcome, WorkflowCompletionStatus, WorkflowId, WorkflowOp, WorkflowRunStatus,
     WorkflowRunTarget,
 };
+use cyril_review::{CheckResult, FindingsError, ReviewError, ReviewRun, read_findings, run_check};
 use cyril_ui::traits::{ReviewCheck, ReviewForm};
 use std::collections::{HashMap, HashSet};
+use std::future::Future;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, oneshot};
 
 /// The only target this slice offers: HEAD against its upstream or main.
 const TARGET: &str = "auto";
@@ -46,6 +49,8 @@ pub(super) struct ReviewState {
     home: Option<PathBuf>,
     agent_load_delay: Duration,
     launch: Option<Launch>,
+    /// The id the next launch gets.
+    next_launch: u64,
     /// Every run this process armed, live or ended. An ended run is kept so
     /// its late requests are denied and logged rather than falling through
     /// to an ordinary prompt — even after a newer review has started.
@@ -56,12 +61,24 @@ pub(super) struct ReviewState {
 
 /// A launch between `/review` and a started run.
 struct Launch {
-    target: String,
-    scope: Vec<String>,
+    /// Which launch this is: results of an abandoned launch carry an older
+    /// id and are dropped instead of driving a newer one.
+    id: u64,
+    plan: Plan,
     stage: Stage,
 }
 
+/// What the review is of. Fixed once the form opens.
+struct Plan {
+    target: String,
+    scope: Vec<String>,
+    /// The `[review]` settings the form showed: what consent covers.
+    config: ReviewConfig,
+}
+
 enum Stage {
+    /// The form is open, reading `[review]` and counting the diff.
+    Opening,
     /// The form is open.
     Form,
     /// Enter was pressed; the blocking launch steps are running.
@@ -70,6 +87,12 @@ enum Stage {
     Loading {
         ready: ReadyRun,
         retries: u32,
+    },
+    /// The check command is running. Held only to be dropped: abandoning
+    /// the launch drops it, which stops the command.
+    Checking {
+        ready: ReadyRun,
+        _cancel: oneshot::Sender<()>,
     },
     Minting {
         ready: ReadyRun,
@@ -88,10 +111,28 @@ struct ArmedRun {
     sessions: HashSet<SessionId>,
 }
 
-/// A result from blocking work, back on the event loop.
-pub(super) enum ReviewTask {
-    Probed(Result<usize, LaunchError>),
+/// What the form opens with.
+pub(super) struct Opened {
+    config: ReviewConfig,
+    scope: Vec<String>,
+    files: usize,
+}
+
+/// A step of one launch, tagged with that launch's id.
+pub(super) enum LaunchStep {
+    Opened(Result<Opened, LaunchError>),
     Prepared(Result<Prepared, LaunchError>),
+    Checked(Result<CheckResult, ReviewError>),
+    /// The agent-load wait is over: send `workflow/new`.
+    SendNew,
+}
+
+/// A result from off-loop work, back on the event loop.
+pub(super) enum ReviewTask {
+    Launch {
+        launch: u64,
+        step: LaunchStep,
+    },
     Recorded {
         workflow_id: WorkflowId,
         result: Result<(), RunRecordError>,
@@ -101,10 +142,11 @@ pub(super) enum ReviewTask {
         decision: Decision,
     },
     Finished(String),
-    /// The agent-load wait is over: send `workflow/new`.
-    SendNew,
-    /// Blocking work panicked; whatever it was part of is abandoned.
-    Crashed(String),
+    /// Off-loop work panicked. A launch's work abandons that launch.
+    Crashed {
+        launch: Option<u64>,
+        error: String,
+    },
 }
 
 impl ReviewState {
@@ -119,6 +161,7 @@ impl ReviewState {
             home: launch::node_home(),
             agent_load_delay: AGENT_LOAD_DELAY,
             launch: None,
+            next_launch: 0,
             runs: HashMap::new(),
             tx,
             rx,
@@ -130,6 +173,11 @@ impl ReviewState {
         self.prefix = Ok(prefix);
         self.home = Some(home);
         self.agent_load_delay = Duration::from_millis(10);
+    }
+
+    #[cfg(test)]
+    pub(super) fn current_launch(&self) -> Option<u64> {
+        self.launch.as_ref().map(|launch| launch.id)
     }
 
     /// Let any pending agent-load wait fire.
@@ -149,16 +197,56 @@ impl ReviewState {
         });
     }
 
-    /// Run `work` off the event loop; its result, if any, comes back on `rx`.
-    /// A panic comes back as [`ReviewTask::Crashed`], so nothing waits on a
-    /// result that will never arrive.
+    /// Run blocking `work` off the event loop; its result, if any, comes back
+    /// on `rx`. A panic comes back as [`ReviewTask::Crashed`], so nothing
+    /// waits on a result that will never arrive.
     pub(super) fn spawn(&self, work: impl FnOnce() -> Option<ReviewTask> + Send + 'static) {
+        self.report(None, tokio::task::spawn_blocking(work));
+    }
+
+    /// Run one blocking step of launch `launch`.
+    pub(super) fn spawn_step(
+        &self,
+        launch: u64,
+        work: impl FnOnce() -> LaunchStep + Send + 'static,
+    ) {
+        self.report(
+            Some(launch),
+            tokio::task::spawn_blocking(move || {
+                Some(ReviewTask::Launch {
+                    launch,
+                    step: work(),
+                })
+            }),
+        );
+    }
+
+    /// Run an async step of launch `launch` as its own task.
+    fn spawn_async_step(
+        &self,
+        launch: u64,
+        work: impl Future<Output = LaunchStep> + Send + 'static,
+    ) {
+        self.report(
+            Some(launch),
+            tokio::spawn(async move {
+                Some(ReviewTask::Launch {
+                    launch,
+                    step: work.await,
+                })
+            }),
+        );
+    }
+
+    fn report(&self, launch: Option<u64>, work: tokio::task::JoinHandle<Option<ReviewTask>>) {
         let tx = self.tx.clone();
-        let blocking = tokio::task::spawn_blocking(work);
         tokio::spawn(async move {
-            let task = match blocking.await {
+            let task = match work.await {
                 Ok(task) => task,
-                Err(error) => Some(ReviewTask::Crashed(error.to_string())),
+                Err(error) => Some(ReviewTask::Crashed {
+                    launch,
+                    error: error.to_string(),
+                }),
             };
             if let Some(task) = task
                 && tx.send(task).is_err()
@@ -191,7 +279,8 @@ impl ReviewState {
 }
 
 impl App {
-    /// `/review`: open the consent form and count the files off-loop.
+    /// `/review`: open the consent form, then read the repository's
+    /// `[review]` settings and count the diff off-loop.
     pub(super) fn open_review(&mut self) {
         if let Some(run) = self.review.live_run() {
             let id = run.authorization.workflow_id();
@@ -214,24 +303,38 @@ impl App {
             return;
         }
         let target = TARGET.to_owned();
-        let scope = vec![".".to_owned()];
+        let id = self.review.next_launch;
+        self.review.next_launch += 1;
+        self.review.launch = Some(Launch {
+            id,
+            plan: Plan {
+                target: target.clone(),
+                scope: Vec::new(),
+                config: ReviewConfig::default(),
+            },
+            stage: Stage::Opening,
+        });
         self.ui_state.show_review_form(ReviewForm {
             target: target.clone(),
-            scope: scope.clone(),
+            scope: Vec::new(),
             file_count: None,
-            check: ReviewCheck::NotConfigured,
+            check: ReviewCheck::Reading,
             busy: false,
         });
-        self.review.launch = Some(Launch {
-            target: target.clone(),
-            scope: scope.clone(),
-            stage: Stage::Form,
-        });
         let workspace = self.cwd.clone();
-        self.review.spawn(move || {
-            Some(ReviewTask::Probed(launch::probe(
-                &workspace, &target, &scope,
-            )))
+        self.review.spawn_step(id, move || {
+            let opened = ReviewConfig::load(&workspace)
+                .map_err(LaunchError::from)
+                .and_then(|config| {
+                    let scope = config.scope.clone().unwrap_or_else(|| vec![".".to_owned()]);
+                    let files = launch::probe(&workspace, &target, &scope)?;
+                    Ok(Opened {
+                        config,
+                        scope,
+                        files,
+                    })
+                });
+            LaunchStep::Opened(opened)
         });
     }
 
@@ -270,73 +373,26 @@ impl App {
             return;
         };
         launch.stage = Stage::Preparing;
+        let id = launch.id;
         if let Some(form) = self.ui_state.review_form_mut() {
             form.busy = true;
         }
         let request = LaunchRequest {
             workspace: self.cwd.clone(),
-            target: launch.target.clone(),
-            scope: launch.scope.clone(),
+            target: launch.plan.target.clone(),
+            scope: launch.plan.scope.clone(),
             crtool,
             home: self.review.home.clone(),
+            config: launch.plan.config.clone(),
         };
         self.review
-            .spawn(move || Some(ReviewTask::Prepared(launch::prepare(&request))));
+            .spawn_step(id, move || LaunchStep::Prepared(launch::prepare(&request)));
     }
 
     pub(super) async fn handle_review_task(&mut self, task: ReviewTask) {
         self.redraw_needed = true;
         match task {
-            ReviewTask::Probed(result) => {
-                if !matches!(
-                    self.review.launch,
-                    Some(Launch {
-                        stage: Stage::Form,
-                        ..
-                    })
-                ) {
-                    return;
-                }
-                match result {
-                    Ok(count) => {
-                        if let Some(form) = self.ui_state.review_form_mut() {
-                            form.file_count = Some(count);
-                        }
-                    }
-                    Err(error) => self.abandon_launch(launch_message(&error)),
-                }
-            }
-            ReviewTask::Prepared(result) => {
-                let Some(launch) = self.review.launch.take() else {
-                    return;
-                };
-                self.ui_state.close_review_form();
-                match result {
-                    Ok(Prepared::Nothing) => self.ui_state.add_system_message(format!(
-                        "review: nothing to review — {} in {}",
-                        launch.target,
-                        launch.scope.join(" ")
-                    )),
-                    Err(error) => self.ui_state.add_system_message(launch_message(&error)),
-                    Ok(Prepared::Ready(ready)) => {
-                        self.ui_state.add_system_message(format!(
-                            "review: gathered {} file(s) into {} — creating the workflow",
-                            ready.files,
-                            ready.run_dir.display()
-                        ));
-                        if ready.agents_changed {
-                            self.review
-                                .after(self.review.agent_load_delay, ReviewTask::SendNew);
-                            self.review.launch = Some(Launch {
-                                stage: Stage::Loading { ready, retries: 0 },
-                                ..launch
-                            });
-                        } else {
-                            self.send_new(launch.target, launch.scope, ready, 0).await;
-                        }
-                    }
-                }
-            }
+            ReviewTask::Launch { launch, step } => self.handle_launch_step(launch, step).await,
             ReviewTask::Recorded {
                 workflow_id,
                 result,
@@ -388,34 +444,194 @@ impl App {
                 }
             }
             ReviewTask::Finished(text) => self.ui_state.add_system_message(text),
-            ReviewTask::SendNew => {
-                let Some(launch) = self.review.launch.take() else {
-                    return;
-                };
-                match launch.stage {
-                    Stage::Loading { ready, retries } => {
-                        self.send_new(launch.target, launch.scope, ready, retries)
-                            .await;
-                    }
-                    stage => self.review.launch = Some(Launch { stage, ..launch }),
-                }
-            }
-            ReviewTask::Crashed(error) => {
-                tracing::error!(%error, "review: blocking work panicked");
-                if self.review.launch.is_some() {
+            ReviewTask::Crashed { launch, error } => {
+                tracing::error!(%error, "review: off-loop work panicked");
+                if launch.is_some()
+                    && launch == self.review.launch.as_ref().map(|current| current.id)
+                {
                     self.abandon_launch(format!("review: internal error — {error}"));
                 }
             }
         }
     }
 
-    async fn send_new(
-        &mut self,
-        target: String,
-        scope: Vec<String>,
-        ready: ReadyRun,
-        retries: u32,
-    ) {
+    /// One step of a launch. A step of any launch but the current one is
+    /// stale (that launch was abandoned) and is dropped.
+    async fn handle_launch_step(&mut self, id: u64, step: LaunchStep) {
+        if self.review.launch.as_ref().map(|launch| launch.id) != Some(id) {
+            tracing::debug!(
+                launch = id,
+                "review: dropping a step of an abandoned launch"
+            );
+            return;
+        }
+        match step {
+            LaunchStep::Opened(result) => {
+                let Some(launch) = self
+                    .review
+                    .launch
+                    .as_mut()
+                    .filter(|launch| matches!(launch.stage, Stage::Opening))
+                else {
+                    return;
+                };
+                match result {
+                    Ok(Opened {
+                        config,
+                        scope,
+                        files,
+                    }) => {
+                        let check = match &config.check {
+                            Some(check) => ReviewCheck::WillRun {
+                                command: check.command.clone(),
+                                timeout_secs: check.timeout.as_secs(),
+                            },
+                            None => ReviewCheck::NotConfigured,
+                        };
+                        launch.plan.scope = scope.clone();
+                        launch.plan.config = config;
+                        launch.stage = Stage::Form;
+                        let target = launch.plan.target.clone();
+                        self.ui_state.show_review_form(ReviewForm {
+                            target,
+                            scope,
+                            file_count: Some(files),
+                            check,
+                            busy: false,
+                        });
+                    }
+                    Err(error) => self.abandon_launch(launch_message(&error)),
+                }
+            }
+            LaunchStep::Prepared(result) => {
+                let Some(launch) = self.review.launch.take() else {
+                    return;
+                };
+                match result {
+                    Ok(Prepared::Nothing) => {
+                        self.ui_state.close_review_form();
+                        self.ui_state.add_system_message(format!(
+                            "review: nothing to review — {} in {}",
+                            launch.plan.target,
+                            launch.plan.scope.join(" ")
+                        ));
+                    }
+                    Err(error) => {
+                        self.ui_state.close_review_form();
+                        self.ui_state.add_system_message(launch_message(&error));
+                    }
+                    Ok(Prepared::Ready(ready)) => {
+                        self.ui_state.add_system_message(format!(
+                            "review: gathered {} file(s) into {}",
+                            ready.files,
+                            ready.run_dir.display()
+                        ));
+                        match launch.plan.config.check.clone() {
+                            Some(check) => self.start_check(launch.id, launch.plan, ready, check),
+                            None => {
+                                self.ui_state.close_review_form();
+                                self.create_workflow(launch.id, launch.plan, ready).await;
+                            }
+                        }
+                    }
+                }
+            }
+            LaunchStep::Checked(result) => {
+                let Some(launch) = self.review.launch.take() else {
+                    return;
+                };
+                let Stage::Checking { ready, .. } = launch.stage else {
+                    self.review.launch = Some(launch);
+                    return;
+                };
+                self.ui_state.close_review_form();
+                match result {
+                    Ok(check) => {
+                        let mut text = format!(
+                            "review: check {} — recorded for the reviewers",
+                            check.outcome().status()
+                        );
+                        if let Some(problem) = check.cleanup_error() {
+                            text.push_str(&format!(" ({problem})"));
+                        }
+                        self.ui_state.add_system_message(text);
+                        self.create_workflow(launch.id, launch.plan, ready).await;
+                    }
+                    Err(error) => self.ui_state.add_system_message(format!(
+                        "review: the check could not run — {error}; nothing was started"
+                    )),
+                }
+            }
+            LaunchStep::SendNew => {
+                let Some(launch) = self.review.launch.take() else {
+                    return;
+                };
+                match launch.stage {
+                    Stage::Loading { ready, retries } => {
+                        self.send_new(launch.id, launch.plan, ready, retries).await;
+                    }
+                    stage => self.review.launch = Some(Launch { stage, ..launch }),
+                }
+            }
+        }
+    }
+
+    /// Run the configured check once, off-loop, before any workflow exists.
+    /// The form stays open: Esc abandons the launch, and dropping the
+    /// launch's cancel sender stops the command.
+    fn start_check(&mut self, id: u64, plan: Plan, ready: ReadyRun, check: CheckCommand) {
+        self.ui_state
+            .add_system_message("review: running check…".to_owned());
+        let (cancel, cancelled) = oneshot::channel::<()>();
+        let workspace = self.cwd.clone();
+        let run_dir = ready.run_dir.clone();
+        self.review.spawn_async_step(id, async move {
+            let stop = async move {
+                // An explicit cancel or a dropped launch both stop the check.
+                match cancelled.await {
+                    Ok(()) | Err(_) => {}
+                }
+            };
+            let result = match ReviewRun::new(&workspace, &run_dir) {
+                Ok(run) => run_check(&run, &check.command, check.timeout, stop).await,
+                Err(error) => Err(error),
+            };
+            LaunchStep::Checked(result)
+        });
+        self.review.launch = Some(Launch {
+            id,
+            plan,
+            stage: Stage::Checking {
+                ready,
+                _cancel: cancel,
+            },
+        });
+    }
+
+    /// Send `workflow/new`, after the agent-load wait when agents were just
+    /// installed.
+    async fn create_workflow(&mut self, id: u64, plan: Plan, ready: ReadyRun) {
+        self.ui_state
+            .add_system_message("review: creating the workflow".to_owned());
+        if ready.agents_changed {
+            self.review.after(
+                self.review.agent_load_delay,
+                ReviewTask::Launch {
+                    launch: id,
+                    step: LaunchStep::SendNew,
+                },
+            );
+            self.review.launch = Some(Launch {
+                id,
+                plan,
+                stage: Stage::Loading { ready, retries: 0 },
+            });
+        } else {
+            self.send_new(id, plan, ready, 0).await;
+        }
+    }
+
+    async fn send_new(&mut self, id: u64, plan: Plan, ready: ReadyRun, retries: u32) {
         let Some(session_id) = self.session.id().cloned() else {
             self.ui_state
                 .add_system_message("review: no active session — nothing was started".to_owned());
@@ -434,8 +650,8 @@ impl App {
             return;
         }
         self.review.launch = Some(Launch {
-            target,
-            scope,
+            id,
+            plan,
             stage: Stage::Minting { ready, retries },
         });
     }
@@ -527,7 +743,13 @@ impl App {
             Stage::Minting { ready, retries } if retries < AGENT_LOAD_RETRIES => {
                 let delay = self.review.agent_load_delay * 2u32.pow(retries);
                 tracing::info!(retries, ?delay, %details, "review: agents not loaded yet; retrying workflow/new");
-                self.review.after(delay, ReviewTask::SendNew);
+                self.review.after(
+                    delay,
+                    ReviewTask::Launch {
+                        launch: launch.id,
+                        step: LaunchStep::SendNew,
+                    },
+                );
                 self.review.launch = Some(Launch {
                     stage: Stage::Loading {
                         ready,
@@ -566,8 +788,8 @@ impl App {
             workflow_id: workflow_id.to_string(),
             crtool_prefix: crtool.as_str().to_owned(),
             cyril_version: env!("CARGO_PKG_VERSION").to_owned(),
-            target: launch.target.clone(),
-            scope: launch.scope.clone(),
+            target: launch.plan.target.clone(),
+            scope: launch.plan.scope.clone(),
         };
         self.review.runs.insert(
             workflow_id.clone(),
@@ -666,12 +888,12 @@ impl App {
                 let denials = run.authorization.denials().to_vec();
                 let workspace = self.cwd.clone();
                 self.review.spawn(move || {
-                    let findings = cyril_review::ReviewRun::new(&workspace, &run_dir)
-                        .map_err(|error| cyril_review::FindingsError::Unreadable {
+                    let findings = ReviewRun::new(&workspace, &run_dir)
+                        .map_err(|error| FindingsError::Unreadable {
                             path: run_dir.join("findings.json"),
                             source: std::io::Error::other(error.to_string()),
                         })
-                        .and_then(|run| cyril_review::read_findings(&run));
+                        .and_then(|run| read_findings(&run));
                     match &findings {
                         Ok(findings) => {
                             tracing::info!(findings = findings.len(), "review: summary ready");

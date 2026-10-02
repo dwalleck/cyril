@@ -60,6 +60,7 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
         None => " — counting files…".to_owned(),
     };
     let check = match &form.check {
+        ReviewCheck::Reading => "reading .cyril/config.toml…".to_owned(),
         ReviewCheck::NotConfigured => "no check configured".to_owned(),
         ReviewCheck::WillRun {
             command,
@@ -70,7 +71,11 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
         Line::from(vec![label("Target"), value(form.target.clone())]),
         Line::from(vec![
             label("Scope"),
-            value(form.scope.join(" ")),
+            value(if form.scope.is_empty() {
+                "…".to_owned()
+            } else {
+                form.scope.join(" ")
+            }),
             detail(files),
         ]),
         Line::from(vec![label("Runs"), detail(EXPECTED_RUN.to_owned())]),

@@ -1,6 +1,7 @@
 //! `/review`'s blocking launch steps against a real repository and a fake
 //! home: what lands on disk, and what an empty diff or a refusal leaves alone.
 
+use cyril_core::review::config::{ContextSource, ReviewConfig};
 use cyril_core::review::launch::{LaunchError, LaunchRequest, Prepared, RUNS_DIR, prepare, probe};
 use cyril_core::review::{CrtoolPrefix, ShellDialect};
 use std::error::Error;
@@ -66,6 +67,7 @@ fn request(fixture: &Fixture) -> Result<LaunchRequest, Box<dyn Error>> {
         scope: vec![".".to_owned()],
         crtool: CrtoolPrefix::from_executable(Path::new(exe), ShellDialect::Posix)?,
         home: Some(fixture.home.clone()),
+        config: ReviewConfig::default(),
     })
 }
 
@@ -191,5 +193,32 @@ fn below_the_root_names_the_root() -> TestResult {
         ),
         other => return Err(format!("expected NotRoot, got {other:?}").into()),
     }
+    Ok(())
+}
+
+/// The verifiers get `context_file` as it is when the review starts, and a
+/// missing file refuses the launch before anything is written.
+#[test]
+fn context_file_is_read_at_launch_into_the_inputs() -> TestResult {
+    let fixture = fixture()?;
+    fs::write(fixture.repo.join("src/a.rs"), "fn a() { todo!() }\n")?;
+    let mut request = request(&fixture)?;
+    request.config.context = Some(ContextSource::File(PathBuf::from("REVIEW.md")));
+    match prepare(&request) {
+        Err(LaunchError::Config(_)) => {}
+        other => return Err(format!("a missing context file must refuse, got {other:?}").into()),
+    }
+    assert!(
+        !fixture.repo.join(RUNS_DIR).exists(),
+        "refused before any write"
+    );
+    fs::write(
+        fixture.repo.join("REVIEW.md"),
+        "docs/spec.md is authoritative",
+    )?;
+    let Prepared::Ready(run) = prepare(&request)? else {
+        return Err("a changed file must produce a run".into());
+    };
+    assert_eq!(run.inputs["context"], "docs/spec.md is authoritative");
     Ok(())
 }
