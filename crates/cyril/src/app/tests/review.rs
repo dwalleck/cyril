@@ -330,7 +330,11 @@ async fn launch(
     assert_eq!(record["workflow_id"], RUN);
     assert_eq!(record["crtool_prefix"], prefix().as_str());
     assert_eq!(record["target"], "auto");
-    assert_eq!(record["scope"], serde_json::json!(["."]));
+    assert_eq!(
+        record["scope"],
+        serde_json::json!(["src"]),
+        "the touched group"
+    );
 
     app.handle_notification(outcome(WorkflowCommandOutcome::Invoked {
         workflow_id: run_id(),
@@ -936,7 +940,7 @@ async fn the_form_shows_the_configured_check_and_scope_without_running_it() {
     app.handle_command_result(CommandResult::review());
     settle(&mut app).await;
     let form = app.ui_state.review_form().expect("form").clone();
-    assert_eq!(form.scope, ["src"]);
+    assert_eq!(form.scope(), ["src"]);
     assert_eq!(form.file_count, Some(1));
     assert_eq!(
         form.check,
@@ -1270,23 +1274,30 @@ async fn the_base_field_takes_focus_only_in_base_mode() {
     let (mut app, _rx) = review_app(&repo);
     app.handle_command_result(CommandResult::review());
     settle(&mut app).await;
+    use cyril_ui::traits::ReviewField;
+    // Auto mode: Tab goes from the target to the paths, never to a base field.
     app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
     assert_eq!(
         form(&app).focus,
-        cyril_ui::traits::ReviewField::Target,
+        ReviewField::Paths,
         "no base field in auto mode"
     );
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    assert_eq!(form(&app).focus, ReviewField::Target);
     change(&mut app, KeyCode::Right).await;
     assert_eq!(form(&app).target.spec(), "main...HEAD");
     app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
-    assert_eq!(form(&app).focus, cyril_ui::traits::ReviewField::Base);
+    assert_eq!(form(&app).focus, ReviewField::Base);
     change(&mut app, KeyCode::Right).await;
     assert_eq!(form(&app).target.spec(), "release...HEAD");
-    // Leaving base mode moves the focus back with it.
-    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    // Back to the target field, then out of base mode.
+    app.handle_key(key(KeyCode::BackTab))
+        .await
+        .expect("BackTab");
+    assert_eq!(form(&app).focus, ReviewField::Target);
     change(&mut app, KeyCode::Right).await;
     assert_eq!(form(&app).target.spec(), "HEAD");
-    assert_eq!(form(&app).focus, cyril_ui::traits::ReviewField::Target);
+    assert_eq!(form(&app).focus, ReviewField::Target);
     // Coming back to base mode keeps the branch picked before.
     change(&mut app, KeyCode::Left).await;
     assert_eq!(form(&app).target.spec(), "release...HEAD");
@@ -2016,4 +2027,325 @@ async fn cancel_during_a_resume_drops_it() {
         "review resume: cancelled; nothing was continued"
     );
     assert!(!repo.home.join(".kiro").exists());
+}
+
+// --- cyril-93fs: scope checkboxes and argument prefills ---
+
+/// Committed crates/, docs/ and README.md, all three edited uncommitted.
+fn spread() -> Repo {
+    let repo = repo(false);
+    fs::create_dir_all(repo.root.join("crates")).expect("crates");
+    fs::create_dir_all(repo.root.join("docs")).expect("docs");
+    fs::write(repo.root.join("crates/lib.rs"), "fn x() {}\n").expect("lib");
+    fs::write(repo.root.join("crates/more.rs"), "fn y() {}\n").expect("more");
+    fs::write(repo.root.join("docs/guide.md"), "guide\n").expect("guide");
+    fs::write(repo.root.join("README.md"), "readme\n").expect("readme");
+    git(&repo.root, &["add", "-A"]);
+    git(&repo.root, &["commit", "-q", "-m", "spread"]);
+    fs::write(repo.root.join("crates/lib.rs"), "fn x() { 1 }\n").expect("lib");
+    fs::write(repo.root.join("crates/more.rs"), "fn y() { 2 }\n").expect("more");
+    fs::write(repo.root.join("docs/guide.md"), "guide 2\n").expect("guide");
+    fs::write(repo.root.join("README.md"), "readme 2\n").expect("readme");
+    repo
+}
+
+fn choices(app: &App) -> Vec<(String, usize, bool)> {
+    form(app)
+        .paths
+        .iter()
+        .map(|choice| (choice.path.clone(), choice.files, choice.checked))
+        .collect()
+}
+
+fn owned(rows: &[(&str, usize, bool)]) -> Vec<(String, usize, bool)> {
+    rows.iter()
+        .map(|(path, files, checked)| ((*path).to_owned(), *files, *checked))
+        .collect()
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn touched_groups_are_checkboxes_and_space_narrows_the_scope() {
+    let repo = spread();
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert_eq!(
+        choices(&app),
+        owned(&[
+            ("README.md", 1, true),
+            ("crates", 2, true),
+            ("docs", 1, true)
+        ]),
+        "every touched group, root files kept"
+    );
+    assert_eq!(form(&app).file_count, Some(4));
+
+    // Tab to the paths, → to crates, Space unchecks it.
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    assert_eq!(form(&app).file_count, Some(2));
+    assert_eq!(form(&app).scope(), ["README.md", "docs"]);
+
+    // Unchecking everything is refused locally, and nothing is created.
+    app.handle_key(key(KeyCode::Left)).await.expect("Left");
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    assert_eq!(form(&app).scope(), Vec::<String>::new());
+    assert_eq!(
+        form(&app).problem.as_deref(),
+        Some("select at least one path")
+    );
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    assert!(!form(&app).busy, "Enter is refused");
+    assert!(!repo.root.join(".code-review").exists());
+
+    // Re-check docs and confirm: the selection reaches every consumer.
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    let Ok(BridgeCommand::Workflow {
+        op: WorkflowOp::New { inputs, .. },
+        ..
+    }) = next_new(&mut app, &mut rx).await
+    else {
+        panic!("New");
+    };
+    assert_eq!(inputs["scope"], "docs");
+    let run_dir = native(inputs["rundir"].as_str().expect("rundir"));
+    assert_eq!(
+        fs::read_to_string(run_dir.join("changed-files.txt")).expect("files"),
+        "docs/guide.md\n"
+    );
+    app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
+        workflow_id: run_id(),
+        name: "cyril-review".into(),
+    }));
+    settle(&mut app).await;
+    let record: serde_json::Value =
+        serde_json::from_slice(&fs::read(run_dir.join("run.json")).expect("run.json"))
+            .expect("run.json parses");
+    assert_eq!(record["scope"], serde_json::json!(["docs"]));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_configured_scope_preselects_and_a_scoped_empty_diff_writes_nothing() {
+    let repo = spread();
+    configure(
+        &repo,
+        &[(
+            "scope",
+            toml::Value::Array(vec![
+                toml::Value::String("docs".into()),
+                toml::Value::String("ops".into()),
+            ]),
+        )],
+    );
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert_eq!(
+        choices(&app),
+        owned(&[
+            ("docs", 1, true),
+            ("ops", 0, true),
+            ("README.md", 1, false),
+            ("crates", 2, false),
+        ])
+    );
+    assert_eq!(form(&app).file_count, Some(1));
+
+    // Only ops (which this diff does not touch): nothing to review.
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    assert_eq!(form(&app).scope(), ["ops"]);
+    assert_eq!(form(&app).file_count, Some(0));
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    assert_eq!(
+        last_message(&app),
+        "review: nothing to review — auto in ops"
+    );
+    assert!(!repo.root.join(".code-review").exists());
+    assert!(!repo.home.join(".kiro").exists());
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn arguments_prefill_the_form_and_focus_what_they_left_open() {
+    let repo = spread();
+    git(&repo.root, &["branch", "release"]);
+    let (mut app, mut rx) = review_app(&repo);
+    let args = |text: &str| {
+        cyril_core::review::target::ReviewArgs::parse(&text.split_whitespace().collect::<Vec<_>>())
+            .expect("valid arguments")
+    };
+    use cyril_ui::traits::ReviewField;
+
+    app.handle_command_result(CommandResult::review_with(args("uncommitted -- docs")));
+    settle(&mut app).await;
+    assert_eq!(form(&app).target.spec(), "HEAD");
+    assert_eq!(
+        choices(&app),
+        owned(&[
+            ("docs", 1, true),
+            ("README.md", 1, false),
+            ("crates", 2, false)
+        ])
+    );
+    assert_eq!(
+        form(&app).focus,
+        ReviewField::Target,
+        "everything was given"
+    );
+    assert!(rx.try_recv().is_err(), "arguments never skip the consent");
+    // Given fields stay editable.
+    change(&mut app, KeyCode::Right).await;
+    assert_eq!(form(&app).target.spec(), "HEAD~1..HEAD");
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+
+    app.handle_command_result(CommandResult::review_with(args("head")));
+    settle(&mut app).await;
+    assert_eq!(
+        form(&app).focus,
+        ReviewField::Paths,
+        "the paths were not given"
+    );
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+
+    app.handle_command_result(CommandResult::review_with(args("base")));
+    settle(&mut app).await;
+    assert_eq!(
+        form(&app).target.spec(),
+        "release...HEAD",
+        "the only other branch"
+    );
+    assert_eq!(
+        form(&app).focus,
+        ReviewField::Base,
+        "the branch was not given"
+    );
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+
+    app.handle_command_result(CommandResult::review_with(args("base nope -- docs")));
+    settle(&mut app).await;
+    let problem = form(&app).problem.expect("a missing branch is a problem");
+    assert!(problem.contains("bad revision 'nope...HEAD'"), "{problem}");
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+
+    app.handle_command_result(CommandResult::review_with(args("-- ../outside")));
+    assert!(app.ui_state.review_form().is_none());
+    assert_eq!(
+        last_message(&app),
+        "review: scope path \"../outside\" is outside the repository"
+    );
+}
+
+/// The operator's toggles outlive target changes, the cursor stays on its
+/// path, and a pending recount keeps Enter refused even after Space.
+#[tokio::test(flavor = "multi_thread")]
+async fn toggles_outlive_target_changes_and_enter_waits_for_the_count() {
+    let repo = spread();
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    // Uncheck docs (cursor: README.md → crates → docs).
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    assert_eq!(form(&app).scope(), ["README.md", "crates"]);
+
+    // A target change: Space before the recount lands must not re-enable Enter.
+    app.handle_key(key(KeyCode::BackTab))
+        .await
+        .expect("BackTab");
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    assert_eq!(form(&app).target.spec(), "HEAD");
+    app.handle_key(key(KeyCode::Tab)).await.expect("Tab");
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    assert_eq!(form(&app).file_count, None, "still counting");
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    assert!(!form(&app).busy, "Enter waits for the count");
+    for _ in 0..2 {
+        settle(&mut app).await;
+    }
+    // The cursor stayed on docs, so that Space re-checked it.
+    assert!(choices(&app).contains(&("docs".to_owned(), 1, true)));
+    assert!(form(&app).file_count.is_some(), "the count landed");
+
+    // Uncheck docs again and switch back: the toggle outlives the change.
+    app.handle_key(key(KeyCode::Char(' ')))
+        .await
+        .expect("Space");
+    app.handle_key(key(KeyCode::BackTab))
+        .await
+        .expect("BackTab");
+    change(&mut app, KeyCode::Left).await;
+    assert_eq!(form(&app).target.spec(), "auto");
+    assert!(
+        choices(&app).contains(&("docs".to_owned(), 1, false)),
+        "{:?}",
+        choices(&app)
+    );
+    assert!(rx.try_recv().is_err());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn path_arguments_are_normalized_and_patterns_refused() {
+    let repo = spread();
+    let (mut app, _rx) = review_app(&repo);
+    let args = |text: &str| {
+        cyril_core::review::target::ReviewArgs::parse(&text.split_whitespace().collect::<Vec<_>>())
+            .expect("valid arguments")
+    };
+    app.handle_command_result(CommandResult::review_with(args("-- ./crates/")));
+    settle(&mut app).await;
+    assert_eq!(form(&app).scope(), ["crates"]);
+    assert_eq!(
+        form(&app).file_count,
+        Some(2),
+        "the form counts what git reviews"
+    );
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    app.handle_command_result(CommandResult::review_with(args("-- crates/*.rs")));
+    assert!(app.ui_state.review_form().is_none());
+    assert_eq!(
+        last_message(&app),
+        "review: scope path \"crates/*.rs\" is a pattern; name a directory or file"
+    );
+}
+
+/// A touched name no pathspec can carry is named on the form, not dropped
+/// silently or allowed to break the launch.
+#[tokio::test(flavor = "multi_thread")]
+async fn unreviewable_names_are_named_on_the_form() {
+    let repo = spread();
+    fs::write(repo.root.join("Release Notes.md"), "notes\n").expect("notes");
+    git(&repo.root, &["add", "Release Notes.md"]);
+    let (mut app, _rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert!(
+        !choices(&app).iter().any(|(path, _, _)| path.contains(' ')),
+        "not offered"
+    );
+    let note = form(&app).note.expect("a note");
+    assert!(note.contains("Release Notes.md"), "{note}");
 }

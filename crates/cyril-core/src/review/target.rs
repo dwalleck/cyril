@@ -87,6 +87,57 @@ impl ReviewTarget {
     }
 }
 
+/// The target `/review <mode> [<branch>]` asked for.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum TargetArg {
+    Auto,
+    Uncommitted,
+    HeadCommit,
+    /// `base` with the branch, or without one (the form asks).
+    Base(Option<String>),
+}
+
+/// What `/review` arguments prefill. Every field stays visible and editable,
+/// and Enter is still the consent.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct ReviewArgs {
+    pub target: Option<TargetArg>,
+    /// `-- <paths>`: the scope's checked paths.
+    pub paths: Option<Vec<String>>,
+}
+
+impl ReviewArgs {
+    /// `[auto | uncommitted | head | base [<branch>]] [-- <path>…]`.
+    pub fn parse(words: &[&str]) -> Result<Self, String> {
+        let (head, paths) = match words.iter().position(|word| *word == "--") {
+            Some(at) => {
+                let paths: Vec<String> = words[at + 1..]
+                    .iter()
+                    .map(|word| (*word).to_owned())
+                    .collect();
+                if paths.is_empty() {
+                    return Err("`--` must be followed by at least one path".to_owned());
+                }
+                (&words[..at], Some(paths))
+            }
+            None => (words, None),
+        };
+        let target = match head {
+            [] => None,
+            ["auto"] => Some(TargetArg::Auto),
+            ["uncommitted"] => Some(TargetArg::Uncommitted),
+            ["head"] => Some(TargetArg::HeadCommit),
+            ["base"] => Some(TargetArg::Base(None)),
+            ["base", branch] => Some(TargetArg::Base(Some((*branch).to_owned()))),
+            ["auto" | "uncommitted" | "head", extra, ..] | ["base", _, extra, ..] => {
+                return Err(format!("unexpected {extra:?} (paths go after `--`)"));
+            }
+            [word, ..] => return Err(format!("unknown target {word:?}")),
+        };
+        Ok(Self { target, paths })
+    }
+}
+
 fn default_base(branches: &[String]) -> Option<&str> {
     PREFERRED_BASES
         .iter()
@@ -146,6 +197,38 @@ mod tests {
             ReviewTarget::Uncommitted.cycle(&list, Some("gone"), true),
             ReviewTarget::Base("main".into()),
             "a remembered branch that no longer exists falls back to the default"
+        );
+    }
+
+    #[test]
+    fn arguments_prefill_target_and_paths() {
+        let parse = |text: &str| ReviewArgs::parse(&text.split_whitespace().collect::<Vec<_>>());
+        assert_eq!(parse(""), Ok(ReviewArgs::default()));
+        assert_eq!(
+            parse("base main -- crates docs"),
+            Ok(ReviewArgs {
+                target: Some(TargetArg::Base(Some("main".into()))),
+                paths: Some(vec!["crates".into(), "docs".into()]),
+            })
+        );
+        assert_eq!(
+            parse("-- src"),
+            Ok(ReviewArgs {
+                target: None,
+                paths: Some(vec!["src".into()]),
+            })
+        );
+        assert_eq!(
+            parse("head").map(|args| args.target),
+            Ok(Some(TargetArg::HeadCommit))
+        );
+        assert_eq!(
+            parse("sideways"),
+            Err("unknown target \"sideways\"".to_owned())
+        );
+        assert_eq!(
+            parse("auto --"),
+            Err("`--` must be followed by at least one path".to_owned())
         );
     }
 

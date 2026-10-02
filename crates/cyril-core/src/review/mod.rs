@@ -12,6 +12,7 @@ pub mod launch;
 pub mod policy;
 pub mod resume;
 pub mod run_record;
+pub mod scope;
 pub mod summary;
 pub mod target;
 
