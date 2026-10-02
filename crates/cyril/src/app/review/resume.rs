@@ -9,7 +9,7 @@
 //! its stored inputs and facts.
 
 use super::*;
-use cyril_core::review::launch::{Installed, install_assets, reserved_agents};
+use cyril_core::review::launch::{Installed, install_checked};
 use cyril_core::review::resume::{self as resume_core, Candidate, Chosen};
 use cyril_ui::traits::{ReviewResumeView, TuiState};
 
@@ -33,8 +33,13 @@ enum ResumeStage {
     Installing(Box<Chosen>),
     /// Waiting for the agent-load pause or the `workflow/load` reply.
     Loading(Box<Chosen>),
-    /// `retry`/`resume` is out; the run is armed.
-    Continuing(WorkflowId),
+    /// `retry` (failed) or `resume` (paused) is out; the run is armed.
+    Continuing {
+        workflow_id: WorkflowId,
+        paused: bool,
+        /// Re-sends after KAS reported a review agent as not yet loaded.
+        retries: u32,
+    },
 }
 
 /// The resume steps that run off the event loop.
@@ -42,10 +47,12 @@ pub(in crate::app) enum ResumeStep {
     Scanned(std::io::Result<Vec<Candidate>>),
     Chosen(Result<(Box<Chosen>, usize), String>),
     Installed(Result<Installed, LaunchError>),
-    /// Load (or skip it) now.
+    /// The agent-load pause is over: load the run.
     Proceed,
-    /// `workflow/load` registered the run: continue it.
-    Loaded,
+    /// `workflow/load` registered the run, with its current status.
+    Loaded(WorkflowRunStatus),
+    /// Send `retry`/`resume` again after KAS loaded the review agents.
+    Resend,
 }
 
 impl App {
@@ -111,24 +118,26 @@ impl App {
             (ResumeStage::Choosing, ResumeStep::Chosen(Ok((chosen, files)))) => {
                 if let Some(live) = self.review.live_run() {
                     let live_id = live.authorization.workflow_id();
+                    let paused = live.authorization.state() == AuthorizationState::Paused;
                     // A paused run may be reconfirmed; any other armed run
                     // keeps the one-review rule.
-                    let same_paused = live_id == &chosen.workflow_id
-                        && live.authorization.state() == AuthorizationState::Paused;
-                    if !same_paused {
-                        self.ui_state.add_system_message(format!(
-                            "review resume: {live_id} is still running — /workflow status {live_id}"
-                        ));
+                    if !(paused && live_id == &chosen.workflow_id) {
+                        let text = if paused {
+                            format!(
+                                "review resume: {live_id} is paused — /review resume {live_id} or /review cancel first"
+                            )
+                        } else {
+                            format!(
+                                "review resume: {live_id} is still running — /workflow status {live_id}"
+                            )
+                        };
+                        self.ui_state.add_system_message(text);
                         return;
                     }
                 }
                 let view = ReviewResumeView {
-                    run: chosen
-                        .dir
-                        .file_name()
-                        .map(|name| name.to_string_lossy().into_owned())
-                        .unwrap_or_default(),
-                    status: chosen.status.to_string(),
+                    run: chosen.name.clone(),
+                    status: chosen.status,
                     target: chosen.record.target.clone(),
                     unreadable: chosen.unreadable.clone(),
                 };
@@ -168,15 +177,24 @@ impl App {
                     }
                 }
             }
+            // Always load: KAS answers it for a run it already holds, and it
+            // makes this session the run's parent. The tracker knowing the
+            // run (a /workflow status, a restarted agent) proves neither.
             (ResumeStage::Loading(chosen), ResumeStep::Proceed) => {
-                if self.workflow_tracker.get(&chosen.workflow_id).is_some() {
-                    self.continue_run(id, *chosen).await;
-                } else {
-                    self.load_run(id, chosen).await;
-                }
+                self.load_run(id, chosen).await;
             }
-            (ResumeStage::Loading(chosen), ResumeStep::Loaded) => {
-                self.continue_run(id, *chosen).await;
+            (ResumeStage::Loading(chosen), ResumeStep::Loaded(status)) => {
+                self.continue_run(id, *chosen, status).await;
+            }
+            (
+                ResumeStage::Continuing {
+                    workflow_id,
+                    paused,
+                    retries,
+                },
+                ResumeStep::Resend,
+            ) => {
+                self.send_continue(id, workflow_id, paused, retries).await;
             }
             (stage, _) => {
                 tracing::debug!(launch = id, "review resume: a step arrived out of order");
@@ -210,9 +228,20 @@ impl App {
     }
 
     /// Arm the run (or re-arm the paused one this process holds), then send
-    /// `retry` for a failed run or `resume` for a paused one.
-    async fn continue_run(&mut self, id: u64, chosen: Chosen) {
+    /// `retry` for a failed run or `resume` for a paused one — by the status
+    /// the load just reported, not the earlier listing.
+    async fn continue_run(&mut self, id: u64, chosen: Chosen, status: WorkflowRunStatus) {
         let workflow_id = chosen.workflow_id.clone();
+        let paused = match status {
+            WorkflowRunStatus::Paused => true,
+            WorkflowRunStatus::Failed => false,
+            other => {
+                self.ui_state.add_system_message(format!(
+                    "review resume: {workflow_id} is now {other}; nothing to continue"
+                ));
+                return;
+            }
+        };
         match self.review.run_for(&workflow_id) {
             Some(run) => run.authorization.rearm(),
             None => {
@@ -231,13 +260,24 @@ impl App {
                 );
             }
         }
-        let op = match chosen.status {
-            WorkflowRunStatus::Paused => WorkflowOp::Resume {
+        self.send_continue(id, workflow_id, paused, 0).await;
+    }
+
+    async fn send_continue(
+        &mut self,
+        id: u64,
+        workflow_id: WorkflowId,
+        paused: bool,
+        retries: u32,
+    ) {
+        let op = if paused {
+            WorkflowOp::Resume {
                 id: workflow_id.clone(),
-            },
-            _ => WorkflowOp::Retry {
+            }
+        } else {
+            WorkflowOp::Retry {
                 id: workflow_id.clone(),
-            },
+            }
         };
         let Some(session_id) = self.session.id().cloned() else {
             self.withdraw_resume(&workflow_id, "the session is gone");
@@ -250,8 +290,57 @@ impl App {
         }
         self.review.resume = Some(Resume {
             id,
-            stage: ResumeStage::Continuing(workflow_id),
+            stage: ResumeStage::Continuing {
+                workflow_id,
+                paused,
+                retries,
+            },
         });
+    }
+
+    /// A `retry`/`resume` refused only because KAS has not loaded the review
+    /// agents yet is re-sent after a longer wait instead of reported.
+    pub(in crate::app) fn absorb_resume_retry(&mut self, outcome: &WorkflowCommandOutcome) -> bool {
+        let WorkflowCommandOutcome::Failed {
+            workflow_id: Some(failed),
+            details,
+            ..
+        } = outcome
+        else {
+            return false;
+        };
+        let Some(resume) = self.review.resume.as_mut() else {
+            return false;
+        };
+        let ResumeStage::Continuing {
+            workflow_id,
+            retries,
+            ..
+        } = &mut resume.stage
+        else {
+            return false;
+        };
+        if workflow_id != failed
+            || !details.contains(AGENT_NOT_REGISTERED)
+            || *retries >= AGENT_LOAD_RETRIES
+        {
+            return false;
+        }
+        let delay = self.review.agent_load_delay * 2u32.pow(*retries);
+        *retries += 1;
+        tracing::info!(
+            ?delay,
+            "review resume: agents not loaded yet; sending again"
+        );
+        let id = resume.id;
+        self.review.after(
+            delay,
+            ReviewTask::Launch {
+                launch: id,
+                step: LaunchStep::Resume(ResumeStep::Resend),
+            },
+        );
+        true
     }
 
     fn withdraw_resume(&mut self, workflow_id: &WorkflowId, why: &str) {
@@ -288,13 +377,10 @@ impl App {
                 let workspace = self.cwd.clone();
                 let home = self.review.home.clone();
                 self.review.spawn_step(resume.id, move || {
-                    let installed = reserved_agents(&workspace).and_then(|reserved| {
-                        if !reserved.is_empty() {
-                            return Err(LaunchError::ReservedAgents { paths: reserved });
-                        }
-                        install_assets(home.as_deref().ok_or(LaunchError::NoHome)?)
-                    });
-                    LaunchStep::Resume(ResumeStep::Installed(installed))
+                    LaunchStep::Resume(ResumeStep::Installed(install_checked(
+                        &workspace,
+                        home.as_deref(),
+                    )))
                 });
                 self.review.resume = Some(Resume {
                     id: resume.id,
@@ -382,20 +468,28 @@ impl App {
         };
         let id = resume.id;
         match (&resume.stage, outcome) {
-            (ResumeStage::Loading(chosen), WorkflowCommandOutcome::Loaded { workflow_id, .. })
-                if *workflow_id == chosen.workflow_id =>
-            {
+            (
+                ResumeStage::Loading(chosen),
+                WorkflowCommandOutcome::Loaded {
+                    workflow_id,
+                    status,
+                },
+            ) if *workflow_id == chosen.workflow_id => {
                 self.review.after(
                     Duration::ZERO,
                     ReviewTask::Launch {
                         launch: id,
-                        step: LaunchStep::Resume(ResumeStep::Loaded),
+                        step: LaunchStep::Resume(ResumeStep::Loaded(*status)),
                     },
                 );
             }
-            (ResumeStage::Loading(chosen), WorkflowCommandOutcome::Failed { operation, .. })
-                if operation == "workflow load" =>
-            {
+            (
+                ResumeStage::Loading(chosen),
+                WorkflowCommandOutcome::Failed {
+                    workflow_id: Some(failed),
+                    ..
+                },
+            ) if *failed == chosen.workflow_id => {
                 let text = format!(
                     "review resume: could not load {}; nothing was started",
                     chosen.workflow_id
@@ -404,7 +498,10 @@ impl App {
                 self.ui_state.add_system_message(text);
             }
             (
-                ResumeStage::Continuing(expected),
+                ResumeStage::Continuing {
+                    workflow_id: expected,
+                    ..
+                },
                 WorkflowCommandOutcome::Retried { workflow_id, .. }
                 | WorkflowCommandOutcome::Resumed { workflow_id, .. },
             ) if workflow_id == expected => {
@@ -414,10 +511,18 @@ impl App {
                 self.review.resume = None;
                 self.ui_state.add_system_message(text);
             }
+            // Only this run's failure: another run's retry/resume failing
+            // says nothing about it.
             (
-                ResumeStage::Continuing(expected),
-                WorkflowCommandOutcome::Failed { operation, .. },
-            ) if operation == "workflow retry" || operation == "workflow resume" => {
+                ResumeStage::Continuing {
+                    workflow_id: expected,
+                    ..
+                },
+                WorkflowCommandOutcome::Failed {
+                    workflow_id: Some(failed),
+                    ..
+                },
+            ) if failed == expected => {
                 let expected = expected.clone();
                 self.withdraw_resume(&expected, "the agent refused it");
             }

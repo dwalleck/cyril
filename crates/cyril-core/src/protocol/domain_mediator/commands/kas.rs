@@ -153,6 +153,7 @@ fn workflow_failure(operation: &str, code: Option<i64>, details: String) -> Work
         snapshot: None,
         outcome: crate::types::WorkflowCommandOutcome::Failed {
             operation: operation.to_owned(),
+            workflow_id: None,
             code,
             details,
         },
@@ -427,6 +428,12 @@ pub(in crate::protocol::domain_mediator) async fn handle_workflow(
             }
         }
     };
+    let mut reply = reply;
+    // A failure names the run its operation named, so a caller tracking one
+    // run is never confused by another run's failure.
+    if let crate::types::WorkflowCommandOutcome::Failed { workflow_id, .. } = &mut reply.outcome {
+        *workflow_id = op.workflow_id().cloned();
+    }
     send_workflow_reply(tx, reply).await
 }
 

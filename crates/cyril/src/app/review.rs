@@ -848,7 +848,11 @@ impl App {
                     ));
                 }
             }
-            WorkflowCommandOutcome::Failed { operation, .. } => {
+            WorkflowCommandOutcome::Failed {
+                operation,
+                workflow_id: failed,
+                ..
+            } => {
                 let stage = self.review.launch.as_ref().map(|launch| &launch.stage);
                 match (operation.as_str(), stage) {
                     ("workflow new", Some(Stage::Minting { .. })) => {
@@ -857,7 +861,9 @@ impl App {
                             "review: the workflow was not created; nothing was started".to_owned(),
                         );
                     }
-                    ("workflow invoke", Some(Stage::Invoking(id))) => {
+                    ("workflow invoke", Some(Stage::Invoking(id)))
+                        if failed.as_ref().is_none_or(|failed| failed == id) =>
+                    {
                         let id = id.clone();
                         self.withdraw(&id, format!("review: {id} did not start"));
                     }

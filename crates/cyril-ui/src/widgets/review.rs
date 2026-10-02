@@ -315,7 +315,7 @@ mod tests {
         let resume = ReviewForm::resuming(
             crate::traits::ReviewResumeView {
                 run: "20261002-010203-abcd".to_owned(),
-                status: "failed".to_owned(),
+                status: cyril_core::types::WorkflowRunStatus::Failed,
                 target: "main...HEAD".to_owned(),
                 unreadable: vec!["20261002-020000-dead".to_owned()],
             },

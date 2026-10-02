@@ -83,6 +83,20 @@ pub enum WorkflowOp {
 }
 
 impl WorkflowOp {
+    /// The run this operation acts on, when it names one.
+    pub fn workflow_id(&self) -> Option<&WorkflowId> {
+        match self {
+            Self::Invoke { id }
+            | Self::Load { id }
+            | Self::Retry { id }
+            | Self::Attach { id }
+            | Self::Status { id }
+            | Self::Cancel { id }
+            | Self::Resume { id } => Some(id),
+            Self::ListRecipes | Self::ListRuns | Self::Run { .. } | Self::New { .. } => None,
+        }
+    }
+
     /// Stable operation label used for `BridgeError { operation }` and log
     /// context, so a failure names the user-facing command that caused it.
     pub fn label(&self) -> &'static str {
@@ -320,6 +334,8 @@ pub enum WorkflowCommandOutcome {
     Failed {
         /// [`WorkflowOp::label`] of the failed operation.
         operation: String,
+        /// The run the operation named, for operations that name one.
+        workflow_id: Option<WorkflowId>,
         /// JSON-RPC error code, when the failure was an agent error.
         code: Option<i64>,
         /// Human-actionable text: the agent's `error.data.details` when

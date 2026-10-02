@@ -573,6 +573,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
     ));
     app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
         operation: "workflow new".into(),
+        workflow_id: None,
         code: Some(-32603),
         details: "boom".into(),
     }));
@@ -607,6 +608,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
     assert!(rx.try_recv().is_ok(), "Invoke");
     app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
         operation: "workflow invoke".into(),
+        workflow_id: None,
         code: None,
         details: "boom".into(),
     }));
@@ -683,6 +685,7 @@ async fn unloaded_agents_retry_workflow_new_then_report() {
     let not_registered = || {
         outcome(WorkflowCommandOutcome::Failed {
             operation: "workflow new".into(),
+            workflow_id: None,
             code: Some(-32603),
             details: "Workflow references custom agent 'cyril-review-clerk' which is not \
                       registered. Registered step agents: wf-coder."
@@ -1105,6 +1108,7 @@ async fn context_file_is_reread_for_every_review() {
         contexts.push(inputs["context"].as_str().expect("context").to_owned());
         app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
             operation: "workflow new".into(),
+            workflow_id: None,
             code: None,
             details: "end this launch".into(),
         }));
@@ -1244,6 +1248,7 @@ async fn each_target_counts_gathers_and_sends_its_own_diff() {
         assert_eq!(manifest(&run_dir)["requested_target"], spec, "{case:?}");
         app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
             operation: "workflow new".into(),
+            workflow_id: None,
             code: None,
             details: "end this launch".into(),
         }));
@@ -1460,7 +1465,7 @@ async fn resume_picks_the_newest_failed_or_paused_run_and_retries_it_after_loadi
         view.run, "20261001-100000-bbbb",
         "newest resumable, not newest dir"
     );
-    assert_eq!(view.status, "failed");
+    assert_eq!(view.status, WorkflowRunStatus::Failed);
     assert_eq!(view.target, "main...HEAD");
     assert_eq!(form(&app).file_count, Some(2));
     assert!(
@@ -1596,7 +1601,7 @@ async fn resume_refusals_name_their_reason() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn a_paused_run_is_reconfirmed_in_process_and_resumed_without_loading() {
+async fn a_paused_run_is_reconfirmed_in_process_and_resumed() {
     let repo = repo(true);
     let (mut app, mut rx) = review_app(&repo);
     let run_dir = launch(&mut app, &mut rx, &repo).await;
@@ -1621,7 +1626,8 @@ async fn a_paused_run_is_reconfirmed_in_process_and_resumed_without_loading() {
         "still armed"
     );
 
-    // Enter resumes it; the tracker already holds it, so nothing is loaded.
+    // Enter loads it (KAS answers a load for a run it holds; it makes this
+    // session the parent) and resumes it by the status the load reports.
     resume_to_form(
         &mut app,
         &mut rx,
@@ -1635,13 +1641,34 @@ async fn a_paused_run_is_reconfirmed_in_process_and_resumed_without_loading() {
     assert!(
         matches!(
             rx.try_recv(),
+            Ok(BridgeCommand::Workflow { op: WorkflowOp::Load { id }, .. }) if id == run_id()
+        ),
+        "the run is always loaded"
+    );
+    app.handle_notification(outcome(WorkflowCommandOutcome::Loaded {
+        workflow_id: run_id(),
+        status: WorkflowRunStatus::Paused,
+    }));
+    settle(&mut app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
             Ok(BridgeCommand::Workflow { op: WorkflowOp::Resume { id }, .. }) if id == run_id()
         ),
         "a paused run is resumed"
     );
-    // A refused continuation withdraws the authorization.
+    // Another run's failure says nothing about this one.
     app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
         operation: "workflow resume".into(),
+        workflow_id: Some(WorkflowId::try_from("wf_other".to_owned()).expect("id")),
+        code: None,
+        details: "not ours".into(),
+    }));
+    assert!(!last_message(&app).contains("withdrawn"));
+    // A refused continuation withdraws the authorization (as the ticket asks).
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow resume".into(),
+        workflow_id: Some(run_id()),
         code: None,
         details: "no".into(),
     }));
@@ -1671,5 +1698,53 @@ async fn resume_refuses_while_another_review_is_running() {
     assert_eq!(
         last_message(&app),
         format!("review resume: {RUN} is still running — /workflow status {RUN}")
+    );
+}
+
+/// A retry refused only because KAS has not loaded the review agents yet is
+/// sent again, not reported as a failure.
+#[tokio::test(flavor = "multi_thread")]
+async fn resume_resends_when_the_review_agents_are_not_loaded_yet() {
+    let repo = repo(true);
+    write_run(&repo, "20261001-100000-bbbb", "wf_b");
+    let (mut app, mut rx) = review_app(&repo);
+    resume_to_form(
+        &mut app,
+        &mut rx,
+        None,
+        &[("wf_b", WorkflowRunStatus::Failed)],
+    )
+    .await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    settle(&mut app).await;
+    assert!(rx.try_recv().is_ok(), "Load");
+    let wf_b = WorkflowId::try_from("wf_b".to_owned()).expect("id");
+    app.handle_notification(outcome(WorkflowCommandOutcome::Loaded {
+        workflow_id: wf_b.clone(),
+        status: WorkflowRunStatus::Failed,
+    }));
+    settle(&mut app).await;
+    assert!(rx.try_recv().is_ok(), "Retry");
+    let before = app.ui_state.messages().len();
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow retry".into(),
+        workflow_id: Some(wf_b.clone()),
+        code: Some(-32603),
+        details: "Workflow references custom agent 'cyril-review-clerk' which is not registered."
+            .into(),
+    }));
+    assert_eq!(
+        app.ui_state.messages().len(),
+        before,
+        "absorbed, not reported"
+    );
+    settle(&mut app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::Workflow { op: WorkflowOp::Retry { id }, .. }) if id == wf_b
+        ),
+        "sent again"
     );
 }
