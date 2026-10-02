@@ -220,6 +220,24 @@ pub(crate) fn text_size(lines: &[String]) -> usize {
     lines.iter().map(|line| line.chars().count() + 1).sum()
 }
 
+/// A run directory with a minimal stamped manifest, for step tests that do
+/// not need a gathered repository.
+#[cfg(test)]
+pub(crate) fn stamped_run() -> Result<(tempfile::TempDir, ReviewRun)> {
+    let tree = tempfile::tempdir().map_err(|source| io_error("create temp dir", ".", source))?;
+    let run = ReviewRun::new(tree.path(), tree.path().join("run"))?;
+    write_json(
+        &run.path("manifest.json"),
+        &serde_json::json!({
+            "requested_target": "HEAD", "target": "HEAD", "scope": ["."], "head": "0".repeat(40),
+            "worktree_matches_diff_head": true, "gathered_at": "2026-01-01T00:00:00+00:00",
+            "crtool_version": VERSION, "total_files": 0, "total_patch_bytes": 0,
+            "warnings": [], "files": [],
+        }),
+    )?;
+    Ok((tree, run))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

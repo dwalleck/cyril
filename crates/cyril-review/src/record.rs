@@ -95,6 +95,33 @@ pub(crate) fn object(value: Option<&Value>) -> Record {
         .unwrap_or_default()
 }
 
+/// The `candidates` crtool itself wrote into `path`: anything but an array of
+/// objects means the run file is corrupt, never "no candidates".
+pub(crate) fn required_records(file: &Record, path: &Path) -> crate::Result<Vec<Record>> {
+    let corrupt = || crate::ReviewError::CorruptRunFile {
+        path: path.to_path_buf(),
+        message: "`candidates` is not an array of objects",
+    };
+    let items = file
+        .get("candidates")
+        .and_then(Value::as_array)
+        .ok_or_else(corrupt)?;
+    items
+        .iter()
+        .map(|item| item.as_object().cloned().ok_or_else(corrupt))
+        .collect()
+}
+
+/// An id that is safe as a file name: letters, digits, `.`, `_` and `-`,
+/// never `..`. Candidate ids name ballot and verdict files.
+pub(crate) fn plain_id(id: &str) -> bool {
+    !id.is_empty()
+        && !id.contains("..")
+        && id
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '-'))
+}
+
 /// A finder's candidates file: `{"candidates": [...]}` or a bare list. Returns
 /// the object entries and a problem description when something was wrong.
 pub(crate) fn load_candidates(path: &Path) -> (Vec<Record>, Option<String>) {
@@ -153,6 +180,16 @@ mod tests {
         assert_eq!(to_line(Some(&json!("x"))), json!(null));
         assert_eq!(to_line(Some(&json!(null))), json!(null));
         assert_eq!(to_line(None), json!(null));
+    }
+
+    #[test]
+    fn only_plain_ids_name_files() {
+        for id in ["C01", "S02", "C03.v2", "a-b_c"] {
+            assert!(plain_id(id), "{id}");
+        }
+        for id in ["", "..", "../x", "a/b", "a\\b", "/abs", "C01..v2", "S 1"] {
+            assert!(!plain_id(id), "{id}");
+        }
     }
 
     #[test]

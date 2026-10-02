@@ -47,6 +47,9 @@ mode would write CRLF there). Decoding git output and agent files uses
 | Self-exclusion | Skips hits under `.code-review/` | Skips hits under the actual run directory |
 | Odd values in agent records | Python `str()`/`repr()`/truthiness: `None`, `0` and `[]` count as empty, a float line is truncated | Strings and integers as agents are told to write them; any other value prints as its JSON text; only absent, `null` and `""` count as empty; a line is an integer or an integer string; an absent file or line prints `?` |
 | Comment decorations | A repeated decoration is warned about as "not a lowercase word" | A repeated decoration is dropped silently |
+| Sweep candidate ids | Any id the sweep finder writes, used in file names as is | Only a plain name (letters, digits, `.`, `_`, `-`, never `..`) is kept; any other id gets its `S` number, with a warning |
+| Candidates without a file | Sort and group as `None` in the merge digest | Sort and group as `?`, which is what the digest prints for them |
+| `shard --shards 0` | Exit 0 with no candidates, a crash otherwise | Always refused (exit 2) |
 | Parse-error text | Python `json` messages inside `unreadable` warnings | serde_json messages |
 | Per-file patch | `git diff -- <path>`, read as a glob (`src/[id].tsx` matches `src/i.tsx`) | `:(literal)<path>` |
 | `scope` | One space-split string | Same on the command line (the recipe passes one string); pathspecs containing spaces are unsupported |
