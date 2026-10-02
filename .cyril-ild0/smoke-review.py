@@ -176,21 +176,34 @@ def kill_session():
 
 def prompt_options():
     """The approval popup's options, top to bottom, read inside its borders:
-    the selected one starts with "▸ ", the rest with two spaces."""
+    the selected one starts with "▸ ", the rest with two spaces. The border is
+    found on each row: a wide glyph (⏳) left of the popup shifts that row's
+    text by one column."""
     rows = text().splitlines()
     top = next(n for n, row in enumerate(rows) if PROMPT_TITLE in row)
     left = rows[top].rindex("┌", 0, rows[top].index(PROMPT_TITLE))
-    right = rows[top].index("┐", left)
     options = []
     for row in rows[top + 1:]:
-        if row[left:left + 1] == "└":
+        # The border nearest the title's column, so a "│" in content behind
+        # the popup two columns off is not taken for it.
+        border = min((n for n in range(max(0, left - 2), min(len(row), left + 3))
+                      if row[n] in "│└"), key=lambda n: abs(n - left), default=None)
+        if border is None or row[border] == "└":
             break
-        inner = row[left + 1:right]
+        inner = row[border + 1:].split("│", 1)[0]
         if inner.startswith("▸ ") or (options and inner.startswith("  ") and inner[2:3].strip()):
             options.append(inner[2:].strip())
         elif options:
             break
     return options
+
+
+def allow_once(labels):
+    """The first allowing option that is not an "always" one: KAS's plain
+    "Allow" is allow_once whether or not "Always allow" is also offered, and
+    an explicit "Allow once" qualifies too. Reject options never do."""
+    return next((n for n, label in enumerate(label.lower() for label in labels)
+                 if label.startswith(("allow", "yes")) and "always" not in label), None)
 
 
 def drive():
@@ -264,19 +277,36 @@ def drive():
                         note("the prompt belongs to another session, not the main one")
                         return 9
                     labels = prompt_options()
-                    once = next((n for n, line in enumerate(labels) if "once" in line.lower()), None)
+                    once = allow_once(labels)
                     if once is None:
                         note(f"no allow-once option among {labels!r}")
                         return 10
                     note(f"main-session approval shown during the run; choosing {labels[once].strip()!r}")
                     for _ in range(once):
                         send("\x1b[B"); pump(0.3)
-                    send("\r"); pump(30)
-                    snap("chat.txt"); note("approved once; chat answered")
+                    send("\r")
+                    answered = False
+                    for _ in range(30):
+                        pump(2)
+                        screen_text = text()
+                        answered = PROMPT_TITLE not in screen_text and any(
+                            "cyril-ild0-chat" in line and "Run the shell command" not in line
+                            and "echo" not in line for line in screen_text.splitlines())
+                        if answered:
+                            break
+                    snap("chat.txt")
+                    if not answered:
+                        note("the prompt did not close with the command's output in chat")
+                        return 11
+                    if any(line in screen_text for line in ("review complete", "review failed")):
+                        note("the review ended during the chat")
+                        return 12
+                    note("approved once; the chat shows the output; the review is still running")
                     return 0
                 if args.action == "kill-after-launch":
                     pump(60)
-                    snap("killed.txt"); kill_session()
+                    snap("killed.txt"); kill_session(); time.sleep(1)
+                    processes("processes.txt")
                     note("SIGKILL to every process in cyril's session mid-run")
                     return 0
                 if args.until == "launch":
