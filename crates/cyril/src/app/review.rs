@@ -12,7 +12,7 @@ use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
 use cyril_core::review::config::{CheckCommand, ReviewConfig};
 use cyril_core::review::consent::PermissionConsent;
 use cyril_core::review::launch::{self, LaunchError, LaunchRequest, Prepared, ReadyRun};
-use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide};
+use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide, input_problem};
 use cyril_core::review::run_record::{RunRecord, RunRecordError};
 use cyril_core::review::summary::{RunEnding, summary};
 use cyril_core::review::target::ReviewTarget;
@@ -37,6 +37,8 @@ use tokio::sync::{mpsc, oneshot};
 /// retry while KAS still reports a review agent as unregistered.
 const AGENT_LOAD_DELAY: Duration = Duration::from_secs(2);
 const AGENT_LOAD_RETRIES: u32 = 3;
+const RECOUNT_DELAY: Duration = Duration::from_millis(150);
+const DIRTY_NOTE: &str = "uncommitted changes in scope are not part of this diff, but the reviewers read the working tree";
 /// KAS's `WorkflowAgentNotFoundError` text (2.26.0): "Workflow references
 /// custom agent '<name>' which is not registered."
 const AGENT_NOT_REGISTERED: &str = "which is not registered";
@@ -47,6 +49,9 @@ pub(super) struct ReviewState {
     /// Where the assets install: Node's home directory.
     home: Option<PathBuf>,
     agent_load_delay: Duration,
+    /// How long the form waits after a change before counting, so holding
+    /// an arrow key does not start a git process per step.
+    recount_delay: Duration,
     launch: Option<Launch>,
     /// The id the next launch gets.
     next_launch: u64,
@@ -67,9 +72,12 @@ struct Launch {
     stage: Stage,
 }
 
-/// What the review is of. Fixed once the form opens.
+/// What the review is of. The target follows the form until Enter; the plan,
+/// not the form, is what the launch uses.
 struct Plan {
     target: ReviewTarget,
+    /// Bumped on every target change: only the latest count is applied.
+    recount: u64,
     scope: Vec<String>,
     /// The `[review]` settings the form showed: what consent covers.
     config: ReviewConfig,
@@ -116,15 +124,21 @@ pub(super) struct Opened {
     scope: Vec<String>,
     files: usize,
     branches: Vec<String>,
+    branch_note: Option<String>,
 }
 
 /// A step of one launch, tagged with that launch's id.
 pub(super) enum LaunchStep {
     Opened(Result<Opened, LaunchError>),
-    /// The diff count for `target` (its spec) after the form changed.
+    /// The form settled on a new target: count it if still current.
+    RecountDue {
+        recount: u64,
+    },
+    /// The count (and whether scope has uncommitted changes) for recount
+    /// number `recount`.
     Recounted {
-        target: String,
-        files: Result<usize, LaunchError>,
+        recount: u64,
+        files: Result<(usize, bool), LaunchError>,
     },
     Prepared(Result<Prepared, LaunchError>),
     Checked(Result<CheckResult, ReviewError>),
@@ -165,6 +179,7 @@ impl ReviewState {
             prefix,
             home: launch::node_home(),
             agent_load_delay: AGENT_LOAD_DELAY,
+            recount_delay: RECOUNT_DELAY,
             launch: None,
             next_launch: 0,
             runs: HashMap::new(),
@@ -178,6 +193,7 @@ impl ReviewState {
         self.prefix = Ok(prefix);
         self.home = Some(home);
         self.agent_load_delay = Duration::from_millis(10);
+        self.recount_delay = Duration::from_millis(1);
     }
 
     #[cfg(test)]
@@ -314,6 +330,7 @@ impl App {
             id,
             plan: Plan {
                 target: target.clone(),
+                recount: 0,
                 scope: Vec::new(),
                 config: ReviewConfig::default(),
             },
@@ -328,12 +345,21 @@ impl App {
                 .and_then(|config| {
                     let scope = config.scope.clone().unwrap_or_else(|| vec![".".to_owned()]);
                     let files = launch::probe(&workspace, &target.spec(), &scope)?;
-                    let branches = launch::base_branches(&workspace)?;
+                    // Without a branch list the form offers no base mode and
+                    // says why; the other targets still work.
+                    let (branches, branch_note) = match launch::base_branches(&workspace) {
+                        Ok(branches) => (branches, None),
+                        Err(error) => {
+                            tracing::warn!(%error, "review: cannot list base branches");
+                            (Vec::new(), Some(format!("no base branches: {error}")))
+                        }
+                    };
                     Ok(Opened {
                         config,
                         scope,
                         files,
                         branches,
+                        branch_note,
                     })
                 });
             LaunchStep::Opened(opened)
@@ -368,7 +394,10 @@ impl App {
             KeyCode::Left | KeyCode::Right => {
                 let back = key.code == KeyCode::Left;
                 let target = match form.focus {
-                    ReviewField::Target => form.target.cycle(&form.branches, back),
+                    ReviewField::Target => {
+                        form.target
+                            .cycle(&form.branches, form.base_choice.as_deref(), back)
+                    }
                     ReviewField::Base => form.target.cycle_base(&form.branches, back),
                 };
                 if target != form.target {
@@ -379,8 +408,9 @@ impl App {
         }
     }
 
-    /// The form's target changed: recount its diff off-loop. Enter waits for
-    /// the count; a count for a target the form has since left is dropped.
+    /// The form's target changed. A target the recipe would refuse is shown
+    /// as a problem at once; otherwise the diff is recounted off-loop after a
+    /// short pause, and only the latest count is applied.
     fn choose_target(&mut self, target: ReviewTarget) {
         let Some(launch) = self
             .review
@@ -391,25 +421,30 @@ impl App {
             return;
         };
         launch.plan.target = target.clone();
-        let id = launch.id;
-        let scope = launch.plan.scope.clone();
-        let spec = target.spec();
+        launch.plan.recount += 1;
+        let (id, recount) = (launch.id, launch.plan.recount);
+        let problem = input_problem("target", &target.spec());
         if let Some(form) = self.ui_state.review_form_mut() {
+            if let ReviewTarget::Base(base) = &target {
+                form.base_choice = Some(base.clone());
+            }
             form.target = target;
             form.file_count = None;
-            form.problem = None;
+            form.note = None;
+            form.problem = problem.clone();
             if !form.shows_base() {
                 form.focus = ReviewField::Target;
             }
         }
-        let workspace = self.cwd.clone();
-        self.review.spawn_step(id, move || {
-            let files = launch::probe(&workspace, &spec, &scope);
-            LaunchStep::Recounted {
-                target: spec,
-                files,
-            }
-        });
+        if problem.is_none() {
+            self.review.after(
+                self.review.recount_delay,
+                ReviewTask::Launch {
+                    launch: id,
+                    step: LaunchStep::RecountDue { recount },
+                },
+            );
+        }
     }
 
     fn confirm_review(&mut self) {
@@ -533,6 +568,7 @@ impl App {
                         scope,
                         files,
                         branches,
+                        branch_note,
                     }) => {
                         let check = match &config.check {
                             Some(check) => ReviewCheck::WillRun {
@@ -548,22 +584,50 @@ impl App {
                             form.scope = scope;
                             form.file_count = Some(files);
                             form.branches = branches;
+                            form.note = branch_note;
                             form.check = check;
                         }
                     }
                     Err(error) => self.abandon_launch(launch_message(&error)),
                 }
             }
-            LaunchStep::Recounted { target, files } => {
-                let Some(form) = self
-                    .ui_state
-                    .review_form_mut()
-                    .filter(|form| form.target.spec() == target)
+            LaunchStep::RecountDue { recount } => {
+                let Some(launch) = self
+                    .review
+                    .launch
+                    .as_ref()
+                    .filter(|launch| launch.plan.recount == recount)
                 else {
                     return;
                 };
+                let workspace = self.cwd.clone();
+                let spec = launch.plan.target.spec();
+                let scope = launch.plan.scope.clone();
+                self.review.spawn_step(id, move || {
+                    let files = launch::probe(&workspace, &spec, &scope)
+                        .and_then(|files| Ok((files, launch::uncommitted(&workspace, &scope)?)));
+                    LaunchStep::Recounted { recount, files }
+                });
+            }
+            LaunchStep::Recounted { recount, files } => {
+                let Some(launch) = self
+                    .review
+                    .launch
+                    .as_ref()
+                    .filter(|launch| launch.plan.recount == recount)
+                else {
+                    return;
+                };
+                let dirty_head = launch.plan.target.ends_at_head_commit();
+                let Some(form) = self.ui_state.review_form_mut() else {
+                    return;
+                };
                 match files {
-                    Ok(files) => form.file_count = Some(files),
+                    Ok((files, dirty)) => {
+                        form.file_count = Some(files);
+                        form.problem = None;
+                        form.note = (dirty && dirty_head).then(|| DIRTY_NOTE.to_owned());
+                    }
                     Err(error) => form.problem = Some(error.to_string()),
                 }
             }

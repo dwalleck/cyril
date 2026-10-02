@@ -23,11 +23,23 @@ const MAY_DO: [&str; 4] = [
 ];
 
 const LABEL_WIDTH: usize = 9;
+/// The form's outer width; long lines wrap inside it.
+const WIDTH: u16 = 80;
+
+/// Rows `lines` take once wrapped to `inner` columns, so the box never clips
+/// the consent text below a long line.
+fn wrapped_rows(lines: &[Line<'_>], inner: u16) -> usize {
+    let inner = usize::from(inner.max(1));
+    lines
+        .iter()
+        .map(|line| line.width().div_ceil(inner).max(1))
+        .sum()
+}
 
 pub fn render(frame: &mut Frame, area: Rect, input_top: u16, form: &ReviewForm, theme: &Theme) {
     let lines = lines(form, theme);
-    let height = u16::try_from(lines.len() + 2).unwrap_or(u16::MAX);
-    let Some(popup_area) = modal::place(area, input_top, 80, height) else {
+    let height = u16::try_from(wrapped_rows(&lines, WIDTH - 2) + 2).unwrap_or(u16::MAX);
+    let Some(popup_area) = modal::place(area, input_top, WIDTH, height) else {
         return; // no rows above the input can hold the form
     };
     frame.render_widget(Clear, popup_area);
@@ -54,10 +66,11 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
     };
     let value = |text: String| Span::styled(text, Style::default().fg(theme.text));
     let detail = |text: String| Span::styled(text, Style::default().fg(theme.text_secondary));
-    let files = match form.file_count {
-        Some(1) => " — 1 file".to_owned(),
-        Some(count) => format!(" — {count} files"),
-        None => " — counting files…".to_owned(),
+    let files = match (form.file_count, &form.problem) {
+        (Some(1), _) => " — 1 file".to_owned(),
+        (Some(count), _) => format!(" — {count} files"),
+        (None, Some(_)) => " — cannot be counted".to_owned(),
+        (None, None) => " — counting files…".to_owned(),
     };
     let check = match &form.check {
         ReviewCheck::Reading => "reading .cyril/config.toml…".to_owned(),
@@ -88,10 +101,18 @@ fn lines<'a>(form: &'a ReviewForm, theme: &Theme) -> Vec<Line<'a>> {
             marker(ReviewField::Base),
         ]));
     }
+    // Git's errors span lines; the form shows them as one wrapped line.
+    let one_line = |text: &str| text.split_whitespace().collect::<Vec<_>>().join(" ");
     if let Some(problem) = &form.problem {
         lines.push(Line::from(vec![
             label(""),
-            Span::styled(problem.clone(), Style::default().fg(theme.danger)),
+            Span::styled(one_line(problem), Style::default().fg(theme.danger)),
+        ]));
+    }
+    if let Some(note) = &form.note {
+        lines.push(Line::from(vec![
+            label(""),
+            Span::styled(one_line(note), Style::default().fg(theme.warning)),
         ]));
     }
     lines.extend([
@@ -234,5 +255,28 @@ mod tests {
             "{text}"
         );
         assert!(text.contains("HEAD has no parent commit"), "{text}");
+    }
+
+    /// A long problem wraps inside the box, and the consent text below it
+    /// stays on screen.
+    #[test]
+    fn a_long_problem_wraps_without_clipping_the_consent() {
+        let mut broken = form();
+        broken.target = ReviewTarget::HeadCommit;
+        broken.file_count = None;
+        broken.problem = Some(format!(
+            "git diff failed:\nfatal: {}",
+            "ambiguous argument 'HEAD~1..HEAD': unknown revision ".repeat(3)
+        ));
+        let text = rendered(&broken);
+        assert!(text.contains("cannot be counted"), "{text}");
+        assert!(
+            text.contains("never asked"),
+            "the last permission line is visible:\n{text}"
+        );
+        assert!(
+            text.contains("Esc cancels"),
+            "the key hint is visible:\n{text}"
+        );
     }
 }

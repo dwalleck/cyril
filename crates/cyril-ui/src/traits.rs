@@ -598,6 +598,8 @@ pub struct ReviewForm {
     pub target: cyril_core::review::target::ReviewTarget,
     /// Branches a base-branch review can compare against.
     pub branches: Vec<String>,
+    /// The base branch last picked, kept while another mode is shown.
+    pub base_choice: Option<String>,
     /// Which field ←/→ changes.
     pub focus: ReviewField,
     /// Git pathspecs; `.` is everything.
@@ -606,6 +608,8 @@ pub struct ReviewForm {
     pub file_count: Option<usize>,
     /// Why the current choice cannot be reviewed; Enter is refused while set.
     pub problem: Option<String>,
+    /// Something the operator should know that does not block the review.
+    pub note: Option<String>,
     /// What runs before the workflow starts.
     pub check: ReviewCheck,
     /// Enter was pressed and the launch is under way.
@@ -627,10 +631,12 @@ impl ReviewForm {
         Self {
             target,
             branches: Vec::new(),
+            base_choice: None,
             focus: ReviewField::Target,
             scope: Vec::new(),
             file_count: None,
             problem: None,
+            note: None,
             check: ReviewCheck::Reading,
             busy: false,
         }

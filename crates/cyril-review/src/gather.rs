@@ -145,7 +145,8 @@ pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Re
 }
 
 /// Branches `/review` offers as a base: local and remote-tracking, without
-/// the checked-out branch and the symbolic `<remote>/HEAD` entries.
+/// the checked-out branch and symbolic refs (a remote's `HEAD`, which git
+/// would shorten to the bare remote name).
 pub fn base_branches(run: &ReviewRun) -> Result<Vec<String>> {
     let current = git::git_output(run, &["symbolic-ref", "--short", "-q", "HEAD"])?;
     // Exit 1 means a detached HEAD: no branch to leave out.
@@ -154,16 +155,31 @@ pub fn base_branches(run: &ReviewRun) -> Result<Vec<String>> {
         run,
         &[
             "for-each-ref",
-            "--format=%(refname:short)",
+            "--format=%(refname:short)%09%(symref)",
             "refs/heads",
             "refs/remotes",
         ],
     )?;
     Ok(refs
         .lines()
-        .filter(|name| !name.is_empty() && *name != current && !name.ends_with("/HEAD"))
-        .map(str::to_owned)
+        .filter_map(|line| line.split_once('\t'))
+        .filter(|(name, symref)| !name.is_empty() && symref.is_empty() && *name != current)
+        .map(|(name, _)| name.to_owned())
         .collect())
+}
+
+/// Whether the working tree has uncommitted changes to tracked files in
+/// `scope`: a target that ends at the HEAD commit does not review them, but
+/// the reviewers read the working tree.
+pub fn uncommitted_in_scope(run: &ReviewRun, scope: &str) -> Result<bool> {
+    let mut args = vec![
+        "status".to_owned(),
+        "--porcelain".to_owned(),
+        "--untracked-files=no".to_owned(),
+        "--".to_owned(),
+    ];
+    args.extend(split_scope(scope));
+    Ok(!git::git_text(run, &args)?.trim().is_empty())
 }
 
 /// Scope as the recipe passes it: one string of space-separated pathspecs.

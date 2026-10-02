@@ -1181,11 +1181,18 @@ fn form(app: &App) -> cyril_ui::traits::ReviewForm {
         .clone()
 }
 
-/// Press `code` on the form and wait for the recount.
+/// Press `code` on the form and wait for the recount (or the problem).
 async fn change(app: &mut App, code: KeyCode) {
     app.handle_key(key(code)).await.expect("key");
     assert_eq!(form(app).file_count, None, "a change recounts");
-    settle(app).await;
+    for _ in 0..3 {
+        let shown = form(app);
+        if shown.file_count.is_some() || shown.problem.is_some() {
+            return;
+        }
+        settle(app).await;
+    }
+    panic!("the recount never landed");
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -1275,6 +1282,9 @@ async fn the_base_field_takes_focus_only_in_base_mode() {
     change(&mut app, KeyCode::Right).await;
     assert_eq!(form(&app).target.spec(), "HEAD");
     assert_eq!(form(&app).focus, cyril_ui::traits::ReviewField::Target);
+    // Coming back to base mode keeps the branch picked before.
+    change(&mut app, KeyCode::Left).await;
+    assert_eq!(form(&app).target.spec(), "release...HEAD");
     assert!(
         !repo.root.join(".code-review").exists(),
         "changing modes writes nothing"
@@ -1306,4 +1316,28 @@ async fn a_target_that_cannot_be_diffed_is_reported_and_refused() {
     change(&mut app, KeyCode::Left).await;
     assert_eq!(form(&app).problem, None);
     assert_eq!(form(&app).file_count, Some(1));
+}
+
+/// A target that ends at the HEAD commit says so when scope has uncommitted
+/// changes the reviewers will read; auto and uncommitted include them.
+#[tokio::test(flavor = "multi_thread")]
+async fn commit_ending_targets_note_uncommitted_changes() {
+    let repo = history();
+    let (mut app, _rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    assert_eq!(form(&app).note, None, "auto includes the working tree");
+    let mut notes = Vec::new();
+    for _ in 0..3 {
+        change(&mut app, KeyCode::Right).await;
+        notes.push((form(&app).target.spec(), form(&app).note.is_some()));
+    }
+    assert_eq!(
+        notes,
+        [
+            ("main...HEAD".to_owned(), true),
+            ("HEAD".to_owned(), false),
+            ("HEAD~1..HEAD".to_owned(), true),
+        ]
+    );
 }

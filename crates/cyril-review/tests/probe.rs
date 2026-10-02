@@ -1,6 +1,6 @@
 //! `touched_files`: the count `/review` shows before consent.
 
-use cyril_review::{ReviewError, ReviewRun, base_branches, touched_files};
+use cyril_review::{ReviewError, ReviewRun, base_branches, touched_files, uncommitted_in_scope};
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -68,7 +68,27 @@ fn base_branches_leave_out_the_checked_out_branch() -> TestResult {
     git(&repo, &config, &["commit", "-q", "-m", "first"])?;
     git(&repo, &config, &["branch", "release"])?;
     git(&repo, &config, &["checkout", "-q", "-b", "feature"])?;
+    // A remote with a HEAD: git shortens refs/remotes/origin/HEAD to "origin".
+    git(
+        &repo,
+        &config,
+        &["update-ref", "refs/remotes/origin/main", "HEAD"],
+    )?;
+    git(
+        &repo,
+        &config,
+        &[
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+        ],
+    )?;
     let run = ReviewRun::new(&repo, repo.join(".code-review/r"))?;
-    assert_eq!(base_branches(&run)?, ["main", "release"]);
+    assert_eq!(base_branches(&run)?, ["main", "release", "origin/main"]);
+
+    assert!(!uncommitted_in_scope(&run, "")?);
+    fs::write(repo.join("a.txt"), "edited\n")?;
+    assert!(uncommitted_in_scope(&run, "")?);
+    assert!(!uncommitted_in_scope(&run, "elsewhere")?);
     Ok(())
 }
