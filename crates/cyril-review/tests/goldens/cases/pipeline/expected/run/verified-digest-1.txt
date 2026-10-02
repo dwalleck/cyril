@@ -8,6 +8,5 @@ C06 | PLAUSIBLE | x2 | cleanup | src/util.rs:5 | Duplicate helper 5 || fails: th
 C07 | UNVERIFIED | x1 | cleanup | src/util.rs:7 | Duplicate helper 7 || fails: the copies drift apart
 C08 | CONFIRMED [by design] | x1 | cleanup | src/util.rs:8 | Duplicate helper 8 || fails: the copies drift apart
 C09 | CONFIRMED | x1 | altitude | src/app.rs:5 | Special case bolted onto the shared parser || fails: every new flag adds a branch
-C10 | CONFIRMED (votes C/U/U) | x1 | conventions | src/lib.rs:3 | unwrap in non-test code || fails: CLAUDE.md forbids it
 S01 | PLAUSIBLE (votes R/P/U) [by design] | x1 | correctness | src/io.rs:40 | Leaked file handle on the error path || fails: an early return skips close
 S02 | UNVERIFIED | x1 | correctness | src/io.rs:? | Sweep candidate without an id || fails: the finder forgot the id
