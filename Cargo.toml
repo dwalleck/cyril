@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/cyril-core",
     "crates/cyril-memory",
+    "crates/cyril-review",
     "crates/cyril-ui",
     "crates/cyril-voice",
     "crates/cyril-workbench",
@@ -31,6 +32,8 @@ constant_time_eq = "0.4"
 getrandom = "0.4"
 hex = "0.4"
 interprocess = { version = "2.4.3", default-features = false, features = ["tokio"] }
+git2 = { version = "=0.21.0", default-features = false, features = ["vendored-libgit2"] }
+subprocess = { version = "=1.2.1", default-features = false }
 serde_path_to_error = { version = "0.1", default-features = false }
 regex = { version = "1", default-features = false, features = ["std", "perf"] }
 sha2 = "0.10"

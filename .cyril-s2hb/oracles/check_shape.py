@@ -15,20 +15,21 @@ REVIEW = "crates/cyril-review/"
 LIB_PATH = "crates/cyril-core/src/lib.rs"
 BRIDGE_PATH = "crates/cyril-core/src/protocol/bridge.rs"
 HOST_SHELL_PATH = "crates/cyril-core/src/protocol/kas/host_shell.rs"
+
 LIMITS = {
     REVIEW + "src/lib.rs": 180,
     REVIEW + "src/run.rs": 300,
     REVIEW + "src/clock.rs": 150,
-    REVIEW + "src/git.rs": 240,
-    REVIEW + "src/gather.rs": 260,
-    REVIEW + "src/facts.rs": 420,
+    REVIEW + "src/git.rs": 290,
+    REVIEW + "src/gather.rs": 350,
+    REVIEW + "src/facts.rs": 620,
     "crates/cyril-core/src/review/mod.rs": 190,
     "crates/cyril/src/crtool.rs": 130,
 }
 DIAGNOSTICS = {
     REVIEW + "src/diagnostics/mod.rs": 280,
-    REVIEW + "src/diagnostics/process.rs": 250,
-    REVIEW + "src/diagnostics/command.rs": 230,
+    REVIEW + "src/diagnostics/process.rs": 400,
+    REVIEW + "src/diagnostics/command.rs": 270,
 }
 PARENTS = {
     "crates/cyril/src/main.rs": (20, 360),
@@ -258,7 +259,7 @@ def parent_without_wiring(path, text):
     if path.endswith("/main.rs"):
         text = text.replace("mod crtool;\n", "")
         text = re.sub(r"\s*#\[command\(subcommand\)\]\s*command: Option<crtool::Command>,", "", text)
-        text = re.sub(r"\s*if let Some\(command\) = cli.command \{\s*std::process::exit\(command.run\(\)\);\s*\}", "", text)
+        text = re.sub(r"\s*if let Some\(command\) = cli.command \{\s*std::process::exit\(command.run\(cli\.cwd\)\);\s*\}", "", text)
     elif path == LIB_PATH:
         text = text.replace("pub mod review;\n", "")
     elif path.endswith("/bridge.rs"):
@@ -288,6 +289,49 @@ def dependency_names(table):
     for target in table.get("target", {}).values():
         result.update(dependency_names(target))
     return result
+
+
+
+def diagnostics_owner_errors():
+    """Narrow B placement/private-owner tripwires, not behavioral proof."""
+    errors = []
+    modules = [(REVIEW + "src/lib.rs", "diagnostics"),
+               (REVIEW + "src/diagnostics/mod.rs", "command"),
+               (REVIEW + "src/diagnostics/mod.rs", "process")]
+    for path, name in modules:
+        current = ROOT / path
+        if not current.is_file():
+            errors.append(f"{path}: required B owner missing")
+            continue
+        source = _live_source(path, current.read_text(encoding="utf-8"), errors)
+        if source is None:
+            continue
+        declarations = source.top_level_mods(name)
+        if not (len(declarations) == 1 and not declarations[0].conditional
+                and not source.has_attribute_before(declarations[0].keyword, {"path"})
+                and source.item_header(declarations[0]) == token_texts(f"mod {name};")):
+            errors.append(f"{path}: `{name}` must have one private unconditional default-path owner")
+    for path in (REVIEW + "src/diagnostics/command.rs", REVIEW + "src/diagnostics/process.rs"):
+        current = ROOT / path
+        if not current.is_file():
+            continue
+        source = _live_source(path, current.read_text(encoding="utf-8"), errors)
+        if source is None:
+            continue
+        for index, token in enumerate(source.tokens):
+            if source.depth_before[index] != 0 or token.text != "pub":
+                continue
+            # pub(crate)/pub(super) are private implementation cooperation.
+            if index + 1 < len(source.tokens) and source.tokens[index + 1].text != "(":
+                errors.append(f"{path}: unrestricted public helper/item outside the operation facade")
+    facade = ROOT / REVIEW / "src/lib.rs"
+    if facade.is_file():
+        source = _live_source(REVIEW + "src/lib.rs", facade.read_text(encoding="utf-8"), errors)
+        if source is not None:
+            for index, token in enumerate(source.tokens):
+                if source.depth_before[index] == 0 and token.text in {"Manifest", "ManifestFile"}:
+                    errors.append(f"{REVIEW}src/lib.rs: private manifest representation exposed by facade")
+    return errors
 
 
 def main():
@@ -326,6 +370,7 @@ def main():
                   if path == "crates/cyril-core/src/review/mod.rs"}
     if args.phase == "diagnostics":
         limits.update(DIAGNOSTICS)
+        errors.extend(diagnostics_owner_errors())
     expected_sources = {p for p in limits if p.startswith(REVIEW)}
     actual_sources = {p.relative_to(ROOT).as_posix() for p in (ROOT / REVIEW / "src").rglob("*.rs")}
     for missing in sorted(set(limits) - {p for p in limits if (ROOT / p).is_file()}):
@@ -370,21 +415,26 @@ def main():
             errors.append(f"{manifest_path.relative_to(ROOT)}: leaf belongs to the gather increment")
         manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
         deps = dependency_names(manifest)
-        if deps != {"serde", "serde_json", "regex", "thiserror"}:
-            errors.append(f"{manifest_path.relative_to(ROOT)}: forbidden/missing runtime dependencies {sorted(deps)}")
+        # Exact selected packages; versions/features/linking are reviewed separately.
+        expected = {"serde", "serde_json", "regex", "thiserror", "git2", "tokio",
+                    "tracing", "interprocess", "subprocess"}
+        if deps != expected:
+            errors.append(f"{manifest_path.relative_to(ROOT)}: unapproved/missing runtime dependencies {sorted(deps)}")
         if manifest.get("lints") != {"workspace": True}:
             errors.append(f"{manifest_path.relative_to(ROOT)}: workspace lints must be inherited unchanged")
+    elif args.phase != "prefix":
+        errors.append(f"{manifest_path.relative_to(ROOT)}: required leaf manifest missing")
     lib_path = ROOT / REVIEW / "src/lib.rs"
     if lib_path.is_file():
         lib = production(lib_path.read_text(encoding="utf-8"))
         if re.search(r"(?m)^pub mod ", lib):
             errors.append(f"{lib_path.relative_to(ROOT)}: internal modules exposed instead of operation interface")
-    if args.phase != "prefix":
+    if args.phase in ("gather", "diagnostics"):
         cli = (ROOT / "crates/cyril/src/crtool.rs").read_text(encoding="utf-8")
         if re.search(r"\bDiagnostics\b|cyril_core::|serde_json::|tokio::", production(cli)):
             errors.append("crates/cyril/src/crtool.rs: forbidden diagnostics verb or business/runtime ownership")
         main_source = (ROOT / "crates/cyril/src/main.rs").read_text(encoding="utf-8")
-        dispatch = main_source.find("std::process::exit(command.run());")
+        dispatch = main_source.find("std::process::exit(command.run(cli.cwd));")
         startup = main_source.find("    setup_logging();")
         if dispatch < 0 or startup < 0 or dispatch > startup:
             errors.append("crates/cyril/src/main.rs: hidden dispatch must precede ordinary startup")

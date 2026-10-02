@@ -1,0 +1,27 @@
+[package]
+name = "cyril-review"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Native code-review gather, facts, and diagnostics operations"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+regex = { workspace = true, features = ["unicode"] }
+thiserror = { workspace = true }
+git2 = { workspace = true }
+tokio = { workspace = true, features = ["io-util", "macros", "process", "rt", "time"] }
+tracing = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+interprocess = { workspace = true }
+subprocess = { workspace = true }
+
+[dev-dependencies]
+tempfile.workspace = true

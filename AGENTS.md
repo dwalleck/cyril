@@ -123,12 +123,13 @@ Tooling references the archive via `$HOME/.local/share/kiro-research/binaries/<v
 
 ## Architecture
 
-### Five-Crate Workspace
+### Workspace Crates
 
 ```
 crates/
   cyril-core/     # Library — protocol, types, commands, session, platform
   cyril-memory/   # Library — strict memory config, private stores, authenticated local runtime
+  cyril-review/   # Library — native review artifacts, gather, facts, diagnostics, clock seam
   cyril-ui/       # Library — rendering, widgets, UI state (depends on cyril-core)
   cyril-voice/    # Library — speech-to-text voice input engine; behind the default-off `voice` feature (ROADMAP CN2)
   cyril/          # Binary — wires everything together, owns the event loop
@@ -148,6 +149,12 @@ Each crate has a clear responsibility and strict rules about what it must NOT do
 - **Responsibility:** Hide lesson history/audit, storage, framing, authentication, migrations, and platform IPC behind typed `AdminClient` project operations plus health/shutdown and the companion runtime entrypoint.
 - **Must NOT:** Import ACP, MCP, ratatui, or native-model types. Add retrieval/content/job schema before a production consumer. Define a backend trait or selector while local is the only implementation.
 - **Dependency rule:** `cyril` may depend on `cyril-memory`; core and UI remain persistence-free.
+
+**`cyril-review`** — Native review evidence.
+- **Owns:** Run-directory/version/identity guards, native git2 operations and the profiled Git CLI boundary, gather/facts transformations, asynchronous diagnostics with direct-child/stream ownership, and the review clock seam.
+- **Responsibility:** Produce selected diff, patch, symbol/usage and diagnostic evidence. Gather/facts are synchronous; diagnostics runs on the caller's Tokio runtime. Preserve functional results against the Python verification reference, not JSON formatting or diagnostic wording. Capture completeness is separate from the process outcome; bounded final drainage may omit unread bytes but never silently discard collected bytes.
+- **Must NOT:** Import `cyril-core`, ACP or UI crates. Construct a Tokio runtime, own the chat `/review` lifecycle, parse host-shell configuration, or target descendants.
+- **Dependency boundary:** git2 supplies typed Git data; one profiled CLI patch producer preserves Git driver semantics, and explicit `git grep` handles searches. Diagnostics uses Unix Tokio process streams and Windows subprocess/interprocess streams. The binary's thin `crtool` dispatcher invokes gather/facts before logging, config, agent or terminal startup; diagnostics has no CLI verb.
 
 
 **`cyril-ui`** — Rendering and UI state.

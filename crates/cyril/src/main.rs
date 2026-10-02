@@ -1,5 +1,6 @@
 mod app;
 mod capture_forwarder;
+mod crtool;
 mod memory_runtime;
 
 use std::fmt;
@@ -14,6 +15,9 @@ use cyril_core::types::AgentEngine;
     about = "Polished TUI for the Agent Client Protocol ecosystem"
 )]
 struct Cli {
+    #[command(subcommand)]
+    command: Option<crtool::Command>,
+
     /// Working directory
     #[arg(short = 'd', long = "cwd")]
     cwd: Option<PathBuf>,
@@ -39,6 +43,9 @@ struct Cli {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
+    if let Some(command) = cli.command {
+        std::process::exit(command.run(cli.cwd));
+    }
 
     setup_logging();
 
