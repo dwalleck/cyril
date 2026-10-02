@@ -127,14 +127,15 @@ Then run the command your step prompt gives. It validates every file, renders
 the comments, and writes a template comment for any finding you missed — so a
 missing file is not fatal, but a considered comment is the point of this step.
 
-## The crtool command
+## If the crtool command is missing
 
-Every crtool command you run is the crtool command given in this workflow's
-crtool input; your step prompt spells it out in full. If a command in your
-step prompt starts with a blank or with a literal `{{crtool}}` instead of a
-program, that input was never set: report that and signal failure. Do not
-guess another command.
-
+The command that runs `crtool.py` is the workflow input `crtool`, which whoever
+started this review fills in. If a command in your step prompt starts with a
+blank or with a literal `{{crtool}}` instead of a program, that input was never
+set: use `uv run --script .kiro/code-review/crtool.py` when `uv` is installed,
+otherwise `python .kiro/code-review/crtool.py` on Windows and
+`python3 .kiro/code-review/crtool.py` elsewhere — then the rest of the command
+exactly as given.
 ## Rules
 
 - Write only inside the run directory's `comments/` folder. Never modify source.

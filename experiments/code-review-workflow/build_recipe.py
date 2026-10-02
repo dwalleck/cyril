@@ -72,6 +72,18 @@ CANONICAL_AGENTS = os.path.join(ASSETS_DIR, "agents")
 CYRIL_OUT = os.path.join(ASSETS_DIR, "cyril-review.workflow.json")
 MIRROR_DIR = os.path.join(REPO, ".kiro", "agents")
 ROLES = ("finder", "verifier", "clerk", "commenter")
+# The experiment can also be started from Kiro's own workflow UI, where nobody fills
+# the crtool input: its mirrors keep the Python fallback that cyril's agents drop.
+MIRROR_FALLBACK = """## If the crtool command is missing
+
+The command that runs `crtool.py` is the workflow input `crtool`, which whoever
+started this review fills in. If a command in your step prompt starts with a
+blank or with a literal `{{crtool}}` instead of a program, that input was never
+set: use `uv run --script .kiro/code-review/crtool.py` when `uv` is installed,
+otherwise `python .kiro/code-review/crtool.py` on Windows and
+`python3 .kiro/code-review/crtool.py` elsewhere — then the rest of the command
+exactly as given.
+"""
 # Agent names per recipe: cyril's own, and the experiment's mirrors.
 CYRIL_PREFIX, MIRROR_PREFIX = "cyril-review-", "cr-"
 PINNED = ("model", "effortLevel")  # agent frontmatter key -> step field (model -> modelId)
@@ -465,6 +477,7 @@ def mirror_agents(directory):
         if n != 1:
             raise SystemExit(f"canonical {role} agent has no `name: {CYRIL_PREFIX}{role}` line")
         text = text.replace("the cyril-review workflow", "the code-review-max workflow")
+        text = re.sub(r"## The crtool command\n.*?(?=\n## )", MIRROR_FALLBACK.rstrip("\n"), text, count=1, flags=re.S)
         with open(os.path.join(directory, f"{MIRROR_PREFIX}{role}.md"), "w", encoding="utf-8", newline="") as f:
             f.write(text)
     print(f"mirrored {len(ROLES)} agents into {directory}")
@@ -489,6 +502,8 @@ def main():
     if a.mirror_agents:
         mirror_agents(a.mirror_agents)
         return
+    if a.cyril and (a.only or a.replay):
+        raise SystemExit("--cyril builds the full recipe cyril embeds; it cannot be combined with --only or --replay")
     out = a.out or (CYRIL_OUT if a.cyril else DEFAULT_OUT)
 
     recipe = build(a.shards, a.split_cleanup, a.replay, tuple(x for x in a.only.split(',') if x), a.cyril)

@@ -50,6 +50,7 @@ mode would write CRLF there). Decoding git output and agent files uses
 | Sweep candidate ids | Any id the sweep finder writes, used in file names as is | Only a plain name (letters, digits, `.`, `_`, `-`, never `..`) is kept; any other id gets its `S` number, with a warning |
 | Candidates without a file | Sort and group as `None` in the merge digest | Sort and group as `?`, which is what the digest prints for them |
 | `shard --shards 0` | Exit 0 with no candidates, a crash otherwise | Always refused (exit 2) |
+| `duplicate_of` in a comment file | Any other reported finding, so a mutual pair leaves the defect uncommented | Only a better-ranked finding that has its own comment; otherwise the template is used, with a warning |
 | Parse-error text | Python `json` messages inside `unreadable` warnings | serde_json messages |
 | Per-file patch | `git diff -- <path>`, read as a glob (`src/[id].tsx` matches `src/i.tsx`) | `:(literal)<path>` |
 | `scope` | One space-split string | Same on the command line (the recipe passes one string); pathspecs containing spaces are unsupported |

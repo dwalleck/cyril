@@ -31,6 +31,10 @@ GATHERED_AT = b"2026-01-01T00:00:00+00:00"
 DEVIATIONS = [
     # "Odd values in agent records": an absent line prints `?`, not Python's `None`.
     ("comments/brief-*.txt", rb"^(===== .*):None$", rb"\1:?"),
+    # ...and an absent file prints `?`, not `None`, wherever a location is shown.
+    ("comments/brief-*.txt", rb"^(===== \S+  \(rank \d+\)  )None:", rb"\1?:"),
+    ("comments.md", rb"^(## \d+\. )`None(:|`)", rb"\1`?\2"),
+    ("report.md", rb"`None(:\d+)?`", rb"`?\1"),
 ]
 
 
