@@ -8,19 +8,20 @@
 //! reports back through [`ReviewState::rx`]; the event loop only routes.
 
 use super::App;
-use cyril_core::review::authorization::RunAuthorization;
+use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
 use cyril_core::review::consent::PermissionConsent;
 use cyril_core::review::launch::{self, LaunchError, LaunchRequest, Prepared, ReadyRun};
-use cyril_core::review::policy::{Decision, PolicyScope, decide};
+use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide};
 use cyril_core::review::run_record::{RunRecord, RunRecordError};
 use cyril_core::review::summary::{RunEnding, summary};
 use cyril_core::review::{CrtoolPrefix, ShellDialect};
 use cyril_core::types::{
     BridgeCommand, PermissionOptionKind, PermissionRequest, PermissionResponse, SessionId,
-    WorkflowCommandOutcome, WorkflowCompletionStatus, WorkflowId, WorkflowOp, WorkflowRunTarget,
+    WorkflowCommandOutcome, WorkflowCompletionStatus, WorkflowId, WorkflowOp, WorkflowRunStatus,
+    WorkflowRunTarget,
 };
 use cyril_ui::traits::{ReviewCheck, ReviewForm};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -28,8 +29,6 @@ use tokio::sync::mpsc;
 
 /// The only target this slice offers: HEAD against its upstream or main.
 const TARGET: &str = "auto";
-/// Every denial of a run's requests, one per line, in its run directory.
-pub(super) const DENIED_LOG: &str = "denied.log";
 /// KAS loads agent files from a watcher (300 ms debounce, 1 s rechecks for a
 /// directory it saw appear), so a freshly installed agent is not registered
 /// at once. Wait this long before creating the workflow, and double it per
@@ -47,9 +46,10 @@ pub(super) struct ReviewState {
     home: Option<PathBuf>,
     agent_load_delay: Duration,
     launch: Option<Launch>,
-    /// The latest run. Kept after it ends so its late requests are denied
-    /// and logged rather than falling through to an ordinary prompt.
-    run: Option<ArmedRun>,
+    /// Every run this process armed, live or ended. An ended run is kept so
+    /// its late requests are denied and logged rather than falling through
+    /// to an ordinary prompt — even after a newer review has started.
+    runs: HashMap<WorkflowId, ArmedRun>,
     tx: mpsc::UnboundedSender<ReviewTask>,
     pub(super) rx: mpsc::UnboundedReceiver<ReviewTask>,
 }
@@ -64,6 +64,7 @@ struct Launch {
 enum Stage {
     /// The form is open.
     Form,
+    /// Enter was pressed; the blocking launch steps are running.
     Preparing,
     /// Waiting for KAS to load the review agents before `workflow/new`.
     Loading {
@@ -102,6 +103,8 @@ pub(super) enum ReviewTask {
     Finished(String),
     /// The agent-load wait is over: send `workflow/new`.
     SendNew,
+    /// Blocking work panicked; whatever it was part of is abandoned.
+    Crashed(String),
 }
 
 impl ReviewState {
@@ -116,7 +119,7 @@ impl ReviewState {
             home: launch::node_home(),
             agent_load_delay: AGENT_LOAD_DELAY,
             launch: None,
-            run: None,
+            runs: HashMap::new(),
             tx,
             rx,
         }
@@ -127,6 +130,12 @@ impl ReviewState {
         self.prefix = Ok(prefix);
         self.home = Some(home);
         self.agent_load_delay = Duration::from_millis(10);
+    }
+
+    /// Let any pending agent-load wait fire.
+    #[cfg(test)]
+    pub(super) async fn flush_delays_for_tests(&self) {
+        tokio::time::sleep(self.agent_load_delay * 4).await;
     }
 
     /// Deliver `task` on `rx` after `delay`.
@@ -141,10 +150,17 @@ impl ReviewState {
     }
 
     /// Run `work` off the event loop; its result, if any, comes back on `rx`.
-    fn spawn(&self, work: impl FnOnce() -> Option<ReviewTask> + Send + 'static) {
+    /// A panic comes back as [`ReviewTask::Crashed`], so nothing waits on a
+    /// result that will never arrive.
+    pub(super) fn spawn(&self, work: impl FnOnce() -> Option<ReviewTask> + Send + 'static) {
         let tx = self.tx.clone();
-        tokio::task::spawn_blocking(move || {
-            if let Some(task) = work()
+        let blocking = tokio::task::spawn_blocking(work);
+        tokio::spawn(async move {
+            let task = match blocking.await {
+                Ok(task) => task,
+                Err(error) => Some(ReviewTask::Crashed(error.to_string())),
+            };
+            if let Some(task) = task
                 && tx.send(task).is_err()
             {
                 tracing::debug!("review result dropped: the app is gone");
@@ -152,22 +168,22 @@ impl ReviewState {
         });
     }
 
-    fn live_run(&self) -> Option<&WorkflowId> {
-        self.run
-            .as_ref()
-            .filter(|run| run.authorization.is_live())
-            .map(|run| run.authorization.workflow_id())
+    /// The armed or paused run, if any: one review at a time.
+    fn live_run(&self) -> Option<&ArmedRun> {
+        self.runs.values().find(|run| run.authorization.is_live())
     }
 
     fn run_for(&mut self, workflow_id: &WorkflowId) -> Option<&mut ArmedRun> {
-        self.run
-            .as_mut()
-            .filter(|run| run.authorization.workflow_id() == workflow_id)
+        self.runs.get_mut(workflow_id)
     }
 
-    /// Disarm the live run, if any; it keeps denying late requests.
+    /// Disarm every live run; each keeps denying late requests.
     pub(super) fn disarm(&mut self, why: &str) {
-        if let Some(run) = self.run.as_mut().filter(|run| run.authorization.is_live()) {
+        for run in self
+            .runs
+            .values_mut()
+            .filter(|run| run.authorization.is_live())
+        {
             tracing::info!(workflow_id = %run.authorization.workflow_id(), why, "review: disarmed");
             run.authorization.disarm();
         }
@@ -177,8 +193,13 @@ impl ReviewState {
 impl App {
     /// `/review`: open the consent form and count the files off-loop.
     pub(super) fn open_review(&mut self) {
-        if let Some(id) = self.review.live_run() {
-            let text = format!("review: {id} is still running — /workflow status {id}");
+        if let Some(run) = self.review.live_run() {
+            let id = run.authorization.workflow_id();
+            let text = if run.authorization.state() == AuthorizationState::Paused {
+                format!("review: {id} is paused — /workflow resume {id} continues it")
+            } else {
+                format!("review: {id} is still running — /workflow status {id}")
+            };
             self.ui_state.add_system_message(text);
             return;
         }
@@ -214,23 +235,24 @@ impl App {
         });
     }
 
-    /// Esc backs out with no side effects (ignored once the launch is under
-    /// way); Enter confirms once the count is known; every other key is
-    /// consumed so nothing reaches the chat behind the form.
+    /// Esc backs out: before Enter with no side effects, after it by
+    /// abandoning the launch (whatever the launch steps already wrote stays).
+    /// Enter confirms once the count is known; every other key is consumed so
+    /// nothing reaches the chat behind the form.
     pub(super) fn handle_review_key(&mut self, key: crossterm::event::KeyEvent) {
         use crossterm::event::KeyCode;
         let Some(form) = self.ui_state.review_form_mut() else {
             return;
         };
-        if form.busy {
-            return;
-        }
         match key.code {
+            KeyCode::Esc if form.busy => self.abandon_launch(
+                "review: abandoned — anything already written stays under .code-review/".to_owned(),
+            ),
             KeyCode::Esc => {
                 self.ui_state.close_review_form();
                 self.review.launch = None;
             }
-            KeyCode::Enter if form.file_count.is_some() => self.confirm_review(),
+            KeyCode::Enter if !form.busy && form.file_count.is_some() => self.confirm_review(),
             _ => {}
         }
     }
@@ -310,7 +332,7 @@ impl App {
                                 ..launch
                             });
                         } else {
-                            self.send_new(launch, ready, 0).await;
+                            self.send_new(launch.target, launch.scope, ready, 0).await;
                         }
                     }
                 }
@@ -372,19 +394,28 @@ impl App {
                 };
                 match launch.stage {
                     Stage::Loading { ready, retries } => {
-                        let launch = Launch {
-                            stage: Stage::Preparing,
-                            ..launch
-                        };
-                        self.send_new(launch, ready, retries).await;
+                        self.send_new(launch.target, launch.scope, ready, retries)
+                            .await;
                     }
                     stage => self.review.launch = Some(Launch { stage, ..launch }),
+                }
+            }
+            ReviewTask::Crashed(error) => {
+                tracing::error!(%error, "review: blocking work panicked");
+                if self.review.launch.is_some() {
+                    self.abandon_launch(format!("review: internal error — {error}"));
                 }
             }
         }
     }
 
-    async fn send_new(&mut self, launch: Launch, ready: ReadyRun, retries: u32) {
+    async fn send_new(
+        &mut self,
+        target: String,
+        scope: Vec<String>,
+        ready: ReadyRun,
+        retries: u32,
+    ) {
         let Some(session_id) = self.session.id().cloned() else {
             self.ui_state
                 .add_system_message("review: no active session — nothing was started".to_owned());
@@ -403,8 +434,9 @@ impl App {
             return;
         }
         self.review.launch = Some(Launch {
+            target,
+            scope,
             stage: Stage::Minting { ready, retries },
-            ..launch
         });
     }
 
@@ -430,8 +462,8 @@ impl App {
                     self.review.launch = None;
                     let report = self
                         .review
-                        .run
-                        .as_ref()
+                        .runs
+                        .get(workflow_id)
                         .map(|run| run.run_dir.join("report.md"));
                     self.ui_state.add_system_message(format!(
                         "review: {workflow_id} is running — /workflow status {workflow_id} \
@@ -457,8 +489,18 @@ impl App {
                 }
             }
             WorkflowCommandOutcome::Cancelled { workflow_id, .. } => {
-                if self.review.live_run() == Some(workflow_id) {
-                    self.review.disarm("cancelled");
+                if let Some(run) = self.review.run_for(workflow_id)
+                    && run.authorization.is_live()
+                {
+                    tracing::info!(%workflow_id, "review: disarmed (cancelled)");
+                    run.authorization.disarm();
+                }
+            }
+            WorkflowCommandOutcome::Resumed { workflow_id, .. } => {
+                if let Some(run) = self.review.run_for(workflow_id)
+                    && run.authorization.state() == AuthorizationState::Paused
+                {
+                    run.authorization.rearm();
                 }
             }
             _ => {}
@@ -527,11 +569,14 @@ impl App {
             target: launch.target.clone(),
             scope: launch.scope.clone(),
         };
-        self.review.run = Some(ArmedRun {
-            authorization: RunAuthorization::arm(workflow_id.clone(), scope),
-            run_dir: ready.run_dir.clone(),
-            sessions: HashSet::new(),
-        });
+        self.review.runs.insert(
+            workflow_id.clone(),
+            ArmedRun {
+                authorization: RunAuthorization::arm(workflow_id.clone(), scope),
+                run_dir: ready.run_dir.clone(),
+                sessions: HashSet::new(),
+            },
+        );
         self.review.launch = Some(Launch {
             stage: Stage::Recording(workflow_id.clone()),
             ..launch
@@ -562,8 +607,8 @@ impl App {
         self.ui_state.add_system_message(message);
     }
 
-    /// Remember the sessions the tracker attributes to the review's run;
-    /// called around every lifecycle frame of that run.
+    /// Remember the sessions the tracker attributes to a review run; called
+    /// around every lifecycle frame and fetched snapshot of that run.
     pub(super) fn remember_review_sessions(&mut self, workflow_id: &WorkflowId) {
         let Some(run) = self.review.run_for(workflow_id) else {
             return;
@@ -588,6 +633,17 @@ impl App {
         let Some(run) = self.review.run_for(workflow_id) else {
             return;
         };
+        // Lifecycle frames and fetched snapshots both report endings; act on
+        // the first only.
+        let fresh = match status {
+            WorkflowCompletionStatus::Paused => {
+                run.authorization.state() == AuthorizationState::Armed
+            }
+            _ => run.authorization.is_live(),
+        };
+        if !fresh {
+            return;
+        }
         tracing::info!(
             %workflow_id,
             ?status,
@@ -598,7 +654,9 @@ impl App {
         let ending = match status {
             WorkflowCompletionStatus::Paused => {
                 run.authorization.pause();
-                RunEnding::Paused
+                RunEnding::Paused {
+                    workflow_id: workflow_id.to_string(),
+                }
             }
             WorkflowCompletionStatus::Failed => RunEnding::Failed,
             WorkflowCompletionStatus::Aborted => RunEnding::Aborted,
@@ -626,11 +684,47 @@ impl App {
                 return;
             }
         };
-        if !matches!(ending, RunEnding::Paused) {
+        if !matches!(ending, RunEnding::Paused { .. }) {
             run.authorization.disarm();
         }
         let text = summary(&ending, &run.run_dir, run.authorization.denials());
         self.ui_state.add_system_message(text);
+    }
+
+    #[cfg(test)]
+    pub(super) fn review_run_dir_for_tests(&self, workflow_id: &WorkflowId) -> Option<PathBuf> {
+        self.review
+            .runs
+            .get(workflow_id)
+            .map(|run| run.run_dir.clone())
+    }
+
+    /// The agent connection is gone: no run can finish or ask again, so
+    /// disarm everything and end any launch in flight.
+    pub(super) fn review_agent_gone(&mut self) {
+        self.review.disarm("the agent disconnected");
+        if self.review.launch.is_some() {
+            self.abandon_launch(
+                "review: the agent disconnected; the launch was abandoned".to_owned(),
+            );
+        }
+    }
+
+    /// A fetched snapshot that shows a review run paused or ended reports it
+    /// like `run_complete` would: some endings only ever arrive that way.
+    pub(super) fn review_snapshot_status(
+        &mut self,
+        workflow_id: &WorkflowId,
+        status: WorkflowRunStatus,
+    ) {
+        let completion = match status {
+            WorkflowRunStatus::Running => return,
+            WorkflowRunStatus::Paused => WorkflowCompletionStatus::Paused,
+            WorkflowRunStatus::Completed => WorkflowCompletionStatus::Completed,
+            WorkflowRunStatus::Failed => WorkflowCompletionStatus::Failed,
+            WorkflowRunStatus::Aborted => WorkflowCompletionStatus::Aborted,
+        };
+        self.review_run_completed(workflow_id, completion);
     }
 
     /// Decide a request from the armed run's step sessions; hand back every
@@ -644,9 +738,9 @@ impl App {
             Some((owner, _)) => owner.clone(),
             None => match self
                 .review
-                .run
-                .as_ref()
-                .filter(|run| run.sessions.contains(&request.session_id))
+                .runs
+                .values()
+                .find(|run| run.sessions.contains(&request.session_id))
             {
                 Some(run) => run.authorization.workflow_id().clone(),
                 None => return Some(request),

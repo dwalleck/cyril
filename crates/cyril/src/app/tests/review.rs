@@ -118,21 +118,15 @@ fn run_id() -> WorkflowId {
     WorkflowId::try_from(RUN.to_owned()).expect("valid id")
 }
 
-/// `run_complete` for [`RUN`] with the claimed `alpha` step.
-fn completion(status: WorkflowRunStatus) -> RoutedNotification {
+/// [`RUN`]'s state with the `alpha` step, at `status`.
+fn final_snapshot(status: WorkflowRunStatus) -> WorkflowSnapshot {
     let node_status = match status {
         WorkflowRunStatus::Paused => WorkflowNodeStatus::Paused,
         WorkflowRunStatus::Completed => WorkflowNodeStatus::Completed,
         WorkflowRunStatus::Failed => WorkflowNodeStatus::Failed,
         _ => WorkflowNodeStatus::Aborted,
     };
-    let completion_status = match status {
-        WorkflowRunStatus::Paused => WorkflowCompletionStatus::Paused,
-        WorkflowRunStatus::Completed => WorkflowCompletionStatus::Completed,
-        WorkflowRunStatus::Failed => WorkflowCompletionStatus::Failed,
-        _ => WorkflowCompletionStatus::Aborted,
-    };
-    let snapshot = WorkflowSnapshot::new(
+    WorkflowSnapshot::new(
         run_id(),
         format!("recipe-{RUN}"),
         status,
@@ -156,9 +150,19 @@ fn completion(status: WorkflowRunStatus) -> RoutedNotification {
             )],
         ),
         WorkflowSnapshotMetadata::new("created".to_owned(), 1),
-    );
-    let completed =
-        WorkflowRunCompleted::new(run_id(), completion_status, snapshot).expect("valid completion");
+    )
+}
+
+/// `run_complete` for [`RUN`] with the claimed `alpha` step.
+fn completion(status: WorkflowRunStatus) -> RoutedNotification {
+    let completion_status = match status {
+        WorkflowRunStatus::Paused => WorkflowCompletionStatus::Paused,
+        WorkflowRunStatus::Completed => WorkflowCompletionStatus::Completed,
+        WorkflowRunStatus::Failed => WorkflowCompletionStatus::Failed,
+        _ => WorkflowCompletionStatus::Aborted,
+    };
+    let completed = WorkflowRunCompleted::new(run_id(), completion_status, final_snapshot(status))
+        .expect("valid completion");
     RoutedNotification::global(Notification::Workflow(Box::new(
         WorkflowEvent::RunCompleted(completed),
     )))
@@ -506,7 +510,10 @@ async fn pause_stays_armed_and_failure_disarms() {
     app.handle_notification(completion(WorkflowRunStatus::Paused));
     assert_eq!(
         last_message(&app),
-        format!("review paused — /review resume ({})", run_dir.display())
+        format!(
+            "review paused — /workflow resume {RUN} continues it ({})",
+            run_dir.display()
+        )
     );
     let (request, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
     decide(&mut app, request).await;
@@ -516,6 +523,16 @@ async fn pause_stays_armed_and_failure_disarms() {
         Some("AllowOnce"),
         "a paused run keeps its authorization"
     );
+    app.handle_command_result(CommandResult::review());
+    assert_eq!(
+        last_message(&app),
+        format!("review: {RUN} is paused — /workflow resume {RUN} continues it")
+    );
+    // A resume re-arms it; a repeated pause report is not announced twice.
+    app.handle_notification(outcome(WorkflowCommandOutcome::Resumed {
+        workflow_id: run_id(),
+        status: Some(WorkflowRunStatus::Running),
+    }));
     app.handle_command_result(CommandResult::review());
     assert!(last_message(&app).contains("is still running"));
 
@@ -704,4 +721,133 @@ async fn unloaded_agents_retry_workflow_new_then_report() {
     assert!(rx.try_recv().is_err(), "no fifth attempt");
     app.handle_command_result(CommandResult::review());
     assert!(app.ui_state.review_form().is_some(), "the launch is over");
+}
+
+/// Some endings only arrive as a fetched snapshot (`/workflow status`,
+/// `attach`): they end the run like `run_complete`, once.
+#[tokio::test]
+async fn a_terminal_snapshot_ends_the_run_once() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    let run_dir = launch(&mut app, &mut rx, &repo).await;
+    let ended = |app: &App| {
+        app.ui_state
+            .messages()
+            .iter()
+            .filter(|message| {
+                matches!(message.kind(), ChatMessageKind::System(text)
+                    if text.starts_with("review aborted"))
+            })
+            .count()
+    };
+    app.handle_notification(RoutedNotification::global(Notification::WorkflowSnapshot(
+        Box::new(final_snapshot(WorkflowRunStatus::Aborted)),
+    )));
+    assert_eq!(
+        last_message(&app),
+        format!("review aborted — {}", run_dir.display())
+    );
+    app.handle_notification(completion(WorkflowRunStatus::Aborted));
+    assert_eq!(
+        ended(&app),
+        1,
+        "the run_complete after it is not a second ending"
+    );
+    app.handle_command_result(CommandResult::review());
+    assert!(
+        app.ui_state.review_form().is_some(),
+        "the run no longer blocks /review"
+    );
+}
+
+/// A dead agent can neither finish the run nor answer the launch, so both
+/// end; the run's late requests are still denied.
+#[tokio::test]
+async fn a_disconnect_disarms_the_run() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    launch(&mut app, &mut rx, &repo).await;
+    app.handle_notification(RoutedNotification::global(
+        Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        },
+    ));
+    let (late, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, late).await;
+    assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
+    app.handle_command_result(CommandResult::review());
+    assert!(app.ui_state.review_form().is_some());
+}
+
+/// A newer review does not forget an older run: its stragglers stay denied.
+#[tokio::test]
+async fn an_older_runs_late_requests_stay_denied() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    launch(&mut app, &mut rx, &repo).await;
+    fs::write(
+        app.review_run_dir_for_tests(&run_id())
+            .expect("run A is known")
+            .join("findings.json"),
+        "[]",
+    )
+    .expect("findings.json");
+    app.handle_notification(completion(WorkflowRunStatus::Completed));
+    settle(&mut app).await;
+
+    // Run B is minted and armed.
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    assert!(next_new(&mut app, &mut rx).await.is_ok(), "New for run B");
+    app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
+        workflow_id: WorkflowId::try_from("wf_second".to_owned()).expect("id"),
+        name: "cyril-review".into(),
+    }));
+    settle(&mut app).await;
+
+    let (late, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, late).await;
+    assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
+}
+
+/// Esc after Enter abandons the launch; the launch steps' late result is
+/// dropped rather than creating a workflow.
+#[tokio::test]
+async fn esc_while_preparing_abandons_the_launch() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    assert!(app.ui_state.review_form().is_none());
+    assert!(last_message(&app).starts_with("review: abandoned"));
+    settle(&mut app).await;
+    app.review.flush_delays_for_tests().await;
+    assert!(
+        rx.try_recv().is_err(),
+        "no workflow after an abandoned launch"
+    );
+    app.handle_command_result(CommandResult::review());
+    assert!(app.ui_state.review_form().is_some());
+}
+
+/// Blocking work that panics reports back instead of leaving the form
+/// waiting forever.
+#[tokio::test]
+async fn a_panicking_launch_step_is_reported() {
+    let repo = repo(true);
+    let (mut app, _rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    app.review.spawn(|| panic!("boom"));
+    settle(&mut app).await;
+    assert!(app.ui_state.review_form().is_none());
+    assert!(
+        last_message(&app).starts_with("review: internal error"),
+        "{}",
+        last_message(&app)
+    );
 }

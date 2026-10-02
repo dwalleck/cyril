@@ -143,6 +143,23 @@ fn a_ready_run_installs_assets_gathers_and_ignores_itself() -> TestResult {
     Ok(())
 }
 
+/// Another tool (the Python driver) may have made `.code-review` without an
+/// ignore file; the runs must still stay out of `git status`.
+#[test]
+fn an_existing_runs_directory_still_ignores_itself() -> TestResult {
+    let fixture = fixture()?;
+    fs::write(fixture.repo.join("src/a.rs"), "fn a() { todo!() }\n")?;
+    fs::create_dir(fixture.repo.join(RUNS_DIR))?;
+    let Prepared::Ready(_) = prepare(&request(&fixture)?)? else {
+        return Err("a changed file must produce a run".into());
+    };
+    assert_eq!(
+        fs::read_to_string(fixture.repo.join(RUNS_DIR).join(".gitignore"))?,
+        "*\n"
+    );
+    Ok(())
+}
+
 #[test]
 fn reserved_agent_names_refuse_before_any_install() -> TestResult {
     let fixture = fixture()?;

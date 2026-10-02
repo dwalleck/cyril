@@ -16,7 +16,10 @@ pub enum RunEnding {
     Completed(Result<Vec<Finding>, FindingsError>),
     Failed,
     Aborted,
-    Paused,
+    /// Still armed; `/workflow resume <id>` continues it.
+    Paused {
+        workflow_id: String,
+    },
 }
 
 /// The completion message for a run ending in `run_dir`.
@@ -25,7 +28,9 @@ pub fn summary(ending: &RunEnding, run_dir: &Path, denials: &[String]) -> String
     let findings = match ending {
         RunEnding::Failed => return format!("review failed — {dir}"),
         RunEnding::Aborted => return format!("review aborted — {dir}"),
-        RunEnding::Paused => return format!("review paused — /review resume ({dir})"),
+        RunEnding::Paused { workflow_id } => {
+            return format!("review paused — /workflow resume {workflow_id} continues it ({dir})");
+        }
         RunEnding::Completed(Err(error)) => {
             return format!("review completed, but {error} — {dir}");
         }
@@ -151,9 +156,15 @@ mod tests {
             summary(&RunEnding::Aborted, dir, &[]),
             format!("review aborted — {}", dir.display())
         );
+        let paused = RunEnding::Paused {
+            workflow_id: "wf-1".to_owned(),
+        };
         assert_eq!(
-            summary(&RunEnding::Paused, dir, &[]),
-            format!("review paused — /review resume ({})", dir.display())
+            summary(&paused, dir, &[]),
+            format!(
+                "review paused — /workflow resume wf-1 continues it ({})",
+                dir.display()
+            )
         );
         let empty = summary(&RunEnding::Completed(Ok(Vec::new())), dir, &[]);
         assert!(empty.starts_with("review complete: no findings\nreport: "));

@@ -1174,7 +1174,8 @@ impl App {
                 outcome @ (WorkflowCommandOutcome::Minted { .. }
                 | WorkflowCommandOutcome::Invoked { .. }
                 | WorkflowCommandOutcome::Failed { .. }
-                | WorkflowCommandOutcome::Cancelled { .. }),
+                | WorkflowCommandOutcome::Cancelled { .. }
+                | WorkflowCommandOutcome::Resumed { .. }),
             ) => Some(outcome.clone()),
             _ => None,
         };
@@ -1182,6 +1183,9 @@ impl App {
             && self.absorb_review_retry(outcome)
         {
             return Vec::new();
+        }
+        if matches!(routed.notification, Notification::BridgeDisconnected { .. }) {
+            self.review_agent_gone();
         }
         let commands = self.handle_notification_inner(routed, true);
         if let Some(outcome) = review_outcome {
@@ -1376,12 +1380,16 @@ impl App {
         // node paths) leaves the tracker unchanged and is warning-only.
         if let Notification::WorkflowSnapshot(snapshot) = notification {
             let workflow_id = snapshot.workflow_id().as_str().to_owned();
+            let snapshot_run = (snapshot.workflow_id().clone(), snapshot.status());
+            self.remember_review_sessions(&snapshot_run.0);
             match self.workflow_tracker.apply_snapshot(*snapshot) {
                 Ok(changed) => {
+                    self.remember_review_sessions(&snapshot_run.0);
                     if changed {
                         // Snapshot-borne node state can carry session claims
                         // (cyril-jxfu C5) — same sweep as lifecycle frames.
                         self.reparent_claimed_subagent_streams();
+                        self.review_snapshot_status(&snapshot_run.0, snapshot_run.1);
                     }
                 }
                 Err(error) => {

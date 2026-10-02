@@ -1,5 +1,5 @@
 //! `<run_dir>/run.json`: the identity of a review run, written once the
-//! workflow exists and before it is invoked, read again by `/review resume`.
+//! workflow exists and before it is invoked; resuming a run reads it again.
 
 use serde::{Deserialize, Serialize};
 use std::fs;

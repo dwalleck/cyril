@@ -8,7 +8,7 @@ use cyril_review::{ASSETS, AssetKind, ReviewError, ReviewRun, gather, touched_fi
 use serde_json::{Map, Value};
 use std::fs;
 use std::hash::{BuildHasher, Hasher};
-use std::io;
+use std::io::{self, Write};
 use std::path::{Component, Path, PathBuf};
 
 /// The repository-local directory every run directory lives under.
@@ -228,18 +228,27 @@ pub fn install_assets(home: &Path) -> Result<Installed, LaunchError> {
     })
 }
 
-/// A new `.code-review/<YYYYMMDD-HHMMSS>-<4hex>/`. Creating `.code-review`
-/// also writes its self-ignoring `.gitignore`; the repository's own ignore
+/// A new `.code-review/<YYYYMMDD-HHMMSS>-<4hex>/`, under a `.code-review`
+/// that ignores itself (`.gitignore` = `*`); the repository's own ignore
 /// files are never touched.
 pub fn create_run_dir(workspace: &Path) -> Result<PathBuf, LaunchError> {
     let base = workspace.join(RUNS_DIR);
     match fs::create_dir(&base) {
-        Ok(()) => {
-            let ignore = base.join(".gitignore");
-            fs::write(&ignore, "*\n").map_err(io_error("write", &ignore))?;
-        }
+        Ok(()) => {}
         Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
         Err(error) => return Err(io_error("create", &base)(error)),
+    }
+    // Created when missing (another tool may have made the directory), never
+    // rewritten: an existing ignore file is the user's.
+    let ignore = base.join(".gitignore");
+    match fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&ignore)
+    {
+        Ok(mut file) => file.write_all(b"*\n").map_err(io_error("write", &ignore))?,
+        Err(error) if error.kind() == io::ErrorKind::AlreadyExists => {}
+        Err(error) => return Err(io_error("create", &ignore)(error)),
     }
     let now = time::OffsetDateTime::now_utc();
     let stamp = format!(

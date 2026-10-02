@@ -13,6 +13,12 @@ pub const STEP_SUBCOMMANDS: [&str; 8] = [
     "gather", "merge", "shard", "facts", "ballots", "collate", "finalize", "comments",
 ];
 
+/// Files in the run directory that cyril writes for itself — the run's
+/// identity and the policy's audit log. Steps may not touch them.
+pub const PROTECTED_RUN_FILES: [&str; 2] = [super::run_record::RUN_RECORD, DENIED_LOG];
+/// Every denial of a run's requests, one per line, in its run directory.
+pub const DENIED_LOG: &str = "denied.log";
+
 /// Quotes PowerShell reads as `"`: a value holding one ends its argument early.
 const SMART_QUOTES: [char; 3] = ['\u{201c}', '\u{201d}', '\u{201e}'];
 
@@ -73,30 +79,49 @@ impl Decision {
 
 /// Decide one permission request of an armed run's step session.
 pub fn decide(consent: &PermissionConsent, scope: &PolicyScope) -> Decision {
-    let resource = consent.resource().unwrap_or_default();
+    let resource = consent
+        .resource()
+        .filter(|resource| !resource.trim().is_empty());
     let base = consent.workspace_root().unwrap_or(&scope.workspace_root);
-    let full = || base.join(resource);
-    let tool = consent.tool_id().unwrap_or_default();
+    let tool = consent.tool_id();
     match consent.capability() {
         // KAS asks an implicit fs_read for directory listings and for a shell
         // command's cwd; reading the workspace is the whole job.
-        Capability::FsRead => Decision::new(
-            under(&full(), &scope.workspace_root),
-            format!("read {resource}"),
-        ),
-        Capability::FsWrite | Capability::StrReplace => {
-            Decision::new(under(&full(), &scope.run_dir), format!("write {resource}"))
-        }
-        _ if matches!(tool, "fs_write" | "str_replace") => {
-            Decision::new(under(&full(), &scope.run_dir), format!("write {resource}"))
-        }
+        Capability::FsRead => match resource {
+            Some(resource) => Decision::new(
+                under(&base.join(resource), &scope.workspace_root),
+                format!("read {resource}"),
+            ),
+            None => Decision::new(false, "read request names no path".to_owned()),
+        },
+        Capability::FsWrite | Capability::StrReplace => write(resource, base, scope),
+        _ if matches!(tool, Some("fs_write" | "str_replace")) => write(resource, base, scope),
         Capability::Shell => shell(consent, scope),
-        _ if tool == "execute_bash" => shell(consent, scope),
+        _ if tool == Some("execute_bash") => shell(consent, scope),
         Capability::Unrecognized(name) => Decision::new(
             false,
-            format!("unhandled capability {name:?} {}", truncate(resource, 120)),
+            format!(
+                "unhandled capability {name:?} {}",
+                truncate(resource.unwrap_or("(no resource)"), 120)
+            ),
         ),
     }
+}
+
+/// Writes land only under the run directory, and never on the files cyril
+/// keeps there for itself.
+fn write(resource: Option<&str>, base: &Path, scope: &PolicyScope) -> Decision {
+    let Some(resource) = resource else {
+        return Decision::new(false, "write request names no path".to_owned());
+    };
+    let full = base.join(resource);
+    if PROTECTED_RUN_FILES
+        .iter()
+        .any(|name| under(&full, &scope.run_dir.join(name)))
+    {
+        return Decision::new(false, format!("write {resource} (the run's own record)"));
+    }
+    Decision::new(under(&full, &scope.run_dir), format!("write {resource}"))
 }
 
 /// EVERY place the request carries a command must hold an allowed call:

@@ -264,6 +264,43 @@
         "capability": "web_fetch",
         "resource": "https://example.invalid"
       }
+    },
+    {
+      "name": "a read that names no path",
+      "allow": false,
+      "request": {
+        "capability": "fs_read",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "a write that names no path",
+      "allow": false,
+      "request": {
+        "capability": "fs_write",
+        "tool_id": "fs_write",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "a write over the run record",
+      "allow": false,
+      "request": {
+        "capability": "fs_write",
+        "tool_id": "fs_write",
+        "resource": "<RUN>/run.json",
+        "workspace_root": "<WS>"
+      }
+    },
+    {
+      "name": "an edit of the denial log",
+      "allow": false,
+      "request": {
+        "capability": "str_replace",
+        "tool_id": "str_replace",
+        "resource": "<RUN>/denied.log",
+        "workspace_root": "<WS>"
+      }
     }
   ]
 }

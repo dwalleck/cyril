@@ -168,6 +168,11 @@ def crtool_call_problem(cmd, ws, rundir, crtool):
     return None
 
 
+# Files in the run directory that cyril writes for itself: run.json (the run's
+# identity) and denied.log (the policy's audit trail). Steps may not touch them.
+PROTECTED_RUN_FILES = ("run.json", "denied.log")
+
+
 def decide(p, ws, rundir, crtool, allow_caps=()):
     """(allow, why) for one session/request_permission. Reads inside the workspace,
     writes only under the run directory, shell only for this run's crtool calls."""
@@ -181,10 +186,17 @@ def decide(p, ws, rundir, crtool, allow_caps=()):
         # KAS asks an implicit fs_read consent for directory listings and for a
         # shell command's cwd (nested under the run_command call: denying it
         # rejects the command). Reading the workspace is the whole job.
+        if not res.strip():
+            return False, "read request names no path"
         full = res if os.path.isabs(res) else os.path.join(consent.get("workspaceRoot") or ws, res)
         return under(full, ws), f"read {res}"
     if cap in ("fs_write", "str_replace") or kiro.get("toolId") in ("fs_write", "str_replace"):
+        if not res.strip():
+            return False, "write request names no path"
         full = res if os.path.isabs(res) else os.path.join(consent.get("workspaceRoot") or ws, res)
+        # cyril's own record of the run and its audit log are never step output.
+        if any(under(full, os.path.join(rundir, name)) for name in PROTECTED_RUN_FILES):
+            return False, f"write {res} (the run's own record)"
         return under(full, rundir), f"write {res}"
     if "execute_bash" in (cap, kiro.get("toolId")) or cap in ("shell", "execute"):
         tc = p.get("toolCall") or {}

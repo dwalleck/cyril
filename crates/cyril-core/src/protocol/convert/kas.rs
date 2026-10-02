@@ -18,14 +18,6 @@ use crate::types::{
 pub(crate) mod powers;
 pub(crate) mod workflow;
 
-/// Attach KAS rejection feedback to the response-level metadata bag.
-///
-/// The generic permission converter owns the ACP outcome and dispatches here
-/// only for a [`crate::types::PermissionResponse::RejectWithReason`] candidate.
-/// It keeps the KAS key names and all eligibility checks in the KAS wire owner:
-/// the bound engine must be KAS, the offered option ID must be exact and its
-/// kind must be `reject_once`, and the reason must contain non-whitespace.
-/// The accepted reason is moved into the JSON value unchanged.
 /// `_meta.kiro.{toolId, command, consent{capability, resource, workspaceRoot}}`
 /// of a KAS `session/request_permission`, with the commands the tool call's
 /// `rawInput` carries. `None` when the request has no `_meta.kiro`.
@@ -65,6 +57,14 @@ pub(crate) fn permission_consent(
     ))
 }
 
+/// Attach KAS rejection feedback to the response-level metadata bag.
+///
+/// The generic permission converter owns the ACP outcome and dispatches here
+/// only for a [`crate::types::PermissionResponse::RejectWithReason`] candidate.
+/// It keeps the KAS key names and all eligibility checks in the KAS wire owner:
+/// the bound engine must be KAS, the offered option ID must be exact and its
+/// kind must be `reject_once`, and the reason must contain non-whitespace.
+/// The accepted reason is moved into the JSON value unchanged.
 pub(crate) fn attach_rejection_metadata(
     response: acp::RequestPermissionResponse,
     args: &acp::RequestPermissionRequest,

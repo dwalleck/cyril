@@ -1720,7 +1720,6 @@ impl UiState {
         !self.approvals.is_empty()
     }
 
-    /// Check if there is an active picker dialog.
     /// Open the `/review` consent form.
     pub fn show_review_form(&mut self, form: crate::traits::ReviewForm) {
         self.review_form = Some(form);
@@ -1736,6 +1735,7 @@ impl UiState {
         self.review_form.take().is_some()
     }
 
+    /// Check if there is an active picker dialog.
     pub fn has_picker(&self) -> bool {
         self.picker.is_some()
     }
