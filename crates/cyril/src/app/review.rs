@@ -11,8 +11,8 @@ mod resume;
 
 use super::App;
 use cyril_core::review::authorization::{AuthorizationState, RunAuthorization};
-use cyril_core::review::config::scope_problem;
 use cyril_core::review::config::{CheckCommand, ReviewConfig};
+use cyril_core::review::config::{normalize_scope_path, scope_problem};
 use cyril_core::review::consent::PermissionConsent;
 use cyril_core::review::launch::{self, LaunchError, LaunchRequest, Prepared, ReadyRun};
 use cyril_core::review::policy::{DENIED_LOG, Decision, PolicyScope, decide, input_problem};
@@ -27,8 +27,8 @@ use cyril_core::types::{
     WorkflowRunTarget,
 };
 use cyril_review::{CheckResult, FindingsError, ReviewError, ReviewRun, read_findings, run_check};
-use cyril_ui::traits::{ReviewCheck, ReviewField, ReviewForm, TuiState};
-use std::collections::{HashMap, HashSet};
+use cyril_ui::traits::{ReviewCheck, ReviewField, ReviewForm};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::future::Future;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -97,6 +97,12 @@ struct Plan {
     /// Why the current target cannot be reviewed (a git error, a name the
     /// recipe would refuse); Enter is refused while set.
     target_problem: Option<String>,
+    /// The operator's own checkbox toggles; they outlive target changes.
+    overrides: BTreeMap<String, bool>,
+    /// A target change is being counted: Enter waits for the new count.
+    recount_pending: bool,
+    /// Why base mode is missing, when the branch list could not be read.
+    branch_note: Option<String>,
     /// The `[review]` settings the form showed: what consent covers.
     config: ReviewConfig,
 }
@@ -396,8 +402,16 @@ impl App {
                 recount: 0,
                 scope: Vec::new(),
                 touched: launch::Touched::default(),
-                preset: args.paths.clone(),
+                preset: args.paths.as_ref().map(|paths| {
+                    paths
+                        .iter()
+                        .map(|path| normalize_scope_path(path))
+                        .collect()
+                }),
                 target_problem: None,
+                overrides: BTreeMap::new(),
+                recount_pending: false,
+                branch_note: None,
                 config: ReviewConfig::default(),
             },
             stage: Stage::Opening,
@@ -453,8 +467,12 @@ impl App {
                 };
             }
             KeyCode::Char(' ') if form.focus == ReviewField::Paths => {
-                if let Some(choice) = form.paths.get_mut(form.path_cursor) {
-                    choice.checked = !choice.checked;
+                let Some(choice) = form.paths.get(form.path_cursor) else {
+                    return;
+                };
+                let toggled = (choice.path.clone(), !choice.checked);
+                if let Some(launch) = self.review.launch.as_mut() {
+                    launch.plan.overrides.insert(toggled.0, toggled.1);
                 }
                 self.refresh_scope();
             }
@@ -485,31 +503,55 @@ impl App {
         let Some(form) = self.ui_state.review_form_mut() else {
             return;
         };
+        let plan = &mut launch.plan;
+        let offered = scope::choices(
+            &plan.touched.files,
+            plan.preset.as_deref(),
+            &plan.overrides,
+            |path| scope_problem(path).is_none(),
+        );
+        // The cursor stays on the same path when the list changes.
+        let cursored = form
+            .paths
+            .get(form.path_cursor)
+            .map(|choice| choice.path.clone());
+        form.paths = offered.paths;
+        form.path_cursor = cursored
+            .and_then(|path| form.paths.iter().position(|choice| choice.path == path))
+            .unwrap_or_else(|| form.path_cursor.min(form.paths.len().saturating_sub(1)));
         // Nothing touched means nothing to choose: the whole repository, so
         // Enter reports "nothing to review" rather than an empty selection.
-        launch.plan.scope = if form.paths.is_empty() {
+        plan.scope = if form.paths.is_empty() {
             vec![".".to_owned()]
         } else {
             scope::selected(&form.paths)
         };
-        let touched = &launch.plan.touched;
-        form.file_count = Some(scope::count(&form.paths, &touched.files));
-        form.problem = launch.plan.target_problem.clone().or_else(|| {
-            launch
-                .plan
-                .scope
+        form.file_count =
+            (!plan.recount_pending).then(|| scope::count(&form.paths, &plan.touched.files));
+        form.problem = plan.target_problem.clone().or_else(|| {
+            plan.scope
                 .is_empty()
                 .then(|| "select at least one path".to_owned())
         });
-        let dirty = touched.uncommitted.iter().any(|file| {
-            launch
-                .plan
-                .scope
-                .iter()
-                .any(|path| scope::covers(path, file))
-        });
-        form.note =
-            (dirty && launch.plan.target.ends_at_head_commit()).then(|| DIRTY_NOTE.to_owned());
+        let dirty = plan
+            .touched
+            .uncommitted
+            .iter()
+            .any(|file| plan.scope.iter().any(|path| scope::covers(path, file)));
+        let notes: Vec<String> = [
+            (dirty && plan.target.ends_at_head_commit()).then(|| DIRTY_NOTE.to_owned()),
+            (!offered.unusable.is_empty()).then(|| {
+                format!(
+                    "not reviewable by path (spaces or shell characters): {}",
+                    offered.unusable.join(", ")
+                )
+            }),
+            plan.branch_note.clone(),
+        ]
+        .into_iter()
+        .flatten()
+        .collect();
+        form.note = (!notes.is_empty()).then(|| notes.join("; "));
     }
 
     /// The form's target changed. A target the recipe would refuse is shown
@@ -529,6 +571,7 @@ impl App {
         let (id, recount) = (launch.id, launch.plan.recount);
         let problem = input_problem("target", &target.spec());
         launch.plan.target_problem = problem.clone();
+        launch.plan.recount_pending = problem.is_none();
         if let Some(form) = self.ui_state.review_form_mut() {
             if let ReviewTarget::Base(base) = &target {
                 form.base_choice = Some(base.clone());
@@ -729,10 +772,10 @@ impl App {
                         if launch.plan.preset.is_none() {
                             launch.plan.preset.clone_from(&config.scope);
                         }
-                        let paths = scope::choices(&touched.files, launch.plan.preset.as_deref());
                         launch.plan.target = target.clone();
                         launch.plan.touched = touched;
                         launch.plan.target_problem = target_problem;
+                        launch.plan.branch_note = branch_note;
                         launch.plan.config = config;
                         launch.stage = Stage::Form;
                         if let Some(form) = self.ui_state.review_form_mut() {
@@ -740,31 +783,23 @@ impl App {
                                 form.base_choice = Some(base.clone());
                             }
                             form.target = target;
-                            form.paths = paths;
                             form.branches = branches;
                             form.check = check;
-                            if !form.fields().contains(&form.focus) {
-                                form.focus = ReviewField::Target;
-                            }
                         }
                         self.refresh_scope();
-                        if let (Some(note), Some(form)) =
-                            (branch_note, self.ui_state.review_form_mut())
-                            && form.note.is_none()
+                        if let Some(form) = self.ui_state.review_form_mut()
+                            && !form.fields().contains(&form.focus)
                         {
-                            form.note = Some(note);
+                            form.focus = ReviewField::Target;
                         }
                     }
                     Err(error) => self.abandon_launch(launch_message(&error)),
                 }
             }
             LaunchStep::RecountDue { recount } => {
-                let Some(launch) = self
-                    .review
-                    .launch
-                    .as_ref()
-                    .filter(|launch| launch.plan.recount == recount)
-                else {
+                let Some(launch) = self.review.launch.as_ref().filter(|launch| {
+                    launch.plan.recount == recount && matches!(launch.stage, Stage::Form)
+                }) else {
                     return;
                 };
                 let workspace = self.cwd.clone();
@@ -775,43 +810,25 @@ impl App {
                 });
             }
             LaunchStep::Recounted { recount, files } => {
-                let Some(launch) = self
-                    .review
-                    .launch
-                    .as_mut()
-                    .filter(|launch| launch.plan.recount == recount)
-                else {
+                // Only the latest count, and only while the form is open: a
+                // count landing after Enter must not change the scope.
+                let Some(launch) = self.review.launch.as_mut().filter(|launch| {
+                    launch.plan.recount == recount && matches!(launch.stage, Stage::Form)
+                }) else {
                     return;
                 };
+                launch.plan.recount_pending = false;
                 match files {
                     Ok(touched) => {
-                        // The form is open while the launch is in the form stage.
-                        let Some(previous) =
-                            self.ui_state.review_form().map(|form| form.paths.clone())
-                        else {
-                            return;
-                        };
-                        let paths = scope::rebuild(
-                            &previous,
-                            &touched.files,
-                            launch.plan.preset.as_deref(),
-                        );
                         launch.plan.touched = touched;
                         launch.plan.target_problem = None;
-                        if let Some(form) = self.ui_state.review_form_mut() {
-                            form.paths = paths;
-                            form.path_cursor =
-                                form.path_cursor.min(form.paths.len().saturating_sub(1));
-                        }
-                        self.refresh_scope();
                     }
                     Err(error) => {
+                        launch.plan.touched = launch::Touched::default();
                         launch.plan.target_problem = Some(error.to_string());
-                        if let Some(form) = self.ui_state.review_form_mut() {
-                            form.problem = Some(error.to_string());
-                        }
                     }
                 }
+                self.refresh_scope();
             }
             LaunchStep::Prepared(result) => {
                 let Some(launch) = self.review.launch.take() else {
@@ -1435,11 +1452,9 @@ fn open_launch(workspace: &Path, requested: Option<TargetArg>) -> Result<Opened,
         None | Some(TargetArg::Auto) => (ReviewTarget::Auto, None),
         Some(TargetArg::Uncommitted) => (ReviewTarget::Uncommitted, None),
         Some(TargetArg::HeadCommit) => (ReviewTarget::HeadCommit, None),
-        Some(TargetArg::Base(Some(base))) => {
-            let problem = (!branches.contains(&base))
-                .then(|| format!("there is no branch {base:?} to compare against"));
-            (ReviewTarget::Base(base), problem)
-        }
+        // Whether the branch exists is git's to say: the touched-files probe
+        // below reports it.
+        Some(TargetArg::Base(Some(base))) => (ReviewTarget::Base(base), None),
         Some(TargetArg::Base(None)) => match ReviewTarget::Auto.cycle(&branches, None, false) {
             base @ ReviewTarget::Base(_) => (base, None),
             _ => (

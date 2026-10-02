@@ -119,7 +119,7 @@ impl ReviewConfig {
                         if let Some(problem) = scope_problem(path) {
                             return Err(invalid(format!("`scope` {problem}")));
                         }
-                        paths.push(path.clone());
+                        paths.push(normalize_scope_path(path));
                     }
                     if paths.is_empty() {
                         return Err(invalid("`scope` must name at least one path"));
@@ -193,12 +193,31 @@ pub fn scope_problem(path: &str) -> Option<String> {
     if path.is_empty() || path.chars().any(char::is_whitespace) {
         return Some(format!("path {path:?} is empty or contains whitespace"));
     }
+    // git reads these as globs or pathspec magic; the form counts plain
+    // paths, so it could not show what git would review.
+    if path.starts_with(':') || path.contains(['*', '?', '[']) {
+        return Some(format!(
+            "path {path:?} is a pattern; name a directory or file"
+        ));
+    }
     if let Some(problem) = input_problem("scope", path) {
         return Some(format!("path {path:?}: {problem}"));
     }
-    inside_workspace("scope", path)
-        .err()
-        .map(|_| format!("path {path:?} is outside the repository"))
+    escape_problem(path)
+}
+
+/// `path` as git and the form both read it: no `./` lead, no trailing `/`.
+pub fn normalize_scope_path(path: &str) -> String {
+    let mut path = path;
+    while let Some(rest) = path.strip_prefix("./") {
+        path = rest;
+    }
+    let trimmed = path.trim_end_matches('/');
+    if trimmed.is_empty() {
+        ".".to_owned()
+    } else {
+        trimmed.to_owned()
+    }
 }
 
 fn wrong_type(key: &str, expected: &str) -> ConfigError {
@@ -215,20 +234,31 @@ fn text(key: &str, value: &toml::Value) -> Result<String, ConfigError> {
 
 /// A relative path that stays inside the repository, judged lexically.
 fn inside_workspace(key: &str, path: &str) -> Result<PathBuf, ConfigError> {
-    let escapes = || invalid(format!("`{key}` path {path:?} is outside the repository"));
+    match escape_problem(path) {
+        Some(problem) => Err(invalid(format!("`{key}` {problem}"))),
+        None => Ok(PathBuf::from(path)),
+    }
+}
+
+/// Why `path` is not a relative path inside the repository, judged
+/// lexically, or `None`.
+fn escape_problem(path: &str) -> Option<String> {
     let mut depth = 0usize;
     for component in Path::new(path).components() {
         match component {
             Component::Normal(_) => depth += 1,
             Component::CurDir => {}
-            Component::ParentDir => depth = depth.checked_sub(1).ok_or_else(escapes)?,
-            Component::RootDir | Component::Prefix(_) => return Err(escapes()),
+            Component::ParentDir => match depth.checked_sub(1) {
+                Some(up) => depth = up,
+                None => return Some(format!("path {path:?} is outside the repository")),
+            },
+            Component::RootDir | Component::Prefix(_) => {
+                return Some(format!("path {path:?} is outside the repository"));
+            }
         }
     }
-    if path.starts_with('-') {
-        return Err(invalid(format!("`{key}` path {path:?} starts with '-'")));
-    }
-    Ok(PathBuf::from(path))
+    path.starts_with('-')
+        .then(|| format!("path {path:?} starts with '-'"))
 }
 
 #[cfg(test)]
@@ -284,6 +314,8 @@ mod tests {
             config.scope,
             Some(vec!["crates".to_owned(), "docs".to_owned()])
         );
+        let normalized = load("[review]\nscope = [\"./crates/\"]\n").expect("valid");
+        assert_eq!(normalized.scope, Some(vec!["crates".to_owned()]));
         let default_timeout = load("[review]\ncheck_cmd = \"make\"\n").expect("valid");
         assert_eq!(
             default_timeout.check.map(|check| check.timeout),
@@ -333,6 +365,14 @@ mod tests {
             (
                 "[review]\nscope = [\"\"]\n",
                 "`scope` path \"\" is empty or contains whitespace",
+            ),
+            (
+                "[review]\nscope = [\"src/*.rs\"]\n",
+                "`scope` path \"src/*.rs\" is a pattern; name a directory or file",
+            ),
+            (
+                "[review]\nscope = [\"-docs\"]\n",
+                "`scope` path \"-docs\" starts with '-'",
             ),
             ("review = 1\n", "`review` must be a table"),
         ] {

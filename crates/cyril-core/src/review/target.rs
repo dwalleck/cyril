@@ -129,6 +129,9 @@ impl ReviewArgs {
             ["head"] => Some(TargetArg::HeadCommit),
             ["base"] => Some(TargetArg::Base(None)),
             ["base", branch] => Some(TargetArg::Base(Some((*branch).to_owned()))),
+            ["auto" | "uncommitted" | "head", extra, ..] | ["base", _, extra, ..] => {
+                return Err(format!("unexpected {extra:?} (paths go after `--`)"));
+            }
             [word, ..] => return Err(format!("unknown target {word:?}")),
         };
         Ok(Self { target, paths })

@@ -3,6 +3,8 @@
 //! sets the preselection; the checked paths are the pathspecs the probe,
 //! gather, the workflow and `run.json` all receive.
 
+use std::collections::BTreeMap;
+
 /// One checkbox: a pathspec and how many touched files it covers.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PathChoice {
@@ -20,82 +22,81 @@ pub fn covers(path: &str, file: &str) -> bool {
             .is_some_and(|rest| rest.starts_with('/'))
 }
 
-/// The choices for `touched` files. Without a preset every touched group is
-/// checked. With one (`[review] scope` or `/review -- <paths>`) its paths are
-/// checked — kept even when they cover nothing now — and the touched groups
-/// they leave out are offered unchecked. Root files are their own choices,
-/// never dropped.
-pub fn choices(touched: &[String], preset: Option<&[String]>) -> Vec<PathChoice> {
+/// The form's choices, and the touched paths that cannot be offered.
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
+pub struct Choices {
+    pub paths: Vec<PathChoice>,
+    /// Touched groups no pathspec can name safely (spaces, shell characters):
+    /// left out of the review, and said so.
+    pub unusable: Vec<String>,
+}
+
+/// The choices for `touched` files, recomputed from scratch on every change
+/// so the order is stable: preset paths first, then the touched groups in
+/// name order.
+///
+/// - Without a preset every touched group (a top-level directory, or a root
+///   file) is checked. With one (`[review] scope`, `/review -- <paths>`) its
+///   paths are checked — kept even when they cover nothing now — and the
+///   other touched groups are offered unchecked; a group a preset path lies
+///   inside is offered one level down, so its other files stay selectable.
+/// - `overrides` are the operator's own toggles and win over both; a path
+///   checked by the operator that the target no longer touches stays shown.
+/// - A group `usable` rejects is not offered.
+pub fn choices(
+    touched: &[String],
+    preset: Option<&[String]>,
+    overrides: &BTreeMap<String, bool>,
+    usable: impl Fn(&str) -> bool,
+) -> Choices {
+    let preset = preset.unwrap_or_default();
     let mut groups: Vec<String> = Vec::new();
     for file in touched {
-        let group = file.split_once('/').map_or(file.as_str(), |(top, _)| top);
-        if !groups.iter().any(|known| known == group) {
-            groups.push(group.to_owned());
+        if preset.iter().any(|path| covers(path, file)) {
+            continue;
+        }
+        let mut parts = file.splitn(3, '/');
+        let top = parts.next().unwrap_or(file.as_str());
+        let group = match (parts.next(), parts.next()) {
+            (None, _) => file.clone(),
+            (Some(second), rest) if preset.iter().any(|path| covers(top, path)) => match rest {
+                Some(_) => format!("{top}/{second}"),
+                None => file.clone(),
+            },
+            _ => top.to_owned(),
+        };
+        if !groups.contains(&group) {
+            groups.push(group);
         }
     }
     groups.sort();
     let count = |path: &str| touched.iter().filter(|file| covers(path, file)).count();
-    match preset {
-        None => groups
-            .into_iter()
-            .map(|path| PathChoice {
-                files: count(&path),
-                path,
+    let default_checked = preset.is_empty();
+    let mut paths: Vec<PathChoice> = preset
+        .iter()
+        .map(|path| (path.clone(), true))
+        .chain(groups.into_iter().map(|group| (group, default_checked)))
+        .map(|(path, checked)| PathChoice {
+            files: count(&path),
+            checked: overrides.get(&path).copied().unwrap_or(checked),
+            path,
+        })
+        .collect();
+    for (path, checked) in overrides {
+        if *checked && !paths.iter().any(|choice| &choice.path == path) {
+            paths.push(PathChoice {
+                files: count(path),
+                path: path.clone(),
                 checked: true,
-            })
-            .collect(),
-        Some(preset) => {
-            let mut choices: Vec<PathChoice> = preset
-                .iter()
-                .map(|path| PathChoice {
-                    files: count(path),
-                    path: path.clone(),
-                    checked: true,
-                })
-                .collect();
-            choices.extend(
-                groups
-                    .into_iter()
-                    .filter(|group| {
-                        !preset
-                            .iter()
-                            .any(|path| covers(path, group) || covers(group, path))
-                    })
-                    .map(|path| PathChoice {
-                        files: count(&path),
-                        path,
-                        checked: false,
-                    }),
-            );
-            choices
+            });
         }
     }
-}
-
-/// The choices for a new target, keeping every path's checked state; paths
-/// that are new are checked only when no preset governs the form.
-pub fn rebuild(
-    previous: &[PathChoice],
-    touched: &[String],
-    preset: Option<&[String]>,
-) -> Vec<PathChoice> {
-    let kept: Vec<String> = previous
-        .iter()
-        .filter(|choice| choice.checked)
-        .map(|choice| choice.path.clone())
-        .collect();
-    let mut rebuilt = choices(touched, Some(&kept));
-    for choice in &mut rebuilt {
-        let was = previous.iter().find(|old| old.path == choice.path);
-        choice.checked = match was {
-            Some(old) => old.checked,
-            None => preset.is_none(),
-        };
+    let (paths, unusable): (Vec<_>, Vec<_>) =
+        paths.into_iter().partition(|choice| usable(&choice.path));
+    Choices {
+        paths,
+        unusable: unusable.into_iter().map(|choice| choice.path).collect(),
     }
-    // A checked path the new target no longer touches stays offered (and
-    // counts 0) so the operator sees it; an unchecked one is dropped.
-    rebuilt.retain(|choice| choice.checked || choice.files > 0);
-    rebuilt
 }
 
 /// The checked pathspecs.
@@ -127,57 +128,80 @@ mod tests {
         names.iter().map(|name| (*name).to_owned()).collect()
     }
 
-    fn shown(choices: &[PathChoice]) -> Vec<(&str, usize, bool)> {
+    fn shown(choices: &Choices) -> Vec<(&str, usize, bool)> {
         choices
+            .paths
             .iter()
             .map(|choice| (choice.path.as_str(), choice.files, choice.checked))
             .collect()
     }
 
-    #[test]
-    fn touched_groups_are_all_checked_and_root_files_kept() {
-        let touched = files(&["crates/a.rs", "crates/b/c.rs", "docs/x.md", "README.md"]);
-        let choices = choices(&touched, None);
-        assert_eq!(
-            shown(&choices),
-            [
-                ("README.md", 1, true),
-                ("crates", 2, true),
-                ("docs", 1, true),
-            ]
-        );
-        assert_eq!(count(&choices, &touched), 4);
+    fn plain(touched: &[String], preset: Option<&[String]>) -> Choices {
+        choices(touched, preset, &BTreeMap::new(), |_| true)
     }
 
     #[test]
-    fn a_preset_checks_its_paths_and_offers_the_rest_unchecked() {
+    fn touched_groups_are_all_checked_and_root_files_kept() {
         let touched = files(&["crates/a.rs", "crates/b/c.rs", "docs/x.md", "README.md"]);
-        let preset = files(&["crates/b", "ops"]);
-        let choices = choices(&touched, Some(&preset));
+        let offered = plain(&touched, None);
         assert_eq!(
-            shown(&choices),
+            shown(&offered),
+            [
+                ("README.md", 1, true),
+                ("crates", 2, true),
+                ("docs", 1, true)
+            ]
+        );
+        assert_eq!(count(&offered.paths, &touched), 4);
+    }
+
+    #[test]
+    fn a_preset_checks_its_paths_and_offers_the_rest_one_level_down() {
+        let touched = files(&[
+            "crates/b/c.rs",
+            "crates/d/e.rs",
+            "crates/top.rs",
+            "docs/x.md",
+            "README.md",
+        ]);
+        let preset = files(&["crates/b", "ops"]);
+        let offered = plain(&touched, Some(&preset));
+        assert_eq!(
+            shown(&offered),
             [
                 ("crates/b", 1, true),
                 ("ops", 0, true),
                 ("README.md", 1, false),
+                ("crates/d", 1, false),
+                ("crates/top.rs", 1, false),
                 ("docs", 1, false),
             ]
         );
-        assert_eq!(selected(&choices), ["crates/b", "ops"]);
-        assert_eq!(count(&choices, &touched), 1);
+        assert_eq!(selected(&offered.paths), ["crates/b", "ops"]);
     }
 
     #[test]
-    fn rebuilding_keeps_what_the_operator_chose() {
-        let first = files(&["crates/a.rs", "docs/x.md"]);
-        let mut choices = choices(&first, None);
-        choices[1].checked = false; // docs
-        let second = files(&["crates/a.rs", "docs/y.md", "ops/z.yml"]);
-        let rebuilt = rebuild(&choices, &second, None);
-        assert_eq!(
-            shown(&rebuilt),
-            [("crates", 1, true), ("docs", 1, false), ("ops", 1, true)]
+    fn the_operators_toggles_survive_target_changes() {
+        let mut toggles = BTreeMap::new();
+        toggles.insert("docs".to_owned(), false);
+        // A target that does not touch docs, then one that does again.
+        let first = choices(&files(&["crates/a.rs"]), None, &toggles, |_| true);
+        assert_eq!(shown(&first), [("crates", 1, true)]);
+        let back = choices(
+            &files(&["crates/a.rs", "docs/y.md"]),
+            None,
+            &toggles,
+            |_| true,
         );
+        assert_eq!(shown(&back), [("crates", 1, true), ("docs", 1, false)]);
+    }
+
+    #[test]
+    fn unusable_paths_are_named_not_offered() {
+        let touched = files(&["Release Notes.md", "src/a.rs"]);
+        let offered = choices(&touched, None, &BTreeMap::new(), |path| !path.contains(' '));
+        assert_eq!(shown(&offered), [("src", 1, true)]);
+        assert_eq!(offered.unusable, ["Release Notes.md"]);
     }
 
     #[test]
