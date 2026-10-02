@@ -159,8 +159,12 @@ cancel path can interrupt by killing the child.
   splitting from the `shlex` crate and timestamps from a time crate, rather than
   copying Python's behaviour by hand.
 - No Windows-only crates. The same code runs on every OS.
-- Size budget: about 2,000 lines of non-test Rust for all eight subcommands and
-  the check function. A change that would exceed it needs a stated reason.
+- Size budget: about 3,000 lines of non-test Rust, counted after rustfmt, for
+  all eight subcommands and the check function. A change that would exceed it
+  needs a stated reason. (Raised from 2,000 with cyril-7vrl: merge, shard,
+  ballots and collate are mostly dict reshaping that Python writes in one line
+  and rustfmt lays out over five to ten. At that slice the crate was 2,424
+  lines with finalize and comments still to come.)
 
 ## Testing
 
