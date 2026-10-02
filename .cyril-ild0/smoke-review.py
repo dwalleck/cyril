@@ -176,21 +176,33 @@ def kill_session():
 
 def prompt_options():
     """The approval popup's options, top to bottom, read inside its borders:
-    the selected one starts with "▸ ", the rest with two spaces."""
+    the selected one starts with "▸ ", the rest with two spaces. The border is
+    found on each row: a wide glyph (⏳) left of the popup shifts that row's
+    text by one column."""
     rows = text().splitlines()
     top = next(n for n, row in enumerate(rows) if PROMPT_TITLE in row)
     left = rows[top].rindex("┌", 0, rows[top].index(PROMPT_TITLE))
-    right = rows[top].index("┐", left)
     options = []
     for row in rows[top + 1:]:
-        if row[left:left + 1] == "└":
+        borders = [n for n, ch in enumerate(row) if ch in "│└" and abs(n - left) <= 2]
+        if not borders or row[borders[0]] == "└":
             break
-        inner = row[left + 1:right]
+        inner = row[borders[0] + 1:].split("│", 1)[0]
         if inner.startswith("▸ ") or (options and inner.startswith("  ") and inner[2:3].strip()):
             options.append(inner[2:].strip())
         elif options:
             break
     return options
+
+
+def allow_once(labels):
+    """The option that allows this one request: the "once" option when an
+    "always" one is offered, else the plain allow (KAS offers Allow / Deny)."""
+    lowered = [label.lower() for label in labels]
+    if any("always" in label for label in lowered):
+        return next((n for n, label in enumerate(lowered) if "once" in label), None)
+    return next((n for n, label in enumerate(lowered)
+                 if label.startswith(("allow", "yes"))), None)
 
 
 def drive():
@@ -264,7 +276,7 @@ def drive():
                         note("the prompt belongs to another session, not the main one")
                         return 9
                     labels = prompt_options()
-                    once = next((n for n, line in enumerate(labels) if "once" in line.lower()), None)
+                    once = allow_once(labels)
                     if once is None:
                         note(f"no allow-once option among {labels!r}")
                         return 10
