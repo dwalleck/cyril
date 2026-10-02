@@ -1175,12 +1175,17 @@ impl App {
                 | WorkflowCommandOutcome::Invoked { .. }
                 | WorkflowCommandOutcome::Failed { .. }
                 | WorkflowCommandOutcome::Cancelled { .. }
-                | WorkflowCommandOutcome::Resumed { .. }),
+                | WorkflowCommandOutcome::Resumed { .. }
+                | WorkflowCommandOutcome::Retried { .. }
+                | WorkflowCommandOutcome::Loaded { .. }
+                | WorkflowCommandOutcome::Runs { .. }),
             ) => Some(outcome.clone()),
             _ => None,
         };
         if let Some(outcome) = &review_outcome
-            && self.absorb_review_retry(outcome)
+            && (self.absorb_review_retry(outcome)
+                || self.absorb_resume_listing(outcome)
+                || self.absorb_resume_retry(outcome))
         {
             return Vec::new();
         }
@@ -1190,6 +1195,7 @@ impl App {
         let commands = self.handle_notification_inner(routed, true);
         if let Some(outcome) = review_outcome {
             self.observe_review_outcome(&outcome);
+            self.observe_resume_outcome(&outcome);
         }
         commands
     }
@@ -2222,6 +2228,7 @@ impl App {
                 }
             }
             CommandResultKind::Review => self.open_review(),
+            CommandResultKind::ReviewResume { selector } => self.open_resume(selector),
             CommandResultKind::Quit => {
                 self.ui_state.request_quit();
             }
@@ -7712,6 +7719,7 @@ mod tests {
         app.handle_notification(RoutedNotification::global(Notification::WorkflowCommand(
             cyril_core::types::WorkflowCommandOutcome::Failed {
                 operation: "workflow list".to_owned(),
+                workflow_id: None,
                 code: Some(-32603),
                 details: "details".to_owned(),
             },

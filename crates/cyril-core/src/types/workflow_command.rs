@@ -46,6 +46,17 @@ pub enum WorkflowOp {
         /// The minted run.
         id: WorkflowId,
     },
+    /// `_kiro/workflow/load`: register a persisted run with this session as
+    /// its parent, without executing anything (`/review resume`).
+    Load {
+        /// The persisted run.
+        id: WorkflowId,
+    },
+    /// `_kiro/workflow/retry`: re-run a failed run's failed nodes.
+    Retry {
+        /// The failed run.
+        id: WorkflowId,
+    },
     /// `/workflow attach <id>` → `_kiro/workflow/inspect` (read-only; the
     /// ownership-taking act is [`WorkflowOp::Resume`]).
     Attach {
@@ -72,6 +83,20 @@ pub enum WorkflowOp {
 }
 
 impl WorkflowOp {
+    /// The run this operation acts on, when it names one.
+    pub fn workflow_id(&self) -> Option<&WorkflowId> {
+        match self {
+            Self::Invoke { id }
+            | Self::Load { id }
+            | Self::Retry { id }
+            | Self::Attach { id }
+            | Self::Status { id }
+            | Self::Cancel { id }
+            | Self::Resume { id } => Some(id),
+            Self::ListRecipes | Self::ListRuns | Self::Run { .. } | Self::New { .. } => None,
+        }
+    }
+
     /// Stable operation label used for `BridgeError { operation }` and log
     /// context, so a failure names the user-facing command that caused it.
     pub fn label(&self) -> &'static str {
@@ -81,6 +106,8 @@ impl WorkflowOp {
             Self::Run { .. } => "workflow run",
             Self::New { .. } => "workflow new",
             Self::Invoke { .. } => "workflow invoke",
+            Self::Load { .. } => "workflow load",
+            Self::Retry { .. } => "workflow retry",
             Self::Attach { .. } => "workflow attach",
             Self::Status { .. } => "workflow status",
             Self::Cancel { .. } => "workflow cancel",
@@ -274,6 +301,20 @@ pub enum WorkflowCommandOutcome {
         /// The run that started.
         workflow_id: WorkflowId,
     },
+    /// `load` succeeded; its state seeds the tracker separately (sent first).
+    Loaded {
+        /// The loaded run.
+        workflow_id: WorkflowId,
+        /// Its persisted status.
+        status: WorkflowRunStatus,
+    },
+    /// `retry` succeeded (`{workflowId, status}` reply shape).
+    Retried {
+        /// The retried run.
+        workflow_id: WorkflowId,
+        /// Status the engine reported after retrying, when parseable.
+        status: Option<WorkflowRunStatus>,
+    },
     /// `cancel` succeeded (`{ok, previousStatus}` reply shape).
     Cancelled {
         /// The cancelled run.
@@ -293,6 +334,8 @@ pub enum WorkflowCommandOutcome {
     Failed {
         /// [`WorkflowOp::label`] of the failed operation.
         operation: String,
+        /// The run the operation named, for operations that name one.
+        workflow_id: Option<WorkflowId>,
         /// JSON-RPC error code, when the failure was an agent error.
         code: Option<i64>,
         /// Human-actionable text: the agent's `error.data.details` when

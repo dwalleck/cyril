@@ -167,19 +167,28 @@ impl Command for ReviewCommand {
     }
 
     fn description(&self) -> &str {
-        "Review this branch's changes with a multi-agent code-review workflow"
+        "Review changes with a multi-agent workflow; /review resume continues a failed or paused one"
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
-        if !args.trim().is_empty() {
-            return Ok(CommandResult::system_message("Usage: /review".into()));
-        }
+        let mut words = args.split_whitespace();
+        let result = match (words.next(), words.next(), words.next()) {
+            (None, _, _) => CommandResult::review(),
+            (Some("resume"), selector, None) => {
+                CommandResult::review_resume(selector.map(str::to_owned))
+            }
+            _ => {
+                return Ok(CommandResult::system_message(
+                    "Usage: /review | /review resume [<run dir | workflow id>]".into(),
+                ));
+            }
+        };
         if ctx.session.id().is_none() {
             return Ok(CommandResult::system_message(
                 "No active session — /review needs one.".into(),
             ));
         }
-        Ok(CommandResult::review())
+        Ok(result)
     }
 }
 
@@ -363,7 +372,20 @@ mod tests {
         let result = run_with(&ReviewCommand, &mut harness, "").await;
         assert!(matches!(result.kind, CommandResultKind::Review));
         let result = run_with(&ReviewCommand, &mut harness, "main").await;
-        assert_eq!(message_text(&result), "Usage: /review");
+        assert_eq!(
+            message_text(&result),
+            "Usage: /review | /review resume [<run dir | workflow id>]"
+        );
+        let result = run_with(&ReviewCommand, &mut harness, "resume").await;
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::ReviewResume { selector: None }
+        ));
+        let result = run_with(&ReviewCommand, &mut harness, "resume wf_1").await;
+        assert!(matches!(
+            result.kind,
+            CommandResultKind::ReviewResume { selector: Some(ref id) } if id == "wf_1"
+        ));
         assert_nothing_sent(&mut harness);
         let mut sessionless = self::harness(false);
         let result = run_with(&ReviewCommand, &mut sessionless, "").await;

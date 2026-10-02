@@ -614,6 +614,22 @@ pub struct ReviewForm {
     pub check: ReviewCheck,
     /// Enter was pressed and the launch is under way.
     pub busy: bool,
+    /// Set for `/review resume`: the form is read-only and shows the stored
+    /// run; `target` and the choice fields are not used.
+    pub resume: Option<ReviewResumeView>,
+}
+
+/// The persisted run a `/review resume` form asks to continue.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewResumeView {
+    /// The run directory's name.
+    pub run: String,
+    /// The agent's persisted status: failed or paused.
+    pub status: cyril_core::types::WorkflowRunStatus,
+    /// The target the run was gathered with, as stored.
+    pub target: String,
+    /// Run directories passed over because their `run.json` is unreadable.
+    pub unreadable: Vec<String>,
 }
 
 /// A field of the `/review` form that takes ←/→.
@@ -639,6 +655,18 @@ impl ReviewForm {
             note: None,
             check: ReviewCheck::Reading,
             busy: false,
+            resume: None,
+        }
+    }
+
+    /// A read-only form to continue the stored run `view`.
+    pub fn resuming(view: ReviewResumeView, scope: Vec<String>, files: usize) -> Self {
+        Self {
+            scope,
+            file_count: Some(files),
+            check: ReviewCheck::NotRerun,
+            resume: Some(view),
+            ..Self::opening(cyril_core::review::target::ReviewTarget::Auto)
         }
     }
 
@@ -661,6 +689,8 @@ impl ReviewForm {
 pub enum ReviewCheck {
     /// The repository's settings are still being read.
     Reading,
+    /// A resumed run keeps the check results it already recorded.
+    NotRerun,
     NotConfigured,
     WillRun {
         command: String,

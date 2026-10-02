@@ -190,3 +190,93 @@ async fn new_mints_without_invoking_and_invoke_starts_the_run() {
     )
     .await;
 }
+
+/// `/review resume` loads a persisted run with this session as its parent
+/// (registering it executes nothing), then retries it: two calls, in order,
+/// with the wire shapes KAS 2.26.0 reads.
+#[tokio::test(flavor = "current_thread")]
+async fn load_registers_the_run_and_retry_restarts_it() {
+    let script = Rc::new(RefCell::new(Script {
+        wire_kas: Some(true),
+        sess_ids: Some(true),
+        ..Script::default()
+    }));
+    let state: serde_json::Value =
+        serde_json::from_str(NEW_REPLY_2180).expect_contract("fixture is valid JSON");
+    {
+        let responses = script.borrow();
+        let mut responses = responses
+            .ext_responses
+            .lock()
+            .expect_contract("ext responses");
+        responses.push(("kiro/workflow/load".to_owned(), state));
+        responses.push((
+            "kiro/workflow/retry".to_owned(),
+            serde_json::json!({
+                "workflowId": "wf_67c4d77ef2bcd709",
+                "status": "running",
+                "retriedNodeIds": ["verify"]
+            }),
+        ));
+    }
+    let observed = Rc::clone(&script);
+    with_engine_harness(
+        Rc::new(KasEngine::default()),
+        script,
+        move |sender, mut rx, _permission_rx, _gate, loop_handle, _kill| async move {
+            let session_id = start_session(&sender, &mut rx).await;
+            let id = WorkflowId::try_from("wf_67c4d77ef2bcd709".to_owned()).expect_contract("id");
+            for op in [
+                WorkflowOp::Load { id: id.clone() },
+                WorkflowOp::Retry { id: id.clone() },
+            ] {
+                sender
+                    .send(BridgeCommand::Workflow {
+                        session_id: session_id.clone(),
+                        workspace_paths: vec![std::path::PathBuf::from("/ws")],
+                        op,
+                    })
+                    .await
+                    .expect_contract("op accepted");
+            }
+            let (mut loaded, mut retried) = (false, false);
+            for _ in 0..8 {
+                match recv_notif(&mut rx, 5).await {
+                    Some(Notification::WorkflowCommand(WorkflowCommandOutcome::Loaded {
+                        workflow_id,
+                        ..
+                    })) => loaded = workflow_id == id,
+                    Some(Notification::WorkflowCommand(WorkflowCommandOutcome::Retried {
+                        workflow_id,
+                        status,
+                    })) => {
+                        retried = workflow_id == id
+                            && status == Some(crate::types::WorkflowRunStatus::Running);
+                        break;
+                    }
+                    Some(_) => continue,
+                    None => break,
+                }
+            }
+            assert!(loaded, "load answers Loaded");
+            assert!(retried, "retry answers Retried");
+            let calls = observed.borrow().ext_calls().clone();
+            let methods: Vec<&str> = calls.iter().map(|(method, _)| method.as_str()).collect();
+            assert_eq!(methods, ["kiro/workflow/load", "kiro/workflow/retry"]);
+            assert_eq!(
+                calls[0].1,
+                serde_json::json!({
+                    "workflowId": "wf_67c4d77ef2bcd709",
+                    "parentSessionId": session_id.as_str(),
+                    "workspacePaths": ["/ws"]
+                })
+            );
+            assert_eq!(
+                calls[1].1,
+                serde_json::json!({"workflowId": "wf_67c4d77ef2bcd709"})
+            );
+            shut_down(&sender, loop_handle).await;
+        },
+    )
+    .await;
+}

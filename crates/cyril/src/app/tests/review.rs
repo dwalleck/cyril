@@ -573,6 +573,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
     ));
     app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
         operation: "workflow new".into(),
+        workflow_id: None,
         code: Some(-32603),
         details: "boom".into(),
     }));
@@ -607,6 +608,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
     assert!(rx.try_recv().is_ok(), "Invoke");
     app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
         operation: "workflow invoke".into(),
+        workflow_id: None,
         code: None,
         details: "boom".into(),
     }));
@@ -683,6 +685,7 @@ async fn unloaded_agents_retry_workflow_new_then_report() {
     let not_registered = || {
         outcome(WorkflowCommandOutcome::Failed {
             operation: "workflow new".into(),
+            workflow_id: None,
             code: Some(-32603),
             details: "Workflow references custom agent 'cyril-review-clerk' which is not \
                       registered. Registered step agents: wf-coder."
@@ -1105,6 +1108,7 @@ async fn context_file_is_reread_for_every_review() {
         contexts.push(inputs["context"].as_str().expect("context").to_owned());
         app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
             operation: "workflow new".into(),
+            workflow_id: None,
             code: None,
             details: "end this launch".into(),
         }));
@@ -1244,6 +1248,7 @@ async fn each_target_counts_gathers_and_sends_its_own_diff() {
         assert_eq!(manifest(&run_dir)["requested_target"], spec, "{case:?}");
         app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
             operation: "workflow new".into(),
+            workflow_id: None,
             code: None,
             details: "end this launch".into(),
         }));
@@ -1339,5 +1344,407 @@ async fn commit_ending_targets_note_uncommitted_changes() {
             ("HEAD".to_owned(), false),
             ("HEAD~1..HEAD".to_owned(), true),
         ]
+    );
+}
+
+// --- cyril-2ruj: /review resume ---
+
+/// A run directory with its record and a manifest, as a launch leaves it.
+fn write_run(repo: &Repo, name: &str, workflow_id: &str) -> PathBuf {
+    write_run_with(
+        repo,
+        name,
+        workflow_id,
+        prefix().as_str(),
+        env!("CARGO_PKG_VERSION"),
+    )
+}
+
+fn write_run_with(
+    repo: &Repo,
+    name: &str,
+    workflow_id: &str,
+    crtool_prefix: &str,
+    cyril_version: &str,
+) -> PathBuf {
+    let dir = repo.root.join(".code-review").join(name);
+    fs::create_dir_all(&dir).expect("run dir");
+    cyril_core::review::run_record::RunRecord {
+        workflow_id: workflow_id.to_owned(),
+        crtool_prefix: crtool_prefix.to_owned(),
+        cyril_version: cyril_version.to_owned(),
+        target: "main...HEAD".to_owned(),
+        scope: vec!["src".to_owned()],
+    }
+    .write(&dir)
+    .expect("run.json");
+    fs::write(
+        dir.join("manifest.json"),
+        r#"{"total_files": 2, "requested_target": "main...HEAD"}"#,
+    )
+    .expect("manifest");
+    dir
+}
+
+fn runs(rows: &[(&str, WorkflowRunStatus)]) -> RoutedNotification {
+    outcome(WorkflowCommandOutcome::Runs {
+        runs: rows
+            .iter()
+            .map(|(id, status)| cyril_core::types::WorkflowRunSummary {
+                workflow_id: WorkflowId::try_from((*id).to_owned()).expect("id"),
+                name: "cyril-review".to_owned(),
+                status: *status,
+                created_at: None,
+                updated_at: None,
+                started_at: None,
+                ended_at: None,
+                parent_session_id: None,
+            })
+            .collect(),
+        skipped: 0,
+    })
+}
+
+/// `/review resume <selector>` through the listing: returns the chat's
+/// last line, and asserts the run table was not shown.
+async fn resume_to_form(
+    app: &mut App,
+    rx: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
+    selector: Option<&str>,
+    listing: &[(&str, WorkflowRunStatus)],
+) {
+    app.handle_command_result(CommandResult::review_resume(selector.map(str::to_owned)));
+    settle(app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::Workflow {
+                op: WorkflowOp::ListRuns,
+                ..
+            })
+        ),
+        "resume asks the agent for the runs' status"
+    );
+    let before = app.ui_state.messages().len();
+    app.handle_notification(runs(listing));
+    assert_eq!(
+        app.ui_state.messages().len(),
+        before,
+        "the listing is absorbed, not shown"
+    );
+    settle(app).await;
+}
+
+fn resume_view(app: &App) -> Option<cyril_ui::traits::ReviewResumeView> {
+    app.ui_state
+        .review_form()
+        .and_then(|form| form.resume.clone())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn resume_picks_the_newest_failed_or_paused_run_and_retries_it_after_loading() {
+    let repo = repo(true);
+    let _paused = write_run(&repo, "20261001-090000-aaaa", "wf_a");
+    let failed = write_run(&repo, "20261001-100000-bbbb", "wf_b");
+    write_run(&repo, "20261001-120000-cccc", "wf_c");
+    let manifest_before = fs::read(failed.join("manifest.json")).expect("manifest");
+    let (mut app, mut rx) = review_app(&repo);
+    resume_to_form(
+        &mut app,
+        &mut rx,
+        None,
+        &[
+            ("wf_a", WorkflowRunStatus::Paused),
+            ("wf_b", WorkflowRunStatus::Failed),
+            ("wf_c", WorkflowRunStatus::Completed),
+        ],
+    )
+    .await;
+    let view = resume_view(&app).expect("the read-only resume form");
+    assert_eq!(
+        view.run, "20261001-100000-bbbb",
+        "newest resumable, not newest dir"
+    );
+    assert_eq!(view.status, WorkflowRunStatus::Failed);
+    assert_eq!(view.target, "main...HEAD");
+    assert_eq!(form(&app).file_count, Some(2));
+    assert!(
+        !repo.home.join(".kiro").exists(),
+        "nothing installed before Enter"
+    );
+
+    // Arrows do nothing on a read-only form.
+    app.handle_key(key(KeyCode::Right)).await.expect("Right");
+    assert_eq!(
+        resume_view(&app).map(|view| view.run),
+        Some(view.run.clone())
+    );
+
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await; // installed
+    settle(&mut app).await; // proceed after the agent-load wait
+    let Ok(BridgeCommand::Workflow {
+        op: WorkflowOp::Load { id },
+        ..
+    }) = rx.try_recv()
+    else {
+        panic!("a run this process does not hold is loaded first");
+    };
+    assert_eq!(id.as_str(), "wf_b");
+    assert!(
+        repo.home
+            .join(".kiro/workflows/cyril-review.workflow.json")
+            .is_file(),
+        "assets installed after consent"
+    );
+    let wf_b = WorkflowId::try_from("wf_b".to_owned()).expect("id");
+    app.handle_notification(outcome(WorkflowCommandOutcome::Loaded {
+        workflow_id: wf_b.clone(),
+        status: WorkflowRunStatus::Failed,
+    }));
+    settle(&mut app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::Workflow { op: WorkflowOp::Retry { id }, .. }) if id == wf_b
+        ),
+        "a failed run is retried"
+    );
+    app.handle_notification(outcome(WorkflowCommandOutcome::Retried {
+        workflow_id: wf_b.clone(),
+        status: Some(WorkflowRunStatus::Running),
+    }));
+    assert_eq!(
+        last_message(&app),
+        "review: wf_b continues — /workflow status wf_b follows it"
+    );
+    assert_eq!(
+        fs::read(failed.join("manifest.json")).expect("manifest"),
+        manifest_before,
+        "nothing is gathered again"
+    );
+    // The resumed run is armed with its stored run directory.
+    app.handle_notification(RoutedNotification::global(workflow_run_started_frame(
+        "wf_b",
+    )));
+    app.handle_notification(RoutedNotification::global(workflow_node_claim_frame(
+        "wf_b",
+        "alpha",
+        &SessionId::new("sess_b"),
+    )));
+    let (request, answer) = step_request("sess_b", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, request).await;
+    settle(&mut app).await;
+    assert_eq!(answered(answer).await.as_deref(), Some("AllowOnce"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn resume_refusals_name_their_reason() {
+    let repo = repo(true);
+    write_run(&repo, "20261001-120000-cccc", "wf_c");
+    write_run_with(
+        &repo,
+        "20261001-130000-dddd",
+        "wf_d",
+        "\"/elsewhere/cyril\" crtool",
+        env!("CARGO_PKG_VERSION"),
+    );
+    write_run_with(
+        &repo,
+        "20261001-140000-eeee",
+        "wf_e",
+        prefix().as_str(),
+        "0.0.1",
+    );
+    fs::create_dir_all(repo.root.join(".code-review/20261001-150000-ffff")).expect("dir");
+    fs::write(
+        repo.root.join(".code-review/20261001-150000-ffff/run.json"),
+        "{",
+    )
+    .expect("corrupt");
+    let (mut app, mut rx) = review_app(&repo);
+    let listing = [
+        ("wf_c", WorkflowRunStatus::Completed),
+        ("wf_d", WorkflowRunStatus::Failed),
+        ("wf_e", WorkflowRunStatus::Paused),
+    ];
+    for (selector, expected) in [
+        (
+            "wf_c",
+            "review resume: wf_c is completed; there is nothing to resume",
+        ),
+        (
+            "wf_d",
+            "review resume: run was started by a different cyril binary (\"/elsewhere/cyril\" crtool); start a new /review",
+        ),
+        ("20261001-150000-ffff", "is corrupt"),
+        (
+            "nope",
+            "review resume: no run under .code-review/ matches \"nope\"",
+        ),
+    ] {
+        resume_to_form(&mut app, &mut rx, Some(selector), &listing).await;
+        assert!(resume_view(&app).is_none(), "{selector}: no form");
+        assert!(
+            last_message(&app).contains(expected),
+            "{selector}: {}",
+            last_message(&app)
+        );
+    }
+    resume_to_form(&mut app, &mut rx, Some("wf_e"), &listing).await;
+    assert!(
+        last_message(&app).starts_with("review resume: run was started by cyril 0.0.1"),
+        "{}",
+        last_message(&app)
+    );
+    assert!(!repo.home.join(".kiro").exists());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn a_paused_run_is_reconfirmed_in_process_and_resumed() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    let run_dir = launch(&mut app, &mut rx, &repo).await;
+    app.handle_notification(completion(WorkflowRunStatus::Paused));
+    let name = run_dir
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("name")
+        .to_owned();
+
+    // Esc leaves the paused authorization as it was.
+    resume_to_form(&mut app, &mut rx, None, &[(RUN, WorkflowRunStatus::Paused)]).await;
+    assert_eq!(resume_view(&app).map(|view| view.run), Some(name.clone()));
+    app.handle_key(key(KeyCode::Esc)).await.expect("Esc");
+    assert!(app.ui_state.review_form().is_none());
+    let (request, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, request).await;
+    settle(&mut app).await;
+    assert_eq!(
+        answered(answer).await.as_deref(),
+        Some("AllowOnce"),
+        "still armed"
+    );
+
+    // Enter loads it (KAS answers a load for a run it holds; it makes this
+    // session the parent) and resumes it by the status the load reports.
+    resume_to_form(
+        &mut app,
+        &mut rx,
+        Some(&name),
+        &[(RUN, WorkflowRunStatus::Paused)],
+    )
+    .await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    settle(&mut app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::Workflow { op: WorkflowOp::Load { id }, .. }) if id == run_id()
+        ),
+        "the run is always loaded"
+    );
+    app.handle_notification(outcome(WorkflowCommandOutcome::Loaded {
+        workflow_id: run_id(),
+        status: WorkflowRunStatus::Paused,
+    }));
+    settle(&mut app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::Workflow { op: WorkflowOp::Resume { id }, .. }) if id == run_id()
+        ),
+        "a paused run is resumed"
+    );
+    // Another run's failure says nothing about this one.
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow resume".into(),
+        workflow_id: Some(WorkflowId::try_from("wf_other".to_owned()).expect("id")),
+        code: None,
+        details: "not ours".into(),
+    }));
+    assert!(!last_message(&app).contains("withdrawn"));
+    // A refused continuation withdraws the authorization (as the ticket asks).
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow resume".into(),
+        workflow_id: Some(run_id()),
+        code: None,
+        details: "no".into(),
+    }));
+    assert!(last_message(&app).contains("its authorization is withdrawn"));
+    let (late, answer) = step_request("sess_step", read("src/a.rs"), &KAS_OPTIONS);
+    decide(&mut app, late).await;
+    assert_eq!(answered(answer).await.as_deref(), Some("RejectOnce"));
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn resume_refuses_while_another_review_is_running() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    launch(&mut app, &mut rx, &repo).await;
+    write_run(&repo, "20200101-000000-0000", "wf_old");
+    resume_to_form(
+        &mut app,
+        &mut rx,
+        Some("wf_old"),
+        &[
+            (RUN, WorkflowRunStatus::Running),
+            ("wf_old", WorkflowRunStatus::Failed),
+        ],
+    )
+    .await;
+    assert!(resume_view(&app).is_none());
+    assert_eq!(
+        last_message(&app),
+        format!("review resume: {RUN} is still running — /workflow status {RUN}")
+    );
+}
+
+/// A retry refused only because KAS has not loaded the review agents yet is
+/// sent again, not reported as a failure.
+#[tokio::test(flavor = "multi_thread")]
+async fn resume_resends_when_the_review_agents_are_not_loaded_yet() {
+    let repo = repo(true);
+    write_run(&repo, "20261001-100000-bbbb", "wf_b");
+    let (mut app, mut rx) = review_app(&repo);
+    resume_to_form(
+        &mut app,
+        &mut rx,
+        None,
+        &[("wf_b", WorkflowRunStatus::Failed)],
+    )
+    .await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    settle(&mut app).await;
+    assert!(rx.try_recv().is_ok(), "Load");
+    let wf_b = WorkflowId::try_from("wf_b".to_owned()).expect("id");
+    app.handle_notification(outcome(WorkflowCommandOutcome::Loaded {
+        workflow_id: wf_b.clone(),
+        status: WorkflowRunStatus::Failed,
+    }));
+    settle(&mut app).await;
+    assert!(rx.try_recv().is_ok(), "Retry");
+    let before = app.ui_state.messages().len();
+    app.handle_notification(outcome(WorkflowCommandOutcome::Failed {
+        operation: "workflow retry".into(),
+        workflow_id: Some(wf_b.clone()),
+        code: Some(-32603),
+        details: "Workflow references custom agent 'cyril-review-clerk' which is not registered."
+            .into(),
+    }));
+    assert_eq!(
+        app.ui_state.messages().len(),
+        before,
+        "absorbed, not reported"
+    );
+    settle(&mut app).await;
+    assert!(
+        matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::Workflow { op: WorkflowOp::Retry { id }, .. }) if id == wf_b
+        ),
+        "sent again"
     );
 }

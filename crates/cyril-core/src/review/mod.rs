@@ -10,6 +10,7 @@ pub mod consent;
 pub mod inputs;
 pub mod launch;
 pub mod policy;
+pub mod resume;
 pub mod run_record;
 pub mod summary;
 pub mod target;

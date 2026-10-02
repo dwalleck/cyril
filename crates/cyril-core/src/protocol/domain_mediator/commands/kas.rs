@@ -153,6 +153,7 @@ fn workflow_failure(operation: &str, code: Option<i64>, details: String) -> Work
         snapshot: None,
         outcome: crate::types::WorkflowCommandOutcome::Failed {
             operation: operation.to_owned(),
+            workflow_id: None,
             code,
             details,
         },
@@ -253,6 +254,26 @@ fn map_workflow_reply(
             },
             Err(error) => parse_failure(&error),
         },
+        Op::Retry { .. } => match wire::parse_run_status_reply(&body) {
+            Ok((workflow_id, status)) => WorkflowOpReply {
+                snapshot: None,
+                outcome: Outcome::Retried {
+                    workflow_id,
+                    status,
+                },
+            },
+            Err(error) => parse_failure(&error),
+        },
+        Op::Load { .. } => match wire::parse_state_reply(&body) {
+            Ok(snapshot) => WorkflowOpReply {
+                outcome: Outcome::Loaded {
+                    workflow_id: snapshot.workflow_id().clone(),
+                    status: snapshot.status(),
+                },
+                snapshot: Some(snapshot),
+            },
+            Err(error) => parse_failure(&error),
+        },
         Op::New { .. } => match wire::parse_state_reply(&body) {
             Ok(snapshot) => WorkflowOpReply {
                 outcome: Outcome::Minted {
@@ -309,6 +330,18 @@ fn workflow_op_request(
             "kiro/workflow/resume",
             serde_json::json!({ "workflowId": id.as_str() }),
         ),
+        Op::Retry { id } => (
+            "kiro/workflow/retry",
+            serde_json::json!({ "workflowId": id.as_str() }),
+        ),
+        Op::Load { id } => (
+            "kiro/workflow/load",
+            serde_json::json!({
+                "workflowId": id.as_str(),
+                "parentSessionId": session_id.as_str(),
+                "workspacePaths": workspace_paths,
+            }),
+        ),
         Op::Invoke { id } => (
             "kiro/workflow/invoke",
             serde_json::json!({ "workflowId": id.as_str() }),
@@ -359,6 +392,8 @@ pub(in crate::protocol::domain_mediator) async fn handle_workflow(
         | Op::Status { .. }
         | Op::Cancel { .. }
         | Op::Resume { .. }
+        | Op::Retry { .. }
+        | Op::Load { .. }
         | Op::New { .. }
         | Op::Invoke { .. } => {
             let body = workflow_extension(connection, operation, method, &params).await;
@@ -393,6 +428,12 @@ pub(in crate::protocol::domain_mediator) async fn handle_workflow(
             }
         }
     };
+    let mut reply = reply;
+    // A failure names the run its operation named, so a caller tracking one
+    // run is never confused by another run's failure.
+    if let crate::types::WorkflowCommandOutcome::Failed { workflow_id, .. } = &mut reply.outcome {
+        *workflow_id = op.workflow_id().cloned();
+    }
     send_workflow_reply(tx, reply).await
 }
 
