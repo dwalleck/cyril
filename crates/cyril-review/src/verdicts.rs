@@ -3,7 +3,8 @@
 
 use crate::merge::{also_count, id, write_queue};
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, text, to_line, unreadable,
+    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, records, text, to_line,
+    unreadable,
 };
 use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
 use crate::{Result, io_error};
@@ -271,16 +272,7 @@ fn all_candidates(
     warnings: Option<&mut Vec<String>>,
 ) -> Result<(Record, Vec<Record>, usize)> {
     let index: Record = read_json(&run.path("deduped/index.json"))?;
-    let mut candidates: Vec<Record> = index
-        .get("candidates")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_object().cloned())
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut candidates: Vec<Record> = records(index.get("candidates"));
     let sweep_path = run.path("candidates/sweep.json");
     let mut sweep_count = 0;
     if sweep_path.exists() {

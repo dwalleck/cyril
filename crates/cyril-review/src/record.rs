@@ -74,6 +74,27 @@ pub(crate) fn field_or_empty(record: &Record, key: &str) -> Value {
         .unwrap_or_else(|| Value::String(String::new()))
 }
 
+/// The object entries of an array field; anything else reads as none.
+pub(crate) fn records(value: Option<&Value>) -> Vec<Record> {
+    value
+        .and_then(Value::as_array)
+        .map(|items| {
+            items
+                .iter()
+                .filter_map(|item| item.as_object().cloned())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// An object field, or empty when it is absent or not an object.
+pub(crate) fn object(value: Option<&Value>) -> Record {
+    value
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// A finder's candidates file: `{"candidates": [...]}` or a bare list. Returns
 /// the object entries and a problem description when something was wrong.
 pub(crate) fn load_candidates(path: &Path) -> (Vec<Record>, Option<String>) {

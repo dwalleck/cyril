@@ -2,8 +2,8 @@
 //! duplicate decisions, assigns final ids and splits them into verifier queues.
 
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line, text,
-    to_line, unreadable,
+    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line, records,
+    text, to_line, unreadable,
 };
 use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
 use crate::{Result, ReviewError, io_error};
@@ -140,16 +140,7 @@ pub fn shard(run: &ReviewRun, shards: usize) -> Result<String> {
         });
     }
     let merged: Record = read_json(&run.path("candidates/all.json"))?;
-    let mut candidates: Vec<Record> = merged
-        .get("candidates")
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_object().cloned())
-                .collect()
-        })
-        .unwrap_or_default();
+    let mut candidates: Vec<Record> = records(merged.get("candidates"));
     let order: HashMap<String, usize> = candidates
         .iter()
         .enumerate()

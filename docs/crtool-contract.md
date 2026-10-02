@@ -164,7 +164,7 @@ cancel path can interrupt by killing the child.
   all eight subcommands, the check function and the embedded-asset module. A
   change that would exceed it needs a stated reason. History: set at 2,000,
   raised to 3,000 with cyril-7vrl, and closed at 3,300 with cyril-m139, when
-  the complete port measured 3,264. The excess over the first estimate is
+  the complete port measured 3,248. The excess over the first estimate is
   layout, not logic: the aggregation and reporting steps are dict reshaping
   and Markdown that Python writes in one line and rustfmt lays out over five
   to ten.

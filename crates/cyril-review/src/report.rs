@@ -3,7 +3,7 @@
 //! postable Conventional Comments (conventionalcomments.org).
 
 use crate::merge::id;
-use crate::record::{Record, blank, one_line, text, to_line};
+use crate::record::{Record, blank, object, one_line, records, text, to_line};
 use crate::run::{ReviewRun, read_json, read_manifest, write, write_json, write_pages};
 use crate::{Result, io_error};
 use serde::{Deserialize, Serialize};
@@ -561,14 +561,6 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
     Ok(stdout)
 }
 
-/// An object field, or empty when it is absent or not an object.
-fn object(value: Option<&Value>) -> Record {
-    value
-        .and_then(Value::as_object)
-        .cloned()
-        .unwrap_or_default()
-}
-
 fn has_decoration(decorations: &[String], wanted: &str) -> bool {
     decorations.iter().any(|decoration| decoration == wanted)
 }
@@ -679,18 +671,6 @@ fn finding(record: &Record) -> Finding {
         comment: None,
         duplicate_of: None,
     }
-}
-
-fn records(value: Option<&Value>) -> Vec<Record> {
-    value
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_object().cloned())
-                .collect()
-        })
-        .unwrap_or_default()
 }
 
 fn strings(value: Option<&Value>) -> Vec<String> {
