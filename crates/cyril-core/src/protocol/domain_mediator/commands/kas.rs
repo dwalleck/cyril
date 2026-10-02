@@ -253,6 +253,22 @@ fn map_workflow_reply(
             },
             Err(error) => parse_failure(&error),
         },
+        Op::New { .. } => match wire::parse_state_reply(&body) {
+            Ok(snapshot) => WorkflowOpReply {
+                outcome: Outcome::Minted {
+                    workflow_id: snapshot.workflow_id().clone(),
+                    name: snapshot.workflow_name().to_owned(),
+                },
+                snapshot: Some(snapshot),
+            },
+            Err(error) => parse_failure(&error),
+        },
+        Op::Invoke { id } => WorkflowOpReply {
+            snapshot: None,
+            outcome: Outcome::Invoked {
+                workflow_id: id.clone(),
+            },
+        },
         Op::Run { .. } => {
             tracing::error!("map_workflow_reply received a Run op; run is a two-call sequence");
             workflow_failure(operation, None, "internal: run mis-routed".to_owned())
@@ -293,7 +309,11 @@ fn workflow_op_request(
             "kiro/workflow/resume",
             serde_json::json!({ "workflowId": id.as_str() }),
         ),
-        Op::Run { target, inputs } => (
+        Op::Invoke { id } => (
+            "kiro/workflow/invoke",
+            serde_json::json!({ "workflowId": id.as_str() }),
+        ),
+        Op::Run { target, inputs } | Op::New { target, inputs } => (
             "kiro/workflow/new",
             serde_json::json!({
                 "workflowPath": target.as_workflow_path(),
@@ -338,7 +358,9 @@ pub(in crate::protocol::domain_mediator) async fn handle_workflow(
         | Op::Attach { .. }
         | Op::Status { .. }
         | Op::Cancel { .. }
-        | Op::Resume { .. } => {
+        | Op::Resume { .. }
+        | Op::New { .. }
+        | Op::Invoke { .. } => {
             let body = workflow_extension(connection, operation, method, &params).await;
             map_workflow_reply(&op, body)
         }

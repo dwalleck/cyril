@@ -3994,6 +3994,7 @@ mod tests {
                 }],
                 can_reject_with_reason: false,
                 responder,
+                consent: None,
             },
             receiver,
         )
@@ -4026,6 +4027,7 @@ mod tests {
                 trust_options: vec![],
                 can_reject_with_reason: true,
                 responder,
+                consent: None,
             },
             receiver,
         )

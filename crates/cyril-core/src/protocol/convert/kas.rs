@@ -26,6 +26,45 @@ pub(crate) mod workflow;
 /// the bound engine must be KAS, the offered option ID must be exact and its
 /// kind must be `reject_once`, and the reason must contain non-whitespace.
 /// The accepted reason is moved into the JSON value unchanged.
+/// `_meta.kiro.{toolId, command, consent{capability, resource, workspaceRoot}}`
+/// of a KAS `session/request_permission`, with the commands the tool call's
+/// `rawInput` carries. `None` when the request has no `_meta.kiro`.
+pub(crate) fn permission_consent(
+    args: &acp::RequestPermissionRequest,
+    tool_call: &crate::types::ToolCall,
+) -> Option<crate::review::consent::PermissionConsent> {
+    let kiro = args.meta.as_ref()?.get("kiro")?.as_object()?;
+    let text = |object: &serde_json::Map<String, serde_json::Value>, key: &str| {
+        object
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    };
+    let empty = serde_json::Map::new();
+    let consent = kiro
+        .get("consent")
+        .and_then(serde_json::Value::as_object)
+        .unwrap_or(&empty);
+    let raw_commands = tool_call
+        .raw_input()
+        .and_then(serde_json::Value::as_object)
+        .map(|raw| {
+            ["command", "cmd"]
+                .iter()
+                .filter_map(|key| text(raw, key))
+                .collect()
+        })
+        .unwrap_or_default();
+    Some(crate::review::consent::PermissionConsent::new(
+        text(consent, "capability").as_deref(),
+        text(consent, "resource"),
+        text(consent, "workspaceRoot").map(std::path::PathBuf::from),
+        text(kiro, "toolId"),
+        text(kiro, "command"),
+        raw_commands,
+    ))
+}
+
 pub(crate) fn attach_rejection_metadata(
     response: acp::RequestPermissionResponse,
     args: &acp::RequestPermissionRequest,

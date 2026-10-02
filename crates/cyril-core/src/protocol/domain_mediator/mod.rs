@@ -679,6 +679,11 @@ impl DomainMediator {
         let engine = self.config.engine.kind();
         let can_reject_with_reason = cfg!(feature = "kas") && engine == AgentEngine::Kas;
         let (response_tx, response_rx) = oneshot::channel::<PermissionResponse>();
+        // Typed consent is KAS's `_meta.kiro`; other engines send none.
+        #[cfg(feature = "kas")]
+        let consent = crate::protocol::convert::kas::permission_consent(&args, &tool_call);
+        #[cfg(not(feature = "kas"))]
+        let consent = None;
         let request = PermissionRequest {
             session_id,
             tool_call,
@@ -687,6 +692,7 @@ impl DomainMediator {
             trust_options: crate::protocol::convert::extract_trust_options(&args),
             can_reject_with_reason,
             responder: response_tx,
+            consent,
         };
         let permission_tx = self.bridge.permission_tx.clone();
         let task = tokio::task::spawn_local(async move {

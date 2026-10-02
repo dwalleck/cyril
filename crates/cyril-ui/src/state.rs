@@ -7562,6 +7562,7 @@ mod tests {
             trust_options: Vec::new(),
             can_reject_with_reason: false,
             responder: tx,
+            consent: None,
         };
         (req, rx)
     }
@@ -8054,6 +8055,7 @@ mod tests {
                 trust_options: Vec::new(),
                 can_reject_with_reason: false,
                 responder: tx,
+                consent: None,
             };
             (req, rx)
         }
@@ -8142,6 +8144,7 @@ mod tests {
                     .collect(),
                 can_reject_with_reason: false,
                 responder,
+                consent: None,
             });
             if matches!(index, 10 | 20) {
                 drop(receiver);
@@ -8278,6 +8281,7 @@ mod tests {
             trust_options: Vec::new(),
             can_reject_with_reason: false,
             responder: tx,
+            consent: None,
         };
         let mut state = UiState::new(500);
         state.show_approval(req);
@@ -8465,6 +8469,7 @@ mod tests {
             trust_options,
             can_reject_with_reason: false,
             responder: tx,
+            consent: None,
         };
         (req, rx)
     }

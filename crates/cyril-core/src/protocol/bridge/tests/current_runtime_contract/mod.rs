@@ -50,6 +50,9 @@ mod lifecycle;
 mod powers;
 #[cfg(feature = "kas")]
 mod rejection_feedback;
+// `/review` (cyril-iowg): typed permission consent and the New/Invoke ops.
+#[cfg(feature = "kas")]
+mod review;
 mod routing;
 mod saturation;
 mod stall;
