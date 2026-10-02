@@ -1,0 +1,57 @@
+{
+  "commits": [
+    {
+      "message": "baseline",
+      "files": {
+        "src/lib.rs": "pub fn one() {}\n"
+      }
+    }
+  ],
+  "worktree": {
+    "files": {
+      "src/lib.rs": "pub fn one() {}\npub fn two() {}\n"
+    }
+  },
+  "steps": [
+    [
+      "gather",
+      "HEAD",
+      ""
+    ],
+    [
+      "write",
+      "candidates/a-line-scan.json",
+      {
+        "angle": "a-line-scan",
+        "candidates": [
+          {
+            "file": "src/lib.rs",
+            "line": 2,
+            "summary": "New function never called",
+            "failure_scenario": "dead code ships",
+            "category": "Rule CONVENTIONS check"
+          }
+        ]
+      }
+    ],
+    [
+      "merge",
+      "--expect",
+      "a-line-scan,b-removed-behavior"
+    ],
+    [
+      "write",
+      "deduped/decisions.json",
+      []
+    ],
+    [
+      "shard"
+    ],
+    [
+      "ballots"
+    ],
+    [
+      "collate"
+    ]
+  ]
+}

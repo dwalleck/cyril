@@ -1,0 +1,16 @@
+# pid | file:line | category | summary || fails: failure-scenario excerpt   (full record: candidates/raw/<pid>.json) -- page 1 of 1
+altitude-1 | src/app.rs:5 | altitude | Special case bolted onto the shared parser || fails: every new flag adds a branch
+a-line-scan-3 | src/io.rs:? | correctness | Missing fsync before rename || fails: 
+conventions-1 | src/lib.rs:3 | conventions | unwrap in non-test code || fails: CLAUDE.md forbids it
+>>> the next 2 candidates cite the SAME location, src/lib.rs:10: if they describe one defect they are ONE group (keep them apart only if the reasons genuinely differ)
+a-line-scan-1 | src/lib.rs:10 | correctness | Off-by-one in loop bound || fails: len 0 -> panics at index
+b-removed-behavior-1 | src/lib.rs:10 | correctness | Loop bound excludes the last item || fails: last element skipped when n > 0, and the total under-counts by one
+a-line-scan-2 | src/lib.rs:22 | correctness | Unchecked unwrap / on parse || fails: non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the C…
+cleanup-1 | src/util.rs:1 | cleanup | Duplicate helper 1 || fails: the copies drift apart
+cleanup-2 | src/util.rs:2 | cleanup | Duplicate helper 2 || fails: the copies drift apart
+cleanup-3 | src/util.rs:3 | cleanup | Duplicate helper 3 || fails: the copies drift apart
+cleanup-4 | src/util.rs:4 | cleanup | Duplicate helper 4 || fails: the copies drift apart
+cleanup-5 | src/util.rs:5 | cleanup | Duplicate helper 5 || fails: the copies drift apart
+cleanup-6 | src/util.rs:6 | cleanup | Duplicate helper 6 || fails: the copies drift apart
+cleanup-7 | src/util.rs:7 | cleanup | Duplicate helper 7 || fails: the copies drift apart
+cleanup-8 | src/util.rs:8 | cleanup | Duplicate helper 8 || fails: the copies drift apart

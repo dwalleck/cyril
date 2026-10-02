@@ -1,0 +1,32 @@
+{
+  "requested_target": "HEAD",
+  "target": "HEAD",
+  "scope": [
+    "."
+  ],
+  "head": "e398f6099680ac5e1a841f5b1fb2d6eed9fbf663",
+  "worktree_matches_diff_head": true,
+  "gathered_at": "2026-01-01T00:00:00+00:00",
+  "total_files": 1,
+  "total_patch_bytes": 149,
+  "warnings": [],
+  "files": [
+    {
+      "index": 1,
+      "path": "src/lib.rs",
+      "status": "M",
+      "insertions": 1,
+      "deletions": 0,
+      "binary": false,
+      "patch": "patches/001.patch",
+      "patch_bytes": 149
+    }
+  ],
+  "change_docs": [],
+  "facts": {
+    "symbols": 1,
+    "usages_pages": [
+      "facts/usages-1.txt"
+    ]
+  }
+}

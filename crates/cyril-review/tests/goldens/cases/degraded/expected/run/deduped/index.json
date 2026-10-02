@@ -1,0 +1,26 @@
+{
+  "angles_reported": [
+    "a-line-scan"
+  ],
+  "angles_missing": [
+    "b-removed-behavior"
+  ],
+  "raw_count": 1,
+  "deduped_count": 1,
+  "dropped": [],
+  "warnings": [
+    "decisions.json unreadable (top level is not an object); no dedup applied"
+  ],
+  "candidates": [
+    {
+      "file": "src/lib.rs",
+      "line": 2,
+      "summary": "New function never called",
+      "failure_scenario": "dead code ships",
+      "category": "Rule CONVENTIONS check",
+      "pid": "a-line-scan-1",
+      "angle": "a-line-scan",
+      "id": "C01"
+    }
+  ]
+}

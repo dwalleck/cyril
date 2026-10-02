@@ -1,0 +1,281 @@
+{
+  "kept": [
+    {
+      "file": "src/lib.rs",
+      "line": 22,
+      "summary": "Unchecked unwrap | on parse",
+      "failure_scenario": "non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, ",
+      "category": "correctness",
+      "evidence": "x.unwrap()",
+      "pid": "a-line-scan-2",
+      "angle": "a-line-scan",
+      "id": "C01",
+      "verdict": "CONFIRMED",
+      "verification": {
+        "evidence": "evidence for C01",
+        "reasoning": "reasoning for C01"
+      }
+    },
+    {
+      "file": "src/io.rs",
+      "line": null,
+      "summary": "Missing fsync before rename",
+      "failure_scenario": "",
+      "category": "correctness",
+      "pid": "a-line-scan-3",
+      "angle": "a-line-scan",
+      "incomplete": [
+        "failure_scenario"
+      ],
+      "id": "C02",
+      "verdict": "UNVERIFIED",
+      "verification": {
+        "reasoning": "no verdict file was written"
+      }
+    },
+    {
+      "file": "src/lib.rs",
+      "line": 10,
+      "summary": "Loop bound excludes the last item",
+      "failure_scenario": "last element skipped when n > 0, and the total under-counts by one",
+      "category": "correctness",
+      "evidence": "0..=n vs 0..n",
+      "pid": "b-removed-behavior-1",
+      "angle": "b-removed-behavior",
+      "also_flagged_by": [
+        {
+          "pid": "a-line-scan-1",
+          "angle": "a-line-scan",
+          "summary": "Off-by-one in loop bound"
+        }
+      ],
+      "id": "C03",
+      "verdict": "CONFIRMED",
+      "verification": {
+        "evidence": "evidence for C03.v2",
+        "reasoning": "reasoning for C03.v2"
+      },
+      "votes": [
+        "REFUTED",
+        "CONFIRMED",
+        "CONFIRMED"
+      ]
+    },
+    {
+      "file": "src/util.rs",
+      "line": 2,
+      "summary": "Duplicate helper 2",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-2",
+      "angle": "cleanup",
+      "also_flagged_by": [
+        {
+          "pid": "cleanup-1",
+          "angle": "cleanup",
+          "summary": "Duplicate helper 1"
+        }
+      ],
+      "id": "C04",
+      "verdict": "UNVERIFIED",
+      "verification": {
+        "evidence": "evidence for C04",
+        "reasoning": "reasoning for C04",
+        "raw_verdict": "MAYBE"
+      }
+    },
+    {
+      "file": "src/util.rs",
+      "line": 3,
+      "summary": "Duplicate helper 3",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-3",
+      "angle": "cleanup",
+      "also_flagged_by": [
+        {
+          "pid": "cleanup-4",
+          "angle": "cleanup",
+          "summary": "Duplicate helper 4"
+        }
+      ],
+      "id": "C05",
+      "verdict": "UNVERIFIED",
+      "verification": {
+        "reasoning": "verdict file unreadable: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+      }
+    },
+    {
+      "file": "src/util.rs",
+      "line": 5,
+      "summary": "Duplicate helper 5",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-5",
+      "angle": "cleanup",
+      "also_flagged_by": [
+        {
+          "pid": "cleanup-6",
+          "angle": "cleanup",
+          "summary": "Duplicate helper 6"
+        }
+      ],
+      "id": "C06",
+      "verdict": "PLAUSIBLE",
+      "verification": {
+        "evidence": "evidence for C06",
+        "reasoning": "reasoning for C06",
+        "would_confirm": "run it on an empty list",
+        "corrected_line": 7
+      }
+    },
+    {
+      "file": "src/util.rs",
+      "line": 7,
+      "summary": "Duplicate helper 7",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-7",
+      "angle": "cleanup",
+      "id": "C07",
+      "verdict": "UNVERIFIED",
+      "verification": {
+        "reasoning": "verdict file is not a JSON object"
+      }
+    },
+    {
+      "file": "src/util.rs",
+      "line": 8,
+      "summary": "Duplicate helper 8",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-8",
+      "angle": "cleanup",
+      "id": "C08",
+      "verdict": "CONFIRMED",
+      "verification": {
+        "evidence": "evidence for C08",
+        "reasoning": "reasoning for C08"
+      },
+      "by_design": "docs/x.md: accepted on purpose"
+    },
+    {
+      "file": "src/app.rs",
+      "line": 5,
+      "summary": "Special case bolted onto the shared parser",
+      "failure_scenario": "every new flag adds a branch",
+      "category": "altitude",
+      "pid": "altitude-1",
+      "angle": "altitude",
+      "id": "C09",
+      "verdict": "CONFIRMED",
+      "verification": {
+        "evidence": "evidence for C09",
+        "reasoning": "reasoning for C09"
+      }
+    },
+    {
+      "file": "src/io.rs",
+      "line": 40,
+      "summary": "Leaked file handle on the error path",
+      "failure_scenario": "an early return skips close",
+      "category": "correctness",
+      "id": "S01",
+      "angle": "sweep",
+      "verdict": "PLAUSIBLE",
+      "verification": {
+        "evidence": "evidence for S01.v2",
+        "reasoning": "reasoning for S01.v2"
+      },
+      "by_design": "README: accepted limitation",
+      "votes": [
+        "REFUTED",
+        "PLAUSIBLE",
+        "UNVERIFIED"
+      ]
+    },
+    {
+      "file": "src/io.rs",
+      "line": null,
+      "summary": "Sweep candidate without an id",
+      "failure_scenario": "the finder forgot the id",
+      "category": "correctness",
+      "id": "S02",
+      "angle": "sweep",
+      "verdict": "UNVERIFIED",
+      "verification": {
+        "reasoning": "no verdict file was written"
+      }
+    }
+  ],
+  "refuted": [
+    {
+      "file": "src/lib.rs",
+      "line": 3,
+      "summary": "unwrap in non-test code",
+      "failure_scenario": "CLAUDE.md forbids it",
+      "category": "conventions",
+      "evidence": "CLAUDE.md: Zero `.unwrap()` in non-test code",
+      "pid": "conventions-1",
+      "angle": "conventions",
+      "id": "C10",
+      "verdict": "REFUTED",
+      "verification": {
+        "evidence": "evidence for C10.v2",
+        "reasoning": "reasoning for C10.v2"
+      },
+      "votes": [
+        "CONFIRMED",
+        "REFUTED",
+        "REFUTED"
+      ]
+    }
+  ],
+  "stats": {
+    "angles_reported": [
+      "a-line-scan",
+      "b-removed-behavior",
+      "c-cross-file",
+      "cleanup",
+      "altitude",
+      "conventions"
+    ],
+    "angles_missing": [
+      "d-language-pitfalls",
+      "e-wrapper-proxy"
+    ],
+    "raw_candidates": 14,
+    "after_dedup": 10,
+    "sweep_candidates": 2,
+    "verdicts": {
+      "CONFIRMED": 4,
+      "PLAUSIBLE": 2,
+      "REFUTED": 1,
+      "UNVERIFIED": 5
+    },
+    "balloted": 3,
+    "overturned_by_vote": [
+      "C03: REFUTED -> CONFIRMED (REFUTED, CONFIRMED, CONFIRMED)",
+      "C10: CONFIRMED -> REFUTED (CONFIRMED, REFUTED, REFUTED)",
+      "S01: REFUTED -> PLAUSIBLE (REFUTED, PLAUSIBLE, UNVERIFIED)"
+    ],
+    "candidates_per_angle_after_dedup": {
+      "a-line-scan": 2,
+      "b-removed-behavior": 1,
+      "cleanup": 5,
+      "altitude": 1,
+      "conventions": 1,
+      "sweep": 2
+    },
+    "unverified_ids": [
+      "C02",
+      "C04",
+      "C05",
+      "C07",
+      "S02"
+    ]
+  },
+  "warnings": [
+    "decision names unknown pid(s) ['ghost-9']; ignored those"
+  ]
+}

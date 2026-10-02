@@ -1,0 +1,28 @@
+{
+  "angle": "a-line-scan",
+  "candidates": [
+    {
+      "file": "src/lib.rs",
+      "line": 10,
+      "summary": "Off-by-one in loop bound",
+      "failure_scenario": "len 0 -> panics at index",
+      "category": "correctness",
+      "evidence": "for i in 0..=n"
+    },
+    {
+      "file": "src/lib.rs",
+      "line": "22",
+      "summary": "Unchecked unwrap | on parse",
+      "failure_scenario": "non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, ",
+      "category": "correctness",
+      "evidence": "x.unwrap()"
+    },
+    {
+      "file": "src/io.rs",
+      "line": null,
+      "summary": "Missing fsync before rename",
+      "failure_scenario": "",
+      "category": "correctness"
+    }
+  ]
+}

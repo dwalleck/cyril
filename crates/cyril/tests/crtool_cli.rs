@@ -96,6 +96,33 @@ fn crtool_gathers_refuses_and_reports_empty_diffs_with_crtool_exit_codes() -> Te
 
     let facts = cyril(&repo, &["crtool", "facts", &run])?;
     assert_eq!(facts.status.code(), Some(0), "{facts:?}");
+
+    // The aggregation verbs, spelled exactly as the recipe runs them.
+    let candidates = tree.path().join("run/candidates/a-line-scan.json");
+    fs::write(
+        &candidates,
+        r#"{"candidates": [{"file": "src/lib.rs", "line": 2, "summary": "s", "failure_scenario": "f"}]}"#,
+    )?;
+    for (args, first_line) in [
+        (
+            vec!["merge", &*run, "--expect", "a-line-scan,b-removed-behavior"],
+            "digest pages",
+        ),
+        (vec!["shard", &*run, "--shards", "3"], "digest pages"),
+        (vec!["ballots", &*run], "ballots: 0 of 1 candidates"),
+        (vec!["collate", &*run], "digest pages"),
+    ] {
+        let mut argv = vec!["crtool"];
+        argv.extend(args);
+        let output = cyril(&repo, &argv)?;
+        assert_eq!(output.status.code(), Some(0), "{argv:?}: {output:?}");
+        assert!(
+            String::from_utf8(output.stdout)?.starts_with(first_line),
+            "{argv:?}"
+        );
+    }
+    let zero = cyril(&repo, &["crtool", "shard", &run, "--shards", "0"])?;
+    assert_eq!(zero.status.code(), Some(2));
     Ok(())
 }
 

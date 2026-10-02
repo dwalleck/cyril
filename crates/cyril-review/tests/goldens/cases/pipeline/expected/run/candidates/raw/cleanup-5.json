@@ -1,0 +1,9 @@
+{
+  "file": "src/util.rs",
+  "line": 5,
+  "summary": "Duplicate helper 5",
+  "failure_scenario": "the copies drift apart",
+  "category": "cleanup",
+  "pid": "cleanup-5",
+  "angle": "cleanup"
+}

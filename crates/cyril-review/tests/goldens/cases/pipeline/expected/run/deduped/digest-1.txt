@@ -1,0 +1,11 @@
+# id | file:line | angles | summary   (full record: deduped/<id>.json) -- page 1 of 1
+C01 | src/lib.rs:22 | x1 | Unchecked unwrap / on parse
+C02 | src/io.rs:? | x1 | Missing fsync before rename
+C03 | src/lib.rs:10 | x2 | Loop bound excludes the last item
+C04 | src/util.rs:2 | x2 | Duplicate helper 2
+C05 | src/util.rs:3 | x2 | Duplicate helper 3
+C06 | src/util.rs:5 | x2 | Duplicate helper 5
+C07 | src/util.rs:7 | x1 | Duplicate helper 7
+C08 | src/util.rs:8 | x1 | Duplicate helper 8
+C09 | src/app.rs:5 | x1 | Special case bolted onto the shared parser
+C10 | src/lib.rs:3 | x1 | unwrap in non-test code

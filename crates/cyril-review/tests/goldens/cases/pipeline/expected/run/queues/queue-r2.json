@@ -1,0 +1,9 @@
+{
+  "done": false,
+  "ids": [
+    "C03.v3",
+    "C10.v3",
+    "S01.v3"
+  ],
+  "verdict_dir": "<RUN>/verdicts/r2"
+}

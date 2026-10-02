@@ -1,0 +1,2 @@
+# id | file:line | angles | summary   (full record: deduped/<id>.json) -- page 1 of 1
+C01 | src/lib.rs:2 | x1 | New function never called

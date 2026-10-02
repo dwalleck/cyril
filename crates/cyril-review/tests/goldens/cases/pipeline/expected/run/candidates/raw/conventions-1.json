@@ -1,0 +1,10 @@
+{
+  "file": "src/lib.rs",
+  "line": 3,
+  "summary": "unwrap in non-test code",
+  "failure_scenario": "CLAUDE.md forbids it",
+  "category": "conventions",
+  "evidence": "CLAUDE.md: Zero `.unwrap()` in non-test code",
+  "pid": "conventions-1",
+  "angle": "conventions"
+}

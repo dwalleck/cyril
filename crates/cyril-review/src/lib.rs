@@ -6,12 +6,17 @@ mod check;
 mod facts;
 mod gather;
 mod git;
+mod merge;
+mod record;
 mod run;
+mod verdicts;
 
 pub use check::{CheckOutcome, CheckResult, run_check};
 pub use facts::facts;
 pub use gather::gather;
+pub use merge::{merge, shard};
 pub use run::ReviewRun;
+pub use verdicts::{ballots, collate};
 
 use std::io;
 use std::path::PathBuf;
@@ -68,6 +73,13 @@ pub enum ReviewError {
         #[source]
         source: io::Error,
     },
+    #[error("{path} is corrupt: {message}")]
+    CorruptRunFile {
+        path: PathBuf,
+        message: &'static str,
+    },
+    #[error("invalid argument: {message}")]
+    InvalidArgument { message: &'static str },
     #[error("invalid regular expression: {0}")]
     Regex(#[from] regex::Error),
 }

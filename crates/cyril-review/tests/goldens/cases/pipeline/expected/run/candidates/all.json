@@ -1,0 +1,176 @@
+{
+  "angles_expected": [
+    "a-line-scan",
+    "b-removed-behavior",
+    "c-cross-file",
+    "d-language-pitfalls",
+    "e-wrapper-proxy",
+    "cleanup",
+    "altitude",
+    "conventions"
+  ],
+  "angles_reported": [
+    "a-line-scan",
+    "b-removed-behavior",
+    "c-cross-file",
+    "cleanup",
+    "altitude",
+    "conventions"
+  ],
+  "angles_missing": [
+    "d-language-pitfalls",
+    "e-wrapper-proxy"
+  ],
+  "problems": [
+    {
+      "angle": "d-language-pitfalls",
+      "file": "candidates/d-language-pitfalls.json",
+      "problem": "unreadable: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)"
+    },
+    {
+      "angle": "cleanup",
+      "problem": "9 candidates; kept first 8"
+    },
+    {
+      "angle": "altitude",
+      "file": "candidates/altitude.json",
+      "problem": "non-object entries skipped"
+    }
+  ],
+  "raw_count": 14,
+  "candidates": [
+    {
+      "file": "src/lib.rs",
+      "line": 10,
+      "summary": "Off-by-one in loop bound",
+      "failure_scenario": "len 0 -> panics at index",
+      "category": "correctness",
+      "evidence": "for i in 0..=n",
+      "pid": "a-line-scan-1",
+      "angle": "a-line-scan"
+    },
+    {
+      "file": "src/lib.rs",
+      "line": 22,
+      "summary": "Unchecked unwrap | on parse",
+      "failure_scenario": "non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, ",
+      "category": "correctness",
+      "evidence": "x.unwrap()",
+      "pid": "a-line-scan-2",
+      "angle": "a-line-scan"
+    },
+    {
+      "file": "src/io.rs",
+      "line": null,
+      "summary": "Missing fsync before rename",
+      "failure_scenario": "",
+      "category": "correctness",
+      "pid": "a-line-scan-3",
+      "angle": "a-line-scan",
+      "incomplete": [
+        "failure_scenario"
+      ]
+    },
+    {
+      "file": "src/lib.rs",
+      "line": 10,
+      "summary": "Loop bound excludes the last item",
+      "failure_scenario": "last element skipped when n > 0, and the total under-counts by one",
+      "category": "correctness",
+      "evidence": "0..=n vs 0..n",
+      "pid": "b-removed-behavior-1",
+      "angle": "b-removed-behavior"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 1,
+      "summary": "Duplicate helper 1",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-1",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 2,
+      "summary": "Duplicate helper 2",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-2",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 3,
+      "summary": "Duplicate helper 3",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-3",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 4,
+      "summary": "Duplicate helper 4",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-4",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 5,
+      "summary": "Duplicate helper 5",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-5",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 6,
+      "summary": "Duplicate helper 6",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-6",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 7,
+      "summary": "Duplicate helper 7",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-7",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 8,
+      "summary": "Duplicate helper 8",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup",
+      "pid": "cleanup-8",
+      "angle": "cleanup"
+    },
+    {
+      "file": "src/app.rs",
+      "line": 5,
+      "summary": "Special case bolted onto the shared parser",
+      "failure_scenario": "every new flag adds a branch",
+      "category": "altitude",
+      "pid": "altitude-1",
+      "angle": "altitude"
+    },
+    {
+      "file": "src/lib.rs",
+      "line": 3,
+      "summary": "unwrap in non-test code",
+      "failure_scenario": "CLAUDE.md forbids it",
+      "category": "conventions",
+      "evidence": "CLAUDE.md: Zero `.unwrap()` in non-test code",
+      "pid": "conventions-1",
+      "angle": "conventions"
+    }
+  ]
+}

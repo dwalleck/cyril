@@ -1,0 +1,25 @@
+{
+  "angles_expected": [
+    "a-line-scan",
+    "b-removed-behavior"
+  ],
+  "angles_reported": [
+    "a-line-scan"
+  ],
+  "angles_missing": [
+    "b-removed-behavior"
+  ],
+  "problems": [],
+  "raw_count": 1,
+  "candidates": [
+    {
+      "file": "src/lib.rs",
+      "line": 2,
+      "summary": "New function never called",
+      "failure_scenario": "dead code ships",
+      "category": "Rule CONVENTIONS check",
+      "pid": "a-line-scan-1",
+      "angle": "a-line-scan"
+    }
+  ]
+}
