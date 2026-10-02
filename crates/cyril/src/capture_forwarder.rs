@@ -199,7 +199,9 @@ fn event_bytes(event: &CoreEvent) -> usize {
         .saturating_add(payload)
 }
 
-#[cfg(test)]
+// Its only test drives the in-process memory runtime, which binds a
+// unix-domain socket.
+#[cfg(all(test, unix))]
 mod tests {
     use super::CaptureForwarder;
     use cyril_core::types::{
@@ -208,7 +210,6 @@ mod tests {
     use std::time::{Duration, Instant};
     use tokio::sync::mpsc;
 
-    #[cfg(unix)]
     #[tokio::test]
     async fn c9_forwarder_batches_and_drains_before_runtime_shutdown() {
         let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;

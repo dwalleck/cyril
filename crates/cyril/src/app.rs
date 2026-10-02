@@ -4681,6 +4681,7 @@ mod tests {
     }
 
     /// Drive one off-loop memory result the way the `select!` arm would.
+    #[cfg(unix)]
     async fn drain_one_memory_result(app: &mut App) {
         let result = tokio::time::timeout(Duration::from_secs(5), app.memory_task_rx.recv())
             .await
@@ -4689,6 +4690,7 @@ mod tests {
         app.handle_memory_task_result(result).await;
     }
 
+    #[cfg(unix)]
     async fn recv_prompt(
         commands: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
     ) -> (SessionId, Vec<String>, Vec<String>) {
