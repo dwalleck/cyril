@@ -23,18 +23,29 @@ use cyril_ui::traits::{ReviewCheck, ReviewForm};
 use std::collections::HashSet;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tokio::sync::mpsc;
 
 /// The only target this slice offers: HEAD against its upstream or main.
 const TARGET: &str = "auto";
 /// Every denial of a run's requests, one per line, in its run directory.
 pub(super) const DENIED_LOG: &str = "denied.log";
+/// KAS loads agent files from a watcher (300 ms debounce, 1 s rechecks for a
+/// directory it saw appear), so a freshly installed agent is not registered
+/// at once. Wait this long before creating the workflow, and double it per
+/// retry while KAS still reports a review agent as unregistered.
+const AGENT_LOAD_DELAY: Duration = Duration::from_secs(2);
+const AGENT_LOAD_RETRIES: u32 = 3;
+/// KAS's `WorkflowAgentNotFoundError` text (2.26.0): "Workflow references
+/// custom agent '<name>' which is not registered."
+const AGENT_NOT_REGISTERED: &str = "which is not registered";
 
 pub(super) struct ReviewState {
     /// The crtool spelling for the session's host shell, or why there is none.
     prefix: Result<CrtoolPrefix, String>,
     /// Where the assets install: Node's home directory.
     home: Option<PathBuf>,
+    agent_load_delay: Duration,
     launch: Option<Launch>,
     /// The latest run. Kept after it ends so its late requests are denied
     /// and logged rather than falling through to an ordinary prompt.
@@ -54,7 +65,15 @@ enum Stage {
     /// The form is open.
     Form,
     Preparing,
-    Minting(ReadyRun),
+    /// Waiting for KAS to load the review agents before `workflow/new`.
+    Loading {
+        ready: ReadyRun,
+        retries: u32,
+    },
+    Minting {
+        ready: ReadyRun,
+        retries: u32,
+    },
     Recording(WorkflowId),
     Invoking(WorkflowId),
 }
@@ -81,6 +100,8 @@ pub(super) enum ReviewTask {
         decision: Decision,
     },
     Finished(String),
+    /// The agent-load wait is over: send `workflow/new`.
+    SendNew,
 }
 
 impl ReviewState {
@@ -93,6 +114,7 @@ impl ReviewState {
         Self {
             prefix,
             home: launch::node_home(),
+            agent_load_delay: AGENT_LOAD_DELAY,
             launch: None,
             run: None,
             tx,
@@ -104,6 +126,18 @@ impl ReviewState {
     pub(super) fn set_environment(&mut self, prefix: CrtoolPrefix, home: PathBuf) {
         self.prefix = Ok(prefix);
         self.home = Some(home);
+        self.agent_load_delay = Duration::from_millis(10);
+    }
+
+    /// Deliver `task` on `rx` after `delay`.
+    fn after(&self, delay: Duration, task: ReviewTask) {
+        let tx = self.tx.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(delay).await;
+            if tx.send(task).is_err() {
+                tracing::debug!("review result dropped: the app is gone");
+            }
+        });
     }
 
     /// Run `work` off the event loop; its result, if any, comes back on `rx`.
@@ -262,7 +296,23 @@ impl App {
                         launch.scope.join(" ")
                     )),
                     Err(error) => self.ui_state.add_system_message(launch_message(&error)),
-                    Ok(Prepared::Ready(ready)) => self.send_new(launch, ready).await,
+                    Ok(Prepared::Ready(ready)) => {
+                        self.ui_state.add_system_message(format!(
+                            "review: gathered {} file(s) into {} — creating the workflow",
+                            ready.files,
+                            ready.run_dir.display()
+                        ));
+                        if ready.agents_changed {
+                            self.review
+                                .after(self.review.agent_load_delay, ReviewTask::SendNew);
+                            self.review.launch = Some(Launch {
+                                stage: Stage::Loading { ready, retries: 0 },
+                                ..launch
+                            });
+                        } else {
+                            self.send_new(launch, ready, 0).await;
+                        }
+                    }
                 }
             }
             ReviewTask::Recorded {
@@ -316,10 +366,25 @@ impl App {
                 }
             }
             ReviewTask::Finished(text) => self.ui_state.add_system_message(text),
+            ReviewTask::SendNew => {
+                let Some(launch) = self.review.launch.take() else {
+                    return;
+                };
+                match launch.stage {
+                    Stage::Loading { ready, retries } => {
+                        let launch = Launch {
+                            stage: Stage::Preparing,
+                            ..launch
+                        };
+                        self.send_new(launch, ready, retries).await;
+                    }
+                    stage => self.review.launch = Some(Launch { stage, ..launch }),
+                }
+            }
         }
     }
 
-    async fn send_new(&mut self, launch: Launch, ready: ReadyRun) {
+    async fn send_new(&mut self, launch: Launch, ready: ReadyRun, retries: u32) {
         let Some(session_id) = self.session.id().cloned() else {
             self.ui_state
                 .add_system_message("review: no active session — nothing was started".to_owned());
@@ -337,13 +402,8 @@ impl App {
                 .add_system_message(format!("review: cannot create the workflow — {error}"));
             return;
         }
-        self.ui_state.add_system_message(format!(
-            "review: gathered {} file(s) into {} — creating the workflow",
-            ready.files,
-            ready.run_dir.display()
-        ));
         self.review.launch = Some(Launch {
-            stage: Stage::Minting(ready),
+            stage: Stage::Minting { ready, retries },
             ..launch
         });
     }
@@ -383,7 +443,7 @@ impl App {
             WorkflowCommandOutcome::Failed { operation, .. } => {
                 let stage = self.review.launch.as_ref().map(|launch| &launch.stage);
                 match (operation.as_str(), stage) {
-                    ("workflow new", Some(Stage::Minting(_))) => {
+                    ("workflow new", Some(Stage::Minting { .. })) => {
                         self.review.launch = None;
                         self.ui_state.add_system_message(
                             "review: the workflow was not created; nothing was started".to_owned(),
@@ -405,13 +465,50 @@ impl App {
         }
     }
 
+    /// A `workflow/new` that failed only because KAS has not loaded the
+    /// review agents yet is retried after a longer wait instead of reported.
+    /// Returns whether the outcome was absorbed.
+    pub(super) fn absorb_review_retry(&mut self, outcome: &WorkflowCommandOutcome) -> bool {
+        let WorkflowCommandOutcome::Failed {
+            operation, details, ..
+        } = outcome
+        else {
+            return false;
+        };
+        if operation != "workflow new" || !details.contains(AGENT_NOT_REGISTERED) {
+            return false;
+        }
+        let Some(launch) = self.review.launch.take() else {
+            return false;
+        };
+        match launch.stage {
+            Stage::Minting { ready, retries } if retries < AGENT_LOAD_RETRIES => {
+                let delay = self.review.agent_load_delay * 2u32.pow(retries);
+                tracing::info!(retries, ?delay, %details, "review: agents not loaded yet; retrying workflow/new");
+                self.review.after(delay, ReviewTask::SendNew);
+                self.review.launch = Some(Launch {
+                    stage: Stage::Loading {
+                        ready,
+                        retries: retries + 1,
+                    },
+                    ..launch
+                });
+                true
+            }
+            stage => {
+                self.review.launch = Some(Launch { stage, ..launch });
+                false
+            }
+        }
+    }
+
     /// `Minted`: arm the run's authorization, then persist its identity.
     /// Invoke waits for the record.
     fn arm_review(&mut self, workflow_id: &WorkflowId) {
         let Some(launch) = self.review.launch.take() else {
             return;
         };
-        let Stage::Minting(ready) = launch.stage else {
+        let Stage::Minting { ready, .. } = launch.stage else {
             self.review.launch = Some(launch);
             return;
         };

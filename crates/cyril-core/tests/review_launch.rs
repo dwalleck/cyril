@@ -91,6 +91,7 @@ fn a_ready_run_installs_assets_gathers_and_ignores_itself() -> TestResult {
         return Err("a changed file must produce a run".into());
     };
     assert_eq!(run.files, 1);
+    assert!(run.agents_changed, "a fresh home gets every agent");
     assert_eq!(
         run.recipe,
         fixture
@@ -134,6 +135,10 @@ fn a_ready_run_installs_assets_gathers_and_ignores_itself() -> TestResult {
         return Err("the diff is still there".into());
     };
     assert_ne!(second.run_dir, run.run_dir);
+    assert!(
+        !second.agents_changed,
+        "identical bytes are left alone, so KAS has nothing to reload"
+    );
     assert_eq!(fs::read_to_string(runs.join(".gitignore"))?, "*\n# kept\n");
     Ok(())
 }

@@ -1178,6 +1178,11 @@ impl App {
             ) => Some(outcome.clone()),
             _ => None,
         };
+        if let Some(outcome) = &review_outcome
+            && self.absorb_review_retry(outcome)
+        {
+            return Vec::new();
+        }
         let commands = self.handle_notification_inner(routed, true);
         if let Some(outcome) = review_outcome {
             self.observe_review_outcome(&outcome);

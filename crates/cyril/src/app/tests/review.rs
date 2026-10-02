@@ -245,6 +245,19 @@ async fn answered(receiver: tokio::sync::oneshot::Receiver<PermissionResponse>) 
     }
 }
 
+/// The next outbound command once `workflow/new` is due: a fresh install
+/// first waits for KAS to load the review agents.
+async fn next_new(
+    app: &mut App,
+    rx: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
+) -> Result<BridgeCommand, tokio::sync::mpsc::error::TryRecvError> {
+    if let Ok(command) = rx.try_recv() {
+        return Ok(command);
+    }
+    settle(app).await;
+    rx.try_recv()
+}
+
 /// Decide `request` through the policy: it must never reach the overlay.
 async fn decide(app: &mut App, request: PermissionRequest) {
     assert!(
@@ -275,7 +288,7 @@ async fn launch(
         op: WorkflowOp::New { target, inputs },
         workspace_paths,
         ..
-    }) = rx.try_recv()
+    }) = next_new(app, rx).await
     else {
         panic!("Enter must send workflow/new");
     };
@@ -531,7 +544,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
     app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
     settle(&mut app).await;
     assert!(matches!(
-        rx.try_recv(),
+        next_new(&mut app, &mut rx).await,
         Ok(BridgeCommand::Workflow {
             op: WorkflowOp::New { .. },
             ..
@@ -564,7 +577,7 @@ async fn failed_steps_end_the_launch_and_withdraw_authorization() {
     settle(&mut app).await;
     app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
     settle(&mut app).await;
-    assert!(rx.try_recv().is_ok(), "New");
+    assert!(next_new(&mut app, &mut rx).await.is_ok(), "New");
     app.handle_notification(outcome(WorkflowCommandOutcome::Minted {
         workflow_id: run_id(),
         name: "cyril-review".into(),
@@ -606,7 +619,7 @@ async fn an_unrecorded_run_is_never_invoked() {
     let Ok(BridgeCommand::Workflow {
         op: WorkflowOp::New { inputs, .. },
         ..
-    }) = rx.try_recv()
+    }) = next_new(&mut app, &mut rx).await
     else {
         panic!("Enter must send workflow/new");
     };
@@ -626,6 +639,69 @@ async fn an_unrecorded_run_is_never_invoked() {
             && text.ends_with("; its authorization is withdrawn"),
         "{text}"
     );
+    app.handle_command_result(CommandResult::review());
+    assert!(app.ui_state.review_form().is_some(), "the launch is over");
+}
+
+/// KAS loads freshly installed agents from a file watcher. Until it has, a
+/// `workflow/new` naming them fails; `/review` retries a bounded number of
+/// times without reporting the interim failures, then reports the last one.
+#[tokio::test]
+async fn unloaded_agents_retry_workflow_new_then_report() {
+    let repo = repo(true);
+    let (mut app, mut rx) = review_app(&repo);
+    app.handle_command_result(CommandResult::review());
+    settle(&mut app).await;
+    app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+    settle(&mut app).await;
+    assert!(
+        rx.try_recv().is_err(),
+        "a fresh install waits for KAS to load the agents before New"
+    );
+    let not_registered = || {
+        outcome(WorkflowCommandOutcome::Failed {
+            operation: "workflow new".into(),
+            code: Some(-32603),
+            details: "Workflow references custom agent 'cyril-review-clerk' which is not \
+                      registered. Registered step agents: wf-coder."
+                .into(),
+        })
+    };
+    let failures = |app: &App| {
+        app.ui_state
+            .messages()
+            .iter()
+            .filter(|message| {
+                matches!(message.kind(), ChatMessageKind::System(text)
+                    if text.contains("not registered") || text.contains("was not created"))
+            })
+            .count()
+    };
+    for attempt in 0..=3 {
+        assert!(
+            matches!(
+                next_new(&mut app, &mut rx).await,
+                Ok(BridgeCommand::Workflow {
+                    op: WorkflowOp::New { .. },
+                    ..
+                })
+            ),
+            "workflow/new attempt {attempt}"
+        );
+        app.handle_notification(not_registered());
+        if attempt < 3 {
+            assert_eq!(failures(&app), 0, "attempt {attempt} is retried silently");
+        }
+    }
+    assert_eq!(
+        last_message(&app),
+        "review: the workflow was not created; nothing was started"
+    );
+    assert!(
+        failures(&app) >= 2,
+        "the agent's error and the review's line"
+    );
+    assert!(rx.try_recv().is_err(), "no fifth attempt");
     app.handle_command_result(CommandResult::review());
     assert!(app.ui_state.review_form().is_some(), "the launch is over");
 }

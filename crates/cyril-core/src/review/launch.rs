@@ -74,6 +74,9 @@ pub struct ReadyRun {
     /// The installed recipe's absolute path, sent as `workflowPath` so no
     /// workspace recipe name can shadow it.
     pub recipe: PathBuf,
+    /// Agent files were written: KAS loads them from its file watcher a
+    /// moment later, so the workflow must not be created straight away.
+    pub agents_changed: bool,
     pub inputs: Map<String, Value>,
     pub files: usize,
 }
@@ -133,7 +136,7 @@ pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {
     if !reserved.is_empty() {
         return Err(LaunchError::ReservedAgents { paths: reserved });
     }
-    let recipe = install_assets(home.as_deref().ok_or(LaunchError::NoHome)?)?;
+    let installed = install_assets(home.as_deref().ok_or(LaunchError::NoHome)?)?;
     let run_dir = create_run_dir(workspace)?;
     let run = ReviewRun::new(workspace, &run_dir)?;
     gather(&run, target, &scope.join(" ")).map_err(|source| LaunchError::Gather {
@@ -143,7 +146,8 @@ pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {
     let inputs = recipe_inputs(&run_dir, target, scope, None, crtool)?;
     Ok(Prepared::Ready(ReadyRun {
         run_dir,
-        recipe,
+        recipe: installed.recipe,
+        agents_changed: installed.agents_changed,
         inputs,
         files,
     }))
@@ -177,11 +181,19 @@ pub fn reserved_agents(workspace: &Path) -> Result<Vec<PathBuf>, LaunchError> {
     Ok(found)
 }
 
+/// What [`install_assets`] did.
+#[derive(Debug)]
+pub struct Installed {
+    pub recipe: PathBuf,
+    pub agents_changed: bool,
+}
+
 /// Write each asset under `<home>/.kiro/{workflows,agents}` whose bytes
 /// differ, and return the recipe's path.
-pub fn install_assets(home: &Path) -> Result<PathBuf, LaunchError> {
+pub fn install_assets(home: &Path) -> Result<Installed, LaunchError> {
     let kiro = home.join(".kiro");
     let mut recipe = None;
+    let mut agents_changed = false;
     for asset in ASSETS {
         let dir = kiro.join(match asset.kind() {
             AssetKind::Workflow => "workflows",
@@ -203,11 +215,16 @@ pub fn install_assets(home: &Path) -> Result<PathBuf, LaunchError> {
         let temporary = dir.join(format!(".{}.tmp", asset.file_name()));
         fs::write(&temporary, asset.contents()).map_err(io_error("write", &temporary))?;
         fs::rename(&temporary, &path).map_err(io_error("install", &path))?;
+        agents_changed |= asset.kind() == AssetKind::Agent;
     }
-    recipe.ok_or_else(|| LaunchError::Io {
+    let recipe = recipe.ok_or_else(|| LaunchError::Io {
         action: "find",
         path: kiro.join("workflows"),
         source: io::Error::new(io::ErrorKind::NotFound, "no embedded recipe"),
+    })?;
+    Ok(Installed {
+        recipe,
+        agents_changed,
     })
 }
 
