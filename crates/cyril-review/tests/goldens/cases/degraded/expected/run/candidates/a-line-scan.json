@@ -1,0 +1,12 @@
+{
+  "angle": "a-line-scan",
+  "candidates": [
+    {
+      "file": "src/lib.rs",
+      "line": 2,
+      "summary": "New function never called",
+      "failure_scenario": "dead code ships",
+      "category": "Rule CONVENTIONS check"
+    }
+  ]
+}

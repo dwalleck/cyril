@@ -1,0 +1,20 @@
+{
+  "angle": "sweep",
+  "candidates": [
+    {
+      "file": "src/io.rs",
+      "line": 40,
+      "summary": "Leaked file handle on the error path",
+      "failure_scenario": "an early return skips close",
+      "category": "correctness",
+      "id": "S01"
+    },
+    {
+      "file": "src/io.rs",
+      "line": "x",
+      "summary": "Sweep candidate without an id",
+      "failure_scenario": "the finder forgot the id",
+      "category": "correctness"
+    }
+  ]
+}

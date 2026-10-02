@@ -1,0 +1,10 @@
+{
+  "file": "src/app.rs",
+  "line": 5,
+  "summary": "Special case bolted onto the shared parser",
+  "failure_scenario": "every new flag adds a branch",
+  "category": "altitude",
+  "pid": "altitude-1",
+  "angle": "altitude",
+  "id": "C09"
+}

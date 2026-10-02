@@ -1,0 +1,2 @@
+# id | verdict | angles | category | file:line | summary || fails: excerpt   (full: deduped/<id>.json or candidates/sweep.json, verdicts/<id>.json) -- page 1 of 1
+C01 | UNVERIFIED (votes U/U/U) | x1 | Rule CONVENTI… | src/lib.rs:2 | New function never called || fails: dead code ships

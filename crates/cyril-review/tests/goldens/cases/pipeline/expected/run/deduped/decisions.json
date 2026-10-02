@@ -1,0 +1,34 @@
+{
+  "groups": [
+    {
+      "pids": [
+        "a-line-scan-1",
+        "b-removed-behavior-1"
+      ],
+      "reason": "same loop bound"
+    },
+    {
+      "pids": [
+        "cleanup-1",
+        "cleanup-2",
+        "ghost-9"
+      ],
+      "keep": "cleanup-2",
+      "reason": "same helper"
+    },
+    {
+      "pids": [
+        "cleanup-6",
+        "cleanup-5"
+      ],
+      "reason": "equal detail: merge order decides"
+    }
+  ],
+  "duplicates": [
+    {
+      "drop": "cleanup-4",
+      "keep": "cleanup-3",
+      "reason": "older pair format"
+    }
+  ]
+}

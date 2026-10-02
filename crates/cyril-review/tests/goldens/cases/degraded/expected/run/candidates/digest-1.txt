@@ -1,0 +1,2 @@
+# pid | file:line | category | summary || fails: failure-scenario excerpt   (full record: candidates/raw/<pid>.json) -- page 1 of 1
+a-line-scan-1 | src/lib.rs:2 | Rule CONVENTI… | New function never called || fails: dead code ships

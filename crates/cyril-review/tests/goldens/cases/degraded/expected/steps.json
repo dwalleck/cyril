@@ -1,0 +1,70 @@
+[
+  {
+    "step": [
+      "gather",
+      "HEAD",
+      ""
+    ],
+    "exit": 0,
+    "stdout": "facts: 1 changed symbols (usages capped at 25 each), 0 change docs -> facts/usages-1.txt\ngathered 1 files, 149 patch bytes, target=HEAD\n"
+  },
+  {
+    "step": [
+      "write",
+      "candidates/a-line-scan.json",
+      {
+        "angle": "a-line-scan",
+        "candidates": [
+          {
+            "file": "src/lib.rs",
+            "line": 2,
+            "summary": "New function never called",
+            "failure_scenario": "dead code ships",
+            "category": "Rule CONVENTIONS check"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "merge",
+      "--expect",
+      "a-line-scan,b-removed-behavior"
+    ],
+    "exit": 0,
+    "stdout": "digest pages (read these, not all.json): candidates/digest-1.txt\nmerged 1 candidates from 1/2 angles | MISSING: b-removed-behavior\n"
+  },
+  {
+    "step": [
+      "write",
+      "deduped/decisions.json",
+      []
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "shard"
+    ],
+    "exit": 0,
+    "stdout": "digest pages (the already-raised list): deduped/digest-1.txt\nsharded 1 candidates (0 duplicates dropped) into 4 queues: [1, 0, 0, 0] | WARNINGS: decisions.json unreadable (top level is not an object); no dedup applied\n"
+  },
+  {
+    "step": [
+      "ballots"
+    ],
+    "exit": 0,
+    "stdout": "ballots: 1 of 1 candidates get two more votes (0 refuted, 1 conventions) -> queues/queue-r1.json, queue-r2.json\n"
+  },
+  {
+    "step": [
+      "collate"
+    ],
+    "exit": 0,
+    "stdout": "digest pages (read these, not verified.json): verified-digest-1.txt\ncollated: kept 1 (CONFIRMED=0, PLAUSIBLE=0, UNVERIFIED=1), refuted 0\n"
+  }
+]

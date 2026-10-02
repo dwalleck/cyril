@@ -1,0 +1,7 @@
+{
+  "id": "C08",
+  "verdict": "CONFIRMED",
+  "evidence": "evidence for C08",
+  "reasoning": "reasoning for C08",
+  "by_design": "docs/x.md: accepted on purpose"
+}

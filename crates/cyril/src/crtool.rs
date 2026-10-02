@@ -26,13 +26,34 @@ pub(crate) enum Step {
     },
     /// Rebuild facts for a stamped run.
     Facts { rundir: PathBuf },
+    /// Merge every finder's candidates.
+    Merge {
+        rundir: PathBuf,
+        #[arg(long)]
+        expect: String,
+    },
+    /// Apply duplicate decisions and split candidates into verifier queues.
+    Shard {
+        rundir: PathBuf,
+        #[arg(long, default_value_t = 4)]
+        shards: usize,
+    },
+    /// Queue two more votes for unstable verdicts.
+    Ballots { rundir: PathBuf },
+    /// Tally every vote into kept and refuted findings.
+    Collate { rundir: PathBuf },
 }
 
 impl Step {
     /// The run directory exactly as the caller spelled it.
     fn rundir(&self) -> &Path {
         match self {
-            Self::Gather { rundir, .. } | Self::Facts { rundir } => rundir,
+            Self::Gather { rundir, .. }
+            | Self::Facts { rundir }
+            | Self::Merge { rundir, .. }
+            | Self::Shard { rundir, .. }
+            | Self::Ballots { rundir }
+            | Self::Collate { rundir } => rundir,
         }
     }
 }
@@ -63,13 +84,14 @@ impl Command {
             Err(error) => return report_error(&error, 2),
         };
         let rundir = anchored(&workspace, step.rundir());
-        let result = match step {
-            Step::Gather { target, scope, .. } => ReviewRun::new(&workspace, rundir)
-                .and_then(|run| cyril_review::gather(&run, &target, &scope)),
-            Step::Facts { .. } => {
-                ReviewRun::new(&workspace, rundir).and_then(|run| cyril_review::facts(&run))
-            }
-        };
+        let result = ReviewRun::new(&workspace, rundir).and_then(|run| match step {
+            Step::Gather { target, scope, .. } => cyril_review::gather(&run, &target, &scope),
+            Step::Facts { .. } => cyril_review::facts(&run),
+            Step::Merge { expect, .. } => cyril_review::merge(&run, &expect),
+            Step::Shard { shards, .. } => cyril_review::shard(&run, shards),
+            Step::Ballots { .. } => cyril_review::ballots(&run),
+            Step::Collate { .. } => cyril_review::collate(&run),
+        });
         match result {
             Ok(output) => write_output(&output),
             Err(error) => report_error(&error, error.exit_code()),

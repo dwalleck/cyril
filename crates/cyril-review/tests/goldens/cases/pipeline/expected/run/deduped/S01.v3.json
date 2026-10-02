@@ -1,0 +1,10 @@
+{
+  "file": "src/io.rs",
+  "line": 40,
+  "summary": "Leaked file handle on the error path",
+  "failure_scenario": "an early return skips close",
+  "category": "correctness",
+  "id": "S01.v3",
+  "angle": "sweep",
+  "ballot_of": "S01"
+}

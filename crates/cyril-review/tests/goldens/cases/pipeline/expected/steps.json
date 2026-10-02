@@ -1,0 +1,524 @@
+[
+  {
+    "step": [
+      "gather",
+      "HEAD",
+      ""
+    ],
+    "exit": 0,
+    "stdout": "facts: 1 changed symbols (usages capped at 25 each), 0 change docs -> facts/usages-1.txt\ngathered 1 files, 149 patch bytes, target=HEAD\n"
+  },
+  {
+    "step": [
+      "write",
+      "candidates/a-line-scan.json",
+      {
+        "angle": "a-line-scan",
+        "candidates": [
+          {
+            "file": "src/lib.rs",
+            "line": 10,
+            "summary": "Off-by-one in loop bound",
+            "failure_scenario": "len 0 -> panics at index",
+            "category": "correctness",
+            "evidence": "for i in 0..=n"
+          },
+          {
+            "file": "src/lib.rs",
+            "line": "22",
+            "summary": "Unchecked unwrap | on parse",
+            "failure_scenario": "non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, ",
+            "category": "correctness",
+            "evidence": "x.unwrap()"
+          },
+          {
+            "file": "src/io.rs",
+            "line": null,
+            "summary": "Missing fsync before rename",
+            "failure_scenario": "",
+            "category": "correctness"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/b-removed-behavior.json",
+      [
+        {
+          "file": "src/lib.rs",
+          "line": 10,
+          "summary": "Loop bound excludes the last item",
+          "failure_scenario": "last element skipped when n > 0, and the total under-counts by one",
+          "category": "correctness",
+          "evidence": "0..=n vs 0..n"
+        }
+      ]
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/c-cross-file.json",
+      {
+        "angle": "c-cross-file",
+        "candidates": []
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/d-language-pitfalls.json",
+      "{not json"
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/cleanup.json",
+      {
+        "angle": "cleanup",
+        "candidates": [
+          {
+            "file": "src/util.rs",
+            "line": 1,
+            "summary": "Duplicate helper 1",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 2,
+            "summary": "Duplicate helper 2",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 3,
+            "summary": "Duplicate helper 3",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 4,
+            "summary": "Duplicate helper 4",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 5,
+            "summary": "Duplicate helper 5",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 6,
+            "summary": "Duplicate helper 6",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 7,
+            "summary": "Duplicate helper 7",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 8,
+            "summary": "Duplicate helper 8",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          },
+          {
+            "file": "src/util.rs",
+            "line": 9,
+            "summary": "Duplicate helper 9",
+            "failure_scenario": "the copies drift apart",
+            "category": "cleanup"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/altitude.json",
+      {
+        "candidates": [
+          "not an object",
+          {
+            "file": "src/app.rs",
+            "line": 5,
+            "summary": "Special case bolted onto the shared parser",
+            "failure_scenario": "every new flag adds a branch",
+            "category": "altitude"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/conventions.json",
+      {
+        "angle": "conventions",
+        "candidates": [
+          {
+            "file": "src/lib.rs",
+            "line": 3,
+            "summary": "unwrap in non-test code",
+            "failure_scenario": "CLAUDE.md forbids it",
+            "category": "conventions",
+            "evidence": "CLAUDE.md: Zero `.unwrap()` in non-test code"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "merge",
+      "--expect",
+      "a-line-scan,b-removed-behavior,c-cross-file,d-language-pitfalls,e-wrapper-proxy,cleanup,altitude,conventions"
+    ],
+    "exit": 0,
+    "stdout": "digest pages (read these, not all.json): candidates/digest-1.txt\nmerged 14 candidates from 6/8 angles | MISSING: d-language-pitfalls,e-wrapper-proxy | 3 problem(s), see candidates/all.json\n"
+  },
+  {
+    "step": [
+      "write",
+      "deduped/decisions.json",
+      {
+        "groups": [
+          {
+            "pids": [
+              "a-line-scan-1",
+              "b-removed-behavior-1"
+            ],
+            "reason": "same loop bound"
+          },
+          {
+            "pids": [
+              "cleanup-1",
+              "cleanup-2",
+              "ghost-9"
+            ],
+            "keep": "cleanup-2",
+            "reason": "same helper"
+          },
+          {
+            "pids": [
+              "cleanup-6",
+              "cleanup-5"
+            ],
+            "reason": "equal detail: merge order decides"
+          }
+        ],
+        "duplicates": [
+          {
+            "drop": "cleanup-4",
+            "keep": "cleanup-3",
+            "reason": "older pair format"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "shard",
+      "--shards",
+      "3"
+    ],
+    "exit": 0,
+    "stdout": "digest pages (the already-raised list): deduped/digest-1.txt\nsharded 10 candidates (4 duplicates dropped) into 3 queues: [4, 3, 3] | WARNINGS: decision names unknown pid(s) ['ghost-9']; ignored those\n"
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q1/C01.json",
+      {
+        "id": "C01",
+        "verdict": "confirmed",
+        "evidence": "evidence for C01",
+        "reasoning": "reasoning for C01"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q3/C03.json",
+      {
+        "id": "C03",
+        "verdict": "REFUTED",
+        "evidence": "evidence for C03",
+        "reasoning": "reasoning for C03"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q1/C04.json",
+      {
+        "id": "C04",
+        "verdict": "MAYBE",
+        "evidence": "evidence for C04",
+        "reasoning": "reasoning for C04"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q2/C05.json",
+      "{oops"
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q3/C06.json",
+      {
+        "id": "C06",
+        "verdict": "PLAUSIBLE",
+        "evidence": "evidence for C06",
+        "reasoning": "reasoning for C06",
+        "would_confirm": "run it on an empty list",
+        "corrected_line": 7
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q1/C07.json",
+      []
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q2/C08.json",
+      {
+        "id": "C08",
+        "verdict": "CONFIRMED",
+        "evidence": "evidence for C08",
+        "reasoning": "reasoning for C08",
+        "by_design": "docs/x.md: accepted on purpose"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/C09.json",
+      {
+        "id": "C09",
+        "verdict": "CONFIRMED",
+        "evidence": "evidence for C09",
+        "reasoning": "reasoning for C09"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q3/C10.json",
+      {
+        "id": "C10",
+        "verdict": "CONFIRMED",
+        "evidence": "evidence for C10",
+        "reasoning": "reasoning for C10"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/q2/C11.json",
+      {
+        "id": "C11",
+        "verdict": "CONFIRMED",
+        "evidence": "evidence for C11",
+        "reasoning": "reasoning for C11"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "candidates/sweep.json",
+      {
+        "angle": "sweep",
+        "candidates": [
+          {
+            "file": "src/io.rs",
+            "line": 40,
+            "summary": "Leaked file handle on the error path",
+            "failure_scenario": "an early return skips close",
+            "category": "correctness",
+            "id": "S01"
+          },
+          {
+            "file": "src/io.rs",
+            "line": "x",
+            "summary": "Sweep candidate without an id",
+            "failure_scenario": "the finder forgot the id",
+            "category": "correctness"
+          }
+        ]
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/sweep/S01.json",
+      {
+        "id": "S01",
+        "verdict": "REFUTED",
+        "evidence": "evidence for S01",
+        "reasoning": "reasoning for S01"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "ballots"
+    ],
+    "exit": 0,
+    "stdout": "ballots: 3 of 12 candidates get two more votes (2 refuted, 1 conventions) -> queues/queue-r1.json, queue-r2.json\n"
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/r1/C03.v2.json",
+      {
+        "id": "C03.v2",
+        "verdict": "CONFIRMED",
+        "evidence": "evidence for C03.v2",
+        "reasoning": "reasoning for C03.v2"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/r2/C03.v3.json",
+      {
+        "id": "C03.v3",
+        "verdict": "CONFIRMED",
+        "evidence": "evidence for C03.v3",
+        "reasoning": "reasoning for C03.v3"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/r1/C11.v2.json",
+      {
+        "id": "C11.v2",
+        "verdict": "REFUTED",
+        "evidence": "evidence for C11.v2",
+        "reasoning": "reasoning for C11.v2"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/r2/C11.v3.json",
+      {
+        "id": "C11.v3",
+        "verdict": "REFUTED",
+        "evidence": "evidence for C11.v3",
+        "reasoning": "reasoning for C11.v3",
+        "by_design": "CLAUDE.md: rule waived for generated code"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "write",
+      "verdicts/r1/S01.v2.json",
+      {
+        "id": "S01.v2",
+        "verdict": "PLAUSIBLE",
+        "evidence": "evidence for S01.v2",
+        "reasoning": "reasoning for S01.v2",
+        "by_design": "README: accepted limitation"
+      }
+    ],
+    "exit": 0,
+    "stdout": ""
+  },
+  {
+    "step": [
+      "collate"
+    ],
+    "exit": 0,
+    "stdout": "digest pages (read these, not verified.json): verified-digest-1.txt\nvotes changed the outcome: C03: REFUTED -> CONFIRMED (REFUTED, CONFIRMED, CONFIRMED); S01: REFUTED -> PLAUSIBLE (REFUTED, PLAUSIBLE, UNVERIFIED)\ncollated: kept 12 (CONFIRMED=5, PLAUSIBLE=2, UNVERIFIED=5), refuted 0\n"
+  }
+]

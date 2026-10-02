@@ -1,0 +1,8 @@
+{
+  "id": "C06",
+  "verdict": "PLAUSIBLE",
+  "evidence": "evidence for C06",
+  "reasoning": "reasoning for C06",
+  "would_confirm": "run it on an empty list",
+  "corrected_line": 7
+}

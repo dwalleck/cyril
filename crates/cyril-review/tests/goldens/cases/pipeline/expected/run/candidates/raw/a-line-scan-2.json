@@ -1,0 +1,10 @@
+{
+  "file": "src/lib.rs",
+  "line": 22,
+  "summary": "Unchecked unwrap | on parse",
+  "failure_scenario": "non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, non-numeric input crashes the CLI before any output is written, ",
+  "category": "correctness",
+  "evidence": "x.unwrap()",
+  "pid": "a-line-scan-2",
+  "angle": "a-line-scan"
+}

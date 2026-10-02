@@ -1,0 +1,19 @@
+{
+  "balloted": [
+    {
+      "id": "C03",
+      "first_vote": "REFUTED",
+      "reason": "first vote REFUTED"
+    },
+    {
+      "id": "C10",
+      "first_vote": "CONFIRMED",
+      "reason": "conventions claim"
+    },
+    {
+      "id": "S01",
+      "first_vote": "REFUTED",
+      "reason": "first vote REFUTED"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "file": "src/util.rs",
+  "line": 3,
+  "summary": "Duplicate helper 3",
+  "failure_scenario": "the copies drift apart",
+  "category": "cleanup",
+  "pid": "cleanup-3",
+  "angle": "cleanup",
+  "also_flagged_by": [
+    {
+      "pid": "cleanup-4",
+      "angle": "cleanup",
+      "summary": "Duplicate helper 4"
+    }
+  ],
+  "id": "C05"
+}

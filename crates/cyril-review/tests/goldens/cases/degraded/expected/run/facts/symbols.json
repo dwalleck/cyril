@@ -1,0 +1,12 @@
+[
+  {
+    "name": "two",
+    "kind": "fn",
+    "file": "src/lib.rs",
+    "line": 2,
+    "status": "added",
+    "ambiguous": true,
+    "usage_count": 0,
+    "usages": []
+  }
+]

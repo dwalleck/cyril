@@ -1,0 +1,10 @@
+[
+  {
+    "file": "src/lib.rs",
+    "line": 10,
+    "summary": "Loop bound excludes the last item",
+    "failure_scenario": "last element skipped when n > 0, and the total under-counts by one",
+    "category": "correctness",
+    "evidence": "0..=n vs 0..n"
+  }
+]

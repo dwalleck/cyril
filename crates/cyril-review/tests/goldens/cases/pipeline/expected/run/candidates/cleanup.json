@@ -1,0 +1,68 @@
+{
+  "angle": "cleanup",
+  "candidates": [
+    {
+      "file": "src/util.rs",
+      "line": 1,
+      "summary": "Duplicate helper 1",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 2,
+      "summary": "Duplicate helper 2",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 3,
+      "summary": "Duplicate helper 3",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 4,
+      "summary": "Duplicate helper 4",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 5,
+      "summary": "Duplicate helper 5",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 6,
+      "summary": "Duplicate helper 6",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 7,
+      "summary": "Duplicate helper 7",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 8,
+      "summary": "Duplicate helper 8",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    },
+    {
+      "file": "src/util.rs",
+      "line": 9,
+      "summary": "Duplicate helper 9",
+      "failure_scenario": "the copies drift apart",
+      "category": "cleanup"
+    }
+  ]
+}

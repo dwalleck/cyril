@@ -1,0 +1,13 @@
+{
+  "file": "src/io.rs",
+  "line": null,
+  "summary": "Missing fsync before rename",
+  "failure_scenario": "",
+  "category": "correctness",
+  "pid": "a-line-scan-3",
+  "angle": "a-line-scan",
+  "incomplete": [
+    "failure_scenario"
+  ],
+  "id": "C02"
+}

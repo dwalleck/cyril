@@ -41,6 +41,16 @@ fn empty_diff_case_matches_python() -> TestResult {
     check_case("empty")
 }
 
+#[test]
+fn pipeline_case_matches_python() -> TestResult {
+    check_case("pipeline")
+}
+
+#[test]
+fn degraded_pipeline_case_matches_python() -> TestResult {
+    check_case("degraded")
+}
+
 /// Output-shaping settings a user or repository may carry. The pinned diff
 /// and grep options must make every one of them irrelevant.
 const HOSTILE_CONFIG: [(&str, &str); 12] = [
@@ -72,7 +82,10 @@ fn every_case_directory_has_a_test() -> TestResult {
         .map(|entry| entry.map(|entry| entry.file_name().to_string_lossy().into_owned()))
         .collect::<Result<_, _>>()?;
     names.sort();
-    assert_eq!(names, ["auto", "empty", "range", "worktree"]);
+    assert_eq!(
+        names,
+        ["auto", "degraded", "empty", "pipeline", "range", "worktree"]
+    );
     Ok(())
 }
 
@@ -109,7 +122,7 @@ fn check_case_with(name: &str, config: &[(&str, &str)]) -> TestResult {
         if exit == 0 {
             let want = expected["stdout"].as_str().ok_or("expected stdout")?;
             assert_eq!(
-                normalize_elapsed(&stdout),
+                normalize_elapsed(&run_placeholder(&run, &stdout)),
                 normalize_elapsed(want),
                 "{name}: stdout of {step}"
             );
@@ -124,10 +137,17 @@ fn check_case_with(name: &str, config: &[(&str, &str)]) -> TestResult {
         "{name}: run directory files"
     );
     for (relative, want) in &expected {
-        let got = &actual[relative];
-        if relative.ends_with(".json") {
-            let (mut got, mut want): (Value, Value) =
-                (serde_json::from_slice(got)?, serde_json::from_slice(want)?);
+        let got = &match String::from_utf8(actual[relative].clone()) {
+            Ok(text) => run_placeholder(&run, &text).into_bytes(),
+            Err(_) => actual[relative].clone(),
+        };
+        let parsed = (
+            serde_json::from_slice::<Value>(got),
+            serde_json::from_slice::<Value>(want),
+        );
+        if let (true, (Ok(mut got), Ok(mut want))) = (relative.ends_with(".json"), parsed) {
+            normalize_unreadable(&mut got);
+            normalize_unreadable(&mut want);
             if relative == "manifest.json" {
                 for value in [&mut got, &mut want] {
                     if let Some(object) = value.as_object_mut() {
@@ -159,23 +179,41 @@ fn check_case_with(name: &str, config: &[(&str, &str)]) -> TestResult {
 /// One step through the library, as `cyril crtool` (or `/review`, for the
 /// check command) would run it: exit code and stdout.
 fn run_step(run: &ReviewRun, step: &Value) -> TestResult<(i32, String)> {
-    let words: Vec<&str> = step
-        .as_array()
-        .ok_or("step is not a list")?
-        .iter()
-        .map(|word| word.as_str().ok_or("step word is not a string"))
-        .collect::<Result<_, _>>()?;
-    let result = match words.as_slice() {
-        ["gather", target, scope] => cyril_review::gather(run, target, scope),
-        ["facts"] => cyril_review::facts(run),
-        ["diagnostics", command] => {
+    let parts = step.as_array().ok_or("step is not a list")?;
+    let word = |index: usize| -> TestResult<&str> {
+        parts
+            .get(index)
+            .and_then(Value::as_str)
+            .ok_or_else(|| format!("step {step}: no word {index}").into())
+    };
+    let result = match word(0)? {
+        "write" => {
+            write_run_file(run, word(1)?, parts.get(2).ok_or("write without a value")?)?;
+            return Ok((0, String::new()));
+        }
+        "gather" => cyril_review::gather(run, word(1)?, word(2)?),
+        "facts" => cyril_review::facts(run),
+        // ["merge", "--expect", angles] and ["shard"] / ["shard", "--shards", n],
+        // spelled as the recipe's command lines.
+        "merge" => cyril_review::merge(run, word(2)?),
+        "shard" => {
+            let shards = if parts.len() > 1 {
+                word(2)?.parse()?
+            } else {
+                4
+            };
+            cyril_review::shard(run, shards)
+        }
+        "ballots" => cyril_review::ballots(run),
+        "collate" => cyril_review::collate(run),
+        "diagnostics" => {
             let runtime = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()?;
             runtime
                 .block_on(run_check(
                     run,
-                    command,
+                    word(1)?,
                     Duration::from_secs(120),
                     std::future::pending(),
                 ))
@@ -187,6 +225,48 @@ fn run_step(run: &ReviewRun, step: &Value) -> TestResult<(i32, String)> {
         Ok(stdout) => (0, stdout),
         Err(error) => (error.exit_code(), String::new()),
     })
+}
+
+/// An agent's output: a JSON value, or a string written verbatim.
+fn write_run_file(run: &ReviewRun, relative: &str, value: &Value) -> TestResult {
+    let path = run.dir().join(relative);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let text = match value {
+        Value::String(text) => text.clone(),
+        other => serde_json::to_string_pretty(other)?,
+    };
+    fs::write(path, text)?;
+    Ok(())
+}
+
+/// The run directory's absolute path, as queue files spell it.
+fn run_placeholder(run: &ReviewRun, text: &str) -> String {
+    text.replace(&run.dir().to_string_lossy().replace('\\', "/"), "<RUN>")
+}
+
+/// Parse-error wording is the JSON parser's own (Python's `json` there,
+/// serde_json here): keep that something was unreadable, not the words.
+fn normalize_unreadable(value: &mut Value) {
+    match value {
+        Value::String(text) => {
+            if let Some(at) = text.find("unreadable") {
+                let end = at + "unreadable".len();
+                let rest = &text[end..];
+                if rest.starts_with(": ") {
+                    *text = format!("{}: <error>", &text[..end]);
+                } else if rest.starts_with(" (")
+                    && let Some(close) = text.rfind(')')
+                {
+                    *text = format!("{} (<error>){}", &text[..end], &text[close + 1..]);
+                }
+            }
+        }
+        Value::Array(items) => items.iter_mut().for_each(normalize_unreadable),
+        Value::Object(fields) => fields.values_mut().for_each(normalize_unreadable),
+        _ => {}
+    }
 }
 
 /// Elapsed seconds are the one value no two runs share.
