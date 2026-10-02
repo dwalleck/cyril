@@ -3,7 +3,7 @@
 //! postable Conventional Comments (conventionalcomments.org).
 
 use crate::merge::id;
-use crate::record::{Record, blank, object, one_line, records, text, to_line};
+use crate::record::{Record, blank, object, one_line, quoted, required_records, text, to_line};
 use crate::run::{ReviewRun, read_json, read_manifest, write, write_json, write_pages};
 use crate::{Result, io_error};
 use serde::{Deserialize, Serialize};
@@ -84,9 +84,10 @@ pub fn read_findings(run: &ReviewRun) -> std::result::Result<Vec<Finding>, Findi
 /// `crtool finalize <rundir>`
 pub fn finalize(run: &ReviewRun) -> Result<String> {
     let manifest = read_manifest(run)?;
-    let verified: Record = read_json(&run.path("verified.json"))?;
-    let kept = records(verified.get("kept"));
-    let refuted = records(verified.get("refuted"));
+    let verified_path = run.path("verified.json");
+    let verified: Record = read_json(&verified_path)?;
+    let kept = required_records(&verified, "kept", &verified_path)?;
+    let refuted = required_records(&verified, "refuted", &verified_path)?;
     let mut warnings: Vec<String> = strings(verified.get("warnings"));
 
     let (order, notes) = ranking(run, &mut warnings);
@@ -271,13 +272,9 @@ pub fn finalize(run: &ReviewRun) -> Result<String> {
         let angles = angles(record);
         let votes = strings(record.get("votes"));
         brief.push(format!(
-            "===== {}  (rank {rank})  {}:{}",
+            "===== {}  (rank {rank})  {}",
             id(record),
-            record
-                .get("file")
-                .filter(|file| !file.is_null())
-                .map_or_else(|| "?".to_owned(), text),
-            best_line(record).map_or_else(|| "?".to_owned(), |line| line.to_string())
+            brief_location(record)
         ));
         brief.push(format!(
             "verdict: {}{}  | category: {}  | raised by {} angle(s): {}",
@@ -334,19 +331,26 @@ pub fn finalize(run: &ReviewRun) -> Result<String> {
 pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
     read_manifest(run)?;
     let mut findings: Vec<Finding> = read_json(&run.path("findings.json"))?;
-    let verified: Record = read_json(&run.path("verified.json"))?;
-    let kept = records(verified.get("kept"));
+    let verified_path = run.path("verified.json");
+    let verified: Record = read_json(&verified_path)?;
+    let kept = required_records(&verified, "kept", &verified_path)?;
     let reported: HashSet<String> = findings.iter().map(|finding| finding.id.clone()).collect();
     let (mut out, mut warnings) = (Vec::new(), Vec::new());
     let (mut model, mut template, mut duplicates, mut blocking) = (0, 0, 0, 0);
     let mut labels: Vec<(String, usize)> = Vec::new();
+    let mut commented: HashSet<String> = HashSet::new();
     for finding in &mut findings {
-        let record = kept
-            .iter()
-            .find(|record| id(record) == finding.id)
-            .cloned()
-            .unwrap_or_default();
-        let by_design = !blank(record.get("by_design"));
+        let found = kept.iter().find(|record| id(record) == finding.id);
+        if found.is_none() {
+            warnings.push(format!(
+                "{}: no record in verified.json; its votes and by-design note are unknown, so it never blocks",
+                finding.id
+            ));
+        }
+        let record = found.cloned().unwrap_or_else(Record::new);
+        // A finding whose verification is unknown is treated like one the
+        // author accepted: it may be posted, never as blocking.
+        let by_design = found.is_none_or(|record| !blank(record.get("by_design")));
         let mut written = comment_file(run, &finding.id, &mut warnings);
         let mut entry = json!({"id": finding.id, "file": finding.file, "line": finding.line, "verdict": finding.verdict});
         if let Some(duplicate_of) = written
@@ -355,7 +359,9 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
             .filter(|value| !blank(Some(value)))
         {
             let target = text(duplicate_of);
-            if reported.contains(&target) && target != finding.id {
+            // Only a better-ranked finding with its own comment: a mutual or
+            // chained duplicate would leave the defect with no comment at all.
+            if commented.contains(&target) {
                 entry["duplicate_of"] = json!(target);
                 entry["source"] = json!("model");
                 out.push(entry);
@@ -364,8 +370,13 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
                 finding.duplicate_of = Some(target);
                 continue;
             }
+            let why = if reported.contains(&target) {
+                "is not a better-ranked finding with its own comment"
+            } else {
+                "is not a reported finding"
+            };
             warnings.push(format!(
-                "{}: duplicate_of names {}, which is not a reported finding; template used",
+                "{}: duplicate_of names {}, which {why}; template used",
                 finding.id,
                 quoted(&target)
             ));
@@ -502,6 +513,7 @@ pub fn comments(run: &ReviewRun, trailer: bool) -> Result<String> {
         entry["body"] = json!(body);
         entry["source"] = json!(source);
         out.push(entry);
+        commented.insert(finding.id.clone());
         finding.duplicate_of = None;
         finding.comment = Some(body);
     }
@@ -722,6 +734,16 @@ fn location_md(record: &Record) -> String {
     }
 }
 
+/// `file:line` for a brief header: an absent file or line prints `?`.
+fn brief_location(record: &Record) -> String {
+    let file = record
+        .get("file")
+        .filter(|file| !file.is_null())
+        .map_or_else(|| "?".to_owned(), text);
+    let line = best_line(record).map_or_else(|| "?".to_owned(), |line| line.to_string());
+    format!("{file}:{line}")
+}
+
 /// A Markdown table cell: pipes escaped, newlines flattened.
 fn cell(value: Option<&Value>) -> String {
     match value {
@@ -734,7 +756,104 @@ fn cell(value: Option<&Value>) -> String {
     }
 }
 
-/// A value quoted for a warning the clerk or commenter reads: `'text'`.
-fn quoted(value: &str) -> String {
-    format!("'{value}'")
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    fn record(value: Value) -> Record {
+        value.as_object().cloned().unwrap_or_default()
+    }
+
+    fn finding_json(id: &str, verdict: &str) -> Value {
+        json!({"id": id, "file": "a.rs", "line": 1, "summary": format!("defect {id}"),
+               "failure_scenario": "f", "verdict": verdict, "angles": ["a"]})
+    }
+
+    #[test]
+    fn a_corrupt_verified_json_is_an_error_not_zero_findings() -> crate::Result<()> {
+        let (_tree, run) = crate::run::stamped_run()?;
+        write_json(
+            &run.path("verified.json"),
+            &json!({"refuted": [], "stats": {}}),
+        )?;
+        assert!(matches!(
+            finalize(&run),
+            Err(crate::ReviewError::CorruptRunFile { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn duplicates_must_name_a_better_ranked_finding_with_its_own_comment()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let (_tree, run) = crate::run::stamped_run()?;
+        let kept =
+            json!([{"id": "C01", "verdict": "CONFIRMED"}, {"id": "C02", "verdict": "CONFIRMED"}]);
+        write_json(
+            &run.path("verified.json"),
+            &json!({"kept": kept, "refuted": []}),
+        )?;
+        write_json(
+            &run.path("findings.json"),
+            &json!([
+                finding_json("C01", "CONFIRMED"),
+                finding_json("C02", "CONFIRMED")
+            ]),
+        )?;
+        // A mutual pair: C01 may not point down the ranking; C02 may point up.
+        write_json(
+            &run.path("comments/C01.json"),
+            &json!({"duplicate_of": "C02"}),
+        )?;
+        write_json(
+            &run.path("comments/C02.json"),
+            &json!({"duplicate_of": "C01"}),
+        )?;
+        let stdout = comments(&run, true)?;
+        assert!(stdout.contains(
+            "C01: duplicate_of names 'C02', which is not a better-ranked finding with its own comment; template used"
+        ));
+        let findings = crate::read_findings(&run)?;
+        assert!(findings[0].comment.is_some() && findings[0].duplicate_of.is_none());
+        assert_eq!(findings[1].duplicate_of.as_deref(), Some("C01"));
+        Ok(())
+    }
+
+    #[test]
+    fn a_finding_without_a_verified_record_never_blocks() -> crate::Result<()> {
+        let (_tree, run) = crate::run::stamped_run()?;
+        write_json(
+            &run.path("verified.json"),
+            &json!({"kept": [], "refuted": []}),
+        )?;
+        write_json(
+            &run.path("findings.json"),
+            &json!([finding_json("C07", "CONFIRMED")]),
+        )?;
+        write_json(
+            &run.path("comments/C07.json"),
+            &json!({"label": "issue", "decorations": ["blocking"], "subject": "s", "discussion": "d"}),
+        )?;
+        let stdout = comments(&run, true)?;
+        assert!(
+            stdout.contains("C07: no record in verified.json"),
+            "{stdout}"
+        );
+        assert!(stdout.contains("blocking: 0"), "{stdout}");
+        Ok(())
+    }
+
+    #[test]
+    fn an_absent_file_or_line_prints_a_question_mark() {
+        let missing_file = record(json!({"file": null, "line": 4}));
+        assert_eq!(location_md(&missing_file), "`?:4`");
+        assert_eq!(brief_location(&missing_file), "?:4");
+        let missing_line = record(json!({"file": "src/a.rs", "line": null}));
+        assert_eq!(location_md(&missing_line), "`src/a.rs`");
+        assert_eq!(brief_location(&missing_line), "src/a.rs:?");
+        let corrected =
+            record(json!({"file": "a.rs", "line": 3, "verification": {"corrected_line": 9}}));
+        assert_eq!(brief_location(&corrected), "a.rs:9");
+    }
 }

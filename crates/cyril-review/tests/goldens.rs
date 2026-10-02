@@ -78,19 +78,28 @@ fn outputs_ignore_hostile_git_config() -> TestResult {
 
 #[test]
 fn unreadable_normalization_keeps_neighbouring_text() {
+    // A parser message is normalized; crtool's own wording is not.
     assert_eq!(
         normalize_unreadable_text(
-            "a: x unreadable (bad (char 1)); used; b: y unreadable (not a JSON object); used"
+            "a: x unreadable (Expecting value: line 1 column 2 (char 1)); used; b: y unreadable (not a JSON object); used"
         ),
-        "a: x unreadable (<error>); used; b: y unreadable (<error>); used"
+        "a: x unreadable (<error>); used; b: y unreadable (not a JSON object); used"
     );
     assert_eq!(
-        normalize_unreadable_text("unreadable: Expecting value"),
+        normalize_unreadable_text("unreadable: Expecting value: line 1 column 1 (char 0)"),
         "unreadable: <error>"
     );
     assert_eq!(
-        normalize_unreadable_text("x unreadable: bad\nthe next line is still compared"),
+        normalize_unreadable_text(
+            "x unreadable: bad at line 1 column 3\nthe next line is still compared"
+        ),
         "x unreadable: <error>\nthe next line is still compared"
+    );
+    assert_eq!(
+        normalize_unreadable_text(
+            "decisions.json unreadable (top level is not an object); no dedup"
+        ),
+        "decisions.json unreadable (top level is not an object); no dedup"
     );
     assert_eq!(normalize_unreadable_text("readable"), "readable");
 }
@@ -280,18 +289,23 @@ fn run_placeholder(run: &ReviewRun, text: &str) -> String {
 /// (to the balancing parenthesis), everywhere in the text.
 fn normalize_unreadable_text(text: &str) -> String {
     const MARK: &str = "unreadable";
+    // Only a parser's message, which names a position; crtool's own wording
+    // ("not a JSON object", "top level is not an object") is compared exactly.
+    let parser_message = |message: &str| message.contains("line ") && message.contains(" column ");
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(at) = rest.find(MARK) {
         let (head, tail) = rest.split_at(at + MARK.len());
         out.push_str(head);
+        rest = tail;
         if let Some(after) = tail.strip_prefix(": ") {
             // The error runs to the end of its line, never further.
-            out.push_str(": <error>");
-            rest = after.find('\n').map_or("", |end| &after[end..]);
-            continue;
-        }
-        if let Some(inner) = tail.strip_prefix(" (") {
+            let end = after.find('\n').unwrap_or(after.len());
+            if parser_message(&after[..end]) {
+                out.push_str(": <error>");
+                rest = &after[end..];
+            }
+        } else if let Some(inner) = tail.strip_prefix(" (") {
             let mut depth = 1;
             let close = inner.char_indices().find_map(|(index, character)| {
                 match character {
@@ -301,13 +315,11 @@ fn normalize_unreadable_text(text: &str) -> String {
                 }
                 (depth == 0).then_some(index)
             });
-            if let Some(close) = close {
+            if let Some(close) = close.filter(|close| parser_message(&inner[..*close])) {
                 out.push_str(" (<error>)");
                 rest = &inner[close + 1..];
-                continue;
             }
         }
-        rest = tail;
     }
     out.push_str(rest);
     out

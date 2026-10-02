@@ -74,19 +74,6 @@ pub(crate) fn field_or_empty(record: &Record, key: &str) -> Value {
         .unwrap_or_else(|| Value::String(String::new()))
 }
 
-/// The object entries of an array field; anything else reads as none.
-pub(crate) fn records(value: Option<&Value>) -> Vec<Record> {
-    value
-        .and_then(Value::as_array)
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_object().cloned())
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 /// An object field, or empty when it is absent or not an object.
 pub(crate) fn object(value: Option<&Value>) -> Record {
     value
@@ -95,21 +82,30 @@ pub(crate) fn object(value: Option<&Value>) -> Record {
         .unwrap_or_default()
 }
 
-/// The `candidates` crtool itself wrote into `path`: anything but an array of
-/// objects means the run file is corrupt, never "no candidates".
-pub(crate) fn required_records(file: &Record, path: &Path) -> crate::Result<Vec<Record>> {
+/// The `key` array crtool itself wrote into `path`: anything but an array of
+/// objects means the run file is corrupt, never "no records".
+pub(crate) fn required_records(
+    file: &Record,
+    key: &str,
+    path: &Path,
+) -> crate::Result<Vec<Record>> {
     let corrupt = || crate::ReviewError::CorruptRunFile {
         path: path.to_path_buf(),
-        message: "`candidates` is not an array of objects",
+        message: format!("`{key}` is not an array of objects"),
     };
     let items = file
-        .get("candidates")
+        .get(key)
         .and_then(Value::as_array)
         .ok_or_else(corrupt)?;
     items
         .iter()
         .map(|item| item.as_object().cloned().ok_or_else(corrupt))
         .collect()
+}
+
+/// A value quoted for a warning the clerk or commenter reads: `'text'`.
+pub(crate) fn quoted(value: &str) -> String {
+    format!("'{value}'")
 }
 
 /// An id that is safe as a file name: letters, digits, `.`, `_` and `-`,

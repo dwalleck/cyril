@@ -2,7 +2,7 @@
 //! duplicate decisions, assigns final ids and splits them into verifier queues.
 
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line,
+    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line, quoted,
     required_records, text, to_line, unreadable,
 };
 use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
@@ -141,7 +141,7 @@ pub fn shard(run: &ReviewRun, shards: usize) -> Result<String> {
     }
     let merged_path = run.path("candidates/all.json");
     let merged: Record = read_json(&merged_path)?;
-    let mut candidates = required_records(&merged, &merged_path)?;
+    let mut candidates = required_records(&merged, "candidates", &merged_path)?;
     let order: HashMap<String, usize> = candidates
         .iter()
         .enumerate()
@@ -415,7 +415,7 @@ fn pid_list(pids: &[Value]) -> String {
     let items: Vec<String> = pids
         .iter()
         .map(|pid| match pid {
-            Value::String(pid) => format!("'{pid}'"),
+            Value::String(pid) => quoted(pid),
             other => other.to_string(),
         })
         .collect();

@@ -132,18 +132,21 @@ pub(crate) fn write_json(path: &Path, value: &impl Serialize) -> Result<()> {
         source,
     })?;
     text.push('\n');
-    let mut temporary = path.as_os_str().to_owned();
-    temporary.push(".tmp");
-    write(Path::new(&temporary), text.as_bytes())?;
-    fs::rename(&temporary, path).map_err(|source| io_error("replace", path, source))
+    write(path, text.as_bytes())
 }
 
+/// Write a run file atomically (temp file + rename), so a crash never leaves
+/// a half-written one.
 pub(crate) fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .map_err(|source| io_error("create directory", parent, source))?;
     }
-    fs::write(path, bytes).map_err(|source| io_error("write", path, source))
+    let mut temporary = path.as_os_str().to_owned();
+    temporary.push(".tmp");
+    let temporary = Path::new(&temporary);
+    fs::write(temporary, bytes).map_err(|source| io_error("write", temporary, source))?;
+    fs::rename(temporary, path).map_err(|source| io_error("replace", path, source))
 }
 
 /// Write `lines` as `<stem>-N.txt` pages that each fit one tool read, after
