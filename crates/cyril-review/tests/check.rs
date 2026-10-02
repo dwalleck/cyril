@@ -34,6 +34,9 @@ fn gathered() -> TestResult<(tempfile::TempDir, ReviewRun)> {
         Ok(())
     };
     git(&["init", "-q", "-b", "main"])?;
+    // Windows git ships core.autocrlf=true; its CRLF warnings would show up
+    // in the check output as extra lines that mention the changed file.
+    git(&["config", "core.autocrlf", "false"])?;
     fs::write(repo.join("src/lib.rs"), "pub fn one() {}\n")?;
     git(&["add", "-A"])?;
     git(&["commit", "-q", "--no-verify", "-m", "base"])?;
