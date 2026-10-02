@@ -58,6 +58,7 @@ pub fn format_workflow_outcome(outcome: &WorkflowCommandOutcome) -> String {
             operation,
             code,
             details,
+            ..
         } => match code {
             Some(code) => format!("/{operation} failed ({code}): {details}"),
             None => format!("/{operation} failed: {details}"),
@@ -340,6 +341,7 @@ mod tests {
                        goes stale.";
         let text = format_workflow_outcome(&WorkflowCommandOutcome::Failed {
             operation: "workflow resume".to_owned(),
+            workflow_id: None,
             code: Some(-32603),
             details: refusal.to_owned(),
         });

@@ -888,13 +888,18 @@ impl App {
                 }
             }
             WorkflowCommandOutcome::Failed {
-                operation, details, ..
+                operation,
+                workflow_id: failed,
+                details,
+                ..
             } => {
                 if operation == "workflow new" {
                     self.review.cancel_on_mint = false;
                 }
                 if operation == "workflow cancel"
-                    && let Some(workflow_id) = self.review.cancelling.take()
+                    && let Some(workflow_id) = self.review.cancelling.take_if(|cancelling| {
+                        failed.as_ref().is_none_or(|failed| failed == cancelling)
+                    })
                 {
                     self.ui_state.add_system_message(format!(
                         "review: cancelling {workflow_id} failed — {details}; its authorization stays withdrawn"
@@ -908,7 +913,9 @@ impl App {
                             "review: the workflow was not created; nothing was started".to_owned(),
                         );
                     }
-                    ("workflow invoke", Some(Stage::Invoking(id))) => {
+                    ("workflow invoke", Some(Stage::Invoking(id)))
+                        if failed.as_ref().is_none_or(|failed| failed == id) =>
+                    {
                         let id = id.clone();
                         self.withdraw(&id, format!("review: {id} did not start"));
                     }

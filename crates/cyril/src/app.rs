@@ -1183,7 +1183,9 @@ impl App {
             _ => None,
         };
         if let Some(outcome) = &review_outcome
-            && (self.absorb_review_retry(outcome) || self.absorb_resume_listing(outcome))
+            && (self.absorb_review_retry(outcome)
+                || self.absorb_resume_listing(outcome)
+                || self.absorb_resume_retry(outcome))
         {
             return Vec::new();
         }
@@ -7718,6 +7720,7 @@ mod tests {
         app.handle_notification(RoutedNotification::global(Notification::WorkflowCommand(
             cyril_core::types::WorkflowCommandOutcome::Failed {
                 operation: "workflow list".to_owned(),
+                workflow_id: None,
                 code: Some(-32603),
                 details: "details".to_owned(),
             },

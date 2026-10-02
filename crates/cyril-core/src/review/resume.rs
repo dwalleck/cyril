@@ -13,22 +13,17 @@ use std::path::{Path, PathBuf};
 /// One run directory and what its `run.json` says.
 #[derive(Debug)]
 pub struct Candidate {
+    /// The directory's name, as `read_dir` reported it.
+    pub name: String,
     pub dir: PathBuf,
     pub record: Result<RunRecord, RunRecordError>,
-}
-
-impl Candidate {
-    fn name(&self) -> String {
-        self.dir
-            .file_name()
-            .map(|name| name.to_string_lossy().into_owned())
-            .unwrap_or_default()
-    }
 }
 
 /// The run to continue.
 #[derive(Debug)]
 pub struct Chosen {
+    /// The run directory's name.
+    pub name: String,
     pub dir: PathBuf,
     pub record: RunRecord,
     pub workflow_id: WorkflowId,
@@ -59,14 +54,18 @@ pub fn scan(workspace: &Path) -> io::Result<Vec<Candidate>> {
     for entry in entries {
         let entry = entry?;
         if entry.file_type()?.is_dir() {
-            dirs.push(entry.path());
+            dirs.push((
+                entry.file_name().to_string_lossy().into_owned(),
+                entry.path(),
+            ));
         }
     }
     dirs.sort();
     dirs.reverse();
     Ok(dirs
         .into_iter()
-        .map(|dir| Candidate {
+        .map(|(name, dir)| Candidate {
+            name,
             record: RunRecord::read(&dir),
             dir,
         })
@@ -93,6 +92,7 @@ pub fn choose(
             let workflow_id = workflow_id(&record)?;
             let status = resumable(&workflow_id, statuses.get(&workflow_id))?;
             Ok(Chosen {
+                name: candidate.name,
                 dir: candidate.dir,
                 record,
                 workflow_id,
@@ -103,7 +103,7 @@ pub fn choose(
         None => {
             let mut unreadable = Vec::new();
             for candidate in candidates {
-                let name = candidate.name();
+                let name = candidate.name.clone();
                 let record = match candidate.record {
                     Ok(record) => record,
                     // A directory without run.json never got a workflow.
@@ -121,6 +121,7 @@ pub fn choose(
                     statuses.get(&workflow_id).copied()
                 {
                     return Ok(Chosen {
+                        name,
                         dir: candidate.dir,
                         record,
                         workflow_id,
@@ -163,11 +164,16 @@ pub fn compatible(
     Ok(())
 }
 
+/// A selector is a workflow id, a run directory name, or a path to one in
+/// any ordinary spelling (`./`, a trailing separator, absolute).
 fn matches(candidate: &Candidate, selector: &str) -> bool {
-    let by_path = Path::new(selector);
-    candidate.name() == selector
-        || candidate.dir == by_path
-        || (by_path.components().count() > 1 && candidate.dir.ends_with(by_path))
+    let path: PathBuf = Path::new(selector)
+        .components()
+        .filter(|component| !matches!(component, std::path::Component::CurDir))
+        .collect();
+    candidate.name == selector
+        || path.as_os_str() == candidate.name.as_str()
+        || (path.components().count() > 1 && candidate.dir.ends_with(&path))
         || candidate
             .record
             .as_ref()
@@ -253,8 +259,10 @@ mod tests {
         let (dir, statuses) = workspace();
         for selector in [
             "20261001-090000-aaaa",
+            "20261001-090000-aaaa/",
             "wf_a",
             ".code-review/20261001-090000-aaaa",
+            "./.code-review/20261001-090000-aaaa/",
         ] {
             let chosen = choose(scan(dir.path()).expect("scan"), Some(selector), &statuses)
                 .unwrap_or_else(|error| panic!("{selector}: {error}"));

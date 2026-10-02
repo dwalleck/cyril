@@ -5030,6 +5030,7 @@ mod tests {
         let changed = state.apply_notification(&Notification::WorkflowCommand(
             cyril_core::types::WorkflowCommandOutcome::Failed {
                 operation: "workflow resume".into(),
+                workflow_id: None,
                 code: Some(-32603),
                 details: "running in another process (owner pid 42, liveness verdict: live)".into(),
             },

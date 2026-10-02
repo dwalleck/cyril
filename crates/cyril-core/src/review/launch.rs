@@ -158,11 +158,7 @@ pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {
         context.as_deref(),
         crtool,
     )?;
-    let reserved = reserved_agents(workspace)?;
-    if !reserved.is_empty() {
-        return Err(LaunchError::ReservedAgents { paths: reserved });
-    }
-    let installed = install_assets(home.as_deref().ok_or(LaunchError::NoHome)?)?;
+    let installed = install_checked(workspace, home.as_deref())?;
     let run_dir = create_run_dir(workspace)?;
     let run = ReviewRun::new(workspace, &run_dir)?;
     gather(&run, target, &scope.join(" ")).map_err(|source| LaunchError::Gather {
@@ -177,6 +173,16 @@ pub fn prepare(request: &LaunchRequest) -> Result<Prepared, LaunchError> {
         inputs,
         files,
     }))
+}
+
+/// Refuse workspace agents with the review's reserved names, then install
+/// the assets into `home`: the one install step every launch and resume runs.
+pub fn install_checked(workspace: &Path, home: Option<&Path>) -> Result<Installed, LaunchError> {
+    let reserved = reserved_agents(workspace)?;
+    if !reserved.is_empty() {
+        return Err(LaunchError::ReservedAgents { paths: reserved });
+    }
+    install_assets(home.ok_or(LaunchError::NoHome)?)
 }
 
 /// Node's `os.homedir()`, which is where KAS looks for `~/.kiro`.

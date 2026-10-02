@@ -624,8 +624,8 @@ pub struct ReviewForm {
 pub struct ReviewResumeView {
     /// The run directory's name.
     pub run: String,
-    /// The agent's persisted status, e.g. `failed`.
-    pub status: String,
+    /// The agent's persisted status: failed or paused.
+    pub status: cyril_core::types::WorkflowRunStatus,
     /// The target the run was gathered with, as stored.
     pub target: String,
     /// Run directories passed over because their `run.json` is unreadable.
