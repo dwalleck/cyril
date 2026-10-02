@@ -26,6 +26,20 @@ Shape (step nodes count toward the engine's hard cap of 20):
 
 With the comment step the recipe needs 3 verify shards to fit the cap (4 would be 21 nodes).
 
+Model and effort are PINNED per step from the cr-* agent files' frontmatter.
+The engine resolves a step's model as step > workflow > PARENT SESSION (unless
+`auto`) > agent file, and effort as step > workflow > parent > agent, so an
+agent-file-only tiering is silently replaced by whatever model the launching
+session has selected (live probe 2026-09-30: parent on claude-haiku-4.5 put
+every step, cr-finder included, on haiku). A step pin cannot be overridden by
+the parent. The agent files stay the single source of truth; this script copies
+their values onto each step at build time.
+
+`injectOriginalUserRequest` is false: otherwise every step's first prompt quotes
+the parent session's user messages verbatim, which from an interactive chat
+means the whole conversation in every finder and every verifier iteration. The
+`context` input is how a launcher names the authorities a review should use.
+
 Data flows through files under {{rundir}} only. `{{id.output}}` is never used:
 the engine captures a step's LAST message, which for a step that writes a file
 and signs off is the sign-off (cyril-srp6).
@@ -35,6 +49,7 @@ Usage: build_recipe.py [--shards 3] [--split-cleanup] [--replay] [--only ID[,ID]
 import argparse
 import json
 import os
+import re
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_OUT = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow.json")
@@ -44,6 +59,65 @@ DEFAULT_OUT = os.path.join(REPO, ".kiro", "workflows", "code-review-max.workflow
 # single quotes mean nothing to cmd.exe; double quotes work in bash, pwsh and cmd.
 TOOL = "{{crtool}}"
 STEP_CAP = 20
+AGENTS_DIR = os.path.join(REPO, ".kiro", "agents")
+PINNED = ("model", "effortLevel")  # agent frontmatter key -> step field (model -> modelId)
+
+
+def agent_defaults(agent, agents_dir=AGENTS_DIR):
+    """The `model` / `effortLevel` a cr-* agent file declares, as step fields.
+
+    Only flat `key: value` frontmatter lines are read; list-valued keys (tools)
+    are skipped. A missing agent file is an error, not an empty pin set: the
+    recipe would silently fall back to the parent session's model.
+    """
+    path = os.path.join(agents_dir, f"{agent}.md")
+    try:
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as e:
+        raise SystemExit(f"cannot read agent file {path}: {e}") from e
+    m = re.match(r"---\r?\n(.*?)\r?\n---\r?\n", text, re.S)
+    if not m:
+        raise SystemExit(f"{path}: no YAML frontmatter block")
+    found = {}
+    for line in m.group(1).splitlines():
+        km = re.match(r"(\w+):\s*(\S.*?)\s*$", line)
+        if km and km.group(1) in PINNED:
+            found["modelId" if km.group(1) == "model" else "effortLevel"] = km.group(2)
+    return found
+
+
+def walk_steps(nodes):
+    for node in nodes:
+        if node["type"] == "step":
+            yield node
+        yield from walk_steps(node.get("steps", []))
+        yield from walk_steps(node.get("branches", []))
+
+
+def pin_agent_defaults(steps, agents_dir=AGENTS_DIR):
+    """Copy each step's agent model/effort onto the step, keeping explicit step values."""
+    cache = {}
+    for step in walk_steps(steps):
+        pins = cache.setdefault(step["agent"], agent_defaults(step["agent"], agents_dir))
+        for field, value in pins.items():
+            step.setdefault(field, value)
+
+
+def apply_override(recipe, field, value, agents_dir=AGENTS_DIR):
+    """A whole-run `modelId` / `effortLevel` override (run_review.py --model / --effort).
+
+    Sets the workflow-level field, which reaches steps with no pin, AND replaces
+    every step value that equals its agent's default: those are pins, and a step
+    pin outranks the workflow level. An explicit step choice that differs from
+    the agent (the `low`-effort bookkeeping steps) is kept, as before pinning.
+    """
+    recipe[field] = value
+    cache = {}
+    for step in walk_steps(recipe["steps"]):
+        pins = cache.setdefault(step["agent"], agent_defaults(step["agent"], agents_dir))
+        if field in pins and step.get(field) == pins[field]:
+            step[field] = value
 
 # --- angle texts ----------------------------------------------------------
 # A-E, Efficiency, Altitude and Conventions are verbatim from the assembled
@@ -321,6 +395,7 @@ def build(shards, split_cleanup, replay=False, only=()):
         # bookkeeping against an existing run's candidates/*.json and sweep.json.
         steps = [n for n in steps if n["id"] not in ("setup", "find", "sweep")]
 
+    pin_agent_defaults(steps)
     return {
         "name": ("code-review-" + "-".join(only)) if only else ("code-review-replay" if replay else "code-review-max"),
         "description": ("Max-effort, recall-mode code review: one peer session per finder angle, "
@@ -339,6 +414,7 @@ def build(shards, split_cleanup, replay=False, only=()):
                         "Generated by "
                         "experiments/code-review-workflow/build_recipe.py — edit that, not this file."),
         "inputs": {"rundir": "string", "target": "string", "scope": "string", "context": "prompt", "crtool": "string"},
+        "injectOriginalUserRequest": False,
         "steps": steps,
     }
 
