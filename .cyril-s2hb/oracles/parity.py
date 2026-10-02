@@ -106,7 +106,12 @@ def snapshot(root: Path) -> dict[str, bytes]:
     for directory, _, names in os.walk(root):
         for name in sorted(names):
             path = Path(directory) / name
-            result[str(path.relative_to(root)).replace(os.sep, "/")] = path.read_bytes()
+            relative = str(path.relative_to(root)).replace(os.sep, "/")
+            # Native-only writer lock guarding manifest read-modify-write; it
+            # coordinates steps and carries no review evidence.
+            if relative == "manifest.lock":
+                continue
+            result[relative] = path.read_bytes()
     return dict(sorted(result.items()))
 
 def directory_snapshot(root: Path) -> set[str]:
