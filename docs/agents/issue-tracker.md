@@ -10,8 +10,26 @@ The repository is initialized with:
 - Configuration: `.rivets/config.yaml`
 - Issue prefix: `cyril`
 
-Every mutation rewrites `.rivets/issues.jsonl`. Commit it right away, on `main`
-from the primary checkout, as `chore(rivets): …`.
+Every mutation rewrites `.rivets/issues.jsonl`. Commit it right away. Where the
+commit goes depends on whether a PR owns the change:
+
+- **Claim and start on `main`, before creating the worktree.** A claim is how
+  other sessions learn the issue is taken: `rivets ready` reads `main`'s copy,
+  so a claim made only on a branch leaves the issue looking free to every
+  parallel session until the PR merges. Commit it as `chore(rivets): …`, then
+  branch, so the worktree starts from the claimed state.
+- **Everything else for the work a PR does rides with that PR.** Progress notes,
+  issues filed or split off while doing the work, and closing the issue the PR
+  resolves are committed on the feature branch, in its worktree. The issue then
+  closes when the PR merges, and an abandoned PR leaves it open (release the
+  claim on `main` when abandoning).
+- **Tracker work no PR owns goes on `main`** from the primary checkout, as
+  `chore(rivets): …`. This covers filing and triaging issues outside any PR,
+  planning and roadmap breakdown, and notes recorded after a PR has merged.
+
+The file is one issue per line, sorted by ID, so a branch's tracker edits and
+`main`'s rarely touch adjacent lines and usually merge cleanly. If they do
+conflict, keep both sides' lines: each line is a whole, independent issue.
 
 ## Core model
 

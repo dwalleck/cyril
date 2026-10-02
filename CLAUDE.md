@@ -79,7 +79,9 @@ cd "$dest"
 ```
 
 The primary checkout (`~/repos/cyril`) is for **main-line commits only**
-(`chore(rivets)`, docs, merges). A tracked guard enforces this — enable it once
+(`chore(rivets)`, docs, merges). Claiming an issue is main-line, so parallel
+sessions see it; that issue's later tracker changes, including its close, ride
+on the feature branch with the PR (see `docs/agents/issue-tracker.md`). A tracked guard enforces this — enable it once
 per clone:
 
 ```sh
