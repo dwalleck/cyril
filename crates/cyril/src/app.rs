@@ -1756,6 +1756,7 @@ impl App {
             match overlay {
                 Overlay::Approval => self.handle_approval_key(key),
                 Overlay::Picker => self.handle_picker_key(key).await?,
+                Overlay::Review => self.handle_review_key(key),
                 Overlay::Hooks => self.handle_hooks_panel_key(key),
                 Overlay::Powers => dispatch_powers_panel_key(key, &mut self.ui_state),
                 Overlay::Code => self.handle_code_panel_key(key).await?,
@@ -1917,6 +1918,15 @@ impl App {
             _ => {} // Consume all other keys
         }
         Ok(())
+    }
+
+    /// The `/review` consent form owns the keyboard: Esc backs out with no
+    /// side effects; every other key is consumed so nothing reaches the chat
+    /// behind it.
+    fn handle_review_key(&mut self, key: KeyEvent) {
+        if key.code == KeyCode::Esc {
+            self.ui_state.close_review_form();
+        }
     }
 
     async fn handle_picker_key(&mut self, key: KeyEvent) -> cyril_core::Result<()> {
@@ -6357,6 +6367,50 @@ mod tests {
             app.ui_state.chat_scroll_back(),
             Some(MOUSE_SCROLL_LINES),
             "the chat scrolls again once the overlay is gone"
+        );
+    }
+
+    /// The `/review` consent form is modal: until Esc closes it, typing,
+    /// Enter, a paste and a dictation all stay out of the chat input behind it.
+    #[tokio::test]
+    async fn review_form_owns_the_keyboard_until_esc() {
+        let (mut app, _rx) = test_app_with_command_rx();
+        app.ui_state.insert_text("draft");
+        app.ui_state.show_review_form(cyril_ui::traits::ReviewForm {
+            target: "auto".into(),
+            scope: vec![".".into()],
+            file_count: Some(3),
+            check: cyril_ui::traits::ReviewCheck::NotConfigured,
+            busy: false,
+        });
+
+        for code in [KeyCode::Char('x'), KeyCode::Enter, KeyCode::Backspace] {
+            app.handle_key(KeyEvent::new(code, KeyModifiers::NONE))
+                .await
+                .expect("key under the form");
+        }
+        app.handle_terminal_event(Event::Paste("pasted".into()))
+            .await
+            .expect("paste under the form");
+        app.handle_voice_event(VoiceEvent::Transcript("dictated".into()));
+        assert_eq!(
+            app.ui_state.input_text(),
+            "draft",
+            "nothing may reach the input the form is covering"
+        );
+        assert!(app.ui_state.review_form().is_some(), "only Esc closes it");
+
+        app.handle_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+            .await
+            .expect("Esc");
+        assert!(app.ui_state.review_form().is_none());
+        app.handle_key(KeyEvent::new(KeyCode::Char('x'), KeyModifiers::NONE))
+            .await
+            .expect("key after the form");
+        assert_eq!(
+            app.ui_state.input_text(),
+            "draftx",
+            "typing reaches the input again"
         );
     }
 

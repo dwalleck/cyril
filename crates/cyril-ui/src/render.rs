@@ -241,6 +241,11 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
                     );
                 }
             }
+            Overlay::Review => {
+                if let Some(form) = state.review_form() {
+                    crate::widgets::review::render(frame, area, input_area.y, form, &theme);
+                }
+            }
             Overlay::Picker => {
                 if let Some(picker) = state.picker() {
                     crate::widgets::picker::render(frame, area, input_area.y, picker, &theme);

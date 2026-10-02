@@ -120,6 +120,7 @@ pub trait TuiState {
     /// ```
     fn approval(&self) -> Option<&ApprovalState>;
     fn picker(&self) -> Option<&PickerState>;
+    fn review_form(&self) -> Option<&ReviewForm>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
     fn powers_panel(&self) -> Option<&PowersPanelState>;
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData>;
@@ -174,6 +175,9 @@ pub enum Overlay {
     /// Command-option picker (`/model`, `/theme`, and every
     /// `CommandOptionsReceived` reply, which also arrives unprompted).
     Picker,
+    /// The `/review` consent form (cyril-iowg). Directly below Approval: a
+    /// permission prompt from another session still answers first.
+    Review,
     /// Permission prompt. Painted last and consulted first: an approval the
     /// user cannot see must never be answerable by a stray Enter.
     Approval,
@@ -181,12 +185,13 @@ pub enum Overlay {
 
 impl Overlay {
     /// Every overlay, bottom-most (painted first, keyed last) to top-most.
-    pub const ALL: [Overlay; 6] = [
+    pub const ALL: [Overlay; 7] = [
         Overlay::Usage,
         Overlay::Code,
         Overlay::Powers,
         Overlay::Hooks,
         Overlay::Picker,
+        Overlay::Review,
         Overlay::Approval,
     ];
 }
@@ -583,6 +588,29 @@ pub enum PickerKind {
     Agent,
     /// Cyril's palette picker: confirming commits locally, never to the wire.
     Theme,
+}
+
+/// The `/review` consent form: what the review will run and everything it
+/// may do, so that Enter is informed consent.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReviewForm {
+    /// The diff target, e.g. `auto`.
+    pub target: String,
+    /// Git pathspecs; `.` is everything.
+    pub scope: Vec<String>,
+    /// Files the target's diff touches in scope; `None` while counting.
+    pub file_count: Option<usize>,
+    /// What runs before the workflow starts.
+    pub check: ReviewCheck,
+    /// Enter was pressed and the launch is under way.
+    pub busy: bool,
+}
+
+/// The repository check command shown on the consent form.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReviewCheck {
+    NotConfigured,
+    WillRun { command: String, timeout_secs: u64 },
 }
 
 /// Selection picker dialog state.
@@ -1038,6 +1066,9 @@ pub mod test_support {
         }
         fn picker(&self) -> Option<&PickerState> {
             self.picker.as_ref()
+        }
+        fn review_form(&self) -> Option<&ReviewForm> {
+            None
         }
         fn hooks_panel(&self) -> Option<&HooksPanelState> {
             self.hooks_panel.as_ref()
