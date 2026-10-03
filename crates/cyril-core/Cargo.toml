@@ -62,6 +62,9 @@ tracing-subscriber = { workspace = true, optional = true }
 # (cyril-0pms) — `acp-server.js` is a grandchild, unreachable by kill_on_drop.
 nix = { workspace = true }
 
+[target.'cfg(windows)'.dependencies]
+dirs = { workspace = true }
+
 [dev-dependencies]
 anyhow = { workspace = true }
 rstest = { workspace = true }

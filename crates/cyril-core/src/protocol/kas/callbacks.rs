@@ -628,16 +628,18 @@ mod tests {
     // it must not double.
     #[test]
     fn auth_failure_hint_not_doubled() {
-        let n = auth_failure_notification(&acp::Error::new(
-            -32603,
-            "kiro token expired; run `kiro-cli login`",
-        ))
-        .expect("failure surfaces");
-        match n {
-            crate::types::Notification::BridgeError { message, .. } => {
-                assert_eq!(message.matches("kiro-cli login").count(), 1, "{message}");
+        for reason in [
+            "kiro token expired; run `kiro-cli login`".to_string(),
+            super::super::discovery::KasMissing::NoHomeForStore.reason(),
+        ] {
+            let n = auth_failure_notification(&acp::Error::new(-32603, reason))
+                .expect("failure surfaces");
+            match n {
+                crate::types::Notification::BridgeError { message, .. } => {
+                    assert_eq!(message.matches("kiro-cli login").count(), 1, "{message}");
+                }
+                other => panic!("expected BridgeError, got {other:?}"),
             }
-            other => panic!("expected BridgeError, got {other:?}"),
         }
     }
 
