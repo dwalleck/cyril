@@ -304,13 +304,9 @@ fn get_access_token_from(db: &Path, now: Option<i64>) -> acp::Result<acp::ExtRes
 /// store's refresh token.
 pub(crate) async fn respond_get_access_token() -> acp::Result<acp::ExtResponse> {
     let db = crate::protocol::kas::discovery::default_store_path().ok_or_else(|| {
-        tracing::warn!(
-            "getAccessToken failed: no home directory to locate the kiro credential store"
-        );
-        acp::Error::new(
-            JSONRPC_INTERNAL_ERROR,
-            "no home directory to locate the kiro credential store",
-        )
+        let reason = super::discovery::KasMissing::NoHomeForStore.reason();
+        tracing::warn!(%reason, "getAccessToken failed: credential store location unavailable");
+        acp::Error::new(JSONRPC_INTERNAL_ERROR, reason)
     })?;
     // spawn_blocking: rusqlite is synchronous, and the bridge is a
     // single-threaded runtime whose executor must not stall on I/O.

@@ -20,8 +20,8 @@ use crate::types::AgentCommand;
 /// `BridgeDisconnected` (spec B6) instead of a silent hang or a v2 fallback.
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) enum KasMissing {
-    /// No kiro data dir can be resolved — no absolute `XDG_DATA_HOME` and
-    /// neither `HOME` nor `USERPROFILE` set — and no path override was given.
+    /// No kiro data dir can be resolved from the platform's data-directory
+    /// sources, and no path override was given.
     NoHome,
     /// The KAS server bundle (`acp-server.js`) is not a file at the resolved path.
     Server(PathBuf),
@@ -42,10 +42,15 @@ pub(crate) enum KasMissing {
 impl KasMissing {
     /// A user-facing, actionable reason for the `BridgeDisconnected` (spec B6).
     pub(crate) fn reason(&self) -> String {
+        #[cfg(windows)]
+        const MISSING_DATA_DIR: &str = "no Windows local data directory (LOCALAPPDATA and the known-folder lookup unavailable)";
+        #[cfg(not(windows))]
+        const MISSING_DATA_DIR: &str = "no home directory (HOME unset)";
         match self {
-            KasMissing::NoHome => "cannot locate the KAS bundle: no home directory (HOME unset). \
+            KasMissing::NoHome => format!(
+                "cannot locate the KAS bundle: {MISSING_DATA_DIR}. \
                  Set KIRO_KAS_SERVER_PATH to the acp-server.js path."
-                .to_string(),
+            ),
             KasMissing::Server(p) => format!(
                 "KAS bundle not found at {}. Run `kiro-cli acp --agent-engine v3` \
                  once to self-extract it, or set KIRO_KAS_SERVER_PATH.",
@@ -55,9 +60,12 @@ impl KasMissing {
                  KIRO_AGENT_PATH to the node binary."
                 .to_string(),
             KasMissing::NoHomeForStore => {
-                "cannot locate the kiro credential store: no home directory (HOME unset). \
-                 KAS auth is served from kiro-cli's login store (`kiro-cli login`)."
-                    .to_string()
+                #[cfg(windows)]
+                let recovery = "Restore LOCALAPPDATA or the Windows local-app-data known folder, \
+                    then run `kiro-cli login`.";
+                #[cfg(not(windows))]
+                let recovery = "Restore the home directory, then run `kiro-cli login`.";
+                format!("cannot locate the kiro credential store: {MISSING_DATA_DIR}. {recovery}")
             }
             KasMissing::StoreUnservable { store, why } => {
                 format!("KAS auth not servable from {}: {why}", store.display())
@@ -68,11 +76,11 @@ impl KasMissing {
 
 /// `<home>`-relative default for `$XDG_DATA_HOME` (XDG Base Directory spec) —
 /// the fallback kiro-cli's own `dirs`-based resolution uses.
+#[cfg(any(not(windows), test))]
 const XDG_DATA_HOME_DEFAULT_REL: &str = ".local/share";
-/// kiro-cli's data dir name under the XDG data home. [`kiro_data_dir`]
-/// resolves it; it is the shared parent of the KAS extraction root
-/// ([`kas_root`]) and the credential store ([`store_path`]), and a unit test
-/// pins both to it so the two cannot drift apart (dcc6 review F19b).
+/// kiro-cli's Unix data dir name under the XDG data home. The resolved data
+/// dir is the shared parent of the KAS extraction root and credential store.
+#[cfg(any(not(windows), test))]
 const KIRO_DATA_DIR_NAME: &str = "kiro-cli";
 /// Data-dir-relative KAS self-extraction root. kiro ≥2.10.0 extracts into
 /// versioned `<semver>-<sha256>/` dirs under it; older releases extracted the
@@ -89,21 +97,20 @@ const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-serve
 /// `XDG_DATA_HOME` is set, non-empty and absolute, else
 /// `<home>/.local/share/kiro-cli` — the `dirs::data_local_dir` rule kiro-cli
 /// resolves through on the targets `dirs` routes to `lin.rs` (Linux, Android,
-/// the BSDs, illumos, Redox — `dirs-6.0.0/src/lib.rs`); its macOS/iOS and
-/// Windows builds never consult `XDG_DATA_HOME`, so
-/// [`kiro_data_dir_from_env`] passes `None` there. Strace-proven on 2.24.0:
-/// `settings list` under `HOME=<tmp> XDG_DATA_HOME=<x>` opens
+/// the BSDs, illumos, Redox — `dirs-6.0.0/src/lib.rs`). macOS/iOS keep the
+/// existing HOME fallback without consulting `XDG_DATA_HOME`; their native
+/// data-directory support is separate scope (cyril-igrx). Strace-proven on
+/// Linux 2.24.0: `settings list` under `HOME=<tmp> XDG_DATA_HOME=<x>` opens
 /// `<x>/kiro-cli/data.sqlite3` and never touches `<tmp>/.local/share`; see
-/// `.cyril-brui/evidence.md`. An empty or relative value is invalid under that
-/// rule (dirs-sys `is_absolute_path`) and falls back to `<home>` with a
-/// warning naming it — never silently, since the fallback store may hold a
-/// different login than the one kiro-cli uses.
+/// `.cyril-brui/evidence.md`. An empty or relative value falls back to
+/// `<home>` with a warning naming it.
 ///
 /// Pure (no env reads) so every branch is unit-testable on every host
 /// without env mutation (`set_var` is `unsafe` in Rust 2024, forbidden in
 /// this workspace); [`kiro_data_dir_from_env`] is the one production caller,
 /// and `env_wrappers_resolve_xdg_data_home_like_kiro_cli` drives the wrappers
 /// themselves through a re-entered child process with a private environment.
+#[cfg(any(not(windows), test))]
 fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<PathBuf> {
     if let Some(value) = xdg_data_home {
         let xdg = Path::new(value);
@@ -119,27 +126,58 @@ fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<P
     home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME))
 }
 
-/// [`kiro_data_dir`] from the real environment — the single resolution both
-/// the KAS root and the credential store derive from. `XDG_DATA_HOME` is
-/// consulted only where kiro-cli's `dirs` build consults it — the targets
-/// `dirs-6.0.0/src/lib.rs` routes to `lin.rs` (Linux, Android, the BSDs,
-/// illumos, Redox); macOS/iOS (`mac.rs`) and Windows (`win.rs`) never do, and
-/// there a stray value (dotfiles, MSYS) must not divert cyril from the HOME
-/// default kiro-cli is not using either (PR #140 review F2, re-review N1).
-/// `dirs` also routes `wasm32` to its own module; cyril cannot target wasm,
-/// so no `target_arch` clause is carried here. That the HOME default is
-/// itself not where macOS/Windows kiro-cli keeps its data
-/// (`~/Library/Application Support`, `LOCALAPPDATA`) is a pre-existing gap
-/// tracked beside cyril-lwpm, not decided here.
+/// Windows uses `%LOCALAPPDATA%\Kiro-Cli`, or the Windows local-app-data
+/// known folder if the environment value is absent or not absolute. The
+/// fallback is lazy and injected so unavailable/invalid roots are testable
+/// on every host without mutating the process environment.
+#[cfg(any(windows, test))]
+fn windows_kiro_data_dir(
+    local_app_data: Option<&OsStr>,
+    known_folder: impl FnOnce() -> Option<PathBuf>,
+) -> Option<PathBuf> {
+    if let Some(value) = local_app_data {
+        let local = Path::new(value);
+        if local.is_absolute() {
+            return Some(local.join("Kiro-Cli"));
+        }
+        tracing::warn!(
+            value = ?value,
+            "LOCALAPPDATA is not an absolute path; kiro data dir falls back to the Windows known folder"
+        );
+    }
+    let Some(local) = known_folder() else {
+        tracing::debug!("Windows local-app-data known folder unavailable");
+        return None;
+    };
+    if !local.is_absolute() {
+        tracing::warn!(path = %local.display(), "Windows local-app-data known folder is not absolute");
+        return None;
+    }
+    Some(local.join("Kiro-Cli"))
+}
+
+/// One platform resolution shared by the KAS bundle and credential store.
+/// Windows ignores HOME/XDG and uses local AppData; other targets retain
+/// their existing XDG/HOME rules.
 fn kiro_data_dir_from_env() -> Option<PathBuf> {
-    #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "windows")))]
-    let xdg_data_home = std::env::var_os("XDG_DATA_HOME");
-    #[cfg(any(target_os = "macos", target_os = "ios", target_os = "windows"))]
-    let xdg_data_home: Option<std::ffi::OsString> = None;
-    kiro_data_dir(
-        crate::kiro_agent_config::home_dir().as_deref(),
-        xdg_data_home.as_deref(),
-    )
+    #[cfg(windows)]
+    {
+        windows_kiro_data_dir(
+            std::env::var_os("LOCALAPPDATA").as_deref(),
+            dirs::data_local_dir,
+        )
+    }
+    #[cfg(not(windows))]
+    {
+        #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+        let xdg_data_home = std::env::var_os("XDG_DATA_HOME");
+        #[cfg(any(target_os = "macos", target_os = "ios"))]
+        let xdg_data_home: Option<std::ffi::OsString> = None;
+        kiro_data_dir(
+            crate::kiro_agent_config::home_dir().as_deref(),
+            xdg_data_home.as_deref(),
+        )
+    }
 }
 
 /// The KAS self-extraction root under `data_dir`.
@@ -377,8 +415,8 @@ async fn installed_cli_version() -> Option<(u32, u32, u32)> {
 /// `KIRO_KAS_SERVER_PATH` / `KIRO_AGENT_PATH` override the defaults.
 pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     // Resolved ONCE per spawn: the root scan, `resolve`, and the store gate
-    // below all derive from this value (F19b), and an invalid XDG_DATA_HOME
-    // warns once rather than once per consumer.
+    // below all derive from this value (F19b), and an invalid directory
+    // environment value warns once rather than once per consumer.
     let data_dir = kiro_data_dir_from_env();
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
@@ -419,10 +457,10 @@ pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
     Ok(cmd)
 }
 
-/// kiro-cli's credential store — `<kiro data dir>/data.sqlite3`, i.e.
-/// `$XDG_DATA_HOME/kiro-cli/data.sqlite3` or `~/.local/share/kiro-cli/data.sqlite3`
-/// ([`kiro_data_dir`]). The auth responder's source: unlike the SSO-cache
-/// token file, this is refreshed by every login and deleted-row on logout.
+/// kiro-cli's credential store — `<kiro data dir>/data.sqlite3`, under
+/// `%LOCALAPPDATA%\Kiro-Cli` on Windows or the existing XDG/HOME root on
+/// other targets. The auth responder's source: unlike the SSO-cache token
+/// file, this is refreshed by every login and deleted-row on logout.
 pub(crate) fn default_store_path() -> Option<PathBuf> {
     kiro_data_dir_from_env().map(|d| store_path(&d))
 }
@@ -1008,19 +1046,90 @@ mod tests {
         );
     }
 
-    /// Where the env wrappers must resolve the kiro data dir on THIS host for
-    /// a private `HOME`/`XDG_DATA_HOME` pair: the XDG dir where kiro-cli's
-    /// `dirs` build consults it, the HOME default on macOS/iOS/Windows where
-    /// it never does (review F2, N1). Shared by the parent (which lays the fake
-    /// extraction there) and the child (which asserts against it), so a
-    /// resolver that consults the variable on the wrong platform misses the
-    /// bundle AND reports the wrong store.
-    fn expected_data_dir_on_host(home: &Path, xdg: &Path) -> PathBuf {
-        if cfg!(any(
-            target_os = "macos",
-            target_os = "ios",
-            target_os = "windows"
-        )) {
+    #[test]
+    fn windows_appdata_server_selection_and_store_share_root() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let local = root.path().join("Profile With Spaces/AppData/Local");
+        let data_dir = windows_kiro_data_dir(Some(local.as_os_str()), || {
+            panic!("valid LOCALAPPDATA must not consult the known folder")
+        })
+        .expect("absolute LOCALAPPDATA resolves");
+        let expected_data = root
+            .path()
+            .join("Profile With Spaces/AppData/Local/Kiro-Cli");
+        let exact = format!("2.24.0-{SHA_A}");
+        let newer = format!("2.25.0-{SHA_B}");
+        for version in [&exact, &newer] {
+            let server = expected_data
+                .join("kas")
+                .join(version)
+                .join("node_modules/@kiro/agent/dist/server/acp-server.js");
+            std::fs::create_dir_all(server.parent().unwrap()).expect("extraction directory");
+            std::fs::write(server, "//").expect("server entry");
+        }
+        let node = root.path().join("node");
+        std::fs::write(&node, "").expect("node file");
+        let entries = list_kas_entries(&kas_root(&data_dir));
+        let command = resolve(
+            Some(&data_dir),
+            None,
+            Some(node.to_str().unwrap()),
+            None,
+            &entries,
+            Some((2, 24, 0)),
+            Path::is_file,
+        )
+        .expect("AppData installation is discoverable");
+        let expected_server = expected_data
+            .join("kas")
+            .join(exact)
+            .join("node_modules/@kiro/agent/dist/server/acp-server.js");
+        assert_eq!(Path::new(command.program()), node);
+        let [_, server, _, _] = command.args() else {
+            panic!("the AppData server path, including spaces, must remain one argument");
+        };
+        assert_eq!(Path::new(server), expected_server);
+        assert_eq!(
+            store_path(&data_dir),
+            expected_data.join("data.sqlite3"),
+            "auth and bundle discovery must use the same Windows installation"
+        );
+    }
+
+    #[test]
+    fn windows_data_dir_falls_back_to_known_folder() {
+        let known = abs_fixture("Users/Profile With Spaces/AppData/Local");
+        for value in [None, xdg(""), xdg("   "), xdg("relative/AppData")] {
+            assert_eq!(
+                windows_kiro_data_dir(value, || Some(known.clone())),
+                Some(known.join("Kiro-Cli")),
+                "LOCALAPPDATA={value:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn windows_without_local_data_root_reports_missing_bundle() {
+        for value in [None, xdg(""), xdg("relative/AppData")] {
+            for known in [None, Some(PathBuf::from("relative/known-folder"))] {
+                let data_dir = windows_kiro_data_dir(value, || known);
+                assert_eq!(
+                    resolve_legacy(data_dir.as_deref(), None, None, None, |_| true).unwrap_err(),
+                    KasMissing::NoHome,
+                    "an unavailable Windows data root must not become a relative launch root"
+                );
+            }
+        }
+    }
+
+    /// The expected root for the isolated environment: local AppData on
+    /// Windows, XDG where supported, and the unchanged HOME default on
+    /// macOS/iOS. Each variable points to a different root, so consulting
+    /// a competing variable makes both consumers fail.
+    fn expected_data_dir_on_host(home: &Path, xdg: &Path, local: &Path) -> PathBuf {
+        if cfg!(windows) {
+            local.join("Kiro-Cli")
+        } else if cfg!(any(target_os = "macos", target_os = "ios")) {
             home.join(XDG_DATA_HOME_DEFAULT_REL)
                 .join(KIRO_DATA_DIR_NAME)
         } else {
@@ -1033,7 +1142,7 @@ mod tests {
     // above cannot see a wrapper that reads the wrong variable (R1:
     // `XDG_DATA_DIR`) or a store gate that re-derives from HOME (R2); both
     // reviewer mutations survived all of them. Re-enter this test binary
-    // with a private HOME + XDG_DATA_HOME — never mutating the runner's
+    // with private HOME + XDG_DATA_HOME + LOCALAPPDATA — never mutating the runner's
     // environment (the `tests/spawn_isolation.rs` idiom) — and drive both
     // wrappers. No auth is touched: PATH holds no kiro-cli, no store exists,
     // and nothing is spawned beyond this binary (the fake node is never run).
@@ -1047,10 +1156,11 @@ mod tests {
             let root = tempfile::tempdir().expect("tempdir");
             let home = root.path().join("home");
             let xdg = root.path().join("xdg");
+            let local = root.path().join("Profile With Spaces/AppData/Local");
             let node = root.path().join("node");
             std::fs::create_dir_all(&home).expect("home dir");
             std::fs::write(&node, "").expect("fake node file");
-            let server_dir = kas_root(&expected_data_dir_on_host(&home, &xdg))
+            let server_dir = kas_root(&expected_data_dir_on_host(&home, &xdg, &local))
                 .join(format!("2.24.0-{SHA_A}"))
                 .join("node_modules/@kiro/agent/dist/server");
             std::fs::create_dir_all(&server_dir).expect("fake extraction");
@@ -1068,6 +1178,7 @@ mod tests {
             .env("HOME", &home)
             .env("USERPROFILE", &home)
             .env("XDG_DATA_HOME", &xdg)
+            .env("LOCALAPPDATA", &local)
             .env("KIRO_AGENT_PATH", &node)
             // No kiro-cli anywhere on PATH: the version probe fails and
             // selection takes the newest extraction; nothing real can run.
@@ -1085,7 +1196,8 @@ mod tests {
         // Child: the real environment IS the private one the parent set.
         let home = PathBuf::from(std::env::var_os("HOME").expect("HOME"));
         let xdg = PathBuf::from(std::env::var_os("XDG_DATA_HOME").expect("XDG_DATA_HOME"));
-        let data_dir = expected_data_dir_on_host(&home, &xdg);
+        let local = PathBuf::from(std::env::var_os("LOCALAPPDATA").expect("LOCALAPPDATA"));
+        let data_dir = expected_data_dir_on_host(&home, &xdg, &local);
         assert_eq!(
             default_store_path(),
             Some(data_dir.join(STORE_FILE_NAME)),
