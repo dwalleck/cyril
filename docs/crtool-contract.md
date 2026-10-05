@@ -173,6 +173,24 @@ cancel path can interrupt by killing the child.
   and Markdown that Python writes in one line and rustfmt lays out over five
   to ten.
 
+### Review seam refactor
+
+The step functions remain the public command interface. Repository probes take
+only a workspace path; operations that read or write run artifacts take a
+`ReviewRun`. Normalized verdicts use the shared `Verdict` enum, preserving the
+uppercase artifact spellings. Arbitrary agent payload fields remain JSON.
+Check execution owns the child and both readers through termination and returns
+captured streams with explicit EOF, deadline, read-failure or task-failure state.
+Diagnostics rendering and comment resolution/rendering are private pure seams.
+
+The approved seam refactor adds 265 production lines over its 3,441-line base
+(3,706 total, counting rustfmt output including comments and blank lines before
+`#[cfg(test)]`). This exceeds the approximate 3,300-line budget to make capture
+ownership/results explicit, separate comment policy from persistence, and carry
+typed verdicts across the actual application interface. It adds no process,
+storage or rendering framework; reusing raw maps and booleans would lose the
+invariants this refactor establishes. Tests are counted separately.
+
 ## Testing
 
 - **Golden runs:** a few fixture repositories with recorded agent outputs
