@@ -3,6 +3,7 @@ use crate::run::{Manifest, ManifestFile, ReviewRun, VERSION, read_manifest, writ
 use crate::{Result, ReviewError, facts, io_error};
 use std::collections::HashMap;
 use std::fs;
+use std::path::Path;
 
 const RUN_DIRS: [&str; 6] = [
     "patches",
@@ -16,8 +17,9 @@ const RUN_DIRS: [&str; 6] = [
 /// `crtool gather <rundir> <target> [<scope>]`: write the diff, per-file
 /// patches and manifest, then the facts. Returns the step's stdout.
 pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<String> {
+    let workspace = run.workspace();
     git::admit_target(requested_target)?;
-    git::require_root(run)?;
+    git::require_root(workspace)?;
     let scope = split_scope(scope);
     let manifest_path = run.path("manifest.json");
     if manifest_path.exists() {
@@ -44,13 +46,13 @@ pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<St
         fs::create_dir_all(&path).map_err(|source| io_error("create directory", path, source))?;
     }
 
-    let (target, note) = resolve_target(run, requested_target)?;
+    let (target, note) = resolve_target(workspace, requested_target)?;
     git::admit_target(&target)?;
     let mut warnings: Vec<String> = note.into_iter().collect();
-    let head = git::commit_id(run, "HEAD")?;
+    let head = git::commit_id(workspace, "HEAD")?;
     let mut matches_head = true;
     if let Some(side) = head_side(&target) {
-        matches_head = git::commit_id(run, side)? == head;
+        matches_head = git::commit_id(workspace, side)? == head;
         if !matches_head {
             warnings.push(format!(
                 "working tree (HEAD) is not at the diff's head ({side}); source files may not match the patches"
@@ -58,18 +60,21 @@ pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<St
         }
     }
 
-    let full = git::git(run, &diff_args(&target, &[PATCH_CONTEXT], &scope))?;
+    let full = git::git(workspace, &diff_args(&target, &[PATCH_CONTEXT], &scope))?;
     if full.iter().all(u8::is_ascii_whitespace) {
         return Err(ReviewError::EmptyDiff { target, scope });
     }
     write(&run.path("diff.patch"), &full)?;
 
-    let name_status = git::git(run, &diff_args(&target, &["--name-status", "-z"], &scope))?;
+    let name_status = git::git(
+        workspace,
+        &diff_args(&target, &["--name-status", "-z"], &scope),
+    )?;
     let mut status: HashMap<&str, &str> = HashMap::new();
     for pair in git::nul_records(&name_status)?.chunks_exact(2) {
         status.insert(pair[1], pair[0]);
     }
-    let numstat = git::git(run, &diff_args(&target, &["--numstat", "-z"], &scope))?;
+    let numstat = git::git(workspace, &diff_args(&target, &["--numstat", "-z"], &scope))?;
     let mut files = Vec::new();
     for record in git::nul_records(&numstat)? {
         let mut fields = record.splitn(3, '\t');
@@ -81,7 +86,7 @@ pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<St
         let index = files.len() + 1;
         let patch_name = format!("patches/{index:03}.patch");
         let patch = git::git(
-            run,
+            workspace,
             &diff_args(&target, &[PATCH_CONTEXT], &[format!(":(literal){path}")]),
         )?;
         write(&run.path(&patch_name), &patch)?;
@@ -133,13 +138,13 @@ pub fn gather(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<St
 /// The files the diff `gather` would write touches, in git's order: what
 /// `/review` shows (and lets the operator narrow) before consent. Refuses
 /// anywhere but the repository root.
-pub fn changed_paths(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<Vec<String>> {
+pub fn changed_paths(workspace: &Path, requested_target: &str, scope: &str) -> Result<Vec<String>> {
     git::admit_target(requested_target)?;
-    git::require_root(run)?;
-    let (target, _) = resolve_target(run, requested_target)?;
+    git::require_root(workspace)?;
+    let (target, _) = resolve_target(workspace, requested_target)?;
     git::admit_target(&target)?;
     let names = git::git(
-        run,
+        workspace,
         &diff_args(&target, &["--name-only", "-z"], &split_scope(scope)),
     )?;
     Ok(git::nul_records(&names)?
@@ -149,19 +154,19 @@ pub fn changed_paths(run: &ReviewRun, requested_target: &str, scope: &str) -> Re
 }
 
 /// How many files the diff `gather` would write touches.
-pub fn touched_files(run: &ReviewRun, requested_target: &str, scope: &str) -> Result<usize> {
-    Ok(changed_paths(run, requested_target, scope)?.len())
+pub fn touched_files(workspace: &Path, requested_target: &str, scope: &str) -> Result<usize> {
+    Ok(changed_paths(workspace, requested_target, scope)?.len())
 }
 
 /// Branches `/review` offers as a base: local and remote-tracking, without
 /// the checked-out branch and symbolic refs (a remote's `HEAD`, which git
 /// would shorten to the bare remote name).
-pub fn base_branches(run: &ReviewRun) -> Result<Vec<String>> {
-    let current = git::git_output(run, &["symbolic-ref", "--short", "-q", "HEAD"])?;
+pub fn base_branches(workspace: &Path) -> Result<Vec<String>> {
+    let current = git::git_output(workspace, &["symbolic-ref", "--short", "-q", "HEAD"])?;
     // Exit 1 means a detached HEAD: no branch to leave out.
     let current = String::from_utf8_lossy(&current.stdout).trim().to_owned();
     let refs = git::git_text(
-        run,
+        workspace,
         &[
             "for-each-ref",
             "--format=%(refname:short)%09%(symref)",
@@ -179,9 +184,9 @@ pub fn base_branches(run: &ReviewRun) -> Result<Vec<String>> {
 
 /// Tracked files with uncommitted changes: a target that ends at the HEAD
 /// commit does not review them, but the reviewers read the working tree.
-pub fn uncommitted_paths(run: &ReviewRun) -> Result<Vec<String>> {
+pub fn uncommitted_paths(workspace: &Path) -> Result<Vec<String>> {
     let status = git::git(
-        run,
+        workspace,
         &[
             "status",
             "--porcelain",
@@ -229,20 +234,23 @@ fn count(binary: bool, field: &str) -> Option<u64> {
 }
 
 /// Pick the diff when the caller says `auto` (phase 0 of the review prompt).
-fn resolve_target(run: &ReviewRun, requested: &str) -> Result<(String, Option<String>)> {
+fn resolve_target(workspace: &Path, requested: &str) -> Result<(String, Option<String>)> {
     if requested != "auto" {
         return Ok((requested.to_owned(), None));
     }
     let mut base = None;
     for candidate in ["@{upstream}", "main", "master"] {
-        if git::is_commit(run, candidate)? {
+        if git::is_commit(workspace, candidate)? {
             base = Some(candidate);
             break;
         }
     }
-    let dirty = !git::git_text(run, &["status", "--porcelain", "--untracked-files=no"])?
-        .trim()
-        .is_empty();
+    let dirty = !git::git_text(
+        workspace,
+        &["status", "--porcelain", "--untracked-files=no"],
+    )?
+    .trim()
+    .is_empty();
     let Some(base) = base else {
         let target = if dirty { "HEAD" } else { "HEAD~1" };
         return Ok((
@@ -251,11 +259,11 @@ fn resolve_target(run: &ReviewRun, requested: &str) -> Result<(String, Option<St
         ));
     };
     let range = format!("{base}...HEAD");
-    let empty = git::git_text(run, &diff_args(&range, &["--name-only"], &[]))?
+    let empty = git::git_text(workspace, &diff_args(&range, &["--name-only"], &[]))?
         .trim()
         .is_empty();
     if dirty || empty {
-        let merge_base = git::git_text(run, &["merge-base", base, "HEAD"])?
+        let merge_base = git::git_text(workspace, &["merge-base", base, "HEAD"])?
             .trim()
             .to_owned();
         let short: String = merge_base.chars().take(12).collect();

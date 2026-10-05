@@ -1,20 +1,17 @@
 //! `ballots` gives unstable verdicts two more votes; `collate` tallies every
 //! vote into the kept and refuted findings.
 
-use crate::merge::{also_count, id, write_queue};
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, load_candidates, location, one_line, plain_id, quoted,
-    required_records, text, to_line, unreadable,
+    MAX_PER_ANGLE, Record, also_count, blank, id, load_candidates, location, one_line, plain_id,
+    quoted, required_records, text, to_line, unreadable,
 };
-use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
-use crate::{Result, io_error};
+use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages, write_queue};
+use crate::{Result, Verdict, io_error};
 use serde_json::{Map, Value, json};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const VERDICTS: [&str; 3] = ["CONFIRMED", "PLAUSIBLE", "REFUTED"];
-const UNVERIFIED: &str = "UNVERIFIED";
 const BALLOT_TAGS: [(&str, &str); 2] = [("r1", "v2"), ("r2", "v3")];
 
 /// `crtool ballots <rundir>`: a single vote proved unstable exactly where it
@@ -28,9 +25,9 @@ pub fn ballots(run: &ReviewRun) -> Result<String> {
     let mut chosen = Vec::new();
     for candidate in &candidates {
         let candidate_id = id(candidate);
-        let first = verdict_of(&verdicts.load(&candidate_id));
+        let first = verdicts.load(&candidate_id).verdict;
         let mut why = Vec::new();
-        if first == "REFUTED" {
+        if first == Verdict::Refuted {
             why.push("first vote REFUTED");
         }
         if is_conventions(candidate) {
@@ -111,18 +108,14 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
                 ballots.push(verdicts.load(&format!("{candidate_id}.{tag}")));
             }
         }
-        let votes: Vec<String> = ballots.iter().map(verdict_of).collect();
-        let fin = if is_balloted {
-            tally(&votes)
-        } else {
-            votes[0].clone()
-        };
-        let shown = ballots
+        let votes: Vec<Verdict> = ballots.iter().map(|ballot| ballot.verdict).collect();
+        let final_verdict = if is_balloted { tally(&votes) } else { votes[0] };
+        let representative_ballot = ballots
             .iter()
-            .find(|ballot| verdict_of(ballot) == fin)
+            .find(|ballot| ballot.verdict == final_verdict)
             .unwrap_or(&ballots[0]);
         let mut record = candidate.clone();
-        record.insert("verdict".to_owned(), json!(fin));
+        record.insert("verdict".to_owned(), json!(final_verdict));
         let verification: Map<String, Value> = [
             "evidence",
             "reasoning",
@@ -132,42 +125,52 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
         ]
         .into_iter()
         .filter_map(|key| {
-            let value = shown.get(key);
+            let value = representative_ballot.fields.get(key);
             (!blank(value)).then(|| (key.to_owned(), value.cloned().unwrap_or(Value::Null)))
         })
         .collect();
         record.insert("verification".to_owned(), Value::Object(verification));
         // An accepted limitation is still a finding: any vote's by_design note
         // rides along instead of the finding being refuted away.
-        let note = ballots
-            .iter()
-            .find_map(|ballot| ballot.get("by_design").filter(|note| !blank(Some(note))));
+        let note = ballots.iter().find_map(|ballot| {
+            ballot
+                .fields
+                .get("by_design")
+                .filter(|note| !blank(Some(note)))
+        });
         if let Some(note) = note
-            && fin != "REFUTED"
+            && final_verdict != Verdict::Refuted
         {
             record.insert("by_design".to_owned(), json!(text(note)));
         }
         if is_balloted {
             record.insert("votes".to_owned(), json!(votes));
-            if fin != votes[0] {
+            if final_verdict != votes[0] {
                 overturned.push(format!(
-                    "{candidate_id}: {} -> {fin} ({})",
+                    "{candidate_id}: {} -> {final_verdict} ({})",
                     votes[0],
-                    votes.join(", ")
+                    votes
+                        .iter()
+                        .map(|vote| vote.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 ));
             }
         }
-        if fin == "REFUTED" {
+        if final_verdict == Verdict::Refuted {
             refuted.push(record)
         } else {
             kept.push(record)
         }
     }
 
-    let order = ["CONFIRMED", "PLAUSIBLE", "REFUTED", UNVERIFIED];
+    let order = Verdict::REPORT_ORDER;
     let mut counts = vec![0usize; order.len()];
     for record in kept.iter().chain(&refuted) {
-        if let Some(slot) = order.iter().position(|name| record["verdict"] == *name) {
+        if let Some(slot) = order
+            .iter()
+            .position(|name| record["verdict"] == name.as_str())
+        {
             counts[slot] += 1;
         }
     }
@@ -181,7 +184,7 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
     }
     let unverified: Vec<String> = kept
         .iter()
-        .filter(|record| record["verdict"] == UNVERIFIED)
+        .filter(|record| record["verdict"] == Verdict::Unverified.as_str())
         .map(id)
         .collect();
     let lines: Vec<String> = kept
@@ -222,7 +225,7 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
     let summary_counts: Vec<String> = order
         .iter()
         .zip(&counts)
-        .filter(|(name, _)| **name != "REFUTED")
+        .filter(|(name, _)| **name != Verdict::Refuted)
         .map(|(name, count)| format!("{name}={count}"))
         .collect();
     let (kept_count, refuted_count) = (kept.len(), refuted.len());
@@ -237,7 +240,7 @@ pub fn collate(run: &ReviewRun) -> Result<String> {
                 "raw_candidates": index.get("raw_count"),
                 "after_dedup": index.get("deduped_count"),
                 "sweep_candidates": sweep_count,
-                "verdicts": order.iter().zip(&counts).map(|(name, count)| ((*name).to_owned(), json!(count))).collect::<Map<_, _>>(),
+                "verdicts": order.iter().zip(&counts).map(|(name, count)| (name.to_string(), json!(count))).collect::<Map<_, _>>(),
                 "balloted": balloted.len(),
                 "overturned_by_vote": overturned,
                 "candidates_per_angle_after_dedup": per_angle.into_iter().map(|(angle, count)| (angle, json!(count))).collect::<Map<_, _>>(),
@@ -275,7 +278,7 @@ fn all_candidates(
     let index_path = run.path("deduped/index.json");
     let index: Record = read_json(&index_path)?;
     let mut candidates = required_records(&index, "candidates", &index_path)?;
-    let mut seen: HashSet<String> = candidates.iter().map(crate::merge::id).collect();
+    let mut seen: HashSet<String> = candidates.iter().map(crate::record::id).collect();
     let sweep_path = run.path("candidates/sweep.json");
     let mut sweep_count = 0;
     if sweep_path.exists() {
@@ -311,7 +314,7 @@ fn all_candidates(
                 }
                 record.insert("id".to_owned(), json!(fallback));
             }
-            seen.insert(crate::merge::id(&record));
+            seen.insert(crate::record::id(&record));
             record.insert("angle".to_owned(), json!("sweep"));
             record.insert("line".to_owned(), line);
             candidates.push(record);
@@ -332,8 +335,9 @@ fn is_conventions(candidate: &Record) -> bool {
         || candidate.get("angle").and_then(Value::as_str) == Some("conventions")
 }
 
-fn verdict_of(verdict: &Record) -> String {
-    verdict.get("verdict").map(text).unwrap_or_default()
+struct LoadedVerdict {
+    verdict: Verdict,
+    fields: Record,
 }
 
 /// Every verdict file in the run, by file name: wherever under a `verdicts`
@@ -360,12 +364,15 @@ impl Verdicts {
 
     /// The candidate's verdict, normalized: an unknown verdict becomes
     /// UNVERIFIED with the raw value kept.
-    fn load(&self, candidate_id: &str) -> Record {
+    fn load(&self, candidate_id: &str) -> LoadedVerdict {
         let unverified = |reasoning: String| {
             let mut verdict = Record::new();
-            verdict.insert("verdict".to_owned(), json!(UNVERIFIED));
+            verdict.insert("verdict".to_owned(), json!(Verdict::Unverified));
             verdict.insert("reasoning".to_owned(), json!(reasoning));
-            verdict
+            LoadedVerdict {
+                verdict: Verdict::Unverified,
+                fields: verdict,
+            }
         };
         let Some(path) = self.files.get(&format!("{candidate_id}.json")) else {
             return unverified("no verdict file was written".to_owned());
@@ -378,17 +385,15 @@ impl Verdicts {
             }
         };
         let raw = verdict.get("verdict").cloned().unwrap_or(Value::Null);
-        let normalized = match &raw {
-            Value::String(verdict) => verdict.trim().to_uppercase(),
-            _ => String::new(),
-        };
-        if VERDICTS.contains(&normalized.as_str()) {
-            verdict.insert("verdict".to_owned(), json!(normalized));
-        } else {
+        let normalized = Verdict::from_agent(Some(&raw));
+        if normalized == Verdict::Unverified {
             verdict.insert("raw_verdict".to_owned(), raw);
-            verdict.insert("verdict".to_owned(), json!(UNVERIFIED));
         }
-        verdict
+        verdict.insert("verdict".to_owned(), json!(normalized));
+        LoadedVerdict {
+            verdict: normalized,
+            fields: verdict,
+        }
     }
 }
 
@@ -437,21 +442,20 @@ fn walk(
 
 /// Final verdict from 1-3 votes. REFUTED needs two; so does CONFIRMED; a
 /// split is PLAUSIBLE.
-fn tally(votes: &[String]) -> String {
-    let valid: Vec<&str> = votes
+fn tally(votes: &[Verdict]) -> Verdict {
+    let valid: Vec<Verdict> = votes
         .iter()
-        .map(String::as_str)
-        .filter(|vote| VERDICTS.contains(vote))
+        .copied()
+        .filter(|vote| *vote != Verdict::Unverified)
         .collect();
     match valid.as_slice() {
-        [] => UNVERIFIED.to_owned(),
-        ["REFUTED"] => "PLAUSIBLE".to_owned(),
-        [only] => (*only).to_owned(),
-        _ => ["REFUTED", "CONFIRMED"]
+        [] => Verdict::Unverified,
+        [Verdict::Refuted] => Verdict::Plausible,
+        [only] => *only,
+        _ => [Verdict::Refuted, Verdict::Confirmed]
             .into_iter()
             .find(|verdict| valid.iter().filter(|vote| *vote == verdict).count() >= 2)
-            .unwrap_or("PLAUSIBLE")
-            .to_owned(),
+            .unwrap_or(Verdict::Plausible),
     }
 }
 
@@ -459,8 +463,11 @@ fn tally(votes: &[String]) -> String {
 mod tests {
     use super::*;
 
-    fn votes(names: &[&str]) -> Vec<String> {
-        names.iter().map(|name| (*name).to_owned()).collect()
+    fn votes(names: &[&str]) -> Vec<Verdict> {
+        names
+            .iter()
+            .map(|name| Verdict::from_agent(Some(&json!(name))))
+            .collect()
     }
 
     #[test]
@@ -483,10 +490,10 @@ mod tests {
             b"{\"verdict\": \"CONFIRMED\"}",
         )?;
         let verdicts = Verdicts::index(&run)?;
-        assert_eq!(verdict_of(&verdicts.load("C01")), "REFUTED");
-        assert_eq!(verdict_of(&verdicts.load("C02")), "CONFIRMED");
+        assert_eq!(verdicts.load("C01").verdict, Verdict::Refuted);
+        assert_eq!(verdicts.load("C02").verdict, Verdict::Confirmed);
         // Only files under a `verdicts` directory are verdicts.
-        assert_eq!(verdict_of(&verdicts.load("C03")), "UNVERIFIED");
+        assert_eq!(verdicts.load("C03").verdict, Verdict::Unverified);
         Ok(())
     }
 
@@ -509,8 +516,8 @@ mod tests {
         link(Path::new(".."), "verdicts/q1/loop")?;
         link(&tree.path().join("outside"), "verdicts/elsewhere")?;
         let verdicts = Verdicts::index(&run)?;
-        assert_eq!(verdict_of(&verdicts.load("C01")), "REFUTED");
-        assert_eq!(verdict_of(&verdicts.load("C09")), "UNVERIFIED");
+        assert_eq!(verdicts.load("C01").verdict, Verdict::Refuted);
+        assert_eq!(verdicts.load("C09").verdict, Verdict::Unverified);
         Ok(())
     }
 
@@ -528,7 +535,7 @@ mod tests {
         )?;
         let mut warnings = Vec::new();
         let (_, candidates, _) = all_candidates(&run, Some(&mut warnings))?;
-        let ids: Vec<String> = candidates.iter().map(crate::merge::id).collect();
+        let ids: Vec<String> = candidates.iter().map(crate::record::id).collect();
         assert_eq!(ids, ["C01", "S01", "S07", "S03"]);
         assert_eq!(
             warnings,
@@ -553,25 +560,28 @@ mod tests {
 
     #[test]
     fn refuted_and_confirmed_each_need_two_votes() {
-        assert_eq!(tally(&votes(&[])), "UNVERIFIED");
-        assert_eq!(tally(&votes(&["UNVERIFIED", "UNVERIFIED"])), "UNVERIFIED");
-        assert_eq!(tally(&votes(&["REFUTED"])), "PLAUSIBLE");
-        assert_eq!(tally(&votes(&["CONFIRMED"])), "CONFIRMED");
+        assert_eq!(tally(&votes(&[])), Verdict::Unverified);
+        assert_eq!(
+            tally(&votes(&["UNVERIFIED", "UNVERIFIED"])),
+            Verdict::Unverified
+        );
+        assert_eq!(tally(&votes(&["REFUTED"])), Verdict::Plausible);
+        assert_eq!(tally(&votes(&["CONFIRMED"])), Verdict::Confirmed);
         assert_eq!(
             tally(&votes(&["REFUTED", "REFUTED", "CONFIRMED"])),
-            "REFUTED"
+            Verdict::Refuted
         );
         assert_eq!(
             tally(&votes(&["REFUTED", "CONFIRMED", "CONFIRMED"])),
-            "CONFIRMED"
+            Verdict::Confirmed
         );
         assert_eq!(
             tally(&votes(&["REFUTED", "CONFIRMED", "PLAUSIBLE"])),
-            "PLAUSIBLE"
+            Verdict::Plausible
         );
         assert_eq!(
             tally(&votes(&["REFUTED", "UNVERIFIED", "CONFIRMED"])),
-            "PLAUSIBLE"
+            Verdict::Plausible
         );
     }
 }

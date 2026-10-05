@@ -1,8 +1,6 @@
 //! `touched_files`: the count `/review` shows before consent.
 
-use cyril_review::{
-    ReviewError, ReviewRun, base_branches, changed_paths, touched_files, uncommitted_paths,
-};
+use cyril_review::{ReviewError, base_branches, changed_paths, touched_files, uncommitted_paths};
 use std::error::Error;
 use std::fs;
 use std::path::Path;
@@ -39,18 +37,17 @@ fn counts_the_auto_diff_and_refuses_below_the_root() -> TestResult {
     git(&repo, &config, &["init", "-q", "-b", "main"])?;
     git(&repo, &config, &["add", "-A"])?;
     git(&repo, &config, &["commit", "-q", "-m", "first"])?;
-    let run = ReviewRun::new(&repo, repo.join(".code-review/r"))?;
 
     // Clean and at main: auto diffs the merge-base against the worktree.
-    assert_eq!(touched_files(&run, "auto", "")?, 0);
+    assert_eq!(touched_files(&repo, "auto", "")?, 0);
 
     fs::write(repo.join("src/a.rs"), "fn a() { todo!() }\n")?;
     fs::write(repo.join("b.md"), "b, changed\n")?;
-    assert_eq!(touched_files(&run, "auto", "")?, 2);
-    assert_eq!(touched_files(&run, "auto", "src")?, 1);
-    assert_eq!(changed_paths(&run, "auto", "")?, ["b.md", "src/a.rs"]);
+    assert_eq!(touched_files(&repo, "auto", "")?, 2);
+    assert_eq!(touched_files(&repo, "auto", "src")?, 1);
+    assert_eq!(changed_paths(&repo, "auto", "")?, ["b.md", "src/a.rs"]);
 
-    let below = ReviewRun::new(repo.join("src"), repo.join(".code-review/r"))?;
+    let below = repo.join("src");
     assert!(matches!(
         touched_files(&below, "auto", ""),
         Err(ReviewError::NotRepositoryRoot { .. })
@@ -86,11 +83,10 @@ fn base_branches_leave_out_the_checked_out_branch() -> TestResult {
             "refs/remotes/origin/main",
         ],
     )?;
-    let run = ReviewRun::new(&repo, repo.join(".code-review/r"))?;
-    assert_eq!(base_branches(&run)?, ["main", "release", "origin/main"]);
+    assert_eq!(base_branches(&repo)?, ["main", "release", "origin/main"]);
 
-    assert!(uncommitted_paths(&run)?.is_empty());
+    assert!(uncommitted_paths(&repo)?.is_empty());
     fs::write(repo.join("a.txt"), "edited\n")?;
-    assert_eq!(uncommitted_paths(&run)?, ["a.txt"]);
+    assert_eq!(uncommitted_paths(&repo)?, ["a.txt"]);
     Ok(())
 }

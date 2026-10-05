@@ -11,6 +11,7 @@ mod merge;
 mod record;
 mod report;
 mod run;
+mod verdict;
 mod verdicts;
 
 pub use assets::{ASSETS, Asset, AssetKind, WORKFLOW_NAME};
@@ -20,6 +21,7 @@ pub use gather::{base_branches, changed_paths, gather, touched_files, uncommitte
 pub use merge::{merge, shard};
 pub use report::{Finding, FindingsError, comments, finalize, read_findings};
 pub use run::ReviewRun;
+pub use verdict::Verdict;
 pub use verdicts::{ballots, collate};
 
 use std::io;

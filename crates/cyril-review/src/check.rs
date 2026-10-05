@@ -5,6 +5,7 @@
 use crate::run::{ReviewRun, read_manifest, write, write_json};
 use crate::{Result, ReviewError, io_error};
 use std::future::Future;
+use std::path::Path;
 use std::process::Stdio;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant};
@@ -77,9 +78,76 @@ pub async fn run_check(
     cancel: impl Future<Output = ()>,
 ) -> Result<CheckResult> {
     let mut manifest = read_manifest(run)?;
+    let execution = execute_check(run.workspace(), command, timeout, cancel).await?;
+    let changed: Vec<&str> = manifest
+        .files
+        .iter()
+        .map(|file| file.path.as_str())
+        .collect();
+    let artifacts = render_diagnostics(command, &manifest.head, &changed, &execution);
+    if let Some(problem) = &artifacts.result.cleanup_error {
+        tracing::warn!(command, problem, "check command cleanup");
+    }
+    write(
+        &run.path("facts/diagnostics-raw.txt"),
+        artifacts.raw.as_bytes(),
+    )?;
+    write(
+        &run.path("facts/diagnostics.txt"),
+        artifacts.report.as_bytes(),
+    )?;
+    manifest.update_facts(|facts| {
+        facts.insert("diagnostics".to_owned(), "facts/diagnostics.txt".into());
+        facts.insert(
+            "diagnostics_status".to_owned(),
+            artifacts.result.outcome.status().into(),
+        );
+    });
+    write_json(&run.path("manifest.json"), &manifest)?;
+    Ok(artifacts.result)
+}
+
+struct CapturedStream {
+    bytes: Vec<u8>,
+    end: CaptureEnd,
+}
+
+#[derive(Debug)]
+enum CaptureEnd {
+    Eof,
+    DrainDeadline,
+    ReadFailed(std::io::Error),
+    TaskFailed(String),
+}
+
+impl CaptureEnd {
+    fn from_task(result: Result<std::io::Result<()>, tokio::task::JoinError>) -> Self {
+        match result {
+            Ok(Ok(())) => Self::Eof,
+            Ok(Err(error)) => Self::ReadFailed(error),
+            Err(error) if error.is_cancelled() => Self::DrainDeadline,
+            Err(error) => Self::TaskFailed(error.to_string()),
+        }
+    }
+}
+
+struct CheckExecution {
+    outcome: CheckOutcome,
+    stdout: CapturedStream,
+    stderr: CapturedStream,
+    elapsed: Duration,
+    cleanup_errors: Vec<String>,
+}
+
+async fn execute_check(
+    workspace: &Path,
+    command: &str,
+    timeout: Duration,
+    cancel: impl Future<Output = ()>,
+) -> Result<CheckExecution> {
     let mut process = tokio::process::Command::from(build_command(command)?);
     process
-        .current_dir(run.workspace())
+        .current_dir(workspace)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -97,7 +165,7 @@ pub async fn run_check(
     let stopped = tokio::select! {
         status = child.wait() => {
             let status = status
-                .map_err(|source| io_error("wait for check command", run.workspace(), source))?;
+                .map_err(|source| io_error("wait for check command", workspace, source))?;
             Stopped::Exited(match exit_code(status) {
                 Some(0) => CheckOutcome::Clean,
                 exit_code => CheckOutcome::Failed { exit_code },
@@ -111,37 +179,69 @@ pub async fn run_check(
         Stopped::Killed(outcome) => {
             if let Err(error) = child.start_kill() {
                 problems.push(format!("could not stop the check command: {error}"));
-            } else if tokio::time::timeout(GRACE, child.wait()).await.is_err() {
-                problems.push("the check command did not exit after it was killed".to_owned());
+            } else {
+                match tokio::time::timeout(GRACE, child.wait()).await {
+                    Ok(Ok(_)) => {}
+                    Ok(Err(error)) => {
+                        problems.push(format!("could not reap the check command: {error}"))
+                    }
+                    Err(_) => problems
+                        .push("the check command did not exit after it was killed".to_owned()),
+                }
             }
             outcome
         }
     };
-    let took = started.elapsed();
-    let (out, out_complete) = stdout.finish().await;
-    let (err, err_complete) = stderr.finish().await;
-    if !(out_complete && err_complete) {
+    let elapsed = started.elapsed();
+    let deadline = tokio::time::Instant::now() + GRACE;
+    let (stdout, stderr) = tokio::join!(stdout.finish(deadline), stderr.finish(deadline));
+    Ok(CheckExecution {
+        outcome,
+        stdout,
+        stderr,
+        elapsed,
+        cleanup_errors: problems,
+    })
+}
+
+struct DiagnosticArtifacts {
+    raw: String,
+    report: String,
+    result: CheckResult,
+}
+
+fn render_diagnostics(
+    command: &str,
+    head: &str,
+    changed: &[&str],
+    execution: &CheckExecution,
+) -> DiagnosticArtifacts {
+    let mut problems = execution.cleanup_errors.clone();
+    let mut abandoned = false;
+    for (name, stream) in [("stdout", &execution.stdout), ("stderr", &execution.stderr)] {
+        match &stream.end {
+            CaptureEnd::Eof => {}
+            CaptureEnd::DrainDeadline => abandoned = true,
+            CaptureEnd::ReadFailed(error) => {
+                problems.push(format!("could not read {name}: {error}"))
+            }
+            CaptureEnd::TaskFailed(error) => {
+                problems.push(format!("{name} reader failed: {error}"))
+            }
+        }
+    }
+    if abandoned {
         problems.push("output written after the check stopped was not captured".to_owned());
     }
     let cleanup_error = (!problems.is_empty()).then(|| problems.join("; "));
-    if let Some(problem) = &cleanup_error {
-        tracing::warn!(command, problem, "check command cleanup");
-    }
-
-    let mut raw = out;
+    let mut raw = execution.stdout.bytes.clone();
     raw.push(b'\n');
-    raw.extend_from_slice(&err);
+    raw.extend_from_slice(&execution.stderr.bytes);
     let text = String::from_utf8_lossy(&raw);
-    write(&run.path("facts/diagnostics-raw.txt"), text.as_bytes())?;
 
     let lines: Vec<&str> = text
         .lines()
         .filter(|line| !line.trim().is_empty())
-        .collect();
-    let changed: Vec<&str> = manifest
-        .files
-        .iter()
-        .map(|file| file.path.as_str())
         .collect();
     // Checkers print native paths (`crates\x\a.rs:12:5` on Windows); git's use `/`.
     let mine: Vec<&str> = lines
@@ -152,13 +252,13 @@ pub async fn run_check(
             changed.iter().any(|path| line.contains(path))
         })
         .collect();
-    let status = outcome.status();
-    let head: String = manifest.head.chars().take(12).collect();
+    let status = execution.outcome.status();
+    let head: String = head.chars().take(12).collect();
     let mut report = vec![
         format!("command: {command}"),
         format!(
             "result: {status} in {:.0}s, on HEAD {head}",
-            took.as_secs_f64()
+            execution.elapsed.as_secs_f64()
         ),
     ];
     if let Some(problem) = &cleanup_error {
@@ -181,25 +281,20 @@ pub async fn run_check(
             .iter()
             .map(|line| (*line).to_owned()),
     );
-    write(
-        &run.path("facts/diagnostics.txt"),
-        format!("{}\n", report.join("\n")).as_bytes(),
-    )?;
-
-    manifest.update_facts(|facts| {
-        facts.insert("diagnostics".to_owned(), "facts/diagnostics.txt".into());
-        facts.insert("diagnostics_status".to_owned(), status.clone().into());
-    });
-    write_json(&run.path("manifest.json"), &manifest)?;
-    Ok(CheckResult {
-        outcome,
-        cleanup_error,
-        summary: format!(
-            "diagnostics: {status} in {:.0}s; {} line(s) on changed files -> facts/diagnostics.txt",
-            took.as_secs_f64(),
-            mine.len()
-        ),
-    })
+    let matched = mine.len();
+    DiagnosticArtifacts {
+        raw: text.into_owned(),
+        report: format!("{}\n", report.join("\n")),
+        result: CheckResult {
+            outcome: execution.outcome,
+            cleanup_error,
+            summary: format!(
+                "diagnostics: {status} in {:.0}s; {} line(s) on changed files -> facts/diagnostics.txt",
+                execution.elapsed.as_secs_f64(),
+                matched
+            ),
+        },
+    }
 }
 
 /// Why waiting for the command ended.
@@ -282,7 +377,7 @@ fn exit_code(status: std::process::ExitStatus) -> Option<i64> {
 /// gets even if the stream never ends.
 struct Collector {
     bytes: Arc<Mutex<Vec<u8>>>,
-    task: Option<JoinHandle<()>>,
+    task: Option<JoinHandle<std::io::Result<()>>>,
 }
 
 impl Collector {
@@ -294,15 +389,12 @@ impl Collector {
                 let mut chunk = [0u8; 8192];
                 loop {
                     match stream.read(&mut chunk).await {
-                        Ok(0) => break,
+                        Ok(0) => return Ok(()),
                         Ok(count) => bytes
                             .lock()
                             .unwrap_or_else(PoisonError::into_inner)
                             .extend_from_slice(&chunk[..count]),
-                        Err(error) => {
-                            tracing::warn!(%error, "reading check command output failed");
-                            break;
-                        }
+                        Err(error) => return Err(error),
                     }
                 }
             })
@@ -310,26 +402,136 @@ impl Collector {
         Self { bytes, task }
     }
 
-    /// The bytes read, and whether the stream reached its end within `GRACE`.
-    async fn finish(self) -> (Vec<u8>, bool) {
-        let complete = match self.task {
-            None => true,
-            Some(mut task) => match tokio::time::timeout(GRACE, &mut task).await {
-                Ok(_) => true,
+    /// Stop the reader before taking its buffer, including on the deadline.
+    async fn finish(mut self, deadline: tokio::time::Instant) -> CapturedStream {
+        let end = match self.task.as_mut() {
+            None => CaptureEnd::Eof,
+            Some(task) => match tokio::time::timeout_at(deadline, &mut *task).await {
+                Ok(result) => CaptureEnd::from_task(result),
                 Err(_) => {
                     task.abort();
-                    false
+                    CaptureEnd::from_task(task.await)
                 }
             },
         };
         let bytes = std::mem::take(&mut *self.bytes.lock().unwrap_or_else(PoisonError::into_inner));
-        (bytes, complete)
+        CapturedStream { bytes, end }
+    }
+}
+
+impl Drop for Collector {
+    fn drop(&mut self) {
+        // Also stop readers if the caller drops execution or child.wait fails.
+        if let Some(task) = &self.task {
+            task.abort();
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct FailingReader(bool);
+
+    impl AsyncRead for FailingReader {
+        fn poll_read(
+            mut self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+            buffer: &mut tokio::io::ReadBuf<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            if self.0 {
+                std::task::Poll::Ready(Err(std::io::Error::other("capture failed")))
+            } else {
+                self.0 = true;
+                buffer.put_slice(b"retained");
+                std::task::Poll::Ready(Ok(()))
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn read_failure_keeps_bytes_and_reports_incomplete_capture() {
+        let captured = Collector::start(Some(FailingReader(false)))
+            .finish(tokio::time::Instant::now() + GRACE)
+            .await;
+        assert_eq!(captured.bytes, b"retained");
+        assert!(matches!(captured.end, CaptureEnd::ReadFailed(_)));
+    }
+
+    #[tokio::test]
+    async fn deadline_keeps_output_from_both_open_streams() -> std::io::Result<()> {
+        use tokio::io::AsyncWriteExt;
+        let (mut first_writer, first_reader) = tokio::io::duplex(64);
+        let (mut second_writer, second_reader) = tokio::io::duplex(64);
+        first_writer.write_all(b"first").await?;
+        second_writer.write_all(b"second").await?;
+        let first = Collector::start(Some(first_reader));
+        let second = Collector::start(Some(second_reader));
+        let deadline = tokio::time::Instant::now() + Duration::from_millis(25);
+        let (first, second) = tokio::join!(first.finish(deadline), second.finish(deadline));
+        assert_eq!(first.bytes, b"first");
+        assert_eq!(second.bytes, b"second");
+        assert!(matches!(first.end, CaptureEnd::DrainDeadline));
+        assert!(matches!(second.end, CaptureEnd::DrainDeadline));
+        // Both readers have terminated, even though the writers remain alive.
+        assert!(first_writer.write_all(b"later").await.is_err());
+        assert!(second_writer.write_all(b"later").await.is_err());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn eof_is_complete_and_task_failure_is_not() {
+        let captured = Collector::start(Some(&b"complete"[..]))
+            .finish(tokio::time::Instant::now() + GRACE)
+            .await;
+        assert_eq!(captured.bytes, b"complete");
+        assert!(matches!(captured.end, CaptureEnd::Eof));
+        let task = tokio::spawn(async { panic!("reader failed") });
+        let collector = Collector {
+            bytes: Arc::new(Mutex::new(b"before panic".to_vec())),
+            task: Some(task),
+        };
+        let captured = collector.finish(tokio::time::Instant::now() + GRACE).await;
+        assert_eq!(captured.bytes, b"before panic");
+        assert!(matches!(captured.end, CaptureEnd::TaskFailed(_)));
+    }
+
+    #[test]
+    fn diagnostics_render_capture_failure_separately_from_clean_exit() {
+        let execution = CheckExecution {
+            outcome: CheckOutcome::Clean,
+            stdout: CapturedStream {
+                bytes: b"src\\lib.rs:7 warning\n".to_vec(),
+                end: CaptureEnd::ReadFailed(std::io::Error::other("broken pipe")),
+            },
+            stderr: CapturedStream {
+                bytes: b"last line\n".to_vec(),
+                end: CaptureEnd::Eof,
+            },
+            elapsed: Duration::from_secs(3),
+            cleanup_errors: Vec::new(),
+        };
+        let artifacts =
+            render_diagnostics("check", "1234567890123456", &["src/lib.rs"], &execution);
+        assert_eq!(artifacts.raw, "src\\lib.rs:7 warning\n\nlast line\n");
+        assert!(
+            artifacts
+                .report
+                .contains("result: clean in 3s, on HEAD 123456789012")
+        );
+        assert!(
+            artifacts
+                .report
+                .contains("1 output line(s) mention a changed file:")
+        );
+        assert!(
+            artifacts
+                .report
+                .contains("cleanup: could not read stdout: broken pipe")
+        );
+        assert!(artifacts.result.cleanup_error().is_some());
+    }
 
     #[test]
     fn windows_program_is_the_first_token_or_the_quoted_prefix() {

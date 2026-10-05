@@ -8,6 +8,17 @@ use std::path::Path;
 
 pub(crate) type Record = Map<String, Value>;
 
+pub(crate) fn id(record: &Record) -> String {
+    record.get("id").map(text).unwrap_or_else(|| "?".to_owned())
+}
+
+pub(crate) fn also_count(record: &Record) -> usize {
+    record
+        .get("also_flagged_by")
+        .and_then(Value::as_array)
+        .map_or(0, Vec::len)
+}
+
 /// Candidates per finder angle (and in the gap sweep) that are kept.
 pub(crate) const MAX_PER_ANGLE: usize = 8;
 

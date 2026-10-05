@@ -2,10 +2,10 @@
 //! duplicate decisions, assigns final ids and splits them into verifier queues.
 
 use crate::record::{
-    MAX_PER_ANGLE, Record, blank, field_or_empty, load_candidates, location, one_line, quoted,
-    required_records, text, to_line, unreadable,
+    MAX_PER_ANGLE, Record, also_count, blank, field_or_empty, id, load_candidates, location,
+    one_line, quoted, required_records, text, to_line, unreadable,
 };
-use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages};
+use crate::run::{ReviewRun, read_json, read_manifest, write_json, write_pages, write_queue};
 use crate::{Result, ReviewError, io_error};
 use serde_json::{Value, json};
 use std::collections::{HashMap, HashSet};
@@ -370,37 +370,6 @@ pub fn shard(run: &ReviewRun, shards: usize) -> Result<String> {
     Ok(stdout)
 }
 
-/// Write `queues/<file>.json` for the ids, with its own absolute verdict directory.
-pub(crate) fn write_queue(
-    run: &ReviewRun,
-    file: &str,
-    verdict_dir: &str,
-    ids: &[String],
-) -> Result<()> {
-    let directory = run.path(&format!("verdicts/{verdict_dir}"));
-    fs::create_dir_all(&directory)
-        .map_err(|source| io_error("create directory", &directory, source))?;
-    write_json(
-        &run.path(&format!("queues/{file}.json")),
-        &json!({
-            "done": ids.is_empty(),
-            "ids": ids,
-            "verdict_dir": forward_slashes(&directory),
-        }),
-    )
-}
-
-/// A path with `/` separators, as queue files spell it. Only Windows
-/// separators are converted: on Unix a backslash belongs to the name.
-fn forward_slashes(path: &std::path::Path) -> String {
-    let path = path.to_string_lossy();
-    if cfg!(windows) {
-        path.replace('\\', "/")
-    } else {
-        path.into_owned()
-    }
-}
-
 fn objects(value: Option<&Value>) -> impl Iterator<Item = &Record> {
     value
         .and_then(Value::as_array)
@@ -432,17 +401,6 @@ fn find(parent: &mut [usize], mut index: usize) -> usize {
 
 fn pid(record: &Record) -> String {
     record.get("pid").map(text).unwrap_or_default()
-}
-
-pub(crate) fn id(record: &Record) -> String {
-    record.get("id").map(text).unwrap_or_else(|| "?".to_owned())
-}
-
-pub(crate) fn also_count(record: &Record) -> usize {
-    record
-        .get("also_flagged_by")
-        .and_then(Value::as_array)
-        .map_or(0, Vec::len)
 }
 
 /// The file as the digest prints it: an absent or null file is `?`.
@@ -482,15 +440,6 @@ mod tests {
         assert_eq!(
             place(&record(json!({"line": 3}))),
             place(&record(json!({"file": null, "line": 3})))
-        );
-    }
-
-    #[cfg(unix)]
-    #[test]
-    fn a_unix_backslash_stays_in_the_verdict_dir() {
-        assert_eq!(
-            forward_slashes(std::path::Path::new("/r/a\\b/verdicts/q1")),
-            "/r/a\\b/verdicts/q1"
         );
     }
 

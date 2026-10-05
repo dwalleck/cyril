@@ -95,8 +95,7 @@ pub enum Prepared {
 
 /// Files the request's diff touches; refuses outside the repository root.
 pub fn probe(workspace: &Path, target: &str, scope: &[String]) -> Result<usize, LaunchError> {
-    let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
-    touched_files(&run, target, &scope.join(" ")).map_err(|error| root_error(workspace, error))
+    touched_files(workspace, target, &scope.join(" ")).map_err(|error| root_error(workspace, error))
 }
 
 /// The refusal outside the root names the root in the operator's terms.
@@ -127,8 +126,7 @@ fn up(workspace: &Path, cdup: &str) -> PathBuf {
 
 /// Branches the form offers as a base for a `base...HEAD` review.
 pub fn base_branches(workspace: &Path) -> Result<Vec<String>, LaunchError> {
-    let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
-    Ok(cyril_review::base_branches(&run)?)
+    Ok(cyril_review::base_branches(workspace)?)
 }
 
 /// What a target's diff touches across the whole repository, and which
@@ -141,12 +139,11 @@ pub struct Touched {
 }
 
 pub fn touched(workspace: &Path, target: &str) -> Result<Touched, LaunchError> {
-    let run = ReviewRun::new(workspace, workspace.join(RUNS_DIR))?;
-    let files = cyril_review::changed_paths(&run, target, ".")
+    let files = cyril_review::changed_paths(workspace, target, ".")
         .map_err(|error| root_error(workspace, error))?;
     Ok(Touched {
         files,
-        uncommitted: cyril_review::uncommitted_paths(&run)?,
+        uncommitted: cyril_review::uncommitted_paths(workspace)?,
     })
 }
 
