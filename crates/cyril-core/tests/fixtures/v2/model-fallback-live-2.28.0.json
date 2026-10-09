@@ -1,0 +1,44 @@
+[
+  {
+    "arm": "A",
+    "frame": {
+      "sessionId": "391bfbd2-a0b0-4886-b56d-a5e942b0c26c",
+      "update": {
+        "sessionUpdate": "model_fallback",
+        "from": "claude-sonnet-5",
+        "to": "claude-haiku-4.5",
+        "cause": "unavailable",
+        "source": "user",
+        "promoted": false
+      }
+    }
+  },
+  {
+    "arm": "B",
+    "frame": {
+      "sessionId": "3d66e7a8-3e25-414b-b0e8-87729e80c47e",
+      "update": {
+        "sessionUpdate": "model_fallback",
+        "from": "claude-haiku-4.5",
+        "to": null,
+        "cause": "unavailable",
+        "source": null,
+        "promoted": false
+      }
+    }
+  },
+  {
+    "arm": "C",
+    "frame": {
+      "sessionId": "e3abfb73-1e0a-446d-9fc7-d5c70d171531",
+      "update": {
+        "sessionUpdate": "model_fallback",
+        "from": "claude-opus-5.5",
+        "to": null,
+        "cause": "unavailable",
+        "source": null,
+        "promoted": false
+      }
+    }
+  }
+]

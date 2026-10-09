@@ -91,7 +91,7 @@ sacp 11.0.0). This is consistent with maintenance mode ahead of the deprecation.
 
 | item | ver | live | cyril | issue |
 |---|---|---|---|---|
-| **model fallback switched on** (rollout row removed, gate strings gone; engine code predates 2.26.0) | 2.27.1 | `/model fallback` → `{success:true,"Fallback for X set to Y"}` on 2.28.0; 2.26.0 → "Model fallback is not available." Options gain `fallback{eligible, vendorDefault[], configured}`. A `model_fallback` frame **could not be provoked**: a bogus `set_model` still fails the next prompt with `-32603` on both versions | DROPPED / NOT-SENT | cyril-ci3j (P1), cyril-lnxg |
+| **model fallback switched on** (rollout row removed, gate strings gone; engine code predates 2.26.0) | 2.27.1 | `/model fallback` → `{success:true,"Fallback for X set to Y"}` on 2.28.0; 2.26.0 → "Model fallback is not available." Options gain `fallback{eligible, vendorDefault[], configured}`. A bogus `set_model` still fails the next prompt with `-32603` and no frame (the `InvalidModelId` path). **Frame captured live afterwards — see §3a** | DROPPED / NOT-SENT | cyril-ci3j (P1), cyril-lnxg (P1) |
 | `stopReason: refusal` for content-filtered turns | 2.26.1 | — | HANDLED (`convert/mod.rs:134`) | — |
 | `_kiro.dev/agent/not_found` fields | 2.27.1 (static) | **live contradicts static**: `{sessionId, requestedAgent, fallbackAgent}` on both versions | `sessionId` ignored | cyril-6i02 (P4) |
 | trust-classifier shadow (`trust_shadow.rs`, `trust_shadow_host.rs`; hidden SAFE/UNSAFE/ABSTAIN model call per approval) | 2.27.1 | env set on `kiro-cli acp`: **no effect** (no log, no wire) | N/A | cyril-8q8p |
@@ -101,6 +101,42 @@ sacp 11.0.0). This is consistent with maintenance mode ahead of the deprecation.
 | **Classic → 3.0 nudge** (`classic_nudge.rs`, `KIRO_CLASSIC_NUDGE_RELAUNCHED`) | 2.28.0 | launcher only | **default engine is v2** | cyril-a7nk, cyril-4c4d |
 | `KIRO_TEST_DROP_FIRST_END_TURN` (test hook) | 2.28.0 | no visible effect on `acp` | — | — |
 | standing gap (not a delta): `goal/status`, `mcp`/`webTools` `governance_disabled`, `settings/set`, `telemetry/*` unhandled | ≤2.26.0 | — | DROPPED | cyril-bmek |
+
+### 3a. Addendum — `model_fallback` captured live (same day)
+
+The user captured this with a TLS-terminating proxy that answered the primary model's
+`GenerateAssistantResponse` with errors. Evidence:
+[`experiments/conductor-spike/v2-model-fallback-2.28.0.md`](../experiments/conductor-spike/v2-model-fallback-2.28.0.md),
+the frames in `v2-model-fallback-2.28.0.jsonl`, and the fixture
+`crates/cyril-core/tests/fixtures/v2/model-fallback-live-2.28.0.json`. Engine:
+`kiro-cli-chat` sha256 `ae5e172a905bd007`.
+
+```json
+{"sessionId":"…","update":{"sessionUpdate":"model_fallback","from":"claude-sonnet-5",
+ "to":"claude-haiku-4.5","cause":"unavailable","source":"user","promoted":false}}
+```
+
+- **Shape:** `{from, to, cause, source, promoted}`. **`source` (`"user"` | `null`) is
+  missing from the TUI-derived shape**, and it is non-null exactly when a target existed.
+  `promoted` was present and `false` in every frame. `promoted:true` was never observed;
+  the binary strings suggest it happens on refusals only.
+- **Trigger:** HTTP 429 with `x-amzn-errortype: ThrottlingException`, reason
+  `INSUFFICIENT_MODEL_CAPACITY`. There are 3 engine × 3 smithy attempts, i.e. 9 requests,
+  and 8 `retry_warning` frames before the move. The capacity ones carry `capacity:true`
+  and `modelId`. The turn then completes with `end_turn` and is billed on the fallback model.
+- **Corrects §3's static inference:** a **503 `ServiceUnavailableException` does NOT fall
+  back**. It is a separate retry class ("Retrying in 3s after a server error", no capacity
+  flag), and the turn fails.
+- **No configured target means no move:** the frame arrives with `to:null, source:null`,
+  then `_kiro.dev/error/rate_limit`, then `-32603` "The model you've selected is
+  temporarily unavailable…". `claude-opus-5.5`'s `vendorDefault` was **not** used on this
+  capacity/unavailable path. The binary labels vendor defaults "refusals only", so
+  refusal behaviour stays unverified. In practice, `/model fallback` is what makes
+  capacity fallback work at all.
+- **Non-promoted moves are turn-scoped:** the session model stays `[active]` and the next
+  turn runs on it.
+- **Refusal arm not producible:** forged refusal fields were accepted on the stream but not
+  decoded.
 
 **Rollout registry deltas:**
 - 2.27.0: `background_execution` description now states the client contract.
@@ -175,7 +211,7 @@ New:
 | cyril-w55l | 1 | "Always allow" on a workflow step approval loops 20× then fails the step |
 | cyril-ci3j | 1 | v2: handle `model_fallback` |
 | cyril-a7nk | 1 | Kiro CLI 3.0 deprecates Classic/v2: watch and sunset |
-| cyril-lnxg | 2 | v2 `/model fallback` |
+| cyril-lnxg | 1 | v2 `/model fallback` (without it, capacity fallback never moves) |
 | cyril-53qx | 2 | KAS settings marshal drift |
 | cyril-0na7 | 2 | KAS memory controls |
 | cyril-ojum | 2 | KAS cascade routing / `model_routed` |
