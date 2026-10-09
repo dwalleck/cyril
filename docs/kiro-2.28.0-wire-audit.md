@@ -17,8 +17,12 @@ three findings that matter most:
 2. **"Always allow" on a workflow *step* approval loops 20 times, then fails the step.**
    This is live on 0.66.15 and 0.66.26. KAS doesn't honour step-session always-grants;
    the TUI works around it client-side (cyril-w55l, P1).
-3. **v2 model fallback is default-on from 2.27.1.** cyril drops `model_fallback`, so a
-   refused or over-capacity turn silently runs on another model (cyril-ci3j, P1).
+3. **v2 model fallback is default-on from 2.27.1.** cyril drops `model_fallback`
+   (cyril-ci3j). The live capture (§3a) narrowed the impact: a capacity fallback only
+   moves a turn when a fallback target is configured, and cyril sessions can't configure
+   one. So under cyril the only possible silent move is the unverified refusal path.
+   ci3j was re-scoped to a minimal P2, and `/model fallback` (cyril-lnxg) was deferred
+   because v2 is retiring.
 
 Per-lane evidence, with quoted contexts, HANDLED/DROPPED tables and exact probe recipes:
 [`experiments/conductor-spike/audit-2.28.0/`](../experiments/conductor-spike/audit-2.28.0/)
@@ -209,9 +213,9 @@ New:
 |---|---|---|
 | cyril-4c4d | 1 | Make KAS (v3) cyril's default engine |
 | cyril-w55l | 1 | "Always allow" on a workflow step approval loops 20× then fails the step |
-| cyril-ci3j | 1 | v2: handle `model_fallback` |
+| cyril-ci3j | 2 | v2: handle `model_fallback` (re-scoped minimal; v2 retiring) |
 | cyril-a7nk | 1 | Kiro CLI 3.0 deprecates Classic/v2: watch and sunset |
-| cyril-lnxg | 1 | v2 `/model fallback` (without it, capacity fallback never moves) |
+| cyril-lnxg | 3 | v2 `/model fallback` — DEFERRED (v2 retiring; revive only if cyril-4c4d slips) |
 | cyril-53qx | 2 | KAS settings marshal drift |
 | cyril-0na7 | 2 | KAS memory controls |
 | cyril-ojum | 2 | KAS cascade routing / `model_routed` |
