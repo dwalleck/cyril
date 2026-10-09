@@ -346,3 +346,120 @@ unsolicited parent turn:
 8. `sweep-new-fields.py` walks only 5 array elements, so it reports false "removed" paths when an array grows.
 9. The workflow ext methods ARE in `agentCapabilities._meta.kiro.extensionMethods`. The authoring skill says they
    are not advertised; that is stale.
+
+## 7. Correction (re-probe with clientCapabilities placement)
+
+**What was wrong.** `probe-kas-leads-2.28.0.py`'s `init()` helper put initialize settings at the request's
+top-level `_meta.kiro.settings`. KAS 0.66.26 reads them ONLY from `initialize.clientCapabilities._meta.kiro`
+(`let r=t.clientCapabilities?._meta?.kiro … this.clientMeta=r`; `subagentOrchestrationActive` and
+`captureMemoryConfig` both read `this.clientMeta?.settings`). cyril sends them there too
+(`crates/cyril-core/src/protocol/engine.rs` `client_capabilities`). So every "init setting" in §4 T-L1, T-L6 and
+L1/L4 was a no-op. The §4 bullets for those three items and §6 items 4 and 6 are **void**; the results below replace them.
+
+**Re-probe.** `probe-kas-initsettings-2.28.0.py` is a copy of the leads probe with only the `init()` fix
+(settings merged into `clientCapabilities._meta.kiro` next to `caps_meta`), plus three new probes:
+`orch2`, `memory` and `confstate`. The spawn is unchanged: the same 0.66.26 carve (direct
+`node --experimental-wasm-modules acp-server.js --transport=stdio --auth=acp-callback`), `HOME=<tmp>` with the
+real `XDG_DATA_HOME`, one KAS process at a time. The initialize frames in the capture show the corrected
+placement. Capture: `kas-initsettings-2.28.0.jsonl` (931 lines: the `all` run plus a `confstate` re-run that adds
+arm S3). Tokens are redacted; grep found no live token prefix, no JWT, no ARN and no Bearer header.
+
+Auth: the token was already expired at start (-1235 s). The single-flight post-expiry renewer fired exactly once
+(`kiro-cli user whoami`, rc 0, +3599 s). No other kiro process was running, and the token was valid at the end
+(2768 s left). Neither run used login or logout.
+
+### 7.1 T-L1 `subagentOrchestration` x workflows
+
+Tool lists are the model's self-report; toolSpecs chars come from `contextBreakdown`. Init settings for every arm
+are `base` (`codeIntelligence`, `knowledge`, `thinking` and `largeToolOutputHandler`, each `{enabled:true}`),
+plus `subagentOrchestration` where noted. `workflows`+`goal` go in the session/new `_meta.kiro.settings`, as
+in the original probe.
+
+| arm | orch in init | workflows (session) | delegation tool | workflow tools | toolSpecs chars | tools |
+|---|---|---|---|---|---|---|
+| A | – | off | `invoke_sub_agent` | – | 38285 | 17 |
+| B | on | off | **`orchestrate_subagent`** | – | 41279 | 17 |
+| C | – | on | **none** (suppressed) | run/inspect/update_workflow, send_message | 54090 | 20 |
+| D | on | on | **`orchestrate_subagent`** (survives) | same 4 | 60453 | 21 |
+| E | on (+wf/goal also in init, cyril-like) | on | `orchestrate_subagent` | same 4 | 60453 | 21 |
+| F | – (orch only in session/new) | on | none | same 4 | 54090 | 20 |
+
+- The code's prediction is confirmed:
+  - Init-level `subagentOrchestration:{enabled:true}` swaps the builder from `invoke_sub_agent` to
+    `orchestrate_subagent` (tool title "Orchestrate Sub-agent", +2994 chars).
+  - With workflows on, it **keeps** a chat delegation tool. `suppressChatDelegationTool` is
+    `workflowsEnabled && !subagentOrchestrationActive`.
+- Without orchestration (C), workflows-on still removes the delegation tool entirely, as originally reported.
+  That part of the old finding stands for the no-orch case only.
+- A session/new `subagentOrchestration` (F) is **ignored**. The setting is connection-scoped
+  (`clientMeta.settings`).
+- Putting workflows+goal in the init settings as well (E) does not change the tool list relative to D.
+- So the setting is **not dead**. cyril's default-on `subagentOrchestration` (`DEFAULTS_ON` in
+  `kas/settings.rs`) is what gives cyril sessions `orchestrate_subagent`, and keeps delegation alive with
+  workflows on.
+- **Old baseline is wrong too.** Arm A (base in init) has `code` and `knowledge`. The no-init-settings control
+  (memory M0: 15 tools, 27951 chars, the same number the old probe reported for all of A/B) lacks them.
+  Non-memory init keys override the model-config feature flags (`hPe(Crr(...l.has(h)?Tw(u,h):...))`), so the old
+  27951/43756 figures describe a client that sends no init settings, not cyril.
+- `_kiro/tools/didChange` still carries tags only. The KAS log never names the tool ids (0 hits in every arm),
+  so the tool list rests on the model's self-report plus the toolSpecs deltas.
+
+### 7.2 T-L6 memory (`clientCapabilities._meta.kiro.settings.memory`)
+
+| arm | init memory | session/new memory | session/new `_meta.memoryConfig` | configOption `memoryReflection` |
+|---|---|---|---|---|
+| M0 control | – | – | `{read_write, reflection:true}` | on |
+| M1 | `{mode:"disabled"}` | – | **`{disabled, reflection:true}`** | on |
+| M2 | `{mode:"read_only", reflection:false}` | – | **`{read_only, reflection:false}`** | **off** |
+| M3 (session control) | – | `{mode:"disabled"}` | `{disabled, reflection:true}` | on |
+| M4 | `{read_only, reflection:false}` | `{mode:"read_write"}` | `{read_write, reflection:false}` | off |
+
+- Init memory settings **are honored**. The old "IGNORED (rollout/flag-gated)" claim is void.
+- Resolution is per-field (`j1n`): the session value wins, then the init value, then the default
+  (`read_write`/`true`). That is why M1's `disabled` leaves `reflection:true`, and M4 mixes the two.
+- `memoryReflection` mirrors the resolved `reflection`.
+- `memoryConfigSource` is never on the wire (persisted-record schema only).
+- No `memory` tool appears in any arm: the toolSpecs count is identical (27951) and `contextBreakdown.memory`
+  is all 0. The memory tool stays dark regardless of mode on a standalone spawn.
+- The session record echoes the session/new `_meta` under `_meta._meta`.
+
+### 7.3 L1/L4 `_kiro/configuration/state`
+
+All arms set `clientCapabilities._meta.kiro.configurationState:true`.
+
+- **S0 control** (no init settings; session/new `thinking:on`):
+  - The connection view has 8 layers and `settings:[]`.
+  - The session view has 11 layers and contains `workflows off`, `fta off` and `thinking on`. Each of those
+    rows has a single `session` contribution.
+- **S1** (init `thinking:{enabled:false}` + `memory{read_only,false}`; session/new `thinking:on`): **identical to S0.**
+  - The connection view is still `settings:[]`.
+  - `thinking` resolves `on` with ONLY a `session` contribution. The init `off` is not a contribution in any
+    layer, so nothing is standing or displaced.
+  - memory does not appear in configuration/state. It took effect anyway: memoryConfig `{read_only, false}`.
+- **S2** (same init, no session settings): `thinking` has **no row at all**, and the session view has only
+  `workflows`/`fta`.
+- **S3** (init `knowledge:{enabled:false, maxFiles:123}` + `thinking off`; session/new `thinking on`):
+  - The connection view now has `krn:::setting/knowledge off` and `knowledgeMaxFiles 123`, both
+    `assertions/contributions[{layer:"kiro-agent", stated{value, used:true}}]`.
+  - The session view carries them forward and adds the session rows: `thinking on`, with a `session`
+    contribution only.
+- Why: the intake tables are `XAt = {startup:[], kiroAgent:Puu, session:[…, Nuu]}`.
+  - Initialize settings feed only the **`kiro-agent`** layer, and only for the knowledge* family (Puu).
+  - The **`client-connection`** layer gets nothing from initialize, because the `startup` table is empty on
+    0.66.26.
+  - `thinking` and the other Nuu keys are session-table keys, read from session/new or per message.
+- The row shape is `{krn, value, compose, assertions[{layer, compose}], contributions[{layer, stated{value,
+  used}}]}` and has no other keys. There is no `standing`, `displaced` or `decidedBy`.
+- Whether init `thinking:off` affects the model is untested: 0 `agent_thought_chunk` in every arm, including
+  the thinking-on control.
+- `KIRO_DUMP_CONFIGURATION` dumps match the wire (in private scratch, not committed).
+
+**Revised §6 items.**
+- Item 4: `subagentOrchestration` is live and connection-scoped. It selects `orchestrate_subagent`, and it
+  prevents workflows-on from suppressing chat delegation.
+- Item 6: KAS memory init settings are honored per-field. The memory tool itself stays absent.
+- Item 2 (§2's "Initialize-level settings are NOT represented") needs this qualifier: they are not represented
+  except for knowledge*, which lands in the `kiro-agent` layer.
+- Same misplacement, not re-measured: §4 L8's `init_telemetryEnabled_false` variant also sent
+  `telemetryEnabled` at top-level `_meta.kiro`. KAS reads it from `clientCapabilities._meta.kiro`, so that leg
+  is void too.

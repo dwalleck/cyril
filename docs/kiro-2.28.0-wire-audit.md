@@ -266,6 +266,34 @@ sends them (`engine::client_capabilities`). Earlier audits and CLAUDE.md wrote
 2. "KAS memory settings at initialize are ignored" (cyril-0na7).
 3. "Settings sent at initialize don't appear in `_kiro/configuration/state`" (cyril-iq2c).
 
+**Re-probe results** (`probe-kas-initsettings-2.28.0.py`, KAS 0.66.26, settings in
+`clientCapabilities._meta.kiro.settings`; details in `audit-2.28.0/live-findings.md` §7). All
+three earlier conclusions are overturned:
+
+1. **Orchestration is live.**
+
+   | arm | delegation tool |
+   |---|---|
+   | no orchestration, workflows off | `invoke_sub_agent` |
+   | orchestration on, workflows off | `orchestrate_subagent` |
+   | workflows on, no orchestration | none (suppressed) |
+   | workflows on, orchestration on | `orchestrate_subagent` |
+   | orchestration only in `session/new` | none |
+
+   The setting counts only at initialize, and cyril's default-on value is what gives cyril
+   `orchestrate_subagent`.
+2. **Init memory is honored**, resolved per field: session value, then init value, then default.
+   For example, init `{read_only, reflection:false}` gives `memoryConfig {read_only, false}`
+   and turns `memoryReflection` off. No memory tool appears in any arm; it is still behind an
+   AB flag.
+3. **Configuration state:** init `knowledge*` lands in the `kiro-agent` layer (contribution
+   `used:true`). Init thinking and memory produce no rows, though memory still takes effect.
+   `client-connection` receives nothing from initialize. Rows are
+   `{krn, value, compose, assertions, contributions}` and have no standing or decidedBy fields.
+
+The earlier telemetry leg that sent `telemetryEnabled:false` at initialize is void for the
+same reason.
+
 Rule for future probes: write the full path,
 `initialize.clientCapabilities._meta.kiro.settings`, and assert in the probe that a
 known connection-level gate (e.g. `largeToolOutputHandler`) takes effect, as a control.
