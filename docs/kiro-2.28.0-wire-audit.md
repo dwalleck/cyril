@@ -57,7 +57,7 @@ only a version pin plus an erased type import; the zod schemas are inlined at ab
 
 | item | ver | direction / gate | live | cyril | issue |
 |---|---|---|---|---|---|
-| `_kiro/configuration/state` | .22 | agent→client; opt-in `clientCapabilities._meta.kiro.configurationState` | ✅ shape `{view, layers, settings[{krn, value, compose, assertions, contributions}], resources}`. Static guessed a different row shape, and settings sent at initialize do **not** appear | NOT-SENT | cyril-iq2c |
+| `_kiro/configuration/state` | .22 | agent→client; opt-in `clientCapabilities._meta.kiro.configurationState` | ✅ shape `{view, layers, settings[{krn, value, compose, assertions, contributions}], resources}`. Static guessed a different row shape. (The live claim that initialize settings do not appear was **invalid**, because the probe mis-placed them; see §9) | NOT-SENT | cyril-iq2c |
 | `_kiro/configuration/contribute` | .22 | client→agent | unreachable standalone (`enableConfigurationContributeMethod` never set) | N/A | — |
 | `KIRO_DUMP_CONFIGURATION(_DIR)` | .22 | env debug dump of resolved layers | — | — | — |
 | multi-client server (`SharedInitialization`, `ClientConnections`, `single-client-stream`) | .22 | formalises the `kiro-cli serve` ws mux; first initialize result shared with every client | no change for one stdio client | N/A | cyril-5g2o note |
@@ -169,8 +169,8 @@ Across all five bundles the set of wire-method literals grew by exactly one,
 
 | TUI behaviour | live | cyril | issue |
 |---|---|---|---|
-| no longer sends `subagentOrchestration` (setting and env removed, 2.28.0) | no effect either way on 0.66.26; **workflows on removes `invoke_sub_agent` regardless** | still sends `{enabled:true}` | cyril-53qx |
-| memory controls `memory:{mode, reflection}` at initialize; `memoryReflection` config option; reads `session/new._meta.memoryConfig` | **initialize memory settings ignored** on a standalone spawn | NOT-SENT | cyril-0na7 |
+| no longer sends `subagentOrchestration` (setting and env removed, 2.28.0) | ~~no effect either way~~ **INVALID** (probe mis-placed the setting; see §9). Code: when active, the orchestration tool builder replaces `invoke_sub_agent`, and with workflows on the chat delegation tool is kept | still sends `{enabled:true}`, correctly placed; **keep it** | cyril-53qx |
+| memory controls `memory:{mode, reflection}` at initialize; `memoryReflection` config option; reads `session/new._meta.memoryConfig` | ~~initialize memory settings ignored~~ **INVALID** (mis-placed; see §9) | NOT-SENT | cyril-0na7 |
 | `_kiro/session/history {sessionId, beforeMessageId, limit}` | **empty unless `beforeMessageId`** | NOT-SENT | cyril-a3th |
 | `session/prompt _meta.kiro.displayText` | ✅ persisted and shown on reload | NOT-SENT | cyril-hzkb |
 | child-consent grant table auto-approves matching step-session approvals | needed: KAS loops 20× otherwise | absent | cyril-w55l, cyril-gn07 |
@@ -238,7 +238,7 @@ Notes were added to: cyril-lki9, fb1m, 4u4a, 0asq, gn07, 1116, 0s9x, 1rpv, 5onw,
 ## 8. Method notes for the next audit
 
 - The changelog is remote now. Use `stable/<ver>/feed.json`, not `version --changelog` on an archived binary.
-- **Static predictions were wrong three times:** the `agent/not_found` 4th field, the `configuration/state` row shape, and initialize memory settings. Keep the live lane.
+- **Static predictions were wrong twice:** the `agent/not_found` 4th field and the `configuration/state` row shape. Keep the live lane, but see §9: **the live lane was wrong three times too**, all from one mis-placed handshake field.
 - `sweep-new-fields.py` samples 5 array elements, which produced a false "removed `promptScoped`" (cyril-66tl).
 - KAS legs spawned `node acp-server.js` straight from the carve, so no Rust host ran and the stale-engine cleanup never fired. v2 legs put the archive `bin/` first on PATH and recorded child exe proofs.
 - Subagents may be refused the Write tool for findings files. Have them write via Bash, and return full findings in the hand-back.
@@ -246,3 +246,27 @@ Notes were added to: cyril-lki9, fb1m, 4u4a, 0asq, gn07, 1116, 0s9x, 1rpv, 5onw,
   - `static-{kas,host,tui,rollout,doc-manifests}-*-2.28.0.py`
   - `probe-{v2,kas}-*-2.28.0.py`
 - Captures in the same directory: `{v2,kas}-live-sweep-{2.26.0,2.28.0}.jsonl` and `kas-workflow-live-{2.26.0,2.28.0}.jsonl` (trimmed; tokens redacted).
+
+## 9. Correction (same day): initialize settings were mis-placed in the live probe
+
+The live probe's `init()` helper (`probe-kas-leads-2.28.0.py`) sent "initialize settings"
+at the **initialize request's top-level `_meta.kiro.settings`**. KAS 0.66.15 and 0.66.26
+read **only** `initialize.clientCapabilities._meta.kiro`
+(`let r=t.clientCapabilities?._meta?.kiro … this.clientMeta=r`). That is also where cyril
+sends them (`engine::client_capabilities`). Earlier audits and CLAUDE.md wrote
+"`initialize._meta.kiro.settings`" as shorthand for the `clientCapabilities` form, and the
+2.28.0 probe took the shorthand literally. These three conclusions are therefore
+**invalid**, and are being re-measured with `probe-kas-initsettings-2.28.0.py`
+(results go in `audit-2.28.0/live-findings.md` §7):
+
+1. "`subagentOrchestration` has no effect." Code says otherwise:
+   `subagentOrchestrationActive()` reads `clientMeta.settings`; when active, the
+   orchestration tool builder is used, and with workflows on the chat delegation tool
+   is **not** suppressed. cyril-53qx was corrected to **keep** sending it.
+2. "KAS memory settings at initialize are ignored" (cyril-0na7).
+3. "Settings sent at initialize don't appear in `_kiro/configuration/state`" (cyril-iq2c).
+
+Rule for future probes: write the full path,
+`initialize.clientCapabilities._meta.kiro.settings`, and assert in the probe that a
+known connection-level gate (e.g. `largeToolOutputHandler`) takes effect, as a control.
+
