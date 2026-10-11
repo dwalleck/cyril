@@ -1,0 +1,69 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-07",
+   "version": "2.28.1",
+   "title": "Version 2.28.1",
+   "changes": [
+    {
+     "type": "added",
+     "description": "`kiro-cli agent upgrade <dir>` upgrades a directory of agent configs for V2 and V3"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-05",
+   "version": "2.28.0",
+   "title": "Version 2.28.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "`/settings` Display > Full Screen lets you turn off Copy on select for terminal or tmux copying"
+    },
+    {
+     "type": "added",
+     "description": "Classic sessions offer to switch you to 3.0 and upgrade your agent configs"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Hook matchers accept tool tags such as `shell`, `read`, `@builtin` and `@mcp`"
+    },
+    {
+     "type": "changed",
+     "description": "`/model` and `/effort` pickers open mid-turn, with selections applied after the turn ends"
+    },
+    {
+     "type": "fixed",
+     "description": "Conversations no longer stop responding after a sub-agent finishes in V2 TUI sessions"
+    },
+    {
+     "type": "fixed",
+     "description": "Expanded activity trays no longer limit task lists to six rows, with a screen-sized limit in fullscreen"
+    },
+    {
+     "type": "fixed",
+     "description": "Windows V2 stdio MCP servers preserve `|`, `&`, `%`, and spaces in arguments when resolved to `.exe`, `.com`, `.bat`, or `.cmd` without a configured `PATHEXT`"
+    },
+    {
+     "type": "fixed",
+     "description": "Voice recording hints point to `kiro-cli settings voice.*` instead of the nonexistent `/settings voice`"
+    },
+    {
+     "type": "fixed",
+     "description": "Returning from the agent monitor or session dashboard no longer misplaces the chat view on some terminals"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Interrupted tool calls report accurate outcomes, live and after reload"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Reduced memory growth during very long agent sessions"
+    }
+   ]
+  }
+ ]
+}
