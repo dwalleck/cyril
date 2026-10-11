@@ -1,0 +1,144 @@
+[
+ {
+  "from": "2.28.0",
+  "to": "2.29.0",
+  "novel_added": {
+   "Autocompleteg": [
+    "eCodeSignIn|AuthorityMissingE|SsoTokenProviderrL|), ignoring DATA occurred after |TypeErasedError:OperationAborted|_showAutocompletegP|=Dut|light_blue_reverrm_mediumpurple4b|xterm_slateblue1rm_lightsalmon3axterm_greenyello_lightgoldenrod2|Grapheme_Clust"
+   ],
+   "Errormsgc": [
+    ": entered unreachable code: invalid start of fixed length hexadecimal number called `Result::unwrap()` on an `Err` valueErrormsgc|compiled regex exceeded size limitexhausted state IDs, too many statescapture group slots exhausted|assertion failed: !"
+   ],
+   "Exezzzzzzzzzzzzzzzze": [
+    "tsEimplicitGlobalRe9|$wXV|InvalidAttributeNewSessionTicket3333333333333333|csharp_namespacesecs_since_epochcliSubcommandExezzzzzzzzzzzzzzzze.protobuf.Emptyerror decoding: |max size reached|\"light_green_blinlight_green_boldline|light_blue_italilight_purple_revl"
+   ],
+   "Optionspackedjstypectype": [
+    "eneric_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8FieldOptionspackedjstypectypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmap_entrymessage_set_wire_formatno_standard_descriptor_accessorS"
+   ],
+   "Rangec": [
+    "ired field was missing: ``invalid value for field: `MissingFieldInvalidValueResolveEndpointErrorDateTimeFormatErrorOutOfRangec|sourcemessageevent /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-sdk-sts-1.94.0/src/endpoint_li"
+   ],
+   "Requestimmediateoffsetinsertioninsert": [
+    "onfig_sectionsEnvConfigErrorproperty_sourceerrH0H1intercept_commandcursor_positionevent_blobSetExplicitlyUnsetInsertTextRequestimmediateoffsetinsertioninsert_during_commandTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: ImdsCredenti"
+   ],
+   "boundsd": [
+    "ed: out_pos + 2 < out_slice.len()assertion failed: (source_pos + 2) & out_buf_size_mask < out_slice.len()dest is out of boundsdJ:|[BUG] umask returned invalid ModeUnknown errnoOperation not permittedNo such file or directoryNo such processInterrup"
+   ],
+   "bufferk": [
+    "pv4AddressInvalidIpv6AddressInvalidDomainCharacterRelativeUrlWithoutBaseSetHostOnCannotBeABaseUrl|failed to write whole bufferk|stateSELECT value FROM  WHERE key = ?1Errora Display implementation returned an error unexpectedlydescription() is depr"
+   ],
+   "dateq": [
+    "::split().next() returns Somedomain subvalue sub,  :-|resulting value is out of rangeoverflow subtracting duration from dateqP|[]description() is deprecated; use Display*IdnaErrorsErrorsIDNA errors: |\"{E5|nI73|) as|0xfalse00010203040506070809101"
+   ],
+   "filespy": [
+    "ic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8Fie"
+   ],
+   "idauth": [
+    "sis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType"
+   ],
+   "uupdate": [
+    "icyDocumentContextAssertionx-xss-protection0*|enR~eD|Mxxxxxxxxxxxxxxxxinvalid app namedashboardPageVieotobuf.ListValue|*uupdateConditions|IntegerUnderflowinvalid new line|light_red_strikelight_yellow_revlight_purple_undlight_purple_itaht_purple_st"
+   ]
+  },
+  "novel_removed": {
+   "Cella": [
+    "as gone awayDateTimeFormatErrorAssumeRoleProviderexternal_idtime_sourceCannotSerializeUnknownVariantunionErrorTakingOnceCella character literal was not validthe '' component could not be parsedunexpected trailing characters; the end of input was"
+   ],
+   "Generatorrngh": [
+    "iantunioncauseOutOfRange|!\"#$%&'|0123456789|abcdefghijklmnopqrstuvwxyz|^_`abcdefghijklmnopqrstuvwxyz|DefaultInvocationIdGeneratorrngh|SharedRequestSerializersourceUnhandledSharedResponseDeserializerAuthSchemeOptionResolverParamsSharedAuthSchemeOptionRes"
+   ],
+   "Imaget": [
+    "eDirectoryNonAbsolutePathUnsupportedOsIoTimeFormatUtf8FromPathUtf8FromPathBufFromVecWithNulIntoStringQParentNotSetNotAppImaget.sockRequestAttemptsSharedRetryStrategy|ChatAddMessageEventChatInteractWithMessageEventChatUserModificationEventCodeCove"
+   ],
+   "Optionspy": [
+    "oBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsuninterpreted_optiondeprecatedallow_aliasFileOptionspy_generic_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_check_utf8go_packageo"
+   ],
+   "countw": [
+    "Err` valueEndOfInput|assertion failed: len > 0assertion failed: src.len() == dst.len()assertion failed: old_left_len >= countw|DnsName(\"\")DirectoryNameIpAddress()UniformResourceIdentifier(\"Unsupported(0x|.:::[invalid: ], |called `Result::unwrap()"
+   ],
+   "packagecc": [
+    "sionRangeoptionsEnumOptionsuninterpreted_optiondeprecatedallow_aliasFileOptionspy_generic_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_check_utf8go_packageoptimize_forphp_namespacephp_generic_servicesjava"
+   ]
+  }
+ },
+ {
+  "from": "2.29.0",
+  "to": "2.29.1",
+  "novel_added": {
+   "Cachet": [
+    "Inmessage was not specified but it is required when building ValidationErrorFrozenLayerSharedTokenProviderSharedIdentityCachetAa|UnknownBeforeSerializationSerializationBeforeTransmitBeforeDeserializationDeserializationAfterDeserializationLinuxMac"
+   ],
+   "Errorj": [
+    "ertion failed: seq1.len().map_or(true, |x| x <= self.limit_total)a Display implementation returned an error unexpectedlyErrorj|internal error: entered unreachable code: expected expr or alt, got Unicode classinternal error: entered unreachable co"
+   ],
+   "Imaget": [
+    "eDirectoryNonAbsolutePathUnsupportedOsIoTimeFormatUtf8FromPathUtf8FromPathBufFromVecWithNulIntoStringQParentNotSetNotAppImaget.sockRequestAttemptsSharedRetryStrategy|DowncastParamsUnknownVariantValueKmsAccessDeniedUnknownevent crates/fig_telemetr"
+   ],
+   "Optionscc": [
+    "oBitRgbrbgIndexed|EnumReservedRangestartendExtensionRangeoptionsEnumOptionsdeprecateduninterpreted_optionallow_aliasFileOptionscc_generic_servicesgo_packageoptimize_forruby_packagejava_generate_equals_and_hashjava_multiple_filesjava_generic_services"
+   ],
+   "Payloadx": [
+    "ncodedApplicationDataHandshakeMessagePayloadtyppayloadcalled `Result::unwrap()` on an `Err` valueDnsNameChangeCipherSpecPayloadx|We got ServerHello |rustls::client::hs|Using ciphersuite SSLv2SSLv3TLSv1_0TLSv1_1TLSv1_2TLSv1_3UnknownMessageversionpay"
+   ],
+   "Protosyntaxpackagedependencyweak": [
+    "meextension_rangeextensionfieldnested_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_v"
+   ],
+   "Unknownq": [
+    "spatchmessage/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/client/dispatch.rsKnownUnknownq|InvalidUriCharInvalidSchemeInvalidPortInvalidFormatSchemeMissingPathAndQueryMissingTooLongEmptySchemeTooLongInvalidUria"
+   ],
+   "comc": [
+    "_id.rs:352event crates/fig_auth/src/builder_id.rs:376event crates/fig_auth/src/builder_id.rs:176https://oidc..amazonaws.comc|DELETE FROM  WHERE key = ?1auth_kvstateSELECT value FROM INSERT OR REPLACE INTO  (key, value) VALUES (?1, ?2)()descript"
+   ],
+   "lenh": [
+    "_len >= 1invalid match spancalled `Result::unwrap()` on an `Err` valueFinderneedleTryFromIntErrorimpmemory_usageminimum_lenh|internal error: entered unreachable code743210/.-g|,+*)('&%$#\"!8 |iPb`aQ|mn|oRlv|u\\jSHc]AO|invalid match spanMemmemPack"
+   ],
+   "namelabelr": [
+    "ueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinval"
+   ],
+   "namespacepy": [
+    "ic_servicesjava_outer_classnamephp_namespacejava_string_check_utf8java_packageswift_prefixobjc_class_prefixphp_metadata_namespacepy_generic_servicesphp_generic_servicesFieldOptionspackedctypejstypeOneofOptionsMethodOptionsidempotency_levelMessageOptio"
+   ],
+   "spanxx": [
+    "classes: memory usage: )|(): |         matches: F :|, -LeftmostFirstLeftmostLongestStateIDError|   >* *>D invalid match spanxx_|assertion failed: !bytes.is_empty()assertion failed: self.by_id.len() <= u16::MAX as usizeassertion failed: patterns.l"
+   ],
+   "timestampj": [
+    " the server that was not recognized by the SDK. Consider upgrading to the latest version of the SDK.failed to serialize timestampjA|typecheckedoverflow occurred when adding duration to UNIX_EPOCHoverflow occurred when subtracting duration from UNIX_E"
+   ]
+  },
+  "novel_removed": {
+   "Autocompleteg": [
+    "eCodeSignIn|AuthorityMissingE|SsoTokenProviderrL|), ignoring DATA occurred after |TypeErasedError:OperationAborted|_showAutocompletegP|=Dut|light_blue_reverrm_mediumpurple4b|xterm_slateblue1rm_lightsalmon3axterm_greenyello_lightgoldenrod2|Grapheme_Clust"
+   ],
+   "Errormsgc": [
+    ": entered unreachable code: invalid start of fixed length hexadecimal number called `Result::unwrap()` on an `Err` valueErrormsgc|compiled regex exceeded size limitexhausted state IDs, too many statescapture group slots exhausted|assertion failed: !"
+   ],
+   "Exezzzzzzzzzzzzzzzze": [
+    "tsEimplicitGlobalRe9|$wXV|InvalidAttributeNewSessionTicket3333333333333333|csharp_namespacesecs_since_epochcliSubcommandExezzzzzzzzzzzzzzzze.protobuf.Emptyerror decoding: |max size reached|\"light_green_blinlight_green_boldline|light_blue_italilight_purple_revl"
+   ],
+   "Fdocapacity": [
+    "et environment variable `` to `description() is deprecated; use DisplayVariantNotFoundFromPathErrorAddressInvalidVersionFdocapacity overflowinvalid tag value: 0invalid key value: delimited length exceededrecursion limit reachedunexpected end group tag"
+   ],
+   "Rangec": [
+    "ired field was missing: ``invalid value for field: `MissingFieldInvalidValueResolveEndpointErrorDateTimeFormatErrorOutOfRangec|sourcemessageevent /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-sdk-sts-1.94.0/src/endpoint_li"
+   ],
+   "Requestimmediateoffsetinsertioninsert": [
+    "onfig_sectionsEnvConfigErrorproperty_sourceerrH0H1intercept_commandcursor_positionevent_blobSetExplicitlyUnsetInsertTextRequestimmediateoffsetinsertioninsert_during_commandTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: ImdsCredenti"
+   ],
+   "boundsd": [
+    "ed: out_pos + 2 < out_slice.len()assertion failed: (source_pos + 2) & out_buf_size_mask < out_slice.len()dest is out of boundsdJ:|[BUG] umask returned invalid ModeUnknown errnoOperation not permittedNo such file or directoryNo such processInterrup"
+   ],
+   "dateq": [
+    "::split().next() returns Somedomain subvalue sub,  :-|resulting value is out of rangeoverflow subtracting duration from dateqP|[]description() is deprecated; use Display*IdnaErrorsErrorsIDNA errors: |\"{E5|nI73|) as|0xfalse00010203040506070809101"
+   ],
+   "filespy": [
+    "ic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8Fie"
+   ],
+   "idauth": [
+    "sis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType"
+   ],
+   "partis": [
+    "aluedouble_valuenegative_int_valuepositive_int_valueExtensionRangeOptionstrailing_commentsleading_detached_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimitedStartGroupThirtyTw"
+   ]
+  }
+ }
+]

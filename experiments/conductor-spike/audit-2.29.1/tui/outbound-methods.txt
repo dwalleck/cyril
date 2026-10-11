@@ -1,0 +1,52 @@
+# 2.28.0: 23 outbound kiro method literals
+  _kiro/account/getUsage
+  _kiro/codeIntelligence
+  _kiro/config/template
+  _kiro/hooks/list
+  _kiro/knowledge
+  _kiro/mcp/resetServer
+  _kiro/memory/get
+  _kiro/memory/list
+  _kiro/policy/ignore_files_changed
+  _kiro/powers/refresh
+  _kiro/session/compact
+  _kiro/session/context
+  _kiro/session/delete
+  _kiro/session/history
+  _kiro/session/rename
+  _kiro/sourceProviders/list
+  _kiro/sourceProviders/listResources
+  _kiro/spec/invoke
+  _kiro/spec/resolveSession
+  kiro.dev/session/list
+  kiro.dev/session/terminate
+  kiro.dev/settings/list
+  kiro.dev/settings/set
+# 2.29.1: 23 outbound kiro method literals
+  _kiro/account/getUsage
+  _kiro/codeIntelligence
+  _kiro/config/template
+  _kiro/hooks/list
+  _kiro/knowledge
+  _kiro/mcp/resetServer
+  _kiro/memory/get
+  _kiro/memory/list
+  _kiro/policy/ignore_files_changed
+  _kiro/powers/refresh
+  _kiro/session/compact
+  _kiro/session/context
+  _kiro/session/delete
+  _kiro/session/history
+  _kiro/session/rename
+  _kiro/sourceProviders/list
+  _kiro/sourceProviders/listResources
+  _kiro/spec/invoke
+  _kiro/spec/resolveSession
+  kiro.dev/session/list
+  kiro.dev/session/terminate
+  kiro.dev/settings/list
+  kiro.dev/settings/set
+
+added:   []
+removed: []
+literal sets: 92 vs 92 added=[] removed=[]

@@ -1,0 +1,39 @@
+
+== watch-handler id: literals: 369->370  +['node-id']  -[]
+
+== zod enums (raw): 64->65  +['"served","notEnabled"', '"workflow-continuation",...Xtr.options,"agent-initiated-prompt","steering-injection"']  -['"workflow-continuation",...XKt.options,"agent-initiated-prompt","steering-injection"']
+
+-- onMaxIterations:
+   [OLD] onMaxIterations:OKt}),k.object({type:k.literal("parallel"),id:k.string(),branches:k.array(
+   [NEW] onMaxIterations:Ltr}),k.object({type:k.literal("parallel"),id:k.string(),branches:k.array(
+
+-- completionSignal:
+   [OLD] completionSignal:k.enum(["success","need_input","error"]).optional()}).refine(e=>e.contain
+   [NEW] completionSignal:k.enum(["success","need_input","error"]).optional()}).refine(e=>e.contain
+
+-- joinPolicy:
+   [OLD] joinPolicy:DKt}),k.object({type:k.literal("watch"),id:k.string(),handler:k.string(),config
+   [NEW] joinPolicy:Otr}),k.object({type:k.literal("watch"),id:k.string(),handler:k.string(),config
+
+-- stopCondition:
+   [OLD] stopCondition:Ude.optional(),stopWhen:k.string().optional(),onMaxIterations:OKt}),k.object
+   [NEW] stopCondition:vfe.optional(),stopWhen:k.string().optional(),onMaxIterations:Ltr}),k.object
+
+### watch handler registry
+   [OLD] @10831991: ,c]of r){if(r.size<=oao)break;c.reported&&r.delete(a)}for(let a of r.keys()){if(r.size<=oao)break;r.delete(a)}});return{id:"background-process",description:"Runs a command once as a managed background process and completes the watch the moment it exits. Use for b
+   [NEW] @11104914: ,c]of r){if(r.size<=Kbo)break;c.reported&&r.delete(a)}for(let a of r.keys()){if(r.size<=Kbo)break;r.delete(a)}});return{id:"background-process",description:"Runs a command once as a managed background process and completes the watch the moment it exits. Use for b
+
+== workflow settings keys: 1->1  +[]  -[]
+
+### counts
+  "workflows"                       4->   4
+  "goal"                            9->   9
+  verifyFirstWorkflow               5->   5
+  workflowNotifications             0->   0
+  listWatchHandlers                 6->   6
+  "github-pr"                       6->   6
+  "command"                        47->  47
+  "background-process"              1->   1
+  noteUserRequests                  0->   5
+  summaryUserRequests               0->   9
+  summaryNoteTag                    0->   7

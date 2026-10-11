@@ -1,0 +1,49 @@
+[
+    {
+        "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.28.0/extracted/kirocli/bin/kiro-cli-chat",
+        "overrides_changed": true,
+        "rows": {
+            "memory": {
+                "fields": {
+                    "description": [
+                        "Persistent agent memory and the /memories command. Ramped to all internal users on every channel; KAS's memory experiment still decides per-user eligibility.",
+                        "Persistent agent memory and the /memories command. Generally available to all users on every channel; memory starts off for external users until they opt in, and KAS's memory experiment still decides per-user eligibility."
+                    ],
+                    "segment": [
+                        "internal",
+                        "all"
+                    ]
+                },
+                "kind": "CHANGED"
+            },
+            "memory_controls": {
+                "fields": {
+                    "description": [
+                        "KAS-only /memories controls: saved memory access and automatic-update defaults, plus record browsing (list, preview, detail). Ramped to all internal users on every channel; set treatment_percent to 0 to darken it.",
+                        "KAS-only /memories controls: saved memory access and automatic-update defaults, plus record browsing (list, preview, detail). Generally available to all users on every channel; set treatment_percent to 0 to darken it."
+                    ],
+                    "segment": [
+                        "internal",
+                        "all"
+                    ]
+                },
+                "kind": "CHANGED"
+            },
+            "standalone_toolbox": {
+                "kind": "ADDED",
+                "new": {
+                    "description": "Autocomplete decoupling cohort: the bundled Toolbox post-install hook asks this flag whether to move a user onto the standalone channel. It does not gate update routing, which always keeps a standalone binary on standalone archives. Starts at 0%; ramp treatment_percent in later releases. Lowering it stops new enrollment but does not move already-migrated users back.",
+                    "segment": "all",
+                    "treatment_percent": 0
+                }
+            }
+        },
+        "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.29.0/extracted/kirocli/bin/kiro-cli-chat"
+    },
+    {
+        "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.29.0/extracted/kirocli/bin/kiro-cli-chat",
+        "overrides_changed": false,
+        "rows": {},
+        "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.29.1/extracted/kirocli/bin/kiro-cli-chat"
+    }
+]

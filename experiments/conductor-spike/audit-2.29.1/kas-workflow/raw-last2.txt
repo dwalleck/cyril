@@ -1,0 +1,20 @@
+
+##### OLD '### 5.'..'### 7.' node docs
+  (no matching '### 6.' section)
+
+##### NEW '### 5.'..'### 7.' node docs
+  @3357195: ### 6. include\n\nPuts another recipe\'s steps into this workflow in place of the node. Required: type, id, path. Optional: inputs.\n\n```json\n{\n "type": "include",\n "id": "review",\n "path": "/abs/repo/.kiro/workflows/review.workflow.json",\n "inputs": { "target": "{{worktree_path}}" }\n}\n```\n\n- `path` is on
+
+### OLD node-type section titles
+
+### NEW node-type section titles
+    1 step
+    2 repeat
+    3 sequence
+    4 parallel
+    5 watch
+    6 include
+
+### _kiro/session/notify payload builder
+  [cAt] function cAt(e,t,r,n){return{sessionId:e,...n.sessionId!==void 0&&{callerSessionId:n.sessionId},message:t,severity:r,sender:n.role,...n.workflowId?{workflowId:n.workflowId}:{},...n.nodeId?{nodeId:n.nodeId}:{},...n.agentName?{agentName:n.agentName}:{}}}var oze=class e extends nr{static id="send_message";static title="Se
+  [v0t] function v0t(e,t,r,n){return{sessionId:e,...n.sessionId!==void 0&&{callerSessionId:n.sessionId},message:t,severity:r,sender:n.role,...n.workflowId?{workflowId:n.workflowId}:{},...n.nodeId?{nodeId:n.nodeId}:{},...n.agentName?{agentName:n.agentName}:{}}}var s6e=class e extends er{static id="send_message";static title="Se

@@ -1,0 +1,1132 @@
+{
+  "cats": {
+    "meta_keys": {
+      "added": {
+        "replay": {
+          "ctx": [
+            "d 0?{instanceStatus:n.instanceStatus}:{},...r.description?{description:r.description}:{}})}};Si();var ALt={id:\"replay\",label:\"Replay history to client\"},ILt={id:\"build-context\",label:\"Rebuild model context\"},PLt={id:\"shell-type\"",
+            "ResidentHolds(t.sessionId,s)){S.debug(\"acp.session.load.step.resident_replaced\",{sessionId:t.sessionId,during:\"replay\"});continue}l||S.debug(\"acp.session.load.step.attach_not_confirmed\",{sessionId:t.sessionId})}let u={id:t.sessi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": true
+        }
+      },
+      "new_distinct": 15,
+      "old_distinct": 14,
+      "removed": {}
+    },
+    "notify": {
+      "added": {},
+      "new_distinct": 8,
+      "old_distinct": 8,
+      "removed": {}
+    },
+    "snake_lits": {
+      "added": {
+        "abstract_class_declaration": {
+          "ctx": [
+            "NCTION_TYPES,\"function_definition\",\"constructor_declaration\",\"lambda\",\"lambda_expression\",\"class_declaration\",\"abstract_class_declaration\",\"class_definition\",\"class_specifier\",\"struct_specifier\"]);async buildGraph(t,r){let n={modules:new Map,functi",
+            "{className:y,fnScope:w}=g,v=g.exported||m.type===\"export_statement\";if(m.type===\"class_declaration\"||m.type===\"abstract_class_declaration\"){let T=this.getNodeText(m.childForFieldName(\"name\"));if(T){let C=w?`${w}.${T}`:T,x=[],R=[],P={},N=m.childForF"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "array_pattern": {
+          "ctx": [
+            "r.push({name:s,type:{base:\"object\",refinement:null},optional:!1})}else if(o.type===\"object_pattern\"||o.type===\"array_pattern\"||o.type===\"assignment_pattern\"||o.type===\"rest_pattern\")for(let s of this.patternBindingNames(o))r.push({name",
+            "rn\":case\"assignment_pattern\":return[{node:n.childForFieldName(\"left\"),state:void 0}];case\"object_pattern\":case\"array_pattern\":case\"rest_pattern\":return;default:return EE}}),r}extractJavaScriptReturnType(t){let r=t.childForFieldName(\"re"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "as_expression": {
+          "ctx": [
+            ",n):null;case\"cast_expression\":return i(this.bareTypeName(this.getNodeText(t.childForFieldName(\"type\"))));case\"as_expression\":{let o=t.namedChild(1);return o?i(this.bareTypeName(o.text)):null}case\"object_creation_expression\":case\"new_e"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "as_pattern_target": {
+          "ctx": [
+            "atement\":case\"for_in_clause\":for(let i of e.pythonTargetNames(t.childForFieldName(\"left\")))r.add(i);break;case\"as_pattern_target\":for(let i of e.pythonTargetNames(t))r.add(i);break;case\"for_in_statement\":n(t.childForFieldName(\"left\"));brea",
+            "?(r.push(n.text),EE):e.PYTHON_TARGET_PATTERNS.has(n.type)?void 0:EE),r}static PYTHON_TARGET_PATTERNS=new Set([\"as_pattern_target\",\"pattern_list\",\"tuple_pattern\",\"list_pattern\",\"tuple\",\"list\",\"parenthesized_expression\",\"list_splat_pattern\"]"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "assignment_pattern": {
+          "ctx": [
+            "\"object\",refinement:null},optional:!1})}else if(o.type===\"object_pattern\"||o.type===\"array_pattern\"||o.type===\"assignment_pattern\"||o.type===\"rest_pattern\")for(let s of this.patternBindingNames(o))r.push({name:s,type:{base:\"object\",refineme",
+            "or(let s of this.patternBindingNames(o))r.push({name:s,type:{base:\"object\",refinement:null},optional:o.type===\"assignment_pattern\"});else if(o.type===\"required_parameter\"||o.type===\"optional_parameter\"){let s=o.childForFieldName(\"pattern\"),"
+          ],
+          "new": 3,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "carry_unavailable": {
+          "ctx": [
+            "erver_cascade\"),c=n.noteUserRequests(e.context,a.carriedUserRequests);if(c.length===0){OCt(a.carryUnavailable?\"carry_unavailable\":\"no_user_request\");return}let u,l;try{u=await n.generateCompactionBrief({fork:rbe(e,()=>e.execution.lastReque",
+            "off brief not used, falling back to generic summarization\";e===\"error\"?S.warn(i,{...n,error:Xr(t.error)}):e===\"carry_unavailable\"?S.warn(i,n):S.debug(i,n)}async function Wlo(e,t){S.warn(\"[ContextOverflowHandler] Using brute-force truncatio"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "cast_expression": {
+          "ctx": [
+            ")??null}case\"parenthesized_expression\":return t.namedChild(0)?this.receiverType(t.namedChild(0),r,n):null;case\"cast_expression\":return i(this.bareTypeName(this.getNodeText(t.childForFieldName(\"type\"))));case\"as_expression\":{let o=t.named"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "catch_formal_parameter": {
+          "ctx": [
+            "(\"left\"));break;case\"catch_clause\":n(t.childForFieldName(\"parameter\"));break;case\"enhanced_for_statement\":case\"catch_formal_parameter\":{let i=t.childForFieldName(\"name\");i?.type===\"identifier\"&&r.add(i.text);break}case\"for_range_loop\":{let i=t."
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "compaction_required_for_model_handoff": {
+          "ctx": [
+            "ttlingExceptionReason))});var dCt,wuo,q3r=E(()=>{\"use strict\";dCt=\"COMPACTION_REQUIRED_FOR_MODEL_HANDOFF\",wuo=\"compaction_required_for_model_handoff\"});import{StringDecoder as c9c}from\"node:string_decoder\";function d9c(e){if(!Array.isArray(e))return[];let t=["
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "context_length_exceeded": {
+          "ctx": [
+            " 0})}function t9c(e,t){let r=(e??\"\").toLowerCase(),n=t??\"\",i=n?n.replace(/^kiro:/,\"\").toUpperCase():\"\";if(n===\"context_length_exceeded\")return 413;if(n===\"model_not_found\"||r===\"not_found\")return 404;if(r===\"too_many_requests\"||n===\"rate_limit_e"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "context_overflow": {
+          "ctx": [
+            "n setting is enabled. ${CVi}`},r0c={context_overflow:!1,model_handoff:!0},P2=class extends Eo{constructor(r,n=\"context_overflow\"){super(r);this.overflowCause=n}overflowCause;name=\"ContextWindowExceededError\";manualCompactionRequired=!1;re",
+            "this.overflowCause){case\"model_handoff\":return[\"contextWindowExceeded\",\"modelHandoffCompactionRequested\"];case\"context_overflow\":return[\"contextWindowExceeded\"]}}get retryErrorType(){return\"CLIENT_ERROR\"}get isServerRequested(){return r0c"
+          ],
+          "new": 4,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "control_flow_graphs": {
+          "ctx": [
+            "of e}var bRo,cMt,kRo,nhu,aMt,RRo=E(()=>{\"use strict\";he();CWr();bRo=Number.MAX_SAFE_INTEGER,cMt=6;kRo=[{table:\"control_flow_graphs\",entries:e=>[...e.controlFlowGraphs.entries()]},{table:\"pseudocode\",entries:e=>[...e.pseudocode.entries()]},{t",
+            "r)return{...r,callers:this.callersOf(t),callees:this.calleesOf(t)}}getControlFlowGraph(t){return this.refBlob(\"control_flow_graphs\",t)}getControlFlowGraphs(){return this.allRefBlobs(\"control_flow_graphs\")}getFunctions(){let t=this.db.prepare"
+          ],
+          "new": 3,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "credit_balance_exhausted": {
+          "ctx": [
+            ")return 404;if(r===\"too_many_requests\"||n===\"rate_limit_exceeded\")return 429;if(r===\"insufficient_quota\"||n===\"credit_balance_exhausted\")return 402;if(n===\"access_denied\"||n===\"kiro:model_requires_user_opt_in\"||r9c.has(i))return 403;if(r===\"inval"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "decoder_unavailable": {
+          "ctx": [
+            "o_vision\"});if(!i)return JEe(e.byteLength)>r.maxBase64Bytes?o(oUr):o({kind:\"image\",bytes:e,mimeType:t,outcome:\"decoder_unavailable\"});let s;try{s=ZEe(e)}catch(m){return S.debug(\"image.fit.headerFailed\",{mimeType:t,error:Xr(m)}),o(nUr)}let{wi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "default_model": {
+          "ctx": [
+            "turn r}sb();rr();Ye();var RE=\"enterpriseManagement\",pI=We(\"kiro.feature\"),A9u=[\"user_activity_report.enabled\",\"default_model\",\"fallback_model\",\"overages\"];function S8o(e){return A9u.find(r=>r===e)??\"unknown\"}function v8o(e){pI.reportCo"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "empty_brief": {
+          "ctx": [
+            "t\",\"ContextOverflowHandler\"),WWc={context_overflow:void 0,model_handoff:\"ForModelHandoff\"};jWc={empty_summary:\"empty_brief\"},VWc={success:{actionState:\"Success\",counter:\"ContextOverflowRecoverySuccess\"},failed:{actionState:\"Error\",co"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "enum_body_declarations": {
+          "ctx": [
+            "et r={},n=t.childForFieldName(\"body\"),i=[...n?.namedChildren??[]];for(let o of n?.namedChildren??[])o?.type===\"enum_body_declarations\"&&i.push(...o.namedChildren);for(let o of i){if(o?.type!==\"field_declaration\")continue;let s=this.bareTypeName"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "envelope_refused": {
+          "ctx": [
+            "?e.hash===t.hash:e?.status===t.status}function G9u(e){return e instanceof k5e?\"hash_mismatch\":e instanceof H0?\"envelope_refused\":e instanceof R5e?\"policy_refused\":\"transport\"}function j9u(e,t){if(e instanceof A5e)return\"failed_deadline\";s",
+            "iled_deadline\";switch(t){case\"transport\":return\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":return\"failed_policy\"}}function V9u(e,t){switch(t.status){case\"d"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "failed_deadline": {
+          "ctx": [
+            "?\"envelope_refused\":e instanceof R5e?\"policy_refused\":\"transport\"}function j9u(e,t){if(e instanceof A5e)return\"failed_deadline\";switch(t){case\"transport\":return\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refu"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "failed_envelope": {
+          "ctx": [
+            "case\"transport\":return\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":return\"failed_policy\"}}function V9u(e,t){switch(t.status){case\"disabled\":return\"disabled"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "failed_hash": {
+          "ctx": [
+            "ceof A5e)return\"failed_deadline\";switch(t){case\"transport\":return\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":return\"failed_policy\"}}function V9u(e,t){"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "failed_policy": {
+          "ctx": [
+            "\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":return\"failed_policy\"}}function V9u(e,t){switch(t.status){case\"disabled\":return\"disabled\";case\"not-eligible\":return\"not_eligible\";c"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "failed_transport": {
+          "ctx": [
+            "ed\":\"transport\"}function j9u(e,t){if(e instanceof A5e)return\"failed_deadline\";switch(t){case\"transport\":return\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":r"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "fallback_model": {
+          "ctx": [
+            ";Ye();var RE=\"enterpriseManagement\",pI=We(\"kiro.feature\"),A9u=[\"user_activity_report.enabled\",\"default_model\",\"fallback_model\",\"overages\"];function S8o(e){return A9u.find(r=>r===e)??\"unknown\"}function v8o(e){pI.reportCountMetrics({Enter"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "field_expression": {
+          "ctx": [
+            "h(t.type){case\"member_expression\":r=t.childForFieldName(\"object\"),n=t.childForFieldName(\"property\");break;case\"field_expression\":r=t.childForFieldName(\"argument\"),n=t.childForFieldName(\"field\");break;case\"attribute\":r=t.childForFieldName("
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "for_in_clause": {
+          "ctx": [
+            "nment\":{let i=t.childForFieldName(\"left\");i?.type===\"identifier\"&&r.add(i.text);break}case\"for_statement\":case\"for_in_clause\":for(let i of e.pythonTargetNames(t.childForFieldName(\"left\")))r.add(i);break;case\"as_pattern_target\":for(let "
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "formal_parameters": {
+          "ctx": [
+            "urn EE}});break}case\"required_parameter\":case\"optional_parameter\":n(t.childForFieldName(\"pattern\"));break;case\"formal_parameters\":for(let i of t.namedChildren)i&&i.type!==\"required_parameter\"&&i.type!==\"optional_parameter\"&&n(i);break;case"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "hash_mismatch": {
+          "ctx": [
+            "=\"enabled\"&&t.status===\"enabled\"?e.hash===t.hash:e?.status===t.status}function G9u(e){return e instanceof k5e?\"hash_mismatch\":e instanceof H0?\"envelope_refused\":e instanceof R5e?\"policy_refused\":\"transport\"}function j9u(e,t){if(e insta",
+            "n j9u(e,t){if(e instanceof A5e)return\"failed_deadline\";switch(t){case\"transport\":return\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":return\"failed_policy\""
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "hook_output": {
+          "ctx": [
+            "\";Ye();he();function Yjn(e){switch(e){case\"model\":case\"say\":case\"reasoning\":case\"legacy_reasoning_replay\":case\"hook_output\":case\"label\":case\"display_error\":case\"retry\":case\"summarization\":case\"steering\":case\"print\":case\"user_input\":c",
+            "),ZUr=new Set([\"fetch_cloud_config\"]);F6e();Ja();Ye();he();import{randomUUID as tGc}from\"node:crypto\";var JUr=\"hook_output\";function cBe(e,t){if(e.execution.lifetime.aborted)return S.debug(\"hooks.turnMessage.droppedAfterRunEnded\",{ex"
+          ],
+          "new": 5,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_400": {
+          "ctx": [
+            ",cpa=new Set(opa);ppa=/^[A-Z][A-Z0-9_]{1,63}$/,fpa=\"TimeoutError\",hpa=/^[A-Za-z][A-Za-z0-9_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_401": {
+          "ctx": [
+            "a);ppa=/^[A-Z][A-Z0-9_]{1,63}$/,fpa=\"TimeoutError\",hpa=/^[A-Za-z][A-Za-z0-9_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_403": {
+          "ctx": [
+            "A-Z0-9_]{1,63}$/,fpa=\"TimeoutError\",hpa=/^[A-Za-z][A-Za-z0-9_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_404": {
+          "ctx": [
+            "/,fpa=\"TimeoutError\",hpa=/^[A-Za-z][A-Za-z0-9_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_408": {
+          "ctx": [
+            "rror\",hpa=/^[A-Za-z][A-Za-z0-9_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});a"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_409": {
+          "ctx": [
+            "Za-z][A-Za-z0-9_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function K"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_413": {
+          "ctx": [
+            "_]{0,63}$/;wpa={400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function KGn(e){let{authP"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_429": {
+          "ctx": [
+            "{400:\"http_400\",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function KGn(e){let{authProvider:t,contr"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_500": {
+          "ctx": [
+            ",401:\"http_401\",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function KGn(e){let{authProvider:t,controlPlaneEndpoint"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_502": {
+          "ctx": [
+            ",403:\"http_403\",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function KGn(e){let{authProvider:t,controlPlaneEndpointOverride:r,regi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_503": {
+          "ctx": [
+            ",404:\"http_404\",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function KGn(e){let{authProvider:t,controlPlaneEndpointOverride:r,regionOverride:n,en"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_504": {
+          "ctx": [
+            ",408:\"http_408\",409:\"http_409\",413:\"http_413\",429:\"http_429\",500:\"http_500\",502:\"http_502\",503:\"http_503\",504:\"http_504\"}});async function KGn(e){let{authProvider:t,controlPlaneEndpointOverride:r,regionOverride:n,endpoint:i,origin"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_none": {
+          "ctx": [
+            "${r}.${e}`}),hme.reportHistogramMetrics({[`${e}.latency`]:t},{Operation:e})}function _pa(e){return e===void 0?\"http_none\":wpa[e]??\"http_other\"}async function qU(e,t,r){let n=upa(t),i=performance.now();Xur(e,\"count\",n),hme.reportCou"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "http_other": {
+          "ctx": [
+            "ortHistogramMetrics({[`${e}.latency`]:t},{Operation:e})}function _pa(e){return e===void 0?\"http_none\":wpa[e]??\"http_other\"}async function qU(e,t,r){let n=upa(t),i=performance.now();Xur(e,\"count\",n),hme.reportCountMetrics({count:1},{"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "inferred_parameters": {
+          "ctx": [
+            "dForFieldName(\"parameters\");if(n?.type===\"identifier\"&&r.add(n.text),n?.type===\"lambda_parameters\"||n?.type===\"inferred_parameters\")for(let i of n.namedChildren)i?.type===\"identifier\"&&r.add(i.text);return Ka(t,0,(i,o)=>{if(o>0&&this.nestedS"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "initializer_list": {
+          "ctx": [
+            "ith(\"&\")&&(i=o,o=n),!o)return!1;switch(o.type){case\"argument_list\":case\"arguments\":case\"return_statement\":case\"initializer_list\":case\"array\":case\"list\":return!0;case\"keyword_argument\":case\"pair\":case\"init_declarator\":case\"variable_declara"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "keyword_argument": {
+          "ctx": [
+            "ument_list\":case\"arguments\":case\"return_statement\":case\"initializer_list\":case\"array\":case\"list\":return!0;case\"keyword_argument\":case\"pair\":case\"init_declarator\":case\"variable_declarator\":return o.childForFieldName(\"value\")?.id===i.id;cas"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "lambda_capture_specifier": {
+          "ctx": [
+            "ForFieldName(\"declarator\"));return n?{name:n,source:\"\"}:null}case\"assignment_expression\":{if(t.parent?.type!==\"lambda_capture_specifier\")return null;let n=r(t.childForFieldName(\"left\"));return n?{name:n,source:t.childForFieldName(\"right\")?.text??"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "lambda_parameters": {
+          "ctx": [
+            "rFieldName(\"parameter\")??t.childForFieldName(\"parameters\");if(n?.type===\"identifier\"&&r.add(n.text),n?.type===\"lambda_parameters\"||n?.type===\"inferred_parameters\")for(let i of n.namedChildren)i?.type===\"identifier\"&&r.add(i.text);return Ka"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "list_pattern": {
+          "ctx": [
+            ".type)?void 0:EE),r}static PYTHON_TARGET_PATTERNS=new Set([\"as_pattern_target\",\"pattern_list\",\"tuple_pattern\",\"list_pattern\",\"tuple\",\"list\",\"parenthesized_expression\",\"list_splat_pattern\"]);static isModuleLoad(t){let r=t?.type===\"awai"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "mcp_registry_url": {
+          "ctx": [
+            "ce_tracker\":{let n=L8o(r,_m.codeReferenceTracker,B9u);n!==void 0&&(t={...t,codeReferenceTracker:n});break}case\"mcp_registry_url\":{let n=L8o(r,_m.mcpRegistryUrl,q9u);n!==void 0&&(t={...t,mcpRegistryUrl:n});break}default:v8o(S8o(r.key))}ret"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "method_reference": {
+          "ctx": [
+            "pe){case\"call\":case\"call_expression\":case\"method_invocation\":o(this.resolveCallSite(s,r,c).targets);break;case\"method_reference\":{let p=s.namedChild(0),f=s.namedChild(s.namedChildCount-1),h=this.getNodeText(f);p&&h&&f.id!==p.id&&h!==\"new\""
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "mode_routing": {
+          "ctx": [
+            ":\"custom\";Y7u.reportCountMetrics({modeFallback:1},{Feature:K7u,Activity:t,requestedMode:n})}rr();Ye();var X7u=\"mode_routing\",Z7u=\"mode-routing\",J7u=We(\"kiro.feature\",X7u);function W9o(e){J7u.reportCountMetrics({modeRouted:1},{Feature:"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "model_error": {
+          "ctx": [
+            "n\"||r9c.has(i))return 403;if(r===\"invalid_request\")return 400;if(n===\"server_is_overloaded\")return 503;if(r===\"model_error\"||r===\"server_error\")return 500;if(!r&&n){if(n9c.has(i)||/^(invalid|unsupported|missing)_/.test(n))return 400;",
+            "de:t,message:r,metadata:n,retryAfterMilliseconds:i}=e,o=(e.errorType??\"\").toLowerCase(),s=ZHc(t,e.code),a=o===\"model_error\"?\"MODEL_TEMPORARILY_UNAVAILABLE\":void 0;if(t===429||o.includes(\"throttl\"))return new Is.ThrottlingException({m"
+          ],
+          "new": 4,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "model_fallback": {
+          "ctx": [
+            "date\":return{};case\"focus_update\":return{focus:{title:e.title,description:e.description,status:e.status}};case\"model_fallback\":case\"model_routed\":return{}}}ixt();import*as BEo from\"path\";he();var $Eo=new Set;function Ziu(e,t){!BEo.isAbs",
+            "rType:r.errorType,...r.retryErrorType!==void 0&&{retryErrorType:r.retryErrorType}})]}case rEe:return[fa({kind:\"model_fallback\",...VAt(t)})];case\"summarization\":{let r=t;switch(r.status){case\"running\":return[fa({kind:\"summarization_start"
+          ],
+          "new": 3,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "model_fallback_availability": {
+          "ctx": [
+            "NUATION:\"stall_tool_continuation\",MODEL_FALLBACK_REFUSAL:\"model_fallback_refusal\",MODEL_FALLBACK_AVAILABILITY:\"model_fallback_availability\",AB_MEMORY_INTERNAL:\"memory_internal_enabled\",AB_MEMORY_EXTERNAL:\"memory_external_enabled\",AB_TOOL_LOAD:\"tool_"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "model_fallback_refusal": {
+          "ctx": [
+            "UTH_EXPIRY_RETRY:\"auth_expiry_retry\",STALL_TOOL_CONTINUATION:\"stall_tool_continuation\",MODEL_FALLBACK_REFUSAL:\"model_fallback_refusal\",MODEL_FALLBACK_AVAILABILITY:\"model_fallback_availability\",AB_MEMORY_INTERNAL:\"memory_internal_enabled\",AB_MEM"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "model_handoff": {
+          "ctx": [
+            "xt limit exceeded unexpectedly. Please try again.\")}get telemetryMetricNames(){switch(this.overflowCause){case\"model_handoff\":return[\"contextWindowExceeded\",\"modelHandoffCompactionRequested\"];case\"context_overflow\":return[\"contextWindo",
+            "ion (## Overview through ## Next) COMPLETE. These carry the durable facts and MUST all survive in full.`;G0c=[\"model_handoff\"],j0c=new Set(G0c);V0c=\"generic\";lKi=\"Understood. The conversation is getting too long. I will request summari"
+          ],
+          "new": 8,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "model_not_found": {
+          "ctx": [
+            "Case(),n=t??\"\",i=n?n.replace(/^kiro:/,\"\").toUpperCase():\"\";if(n===\"context_length_exceeded\")return 413;if(n===\"model_not_found\"||r===\"not_found\")return 404;if(r===\"too_many_requests\"||n===\"rate_limit_exceeded\")return 429;if(r===\"insuffic"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "no_session": {
+          "ctx": [
+            ":i,executionId:o,snapshot:s}=e,{reasoning:a}=i,c=s;if(c===void 0){let m=await n.loadSession(t,r);if(!m){fKi(i,\"no_session\");return}if(c=gKi(cN(m.messages)),c===void 0){fKi(i,\"nothing_effective\");return}}let{firstMessageId:u,effectiv",
+            "ompaction.carry_legacy_note\")}async function Cxt(e,t,r,n){try{let i=await e.loadSession(t,r);if(!i)return mKi(\"no_session\",n),{carriedUserRequests:[],snapshot:void 0,carryUnavailable:!1};let o=cN(i.messages);return{carriedUserReques"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "no_text": {
+          "ctx": [
+            "tedNote(t){let r=this.capSummary(t.text);return r===void 0?{reason:\"empty_summary\",emptyReason:t.emptyReason??\"no_text\"}:{summary:r}}get noteConfig(){let{compactedContentTemplate:t,compactedContentTag:r}=this.config;return{compac",
+            "s.config.compactionMaxChars);return{text:l,reasoning:u.additional_kwargs,...l.trim().length===0&&{emptyReason:\"no_text\"}}}}});function FWc(e,t){let{inputTokens:r,outputTokens:n,cacheReadInputTokens:i,cacheWriteInputTokens:o}=YEe("
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "no_vision": {
+          "ctx": [
+            "e64Bytes:6730572,readLongEdge:1568}}function eUr(e){let t=e.toLowerCase();return Huo.has(t)?{vision:!1,reason:\"no_vision\"}:Q9c(t)??Y9c}function vCt(e){let t=e.toLowerCase();for(let r of[\"claude\",\"gpt\",\"kimi\",\"grok\"])if(t.startsWith",
+            ".toLowerCase();for(let r of[\"claude\",\"gpt\",\"kimi\",\"grok\"])if(t.startsWith(`${r}-`))return r;return Huo.has(t)?\"no_vision\":\"other\"}var zuo,Y9c,Huo,tUr=E(()=>{\"use strict\";zuo={over:20,maxSide:2e3},Y9c={maxSide:8e3,maxBase64Bytes:524"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "not_eligible": {
+          "ctx": [
+            "ementReadFallback:1},{Feature:RE,Activity:e,failure:t,surface:r})}var I9u={eligible:\"eligible\",\"not-eligible\":\"not_eligible\",unknown:\"unknown\"};function b8o(e){pI.reportCountMetrics({EnterpriseManagementEligibility:1},{Feature:RE,Acti",
+            "n\"failed_policy\"}}function V9u(e,t){switch(t.status){case\"disabled\":return\"disabled\";case\"not-eligible\":return\"not_eligible\";case\"enabled\":return z8o(e,t)?\"unchanged\":\"enabled\"}}var a$t=class{constructor(t){this.options=t}options;read"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "not_found": {
+          "ctx": [
+            "place(/^kiro:/,\"\").toUpperCase():\"\";if(n===\"context_length_exceeded\")return 413;if(n===\"model_not_found\"||r===\"not_found\")return 404;if(r===\"too_many_requests\"||n===\"rate_limit_exceeded\")return 429;if(r===\"insufficient_quota\"||n===",
+            "sage:r,$metadata:n,reason:s}):new Is.AccessDeniedException({message:r,$metadata:n,...s?{reason:s}:{}});if(o===\"not_found\"||t===404&&s===Is.ValidationExceptionReason.INVALID_MODEL_ID)return new Is.ValidationException({message:r,$met"
+          ],
+          "new": 3,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "note_config": {
+          "ctx": [
+            "ry. Resume the conversation as outlined above.]\";_Ki={summaryUserRequests:\"user_requests\",summaryNoteTemplate:\"note_config\",summaryNoteTag:\"note_config\"}});var RZ=E(()=>{\"use strict\";Q_e();kZ();vye();fPe();ert();Zte();lRe();Uer()});f",
+            "s outlined above.]\";_Ki={summaryUserRequests:\"user_requests\",summaryNoteTemplate:\"note_config\",summaryNoteTag:\"note_config\"}});var RZ=E(()=>{\"use strict\";Q_e();kZ();vye();fPe();ert();Zte();lRe();Uer()});function xKi(e){return{...e,ag"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "nothing_effective": {
+          "ctx": [
+            "){let m=await n.loadSession(t,r);if(!m){fKi(i,\"no_session\");return}if(c=gKi(cN(m.messages)),c===void 0){fKi(i,\"nothing_effective\");return}}let{firstMessageId:u,effectiveMessageCount:l}=c,d=new Date().toISOString(),p={id:`tombstone_summariz"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "object_assignment_pattern": {
+          "ctx": [
+            "ext(n);return i&&r.push(i),EE}case\"pair_pattern\":return[{node:n.childForFieldName(\"value\"),state:void 0}];case\"object_assignment_pattern\":case\"assignment_pattern\":return[{node:n.childForFieldName(\"left\"),state:void 0}];case\"object_pattern\":case\"ar"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "object_pattern": {
+          "ctx": [
+            "t s=this.getNodeText(o);s&&r.push({name:s,type:{base:\"object\",refinement:null},optional:!1})}else if(o.type===\"object_pattern\"||o.type===\"array_pattern\"||o.type===\"assignment_pattern\"||o.type===\"rest_pattern\")for(let s of this.patternBi",
+            "ject_assignment_pattern\":case\"assignment_pattern\":return[{node:n.childForFieldName(\"left\"),state:void 0}];case\"object_pattern\":case\"array_pattern\":case\"rest_pattern\":return;default:return EE}}),r}extractJavaScriptReturnType(t){let r=t.c"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "over_pixel_cap": {
+          "ctx": [
+            "PNG, JPEG, GIF or WebP first.`};let n;try{n=ZEe(e)}catch{return Opo}return n.width*n.height>U6e?{ok:!1,reason:\"over_pixel_cap\",message:`The image declares ${String(n.width)}x${String(n.height)} pixels, over the ${String(U6e/1e6)} megapi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "pair_pattern": {
+          "ctx": [
+            "identifier\":case\"shorthand_property_identifier_pattern\":{let i=this.getNodeText(n);return i&&r.push(i),EE}case\"pair_pattern\":return[{node:n.childForFieldName(\"value\"),state:void 0}];case\"object_assignment_pattern\":case\"assignment_patt"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "parent_cancel": {
+          "ctx": [
+            "\"};if(oi(t.state.status))return{workflowId:r,updated:!1,message:Wze(\"stop\",t.state.status)};try{t.abortReason=\"parent_cancel\",await this.handlers()[\"_kiro/workflow/cancel\"]({workflowId:r,targetStatus:\"aborted\"})}catch(o){t.abortReason="
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": true
+        },
+        "pattern_list": {
+          "ctx": [
+            ":e.PYTHON_TARGET_PATTERNS.has(n.type)?void 0:EE),r}static PYTHON_TARGET_PATTERNS=new Set([\"as_pattern_target\",\"pattern_list\",\"tuple_pattern\",\"list_pattern\",\"tuple\",\"list\",\"parenthesized_expression\",\"list_splat_pattern\"]);static isModu"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "placeholder_no_vision": {
+          "ctx": [
+            ",t,r,n,i){let o=m=>({kind:\"done\",result:m});if(!Q3r(r))return o({kind:\"placeholder\",text:iUr.noVision,outcome:\"placeholder_no_vision\"});if(!i)return JEe(e.byteLength)>r.maxBase64Bytes?o(oUr):o({kind:\"image\",bytes:e,mimeType:t,outcome:\"decoder_"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "placeholder_undecodable": {
+          "ctx": [
+            "t]\",undecodable:\"[image omitted: could not be decoded]\"},nUr={kind:\"placeholder\",text:iUr.undecodable,outcome:\"placeholder_undecodable\"},oUr={kind:\"placeholder\",text:iUr.unfittable,outcome:\"placeholder_unfittable\"}});import{createHash as s5c}fro"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "placeholder_unfittable": {
+          "ctx": [
+            "\",text:iUr.undecodable,outcome:\"placeholder_undecodable\"},oUr={kind:\"placeholder\",text:iUr.unfittable,outcome:\"placeholder_unfittable\"}});import{createHash as s5c}from\"node:crypto\";function Xuo(e){return s5c(\"sha256\").update(e).digest(\"hex\")}fu"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "pointer_expression": {
+          "ctx": [
+            ";return s||(this.collectLocalNames(i,r),pg(i,o+1))}),r}static isValuePosition(t,r,n){let i=t,o=r;if(o?.type===\"pointer_expression\"&&o.text.startsWith(\"&\")&&(i=o,o=n),!o)return!1;switch(o.type){case\"argument_list\":case\"arguments\":case\"return"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "policy_refused": {
+          "ctx": [
+            "s}function G9u(e){return e instanceof k5e?\"hash_mismatch\":e instanceof H0?\"envelope_refused\":e instanceof R5e?\"policy_refused\":\"transport\"}function j9u(e,t){if(e instanceof A5e)return\"failed_deadline\";switch(t){case\"transport\":return\"fa",
+            "\"failed_transport\";case\"hash_mismatch\":return\"failed_hash\";case\"envelope_refused\":return\"failed_envelope\";case\"policy_refused\":return\"failed_policy\"}}function V9u(e,t){switch(t.status){case\"disabled\":return\"disabled\";case\"not-eligible\":"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "preproc_elif": {
+          "ctx": [
+            "r\"&&n.text===\"static\")return!0}return!1}static livePreprocessorFrames(t,r){if(t.type!==\"preproc_if\"&&t.type!==\"preproc_elif\")return null;let n=t.childForFieldName(\"condition\"),i=e.literalConditionValue(n?.text??\"\");if(i===null)return "
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "preproc_if": {
+          "ctx": [
+            "\"storage_class_specifier\"&&n.text===\"static\")return!0}return!1}static livePreprocessorFrames(t,r){if(t.type!==\"preproc_if\"&&t.type!==\"preproc_elif\")return null;let n=t.childForFieldName(\"condition\"),i=e.literalConditionValue(n?.text"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "rate_limit_exceeded": {
+          "ctx": [
+            "gth_exceeded\")return 413;if(n===\"model_not_found\"||r===\"not_found\")return 404;if(r===\"too_many_requests\"||n===\"rate_limit_exceeded\")return 429;if(r===\"insufficient_quota\"||n===\"credit_balance_exhausted\")return 402;if(n===\"access_denied\"||n=="
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "reference_tracker": {
+          "ctx": [
+            "rn{value:n,compose:e.composeBehavior}}function $8o(e){let t={};for(let r of e.configuration)switch(r.key){case\"reference_tracker\":{let n=L8o(r,_m.codeReferenceTracker,B9u);n!==void 0&&(t={...t,codeReferenceTracker:n});break}case\"mcp_regist"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "rest_pattern": {
+          "ctx": [
+            "nal:!1})}else if(o.type===\"object_pattern\"||o.type===\"array_pattern\"||o.type===\"assignment_pattern\"||o.type===\"rest_pattern\")for(let s of this.patternBindingNames(o))r.push({name:s,type:{base:\"object\",refinement:null},optional:o.type=",
+            "pattern\":return[{node:n.childForFieldName(\"left\"),state:void 0}];case\"object_pattern\":case\"array_pattern\":case\"rest_pattern\":return;default:return EE}}),r}extractJavaScriptReturnType(t){let r=t.childForFieldName(\"return_type\");if(!r)r"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "server_cascade": {
+          "ctx": [
+            "ed&&o?.aborted!==!0)return ICt.reportCountMetrics({ModelHandoffCompactionTimeout:1},{modelId:n,caller:s}),s===\"server_cascade\"?S.warn(\"model_routing.handoff.compaction_timeout\",{timeoutMs:a,caller:s}):S.debug(\"model_routing.handoff.comp",
+            "on.model.modelId,{sessionServices:o,chatSessionId:s}=e.execution,a=await Cxt(o.persistence,s,o.workspacePaths,\"server_cascade\"),c=n.noteUserRequests(e.context,a.carriedUserRequests);if(c.length===0){OCt(a.carryUnavailable?\"carry_unavail"
+          ],
+          "new": 3,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "server_cascade_config": {
+          "ctx": [
+            "MIC_DELEGATION_CONFIG:\"dynamic_delegation_config\",AB_CASCADE_CONFIG:\"cascade_config\",AB_SERVER_CASCADE_CONFIG:\"server_cascade_config\",SKILL_NAME_QUALIFIERS:\"skill_name_qualifiers\"},yE={system_field_injection:{default:!1},system_prompt_migratio",
+            "Json!==void 0?{json:e.envConfigJson,source:\"env\"}:dWc(e.abServerConfigJson)?{json:e.abServerConfigJson,source:\"server_cascade_config\"}:{json:void 0,source:\"defaults\"}}function dWc(e){if(e===void 0||e===\"\")return!1;try{let t=JSON.parse(e);retur"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "server_is_overloaded": {
+          "ctx": [
+            "ied\"||n===\"kiro:model_requires_user_opt_in\"||r9c.has(i))return 403;if(r===\"invalid_request\")return 400;if(n===\"server_is_overloaded\")return 503;if(r===\"model_error\"||r===\"server_error\")return 500;if(!r&&n){if(n9c.has(i)||/^(invalid|unsupporte"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "shorthand_property_identifier": {
+          "ctx": [
+            "xports\"){if(i.type===\"identifier\"&&o(i.text),i.type!==\"object\")return;for(let s of i.namedChildren){s?.type===\"shorthand_property_identifier\"&&o(s.text);let a=s?.type===\"pair\"?s.childForFieldName(\"value\"):null;a?.type===\"identifier\"&&o(a.text)}}else e",
+            ":{if(e.isValuePosition(s,a.parent,a.grandparent)){let p=this.resolveValueReference(s,r,c);p&&o([p])}break}case\"shorthand_property_identifier\":{if(a.parent?.type===\"object\"){let p=this.resolveValueReference(s,r,c);p&&o([p])}break}default:break}let d=th"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "shorthand_property_identifier_pattern": {
+          "ctx": [
+            "l,...d})}}return r}patternBindingNames(t){let r=[];return Ka(t,void 0,n=>{switch(n.type){case\"identifier\":case\"shorthand_property_identifier_pattern\":{let i=this.getNodeText(n);return i&&r.push(i),EE}case\"pair_pattern\":return[{node:n.childForFieldName(\"value\""
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "skill_name_qualifiers": {
+          "ctx": [
+            "ig\",AB_CASCADE_CONFIG:\"cascade_config\",AB_SERVER_CASCADE_CONFIG:\"server_cascade_config\",SKILL_NAME_QUALIFIERS:\"skill_name_qualifiers\"},yE={system_field_injection:{default:!1},system_prompt_migration:{default:!1},steering_supervisor:{default:!1"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "storage_class_specifier": {
+          "ctx": [
+            "lastSegment(r))}static hasStaticStorageClass(t){for(let r=0;r<t.childCount;r++){let n=t.child(r);if(n?.type===\"storage_class_specifier\"&&n.text===\"static\")return!0}return!1}static livePreprocessorFrames(t,r){if(t.type!==\"preproc_if\"&&t.type!==\"p"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "structured_binding_declarator": {
+          "ctx": [
+            "loop\":{let i=t.childForFieldName(\"declarator\"),o=this.cppBoundName(i);o&&r.add(o),Ka(i,void 0,s=>{if(s.type===\"structured_binding_declarator\"){for(let a of s.namedChildren)a?.type===\"identifier\"&&r.add(a.text);return EE}});break}case\"required_paramete"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "sub_agent": {
+          "ctx": [
+            " the built-in config\"),hw}async function ZWc(e,t){let r=\"model_handoff\";if(e.execution.subAgent!==void 0){OCt(\"sub_agent\");return}let n=YWc(e),i=e.execution.model.modelId,{sessionServices:o,chatSessionId:s}=e.execution,a=await Cxt("
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "summary_keys": {
+          "ctx": [
+            "eturn}if(o.data.summaryKeys.join(\",\")!==vxo.join(\",\")){S.debug(\"workflow.terminal_index.file_ignored\",{reason:\"summary_keys\"});return}for(let s of o.data.entries)if(oi(s.summary.status)){if(!this.hasRoomForRow())break;r.rows.set(s.wor"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": true
+        },
+        "translation_unit": {
+          "ctx": [
+            "arator\":{let n=r(t.childForFieldName(\"declarator\")),i=t.parent?.type===\"declaration\"&&t.parent.parent?.type!==\"translation_unit\";return n&&i?{name:n,source:t.childForFieldName(\"parameters\")?.text??\"\"}:null}case\"parameter_declaration\":{let"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "tuple_pattern": {
+          "ctx": [
+            "T_PATTERNS.has(n.type)?void 0:EE),r}static PYTHON_TARGET_PATTERNS=new Set([\"as_pattern_target\",\"pattern_list\",\"tuple_pattern\",\"list_pattern\",\"tuple\",\"list\",\"parenthesized_expression\",\"list_splat_pattern\"]);static isModuleLoad(t){let r="
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "under_50": {
+          "ctx": [
+            "{\"use strict\";xCt();Hlo();RUr();X6e()});function GWc(e,t){if(e!==\"context_overflow\"||t>=mie)return;let r=t<50?\"under_50\":\"under_threshold\";ibe.reportCountMetrics({ContextOverflowBelowUsageBand:1},{band:r}),S.warn(\"[ContextOverflow"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "under_threshold": {
+          "ctx": [
+            "t\";xCt();Hlo();RUr();X6e()});function GWc(e,t){if(e!==\"context_overflow\"||t>=mie)return;let r=t<50?\"under_50\":\"under_threshold\";ibe.reportCountMetrics({ContextOverflowBelowUsageBand:1},{band:r}),S.warn(\"[ContextOverflowHandler] Overflow "
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "unsupported_format": {
+          "ctx": [
+            "eadable image.\"};function Lpo(e){let t=Z3r(e);if(t===void 0)return Opo;let r=XEe(t);if(!r)return{ok:!1,reason:\"unsupported_format\",message:`The file is ${tjc[t]}, which models do not read. Convert it to a still PNG, JPEG, GIF or WebP first."
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "user_cancel": {
+          "ctx": [
+            "id 0){let g=d.state.status;d.cancelTargetStatus=u,d.cancelAttribution=l,l?.initiator===\"user\"&&(d.abortReason=\"user_cancel\");try{await e.runner.cancel(c.workflowId)}catch(y){throw d.abortReason=void 0,y}return{ok:!0,previousStatus:g}",
+            "i(l.state.status)){l.cancelTargetStatus=\"aborted\",l.cancelAttribution=u,u?.initiator===\"user\"&&(l.abortReason=\"user_cancel\");try{await e.runner.cancel(c.workflowId)}catch(h){throw l.abortReason=void 0,h}}await cxo(c.workflowId,l.work"
+          ],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": true
+        },
+        "user_requests": {
+          "ctx": [
+            "is the end of the conversation summary. Resume the conversation as outlined above.]\";_Ki={summaryUserRequests:\"user_requests\",summaryNoteTemplate:\"note_config\",summaryNoteTag:\"note_config\"}});var RZ=E(()=>{\"use strict\";Q_e();kZ();vye()"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        }
+      },
+      "new_distinct": 1379,
+      "old_distinct": 1285,
+      "removed": {
+        "content_filter": {
+          "ctx": [
+            "t:{toolUseId:y,stop:!0}}}o.length=0,t.clear(),r=void 0;let g;h&&m===\"max_output_tokens\"?g=\"MAX_TOKENS\":h&&m===\"content_filter\"?g=\"CONTENT_FILTERED\":g=\"END_TURN\",yield{metadataEvent:{stopReason:g}},yield*c(f),yield*u(f)}function*c(p){let"
+          ],
+          "new": 0,
+          "old": 1,
+          "wf_ctx": false
+        },
+        "inline_agent": {
+          "ctx": [
+            "e maximum, and effort is ignored for models that do not support it.\")});function Mto(e,t){return{id:e.trim()||\"inline_agent\",description:\"(inline agent)\",prompt:t.systemPrompt,tools:\"*\",model:t.model??void 0}}function Dto(e){let t=e?."
+          ],
+          "new": 0,
+          "old": 1,
+          "wf_ctx": false
+        },
+        "orchestrate_subagent": {
+          "ctx": [
+            "InvokeSubAgent:{name:\"invoke_sub_agent\",description:\"Tracks invoke sub-agent tool\"},OrchestrateSubAgent:{name:\"orchestrate_subagent\",description:\"Tracks orchestrate sub-agent (DAG pipeline) tool\"},ReportProgress:{name:\"report_progress\",descri",
+            "use strict\"});function MUn(e){return e?Irr:Rrr}var Rrr,Irr,yit=b(()=>{\"use strict\";Rrr=\"invoke_sub_agent\",Irr=\"orchestrate_subagent\"});function mPe(e){return(e.includes(\"/\")||e.includes(\"\\\\\")?e.split(/[/\\\\]/).pop()??e:e).toLowerCase().replace"
+          ],
+          "new": 0,
+          "old": 10,
+          "wf_ctx": false
+        },
+        "stage_failure": {
+          "ctx": [
+            "`Stage '${D.name}' failed: ${D.response}`;return v.warn(`[OrchestrateSubAgent] Pipeline stopped: ${F}`),_(x+1,\"stage_failure\"),w.push(...P),c.recordToolFault(new Error(F)),this.concludeToolUse(n,o,l(\"Error\",this.formatResults(w),m()))}"
+          ],
+          "new": 0,
+          "old": 1,
+          "wf_ctx": false
+        }
+      }
+    },
+    "wf_agents": {
+      "added": {},
+      "new_distinct": 9,
+      "old_distinct": 9,
+      "removed": {}
+    },
+    "wf_methods": {
+      "added": {},
+      "new_distinct": 25,
+      "old_distinct": 25,
+      "removed": {}
+    },
+    "zod_keys": {
+      "added": {
+        "answer": {
+          "ctx": [
+            ")):i.reader.readDeferring({identity:t,signal:a})),s=H9u(o.reading,i.answer);return wQr(V9u(i.answer,s),{basis:\"answer\",surface:r,authMethod:t.authMethod,rules:B8o(s).length,entries:s.status===\"enabled\"?s.entries:0}),{reading:{va",
+            "es:s.status===\"enabled\"?s.entries:0}),{reading:{values:U8o(s),rules:B8o(s),surface:r,eligibility:W9u(s),basis:\"answer\"},commit:async()=>{await o.commit(),this.answered(i,s)}}}catch(o){let s=G9u(o);_8o(s);let a={surface:r,failure"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "composeBehavior": {
+          "ctx": [
+            "terval\",toa=\"batchResult\",roa=\"byUserAnalytics\",noa=\"body\",Khe=\"client\",xWn=\"createdAt\",ioa=\"consentedAt\",ooa=\"composeBehavior\",soa=\"consentDescription\",aoa=\"clientId\",coa=\"continuousLearning\",uoa=\"currentOverages\",loa=\"currentOveragesWi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "configuration": {
+          "ctx": [
+            "urrentUsage\",CWn=\"currentUsageWithPrecision\",goa=\"cancelUrl\",gcr=\"clientVersion\",yoa=\"content\",Soa=\"code\",voa=\"configuration\",kWn=\"currency\",_Ne=\"description\",woa=\"dashboardAnalytics\",_oa=\"deviceCodeSignIn\",RWn=\"defaultModel\",AWn=\"disp",
+            "teInputTokens\",LIa=\"category\",FIa=\"character\",Rie=\"content\",$Ia=\"code\",UIa=\"completions\",BIa=\"completion\",qIa=\"configuration\",dht=\"description\",zIa=\"documentChar\",HIa=\"documentCitationEvent\",WIa=\"documentChunk\",GIa=\"documentIndex\",jIa="
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "confirmedAt": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "consentRound": {
+          "ctx": [],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "enterpriseManagementStatus": {
+          "ctx": [
+            "\"error\",Xhe=\"expiresAt\",koa=\"errorDetails\",Roa=\"eventEndpointAuthSecretArn\",Aoa=\"externalIdentityDetails\",Ioa=\"enterpriseManagementStatus\",Poa=\"endpointServiceName\",Moa=\"endpointServiceRegion\",Noa=\"encodedVerificationUrl\",Doa=\"effect\",Ooa=\"email\",L"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "envelope": {
+          "ctx": [
+            "only endpoint is answered with the unsupported-protocol-version error naming the supported revisions.\"},{rung:\"envelope\",order:4,evaluatedAt:\"edge\",codes:[Ii.InvalidParams],conformance:[\"server-stateless\"],rationale:\"A present env"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "fetchedAt": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "generatedAt": {
+          "ctx": [
+            "atureHeader\",$oa=\"freeTrialExpiry\",Uoa=\"freeTrialInfo\",Boa=\"freeTrialStatus\",qoa=\"feature\",zoa=\"features\",Hoa=\"generatedAt\",Woa=\"hash\",Fre=\"httpError\",FC=\"httpQuery\",gP=\"http\",Goa=\"instanceArn\",joa=\"identityDetails\",EWn=\"isEmailRequi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "hash": {
+          "ctx": [
+            "freeTrialExpiry\",Uoa=\"freeTrialInfo\",Boa=\"freeTrialStatus\",qoa=\"feature\",zoa=\"features\",Hoa=\"generatedAt\",Woa=\"hash\",Fre=\"httpError\",FC=\"httpQuery\",gP=\"http\",Goa=\"instanceArn\",joa=\"identityDetails\",EWn=\"isEmailRequired\",Voa=\"i",
+            "rization\",\"Cookie\"],c2a=[\"auth\",\"host\",\"hostname\",\"href\",\"path\",\"pathname\",\"port\",\"protocol\",\"query\",\"search\",\"hash\"],R_r=[\"abort\",\"aborted\",\"connect\",\"error\",\"socket\",\"timeout\"],A_r=Object.create(null);R_r.forEach(function(e)"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "identityKind": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "includedFrom": {
+          "ctx": [],
+          "new": 3,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "ino": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "lastReadAt": {
+          "ctx": [],
+          "new": 2,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "manifest": {
+          "ctx": [
+            "ider\",Scr=\"maxResults\",csa=\"mcpRegistryUrl\",usa=\"minimumTokensPerCacheCheckpoint\",lsa=\"manifestVersionId\",dsa=\"manifest\",psa=\"models\",DWn=\"notifications\",OWn=\"nextDateReset\",fsa=\"notificationId\",wNe=\"nextToken\",hsa=\"name\",Vhe=\"ori",
+            "leaved-parityfec\":{source:\"iana\"},\"text/cache-manifest\":{source:\"iana\",compressible:!0,extensions:[\"appcache\",\"manifest\"]},\"text/calendar\":{source:\"iana\",extensions:[\"ics\",\"ifb\"]},\"text/calender\":{compressible:!0},\"text/cmd\":{comp"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "mtimeMs": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "noteUserRequests": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "policy": {
+          "ctx": [
+            "UWn=\"profileName\",BWn=\"profileType\",qWn=\"preferenceType\",Msa=\"percentUsed\",Nsa=\"permissionUpdateRequired\",Dsa=\"policy\",Osa=\"profile\",Lsa=\"pricing\",Fsa=\"profiles\",zWn=\"protocol\",$sa=\"qSubscriptionType\",bcr=\"reason\",Usa=\"redeemedA",
+            "used\")return S.info(\"workflow.watch.command.permission_decided\",{workflowId:n,nodeId:i,decision:\"deny\",source:\"policy\"}),{kind:\"deny\",reason:u.reason};if(r.signal.aborted)return S.debug(\"workflow.watch.command.permission_abandon"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": true
+        },
+        "roots": {
+          "ctx": [
+            "bserver===\"workspace\"&&Array.isArray(t.roots)&&t.roots.length>0)return{observer:\"workspace\",roots:rBr(t.roots,\"roots\")};throw new Rn('observer must be \"connection\", \"session\" with a sessionId, or \"workspace\" with roots')}functi"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "stamp": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "steeringAfterPromptBody": {
+          "ctx": [
+            "ources,permissions:s.permissions,welcomeMessage:s.welcomeMessage,dispatchKind:s.dispatchKind,hooks:s.hooks,...\"steeringAfterPromptBody\"in s&&typeof s.steeringAfterPromptBody==\"boolean\"&&{steeringAfterPromptBody:s.steeringAfterPromptBody}},prompt"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "summaryKeys": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "summaryKind": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "summaryNoteTag": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "summaryNoteTemplate": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "summaryUserRequests": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "sweep": {
+          "ctx": [],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "versionId": {
+          "ctx": [
+            "a=\"userInfo\",_aa=\"userIdClaimKey\",Eaa=\"userId\",ENe=\"usageLimit\",YWn=\"usageLimitWithPrecision\",baa=\"value\",Taa=\"versionId\",xaa=\"workspaceContext\",Caa=\"webTools\",ir=\"com.amazon.kiro.controlplane\",kaa=\"com.amazon.aws.vector.consolas.c",
+            "tUrl\",t6u=\"tokenValue\",CXr=\"text\",zBo=\"title\",yCe=\"url\",pue=\"updatedAt\",r6u=\"uri\",n6u=\"usage\",kXr=\"value\",gFt=\"versionId\",i6u=\"visibility\",kt=\"com.amazon.kirowebportalservice\",ha=\"com.amazon.kirowebportalservice.bearer\",HBo=(Gn(),k"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": false
+        },
+        "vibeToDefaultV2Routing": {
+          "ctx": [
+            ",IHc,b3r,$co,x3r=E(()=>{\"use strict\";AO();tB();E3r();AHc=J0t({settingKey:\"unifiedAgent\"}),IHc=J0t({settingKey:\"vibeToDefaultV2Routing\"}),b3r=[AHc,IHc],$co=b3r});var Uco,Bco,WZ,qco=E(()=>{\"use strict\";tB();HEe();x3r();he();Uco={[$n.SESSION_TITLE",
+            "ows:Em(\"workflows\",\"off\",{hidden:!1}),unifiedAgent:ZRt(\"unifiedAgent\",{hidden:!0}),vibeToDefaultV2Routing:ZRt(\"vibeToDefaultV2Routing\",{hidden:!0}),validation:Em(\"validation\",\"off\",{hidden:!0}),specPlan:LTe(\"specPlan\",ctu,\"off\",{hidden:!0}),spe"
+          ],
+          "new": 1,
+          "old": 0,
+          "wf_ctx": true
+        }
+      },
+      "new_distinct": 564,
+      "old_distinct": 538,
+      "removed": {
+        "inlineAgents": {
+          "ctx": [
+            "lligence:kp(\"codeIntelligence\",\"off\"),subagentOrchestration:kp(\"subagentOrchestration\",\"off\"),inlineAgents:kp(\"inlineAgents\",\"off\"),checkpoint:kp(\"checkpoint\",\"off\"),semanticReview:kp(\"semanticReview\",\"on\"),fta:kp(\"fta\",\"off\"),goal:kp",
+            "flowTool?.();Lc!==void 0&&Jt.push(Lc)}Br&&Jt.push(...e.workflowChatTools?.(Xi)??[]);let Zn;if(a){let Lc=Tw(oe,\"inlineAgents\"),wce=e.subagentOrchestrationActive?.()??Tw(oe,\"subagentOrchestration\")?slo(a,Xi,m,A,Lc,Je):K6e(a,Xi,!1,m,A,Lc"
+          ],
+          "new": 0,
+          "old": 1,
+          "wf_ctx": true
+        },
+        "stages": {
+          "ctx": [
+            "n parallel. Supports bounded repeat loops via the optional 'repeat' field.\n\nPass the pipeline in the required 'stages' array \\u2014 at least one stage. Each stage needs a name, a role, and a prompt_template; add depends_on to ma"
+          ],
+          "new": 0,
+          "old": 1,
+          "wf_ctx": false
+        },
+        "subagentOrchestration": {
+          "ctx": [
+            "ionToolAvailable:i=!0}=n,s=r.client===\"kiro-web\",a=r.client===\"kiro-ide\",c=IYs(e),u=MUn(j7().isFeatureEnabled(\"subagentOrchestration\")),l=i?`\n<subagents>\n${o?CYs(u,a):xYs(u,a)}\n</subagents>\n`:\"\";return Mf({prompt:`${Qte(e,t,r)}\n${s?`\nYou are K",
+            "\"),tangentMode:kp(\"tangentMode\",\"off\"),codeIntelligence:kp(\"codeIntelligence\",\"off\"),subagentOrchestration:kp(\"subagentOrchestration\",\"off\"),inlineAgents:kp(\"inlineAgents\",\"off\"),checkpoint:kp(\"checkpoint\",\"off\"),semanticReview:kp(\"semanticRev"
+          ],
+          "new": 0,
+          "old": 1,
+          "wf_ctx": false
+        }
+      }
+    }
+  },
+  "new_bytes": 12669464,
+  "old_bytes": 12295918
+}

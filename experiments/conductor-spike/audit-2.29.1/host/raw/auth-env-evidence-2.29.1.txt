@@ -1,0 +1,44 @@
+===== AUTH_METHOD + variant docs (chat binary)
+[Authentication owner @2.28.0] l permission requestsTrust only this set of toolsAUTH_METHODAuthentication owner for the v3 engine. Use "cli" to keep authentication inside this processauth-methodMETHODStart Agent Client Protocol (ACP) agentServePort to listen onStart a persistent WebSocket server for the v3 engineAcpClientHuman-readable textstream-jsonThe run's ACP events as JSON Lines on stdout, one self-describing event per lineHookExecutorcacheAppendCognitoProvidertelemetry_stageStaticEndpointSettingsDataremote_typeRenameRe
+[Authentication owner @2.29.1] l permission requestsTrust only this set of toolsAUTH_METHODAuthentication owner for the v3 engine. Defaults to "cli", which uses the .[1mkiro-cli login.[0m session; use "client" to answer the engine's access-token requests from the ACP clientauth-methodMETHODStart Agent Client Protocol (ACP) agentAccepts and ignores the autocomplete bundle's .[1minit.[0m calls, which surviving shell integration lines still make on every new shellHidden helpers run by installers. Not for direct useServePort to l
+[Resolve access tokens @2.28.0] delsErrorDefaultModelNotFoundGetProfileErrorOidcDiscoverycliResolve access tokens for the v3 engine from the Kiro CLI credential storeCachedHookToolUseResultFsLinePowersArgsManage installed powersUpdateArgscheckCHECKOnly check for updates without installingForce installation even if already on latest versionCLI arguments for the update commandUnsupported platform: Failed to fetch manifest: Invalid manifest JSON: Invalid version string: Download failed: Checksum verification failed: expected , got
+[Resolve access tokens @2.29.1] delsErrorDefaultModelNotFoundGetProfileErrorOidcDiscoverycliResolve access tokens for the v3 engine from the Kiro CLI credential store (default)Forward the v3 engine's access-token requests to the ACP clientCachedHookToolUseResultFsLinePowersArgsManage installed powersUpdateArgscheckCHECKOnly check for updates without installingForce installation even if already on latest versionCLI arguments for the update commandUnsupported platform: Failed to fetch manifest: Invalid manifest JSON: No installab
+[Forward the v3 engine @2.29.1] r the v3 engine from the Kiro CLI credential store (default)Forward the v3 engine's access-token requests to the ACP clientCachedHookToolUseResultFsLinePowersArgsManage installed powersUpdateArgscheckCHECKOnly check for updates without installingForce installation even if already on latest versionCLI arguments for the update commandUnsupported platform: Failed to fetch manifest: Invalid manifest JSON: No installable update artifact is available for this platform (Invalid version string: Download 
+[--auth-method is only supported @2.28.0] llowing arguments are not supported with --agent-engine=v3: --auth-method is only supported with --agent-engine=v3memory.enabledread_onlyread_writeNo changelog information available for version Changelog for version :.Changelog for all versions:.No changelog information available..  No changes recorded for this version..AddedFixedChangedevent crates/chat-cli/src/cli/mod.rs:1541host_logging_readyCommand being ranhost_os_readylogs dir must be setkiro-chat.loghttps://kiro.dev/docs/cli/mcp/security/.To learn m
+[--auth-method is only supported @2.29.1] llowing arguments are not supported with --agent-engine=v3: --auth-method is only supported with --agent-engine=v3memory.enabledread_onlyread_writeNo changelog information available for version Changelog for version :.Changelog for all versions:.No changelog information available..  No changes recorded for this version..AddedFixedChangedevent crates/chat-cli/src/cli/mod.rs:1481host_logging_readyCommand being ranhost_os_readylogs dir must be setkiro-chat.loghttps://kiro.dev/docs/cli/mcp/security/.To learn m
+
+===== counts across all three (chat / launcher / term)
+Authentication owner             chat=[1, 1, 1] launcher=[0, 0, 0] term=[0, 0, 0]
+Forward the v3 engine            chat=[0, 1, 1] launcher=[0, 0, 0] term=[0, 0, 0]
+acp-callback                     chat=[2, 2, 2] launcher=[0, 0, 0] term=[0, 0, 0]
+KIRO_CLI_IS_CHILD_PROCESS        chat=[0, 1, 1] launcher=[0, 0, 0] term=[0, 0, 0]
+KIRO_DESKTOP_RELEASE_URL         chat=[1, 1, 1] launcher=[0, 0, 0] term=[0, 0, 0]
+KIRO_NO_AUTO_UPDATE              chat=[1, 1, 1] launcher=[0, 0, 0] term=[0, 0, 0]
+tool_tags                        chat=[0, 3, 3] launcher=[0, 0, 0] term=[0, 0, 0]
+cleanup-autocomplete-artifacts   chat=[0, 4, 4] launcher=[0, 0, 0] term=[0, 0, 0]
+standalone-cohort                chat=[0, 2, 2] launcher=[0, 0, 0] term=[0, 0, 0]
+symlink                          chat=[9, 11, 11] launcher=[14, 14, 14] term=[3, 3, 3]
+allowedPaths                     chat=[3, 3, 3] launcher=[0, 0, 0] term=[0, 0, 0]
+auto-approve                     chat=[5, 5, 5] launcher=[0, 0, 0] term=[0, 0, 0]
+classic                          chat=[52, 52, 52] launcher=[6, 6, 6] term=[2, 2, 2]
+deprecated                       chat=[129, 129, 129] launcher=[192, 193, 193] term=[173, 173, 173]
+sunset                           chat=[1, 1, 1] launcher=[0, 0, 0] term=[0, 0, 0]
+_kiro/auth/getAccessToken        chat=[2, 2, 2] launcher=[0, 0, 0] term=[0, 0, 0]
+_kiro/session/delete             chat=[2, 2, 2] launcher=[0, 0, 0] term=[0, 0, 0]
+
+===== KIRO_CLI_IS_CHILD_PROCESS env-table context
+[2.28.0] _DIRKIRO_SKIP_BINARY_PINNINGKIRO_API_KEYKIRO_NO_AUTO_UPDATEKIRO_DESKTOP_RELEASE_URLQ_DESKTOP_RELEASE_URLKIRO_FEED_URLKIRO_BUNDLED_FEED_FILEKIRO_NO_REMOTE_CHANGELOGKIRO_ROLLOUT_FORCE_INTERNALASBX_KIRO_MANDATORY
+[2.29.1] _DIRKIRO_SKIP_BINARY_PINNINGKIRO_API_KEYKIRO_NO_AUTO_UPDATEKIRO_CLI_IS_CHILD_PROCESSKIRO_DESKTOP_RELEASE_URLQ_DESKTOP_RELEASE_URLKIRO_FEED_URLKIRO_BUNDLED_FEED_FILEKIRO_NO_REMOTE_CHANGELOGKIRO_ROLLOUT_FORCE_IN
+
+===== tool_tags contexts
+[2.29.1] executor/mod.rs:214event crates/agent/src/agent/task_executor/mod.rs:220cacheddropping hook start cancelled before executor dispatchfound cached hooksession_idUSER_PROMPTtool_tagstool_inputtool_responseassistant_response ... truncatedfailed to execute command: command timed out after  msserver_errorMessageconnection abortedconnection closed before
+[2.29.1] encestool_choiceListResourcesRequestMethodProgressNotificationMethod2025-03-262025-06-182026-07-28tasks/updateuri_templatenotificationOutOfRangeGlobalEphemeralToolContexttool_tagstool_responsesession_id_hashturn_indexverdictmodel_servedprompt_versionlatency_msinput_tokenscache_read_tokenscache_write_tokenscreditstime_to_first_chunk_msuser_slice_to
+[2.29.1] meOwnedMaxTurnRequeststrust_optionsStartedContextRecoveryAttemptfinal_attemptSystemCommandSessionIdTokioSleepIpcMockBuildErrorOutOfRangeEphemeralPromptArgumentToolContexttool_tagstool_inputtool_responsesession_id_hashturn_indexmodel_servedprompt_versionlatency_mscache_read_tokenscache_write_tokensuser_slice_tokenspayload_truncateddropped_tool_call
+
+===== Classic deprecation + nudge
+[Classic is being deprecated with @2.28.0] ssion continues in Classic. 3.0 opens from your next launch.Classic is being deprecated with the Kiro CLI 3.0 release in October. 3.0 runs in the terminal UI and also brings cloud sessions, tangents, specs, global hooks, and more.event crates/chat-cli/src/launch/classic_nudge.rs:269Failed to
+[Classic is being deprecated. Remove @2.28.0] ine or use --v3.```3.0 is your default (chat.agentEngine=)..Classic is being deprecated. Remove  from your alias or script to continue..To open Classic once, run: kiro-cli chat --agent-engine v1......................................... ............................................... ...........
+[Classic nudge failed @2.28.0] ledge.defaultExcludePatternsFailed to update context by ID: Classic nudge failed, skipping: ......................................................................... ... ..* ... ..f ..i ..................................................................failed to get modified time 
+[Classic is being deprecated with @2.29.1] ssion continues in Classic. 3.0 opens from your next launch.Classic is being deprecated with the Kiro CLI 3.0 release in October. 3.0 runs in the terminal UI and also brings cloud sessions, tangents, specs, global hooks, and more.event crates/chat-cli/src/launch/classic_nudge.rs:269Failed to
+[Classic is being deprecated. Remove @2.29.1] ine or use --v3.```3.0 is your default (chat.agentEngine=)..Classic is being deprecated. Remove  from your alias or script to continue..To open Classic once, run: kiro-cli chat --agent-engine v1......................................... ............................................... ...........
+[Classic nudge failed @2.29.1] ledge.defaultExcludePatternsFailed to update context by ID: Classic nudge failed, skipping: ......................................................................... ... ..* ... ..f ..i ..................................................................failed to get modified time 

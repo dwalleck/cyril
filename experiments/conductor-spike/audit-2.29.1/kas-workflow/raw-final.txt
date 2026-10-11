@@ -1,0 +1,30 @@
+### OLD interaction_resolved / pending_interaction zod
+
+##### 'interaction_resolved",toolCallId'
+  @10806223: ({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[va({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption}})];case"session_metadata":return lBc(r.key,r.value)}}function lBc(e,t){switch(e){case"memoryExtractionWatermark":
+  @11009175: estion:n.question,options:n.options.map(p=>({optionId:p.optionId,name:p.name,kind:p.kind}))});let c=async(p,f)=>{let h={id:`${n.toolCallId}-resolved`,timestamp:new Date().toISOString(),payload:{type:"interaction_resolved",toolCallId:n.toolCallId,outcome:p,...f&&{selectedOption:f},executionId:n.executionId}};try{await e.appendMessages(t,r,[h])}catch(m){v.warn("[withPersistedInteraction] Failed to persist interaction_resolved",{se
+   ...more
+
+##### 'pending_interaction",toolCallId'
+  @10806031: ll||r.exitCode!=null)&&{result:{...r.output!=null&&{output:r.output},...r.exitCode!=null&&{exitCode:r.exitCode}}}}}};return[va({kind:"hook_update",hook:o})]}case"pending_interaction":return[va({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[va({kind:"interaction_resolved",toolCallId:r.tool
+  @11008894: Messages(t,r,[a])}catch(p){v.warn("[withPersistedInteraction] Failed to persist pending_interaction",{sessionId:t,toolCallId:n.toolCallId,error:p instanceof Error?p.message:String(p)})}await s({kind:"pending_interaction",toolCallId:n.toolCallId,interactionType:n.interactionType,question:n.question,options:n.options.map(p=>({optionId:p.optionId,name:p.name,kind:p.kind}))});let c=async(p,f)=>{let h={id:`${n.toolCallId}-resolved`,
+   ...more
+
+### OLD 'not available in this session' / notInForce
+  not available in this session         0->   2
+  notInForce                            0->   3
+  inForce                               0->  34
+  recipeInForce                         0->   7
+  includeResolver                       0->  13
+  generated:// includes                 0->   1
+
+### Tau( callers NEW
+
+##### 'Tau('
+  @11142566: esolver?.(t,n=>e.recipeInForce(n,t,r))??Ube}function dxo(e,t){e.length!==0&&S.debug("workflow.include.warnings",{count:e.length,sourceId:bo(t)})}async function Tau(e,t,r,n,i){let{raw:o}=await kIt(e,{sources:t,recipeFs:r,inForce:i},vau),s=await xae(o,n,{sourceLocation:e});if(!s.ok)throw new ZBe(`_kiro/workflow/new: '${e}' h
+  @11145614: ${D}' requires a non-empty 'prompt' input \u2014 it becomes the agent's task text verbatim.`);f=VTo(M,c.inputs)}else{let M=e.host.recipeSourcePolicy(p);f=await Tau(D,M,e.host.recipeFs,sxo(e.host,p,u),L=>e.host.recipeInForce(L,p,u))}}let m=e.host.resolveWorkspacePathForNew({...c.workflowPath!==void 0&&{workflowPath:c.workfl
+
+### who calls sxo / passes includeResolver to _kiro/workflow/new handler
+
+##### 'workflowNew:'
+  @11204689: BaseDirFor(t);return{resolve:i=>mxo({sources:this.recipeSourcePolicy(t),recipeFs:tqe(),bundledSource:hmo,generatedBaseDir:n,inForce:r}).resolve(i)}}workflowBaseDirFor(t){return M0.join(this.host.sessionsPath,IS([...t]),Tze)}createRunWorkflowTool(t,r,n){let i={workflowNew:o=>this.handlers()["_kiro/workflow/new"](o),workflowInvoke:o=>this.handlers()["_kiro/workflow/invoke"](o),workflowInspect:o=>this.handlers()["_kiro/workflow/inspect"](o)};return new Zqe({handlers:i,recipes:t,creatorDeps:r,...n!==void 0&&{dynamicDelegation:n},i

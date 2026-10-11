@@ -1,0 +1,12 @@
+#### 2.28.0: TuiCommand:: variants 0 []
+     Args structs 14
+#### 2.29.0: TuiCommand:: variants 0 []
+     Args structs 14
+#### 2.29.1: TuiCommand:: variants 0 []
+     Args structs 14
+--- 2.29.0 vs 2.28.0: variants +[] -[]
+    Args +{} -{}
+    Args changed {}
+--- 2.29.1 vs 2.28.0: variants +[] -[]
+    Args +{} -{}
+    Args changed {}

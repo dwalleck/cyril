@@ -1,0 +1,9 @@
+(node:3449131) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.26"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[INFO] [KiroAgent] MCP subsystem initialized
+(node:3449131) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=5
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6
