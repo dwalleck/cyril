@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 [2.29.1 copy of static-kas-flags-2.28.0.py] Changes vs 2.28.0:
   * env-map regex accepts a `$`-prefixed minified enum var (`[$n.X]:"KIRO_FEATURE_..."`,
     KAS 0.66.33) — the 2.28.0 copy matched only `\w+` and reported 0 env-reachable;
