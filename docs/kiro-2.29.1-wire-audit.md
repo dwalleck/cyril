@@ -21,10 +21,12 @@ The three findings that matter most:
    server-pushed `server_cascade_config`. cyril drops the notification at
    `crates/cyril-core/src/protocol/convert/kas.rs:525`. This is the same feature the 2.28.0 audit
    captured live on the v2 engine (§3a there); on 0.66.33 it has a KAS wire shape of its own.
-2. **cyril's KAS settings handshake is now partly dead.** `subagentOrchestration` and `inlineAgents`
-   were removed from the `AgentSettings` schema in 0.66.33 (the `orchestrate_subagent` delegation
-   tool is gone with them), and `todoList` has been stale since 0.66.22. cyril still sends both
-   (`crates/cyril-core/src/protocol/kas/settings.rs:82,93-98`).
+2. **Two `AgentSettings` keys cyril sends are now dead on the wire.** 0.66.33 removed
+   `subagentOrchestration` and `inlineAgents` from the schema (14→0, 11→0; the `orchestrate_subagent`
+   delegation tool is gone with them), and `todoList` has been outside the schema since 0.66.22.
+   cyril sends `subagentOrchestration` (`settings.rs:97`, `DEFAULTS_ON`) and `todoList`
+   (`settings.rs:82`, `BOOL_MAP`) — both now land as `configuration.intake.unknown-key`. cyril has no
+   `inlineAgents` sender at all (0 hits in `crates/`); that removal is upstream-only.
 3. **Two unannounced workflow items**: a sixth recipe node type `include` (recipe composition) and
    the propagation of `consentRound` onto the `pending_interaction` / `interaction_resolved`
    session_info kinds. The latter is the wire mechanism behind the open ticket for "Always allow"
