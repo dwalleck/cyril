@@ -1,0 +1,7 @@
+# Lane scratch — reproducible from the carve, never worth committing:
+#   *.mid        masked copies of the 33-42 MB host binaries (host lane reads .rodata)
+#   tmp/         probe temp HOMEs (incl. a 176 MB downloaded embedding model)
+# The lane FINDINGS.md, RUN-STATE.md, feed/frames JSON and the top-level captures are tracked.
+*.mid
+tmp/
+__pycache__/

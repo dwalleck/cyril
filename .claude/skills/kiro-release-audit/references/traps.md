@@ -33,6 +33,11 @@ the positive form; the history says why it is a rule.
    silently spawns the installed `~/.local/bin/kiro-cli-chat`. Prepend the archive's `bin/` to
    PATH and record the child's `/proc/<pid>/exe` in every v2 capture. Direct `node acp-server.js`
    spawns from the carve are immune, and they also avoid the host's stale-engine cleanup.
+   The same split applies to probes: **ask the binary that owns the namespace.** `kiro-cli internal
+   --help` lists 25 fig/shell helpers and none of the hidden agent helpers; `kiro-cli-chat _
+   cleanup-autocomplete-artifacts --dry-run` works, while the launcher errors `unrecognized
+   subcommand` and the chat binary rejects the name `internal`. A "subcommand absent" verdict from
+   the wrong binary is a wrong-binary artifact (2.29.1, H4).
 9. **Binaries are stripped since 2.23.0.** No `nm`/`rustfilt` lane. `crates/<crate>/src/*.rs`
    source-path strings, serde field literals and the compiled-in rollout table survive and are the
    host lane's material. Confirm any Rust-side claim with such a path, never a bare word match
@@ -67,3 +72,18 @@ the positive form; the history says why it is a rule.
     origin has no 2.28.1 tarball. `audit-state.sh` marks such versions "no Linux tarball on origin";
     their lines fold into the next shipped release. Run `acquire.sh` unpiped: `cmd | tail` hides its
     non-zero exit and a dependent carve then fails on a missing file.
+20. **`BUILD_HASH` is a release-train stamp, not a content digest.** 2.29.0 and 2.29.1 share
+    `31e6bb3f…` while every host binary differs (chat 215,572,200 → 215,787,048 B; `.text` +190,656;
+    source trees changed). Decide identity by binary size+sha256 and by the readable `.d.ts`/JS
+    content; never collapse two releases because `BUILD_HASH` matches.
+21. **A live leg that finished "suspiciously fast" is void.** The 2.29.1 live lane's first 0.66.26
+    sweep leg returned in a fraction of its estimated time and covered fewer paths; it was discarded
+    and re-run. Treat a short capture as a lead to reproduce, never as a verdict.
+22. **`kiro-cli version --changelog` is remote.** Since 2.28.0 the endpoint is fetched live, so an
+    archived binary prints the CURRENT feed, never its own. Take per-version changelogs from
+    `stable/<ver>/feed.json` and copy them into the evidence directory.
+23. **"The reference client stopped sending it" ≠ "the engine rejects it."** The 2.28.0 audit
+    concluded KEEP `subagentOrchestration` because the TUI no longer sent it; 0.66.33 had *removed*
+    it from the `AgentSettings` schema, and the engine now logs `configuration.intake.unknown-key`.
+    Before deciding keep-vs-drop, grep the bundled schema in BOTH versions and, where possible,
+    confirm the intake at `KIRO_LOG_LEVEL=debug` against a control arm.
