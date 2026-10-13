@@ -1,0 +1,359 @@
+#!/usr/bin/env -S uv run --script
+# /// script
+# dependencies = ["pyte"]
+# ///
+"""Real Cyril PTY smoke with capture-derived, local-only ACP frames."""
+import codecs
+import copy
+import fcntl
+import hashlib
+import json
+import os
+import pathlib
+import pty
+import select
+import signal
+import sqlite3
+import struct
+import subprocess
+import sys
+import tempfile
+import termios
+import time
+import traceback
+
+ROOT = pathlib.Path(__file__).resolve().parent / 'final-campaign'
+SOURCE = pathlib.Path('/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion')
+BINARY = pathlib.Path('/tmp/cyril-lki9-m20.96sygg/cyril-smoke')
+TAIL = SOURCE / 'experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl'
+HEAD = '99ed7ce52a4ae7c422ebd62dd98e5f73b707901e'
+TREE = 'c2019f58762a55ef0e538c688e080efde4079a17'
+SID = 'sess_lki9_controlled_smoke'
+WF_HEADER = '─── ⚙ workflow "audit-channels-2.26.0" completed · agent follow-up ───'
+GENERIC_HEADER = '─── ⚙ agent-initiated · send-message-wake ───'
+STEER_TEXT = 'LKI9_SMOKE_STEER_BEFORE_FIRST_CONTENT'
+
+
+def digest(path):
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def append(path, value):
+    with path.open('a') as output:
+        output.write(json.dumps(value, ensure_ascii=False) + '\n')
+
+
+def replace_session(value, old):
+    if isinstance(value, str):
+        return SID if value == old else value
+    if isinstance(value, list):
+        return [replace_session(child, old) for child in value]
+    if isinstance(value, dict):
+        return {key: replace_session(child, old) for key, child in value.items()}
+    return value
+
+
+def frames():
+    records = [json.loads(line) for line in TAIL.read_text().splitlines()]
+    selected = {name: records[index - 1]['msg'] for name, index in {
+        'run-start': 27, 'completion': 156, 'start': 160, 'chunk1': 165, 'chunk2': 166, 'end': 240,
+    }.items()}
+    old = selected['start']['params']['sessionId']
+    return {name: replace_session(message, old) for name, message in selected.items()}
+
+
+def agent():
+    wire = ROOT / 'wire.jsonl'
+    source_frames = frames()
+    control_index = 1
+    created = False
+    turn_index = 0
+
+    def send(message):
+        append(wire, {'dir': 'agent->client', 'monotonic': time.monotonic(), 'msg': message})
+        print(json.dumps(message), flush=True)
+
+    def info(kind, **fields):
+        send({'jsonrpc': '2.0', 'method': 'session/update', 'params': {
+            'sessionId': SID, 'update': {'sessionUpdate': 'session_info_update',
+            '_meta': {'kiro': {'kind': kind, **fields}}}}})
+
+    def control(action):
+        nonlocal turn_index
+        if action == 'workflow-start':
+            send(source_frames['run-start'])
+            send(source_frames['completion'])
+            turn_index += 1
+            send(source_frames['start'])
+        elif action == 'workflow-content':
+            send(source_frames['chunk1'])
+            send(source_frames['chunk2'])
+        elif action == 'end':
+            send(source_frames['end'])
+        elif action in ('generic-start', 'silent-start'):
+            turn_index += 1
+            message = copy.deepcopy(source_frames['start'])
+            message['params']['update']['_meta']['kiro']['messageId'] = f'lki9-{turn_index}-turn-start'
+            send(message)
+        elif action == 'generic-content':
+            message = copy.deepcopy(source_frames['chunk1'])
+            message['params']['update']['_meta']['kiro']['agentInitiatedReason'] = 'send-message-wake'
+            message['params']['update']['_meta']['kiro']['replayId'] = 'lki9-generic-say'
+            message['params']['update']['content']['text'] = 'LKI9_GENERIC_WAKE_BODY'
+            send(message)
+        else:
+            raise ValueError(action)
+
+    while True:
+        ready, _, _ = select.select([sys.stdin], [], [], 0.03)
+        if ready:
+            line = sys.stdin.readline()
+            if not line:
+                return
+            message = json.loads(line)
+            append(wire, {'dir': 'client->agent', 'monotonic': time.monotonic(), 'msg': message})
+            method, ident = message.get('method'), message.get('id')
+            if method == 'initialize':
+                send({'jsonrpc': '2.0', 'id': ident, 'result': {'protocolVersion': 1,
+                    'agentCapabilities': {'loadSession': True, '_meta': {'kiro': {}}},
+                    'agentInfo': {'name': 'lki9-controlled-smoke', 'version': '0.66.15'}, 'authMethods': []}})
+            elif method == 'session/new':
+                send({'jsonrpc': '2.0', 'id': ident, 'result': {'sessionId': SID}})
+                created = True
+            elif method == '_session/steer':
+                mid = f'steer-lki9-{turn_index}'
+                info('steering_queued', messageId=mid, content=message['params']['message'])
+                send({'jsonrpc': '2.0', 'id': ident, 'result': {'messageId': mid, 'queued': True}})
+            elif method == 'session/cancel':
+                terminal = copy.deepcopy(source_frames['end'])
+                terminal['params']['update']['_meta']['kiro'].update(
+                    messageId=f'lki9-{turn_index}-turn-end', stopReason='cancelled', turnEnd={'stopReason': 'cancelled'})
+                send(terminal)
+                if ident is not None:
+                    send({'jsonrpc': '2.0', 'id': ident, 'result': {}})
+            elif method == 'session/prompt':
+                send({'jsonrpc': '2.0', 'id': ident, 'error': {'code': -32603, 'message': 'Unexpected session/prompt: unsolicited-turn smoke'}})
+            elif method and ident is not None:
+                send({'jsonrpc': '2.0', 'id': ident, 'result': {}})
+        command = ROOT / f'control-{control_index}.json'
+        if created and command.exists():
+            request = json.loads(command.read_text())
+            control(request['action'])
+            (ROOT / f'sent-{control_index}.json').write_text(json.dumps({'action': request['action'], 'monotonic': time.monotonic()}))
+            control_index += 1
+
+
+def smoke():
+    import pyte
+
+    ROOT.mkdir(exist_ok=True)
+    assert not (ROOT / 'wire.jsonl').exists(), 'Choose a fresh evidence directory for each run'
+    captured_frames = frames()
+    (ROOT / 'replay-frames.json').write_text(json.dumps(captured_frames, ensure_ascii=False, indent=2))
+    receipt = {
+        'result': 'RUNNING', 'seam': 'real Cyril executable + PTY + controlled local ACP agent',
+        'limits': ['No real KAS backend or billed calls; this proves client integration only.',
+                   'PTY/pyte snapshots are not native graphical-terminal host evidence.',
+                   'UI idle observation does not directly count internal TurnCompleted events.',
+                   'No watchdog-threshold, permission-overlay, B5, or B6 proof in this campaign.'],
+        'binary': str(BINARY), 'binary_sha256': digest(BINARY),
+        'source_head': HEAD, 'source_tree': TREE, 'script': str(pathlib.Path(__file__).resolve()),
+        'script_sha256': digest(pathlib.Path(__file__).resolve()),
+        'provenance_commands': ['git rev-parse HEAD HEAD^{tree} (in source worktree)', f'sha256sum {BINARY} {TAIL}'],
+        'harness_adaptation': 'Initial caption-only attempt assumed nonexistent Ready label. A second attempt used a shared target binary rebuilt during parent mutation tests and is invalid provenance; final campaign uses the pinned restored executable and captured run_start prerequisite.',
+        'source_capture': str(TAIL), 'source_capture_sha256': digest(TAIL),
+        'capture_lines': {'run-start': 27, 'completion': 156, 'start': 160, 'chunk1': 165, 'chunk2': 166, 'end': 240},
+        'mutations': ['Replace captured parent session with sess_lki9_controlled_smoke.',
+                      'Generic turn changes reason/text/replayId; silent turn has no content.',
+                      'Cancelled turn uses captured terminal envelope with stopReason cancelled.'],
+        'run_command': f'uv run --script {pathlib.Path(__file__).resolve()}',
+        'tui_command': [str(BINARY), '--cwd', '<isolated-temp-home>', '--agent-engine', 'kas'],
+        'authentication': 'isolated HOME with synthetic auth_kv/state only; KIRO_KAS_SERVER_PATH local node wrapper',
+        'assertions': [], 'captures': [],
+        'source_provenance': 'Parent supplied pinned --features kas executable built at 99ed7ce after byte-identical core restore; App additions at build time are test-only.',
+        'ui_observation_contract': 'Idle/Ready has no literal Ready label; Waiting renders Thinking... plus toolbar spinner; Streaming keeps toolbar spinner without Thinking; settled idle has neither.',
+    }
+    screen = pyte.Screen(120, 36)
+    stream = pyte.Stream(screen)
+    decoder = codecs.getincrementaldecoder('utf-8')('replace')
+    master, slave = pty.openpty()
+    fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack('HHHH', 36, 120, 0, 0))
+    raw_bytes = bytearray()
+    started = time.monotonic()
+    control_index = 0
+    raw = (ROOT / 'terminal.ansi').open('wb')
+    with tempfile.TemporaryDirectory(prefix='cyril-lki9-isolated-home-') as scratch:
+        store = pathlib.Path(scratch) / '.local/share/kiro-cli/data.sqlite3'
+        store.parent.mkdir(parents=True)
+        with sqlite3.connect(store) as database:
+            database.execute('CREATE TABLE auth_kv (key TEXT PRIMARY KEY, value TEXT)')
+            database.execute('CREATE TABLE state (key TEXT PRIMARY KEY, value TEXT)')
+            database.execute('INSERT INTO auth_kv VALUES (?, ?)', ('kirocli:odic:token', json.dumps({'access_token': 'AT-synthetic-lki9-smoke', 'expires_at': '2099-01-01T00:00:00Z'})))
+            database.execute('INSERT INTO state VALUES (?, ?)', ('api.codewhisperer.profile', json.dumps({'arn': 'arn:aws:codewhisperer:us-east-1:1:profile/SMOKE'})))
+        server = pathlib.Path(scratch) / 'mock-server.js'
+        server.write_text("const {spawn}=require('node:child_process');" +
+                          f"const child=spawn({json.dumps(sys.executable)},[{json.dumps(str(pathlib.Path(__file__).resolve()))},'agent'],{{stdio:'inherit'}});" +
+                          "child.on('exit',code=>process.exit(code ?? 1));process.on('SIGTERM',()=>child.kill('SIGTERM'));")
+        env = os.environ.copy()
+        env.update(TERM='xterm-256color', COLORTERM='truecolor', HOME=scratch,
+                   USERPROFILE=scratch, XDG_CONFIG_HOME=scratch, XDG_DATA_HOME=str(pathlib.Path(scratch) / '.local/share'),
+                   XDG_CACHE_HOME=str(pathlib.Path(scratch) / '.cache'), KIRO_KAS_SERVER_PATH=str(server))
+        command = [str(BINARY), '--cwd', scratch, '--agent-engine', 'kas']
+        process = subprocess.Popen(command, stdin=slave, stdout=slave, stderr=slave,
+                                   env=env, cwd=scratch, start_new_session=True)
+        receipt['tui_command_actual'] = command
+        os.close(slave)
+
+        def drain(seconds=0.15):
+            until = time.monotonic() + seconds
+            while time.monotonic() < until:
+                ready, _, _ = select.select([master], [], [], max(0, until - time.monotonic()))
+                if not ready:
+                    break
+                try:
+                    data = os.read(master, 65536)
+                except OSError:
+                    break
+                if not data:
+                    break
+                raw.write(data)
+                raw.flush()
+                raw_bytes.extend(data)
+                stream.feed(decoder.decode(data))
+
+        def text():
+            return '\n'.join(screen.display)
+
+        def records():
+            path = ROOT / 'wire.jsonl'
+            if not path.exists():
+                return []
+            return [json.loads(line) for line in path.read_text().splitlines()]
+
+        def outgoing(method):
+            return [record for record in records() if record['dir'] == 'client->agent' and record['msg'].get('method') == method]
+
+        def await_condition(description, predicate, seconds=20):
+            until = time.monotonic() + seconds
+            while not predicate():
+                if time.monotonic() > until or process.poll() is not None:
+                    raise AssertionError(f'{description}; exit={process.poll()}\n{text()}')
+                drain()
+
+        def check(description, predicate):
+            assert predicate, description + '\n' + text()
+            receipt['assertions'].append({'claim': description, 'result': 'PASS', 'monotonic': time.monotonic()})
+
+        def capture(name):
+            drain(0.2)
+            (ROOT / f'{name}.txt').write_text(text())
+            (ROOT / f'{name}.ansi').write_bytes(bytes(raw_bytes))
+            receipt['captures'].append(name)
+            append(ROOT / 'events.jsonl', {'kind': 'capture', 'name': name, 'monotonic': time.monotonic(), 'terminal_bytes': len(raw_bytes)})
+
+        def control(action):
+            nonlocal control_index
+            control_index += 1
+            append(ROOT / 'events.jsonl', {'kind': 'control', 'action': action, 'monotonic': time.monotonic()})
+            (ROOT / f'control-{control_index}.json').write_text(json.dumps({'action': action}))
+            await_condition(f'Agent did not send {action}', lambda: (ROOT / f'sent-{control_index}.json').exists())
+            drain(0.4)
+
+        def send(value):
+            append(ROOT / 'events.jsonl', {'kind': 'pty-input', 'value': value, 'monotonic': time.monotonic()})
+            os.write(master, value.encode())
+            drain(0.3)
+
+        def ready():
+            return SID in screen.display[0] and not busy() and 'Thinking...' not in text()
+
+        def busy():
+            return SID in screen.display[0] and any(glyph in screen.display[0] for glyph in '⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏')
+
+        try:
+            await_condition('initialize and session/new handshake missing', lambda: outgoing('initialize') and outgoing('session/new'))
+            drain(1)
+            capture('00-initial-idle')
+            await_condition('Initial idle toolbar missing', ready)
+            check('Launched without --prompt and sent no session/prompt', '--prompt' not in command and not outgoing('session/prompt'))
+            control('workflow-start')
+            await_condition('Unsolicited turn_start did not show busy spinner and Thinking before content', lambda: busy() and 'Thinking...' in text())
+            capture('01-workflow-busy-before-content')
+            check('Busy before first content, with no invented header', busy() and 'agent follow-up' not in text() and "I'll review" not in text())
+            send('\x1b[200~' + STEER_TEXT + '\x1b[201~')
+            send('\r')
+            await_condition('Mid-turn input did not send _session/steer', lambda: outgoing('_session/steer'))
+            check('Before first content, submitted text uses actual _session/steer not session/prompt',
+                  outgoing('_session/steer')[0]['msg']['params'] == {'sessionId': SID, 'message': STEER_TEXT} and not outgoing('session/prompt'))
+            capture('02-steer-before-content')
+            control('workflow-content')
+            await_condition('Named workflow header or captured body missing', lambda: WF_HEADER in text() and "I'll review the workflow results to see what was" in text())
+            capture('03-workflow-header-and-body')
+            check('Named workflow header appears exactly once and before first body',
+                  text().count(WF_HEADER) == 1 and text().index(WF_HEADER) < text().index("I'll review the workflow"))
+            drain(1.2)
+            check('Wake keeps the active toolbar spinner while waiting without turn_end', busy())
+            control('end')
+            await_condition('Wake turn_end did not return to idle toolbar', ready)
+            capture('04-workflow-idle-after-turn-end')
+            check('Workflow wake returns to idle toolbar after captured turn_end', ready())
+            check('Two tagged chunks still render only one named workflow header', text().count(WF_HEADER) == 1)
+            control('generic-start')
+            await_condition('Generic unsolicited turn_start did not show Thinking', busy)
+            control('generic-content')
+            await_condition('Generic agent-initiated header/body missing', lambda: GENERIC_HEADER in text() and 'LKI9_GENERIC_WAKE_BODY' in text())
+            capture('05-generic-header-and-body')
+            check('Generic reason header appears once before body', text().count(GENERIC_HEADER) == 1 and text().index(GENERIC_HEADER) < text().index('LKI9_GENERIC_WAKE_BODY'))
+            send('\x1b')
+            await_condition('Esc did not send session/cancel', lambda: outgoing('session/cancel'))
+            await_condition('Cancelled generic turn did not return to idle toolbar', ready)
+            capture('06-generic-idle-after-escape')
+            check('Esc sends actual session/cancel for the wake session', outgoing('session/cancel')[0]['msg'].get('params') == {'sessionId': SID})
+            control('silent-start')
+            await_condition('Silent turn_start did not show Thinking', busy)
+            capture('07-silent-busy')
+            drain(1.2)
+            check('Tagless silent wake remains Thinking without adding a header', busy() and text().count(WF_HEADER) == 1 and text().count(GENERIC_HEADER) == 1)
+            control('end')
+            await_condition('Silent turn_end did not return to idle toolbar', ready)
+            capture('08-silent-idle')
+            check('Silent wake returns idle with no additional header', ready() and text().count(WF_HEADER) == 1 and text().count(GENERIC_HEADER) == 1)
+            check('No session/prompt sent anywhere in the unsolicited campaign', not outgoing('session/prompt'))
+            wire = records()
+            complete_at = next(i for i, rec in enumerate(wire) if rec['msg'].get('method') == '_kiro/workflow/run_complete')
+            start_at = next(i for i, rec in enumerate(wire) if rec['msg'].get('params', {}).get('update', {}).get('_meta', {}).get('kiro', {}).get('kind') == 'turn_start')
+            content_at = next(i for i, rec in enumerate(wire) if rec['msg'].get('params', {}).get('update', {}).get('sessionUpdate') == 'agent_message_chunk')
+            check('Recorded workflow completion precedes turn_start, which precedes tagged body', complete_at < start_at < content_at)
+            receipt['wire_counts'] = {'initialize': len(outgoing('initialize')), 'session/new': len(outgoing('session/new')), '_session/steer': len(outgoing('_session/steer')), 'session/cancel': len(outgoing('session/cancel')), 'session/prompt': len(outgoing('session/prompt'))}
+            receipt['result'] = 'PASS'
+        except BaseException as error:
+            capture('failure-screen')
+            receipt.update(result='FAIL', error=str(error), traceback=traceback.format_exc())
+        finally:
+            if process.poll() is None:
+                try:
+                    os.write(master, b'\x11')
+                    drain(0.3)
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGTERM)
+                    process.wait(timeout=5)
+            receipt['process_exit'] = process.poll()
+            receipt['seconds'] = round(time.monotonic() - started, 3)
+            receipt['terminal_sha256'] = digest(ROOT / 'terminal.ansi')
+            receipt['wire_sha256'] = digest(ROOT / 'wire.jsonl')
+            raw.close()
+            os.close(master)
+    (ROOT / 'result.json').write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
+    print(json.dumps(receipt, ensure_ascii=False, indent=2))
+    if receipt['result'] != 'PASS':
+        raise SystemExit(1)
+
+
+if __name__ == '__main__':
+    if sys.argv[1:] == ['agent']:
+        agent()
+    elif not sys.argv[1:]:
+        smoke()
+    else:
+        raise SystemExit('usage: uv run --script /tmp/cyril-lki9-smoke-<unique>/smoke.py')

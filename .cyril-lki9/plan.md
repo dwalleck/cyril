@@ -429,7 +429,7 @@ Sweep (step 7): App `origin` binding comment still accurate (announcements are p
 
 **Gate.**
 1. Affected unit tests — PASS: `cargo nextest run --workspace --all-features` → 2115 passed, 13 skipped.
-2. Falsifier C20 — PASS: `lki9_replay_{tail_wake_header_and_busy_span, gate_on_label_permission_and_step_header, busy_parent_notice, step_verdict_notice, silent_wake_is_busy_without_header}`.
+2. Falsifier C20 — PASS in the resumed completion record below, not by retention of the original run. The five `lki9_replay_*` tests added in `e2bc5842` were deleted by `44f21e45` and have now been restored and requalified against the approved correlation rule.
 3. Stress fixture — PASS: gate-on (two chained wakes across two sessions, runLabel naming, a permission raised mid-wake) and prompt (silent wake pre-empted by a prompt — busy with zero frames, no header, two completions).
 4. Implementation vs oracle — PASS: every expected value comes from the traces (P1–P7 probe outputs: main/step session ids, run names, the injected wake text, the per-turn tagging table); spec success criteria B1, B2 (busy span + single TurnCompleted + idle after), B2-approvals, B5 (busy + step), B7 all hold on the committed captures.
 5. Module shape — PASS: `C21 PASS (… app.rs: 54, state.rs: 75)`; `mediate` deepens the turn mediator (same owner) — no ownership move; the ledger's `TurnMediator` interface gains one composed method.
@@ -475,14 +475,117 @@ Inherited plan references: design.md § "Isolated design-conformance review (202
 
 - Assembled tree = I0 (#144) + I1 (#145) + I2 (this branch). Lanes: fmt, clippy (`--all-features`, `--features kas`, default), nextest (all-features, default), doc tests, C21 — all PASS on the tree above.
 - Design conformance: review 3 `RESULT: PASS` (reviewer: fresh-context general-purpose subagent; isolation: no implementation transcript, blind Phase 1 before `.cyril-lki9/`).
-- Every design claim C1–C22 discharged by its slice record or this repair record.
-- Open: cyril-lki9 and cyril-5n75 close only when the stack merges (human approval).
+- C20 is not covered by the merged tree's original PASS claim: the later repair deleted its five replay tests. Other historical gates retain only their recorded scope; current C20 evidence belongs to the resumed completion record below.
+- I0, I1, and I2 merged as PRs #144, #145, and #147 (I2 merge `00239d28ea6976bb2cf11847be8696c5818f29f1`). Tracker records cyril-lki9 and cyril-5n75 remain open; this resumption does not infer publication or closure authorization from historical approvals.
+
+## Resumed completion (2026-10-12)
+
+Scope: preserve the approved option-b behavior and correlation rule; record it
+in ADR-0011 as the ticket requires, and restore the missing C20 assembled
+capture replay. This is an acceptance repair, not a production redesign.
+The worktree starts at `99ed7ce52a4ae7c422ebd62dd98e5f73b707901e`.
+`CONTEXT.md` already defines agent-initiated turn ownership and mediation;
+no new domain term is introduced.
+
+**Provenance.** `e2bc5842` introduced the five replay tests. The App test hunk
+in `44f21e45` removed their helper and every replay while repairing label
+correlation. The core production replay seam survived. Only those test
+behaviors were recovered against the amended specification, not the
+historical App file or its obsolete FIFO rule.
+
+**Checked source/environment.** Base above plus this commit's App tests;
+`crates/cyril/src/app.rs` SHA-256
+`a216c95e23d32014d147b6d1de2d084a574f38861af281dd5a56c240a19d0281`.
+Linux x86_64, rustc `1.94.0 (4a4ef493e 2026-03-02)`.
+Commands below used `CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target`;
+the inherited empty value made the first Cargo metadata call fail before
+any tests ran. The initial replay compilation exposed an obsolete private
+field access, corrected to `ToolCall::title().to_owned()` without changing
+the assertion. No production code changed.
+
+**Performed checks — PASS.**
+
+| Check | Command / observable | Result |
+|---|---|---|
+| Restored C20 | `cargo nextest run -p cyril --all-features -E 'test(/lki9_replay/)'` | All five captures pass: tail header/order/busy span, gate-on permission and step header, busy-parent notice, step verdict, silent wake. |
+| Format | `cargo fmt --check` | Clean. |
+| Lint | `cargo clippy --all-targets --all-features -- -D warnings` | Clean. |
+| All-feature suite | `cargo nextest run --workspace --all-features --no-fail-fast` | 2,292 passed; 13 skipped. Includes C20 and real bridge watchdog/cancel checks. |
+| Default suite | `cargo nextest run --workspace --no-fail-fast` | 2,285 passed; 13 skipped. C20 is KAS-gated and is proved by the all-feature run, not this row. |
+| Doctests | `cargo test --workspace --all-features --doc` | 2 passed. |
+| C21 | `python3 .cyril-lki9/oracles/shape.py` | PASS against base `99ed7ce5`; App and UiState production deltas both zero. |
+
+Repository run IDs and totals:
+[`logs/2026-10-12-gates.txt`](logs/2026-10-12-gates.txt).
+The full-suite skipped tests do not supply lki9 evidence; all five required
+C20 tests and the affected bridge tests executed.
+
+**M20 sensitivity — PASS.** Temporarily clear the newly allocated server
+turn owner and return `Forward` instead of `BeginServerTurn` in
+`TurnMediator::observe_turn_start`. The mutation compiles; all five replay
+tests fail because a main turn never reaches its end (the mediator drops
+its unowned terminal). Restore the exact pre-mutation bytes (`cmp`), then
+the same five tests pass. Restored mediator SHA-256:
+`9d54f01671f913af70964ec05fe536f5760df5d30b82045d823290b5a2803c79`.
+Receipts: [red](logs/2026-10-12-m20-red.txt),
+[restored green](logs/2026-10-12-m20-restored.txt).
+The stable full gates ran before mutation and remain applicable after
+byte-exact restoration; no permanent implementation change was made.
+
+**Independent review — PASS.** The fresh reviewer checked the restored App
+replays against B1–B7/C20, current permission routing, newest-completion
+correlation, notice/header ordering, feature gates, and the ADR amendment.
+No repair blocker remained; the private-title accessor correction preserves
+the reviewed assertion. Prior production conformance is retained for
+unchanged ownership/interfaces, not as proof that deleted tests ran.
+
+**Consumer proof — PASS.** The real KAS-enabled Cyril executable ran in a
+PTY against a local controlled ACP agent, using captured run-start,
+run-completion, turn-start, tagged chunks and terminal envelopes. Thirteen
+assertions passed; process exit 0. Observed busy before content, one named
+workflow header before the body, idle after turn-end, a generic wake header,
+and a silent wake with no invented header. Actual keyboard input generated
+one `_session/steer` and Esc generated one `session/cancel`; no
+`session/prompt` was sent.
+
+The executable was copied out of the shared Cargo target directory after
+the restored-source build; SHA-256
+`5b8cac4568488a6d7e9783f6c3ec878a0ce7d7a34f8c2dc1c3937846009d3bca`.
+An earlier campaign using the mutable target binary is not acceptance
+evidence. The final fixture also registers the captured run before its
+completion; an unknown run correctly produces a nameless header.
+The integration owner inspected the actual busy, named-header, and idle
+screen captures and verified retained wire/terminal hashes.
+
+Receipt, exact executed driver source, wire and terminal captures, and
+nine text screens: [`logs/2026-10-12-smoke/`](logs/2026-10-12-smoke/).
+The driver is archived byte-for-byte as `driver.py.txt` (its hash matches
+the receipt), not installed as a reusable harness. Reproduction requires a
+scratch copy with `SOURCE`, `BINARY`, `HEAD`, and `TREE` set for that run.
+The scratch script, executable copies, and mutation backup were removed
+after retaining the evidence.
+
+This is client-integration evidence, not a new KAS backend or native
+graphical-terminal qualification. Bridge tests cover watchdog timing,
+capture replays cover permission/injection/completion counts, and existing
+tracker tests cover newest-completion selection. Historical KAS observations
+remain the reference for the unchanged protocol assumptions.
+
+**Completion — PASS.** The ADR requirement, restored C20 coverage and
+sensitivity, consumer smoke, repository gates, and independent review are
+satisfied. No in-scope implementation or qualification failure remains.
+Publication and tracker closure are not performed by this completion record.
+
+**Scope boundary.** cyril-pd4b separately owns the newer network-give-up
+wake correlation and depends on cyril-fb1m. This repair does not claim that
+later trigger is qualified. No tracker mutation or push of unrelated local
+main commits is part of this repair.
 
 ---
 
 ## Self-review
 
-1. Every design row C1–C22 is assigned to exactly one slice (C21 created in S1, rerun every slice); every PENDING falsifier is discharged by its implementing slice. ✓
+1. Every design row C1–C22 is assigned to one slice; current C20 discharge must use the resumed completion record because its original tests were deleted.
 2. Every slice has the fourteen fields; conditional cells carry `N/A — reason`. ✓
 3. Every fence is created in the slice implementing its claim, with the design's named mutation; no fence-less claims. ✓
 4. New loops (S1 filter, S4 flag map, S6 deque, S7 formatting) state cost and bound; no real-latency phases. ✓
@@ -490,4 +593,4 @@ Inherited plan references: design.md § "Isolated design-conformance review (202
 6. Partition applied with a documented margin (30 % code, 10 % artifacts); every slice names its increment; each increment has a mergeable definition. ✓
 7. Tracker taxonomy: deferrals cite cyril-fb1m, cyril-99ds, cyril-zd8u, cyril-4u4a (verified, open). ✓
 8. Fence assertions assert the observable their mutation changes (variant, count, order, dispatched command, disposition). ✓
-9. No slice is declared complete. ✓
+9. Completion is determined by the resumed integration record, not the original pre-build checklist.

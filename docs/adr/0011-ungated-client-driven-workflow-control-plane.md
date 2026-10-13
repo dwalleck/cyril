@@ -114,3 +114,52 @@ inline DAG object.
 - This is a **deliberate deviation from the documented gate**. Anyone reading
   Kiro's engine source will conclude the gate is required; the table above is why
   it is not. Do not "fix" this by enabling workflows.
+
+## Amendment: workflow-initiated follow-up turns (cyril-lki9)
+
+Decision approved 2026-09-29, correlation amended 2026-09-30; recorded here
+2026-10-12. The approval and exact behavior are in
+[`spec.md`](../../.cyril-lki9/spec.md#decisions); implementation landed in
+[PR #145](https://github.com/dwalleck/cyril/pull/145) and
+[PR #147](https://github.com/dwalleck/cyril/pull/147).
+
+Gate-off execution does **not** prevent KAS from starting a billed model turn
+when a workflow completes, fails, or is aborted. The committed
+[`-tail` capture](../../experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl)
+records a parent `turn_start`, tool calls, agent text, and `turn_end` after
+`run_complete`, without a client `session/prompt`. The launch/control-plane
+decision above therefore does not imply that the model is absent from the
+post-run path.
+
+**Keep the parent link; accept, model, and label the follow-up.** Cyril retains
+`parentSessionId` on `_kiro/workflow/new`, preserving parent-scoped relays,
+permissions, and workflow discovery. It neither suppresses the wake nor
+diverts it to another session. Omitting the parent or introducing a dedicated
+control session would change those responsibilities and is not this decision.
+
+- An idle main-session `turn_start` begins a first-class server-started turn.
+  Busy state and the stall watchdog start immediately; permission requests,
+  Esc cancellation, and mid-turn steering use the normal turn machinery.
+  Its `turn_end` completes the turn without waiting for a prompt response.
+- The first frame tagged as agent-initiated gets one transcript header.
+  A workflow-completion wake names the newest completion claimed for that
+  session at turn start, with its status; a missing correlation gets a
+  nameless workflow header. Other reasons get a generic agent-initiated
+  header. A silent turn with no tagged frame remains busy but has no
+  invented header.
+- Engine-injected `notify-*` messages appear inline at their arrival point.
+  They never consume or clear the operator's queued steers (cyril-5n75).
+  Workflow injections use completions arriving after the current turn
+  started, not the completion already claimed by the wake.
+
+This deliberately **does not remove the billed turn**. It makes the turn
+visible and controllable without reconstructing the hidden wake prompt.
+Bridge ownership is documented in
+[ADR-0004](0004-bridge-loop-mediates-both-acp-directions.md).
+The capture replay and lifecycle checks are recorded in
+the [completion record](../../.cyril-lki9/plan.md#resumed-completion-2026-10-12).
+
+The later KAS network-give-up parent-note trigger has separate correlation
+work in **cyril-pd4b**, dependent on **cyril-fb1m** (`_kiro/session/notify`).
+It is not qualified by the run-completion capture and is not claimed fixed
+by this amendment. `/workflow new` authoring remains **cyril-0asq**.
