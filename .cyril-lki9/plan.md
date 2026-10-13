@@ -476,7 +476,7 @@ Inherited plan references: design.md § "Isolated design-conformance review (202
 - Assembled tree = I0 (#144) + I1 (#145) + I2 (this branch). Lanes: fmt, clippy (`--all-features`, `--features kas`, default), nextest (all-features, default), doc tests, C21 — all PASS on the tree above.
 - Design conformance: review 3 `RESULT: PASS` (reviewer: fresh-context general-purpose subagent; isolation: no implementation transcript, blind Phase 1 before `.cyril-lki9/`).
 - C20 is not covered by the merged tree's original PASS claim: the later repair deleted its five replay tests. Other historical gates retain only their recorded scope; current C20 evidence belongs to the resumed completion record below.
-- I0, I1, and I2 merged as PRs #144, #145, and #147 (I2 merge `00239d28ea6976bb2cf11847be8696c5818f29f1`). The requester subsequently authorized cyril-lki9 closure on this completion branch and opening its PR; see Publication authorization below. cyril-5n75 remains open.
+- I0, I1, and I2 merged as PRs #144, #145, and #147 (I2 merge `00239d28ea6976bb2cf11847be8696c5818f29f1`). The requester subsequently authorized cyril-lki9 closure on this completion branch and opening its PR; see Publication authorization below. cyril-5n75 closes on the same branch.
 
 ## Resumed completion (2026-10-12)
 
@@ -584,16 +584,20 @@ tracker records remain untouched.
 
 ### Publication authorization
 
-Requester instruction (verbatim): "close the tracker issue on the branch and open a PR"
+Requester instructions (verbatim): "close the tracker issue on the branch and
+open a PR"; then, after the PR #166 review round, "yes" — answering whether to
+close cyril-5n75 on this branch (folded in by [spec.md](spec.md#decisions),
+fix merged in #147) and push it with the standards-round commits.
 
-Scope: close **cyril-lki9** on `docs/cyril-lki9-completion`, commit the closure,
-push that branch, and open its PR against the discovered upstream `main`.
-Do not merge, publish unrelated local main commits, or close cyril-5n75.
-`rivets close` persisted the closure; a record-by-record comparison with
-the commit parent confirmed no additions or removals and only cyril-lki9
-changed. All 402 records are preserved, and cyril-5n75 remains open.
-The existing qualification still applies: this publication step changes only
-tracker state and workflow status documentation.
+Scope: close **cyril-lki9** and **cyril-5n75** on `docs/cyril-lki9-completion`,
+each in its own tracker-only commit; push that branch and keep its PR against
+the discovered upstream `main` current. Do not merge or publish unrelated local
+main commits. Each `rivets close` was compared record-by-record with its commit
+parent: no additions or removals, and only the closed record changed. All 402
+records are preserved. cyril-5n75's acceptance is met on merged code by
+`lki9_steer_fallback_never_drains_a_bound_chip` and the `EngineMessageInjected`
+conversion (Slice 8; M6 above). The existing qualification still applies:
+these steps change only tracker state and workflow status documentation.
 
 
 ---

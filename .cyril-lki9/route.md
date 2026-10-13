@@ -44,6 +44,8 @@ PASS — the [resumed completion record](plan.md#resumed-completion-2026-10-12)
 owns the delivered ADR amendment, restored capture replays, mutation
 sensitivity, consumer smoke, repository checks, independent review, and
 source-bound receipts. The approved production behavior is unchanged.
-Branch-local cyril-lki9 closure and PR publication are authorized by the
+The PR #166 standards round and its repairs are recorded in
+[review-decisions.md](review-decisions.md). Branch-local closure of cyril-lki9
+and cyril-5n75 and PR publication are authorized by the
 [publication record](plan.md#publication-authorization); merging and closure
 of any other tracker issue are not authorized.
