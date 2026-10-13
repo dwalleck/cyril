@@ -852,11 +852,7 @@ impl App {
 
                 // Priority 3: Permission requests from bridge
                 Some(request) = self.permission_rx.recv() => {
-                    // An armed review decides its own step sessions' requests.
-                    if let Some(request) = self.route_review_permission(request) {
-                        self.ui_state.show_approval(request);
-                    }
-                    self.redraw_needed = true;
+                    self.handle_permission_request(request);
                 }
 
                 // `/review` work that ran off-loop. The App holds the sender.
@@ -1166,6 +1162,14 @@ impl App {
                 );
             }
         }
+    }
+
+    fn handle_permission_request(&mut self, request: PermissionRequest) {
+        // An armed review decides its own step sessions' requests.
+        if let Some(request) = self.route_review_permission(request) {
+            self.ui_state.show_approval(request);
+        }
+        self.redraw_needed = true;
     }
 
     fn handle_notification(&mut self, routed: RoutedNotification) -> Vec<BridgeCommand> {
@@ -7781,12 +7785,9 @@ mod tests {
                         request.session_id.clone(),
                         request.tool_call.title().to_owned(),
                     ));
-                    // The same permission branch as App::run, including the
-                    // review router; an ordinary wake uses the normal overlay.
-                    if let Some(request) = app.route_review_permission(request) {
-                        app.ui_state.show_approval(request);
-                    }
-                    app.redraw_needed = true;
+                    // App::run's own permission path, including the review
+                    // router; an ordinary wake uses the normal overlay.
+                    app.handle_permission_request(request);
                     format!("{index}:permission")
                 }
             };
