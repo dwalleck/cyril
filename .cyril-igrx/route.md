@@ -2,13 +2,13 @@
 
 ## Request and source state
 
-Requester: “claim and implement cyril-igrx”. Issue claimed for `omp`, in progress. Worktree `fix/cyril-igrx-data-dir` starts at `344c8c71` (claim cherry-picked onto fetched upstream). Primary checkout's unrelated local commits and untracked files remain untouched. The tracker cherry-pick retained upstream's adjacent cyril-hzkb record and changed only cyril-igrx.
+Requester: “claim and implement cyril-igrx”. Issue initially claimed for `omp`. Worktree `fix/cyril-igrx-data-dir` starts at `344c8c71` (claim cherry-picked onto fetched upstream). Primary checkout's unrelated local commits and untracked files remain untouched. The tracker cherry-pick retained upstream's adjacent cyril-hzkb record and changed only cyril-igrx.
 
 ## Routing evidence
 
 | Test | Verdict and evidence |
 | --- | --- |
-| T1: unresolved empirical premise | No. The issue identifies `dirs::data_local_dir`; locally installed dirs 6.0.0 `src/mac.rs:7,13` resolves home + `Library/Application Support`. Baseline discovery source used the Unix `.local/share` fallback on Apple. No external runtime choice remains unresolved. |
+| T1: unresolved empirical premise | No. The issue identifies `dirs::data_local_dir`; locally installed dirs 6.0.0 `src/mac.rs:7,13` resolves home + `Library/Application Support`. The lowercase `kiro-cli` leaf is corroborated by the existing Python reference at `experiments/code-review-workflow/review_policy.py:91-97`, not a live macOS observation. Baseline discovery source used the Unix `.local/share` fallback on Apple. No external runtime choice remains unresolved. |
 | T2: structural module shape | No. `protocol/kas/discovery.rs` already owns per-platform data-root resolution and both consumers. Windows already had a pure helper, known-folder fallback, and fixtures from `73abf91c` (PR #164). The repair adds the missing private Apple helper using that pattern; no public interface, schema, dependency, or ownership change. |
 | T3: production-scale risk | No. One startup path join replaces another; no new I/O, concurrency, or hot-path work. |
 | T4: explicit behavior | Yes. cyril-igrx requires platform-correct data roots shared by KAS extraction and `data.sqlite3`. Apple: `<home>/Library/Application Support/kiro-cli`, ignoring XDG/LOCALAPPDATA. Preserve Unix absolute-XDG precedence, invalid-XDG fallback, missing-home errors, overrides, extraction-version selection, and Windows local-AppData/known-folder behavior. WSL-located stores remain separate cyril-lwpm scope. |
@@ -30,7 +30,7 @@ Terminal criterion: deliver remaining Apple behavior, preserve and exercise exis
 
 ## Delivered behavior and evidence
 
-**PASS — Local terminal criterion.** Implementation, documentation, applicable local checks, and independent review are complete. No blocking finding or local-check failure remains. The issue stays `in_progress`; publication and closure were not requested.
+**PASS — Local terminal criterion.** Implementation, documentation, applicable local checks, and independent review are complete. No blocking finding or local-check failure remains. Branch closure and publication are authorized below.
 
 Source under verification: `344c8c71` plus the discovery repair, SHA-256
 `ad36deb8e26b05a3fa61871e869fa5a56e18b9f26e99762cf3ac4af6d0a4a35a`
@@ -63,3 +63,13 @@ on each host in the existing macOS/Windows CI matrix, but those native runs
 were not executed in this session. No native-platform or live authenticated
 KAS qualification is claimed. The unrelated WSL-hosted store request remains
 in the verified open issue `cyril-lwpm`; no WSL behavior was changed.
+
+## Publication authorization
+
+Requester: “close the issue on the branch, push it, open a PR”.
+
+Applies to `cyril-igrx` on `fix/cyril-igrx-data-dir`, targeting the repository's
+default branch `main`. Close the tracker record on this branch, publish it,
+and open the PR; no merge authorization. Production and tests remain at
+`5020f5d4`, so the evidence above is retained unchanged for this tracker and
+record-only publication update.
