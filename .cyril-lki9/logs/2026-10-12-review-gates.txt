@@ -1,0 +1,26 @@
+Source: 2fa41fb3 (harness commit; tree identical to pre-amend 43aeaff0, plus 792dbb69 permission-method extraction) on base 99ed7ce5; PR #166 standards round.
+Selected gate lines from /tmp gates.sh (fmt, clippy and nextest on every ci.yml cargo lane, doctests, C21).
+
+FMT-OK
+CLIPPY-ALL-OK
+    Starting 2292 tests across 34 binaries (13 tests skipped)
+     Summary [   6.576s] 2292 tests run: 2292 passed, 13 skipped
+TEST-ALL-OK
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+DOC-OK
+CLIPPY-KAS-OK
+     Summary [   5.800s] 1411 tests run: 1411 passed, 10 skipped
+TEST-KAS-OK
+CLIPPY-DEFAULT-OK
+    Starting 2285 tests across 34 binaries (13 tests skipped)
+     Summary [   6.584s] 2285 tests run: 2285 passed, 13 skipped
+TEST-DEFAULT-OK
+CLIPPY-CORE-NODEF-OK
+     Summary [   5.228s] 843 tests run: 843 passed, 4 skipped
+TEST-CORE-NODEF-OK
+C21 PASS (base 99ed7ce5 on origin/main; protected-parent prod deltas {'crates/cyril/src/app.rs': 4, 'crates/cyril-ui/src/state.rs': 0})

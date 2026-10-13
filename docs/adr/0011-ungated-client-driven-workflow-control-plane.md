@@ -115,7 +115,7 @@ inline DAG object.
   Kiro's engine source will conclude the gate is required; the table above is why
   it is not. Do not "fix" this by enabling workflows.
 
-## Amendment: workflow-initiated follow-up turns (cyril-lki9)
+## Amendment: workflow-initiated follow-up turns (cyril-lki9, 2026-10-12)
 
 Decision approved 2026-09-29, correlation amended 2026-09-30; recorded here
 2026-10-12. The approval and exact behavior are in
@@ -137,20 +137,20 @@ permissions, and workflow discovery. It neither suppresses the wake nor
 diverts it to another session. Omitting the parent or introducing a dedicated
 control session would change those responsibilities and is not this decision.
 
-- An idle main-session `turn_start` begins a first-class server-started turn.
+- An idle main-session `turn_start` begins a first-class agent-initiated turn.
   Busy state and the stall watchdog start immediately; permission requests,
   Esc cancellation, and mid-turn steering use the normal turn machinery.
   Its `turn_end` completes the turn without waiting for a prompt response.
 - The first frame tagged as agent-initiated gets one transcript header.
-  A workflow-completion wake names the newest completion claimed for that
-  session at turn start, with its status; a missing correlation gets a
+  A workflow-completion wake names the newest completion queued for that
+  session when the turn starts, with its status; a missing correlation gets a
   nameless workflow header. Other reasons get a generic agent-initiated
   header. A silent turn with no tagged frame remains busy but has no
   invented header.
 - Engine-injected `notify-*` messages appear inline at their arrival point.
   They never consume or clear the operator's queued steers (cyril-5n75).
   Workflow injections use completions arriving after the current turn
-  started, not the completion already claimed by the wake.
+  started, not the completion the wake already took.
 
 This deliberately **does not remove the billed turn**. It makes the turn
 visible and controllable without reconstructing the hidden wake prompt.
