@@ -75,11 +75,12 @@ pub(crate) enum HostCallback {
         session_id: Option<String>,
         reply: Reply<acp::ExtResponse>,
     },
-    /// `_kiro/hooks/list {trigger, toolId?}`. A missing trigger is preserved
-    /// as `None` — the responder replies empty (not an error).
+    /// `_kiro/hooks/list {trigger, toolId?, toolTags?}`. A missing trigger is
+    /// preserved as `None` — the responder replies empty (not an error).
     HooksList {
         trigger: Option<String>,
         tool_id: Option<String>,
+        tool_tags: Option<Vec<String>>,
         reply: Reply<acp::ExtResponse>,
     },
     /// `_kiro/hooks/executeHook`. Cancellation stays with the existing
@@ -158,6 +159,36 @@ impl HostCallback {
             }
         }
     }
+}
+
+/// Preserve omitted versus explicitly empty tags and reject every malformed
+/// present value. Both wire parsing and the registry responder use this
+/// boundary, so neither path can silently drop a malformed tag member.
+pub(crate) fn parse_hook_tool_tags(
+    params: &serde_json::Value,
+) -> Result<Option<Vec<String>>, String> {
+    let Some(value) = params.get("toolTags") else {
+        return Ok(None);
+    };
+    let invalid = |detail: String| {
+        let error = format!("parse hooks/list toolTags: {detail}");
+        tracing::warn!(%error, "invalid hooks/list params");
+        error
+    };
+    let array = value
+        .as_array()
+        .ok_or_else(|| invalid("expected an array of strings".into()))?;
+    let tags = array
+        .iter()
+        .enumerate()
+        .map(|(index, value)| {
+            value
+                .as_str()
+                .map(str::to_owned)
+                .ok_or_else(|| invalid(format!("member {index} must be a string")))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(Some(tags))
 }
 
 /// `executeHook` typed params. Semantic defaults (missing command → exit 127
@@ -416,6 +447,7 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
         HostCallback::HooksList {
             trigger,
             tool_id,
+            tool_tags,
             reply,
         } => {
             let mut params = serde_json::Map::new();
@@ -424,6 +456,9 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             }
             if let Some(t) = tool_id {
                 params.insert("toolId".into(), t.into());
+            }
+            if let Some(tags) = tool_tags {
+                params.insert("toolTags".into(), tags.into());
             }
             // Presence checked at the client before sending; a None here would
             // be a caller bug, so refuse rather than silently serve nothing.
