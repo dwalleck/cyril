@@ -657,6 +657,7 @@ mod tests {
             true,
             false,
             false,
+            crate::types::AgentCommandRoute::BridgeExecute,
         )];
         let changed = ctrl.apply_notification(&Notification::CommandsUpdated {
             commands: cmds,

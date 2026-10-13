@@ -264,12 +264,8 @@ fn required_percentage(
     required_nonnegative(value, field).map(|percentage| percentage.min(100.0))
 }
 
-/// The four command names `resolveWorkflows()` registers when the workflow
-/// gate is on. Cyril never sets the gate (ADR-0011), but a backend feature
-/// flip could still advertise them — and they dispatch to
-/// `kiro.dev/commands/execute`, a v2-only method KAS lacks (cyril-oieu), so
-/// offering them is offering a dead end. Exact names only: prefix-matching
-/// would eat legitimate names like `workflow-creator`.
+/// Exact workflow command exclusions: Cyril owns this control plane (ADR-0011).
+/// Prefix matching would also suppress supported agents such as workflow-creator.
 const GATE_WORKFLOW_COMMANDS: [&str; 4] = [
     "workflow-run",
     "workflow-status",
@@ -277,9 +273,54 @@ const GATE_WORKFLOW_COMMANDS: [&str; 4] = [
     "workflow-resume",
 ];
 
-/// Drops the gate-advertised workflow commands from a KAS commands update
-/// (cyril-0qe6 C8); every other notification passes through untouched.
-pub(crate) fn suppress_workflow_gate_commands(notification: Notification) -> Notification {
+/// KAS custom-agent advertisements are slash prompts, not V2 extension RPCs.
+/// Unsupported/missing types stay out of the registry and autocomplete.
+pub(crate) fn commands_to_notification(update: &acp::AvailableCommandsUpdate) -> Notification {
+    let commands = update
+        .available_commands
+        .iter()
+        .filter_map(|command| {
+            if GATE_WORKFLOW_COMMANDS.contains(&command.name.as_str()) {
+                tracing::debug!(
+                    command = command.name,
+                    "suppressing gate-advertised workflow command (ADR-0011)"
+                );
+                return None;
+            }
+            let command_type = command
+                .meta
+                .as_ref()
+                .and_then(|meta| meta.get("kiro"))
+                .and_then(|kiro| kiro.get("type"))
+                .and_then(serde_json::Value::as_str);
+            if command_type != Some("custom-agent") {
+                tracing::debug!(
+                    command = command.name,
+                    command_type,
+                    "suppressing unsupported KAS command advertisement"
+                );
+                return None;
+            }
+            Some(crate::types::CommandInfo::new(
+                command.name.clone(),
+                command.description.clone(),
+                None::<String>,
+                command.input.is_some(),
+                false,
+                false,
+                crate::types::AgentCommandRoute::Prompt,
+            ))
+        })
+        .collect();
+    Notification::CommandsUpdated {
+        commands,
+        prompts: Vec::new(),
+    }
+}
+
+/// Suppress bridge-only advertisements from the shared extension converter.
+/// KAS command support is established only by its typed ACP conversion above.
+pub(crate) fn suppress_unsupported_commands(notification: Notification) -> Notification {
     let Notification::CommandsUpdated {
         mut commands,
         prompts,
@@ -288,11 +329,12 @@ pub(crate) fn suppress_workflow_gate_commands(notification: Notification) -> Not
         return notification;
     };
     commands.retain(|command| {
-        let suppress = GATE_WORKFLOW_COMMANDS.contains(&command.name());
+        let suppress = command.route() != crate::types::AgentCommandRoute::Prompt
+            || GATE_WORKFLOW_COMMANDS.contains(&command.name());
         if suppress {
             tracing::debug!(
                 command = command.name(),
-                "suppressing gate-advertised workflow command (ADR-0011: cyril owns the control plane)"
+                "suppressing unsupported KAS command advertisement"
             );
         }
         !suppress
@@ -1519,54 +1561,177 @@ mod tests {
         );
     }
 
-    /// ENGINE-LEVEL fence for the `Dropped` arm (2026-08-09 review, test
-    /// finding 2): a recognized workflow method with a malformed payload must
-    /// reach the client as `Ok(None)` — never `Err`, which would route into
-    /// the client's malformed-extension error path and poison the stream.
-    /// cyril-0qe6 C8: exactly the four gate-advertised workflow commands are
-    /// suppressed — the buggy implementations are no filter at all, and a
-    /// prefix match that eats `workflow-creator`-style names.
+    fn command_frame(commands: serde_json::Value) -> acp::SessionNotification {
+        serde_json::from_value(json!({
+            "sessionId": "sess_commands",
+            "update": {
+                "sessionUpdate": "available_commands_update",
+                "availableCommands": commands
+            }
+        }))
+        .expect("command advertisement frame")
+    }
+
+    #[tokio::test]
+    async fn kas_custom_agent_advertisements_produce_prompt_intent_only() {
+        use crate::commands::{CommandContext, CommandRegistry, CommandResultKind};
+        use crate::types::{BridgeCommand, SessionId};
+
+        let frame = command_frame(json!([
+            {
+                "name": "general-task-execution",
+                "description": "Delegate a task",
+                "input": {"hint": "task to delegate"},
+                "_meta": {"kiro": {"type": "custom-agent"}}
+            },
+            {
+                "name": "no-input-agent",
+                "description": "Agent without input metadata",
+                "_meta": {"kiro": {"type": "custom-agent"}}
+            },
+            {
+                "name": "steering-document",
+                "description": "Unsupported steering advertisement",
+                "input": {"hint": "task to delegate"},
+                "_meta": {"kiro": {"type": "steering"}}
+            },
+            {
+                "name": "missing-type",
+                "description": "Not classified",
+                "input": {"hint": "task to delegate"}
+            },
+            {
+                "name": "future-type",
+                "description": "Unknown command category",
+                "_meta": {"kiro": {"type": "future"}}
+            },
+            {
+                "name": "malformed-type",
+                "description": "Wrong type representation",
+                "_meta": {"kiro": {"type": ["custom-agent"]}}
+            }
+        ]));
+        let Notification::CommandsUpdated { commands, .. } = KasEngine::default()
+            .convert_session_update(&frame)
+            .expect("KAS advertisement")
+        else {
+            panic!("expected command update");
+        };
+        assert_eq!(
+            commands
+                .iter()
+                .map(|command| command.name())
+                .collect::<Vec<_>>(),
+            ["general-task-execution", "no-input-agent"]
+        );
+        let mut registry = CommandRegistry::new();
+        registry.register_agent_commands(&commands);
+        let mut session = crate::session::SessionController::new();
+        session.apply_notification(&Notification::SessionCreated {
+            session_id: SessionId::new("sess_commands"),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        });
+        let (handle, mut outbound) =
+            crate::protocol::bridge::BridgeHandle::for_tests_with_command_rx();
+        let sender = handle.sender();
+        let ctx = CommandContext {
+            workspace: Path::new("."),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        for input in [
+            "/general-task-execution",
+            "/general-task-execution \"inspect foo\"",
+            "/no-input-agent",
+        ] {
+            let (command, args) = registry.parse(input).expect("supported advertisement");
+            let result = command.execute(&ctx, args).await.expect("prompt intent");
+            assert!(matches!(result.kind, CommandResultKind::SubmitAgentPrompt));
+            assert!(
+                outbound.try_recv().is_err(),
+                "KAS has no V2 execute/options RPC"
+            );
+        }
+        assert!(registry.parse("/steering-document").is_none());
+
+        // The same ACP frame must retain V2's existing execute behavior.
+        let Notification::CommandsUpdated { commands, .. } = crate::protocol::engine::V2Engine
+            .convert_session_update(&frame)
+            .expect("V2 advertisement")
+        else {
+            panic!("expected V2 command update");
+        };
+        assert_eq!(commands.len(), 6);
+        let mut registry = CommandRegistry::new();
+        registry.register_agent_commands(&commands);
+        let (command, args) = registry
+            .parse("/general-task-execution inspect foo")
+            .expect("V2 command");
+        command.execute(&ctx, args).await.expect("V2 execute");
+        assert!(matches!(
+            outbound.try_recv(),
+            Ok(BridgeCommand::ExecuteCommand { command, args, .. })
+                if command == "general-task-execution" && args == json!({"value": "inspect foo"})
+        ));
+    }
+
     #[test]
     fn gate_workflow_commands_suppressed_exactly() {
-        let info = |name: &str| {
-            crate::types::CommandInfo::new(name, name, None::<String>, false, false, false)
-        };
-        let update = Notification::CommandsUpdated {
-            commands: vec![
-                info("workflow-run"),
-                info("workflow-status"),
-                info("workflow-cancel"),
-                info("workflow-resume"),
-                info("workflow-creator"),
-                info("steer"),
-                info("wörkflöw"),
-            ],
-            prompts: Vec::new(),
-        };
-        let Notification::CommandsUpdated { commands, .. } =
-            suppress_workflow_gate_commands(update)
+        let frame = command_frame(json!([
+            {"name": "workflow-run", "description": "run", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "workflow-status", "description": "status", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "workflow-cancel", "description": "cancel", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "workflow-resume", "description": "resume", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "workflow-creator", "description": "create", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "steer", "description": "steer", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "wörkflöw", "description": "unicode", "_meta": {"kiro": {"type": "custom-agent"}}}
+        ]));
+        let Notification::CommandsUpdated { commands, .. } = KasEngine::default()
+            .convert_session_update(&frame)
+            .expect("advertisement")
         else {
-            panic!("variant must be preserved");
+            panic!("expected command update");
         };
-        let names: Vec<&str> = commands.iter().map(|command| command.name()).collect();
         assert_eq!(
-            names,
-            vec!["workflow-creator", "steer", "wörkflöw"],
+            commands
+                .iter()
+                .map(|command| command.name())
+                .collect::<Vec<_>>(),
+            ["workflow-creator", "steer", "wörkflöw"],
             "exact-name suppression only — order and other entries preserved"
         );
-
-        // Identity on an empty update and on non-command notifications.
-        let empty = suppress_workflow_gate_commands(Notification::CommandsUpdated {
-            commands: Vec::new(),
-            prompts: Vec::new(),
-        });
+        let empty = KasEngine::default()
+            .convert_session_update(&command_frame(json!([])))
+            .expect("empty advertisement");
         assert!(
-            matches!(empty, Notification::CommandsUpdated { ref commands, .. } if commands.is_empty())
+            matches!(empty, Notification::CommandsUpdated { commands, .. } if commands.is_empty())
         );
-        let other = suppress_workflow_gate_commands(Notification::TurnCompleted {
-            stop_reason: StopReason::EndTurn,
-        });
-        assert!(matches!(other, Notification::TurnCompleted { .. }));
+    }
+
+    #[test]
+    fn kas_does_not_register_bridge_only_extension_commands() {
+        let params = json!({"commands": [
+            {"name": "general-task-execution", "_meta": {"kiro": {"type": "custom-agent"}}},
+            {"name": "workflow-run"}
+        ]});
+        let kas = KasEngine::default()
+            .convert_ext_notification("kiro.dev/commands/available", &params)
+            .expect("KAS extension");
+        assert!(
+            matches!(kas, Some(Notification::CommandsUpdated { commands, .. }) if commands.is_empty())
+        );
+        let v2 = crate::protocol::engine::V2Engine
+            .convert_ext_notification("kiro.dev/commands/available", &params)
+            .expect("V2 extension");
+        assert!(
+            matches!(v2, Some(Notification::CommandsUpdated { commands, .. }) if commands.len() == 2)
+        );
     }
 
     /// The adapter suite fences the adapter; this fences the engine match.

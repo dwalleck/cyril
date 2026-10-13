@@ -171,13 +171,16 @@ pub struct CommandResult {
 /// `ToggleVoice`, `ShowUsage`, `ShowPowers`): the command layer has no access
 /// to UI state or to App-held handles, so it returns the intent and
 /// `App::handle_command_result` (or the async routing in `App::submit_input`
-/// for `Steer`/`ClearSteer`) performs the effect.
+/// for `SubmitAgentPrompt`/`Steer`/`ClearSteer`) performs the effect.
 #[derive(Debug)]
 pub enum CommandResultKind {
     /// Display a system message in chat.
     SystemMessage(String),
     /// The input wasn't a command — send as prompt.
     NotACommand(String),
+    /// Submit the caller's original slash invocation through the prompt lane.
+    /// No text is carried: parsed command arguments are not the raw input.
+    SubmitAgentPrompt,
     /// Open Cyril's local palette picker (cyril-qaq0). The command layer has no
     /// access to UI state and must not name a palette — the catalog lives in
     /// `cyril-ui` — so it returns only the intent and the App opens the picker.
@@ -243,6 +246,12 @@ impl CommandResult {
     pub fn not_a_command(text: String) -> Self {
         Self {
             kind: CommandResultKind::NotACommand(text),
+        }
+    }
+
+    pub fn submit_agent_prompt() -> Self {
+        Self {
+            kind: CommandResultKind::SubmitAgentPrompt,
         }
     }
 
@@ -440,8 +449,7 @@ impl CommandRegistry {
         registry
     }
 
-    /// Register commands advertised by the agent.
-    /// These are forwarded to the bridge as ext methods when executed.
+    /// Register commands advertised by the agent, retaining their typed route.
     ///
     /// Skips commands that are local-only and not selection commands.
     /// Local selection commands (e.g., `/chat`) are kept because they
@@ -463,6 +471,7 @@ impl CommandRegistry {
                     name,
                     description: cmd.description().unwrap_or_else(|| cmd.label()).to_string(),
                     is_selection: cmd.is_selection(),
+                    route: cmd.route(),
                 }),
             );
         }
@@ -485,11 +494,12 @@ impl Default for CommandRegistry {
     }
 }
 
-/// A command forwarded to the agent via ext method.
+/// An advertised command dispatched according to its engine-classified route.
 struct AgentCommand {
     name: String,
     description: String,
     is_selection: bool,
+    route: crate::types::AgentCommandRoute,
 }
 
 #[async_trait::async_trait]
@@ -507,6 +517,13 @@ impl Command for AgentCommand {
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        match self.route {
+            crate::types::AgentCommandRoute::Prompt => {
+                return Ok(CommandResult::submit_agent_prompt());
+            }
+            crate::types::AgentCommandRoute::BridgeExecute => {}
+        }
+
         let session_id = ctx
             .session
             .id()
@@ -1149,8 +1166,24 @@ mod tests {
     fn register_agent_commands_skips_local_non_selection() {
         let mut registry = CommandRegistry::new();
         let cmds = vec![
-            crate::types::CommandInfo::new("quit", "Quit", None::<&str>, false, false, true), // local, not selection → skip
-            crate::types::CommandInfo::new("compact", "Compact", None::<&str>, false, false, false), // not local → register
+            crate::types::CommandInfo::new(
+                "quit",
+                "Quit",
+                None::<&str>,
+                false,
+                false,
+                true,
+                crate::types::AgentCommandRoute::BridgeExecute,
+            ), // local, not selection → skip
+            crate::types::CommandInfo::new(
+                "compact",
+                "Compact",
+                None::<&str>,
+                false,
+                false,
+                false,
+                crate::types::AgentCommandRoute::BridgeExecute,
+            ), // not local → register
         ];
         registry.register_agent_commands(&cmds);
         assert!(
@@ -1167,7 +1200,15 @@ mod tests {
     fn register_agent_commands_keeps_local_selection() {
         let mut registry = CommandRegistry::new();
         let cmds = vec![
-            crate::types::CommandInfo::new("chat", "Chat", None::<&str>, true, true, true), // local AND selection → keep
+            crate::types::CommandInfo::new(
+                "chat",
+                "Chat",
+                None::<&str>,
+                true,
+                true,
+                true,
+                crate::types::AgentCommandRoute::BridgeExecute,
+            ), // local AND selection → keep
         ];
         registry.register_agent_commands(&cmds);
         assert!(
@@ -1187,6 +1228,7 @@ mod tests {
             false,
             false,
             false,
+            crate::types::AgentCommandRoute::BridgeExecute,
         )];
         registry.register_agent_commands(&cmds);
         // Should still be the builtin help, not agent help
@@ -1228,6 +1270,7 @@ mod tests {
             name: "compact".into(),
             description: "Compact".into(),
             is_selection: false,
+            route: crate::types::AgentCommandRoute::BridgeExecute,
         };
         let result = cmd.execute(&ctx, "").await;
         assert!(result.is_err(), "should fail with no active session");
@@ -1259,6 +1302,7 @@ mod tests {
             name: "compact".into(),
             description: "Compact context".into(),
             is_selection: false,
+            route: crate::types::AgentCommandRoute::BridgeExecute,
         };
         let result = cmd.execute(&ctx, "").await;
         assert!(result.is_ok());
@@ -1304,6 +1348,7 @@ mod tests {
             name: "model".into(),
             description: "Switch model".into(),
             is_selection: true,
+            route: crate::types::AgentCommandRoute::BridgeExecute,
         };
         let result = cmd.execute(&ctx, "claude-sonnet").await;
         assert!(result.is_ok());
@@ -1344,6 +1389,7 @@ mod tests {
             name: "model".into(),
             description: "Switch model".into(),
             is_selection: true,
+            route: crate::types::AgentCommandRoute::BridgeExecute,
         };
 
         let result = cmd.execute(&ctx, "").await.unwrap();

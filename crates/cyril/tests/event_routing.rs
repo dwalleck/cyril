@@ -198,8 +198,17 @@ fn commands_updated_stores_in_session() {
             true,
             false,
             false,
+            AgentCommandRoute::BridgeExecute,
         ),
-        CommandInfo::new("compact", "Compact", None::<&str>, false, false, false),
+        CommandInfo::new(
+            "compact",
+            "Compact",
+            None::<&str>,
+            false,
+            false,
+            false,
+            AgentCommandRoute::BridgeExecute,
+        ),
     ];
     session.apply_notification(&Notification::CommandsUpdated {
         commands: cmds,
