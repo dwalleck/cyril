@@ -904,6 +904,7 @@ pub(crate) fn to_ext_notification(
                             has_options,
                             is_selection,
                             is_local,
+                            crate::types::AgentCommandRoute::BridgeExecute,
                         ))
                     })
                     .collect()

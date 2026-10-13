@@ -405,10 +405,9 @@ pub(crate) struct HookDef {
     /// `postToolUse`, `agentStop`, `sessionStart`) — mapped from the file's
     /// PascalCase (`.cyril-jiyn/findings.md` Q2: the two vocabularies differ).
     pub wire_trigger: &'static str,
-    /// Optional tool-name matcher (regex, matching Kiro's own matcher
-    /// semantics — a substring downgrade would silently never-fire patterns
-    /// like `fs_.*`). Applied against `toolId` on `list`.
-    pub matcher: Option<regex::Regex>,
+    /// Loaded selector and ID regex. `None` is unconditional; an invalid
+    /// configured matcher is retained as a nonmatching `Some`.
+    matcher: Option<HookMatcher>,
     pub command: String,
     /// The file's `action.timeout` in seconds, if declared.
     pub timeout: Option<u64>,
@@ -421,6 +420,102 @@ impl HookDef {
     pub(crate) fn effective_timeout(&self) -> std::time::Duration {
         self.timeout
             .map_or(DEFAULT_TIMEOUT, std::time::Duration::from_secs)
+    }
+}
+
+/// KAS 0.66.26's `ARr`/`koe`: tool triggers may use a raw selector, with an
+/// independent regex fallback against the ID only. Both are compiled at load
+/// time; neither representation being present means an invalid matcher.
+#[derive(Debug, Clone)]
+struct HookMatcher {
+    source: String,
+    tool_pattern: Option<ToolPattern>,
+    id_regex: Option<regex::Regex>,
+}
+
+#[derive(Debug, Clone)]
+enum ToolPattern {
+    Literal,
+    Wildcard(regex::Regex),
+}
+
+impl HookMatcher {
+    fn compile(source: String, trigger: &str, path: &Path, hook: &str) -> Self {
+        let tool_pattern = if matches!(trigger, "preToolUse" | "postToolUse")
+            && !source.contains(['\\', '^', '$', '(', ')', '[', ']', '{', '}', '|', '+'])
+        {
+            if source.contains(['*', '?']) {
+                let mut pattern = String::with_capacity(source.len() + 10);
+                pattern.push_str(r"\A(?:");
+                for ch in source.chars() {
+                    match ch {
+                        '*' => pattern.push_str(".*"),
+                        '?' => pattern.push('.'),
+                        '.' => pattern.push_str(r"\."),
+                        _ => pattern.push(ch),
+                    }
+                }
+                pattern.push_str(r")\z");
+                match regex::Regex::new(&pattern) {
+                    Ok(regex) => Some(ToolPattern::Wildcard(regex)),
+                    Err(error) => {
+                        tracing::warn!(
+                            file = %path.display(), hook, matcher = %source, %error,
+                            "tool selector could not compile; retaining ID regex fallback"
+                        );
+                        None
+                    }
+                }
+            } else {
+                Some(ToolPattern::Literal)
+            }
+        } else {
+            None
+        };
+        let id_regex = match regex::Regex::new(&source) {
+            Ok(regex) => Some(regex),
+            Err(error) => {
+                // Bare "*" and "?" are valid selectors even though they
+                // cannot compile as regexes. Only no usable form is invalid.
+                if tool_pattern.is_none() {
+                    tracing::warn!(
+                        file = %path.display(), hook, matcher = %source, %error,
+                        "invalid matcher; hook retained but will not match"
+                    );
+                }
+                None
+            }
+        };
+        Self {
+            source,
+            tool_pattern,
+            id_regex,
+        }
+    }
+
+    fn is_match(&self, tool_id: &str, tool_tags: &[String]) -> bool {
+        let selector_matches = match &self.tool_pattern {
+            Some(ToolPattern::Literal) => {
+                self.source == tool_id
+                    || matches!(
+                        (self.source.as_str(), tool_id),
+                        ("execute_bash", "execute_pwsh")
+                            | ("execute_pwsh", "execute_bash")
+                            | ("control_bash_process", "control_pwsh_process")
+                            | ("control_pwsh_process", "control_bash_process")
+                    )
+                    || tool_tags.iter().any(|tag| tag == &self.source)
+            }
+            Some(ToolPattern::Wildcard(regex)) => {
+                regex.is_match(tool_id) || tool_tags.iter().any(|tag| regex.is_match(tag))
+            }
+            None => false,
+        };
+        selector_matches
+            || self
+                .id_regex
+                .as_ref()
+                .is_some_and(|regex| regex.is_match(tool_id))
     }
 }
 
@@ -476,9 +571,9 @@ pub(crate) struct HookRegistry {
 
 impl HookRegistry {
     /// Load hooks from the workspace root's `.kiro/hooks/` and the global
-    /// `~/.kiro/hooks/`. Every per-file and per-entry problem is a `warn` +
-    /// skip — one bad file must never take down the rest (the load runs at
-    /// bridge startup on user-authored content).
+    /// `~/.kiro/hooks/`. Unservable entries warn and skip; invalid matchers
+    /// warn and remain nonmatching. One bad file never takes down the rest
+    /// (the load runs at bridge startup on user-authored content).
     pub(crate) fn load(workspace_root: &Path, global_kiro_home: Option<&Path>) -> Self {
         let mut hooks = Vec::new();
         let mut dirs = vec![workspace_root.join(".kiro").join("hooks")];
@@ -557,19 +652,10 @@ impl HookRegistry {
                 tracing::warn!(file = %path.display(), hook = %entry.name, "command action without a command; skipped");
                 continue;
             };
-            let matcher = match entry.matcher.as_deref() {
-                None => None,
-                Some(m) => match regex::Regex::new(m) {
-                    Ok(r) => Some(r),
-                    Err(e) => {
-                        tracing::warn!(
-                            file = %path.display(), hook = %entry.name, matcher = %m, error = %e,
-                            "invalid matcher regex; hook skipped"
-                        );
-                        continue;
-                    }
-                },
-            };
+            let matcher = entry
+                .matcher
+                .filter(|source| !source.is_empty())
+                .map(|source| HookMatcher::compile(source, trigger, path, &entry.name));
             out.push(HookDef {
                 id: format!("{stem}:{}", entry.name),
                 name: entry.name,
@@ -581,26 +667,31 @@ impl HookRegistry {
         }
     }
 
-    /// Answer the `_kiro/hooks/list` ext request from its params, replying
-    /// `{hooks: [...]}`. A missing `trigger` yields an empty list (the agent
-    /// always sends one; a malformed frame should not error the turn).
+    /// Answer `_kiro/hooks/list {trigger, toolId?, toolTags?}`, replying
+    /// `{hooks: [...]}`. A missing trigger yields an empty list; malformed
+    /// present tags are diagnosed and rejected as invalid params.
     pub(crate) fn respond_list(&self, params: &serde_json::Value) -> acp::Result<acp::ExtResponse> {
+        let tool_tags = super::callbacks::parse_hook_tool_tags(params)
+            .map_err(|error| acp::Error::invalid_params().data(error))?;
         let Some(trigger) = params.get("trigger").and_then(|t| t.as_str()) else {
             tracing::warn!("hooks/list without a trigger; replying empty");
             return json_ext_response(&serde_json::json!({ "hooks": [] }));
         };
         let tool_id = params.get("toolId").and_then(|t| t.as_str());
-        let hooks = self.list(trigger, tool_id);
+        let hooks = self.list(trigger, tool_id, tool_tags.as_deref());
         json_ext_response(&serde_json::json!({ "hooks": hooks }))
     }
 
-    /// Answer `_kiro/hooks/list {trigger, toolId?}`: the hooks whose wire
-    /// trigger equals `trigger`, honoring each hook's optional tool-name
-    /// matcher against `tool_id`. A matcher-carrying hook is excluded when
-    /// `tool_id` is absent (there is nothing to match) or does not match; an
-    /// unknown trigger simply yields an empty list, never an error.
-    pub(crate) fn list(&self, trigger: &str, tool_id: Option<&str>) -> Vec<serde_json::Value> {
-        self.matching(trigger, tool_id)
+    /// Answer `_kiro/hooks/list {trigger, toolId?, toolTags?}`. A configured
+    /// matcher requires `tool_id`, even when tags are supplied. No matcher is
+    /// unconditional within its trigger; unknown triggers yield an empty list.
+    pub(crate) fn list(
+        &self,
+        trigger: &str,
+        tool_id: Option<&str>,
+        tool_tags: Option<&[String]>,
+    ) -> Vec<serde_json::Value> {
+        self.matching(trigger, tool_id, tool_tags)
             .map(|h| {
                 serde_json::json!({
                     "id": h.id,
@@ -614,24 +705,27 @@ impl HookRegistry {
 
     /// The single membership predicate under both the wire `list` reply and
     /// host-driven sessionStart execution: wire trigger equals `trigger`,
-    /// and the optional matcher accepts `tool_id` (a matcher-carrying hook
-    /// is excluded when there is no tool context to match).
+    /// and the optional matcher accepts the supplied ID/tags (a configured
+    /// matcher is excluded when there is no tool ID to match).
     fn matching<'a>(
         &'a self,
         trigger: &'a str,
         tool_id: Option<&'a str>,
+        tool_tags: Option<&'a [String]>,
     ) -> impl Iterator<Item = &'a HookDef> + 'a {
         self.hooks
             .iter()
             .filter(move |h| h.wire_trigger == trigger)
             .filter(move |h| match &h.matcher {
                 None => true,
-                Some(rx) => tool_id.is_some_and(|t| rx.is_match(t)),
+                Some(matcher) => {
+                    tool_id.is_some_and(|id| matcher.is_match(id, tool_tags.unwrap_or_default()))
+                }
             })
     }
 
     /// The hooks host-driven sessionStart execution serves — the same
-    /// `matching` predicate as `list("sessionStart", None)`, so the accessor
+    /// `matching` predicate as `list("sessionStart", None, None)`, so the accessor
     /// and the wire list cannot disagree on membership (structurally, not by
     /// parallel filters kept in sync by hand). A matcher-carrying
     /// sessionStart hook can never be a member (no tool context to match at
@@ -648,7 +742,7 @@ impl HookRegistry {
                 "sessionStart hook has a matcher; excluded (nothing to match at session start)"
             );
         }
-        self.matching("sessionStart", None)
+        self.matching("sessionStart", None, None)
     }
 }
 
@@ -956,9 +1050,9 @@ mod tests {
     // cyril-jiyn claim 4 fence (skip half): the stress-fixture load — one dir
     // containing an invalid-JSON file, an unknown trigger, an agent action,
     // an invalid matcher regex, and a duplicate name in a second file.
-    // Expected: exactly the servable hooks load; nothing aborts.
+    // Expected: exactly the servable hooks are listed; nothing aborts.
     #[test]
-    fn hook_registry_skips_invalid_without_aborting() {
+    fn hook_registry_serves_valid_hooks_despite_invalid_entries() {
         let ws = tempfile::tempdir().unwrap();
         let dir = ws.path().join(".kiro/hooks");
         write(&dir, "broken.json", "{ not json !!!");
@@ -988,12 +1082,16 @@ mod tests {
         );
 
         let reg = HookRegistry::load(ws.path(), None);
-        let mut ids: Vec<&str> = reg.hooks.iter().map(|h| h.id.as_str()).collect();
+        let mut ids: Vec<String> = ["postToolUse", "promptSubmit", "preToolUse", "agentStop"]
+            .into_iter()
+            .flat_map(|trigger| reg.list(trigger, Some("fs_write"), None))
+            .map(|hook| hook["id"].as_str().unwrap().to_owned())
+            .collect();
         ids.sort_unstable();
         assert_eq!(
             ids,
             vec!["mixed:good", "second:good"],
-            "exactly the servable hooks load; duplicates across files both survive under distinct ids"
+            "invalid entries cannot become unconditional; duplicate names retain distinct IDs"
         );
     }
 
@@ -1027,18 +1125,266 @@ mod tests {
 
         // fs_write matches the matcher → both hooks.
         assert_eq!(
-            names(&reg.list("preToolUse", Some("fs_write"))),
+            names(&reg.list("preToolUse", Some("fs_write"), None)),
             vec!["h:always", "h:fsonly"]
         );
         // execute_bash misses the matcher → only the no-matcher hook.
         assert_eq!(
-            names(&reg.list("preToolUse", Some("execute_bash"))),
+            names(&reg.list("preToolUse", Some("execute_bash"), None)),
             vec!["h:always"]
         );
         // No toolId → matcher hooks can't match → only the no-matcher hook.
-        assert_eq!(names(&reg.list("preToolUse", None)), vec!["h:always"]);
+        assert_eq!(names(&reg.list("preToolUse", None, None)), vec!["h:always"]);
         // Unknown trigger → empty, not an error.
-        assert!(reg.list("bogusTrigger", Some("fs_write")).is_empty());
+        assert!(reg.list("bogusTrigger", Some("fs_write"), None).is_empty());
+    }
+
+    #[test]
+    fn respond_list_selects_shell_tag_hook() {
+        let ws = tempfile::tempdir().unwrap();
+        write(
+            &ws.path().join(".kiro/hooks"),
+            "tags.json",
+            r#"{"version":"v1","hooks":[
+                {"name":"shell-tag","trigger":"PreToolUse","matcher":"shell",
+                 "action":{"type":"command","command":"echo hook"}}
+            ]}"#,
+        );
+        let reg = HookRegistry::load(ws.path(), None);
+        let resp = reg
+            .respond_list(&serde_json::json!({
+                "trigger": "preToolUse",
+                "toolId": "execute_bash",
+                "toolTags": ["shell", "@builtin"]
+            }))
+            .unwrap();
+        let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+        assert_eq!(
+            reply["hooks"],
+            serde_json::json!([{
+                "id": "tags:shell-tag",
+                "name": "shell-tag",
+                "action": {"type": "runCommand", "command": "echo hook"},
+                "approved": true
+            }])
+        );
+    }
+
+    #[test]
+    fn respond_list_matches_kas_tool_selector_matrix() {
+        // Matcher source, optional tool ID/tags, and expected selection.
+        type ToolSelectorCase<'a> = (&'a str, Option<&'a str>, Option<&'a [&'a str]>, bool);
+        let cases: &[ToolSelectorCase<'_>] = &[
+            (
+                "shell",
+                Some("execute_bash"),
+                Some(&["shell", "@builtin"]),
+                true,
+            ),
+            ("read", Some("read_file"), Some(&["read", "@builtin"]), true),
+            (
+                "@builtin",
+                Some("execute_bash"),
+                Some(&["shell", "@builtin"]),
+                true,
+            ),
+            ("@mcp", Some("mcp_git_status"), Some(&["@mcp"]), true),
+            ("@mcp", Some("execute_bash"), Some(&["@mcp"]), true),
+            ("shell", Some("execute_bash"), None, false),
+            ("shell", Some("execute_bash"), Some(&[]), false),
+            ("shell", Some("execute_bash"), Some(&["shell-tools"]), false),
+            ("shell", Some("execute_bash"), Some(&["@shell"]), false),
+            ("shell", None, Some(&["shell", "@builtin"]), false),
+            ("@mcp", Some("mcp_git_status"), None, false),
+            ("@builtin", Some("builtin_tool"), None, false),
+            ("*", Some("execute_bash"), None, true),
+            ("*", Some(""), None, true),
+            ("*", None, Some(&["shell"]), false),
+            ("?", Some("x"), None, true),
+            ("?", Some("xy"), None, false),
+            ("?", Some("execute_bash"), Some(&["x"]), true),
+            ("mcp_*", Some("mcp_git_status"), None, true),
+            ("mcp_*", Some("execute_bash"), Some(&["mcp_git"]), true),
+            (
+                "mcp_*",
+                Some("execute_bash"),
+                Some(&["prefix_mcp_git"]),
+                false,
+            ),
+            ("sh?ll", Some("execute_bash"), Some(&["shell"]), true),
+            ("sh?ll", Some("execute_bash"), Some(&["shll"]), false),
+            ("sh?ll", Some("execute_bash"), Some(&["shell_extra"]), false),
+            ("@mcp.*", Some("execute_bash"), Some(&["@mcp.git"]), true),
+            ("@mcp.*", Some("execute_bash"), Some(&["@mcpXgit"]), false),
+            ("execute_bash", Some("execute_pwsh"), None, true),
+            ("execute_pwsh", Some("execute_bash"), None, true),
+            (
+                "control_bash_process",
+                Some("control_pwsh_process"),
+                None,
+                true,
+            ),
+            (
+                "control_pwsh_process",
+                Some("control_bash_process"),
+                None,
+                true,
+            ),
+            ("execute_ba*", Some("execute_pwsh"), None, false),
+            ("fs_.*", Some("fs_write"), None, true),
+            ("fs_.*", Some("execute_bash"), Some(&["fs_write"]), false),
+            ("shell", Some("shell_tool"), None, true),
+            ("^mcp_.*$", Some("mcp_git_status"), None, true),
+            (
+                "^mcp_.*$",
+                Some("execute_bash"),
+                Some(&["mcp_git_status"]),
+                false,
+            ),
+            ("shell|read", Some("execute_bash"), Some(&["shell"]), false),
+            (r"\bshell\b", Some("execute_bash"), Some(&["shell"]), false),
+            ("shell$", Some("execute_bash"), Some(&["shell"]), false),
+            ("sh[ae]ll", Some("execute_bash"), Some(&["shell"]), false),
+            ("s(hell)", Some("execute_bash"), Some(&["shell"]), false),
+            ("sh{2}ell", Some("execute_bash"), Some(&["shhell"]), false),
+            ("shell+", Some("execute_bash"), Some(&["shell"]), false),
+            (
+                "[",
+                Some("execute_bash"),
+                Some(&["shell", "@builtin"]),
+                false,
+            ),
+            ("fs_(", Some("fs_write"), None, false),
+            ("", None, None, true),
+        ];
+        let ws = tempfile::tempdir().unwrap();
+        let dir = ws.path().join(".kiro/hooks");
+        for (file_trigger, trigger) in
+            [("PreToolUse", "preToolUse"), ("PostToolUse", "postToolUse")]
+        {
+            for &(matcher, tool_id, tool_tags, expected) in cases {
+                let file = serde_json::json!({
+                    "version": "v1",
+                    "hooks": [{
+                        "name": "selected",
+                        "trigger": file_trigger,
+                        "matcher": matcher,
+                        "action": {"type": "command", "command": "echo hook"}
+                    }]
+                });
+                write(&dir, "matrix.json", &file.to_string());
+                let reg = HookRegistry::load(ws.path(), None);
+                let mut params = serde_json::json!({"trigger": trigger});
+                if let Some(id) = tool_id {
+                    params["toolId"] = id.into();
+                }
+                if let Some(tags) = tool_tags {
+                    params["toolTags"] = serde_json::json!(tags);
+                }
+                let resp = reg.respond_list(&params).unwrap();
+                let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+                let ids: Vec<&str> = reply["hooks"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|hook| hook["id"].as_str().unwrap())
+                    .collect();
+                assert_eq!(
+                    ids,
+                    if expected {
+                        vec!["matrix:selected"]
+                    } else {
+                        vec![]
+                    },
+                    "{trigger}: matcher={matcher:?}, id={tool_id:?}, tags={tool_tags:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn respond_list_preserves_non_tool_trigger_matching() {
+        let ws = tempfile::tempdir().unwrap();
+        let dir = ws.path().join(".kiro/hooks");
+        for (file_trigger, trigger) in [
+            ("SessionStart", "sessionStart"),
+            ("UserPromptSubmit", "promptSubmit"),
+            ("Stop", "agentStop"),
+        ] {
+            let file = serde_json::json!({
+                "version": "v1",
+                "hooks": [
+                    {"name": "always", "trigger": file_trigger,
+                     "action": {"type": "command", "command": "echo always"}},
+                    {"name": "empty", "trigger": file_trigger, "matcher": "",
+                     "action": {"type": "command", "command": "echo empty"}},
+                    {"name": "regex", "trigger": file_trigger, "matcher": "execute_bash",
+                     "action": {"type": "command", "command": "echo regex"}},
+                    {"name": "invalid", "trigger": file_trigger, "matcher": "*",
+                     "action": {"type": "command", "command": "echo invalid"}}
+                ]
+            });
+            write(&dir, "other.json", &file.to_string());
+            let reg = HookRegistry::load(ws.path(), None);
+            for (tool_id, expected) in [
+                (None, vec!["other:always", "other:empty"]),
+                (Some("execute_pwsh"), vec!["other:always", "other:empty"]),
+                (
+                    Some("execute_bash"),
+                    vec!["other:always", "other:empty", "other:regex"],
+                ),
+            ] {
+                let mut params = serde_json::json!({
+                    "trigger": trigger,
+                    "toolTags": ["execute_bash"]
+                });
+                if let Some(id) = tool_id {
+                    params["toolId"] = id.into();
+                }
+                let resp = reg.respond_list(&params).unwrap();
+                let reply: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
+                let ids: Vec<&str> = reply["hooks"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .map(|hook| hook["id"].as_str().unwrap())
+                    .collect();
+                assert_eq!(ids, expected, "{trigger}: toolId={tool_id:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn respond_list_rejects_malformed_present_tool_tags() {
+        let reg = HookRegistry::default();
+        for tags in [
+            serde_json::json!(null),
+            serde_json::json!("shell"),
+            serde_json::json!(42),
+            serde_json::json!(false),
+            serde_json::json!({"tag": "shell"}),
+            serde_json::json!(["shell", null]),
+            serde_json::json!(["shell", 42]),
+            serde_json::json!(["shell", false]),
+            serde_json::json!(["shell", ["@builtin"]]),
+            serde_json::json!(["shell", {"tag": "@builtin"}]),
+        ] {
+            for trigger in [Some("preToolUse"), None] {
+                let mut params = serde_json::json!({
+                    "toolId": "execute_bash",
+                    "toolTags": tags
+                });
+                if let Some(trigger) = trigger {
+                    params["trigger"] = trigger.into();
+                }
+                let error = reg.respond_list(&params).unwrap_err();
+                assert_eq!(error.code, acp::ErrorCode::InvalidParams);
+                assert!(
+                    error.data.unwrap().to_string().contains("toolTags"),
+                    "invalid tags must have a field-specific diagnostic"
+                );
+            }
+        }
     }
 
     // cyril-tpfd claim 7 (parse half): `action.timeout` is SECONDS, absent

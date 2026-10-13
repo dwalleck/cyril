@@ -25,10 +25,9 @@ use crate::types::{AgentEngine, AgentInitiation, Notification};
 /// never the protocol-default null — and [`client_capabilities`] derives the
 /// inbound advertisement from the same datum.
 ///
-/// The presence fields exist only under the `kas` cargo feature (the
-/// `InternalChannels` cfg-field precedent): a default build **cannot
-/// construct** presence, making ADR-0002's "default build links no KAS code"
-/// a type-system fact rather than a convention.
+/// The presence fields exist only under the `kas` Cargo feature (the
+/// `InternalChannels` cfg-field precedent). A build without that feature
+/// cannot construct presence; the production binary enables KAS by default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Adapters {
     /// Inbound `_kiro/auth/getAccessToken`. Auth has no capability
@@ -212,9 +211,8 @@ pub(crate) trait Engine {
     ) -> crate::Result<Option<Notification>>;
 }
 
-/// The v2 (Rust, `kiro.dev/*`) engine — cyril's default. Delegates to the
-/// existing `convert::` functions verbatim, so behavior is byte-identical to
-/// pre-KAS-0 (the milestone's strict-parity acceptance criterion).
+/// The v2 (Rust, `kiro.dev/*`) compatibility engine. Delegates to the existing
+/// `convert::` functions verbatim, preserving the pre-KAS-0 behavior.
 pub(crate) struct V2Engine;
 
 impl Engine for V2Engine {
@@ -249,16 +247,17 @@ impl Engine for V2Engine {
 }
 
 /// The KAS engine (TypeScript/LangGraph, `_kiro/*` dialect), reached via the
-/// free-path direct spawn (KAS-1, cyril-evwh). Gated behind the `kas` cargo
-/// feature (ADR-0002) so a default build links no KAS code.
+/// free-path direct spawn (KAS-1, cyril-evwh). Gated behind the `kas` Cargo
+/// feature (ADR-0002), which the production binary enables by default.
 ///
 /// KAS-2a (cyril-j16p) renders the KAS dialect incrementally. Slice 1:
 /// `convert_session_update` maps the `session_info_update` → `turn_end`
 /// lifecycle frame to `TurnCompleted` (the KAS turn-completion signal, in place
-/// of v2's prompt response) and delegates every other `session/update` — agent
-/// text and tool calls — to the generic `convert::` functions. Exact normalized
-/// `kiro/workflow/*` lifecycle methods route through the KAS-only workflow
-/// adapter; every other extension keeps the existing Kiro conversion path.
+/// of v2's prompt response). Available commands use KAS metadata classification;
+/// agent text and tool calls use the generic `convert::` functions. Exact
+/// normalized `kiro/workflow/*` lifecycle methods route through the KAS-only
+/// workflow adapter; other extensions keep shared conversion, with unsupported
+/// bridge-command advertisements suppressed.
 /// Advertises `fs` read+write (KAS-5a, cyril-7bdu) and `terminal` (KAS-5b,
 /// cyril-ufie) capabilities so KAS delegates file I/O and shell execution to
 /// cyril's host-io responders instead of running them in-process.
@@ -323,16 +322,16 @@ impl Engine for KasEngine {
     fn convert_session_update(&self, args: &acp::SessionNotification) -> Option<Notification> {
         // KAS-2a (cyril-j16p) Slice 1: the `turn_end` lifecycle frame is a
         // KAS-specific `session_info_update` sub-kind that drives turn
-        // completion (v2 derives it from the prompt response instead). All
-        // other updates — agent text, tool calls — delegate to the generic
-        // converter unchanged.
+        // completion (v2 derives it from the prompt response instead).
+        // Available commands also need KAS-specific metadata classification;
+        // agent text and tool calls retain the generic converter.
         if let acp::SessionUpdate::SessionInfoUpdate(siu) = &args.update {
             return convert::kas::session_info_to_notification(siu);
         }
-        // Gate-advertised workflow commands never reach autocomplete
-        // (cyril-0qe6 C8) — a KAS dialect quirk, filtered in the dialect.
+        if let acp::SessionUpdate::AvailableCommandsUpdate(update) = &args.update {
+            return Some(convert::kas::commands_to_notification(update));
+        }
         convert::session_update_to_notification(args)
-            .map(convert::kas::suppress_workflow_gate_commands)
     }
 
     /// cyril-lki9: KAS tags every chunk and tool frame of an agent-initiated
@@ -362,11 +361,10 @@ impl Engine for KasEngine {
                 if let Some(powers) = convert::kas::powers::to_notification(method, params)? {
                     return Ok(Some(powers));
                 }
-                // Same C8 suppression as the session-update path: the shared
-                // kiro converter can also emit CommandsUpdated, and the four
-                // gate commands must not reach autocomplete from any route.
+                // Shared V2 conversion cannot classify supported KAS commands.
+                // Never register its bridge-only commands for this engine.
                 Ok(convert::kiro::to_ext_notification(method, params)?
-                    .map(convert::kas::suppress_workflow_gate_commands))
+                    .map(convert::kas::suppress_unsupported_commands))
             }
         }
     }

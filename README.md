@@ -19,12 +19,13 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 - **Agent/model switching** — switch agents (`/agent`) and models (`/model`) via picker UI
 - **Live activity indicator** — animated spinner with elapsed time and current tool activity in the toolbar
 - **Context bar** — visual gauge showing context window usage
-- **Opt-in local memory runtime** — teach explicit per-project lessons that are injected into a fresh session's first prompt, backed by private versioned stores and authenticated health reporting, without making chat depend on memory availability
-- **@-file references** — reference files in prompts with `@path/to/file` autocomplete
+- **Opt-in local memory runtime** — teach explicit per-project lessons for a fresh session's first ordinary chat prompt, backed by private versioned stores and authenticated health reporting, without making chat depend on memory availability
+- **@-file references** — reference files in ordinary chat prompts with `@path/to/file` autocomplete
 
 ## Prerequisites
 
-- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`) — Linux, macOS, and Windows native binaries are all supported
+- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`) — Kiro ships native Linux, macOS and Windows binaries; see the platform qualification note below
+- [Node.js](https://nodejs.org/) on `PATH` for the default KAS launch
 - [Rust toolchain](https://rustup.rs/) (for building from source)
 
 ## Installation
@@ -67,11 +68,49 @@ cyril -d /path/to/project        # Linux
 cyril -d C:\Users\you\project    # Windows
 ```
 
-### KAS on native platforms
+### Engines and first run
 
-Build with `cargo build -p cyril --release --bins --features kas`, then run
-`cyril --agent-engine kas`. The default KAS launch uses Node.js directly;
-install Node.js on `PATH` and authenticate with `kiro-cli login`.
+Normal production builds of the `cyril` package enable `kas` and select KAS when
+engine configuration is absent. The library `cyril-core` keeps its `kas` feature
+opt-in. Explicit v2 selection remains supported:
+
+```sh
+cyril --agent-engine v2
+```
+
+Or set the engine in `~/.config/cyril/config.toml`:
+
+```toml
+[agent]
+engine = "v2"
+```
+
+CLI engine selection still wins over configuration. `kas` and `v3` both select
+KAS. To build a V2-only binary without the KAS credential-reading code, use an
+isolated selected-package build:
+
+```sh
+cargo build -p cyril --no-default-features
+```
+
+That build defaults to v2. Runtime `--agent-engine v2` does **not** remove the
+credential-reading capability from a normal binary. A workspace build is not
+proof of exclusion: `cyril-workbench` enables core KAS through feature
+unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
+
+The default KAS `free` spawn runs discovered Node.js plus the extracted
+`acp-server.js` directly, with callback authentication supplied by Cyril from
+Kiro's credential store. “Free” means no Kiro wrapper, not credential-free.
+It ignores `--agent-command`; an override alone does not select a WSL agent.
+
+If the bundle is missing, the error reports the searched path and instructs
+`kiro-cli acp --agent-engine v3` once to extract it, or `KIRO_KAS_SERVER_PATH`
+to select an explicit `acp-server.js`. Missing Node has its own instruction:
+install Node.js on `PATH` or set `KIRO_AGENT_PATH` to its executable. Credential
+failures are distinct; authenticate with `kiro-cli login`. Server/Node overrides
+do not relocate credentials. There is no silent Wrapper or v2 fallback.
+
+### KAS on native platforms
 
 Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and reads
 authentication from `<data dir>/data.sqlite3`. Both use the same platform root:
@@ -83,17 +122,23 @@ authentication from `<data dir>/data.sqlite3`. Both use the same platform root:
 | Native Windows | `%LOCALAPPDATA%\Kiro-Cli`, falling back to Windows' local-app-data known folder when `LOCALAPPDATA` is unset or not absolute |
 
 `XDG_DATA_HOME` does not redirect macOS or native Windows KAS discovery.
-macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME`.
+macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME` and does not
+require WSL. Explicit v2 inside WSL requires both engine and command selection,
+for example `cyril --agent-engine v2 --agent-command wsl kiro-cli acp`, plus a
+Kiro login inside WSL. Path translation follows the resolved agent location,
+not merely Cyril's host OS.
 
-If the bundle has not been extracted yet, run `kiro-cli acp --agent-engine v3`
-once. `KIRO_KAS_SERVER_PATH` can select an explicit `acp-server.js`, and
-`KIRO_AGENT_PATH` can select the Node.js executable; neither changes the
-credential-store location.
+The macOS data-root correction from
+[PR #167](https://github.com/dwalleck/cyril/pull/167) is integrated.
+Live native macOS/Windows KAS qualification is not claimed here. See the
+[ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d).
 
 ### Local memory runtime
 
-Memory is disabled by default. Enable the local runtime in Cyril's
-`~/.config/cyril/config.toml`:
+Cyril's local memory runtime is disabled by default. It is separate from native
+KAS memory: upstream KAS defaults are preserved, with possible overlap and costs
+explicitly accepted. Cyril's `/memory` does **not** control native KAS memory.
+Enable the local runtime in Cyril's `~/.config/cyril/config.toml`:
 
 ```toml
 [memory]
@@ -104,14 +149,16 @@ Use `/memory status` to inspect runtime health, store schema versions, and how
 the current workspace is bound to a project (a Git common dir, or the
 canonical path outside Git).
 
-Lessons are explicit: nothing is captured from conversations. `/memory teach
-<text>` stores a project lesson (secrets such as `password=…`, `ghp_…`, `AKIA…`,
+Cyril lessons are explicit: the local runtime captures nothing from
+conversations. `/memory teach <text>` stores a project lesson (secrets such as `password=…`, `ghp_…`, `AKIA…`,
 `sk-…`, and PEM private keys are redacted before storage); `/memory list` and
 `/memory inspect <id>` read them back; `/memory teach --replace <id> <text>`
 supersedes one. Active lessons for the bound project are prepended, in a
-`<CYRIL_LESSONS>` block, to the **first prompt of each fresh session** and never
-shown in the transcript. If the memory runtime is unavailable the prompt goes
-out without them; chat never waits on memory.
+`<CYRIL_LESSONS>` block, to the **first ordinary chat prompt of each fresh
+session** and never shown in the transcript. Registered KAS agent-command
+prompts do not receive this block; if a command comes first, the lessons remain
+pending for the next ordinary chat prompt. If the memory runtime is unavailable
+the prompt goes out without them; chat never waits on memory.
 
 
 ### Keyboard shortcuts
@@ -147,6 +194,54 @@ the limit is refused in full with a visible notice; it is never silently
 truncated. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
+
+### Host hooks (KAS)
+
+KAS is the default engine in normal production builds. In the default KAS hooks
+mode, `[agent] kas_hooks = "host"`, Cyril loads command hooks from the
+workspace's `.kiro/hooks/*.json` and `~/.kiro/hooks/*.json`.
+
+For example, a `.kiro/hooks/shell.json` hook can select tools tagged `shell`:
+
+```json
+{
+  "version": "v1",
+  "hooks": [{
+    "name": "shell-hook",
+    "trigger": "PreToolUse",
+    "matcher": "shell",
+    "action": {"type": "command", "command": "echo shell hook"}
+  }]
+}
+```
+
+For `PreToolUse` and `PostToolUse`, matching follows KAS's selector-plus-ID-regex
+rules:
+
+- Matchers without any of `\ ^ $ ( ) [ ] { } | +` act as tool selectors.
+  Literals match exact supplied tool IDs or tags, such as `shell`, `read`,
+  `@builtin`, and `@mcp`; source tags are not inferred from ID prefixes.
+  `*` matches zero or more characters and `?` matches one, across the whole ID
+  or tag. Other characters are literal in these wildcard patterns, and `*`
+  alone is valid.
+- Exact ID selectors also recognize `execute_bash`/`execute_pwsh` and
+  `control_bash_process`/`control_pwsh_process` as aliases in both directions.
+- Independently, a valid matcher retains legacy unanchored Rust-regex matching
+  against the tool ID only. For example, `fs_.*` still matches `fs_write`.
+  Regex-only forms such as `^mcp_.*$` never match tags.
+
+A configured matcher requires a tool ID, even if tags are supplied. Missing
+or empty tags leave ID matching available; an omitted or empty matcher selects
+every hook invocation within its trigger. Invalid matchers are warned about
+and retained as nonmatching hooks. A malformed present `toolTags` value—anything
+other than an array containing only strings—is diagnosed and rejected as
+invalid params, not silently reduced to ID-only matching.
+
+Tag matching does not change hook execution authority or approval behavior.
+A pre-tool command hook exiting with code 2 blocks the tool. Other triggers
+keep their existing behavior. `kas_hooks = "kas"` remains the separate KAS-owned
+registry/execution mode; this Host-mode repair does not change it.
+
 
 ### Reviewing a branch (KAS)
 
@@ -245,7 +340,7 @@ findings and the path to `report.md`.
 | `/review` | Review changes with a multi-agent workflow (KAS); `/review resume`, `/review cancel` |
 | `/quit` | Quit |
 
-**Agent commands** (forwarded to Kiro via ACP):
+**V2 agent commands** (forwarded to Kiro via ACP; examples, not a KAS parity guarantee):
 
 | Command | Description |
 |---------|-------------|
@@ -259,6 +354,27 @@ findings and the path to `report.md`.
 | `/prompts` | Select from available prompts (picker) |
 | `/tools` | Show available agent tools |
 | `/usage` | Show billing and usage info |
+
+V2 retains its existing command execution and selection-option requests.
+Advertised commands cannot replace Cyril's builtins or an already-registered
+command.
+
+**KAS agent commands:** when KAS advertises a `custom-agent` command, Cyril
+registers it for ordinary ACP prompt submission. For example, if advertised,
+`/general-task-execution "inspect foo"` starts a prompt turn rather than a V2
+command RPC. The invocation is sent as exactly one original text block,
+preserving the slash, quotes, and whitespace as typed, including commands with
+no arguments.
+
+Recognized KAS command prompts receive **no automatic local lesson or
+`@file` expansion text**: those additions would change KAS's command arguments.
+First-prompt local lessons remain pending for ordinary chat instead. Ordinary
+chat and unregistered slash fallback keep their existing context/file behavior.
+If a turn is already busy, the invocation follows normal steering behavior.
+
+Unsupported KAS command types are not registered. The exact workflow commands
+`workflow-run`, `workflow-status`, `workflow-cancel`, and `workflow-resume` also
+remain excluded; Cyril retains its own workflow control plane.
 
 ## Project structure
 

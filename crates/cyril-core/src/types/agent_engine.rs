@@ -5,21 +5,21 @@
 /// the bridge. This is a **typed selection** (CONTEXT.md: "Engine" is a
 /// first-class axis), not sniffed from the agent command string.
 ///
-/// KAS-0 wires only [`AgentEngine::V2`]; [`AgentEngine::Kas`] is selectable but
-/// reports "not available yet" until KAS-1 (cyril-evwh) makes the spawn real,
-/// behind the `kas` cargo feature (ADR-0002).
+/// KAS support is compiled behind the `kas` cargo feature (ADR-0002). The
+/// default follows that capability: KAS when enabled, V2 otherwise. Explicit
+/// selections remain available; selecting KAS without support fails at spawn.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum AgentEngine {
-    /// The Rust engine (`kiro.dev/*` dialect), reached via `kiro-cli acp` —
-    /// cyril's default.
-    #[default]
+    /// The Rust engine (`kiro.dev/*` dialect), reached via `kiro-cli acp`.
+    /// Default when KAS support is not compiled in.
+    #[cfg_attr(not(feature = "kas"), default)]
     V2,
-    /// The TypeScript/LangGraph engine (`_kiro/*` dialect), reached via
-    /// `kiro-cli acp --agent-engine <v3|kas>` (version-dependent flag, resolved
-    /// in KAS-1). `v3` — kiro-cli's own name for this engine since 2.8.0 — is
-    /// accepted as an input alias (cyril-6iek); the canonical spelling stays
-    /// `kas` (serialization always emits `"kas"`).
+    /// The TypeScript/LangGraph engine (`_kiro/*` dialect), reached via direct
+    /// Free spawn or `kiro-cli acp --agent-engine <v3|kas>` Wrapper spawn.
+    /// Default when KAS support is compiled in. `v3` — kiro-cli's own name
+    /// since 2.8.0 — is accepted as an input alias; serialization emits `"kas"`.
+    #[cfg_attr(feature = "kas", default)]
     #[serde(alias = "v3")]
     Kas,
 }
@@ -52,12 +52,6 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
-
-    #[test]
-    fn default_is_v2() {
-        // The default build drives v2 — selecting KAS is always explicit (ADR-0002).
-        assert_eq!(AgentEngine::default(), AgentEngine::V2);
-    }
 
     // Slice 5 (D7 parse table): FromStr maps cyril's selector values, is
     // case/whitespace-tolerant, and REJECTS the unknown rather than defaulting.

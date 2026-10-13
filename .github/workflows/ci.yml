@@ -13,10 +13,10 @@ env:
 # Cancel superseded runs on a PR branch when it's re-pushed, but never cancel
 # a run on main (keep main's history fully validated). One lane per ref.
 #
-# `test` and `build` each put a macOS job in the matrix, so every run asks for
-# two of them, and macOS concurrency is an account-wide pool shared with every
-# other repository. Without a lane, a branch pushed repeatedly stacks runs that
-# hold those slots while unrelated projects wait.
+# `test` and `default-features` each put a macOS job in the matrix; conditional
+# code-review tooling can add a third. macOS concurrency is an account-wide
+# pool shared with every other repository. Without a lane, repeated pushes
+# stack runs that hold those slots while unrelated projects wait.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
@@ -189,7 +189,11 @@ jobs:
 
   default-features:
     name: Default Features
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -200,13 +204,31 @@ jobs:
       - name: Install cargo-nextest
         uses: taiki-e/install-action@nextest
 
-      # Workspace defaults include workbench's KAS dependency. Keep that
-      # coverage, then select core alone to exercise its default-off KAS code.
+      # Workspace defaults unify KAS through workbench. Select the production
+      # package independently to prove its default feature policy.
+      - name: Build (binary default features)
+        run: cargo build -p cyril --bins
+
+      - name: Test (binary default features)
+        run: cargo nextest run -p cyril
+
+      # Retain workspace-default coverage in addition to package isolation.
       - name: Clippy (default features)
         run: cargo clippy --workspace --all-targets -- -D warnings
 
       - name: Test (default features)
         run: cargo nextest run --workspace
+
+      # No-default exclusion must also select the binary independently: a
+      # workspace invocation would re-enable KAS via workbench.
+      - name: Build (binary without KAS)
+        run: cargo build -p cyril --no-default-features --bins
+
+      - name: Clippy (binary without KAS)
+        run: cargo clippy -p cyril --no-default-features --all-targets -- -D warnings
+
+      - name: Test (binary without KAS)
+        run: cargo nextest run -p cyril --no-default-features
 
       - name: Clippy (core without KAS)
         run: cargo clippy -p cyril-core --no-default-features --all-targets -- -D warnings

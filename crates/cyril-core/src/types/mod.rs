@@ -30,7 +30,7 @@ pub mod workflow_command;
 pub use agent_command::AgentCommand;
 pub use agent_engine::AgentEngine;
 pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatus};
-pub use command::{CommandInfo, CommandOption, ConfigOption};
+pub use command::{AgentCommandRoute, CommandInfo, CommandOption, ConfigOption};
 pub use event::{
     AgentInitiation, BridgeCommand, Notification, PermissionOption, PermissionOptionId,
     PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification, TrustOption,
