@@ -1,0 +1,143 @@
+{
+  "result": "PASS",
+  "seam": "real Cyril executable + PTY + controlled local ACP agent",
+  "limits": [
+    "No real KAS backend or billed calls; this proves client integration only.",
+    "PTY/pyte snapshots are not native graphical-terminal host evidence.",
+    "UI idle observation does not directly count internal TurnCompleted events.",
+    "No watchdog-threshold, permission-overlay, B5, or B6 proof in this campaign."
+  ],
+  "binary": "/tmp/cyril-lki9-m20.96sygg/cyril-smoke",
+  "binary_sha256": "5b8cac4568488a6d7e9783f6c3ec878a0ce7d7a34f8c2dc1c3937846009d3bca",
+  "source_head": "99ed7ce52a4ae7c422ebd62dd98e5f73b707901e",
+  "source_tree": "c2019f58762a55ef0e538c688e080efde4079a17",
+  "script": "/tmp/cyril-lki9-smoke-UOq0CtGo/smoke.py",
+  "script_sha256": "b0c10ea55798dad9ea66b7fb5605a652f6ca2761629790d54fe6c4f182fc0a48",
+  "provenance_commands": [
+    "git rev-parse HEAD HEAD^{tree} (in source worktree)",
+    "sha256sum /tmp/cyril-lki9-m20.96sygg/cyril-smoke /home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl"
+  ],
+  "harness_adaptation": "Initial caption-only attempt assumed nonexistent Ready label. A second attempt used a shared target binary rebuilt during parent mutation tests and is invalid provenance; final campaign uses the pinned restored executable and captured run_start prerequisite.",
+  "source_capture": "/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl",
+  "source_capture_sha256": "144ecd032be0d98ce2fca06d34a98b5537375efe17318b3ef7267643aa9dffaa",
+  "capture_lines": {
+    "run-start": 27,
+    "completion": 156,
+    "start": 160,
+    "chunk1": 165,
+    "chunk2": 166,
+    "end": 240
+  },
+  "mutations": [
+    "Replace captured parent session with sess_lki9_controlled_smoke.",
+    "Generic turn changes reason/text/replayId; silent turn has no content.",
+    "Cancelled turn uses captured terminal envelope with stopReason cancelled."
+  ],
+  "run_command": "uv run --script /tmp/cyril-lki9-smoke-UOq0CtGo/smoke.py",
+  "tui_command": [
+    "/tmp/cyril-lki9-m20.96sygg/cyril-smoke",
+    "--cwd",
+    "<isolated-temp-home>",
+    "--agent-engine",
+    "kas"
+  ],
+  "authentication": "isolated HOME with synthetic auth_kv/state only; KIRO_KAS_SERVER_PATH local node wrapper",
+  "assertions": [
+    {
+      "claim": "Launched without --prompt and sent no session/prompt",
+      "result": "PASS",
+      "monotonic": 360224.023024153
+    },
+    {
+      "claim": "Busy before first content, with no invented header",
+      "result": "PASS",
+      "monotonic": 360224.789240895
+    },
+    {
+      "claim": "Before first content, submitted text uses actual _session/steer not session/prompt",
+      "result": "PASS",
+      "monotonic": 360225.389804242
+    },
+    {
+      "claim": "Named workflow header appears exactly once and before first body",
+      "result": "PASS",
+      "monotonic": 360226.345476311
+    },
+    {
+      "claim": "Wake keeps the active toolbar spinner while waiting without turn_end",
+      "result": "PASS",
+      "monotonic": 360227.549051662
+    },
+    {
+      "claim": "Workflow wake returns to idle toolbar after captured turn_end",
+      "result": "PASS",
+      "monotonic": 360228.318253389
+    },
+    {
+      "claim": "Two tagged chunks still render only one named workflow header",
+      "result": "PASS",
+      "monotonic": 360228.318893894
+    },
+    {
+      "claim": "Generic reason header appears once before body",
+      "result": "PASS",
+      "monotonic": 360229.629664826
+    },
+    {
+      "claim": "Esc sends actual session/cancel for the wake session",
+      "result": "PASS",
+      "monotonic": 360230.140153863
+    },
+    {
+      "claim": "Tagless silent wake remains Thinking without adding a header",
+      "result": "PASS",
+      "monotonic": 360232.102435759
+    },
+    {
+      "claim": "Silent wake returns idle with no additional header",
+      "result": "PASS",
+      "monotonic": 360232.872992886
+    },
+    {
+      "claim": "No session/prompt sent anywhere in the unsolicited campaign",
+      "result": "PASS",
+      "monotonic": 360232.873174438
+    },
+    {
+      "claim": "Recorded workflow completion precedes turn_start, which precedes tagged body",
+      "result": "PASS",
+      "monotonic": 360232.873242856
+    }
+  ],
+  "captures": [
+    "00-initial-idle",
+    "01-workflow-busy-before-content",
+    "02-steer-before-content",
+    "03-workflow-header-and-body",
+    "04-workflow-idle-after-turn-end",
+    "05-generic-header-and-body",
+    "06-generic-idle-after-escape",
+    "07-silent-busy",
+    "08-silent-idle"
+  ],
+  "source_provenance": "Parent supplied pinned --features kas executable built at 99ed7ce after byte-identical core restore; App additions at build time are test-only.",
+  "ui_observation_contract": "Idle/Ready has no literal Ready label; Waiting renders Thinking... plus toolbar spinner; Streaming keeps toolbar spinner without Thinking; settled idle has neither.",
+  "tui_command_actual": [
+    "/tmp/cyril-lki9-m20.96sygg/cyril-smoke",
+    "--cwd",
+    "/home/dwalleck/.claude/tmp/cyril-lki9-isolated-home-1_rcz3g1",
+    "--agent-engine",
+    "kas"
+  ],
+  "wire_counts": {
+    "initialize": 1,
+    "session/new": 1,
+    "_session/steer": 1,
+    "session/cancel": 1,
+    "session/prompt": 0
+  },
+  "process_exit": 0,
+  "seconds": 10.234,
+  "terminal_sha256": "1db31a7205b67d5f8187fe7e8f7738aceee222444ac82325d970755640c94177",
+  "wire_sha256": "d0cad4826beab8b0e6facd3309beb3e6cf8170c69d367c71be91f6e3c4761bef"
+}

@@ -1,0 +1,122 @@
+M20 on the PR #166 standards-round harness (2fa41fb3). Mutation: in TurnMediator::observe_turn_start, after allocating the server turn, set self.active = None and return Disposition::Forward instead of BeginServerTurn. Pre-mutation SHA-256 9d54f01671f913af70964ec05fe536f5760df5d30b82045d823290b5a2803c79.
+
+warning: variant `BeginServerTurn` is never constructed
+   --> crates/cyril-core/src/protocol/turn_mediator.rs:116:5
+    |
+105 | pub(crate) enum Disposition {
+    |                 ----------- variant in this enum
+...
+116 |     BeginServerTurn,
+    |     ^^^^^^^^^^^^^^^
+    |
+    = note: `Disposition` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `cyril-core` (lib) generated 1 warning
+    Finished `test` profile [optimized + debuginfo] target(s) in 5.46s
+────────────
+ Nextest run ID 2b4cdc96-aee4-48c0-9f85-196c23e39a99 with nextest profile: default
+    Starting 5 tests across 8 binaries (246 tests skipped)
+        FAIL [   0.014s] (1/5) cyril::bin/cyril app::tests::lki9_replay_step_verdict_notice
+  stdout ───
+
+    running 1 test
+    test app::tests::lki9_replay_step_verdict_notice ... FAILED
+
+    failures:
+
+    failures:
+        app::tests::lki9_replay_step_verdict_notice
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'app::tests::lki9_replay_step_verdict_notice' (1350810) panicked at crates/cyril/src/app.rs:7836:9:
+    .cyril-lki9/lki9-live-cancel-06615-2.26.0.jsonl: every main turn reaches its end
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.014s] (2/5) cyril::bin/cyril app::tests::lki9_replay_silent_wake_is_busy_without_header
+  stdout ───
+
+    running 1 test
+    test app::tests::lki9_replay_silent_wake_is_busy_without_header ... FAILED
+
+    failures:
+
+    failures:
+        app::tests::lki9_replay_silent_wake_is_busy_without_header
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'app::tests::lki9_replay_silent_wake_is_busy_without_header' (1350809) panicked at crates/cyril/src/app.rs:7836:9:
+    .cyril-lki9/lki9-live-prompt-06615-2.26.0.jsonl: every main turn reaches its end
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.016s] (3/5) cyril::bin/cyril app::tests::lki9_replay_tail_wake_header_and_busy_span
+  stdout ───
+
+    running 1 test
+    test app::tests::lki9_replay_tail_wake_header_and_busy_span ... FAILED
+
+    failures:
+
+    failures:
+        app::tests::lki9_replay_tail_wake_header_and_busy_span
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'app::tests::lki9_replay_tail_wake_header_and_busy_span' (1350807) panicked at crates/cyril/src/app.rs:7836:9:
+    experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl: every main turn reaches its end
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.017s] (4/5) cyril::bin/cyril app::tests::lki9_replay_busy_parent_notice
+  stdout ───
+
+    running 1 test
+    test app::tests::lki9_replay_busy_parent_notice ... FAILED
+
+    failures:
+
+    failures:
+        app::tests::lki9_replay_busy_parent_notice
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'app::tests::lki9_replay_busy_parent_notice' (1350808) panicked at crates/cyril/src/app.rs:7836:9:
+    .cyril-lki9/lki9-live-busy-06615-2.26.0.jsonl: every main turn reaches its end
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.019s] (5/5) cyril::bin/cyril app::tests::lki9_replay_gate_on_label_permission_and_step_header
+  stdout ───
+
+    running 1 test
+    test app::tests::lki9_replay_gate_on_label_permission_and_step_header ... FAILED
+
+    failures:
+
+    failures:
+        app::tests::lki9_replay_gate_on_label_permission_and_step_header
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 210 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'app::tests::lki9_replay_gate_on_label_permission_and_step_header' (1350806) panicked at crates/cyril/src/app.rs:7836:9:
+    experiments/conductor-spike/kas-workflow-new-06615-gateon-2.26.0.jsonl: every main turn reaches its end
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.020s] 5 tests run: 0 passed, 5 failed, 246 skipped
+        FAIL [   0.014s] (1/5) cyril::bin/cyril app::tests::lki9_replay_step_verdict_notice
+        FAIL [   0.014s] (2/5) cyril::bin/cyril app::tests::lki9_replay_silent_wake_is_busy_without_header
+        FAIL [   0.016s] (3/5) cyril::bin/cyril app::tests::lki9_replay_tail_wake_header_and_busy_span
+        FAIL [   0.017s] (4/5) cyril::bin/cyril app::tests::lki9_replay_busy_parent_notice
+        FAIL [   0.019s] (5/5) cyril::bin/cyril app::tests::lki9_replay_gate_on_label_permission_and_step_header
+error: test run failed
