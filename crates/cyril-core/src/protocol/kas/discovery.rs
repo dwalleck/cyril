@@ -75,12 +75,12 @@ impl KasMissing {
 }
 
 /// `<home>`-relative default for `$XDG_DATA_HOME` (XDG Base Directory spec) —
-/// the fallback kiro-cli's own `dirs`-based resolution uses.
-#[cfg(any(not(windows), test))]
+/// the fallback kiro-cli's own `dirs`-based resolution uses on XDG targets.
+#[cfg(any(not(any(windows, target_os = "macos", target_os = "ios")), test))]
 const XDG_DATA_HOME_DEFAULT_REL: &str = ".local/share";
-/// kiro-cli's Unix data dir name under the XDG data home. The resolved data
+/// kiro-cli's data dir name under the XDG data home. The resolved data
 /// dir is the shared parent of the KAS extraction root and credential store.
-#[cfg(any(not(windows), test))]
+#[cfg(any(not(any(windows, target_os = "macos", target_os = "ios")), test))]
 const KIRO_DATA_DIR_NAME: &str = "kiro-cli";
 /// Data-dir-relative KAS self-extraction root. kiro ≥2.10.0 extracts into
 /// versioned `<semver>-<sha256>/` dirs under it; older releases extracted the
@@ -97,9 +97,7 @@ const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-serve
 /// `XDG_DATA_HOME` is set, non-empty and absolute, else
 /// `<home>/.local/share/kiro-cli` — the `dirs::data_local_dir` rule kiro-cli
 /// resolves through on the targets `dirs` routes to `lin.rs` (Linux, Android,
-/// the BSDs, illumos, Redox — `dirs-6.0.0/src/lib.rs`). macOS/iOS keep the
-/// existing HOME fallback without consulting `XDG_DATA_HOME`; their native
-/// data-directory support is separate scope (cyril-igrx). Strace-proven on
+/// the BSDs, illumos, Redox — `dirs-6.0.0/src/lib.rs`). Strace-proven on
 /// Linux 2.24.0: `settings list` under `HOME=<tmp> XDG_DATA_HOME=<x>` opens
 /// `<x>/kiro-cli/data.sqlite3` and never touches `<tmp>/.local/share`; see
 /// `.cyril-brui/evidence.md`. An empty or relative value falls back to
@@ -110,7 +108,7 @@ const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-serve
 /// this workspace); [`kiro_data_dir_from_env`] is the one production caller,
 /// and `env_wrappers_resolve_xdg_data_home_like_kiro_cli` drives the wrappers
 /// themselves through a re-entered child process with a private environment.
-#[cfg(any(not(windows), test))]
+#[cfg(any(not(any(windows, target_os = "macos", target_os = "ios")), test))]
 fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<PathBuf> {
     if let Some(value) = xdg_data_home {
         let xdg = Path::new(value);
@@ -124,6 +122,14 @@ fn kiro_data_dir(home: Option<&Path>, xdg_data_home: Option<&OsStr>) -> Option<P
         );
     }
     home.map(|h| h.join(XDG_DATA_HOME_DEFAULT_REL).join(KIRO_DATA_DIR_NAME))
+}
+
+/// macOS/iOS use `<home>/Library/Application Support/kiro-cli`, matching
+/// kiro-cli's `dirs::data_local_dir` rule (`dirs-6.0.0/src/mac.rs`).
+/// Pure like the other platform helpers; XDG and LOCALAPPDATA play no role.
+#[cfg(any(target_os = "macos", target_os = "ios", test))]
+fn apple_kiro_data_dir(home: Option<&Path>) -> Option<PathBuf> {
+    home.map(|h| h.join("Library/Application Support/kiro-cli"))
 }
 
 /// Windows uses `%LOCALAPPDATA%\Kiro-Cli`, or the Windows local-app-data
@@ -157,8 +163,8 @@ fn windows_kiro_data_dir(
 }
 
 /// One platform resolution shared by the KAS bundle and credential store.
-/// Windows ignores HOME/XDG and uses local AppData; other targets retain
-/// their existing XDG/HOME rules.
+/// Windows uses local AppData, macOS/iOS use Library/Application Support,
+/// and other targets follow the XDG/HOME rules.
 fn kiro_data_dir_from_env() -> Option<PathBuf> {
     #[cfg(windows)]
     {
@@ -167,12 +173,13 @@ fn kiro_data_dir_from_env() -> Option<PathBuf> {
             dirs::data_local_dir,
         )
     }
-    #[cfg(not(windows))]
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
     {
-        #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+        apple_kiro_data_dir(crate::kiro_agent_config::home_dir().as_deref())
+    }
+    #[cfg(not(any(windows, target_os = "macos", target_os = "ios")))]
+    {
         let xdg_data_home = std::env::var_os("XDG_DATA_HOME");
-        #[cfg(any(target_os = "macos", target_os = "ios"))]
-        let xdg_data_home: Option<std::ffi::OsString> = None;
         kiro_data_dir(
             crate::kiro_agent_config::home_dir().as_deref(),
             xdg_data_home.as_deref(),
@@ -458,9 +465,10 @@ pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
 }
 
 /// kiro-cli's credential store — `<kiro data dir>/data.sqlite3`, under
-/// `%LOCALAPPDATA%\Kiro-Cli` on Windows or the existing XDG/HOME root on
-/// other targets. The auth responder's source: unlike the SSO-cache token
-/// file, this is refreshed by every login and deleted-row on logout.
+/// `%LOCALAPPDATA%\Kiro-Cli` on Windows, Library/Application Support on
+/// macOS/iOS, or the XDG/HOME root on other targets. The auth responder's
+/// source: unlike the SSO-cache token file, this is refreshed by every login
+/// and deleted-row on logout.
 pub(crate) fn default_store_path() -> Option<PathBuf> {
     kiro_data_dir_from_env().map(|d| store_path(&d))
 }
@@ -1047,6 +1055,61 @@ mod tests {
     }
 
     #[test]
+    fn apple_server_selection_and_store_share_native_root() {
+        let root = tempfile::tempdir().expect("tempdir");
+        let home = root.path().join("Profile ü With Spaces");
+        let data_dir = apple_kiro_data_dir(Some(&home)).expect("home resolves");
+        let expected_data = home.join("Library/Application Support/kiro-cli");
+        let exact = format!("2.24.0-{SHA_A}");
+        let newer = format!("2.25.0-{SHA_B}");
+        for version in [&exact, &newer] {
+            let server = expected_data
+                .join("kas")
+                .join(version)
+                .join("node_modules/@kiro/agent/dist/server/acp-server.js");
+            std::fs::create_dir_all(server.parent().unwrap()).expect("extraction directory");
+            std::fs::write(server, "//").expect("server entry");
+        }
+        let node = root.path().join("node");
+        std::fs::write(&node, "").expect("node file");
+        let entries = list_kas_entries(&kas_root(&data_dir));
+        let command = resolve(
+            Some(&data_dir),
+            None,
+            Some(node.to_str().unwrap()),
+            None,
+            &entries,
+            Some((2, 24, 0)),
+            Path::is_file,
+        )
+        .expect("Apple Application Support installation is discoverable");
+        let expected_server = expected_data
+            .join("kas")
+            .join(exact)
+            .join("node_modules/@kiro/agent/dist/server/acp-server.js");
+        assert_eq!(Path::new(command.program()), node);
+        let [_, server, _, _] = command.args() else {
+            panic!("the Apple server path, including spaces and Unicode, must remain one argument");
+        };
+        assert_eq!(Path::new(server), expected_server);
+        assert_eq!(
+            store_path(&data_dir),
+            expected_data.join("data.sqlite3"),
+            "auth and bundle discovery must use the same Apple installation"
+        );
+    }
+
+    #[test]
+    fn apple_data_dir_without_home_reports_missing_bundle() {
+        let data_dir = apple_kiro_data_dir(None);
+        assert_eq!(data_dir, None);
+        assert_eq!(
+            resolve_legacy(data_dir.as_deref(), None, None, None, |_| true).unwrap_err(),
+            KasMissing::NoHome
+        );
+    }
+
+    #[test]
     fn windows_appdata_server_selection_and_store_share_root() {
         let root = tempfile::tempdir().expect("tempdir");
         let local = root.path().join("Profile With Spaces/AppData/Local");
@@ -1123,15 +1186,14 @@ mod tests {
     }
 
     /// The expected root for the isolated environment: local AppData on
-    /// Windows, XDG where supported, and the unchanged HOME default on
+    /// Windows, XDG where supported, and Library/Application Support on
     /// macOS/iOS. Each variable points to a different root, so consulting
     /// a competing variable makes both consumers fail.
     fn expected_data_dir_on_host(home: &Path, xdg: &Path, local: &Path) -> PathBuf {
         if cfg!(windows) {
             local.join("Kiro-Cli")
         } else if cfg!(any(target_os = "macos", target_os = "ios")) {
-            home.join(XDG_DATA_HOME_DEFAULT_REL)
-                .join(KIRO_DATA_DIR_NAME)
+            home.join("Library/Application Support/kiro-cli")
         } else {
             xdg.join(KIRO_DATA_DIR_NAME)
         }

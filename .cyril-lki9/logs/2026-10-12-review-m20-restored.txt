@@ -1,0 +1,13 @@
+Restored byte-exact (cmp OK); SHA-256 9d54f01671f913af70964ec05fe536f5760df5d30b82045d823290b5a2803c79. Same five replays at 2fa41fb3:
+
+    Finished `test` profile [optimized + debuginfo] target(s) in 4.61s
+────────────
+ Nextest run ID 969e0cbd-f158-4b31-92c8-6759ba443fae with nextest profile: default
+    Starting 5 tests across 8 binaries (246 tests skipped)
+        PASS [   0.007s] (1/5) cyril::bin/cyril app::tests::lki9_replay_silent_wake_is_busy_without_header
+        PASS [   0.009s] (2/5) cyril::bin/cyril app::tests::lki9_replay_step_verdict_notice
+        PASS [   0.012s] (3/5) cyril::bin/cyril app::tests::lki9_replay_busy_parent_notice
+        PASS [   0.013s] (4/5) cyril::bin/cyril app::tests::lki9_replay_tail_wake_header_and_busy_span
+        PASS [   0.016s] (5/5) cyril::bin/cyril app::tests::lki9_replay_gate_on_label_permission_and_step_header
+────────────
+     Summary [   0.016s] 5 tests run: 5 passed, 246 skipped
