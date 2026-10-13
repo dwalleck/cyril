@@ -148,6 +148,55 @@ truncated. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
 
+### Host hooks (KAS)
+
+KAS remains opt-in: build with `--features kas` and launch with
+`cyril --agent-engine kas`. In the default KAS hooks mode,
+`[agent] kas_hooks = "host"`, Cyril loads command hooks from the workspace's
+`.kiro/hooks/*.json` and `~/.kiro/hooks/*.json`.
+
+For example, a `.kiro/hooks/shell.json` hook can select tools tagged `shell`:
+
+```json
+{
+  "version": "v1",
+  "hooks": [{
+    "name": "shell-hook",
+    "trigger": "PreToolUse",
+    "matcher": "shell",
+    "action": {"type": "command", "command": "echo shell hook"}
+  }]
+}
+```
+
+For `PreToolUse` and `PostToolUse`, matching follows KAS's selector-plus-ID-regex
+rules:
+
+- Matchers without any of `\ ^ $ ( ) [ ] { } | +` act as tool selectors.
+  Literals match exact supplied tool IDs or tags, such as `shell`, `read`,
+  `@builtin`, and `@mcp`; source tags are not inferred from ID prefixes.
+  `*` matches zero or more characters and `?` matches one, across the whole ID
+  or tag. Other characters are literal in these wildcard patterns, and `*`
+  alone is valid.
+- Exact ID selectors also recognize `execute_bash`/`execute_pwsh` and
+  `control_bash_process`/`control_pwsh_process` as aliases in both directions.
+- Independently, a valid matcher retains legacy unanchored Rust-regex matching
+  against the tool ID only. For example, `fs_.*` still matches `fs_write`.
+  Regex-only forms such as `^mcp_.*$` never match tags.
+
+A configured matcher requires a tool ID, even if tags are supplied. Missing
+or empty tags leave ID matching available; an omitted or empty matcher selects
+every hook invocation within its trigger. Invalid matchers are warned about
+and retained as nonmatching hooks. A malformed present `toolTags` value—anything
+other than an array containing only strings—is diagnosed and rejected as
+invalid params, not silently reduced to ID-only matching.
+
+Tag matching does not change hook execution authority or approval behavior.
+A pre-tool command hook exiting with code 2 blocks the tool. Other triggers
+keep their existing behavior. `kas_hooks = "kas"` remains the separate KAS-owned
+registry/execution mode; this Host-mode repair does not change it.
+
+
 ### Reviewing a branch (KAS)
 
 `/review`, run from the repository root, reviews changes with Kiro's

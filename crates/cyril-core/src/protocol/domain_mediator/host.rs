@@ -109,6 +109,17 @@ fn dispatch_extension(
                 );
                 return;
             }
+            let tool_tags = match callbacks::parse_hook_tool_tags(&params) {
+                Ok(tags) => tags,
+                Err(error) => {
+                    respond_extension_error(
+                        responder,
+                        &method,
+                        agent_client_protocol::Error::invalid_params().data(error),
+                    );
+                    return;
+                }
+            };
             let (reply, response_rx) = tokio::sync::oneshot::channel();
             (
                 callbacks::HostCallback::HooksList {
@@ -120,6 +131,7 @@ fn dispatch_extension(
                         .get("toolId")
                         .and_then(serde_json::Value::as_str)
                         .map(str::to_owned),
+                    tool_tags,
                     reply,
                 },
                 response_rx,
@@ -280,4 +292,173 @@ fn spawn_job(
         }
         mediator.borrow_mut().complete(id);
     });
+}
+
+#[cfg(all(test, feature = "kas"))]
+mod tests {
+    #![allow(clippy::unwrap_used, clippy::expect_used)]
+
+    use agent_client_protocol::schema::v1 as acp;
+    use agent_client_protocol::{Agent, Client, ConnectionTo};
+
+    use super::*;
+    use crate::protocol::domain_mediator::DomainChannels;
+    use crate::protocol::engine::KasEngine;
+    use crate::protocol::kas::callbacks::DispatchCtx;
+    use crate::protocol::kas::hooks::{HookOps, HookRegistry};
+    use crate::protocol::kas::terminal_io::TerminalRegistry;
+    use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
+    use crate::protocol::source_observer::IngressTracker;
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn hook_tags_cross_host_callback_boundary_and_invalid_tags_are_refused() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let ws = tempfile::tempdir().unwrap();
+                let dir = ws.path().join(".kiro/hooks");
+                std::fs::create_dir_all(&dir).unwrap();
+                std::fs::write(
+                    dir.join("tags.json"),
+                    r#"{"version":"v1","hooks":[
+                        {"name":"always","trigger":"PreToolUse",
+                         "action":{"type":"command","command":"echo always"}},
+                        {"name":"shell","trigger":"PreToolUse","matcher":"shell",
+                         "action":{"type":"command","command":"echo shell"}}
+                    ]}"#,
+                )
+                .unwrap();
+                let (channels, _domain_rx, host_rx) =
+                    DomainChannels::new(IngressTracker::new()).unwrap();
+                let ctx = Rc::new(DispatchCtx {
+                    notify_tx: channels.clone(),
+                    terminals: Rc::new(TerminalRegistry::new(None)),
+                    hooks: Some(Rc::new(HookRegistry::load(ws.path(), None))),
+                    hook_ops: HookOps::default(),
+                    cwd: ws.path().to_path_buf(),
+                });
+                let engine: Rc<dyn Engine> = Rc::new(KasEngine {
+                    hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+                    ..KasEngine::default()
+                });
+                let host = run(
+                    host_rx,
+                    engine,
+                    Rc::new(RefCell::new(HostMediator::new())),
+                    ctx,
+                );
+                let agent = Agent
+                    .builder()
+                    .name("hook-tag-callback-test-agent")
+                    .on_receive_request(
+                        async move |request: acp::InitializeRequest,
+                                    responder,
+                                    connection: ConnectionTo<Client>| {
+                            let callback_connection = connection.clone();
+                            connection.spawn(async move {
+                                let valid = [
+                                    (
+                                        serde_json::json!({
+                                            "trigger": "preToolUse",
+                                            "toolId": "execute_bash",
+                                            "toolTags": ["shell", "@builtin"]
+                                        }),
+                                        vec!["tags:always", "tags:shell"],
+                                    ),
+                                    (
+                                        serde_json::json!({
+                                            "trigger": "preToolUse",
+                                            "toolId": "execute_bash"
+                                        }),
+                                        vec!["tags:always"],
+                                    ),
+                                    (
+                                        serde_json::json!({
+                                            "trigger": "preToolUse",
+                                            "toolId": "execute_bash",
+                                            "toolTags": []
+                                        }),
+                                        vec!["tags:always"],
+                                    ),
+                                    (
+                                        serde_json::json!({
+                                            "trigger": "preToolUse",
+                                            "toolTags": ["shell", "@builtin"]
+                                        }),
+                                        vec!["tags:always"],
+                                    ),
+                                ];
+                                for (params, expected) in valid {
+                                    let response = callback_connection
+                                        .send_request(UntypedMessage::new(
+                                            "_kiro/hooks/list",
+                                            params,
+                                        )?)
+                                        .block_task()
+                                        .await?;
+                                    let ids: Vec<&str> = response["hooks"]
+                                        .as_array()
+                                        .unwrap()
+                                        .iter()
+                                        .map(|hook| hook["id"].as_str().unwrap())
+                                        .collect();
+                                    assert_eq!(ids, expected);
+                                }
+                                for tags in [
+                                    serde_json::json!(null),
+                                    serde_json::json!("shell"),
+                                    serde_json::json!(42),
+                                    serde_json::json!(false),
+                                    serde_json::json!({"tag": "shell"}),
+                                    serde_json::json!(["shell", null]),
+                                    serde_json::json!(["shell", 42]),
+                                    serde_json::json!(["shell", false]),
+                                    serde_json::json!(["shell", ["@builtin"]]),
+                                    serde_json::json!(["shell", {"tag": "@builtin"}]),
+                                ] {
+                                    let error = callback_connection
+                                        .send_request(UntypedMessage::new(
+                                            "_kiro/hooks/list",
+                                            serde_json::json!({
+                                                "trigger": "preToolUse",
+                                                "toolId": "execute_bash",
+                                                "toolTags": tags
+                                            }),
+                                        )?)
+                                        .block_task()
+                                        .await
+                                        .unwrap_err();
+                                    assert_eq!(error.code, acp::ErrorCode::InvalidParams);
+                                    assert!(
+                                        error.data.unwrap().to_string().contains("toolTags"),
+                                        "the wire error identifies the malformed field"
+                                    );
+                                }
+                                responder
+                                    .respond(acp::InitializeResponse::new(request.protocol_version))
+                            })?;
+                            Ok(())
+                        },
+                        agent_client_protocol::on_receive_request!(),
+                    );
+                let runtime = SdkRuntime::start_for_test(agent, channels, StageChain::default())
+                    .await
+                    .unwrap();
+                tokio::time::timeout(
+                    std::time::Duration::from_secs(5),
+                    runtime
+                        .connection()
+                        .send_request(acp::InitializeRequest::new(
+                            agent_client_protocol::schema::ProtocolVersion::V1,
+                        ))
+                        .block_task(),
+                )
+                .await
+                .expect("hook callback requests complete")
+                .expect("hook callback boundary assertions pass");
+                runtime.shutdown().await;
+                host.abort();
+                assert!(host.await.unwrap_err().is_cancelled());
+            })
+            .await;
+    }
 }
