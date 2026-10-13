@@ -34,8 +34,8 @@ The parity audit required specification decisions; `spec.md` now records the req
 ## Pending dependencies and terminal criterion
 
 - SATISFIED — prerequisite owner landed PR #167 / cyril-igrx; its closed state and platform source are integrated. cyril-4c4d is claimed/in progress.
-- Design approval is recorded in `design.md`; budgeted-plan and checkpointed-build may proceed for settled slices.
-- PENDING — implementing session: deliver every ticket outcome, preserve explicit V2 and no-default builds, update affected callers/docs, and establish valid consumer, platform/repository, and independent-review evidence under checkpointed-build.
+- SATISFIED — specification/design approvals are recorded; all three implementation slices completed under the approved contracts.
+- SATISFIED at `a813eed9` — every ticket outcome, explicit V2/no-default compatibility, affected callers/docs, real consumer checks, all-platform repository gates and independent review are recorded in `plan.md`. The earlier intermittent Windows readiness observation is retained without claiming an unproven fix. Delivery remains the authorized draft PRs.
 
 Routing completion is not implementation completion. The change is complete only when those artifacts satisfy their owning criteria and no blocking defect or required proof remains unresolved. Publication/merge and issue closure require the workflow's scoped authorization; they are not implied by preparation of this route.
 

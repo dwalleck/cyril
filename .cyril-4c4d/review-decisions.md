@@ -10,7 +10,7 @@ Active workflow: `route.md`, approved `design.md`, `plan.md` Slice 3. Main owns 
 
 - Delivered behavior: Slice 3 now matrices the existing `default-features` job across Ubuntu, macOS and Windows with `fail-fast: false`; every prior check remains. The root cause was the single-OS owner of package-isolation checks. No product behavior, dependency, or new test machinery changed; D1/C6 and the other plan fields are unchanged.
 - Performed checks/results: ReviewAssembledKasDefault independently re-reviewed the applied matrix, Cargo-only step shell compatibility and `CI Success` aggregation; no findings. A failed matrix leg still makes the required aggregate fail. Prior local source gates and consumer receipts remain valid because only runner coverage changed. Actual native execution is recorded with Slice 3's remote CI, not inferred from this static review.
-- Unresolved failures: no remaining definition/re-review defect. Main must obtain successful native default/no-default jobs on the published assembled branch before final completion.
+- Unresolved failures: none for F1. Slice 3's successful assembled native qualification in `plan.md` records execution of every supported platform's default/no-default lane and the required aggregate; static review is no longer substituted for native proof.
 
 ## Review errors
 
