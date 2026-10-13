@@ -122,12 +122,12 @@ impl HostShell {
         Self::new(ShellKind::Posix, PathBuf::from("/bin/sh"))
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(crate) fn test_posix_at(executable: impl Into<PathBuf>) -> Self {
         Self::new(ShellKind::Posix, executable.into())
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(crate) fn test_fish_at(executable: impl Into<PathBuf>) -> Self {
         Self::new(ShellKind::Fish, executable.into())
     }
@@ -488,7 +488,9 @@ fn find_on_path(name: &OsStr, host: &impl HostEnvironment) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::{HostEnvironment, HostPlatform, HostShell, ShellKind, SystemHost, resolve_for};
+    #[cfg(unix)]
+    use super::SystemHost;
+    use super::{HostEnvironment, HostPlatform, HostShell, ShellKind, resolve_for};
     use std::cell::Cell;
     use std::collections::{HashMap, HashSet};
     use std::ffi::OsString;
