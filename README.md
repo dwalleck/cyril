@@ -67,17 +67,23 @@ cyril -d /path/to/project        # Linux
 cyril -d C:\Users\you\project    # Windows
 ```
 
-### KAS on native Windows
+### KAS on native platforms
 
 Build with `cargo build -p cyril --release --bins --features kas`, then run
 `cyril --agent-engine kas`. The default KAS launch uses Node.js directly;
 install Node.js on `PATH` and authenticate with `kiro-cli login`.
 
-Cyril discovers Kiro's extracted KAS bundles under
-`%LOCALAPPDATA%\Kiro-Cli\kas` and reads authentication from
-`%LOCALAPPDATA%\Kiro-Cli\data.sqlite3`. If `LOCALAPPDATA` is unset or not
-absolute, it uses Windows' local-app-data known folder. `HOME` and
-`XDG_DATA_HOME` do not redirect native Windows KAS discovery.
+Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and reads
+authentication from `<data dir>/data.sqlite3`. Both use the same platform root:
+
+| Platform | Kiro data directory |
+| --- | --- |
+| Linux | `$XDG_DATA_HOME/kiro-cli` when absolute; otherwise `~/.local/share/kiro-cli` |
+| macOS | `~/Library/Application Support/kiro-cli` |
+| Native Windows | `%LOCALAPPDATA%\Kiro-Cli`, falling back to Windows' local-app-data known folder when `LOCALAPPDATA` is unset or not absolute |
+
+`XDG_DATA_HOME` does not redirect macOS or native Windows KAS discovery.
+macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME`.
 
 If the bundle has not been extracted yet, run `kiro-cli acp --agent-engine v3`
 once. `KIRO_KAS_SERVER_PATH` can select an explicit `acp-server.js`, and
