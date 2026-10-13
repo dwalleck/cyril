@@ -1,0 +1,19 @@
+{"kind": "capture", "name": "00-initial-idle", "monotonic": 360224.014252487, "terminal_bytes": 1086}
+{"kind": "control", "action": "workflow-start", "monotonic": 360224.02302799}
+{"kind": "capture", "name": "01-workflow-busy-before-content", "monotonic": 360224.780454141, "terminal_bytes": 14024}
+{"kind": "pty-input", "value": "\u001b[200~LKI9_SMOKE_STEER_BEFORE_FIRST_CONTENT\u001b[201~", "monotonic": 360224.789246165}
+{"kind": "pty-input", "value": "\r", "monotonic": 360225.08936356}
+{"kind": "capture", "name": "02-steer-before-content", "monotonic": 360225.590765907, "terminal_bytes": 28774}
+{"kind": "control", "action": "workflow-content", "monotonic": 360225.590807906}
+{"kind": "capture", "name": "03-workflow-header-and-body", "monotonic": 360226.343419583, "terminal_bytes": 41462}
+{"kind": "control", "action": "end", "monotonic": 360227.549066991}
+{"kind": "capture", "name": "04-workflow-idle-after-turn-end", "monotonic": 360228.30972991, "terminal_bytes": 62118}
+{"kind": "control", "action": "generic-start", "monotonic": 360228.318902269}
+{"kind": "control", "action": "generic-content", "monotonic": 360228.874808627}
+{"kind": "capture", "name": "05-generic-header-and-body", "monotonic": 360229.627528118, "terminal_bytes": 82668}
+{"kind": "pty-input", "value": "\u001b", "monotonic": 360229.629667401}
+{"kind": "capture", "name": "06-generic-idle-after-escape", "monotonic": 360230.139964808, "terminal_bytes": 82960}
+{"kind": "control", "action": "silent-start", "monotonic": 360230.140156228}
+{"kind": "capture", "name": "07-silent-busy", "monotonic": 360230.896832681, "terminal_bytes": 95682}
+{"kind": "control", "action": "end", "monotonic": 360232.102449274}
+{"kind": "capture", "name": "08-silent-idle", "monotonic": 360232.862980016, "terminal_bytes": 114721}

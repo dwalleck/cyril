@@ -75,7 +75,7 @@ struct Language {
 
 /// `crtool facts <rundir>`: rebuild the facts of a gathered run.
 pub fn facts(run: &ReviewRun) -> Result<String> {
-    crate::git::require_root(run)?;
+    crate::git::require_root(run.workspace())?;
     let mut manifest = read_manifest(run)?;
     build_facts(run, &mut manifest)
 }
@@ -96,7 +96,7 @@ pub(crate) fn build_facts(run: &ReviewRun, manifest: &mut Manifest) -> Result<St
     // narrow review scope hides them from the patches; verifiers need them.
     let mut args: Vec<&str> = DIFF.to_vec();
     args.extend(["--name-only", "-z", &manifest.target]);
-    let names = git::git(run, &args)?;
+    let names = git::git(run.workspace(), &args)?;
     let mut docs = Vec::new();
     for path in git::nul_records(&names)? {
         let lower = path.to_lowercase();
@@ -307,7 +307,7 @@ fn usages(
                     .iter()
                     .map(|extension| format!(":(top)*{extension}")),
             );
-            let output = git::git_output(run, &args)?;
+            let output = git::git_output(run.workspace(), &args)?;
             // grep exits 1 for "no match"; anything else is a real failure.
             if !matches!(output.status.code(), Some(0 | 1)) {
                 return Err(git::failure(&args, &output));
