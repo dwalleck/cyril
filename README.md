@@ -19,7 +19,7 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 - **Agent/model switching** — switch agents (`/agent`) and models (`/model`) via picker UI
 - **Live activity indicator** — animated spinner with elapsed time and current tool activity in the toolbar
 - **Context bar** — visual gauge showing context window usage
-- **Opt-in local memory runtime** — teach explicit per-project lessons that are injected into a fresh session's first prompt, backed by private versioned stores and authenticated health reporting, without making chat depend on memory availability
+- **Opt-in local memory runtime** — teach explicit per-project lessons that are injected into a fresh session's first ordinary chat prompt, backed by private versioned stores and authenticated health reporting, without making chat depend on memory availability
 - **@-file references** — reference files in prompts with `@path/to/file` autocomplete
 
 ## Prerequisites
@@ -86,7 +86,7 @@ credential-store location.
 
 ### Local memory runtime
 
-Memory is disabled by default. Enable the local runtime in Cyril's
+Cyril's local memory runtime is disabled by default. Enable it in
 `~/.config/cyril/config.toml`:
 
 ```toml
@@ -103,9 +103,11 @@ Lessons are explicit: nothing is captured from conversations. `/memory teach
 `sk-…`, and PEM private keys are redacted before storage); `/memory list` and
 `/memory inspect <id>` read them back; `/memory teach --replace <id> <text>`
 supersedes one. Active lessons for the bound project are prepended, in a
-`<CYRIL_LESSONS>` block, to the **first prompt of each fresh session** and never
-shown in the transcript. If the memory runtime is unavailable the prompt goes
-out without them; chat never waits on memory.
+`<CYRIL_LESSONS>` block, to the **first ordinary chat prompt of each fresh
+session** and never shown in the transcript. Registered KAS agent-command
+prompts do not receive this block; if a command comes first, the lessons remain
+pending for the next ordinary chat prompt. If the memory runtime is unavailable
+the prompt goes out without them; chat never waits on memory.
 
 
 ### Keyboard shortcuts
@@ -239,7 +241,7 @@ findings and the path to `report.md`.
 | `/review` | Review changes with a multi-agent workflow (KAS); `/review resume`, `/review cancel` |
 | `/quit` | Quit |
 
-**Agent commands** (forwarded to Kiro via ACP):
+**V2 agent commands** (forwarded to Kiro via ACP):
 
 | Command | Description |
 |---------|-------------|
@@ -253,6 +255,27 @@ findings and the path to `report.md`.
 | `/prompts` | Select from available prompts (picker) |
 | `/tools` | Show available agent tools |
 | `/usage` | Show billing and usage info |
+
+V2 retains its existing command execution and selection-option requests.
+Advertised commands cannot replace Cyril's builtins or an already-registered
+command.
+
+**KAS agent commands:** when KAS advertises a `custom-agent` command, Cyril
+registers it for ordinary ACP prompt submission. For example, if advertised,
+`/general-task-execution "inspect foo"` starts a prompt turn rather than a V2
+command RPC. The invocation is sent as exactly one original text block,
+preserving the slash, quotes, and whitespace as typed, including commands with
+no arguments.
+
+Recognized KAS command prompts receive **no automatic local lesson or
+`@file` expansion text**: those additions would change KAS's command arguments.
+First-prompt local lessons remain pending for ordinary chat instead. Ordinary
+chat and unregistered slash fallback keep their existing context/file behavior.
+If a turn is already busy, the invocation follows normal steering behavior.
+
+Unsupported KAS command types are not registered. The exact workflow commands
+`workflow-run`, `workflow-status`, `workflow-cancel`, and `workflow-resume` also
+remain excluded; Cyril retains its own workflow control plane.
 
 ## Project structure
 
