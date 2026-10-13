@@ -500,6 +500,7 @@ pub(crate) fn session_update_to_notification(
                         cmd.input.is_some(),
                         false,
                         false,
+                        crate::types::AgentCommandRoute::BridgeExecute,
                     )
                 })
                 .collect();
