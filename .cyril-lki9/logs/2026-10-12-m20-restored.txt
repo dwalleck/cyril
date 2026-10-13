@@ -1,0 +1,22 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-memory)
+   Compiling cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-voice)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 4.29s
+────────────
+ Nextest run ID 6c7d4e25-a63c-4307-843c-fe85ef64e03f with nextest profile: default
+    Starting 5 tests across 8 binaries (246 tests skipped)
+        PASS [   0.009s] (1/5) cyril::bin/cyril app::tests::lki9_replay_step_verdict_notice
+        PASS [   0.009s] (2/5) cyril::bin/cyril app::tests::lki9_replay_silent_wake_is_busy_without_header
+        PASS [   0.012s] (3/5) cyril::bin/cyril app::tests::lki9_replay_busy_parent_notice
+        PASS [   0.013s] (4/5) cyril::bin/cyril app::tests::lki9_replay_tail_wake_header_and_busy_span
+        PASS [   0.014s] (5/5) cyril::bin/cyril app::tests::lki9_replay_gate_on_label_permission_and_step_header
+────────────
+     Summary [   0.014s] 5 tests run: 5 passed, 246 skipped
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-memory)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.57s
+5b8cac4568488a6d7e9783f6c3ec878a0ce7d7a34f8c2dc1c3937846009d3bca  /tmp/cyril-lki9-m20.96sygg/cyril-smoke
