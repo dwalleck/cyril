@@ -8,7 +8,7 @@ Requester: “claim and implement cyril-igrx”. Issue initially claimed for `om
 
 | Test | Verdict and evidence |
 | --- | --- |
-| T1: unresolved empirical premise | No. The issue identifies `dirs::data_local_dir`; locally installed dirs 6.0.0 `src/mac.rs:7,13` resolves home + `Library/Application Support`. The lowercase `kiro-cli` leaf is corroborated by the existing Python reference at `experiments/code-review-workflow/review_policy.py:91-97`, not a live macOS observation. Baseline discovery source used the Unix `.local/share` fallback on Apple. No external runtime choice remains unresolved. |
+| T1: unresolved empirical premise | No. The issue identifies `dirs::data_local_dir`; locally installed dirs 6.0.0 `src/mac.rs:7,13` resolves home + `Library/Application Support`. The lowercase `kiro-cli` leaf was initially corroborated only by the cyril-authored Python reference at `experiments/code-review-workflow/review_policy.py:91-97`; post-review disassembly of kiro-cli 2.29.1's macOS build now proves it (see **Apple leaf verification** below). Baseline discovery source used the Unix `.local/share` fallback on Apple. No external runtime choice remains unresolved. |
 | T2: structural module shape | No. `protocol/kas/discovery.rs` already owns per-platform data-root resolution and both consumers. Windows already had a pure helper, known-folder fallback, and fixtures from `73abf91c` (PR #164). The repair adds the missing private Apple helper using that pattern; no public interface, schema, dependency, or ownership change. |
 | T3: production-scale risk | No. One startup path join replaces another; no new I/O, concurrency, or hot-path work. |
 | T4: explicit behavior | Yes. cyril-igrx requires platform-correct data roots shared by KAS extraction and `data.sqlite3`. Apple: `<home>/Library/Application Support/kiro-cli`, ignoring XDG/LOCALAPPDATA. Preserve Unix absolute-XDG precedence, invalid-XDG fallback, missing-home errors, overrides, extraction-version selection, and Windows local-AppData/known-folder behavior. WSL-located stores remain separate cyril-lwpm scope. |
@@ -63,6 +63,49 @@ on each host in the existing macOS/Windows CI matrix, but those native runs
 were not executed in this session. No native-platform or live authenticated
 KAS qualification is claimed. The unrelated WSL-hosted store request remains
 in the verified open issue `cyril-lwpm`; no WSL behavior was changed.
+
+## Apple leaf verification
+
+The PR #167 review found the Apple leaf unproven: Kiro's Windows leaf is
+`Kiro-Cli` while Linux uses `kiro-cli`, so macOS could have been either, and a
+wrong guess would fail as "KAS bundle not found" on a case-sensitive APFS
+volume. Settled statically on 2026-10-13 against kiro-cli's own macOS build:
+
+- Artifact: `2.29.1/Kiro CLI.dmg` from the versioned release origin, sha256
+  `8c8091748495fabe22df50e33d9eb934f352538a8961d10e9fbb0a2ae3db660b` (matches
+  the release manifest's `os: macos` entry). `Contents/MacOS/kiro-cli-chat` was
+  extracted with `7z e`, and its x86_64 slice was taken with `llvm-lipo -thin`.
+  Archived with provenance at
+  `~/.local/share/kiro-research/binaries/2.29.1/macos/`.
+- Method: index every RIP-relative `lea` target in `__text`, select the code
+  that loads the `Library/Application Support` literal, then read each string
+  operand together with the length argument (`movl $N, %r8d`) passed to the
+  shared `Path::join` callee. Rust literals are unterminated, so the length
+  operand is what fixes the exact string.
+- Credential store (`0x101ef4900`):
+  `home.join("Library/Application Support")` (27) → `.join("kiro-cli")` (8)
+  → `.join("data.sqlite3")` (12).
+- Data/asset directory (`0x101ef9674`): `KIRO_DATA_DIR` (13) override, else
+  `home.join("Library/Application Support")` (27) → `.join("kiro-cli")` (8).
+  KAS extraction (`kas/`) lives under this root.
+
+Verdict: kiro-cli's macOS data root is exactly
+`<home>/Library/Application Support/kiro-cli`, with a lowercase leaf. It
+matches `apple_kiro_data_dir` and the README, and the bundle and the store
+share that root, as `apple_server_selection_and_store_share_native_root`
+asserts. Production and tests are unchanged.
+
+Negative results:
+- The 2.29.1 `tui.js` never builds the data directory. Its only
+  `Application Support` path is editor keybindings.
+- KAS `acp-server.js` references only Kiro IDE paths
+  (`Application Support/Kiro/...`).
+- A missing string proves nothing here: `Kiro-Cli` is absent from Windows
+  `kiro-cli.exe` even though Windows uses that directory.
+
+Out of scope, discovered here: kiro-cli honours `KIRO_DATA_DIR` for the
+asset/KAS root, but not for `data.sqlite3`. cyril's discovery ignores it on
+every platform. Filed as a separate issue, linked from cyril-igrx.
 
 ## Publication authorization
 
