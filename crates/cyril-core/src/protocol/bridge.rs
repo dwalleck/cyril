@@ -472,8 +472,15 @@ mod tests {
             "printf 'alpha\\nbeta\\ngamma\\ndelta\\nepsilon\\nzeta\\n' >&2; exit 1".to_owned(),
         ])
         .unwrap_or_else(|error| panic!("stderr fixture command is valid: {error}"));
-        let handle = spawn_bridge(command, SpawnConfig::default(), std::env::temp_dir())
-            .unwrap_or_else(|error| panic!("stderr fixture bridge starts: {error}"));
+        let handle = spawn_bridge(
+            command,
+            SpawnConfig {
+                engine: AgentEngine::V2,
+                ..SpawnConfig::default()
+            },
+            std::env::temp_dir(),
+        )
+        .unwrap_or_else(|error| panic!("stderr fixture bridge starts: {error}"));
         let (_sender, mut rx, _permission_rx, _source_rx, _completion_rx) = handle.split();
         let routed = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
             .await
@@ -497,8 +504,15 @@ mod tests {
         let command =
             AgentCommand::try_from_argv(vec!["cyril-gl5s-intentionally-missing-agent".to_owned()])
                 .unwrap_or_else(|error| panic!("missing-agent command is valid: {error}"));
-        let handle = spawn_bridge(command, SpawnConfig::default(), std::env::temp_dir())
-            .unwrap_or_else(|error| panic!("bridge thread starts before process spawn: {error}"));
+        let handle = spawn_bridge(
+            command,
+            SpawnConfig {
+                engine: AgentEngine::V2,
+                ..SpawnConfig::default()
+            },
+            std::env::temp_dir(),
+        )
+        .unwrap_or_else(|error| panic!("bridge thread starts before process spawn: {error}"));
         let (_sender, mut rx, _permission_rx, _source_rx, _completion_rx) = handle.split();
         let routed = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
             .await

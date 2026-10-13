@@ -1,4 +1,4 @@
-//! Standard configuration responses through the public, default V2 bridge.
+//! Standard configuration responses through the public, explicitly selected V2 bridge.
 #![cfg(unix)]
 
 use std::collections::BTreeMap;
@@ -9,7 +9,8 @@ use std::time::Duration;
 use anyhow::{Context, Result, bail, ensure};
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
 use cyril_core::types::{
-    AgentCommand, BridgeCommand, ConfigOption, Notification, RoutedNotification, SpawnEnvironment,
+    AgentCommand, AgentEngine, BridgeCommand, ConfigOption, Notification, RoutedNotification,
+    SpawnEnvironment,
 };
 use tokio::sync::mpsc::Receiver;
 use tokio::time::timeout;
@@ -158,6 +159,7 @@ async fn standard_configuration_uses_returned_catalog_and_rejects_malformed_resp
     let bridge = spawn_bridge(
         configuration_peer(&root)?,
         SpawnConfig {
+            engine: AgentEngine::V2,
             shell: Some("bash".into()),
             environment: SpawnEnvironment::Replace(BTreeMap::from([
                 ("HOME".into(), root.clone().into_os_string()),

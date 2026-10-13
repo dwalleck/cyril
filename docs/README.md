@@ -2,11 +2,13 @@
 
 This index catalogs every document in `docs/` along with its **currency status** against the current production Kiro release. The goal is reproducibility: anyone reading a doc should be able to tell at a glance whether it reflects current wire reality or is a historical artifact.
 
-**Current Kiro production version (as of 2026-06-21):** `2.8.1`
+**Catalog currency baseline (2026-06-21):** Kiro `2.8.1`. Later release entries retain their own dated evidence; this baseline is not current-release qualification.
 
 **Two engines, two canons.** Kiro ships two ACP engines (see [`ROADMAP.md`](ROADMAP.md) "KAS engine integration track"):
-- **v2 (default Rust engine)** — canonical wire reference is [`kiro-acp-protocol.md`](kiro-acp-protocol.md) (§ 11 changelog). The v2 *exercised* wire surface has been **frozen-stable since 2.4.1** (per-release audits 2.5.0 → 2.8.1 all report zero v2 wire delta), so that doc remains current for v2 despite its 2.4.1 "last verified" line.
-- **KAS (`--agent-engine v3`/`kas`)** — canonical is a **two-doc pair**: [`kiro-kas-acp-covenant.md`](kiro-kas-acp-covenant.md) for the `_kiro/*` **type contract** (authoritative — extracted from the `@kiro/acp-type-covenant` package; "where it and an audit differ, the covenant wins") + [`kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) for **live behavior + cyril-impact strategy**. Runtime behavior the covenant can't hold (server `--auth` modes, fs-callback gating) lives in the **latest** per-release audit — currently [`kiro-2.8.1-wire-audit.md` § KAS runtime behavior](kiro-2.8.1-wire-audit.md#kas-runtime-behavior--live-capture-2026-06-21-addendum). KAS is where the wire is actively evolving; track the embedded `@kiro/agent` version every release.
+- **v2 (explicitly selectable Rust engine; default in a V2-only build)** — canonical wire reference is [`kiro-acp-protocol.md`](kiro-acp-protocol.md) (§ 11 changelog). Its 2.4.1 baseline and 2.5.0–2.8.1 stability evidence are dated provenance; consult later release audits for subsequent changes.
+- **KAS (Cyril's normal default; `--agent-engine kas`/`v3`)** — canonical type contract is [`kiro-kas-acp-covenant.md`](kiro-kas-acp-covenant.md), extracted from `@kiro/acp-type-covenant`; runtime behavior is release-specific. [`kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) and the [`2.8.1 auth/fs addendum`](kiro-2.8.1-wire-audit.md#kas-runtime-behavior--live-capture-2026-06-21-addendum) preserve the original integration evidence, not current-release certification. Track the embedded `@kiro/agent` version each release.
+
+Default feature/security policy, first-run instructions and local-memory boundaries live in the [root README](../README.md#engines-and-first-run) and [amended ADR-0002](adr/0002-kas-cargo-feature-gate.md). The [ROADMAP parity table](ROADMAP.md#current-default-policy-and-parity-cyril-4c4d) records prerequisite dispositions and remaining qualification limits; a default change is not full KAS/v2 parity.
 
 ## Status legend
 
@@ -25,7 +27,7 @@ After each Kiro release:
 1. Run a fresh wire capture (see `experiments/conductor-spike/` and the `KIRO_ACP_RECORD_PATH` env var documented in `kiro-acp-protocol.md` § 11.6).
 2. Compare against `kiro-acp-protocol.md` § 11 ("Changes since 2.0.1") for known additions; section-by-section if you're auditing.
 3. If new wire changes appear, write a per-release `kiro-X.Y.Z-wire-audit.md`, then mirror the deltas into a new sub-section of § 11 in the canonical protocol doc.
-4. Update the "Current Kiro production version" line above and bump the "Last verified" header on each affected doc.
+4. Advance the catalog currency baseline only with corresponding evidence, and bump the "Last verified" header on each affected current reference.
 5. Audit docs from prior releases stay as 📜 historical — don't rewrite them in place.
 6. **KAS changes** don't go into the v2 protocol doc. Type-shape changes → update [`kiro-kas-acp-covenant.md`](kiro-kas-acp-covenant.md) (re-extract the covenant package after `acp --agent-engine v3` self-extracts the new bundle). Runtime/gating behavior (auth modes, callback negotiation, new `_kiro/*` that fired live) → the new per-release `kiro-X.Y.Z-wire-audit.md`, in a dated "KAS runtime behavior" section. The ROADMAP should *link* these, not restate them.
 

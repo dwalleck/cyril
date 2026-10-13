@@ -93,7 +93,7 @@ near-term seam.
   cited document knowledge, independent of the bound agent. It belongs to
   Phase 5+ as a platform capability, but its near-term adapters follow
   [ADR-0003](adr/0003-defer-proxy-stack-for-host-callbacks.md): bridge capture
-  and first-prompt injection, a stdio MCP surface for explicit agent use, and a
+  and first ordinary chat-prompt injection, a stdio MCP surface for explicit agent use, and a
   TUI control plane. The proxy-stage adapter stays deferred. Delivery uses
   memory-specific milestones that do not replace this roadmap's phase names:
   **M0** runtime/scope/storage foundation; **M1** bridge capture and automatic
@@ -159,7 +159,32 @@ Steering lets the user redirect the agent mid-turn without cancelling: the messa
 
 ## KAS engine integration track
 
-KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self-extracting as of kiro-cli 2.7.1 and reachable today over `kiro-cli acp --agent-engine kas` (the `chat --v3` TUI path is gated by a staged "V3 not supported" check; the ACP path cyril uses is not). KAS is a *different agent on the same wire*: it speaks a `_kiro/*` extension dialect (not v2's `kiro.dev/*` / `_kiro.dev/*`), makes the host supply auth, can call ACP `fs/*` callbacks, and replaces the `agent_crew`/`list_update` subagent model with `agent-subtask` tool calls. This track makes KAS a first-class, opt-in engine in cyril.
+KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self-extracting since kiro-cli 2.7.1. It speaks the `_kiro/*` dialect, uses host authentication in Cyril's launch path, and replaces v2's `agent_crew`/`list_update` model with `agent-subtask` tool calls. The original track introduced KAS as opt-in; cyril-4c4d supersedes that default policy.
+
+### Current default policy and parity (cyril-4c4d)
+
+The production `cyril` package now enables `kas` by default; `cyril-core` retains its opt-in feature. Missing engine configuration chooses KAS in a KAS-capable build and v2 otherwise. Explicit CLI selection still wins over `[agent]` configuration; explicit v2 remains supported. An isolated `cargo build -p cyril --no-default-features` is the V2-only, compile-time credential-reader opt-out. Runtime v2 selection is not that security guarantee, and workspace feature unification can enable KAS. See [amended ADR-0002](adr/0002-kas-cargo-feature-gate.md).
+
+Free spawn remains discovered Node.js plus the extracted bundle with callback auth. First-run errors instruct extraction with `kiro-cli acp --agent-engine v3` or an explicit `KIRO_KAS_SERVER_PATH`; there is no silent Wrapper/v2 fallback. Native Windows uses its AppData root, not WSL; macOS uses `~/Library/Application Support/kiro-cli` following integration of PR #167. **Overall default-switch acceptance remains pending; live-native qualification is not claimed.** This policy is not a claim of full KAS/v2 parity.
+
+Registered KAS `custom-agent` commands use the ordinary prompt/steering lifecycle as exactly one original raw-text block, not a v2 commands RPC. Command invocations receive no automatic local lessons or file expansion; first-prompt lessons stay pending for the next ordinary chat prompt. Builtin precedence and unregistered slash fallback remain unchanged.
+
+Upstream native KAS memory defaults are preserved by explicit approval, accepting possible overlap and costs; no duplicate writes were established by the cited probes. Cyril's `/memory` controls only Cyril memory. Full native-memory controls/status remain separate work.
+
+| Area | Issues / evidence | Default-flip disposition |
+|---|---|---|
+| Native data paths | cyril-igrx / [PR #167](https://github.com/dwalleck/cyril/pull/167) | Prerequisite source integrated: macOS correction and previously landed Windows paths. Platform evidence review remains an acceptance gate; no live-native qualification is claimed. |
+| Host hook tag matching | cyril-5nep | Prerequisite resolved and integrated: tag/selector repair preserves Host authority and exit-2 blocking; local checks, live proof and independent review passed. |
+| Advertised KAS command dispatch | cyril-oieu | Prerequisite resolved and integrated: exact raw-prompt routing and command-to-ordinary-prompt lesson deferral; local checks, live proof and independent review passed. This remains distinct from steering-command discovery. |
+| V2 model fallback | cyril-ci3j / cyril-lnxg | Known follow-up, not a flip blocker; honor the prior deferral as v2 retires. Explicit v2 selection does not imply fallback parity. |
+| KAS model fallback | cyril-aoby | Follow-up: notification/capability is not consumed; the served fallback chain was not provoked by the cited audit. |
+| Settings drift | cyril-53qx | Follow-up: todoList/subagentOrchestration are reported unknown by 0.66.33; correct version policy separately. Older orchestration smokes are not default-switch proof. |
+| Native memory controls/status | cyril-0na7 / cyril-s21o | Upstream defaults accepted for this switch; full controls/status remain separate, not delivered by `/memory`. |
+| Telemetry policy | cyril-zjm5 | Follow-up: no explicit telemetryEnabled opt-out is sent. Zero observed endpoint dials in cited probes is not a privacy guarantee. |
+| Interactive/background terminal execution | cyril-7p7n / cyril-1rpv | Unsupported; not a flip blocker while it remains unadvertised. No terminal/write responder, stdin is null, background mode is not enabled. |
+| Bundled steering command discovery/metadata | cyril-2nz7 / cyril-79ox | Follow-up: upstream stopped advertising three commands and conversion loses metadata; not the advertised-command RPC repair. |
+
+The dated integration updates and KAS-0/KAS-1 milestones below preserve their original scope. Their default-v2/default-off and credential-free demo policies are superseded by the current policy above; historical audits remain unchanged.
 
 **Framing — KAS turns cyril from a *client* into a *host*.** v2 is receive-and-render: cyril parses ~15 `kiro.dev/*` notifications and implements **zero** host callbacks (empty `clientCapabilities`). KAS expands the surface ~3–4× in notifications *and* adds a categorically new dimension — **server→client requests cyril must answer** (`auth/getAccessToken`, `fs/*`, `terminal/*`, `hooks/*`, `shell_type`). So the back half of this track (KAS-5 fs/terminal, KAS-7 hooks) is **host-responsibility work that converges with the stages layer (`crates/cyril-stages/`, Phase 2/5), not dialect parsing** — size and test it as such. In particular it makes `platform/path.rs` load-bearing and demands **cross-platform Windows/Linux testing** (path translation `C:\`↔`/mnt/c`, native-vs-WSL command execution) that the receive-only v2 path never required.
 
@@ -233,7 +258,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 
 **Currency caveat:** the covenant *doc* catalog is synced at `@kiro/agent` 0.3.224; the installed package is now **0.17.2 (2.12.3)** — a large drift. As of the 2.12.3 audit the uncataloged surface added by the cloud-agent stack is: `sourceProviders/{list,listResources}`, the reshaped `session/list`, `system/notify`, and four new `_meta.kiro` handshake caps (`sourceProviders`/`sessionSources`/`sessionListScopes`/`executionTargets`) — all mapped above (cyril-tikf/nn85/08eh). **Re-sync the covenant** (README step 6) before relying on this matrix; the jump from 0.3.257 → 0.17.2 is overdue for a full catalog refresh.
 
-### KAS-0 — `Engine` trait + v2 port + gating (invisible foundation)
+### KAS-0 — `Engine` trait + v2 port + gating (original milestone)
 
 **Depends on:** nothing. Ships **no** user-visible change — its acceptance criterion is strict v2 parity.
 
@@ -244,13 +269,13 @@ Stand up the seam everything else hangs off, without changing v2 behavior:
 - Establish the **`kas` cargo feature** (default off, empty for now) — the project's first feature flag; add a CI lane that builds + lints + tests `--features kas` so it cannot bitrot under "warnings are errors."
 - **Historical ACP-coverage verification spike:** schema 0.11.2 covered the KAS variants emitted during KAS-0. Production now uses the SDK2/schema 1.5 contract and unknown-update fence described in the current architecture above.
 
-### KAS-1 — Engine selection + auth responder (the entry gate)
+### KAS-1 — Engine selection + auth responder (original milestone)
 
 **Depends on:** KAS-0 (the engine gate + `kas` feature exist; KAS-1 fills in the `AuthResponder` and the live KAS spawn).
 
 Without a host-supplied token, every KAS turn dies immediately (`[TokenInvalidError] … Host refresh callback returned no access token`) — **when spawned the way the v3 TUI does.** But there are two spawn shapes, and only one needs the responder (see the free-path note next).
 
-**Free-path de-risking (verified live 2026-06-21).** A first live KAS turn is reachable with **zero credential-custodian code**: spawning `acp-server.js` **directly** over stdio with no `--auth` flag uses KAS's default file-auth (reads the SSO cache, self-refreshes), so `_kiro/auth/getAccessToken` never fires — only the `kiro-cli` *wrapper* spawn injects `--auth=acp-callback` and makes the responder mandatory. This moves Open Tension #7 **off the critical path for the walking-skeleton demo**: ship the free path first (the responder below is for the blessed wrapper lifecycle + Builder-ID/external-IdP users); the trade-off is that direct spawn makes cyril own server-entry + node-runtime discovery. **Full auth-mode + flag contract, 5-tier priority, and the probe:** [`kiro-2.8.1-wire-audit.md` § KAS runtime behavior](kiro-2.8.1-wire-audit.md#kas-runtime-behavior--live-capture-2026-06-21-addendum) (+ memory `reference_kiro_kas_launch_contract`).
+**Historical Free-path de-risking (verified live 2026-06-21; not the current Cyril launch policy).** A first live KAS turn is reachable with **zero credential-custodian code**: spawning `acp-server.js` **directly** over stdio with no `--auth` flag uses KAS's default file-auth (reads the SSO cache, self-refreshes), so `_kiro/auth/getAccessToken` never fires — only the `kiro-cli` *wrapper* spawn injects `--auth=acp-callback` and makes the responder mandatory. This moves Open Tension #7 **off the critical path for the walking-skeleton demo**: ship the free path first (the responder below is for the blessed wrapper lifecycle + Builder-ID/external-IdP users); the trade-off is that direct spawn makes cyril own server-entry + node-runtime discovery. **Full auth-mode + flag contract, 5-tier priority, and the probe:** [`kiro-2.8.1-wire-audit.md` § KAS runtime behavior](kiro-2.8.1-wire-audit.md#kas-runtime-behavior--live-capture-2026-06-21-addendum) (+ memory `reference_kiro_kas_launch_contract`). Current Cyril Free spawn explicitly uses callback auth; direct Node spawn is not a credential-custody exemption.
 
 - Make the KAS spawn real: the `AgentEngine` gate from KAS-0 now resolves the KAS engine to a live `kiro-cli acp --agent-engine <flag>` process (default stays v2). All new KAS code lands behind the `kas` cargo feature established in KAS-0. **The CLI engine flag is version-dependent:** kiro-cli **2.8.0 renamed `--agent-engine kas` → `v3`** (probe-verified 2026-06-19: `kas` is rejected; the accepted values are `v1`/`v2`/`v3`), whereas 2.7.1 accepted `kas`. Resolve the flag from the installed version rather than hardcoding `kas`. (The `kas` cargo feature is cyril's own gate and is unrelated to this CLI flag.)
 - Implement an **`_kiro/auth/getAccessToken`** server→client request responder: reply `{ accessToken, expiresAt, profileArn }`. KAS validates `expiresAt` is > now + ~3 min and **requires `profileArn`** (backend 400s "profileArn is required" without it).
@@ -510,7 +535,7 @@ Hold-to-talk (or toggle) speech-to-text that drops the transcript into the input
 4. **No standardized stage registry exists yet.** The runtime now uses the official Rust SDK2 `ConnectTo`/`Conductor` component ABI, so a future registry can select stage components without another transport rewrite.
 5. **Upstream SDK2 is young.** Cyril pins exact SDK/core/conductor versions and keeps stable wire v1 as the compatibility boundary; upgrades need the deterministic conductor and authenticated v2/KAS acceptance matrix.
 6. **Mission drift.** "Vendor-neutral platform" is more ambitious than "Kiro client." Need to keep shipping a strictly-better-than-status-quo Kiro experience while building the platform underneath.
-7. **KAS makes cyril a credential custodian** (added 2026-06-16, KAS-1). Driving the KAS engine requires cyril to read kiro's bearer token from its on-disk auth store and hand it to the KAS subprocess via `_kiro/auth/getAccessToken` — a responsibility the v2 engine never imposed (it self-authenticates). This is read-only access to a token cyril doesn't own, with refresh-on-expiry, and it widens cyril's security surface. Acceptable for a local Kiro engine, but a real consideration before KAS is default-on, and it does not generalize to other vendors (each has its own auth — Open Tension #3).
+7. **KAS makes cyril a credential custodian** (added 2026-06-16; policy amended 2026-10-12). Cyril reads Kiro's bearer token from its auth store and supplies it through `_kiro/auth/getAccessToken`; v2 self-authenticates. Normal production builds now include this security surface under cyril-4c4d. The isolated selected-package no-default build remains the compile-time exclusion; runtime v2 selection does not. See [ADR-0002](adr/0002-kas-cargo-feature-gate.md). Custody remains vendor-specific, not a general auth solution (Open Tension #3).
 8. **Proxy stages remain deferred; the conductor runtime does not** (updated 2026-08-30; see [ADR-0003](adr/0003-defer-proxy-stack-for-host-callbacks.md)). Every connection already crosses the official zero-or-more-stage conductor. KAS host callbacks remain the near-term side-effect interception path; a non-empty `StageChain` waits for fan-out/observer or cross-vendor orchestration that host callbacks cannot provide.
 
 ## Reference / further reading
