@@ -44,4 +44,6 @@ PASS — the [resumed completion record](plan.md#resumed-completion-2026-10-12)
 owns the delivered ADR amendment, restored capture replays, mutation
 sensitivity, consumer smoke, repository checks, independent review, and
 source-bound receipts. The approved production behavior is unchanged.
-Publication and tracker closure have not been performed.
+Branch-local cyril-lki9 closure and PR publication are authorized by the
+[publication record](plan.md#publication-authorization); merging and closure
+of any other tracker issue are not authorized.

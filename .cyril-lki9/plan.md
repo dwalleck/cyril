@@ -476,7 +476,7 @@ Inherited plan references: design.md § "Isolated design-conformance review (202
 - Assembled tree = I0 (#144) + I1 (#145) + I2 (this branch). Lanes: fmt, clippy (`--all-features`, `--features kas`, default), nextest (all-features, default), doc tests, C21 — all PASS on the tree above.
 - Design conformance: review 3 `RESULT: PASS` (reviewer: fresh-context general-purpose subagent; isolation: no implementation transcript, blind Phase 1 before `.cyril-lki9/`).
 - C20 is not covered by the merged tree's original PASS claim: the later repair deleted its five replay tests. Other historical gates retain only their recorded scope; current C20 evidence belongs to the resumed completion record below.
-- I0, I1, and I2 merged as PRs #144, #145, and #147 (I2 merge `00239d28ea6976bb2cf11847be8696c5818f29f1`). Tracker records cyril-lki9 and cyril-5n75 remain open; this resumption does not infer publication or closure authorization from historical approvals.
+- I0, I1, and I2 merged as PRs #144, #145, and #147 (I2 merge `00239d28ea6976bb2cf11847be8696c5818f29f1`). The requester subsequently authorized cyril-lki9 closure on this completion branch and opening its PR; see Publication authorization below. cyril-5n75 remains open.
 
 ## Resumed completion (2026-10-12)
 
@@ -574,12 +574,27 @@ remain the reference for the unchanged protocol assumptions.
 **Completion — PASS.** The ADR requirement, restored C20 coverage and
 sensitivity, consumer smoke, repository gates, and independent review are
 satisfied. No in-scope implementation or qualification failure remains.
-Publication and tracker closure are not performed by this completion record.
+The requester subsequently authorized branch-local closure and PR publication,
+as recorded below; no merge authorization is implied.
 
 **Scope boundary.** cyril-pd4b separately owns the newer network-give-up
 wake correlation and depends on cyril-fb1m. This repair does not claim that
-later trigger is qualified. No tracker mutation or push of unrelated local
-main commits is part of this repair.
+later trigger is qualified. Unrelated local main commits and all other
+tracker records remain untouched.
+
+### Publication authorization
+
+Requester instruction (verbatim): "close the tracker issue on the branch and open a PR"
+
+Scope: close **cyril-lki9** on `docs/cyril-lki9-completion`, commit the closure,
+push that branch, and open its PR against the discovered upstream `main`.
+Do not merge, publish unrelated local main commits, or close cyril-5n75.
+`rivets close` persisted the closure; a record-by-record comparison with
+the commit parent confirmed no additions or removals and only cyril-lki9
+changed. All 402 records are preserved, and cyril-5n75 remains open.
+The existing qualification still applies: this publication step changes only
+tracker state and workflow status documentation.
+
 
 ---
 
