@@ -1,6 +1,6 @@
 use crate::{Result, ReviewError, io_error};
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::{Map, Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -149,6 +149,37 @@ pub(crate) fn write(path: &Path, bytes: &[u8]) -> Result<()> {
     fs::rename(temporary, path).map_err(|source| io_error("replace", path, source))
 }
 
+/// Write `queues/<file>.json` for the ids, with its own absolute verdict directory.
+pub(crate) fn write_queue(
+    run: &ReviewRun,
+    file: &str,
+    verdict_dir: &str,
+    ids: &[String],
+) -> Result<()> {
+    let directory = run.path(&format!("verdicts/{verdict_dir}"));
+    fs::create_dir_all(&directory)
+        .map_err(|source| io_error("create directory", &directory, source))?;
+    write_json(
+        &run.path(&format!("queues/{file}.json")),
+        &json!({
+            "done": ids.is_empty(),
+            "ids": ids,
+            "verdict_dir": forward_slashes(&directory),
+        }),
+    )
+}
+
+/// A path with `/` separators, as queue files spell it. Only Windows
+/// separators are converted: on Unix a backslash belongs to the name.
+fn forward_slashes(path: &std::path::Path) -> String {
+    let path = path.to_string_lossy();
+    if cfg!(windows) {
+        path.replace('\\', "/")
+    } else {
+        path.into_owned()
+    }
+}
+
 /// Write `lines` as `<stem>-N.txt` pages that each fit one tool read, after
 /// removing the stem's old pages. Returns the pages' run-relative paths.
 pub(crate) fn write_pages(
@@ -244,6 +275,15 @@ pub(crate) fn stamped_run() -> Result<(tempfile::TempDir, ReviewRun)> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(unix)]
+    #[test]
+    fn a_unix_backslash_stays_in_the_verdict_dir() {
+        assert_eq!(
+            forward_slashes(std::path::Path::new("/r/a\\b/verdicts/q1")),
+            "/r/a\\b/verdicts/q1"
+        );
+    }
 
     #[test]
     fn pages_split_at_the_budget_and_never_split_a_line() {

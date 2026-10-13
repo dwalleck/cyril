@@ -1,14 +1,13 @@
 //! The one chat system message a review run ends with. Width truncation is
 //! the renderer's job, not this module's.
 
-use cyril_review::{Finding, FindingsError};
+use cyril_review::{Finding, FindingsError, Verdict};
 use std::path::Path;
 
 /// Findings listed in the message; the rest are counted.
 const SHOWN: usize = 10;
 /// Denial reasons quoted in the message; all of them are in `denied.log`.
 const DENIALS_SHOWN: usize = 3;
-const VERDICT_ORDER: [&str; 3] = ["CONFIRMED", "PLAUSIBLE", "UNVERIFIED"];
 
 /// How the run ended, from its `run_complete` status.
 #[derive(Debug)]
@@ -71,8 +70,9 @@ fn headline(findings: &[Finding]) -> String {
     if findings.is_empty() {
         return "review complete: no findings".to_owned();
     }
-    let counts: Vec<String> = VERDICT_ORDER
+    let counts: Vec<String> = Verdict::REPORT_ORDER
         .iter()
+        .filter(|verdict| **verdict != Verdict::Refuted)
         .filter_map(|verdict| {
             let count = findings
                 .iter()
@@ -100,14 +100,14 @@ fn location(finding: &Finding) -> String {
 mod tests {
     use super::*;
 
-    fn finding(number: usize, verdict: &str) -> Finding {
+    fn finding(number: usize, verdict: Verdict) -> Finding {
         Finding {
             id: format!("C{number:02}"),
             file: Some(format!("src/f{number}.rs")),
             line: Some(number as i64),
             summary: Some(format!("defect {number}")),
             failure_scenario: None,
-            verdict: verdict.to_owned(),
+            verdict,
             angles: vec!["a-line-scan".to_owned()],
             comment: None,
             duplicate_of: None,
@@ -117,7 +117,16 @@ mod tests {
     #[test]
     fn completed_lists_ten_counts_the_rest_and_quotes_three_denials() {
         let findings: Vec<Finding> = (1..=12)
-            .map(|n| finding(n, if n % 2 == 0 { "CONFIRMED" } else { "PLAUSIBLE" }))
+            .map(|n| {
+                finding(
+                    n,
+                    if n % 2 == 0 {
+                        Verdict::Confirmed
+                    } else {
+                        Verdict::Plausible
+                    },
+                )
+            })
             .collect();
         let denials: Vec<String> = (1..=4).map(|n| format!("reason {n}")).collect();
         let text = summary(

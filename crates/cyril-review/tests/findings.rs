@@ -46,7 +46,7 @@ fn a_commented_pipeline_run_parses_into_typed_findings() -> TestResult {
     assert_eq!(findings.len(), 11);
     let first = &findings[0];
     assert_eq!(first.id, "C03");
-    assert_eq!(first.verdict, "CONFIRMED");
+    assert_eq!(first.verdict, cyril_review::Verdict::Confirmed);
     assert_eq!(first.angles, ["b-removed-behavior", "a-line-scan"]);
     assert!(
         first
