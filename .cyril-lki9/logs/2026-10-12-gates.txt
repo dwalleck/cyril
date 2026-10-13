@@ -1,0 +1,35 @@
+Source: 99ed7ce52a4ae7c422ebd62dd98e5f73b707901e plus restored App C20 tests (this commit).
+Selected run IDs, compilation, test totals, and shape-check output from the successful gate command; individual PASS rows omitted.
+
+    Checking cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-review)
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-ui)
+    Checking cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-voice)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-memory)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril-workbench)
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 12.60s
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 4.39s
+ Nextest run ID 839b6760-d2b3-41dd-bcdb-b3bd391995dc with nextest profile: default
+    Starting 2292 tests across 34 binaries (13 tests skipped)
+     Summary [   6.448s] 2292 tests run: 2292 passed, 13 skipped
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-docs-cyril-lki9-completion/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 7.22s
+ Nextest run ID 891f7173-e9f4-4ce7-b330-ce97d0dbbf06 with nextest profile: default
+    Starting 2285 tests across 34 binaries (13 tests skipped)
+     Summary [   6.418s] 2285 tests run: 2285 passed, 13 skipped
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.08s
+   Doc-tests cyril_core
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests cyril_memory
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests cyril_review
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests cyril_ui
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+   Doc-tests cyril_voice
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+   Doc-tests cyril_workbench
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+C21 PASS (base 99ed7ce5 on origin/main; protected-parent prod deltas {'crates/cyril/src/app.rs': 0, 'crates/cyril-ui/src/state.rs': 0})
