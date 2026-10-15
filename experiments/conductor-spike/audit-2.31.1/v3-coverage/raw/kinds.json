@@ -1,0 +1,298 @@
+[
+ {
+  "kind": "turn_start",
+  "kas_new": 22,
+  "kas_old": 22,
+  "tui": 13,
+  "cyril_hits": 4,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas.rs:397",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1603",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1883"
+  ],
+  "tui_ctx": ")return 0;let a=r.length-n,o=r[a];return e.splice(0,o),a}function lTe(e){let t=e.some((a)=>a.type===\"turn_start\"),n=[],r=!1;for(let a=0;a<e.length;a++){let o=e[a];if(o.type===\"turn_start\"){r=!0;contin",
+  "kas_ctx": "ecutionId:k.string().optional(),subExecutionId:k.string().optional()});IXs=k.object({type:k.literal(\"turn_start\"),executionId:k.string().optional()}),PXs=k.object({refusal:k.object({category:k.string("
+ },
+ {
+  "kind": "turn_end",
+  "kas_new": 17,
+  "kas_old": 17,
+  "tui": 9,
+  "cyril_hits": 9,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/turn_mediator.rs:25",
+   "crates/cyril-core/src/protocol/convert/kas.rs:345",
+   "crates/cyril-core/src/protocol/convert/kas.rs:398"
+  ],
+  "tui_ctx": "=[],r=!1;for(let a=0;a<e.length;a++){let o=e[a];if(o.type===\"turn_start\"){r=!0;continue}if(o.type===\"turn_end\"){r=!1;continue}if(o.type===\"user_message\"&&xrn(o)&&(!t||!r))n.push(a)}return n}function x",
+  "kas_ctx": "ing().optional(),recommendedModel:k.string().optional()}).optional()}),MXs=k.object({type:k.literal(\"turn_end\"),stopReason:k.string().min(1),stopDetails:PXs.optional(),executionId:k.string().optional("
+ },
+ {
+  "kind": "turn_completion",
+  "kas_new": 6,
+  "kas_old": 6,
+  "tui": 3,
+  "cyril_hits": 4,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas.rs:390",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1155",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1186"
+  ],
+  "tui_ctx": "tStreamEvent({type:\"session_repositories_update\",repositories:eS(r.repositories)??[]});if(r?.kind===\"turn_completion\"){let a=Xk(r);if(!a)return null;if(a.contextUsagePercentage!=null)t.emitSideEffect(",
+  "kas_ctx": "eturn{contextUsage:{usagePercentage:e.usagePercentage},...e.breakdown&&{breakdown:e.breakdown}};case\"turn_completion\":return{promptTurnSummaries:e.promptTurnSummaries,elapsedTime:e.elapsedTime,status:"
+ },
+ {
+  "kind": "context_usage",
+  "kas_new": 8,
+  "kas_old": 8,
+  "tui": 8,
+  "cyril_hits": 6,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas.rs:401",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1384",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1406"
+  ],
+  "tui_ctx": "showTransientAlert({message:l,status:_d(c),autoHideMs:8000})}function Ern(e,t,n){switch(e.type){case\"context_usage\":return t().setContextUsage(e.percent),!0;case\"context_breakdown_update\":return n({co",
+  "kas_ctx": ")})}let u=$9(t.contextUsageEvent);return u&&typeof u.contextUsagePercentage==\"number\"&&r.push({kind:\"context_usage\",contextUsagePercentage:u.contextUsagePercentage}),r}function $9(e){if(!(typeof e!=\"o"
+ },
+ {
+  "kind": "user_message_id_assigned",
+  "kas_new": 3,
+  "kas_old": 3,
+  "tui": 1,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "r?.breakdown)t.emitSideEffect({type:\"context_breakdown_update\",breakdown:r.breakdown})}if(r?.kind===\"user_message_id_assigned\"&&typeof r?.userMessageId===\"string\")t.emitSideEffect({type:\"kas_message_i",
+  "kas_ctx": "sage\":return{summaryMessage:{content:e.content}};case\"checkpoint_restore_availability\":return{};case\"user_message_id_assigned\":return{userMessageId:e.userMessageId};case\"pending_interaction\":return{pe"
+ },
+ {
+  "kind": "focus_update",
+  "kas_new": 5,
+  "kas_old": 5,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": " this.pendingAsks.has(t)?s=\"waiting_on_user\":o||n>0?s=\"busy\":i>0?s=\"waiting_on_user\":s=\"idle\",{kind:\"focus_update\",status:s===\"busy\"?\"in_progress\":s===\"waiting_on_user\"?\"waiting_on_user\":\"idle\",activi"
+ },
+ {
+  "kind": "steering_inclusion",
+  "kas_new": 9,
+  "kas_old": 9,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "),content:k.string(),scope:k.enum([\"global\",\"workspace\"]).optional()}),AXs=k.object({type:k.literal(\"steering_inclusion\"),documents:k.array(k.union([k.string(),C2n])),executionId:k.string().optional()"
+ },
+ {
+  "kind": "steering_queued",
+  "kas_new": 2,
+  "kas_old": 2,
+  "tui": 8,
+  "cyril_hits": 8,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/engine.rs:622",
+   "crates/cyril-core/src/protocol/convert/kiro.rs:1008",
+   "crates/cyril-core/src/protocol/convert/kiro.rs:1009"
+  ],
+  "tui_ctx": "TransientAlert()}function krn(e,t,n){if(e.sessionId&&e.sessionId!==t().sessionId)return;if(e.type===\"steering_queued\"){n({...Si(j1e(t().steerQueue,{content:e.message,entries:e.entries,messageIds:e.mes",
+  "kas_ctx": "electedOption:e.selectedOption}}};case\"recap\":return{recap:{text:e.text}};case\"queued\":return{};case\"steering_queued\":case\"steering_injected\":case\"steering_cleared\":return{};case\"repositories_update\":"
+ },
+ {
+  "kind": "steering_injected",
+  "kas_new": 2,
+  "kas_old": 2,
+  "tui": 1,
+  "cyril_hits": 9,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas.rs:472",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1318",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1625"
+  ],
+  "tui_ctx": "?{messageIds:r}:{}})}function RQn(e,t){switch(e?.kind){case\"steering_queued\":return IQn(e,t),!0;case\"steering_injected\":return TQn(e,t),!0;case\"steering_cleared\":return DQn(e,t),!0;default:return!1}}v",
+  "kas_ctx": "edOption}}};case\"recap\":return{recap:{text:e.text}};case\"queued\":return{};case\"steering_queued\":case\"steering_injected\":case\"steering_cleared\":return{};case\"repositories_update\":return{};case\"focus_up"
+ },
+ {
+  "kind": "steering_cleared",
+  "kas_new": 2,
+  "kas_old": 2,
+  "tui": 7,
+  "cyril_hits": 7,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kiro.rs:1016",
+   "crates/cyril-core/src/protocol/convert/kiro.rs:1656",
+   "crates/cyril-core/src/protocol/convert/kas.rs:503"
+  ],
+  "tui_ctx": "showTransientAlert({message:e.message,status:\"error\",autoHideMs:5000}),!0;case\"steering_queued\":case\"steering_cleared\":return krn(e,t,n),!0;case\"hooks_update\":return n({hooksList:e.hooks}),!0;case\"sys",
+  "kas_ctx": "return{recap:{text:e.text}};case\"queued\":return{};case\"steering_queued\":case\"steering_injected\":case\"steering_cleared\":return{};case\"repositories_update\":return{};case\"focus_update\":return{focus:{titl"
+ },
+ {
+  "kind": "display_error",
+  "kas_new": 10,
+  "kas_old": 10,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "se\"model\":case\"say\":case\"reasoning\":case\"legacy_reasoning_replay\":case\"hook_output\":case\"label\":case\"display_error\":case\"retry\":case\"summarization\":case\"steering\":case\"print\":case\"user_input\":case\"use"
+ },
+ {
+  "kind": "summarization_started",
+  "kas_new": 3,
+  "kas_old": 3,
+  "tui": 1,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "rn null;return{type:\"compaction_status\",status:\"completed\",attemptId:a,summary:Gee(r)}}if(r?.kind===\"summarization_started\"){if(!t.isPrimarySession)return{type:\"compaction_status\",status:\"started\"};if",
+  "kas_ctx": "ryErrorType!==void 0&&{retryErrorType:e.retryErrorType}}};case\"hook_update\":return{hook:e.hook};case\"summarization_started\":return{summarization:{status:\"running\"}};case\"summarization_failed\":return{s"
+ },
+ {
+  "kind": "summarization_separator",
+  "kas_new": 3,
+  "kas_old": 3,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "n:{status:\"success\",summary:{conversationSummary:e.conversationSummary,truncated:e.truncated}}};case\"summarization_separator\":return{summarizationSeparator:!0};case\"summary_message\":return{summaryMess"
+ },
+ {
+  "kind": "summarization_completed",
+  "kas_new": 4,
+  "kas_old": 4,
+  "tui": 1,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "questId:a.requestId}:{},meteringUsage:a.meteringUsage,turnDurationMs:a.turnDurationMs}}if(r?.kind===\"summarization_completed\"){if(!t.isPrimarySession)return{type:\"compaction_status\",status:\"completed\"",
+  "kas_ctx": "rization:{status:\"running\"}};case\"summarization_failed\":return{summarization:{status:e.reason}};case\"summarization_completed\":return{summarization:{status:\"success\",summary:{conversationSummary:e.conv"
+ },
+ {
+  "kind": "summarization_failed",
+  "kas_new": 4,
+  "kas_old": 4,
+  "tui": 1,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": ";return t.setExternalCompactInProgress(!0),{type:\"compaction_status\",status:\"started\"}}if(r?.kind===\"summarization_failed\"){if(!t.isPrimarySession)return{type:\"compaction_status\",status:\"failed\",error",
+  "kas_ctx": "pdate\":return{hook:e.hook};case\"summarization_started\":return{summarization:{status:\"running\"}};case\"summarization_failed\":return{summarization:{status:e.reason}};case\"summarization_completed\":return{"
+ },
+ {
+  "kind": "summary_message",
+  "kas_new": 4,
+  "kas_old": 4,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "ummary,truncated:e.truncated}}};case\"summarization_separator\":return{summarizationSeparator:!0};case\"summary_message\":return{summaryMessage:{content:e.content}};case\"checkpoint_restore_availability\":r"
+ },
+ {
+  "kind": "recap",
+  "kas_new": 6,
+  "kas_old": 6,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "lCallId:e.toolCallId,outcome:e.outcome,...e.selectedOption&&{selectedOption:e.selectedOption}}};case\"recap\":return{recap:{text:e.text}};case\"queued\":return{};case\"steering_queued\":case\"steering_inject"
+ },
+ {
+  "kind": "queued",
+  "kas_new": 37,
+  "kas_old": 37,
+  "tui": 14,
+  "cyril_hits": 6,
+  "cyril_first": [
+   "crates/cyril-core/src/workflow.rs:2725",
+   "crates/cyril-ui/src/render.rs:404",
+   "crates/cyril-ui/src/render.rs:1084"
+  ],
+  "tui_ctx": "llowAlways=\"allow_always\";a.RejectOnce=\"reject_once\";a.RejectAlways=\"reject_always\"})(Ay||={});_0e=[\"queued\",\"running\",\"succeed\",\"failed\",\"aborted\",\"yielded\"]});var cj,lj,uj;var oM=y(()=>{((nt)=>{nt.A",
+  "kas_ctx": "=[\"kiro-web\",\"kiro-ide\",\"kiro-cli\"];Pje=\"session-title\",_q=(i=>(i.NotStarted=\"not_started\",i.Queued=\"queued\",i.InProgress=\"in_progress\",i.Completed=\"completed\",i))(_q||{}),Or=(c=>(c.PendingAction=\"Pen"
+ },
+ {
+  "kind": "hook_update",
+  "kas_new": 4,
+  "kas_old": 4,
+  "tui": 0,
+  "cyril_hits": 4,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas.rs:371",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1005",
+   "crates/cyril-core/src/protocol/convert/kas.rs:1058"
+  ],
+  "tui_ctx": "",
+  "kas_ctx": "message,errorType:e.errorType,...e.retryErrorType!==void 0&&{retryErrorType:e.retryErrorType}}};case\"hook_update\":return{hook:e.hook};case\"summarization_started\":return{summarization:{status:\"running\""
+ },
+ {
+  "kind": "pending_interaction",
+  "kas_new": 11,
+  "kas_old": 11,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "l(),exitCode:k.number().optional(),executionId:k.string().optional()}),FXs=k.object({type:k.literal(\"pending_interaction\"),interactionType:k.enum([\"tool_approval\",\"user_input\"]),toolCallId:k.string(),"
+ },
+ {
+  "kind": "interaction_resolved",
+  "kas_new": 13,
+  "kas_old": 13,
+  "tui": 1,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "}function gNn(e){if(e.sessionUpdate!==\"session_info_update\")return;let t=e._meta?.kiro;if(t?.kind!==\"interaction_resolved\")return;if(\"replay\"in t&&t.replay===!0)return;return t.toolCallId}var Het=(e)=",
+  "kas_ctx": "ntRound:k.number().optional(),_meta:k.record(k.unknown()).optional()}),$Xs=k.object({type:k.literal(\"interaction_resolved\"),toolCallId:k.string(),outcome:k.string(),selectedOption:k.string().optional("
+ },
+ {
+  "kind": "checkpoint_restore_availability",
+  "kas_new": 2,
+  "kas_old": 2,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "urn{summarizationSeparator:!0};case\"summary_message\":return{summaryMessage:{content:e.content}};case\"checkpoint_restore_availability\":return{};case\"user_message_id_assigned\":return{userMessageId:e.use"
+ },
+ {
+  "kind": "repositories_update",
+  "kas_new": 2,
+  "kas_old": 2,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "\"queued\":return{};case\"steering_queued\":case\"steering_injected\":case\"steering_cleared\":return{};case\"repositories_update\":return{};case\"focus_update\":return{focus:{title:e.title,description:e.descript"
+ },
+ {
+  "kind": "model_routed",
+  "kas_new": 3,
+  "kas_old": 3,
+  "tui": 0,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "",
+  "kas_ctx": "e\":return{focus:{title:e.title,description:e.description,status:e.status}};case\"model_fallback\":case\"model_routed\":return{}}}gxt();import*as pbo from\"path\";pe();var lbo=new Set;function zou(e,t){!pbo."
+ },
+ {
+  "kind": "model_fallback",
+  "kas_new": 3,
+  "kas_old": 3,
+  "tui": 10,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "d promoted\",{promoted:t.promoted}),null;return{...e===void 0?{}:{sessionId:e},update:{sessionUpdate:\"model_fallback\",from:n,to:r,cause:t.cause,promoted:t.promoted===!0}}}function nQn(e,t,n){if(!KA(n.c",
+  "kas_ctx": "rn{};case\"focus_update\":return{focus:{title:e.title,description:e.description,status:e.status}};case\"model_fallback\":case\"model_routed\":return{}}}gxt();import*as pbo from\"path\";pe();var lbo=new Set;fu"
+ },
+ {
+  "kind": "model_fallback_promoted",
+  "kas_new": 0,
+  "kas_old": 0,
+  "tui": 2,
+  "cyril_hits": 0,
+  "cyril_first": [],
+  "tui_ctx": "h>0&&t.length===0)return null;return t}function fet(e){return e?.kind===\"model_fallback\"||e?.kind===\"model_fallback_promoted\"}function bQn(e){if(e===\"refusal\")return\"refused\";if(e===\"availability\")ret",
+  "kas_ctx": ""
+ }
+]

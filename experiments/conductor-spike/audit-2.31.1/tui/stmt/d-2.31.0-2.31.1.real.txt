@@ -1,0 +1,2027 @@
+@@ 713c713
+- _ _=_(_,"report-agent-session");
++ _ _=_(_,"report-agent");
+@@ 715,717c715,720
+- _ _=_.sessionId.trim();
+- _(!_)return;
+- _ _=_.kind==="remote"?_:_;
++ _ _=[...r.head,"--state",_.state,"--_",String(_)];
++ _(_.resume){
++ _{
++ _:_,sessionId:_}
++ =_.resume,_=_==="remote"?_:_;
++ _.push("--agent-session-_",_,"--",...s,_)}
+@@ 719c722
+- _:_.bin,_:[...r.head,"--_",String(_),"--agent-session-_",_,"--",...o,_]}
++ _:_.bin,_:_}
+@@ 734a738,747
++ function _(_,_){
++ _(!_)return _ Promise((_)=>setTimeout(_,_));
++ return _ Promise((_)=>{
++ _ _=()=>{
++ clearTimeout(_),_.removeEventListener("abort",_),_()}
++ ,_=setTimeout(_,_);
++ _(_.addEventListener("abort",_,{
++ _:!0}
++ ),_.aborted)_()}
++ )}
+@@ 741a755
++ snapshot=_;
+@@ 743a758,759
++ activeAttempt;
++ activeRetryDelay;
+@@ 746c762
+- _.executor=_.executor,_.env=_.env??(()=>process.env),_.maxAttempts=_.max(1,_.maxAttempts??_),_.delay=_.delay??((_)=>_ Promise((_)=>setTimeout(_,_))),_.retryDelayMs=_.retryDelayMs??_}
++ _.executor=_.executor,_.env=_.env??(()=>process.env),_.maxAttempts=_.max(1,_.maxAttempts??_),_.delay=_.delay??_,_.retryDelayMs=_.retryDelayMs??_}
+@@ 748,752d763
+- _(_.closed||!_.sessionId.trim())return;
+- _(_.pending={
+- _:"resume",report:_}
+- ,!_.draining)_.draining=_.drain()}
+- release(){
+@@ 754c765,785
+- _(_.pending={
++ _ _=_.sessionId.trim();
++ _(!_)return;
++ _.queue({
++ ...this.snapshot,resume:{
++ _:_.kind,sessionId:_}
++ }
++ )}
++ reportState(_){
++ _(_.closed)return;
++ _.queue({
++ ...this.snapshot,state:_}
++ )}
++ reportIdleOnExit(){
++ _(_.closed||_.snapshot.resume?.kind==="remote")return;
++ _(!_.snapshot.resume&&_.snapshot.state==="_")return;
++ _.queue({
++ ...this.snapshot,state:"_"}
++ )}
++ release(_="_"){
++ _(_.closed||_==="local"&&_.snapshot.resume?.kind==="remote")return;
++ _(_.snapshot=_,_.pending={
+@@ 756a788,791
++ queue(_){
++ _(_.snapshot=_,_.pending={
++ _:"report",report:_}
++ ,!_.draining)_.draining=_.drain()}
+@@ 760c795,796
+- _.closed=!0,_.pending=_ 0,_.controller.abort()}
++ _(_.controller.signal.aborted)return;
++ _.closed=!0,_.pending=_ 0,_.controller.abort(),_.activeAttempt?.abort(),_.activeRetryDelay?.abort()}
+@@ 762c798
+- _.closed=!0;
++ _(_.closed=!0,_.pending)_.activeAttempt?.abort(),_.activeRetryDelay?.abort();
+@@ 786a823,837
++ async waitForRetryDelay(){
++ _ _=_ AbortController;
++ _.activeRetryDelay=_;
++ _ _=()=>{
++ }
++ ,_=_ Promise((_)=>{
++ _=_,_.signal.addEventListener("abort",_,{
++ _:!0}
++ )}
++ );
++ _{
++ await Promise.race([_.delay(_.retryDelayMs,_.signal),_])}
++ finally{
++ _(_.signal.removeEventListener("abort",_),_.activeRetryDelay===_)_.activeRetryDelay=_ 0}
++ }
+@@ 794a846,847
++ _ _=_ AbortController;
++ _.activeAttempt=_;
+@@ 796c849
+- _(await _.executor.run(_,_.controller.signal))return;
++ _(await _.executor.run(_,_.signal))return;
+@@ 802c855,858
+- _(_<_.maxAttempts)await _.delay(_.retryDelayMs)}
++ finally{
++ _(_.activeAttempt===_)_.activeAttempt=_ 0}
++ _(_.controller.signal.aborted||_.pending&&_<_.maxAttempts)return;
++ _(_<_.maxAttempts)await _.waitForRetryDelay()}
+@@ 822c878
+- function _(){
++ function _(_){
+@@ 825c881,888
+- _().release()}
++ _().reportState(_)}
++ catch(_){
++ _.debug("[herdr] failed _ queue state report",_(_))}
++ }
++ function _(_="_"){
++ _(_!=="enabled")return;
++ _{
++ _().release(_)}
+@@ 832,834c895
+- function _(_={
+- }
+- ){
++ function _(_){
+@@ 836c897
+- close:_,onExit:_,_:_=(_)=>{
++ claim:_,close:_,onExit:_,_:_=(_)=>{
+@@ 848a910,912
++ _(_==="release")_();
++ _ _(_==="release-local")_("local");
++ _ _?.reportIdleOnExit();
+@@ 852c916
+- _ _="_-_",_="_",_,_,_=1000,_=3,_=200,_=250,_=0,_,_,_="uninitialized",_=()=>_?.abort();
++ _ _="_-_",_="_",_,_,_=1000,_=3,_=200,_=250,_,_=0,_,_,_="uninitialized",_=()=>_?.abort();
+@@ 855c919,921
+- _=["_-_","_","--agent-engine=_","--resume-_"],_=["_-_","_","--agent-engine=_","--cloud","--resume-_"];
++ _=["_-_","_","--agent-engine=_","--resume-_"],_=["_-_","_","--agent-engine=_","--cloud","--resume-_"],_={
++ state:"_"}
++ ;
+@@ 8432c8498
+- close:()=>_.close(),_:_}
++ claim:"_",close:()=>_.close(),_:_}
+@@ 8439c8505
+- close:()=>_.close(),_:_}
++ claim:"release",close:()=>_.close(),_:_}
+@@ 9962a10029,10064
++ return typeof _==="object"&&_!==_&&!Array.isArray(_)}
++ function _(_){
++ _(!_(_))return;
++ _ _={
++ }
++ ;
++ _(_ _ _ _){
++ _ _=_[_];
++ _(typeof _==="boolean")_[_]=_}
++ return _}
++ function _(_){
++ return typeof _==="string"&&_.has(_)?_:_ 0}
++ function _(_){
++ _(typeof _.sessionId!=="string"||typeof _.isEnterprise!=="boolean")return;
++ _ _=_(_.features);
++ _(!_)return;
++ _ _=_(_.disabledReason);
++ return{
++ sessionId:_.sessionId,isEnterprise:_.isEnterprise,features:_,...n?{
++ disabledReason:_}
++ :{
++ }
++ }
++ }
++ function _(_){
++ return _==="api_failure"||_==="no_endpoint"}
++ function _(_){
++ _(_.features?.webToolsEnabled!==!1)return;
++ return{
++ apiFailure:_(_(_.disabledReason))}
++ }
++ _ _,_;
++ _ _=_(()=>{
++ _=_ _(["admin_disabled","api_failure","no_endpoint"]),_=["mcpEnabled","webToolsEnabled","autonomousAgents","usageAnalytics","promptLogging","codeReferenceTracker","contentCollection"]}
++ );
++ function _(_){
+@@ 10125a10228,10251
++ function _(_){
++ return _.type==="mcp_governance_disabled"||_.type==="web_tools_governance_disabled"?`_{
++ _.type}
++ :_{
++ String(_.apiFailure)}
++ `:_.type}
++ function _(_){
++ return _.type==="mcp_governance_disabled"||_.type==="web_tools_governance_disabled"}
++ function _(_,_){
++ _ _=_(_.disabledReason),_=(_)=>_.filter((_)=>_.type===_);
++ return[...e.features.mcpEnabled===_ 0?_("mcp_governance_disabled"):_.features.mcpEnabled?[]:[{
++ _:"mcp_governance_disabled",apiFailure:_}
++ ],...e.features.webToolsEnabled===_ 0?_("web_tools_governance_disabled"):_.features.webToolsEnabled?[]:[{
++ _:"web_tools_governance_disabled",apiFailure:_}
++ ]]}
++ function _(_,_,_){
++ _ _=_().initErrors,_=_.filter((_)=>!_(_)),_=_(_.state,_),_=_.filter(_).map(_).sort(),_=_.map(_).sort();
++ _(_({
++ governanceState:_.state,initErrors:[...a,...o]}
++ ),_.length===0||_.join("|")===_.join("|"))return;
++ _ _=[...a,...o],_=_(_);
++ _(_)_().showTransientAlert({
++ message:_,status:_(_),autoHideMs:8000}
++ )}
+@@ 10131a10258
++ _"governance_state_update":return _(_,_,_),!0;
+@@ 10137c10264
+- mcpRegistryCache:_.registryServers}
++ mcpRegistryCache:_.registryServers,mcpRegistryHidden:_.hiddenServers}
+@@ 10291a10419
++ _();
+@@ 12490c12618
+- close:()=>{
++ claim:"_",close:()=>{
+@@ 14278a14407,14409
++ function _(_,_){
++ _(!_)return _;
++ return _.split(`\n`).flatMap((_)=>_(_,_))}
+@@ 14285a14417,14432
++ function _(_,_){
++ _(!_)return _;
++ _(_(_))return _(_,_);
++ _ _=`_{
++ _}
++ \_{
++ _}
++ `,_=_.get(_);
++ _(_)return _;
++ _ _=_.split(`\n`),_=[],_=_ _;
++ _(_ _ _ _){
++ _ _=_.length>0?_.getActiveCodes():"";
++ _.push(...pRe(_+_,_)),_(_,_)}
++ _ _=_.length>0?_:_;
++ _(_.size>=_)_.clear();
++ return _.set(_,_),_}
+@@ 14332c14479
+- _ _;
++ _ _,_=512,_;
+@@ 14335c14482,14483
+- _=Object.freeze([""])}
++ _=Object.freeze([""]);
++ _=_ _}
+@@ 291055a291204,291213
++ _ _=_.get(_);
++ _(!_)_=Object.freeze([...new _(Object.values(_))]),_.set(_,_);
++ return _}
++ function _(_){
++ return _(_(_))}
++ function _(_,_){
++ _ _=_(_).replace(/ - \[#\_+\]\([^)]+\)/,""),_=_[_];
++ _(_&&_.test(_))_=_.replace(_,"");
++ return _(_)}
++ function _(_){
+@@ 291061c291219
+- _.version}
++ _(_.version)}
+@@ 291065,291066d291222
+- _ _=_.description.replace(/ - \[#\_+\]\([^)]+\)/,""),_=_[_.type];
+- _(_&&_.test(_))_=_.replace(_,"");
+@@ 291068c291224
+- _.push(_),_.set(_.type,_)}
++ _.push(_(_.description,_.type)),_.set(_.type,_)}
+@@ 291123c291279
+- _ _,_,_,_,_,_;
++ _ _,_,_,_,_,_,_,_=(_)=>_.replace(/\_+/_," ").trim(),_=(_)=>_.replace(_,"\\_&"),_;
+@@ 291133c291289,291290
+- ,_={
++ ,_=_ WeakMap;
++ _={
+@@ 291135c291292,291294
+- ;
++ ,_=/^(?:#|>|```|~~~|(?:[-*_]\_*){
++ 3,}
++ _)/;
+@@ 291160c291319
+- `,_:_.markdown,format:"markdown"}
++ `,_:_.markdown,format:"release-notes",entryMarkers:_(_?.icons??_)}
+@@ 295636c295795,295886
+- return _[_.toLowerCase()]}
++ return _==="cloud"||_==="organization"}
++ function _(_,_){
++ _(_==="organization")return"organization";
++ _(_)return"cloud";
++ return _}
++ function _(_){
++ _(typeof _!=="object"||_===_)return;
++ _ _=_._meta;
++ _(typeof _!=="object"||_===_)return;
++ _ _=_.kiro;
++ _(typeof _!=="object"||_===_)return;
++ _ _=_.resource;
++ _(typeof _!=="object"||_===_)return;
++ return _(_.source)}
++ function _(_){
++ _(!_("managed_settings"))return"cloud";
++ _ _=_.provenance;
++ return(typeof _==="object"&&_!==_?_.scope:_ 0)==="organization"?"organization":"cloud"}
++ function _(_){
++ _(typeof _!=="object"||_===_)return;
++ _ _=_.origin;
++ _(typeof _!=="string")return;
++ _(_==="cloud")return _(_);
++ _(_==="power"){
++ _ _=_.power?.source;
++ _(typeof _==="object"&&_!==_&&_.origin==="cloud")return _(_);
++ return"local"}
++ return"local"}
++ _ _=_(()=>{
++ _()}
++ );
++ function _(_){
++ return _.flatMap((_)=>{
++ _ _=_.features[_];
++ return _===_ 0?[]:[{
++ _:_,enabled:_}
++ ]}
++ )}
++ function _(_){
++ return _(_).filter(({
++ enabled:_}
++ )=>!_).length}
++ function _(_){
++ return _(_).length}
++ function _(_){
++ _ _=_.isEnterprise?"organization":_;
++ return _(_).map(({
++ _:_,enabled:_}
++ )=>({
++ setting:_[_],value:_?"_":"_",governedBy:_}
++ ))}
++ function _(_){
++ _ _=_(_);
++ _(_===0)return _;
++ _ _=_(_);
++ return _>0?`_{
++ String(_)}
++  _ _{
++ String(_)}
++  _`:`_{
++ String(_)}
++  setting${
++ _===1?"":"_"}
++ `}
++ function _(_){
++ _ _=[];
++ _(_(_)>0)switch(_.disabledReason){
++ _"api_failure":_.push("Could _ _ _ organization profile;
++  disabled settings _ conservative defaults.");
++ break;
++ _"no_endpoint":_.push("_ organization control plane _ configured;
++  disabled settings _ conservative defaults.");
++ break;
++ default:break}
++ _(_.isEnterprise)_.push("Managed _ _ organization. Contact _ administrator _ request changes.");
++ return _}
++ _ _="\u2014",_;
++ _ _=_(()=>{
++ _();
++ _={
++ mcpEnabled:"_ servers",webToolsEnabled:"_ tools",autonomousAgents:"autonomous agents",usageAnalytics:"usage analytics",promptLogging:"prompt logging",codeReferenceTracker:"_ reference tracker",contentCollection:"content collection"}
++ }
++ );
++ function _(_){
++ _ _=_[_.toLowerCase()];
++ _(_==="managed"&&!_("managed_settings"))return;
++ return _}
++ function _(_){
++ _(_("managed_settings"))return _;
++ return{
++ ...e,governance:_,mcpRegistryHidden:[],mcpGovernanceDisabled:_ 0}
++ }
+@@ 295639,295641c295889
+- _ _=_.includes("local"),_=_.includes("cloud");
+- _(_&&_)return"local + cloud";
+- return _?"cloud":"local"}
++ return["local","cloud","organization"].filter((_)=>_.includes(_)).join(" + ")}
+@@ 295643,295644c295891,295900
+- _(_)return"cloud";
+- return _??"local"}
++ _(_.source!=="organization")return _;
++ return{
++ ...e,status:_.status===_?"organization":`organization _{
++ _}
++  _{
++ _.status}
++ `}
++ }
++ function _(_,_){
++ return _(_,_)??"local"}
+@@ 295652,295653c295908,295937
+- _ _=(_)=>_.map((_)=>_(_.cloudSession,_)),_=_(_.mcpServers.map((_)=>_.source)),_=_.steeringDocs.length>0?_.steeringDocs:_.steering;
+- return[{
++ _ _=_.governance,_=_?.features.mcpEnabled;
++ _(_&&_!==_ 0){
++ _(!_.isEnterprise||_)return _;
++ return _(_.disabledReason)?"outage":"decision"}
++ _ _=_.mcpGovernanceDisabled;
++ _(!_||_?.isEnterprise===!1)return _;
++ return _.apiFailure?"outage":"decision"}
++ function _(_,_,_){
++ _ _=_(_);
++ _(_==="decision")return{
++ source:"organization",status:"disabled"}
++ ;
++ _(_==="outage")return{
++ source:_,status:"unavailable"}
++ ;
++ _ _=_.mcpServers.filter((_)=>_.status==="running").length,_=_.mcpRegistryHidden?.length??0;
++ _(_>0)return{
++ source:_.mcpServers.length>0?_:"organization",status:`_{
++ _(_,"active")}
++  _{
++ _}
++  _{
++ _(_,"hidden")}
++ `}
++ ;
++ return{
++ source:_,status:_.mcpServers.length>0?_(_,"active"):_}
++ }
++ function _(_,_="\_"){
++ _ _=_(_),_=(_)=>_.map((_)=>_(_.cloudSession,_)),_=_(_.mcpServers.map((_)=>_.source)),_=_.steeringDocs.length>0?_.steeringDocs:_.steering,_=_.governance,_=[{
+@@ 295656c295940
+- _:"_",label:"_ servers",source:_(_),status:_.mcpServers.length>0?_(_.mcpServers.filter((_)=>_.status==="running").length,"active"):_}
++ _:"_",label:"_ servers",...eSn(_,_(_),_)}
+@@ 295665c295949,295952
+- ]}
++ ,...i?.isEnterprise?[{
++ _:"managed",label:"managed",source:"organization",status:_(_)}
++ ]:[]];
++ return _.sourcesReported?_:_.map((_)=>_(_,_))}
+@@ 295707c295994
+- _ _=_(_,_);
++ _ _=_(_),_=_(_,_);
+@@ 295711a295999,296006
++ _"managed":{
++ _ _=_.governance;
++ _(!_)return{
++ title:"/config \u2014 managed",columns:["Setting","Value","Managed _"],_:[],footerLines:[],emptyMessage:"_ agent reported _ managed settings."}
++ ;
++ return{
++ title:"/config \u2014 managed",columns:["Setting","Value","Managed _"],_:_(_).map((_)=>[_.setting,_.value,_.governedBy]),footerLines:_(_),emptyMessage:"_ agent reported _ governed settings."}
++ }
+@@ 295728a296024,296027
++ _();
++ _();
++ _();
++ _();
+@@ 295730c296029
+- agents:"agents",agent:"agents",_:"_",powers:"powers",power:"powers",steering:"steering",skills:"skills",skill:"skills",hooks:"hooks"}
++ agents:"agents",agent:"agents",_:"_",powers:"powers",power:"powers",steering:"steering",skills:"skills",skill:"skills",hooks:"hooks",managed:"managed"}
+@@ 304072a304372,304391
++ function _(_){
++ return _.mcpRegistryHidden.length>0?[...e.mcpRegistryCache]:_ 0}
++ async function _(_,_,_,_){
++ _ _=_.trim();
++ _(!_)_.setActiveCommand({
++ command:_,options:[]}
++ );
++ _ _=[...n.mcpServerCache],_=_==="_";
++ _(_.setShowMcpPanel(!0,_,"_",_?[...n.mcpRegistryCache]:_(_)),_){
++ _ _=_?`_{
++ _.length}
++  configured, _{
++ _.mcpRegistryCache.length}
++  registry servers`:`_{
++ _.length}
++  configured server${
++ _.length===1?"":"_"}
++ `;
++ _.showAlert(_,"success",5000)}
++ }
+@@ 310672,310689d310990
+- _(typeof _!=="object"||_===_)return;
+- _ _=_._meta;
+- _(typeof _!=="object"||_===_)return;
+- _ _=_.kiro;
+- _(typeof _!=="object"||_===_)return;
+- _ _=_.resource;
+- _(typeof _!=="object"||_===_)return;
+- return _(_.source)}
+- function _(_){
+- _(typeof _!=="object"||_===_)return;
+- _ _=_.origin;
+- _(typeof _!=="string")return;
+- _(_==="cloud")return"cloud";
+- _(_==="power"){
+- _ _=_.power?.source;
+- return(typeof _==="object"&&_!==_?_.origin:_ 0)==="cloud"?"cloud":"local"}
+- return"local"}
+- function _(_){
+@@ 311441a311743
++ _();
+@@ 312853c313155,313156
+- _=_ _([_,"kiro_planner","_",...Fn("_")?["Explore"]:[]])}
++ _();
++ _=_ _([_,"kiro_planner","_",...Bn("_")?["Explore"]:[]])}
+@@ 316811c317114
+- _(_==="cloud")_.markCloudConfigSource("hooks",_);
++ _(_(_))_.markCloudConfigSource("hooks",_);
+@@ 316832a317136
++ _();
+@@ 316836,316841d317139
+- _(_.features?.webToolsEnabled!==!1)return;
+- _ _=_.disabledReason;
+- return{
+- apiFailure:_==="api_failure"||_==="no_endpoint"}
+- }
+- function _(_){
+@@ 316855a317154,317212
++ async function _(_,_,_,_){
++ _(!(_?.includes(_)??!1))return;
++ _ _;
++ _{
++ _ _=await _.sendExtMethod(_,{
++ }
++ );
++ _=_(_.configOptions)}
++ catch(_){
++ _.debug("[_] config/template failed:",_);
++ return}
++ _(!_||_.agents.length===0||_())return;
++ _({
++ _:"agents_update",agents:_.agents}
++ )}
++ _ _="_kiro/config/template";
++ _ _=_(()=>{
++ _();
++ _();
++ _()}
++ );
++ function _(_,_,_){
++ return _.onExtNotification("_kiro/governance/state",(_)=>{
++ _ _=_(_);
++ _(!_)return;
++ _(_(_.sessionId||_ 0))return;
++ _({
++ _:"governance_state_update",state:_}
++ )}
++ )}
++ function _(_,_){
++ return _.onExtNotification("_kiro/governance/state",(_)=>{
++ _ _=_(_);
++ _(_)_(_)}
++ )}
++ _ _=_(()=>{
++ _();
++ _()}
++ );
++ function _({
++ client:_,track:_,isForeignSessionPush:_,hasSession:_,broadcast:_,onWebToolsGovernanceDisabled:_}
++ ){
++ _ _=_("managed_settings");
++ return{
++ subscribe:()=>{
++ _(!_)return;
++ _(_(_,_,_))}
++ ,afterInitialize:(_)=>{
++ _(!_){
++ _(_(_,_));
++ return}
++ _(_,_,_,_)}
++ }
++ }
++ _ _=_(()=>{
++ _();
++ _();
++ _()}
++ );
+@@ 316864a317222,317227
++ _ _=(_)=>{
++ _.notificationSubscriptions.push(_)}
++ ,_=(_,_)=>_(_.kiroClient.onExtNotification(_,_)),_=_({
++ client:_.kiroClient,track:_,isForeignSessionPush:(_)=>_.isForeignSessionPush(_),hasSession:()=>_.sessionId!==_ 0,broadcast:(_)=>_.broadcastStreamEvent(_),onWebToolsGovernanceDisabled:(_)=>_.handleWebToolsGovernanceDisabled(_)}
++ );
++ _.subscribe();
+@@ 316866c317229
+- _.kiroCapabilities=_(_.agentCapabilities?._meta?.kiro),_.debug("[_-client] _ agent capabilities:",_.kiroCapabilities),_(_.kiroClient,()=>_.sandboxWriter.policy,_.sandboxStatusHandlers),_.hooksNotificationDisposable=_.kiroClient.onExtNotification("_kiro/hooks/didChange",(_)=>{
++ _.kiroCapabilities=_(_.agentCapabilities?._meta?.kiro),_.debug("[_-client] _ agent capabilities:",_.kiroCapabilities),_.afterInitialize(_.kiroCapabilities.extensionMethods),_(_.kiroClient,()=>_.sandboxWriter.policy,_.sandboxStatusHandlers),_("_kiro/hooks/didChange",(_)=>{
+@@ 316873c317236
+- ),_.powersNotificationDisposable=_.kiroClient.onExtNotification("_kiro/powers/items_changed",(_)=>{
++ ),_("_kiro/powers/items_changed",(_)=>{
+@@ 316884c317247
+- _(_==="cloud")_.markCloudConfigSource("powers",_);
++ _(_(_))_.markCloudConfigSource("powers",_);
+@@ 316902c317265
+- ),_.steeringDocsNotificationDisposable=_.kiroClient.onExtNotification("_kiro/steering/documents_changed",(_)=>{
++ ),_("_kiro/steering/documents_changed",(_)=>{
+@@ 316913c317276
+- _(_==="cloud")_.markCloudConfigSource("steering",_);
++ _(_(_))_.markCloudConfigSource("steering",_);
+@@ 316927c317290
+- ),_.diagnosticsNotificationDisposable=_.kiroClient.onExtNotification("_kiro/diagnostics/changed",(_)=>{
++ ),_("_kiro/diagnostics/changed",(_)=>{
+@@ 316948c317311
+- ),_.toolsNotificationDisposable=_.kiroClient.onExtNotification("_kiro/tools/didChange",(_)=>{
++ ),_("_kiro/tools/didChange",(_)=>{
+@@ 316998,317000d317360
+- ),_.kiroClient.onExtNotification("_kiro/governance/state",(_)=>{
+- _ _=_(_);
+- _(_)_.handleWebToolsGovernanceDisabled(_)}
+@@ 317048c317408
+- _(_==="cloud")_.markCloudConfigSource("_",_);
++ _(_(_))_.markCloudConfigSource("_",_);
+@@ 317051c317411
+- source:_.startedCloudSession?"cloud":_??"local"}
++ source:_(_.startedCloudSession,_)??"local"}
+@@ 317076c317436
+- _:"mcp_registry_snapshot",registryServers:_}
++ _:"mcp_registry_snapshot",registryServers:_,hiddenServers:_(_)}
+@@ 317077a317438,317442
++ function _(_){
++ _(!_("managed_settings"))return[];
++ _ _=_.accessModeFilteredServers;
++ _(_.accessMode!=="registry"||!Array.isArray(_))return[];
++ return _.filter((_)=>typeof _==="string")}
+@@ 317087a317453,317454
++ _();
++ _();
+@@ 317108c317475
+- steerMessage:!1,workflowEffectSink:!1,broadcastSessionEvent:!1,broadcastMultiSession:!1,agentProcess:!1,assertActive:!1,broadcastStreamEvent:!1,buildSessionCandidate:!1,callExtMethod:!1,cancelFirstVisibleResponse:!1,clearSessionConversionState:!1,clearStaleConfigSurface:!1,close:!1,cloudConfigSourceSeen:!1,cloudProvisionFailedEmitted:!0,cloudReadyEmitted:!0,cloudSessionStartMs:!0,commitSessionPoli
++ steerMessage:!1,workflowEffectSink:!1,broadcastSessionEvent:!1,broadcastMultiSession:!1,agentProcess:!1,assertActive:!1,broadcastStreamEvent:!1,buildSessionCandidate:!1,callExtMethod:!1,cancelFirstVisibleResponse:!1,clearSessionConversionState:!1,clearStaleConfigSurface:!1,close:!1,cloudConfigSourceSeen:!1,cloudProvisionFailedEmitted:!0,cloudReadyEmitted:!0,cloudSessionStartMs:!0,commitSessionPoli
+@@ 317938c318305
+- agentProcess:()=>_.agentProcess,steerMessage:()=>_.steerMessage,workflowEffectSink:()=>_.workflowEffectSink,broadcastSessionEvent:()=>_.broadcastSessionEvent,broadcastMultiSession:()=>_.broadcastMultiSession,assertActive:()=>_.assertActive,broadcastStreamEvent:()=>_.broadcastStreamEvent,buildSessionCandidate:()=>_.buildSessionCandidate,callExtMethod:()=>_.callExtMethod,cancelFirstVisibleResponse:(
++ agentProcess:()=>_.agentProcess,steerMessage:()=>_.steerMessage,workflowEffectSink:()=>_.workflowEffectSink,broadcastSessionEvent:()=>_.broadcastSessionEvent,broadcastMultiSession:()=>_.broadcastMultiSession,assertActive:()=>_.assertActive,broadcastStreamEvent:()=>_.broadcastStreamEvent,buildSessionCandidate:()=>_.buildSessionCandidate,callExtMethod:()=>_.callExtMethod,cancelFirstVisibleResponse:(
+@@ 317940c318307
+- cloudProvisionFailedEmitted:(_)=>_.cloudProvisionFailedEmitted=_,cloudReadyEmitted:(_)=>_.cloudReadyEmitted=_,cloudSessionStartMs:(_)=>_.cloudSessionStartMs=_,committedRemoteStore:(_)=>_.committedRemoteStore=_,configEpoch:(_)=>_.configEpoch=_,createInFlight:(_)=>_.createInFlight=_,diagnosticsNotificationDisposable:(_)=>_.diagnosticsNotificationDisposable=_,hooksNotificationDisposable:(_)=>_.hooksN
++ cloudProvisionFailedEmitted:(_)=>_.cloudProvisionFailedEmitted=_,cloudReadyEmitted:(_)=>_.cloudReadyEmitted=_,cloudSessionStartMs:(_)=>_.cloudSessionStartMs=_,committedRemoteStore:(_)=>_.committedRemoteStore=_,configEpoch:(_)=>_.configEpoch=_,createInFlight:(_)=>_.createInFlight=_,kasSettings:(_)=>_.kasSettings=_,kiroCapabilities:(_)=>_.kiroCapabilities=_,lastClientSetModeId:(_)=>_.lastClientSetMo
+@@ 318076,318080c318443
+- hooksNotificationDisposable=_;
+- powersNotificationDisposable=_;
+- steeringDocsNotificationDisposable=_;
+- diagnosticsNotificationDisposable=_;
+- toolsNotificationDisposable=_;
++ notificationSubscriptions=[];
+@@ 318109c318472
+- _.retired=!0,_.hooksNotificationDisposable?.dispose(),_.hooksNotificationDisposable=_,_.powersNotificationDisposable?.dispose(),_.powersNotificationDisposable=_,_.steeringDocsNotificationDisposable?.dispose(),_.steeringDocsNotificationDisposable=_,_.diagnosticsNotificationDisposable?.dispose(),_.diagnosticsNotificationDisposable=_,_.toolsNotificationDisposable?.dispose(),_.toolsNotificationDisposa
++ _.retired=!0,_.notificationSubscriptions.splice(0).forEach((_)=>_.dispose()),_.workflowExtensionInstance?.dispose(),_.workflowExtensionInstance=_ 0,_.extensionRuntimeInstance?.dispose(),_.extensionRuntimeInstance=_ 0,_.sessionDisposables.forEach((_)=>_.dispose()),_.sessionDisposables=[],_.sandboxStatusHandlers.clear(),_.v3ToolCalls.reset(),super.close()}
+@@ 318673c319036
+- _.setShowMcpPanel(!0,[...e.mcpServerCache],"_"),_.setShowConfigPanel(!1),_("_");
++ _.setShowMcpPanel(!0,[...e.mcpServerCache],"_",_(_)),_.setShowConfigPanel(!1),_("_");
+@@ 318770a319134,319135
++ ,{
++ value:"managed",handle:_("managed")}
+@@ 318821a319187,319189
++ function _(_){
++ _(_===!0)return;
++ return _===_?"_ managed settings _ _: _ _ _ reported _ _ session":"_ managed settings _ _: _ account _ _ managed _ _ organization"}
+@@ 318973a319342,319343
++ _ _=_.value==="managed"?_(_.enterpriseGoverned):_ 0;
++ _(_)return _.showAlert(_,"warning",3000),!0;
+@@ 319377c319747
+- close:()=>_.kiro.close()}
++ claim:"release-local",close:()=>_.kiro.close()}
+@@ 321160,321177d321529
+- async function _(_,_,_,_){
+- _ _=_.trim();
+- _(!_)_.setActiveCommand({
+- command:_,options:[]}
+- );
+- _ _=[...n.mcpServerCache],_=_==="_";
+- _(_.setShowMcpPanel(!0,_,"_",_?[...n.mcpRegistryCache]:_ 0),_){
+- _ _=_?`_{
+- _.length}
+-  configured, _{
+- _.mcpRegistryCache.length}
+-  registry servers`:`_{
+- _.length}
+-  configured server${
+- _.length===1?"":"_"}
+- `;
+- _.showAlert(_,"success",5000)}
+- }
+@@ 321291c321643
+- `:_.name,description:_.validationError??_.description??_.source??""}
++ `:_.name,description:_(_.validationError??_.description??_.source??"")}
+@@ 321303c321655
+- _.validationError}
++ _(_.validationError)}
+@@ 321321c321673
+- _.validationError}
++ _(_.validationError)}
+@@ 321512a321865
++ _();
+@@ 322921c323274
+- _:_.kiro,agentEngine:_.agentEngine,cloudSessionActive:_.cloudSessionActive,slashCommands:_,kasCommands:_.kasCommands,prompts:_.prompts,skills:_.skills,steering:_.steering,kasAvailableModels:_.kas.availableModels,kasAvailableAgents:_.kas.availableAgents,kasAvailableEfforts:_.kas.availableEfforts,...TTe(_,_),showAlert:(_,_,_=3000)=>_.showTransientAlert({
++ _:_.kiro,agentEngine:_.agentEngine,cloudSessionActive:_.cloudSessionActive,enterpriseGoverned:_.governanceState?.isEnterprise??_,slashCommands:_,kasCommands:_.kasCommands,prompts:_.prompts,skills:_.skills,steering:_.steering,kasAvailableModels:_.kas.availableModels,kasAvailableAgents:_.kas.availableAgents,kasAvailableEfforts:_.kas.availableEfforts,...TDe(_,_),showAlert:(_,_,_=3000)=>_.showTransien
+@@ 322943c323296
+- ,setUpgradeDiagnostics:_.setUpgradeDiagnostics,setUpgradeRunPreview:_.setUpgradeRunPreview,setShowMcpPanel:_.setShowMcpPanel,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,setShowToolsPanel:_.setShowToolsPanel,requestTrustAllTools:_.requestTrustAllTools,setShowGoalPanel:_.setShowGoalPanel,setGoalStatus:_.setGoalStatus,setShowStatsPanel:_.setShowStatsPanel,setShowHooksPanel:_.s
++ ,setUpgradeDiagnostics:_.setUpgradeDiagnostics,setUpgradeRunPreview:_.setUpgradeRunPreview,setShowMcpPanel:_.setShowMcpPanel,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,mcpRegistryHidden:_.mcpRegistryHidden,setShowToolsPanel:_.setShowToolsPanel,requestTrustAllTools:_.requestTrustAllTools,setShowGoalPanel:_.setShowGoalPanel,setGoalStatus:_.setGoalStatus,setShowStatsPanel:_.s
+@@ 323144c323497
+- close:()=>_.kiro.close(),onExit:_.onExit}
++ claim:"release-local",close:()=>_.kiro.close(),onExit:_.onExit}
+@@ 323147c323500
+- close:()=>_.kiro.close(),onExit:_.onExit}
++ claim:"_",close:()=>_.kiro.close(),onExit:_.onExit}
+@@ 324487a324841,324850
++ _(_.pendingApproval||_.pendingQuestion)return"blocked";
++ return(_.isProcessing||_.isCompacting)&&_.cancelInProgress===_&&!_.agentError?"working":"_"}
++ function _(_){
++ _ _="_";
++ _.subscribe((_)=>{
++ _ _=_(_);
++ _(_===_)return;
++ _=_,_(_)}
++ )}
++ function _(_){
+@@ 324505c324868
+- _(_),_(_),_(_),_(_);
++ _(_),_(_),_(_),_(_),_(_);
+@@ 324559a324923
++ _();
+@@ 325401c325765
+- contextBreakdownCache:_.contextBreakdownCache,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,toolsList:_.toolsList,hooksList:_.hooksList,powersList:_.powersList,steeringDocs:_.steeringDocs,cloudConfigDiagnostics:_.cloudConfigDiagnostics,cloudConfigDiagnosticsReceived:_.cloudConfigDiagnosticsReceived,cloudSnapshotReadiness:_.cloudSnapshotReadiness}
++ contextBreakdownCache:_.contextBreakdownCache,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,mcpRegistryHidden:_.mcpRegistryHidden,toolsList:_.toolsList,hooksList:_.hooksList,powersList:_.powersList,steeringDocs:_.steeringDocs,cloudConfigDiagnostics:_.cloudConfigDiagnostics,cloudConfigDiagnosticsReceived:_.cloudConfigDiagnosticsReceived,cloudSnapshotReadiness:_.cloudSnapshotRe
+@@ 325404c325768
+- contextBreakdownCache:_,mcpServerCache:[],mcpRegistryCache:[],toolsList:[],hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,cloudSnapshotReadiness:{
++ contextBreakdownCache:_,mcpServerCache:[],mcpRegistryCache:[],mcpRegistryHidden:[],toolsList:[],hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,cloudSnapshotReadiness:{
+@@ 325410c325774
+- contextBreakdownCache:_.contextBreakdownCache,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,toolsList:_.toolsList,hooksList:_.hooksList,powersList:_.powersList,steeringDocs:_.steeringDocs,cloudConfigDiagnostics:_.cloudConfigDiagnostics,cloudConfigDiagnosticsReceived:_.cloudConfigDiagnosticsReceived,cloudSnapshotReadiness:_.cloudSnapshotReadiness}
++ contextBreakdownCache:_.contextBreakdownCache,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,mcpRegistryHidden:_.mcpRegistryHidden,toolsList:_.toolsList,hooksList:_.hooksList,powersList:_.powersList,steeringDocs:_.steeringDocs,cloudConfigDiagnostics:_.cloudConfigDiagnostics,cloudConfigDiagnosticsReceived:_.cloudConfigDiagnosticsReceived,cloudSnapshotReadiness:_.cloudSnapshotRe
+@@ 325429c325793
+- mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache}
++ mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,mcpRegistryHidden:_.mcpRegistryHidden}
+@@ 325490,325491c325854,325857
+- _(_>=2)return _({
+- close:()=>_.kiro.close(),onExit:_.onExit}
++ _(_>=2){
++ _(_.kiro.isCloudSessionActive?.()??!1)_(_.kiro.sessionId);
++ return _({
++ claim:"release-local",close:()=>_.kiro.close(),onExit:_.onExit}
+@@ 325494c325860
+- ;
++ }
+@@ 325573a325940
++ _();
+@@ 329322c329689
+- ,showMcpPanel:!1,mcpServers:[],mcpRegistryServers:[],mcpServerCache:[],mcpRegistryCache:[],pendingOAuthServers:_ _,initErrors:[],mcpInitStatus:_ _,bootProgress:_ _,setBootStage:(_,_,_,_)=>{
++ ,showMcpPanel:!1,mcpServers:[],mcpRegistryServers:[],mcpServerCache:[],mcpRegistryCache:[],mcpRegistryHidden:[],pendingOAuthServers:_ _,initErrors:[],mcpInitStatus:_ _,bootProgress:_ _,setBootStage:(_,_,_,_)=>{
+@@ 329338c329705
+- ,mcpMode:"_",showToolsPanel:!1,showGoalPanel:!1,toolsList:[],showStatsPanel:!1,statsList:[],statsSummary:_,showHooksPanel:!1,hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,showRepoPicker:!1,repoPickerResources:[],attachedRepos:[],cloudProviderChecked:!1,cloudProviderConnected:_,showSourceProviderGate:!1,showSessionPicker:!1,sessionPickerRows:
++ ,mcpMode:"_",showToolsPanel:!1,showGoalPanel:!1,toolsList:[],showStatsPanel:!1,statsList:[],statsSummary:_,showHooksPanel:!1,hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,governanceState:_,showRepoPicker:!1,repoPickerResources:[],attachedRepos:[],cloudProviderChecked:!1,cloudProviderConnected:_,showSourceProviderGate:!1,showSessionPicker:!1,
+@@ 346106a346474,347444
++ _ _,_=(_)=>_ _("unsupported",_),_=(_)=>_ _("unsupportedType",_),_=(_)=>_ _("limit",_),_=(_,_)=>_ _("tooWide",`needs _{
++ _}
++  columns, _ _{
++ _}
++ `);
++ _ _=_(()=>{
++ _=class _ extends Error{
++ _;
++ reason;
++ constructor(_,_){
++ super(`_{
++ _}
++ : _{
++ _}
++ `);
++ _.kind=_;
++ _.reason=_}
++ }
++ }
++ );
++ function _(_){
++ return _.get(_)??_}
++ _ _,_,_;
++ _ _=_(()=>{
++ _=[["\u2500","\u2502"],["\u2504","\u2506"],["\u2510","\u2514"],["\u256E","\u2570"],["\u251C","\u252C"],["\u2524","\u2534"],["\u25C4","\u25B2"],["\u25BA","\u25BC"],["\u256A","\u256B"]],_=_ _;
++ _(_[_,_]_ _)_.set(_,_),_.set(_,_);
++ _=_ _(["\u2502","\u2506"])}
++ );
++ _ _;
++ _ _=_(()=>{
++ _={
++ sourceBytes:32768,statementChars:512,nodes:24,edges:40,members:20,labelCells:48,participants:10,sequenceEvents:79,fragmentDepth:4,canvasRows:240,canvasCells:60000}
++ }
++ );
++ function _(_){
++ return Array.from(_.segment(_),(_)=>_.segment)}
++ function _(_){
++ return _(_)}
++ function _(_){
++ _ _=0;
++ _(_ _ _ _(_))_+=_(_);
++ return _}
++ function _(_){
++ _ _=_(_.replace(/<_\_*\/?>/_," ")).replace(_,"").replace(/\_+/_," ").trim();
++ _(_(_)<=_.labelCells)return _;
++ _ _="",_=0;
++ _(_ _ _ _(_)){
++ _ _=_(_);
++ _(_+_>_.labelCells-1)break;
++ _+=_,_+=_}
++ return`_{
++ _}
++ \u2026`}
++ function _(_){
++ _ _=_.trim();
++ return _.length>=2&&_.startsWith('"')&&_.endsWith('"')?_.slice(1,-1):_}
++ function _(_){
++ _(_.length>_.sourceBytes||_ TextEncoder().encode(_).length>_.sourceBytes)throw _(`source _ _{
++ _.sourceBytes}
++  bytes`);
++ _ _=_.split(/\_?\_/).map((_)=>_.replace(/\_+/_," ").trim()).filter((_)=>_!==""&&!_.startsWith("%%")),_=_[0]?.split(/[\_;
++ ]/,1)[0],_=_==="graph"||_==="flowchart",_=_(_.flatMap((_)=>_(_,_)));
++ _(_.some((_)=>_.length>_.statementChars))throw _(`statement _ _{
++ _.statementChars}
++  characters`);
++ return _}
++ function _(_,_=!0){
++ _ _=[],_=0,_=!1,_=!1,_=0;
++ _(_ _=0;
++ _<_.length;
++ _++){
++ _ _=_[_];
++ _(!_&&_!==";
++ "&&_!=='"')continue;
++ _(_==='"')_=_?!1:_.indexOf('"',_+1)>=0;
++ _ _(_)continue;
++ _ _(_==="|"&&_===0)_=!_;
++ _ _(_==="["||_==="("||_==="{
++ ")_++;
++ _ _(_==="]"||_===")"||_==="}
++ ")_=_.max(0,_-1);
++ _ _(_===";
++ "&&_===0&&!_&&!_(_,_,_))_.push(_.slice(_,_)),_=_+1}
++ return _.push(_.slice(_)),_.map((_)=>_.trim()).filter((_)=>_!=="")}
++ function _(_,_,_){
++ _ _=_-1;
++ while(_>=_&&/\_/.test(_[_]))_--;
++ return _>=_&&_<_-1&&_[_]==="#"}
++ function _(_){
++ _ _=[],_=!1;
++ _(_ _ _ _){
++ _(_){
++ _=_!=="}
++ ";
++ continue}
++ _(/^accDescr\_*\{
++ _/.test(_))_=!0;
++ _ _(!/^_(?:Title|Descr)\_*:/.test(_))_.push(_)}
++ return _}
++ _ _,_;
++ _ _=_(async()=>{
++ _();
++ _();
++ _();
++ await _();
++ _=_ _.Segmenter(_ 0,{
++ granularity:"grapheme"}
++ );
++ _=/[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]/_}
++ );
++ class _{
++ width;
++ height;
++ horizontal;
++ cells;
++ constructor(_,_,_=!1){
++ _.width=_;
++ _.height=_;
++ _.horizontal=_;
++ _(_*_>_.canvasCells||_>_.canvasRows)throw _(`canvas _{
++ _}
++ _{
++ _}
++ `);
++ _.cells=Array.from({
++ length:_}
++ ,()=>Array.from({
++ length:_}
++ ,()=>_()))}
++ _(_,_,_,_){
++ _(_.horizontal)_.put(_,_,_(_),_);
++ _ _.put(_,_,_,_)}
++ _(_,_){
++ return _.horizontal?_(_.at(_,_).ch):_.at(_,_).ch}
++ _(_,_,_,_="_"){
++ _ _=_;
++ _(_ _ _ _(_)){
++ _ _=_(_);
++ _(_===0)continue;
++ _.put(_,_,_,_);
++ _(_ _=1;
++ _<_;
++ _++)_.cell(_+_,_).pad=!0;
++ _+=_}
++ }
++ _(_,_,_,_){
++ _ _=_.cell(_,_);
++ _.ch=_,_.role=_,_.pad=!1}
++ _(_,_){
++ return _.cell(_,_)}
++ lines(){
++ return _.cells.map(_)}
++ _(_,_){
++ _ _=_.cells[_]?.[_];
++ _(!_)throw Error(`canvas write _ _ bounds _ _{
++ _}
++ ,_{
++ _}
++ `);
++ return _}
++ }
++ function _(){
++ return{
++ _:" ",_:"_",_:!1}
++ }
++ function _(_){
++ _ _=_.length;
++ while(_>0&&_[_-1].ch===" "&&!_[_-1].pad)_--;
++ _ _=[];
++ _(_ _=0;
++ _<_;
++ _++){
++ _ _=_[_];
++ _(_.pad)continue;
++ _ _=_.ch===" "&&_.length>0?_.at(-1).role:_.role,_=_.at(-1);
++ _(_&&_.role===_)_.chars.push(_.ch);
++ _ _.push({
++ chars:[_.ch],_:_}
++ )}
++ return _.map(({
++ chars:_,_:_}
++ )=>({
++ _:_.join(""),_:_}
++ ))}
++ _ _=_(async()=>{
++ _();
++ _();
++ _();
++ await _()}
++ );
++ function _(_){
++ _ _=[_.shape==="decision"?`\u25C7 _{
++ _.label}
++ `:_.label];
++ _(_.members.length>0)_.push("\u2500".repeat(_.max(1,_(_.label)))),_.push(...e.members);
++ return _}
++ function _(_,_){
++ _(_==="")return 2;
++ return _?_(_)+4:3}
++ function _(_,_){
++ _ _=_.direction==="right"||_.direction==="_",_=_.direction==="_"||_.direction==="_",_=_.nodes.length,_=(_)=>_?_-1-_:_,_=(_)=>_?_-1-_:_,_=_ _;
++ _.edges.forEach((_,_)=>{
++ _(!_(_))return;
++ _[_,_]=[_(_.from),_(_.to)],_=_.min(_,_);
++ _(_.abs(_-_)===1&&!_.has(_))_.set(_,_)}
++ );
++ _ _=_ _(_.values()),_=_.edges.filter((_,_)=>!_.has(_)),_=(_)=>{
++ _ _=_.get(_);
++ return _===_ 0?2:_(_.edges[_].label,_)}
++ ,_=_.nodes.map(_),_=_(_.flatMap((_)=>[_(_.label),_(_.targetLabel)])),_=_?_(_.map((_)=>_.length))+2:_(_.flat().map(_))+4,_=_.nodes.map(()=>0),_=_.map((_)=>{
++ _ _=_[_.from]++,_=_[_.to]++;
++ return[_,_]}
++ ),_=_?_+3:1,_=_.map((_,_)=>_?_.max(_(_.map(_))+4,_[_]*_+2):_.length+_[_]+2),_=_.nodes.map(()=>0),_=0;
++ _(_ _=0;
++ _<_;
++ _++){
++ _ _=_(_);
++ _[_]=_,_+=_[_]+(_<_-1?_(_):0)}
++ _ _=_-1>>1,_=_?0:_([...c].map((_)=>_(_.edges[_].label))),_=_===0?0:_+2+_,_=_.max(_+(_?4:_+5),_+2),_=_.length===0?_.max(_,_):_+_.length*2-1,_=_,[_,_]=_?[_,_]:[_,_];
++ _(_>_)throw _(_,_);
++ _ _=_ _(_,_,_);
++ _(_,_,_,{
++ starts:_,sizes:_,boxCross:_,horizontal:_}
++ ),_.forEach((_,_)=>{
++ _(_,_.edges[_],{
++ upper:_(_),lower:_(_+1),connector:_,starts:_,sizes:_,horizontal:_}
++ )}
++ );
++ _ _=_.map((_,_)=>{
++ _ _=(_,_)=>_[_]+(_?1+_*_:_[_].length+1+_);
++ return[_(_.from,_[_][0]),_(_.to,_[_][1])]}
++ );
++ return _.forEach((_,_)=>{
++ _[_,_]=_[_],_=_+2*_;
++ _(_ _=_.min(_,_)+1;
++ _<_.max(_,_);
++ _++)_.set(_,_,_.dashed?"\u2506":"\u2502","_")}
++ ),_.forEach((_,_)=>{
++ _[_,_]=_[_],_=_+2*_;
++ _(_ _ _[_,_])_(_ _=_;
++ _<_;
++ _++){
++ _ _=_.has(_.get(_,_));
++ _.set(_,_,_?"\u256A":_.dashed?"\u2504":"\u2500","_")}
++ _.set(_-1,_,"\u251C","_"),_.set(_-1,_,"\u251C","_");
++ _ _=(_)=>_==="\u2500"&&_.dashed?"\u2504":_;
++ _.set(_,_,_(_.sourceTip),"_"),_.set(_,_,_(_.targetTip),"_"),_.set(_,_,_<_?"\u2510":"\u2518","_"),_.set(_,_,_<_?"\u2518":"\u2510","_");
++ _(_[_,_]_[[_,_.label],[_,_.targetLabel]]){
++ _(_==="")continue;
++ _(_)_.text(_+2,_+1,_);
++ _ _.text(_+2,_,_)}
++ }
++ ),{
++ lines:_.lines(),width:_}
++ }
++ function _(_,_,_){
++ _ _=_.dashed?"\u2506":"\u2502",_=(_,_)=>_==="\u2500"?_:_==="\u25C4"?_:_,_=(_)=>_.from===_?_.sourceTip:_.targetTip,_=_.starts[_.upper]+_.sizes[_.upper],_=_.starts[_.lower]-1;
++ _(_ _=_+1;
++ _<_;
++ _++)_.set(_.connector,_,_,"_");
++ _ _=_(_(_.upper),"\u25B2"),_=_(_(_.lower),"\u25BC");
++ _(_.set(_.connector,_,_,"_"),_.set(_.connector,_,_,"_"),_===_)_.set(_.connector,_-1,"\u252C","_");
++ _(_===_)_.set(_.connector,_+1,"\u2534","_");
++ _(_.label==="")return;
++ _(_.horizontal)_.text(_+2,_.connector,_.label);
++ _ _.text(_.connector+2,_+1,_.label)}
++ function _(_,_,_,_){
++ _.forEach((_,_)=>{
++ _ _=_.starts[_],_=_+_.sizes[_]-1,_=_.nodes[_].shape==="stadium",_=_.boxCross-1;
++ _.set(0,_,_?"\u256D":"\u250C","_"),_.set(_,_,_?"\u256E":"\u2510","_"),_.set(0,_,_?"\u2570":"\u2514","_"),_.set(_,_,_?"\u256F":"\u2518","_");
++ _(_ _=1;
++ _<_;
++ _++)_.set(_,_,"\u2500","_"),_.set(_,_,"\u2500","_");
++ _(_ _=_+1;
++ _<_;
++ _++)_.set(0,_,"\u2502","_"),_.set(_,_,"\u2502","_");
++ _.forEach((_,_)=>{
++ _ _=_===1&&_.nodes[_].members.length>0;
++ _(_.horizontal)_.text(_+2,_+1,_,_?"_":"_");
++ _ _.text(2,_+_+1,_,_?"_":"_")}
++ )}
++ )}
++ _ _=(_)=>_.reduce((_,_)=>_.max(_,_),0),_=(_)=>_.from!==_.to&&_.targetLabel==="";
++ _ _=_(async()=>{
++ _();
++ _();
++ await _([_(),_()])}
++ );
++ function _(_,_){
++ _ _=_.participants,_=_.map((_)=>_(_)+4),_=_.map((_)=>_.floor(_/2)),_=_.map((_)=>_-1-_.floor(_/2)),_=_(_.events)*2,_=_(_.length,_,_,_(_.events)),_=_.events.reduce((_,_)=>_.type==="_"&&_.side==="_"&&_.left===0?_.max(_,_(_.text)+3-_[0]):_,0),_=[],_=_+_+_[0];
++ _(_ _=0;
++ _<_.length;
++ _++)_.push(_),_+=_[_]??0;
++ _ _=_.length-1,_=_[_]+_[_],_=0;
++ _.events.forEach((_,_)=>{
++ _(_.type==="message"&&_.from===_.to)_=_.max(_,_[_.from]+_.max(4,_(_.text)+1));
++ _(_.type==="_"&&_.side!=="_")_=_.max(_,_[_.left]+_(_.text)+3);
++ _(_.type==="_"||_.type==="branch")_=_.max(_,4*_(_.events,_)+_(_.text)+2)}
++ );
++ _ _=_.max(_+1+_,_);
++ _(_>_)throw _(_,_);
++ _ _=3+_.events.reduce((_,_)=>_+_(_),0);
++ _(_>_.canvasRows)throw _(`_{
++ _}
++  _`);
++ _ _=_ _(_,_);
++ _.forEach((_,_)=>_(_,_[_]-_[_],_[_],_));
++ _ _=3,_=0;
++ _(_ _ _ _.events){
++ _ _=_(_);
++ _(_ _=_;
++ _<_+_;
++ _++){
++ _(_ _ _ _)_.put(_,_,"\u2502","_");
++ _(_ _=0;
++ _<_;
++ _++)_.put(_*2,_,"\u2502","_"),_.put(_-1-_*2,_,"\u2502","_")}
++ _=_(_,_,{
++ _:_,level:_,centers:_,width:_}
++ ),_+=_}
++ return{
++ lines:_.lines(),width:_}
++ }
++ function _(_,_,_){
++ switch(_.type){
++ _"message":return _(_,_,_),_.level;
++ _"_":{
++ _ _=_.centers[_.left],_=_(_.text)+3,[_,_]=_.side==="_"?[_-_,_]:[_,_.max(_.centers[_.right],_+_)];
++ return _(_,_,_,_.text,_.top),_.level}
++ _"_":_"branch":{
++ _ _=_.type==="_"?_.level+1:_.level;
++ return _(_,_,_,_.type==="_"?["\u250C","\u2510"]:["\u251C","\u2524"],_.text),_}
++ _"close":return _(_,_,_.level,["\u2514","\u2518"],""),_.level-1}
++ }
++ function _(_,_,_){
++ _ _=_.centers[_.from],_=_.centers[_.to],_=_.dashed?"\u2504":"\u2500",_=_.head==="cross"?"\_":_.head==="_"?_:_<_?"\u25B6":"\u25C0";
++ _(_===_){
++ _.text(_+2,_.top,_.text);
++ _(_ _=_;
++ _<_+4;
++ _++)_.put(_,_.top+1,_,"_"),_.put(_,_.top+2,_,"_");
++ _.put(_,_.top+1,"\u251C","_"),_.put(_+4,_.top+1,"\u2510","_"),_.put(_+4,_.top+2,"\u2518","_"),_.put(_,_.top+2,_.head==="arrow"?"\u25C0":_,"_");
++ return}
++ _ _=_.min(_,_),_=_.max(_,_);
++ _.text(_+2,_.top,_.text);
++ _(_ _=_;
++ _<=_;
++ _++)_.put(_,_.top+1,_,"_");
++ _(_ _ _ _.centers)_(_>_&&_<_)_.put(_,_.top+1,"\u253C","_");
++ _.put(_,_.top+1,_<_?"\u251C":"\u2524","_"),_.put(_,_.top+1,_,"_")}
++ function _(_,_,_,_,_){
++ _(_ _=_;
++ _<=_;
++ _++)_.put(_,_,"\u2500","_"),_.put(_,_+1," ","_"),_.put(_,_+2,"\u2500","_");
++ _.put(_,_,"\u250C","_"),_.put(_,_,"\u2510","_"),_.put(_,_+1,"\u2502","_"),_.put(_,_+1,"\u2502","_"),_.put(_,_+2,"\u2514","_"),_.put(_,_+2,"\u2518","_"),_.text(_+2,_+1,_)}
++ function _(_,_,_,_,_){
++ _ _=(_-1)*2,_=_.width-1-_;
++ _(_ _=_;
++ _<=_;
++ _++)_.put(_,_.top,"\u2500","_");
++ _(_.put(_,_.top,_[0],"_"),_.put(_,_.top,_[1],"_"),_!=="")_.text(_+2,_.top,` _{
++ _}
++  `,"_")}
++ function _(_,_,_,_){
++ _ _=_+_-1;
++ _(_ _=_+1;
++ _<_;
++ _++)_.put(_,0,"\u2500","_"),_.put(_,2,"\u2500","_");
++ _.put(_,0,"\u250C","_"),_.put(_,0,"\u2510","_"),_.put(_,1,"\u2502","_"),_.put(_,1,"\u2502","_"),_.put(_,2,"\u2514","_"),_.put(_,2,"\u2518","_"),_.put(_+_.floor(_/2),2,"\u252C","_"),_.text(_+2,1,_)}
++ function _(_){
++ _ _=[];
++ _(_ _ _ _)_(_.type==="message"&&_.from!==_.to)_.push([_.min(_.from,_.to),_.max(_.from,_.to),_(_.text)+4]);
++ _ _(_.type==="message")_.push([_.from,_.from+1,_(_.text)+4]);
++ _ _(_.type==="_"&&_.side==="_"){
++ _(_.left>0)_.push([_.left-1,_.left,_(_.text)+5])}
++ _ _(_.type==="_")_.push([_.left,_.max(_.right,_.left+1),_(_.text)+5]);
++ return _}
++ function _(_,_,_,_){
++ _ _=Array.from({
++ length:_.max(0,_-1)}
++ ,(_,_)=>_[_]+3+_[_+1]),_=_.filter(([,_])=>_<_).sort((_,_)=>_[1]-_[0]-(_[1]-_[0]));
++ _(_[_,_,_]_ _){
++ _ _=0;
++ _(_ _=_;
++ _<_;
++ _++)_+=_[_];
++ _(_<_)_[_-1]+=_-_}
++ return _}
++ function _(_){
++ _ _=0,_=0;
++ _(_ _ _ _){
++ _(_.type==="_")_=_.max(_,++_);
++ _(_.type==="close")_--}
++ return _}
++ function _(_,_){
++ _ _=0;
++ _(_ _=0;
++ _<=_;
++ _++){
++ _ _=_[_];
++ _(_.type==="_")_++;
++ _(_.type==="close"&&_<_)_--}
++ return _}
++ _ _=(_)=>{
++ _(_.type==="_"||_.type==="branch"||_.type==="close")return 1;
++ return _.type==="message"&&_.from===_.to?4:3}
++ ;
++ _ _=_(async()=>{
++ _();
++ _();
++ await _([_(),_()])}
++ );
++ class _{
++ index=_ _;
++ graph;
++ constructor(_){
++ _.graph={
++ direction:_,nodes:[],edges:[],warnings:[]}
++ }
++ _(_,_,_){
++ _ _=_.index.get(_);
++ _(_===_ 0){
++ _(_.graph.nodes.length>=_.nodes)throw _(`_ _ _{
++ _.nodes}
++  nodes`);
++ _=_.graph.nodes.length,_.index.set(_,_),_.graph.nodes.push({
++ _:_,label:_(_),shape:"rectangle",members:[]}
++ )}
++ _ _=_.graph.nodes[_];
++ _(_!==_ 0)_.label=_(_)||_.label;
++ _(_!==_ 0)_.shape=_;
++ return _}
++ member(_,_){
++ _ _=_.graph.nodes[_.node(_)];
++ _(_.members.length>=_.members)throw _(`_ _ _{
++ _.members}
++  members`);
++ _.members.push(_(_))}
++ _(_){
++ _(_.graph.edges.length>=_.edges)throw _(`_ _ _{
++ _.edges}
++  edges`);
++ _.graph.edges.push({
++ ...e,label:_(_.label??""),targetLabel:_(_.targetLabel??"")}
++ )}
++ _(_){
++ _(!_.graph.warnings.includes(_))_.graph.warnings.push(_)}
++ reserveEdges(_){
++ _(_.graph.edges.length+_>_.edges)throw _(`_-_ _ _{
++ _}
++  edges _ _ _{
++ _.edges}
++  _`)}
++ }
++ function _(_,_){
++ switch(_?.toUpperCase()){
++ _"_":_"_":return"_";
++ _"_":return"_";
++ _"_":return"right";
++ _"_":return"_";
++ default:return _}
++ }
++ _ _=_(async()=>{
++ _();
++ _();
++ await _()}
++ );
++ function _(_){
++ _ _=_ _("_"),_=_;
++ _(_ _ _ _){
++ _(_!==_){
++ _(_==="}
++ ")_=_;
++ _ _.member(_,_(_));
++ continue}
++ _ _=_.match(/^direction\_+(\_+)_/);
++ _(_){
++ _.graph.direction=_(_[1],_.graph.direction);
++ continue}
++ _ _=_.match(_);
++ _(_){
++ _=_(_[1]),_.node(_,_[2]||_ 0);
++ continue}
++ _ _=_.match(_);
++ _(_){
++ _[,_,_,_,_,_,_]=_,_=_.node(_(_)),_=_.node(_(_));
++ _.edge({
++ _:_,_:_,label:`_{
++ _[_]??"?"}
++  _{
++ _(_)}
++ `,targetLabel:_[_]??"?",dashed:_==="..",sourceTip:"\u2500",targetTip:"\u2500"}
++ );
++ continue}
++ _(/^[\_-]+_/.test(_)){
++ _.node(_);
++ continue}
++ throw _(`cannot _ "_{
++ _.slice(0,20)}
++ "`)}
++ _(_!==_)throw _(`entity _{
++ _}
++  _ _ closed`);
++ return _.graph}
++ function _(_){
++ _ _=_.match(_);
++ _(!_)return _;
++ _[,_,_,_]=_;
++ return _?`_{
++ _}
++  _{
++ _}
++  _{
++ _.replace(/\_+/_,"")}
++ `:`_{
++ _}
++  _{
++ _}
++ `}
++ _ _,_,_,_;
++ _ _=_(async()=>{
++ _();
++ await _([_(),_()]);
++ _=/^([\_-]+|"[^"]+")\_*(\|\||\|_|\}
++ \||\}
++ _)(--|\.\.)(\|\||_\||\|\{
++ |_\{
++ )\_*([\_-]+|"[^"]+")\_*:\_*(.+)_/,_=/^([\_-]+|"[^"]+")(?:\_*\[\_*"?([^"\]]*)"?\_*\])?\_*\{
++ _/,_=/^([\_()[\],-]+)\_+([\_-]+)(?:\_+((?:_|_|_)(?:\_*,\_*(?:_|_|_))*))?(?:\_+"[^"]*")?_/,_={
++ "||":"1","|_":"0..1","_|":"0..1","}
++ |":"1..n","|{
++ ":"1..n","}
++ _":"0..n","_{
++ ":"0..n"}
++ }
++ );
++ class _{
++ _;
++ _=0;
++ constructor(_){
++ _.text=_}
++ _(){
++ return _.text.slice(_.pos)}
++ skipSpace(){
++ while(_.pos<_.text.length&&/\_/.test(_.text[_.pos]))_.pos++}
++ _(){
++ return _.skipSpace(),_.pos>=_.text.length}
++ _(_){
++ _(!_.text.startsWith(_,_.pos))return!1;
++ return _.pos+=_.length,!0}
++ match(_){
++ _ _=_.rest().match(_);
++ _(_)_.pos+=_[0].length;
++ return _}
++ }
++ function _(_,_){
++ _ _=_ _(_(_.split(/\_+/)[1],"_"));
++ _(_ _ _ _)_(_,_);
++ return _.graph}
++ function _(_,_){
++ _(_.test(_))return;
++ _(/^subgraph(?:\_|_)/.test(_)||_==="_")throw _("subgraphs");
++ _(_.includes("@{
++ "))throw _("_ metadata `@{
++ ...}
++ `");
++ _ _=_ _(_),_=_(_,_);
++ while(!_.done()){
++ _ _=_(_);
++ _(!_)throw _(`cannot _ "_{
++ _.rest().slice(0,20)}
++ "`);
++ _.skipSpace();
++ _ _=_(_,_);
++ _(!_.invisible){
++ _.reserveEdges(_.length*_.length);
++ _(_ _ _ _)_(_ _ _ _)_.edge({
++ _:_,_:_,label:_.label,dashed:_.dashed,sourceTip:_.sourceTip,targetTip:_.targetTip}
++ )}
++ _=_}
++ }
++ function _(_,_){
++ _ _=[_(_,_)];
++ _(;
++ ;
++ ){
++ _(_.skipSpace(),!_.eat("&"))return _;
++ _.skipSpace(),_.push(_(_,_))}
++ }
++ function _(_,_){
++ _ _=_.match(_)?.[0];
++ _(!_)throw _(`expected _ _ _ "_{
++ _.rest().slice(0,20)}
++ "`);
++ _(_[_,_,_]_ _){
++ _(!_.eat(_))continue;
++ _ _=_(_,_);
++ return _.match(/^:::[\_-]+/),_.node(_,_,_)}
++ return _.match(/^:::[\_-]+/),_.node(_)}
++ function _(_,_){
++ _(_.skipSpace(),_.text[_.pos]==='"'){
++ _ _=_.text.indexOf('"',_.pos+1);
++ _(_<0)throw _("unterminated quoted label");
++ _ _=_.text.slice(_.pos+1,_);
++ _(_.pos=_+1,_.skipSpace(),!_.some((_)=>_.eat(_)))throw _("unclosed _ shape");
++ return _}
++ _ _=_.map((_)=>_.text.indexOf(_,_.pos)).filter((_)=>_>=0);
++ _(_.length===0)throw _("unclosed _ shape");
++ _ _=_.min(...n),_=_.text.slice(_.pos,_),_=_.find((_)=>_.text.startsWith(_,_));
++ return _.pos=_+_.length,_}
++ function _(_){
++ _ _=_.match(_)??_.match(_);
++ _(_)return _(_[1],`_{
++ _[2]}
++ _{
++ _[4]}
++ `,_[5],_[3]);
++ _ _=_.match(_);
++ _(!_)return _;
++ _(!_[3]&&(_[2]==="--"||_[2]==="=="))throw _("_ label without _ closing arrow");
++ _ _=_.match(_);
++ return _(_[1],_[2],_[3],_(_?.[1]??""))}
++ function _(_,_,_,_){
++ return{
++ label:_(_),dashed:_.includes("."),sourceTip:_?"\u25C4":"\u2500",targetTip:_(_),invisible:_.startsWith("~")}
++ }
++ function _(_){
++ _(_==="_")return"\u25CB";
++ _(_==="_")return"\_";
++ return _?"\u25C4":"\u2500"}
++ _ _,_,_,_,_,_,_;
++ _ _=_(async()=>{
++ _();
++ await _([_(),_()]);
++ _=/^[\_{
++ _}
++ \_{
++ _}
++ _](?:[\_{
++ _}
++ \_{
++ _}
++ _]|-(?![-.>=]))*/_,_=[["([",["])"],"stadium"],["((",["))"],"stadium"],["[[",["]]"],"rectangle"],["[(",[")]"],"rectangle"],["{
++ {
++ ",["}
++ }
++ "],"decision"],["[/",["/]","\\]"],"rectangle"],["[\\",["\\]","/]"],"rectangle"],["[",["]"],"rectangle"],["(",[")"],"stadium"],["{
++ ",["}
++ "],"decision"],[">",["]"],"rectangle"]],_=/^(<)?(--|-\.|==)\_+([^|]+?)\_*(-{
++ 2,}
++ |\.-+|={
++ 2,}
++ )(>|_|_)?/,_=/^(<)?(--|==)(?![-=>_.\_])([^|]+?)\_*(-{
++ 2,}
++ |={
++ 2,}
++ )(>|_|_)?/,_=/^(<)?(-{
++ 2,}
++ |-\.+-|={
++ 2,}
++ |~{
++ 3,}
++ )(>|_|_)?/,_=/^\_*\|([^|]*)\|/,_=/^(classDef|class|style|linkStyle|click|accTitle|accDescr|direction)(?:\_|_)/}
++ );
++ class _{
++ index=_ _;
++ diagram={
++ participants:[],events:[],warnings:[]}
++ ;
++ blocks=[];
++ participant(_,_){
++ _ _=_.index.get(_);
++ _(_===_ 0){
++ _(_.diagram.participants.length>=_.participants)throw _(`_ _ _{
++ _.participants}
++  participants`);
++ _=_.diagram.participants.length,_.index.set(_,_),_.diagram.participants.push(_(_))}
++ _(_!==_ 0)_.diagram.participants[_]=_(_)||_.diagram.participants[_];
++ return _}
++ event(_){
++ _(_.diagram.events.length>=_.sequenceEvents)throw _(`_ _ _{
++ _.sequenceEvents}
++  events`);
++ _.diagram.events.push(_)}
++ visibleDepth(){
++ return _.blocks.filter((_)=>_.visible).length}
++ }
++ function _(_){
++ _ _=_ _;
++ _(_ _ _ _)_(_,_);
++ _(_.blocks.length>0)throw _("_ block _ missing `_`");
++ _(_.diagram.participants.length===0)throw _("_ participants");
++ return _.diagram}
++ function _(_,_){
++ _(_[_,_]_ _)_(_.test(_)&&!_.diagram.warnings.includes(_))_.diagram.warnings.push(_);
++ _(_.test(_))return;
++ _(_.test(_)){
++ _.blocks.push({
++ visible:!1,_:"hidden"}
++ );
++ return}
++ _(_==="_"){
++ _ _=_.blocks.pop();
++ _(!_)throw _("`_` without _ block");
++ _(_.visible)_.event({
++ _:"close"}
++ );
++ return}
++ _ _=_.match(_);
++ _(_){
++ _[,_,_,_]=_,_=_(_??_);
++ _.participant(_(_),_==="actor"?`_{
++ _}
++  (actor)`:_);
++ return}
++ _ _=_.match(_);
++ _(_){
++ _(_.visibleDepth()>=_.fragmentDepth)throw _(`blocks nested _ _{
++ _.fragmentDepth}
++  _`);
++ _.blocks.push({
++ visible:!0,_:_[1]}
++ ),_.event({
++ _:"_",_:_(`_{
++ _[1]}
++  _{
++ _[2]??""}
++ `)}
++ );
++ return}
++ _ _=_.match(_);
++ _(_){
++ _(!_.blocks.at(-1)?.visible)throw _(`\`_{
++ _[1]}
++ \` outside _ block`);
++ _.event({
++ _:"branch",_:_(`_{
++ _[1]}
++  _{
++ _[2]??""}
++ `)}
++ );
++ return}
++ _ _=_.match(_);
++ _(_){
++ _ _=_[1].toLowerCase(),_=_.participant(_[2].trim()),_=_[3]?_.participant(_[3].trim()):_;
++ _.event({
++ _:"_",_:_.min(_,_),right:_.max(_,_),_:_==="_ _"?"_":_==="right _"?"right":"_",_:_(_[4])}
++ );
++ return}
++ _ _=_.match(_);
++ _(_){
++ _[,_,_,_,_]=_,_=_[_];
++ _.event({
++ _:"message",_:_.participant(_),_:_.participant(_),_:_(_??""),...d}
++ );
++ return}
++ throw _(`cannot _ "_{
++ _.slice(0,20)}
++ "`)}
++ _ _,_,_,_,_,_,_,_,_;
++ _ _=_(async()=>{
++ _();
++ _();
++ await _();
++ _=/^(?:create\_+)?(participant|actor)\_+("[^"]+"|[^\_"]+)(?:\_+_\_+(.+))?_/,_=/^([^\_:+<>-][^\_:<>]*?)\_*(-->>|->>|-->|->|--_|-_|--\)|-\))\_*[+-]?\_*([^\_:+<>-][^\_:<>]*?)\_*(?::\_*(.*))?_/,_=/^_\_+(_|_ _|right _)\_+([^:,]+?)(?:\_*,\_*([^:]+?))?\_*:\_*(.*)_/_,_=/^(_|_|_|critical|break|_)(?:\_+(.*))?_/,_=/^(_|_|option)(?:\_+(.*))?_/,_=/^(_|_)(?:\_|_)/,_=[[/^autonumber(?:\_|_)/,"message numbers _ _ 
++ "-->>":{
++ dashed:!0,_:"arrow"}
++ ,"->>":{
++ dashed:!1,_:"arrow"}
++ ,"-->":{
++ dashed:!0,_:"_"}
++ ,"->":{
++ dashed:!1,_:"_"}
++ ,"--_":{
++ dashed:!0,_:"cross"}
++ ,"-_":{
++ dashed:!1,_:"cross"}
++ ,"--)":{
++ dashed:!0,_:"arrow"}
++ ,"-)":{
++ dashed:!1,_:"arrow"}
++ }
++ }
++ );
++ function _(_){
++ _ _=_ _("_"),_={
++ builder:_,labelled:_ _}
++ ,_=!1;
++ _(_ _ _ _){
++ _(_){
++ _=!/^_\_+note$/_.test(_);
++ continue}
++ _(/^_(?:\_|_)/_.test(_)){
++ _.warn("notes _ _ shown"),_=!_.includes(":");
++ continue}
++ _(_,_.replace(/:::[\_-]+/_,""))}
++ _(_)throw _("unterminated _");
++ return _.graph}
++ function _(_,_){
++ _{
++ builder:_}
++ =_;
++ _(_.test(_)||_==="--")return;
++ _ _=_.match(/^direction\_+(\_+)_/);
++ _(_){
++ _.graph.direction=_(_[1],_.graph.direction);
++ return}
++ _(_==="}
++ "||_.test(_))throw _("composite states");
++ _ _=_.match(_);
++ _(_){
++ _(_[3])throw _("composite states");
++ _.node(_[2],_[1]),_.labelled.add(_[2]);
++ return}
++ _ _=_.match(_);
++ _(_){
++ _.node(_[1],_ 0,_[2]==="choice"?"decision":"rectangle");
++ return}
++ _ _=_.match(_);
++ _(_){
++ _ _=_(_,_[1],_),_=_(_,_[2],_);
++ _.edge({
++ _:_,_:_,label:_(_[3]??""),dashed:!1,sourceTip:"\u2500",targetTip:"\u25C4"}
++ );
++ return}
++ _ _=_.match(_);
++ _(_){
++ _[,_,_]=_;
++ _(_.labelled.has(_))_.member(_,_);
++ _ _.node(_,_),_.labelled.add(_);
++ return}
++ _(/^state\_+\_+_/.test(_)||/^[\_-]+_/.test(_)){
++ _.node(_.replace(/^state\_+/,""));
++ return}
++ throw _(`cannot _ "_{
++ _.slice(0,20)}
++ "`)}
++ function _(_,_,_){
++ _(_!=="[*]")return _.node(_);
++ return _===_?_.node(_,"\u25CF start","stadium"):_.node(_,"\u25C9 _","stadium")}
++ _ _="[*]start",_="[*]_",_,_,_,_,_,_;
++ _ _=_(async()=>{
++ _();
++ await _([_(),_()]);
++ _=/^(\_+?)\_*-->\_*(\_+?)(?:\_*:\_*(.*))?_/,_=/^state\_+"([^"]*)"\_+_\_+([^\_{
++ ]+)\_*(\{
++ )?_/,_=/^state\_+(\_+)\_+<<(\_+)>>/,_=/^state\_+(\_+)\_*\{
++ _/,_=/^([\_-]+)\_*:\_*(.+)_/,_=/^(classDef|class|style|accTitle|accDescr|_)(?:\_|_)/}
++ );
++ function _(_,_){
++ _(_.nodes.length===0)throw _("empty diagram");
++ _{
++ return{
++ ...Doe(_,_),warnings:_.warnings}
++ }
++ catch(_){
++ _ _=_.direction==="right"||_.direction==="_";
++ _(!(_ instanceof _&&(_.kind==="tooWide"||_.kind==="limit"))||!_)throw _;
++ _ _={
++ ...e,direction:_.direction==="right"?"_":"_"}
++ ;
++ return{
++ ...Doe(_,_),warnings:_.warnings}
++ }
++ }
++ _ _=(_,_,_)=>_(_(_,_),_),_=(_,_,_)=>_(_(_),_),_;
++ _ _=_(async()=>{
++ _();
++ await _([_(),_(),_(),_(),_(),_()]);
++ _={
++ graph:_,flowchart:_,stateDiagram:_,"stateDiagram-_":_,erDiagram:(_,_,_)=>_(_(_),_),sequenceDiagram:(_,_,_)=>{
++ _ _=_(_);
++ return{
++ ...rCt(_,_),warnings:_.warnings}
++ }
++ }
++ }
++ );
++ function _(_,_){
++ _{
++ _ _=Number.isFinite(_.maxWidth)?_.max(0,_.floor(_.maxWidth)):0;
++ return{
++ _:!0,...oWn(_,_)}
++ }
++ catch(_){
++ _(_ instanceof _){
++ _ _=_.kind==="unsupported"?_(_.reason):_.reason;
++ return{
++ _:!1,error:{
++ _:_.kind,reason:_}
++ }
++ }
++ return{
++ _:!1,error:{
++ _:"unsupported",reason:"internal error"}
++ }
++ }
++ }
++ function _(_,_){
++ _[_="",...r]=_(_),_=_.split(/\_+/)[0]??"",_=Object.hasOwn(_,_)?_[_]:_ 0;
++ _(!_){
++ _ _=_.match(/^[\_-]{
++ 1,30}
++ _/)?.[0];
++ throw _?_(_):_("empty diagram")}
++ return _(_,_,_)}
++ _ _=_(async()=>{
++ _();
++ await _([_(),_()])}
++ );
++ function _(_,_,_){
++ _ _=_ _;
++ return(_,_)=>{
++ _(_.length>_)return _(_,_);
++ _ _=`_{
++ _}
++ \_{
++ _}
++ `,_=_.get(_);
++ _(_)return _.delete(_),_.set(_,_),_;
++ _ _=_(_,_);
++ _(_.size>=_)_.delete(_.keys().next().value);
++ return _.set(_,_),_}
++ }
++ function _(_){
++ switch(_.kind){
++ _"unsupportedType":return`_{
++ _.reason}
++  diagrams _ _ drawn _ _ terminal _;
++  showing _ source.`;
++ _"tooWide":return"Diagram _ wider _ _ space available _;
++  showing _ source.";
++ _"limit":return"Diagram _ _ large _ _ _;
++  showing _ source.";
++ _"unsupported":return`Diagram cannot _ drawn _ (_{
++ _.reason}
++ );
++  showing _ source.`}
++ }
++ function _(_){
++ _(_.glyphs.lineHorizontal===_.lineHorizontal)return _;
++ _ _=_.source.split(`\n`).filter((_)=>_.trim()).length;
++ return[_.notice(`Drawing diagram${
++ _.glyphs.ellipsis}
++  _{
++ _}
++  _{
++ _===1?"_":"lines"}
++ `)]}
++ function _(_){
++ _(_.glyphs.lineHorizontal===_.lineHorizontal)return _;
++ _ _=_(_.source,_.maxWidth);
++ _(!_.ok)return[_.notice(_(_.error)),...e.sourceLines()];
++ _ _=_.lines.map((_)=>_.map((_)=>_.painters[_.role](_.text)).join("")||" ");
++ _(_.warnings.length>0)_.push(_.notice(`Simplified: _{
++ _.warnings.join(";
++  ")}
++ .`));
++ return _}
++ _ _;
++ _ _=_(async()=>{
++ _();
++ await _();
++ _=_((_,_)=>_(_,{
++ maxWidth:_}
++ ),64,16384)}
++ );
++ function _(_){
++ _ _=_(_);
++ return _.blockquoteDepth*2+_.listIndent*2}
+@@ 346108c347446
+- blocks:_,color:_,inlineCodeColor:_,linkColor:_,secondaryColor:_,dividerColor:_,glyphs:_,contentWidth:_,highlightCode:_,styledSegmentCache:_,preserveSoftLineBreaks:_=!1}
++ blocks:_,color:_,inlineCodeColor:_,linkColor:_,secondaryColor:_,dividerColor:_,glyphs:_,contentWidth:_,highlightCode:_,diagramColor:_,styledSegmentCache:_,preserveSoftLineBreaks:_=!1,streaming:_=!1}
+@@ 346123,346124c347461,347471
+- _ _=_>0&&_(_[_-1],_)?1:0,_;
+- _(_.type==="_"){
++ _ _=_>0&&_(_[_-1],_)?1:0,_,_=_.type==="_"?_.segment.codeBlock:_ 0,_=_?.language?.toLowerCase()==="mermaid"?_:_ 0,_=(_)=>_.dim(_(_)),_=!_?_:!_.isComplete?_?_({
++ source:_.code,glyphs:_,notice:_}
++ ):_:_({
++ source:_.code,maxWidth:_.max(1,_-_(_)),glyphs:_,painters:{
++ _:_??_,_:_,_:_}
++ ,notice:_,sourceLines:()=>[_(_(_.code,4),_.language)]}
++ );
++ _(_)_={
++ _:_.type,marginTop:_,lines:_}
++ ;
++ _ _(_.type==="_"){
+@@ 346162c347509
+- _ _=_(_),_=_.blockquoteDepth*2+_.listIndent*2,_=_(_.segment.table,{
++ _ _=_(_),_=_(_.segment.table,{
+@@ 346194c347541
+- await _()}
++ await _([_(),_()])}
+@@ 346217c347564
+- =_(),_=_(),_=_(),_=_??_,_=_("_"),_=_("highlight"),_=_("secondary"),_=_("surface"),_=_(_),_=_(_ WeakMap),_=`_{
++ =_(),_=_(),_=_(),_=_??_,_=_("_"),_=_("highlight"),_=_("secondary"),_=_("surface"),_=_("brand"),_=_(_),_=_(_ WeakMap),_=`_{
+@@ 346246,346247c347593,347594
+- blocks:_,color:_,inlineCodeColor:_,linkColor:_,secondaryColor:_,dividerColor:_,glyphs:_,contentWidth:_,highlightCode:_,styledSegmentCache:_.current}
+- ),[_,_,_,_,_,_,_,_,_]),_=_(()=>{
++ blocks:_,color:_,inlineCodeColor:_,linkColor:_,secondaryColor:_,dividerColor:_,glyphs:_,contentWidth:_,highlightCode:_,diagramColor:_,styledSegmentCache:_.current,streaming:_}
++ ),[_,_,_,_,_,_,_,_,_,_,_]),_=_(()=>{
+@@ 346323c347670
+- flexDirection:"column",width:"100%",paddingLeft:_==="developer"?_:0,backgroundColor:_,children:_(_,{
++ flexDirection:"column",width:"100%",backgroundColor:_,children:_(_,{
+@@ 346368c347715
+- blocks:_,color:_,inlineCodeColor:_("highlight"),linkColor:_("_"),secondaryColor:_("secondary"),dividerColor:_("surface"),glyphs:_,contentWidth:_,highlightCode:_}
++ blocks:_,color:_,inlineCodeColor:_("highlight"),linkColor:_("_"),secondaryColor:_("secondary"),dividerColor:_("surface"),glyphs:_,contentWidth:_,highlightCode:_,diagramColor:_("brand")}
+@@ 353013c354360
+- =_(),_=_??_,_=_(),_=_("primary"),_=_("secondary"),_=_(),[_,_]=_(""),_=_(_);
++ =_(),_=_??_,_=_(),_=_.max(1,_.min(_,_)-2),_=_(),_=_("primary"),_=_("secondary"),_=_(),[_,_]=_(""),_=_(_);
+@@ 353059c354406,354408
+- ),_,_&&_(_,{
++ ),_(_,{
++ value:_,children:_}
++ ),_&&_(_,{
+@@ 353099a354449
++ _();
+@@ 362036a363387,363420
++ function _(_,_){
++ _ _=_.find((_)=>_.startsWith(`_{
++ _}
++  `));
++ _(_)return{
++ _:"entry",marker:_,_:_.slice(_.length+1)}
++ ;
++ return _.trim()===""?{
++ _:"blank"}
++ :{
++ _:"markdown",_:_}
++ }
++ function _(_,_,_){
++ return _.map((_)=>{
++ _ _=_(_,_);
++ _(_.kind==="blank")return 1;
++ _ _=_.kind==="entry"?_(`_{
++ _.marker}
++  `):0,_=_.max(1,_-_);
++ return _.max(1,_(_(_.text),_).length)}
++ )}
++ function _(_,_,_){
++ _ _=_.length,_=0;
++ while(_>0&&_+_[_-1]<=_)_-=1,_+=_[_];
++ _(_===_.length)_=_.max(0,_-1);
++ _ _=_.min(_.max(0,_),_),_=_,_=0;
++ while(_<_.length&&(_===_||_+_[_]<=_))_+=_[_],_+=1;
++ return{
++ start:_,_:_,maxOffset:_}
++ }
++ _ _=_(async()=>{
++ _();
++ await _([_(),_()])}
++ );
+@@ 362041a363426,363465
++ await _([_(),_(),_(),_(),_()]);
++ _=_(function({
++ content:_,color:_,entryMarkers:_,contentWidth:_}
++ ){
++ _ _=_.max(1,_),_=_(()=>_.split(`\n`).map((_)=>_(_,_)),[_,_]);
++ return _(_,{
++ flexDirection:"column",children:_.map((_,_)=>{
++ _(_.kind==="blank")return _(_,{
++ children:" "}
++ ,_);
++ _(_.kind==="markdown")return _(_,{
++ content:_.text,color:_,contentWidth:_}
++ ,_);
++ return _(_,{
++ flexDirection:"_",children:[_(_,{
++ flexShrink:0,children:_(_,{
++ children:_(`_{
++ _.marker}
++  `)}
++ )}
++ ),_(_,{
++ flexDirection:"column",flexGrow:1,flexShrink:1,children:_(_,{
++ value:_.max(1,_-_(`_{
++ _.marker}
++  `)),children:_(_,{
++ content:_.text,color:_}
++ )}
++ )}
++ )]}
++ ,_)}
++ )}
++ )}
++ )}
++ );
++ _ _=2,_;
++ _ _=_(async()=>{
++ _();
++ _();
++ _();
++ _();
+@@ 362051c363475
+- =_(),_=_(),_=(_)=>_.bold(_),_=(_)=>_(_),_=_("muted"),_=_?`_{
++ =_(),_=_()-_,_=_(),_=(_)=>_.bold(_),_=(_)=>_(_),_=_("muted"),_=_?`_{
+@@ 362078c363502
+- flexDirection:"column",marginTop:1,children:_.format==="markdown"?_(_,{
++ flexDirection:"column",marginTop:1,children:_.format==="release-notes"?_(_,{
+@@ 362084c363508
+- content:_.body,color:_}
++ content:_.body,color:_,entryMarkers:_.entryMarkers,contentWidth:_}
+@@ 365280c366704
+- _:"_",children:_(_.description)}
++ _:"_",children:_(_(_.description))}
+@@ 365322a366747
++ _();
+@@ 366537a367963,368037
++ function _(_,_,_){
++ _(_.length===0)return[];
++ _ _=_.length===1?"server _":"servers _";
++ return[`_{
++ _}
++ _{
++ String(_.length)}
++  configured _{
++ _}
++  hidden: _ organization allows _ servers _ _ _ registry.`,_===_ 0?`Hidden: _{
++ _.join(", ")}
++ `:_(_,_.max(_,1))]}
++ function _(_,_){
++ _(_ _=_.length;
++ _>0;
++ _-=1){
++ _ _=_.length-_,_=`Hidden: _{
++ _.slice(0,_).join(", ")}
++ _{
++ _>0?`, _ _{
++ String(_)}
++  _`:""}
++ `;
++ _(_(_)<=_)return _}
++ _ _=`Hidden: _{
++ String(_.length)}
++  _{
++ _.length===1?"server":"servers"}
++ `;
++ return _(_,_)}
++ function _(_,_,_="",_=!0){
++ _ _=_.max(_,1),_=_(_,_,_);
++ _(_.length===0)return 0;
++ return _.reduce((_,_)=>_+_.max(1,_.ceil(_(_)/_)),0)+(_?1:0)}
++ function _(_,_){
++ return _.max(8,...e.map((_)=>_(_.source??"")))+_}
++ _ _=_(async()=>{
++ await _()}
++ );
++ _ _=({
++ hidden:_,contentWidth:_,hasConfigured:_,hasRegistry:_}
++ )=>{
++ _{
++ getColor:_}
++ =_(),_=_(),{
++ allowIcons:_}
++ =_(),_=_(_,_?`_{
++ _.warning}
++  `:"",_);
++ _(_.length===0)return _;
++ _[_,...l]=_,_=_("warning"),_=_("secondary");
++ return _(_,{
++ flexDirection:"column",marginBottom:_||_?1:0,children:[_(_,{
++ children:_(_??"")}
++ ),_.map((_,_)=>_(_,{
++ children:_(_)}
++ ,_))]}
++ )}
++ ,_=({
++ message:_,hidden:_}
++ )=>{
++ _{
++ getColor:_}
++ =_();
++ _(_.length>0)return _;
++ return _(_,{
++ children:_("secondary")(_)}
++ )}
++ ;
++ _ _=_(async()=>{
++ _();
++ _();
++ _();
++ await _([_(),_(),_()])}
++ );
+@@ 366639c368139,368141
+- ,[_]),_=_("_",_,_),_=_&&_==="awaiting-sandbox",_=_(_,_-2,!_&&_.length>0),_=_.max(_-9-_,5),[_,_]=_(_ _),[_,_]=_(_ _),_=!_&&(!_||_),_=_(_,_,!_?"hidden":_?"registry":"configured",_),{
++ ,[_]),_=_("_",_,_),_=_&&_==="awaiting-sandbox",_=_(_,_-2,!_&&_.length>0),_=_((_)=>_.mcpRegistryHidden),_=_.max(_-9-_-_(_,_-2,_?`_{
++ _.warning}
++  `:"",_.length>0||_.length>0),5),[_,_]=_(_ _),[_,_]=_(_ _),_=!_&&(!_||_),_=_(_,_,!_?"hidden":_?"registry":"configured",_),{
+@@ 366661,366662c368163,368164
+- ,...F?[{
+- label:"Source",width:8+_}
++ ,...L?[{
++ label:"Source",width:_(_,_)}
+@@ 366817c368319
+- ),_=_.some((_)=>_.source==="cloud"),_=_.some((_)=>_.source==="local"),_=_({
++ ),_=_.some((_)=>_.source==="cloud"||_.source==="organization"),_=_.some((_)=>_.source==="local"),_=_({
+@@ 366843a368346,368347
++ ),_(_,{
++ hidden:_,contentWidth:_-2,hasConfigured:_,hasRegistry:_}
+@@ 366845c368349
+- children:_(_)}
++ message:_,hidden:_}
+@@ 366879c368383
+- await _([_(),_(),_(),_(),_(),_(),_()])}
++ await _([_(),_(),_(),_(),_(),_(),_(),_(),_()])}
+@@ 367217,367218c368721,368724
+- function _(_,_,_){
+- _ _=_.max(_-2,52),_=_?_.min(10,_.floor(_*0.14)):0,_=_?_.length+1:0,_=_-_-_,_=_?0:12,_=_(_,0.25,22,_),_=_(_,0.24,20,_),_=_(_,0.22,18,_);
++ function _(_,_){
++ return _(_,_.configSource)??""}
++ function _(_,_,_,_){
++ _ _=_.max(_-2,52),_=_?_.max(_.min(10,_.floor(_*0.14)),_+1):0,_=_?_.length+1:0,_=_-_-_,_=_?0:12,_=_(_,0.25,22,_),_=_(_,0.24,20,_),_=_(_,0.22,18,_);
+@@ 367235c368741
+- )=>_):_,_=_.slice(_,_+_),[_]=_(()=>_("cloud_config")&&(_||_.some((_)=>_.configSource))),_=_.some((_)=>_.enabled===!1),_=_(()=>_(_,_,_),[_,_,_]),_=[{
++ )=>_):_,_=_.slice(_,_+_),[_]=_(()=>_("cloud_config")&&(_||_.some((_)=>_.configSource))),_=_.some((_)=>_.enabled===!1),_=_?_.max(0,...e.map((_)=>_(_,_).length)):0,_=_(()=>_(_,_,_,_),[_,_,_,_]),_=[{
+@@ 367249,367250c368755,368756
+- ,...x?[{
+- _:_?"cloud":_.configSource??"",color:_}
++ ,...B?[{
++ _:_(_,_),color:_}
+@@ 367290a368797
++ _();
+@@ 367937c369444
+- _ _=2,_=(_,_)=>_.replace(/^(\*\*.+ _'_ _ _ .+)\*\*_/_,`_ (_{
++ _ _=(_)=>_(_ 0,_),_=2,_=2,_=4,_=2,_=(_,_)=>_.replace(/^(\*\*.+ _'_ _ _ .+)\*\*_/_,(_,_)=>`_{
+@@ 367938a369446,369447
++  (_{
++ _(_)}
+@@ 367940c369449
+- onClose:_}
++ onClose:_,refreshFeed:_=_}
+@@ 367945c369454
+- height:_}
++ width:_,height:_}
+@@ 367948c369457
+- =_(),[_,_]=_(0);
++ =_(),[_,_]=_(0),_=_(_);
+@@ 367951c369460
+- return _(_ 0,_.signal).then((_)=>{
++ return _.current(_.signal).then((_)=>{
+@@ 367957c369466
+- _ _=_?_:_,_=_(()=>_(_,{
++ _ _=_?_:_,_=_(_),_=_(()=>_(_,{
+@@ 367959c369468,369470
+- ),[_,_]),_=_(()=>_.map((_)=>_(_.content,_.date)).join(`\n\n---\n\n`),[_]),_=_.max(_.floor(_/2),8),_=_(()=>_.split(`\n`),[_]),[_,_]=_(0),_=_.slice(_,_+_).join(`\n`),_=_>0,_=_+_<_.length;
++ ),[_,_]),_=_(()=>_.map((_)=>_(_.content,_.date)).join(`\n\n---\n\n`),[_]),_=_.max(1,_-_),_=_(()=>_.split(`\n`),[_]),_=_(()=>_(_,_,_),[_,_,_]),_=_.max(_.floor(_/2),8),_=_-_,_=_.reduce((_,_)=>_+_,0),_=_.max(1,_.min(_,_<=_.min(_,_)?_:_-_)),[_,_]=_(0),{
++ start:_,_:_,maxOffset:_}
++ =_(_,_,_),_=_.slice(_,_).join(`\n`),_=_>0,_=_<_.length;
+@@ 367968c369479
+- title:"/Changelog",onClose:_,canScrollUp:_,canScrollDown:_,onScrollUp:()=>_((_)=>_.max(0,_-1)),onScrollDown:()=>_((_)=>_.min(_.max(0,_.length-_),_+1)),children:_(_,{
++ title:"/Changelog",onClose:_,canScrollUp:_,canScrollDown:_,onScrollUp:()=>_((_)=>_.max(0,_.min(_,_)-1)),onScrollDown:()=>_((_)=>_.min(_,_+1)),children:_(_,{
+@@ 367970c369481
+- content:_,color:_()}
++ content:_,color:_(),entryMarkers:_,contentWidth:_}
+@@ 367983c369494
+- await _([_(),_(),_(),_()])}
++ await _([_(),_(),_(),_(),_()])}
+@@ 370344c371855
+- ),[_,_]),_=_((_)=>_.configHandoffToken!==0),_=_((_)=>_.beginConfigHandoff),_=_((_)=>_.endConfigHandoff),_=_((_)=>_.loadingMessage),_=_((_)=>_.setLoadingMessage),_=_.max(_-12,5),_=_(()=>_(_),[_]),_=_(()=>_?_(_,_):_,[_,_]),_=_(()=>{
++ ),[_,_]),_=_((_)=>_.configHandoffToken!==0),_=_((_)=>_.beginConfigHandoff),_=_((_)=>_.endConfigHandoff),_=_((_)=>_.loadingMessage),_=_((_)=>_.setLoadingMessage),_=_.max(_-12,5),_=_(()=>_(_,_.smallDot),[_,_.smallDot]),_=_(()=>_?_(_,_):_,[_,_]),_=_(()=>{
+@@ 372111c373622
+- ,[_,_]),_=_((_)=>_.kas.availableAgents),_=_((_)=>_.mcpServerCache),_=_((_)=>_.steering),_=_((_)=>_.steeringDocs),_=_((_)=>_.skills),_=_((_)=>_.powersList),_=_((_)=>_.cloudConfigDiagnostics),_=_((_)=>_.showSurveyPanel),_=_((_)=>_.activeSurvey),_=_((_)=>_.closeSurveyPanel),_=_((_)=>_.submitSurvey),_=_(_,(_)=>_.history.isOpen),_={
++ ,[_,_]),_=_((_)=>_.kas.availableAgents),_=_((_)=>_.mcpServerCache),_=_((_)=>_.steering),_=_((_)=>_.steeringDocs),_=_((_)=>_.skills),_=_((_)=>_.powersList),_=_((_)=>_.cloudConfigDiagnostics),_=_((_)=>_.governanceState),_=_((_)=>_.mcpRegistryHidden),_=_((_)=>_.showSurveyPanel),_=_((_)=>_.activeSurvey),_=_((_)=>_.closeSurveyPanel),_=_((_)=>_.submitSurvey),_=_(_,(_)=>_.history.isOpen),_={
+@@ 372246c373757
+- close:()=>_.close(),onExit:_}
++ claim:"release-local",close:()=>_.close(),onExit:_}
+@@ 372256,372257c373767,373770
+- _ _={
+- cloudSession:_,agents:_,mcpServers:_,steering:_,steeringDocs:_,skills:_,hooks:_,powers:_,diagnostics:_}
++ _ _=_.find((_)=>_.type==="mcp_governance_disabled"),_={
++ cloudSession:_,agents:_,mcpServers:_,steering:_,steeringDocs:_,skills:_,hooks:_,powers:_,diagnostics:_,governance:_,mcpRegistryHidden:_,mcpGovernanceDisabled:_?.type==="mcp_governance_disabled"?{
++ apiFailure:_.apiFailure}
++ :_ 0}
+@@ 376429c377942
+- close:()=>_.close(),onExit:_}
++ claim:"release-local",close:()=>_.close(),onExit:_}
+@@ 377556c379069
+- _=_ _(["mcp_server_init_failure","mcp_oauth_request","mcp_server_initialized","mcp_oauth_cleared","mcp_governance_disabled","web_tools_governance_disabled","agent_not_found","agent_config_error","hooks_update","powers_update","steering_documents_update","diagnostics_update","mcp_server_snapshot","mcp_registry_snapshot","rate_limit_error","system_notice"]),_=_ _(["steering_queued","steering_consume
++ _=_ _(["mcp_server_init_failure","mcp_oauth_request","mcp_server_initialized","mcp_oauth_cleared","mcp_governance_disabled","web_tools_governance_disabled","agent_not_found","agent_config_error","hooks_update","powers_update","steering_documents_update","diagnostics_update","governance_state_update","mcp_server_snapshot","mcp_registry_snapshot","rate_limit_error","system_notice"]),_=_ _(["steering
+@@ 379089c380602
+- close:()=>_.close()}
++ claim:"_",close:()=>_.close()}

@@ -1,0 +1,105 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-13",
+   "version": "2.31.0",
+   "title": "Version 2.31.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] `/sandbox` and local `/autonomous` mode are now available to all users, off by default"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] MCP tools now load on demand for every user, keeping unused tool schemas out of requests"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] `KIRO_HOME` now also relocates MCP config, permissions, sessions, powers and agent state"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] A saved `sandbox.json` with `enabled: true` now applies to headless runs"
+    },
+    {
+     "type": "fixed",
+     "description": "`--no-interactive` chat on the V1 engine now exits non-zero with the error that ended the turn instead of a misleading tool-approval error"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP sign-ins are saved under `KIRO_HOME` when set; existing ones are copied over once"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Animated WebP images are now sent to the model as PNG"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Cloud config and other Kiro service requests fail after 15 seconds instead of hanging"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP tools on streamable-HTTP servers keep working after the server drops its session"
+    },
+    {
+     "type": "fixed",
+     "description": "A relative, root, or home-folder `KIRO_HOME` is ignored and `~/.kiro` is used instead"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] In cloud sessions, the code intelligence indicator and `/code` panel now reflect the cloud workspace"
+    },
+    {
+     "type": "fixed",
+     "description": "GitHub and Google sign-ins are no longer signed out when the auth service returns a temporary error during token refresh"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-12",
+   "version": "2.30.0",
+   "title": "Version 2.30.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] Notices in the transcript when a model refuses or is unavailable and the turn moves to another model"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Agent upgrades refresh permissions after V2 setting changes until you edit them"
+    },
+    {
+     "type": "changed",
+     "description": "Kiro CLI may now offer to switch you to V3 when you start a chat"
+    },
+    {
+     "type": "fixed",
+     "description": "Screen readers now follow streaming replies in the full TUI via the Screen reader option in `/settings display`"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Agent upgrades preserve V2 workspace read access and `fs_read` skill trust"
+    },
+    {
+     "type": "fixed",
+     "description": "Scrolling back in `tmux` no longer shows a screen of blank rows after long replies"
+    },
+    {
+     "type": "fixed",
+     "description": "Launching after output without a trailing newline no longer draws the UI at an offset"
+    },
+    {
+     "type": "fixed",
+     "description": "Knowledge search no longer silently drops a chunk from a small knowledge base"
+    },
+    {
+     "type": "fixed",
+     "description": "Garbled text and stray characters around icons in chat on some Linux terminals and remote desktops"
+    }
+   ]
+  }
+ ]
+}

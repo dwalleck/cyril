@@ -1,0 +1,7 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.33"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] (node:2823066) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":9}

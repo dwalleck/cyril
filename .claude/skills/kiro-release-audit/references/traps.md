@@ -87,3 +87,17 @@ the positive form; the history says why it is a rule.
     it from the `AgentSettings` schema, and the engine now logs `configuration.intake.unknown-key`.
     Before deciding keep-vs-drop, grep the bundled schema in BOTH versions and, where possible,
     confirm the intake at `KIRO_LOG_LEVEL=debug` against a control arm.
+24. **KAS is cyril's current path** (user, 2026-10-14). Apply the P1/P2 rules to KAS gaps and demote
+    v2-only findings; run a standing **coverage** lane (Kiro's TUI × KAS × cyril) every cycle, because
+    delta lanes never produce the parity list. Drop v2 live legs unless budget remains.
+25. **v2 commands failing on KAS is expected.** Never spend a probe proving it. Probe the frame Kiro's
+    TUI sends for the same feature and phrase the gap as "cyril lacks a KAS-native route".
+26. **Look for a moved feature before calling it missing.** The 2.31.1 coverage lane reported "no way
+    to change model or effort on KAS"; KAS had folded both into `configId:"model"` options carrying
+    per-model `_meta.kiro.effortLevels`, set with `configId:"effortLevel"`.
+27. **Spot-check every lane citation against the capture.** A "LIVE frame 146" was off by one and
+    pointed at a method only the probe sends. Frame numbers in FINDINGS refer to the lane-dir captures,
+    not the trimmed `*-<NEW>.jsonl` bundles (which carry a header record).
+28. **`largeToolOutputHandler` is not a positive control** (KAS logs it `unknown-key`); use
+    `configurationState:true`, which makes KAS push `_kiro/configuration/state`. KAS debug lines go to
+    `$HOME/.kiro/logs/<ts>/kiro.log`, not stderr.
