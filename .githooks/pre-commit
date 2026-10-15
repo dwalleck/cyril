@@ -9,6 +9,25 @@
 # Override a block:        git commit --no-verify
 set -euo pipefail
 
+# Credential scan (every branch, including main): Kiro wire captures under
+# experiments/ and docs/ carry auth-callback traffic that probe scripts redact;
+# a redaction bug must not reach the remote. Scans only added lines.
+leaks=$(git diff --cached -U0 --diff-filter=AM -- experiments docs | awk '
+  /^\+\+\+ b\// { file = substr($0, 7); next }
+  /^\+/ && (/eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/ ||
+            /aoa[A-Za-z0-9]{30,}/ ||
+            /Bearer [A-Za-z0-9._-]{20,}/ ||
+            /"(accessToken|refreshToken|tokenValue|clientSecret)"[ \t]*:[ \t]*"[A-Za-z0-9_.-]{20,}/) {
+    print file
+  }' | sort -u)
+if [ -n "$leaks" ]; then
+  echo "pre-commit: credential-shaped value in staged lines of:" >&2
+  printf '    %s\n' $leaks >&2
+  echo "Redact it (probe scripts replace tokens with <redacted>) and re-stage." >&2
+  echo "Override a false positive:  git commit --no-verify" >&2
+  exit 1
+fi
+
 branch=$(git rev-parse --abbrev-ref HEAD)
 
 # Main-line branches are allowed anywhere; "HEAD" means a detached checkout
