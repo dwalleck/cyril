@@ -95,9 +95,10 @@ the positive form; the history says why it is a rule.
 26. **Look for a moved feature before calling it missing.** The 2.31.1 coverage lane reported "no way
     to change model or effort on KAS"; KAS had folded both into `configId:"model"` options carrying
     per-model `_meta.kiro.effortLevels`, set with `configId:"effortLevel"`.
-27. **Spot-check every lane citation against the capture.** A "LIVE frame 146" was off by one and
-    pointed at a method only the probe sends. Frame numbers in FINDINGS refer to the lane-dir captures,
-    not the trimmed `*-<NEW>.jsonl` bundles (which carry a header record).
+27. **Cite frames in the checkable form `<capture>.jsonl#<N>"<expect>"`**, N 0-based, and run
+    `check-citations.py`. A prose "LIVE frame 146" was one off (1-based count against 0-based
+    captures) and pointed at a method only the probe sends. Frame numbers refer to the lane-dir
+    captures, not the trimmed `*-<NEW>.jsonl` bundles (which carry a header record).
 28. **`largeToolOutputHandler` is not a positive control** (KAS logs it `unknown-key`); use
     `configurationState:true`, which makes KAS push `_kiro/configuration/state`. KAS debug lines go to
     `$HOME/.kiro/logs/<ts>/kiro.log`, not stderr.

@@ -53,9 +53,9 @@ minutes on 2026-10-11, producing nothing. Tiers:
 
 | tier | when | shape |
 |---|---|---|
-| **constrained** (default) | budget unknown or shared | static lanes one at a time, priority order `kas-core`, `kas-workflow`, `tui`, `host`; then the live lane with every static lead |
-| **full** | the user asks for it and the session is fresh | four static lanes in parallel plus the live lane; forward leads to the live lane as static lanes return |
-| **minimal** | a patch release whose KAS and TUI bytes match OLD | host lane plus one live sweep pair |
+| **constrained** (default) | budget unknown or shared | static lanes one at a time, priority order `kas-core`, `kas-workflow`, `tui`, `host`; then `v3-coverage` and the live lane together, the live lane carrying every static lead |
+| **full** | the user asks for it and the session is fresh | four static lanes in parallel plus the live lane; `v3-coverage` once the static lanes return; forward leads to the live lane as lanes return |
+| **minimal** | a patch release whose KAS and TUI bytes match OLD | host lane, `v3-coverage`, plus one live sweep pair |
 
 The user's stated focus reorders the static lanes and deepens their question lists; the user's
 2026-10-11 ask was v3 backend, workflows, unreleased features, which is the default order above.
@@ -64,12 +64,14 @@ Each lane is a background agent with the brief template in
 [`references/lanes.md`](references/lanes.md): scope, inputs, reusable scripts, the question list,
 the `FINDINGS.md` section contract, and the live-lane protocol (one lane owns auth; legs run
 serially; `HOME` isolated, `XDG_DATA_HOME` real). Lanes write only inside their own
-`audit-<NEW>/<lane>/` directory and append to `FINDINGS.md` as they go. Tick `RUN-STATE.md` after
-each hand-back.
+`audit-<NEW>/<lane>/` directory and append to `FINDINGS.md` as they go. Spot-check each hand-back
+(lanes.md, Orchestration) and tick `RUN-STATE.md`.
 
 Done when every lane's `FINDINGS.md` has all contract sections, every delta row carries
-STATIC or LIVE and HANDLED, DROPPED or NOT-SENT with a cyril `file:line`, and the live lane has run
-`sweep-new-fields.py --diff` over each OLD/NEW capture pair.
+STATIC or LIVE and HANDLED, DROPPED or NOT-SENT with a cyril `file:line`,
+`experiments/conductor-spike/check-citations.py` passes on every `FINDINGS.md`, `v3-coverage` has
+ranked the flip blockers, and the live lane has run `sweep-new-fields.py --diff` over each OLD/NEW
+capture pair.
 
 ## 3. Fold
 
