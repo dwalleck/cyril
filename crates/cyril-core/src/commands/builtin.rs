@@ -1,7 +1,10 @@
 use crate::commands::{
     Command, CommandContext, CommandResult, MemoryCommandAction, UsageAccountCommandSource,
 };
-use crate::types::{BridgeCommand, THINKING_ALWAYS_ON_MESSAGE, THINKING_NOT_TOGGLEABLE_MESSAGE};
+use crate::types::{
+    BridgeCommand, EFFORT_CONFIG_ID, MODE_CONFIG_ID, MODEL_CONFIG_ID, THINKING_ALWAYS_ON_MESSAGE,
+    THINKING_NOT_TOGGLEABLE_MESSAGE,
+};
 
 /// /help — show available commands
 pub struct HelpCommand {
@@ -576,5 +579,179 @@ impl Command for ThinkingCommand {
             .send(BridgeCommand::SetThinking { lever, enabled })
             .await?;
         Ok(CommandResult::dispatched())
+    }
+}
+
+// ── KAS config commands: /model /effort /mode (cyril-vh69) ───────────────
+//
+// Registered only on a KAS-built registry (`ConfigCommandSource`, design
+// decision 1) — on v2 the agent's advertised commands keep the names. Every
+// command validates against the session's `KasConfigSnapshot` and returns a
+// `ShowConfigPicker` intent; none of them sends a bridge command — the App's
+// confirm path revalidates and sends `SetConfigOption`. Sending an
+// unvalidated value is not an option: KAS accepts unoffered values silently
+// and fails the next prompt (design § 3).
+
+/// Shared preconditions: an active session, then the first config catalog.
+/// The "not reported yet" line is named per command — `session/new` may omit
+/// `configOptions`, which reliably arrive just after (wire frame 24), so an
+/// empty affordance must say why rather than fake a list (the PowersCommand
+/// discipline).
+fn kas_config_snapshot<'a>(
+    ctx: &'a CommandContext<'_>,
+    not_reported: &str,
+) -> crate::Result<Result<&'a crate::types::KasConfigSnapshot, CommandResult>> {
+    // Same no-session error as agent commands and /thinking, checked before
+    // the snapshot so a stale pre-session catalog can never drive a picker.
+    ctx.session
+        .id()
+        .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;
+    Ok(match ctx.session.config_options() {
+        Some(snapshot) => Ok(snapshot),
+        None => {
+            tracing::debug!("KAS config command ran before the first config catalog");
+            Err(CommandResult::system_message(not_reported.to_string()))
+        }
+    })
+}
+
+/// `/model` on the KAS engine (cyril-vh69): picker over the config catalog's
+/// model select. Confirming a model with effort metadata chains the effort
+/// picker in the App; the set itself is read back from the returned
+/// catalog's `currentValue`, never from the requested value.
+pub struct ModelCommand;
+
+#[async_trait::async_trait]
+impl Command for ModelCommand {
+    fn name(&self) -> &str {
+        "model"
+    }
+
+    fn description(&self) -> &str {
+        "Pick the session model from the offered catalog"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        if !args.trim().is_empty() {
+            return Ok(CommandResult::system_message(
+                "Usage: /model (no arguments)".to_string(),
+            ));
+        }
+        let snapshot = match kas_config_snapshot(
+            ctx,
+            "Model options haven't been reported yet — they arrive just after session start; try again.",
+        )? {
+            Ok(snapshot) => snapshot,
+            Err(message) => return Ok(message),
+        };
+        match snapshot.picker_options(MODEL_CONFIG_ID) {
+            Some(options) => Ok(CommandResult::show_config_picker(
+                MODEL_CONFIG_ID,
+                "model",
+                options,
+            )),
+            None => {
+                // The KAS catalog always carries a model select; its absence
+                // is wire drift worth a warning.
+                tracing::warn!("KAS config catalog has no model select to offer");
+                Ok(CommandResult::system_message(
+                    "The model select isn't offered by this session.".to_string(),
+                ))
+            }
+        }
+    }
+}
+
+/// `/effort` on the KAS engine (cyril-vh69): picker over the CURRENT model's
+/// effort levels, with the model's `defaultEffortLevel` marked. A model
+/// without effort support (`auto`, `hasEffort: false`) has no `effortLevel`
+/// option on the wire either, so offering a picker would be offering a
+/// silent no-op — the command refuses and names the model instead.
+pub struct EffortCommand;
+
+#[async_trait::async_trait]
+impl Command for EffortCommand {
+    fn name(&self) -> &str {
+        "effort"
+    }
+
+    fn description(&self) -> &str {
+        "Pick the effort level for the current model"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        if !args.trim().is_empty() {
+            return Ok(CommandResult::system_message(
+                "Usage: /effort (no arguments)".to_string(),
+            ));
+        }
+        let snapshot = match kas_config_snapshot(
+            ctx,
+            "Effort levels haven't been reported yet — they arrive just after session start; try again.",
+        )? {
+            Ok(snapshot) => snapshot,
+            Err(message) => return Ok(message),
+        };
+        let Some(model_id) = snapshot.current_model() else {
+            tracing::warn!("KAS config catalog has no current model to read effort from");
+            return Ok(CommandResult::system_message(
+                "The model select isn't offered by this session.".to_string(),
+            ));
+        };
+        match snapshot.effort_picker_options(model_id) {
+            Some(options) => Ok(CommandResult::show_config_picker(
+                EFFORT_CONFIG_ID,
+                "effort",
+                options,
+            )),
+            None => Ok(CommandResult::system_message(format!(
+                "The current model ({model_id}) has no effort levels — /effort applies to models with effort support."
+            ))),
+        }
+    }
+}
+
+/// `/mode` on the KAS engine (cyril-vh69): picker over the config catalog's
+/// mode select, labels and descriptions from the wire. KAS coerces an
+/// unknown mode to `vibe`, so only offered values are ever sent — the
+/// confirm path revalidates membership against the latest snapshot.
+pub struct ModeCommand;
+
+#[async_trait::async_trait]
+impl Command for ModeCommand {
+    fn name(&self) -> &str {
+        "mode"
+    }
+
+    fn description(&self) -> &str {
+        "Pick the session mode from the offered catalog"
+    }
+
+    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        if !args.trim().is_empty() {
+            return Ok(CommandResult::system_message(
+                "Usage: /mode (no arguments)".to_string(),
+            ));
+        }
+        let snapshot = match kas_config_snapshot(
+            ctx,
+            "Mode options haven't been reported yet — they arrive just after session start; try again.",
+        )? {
+            Ok(snapshot) => snapshot,
+            Err(message) => return Ok(message),
+        };
+        match snapshot.picker_options(MODE_CONFIG_ID) {
+            Some(options) => Ok(CommandResult::show_config_picker(
+                MODE_CONFIG_ID,
+                "mode",
+                options,
+            )),
+            None => {
+                tracing::warn!("KAS config catalog has no mode select to offer");
+                Ok(CommandResult::system_message(
+                    "The mode select isn't offered by this session.".to_string(),
+                ))
+            }
+        }
     }
 }

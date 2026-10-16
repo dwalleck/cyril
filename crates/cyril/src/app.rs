@@ -417,6 +417,7 @@ impl App {
             hooks,
             workflows,
             cyril_core::commands::UsageAccountCommandSource::resolve(agent_engine),
+            cyril_core::commands::ConfigCommandSource::resolve(agent_engine),
         );
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
@@ -2238,6 +2239,15 @@ impl App {
                         self.usage_enrichment.enrich(record_id, session_id, kind);
                     }
                 }
+            }
+            CommandResultKind::ShowConfigPicker { .. } => {
+                // The UiState picker plumbing (PickerKind::Config) lands with
+                // the picker slice; until then this intent has no consumer.
+                // Unreachable on v2 — the commands only register on a
+                // KAS-built registry.
+                tracing::error!(
+                    "ShowConfigPicker reached handle_command_result before picker wiring — build ordering bug"
+                );
             }
             CommandResultKind::Review { args } => self.open_review(args),
             CommandResultKind::ReviewResume { selector } => self.open_resume(selector),
