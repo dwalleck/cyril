@@ -101,4 +101,6 @@ Result: all acceptance criteria exercised live; no defects found.
 
 ### Repair re-review
 
-PENDING — perform scoped review of R5/R6 after the repair commit and rerun the required repository gates before publication.
+DONE — scoped review after repair commit `d87fc6bc`, independent of the initial finding report. Scope: R5/R6 production paths, picker lifecycle, pending-request interaction, and regression tests. The current-model predicate blocks the verified delayed-ack standalone reproduction; the exact pending model request is the only pre-ack exception and preserves the approved chained race. `SessionCreated` closes only config pickers and clears pending acknowledgements, while theme picker behavior remains unchanged. No additional production defect or invalidated prior conclusion found.
+
+Final checks at `d87fc6bc`: `cargo test --workspace` PASS; `cargo clippy --workspace --all-targets -- -D warnings` PASS; `cargo fmt --all -- --check` PASS; `git diff --check` PASS.
