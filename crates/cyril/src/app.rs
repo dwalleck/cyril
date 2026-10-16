@@ -9048,6 +9048,53 @@ mod tests {
         ));
     }
 
+    /// A failed model set invalidates the chained effort step and its pending
+    /// request, so a late Enter cannot send an effort value for a model that
+    /// never became active (Codex review round 3, F1).
+    #[tokio::test]
+    async fn failed_model_set_closes_chained_effort_picker() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![
+                config_row("auto", true),
+                config_row("claude-sonnet-5.5", false),
+            ],
+            None,
+        );
+        app.ui_state.picker_select_next();
+        app.handle_picker_key(enter()).await.expect("model confirm");
+        assert!(matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::SetConfigOption { ref config_id, ref value })
+                if config_id == MODEL_CONFIG_ID && value == "claude-sonnet-5.5"
+        ));
+        assert!(app.ui_state.picker().is_some(), "effort step is chained");
+        assert!(
+            app.ui_state
+                .has_pending_config_set(MODEL_CONFIG_ID, "claude-sonnet-5.5")
+        );
+
+        app.handle_notification(RoutedNotification::global(Notification::BridgeError {
+            operation: "set_config_option".into(),
+            message: "model rejected".into(),
+        }));
+
+        assert!(app.ui_state.picker().is_none());
+        assert!(
+            !app.ui_state
+                .has_pending_config_set(MODEL_CONFIG_ID, "claude-sonnet-5.5")
+        );
+        app.handle_picker_key(enter())
+            .await
+            .expect("late effort confirm is ignored");
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+    }
+
     /// F2: a session boundary invalidates an open config picker. A delayed
     /// `/new` or `/load` response must not let its selection apply to the new
     /// session.

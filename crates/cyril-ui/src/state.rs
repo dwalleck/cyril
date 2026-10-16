@@ -1208,6 +1208,9 @@ impl UiState {
                 true
             }
             Notification::BridgeError { operation, message } => {
+                if operation == "set_config_option" {
+                    self.config_set_failed();
+                }
                 self.add_system_message(format!("{operation} failed: {message}"));
                 true
             }
@@ -1688,6 +1691,28 @@ impl UiState {
             .is_some_and(|(pending_id, pending_value)| {
                 pending_id == config_id && pending_value == value
             })
+    }
+
+    /// Clear a failed config request and invalidate its chained effort picker.
+    ///
+    /// `set_config_option` failures carry no config id, so the pending request
+    /// is the authority for which state to clear. A failed model request also
+    /// invalidates the effort step opened for that exact model; otherwise its
+    /// pre-ack rows could still dispatch an effort value after the model switch
+    /// failed (cyril-vh69 review round 3, F1).
+    pub fn config_set_failed(&mut self) {
+        let Some((config_id, requested)) = self.pending_config_set.take() else {
+            return;
+        };
+        if config_id == MODEL_CONFIG_ID
+            && self.picker.as_ref().is_some_and(|picker| {
+                picker.kind == PickerKind::Config
+                    && picker.config_id.as_deref() == Some(EFFORT_CONFIG_ID)
+                    && picker.subject.as_deref() == Some(requested.as_str())
+            })
+        {
+            self.picker_cancel();
+        }
     }
 
     /// Post the read-back confirmation for a KAS `ConfigOptionSet`
