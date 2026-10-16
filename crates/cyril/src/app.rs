@@ -2079,15 +2079,27 @@ impl App {
             // Effort rows came from the model's EffortMetadata, not a
             // catalog select option — revalidate against the same source:
             // the LATEST snapshot's EffortMetadata of the model the picker
-            // was opened for. A stale effort (the model's metadata gone or
-            // the level absent) keeps the refusal below.
+            // was opened for. A standalone picker is valid only while that
+            // model is still current; otherwise a delayed model ack could
+            // apply this level to a different model that happens to retain
+            // the old model's metadata.
             match confirmation.subject.as_deref() {
                 Some(model_id) => snapshot.as_ref().is_some_and(|s| {
-                    s.effort_for_model(model_id).is_some_and(|meta| {
-                        meta.levels()
-                            .iter()
-                            .any(|level| level == &confirmation.value)
-                    })
+                    let subject_is_current = s.current_model() == Some(model_id);
+                    // The chained model→effort picker is intentionally opened
+                    // before KAS acknowledges the model switch. The exact
+                    // model request being pending proves that this is the
+                    // continuation of that user action, rather than a
+                    // standalone picker made stale by an in-flight switch.
+                    let chained_model_switch_pending = self
+                        .ui_state
+                        .has_pending_config_set(MODEL_CONFIG_ID, model_id);
+                    (subject_is_current || chained_model_switch_pending)
+                        && s.effort_for_model(model_id).is_some_and(|meta| {
+                            meta.levels()
+                                .iter()
+                                .any(|level| level == &confirmation.value)
+                        })
                 }),
                 None => {
                     // PickerConfirmation carries Some iff kind == Config and
@@ -8974,6 +8986,91 @@ mod tests {
             ),
             "exactly one frame"
         );
+    }
+
+    /// A standalone `/effort` picker can outlive a model switch: it was
+    /// opened for the old current model, then the pending model ack makes a
+    /// different model current. Even though the old model remains in the
+    /// catalog with valid metadata, its effort level must not be sent.
+    #[tokio::test]
+    async fn standalone_effort_confirm_is_refused_after_model_ack_switches_away() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        let mut before_switch = kas_model_catalog();
+        before_switch[0].value = Some("claude-sonnet-5.5".into());
+        app.session
+            .apply_notification(&Notification::ConfigOptionsUpdated(before_switch));
+
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![
+                config_row("auto", false),
+                config_row("claude-sonnet-5.5", true),
+            ],
+            None,
+        );
+        app.ui_state.picker_select_prev();
+        app.handle_picker_key(enter()).await.expect("model confirm");
+        assert!(matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::SetConfigOption { ref config_id, ref value })
+                if config_id == MODEL_CONFIG_ID && value == "auto"
+        ));
+
+        let rows = app
+            .session
+            .config_options()
+            .and_then(|snapshot| snapshot.effort_picker_options("claude-sonnet-5.5"))
+            .expect("sonnet carries effort levels");
+        app.ui_state.show_config_picker(
+            EFFORT_CONFIG_ID.to_string(),
+            "effort".to_string(),
+            rows,
+            Some("claude-sonnet-5.5".to_string()),
+        );
+
+        let after_switch = kas_model_catalog();
+        app.session
+            .apply_notification(&Notification::ConfigOptionsUpdated(after_switch));
+        app.handle_picker_key(enter())
+            .await
+            .expect("stale effort confirm");
+
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+        let last = app.ui_state.messages().last().expect("a refusal message");
+        assert!(matches!(
+            last.kind(),
+            cyril_ui::traits::ChatMessageKind::System(text)
+                if text == "The options changed while the picker was open — reopen and try again."
+        ));
+    }
+
+    /// F2: a session boundary invalidates an open config picker. A delayed
+    /// `/new` or `/load` response must not let its selection apply to the new
+    /// session.
+    #[tokio::test]
+    async fn session_created_closes_open_config_picker() {
+        let (mut app, _rx) = kas_app_with_catalog();
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![config_row("auto", true)],
+            None,
+        );
+        assert_eq!(app.ui_state.picker_kind(), Some(PickerKind::Config));
+
+        app.handle_notification(RoutedNotification::global(Notification::SessionCreated {
+            session_id: SessionId::new("next-session"),
+            current_mode: None,
+            current_model: None,
+            available_modes: vec![],
+            available_models: vec![],
+        }));
+
+        assert!(app.ui_state.picker().is_none());
     }
 
     /// F2/R1 (review round 1): chained pre-ack race — the effort picker

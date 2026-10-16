@@ -953,6 +953,18 @@ impl UiState {
                 available_modes,
                 available_models: _,
             } => {
+                // A config picker belongs to the session whose catalog opened
+                // it. Close it at the session boundary so a delayed `/new` or
+                // `/load` response cannot apply the old selection to the new
+                // session. Cyril's local theme picker is intentionally kept.
+                if self
+                    .picker
+                    .as_ref()
+                    .is_some_and(|picker| picker.kind == PickerKind::Config)
+                {
+                    self.picker_cancel();
+                }
+                self.pending_config_set = None;
                 self.session_label = Some(session_id.as_str().to_string());
                 self.main_session_id = Some(session_id.clone());
                 self.current_mode = current_mode.as_ref().map(|m| m.as_str().to_string());
@@ -1665,6 +1677,17 @@ impl UiState {
     /// optimistically.
     pub fn note_config_set_requested(&mut self, config_id: String, value: String) {
         self.pending_config_set = Some((config_id, value));
+    }
+
+    /// Whether the exact config request is still awaiting its read-back. The
+    /// App uses this only for the intentional pre-ack model→effort chain:
+    /// standalone effort pickers must instead match the latest current model.
+    pub fn has_pending_config_set(&self, config_id: &str, value: &str) -> bool {
+        self.pending_config_set
+            .as_ref()
+            .is_some_and(|(pending_id, pending_value)| {
+                pending_id == config_id && pending_value == value
+            })
     }
 
     /// Post the read-back confirmation for a KAS `ConfigOptionSet`
@@ -9449,6 +9472,17 @@ mod tests {
             state.messages()[1].kind(),
             ChatMessageKind::ToolCall(_)
         ));
+    }
+
+    #[test]
+    fn pending_config_set_matches_exact_request() {
+        let mut state = UiState::new(500);
+        assert!(!state.has_pending_config_set("model", "sonnet"));
+
+        state.note_config_set_requested("model".into(), "sonnet".into());
+        assert!(state.has_pending_config_set("model", "sonnet"));
+        assert!(!state.has_pending_config_set("model", "opus"));
+        assert!(!state.has_pending_config_set("effortLevel", "sonnet"));
     }
 
     // --- cyril-imjx: picker active-row marker ---

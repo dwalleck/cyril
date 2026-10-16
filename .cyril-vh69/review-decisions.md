@@ -75,3 +75,30 @@ KAS session (`sess_06673024-…`):
 Open wire question ANSWERED (F1 follow-up): post-switch catalogs DO carry an `effortLevel` select option — the effort chip showed `high` immediately after the model-set ack, and the only KAS feed for that chip is the config-notification arm reading an `effortLevel` option's `currentValue` (verified in the round-1 review). The round-1 inference from the 2.31.1 sweep capture (no catalog ever carries it) is explained: the sweep only ever set a bogus model, so it never captured a successful post-switch catalog. This does not weaken the R1 repair: the chained pre-ack race (pre-switch snapshot from `auto` has no `effortLevel` option) still requires EffortMetadata-sourced revalidation, and per-source revalidation remains the correct contract.
 
 Result: all acceptance criteria exercised live; no defects found.
+
+## Review round 2 — Codex PR feedback
+
+| finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
+|---|---|---|---|---|---|---|---|
+| F6 | A standalone effort picker can be opened for model B while a model change to A is awaiting acknowledgement; when A becomes current, confirming B's retained effort rows can apply the choice to A. Require the latest snapshot's current model to match the picker subject before dispatch. | chatgpt-codex-connector[bot] | Verified | Code reading of `confirm_config_picker` showed effort validation checked metadata membership but not `current_model()`. Added `standalone_effort_confirm_is_refused_after_model_ack_switches_away`, which passes with zero dispatches after the delayed ack. The existing chained pre-ack test also remains green because its exact model request is still pending. | Modify | R5: effort confirmation now requires the latest snapshot's current model to equal the picker subject, with a narrowly-scoped exception only for the exact model request that opened the intentional pre-ack model→effort chain. | blocking — without this guard a delayed model acknowledgement can apply a valid effort level to the wrong model |
+| F7 | A config picker opened in one session can remain open across delayed `/new` or `/load` completion and apply its selection to the replacement session. Bind it to its opening session or close it on session changes. | chatgpt-codex-connector[bot] | Verified | Code reading showed `SessionCreated` reset session state without invalidating `PickerKind::Config`. Added `session_created_closes_open_config_picker`, which passes through the App notification route and leaves no picker to confirm after the boundary. | Accept | R6: close config pickers and clear pending config-set acknowledgements in `UiState` on `SessionCreated`; keep Cyril's local theme picker independent. | blocking — a stale selection must never be dispatched into the new session |
+
+### Repairs
+
+#### R5 — reject standalone effort confirmations for a no-longer-current model (F6)
+
+- **Root cause:** effort metadata membership alone does not identify the active model; a standalone picker can retain metadata for a prior model while an asynchronous model set changes the catalog's current model.
+- **Delivered behavior:** `confirm_config_picker` checks `KasConfigSnapshot::current_model()` against the effort picker subject before accepting a level. The only pre-ack exception is when `UiState::has_pending_config_set("model", subject)` proves the picker is the continuation of the model selection just dispatched; this preserves the approved chained pre-ack behavior without allowing a standalone picker opened for the old model to pass.
+- **Performed checks and results:** `cargo test -p cyril --bin cyril app::tests::standalone_effort_confirm_is_refused_after_model_ack_switches_away -- --exact` PASS; `cargo test -p cyril --bin cyril app::tests::chained_effort_confirm_before_ack_sends_both_sets -- --exact` PASS; `cargo test -p cyril-ui --lib state::tests::pending_config_set_matches_exact_request -- --exact` PASS. Checked revision: working tree after `cargo fmt --all`.
+- **Unresolved failures:** none.
+
+#### R6 — invalidate config pickers at session boundaries (F7)
+
+- **Root cause:** `SessionCreated` reset session-projected values but left the config overlay and its pending request metadata alive.
+- **Delivered behavior:** `UiState::apply_notification(SessionCreated)` closes only `PickerKind::Config` and clears `pending_config_set`; the local theme picker remains available. The App-level regression test exercises the routed notification and verifies the picker is gone.
+- **Performed checks and results:** `cargo test -p cyril --bin cyril app::tests::session_created_closes_open_config_picker -- --exact` PASS; `git diff --check` PASS; `cargo fmt --all` PASS. Checked revision: working tree after `cargo fmt --all`.
+- **Unresolved failures:** none.
+
+### Repair re-review
+
+PENDING — perform scoped review of R5/R6 after the repair commit and rerun the required repository gates before publication.
