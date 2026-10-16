@@ -2912,8 +2912,6 @@ mod tests {
     #[cfg(feature = "kas")]
     #[test]
     fn kas_2311_model_catalog_carries_labels_descriptions_and_effort() {
-        use serde::Deserialize;
-
         let capture = include_str!(
             "../../../../../experiments/conductor-spike/audit-2.31.1/live/kas-live-sweep-2.31.1.jsonl"
         );

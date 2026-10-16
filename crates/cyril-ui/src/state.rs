@@ -5954,7 +5954,10 @@ mod tests {
                     key: "thinking".into(),
                     label: "Thinking".into(),
                     value: Some(v.into()),
-                    options: vec!["on".into(), "off".into()],
+                    options: vec![
+                        ConfigOptionValue::new("on", "on"),
+                        ConfigOptionValue::new("off", "off"),
+                    ],
                 })
                 .into_iter()
                 .collect::<Vec<_>>()

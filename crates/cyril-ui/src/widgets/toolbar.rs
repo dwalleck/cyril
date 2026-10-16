@@ -862,7 +862,8 @@ mod tests {
     fn thinking_segment_per_state() {
         use crate::state::UiState;
         use cyril_core::types::{
-            ConfigOption, EffortUpdate, Notification, ReasoningInfo, ReasoningSupport,
+            ConfigOption, ConfigOptionValue, EffortUpdate, Notification, ReasoningInfo,
+            ReasoningSupport,
         };
 
         let metadata = |support, enabled| Notification::MetadataUpdated {
@@ -880,7 +881,10 @@ mod tests {
                 key: "thinking".into(),
                 label: "Thinking".into(),
                 value: Some(value.into()),
-                options: vec!["on".into(), "off".into()],
+                options: vec![
+                    ConfigOptionValue::new("on", "on"),
+                    ConfigOptionValue::new("off", "off"),
+                ],
             }])
         };
         // (label, notification, expected segment)
