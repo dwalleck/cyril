@@ -104,3 +104,23 @@ Result: all acceptance criteria exercised live; no defects found.
 DONE — scoped review after repair commit `d87fc6bc`, independent of the initial finding report. Scope: R5/R6 production paths, picker lifecycle, pending-request interaction, and regression tests. The current-model predicate blocks the verified delayed-ack standalone reproduction; the exact pending model request is the only pre-ack exception and preserves the approved chained race. `SessionCreated` closes only config pickers and clears pending acknowledgements, while theme picker behavior remains unchanged. No additional production defect or invalidated prior conclusion found.
 
 Final checks at `d87fc6bc`: `cargo test --workspace` PASS; `cargo clippy --workspace --all-targets -- -D warnings` PASS; `cargo fmt --all -- --check` PASS; `git diff --check` PASS.
+
+## Review round 3 — Codex PR feedback
+
+| finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
+|---|---|---|---|---|---|---|---|
+| F8 | A failed `set_config_option` model request leaves `pending_config_set` live, so confirming the chained effort picker can send effort for a model that never became active. Clear the pending request and invalidate the chained picker on failure. | chatgpt-codex-connector[bot] | Verified | Code reading confirmed `BridgeError { operation: "set_config_option" }` previously only added a message; the new `failed_model_set_closes_chained_effort_picker` regression drives model confirm → failure → late Enter and observes no effort dispatch. | Accept | R7: handle failed config-set notifications in `UiState`, clear the pending request, and close the effort picker only when it is chained for the failed model. | blocking — a failed model request must not leave an actionable effort step |
+| F9 | The chained effort picker opens before the model-set acknowledgement; confirming it can dispatch `effortLevel` against the previous model. Wait for `ConfigOptionSet` read-back before enabling effort confirmation. | chatgpt-codex-connector[bot] | Verified | Code reading and the existing `chained_effort_confirm_before_ack_sends_both_sets` regression confirm the pre-ack path is intentional and currently dispatches model then effort. The proposed acknowledgement-gated flow changes the approved round-2 interaction and user-visible timing. | ESCALATE — user input required | N/A — do not change the approved pre-ack interaction without product approval. | blocking — choose between preserving the approved immediate chain or delaying effort confirmation until model read-back |
+
+### Repair
+
+#### R7 — clear failed KAS config requests (F8)
+
+- **Root cause:** `UiState::BridgeError` rendered the failure but did not reconcile the request-side `pending_config_set`; the chained effort picker remained actionable after the model set failed.
+- **Delivered behavior:** `UiState::config_set_failed` consumes the failed pending request. For a failed model request, it closes only the matching `effortLevel` picker whose subject is that requested model; unrelated pickers remain untouched. The App-level regression proves a late Enter cannot dispatch an effort set.
+- **Performed checks and results:** commit `dc9a82f7`; `env -u CARGO_TARGET_DIR cargo test -p cyril --bin cyril app::tests::failed_model_set_closes_chained_effort_picker -- --exact` PASS; `env -u CARGO_TARGET_DIR cargo test -p cyril -p cyril-ui` PASS; `env -u CARGO_TARGET_DIR cargo clippy --all-targets -- -D warnings` PASS; `git diff --check` PASS; `cargo fmt --all` PASS.
+- **Unresolved failures:** none for F8. F9 remains pending user decision.
+
+### Pending user decision
+
+F9 is intentionally not replied to or changed: gating the effort picker on model read-back changes the approved pre-ack interaction and needs product direction.
