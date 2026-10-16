@@ -490,6 +490,7 @@ mod tests {
                 filtered_indices: vec![0, 1, 2, 3],
                 selected: 1,
                 config_id: None,
+                subject: None,
             }),
             session_label: Some("theme-contract".into()),
             ..MockTuiState::default()

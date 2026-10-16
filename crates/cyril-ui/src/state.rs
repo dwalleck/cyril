@@ -2608,6 +2608,7 @@ impl UiState {
             selected: 0,
             kind: PickerKind::Agent,
             config_id: None,
+            subject: None,
         });
         self.sync_theme_preview();
     }
@@ -2619,11 +2620,17 @@ impl UiState {
     /// exists only for v2 agent titles, and these rows arrive from the
     /// command layer with `is_current` already set from the snapshot's
     /// `currentValue` — honored exactly as sent.
+    /// `subject` is the model an effort picker was opened for (`Some` iff
+    /// `config_id == effortLevel`, review round 1 F1): effort rows come from
+    /// that model's effort metadata, and the confirm path revalidates
+    /// against the same source — the picker carries the id because a chained
+    /// picker can outlive the pre-switch snapshot.
     pub fn show_config_picker(
         &mut self,
         config_id: String,
         title: String,
         options: Vec<CommandOption>,
+        subject: Option<String>,
     ) {
         let filtered_indices: Vec<usize> = (0..options.len()).collect();
         self.picker = Some(PickerState {
@@ -2634,6 +2641,7 @@ impl UiState {
             selected: 0,
             kind: PickerKind::Config,
             config_id: Some(config_id),
+            subject,
         });
         self.sync_theme_preview();
     }
@@ -2668,6 +2676,7 @@ impl UiState {
             selected,
             kind: PickerKind::Theme,
             config_id: None,
+            subject: None,
         });
         self.sync_theme_preview();
     }
@@ -2755,6 +2764,7 @@ impl UiState {
             title: picker.title.clone(),
             value,
             config_id: picker.config_id.clone(),
+            subject: picker.subject.clone(),
         })
     }
 
@@ -6369,6 +6379,7 @@ mod tests {
                     is_current: true,
                 },
             ],
+            None,
         );
         let picker = state.picker().expect("config picker open");
         assert_eq!(picker.kind, PickerKind::Config);
@@ -6385,6 +6396,7 @@ mod tests {
         assert_eq!(confirmation.title, "model");
         assert_eq!(confirmation.value, "claude-sonnet-5.5");
         assert_eq!(confirmation.config_id.as_deref(), Some("model"));
+        assert_eq!(confirmation.subject, None, "only effort pickers carry one");
         assert!(state.picker().is_none(), "confirm closes the picker");
     }
 
@@ -6425,6 +6437,7 @@ mod tests {
         assert_eq!(confirmation.kind, PickerKind::Agent);
         assert_eq!(confirmation.title, "model");
         assert_eq!(confirmation.config_id, None);
+        assert_eq!(confirmation.subject, None);
     }
 
     /// The UI-side catalog replaces wholesale per notification — chain data

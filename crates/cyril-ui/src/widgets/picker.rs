@@ -184,6 +184,7 @@ mod tests {
             filtered_indices: vec![0, 1],
             selected: 0,
             config_id: None,
+            subject: None,
         };
 
         let backend = TestBackend::new(80, 24);

@@ -269,6 +269,13 @@ pub enum CommandResultKind {
         config_id: String,
         title: String,
         options: Vec<crate::types::CommandOption>,
+        /// The model an effort picker was opened for — `Some` iff
+        /// `config_id == effortLevel` (cyril-vh69, review round 1 F1).
+        /// Effort rows come from that model's `EffortMetadata`, never from
+        /// a catalog select option, so the confirm path revalidates the
+        /// value against the same source; the picker carries the id because
+        /// a chained picker can outlive the pre-switch snapshot.
+        subject: Option<String>,
     },
     /// Open the `/review` consent form, prefilled from the arguments. The App
     /// owns the form, the git probes and the launch, so the command returns
@@ -317,16 +324,20 @@ impl CommandResult {
     }
 
     /// Open the picker over a KAS session config select (cyril-vh69).
+    /// `subject` is the model an effort picker was opened for (`Some` iff
+    /// `config_id == effortLevel`); `None` for model/mode.
     pub fn show_config_picker(
         config_id: impl Into<String>,
         title: impl Into<String>,
         options: Vec<crate::types::CommandOption>,
+        subject: Option<String>,
     ) -> Self {
         Self {
             kind: CommandResultKind::ShowConfigPicker {
                 config_id: config_id.into(),
                 title: title.into(),
                 options,
+                subject,
             },
         }
     }
@@ -2224,6 +2235,7 @@ mod config_command_tests {
                 config_id,
                 title,
                 options,
+                ..
             }) => (config_id, title, options),
             other => panic!("expected ShowConfigPicker, got {other:?}"),
         }

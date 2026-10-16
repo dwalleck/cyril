@@ -2044,7 +2044,14 @@ impl App {
     ///    picker holds a point-in-time copy, and a catalog rebuild while it
     ///    was open may have retracted the value — KAS accepts unoffered
     ///    values silently and fails the next prompt, so a vanished value is
-    ///    refused with a message and NEVER sent.
+    ///    refused with a message and NEVER sent. The revalidation source is
+    ///    per config id (review round 1, F1): `model`/`mode` rows come from
+    ///    the catalog option, so membership is `contains_value`; effort rows
+    ///    come from the model's `EffortMetadata` — no catalog ever carries
+    ///    an `effortLevel` select option (the 2.31.1 capture has none), and
+    ///    a chained picker can outlive the pre-switch snapshot — so effort
+    ///    revalidates against the latest snapshot's `EffortMetadata` of the
+    ///    model the picker was opened for (the picker carries that id).
     /// 2. **Dispatch** exactly one `SetConfigOption` — never `ExecuteCommand`
     ///    (the v2 path), never `SetModel` (no producer may exist). The
     ///    request is noted UI-side so the ack's read-back can log a
@@ -2067,9 +2074,31 @@ impl App {
             return Ok(());
         };
         let snapshot = self.session.config_options().cloned();
-        let still_offered = snapshot
-            .as_ref()
-            .is_some_and(|s| s.contains_value(&config_id, &confirmation.value));
+        let still_offered = if config_id == EFFORT_CONFIG_ID {
+            // Effort rows came from the model's EffortMetadata, not a
+            // catalog select option — revalidate against the same source:
+            // the LATEST snapshot's EffortMetadata of the model the picker
+            // was opened for. A stale effort (the model's metadata gone or
+            // the level absent) keeps the refusal below.
+            match confirmation.subject.as_deref() {
+                Some(model_id) => snapshot.as_ref().is_some_and(|s| {
+                    s.effort_for_model(model_id).is_some_and(|meta| {
+                        meta.levels().iter().any(|level| level == &confirmation.value)
+                    })
+                }),
+                None => {
+                    // PickerConfirmation carries Some iff kind == Config and
+                    // config_id == effortLevel — reaching this is a
+                    // construction bug, not user input.
+                    tracing::error!("effort picker confirm without a subject model");
+                    false
+                }
+            }
+        } else {
+            snapshot
+                .as_ref()
+                .is_some_and(|s| s.contains_value(&config_id, &confirmation.value))
+        };
         if !still_offered {
             tracing::warn!(
                 config_id,
@@ -2093,10 +2122,14 @@ impl App {
             && let Some(snapshot) = snapshot.as_ref()
             && let Some(options) = snapshot.effort_picker_options(&confirmation.value)
         {
+            // The chained picker carries the just-confirmed model id: its
+            // confirm revalidates against THAT model's EffortMetadata in
+            // whatever snapshot is latest then (review round 1, F1).
             self.ui_state.show_config_picker(
                 EFFORT_CONFIG_ID.to_string(),
                 "effort".to_string(),
                 options,
+                Some(confirmation.value.clone()),
             );
         }
         Ok(())
@@ -2321,10 +2354,15 @@ impl App {
                 config_id,
                 title,
                 options,
+                subject,
             } => {
                 // The rows arrive validated and `is_current`-marked from the
-                // session's config snapshot; UiState opens them as sent.
-                self.ui_state.show_config_picker(config_id, title, options);
+                // session's config snapshot; UiState opens them as sent. The
+                // subject (the model an effort picker was opened for) rides
+                // along so the confirm path revalidates against the same
+                // source the rows came from.
+                self.ui_state
+                    .show_config_picker(config_id, title, options, subject);
             }
             CommandResultKind::Review { args } => self.open_review(args),
             CommandResultKind::ReviewResume { selector } => self.open_resume(selector),
@@ -8805,6 +8843,7 @@ mod tests {
                 config_row("auto", true),
                 config_row("claude-sonnet-5.5", false),
             ],
+            None,
         );
         app.ui_state.picker_select_next();
         app.handle_picker_key(enter()).await.expect("model confirm");
@@ -8860,6 +8899,7 @@ mod tests {
                 config_row("auto", true),
                 config_row("claude-sonnet-5.5", false),
             ],
+            None,
         );
         // selected starts at row 0 = auto.
         app.handle_picker_key(enter()).await.expect("auto confirm");
@@ -8879,6 +8919,111 @@ mod tests {
         ));
     }
 
+    /// F2/R1 (review round 1): post-ack effort confirm. The current model
+    /// carries effort metadata, and NO catalog ever carries an
+    /// `effortLevel` select option (the 2.31.1 capture has none) — the rows
+    /// came from the model's EffortMetadata, so the confirm must revalidate
+    /// against that metadata and send exactly one effortLevel frame.
+    #[tokio::test]
+    async fn effort_confirm_sends_one_effort_level_set() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        // Post-ack: the model set has been read back; claude-sonnet-5.5 is
+        // the catalog's currentValue.
+        let mut catalog = kas_model_catalog();
+        catalog[0].value = Some("claude-sonnet-5.5".into());
+        app.session
+            .apply_notification(&Notification::ConfigOptionsUpdated(catalog));
+        let rows = app
+            .session
+            .config_options()
+            .and_then(|snapshot| snapshot.effort_picker_options("claude-sonnet-5.5"))
+            .expect("sonnet 5.5 carries effort levels");
+        app.ui_state.show_config_picker(
+            EFFORT_CONFIG_ID.to_string(),
+            "effort".to_string(),
+            rows,
+            Some("claude-sonnet-5.5".to_string()),
+        );
+        let picked = {
+            let picker = app.ui_state.picker().expect("effort picker open");
+            picker.options[picker.filtered_indices[picker.selected]]
+                .value
+                .clone()
+        };
+        app.handle_picker_key(enter())
+            .await
+            .expect("effort confirm");
+
+        match rx.try_recv() {
+            Ok(BridgeCommand::SetConfigOption { config_id, value }) => {
+                assert_eq!(config_id, EFFORT_CONFIG_ID);
+                assert_eq!(value, picked);
+            }
+            other => panic!("expected one SetConfigOption, got {other:?}"),
+        }
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "exactly one frame"
+        );
+    }
+
+    /// F2/R1 (review round 1): chained pre-ack race — the effort picker
+    /// opens from the PRE-switch snapshot and the user confirms before any
+    /// ack round-trips. Both frames must be sent: model, then effortLevel.
+    #[tokio::test]
+    async fn chained_effort_confirm_before_ack_sends_both_sets() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![
+                config_row("auto", true),
+                config_row("claude-sonnet-5.5", false),
+            ],
+            None,
+        );
+        app.ui_state.picker_select_next();
+        app.handle_picker_key(enter())
+            .await
+            .expect("model confirm");
+        // The effort picker chained from the PRE-switch snapshot; confirm it
+        // before any ack arrives.
+        let picked = {
+            let picker = app.ui_state.picker().expect("effort picker chained");
+            picker.options[picker.filtered_indices[picker.selected]]
+                .value
+                .clone()
+        };
+        app.handle_picker_key(enter())
+            .await
+            .expect("effort confirm");
+
+        match rx.try_recv() {
+            Ok(BridgeCommand::SetConfigOption { config_id, value }) => {
+                assert_eq!(config_id, MODEL_CONFIG_ID);
+                assert_eq!(value, "claude-sonnet-5.5");
+            }
+            other => panic!("expected the model set first, got {other:?}"),
+        }
+        match rx.try_recv() {
+            Ok(BridgeCommand::SetConfigOption { config_id, value }) => {
+                assert_eq!(config_id, EFFORT_CONFIG_ID);
+                assert_eq!(value, picked);
+            }
+            other => panic!("expected the effortLevel set second, got {other:?}"),
+        }
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "exactly two frames"
+        );
+    }
+
     /// C7: the picker holds a point-in-time copy — a value the LATEST
     /// snapshot no longer offers is refused with a message and never sent
     /// (KAS accepts garbage silently, so the client validates).
@@ -8889,6 +9034,7 @@ mod tests {
             MODEL_CONFIG_ID.to_string(),
             "model".to_string(),
             vec![config_row("ghost-model", false)],
+            None,
         );
         app.handle_picker_key(enter()).await.expect("stale confirm");
 

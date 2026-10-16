@@ -649,6 +649,7 @@ impl Command for ModelCommand {
                 MODEL_CONFIG_ID,
                 "model",
                 options,
+                None,
             )),
             None => {
                 // The KAS catalog always carries a model select; its absence
@@ -699,10 +700,14 @@ impl Command for EffortCommand {
             ));
         };
         match snapshot.effort_picker_options(model_id) {
+            // The picker carries the model it was opened for: confirm-time
+            // revalidation reads that model's EffortMetadata, not a catalog
+            // option (review round 1, F1).
             Some(options) => Ok(CommandResult::show_config_picker(
                 EFFORT_CONFIG_ID,
                 "effort",
                 options,
+                Some(model_id.to_string()),
             )),
             None => Ok(CommandResult::system_message(format!(
                 "The current model ({model_id}) has no effort levels — /effort applies to models with effort support."
@@ -745,6 +750,7 @@ impl Command for ModeCommand {
                 MODE_CONFIG_ID,
                 "mode",
                 options,
+                None,
             )),
             None => {
                 tracing::warn!("KAS config catalog has no mode select to offer");

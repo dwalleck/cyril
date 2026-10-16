@@ -746,6 +746,12 @@ pub struct PickerState {
     /// `mode`) — `Some` iff `kind == PickerKind::Config` (cyril-vh69). The
     /// confirm path dispatches on this id, never on the display title.
     pub config_id: Option<String>,
+    /// The model an effort picker was opened for — `Some` iff
+    /// `config_id == effortLevel` (cyril-vh69, review round 1 F1). Effort
+    /// rows come from that model's effort metadata, so the confirm path
+    /// revalidates against the same source; the picker carries the id
+    /// because a chained picker can outlive the pre-switch snapshot.
+    pub subject: Option<String>,
 }
 
 /// What confirming a picker selected (cyril-vh69).
@@ -761,6 +767,9 @@ pub struct PickerConfirmation {
     pub title: String,
     pub value: String,
     pub config_id: Option<String>,
+    /// The model an effort picker was opened for — `Some` iff
+    /// `config_id == effortLevel` (cyril-vh69, review round 1 F1).
+    pub subject: Option<String>,
 }
 
 /// Hooks panel overlay state (read-only table display for `/hooks` command).
