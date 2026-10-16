@@ -2084,7 +2084,9 @@ impl App {
             match confirmation.subject.as_deref() {
                 Some(model_id) => snapshot.as_ref().is_some_and(|s| {
                     s.effort_for_model(model_id).is_some_and(|meta| {
-                        meta.levels().iter().any(|level| level == &confirmation.value)
+                        meta.levels()
+                            .iter()
+                            .any(|level| level == &confirmation.value)
                     })
                 }),
                 None => {
@@ -8990,9 +8992,7 @@ mod tests {
             None,
         );
         app.ui_state.picker_select_next();
-        app.handle_picker_key(enter())
-            .await
-            .expect("model confirm");
+        app.handle_picker_key(enter()).await.expect("model confirm");
         // The effort picker chained from the PRE-switch snapshot; confirm it
         // before any ack arrives.
         let picked = {
