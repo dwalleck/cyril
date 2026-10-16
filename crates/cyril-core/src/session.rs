@@ -53,6 +53,14 @@ pub struct SessionController {
     /// Extended-thinking state of the current model (cyril-k3lz), derived by
     /// `ThinkingState::apply_notification`; read by `/thinking`.
     thinking: ThinkingState,
+    /// The latest KAS session config catalog (cyril-vh69 C3), replaced
+    /// wholesale on every `ConfigOptionsUpdated`/`ConfigOptionSet` — the
+    /// catalog always arrives complete, so there is nothing to merge. `None`
+    /// before the first catalog lands (the wire sends it just after
+    /// `session/new`) and after `SessionCreated`/`BridgeDisconnected` reset
+    /// it. `Option`, not an empty snapshot: "not reported yet" and "reported
+    /// empty" are different facts (the powers precedent above).
+    config_options: Option<KasConfigSnapshot>,
 }
 
 impl SessionController {
@@ -76,6 +84,7 @@ impl SessionController {
             kas_hooks: Vec::new(),
             powers: None,
             thinking: ThinkingState::Unreported,
+            config_options: None,
         }
     }
 
@@ -145,6 +154,14 @@ impl SessionController {
     /// Extended-thinking state of the current model (cyril-k3lz).
     pub fn thinking(&self) -> &ThinkingState {
         &self.thinking
+    }
+
+    /// The latest KAS session config catalog (cyril-vh69), or `None` before
+    /// the agent reports one and after a session boundary resets it. Read by
+    /// the KAS-only `/model` `/effort` `/mode` commands and the App's
+    /// picker-confirm revalidation.
+    pub fn config_options(&self) -> Option<&KasConfigSnapshot> {
+        self.config_options.as_ref()
     }
 
     /// Resolve a user-typed hook reference to the composite id that
@@ -283,9 +300,15 @@ impl SessionController {
             }
             Notification::ConfigOptionsUpdated(options)
             | Notification::ConfigOptionSet { options, .. } => {
-                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                if let Some(model_opt) = options.iter().find(|o| o.key == MODEL_CONFIG_ID) {
                     self.cached_model = model_opt.value.clone();
                 }
+                // Wholesale replacement, never a merge (cyril-vh69 C3/C4):
+                // every config notification carries the complete rebuilt
+                // catalog, so the offered model list, the current value, and
+                // the per-model effort metadata swap atomically — a model
+                // switch can never leak stale effort across (cyril-838u).
+                self.config_options = Some(KasConfigSnapshot::new(options.clone()));
                 true
             }
             Notification::CommandsUpdated { commands, .. } => {
@@ -359,6 +382,9 @@ impl SessionController {
                 self.pending_metering = None;
                 self.pending_refusal = false;
                 self.steering_unsupported = false;
+                // The new session reports its own config catalog just after
+                // creation (cyril-vh69); the old session's must not linger.
+                self.config_options = None;
                 self.status = SessionStatus::Active;
                 true
             }
@@ -412,6 +438,9 @@ impl SessionController {
                 // A dead connection has no live context — clear it so a consumer
                 // doesn't read a stale value as current (mirrors UiState).
                 self.context_usage = None;
+                // Same discipline for the config catalog (cyril-vh69): a
+                // disconnected agent's offers are not validatable.
+                self.config_options = None;
                 self.status = SessionStatus::Disconnected;
                 true
             }
@@ -1498,5 +1527,108 @@ mod thinking_tests {
             ctrl.apply_notification(notification);
             assert_eq!(ctrl.thinking(), &want, "KAS step {step}");
         }
+    }
+}
+
+#[cfg(test)]
+mod config_options_tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+    use crate::types::ConfigOptionValue;
+
+    fn catalog(model_value: &str, extra_key: &str) -> Vec<ConfigOption> {
+        vec![
+            ConfigOption {
+                key: MODEL_CONFIG_ID.into(),
+                label: "Model".into(),
+                value: Some(model_value.into()),
+                options: vec![ConfigOptionValue::new(model_value, model_value)],
+            },
+            ConfigOption {
+                key: extra_key.into(),
+                label: extra_key.into(),
+                value: None,
+                options: vec![],
+            },
+        ]
+    }
+
+    fn session_created(id: &str) -> Notification {
+        Notification::SessionCreated {
+            session_id: SessionId::new(id),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        }
+    }
+
+    /// cyril-vh69 C3: the snapshot replaces wholesale on every config
+    /// notification and resets on session boundaries; unrelated notifications
+    /// leave it alone.
+    #[test]
+    fn config_options_snapshot_lifecycle() {
+        let mut ctrl = SessionController::new();
+        assert!(
+            ctrl.config_options().is_none(),
+            "no snapshot before the first catalog"
+        );
+
+        // Replace on ConfigOptionsUpdated.
+        assert!(
+            ctrl.apply_notification(&Notification::ConfigOptionsUpdated(catalog("auto", "mode")))
+        );
+        let snapshot = ctrl.config_options().expect("catalog replaces in");
+        assert_eq!(snapshot.current_model(), Some("auto"));
+        assert!(snapshot.option("mode").is_some());
+        assert_eq!(
+            ctrl.current_model(),
+            Some("auto"),
+            "cached model still tracks the catalog"
+        );
+
+        // Replace on ConfigOptionSet — wholesale, not a merge: the second
+        // catalog's extra key is the ONLY extra key present.
+        assert!(ctrl.apply_notification(&Notification::ConfigOptionSet {
+            config_id: MODEL_CONFIG_ID.into(),
+            options: catalog("claude-sonnet-5.5", "effortLevel"),
+        }));
+        let snapshot = ctrl.config_options().expect("catalog replaces in");
+        assert_eq!(snapshot.current_model(), Some("claude-sonnet-5.5"));
+        assert!(
+            snapshot.option("mode").is_none(),
+            "wholesale replacement, never a merge"
+        );
+        assert!(snapshot.option("effortLevel").is_some());
+
+        // Unrelated notifications leave the snapshot untouched.
+        ctrl.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("spec"),
+        });
+        assert_eq!(
+            ctrl.config_options()
+                .and_then(KasConfigSnapshot::current_model),
+            Some("claude-sonnet-5.5"),
+            "unrelated notifications do not touch the snapshot"
+        );
+
+        // Reset on SessionCreated: the new session reports its own catalog.
+        ctrl.apply_notification(&session_created("s2"));
+        assert!(
+            ctrl.config_options().is_none(),
+            "SessionCreated resets the snapshot"
+        );
+
+        // Reset on BridgeDisconnected.
+        ctrl.apply_notification(&Notification::ConfigOptionsUpdated(catalog("auto", "mode")));
+        assert!(ctrl.config_options().is_some());
+        ctrl.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        });
+        assert!(
+            ctrl.config_options().is_none(),
+            "BridgeDisconnected resets the snapshot"
+        );
     }
 }
