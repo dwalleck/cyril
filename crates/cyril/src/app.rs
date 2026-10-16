@@ -2054,7 +2054,8 @@ impl App {
     ///    model the picker was opened for (the picker carries that id).
     /// 2. **Dispatch** exactly one `SetConfigOption` — never `ExecuteCommand`
     ///    (the v2 path), never `SetModel` (no producer may exist). The
-    ///    request is noted UI-side so the ack's read-back can log a
+    ///    request is noted UI-side AFTER a successful send (a failed send
+    ///    leaves no stale pending entry) so the ack's read-back can log a
     ///    returned≠requested mismatch; nothing applies the value
     ///    optimistically.
     /// 3. **Chain**: confirming a model whose snapshot entry carries effort
@@ -2110,14 +2111,17 @@ impl App {
             );
             return Ok(());
         }
-        self.ui_state
-            .note_config_set_requested(config_id.clone(), confirmation.value.clone());
         self.bridge_sender
             .send(BridgeCommand::SetConfigOption {
                 config_id: config_id.clone(),
                 value: confirmation.value.clone(),
             })
             .await?;
+        // Note the request side only after a successful send: a failed send
+        // must leave no stale pending entry for the next unrelated ack to
+        // compare against (review round 1, F4).
+        self.ui_state
+            .note_config_set_requested(config_id.clone(), confirmation.value.clone());
         if config_id == MODEL_CONFIG_ID
             && let Some(snapshot) = snapshot.as_ref()
             && let Some(options) = snapshot.effort_picker_options(&confirmation.value)
