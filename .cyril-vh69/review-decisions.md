@@ -55,4 +55,23 @@ DONE — orchestrator (independent of the repair implementer), 2026-10-15. Scope
 - One edge considered and dismissed: confirming effort for a subject model while the latest snapshot's current model differs is unreachable within one cyril session (single client, one open picker; the model changes only through this same confirm path, whose ack makes current == subject).
 - Result: no new findings. Full workspace gate re-run by the reviewer on 3ce3ff3e: `cargo test --workspace` 0 failures, `clippy --workspace --all-targets -- -D warnings` clean, `fmt --check` clean. Initial full review (independent-review.md) remains valid for all unrepaired scope.
 
-Remaining: C13 live smoke (user/implementer, per plan) — including recording whether a post-switch catalog ever carries an `effortLevel` select option.
+Remaining: C13 live smoke — DONE 2026-10-15 (see below).
+
+## C13 live smoke record — 2026-10-15, kiro-cli 2.31.1, branch head 3ce3ff3e (+records commits)
+
+Driver: tmux + sent keystrokes against `target/debug/cyril --features kas --agent-engine kas` (IAM Identity Center login active). `KIRO_ACP_RECORD_PATH` produced no trace under the KAS engine (the hook is v1/v2-TUI-only), so wire-level statements below rest on the verified read-back feed paths, not a frame capture.
+
+KAS session (`sess_06673024-…`):
+- Session start: toolbar `vibe · auto` fed from the initial `config_option_update` catalog (C11).
+- `/model`: picker over the offered models, `auto ✓` marked AND preselected (C4 + R4 live).
+- Confirmed `claude-sonnet-5.5` → "Model set to claude-sonnet-5.5." (read-back message, C10); toolbar → `claude-sonnet-5.5 ◇ high`; effort chain opened with `low/medium/high✓/xhigh/max`, default marked and preselected (C8).
+- Confirmed `max` → "Effort set to max.", toolbar `◇ max` — the F1 repair path live (pre-repair this confirm was refused).
+- `/effort` standalone: opened with the model's levels; marks the model DEFAULT (`high`), not the current `max` — per the approved "default marked" contract; noted as a UX observation, not a defect.
+- `/mode`: Default✓/Spec/Quick Spec/Bug Fix/Plan/Autonomous + custom agents, wire labels/descriptions; confirmed Plan → "Mode set to plan.", toolbar `plan`.
+- Re-selected the current model (assumption 3): allowed, re-sends the set, chains effort again.
+- Switched back to `auto`: "Model set to auto.", effort chip CLEARED, no chain opened (C9 claude→auto, C8 no-effort branch).
+- v2 regression (default engine, separate session): `/model` via the kiro.dev path with credit badges and Agent-picker behavior unchanged (C12 live).
+
+Open wire question ANSWERED (F1 follow-up): post-switch catalogs DO carry an `effortLevel` select option — the effort chip showed `high` immediately after the model-set ack, and the only KAS feed for that chip is the config-notification arm reading an `effortLevel` option's `currentValue` (verified in the round-1 review). The round-1 inference from the 2.31.1 sweep capture (no catalog ever carries it) is explained: the sweep only ever set a bogus model, so it never captured a successful post-switch catalog. This does not weaken the R1 repair: the chained pre-ack race (pre-switch snapshot from `auto` has no `effortLevel` option) still requires EffortMetadata-sourced revalidation, and per-source revalidation remains the correct contract.
+
+Result: all acceptance criteria exercised live; no defects found.
