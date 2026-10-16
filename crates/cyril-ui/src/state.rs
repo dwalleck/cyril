@@ -76,6 +76,17 @@ pub struct UiState {
     /// Extended-thinking state of the current model (cyril-k3lz), derived by
     /// `ThinkingState::apply_notification`; drives the toolbar segment.
     thinking: ThinkingState,
+    /// The latest KAS config catalog seen (cyril-vh69), wholesale-replaced on
+    /// every config notification — the chain data a `PickerKind::Config`
+    /// confirm reads (which model carries effort metadata). Empty before the
+    /// first catalog. Session-side validation lives in
+    /// `SessionController::config_options`; this copy is UI-side only.
+    config_catalog: Vec<ConfigOption>,
+    /// The last `SetConfigOption` the App dispatched (cyril-vh69) — the
+    /// request side of the read-back check: when the ack returns a different
+    /// `currentValue` than requested (KAS silently ignores invalid effort
+    /// levels), the mismatch is logged and the RETURNED value is what shows.
+    pending_config_set: Option<(String, String)>,
     context_usage: Option<f64>,
     /// KAS categorized context breakdown (KAS-2b, cyril-5et2). Retain-last: a
     /// `context_usage` frame that omits the breakdown updates `context_usage`
@@ -423,6 +434,8 @@ impl UiState {
             current_model: None,
             effort: None,
             thinking: ThinkingState::Unreported,
+            config_catalog: Vec::new(),
+            pending_config_set: None,
             context_usage: None,
             context_breakdown: None,
             credit_usage: None,
@@ -1022,12 +1035,45 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options)
             | Notification::ConfigOptionSet { options, .. } => {
+                // The latest catalog, wholesale (cyril-vh69): never a merge —
+                // the same discipline as the session-side snapshot, so a
+                // model switch swaps offered values, current values, and
+                // effort metadata atomically.
+                self.config_catalog.clone_from(options);
+
                 let model_changed =
-                    if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                    if let Some(model_opt) = options.iter().find(|o| o.key == MODEL_CONFIG_ID) {
                         // Route through set_current_model so the "clear effort on a
                         // real model change" invariant lives in exactly one place.
                         self.set_current_model(model_opt.value.clone());
                         true
+                    } else {
+                        false
+                    };
+                // KAS mode chip feed (cyril-vh69 C11): KAS emits no
+                // `current_mode_update`; the catalog's `mode.currentValue`
+                // is the only source — always the RETURNED value, never the
+                // requested one (KAS coerces an unknown mode to `vibe`).
+                let mode_changed =
+                    if let Some(mode_opt) = options.iter().find(|o| o.key == MODE_CONFIG_ID) {
+                        let changed = self.current_mode != mode_opt.value;
+                        self.current_mode = mode_opt.value.clone();
+                        changed
+                    } else {
+                        false
+                    };
+                // KAS effort chip feed (cyril-vh69 C9, absorbs cyril-838u):
+                // repopulation comes AFTER the model feed, so
+                // set_current_model's clear-on-change wins within one frame —
+                // a frame that switches the model and carries no effortLevel
+                // leaves effort cleared (auto), and a later frame repopulates.
+                // Unknown levels render verbatim via EffortLevel::Other.
+                let effort_changed =
+                    if let Some(effort_opt) = options.iter().find(|o| o.key == EFFORT_CONFIG_ID) {
+                        let level = effort_opt.value.as_deref().and_then(EffortLevel::from_wire);
+                        let changed = self.effort != level;
+                        self.effort = level;
+                        changed
                     } else {
                         false
                     };
@@ -1044,7 +1090,22 @@ impl UiState {
                     };
                     self.add_system_message(text);
                 }
-                model_changed || thinking_acked
+                // Read-back confirmations (cyril-vh69 C10): a ConfigOptionSet
+                // for model/mode/effortLevel posts the RETURNED currentValue,
+                // so a set KAS silently ignored (bogus effort level — SUCCESS
+                // with an unchanged currentValue) SHOWS the unchanged value.
+                let config_acked =
+                    if let Notification::ConfigOptionSet { config_id, .. } = notification {
+                        match config_id.as_str() {
+                            MODEL_CONFIG_ID | MODE_CONFIG_ID | EFFORT_CONFIG_ID => {
+                                self.ack_config_set(config_id, options)
+                            }
+                            _ => false,
+                        }
+                    } else {
+                        false
+                    };
+                model_changed || mode_changed || effort_changed || thinking_acked || config_acked
             }
             // v2 `reasoning` ack (cyril-k3lz B2). The toolbar follows the next
             // metadata snapshot; the message confirms immediately.
@@ -1608,6 +1669,62 @@ impl UiState {
             self.effort = None;
         }
         self.current_model = model;
+    }
+
+    /// The latest KAS config catalog seen (cyril-vh69) — wholesale-replaced
+    /// per config notification. The App reads it for the model→effort picker
+    /// chain after a `PickerKind::Config` confirm.
+    pub fn config_catalog(&self) -> &[ConfigOption] {
+        &self.config_catalog
+    }
+
+    /// Record the request side of a `SetConfigOption` dispatch (cyril-vh69).
+    /// The App calls this when it sends; the ack arm compares the RETURNED
+    /// `currentValue` against it (debug-logging a mismatch) and always shows
+    /// the returned value — nothing here applies the requested value
+    /// optimistically.
+    pub fn note_config_set_requested(&mut self, config_id: String, value: String) {
+        self.pending_config_set = Some((config_id, value));
+    }
+
+    /// Post the read-back confirmation for a KAS `ConfigOptionSet`
+    /// (cyril-vh69 C10): the message names the RETURNED `currentValue`, so a
+    /// set the agent silently ignored (a bogus effort level "succeeds" with
+    /// an unchanged value) shows what actually holds — the read-back is the
+    /// falsification surface. Returns whether a message was posted.
+    fn ack_config_set(&mut self, config_id: &str, options: &[ConfigOption]) -> bool {
+        let noun = match config_id {
+            MODEL_CONFIG_ID => "Model",
+            MODE_CONFIG_ID => "Mode",
+            _ => "Effort",
+        };
+        let Some(returned) = options
+            .iter()
+            .find(|o| o.key == config_id)
+            .and_then(|o| o.value.as_deref())
+        else {
+            tracing::debug!(
+                config_id,
+                "config-set ack carries no current value; no confirmation posted"
+            );
+            return false;
+        };
+        if self
+            .pending_config_set
+            .as_ref()
+            .is_some_and(|(id, _)| id == config_id)
+            && let Some((_, requested)) = self.pending_config_set.take()
+            && requested != returned
+        {
+            tracing::debug!(
+                config_id,
+                requested,
+                returned,
+                "set_config_option returned a different value than requested — showing the returned value"
+            );
+        }
+        self.add_system_message(format!("{noun} set to {returned}."));
+        true
     }
 
     /// Add a command output message to the chat.
@@ -2490,6 +2607,33 @@ impl UiState {
             filtered_indices,
             selected: 0,
             kind: PickerKind::Agent,
+            config_id: None,
+        });
+        self.sync_theme_preview();
+    }
+
+    /// Open the picker over a KAS session config select (`/model` `/effort`
+    /// `/mode`, cyril-vh69).
+    ///
+    /// Unlike `show_picker` there is NO `active_option_value` join: that join
+    /// exists only for v2 agent titles, and these rows arrive from the
+    /// command layer with `is_current` already set from the snapshot's
+    /// `currentValue` — honored exactly as sent.
+    pub fn show_config_picker(
+        &mut self,
+        config_id: String,
+        title: String,
+        options: Vec<CommandOption>,
+    ) {
+        let filtered_indices: Vec<usize> = (0..options.len()).collect();
+        self.picker = Some(PickerState {
+            title,
+            options,
+            filter: String::new(),
+            filtered_indices,
+            selected: 0,
+            kind: PickerKind::Config,
+            config_id: Some(config_id),
         });
         self.sync_theme_preview();
     }
@@ -2523,6 +2667,7 @@ impl UiState {
             filtered_indices,
             selected,
             kind: PickerKind::Theme,
+            config_id: None,
         });
         self.sync_theme_preview();
     }
@@ -2594,15 +2739,23 @@ impl UiState {
         self.sync_theme_preview();
     }
 
-    /// Confirm the picker selection. Returns the selected value if any.
     /// Confirm the picker selection and close the dialog.
-    /// Returns (command_name, selected_value) — both are needed by the caller
-    /// to construct the bridge command. Returns None if nothing was selected.
-    pub fn picker_confirm(&mut self) -> Option<(String, String)> {
+    ///
+    /// Returns a [`PickerConfirmation`] carrying the kind, title (the command
+    /// name on the v2 Agent path), selected value, and config id (the
+    /// dispatch key on the KAS Config path) — the caller needs all of them
+    /// to construct the right bridge command. `None` if nothing was
+    /// selected.
+    pub fn picker_confirm(&mut self) -> Option<PickerConfirmation> {
         let picker = self.picker.take()?;
         let idx = picker.filtered_indices.get(picker.selected).copied()?;
         let value = picker.options.get(idx)?.value.clone();
-        Some((picker.title.clone(), value))
+        Some(PickerConfirmation {
+            kind: picker.kind,
+            title: picker.title.clone(),
+            value,
+            config_id: picker.config_id.clone(),
+        })
     }
 
     /// Cancel and close the picker dialog.
@@ -6008,6 +6161,294 @@ mod tests {
         }
     }
 
+    // ── KAS config feed: mode/effort chips, read-back acks, config picker ─
+    // cyril-vh69 C9/C10 (+ the PickerKind::Config plumbing). Oracle: the
+    // design's feed rules (effort clears on a real model switch and
+    // repopulates only from an effortLevel currentValue; every shown value
+    // is the wire's RETURNED currentValue).
+
+    /// A KAS catalog notification: model `model`, optional effortLevel
+    /// current value, mode `vibe`. Mirrors the frame-24 shape — a model
+    /// with effort support carries a separate `effortLevel` select whose
+    /// `currentValue` is the only effort source.
+    fn kas_catalog(model: &str, effort: Option<&str>) -> Notification {
+        let option = |key: &str, value: Option<&str>| ConfigOption {
+            key: key.into(),
+            label: key.into(),
+            value: value.map(str::to_string),
+            options: vec![],
+        };
+        Notification::ConfigOptionsUpdated(vec![
+            option("mode", Some("vibe")),
+            option("model", Some(model)),
+            option("effortLevel", effort),
+        ])
+    }
+
+    /// cyril-vh69 C9: effort never crosses a model switch; repopulation
+    /// comes only from an `effortLevel` currentValue, in the same frame or a
+    /// later one.
+    #[test]
+    fn kas_effort_rederives_across_model_switches() {
+        // auto → claude: effort stays None until the effortLevel
+        // currentValue arrives.
+        let mut state = UiState::new(500);
+        state.apply_notification(&kas_catalog("auto", None));
+        assert_eq!(state.current_model(), Some("auto"));
+        assert_eq!(state.effort(), None, "auto has no effort");
+
+        state.apply_notification(&kas_catalog("claude-sonnet-5.5", None));
+        assert_eq!(state.current_model(), Some("claude-sonnet-5.5"));
+        assert_eq!(
+            state.effort(),
+            None,
+            "a model switch without an effortLevel value leaves effort cleared"
+        );
+
+        // A later frame carrying the level repopulates.
+        state.apply_notification(&kas_catalog("claude-sonnet-5.5", Some("high")));
+        assert_eq!(state.effort(), Some(&EffortLevel::High));
+
+        // claude → claude: the old level clears even though both models
+        // support effort — until the new model's level arrives.
+        state.apply_notification(&kas_catalog("claude-opus-5.5", None));
+        assert_eq!(
+            state.effort(),
+            None,
+            "claude→claude clears the old level (cyril-838u)"
+        );
+        state.apply_notification(&kas_catalog("claude-opus-5.5", Some("medium")));
+        assert_eq!(state.effort(), Some(&EffortLevel::Medium));
+
+        // claude → auto: cleared, and no repopulation follows.
+        state.apply_notification(&kas_catalog("auto", None));
+        assert_eq!(state.effort(), None, "claude→auto clears effort");
+        state.apply_notification(&kas_catalog("auto", None));
+        assert_eq!(state.effort(), None, "auto never repopulates effort");
+    }
+
+    /// cyril-vh69 C9: a backend-defined level survives as
+    /// `EffortLevel::Other`, rendered verbatim in the toolbar.
+    #[test]
+    fn kas_unknown_effort_level_renders_verbatim() {
+        let mut state = UiState::new(500);
+        state.apply_notification(&kas_catalog("gpt-5.6-sol", Some("turbo")));
+        assert_eq!(
+            state.effort(),
+            Some(&EffortLevel::Other("turbo".to_string())),
+            "unknown levels are preserved, never dropped"
+        );
+    }
+
+    /// cyril-vh69 C11 (feed half): the catalog's `mode.currentValue` drives
+    /// the mode chip — KAS emits no current_mode_update.
+    #[test]
+    fn kas_mode_chip_follows_the_catalog() {
+        let mut state = UiState::new(500);
+        assert_eq!(state.current_mode(), None);
+        state.apply_notification(&kas_catalog("auto", None));
+        assert_eq!(state.current_mode(), Some("vibe"));
+
+        // A set ack for mode rewrites the chip from the RETURNED value.
+        state.apply_notification(&Notification::ConfigOptionSet {
+            config_id: "mode".into(),
+            options: vec![
+                ConfigOption {
+                    key: "mode".into(),
+                    label: "Mode".into(),
+                    value: Some("spec".into()),
+                    options: vec![],
+                },
+                ConfigOption {
+                    key: "model".into(),
+                    label: "Model".into(),
+                    value: Some("auto".into()),
+                    options: vec![],
+                },
+            ],
+        });
+        assert_eq!(state.current_mode(), Some("spec"));
+    }
+
+    /// cyril-vh69 C10: ConfigOptionSet posts `Model/Mode/Effort set to
+    /// <currentValue>` from the RETURNED catalog — including the bogus-
+    /// effort shape (SUCCESS with an unchanged currentValue), which must
+    /// show the unchanged value rather than the requested one.
+    #[test]
+    fn kas_config_set_confirmations_read_the_returned_value() {
+        let catalog_with = |key: &str, value: &str| {
+            vec![ConfigOption {
+                key: key.into(),
+                label: key.into(),
+                value: Some(value.into()),
+                options: vec![],
+            }]
+        };
+        let cases = [
+            (
+                "model",
+                "claude-sonnet-5.5",
+                "Model set to claude-sonnet-5.5.",
+            ),
+            ("mode", "spec", "Mode set to spec."),
+            ("effortLevel", "high", "Effort set to high."),
+        ];
+        for (config_id, returned, want) in cases {
+            let mut state = UiState::new(500);
+            let before = state.messages().len();
+            state.apply_notification(&Notification::ConfigOptionSet {
+                config_id: config_id.into(),
+                options: catalog_with(config_id, returned),
+            });
+            assert_eq!(state.messages().len(), before + 1, "{config_id} acks once");
+            assert!(
+                matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == want),
+                "{config_id} ack must read {want:?}"
+            );
+        }
+
+        // The bogus-effort replay (0.66.34 shape): requested "none", the
+        // ack SUCCEEDS with currentValue still "medium" — chip and message
+        // both show medium, and the requested value appears nowhere.
+        let mut state = UiState::new(500);
+        state.apply_notification(&kas_catalog("claude-opus-5.5", Some("medium")));
+        state.note_config_set_requested("effortLevel".into(), "none".into());
+        state.apply_notification(&Notification::ConfigOptionSet {
+            config_id: "effortLevel".into(),
+            options: vec![
+                ConfigOption {
+                    key: "model".into(),
+                    label: "Model".into(),
+                    value: Some("claude-opus-5.5".into()),
+                    options: vec![],
+                },
+                ConfigOption {
+                    key: "effortLevel".into(),
+                    label: "Effort".into(),
+                    value: Some("medium".into()),
+                    options: vec![],
+                },
+            ],
+        });
+        assert_eq!(
+            state.effort(),
+            Some(&EffortLevel::Medium),
+            "the chip shows the RETURNED value, never the requested one"
+        );
+        assert!(
+            matches!(state.messages().last().unwrap().kind(), ChatMessageKind::System(t) if t == "Effort set to medium."),
+            "the message shows the unchanged currentValue"
+        );
+    }
+
+    /// cyril-vh69 (picker plumbing): a config picker honors `is_current`
+    /// exactly as sent — no `active_option_value` join — and confirm returns
+    /// the kind + config_id the App dispatches on.
+    #[test]
+    fn config_picker_honors_sent_current_and_confirms_with_config_id() {
+        let mut state = UiState::new(500);
+        // cyril believes the current model is auto; the picker rows say
+        // otherwise and must win (the snapshot is fresher than the join).
+        state.set_current_model(Some("auto".to_string()));
+        state.show_config_picker(
+            "model".to_string(),
+            "model".to_string(),
+            vec![
+                CommandOption {
+                    label: "Auto".into(),
+                    value: "auto".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+                CommandOption {
+                    label: "Claude Sonnet 5.5".into(),
+                    value: "claude-sonnet-5.5".into(),
+                    description: Some("Balanced".into()),
+                    group: None,
+                    is_current: true,
+                },
+            ],
+        );
+        let picker = state.picker().expect("config picker open");
+        assert_eq!(picker.kind, PickerKind::Config);
+        assert_eq!(picker.config_id.as_deref(), Some("model"));
+        assert!(
+            !picker.options[0].is_current && picker.options[1].is_current,
+            "is_current honored as sent — no active_option_value join"
+        );
+
+        // Confirm row 2 (selected starts at 0 → move down).
+        state.picker_select_next();
+        let confirmation = state.picker_confirm().expect("a selection");
+        assert_eq!(confirmation.kind, PickerKind::Config);
+        assert_eq!(confirmation.title, "model");
+        assert_eq!(confirmation.value, "claude-sonnet-5.5");
+        assert_eq!(confirmation.config_id.as_deref(), Some("model"));
+        assert!(state.picker().is_none(), "confirm closes the picker");
+    }
+
+    /// The v2 agent path is unchanged: confirm returns kind Agent with no
+    /// config_id, and the active_option_value join still marks cyril's own
+    /// current value.
+    #[test]
+    fn agent_picker_confirm_stays_v2_shaped() {
+        let mut state = UiState::new(500);
+        state.set_current_model(Some("sonnet".to_string()));
+        state.show_picker(
+            "model".into(),
+            vec![
+                CommandOption {
+                    label: "auto".into(),
+                    value: "auto".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+                CommandOption {
+                    label: "sonnet".into(),
+                    value: "sonnet".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+            ],
+        );
+        let picker = state.picker().expect("agent picker open");
+        assert_eq!(picker.kind, PickerKind::Agent);
+        assert_eq!(picker.config_id, None);
+        assert!(
+            picker.options[1].is_current,
+            "the v2 join still marks cyril's current model"
+        );
+        let confirmation = state.picker_confirm().expect("a selection");
+        assert_eq!(confirmation.kind, PickerKind::Agent);
+        assert_eq!(confirmation.title, "model");
+        assert_eq!(confirmation.config_id, None);
+    }
+
+    /// The UI-side catalog replaces wholesale per notification — chain data
+    /// for the App's model→effort chain.
+    #[test]
+    fn ui_catalog_replaces_wholesale() {
+        let mut state = UiState::new(500);
+        assert!(state.config_catalog().is_empty());
+        state.apply_notification(&kas_catalog("auto", None));
+        assert_eq!(state.config_catalog().len(), 3);
+        state.apply_notification(&Notification::ConfigOptionsUpdated(vec![ConfigOption {
+            key: "model".into(),
+            label: "Model".into(),
+            value: Some("claude-sonnet-5.5".into()),
+            options: vec![],
+        }]));
+        assert_eq!(
+            state.config_catalog().len(),
+            1,
+            "the later catalog replaces, never merges"
+        );
+        assert_eq!(state.config_catalog()[0].key, "model");
+    }
+
     // ── Subagent routing tests ───────────────────────────────────────────
     // These verify the routing contract that App::handle_notification depends
     // on: session-scoped notifications must flow to SubagentUiState, not the
@@ -9391,7 +9832,9 @@ mod tests {
             "an agent picker must stay open"
         );
         assert_eq!(
-            state.picker_confirm().map(|(command, _)| command),
+            state
+                .picker_confirm()
+                .map(|confirmation| confirmation.title),
             Some("model".to_owned())
         );
     }

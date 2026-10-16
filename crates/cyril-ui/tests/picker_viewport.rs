@@ -30,6 +30,7 @@ fn picker_state(options: Vec<CommandOption>, selected: usize) -> PickerState {
         filter: String::new(),
         filtered_indices: (0..n).collect(),
         selected,
+        config_id: None,
     }
 }
 
@@ -245,6 +246,7 @@ fn filtered_subset_keeps_selection_visible() {
         filter: "x".into(),
         filtered_indices: filtered,
         selected: 9, // deep in the filtered list -> option 27
+        config_id: None,
     };
     let text = render_text(60, 16, &state); // floor: 7 rows, window [3,10)
     let Some(marker_line) = text.lines().find(|l| l.contains('▸')) else {

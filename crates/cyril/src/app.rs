@@ -2005,16 +2005,31 @@ impl App {
                     if let Some(theme_id) = self.ui_state.commit_theme() {
                         tracing::debug!(theme = %theme_id.name(), "theme committed for this session");
                     }
-                } else if let Some((command_name, value)) = self.ui_state.picker_confirm()
-                    && let Some(session_id) = self.session.id()
-                {
-                    self.bridge_sender
-                        .send(BridgeCommand::ExecuteCommand {
-                            command: command_name,
-                            session_id: session_id.clone(),
-                            args: serde_json::json!({"value": value}),
-                        })
-                        .await?;
+                } else if let Some(confirmation) = self.ui_state.picker_confirm() {
+                    match confirmation.kind {
+                        PickerKind::Agent => {
+                            if let Some(session_id) = self.session.id() {
+                                self.bridge_sender
+                                    .send(BridgeCommand::ExecuteCommand {
+                                        command: confirmation.title,
+                                        session_id: session_id.clone(),
+                                        args: serde_json::json!({"value": confirmation.value}),
+                                    })
+                                    .await?;
+                            }
+                        }
+                        PickerKind::Config => {
+                            // Revalidation, SetConfigOption dispatch, and the
+                            // model→effort chain land with the app slice
+                            // (cyril-vh69 C7/C8); unreachable until the
+                            // ShowConfigPicker arm opens a config picker.
+                            tracing::error!(
+                                "PickerKind::Config confirm reached before dispatch wiring — build ordering bug"
+                            );
+                        }
+                        // Theme confirms commit locally above, never here.
+                        PickerKind::Theme => {}
+                    }
                 }
             }
             KeyCode::Esc => self.ui_state.picker_cancel(),

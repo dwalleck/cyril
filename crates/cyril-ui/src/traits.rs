@@ -579,15 +579,21 @@ impl ApprovalState {
 
 /// What confirming a picker does (cyril-qaq0).
 ///
-/// The two kinds share the viewport, filter, and scrollbar machinery but have
-/// opposite commit semantics: an agent picker sends the selection back over the
-/// wire, Cyril's palette picker applies it locally and never writes anything.
+/// The kinds share the viewport, filter, and scrollbar machinery but have
+/// different commit semantics: an agent picker sends the selection back over
+/// the wire, Cyril's palette picker applies it locally and never writes
+/// anything, and a config picker sets a KAS session config value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PickerKind {
     /// Options owned by the agent: confirming dispatches a bridge command.
     Agent,
     /// Cyril's palette picker: confirming commits locally, never to the wire.
     Theme,
+    /// A KAS session config select (`/model` `/effort` `/mode`, cyril-vh69):
+    /// confirming revalidates the value against the session's latest config
+    /// snapshot and dispatches `SetConfigOption` keyed by the picker's
+    /// `config_id` — never the v2 Agent path's `ExecuteCommand`.
+    Config,
 }
 
 /// The `/review` consent form: what the review will run and everything it
@@ -736,6 +742,25 @@ pub struct PickerState {
     pub filtered_indices: Vec<usize>,
     pub selected: usize,
     pub kind: PickerKind,
+    /// The KAS config select this picker sets (`model`, `effortLevel`,
+    /// `mode`) — `Some` iff `kind == PickerKind::Config` (cyril-vh69). The
+    /// confirm path dispatches on this id, never on the display title.
+    pub config_id: Option<String>,
+}
+
+/// What confirming a picker selected (cyril-vh69).
+///
+/// `title` doubles as the agent command name for `PickerKind::Agent` — the
+/// v2 contract, where the picker opens on `CommandOptionsReceived.command`
+/// and confirm hands it back as the command to execute. `config_id` is the
+/// dispatch key for `PickerKind::Config`, so the App never overloads the
+/// display title with routing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PickerConfirmation {
+    pub kind: PickerKind,
+    pub title: String,
+    pub value: String,
+    pub config_id: Option<String>,
 }
 
 /// Hooks panel overlay state (read-only table display for `/hooks` command).

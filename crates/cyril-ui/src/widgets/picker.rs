@@ -183,6 +183,7 @@ mod tests {
             filter: String::new(),
             filtered_indices: vec![0, 1],
             selected: 0,
+            config_id: None,
         };
 
         let backend = TestBackend::new(80, 24);
