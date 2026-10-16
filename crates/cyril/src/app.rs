@@ -2019,13 +2019,7 @@ impl App {
                             }
                         }
                         PickerKind::Config => {
-                            // Revalidation, SetConfigOption dispatch, and the
-                            // model→effort chain land with the app slice
-                            // (cyril-vh69 C7/C8); unreachable until the
-                            // ShowConfigPicker arm opens a config picker.
-                            tracing::error!(
-                                "PickerKind::Config confirm reached before dispatch wiring — build ordering bug"
-                            );
+                            self.confirm_config_picker(confirmation).await?;
                         }
                         // Theme confirms commit locally above, never here.
                         PickerKind::Theme => {}
@@ -2036,6 +2030,74 @@ impl App {
             KeyCode::Char(c) => self.ui_state.picker_type_char(c),
             KeyCode::Backspace => self.ui_state.picker_backspace(),
             _ => {}
+        }
+        Ok(())
+    }
+
+    /// Confirm a KAS config picker (cyril-vh69 C7/C8).
+    ///
+    /// Three steps, all decision data from the session's
+    /// [`KasConfigSnapshot`] (composition only — no business logic of its
+    /// own):
+    ///
+    /// 1. **Revalidate** the chosen value against the LATEST snapshot. The
+    ///    picker holds a point-in-time copy, and a catalog rebuild while it
+    ///    was open may have retracted the value — KAS accepts unoffered
+    ///    values silently and fails the next prompt, so a vanished value is
+    ///    refused with a message and NEVER sent.
+    /// 2. **Dispatch** exactly one `SetConfigOption` — never `ExecuteCommand`
+    ///    (the v2 path), never `SetModel` (no producer may exist). The
+    ///    request is noted UI-side so the ack's read-back can log a
+    ///    returned≠requested mismatch; nothing applies the value
+    ///    optimistically.
+    /// 3. **Chain**: confirming a model whose snapshot entry carries effort
+    ///    metadata immediately opens the effort picker (the model's levels,
+    ///    its `defaultEffortLevel` marked). Esc on that step closes only the
+    ///    picker — KAS applies the model's default itself, so no synthetic
+    ///    `effortLevel` set is sent for an Esc or for a `hasEffort:false`
+    ///    model.
+    async fn confirm_config_picker(
+        &mut self,
+        confirmation: cyril_ui::traits::PickerConfirmation,
+    ) -> cyril_core::Result<()> {
+        let Some(config_id) = confirmation.config_id.clone() else {
+            // PickerConfirmation carries Some iff kind == Config — reaching
+            // this is a construction bug, not user input.
+            tracing::error!("PickerKind::Config confirm without a config_id");
+            return Ok(());
+        };
+        let snapshot = self.session.config_options().cloned();
+        let still_offered = snapshot
+            .as_ref()
+            .is_some_and(|s| s.contains_value(&config_id, &confirmation.value));
+        if !still_offered {
+            tracing::warn!(
+                config_id,
+                value = confirmation.value,
+                "config picker confirm failed revalidation — the catalog changed while the picker was open"
+            );
+            self.ui_state.add_system_message(
+                "The options changed while the picker was open — reopen and try again.".to_string(),
+            );
+            return Ok(());
+        }
+        self.ui_state
+            .note_config_set_requested(config_id.clone(), confirmation.value.clone());
+        self.bridge_sender
+            .send(BridgeCommand::SetConfigOption {
+                config_id: config_id.clone(),
+                value: confirmation.value.clone(),
+            })
+            .await?;
+        if config_id == MODEL_CONFIG_ID
+            && let Some(snapshot) = snapshot.as_ref()
+            && let Some(options) = snapshot.effort_picker_options(&confirmation.value)
+        {
+            self.ui_state.show_config_picker(
+                EFFORT_CONFIG_ID.to_string(),
+                "effort".to_string(),
+                options,
+            );
         }
         Ok(())
     }
@@ -2255,14 +2317,14 @@ impl App {
                     }
                 }
             }
-            CommandResultKind::ShowConfigPicker { .. } => {
-                // The UiState picker plumbing (PickerKind::Config) lands with
-                // the picker slice; until then this intent has no consumer.
-                // Unreachable on v2 — the commands only register on a
-                // KAS-built registry.
-                tracing::error!(
-                    "ShowConfigPicker reached handle_command_result before picker wiring — build ordering bug"
-                );
+            CommandResultKind::ShowConfigPicker {
+                config_id,
+                title,
+                options,
+            } => {
+                // The rows arrive validated and `is_current`-marked from the
+                // session's config snapshot; UiState opens them as sent.
+                self.ui_state.show_config_picker(config_id, title, options);
             }
             CommandResultKind::Review { args } => self.open_review(args),
             CommandResultKind::ReviewResume { selector } => self.open_resume(selector),
@@ -8666,5 +8728,246 @@ mod tests {
             rx.try_recv(),
             Err(tokio::sync::mpsc::error::TryRecvError::Empty)
         ));
+    }
+
+    // ── KAS config picker confirm + chain (cyril-vh69 C7/C8) ────────────
+
+    /// The frame-24 shape, trimmed: model select with `auto` (no effort
+    /// metadata) and `claude-sonnet-5.5` (five levels, default high),
+    /// currentValue `auto`.
+    fn kas_model_catalog() -> Vec<ConfigOption> {
+        vec![ConfigOption {
+            key: MODEL_CONFIG_ID.into(),
+            label: "Model".into(),
+            value: Some("auto".into()),
+            options: vec![
+                ConfigOptionValue::new("auto", "Auto"),
+                ConfigOptionValue {
+                    value: "claude-sonnet-5.5".into(),
+                    name: "Claude Sonnet 5.5".into(),
+                    description: None,
+                    effort: EffortMetadata::new(
+                        vec![
+                            "low".into(),
+                            "medium".into(),
+                            "high".into(),
+                            "xhigh".into(),
+                            "max".into(),
+                        ],
+                        Some("high".into()),
+                    ),
+                },
+            ],
+        }]
+    }
+
+    fn kas_app_with_catalog() -> (App, tokio::sync::mpsc::Receiver<BridgeCommand>) {
+        let (mut app, rx) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        app.session
+            .apply_notification(&Notification::SessionCreated {
+                session_id: SessionId::new("sess_kas"),
+                current_mode: None,
+                current_model: None,
+                available_modes: vec![],
+                available_models: vec![],
+            });
+        app.session
+            .apply_notification(&Notification::ConfigOptionsUpdated(kas_model_catalog()));
+        (app, rx)
+    }
+
+    fn config_row(value: &str, is_current: bool) -> CommandOption {
+        CommandOption {
+            label: value.into(),
+            value: value.into(),
+            description: None,
+            group: None,
+            is_current,
+        }
+    }
+
+    fn enter() -> KeyEvent {
+        KeyEvent::new(KeyCode::Enter, KeyModifiers::NONE)
+    }
+
+    /// C7/C8: confirming a model with effort metadata sends exactly one
+    /// `SetConfigOption` — never ExecuteCommand, never SetModel — and
+    /// immediately opens the effort picker with the model's levels, default
+    /// marked. Esc on the effort step closes only the picker: no second
+    /// frame is sent.
+    #[tokio::test]
+    async fn model_confirm_sends_one_set_and_chains_effort_picker() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![
+                config_row("auto", true),
+                config_row("claude-sonnet-5.5", false),
+            ],
+        );
+        app.ui_state.picker_select_next();
+        app.handle_picker_key(enter()).await.expect("model confirm");
+
+        match rx.try_recv() {
+            Ok(BridgeCommand::SetConfigOption { config_id, value }) => {
+                assert_eq!(config_id, MODEL_CONFIG_ID);
+                assert_eq!(value, "claude-sonnet-5.5");
+            }
+            other => panic!("expected one SetConfigOption, got {other:?}"),
+        }
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "exactly one frame — no synthetic effortLevel set"
+        );
+
+        let picker = app.ui_state.picker().expect("effort picker chained");
+        assert_eq!(picker.kind, PickerKind::Config);
+        assert_eq!(picker.config_id.as_deref(), Some(EFFORT_CONFIG_ID));
+        let levels: Vec<&str> = picker.options.iter().map(|o| o.value.as_str()).collect();
+        assert_eq!(levels, ["low", "medium", "high", "xhigh", "max"]);
+        let marked: Vec<&str> = picker
+            .options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(marked, ["high"], "the model's defaultEffortLevel is marked");
+
+        // Esc closes only the picker and sends nothing further.
+        app.handle_picker_key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE))
+            .await
+            .expect("esc closes the effort step");
+        assert!(app.ui_state.picker().is_none());
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+    }
+
+    /// C8: a model WITHOUT effort metadata (`hasEffort:false`) gets no
+    /// second step.
+    #[tokio::test]
+    async fn model_confirm_without_effort_sends_without_chain() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![
+                config_row("auto", true),
+                config_row("claude-sonnet-5.5", false),
+            ],
+        );
+        // selected starts at row 0 = auto.
+        app.handle_picker_key(enter()).await.expect("auto confirm");
+
+        assert!(matches!(
+            rx.try_recv(),
+            Ok(BridgeCommand::SetConfigOption { ref config_id, ref value })
+                if config_id == MODEL_CONFIG_ID && value == "auto"
+        ));
+        assert!(
+            app.ui_state.picker().is_none(),
+            "auto carries no effort metadata — no chain"
+        );
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+    }
+
+    /// C7: the picker holds a point-in-time copy — a value the LATEST
+    /// snapshot no longer offers is refused with a message and never sent
+    /// (KAS accepts garbage silently, so the client validates).
+    #[tokio::test]
+    async fn stale_config_confirm_is_refused_and_sends_nothing() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        app.ui_state.show_config_picker(
+            MODEL_CONFIG_ID.to_string(),
+            "model".to_string(),
+            vec![config_row("ghost-model", false)],
+        );
+        app.handle_picker_key(enter()).await.expect("stale confirm");
+
+        assert!(
+            matches!(
+                rx.try_recv(),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+            ),
+            "a stale value is never sent"
+        );
+        let last = app.ui_state.messages().last().expect("a refusal message");
+        assert!(
+            matches!(last.kind(), cyril_ui::traits::ChatMessageKind::System(text)
+                if text == "The options changed while the picker was open — reopen and try again."),
+            "stale refusal message: {last:?}"
+        );
+        assert!(app.ui_state.picker().is_none(), "the picker still closes");
+    }
+
+    /// C7 end-to-end on a KAS-built registry: `/model` parses as the
+    /// builtin, returns ShowConfigPicker, and the App opens the config
+    /// picker — the command itself sends nothing.
+    #[tokio::test]
+    async fn slash_model_opens_the_config_picker_on_kas() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        app.ui_state.insert_text("/model");
+        app.submit_input().await.expect("/model executes");
+
+        let picker = app.ui_state.picker().expect("/model opens the picker");
+        assert_eq!(picker.kind, PickerKind::Config);
+        assert_eq!(picker.config_id.as_deref(), Some(MODEL_CONFIG_ID));
+        assert_eq!(picker.options.len(), 2);
+        let marked: Vec<&str> = picker
+            .options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(marked, ["auto"], "the snapshot's currentValue is marked");
+        assert!(matches!(
+            rx.try_recv(),
+            Err(tokio::sync::mpsc::error::TryRecvError::Empty)
+        ));
+    }
+
+    /// C12's v2 fence at the App layer: on a v2-built registry `/model`
+    /// parses as the AGENT command and dispatches QueryCommandOptions —
+    /// unchanged by the KAS surface.
+    #[tokio::test]
+    async fn slash_model_on_v2_still_queries_agent_options() {
+        let (mut app, mut rx) = test_app_with_engine_and_command_rx(AgentEngine::V2);
+        app.session
+            .apply_notification(&Notification::SessionCreated {
+                session_id: SessionId::new("sess_v2"),
+                current_mode: None,
+                current_model: None,
+                available_modes: vec![],
+                available_models: vec![],
+            });
+        // v2's advertised commands arrive via CommandsUpdated; the App
+        // registers them on the registry.
+        app.commands.register_agent_commands(&[CommandInfo::new(
+            "model",
+            "Model",
+            None::<&str>,
+            true,
+            true,
+            false,
+        )]);
+        app.ui_state.insert_text("/model");
+        app.submit_input().await.expect("v2 /model executes");
+
+        assert!(
+            matches!(rx.try_recv(), Ok(BridgeCommand::QueryCommandOptions { ref command, .. }) if command == "model"),
+            "v2 /model still sends QueryCommandOptions"
+        );
+        assert!(
+            app.ui_state.picker().is_none(),
+            "no config picker on v2 — the picker opens on CommandOptionsReceived"
+        );
     }
 }
