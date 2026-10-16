@@ -46,4 +46,13 @@ None — the reviewer's anchors, counts, and capture claims all checked out.
 
 ## Repair re-review
 
-PENDING — scoped independent review of the R1–R4 repair diff after the repairs land (reviewer: orchestrator, independent of the repair implementer; scope: repair diff + affected confirm/picker interactions).
+DONE — orchestrator (independent of the repair implementer), 2026-10-15. Scope: R1–R4 diffs (36a29e75, 627283a8, 6eba475e, 5ebeb5d4) + affected confirm/picker interactions. Checked state: branch head 3ce3ff3e.
+
+- R1: `subject` threaded ShowConfigPicker → PickerState → PickerConfirmation, `Some` iff effortLevel, documented at each layer; EffortCommand sets it from `current_model()`, the chain from the just-confirmed model value. Confirm revalidates per config id: effort → latest snapshot's `effort_for_model(subject)` level membership; model/mode → `contains_value`. Missing subject is error-logged and refused. The stale-effort refusal, zero-sends discipline, and no-SetModel invariant all hold. Red receipts (both new tests failed pre-fix with empty-channel — the spurious refusal) and green receipts verified in the record; tests assert exactly-one-frame and frame order.
+- R2: note moved after `send(...).await?`; failure path leaves no pending entry.
+- R3: field/init/clone_from/accessor/test removed; zero `config_catalog` references remain in `crates/`.
+- R4: preselects first `is_current` row, fallback row 0; both cases tested.
+- One edge considered and dismissed: confirming effort for a subject model while the latest snapshot's current model differs is unreachable within one cyril session (single client, one open picker; the model changes only through this same confirm path, whose ack makes current == subject).
+- Result: no new findings. Full workspace gate re-run by the reviewer on 3ce3ff3e: `cargo test --workspace` 0 failures, `clippy --workspace --all-targets -- -D warnings` clean, `fmt --check` clean. Initial full review (independent-review.md) remains valid for all unrepaired scope.
+
+Remaining: C13 live smoke (user/implementer, per plan) — including recording whether a post-switch catalog ever carries an `effortLevel` select option.
