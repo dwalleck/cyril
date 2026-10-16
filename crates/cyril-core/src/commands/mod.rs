@@ -1729,7 +1729,10 @@ mod thinking_command_tests {
             key: "thinking".into(),
             label: "Thinking".into(),
             value: Some(value.into()),
-            options: vec!["on".into(), "off".into()],
+            options: vec![
+                crate::types::ConfigOptionValue::new("on", "On"),
+                crate::types::ConfigOptionValue::new("off", "Off"),
+            ],
         }])
     }
 
