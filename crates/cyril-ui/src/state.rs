@@ -2613,12 +2613,20 @@ impl UiState {
         subject: Option<String>,
     ) {
         let filtered_indices: Vec<usize> = (0..options.len()).collect();
+        // Open on the current value's row when one is marked — "confirm what
+        // I already have / see where I am" is one keystroke shorter (review
+        // round 1, F5). The filter starts empty, so filtered order IS option
+        // order here.
+        let selected = options
+            .iter()
+            .position(|option| option.is_current)
+            .unwrap_or(0);
         self.picker = Some(PickerState {
             title,
             options,
             filter: String::new(),
             filtered_indices,
-            selected: 0,
+            selected,
             kind: PickerKind::Config,
             config_id: Some(config_id),
             subject,
@@ -6368,9 +6376,12 @@ mod tests {
             !picker.options[0].is_current && picker.options[1].is_current,
             "is_current honored as sent — no active_option_value join"
         );
+        assert_eq!(
+            picker.selected, 1,
+            "the picker opens on the is_current row (F5)"
+        );
 
-        // Confirm row 2 (selected starts at 0 → move down).
-        state.picker_select_next();
+        // Confirm the preselected current row directly — no navigation.
         let confirmation = state.picker_confirm().expect("a selection");
         assert_eq!(confirmation.kind, PickerKind::Config);
         assert_eq!(confirmation.title, "model");
@@ -6378,6 +6389,38 @@ mod tests {
         assert_eq!(confirmation.config_id.as_deref(), Some("model"));
         assert_eq!(confirmation.subject, None, "only effort pickers carry one");
         assert!(state.picker().is_none(), "confirm closes the picker");
+    }
+
+    /// F5: with no `is_current` row the picker falls back to row 0.
+    #[test]
+    fn config_picker_without_a_current_row_starts_at_row_zero() {
+        let mut state = UiState::new(500);
+        state.show_config_picker(
+            "mode".to_string(),
+            "mode".to_string(),
+            vec![
+                CommandOption {
+                    label: "Default".into(),
+                    value: "vibe".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+                CommandOption {
+                    label: "Spec".into(),
+                    value: "spec".into(),
+                    description: None,
+                    group: None,
+                    is_current: false,
+                },
+            ],
+            None,
+        );
+        assert_eq!(
+            state.picker().expect("config picker open").selected,
+            0,
+            "no is_current row → the first row"
+        );
     }
 
     /// The v2 agent path is unchanged: confirm returns kind Agent with no
