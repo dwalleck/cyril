@@ -76,12 +76,6 @@ pub struct UiState {
     /// Extended-thinking state of the current model (cyril-k3lz), derived by
     /// `ThinkingState::apply_notification`; drives the toolbar segment.
     thinking: ThinkingState,
-    /// The latest KAS config catalog seen (cyril-vh69), wholesale-replaced on
-    /// every config notification — the chain data a `PickerKind::Config`
-    /// confirm reads (which model carries effort metadata). Empty before the
-    /// first catalog. Session-side validation lives in
-    /// `SessionController::config_options`; this copy is UI-side only.
-    config_catalog: Vec<ConfigOption>,
     /// The last `SetConfigOption` the App dispatched (cyril-vh69) — the
     /// request side of the read-back check: when the ack returns a different
     /// `currentValue` than requested (KAS silently ignores invalid effort
@@ -434,7 +428,6 @@ impl UiState {
             current_model: None,
             effort: None,
             thinking: ThinkingState::Unreported,
-            config_catalog: Vec::new(),
             pending_config_set: None,
             context_usage: None,
             context_breakdown: None,
@@ -1035,12 +1028,6 @@ impl UiState {
             }
             Notification::ConfigOptionsUpdated(options)
             | Notification::ConfigOptionSet { options, .. } => {
-                // The latest catalog, wholesale (cyril-vh69): never a merge —
-                // the same discipline as the session-side snapshot, so a
-                // model switch swaps offered values, current values, and
-                // effort metadata atomically.
-                self.config_catalog.clone_from(options);
-
                 let model_changed =
                     if let Some(model_opt) = options.iter().find(|o| o.key == MODEL_CONFIG_ID) {
                         // Route through set_current_model so the "clear effort on a
@@ -1669,13 +1656,6 @@ impl UiState {
             self.effort = None;
         }
         self.current_model = model;
-    }
-
-    /// The latest KAS config catalog seen (cyril-vh69) — wholesale-replaced
-    /// per config notification. The App reads it for the model→effort picker
-    /// chain after a `PickerKind::Config` confirm.
-    pub fn config_catalog(&self) -> &[ConfigOption] {
-        &self.config_catalog
     }
 
     /// Record the request side of a `SetConfigOption` dispatch (cyril-vh69).
@@ -6438,28 +6418,6 @@ mod tests {
         assert_eq!(confirmation.title, "model");
         assert_eq!(confirmation.config_id, None);
         assert_eq!(confirmation.subject, None);
-    }
-
-    /// The UI-side catalog replaces wholesale per notification — chain data
-    /// for the App's model→effort chain.
-    #[test]
-    fn ui_catalog_replaces_wholesale() {
-        let mut state = UiState::new(500);
-        assert!(state.config_catalog().is_empty());
-        state.apply_notification(&kas_catalog("auto", None));
-        assert_eq!(state.config_catalog().len(), 3);
-        state.apply_notification(&Notification::ConfigOptionsUpdated(vec![ConfigOption {
-            key: "model".into(),
-            label: "Model".into(),
-            value: Some("claude-sonnet-5.5".into()),
-            options: vec![],
-        }]));
-        assert_eq!(
-            state.config_catalog().len(),
-            1,
-            "the later catalog replaces, never merges"
-        );
-        assert_eq!(state.config_catalog()[0].key, "model");
     }
 
     // ── Subagent routing tests ───────────────────────────────────────────
