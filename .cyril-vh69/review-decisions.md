@@ -19,30 +19,30 @@ None — the reviewer's anchors, counts, and capture claims all checked out.
 ### R1 — effort confirm revalidates against the picker's row source (F1, F2)
 
 - **Root cause:** one revalidation path (`KasConfigSnapshot::contains_value`) was used for every config id, but effort picker rows are sourced from `EffortMetadata.levels`, not from a catalog `effortLevel` select option. Governing claims: C7, C8; owning slice: 5.
-- **Delivered behavior:** PENDING — implementer (bounded repair, checkpointed-build)
-- **Performed checks and results:** PENDING — required: new effort-confirm Enter tests (post-ack and chained pre-ack) observed RED against pre-repair code (sensitivity), then GREEN; full `cargo test --workspace`, `clippy --workspace --all-targets -- -D warnings`, `fmt --check`; scoped repair re-review
-- **Unresolved failures:** none yet
+- **Delivered behavior:** the effort picker carries the model id it was opened for — `subject: Option<String>` on `CommandResultKind::ShowConfigPicker` (set by `EffortCommand` from `current_model()`), `PickerState`, and `PickerConfirmation` (set by the App's chain from the just-confirmed model value). `confirm_config_picker` revalidates per config id: `effortLevel` checks the LATEST `SessionController` snapshot's `effort_for_model(subject)` for level membership; `model`/`mode` keep `contains_value`. A stale effort (metadata gone or level absent) keeps the existing refusal message + warn + zero sends; a missing subject is an error-logged construction bug and refused. Commit `36a29e75`.
+- **Performed checks and results:** RED receipts (pre-fix, `cargo test -p cyril --bins effort_confirm`): `effort_confirm_sends_one_effort_level_set` → `expected one SetConfigOption, got Err(Empty)`; `chained_effort_confirm_before_ack_sends_both_sets` → `expected the effortLevel set second, got Err(Empty)` — the effort confirm was refused and sent nothing, exactly F1. GREEN receipts (post-fix): both tests pass (post-ack confirm sends exactly one `{effortLevel, <level>}` frame; chained pre-ack sends model then effortLevel, two frames total). `cargo test -p cyril -p cyril-core -p cyril-ui` green; `cargo clippy --all-targets -- -D warnings` green. Scoped repair re-review: pending (orchestrator).
+- **Unresolved failures:** none
 
 ### R2 — pending config-set noted after successful send (F4)
 
 - **Root cause:** ordering — note preceded `send(...).await?`. Owning slice: 5.
-- **Delivered behavior:** PENDING — implementer (bounded repair)
-- **Performed checks and results:** PENDING — send-failure path leaves no pending entry; workspace suite/clippy/fmt
-- **Unresolved failures:** none yet
+- **Delivered behavior:** `note_config_set_requested` moved to after `bridge_sender.send(...).await?`; a failed send now propagates with no pending entry, so the next unrelated ack cannot compare against a stale requested value. The pending-comparison consumer (`UiState::ack_config_set`) is unchanged and still behaves (takes pending only on config-id match; shown value always the returned one). Commit `627283a8`.
+- **Performed checks and results:** `cargo test -p cyril` green (210 passed); `cargo clippy --all-targets -- -D warnings` green; workspace suite/clippy/fmt green at the final gate.
+- **Unresolved failures:** none
 
 ### R3 — dead `UiState::config_catalog` removed (F3)
 
 - **Root cause:** design said UiState keeps the chain-data catalog; implementation sourced it from SessionController, leaving the UiState copy write-only. Owning slice: 4. design.md amended in place (technical correction; approved behavior unchanged).
-- **Delivered behavior:** PENDING — implementer (bounded repair)
-- **Performed checks and results:** PENDING — workspace suite/clippy/fmt
-- **Unresolved failures:** none yet
+- **Delivered behavior:** field, initialization, wholesale `clone_from` in the config-notification arm, accessor, and the `ui_catalog_replaces_wholesale` test removed (state.rs, 42 deletions). `SessionController::config_options()` remains the sole chain-data source. Commit `6eba475e`.
+- **Performed checks and results:** `rg config_catalog` finds zero references in `crates/`; `cargo test -p cyril-ui` green (651 passed); `cargo clippy --all-targets -- -D warnings` green; workspace suite/clippy/fmt green at the final gate.
+- **Unresolved failures:** none
 
 ### R4 — config picker preselects the current row (F5)
 
 - **Root cause:** unconditional `selected: 0`. Owning slice: 4.
-- **Delivered behavior:** PENDING — implementer (bounded repair)
-- **Performed checks and results:** PENDING — preselection test; workspace suite/clippy/fmt
-- **Unresolved failures:** none yet
+- **Delivered behavior:** `show_config_picker` opens with `selected` at the first `is_current` row (filter starts empty, so filtered order is option order), falling back to row 0 when nothing is marked. Commit `5ebeb5d4`.
+- **Performed checks and results:** adjusted `config_picker_honors_sent_current_and_confirms_with_config_id` to assert the preselection (`selected == 1`) and confirm without navigation; added `config_picker_without_a_current_row_starts_at_row_zero` for the fallback. `cargo test -p cyril-ui -p cyril` green; `cargo clippy --all-targets -- -D warnings` green; workspace suite/clippy/fmt green at the final gate.
+- **Unresolved failures:** none
 
 ## Repair re-review
 
