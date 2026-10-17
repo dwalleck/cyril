@@ -591,68 +591,92 @@ impl Command for ThinkingCommand {
 // unvalidated value is not an option: KAS accepts unoffered values silently
 // and fails the next prompt (design § 3).
 
-/// Shared preconditions: an active session, then the first config catalog.
-/// The "not reported yet" line is named per command — `session/new` may omit
-/// `configOptions`, which reliably arrive just after (wire frame 24), so an
-/// empty affordance must say why rather than fake a list (the PowersCommand
-/// discipline).
+/// Shared preconditions: an active session, then the first config catalog —
+/// `None` until KAS reports one. `session/new` may omit `configOptions`,
+/// which reliably arrive just after (wire frame 24), so the caller answers
+/// `None` with a command-named "not reported yet" line rather than faking a
+/// list (the PowersCommand discipline).
 fn kas_config_snapshot<'a>(
     ctx: &'a CommandContext<'_>,
-    not_reported: &str,
-) -> crate::Result<Result<&'a crate::types::KasConfigSnapshot, CommandResult>> {
+) -> crate::Result<Option<&'a crate::types::KasConfigSnapshot>> {
     // Same no-session error as agent commands and /thinking, checked before
     // the snapshot so a stale pre-session catalog can never drive a picker.
     ctx.session
         .id()
         .ok_or_else(|| crate::Error::from_kind(crate::ErrorKind::NoSession))?;
-    Ok(match ctx.session.config_options() {
-        Some(snapshot) => Ok(snapshot),
-        None => {
-            tracing::debug!("KAS config command ran before the first config catalog");
-            Err(CommandResult::system_message(not_reported.to_string()))
-        }
-    })
+    let snapshot = ctx.session.config_options();
+    if snapshot.is_none() {
+        tracing::debug!("KAS config command ran before the first config catalog");
+    }
+    Ok(snapshot)
 }
 
-/// `/model` on the KAS engine (cyril-vh69): picker over the config catalog's
-/// model select. Once KAS acknowledges a switch to a model with effort
-/// metadata, the session chains the effort picker from the rebuilt catalog;
-/// the set itself is read back from the returned catalog's `currentValue`,
-/// never from the requested value.
-pub struct ModelCommand;
+/// `/model` and `/mode` on the KAS engine (cyril-vh69): a picker over one
+/// select of the config catalog, labels and descriptions from the wire.
+///
+/// For `/model`, once KAS acknowledges a switch to a model with effort
+/// metadata the session chains the effort picker from the rebuilt catalog.
+/// For `/mode`, KAS coerces an unknown mode to `vibe`, so only offered values
+/// are ever sent. Either way the set is read back from the returned catalog's
+/// `currentValue`, never from the requested value. The fields are private
+/// and only [`Self::model`] and [`Self::mode`] build one, so an effort select
+/// command (whose rows come from model metadata, not a select) cannot exist.
+pub struct ConfigSelectCommand {
+    target: ConfigTarget,
+    description: &'static str,
+}
+
+impl ConfigSelectCommand {
+    pub fn model() -> Self {
+        Self {
+            target: ConfigTarget::Model,
+            description: "Pick the session model from the offered catalog",
+        }
+    }
+
+    pub fn mode() -> Self {
+        Self {
+            target: ConfigTarget::Mode,
+            description: "Pick the session mode from the offered catalog",
+        }
+    }
+}
 
 #[async_trait::async_trait]
-impl Command for ModelCommand {
+impl Command for ConfigSelectCommand {
     fn name(&self) -> &str {
-        "model"
+        self.target.id().as_str()
     }
 
     fn description(&self) -> &str {
-        "Pick the session model from the offered catalog"
+        self.description
     }
 
     async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
+        let name = self.name();
         if !args.trim().is_empty() {
-            return Ok(CommandResult::system_message(
-                "Usage: /model (no arguments)".to_string(),
-            ));
+            return Ok(CommandResult::system_message(format!(
+                "Usage: /{name} (no arguments)"
+            )));
         }
-        let snapshot = match kas_config_snapshot(
-            ctx,
-            "Model options haven't been reported yet — they arrive just after session start; try again.",
-        )? {
-            Ok(snapshot) => snapshot,
-            Err(message) => return Ok(message),
+        let Some(snapshot) = kas_config_snapshot(ctx)? else {
+            return Ok(CommandResult::system_message(format!(
+                "{} options haven't been reported yet — they arrive just after session start; try again.",
+                self.target.id().noun()
+            )));
         };
-        match snapshot.picker(ConfigTarget::Model) {
+        match snapshot.picker(self.target.clone()) {
             Some(picker) => Ok(CommandResult::show_config_picker(picker)),
             None => {
-                // The KAS catalog always carries a model select; its absence
-                // is wire drift worth a warning.
-                tracing::warn!("KAS config catalog has no model select to offer");
-                Ok(CommandResult::system_message(
-                    "The model select isn't offered by this session.".to_string(),
-                ))
+                // The KAS catalog always carries the model and mode selects;
+                // an absent one is wire drift worth a warning.
+                tracing::warn!(
+                    config_id = name,
+                    "KAS config catalog has no such select to offer"
+                );
+                Ok(CommandResult::system_message(format!(
+                    "The {name} select isn't offered by this session."
+                )))
             }
         }
     }
@@ -681,12 +705,11 @@ impl Command for EffortCommand {
                 "Usage: /effort (no arguments)".to_string(),
             ));
         }
-        let snapshot = match kas_config_snapshot(
-            ctx,
-            "Effort levels haven't been reported yet — they arrive just after session start; try again.",
-        )? {
-            Ok(snapshot) => snapshot,
-            Err(message) => return Ok(message),
+        let Some(snapshot) = kas_config_snapshot(ctx)? else {
+            return Ok(CommandResult::system_message(
+                "Effort levels haven't been reported yet — they arrive just after session start; try again."
+                    .to_string(),
+            ));
         };
         let Some(model_id) = snapshot.current_model() else {
             tracing::warn!("KAS config catalog has no current model to read effort from");
@@ -703,47 +726,6 @@ impl Command for EffortCommand {
             None => Ok(CommandResult::system_message(format!(
                 "The current model ({model_id}) has no effort levels — /effort applies to models with effort support."
             ))),
-        }
-    }
-}
-
-/// `/mode` on the KAS engine (cyril-vh69): picker over the config catalog's
-/// mode select, labels and descriptions from the wire. KAS coerces an
-/// unknown mode to `vibe`, so only offered values are ever sent — the
-/// confirm path revalidates membership against the latest snapshot.
-pub struct ModeCommand;
-
-#[async_trait::async_trait]
-impl Command for ModeCommand {
-    fn name(&self) -> &str {
-        "mode"
-    }
-
-    fn description(&self) -> &str {
-        "Pick the session mode from the offered catalog"
-    }
-
-    async fn execute(&self, ctx: &CommandContext<'_>, args: &str) -> crate::Result<CommandResult> {
-        if !args.trim().is_empty() {
-            return Ok(CommandResult::system_message(
-                "Usage: /mode (no arguments)".to_string(),
-            ));
-        }
-        let snapshot = match kas_config_snapshot(
-            ctx,
-            "Mode options haven't been reported yet — they arrive just after session start; try again.",
-        )? {
-            Ok(snapshot) => snapshot,
-            Err(message) => return Ok(message),
-        };
-        match snapshot.picker(ConfigTarget::Mode) {
-            Some(picker) => Ok(CommandResult::show_config_picker(picker)),
-            None => {
-                tracing::warn!("KAS config catalog has no mode select to offer");
-                Ok(CommandResult::system_message(
-                    "The mode select isn't offered by this session.".to_string(),
-                ))
-            }
         }
     }
 }

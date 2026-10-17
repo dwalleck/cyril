@@ -174,8 +174,8 @@ pub enum ConfigCommandSource {
     /// commands keep the names (v2).
     #[default]
     Agent,
-    /// Cyril registers [`builtin::ModelCommand`], [`builtin::EffortCommand`],
-    /// and [`builtin::ModeCommand`] (KAS).
+    /// Cyril registers [`builtin::ConfigSelectCommand`] for `/model` and
+    /// `/mode`, and [`builtin::EffortCommand`] (KAS).
     Kas,
 }
 
@@ -484,9 +484,9 @@ impl CommandRegistry {
             names.push("model");
             names.push("effort");
             names.push("mode");
-            registry.register(Arc::new(builtin::ModelCommand));
+            registry.register(Arc::new(builtin::ConfigSelectCommand::model()));
             registry.register(Arc::new(builtin::EffortCommand));
-            registry.register(Arc::new(builtin::ModeCommand));
+            registry.register(Arc::new(builtin::ConfigSelectCommand::mode()));
         }
         if let WorkflowCommandSource::Kas { workspace_root } = workflows {
             names.push("workflow");
@@ -2286,7 +2286,7 @@ mod config_command_tests {
     /// C4: `/model`'s refusal matrix, one cell per design row.
     #[tokio::test]
     async fn model_command_refusal_matrix() {
-        let cmd = builtin::ModelCommand;
+        let cmd = builtin::ConfigSelectCommand::model();
 
         // Args are a usage error — no arg form exists (design non-goal).
         let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "gpt").await;
@@ -2334,7 +2334,7 @@ mod config_command_tests {
     #[tokio::test]
     async fn model_command_offers_the_snapshot_catalog() {
         let (result, sent) = run(
-            &builtin::ModelCommand,
+            &builtin::ConfigSelectCommand::model(),
             &session(Some(catalog("claude-sonnet-5.5")), true),
             "",
         )
@@ -2383,7 +2383,7 @@ mod config_command_tests {
         let options = crate::protocol::convert::to_config_options(&update.config_options);
 
         let (result, sent) = run(
-            &builtin::ModelCommand,
+            &builtin::ConfigSelectCommand::model(),
             &session(Some(Notification::ConfigOptionsUpdated(options)), true),
             "",
         )
@@ -2466,7 +2466,7 @@ mod config_command_tests {
     /// `is_current` on the reported value; same refusal matrix as /model.
     #[tokio::test]
     async fn mode_command_cells() {
-        let cmd = builtin::ModeCommand;
+        let cmd = builtin::ConfigSelectCommand::mode();
 
         let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "").await;
         let (target, options) = picker(result);
