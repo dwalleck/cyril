@@ -151,4 +151,84 @@ Blocking rows first: F9 (above), F10, F11, F19.
 
 ### Repairs
 
-<<R8–R12 records are written as each repair lands.>>
+Gate used for every repair (the CI lanes of `.github/workflows/ci.yml`): `cargo nextest run` for `-p cyril -p cyril-core --features kas`, `--workspace --all-features`, `-p cyril-core --no-default-features`; `cargo clippy --all-targets -- -D warnings` for `--workspace --all-features`, `--workspace`, `-p cyril -p cyril-core --features kas`, `-p cyril-core --no-default-features`; `cargo fmt --all -- --check`; `cargo test --doc --workspace --all-features` (R10). All commands under `env -u CARGO_TARGET_DIR` (the shell exports an empty value).
+
+#### R8 — drop the no-op `#[allow]`s (F12)
+
+- **Delivered behavior:** both directives deleted (`session.rs` `config_options_tests`, `kas_config.rs` `tests`). No production change. Commit `0f82aabe`.
+- **Performed checks and results:** clippy `-p cyril-core --all-targets --all-features` and `-p cyril-core --no-default-features --all-targets` with `-D warnings`: clean — the suppressions were suppressing nothing.
+- **Unresolved failures:** none.
+
+#### R9 — `with_builtins_and_usage` → `with_builtin_sources` (F18)
+
+- **Delivered behavior:** rename across every caller (`commands/mod.rs`, `app.rs`) and the active design/plan text; signature unchanged. Commit `ef0053c0`.
+- **Performed checks and results:** `cargo check --workspace --all-targets --all-features` clean; `cargo test -p cyril-core --all-features --lib commands` 86 passed; fmt clean.
+- **Unresolved failures:** none.
+
+#### R10 — ack-gated effort chain + typed config vocabulary (F9, F10, F11, F13, F14, F15, F20)
+
+- **Root cause:** one mechanism — the effort step opened before the model ack — needed a pre-ack exception (F1, F6), a UI-side pending slot the App consulted (F15) and a close-on-failure path (F8); the string ids and optional picker fields (F11, F13, F14) carried the "which picker is this" facts it depended on. Repeated product-repair stop disposition: class-wide correction (design.md §2).
+- **Delivered behavior:**
+  - `crates/cyril-core/src/types/kas_config.rs`: `KasConfigId::{Model, Mode, Effort}` (`as_str`, `from_wire`, `noun`) replaces `MODEL_/MODE_/EFFORT_CONFIG_ID`; `ConfigTarget::{Model, Mode, Effort { model_id }}`; `ConfigPicker { target, options }`; `KasConfigRequest { id, value }` + `to_command()`; `KasConfigSnapshot::picker(target)` (replaces `picker_options`/`effort_picker_options`) and `accepts(&target, value)` (replaces the App's inline rule and `contains_value`). `EffortMetadata::offers`.
+  - `crates/cyril-core/src/session.rs`: `pending_config_set: Option<KasConfigRequest>` + `effort_chain: Option<ConfigPicker>`; `note_config_set_requested`, `take_effort_chain`; the `ConfigOptionSet` arm consumes the matching request, debug-logs returned≠requested, and prepares the effort picker only when the returned current model is the requested one; `BridgeError{SET_CONFIG_OPTION_OPERATION}` clears the request; `SessionCreated`/`BridgeDisconnected` clear both.
+  - `crates/cyril-core/src/types/event.rs`: `SET_CONFIG_OPTION_OPERATION`, used by the mediator (`domain_mediator/commands/session.rs`), the session, and `cyril-workbench/src/reviewer.rs`.
+  - `crates/cyril-ui`: `PickerKind::Config(ConfigTarget)` (no longer `Copy`; `picker_kind()` returns `Option<&PickerKind>`); `PickerState`/`PickerConfirmation` lose `config_id`/`subject`; `show_config_picker(ConfigPicker)` derives the title from the target's noun; `UiState` loses `pending_config_set`, `note_config_set_requested`, `has_pending_config_set`, `config_set_failed` and the `"set_config_option"` match; `ack_config_set` switches on `KasConfigId`. The five fixture files that only gained `config_id: None, subject: None` are back to their main-branch content.
+  - `crates/cyril/src/app.rs`: `confirm_config_picker(target, value)` = `accepts` → send `KasConfigRequest::to_command()` → `note_config_set_requested`; `open_effort_chain()` runs after routing a `ConfigOptionSet` and drops the step when a modal overlay is open. Both `error!` construction-bug branches deleted.
+  - Commit `f936ca13`.
+- **Performed checks and results:**
+  - Sensitivity: `model_confirm_chains_effort_only_after_the_model_ack` written first against `ef0053c0` — RED, panicked at `app.rs:8929` ("no effort step before KAS acknowledges the model switch"); GREEN after R10 (`cargo test -p cyril --bin cyril app::tests::model_confirm_chains_effort_only_after_the_model_ack -- --exact`).
+  - New/rewritten coverage: session `model_set_ack_prepares_the_effort_chain_from_the_rebuilt_catalog`, `model_set_that_did_not_take_effect_prepares_no_chain`; kas_config `config_ids_round_trip_the_wire`, `accepts_revalidates_against_the_row_source`; App `effort_step_after_the_ack_sends_model_then_effort`, `failed_model_set_opens_no_effort_step` (replaces F8's `failed_model_set_closes_chained_effort_picker`), `effort_step_never_replaces_an_open_overlay`. Retired: `chained_effort_confirm_before_ack_sends_both_sets` (asserted the behavior F9 removes) and UiState `pending_config_set_matches_exact_request` (state no longer exists).
+  - Gate at `f936ca13`: nextest kas lane 1445 passed, workspace (default features) 2327 passed, core no-default 861 passed; all four clippy lanes clean; doc tests pass; fmt clean.
+- **Unresolved failures:** none. Consumer smoke for the changed live interaction: PENDING — see Final integration below.
+
+#### R11 — one `ConfigSelectCommand`; `Option` snapshot helper (F16, F17)
+
+- **Delivered behavior:** `ConfigSelectCommand::{model(), mode()}` (private fields) replaces `ModelCommand`/`ModeCommand`; name, usage, not-reported and not-offered lines derive from the target, byte-identical to before. `kas_config_snapshot` returns `crate::Result<Option<&KasConfigSnapshot>>`. Commit `be318b35`.
+- **Performed checks and results:** existing refusal-matrix and happy-path command tests (which pin every user-facing string) pass unchanged in substance; nextest kas lane 1445, workspace all-features 2334, core no-default 861 passed; all four clippy lanes clean; fmt clean.
+- **Unresolved failures:** none.
+
+#### R12 — `/effort` ticks the level in use (F19)
+
+- **Delivered behavior:** the `Effort` branch of `KasConfigSnapshot::picker` marks the `effortLevel` select's `currentValue` when `model_id` is current and the value is offered, else `defaultEffortLevel`; `/effort` doc updated. Commit `be0d3767`.
+- **Performed checks and results:**
+  - Sensitivity: `commands::config_command_tests::effort_command_ticks_the_level_in_use` written first against `be318b35` — RED (`left: ["high"]`, `right: ["max"]`); GREEN after. Added `kas_config::tests::effort_picker_marks_the_level_in_use` (in use / unoffered fallback / other-model fallback).
+  - Gate at `be0d3767`: nextest kas lane 1447, workspace all-features 2336, core no-default 863 passed; all four clippy lanes clean; fmt clean.
+- **Unresolved failures:** none.
+
+### Repair re-review
+
+DONE — rust-code-reviewer agent (independent of the repair implementation), scope `8e378ad0..be0d3767` with this log and design.md §2 as context; it ran `cargo clippy --workspace --all-targets -- -D warnings` (clean) and `cargo test -p cyril-core -p cyril-ui -p cyril` (0 failures). Verdict: **nothing blocking**. It confirmed the ack-gated chain only fails *closed* (every ordering hole yields no effort step, none a wrong-model set; F6's `accepts` current-model check still guards a double model confirm), that F4/F5/F6/F7, the read-back messages, the byte-identical refusal strings and the v2 Agent path survive, that R7's retirement is sound, and that the new types remove the named illegal states and switches with no new `#[allow]`/`let _ =`/sentinel. Its three non-blocking findings are round 5 below.
+
+## Review round 5 — repair re-review findings
+
+| finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
+|---|---|---|---|---|---|---|---|
+| F23 | The session's set-failure arm claims a failure can only belong to the pending request; `/thinking`'s KAS lever and the stale-session replacement (`domain_mediator/mod.rs` `ForSession`) emit the same label, and a newer request overwrites the single slot — each silently drops the chain for a model switch that succeeded. Tag requests or key the slot | rust-code-reviewer | Verified | Code reading `domain_mediator/commands/mod.rs:74-80` (SetThinking → `set_config_option`), `domain_mediator/mod.rs` stale replacement, `session.rs` single `Option` slot | Modify | R13: comment corrected to state the shared label and the fail-safe choice; behavior kept | non-blocking — fails closed (no effort step; `/effort` is the fallback), never a wrong set; exact matching would need failure tagging in the mediator, a protocol change disproportionate to a convenience step — permanent design choice, no tracker issue |
+| F24 | The ack can land while the user is typing; the effort step then takes the keyboard (typed characters filter it, Enter confirms a level) — new with F9 | rust-code-reviewer | Verified | Red test `effort_step_never_steals_keystrokes_from_the_input` at `be0d3767` panicked at `app.rs:8984` (step opened over typed input) | Accept | R13: `open_effort_chain` also drops the step when the input buffer is non-empty | non-blocking — UX hazard, but fixed because a stray Enter would send a level the user did not pick |
+| F25 | `model_set_that_did_not_take_effect_prepares_no_chain`: the "unrelated `BridgeError` keeps the request" step is masked by the following `SessionCreated`; `BridgeDisconnected` clearing untested | rust-code-reviewer | Verified | Code reading of the test; mutation (clear on any `BridgeError`) passed the old test | Accept | R13: assert the request survives an unrelated failure (the next ack opens the chain); loop both boundaries | non-blocking — test gap |
+
+### Repair
+
+#### R13 — typing guard, honest failure comment, tighter boundary test (F23, F24, F25)
+
+- **Delivered behavior:** `App::open_effort_chain` drops the post-ack step when `has_modal_overlay()` OR the input buffer is non-empty; session set-failure comment rewritten (no behavior change); session test tightened. Commit `980f0c51`.
+- **Performed checks and results:**
+  - F24 sensitivity: `cargo test -p cyril --bin cyril app::tests::effort_step_never_steals_keystrokes_from_the_input -- --exact` RED at `be0d3767` (panic `app.rs:8984`), GREEN at `980f0c51`.
+  - F25 sensitivity: with the session arm mutated to `Notification::BridgeError { .. } =>` the tightened test FAILED (panic `session.rs:1820`); restored from a byte copy (not git), GREEN.
+  - Gate at `980f0c51`: nextest kas lane 1448, workspace all-features 2337, core no-default 863 passed; all four clippy lanes clean; fmt clean.
+- **Unresolved failures:** none. Scoped re-review: see below.
+
+### R13 scoped re-review
+
+DONE — same rust-code-reviewer agent, scope `be0d3767..980f0c51`; targeted tests pass at `980f0c51`. Verdict: **nothing blocking, no new findings.** Input guard has no false drops: `submit_input` empties the buffer via `take_input()` before `/model` runs, there is no draft-restore path, and autocomplete only shows while the user is typing — so a non-empty buffer at ack time means typed, pasted or voice-transcribed text arrived after the confirm. Key routing is complete: the picker receives keys only as `topmost_overlay()`'s `Overlay::Picker`, and paste/voice inserts are gated on `has_modal_overlay()`. F23's comment is now accurate; F25's test discriminates.
+
+**Round status:** every finding F9–F25 has one evidence state and decision; every behavior-changing repair has sensitivity receipts, a passing gate and independent review; consumer smoke PASS. No blocking defect or required check outstanding.
+
+### Final integration
+
+- Assembled-branch repository gate: PASS at `980f0c51` (R13 record above; the lanes cover every crate).
+- Consumer smoke: PASS — 2026-10-17, kiro-cli 2.32.0 (IAM Identity Center login), cyril built at `be0d3767` with `--features kas` (R13 only adds a guard for the typing case, which the smoke does not exercise), driven by tmux keystrokes under an isolated `HOME` with the real `XDG_DATA_HOME`.
+  - KAS session: toolbar `vibe · auto` from the initial catalog. `/model` opened with `auto ✓` preselected. Confirming `claude-sonnet-5.5`: a capture taken immediately after Enter showed no picker; then "Model set to claude-sonnet-5.5." followed by the effort step `low/medium/high ✓/xhigh/max`, toolbar `◇ high` (F9 + C8 live). Confirmed `max` → "Effort set to max.", toolbar `◇ max`. `/effort` reopened with `max ✓` (F19 live; C13 showed `high✓` here). `/model` → `auto` → "Model set to auto.", effort chip cleared, no step opened. `/mode` opened with `Default ✓`; Plan → "Mode set to plan.", toolbar `plan`.
+  - v2 session (default engine): `/model` opened the kiro.dev picker with credit badges and the `[active]` marker — unchanged (C12).
+  - Not observed on the wire: this run wrote no `cyril.log` in its working directory, so the model-before-effort frame order rests on the pre-ack capture plus `effort_step_after_the_ack_sends_model_then_effort`.
+  - Noted, not a defect of this change: kiro-cli 2.32.0 has no wire audit yet (latest is 2.31.1).
