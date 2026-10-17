@@ -683,7 +683,8 @@ impl Command for ConfigSelectCommand {
 }
 
 /// `/effort` on the KAS engine (cyril-vh69): picker over the CURRENT model's
-/// effort levels, with the model's `defaultEffortLevel` marked. A model
+/// effort levels, with the level in use marked (the model's
+/// `defaultEffortLevel` when KAS reports none — review round 4, F19). A model
 /// without effort support (`auto`, `hasEffort: false`) has no `effortLevel`
 /// option on the wire either, so offering a picker would be offering a
 /// silent no-op — the command refuses and names the model instead.

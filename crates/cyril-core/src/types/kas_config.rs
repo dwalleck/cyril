@@ -205,9 +205,12 @@ impl KasConfigSnapshot {
     ///   An absent and a present-but-empty select are the same refusal —
     ///   the command layer's "not offered by this session".
     /// - `Effort { model_id }`: one row per level of the model's
-    ///   [`EffortMetadata`], `is_current` on its `defaultEffortLevel` — the
-    ///   acceptance criteria's "default marked". `None` when the model has no
-    ///   effort metadata.
+    ///   [`EffortMetadata`], `is_current` on the level in use — the
+    ///   `effortLevel` select's `currentValue` while `model_id` is current and
+    ///   that value is one of its levels (review round 4, F19) — else on its
+    ///   `defaultEffortLevel`. The post-ack chain is built right after KAS
+    ///   applied the default, so it reads "default marked" either way.
+    ///   `None` when the model has no effort metadata.
     pub fn picker(&self, target: ConfigTarget) -> Option<ConfigPicker> {
         let options = match &target {
             ConfigTarget::Model | ConfigTarget::Mode => {
@@ -227,7 +230,11 @@ impl KasConfigSnapshot {
             }
             ConfigTarget::Effort { model_id } => {
                 let effort = self.effort_for_model(model_id)?;
-                let marked = effort.default_level();
+                let in_use = (self.current_model() == Some(model_id.as_str()))
+                    .then(|| self.current_value(KasConfigId::Effort))
+                    .flatten()
+                    .filter(|level| effort.offers(level));
+                let marked = in_use.or(effort.default_level());
                 effort
                     .levels()
                     .iter()
@@ -448,6 +455,45 @@ mod tests {
                     .is_none(),
                 "{model_id} offers no effort picker"
             );
+        }
+    }
+
+    /// F19: the tick follows the `effortLevel` select's `currentValue` only
+    /// for the current model and only when it names an offered level.
+    #[test]
+    fn effort_picker_marks_the_level_in_use() {
+        let with_effort = |current_model: &str, in_use: &str| {
+            let mut options = catalog_with_model(current_model).options().to_vec();
+            options.push(ConfigOption {
+                key: KasConfigId::Effort.as_str().into(),
+                label: "Effort".into(),
+                value: Some(in_use.into()),
+                options: vec![],
+            });
+            KasConfigSnapshot::new(options)
+        };
+        let sonnet = || ConfigTarget::Effort {
+            model_id: "claude-sonnet-5.5".into(),
+        };
+        for (current_model, in_use, want, why) in [
+            ("claude-sonnet-5.5", "max", "max", "the level in use"),
+            (
+                "claude-sonnet-5.5",
+                "none",
+                "high",
+                "an unoffered level falls back",
+            ),
+            (
+                "auto",
+                "max",
+                "high",
+                "another model's level is not this one's",
+            ),
+        ] {
+            let picker = with_effort(current_model, in_use)
+                .picker(sonnet())
+                .expect("sonnet 5.5 has effort levels");
+            assert_eq!(marked(&picker), [want], "{why}");
         }
     }
 

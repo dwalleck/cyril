@@ -2462,6 +2462,43 @@ mod config_command_tests {
         assert!(sent.is_empty(), "args send nothing: {sent:?}");
     }
 
+    /// C5 + F19 (review round 4): standalone `/effort` ticks the level in
+    /// use — the `effortLevel` option's `currentValue` — not the model's
+    /// default; a reported value the model does not offer falls back to the
+    /// default (KAS "succeeds" on bogus levels).
+    #[tokio::test]
+    async fn effort_command_ticks_the_level_in_use() {
+        let with_effort = |current: &str| {
+            let Notification::ConfigOptionsUpdated(mut options) = catalog("claude-sonnet-5.5")
+            else {
+                unreachable!("catalog() is a ConfigOptionsUpdated");
+            };
+            options.push(ConfigOption {
+                key: "effortLevel".into(),
+                label: "Effort".into(),
+                value: Some(current.into()),
+                options: vec![],
+            });
+            Notification::ConfigOptionsUpdated(options)
+        };
+        for (in_use, want) in [("max", "max"), ("none", "high")] {
+            let (result, sent) = run(
+                &builtin::EffortCommand,
+                &session(Some(with_effort(in_use)), true),
+                "",
+            )
+            .await;
+            let (_, options) = picker(result);
+            let marked: Vec<&str> = options
+                .iter()
+                .filter(|o| o.is_current)
+                .map(|o| o.value.as_str())
+                .collect();
+            assert_eq!(marked, [want], "effortLevel currentValue {in_use:?}");
+            assert!(sent.is_empty(), "/effort itself sends nothing: {sent:?}");
+        }
+    }
+
     /// C6: `/mode` picks over the wire values with labels and descriptions,
     /// `is_current` on the reported value; same refusal matrix as /model.
     #[tokio::test]
