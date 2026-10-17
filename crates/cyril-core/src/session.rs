@@ -379,8 +379,12 @@ impl SessionController {
                 }
                 true
             }
-            // A failed set carries no config id; the single pending slot is
-            // the only request it can belong to. Not a displayed change.
+            // A failed set carries no config id, so it cannot be matched to a
+            // request: `/thinking`'s KAS lever and the mediator's stale-session
+            // replacement share this label (review round 5, F23). Clearing is
+            // the fail-safe choice — at worst a successful model set opens no
+            // effort step and the user runs `/effort`; a wrong-model effort
+            // set stays impossible (`accepts`). Not a displayed change.
             Notification::BridgeError { operation, .. }
                 if operation == SET_CONFIG_OPTION_OPERATION =>
             {
@@ -1807,17 +1811,33 @@ mod config_options_tests {
             "a failed set clears its pending request"
         );
 
+        // Another operation's failure leaves the request in place (F25).
         request_sonnet(&mut ctrl);
         ctrl.apply_notification(&Notification::BridgeError {
             operation: "prompt".into(),
             message: "unrelated".into(),
         });
-        ctrl.apply_notification(&session_created("s2"));
         ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
         assert!(
-            ctrl.take_effort_chain().is_none(),
-            "a session boundary clears the pending request"
+            ctrl.take_effort_chain().is_some(),
+            "an unrelated failure does not clear the pending request"
         );
+
+        for boundary in [
+            session_created("s2"),
+            Notification::BridgeDisconnected {
+                reason: "process exited".into(),
+            },
+        ] {
+            ctrl.apply_notification(&Notification::ConfigOptionsUpdated(effort_catalog("auto")));
+            request_sonnet(&mut ctrl);
+            ctrl.apply_notification(&boundary);
+            ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
+            assert!(
+                ctrl.take_effort_chain().is_none(),
+                "{boundary:?} clears the pending request"
+            );
+        }
 
         ctrl.note_config_set_requested(KasConfigRequest::new(KasConfigId::Model, "auto"));
         ctrl.apply_notification(&model_set_ack("auto"));

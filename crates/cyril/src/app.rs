@@ -2082,15 +2082,16 @@ impl App {
     /// Open the effort step a successful model set prepared (review round 4,
     /// F9). `SessionController` builds it from the ack's rebuilt catalog, so
     /// the step only exists once KAS has switched models; the App merely
-    /// places it — unless another modal overlay is already up, where a picker
-    /// opening itself over the user's next action is worse than none (the
-    /// toolbar already shows the default KAS applied).
+    /// places it — unless the user has moved on (another modal overlay is
+    /// up, or they started typing — review round 5, F24): a picker that opens
+    /// itself over the user's next action would take their keystrokes, and
+    /// the toolbar already shows the default KAS applied; `/effort` remains.
     fn open_effort_chain(&mut self) {
         let Some(picker) = self.session.take_effort_chain() else {
             return;
         };
-        if self.ui_state.has_modal_overlay() {
-            tracing::debug!("effort step dropped: another overlay is open");
+        if self.ui_state.has_modal_overlay() || !TuiState::input_text(&self.ui_state).is_empty() {
+            tracing::debug!("effort step dropped: the user has moved on");
             return;
         }
         self.ui_state.show_config_picker(picker);
@@ -8966,6 +8967,26 @@ mod tests {
             Some(&PickerKind::Config(ConfigTarget::Mode)),
             "the mode picker the user opened stays"
         );
+    }
+
+    /// F24 (review round 5): the ack can land after the user started typing;
+    /// the effort step must not steal the keyboard (keystrokes would filter
+    /// it, Enter would confirm a level). The typed text stays put.
+    #[tokio::test]
+    async fn effort_step_never_steals_keystrokes_from_the_input() {
+        let (mut app, mut rx) = kas_app_with_catalog();
+        open_model_picker(&mut app);
+        app.ui_state.picker_select_next();
+        app.handle_picker_key(enter()).await.expect("model confirm");
+        expect_config_set(&mut rx, KasConfigId::Model, "claude-sonnet-5.5");
+
+        app.ui_state.insert_text("hel");
+        ack_model_set(&mut app, "claude-sonnet-5.5");
+        assert!(
+            app.ui_state.picker().is_none(),
+            "typing in progress — the effort step is dropped"
+        );
+        assert_eq!(TuiState::input_text(&app.ui_state), "hel");
     }
 
     /// F2/R1 (review round 1): a post-ack effort confirm revalidates against
