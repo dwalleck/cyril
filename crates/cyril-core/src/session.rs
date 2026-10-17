@@ -1532,8 +1532,6 @@ mod thinking_tests {
 
 #[cfg(test)]
 mod config_options_tests {
-    #![allow(clippy::unwrap_used)]
-
     use super::*;
     use crate::types::ConfigOptionValue;
 
