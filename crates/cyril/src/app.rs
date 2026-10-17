@@ -413,7 +413,7 @@ impl App {
             bridge.split();
         let (usage_enrichment, usage_enrichment_rx) = spawn_usage_enrichment_worker();
         let (memory_task_tx, memory_task_rx) = mpsc::unbounded_channel();
-        let commands = CommandRegistry::with_builtins_and_usage(
+        let commands = CommandRegistry::with_builtin_sources(
             hooks,
             workflows,
             cyril_core::commands::UsageAccountCommandSource::resolve(agent_engine),

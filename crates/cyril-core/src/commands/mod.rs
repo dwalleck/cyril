@@ -472,9 +472,9 @@ impl CommandRegistry {
     /// config builtins (`/model` `/effort` `/mode`, cyril-vh69) never
     /// register here — this constructor is the v2 shape; engine-gated
     /// composition resolves a [`ConfigCommandSource`] and calls
-    /// [`with_builtins_and_usage`](Self::with_builtins_and_usage).
+    /// [`with_builtin_sources`](Self::with_builtin_sources).
     pub fn with_builtins(hooks: HooksCommandSource, workflows: WorkflowCommandSource) -> Self {
-        Self::with_builtins_and_usage(
+        Self::with_builtin_sources(
             hooks,
             workflows,
             UsageAccountCommandSource::None,
@@ -482,7 +482,7 @@ impl CommandRegistry {
         )
     }
 
-    pub fn with_builtins_and_usage(
+    pub fn with_builtin_sources(
         hooks: HooksCommandSource,
         workflows: WorkflowCommandSource,
         usage_account: UsageAccountCommandSource,
@@ -1203,7 +1203,7 @@ mod tests {
             workflow_tracker: None,
             memory_status: None,
         };
-        let registry = CommandRegistry::with_builtins_and_usage(
+        let registry = CommandRegistry::with_builtin_sources(
             HooksCommandSource::Agent,
             WorkflowCommandSource::None,
             UsageAccountCommandSource::Kas,
@@ -2064,7 +2064,7 @@ mod thinking_command_tests {
         let root = std::path::PathBuf::from("/workspace");
         for registry in [
             CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None),
-            CommandRegistry::with_builtins_and_usage(
+            CommandRegistry::with_builtin_sources(
                 HooksCommandSource::Kas {
                     workspace_root: root.clone(),
                 },
@@ -2103,7 +2103,7 @@ mod config_command_tests {
 
     fn kas_registry() -> CommandRegistry {
         let root = std::path::PathBuf::from("/workspace");
-        CommandRegistry::with_builtins_and_usage(
+        CommandRegistry::with_builtin_sources(
             HooksCommandSource::Kas {
                 workspace_root: root.clone(),
             },
