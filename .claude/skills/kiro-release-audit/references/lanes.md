@@ -18,7 +18,7 @@ Workflows section.
 | `tui` | `tui-bundles/kiro-tui-<OLD>.js` vs `<NEW>.js` (minified bun bundle; the reference ACP client) | keys the TUI sends under `initialize.clientCapabilities._meta.kiro` and `.settings`, `session/new`, `session/prompt`, permission-response and `session/load` `_meta`; `_kiro/*` and `kiro.dev/*` literals called; kinds consumed; slash-command set and new flows (`/memories`, `/workflow`, `/model fallback`, `/effort`, `/upgrade-agent`); how it spawns KAS (`--auth=`, env, Windows supervisor); rollout gate checks; dark features | `static-tui-{gates,vocab}-<OLD>.py` | `audit-<OLD>/tui-findings.md` |
 | `host` | `binaries/<ver>/extracted/kirocli/bin/{kiro-cli,kiro-cli-chat,kiro-cli-term}` for OLD and each NEW | why same-`BUILD_HASH` binaries differ; rollout registry rows and percentages; `KIRO_*` env set; settings-key set; new `crates/*/src/*.rs` paths; hidden subcommands and `launch/*.rs`; Classic deprecation state; launcher auth (`--auth-method`, how auth reaches the node KAS process); v2 `_kiro.dev/*` surface, TuiCommand args, serde literals; embedded doc-manifest delta; changelog lines not tagged `[V3]`. May run archived binaries with `--help` only, under temp `HOME` and temp `XDG_DATA_HOME`; never the installed launcher | `static-host-{env,novel-words,paths,serde,settings,vocab}-<OLD>.py`, `static-rollout-<OLD>.py`, `static-doc-manifests-<OLD>.py` | `audit-<OLD>/host-findings.md` |
 | `v3-coverage` | `tui-bundles/kiro-tui-<NEW>.js` (reference v3 client) × `kas-carves/<NEW>` × cyril `crates/` | a **standing** parity inventory, not a delta: nine matrices (handshake keys; agent capabilities read; client→agent methods; every `sessionUpdate`/`session_info_update` kind/`_kiro/*` notification; host callbacks; configOptions/modes/models/effort; every TUI slash command classified TUI-local / KAS-method-backed / v2-only; v2 features lost on KAS; session lifecycle), each row KAS / TUI / cyril verdict + `file:line` / consequence / issue / BLOCKS-FLIP-or-FOLLOW-UP; then ranked flip blockers for cyril-4c4d. Reads the delta lanes' FINDINGS, never redoes them. Before calling a feature missing on KAS, look for where it moved (traps 26) | `static-v3cov-{ctx,kinds,methods,issues}-<OLD>.py` | `audit-<OLD>/v3-coverage-findings.md` |
-| `live` | the two KAS carves spawned directly with `~/.local/share/kiro-cli/node`; the v2 host pair only when budget remains | smoke and `--help` of both `acp-server.js`; initialize diff; paired `sweep`; paired `workflow` gate off and on; the static lanes' leads; memory and telemetry handshakes; new-field sweep | `probe-kas-live-<OLD>.py`, `probe-kas-initsettings-<OLD>.py`, `probe-kas-leads-<OLD>.py`, `probe-v2-live-sweep-<OLD>.py`, `sweep-new-fields.py` | `audit-<OLD>/live-findings.md` (leg recipes, isolation pattern, handshake form) |
+| `live` | the two KAS carves spawned directly with `~/.local/share/kiro-cli/node`; the cyril binary on KAS_NEW (cyril-on-KAS leg); the v2 host pair only when budget remains | smoke and `--help` of both `acp-server.js`; initialize diff; paired `sweep`; paired `workflow` gate off and on; the static lanes' leads; memory and telemetry handshakes; new-field sweep; the cyril-on-KAS leg (user-visible verdict per flip blocker) | `probe-kas-live-<OLD>.py`, `probe-kas-initsettings-<OLD>.py`, `probe-kas-leads-<OLD>.py`, `probe-v2-live-sweep-<OLD>.py`, `sweep-new-fields.py` | `audit-<OLD>/live-findings.md` (leg recipes, isolation pattern, handshake form) |
 
 Cyril consumers the lanes cite for HANDLED/DROPPED/NOT-SENT: `crates/cyril-core/src/protocol/convert/kas.rs`,
 `convert/kas/*.rs` (workflow.rs for the workflow lane), `convert/kiro.rs` (v2),
@@ -93,13 +93,69 @@ Leg order: (0) `--help` of both acp-server.js, initialize-only on NEW with --aut
 with no --auth, diff the initialize results; (1) paired SCENARIO=sweep OLD then NEW;
 (2) paired SCENARIO=workflow GATE=off then GATE=on, OLD then NEW; (3) static leads as they
 arrive (the orchestrator sends them; include a positive control per handshake probe);
-(4) `sweep-new-fields.py --diff <NEW capture> <OLD capture>` per pair; (5) v2 pair only when every
-KAS item is done and budget remains, archive bin/ first on PATH, child exe recorded.
+(4) `sweep-new-fields.py --diff <NEW capture> <OLD capture>` per pair; (5) the cyril-on-KAS leg
+below, against KAS_NEW; (6) v2 pair only when every KAS item is done and budget remains, archive
+bin/ first on PATH, child exe recorded.
 For a cyril-vs-KAS question, send the frame Kiro's TUI sends for that feature; v2 frames failing on
 KAS is expected and needs no probe (traps 25). Re-run any leg that errored early. Kill orphan node
 children of your PROBE_SCRATCH after each leg. Mark every finding LIVE with capture file and frame
 index; copy redacted, trimmed captures to experiments/conductor-spike/kas-<topic>-<NEW>.jsonl.
 ```
+
+## cyril-on-KAS leg
+
+Every other leg drives KAS from a Python probe that imitates cyril; this one runs the cyril binary
+itself, so a flip blocker gets a user-visible verdict, not only a wire one. Appended to the live
+lane's brief verbatim, after the protocol block.
+
+```
+Leg 5 — cyril-on-KAS. Run the real cyril binary against KAS_NEW and record what a cyril user sees
+for each cyril-4c4d flip blocker and each P2 parity row the delta lanes or v3-coverage marked
+LIVE-pending.
+
+Terminal driver: the hex1b MCP (tools start_bash_terminal, send_terminal_input, send_terminal_key,
+wait_for_terminal_text, capture_terminal_text, capture_terminal_screenshot,
+start/stop_asciinema_recording, stop_terminal, remove_session). If its tools are absent from your
+session, say so in FINDINGS and fall back to .cyril-a14l/oracle-pty.py (pty + pyte; copy-and-adapt
+to a real agent and a 160x48 screen as experiments/conductor-spike/probe-cyril-kas-<NEW>.py).
+
+Build once from the primary checkout's HEAD and record the commit:
+  env -u CARGO_TARGET_DIR cargo build --features kas   →  target/debug/cyril
+Spawn, inside one hex1b bash terminal (160x48, asciinema to <lane dir>/cyril-kas/<scenario>.cast):
+  HOME=<fresh temp> XDG_DATA_HOME=<real> KIRO_KAS_SERVER_PATH=<KAS_NEW> KIRO_AGENT_PATH=<node> \
+    <repo>/target/debug/cyril --agent-engine kas
+with cwd = a temp workspace that is `git init` + `git add`ed (cyril's file completer reads git).
+cyril serves the stored access token and never renews it: renew single-flight with the driver's
+`kiro-cli user whoami` path right before the leg, and keep the leg inside one token window.
+
+Scenarios (one cyril process each; seed everything under the temp HOME or workspace):
+  S1 startup     wait for the toolbar; record engine, model and mode shown, and the time from
+                 launch until the model appears (it arrives in a config_option_update).
+  S2 commands    seed one skill and one saved prompt; type `/` and record the completion list;
+                 run `/<skill> hello`; record what the user sees (cyril-oieu).
+  S3 settings    `/thinking` toggle (positive control, a KAS config option cyril already writes);
+                 then `/model`, `/effort`, `/mode` (cyril-vh69).
+  S4 trust       prompt a harmless shell command, answer the approval with "Always allow", start a
+                 new session, prompt the same command; record whether approval is asked again, and
+                 diff the seeded agent file before/after (cyril-auxt).
+  S5 sub-agent   one prompt that makes KAS delegate (invoke_sub_agent); record how the child's tool
+                 calls and its answer appear in the transcript (cyril-ebqu, cyril-1v25).
+  S6 MCP         seed settings/mcp.json with the stdio fixture from audit-<OLD>/live/fixtures/; call
+                 its tool; record the "Tool Load" row and the call's display (cyril-1v25, cyril-2yn8).
+  S7 KIRO_HOME   absolute KIRO_HOME=<temp>/kh with a distinct agent there and another in
+                 $HOME/.kiro/agents; record which agent cyril lists and which KAS loads (cyril-d7ve).
+For each scenario save capture_terminal_text after every step to <lane dir>/cyril-kas/<scenario>-<step>.txt
+and copy the workspace's cyril.log. S2, S4, S5 and S6 are billed (about six turns in total); S1, S3
+and S7 are zero-turn. Stop and remove every terminal session when the leg ends.
+
+FINDINGS row per scenario: issue | expected (from the static row) | observed on screen | evidence
+file | verdict CONFIRMED / REFUTED / CHANGED. A symptom that differs from the wire-level finding
+is a finding in itself.
+```
+
+hex1b is configured for `~/repos/dotnet-agent` only (2026-10-16); enable it for cyril before an
+audit with `claude mcp add -s local hex1b -- hex1b-mcp` (local scope: this checkout, not committed)
+so the live lane inherits its tools.
 
 ## Orchestration
 
