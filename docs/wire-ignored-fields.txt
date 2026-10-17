@@ -1,0 +1,43 @@
+# Wire fields cyril knowingly does not read — allowlist for experiments/conductor-spike/unread-fields.py.
+#
+# One fnmatch glob per line (`*` spans dots), each with `# reason` or `# tracked: <issue>`.
+# A path unread-fields.py reports that no line here matches FAILS the check: triage it into
+# a cyril change, a design reason below, or a tracking issue. Remove a line when cyril starts
+# reading the field or its issue closes. Seeded 2026-10-16 from the 2.31.1 audit's KAS 0.66.34
+# captures (sweep, gate-off workflow, sub-agent, MCP).
+
+# --- by design: payloads cyril shows as opaque JSON or never models -------------------------
+session/update.update.rawInput.*        # tool-authored input, rendered as JSON; tool_load {tool_id, arguments} unwrap tracked: cyril-2yn8
+session/update.update.rawOutput.*       # tool-authored output, rendered as JSON
+result:_kiro/workflow/listRecipes.recipes[].builtIn   # WireRecipe ignores builtIn/inputs/plan by design (convert/kas/workflow.rs)
+result:_kiro/workflow/listRecipes.recipes[].inputs.*  # recipe-defined input names; ignored by design (WireRecipe)
+result:_kiro/workflow/listRecipes.recipes[].plan*     # recipe internals belong to the authoring surface (WireRecipe)
+*.capturedOutputs.*                     # keyed by step id; capture semantics tracked: cyril-srp6
+_kiro/configuration/state               # pushed only when initialize advertises configurationState (probe control arm); opt-in tracked: cyril-iq2c
+
+# --- tracked by an open issue ---------------------------------------------------------------
+result:_kiro/workflow/listRecipes.recipes[].validationError   # tracked: cyril-n8pr
+*configOptions[].options[]._meta.kiro.*                       # per-model effort/credit metadata; tracked: cyril-lxuo, cyril-vh69
+session/update.update._meta.kiro.agentSubtaskId               # tracked: cyril-ebqu
+session/update.update._meta.kiro.activity*                    # focus_update activity; tracked: cyril-0o7e
+_kiro/governance/state                                        # tracked: cyril-0o7e
+_kiro/mcp/status                                              # tracked: cyril-nk4o
+_kiro/session/notify                                          # tracked: cyril-fb1m
+_kiro/sessions/changed                                        # tracked: cyril-as1l
+result:initialize.agentCapabilities._meta.kiro.executionTargets   # tracked: cyril-tikf
+result:initialize.agentCapabilities._meta.kiro.sessionSources     # tracked: cyril-tikf
+result:initialize.agentCapabilities._meta.kiro.sessionListScopes  # tracked: cyril-tikf
+result:initialize.agentCapabilities._meta.kiro.sourceProviders    # tracked: cyril-tikf
+result:initialize.agentCapabilities._meta.kiro.replayMarking      # tracked: cyril-99ds
+session/update.update._meta.kiro.replayId                         # tracked: cyril-99ds
+result:initialize.agentCapabilities._meta.kiro.modelFallbackReporting   # tracked: cyril-aoby
+result:session/*._meta.memoryConfig                           # tracked: cyril-0na7
+*State.memoryConfig*                                          # workflow state; tracked: cyril-4u4a
+*.state.memoryConfig*                                         # workflow state; tracked: cyril-4u4a
+*.finalState.memoryConfig*                                    # workflow state; tracked: cyril-4u4a
+*rootConversationId                                           # tracked: cyril-4u4a
+*backgroundExecution                                          # tracked: cyril-4u4a, cyril-7p7n
+result:_kiro/workflow/*.nodePlan                              # tracked: cyril-jxw3
+result:_kiro/workflow/load.stepSessions                       # tracked: cyril-jxw3
+*._meta.kiro.consentRound                                     # tracked: cyril-w55l, cyril-gn07
+session/request_permission._meta.kiro.consent.*               # tracked: cyril-gn07

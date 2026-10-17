@@ -93,7 +93,11 @@ Leg order: (0) `--help` of both acp-server.js, initialize-only on NEW with --aut
 with no --auth, diff the initialize results; (1) paired SCENARIO=sweep OLD then NEW;
 (2) paired SCENARIO=workflow GATE=off then GATE=on, OLD then NEW; (3) static leads as they
 arrive (the orchestrator sends them; include a positive control per handshake probe);
-(4) `sweep-new-fields.py --diff <NEW capture> <OLD capture>` per pair; (5) the cyril-on-KAS leg
+(4) `sweep-new-fields.py --diff <NEW capture> <OLD capture>` per pair, then `unread-fields.py` over
+the NEW captures cyril would receive (sweep, gate-off workflow, sub-agent, MCP; never a control
+arm), saved as <lane dir>/unread-fields-<NEW>.txt: triage every UNREAD line into a cyril fix, a
+docs/wire-ignored-fields.txt line with its reason or tracking issue, or a proposed issue;
+(5) the cyril-on-KAS leg
 below, against KAS_NEW; (6) v2 pair only when every KAS item is done and budget remains, archive
 bin/ first on PATH, child exe recorded.
 For a cyril-vs-KAS question, send the frame Kiro's TUI sends for that feature; v2 frames failing on
