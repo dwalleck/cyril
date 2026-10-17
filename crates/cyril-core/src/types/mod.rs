@@ -34,10 +34,13 @@ pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatu
 pub use command::{CommandInfo, CommandOption, ConfigOption, ConfigOptionValue, EffortMetadata};
 pub use event::{
     AgentInitiation, BridgeCommand, Notification, PermissionOption, PermissionOptionId,
-    PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification, TrustOption,
+    PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification,
+    SET_CONFIG_OPTION_OPERATION, TrustOption,
 };
 pub use hook::HookInfo;
-pub use kas_config::{EFFORT_CONFIG_ID, KasConfigSnapshot, MODE_CONFIG_ID, MODEL_CONFIG_ID};
+pub use kas_config::{
+    ConfigPicker, ConfigTarget, KasConfigId, KasConfigRequest, KasConfigSnapshot,
+};
 pub use kas_spawn::KasSpawn;
 pub use memory::{
     MemoryBoundedTextView, MemoryDisabledReason, MemoryLessonListView, MemoryLessonMetadataView,

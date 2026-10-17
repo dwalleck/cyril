@@ -105,8 +105,6 @@ fn picker_clamped_above_input_keeps_selection_visible() -> anyhow::Result<()> {
         filter: String::new(),
         filtered_indices: vec![0, 1, 2, 3],
         selected: 3,
-        config_id: None,
-        subject: None,
     };
     let state = MockTuiState::default();
     let mut terminal = Terminal::new(TestBackend::new(60, 16))?;
@@ -409,8 +407,6 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                             is_current: false,
                         })
                         .collect(),
-                    config_id: None,
-                    subject: None,
                     filter: String::new(),
                     filtered_indices: vec![0, 1, 2, 3],
                     selected: 3,

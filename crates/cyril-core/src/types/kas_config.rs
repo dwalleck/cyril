@@ -11,27 +11,146 @@
 //! `currentValue`) lives in `convert/kas.rs`; this module only holds and
 //! queries what conversion already validated.
 
+use crate::types::BridgeCommand;
 use crate::types::command::{CommandOption, ConfigOption, EffortMetadata};
 
-/// The KAS `configOptions` id of the model select (docs/kiro-2.31.1-wire-audit.md
-/// § B3). Effort is NOT a separate model knob: the merged surface sets the
-/// level through [`EFFORT_CONFIG_ID`] after the model switch.
-pub const MODEL_CONFIG_ID: &str = "model";
-/// The KAS `configOptions` id of the session mode select.
-pub const MODE_CONFIG_ID: &str = "mode";
-/// The KAS `configOptions` id of the effort-level select. KAS only carries it
-/// while the current model has effort support; the offered levels come from
-/// the model option's own [`EffortMetadata`], not from this option's values.
-pub const EFFORT_CONFIG_ID: &str = "effortLevel";
+/// The three KAS config selects cyril sets from a picker
+/// (docs/kiro-2.31.1-wire-audit.md § B3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum KasConfigId {
+    /// `model` — the model select. Effort is NOT a separate model knob: the
+    /// merged surface sets the level through [`KasConfigId::Effort`] after
+    /// the model switch.
+    Model,
+    /// `mode` — the session mode select.
+    Mode,
+    /// `effortLevel` — present only while the current model has effort
+    /// support. The offered levels come from the model option's own
+    /// [`EffortMetadata`]; this option supplies the level in use.
+    Effort,
+}
+
+impl KasConfigId {
+    const ALL: [Self; 3] = [Self::Model, Self::Mode, Self::Effort];
+
+    /// The wire `configId`.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Model => "model",
+            Self::Mode => "mode",
+            Self::Effort => "effortLevel",
+        }
+    }
+
+    /// The id for a wire `configId`, or `None` for selects cyril does not
+    /// set from a picker (`thinking`, `autopilot`, …).
+    pub fn from_wire(config_id: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|id| id.as_str() == config_id)
+    }
+
+    /// The setting's name in user-facing text ("Model set to …").
+    pub const fn noun(self) -> &'static str {
+        match self {
+            Self::Model => "Model",
+            Self::Mode => "Mode",
+            Self::Effort => "Effort",
+        }
+    }
+}
+
+/// What a config picker sets. The effort target names the model its levels
+/// came from, so "an effort picker always knows its model" is a type fact
+/// rather than a comment (review round 4, F11).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ConfigTarget {
+    Model,
+    Mode,
+    /// The effort level of `model_id`: rows are that model's
+    /// [`EffortMetadata`] levels, valid only while it is the current model.
+    Effort {
+        model_id: String,
+    },
+}
+
+impl ConfigTarget {
+    /// The config select this target writes.
+    pub fn id(&self) -> KasConfigId {
+        match self {
+            Self::Model => KasConfigId::Model,
+            Self::Mode => KasConfigId::Mode,
+            Self::Effort { .. } => KasConfigId::Effort,
+        }
+    }
+}
+
+/// One openable config picker: what it sets and its rows, `is_current`
+/// already marked from the snapshot.
+#[derive(Debug, Clone)]
+pub struct ConfigPicker {
+    target: ConfigTarget,
+    options: Vec<CommandOption>,
+}
+
+impl ConfigPicker {
+    pub fn new(target: ConfigTarget, options: Vec<CommandOption>) -> Self {
+        Self { target, options }
+    }
+
+    pub fn target(&self) -> &ConfigTarget {
+        &self.target
+    }
+
+    pub fn options(&self) -> &[CommandOption] {
+        &self.options
+    }
+
+    pub fn into_parts(self) -> (ConfigTarget, Vec<CommandOption>) {
+        (self.target, self.options)
+    }
+}
+
+/// One dispatched `session/set_config_option` (review round 4, F14): the
+/// request side of the read-back the `SessionController` keeps while the ack
+/// is in flight.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct KasConfigRequest {
+    id: KasConfigId,
+    value: String,
+}
+
+impl KasConfigRequest {
+    pub fn new(id: KasConfigId, value: impl Into<String>) -> Self {
+        Self {
+            id,
+            value: value.into(),
+        }
+    }
+
+    pub fn id(&self) -> KasConfigId {
+        self.id
+    }
+
+    pub fn value(&self) -> &str {
+        &self.value
+    }
+
+    /// The bridge command that performs this request.
+    pub fn to_command(&self) -> BridgeCommand {
+        BridgeCommand::SetConfigOption {
+            config_id: self.id.as_str().to_owned(),
+            value: self.value.clone(),
+        }
+    }
+}
 
 /// The latest KAS config catalog, replaced wholesale per notification.
 ///
 /// Wraps the `Vec<ConfigOption>` every config notification carries and
-/// answers the queries the `/model` `/effort` `/mode` commands and the App's
-/// confirm path need — option presence, current values, picker rows, per-model
-/// effort metadata, and confirm-time membership. Pure queries only: no
-/// notification handling (that is `SessionController`'s job), no async, no
-/// bridge access.
+/// answers the queries the `/model` `/effort` `/mode` commands, the App's
+/// confirm path and the session's post-ack chain need — option presence,
+/// current values, pickers, per-model effort metadata, and confirm-time
+/// acceptance. Pure queries only: no notification handling (that is
+/// `SessionController`'s job), no async, no bridge access.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KasConfigSnapshot {
     options: Vec<ConfigOption>,
@@ -47,30 +166,20 @@ impl KasConfigSnapshot {
         &self.options
     }
 
-    /// The option named `config_id`, when the catalog offers it.
-    pub fn option(&self, config_id: &str) -> Option<&ConfigOption> {
-        self.options.iter().find(|option| option.key == config_id)
+    /// The `id` select, when the catalog offers it.
+    pub fn option(&self, id: KasConfigId) -> Option<&ConfigOption> {
+        self.options.iter().find(|option| option.key == id.as_str())
     }
 
-    /// The option's reported `currentValue`, or `None` when the option is
+    /// The select's reported `currentValue`, or `None` when the option is
     /// absent or carries no value.
-    pub fn current_value(&self, config_id: &str) -> Option<&str> {
-        self.option(config_id)
-            .and_then(|option| option.value.as_deref())
+    pub fn current_value(&self, id: KasConfigId) -> Option<&str> {
+        self.option(id).and_then(|option| option.value.as_deref())
     }
 
     /// The current model id — `current_value` of the model select.
     pub fn current_model(&self) -> Option<&str> {
-        self.current_value(MODEL_CONFIG_ID)
-    }
-
-    /// Whether `value` is one of the values `config_id` currently offers.
-    /// Exact string equality: KAS accepts unoffered values without complaint
-    /// (and then fails the next prompt), so confirm-time revalidation must be
-    /// precise, never prefix or case-folded.
-    pub fn contains_value(&self, config_id: &str, value: &str) -> bool {
-        self.option(config_id)
-            .is_some_and(|option| option.options.iter().any(|o| o.value == value))
+        self.current_value(KasConfigId::Model)
     }
 
     /// The effort metadata of the offered model `model_id`, when that model
@@ -79,7 +188,7 @@ impl KasConfigSnapshot {
     /// option for them either, so offering a picker would be offering a
     /// silent no-op.
     pub fn effort_for_model(&self, model_id: &str) -> Option<&EffortMetadata> {
-        self.option(MODEL_CONFIG_ID)?
+        self.option(KasConfigId::Model)?
             .options
             .iter()
             .find(|o| o.value == model_id)?
@@ -87,54 +196,79 @@ impl KasConfigSnapshot {
             .as_ref()
     }
 
-    /// Picker rows for `config_id`: one [`CommandOption`] per offered value,
-    /// label/description from the wire, `is_current` on the option's
-    /// `currentValue`, `group` always `None` (credit-rate badges are
-    /// cyril-lxuo, out of scope). `None` when the catalog does not offer the
-    /// option at all — the command layer's "not offered by this session"
-    /// case, which a present-but-empty list deliberately shares (a picker
-    /// with zero options is never opened).
-    pub fn picker_options(&self, config_id: &str) -> Option<Vec<CommandOption>> {
-        let option = self.option(config_id)?;
-        if option.options.is_empty() {
+    /// The picker for `target`, or `None` when this catalog cannot offer it
+    /// (a zero-row picker is never opened).
+    ///
+    /// - `Model`/`Mode`: one row per offered value, label/description from
+    ///   the wire, `is_current` on the select's `currentValue`, `group`
+    ///   always `None` (credit-rate badges are cyril-lxuo, out of scope).
+    ///   An absent and a present-but-empty select are the same refusal —
+    ///   the command layer's "not offered by this session".
+    /// - `Effort { model_id }`: one row per level of the model's
+    ///   [`EffortMetadata`], `is_current` on its `defaultEffortLevel` — the
+    ///   acceptance criteria's "default marked". `None` when the model has no
+    ///   effort metadata.
+    pub fn picker(&self, target: ConfigTarget) -> Option<ConfigPicker> {
+        let options = match &target {
+            ConfigTarget::Model | ConfigTarget::Mode => {
+                let option = self.option(target.id())?;
+                let current = option.value.as_deref();
+                option
+                    .options
+                    .iter()
+                    .map(|o| CommandOption {
+                        label: o.name.clone(),
+                        value: o.value.clone(),
+                        description: o.description.clone(),
+                        group: None,
+                        is_current: current == Some(o.value.as_str()),
+                    })
+                    .collect::<Vec<_>>()
+            }
+            ConfigTarget::Effort { model_id } => {
+                let effort = self.effort_for_model(model_id)?;
+                let marked = effort.default_level();
+                effort
+                    .levels()
+                    .iter()
+                    .map(|level| CommandOption {
+                        label: level.clone(),
+                        value: level.clone(),
+                        description: None,
+                        group: None,
+                        is_current: marked == Some(level.as_str()),
+                    })
+                    .collect()
+            }
+        };
+        if options.is_empty() {
             return None;
         }
-        let current = option.value.as_deref();
-        Some(
-            option
-                .options
-                .iter()
-                .map(|o| CommandOption {
-                    label: o.name.clone(),
-                    value: o.value.clone(),
-                    description: o.description.clone(),
-                    group: None,
-                    is_current: current == Some(o.value.as_str()),
-                })
-                .collect(),
-        )
+        Some(ConfigPicker::new(target, options))
     }
 
-    /// Effort picker rows for the offered model `model_id`: one row per level
-    /// of the model's [`EffortMetadata`], `is_current` on the model's
-    /// `defaultEffortLevel` — the acceptance criteria's "default marked".
-    /// `None` when the model has no effort metadata.
-    pub fn effort_picker_options(&self, model_id: &str) -> Option<Vec<CommandOption>> {
-        let effort = self.effort_for_model(model_id)?;
-        let default = effort.default_level();
-        Some(
-            effort
-                .levels()
-                .iter()
-                .map(|level| CommandOption {
-                    label: level.clone(),
-                    value: level.clone(),
-                    description: None,
-                    group: None,
-                    is_current: default == Some(level.as_str()),
-                })
-                .collect(),
-        )
+    /// Whether confirming `value` for `target` is still valid against THIS
+    /// catalog — the confirm-time revalidation (review round 4, F10). The
+    /// picker holds a point-in-time copy, and KAS accepts unoffered values
+    /// silently and fails the next prompt, so the check is exact and against
+    /// the same source the rows came from:
+    ///
+    /// - `Model`/`Mode`: `value` is one of the select's offered values.
+    /// - `Effort { model_id }`: `model_id` is still the current model (a
+    ///   delayed model ack must not let an old picker apply its level to a
+    ///   different model — review round 2, F6) and offers `value`.
+    pub fn accepts(&self, target: &ConfigTarget, value: &str) -> bool {
+        match target {
+            ConfigTarget::Model | ConfigTarget::Mode => self
+                .option(target.id())
+                .is_some_and(|option| option.options.iter().any(|o| o.value == value)),
+            ConfigTarget::Effort { model_id } => {
+                self.current_model() == Some(model_id.as_str())
+                    && self
+                        .effort_for_model(model_id)
+                        .is_some_and(|effort| effort.offers(value))
+            }
+        }
     }
 }
 
@@ -153,11 +287,15 @@ mod tests {
     }
 
     fn model_catalog() -> KasConfigSnapshot {
+        catalog_with_model("auto")
+    }
+
+    fn catalog_with_model(current: &str) -> KasConfigSnapshot {
         KasConfigSnapshot::new(vec![
             ConfigOption {
-                key: MODEL_CONFIG_ID.into(),
+                key: KasConfigId::Model.as_str().into(),
                 label: "Model".into(),
-                value: Some("auto".into()),
+                value: Some(current.into()),
                 options: vec![
                     value("auto", "Auto", None),
                     value(
@@ -178,7 +316,7 @@ mod tests {
                 ],
             },
             ConfigOption {
-                key: MODE_CONFIG_ID.into(),
+                key: KasConfigId::Mode.as_str().into(),
                 label: "Mode".into(),
                 value: Some("vibe".into()),
                 options: vec![
@@ -195,6 +333,34 @@ mod tests {
         ])
     }
 
+    fn marked(picker: &ConfigPicker) -> Vec<&str> {
+        picker
+            .options()
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect()
+    }
+
+    #[test]
+    fn config_ids_round_trip_the_wire() {
+        for id in KasConfigId::ALL {
+            assert_eq!(KasConfigId::from_wire(id.as_str()), Some(id));
+        }
+        assert_eq!(KasConfigId::Effort.as_str(), "effortLevel");
+        assert_eq!(KasConfigId::from_wire("thinking"), None);
+        assert_eq!(KasConfigId::from_wire("Model"), None, "exact wire ids only");
+        let effort = ConfigTarget::Effort {
+            model_id: "m".into(),
+        };
+        assert_eq!(effort.id(), KasConfigId::Effort);
+        assert!(matches!(
+            KasConfigRequest::new(KasConfigId::Mode, "plan").to_command(),
+            BridgeCommand::SetConfigOption { config_id, value }
+                if config_id == "mode" && value == "plan"
+        ));
+    }
+
     /// Oracle: the helper contract each consumer (commands, App confirm path)
     /// leans on, hand-written from design § Supporting types.
     #[test]
@@ -203,92 +369,133 @@ mod tests {
 
         assert_eq!(snapshot.options().len(), 2);
         assert_eq!(
-            snapshot.option(MODEL_CONFIG_ID).map(|o| o.key.as_str()),
-            Some(MODEL_CONFIG_ID)
+            snapshot.option(KasConfigId::Model).map(|o| o.key.as_str()),
+            Some("model")
         );
-        assert!(snapshot.option("autopilot").is_none());
+        assert!(snapshot.option(KasConfigId::Effort).is_none());
 
-        assert_eq!(snapshot.current_value(MODEL_CONFIG_ID), Some("auto"));
-        assert_eq!(snapshot.current_value(MODE_CONFIG_ID), Some("vibe"));
-        assert_eq!(snapshot.current_value("missing"), None);
+        assert_eq!(snapshot.current_value(KasConfigId::Model), Some("auto"));
+        assert_eq!(snapshot.current_value(KasConfigId::Mode), Some("vibe"));
+        assert_eq!(snapshot.current_value(KasConfigId::Effort), None);
         assert_eq!(snapshot.current_model(), Some("auto"));
-
-        assert!(snapshot.contains_value(MODEL_CONFIG_ID, "claude-haiku-4.5"));
-        assert!(!snapshot.contains_value(MODEL_CONFIG_ID, "claude-haiku"));
-        assert!(!snapshot.contains_value("missing", "auto"));
 
         let effort = snapshot
             .effort_for_model("claude-sonnet-5.5")
             .expect("sonnet 5.5 carries effort");
         assert_eq!(effort.levels().len(), 5);
         assert_eq!(effort.default_level(), Some("high"));
+        assert!(effort.offers("max"));
+        assert!(!effort.offers("Max"));
         assert!(snapshot.effort_for_model("auto").is_none());
         assert!(snapshot.effort_for_model("unknown-model").is_none());
     }
 
     #[test]
-    fn picker_options_mark_the_current_value() {
+    fn select_pickers_mark_the_current_value() {
         let snapshot = model_catalog();
 
         let models = snapshot
-            .picker_options(MODEL_CONFIG_ID)
+            .picker(ConfigTarget::Model)
             .expect("model option present");
-        assert_eq!(models.len(), 3);
+        assert_eq!(models.target(), &ConfigTarget::Model);
+        assert_eq!(models.options().len(), 3);
         assert!(
-            models.iter().all(|o| o.group.is_none()),
+            models.options().iter().all(|o| o.group.is_none()),
             "badges are cyril-lxuo, out of scope"
         );
-        let current: Vec<&str> = models
-            .iter()
-            .filter(|o| o.is_current)
-            .map(|o| o.value.as_str())
-            .collect();
-        assert_eq!(current, ["auto"], "exactly the currentValue is marked");
-        assert_eq!(models[1].label, "Claude Sonnet 5.5");
-        assert_eq!(models[1].value, "claude-sonnet-5.5");
+        assert_eq!(
+            marked(&models),
+            ["auto"],
+            "exactly the currentValue is marked"
+        );
+        assert_eq!(models.options()[1].label, "Claude Sonnet 5.5");
+        assert_eq!(models.options()[1].value, "claude-sonnet-5.5");
 
         // Wire labels AND descriptions ride through.
         let modes = snapshot
-            .picker_options(MODE_CONFIG_ID)
+            .picker(ConfigTarget::Mode)
             .expect("mode option present");
-        assert_eq!(modes[0].label, "Default");
+        assert_eq!(modes.options()[0].label, "Default");
         assert_eq!(
-            modes[0].description.as_deref(),
+            modes.options()[0].description.as_deref(),
             Some("General coding assistance")
         );
-
-        assert!(snapshot.picker_options("missing").is_none());
     }
 
     #[test]
     fn effort_picker_marks_the_model_default() {
         let snapshot = model_catalog();
-        let rows = snapshot
-            .effort_picker_options("claude-sonnet-5.5")
+        let target = ConfigTarget::Effort {
+            model_id: "claude-sonnet-5.5".into(),
+        };
+        let picker = snapshot
+            .picker(target.clone())
             .expect("sonnet 5.5 has effort levels");
-        assert_eq!(rows.len(), 5);
-        let marked: Vec<&str> = rows
-            .iter()
-            .filter(|o| o.is_current)
-            .map(|o| o.value.as_str())
-            .collect();
-        assert_eq!(marked, ["high"], "the model's defaultEffortLevel is marked");
+        assert_eq!(picker.target(), &target);
+        assert_eq!(picker.options().len(), 5);
+        assert_eq!(
+            marked(&picker),
+            ["high"],
+            "the model's defaultEffortLevel is marked"
+        );
 
-        assert!(snapshot.effort_picker_options("auto").is_none());
-        assert!(snapshot.effort_picker_options("unknown-model").is_none());
+        for model_id in ["auto", "unknown-model"] {
+            assert!(
+                snapshot
+                    .picker(ConfigTarget::Effort {
+                        model_id: model_id.into()
+                    })
+                    .is_none(),
+                "{model_id} offers no effort picker"
+            );
+        }
     }
 
     #[test]
-    fn picker_options_never_opens_empty() {
+    fn pickers_never_open_empty() {
         let snapshot = KasConfigSnapshot::new(vec![ConfigOption {
-            key: "empty".into(),
-            label: "Empty".into(),
+            key: "mode".into(),
+            label: "Mode".into(),
             value: None,
             options: vec![],
         }]);
         assert!(
-            snapshot.picker_options("empty").is_none(),
+            snapshot.picker(ConfigTarget::Mode).is_none(),
             "a present-but-empty option is the same refusal as an absent one"
+        );
+        assert!(snapshot.picker(ConfigTarget::Model).is_none(), "absent");
+    }
+
+    /// F10: the confirm-time rule, per target.
+    #[test]
+    fn accepts_revalidates_against_the_row_source() {
+        let snapshot = model_catalog();
+        assert!(snapshot.accepts(&ConfigTarget::Model, "claude-haiku-4.5"));
+        assert!(
+            !snapshot.accepts(&ConfigTarget::Model, "claude-haiku"),
+            "exact equality, never prefix"
+        );
+        assert!(snapshot.accepts(&ConfigTarget::Mode, "spec"));
+        assert!(!snapshot.accepts(&ConfigTarget::Mode, "plan"));
+
+        let sonnet = ConfigTarget::Effort {
+            model_id: "claude-sonnet-5.5".into(),
+        };
+        assert!(
+            !snapshot.accepts(&sonnet, "max"),
+            "the effort model must be the current model (F6)"
+        );
+        let switched = catalog_with_model("claude-sonnet-5.5");
+        assert!(switched.accepts(&sonnet, "max"));
+        assert!(!switched.accepts(&sonnet, "none"), "unoffered level");
+        assert!(
+            !switched.accepts(
+                &ConfigTarget::Effort {
+                    model_id: "auto".into()
+                },
+                "max"
+            ),
+            "a model without effort metadata accepts no level"
         );
     }
 }

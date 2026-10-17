@@ -257,26 +257,15 @@ pub enum CommandResultKind {
         powers: Vec<crate::types::PowerInfo>,
     },
     /// Open the picker over a KAS session config select (`/model` `/effort`
-    /// `/mode`, cyril-vh69). Carries the validated, snapshot-derived rows —
+    /// `/mode`, cyril-vh69). Carries the validated, snapshot-derived picker —
     /// the command layer can read the [`crate::types::KasConfigSnapshot`]
     /// while the picker lives in `cyril-ui`, and the App owns both. The
     /// command sends nothing itself; on confirm the App revalidates the
     /// value against the latest snapshot and sends
-    /// `BridgeCommand::SetConfigOption`. `config_id` (not the display title)
-    /// is the dispatch key, so the confirm path never overloads presentation
-    /// with routing.
-    ShowConfigPicker {
-        config_id: String,
-        title: String,
-        options: Vec<crate::types::CommandOption>,
-        /// The model an effort picker was opened for — `Some` iff
-        /// `config_id == effortLevel` (cyril-vh69, review round 1 F1).
-        /// Effort rows come from that model's `EffortMetadata`, never from
-        /// a catalog select option, so the confirm path revalidates the
-        /// value against the same source; the picker carries the id because
-        /// a chained picker can outlive the pre-switch snapshot.
-        subject: Option<String>,
-    },
+    /// `BridgeCommand::SetConfigOption`. The picker's
+    /// [`crate::types::ConfigTarget`] (not the display title) is the dispatch
+    /// key, so the confirm path never overloads presentation with routing.
+    ShowConfigPicker(crate::types::ConfigPicker),
     /// Open the `/review` consent form, prefilled from the arguments. The App
     /// owns the form, the git probes and the launch, so the command returns
     /// only the intent.
@@ -324,21 +313,9 @@ impl CommandResult {
     }
 
     /// Open the picker over a KAS session config select (cyril-vh69).
-    /// `subject` is the model an effort picker was opened for (`Some` iff
-    /// `config_id == effortLevel`); `None` for model/mode.
-    pub fn show_config_picker(
-        config_id: impl Into<String>,
-        title: impl Into<String>,
-        options: Vec<crate::types::CommandOption>,
-        subject: Option<String>,
-    ) -> Self {
+    pub fn show_config_picker(picker: crate::types::ConfigPicker) -> Self {
         Self {
-            kind: CommandResultKind::ShowConfigPicker {
-                config_id: config_id.into(),
-                title: title.into(),
-                options,
-                subject,
-            },
+            kind: CommandResultKind::ShowConfigPicker(picker),
         }
     }
 
@@ -2229,14 +2206,9 @@ mod config_command_tests {
 
     fn picker(
         result: crate::Result<CommandResultKind>,
-    ) -> (String, String, Vec<crate::types::CommandOption>) {
+    ) -> (crate::types::ConfigTarget, Vec<crate::types::CommandOption>) {
         match result {
-            Ok(CommandResultKind::ShowConfigPicker {
-                config_id,
-                title,
-                options,
-                ..
-            }) => (config_id, title, options),
+            Ok(CommandResultKind::ShowConfigPicker(picker)) => picker.into_parts(),
             other => panic!("expected ShowConfigPicker, got {other:?}"),
         }
     }
@@ -2367,9 +2339,8 @@ mod config_command_tests {
             "",
         )
         .await;
-        let (config_id, title, options) = picker(result);
-        assert_eq!(config_id, "model");
-        assert_eq!(title, "model");
+        let (target, options) = picker(result);
+        assert_eq!(target, crate::types::ConfigTarget::Model);
         assert_eq!(options.len(), 3);
         assert_eq!(options[0].label, "Auto");
         assert_eq!(options[1].label, "Claude Sonnet 5.5");
@@ -2417,8 +2388,8 @@ mod config_command_tests {
             "",
         )
         .await;
-        let (config_id, _, options) = picker(result);
-        assert_eq!(config_id, "model");
+        let (target, options) = picker(result);
+        assert_eq!(target, crate::types::ConfigTarget::Model);
         assert_eq!(options.len(), 21, "21-offered-model catalog");
         let current: Vec<&str> = options
             .iter()
@@ -2438,9 +2409,13 @@ mod config_command_tests {
         // Sonnet 5.5: exactly its levels, default high marked.
         let (result, sent) =
             run(&cmd, &session(Some(catalog("claude-sonnet-5.5")), true), "").await;
-        let (config_id, title, options) = picker(result);
-        assert_eq!(config_id, "effortLevel");
-        assert_eq!(title, "effort");
+        let (target, options) = picker(result);
+        assert_eq!(
+            target,
+            crate::types::ConfigTarget::Effort {
+                model_id: "claude-sonnet-5.5".into()
+            }
+        );
         let levels: Vec<&str> = options.iter().map(|o| o.value.as_str()).collect();
         assert_eq!(levels, ["low", "medium", "high", "xhigh", "max"]);
         let current: Vec<&str> = options
@@ -2453,7 +2428,7 @@ mod config_command_tests {
 
         // Opus 5.5: default medium marked.
         let (result, _) = run(&cmd, &session(Some(catalog("claude-opus-5.5")), true), "").await;
-        let (_, _, options) = picker(result);
+        let (_, options) = picker(result);
         let current: Vec<&str> = options
             .iter()
             .filter(|o| o.is_current)
@@ -2494,9 +2469,8 @@ mod config_command_tests {
         let cmd = builtin::ModeCommand;
 
         let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "").await;
-        let (config_id, title, options) = picker(result);
-        assert_eq!(config_id, "mode");
-        assert_eq!(title, "mode");
+        let (target, options) = picker(result);
+        assert_eq!(target, crate::types::ConfigTarget::Mode);
         assert_eq!(options.len(), 2);
         assert_eq!(options[0].label, "Default");
         assert_eq!(options[0].value, "vibe");

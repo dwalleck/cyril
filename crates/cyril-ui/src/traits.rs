@@ -583,7 +583,7 @@ impl ApprovalState {
 /// different commit semantics: an agent picker sends the selection back over
 /// the wire, Cyril's palette picker applies it locally and never writes
 /// anything, and a config picker sets a KAS session config value.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PickerKind {
     /// Options owned by the agent: confirming dispatches a bridge command.
     Agent,
@@ -591,9 +591,10 @@ pub enum PickerKind {
     Theme,
     /// A KAS session config select (`/model` `/effort` `/mode`, cyril-vh69):
     /// confirming revalidates the value against the session's latest config
-    /// snapshot and dispatches `SetConfigOption` keyed by the picker's
-    /// `config_id` — never the v2 Agent path's `ExecuteCommand`.
-    Config,
+    /// snapshot and dispatches `SetConfigOption` for the target — never the
+    /// v2 Agent path's `ExecuteCommand`. The target names what is set, and an
+    /// effort target the model its levels came from.
+    Config(cyril_core::types::ConfigTarget),
 }
 
 /// The `/review` consent form: what the review will run and everything it
@@ -742,34 +743,20 @@ pub struct PickerState {
     pub filtered_indices: Vec<usize>,
     pub selected: usize,
     pub kind: PickerKind,
-    /// The KAS config select this picker sets (`model`, `effortLevel`,
-    /// `mode`) — `Some` iff `kind == PickerKind::Config` (cyril-vh69). The
-    /// confirm path dispatches on this id, never on the display title.
-    pub config_id: Option<String>,
-    /// The model an effort picker was opened for — `Some` iff
-    /// `config_id == effortLevel` (cyril-vh69, review round 1 F1). Effort
-    /// rows come from that model's effort metadata, so the confirm path
-    /// revalidates against the same source; the picker carries the id
-    /// because a chained picker can outlive the pre-switch snapshot.
-    pub subject: Option<String>,
 }
 
 /// What confirming a picker selected (cyril-vh69).
 ///
 /// `title` doubles as the agent command name for `PickerKind::Agent` — the
 /// v2 contract, where the picker opens on `CommandOptionsReceived.command`
-/// and confirm hands it back as the command to execute. `config_id` is the
-/// dispatch key for `PickerKind::Config`, so the App never overloads the
-/// display title with routing.
+/// and confirm hands it back as the command to execute. A
+/// `PickerKind::Config` carries its own dispatch key (the target), so the
+/// App never overloads the display title with routing.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PickerConfirmation {
     pub kind: PickerKind,
     pub title: String,
     pub value: String,
-    pub config_id: Option<String>,
-    /// The model an effort picker was opened for — `Some` iff
-    /// `config_id == effortLevel` (cyril-vh69, review round 1 F1).
-    pub subject: Option<String>,
 }
 
 /// Hooks panel overlay state (read-only table display for `/hooks` command).

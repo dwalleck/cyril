@@ -2,8 +2,7 @@ use crate::commands::{
     Command, CommandContext, CommandResult, MemoryCommandAction, UsageAccountCommandSource,
 };
 use crate::types::{
-    BridgeCommand, EFFORT_CONFIG_ID, MODE_CONFIG_ID, MODEL_CONFIG_ID, THINKING_ALWAYS_ON_MESSAGE,
-    THINKING_NOT_TOGGLEABLE_MESSAGE,
+    BridgeCommand, ConfigTarget, THINKING_ALWAYS_ON_MESSAGE, THINKING_NOT_TOGGLEABLE_MESSAGE,
 };
 
 /// /help — show available commands
@@ -616,9 +615,10 @@ fn kas_config_snapshot<'a>(
 }
 
 /// `/model` on the KAS engine (cyril-vh69): picker over the config catalog's
-/// model select. Confirming a model with effort metadata chains the effort
-/// picker in the App; the set itself is read back from the returned
-/// catalog's `currentValue`, never from the requested value.
+/// model select. Once KAS acknowledges a switch to a model with effort
+/// metadata, the session chains the effort picker from the rebuilt catalog;
+/// the set itself is read back from the returned catalog's `currentValue`,
+/// never from the requested value.
 pub struct ModelCommand;
 
 #[async_trait::async_trait]
@@ -644,13 +644,8 @@ impl Command for ModelCommand {
             Ok(snapshot) => snapshot,
             Err(message) => return Ok(message),
         };
-        match snapshot.picker_options(MODEL_CONFIG_ID) {
-            Some(options) => Ok(CommandResult::show_config_picker(
-                MODEL_CONFIG_ID,
-                "model",
-                options,
-                None,
-            )),
+        match snapshot.picker(ConfigTarget::Model) {
+            Some(picker) => Ok(CommandResult::show_config_picker(picker)),
             None => {
                 // The KAS catalog always carries a model select; its absence
                 // is wire drift worth a warning.
@@ -699,16 +694,12 @@ impl Command for EffortCommand {
                 "The model select isn't offered by this session.".to_string(),
             ));
         };
-        match snapshot.effort_picker_options(model_id) {
-            // The picker carries the model it was opened for: confirm-time
-            // revalidation reads that model's EffortMetadata, not a catalog
-            // option (review round 1, F1).
-            Some(options) => Ok(CommandResult::show_config_picker(
-                EFFORT_CONFIG_ID,
-                "effort",
-                options,
-                Some(model_id.to_string()),
-            )),
+        // The effort target carries the model it was opened for: confirm-time
+        // revalidation reads that model's EffortMetadata (review round 1, F1).
+        match snapshot.picker(ConfigTarget::Effort {
+            model_id: model_id.to_owned(),
+        }) {
+            Some(picker) => Ok(CommandResult::show_config_picker(picker)),
             None => Ok(CommandResult::system_message(format!(
                 "The current model ({model_id}) has no effort levels — /effort applies to models with effort support."
             ))),
@@ -745,13 +736,8 @@ impl Command for ModeCommand {
             Ok(snapshot) => snapshot,
             Err(message) => return Ok(message),
         };
-        match snapshot.picker_options(MODE_CONFIG_ID) {
-            Some(options) => Ok(CommandResult::show_config_picker(
-                MODE_CONFIG_ID,
-                "mode",
-                options,
-                None,
-            )),
+        match snapshot.picker(ConfigTarget::Mode) {
+            Some(picker) => Ok(CommandResult::show_config_picker(picker)),
             None => {
                 tracing::warn!("KAS config catalog has no mode select to offer");
                 Ok(CommandResult::system_message(

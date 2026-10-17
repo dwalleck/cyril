@@ -155,6 +155,13 @@ impl EffortMetadata {
     pub fn default_level(&self) -> Option<&str> {
         self.default_level.as_deref()
     }
+
+    /// Whether `level` is one of the offered levels — exact string equality,
+    /// because KAS "succeeds" on an unoffered level and silently keeps the
+    /// old one.
+    pub fn offers(&self, level: &str) -> bool {
+        self.levels.iter().any(|offered| offered == level)
+    }
 }
 
 #[cfg(test)]

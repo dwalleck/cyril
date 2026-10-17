@@ -8,7 +8,7 @@ use cyril_core::{
     protocol::bridge::{BridgeSender, spawn_bridge},
     types::{
         BridgeCommand, Notification, PermissionRequest, PermissionResponse, PromptEnvelope,
-        RoutedNotification, SessionId, StopReason, ToolCallStatus,
+        RoutedNotification, SET_CONFIG_OPTION_OPERATION, SessionId, StopReason, ToolCallStatus,
     },
 };
 use evidence::{EvidenceCleanup, EvidenceTree};
@@ -302,7 +302,7 @@ impl Inspection {
                 let operation = match operation.as_str() {
                     "session/new" => Some(ReviewOperation::NewSession),
                     "set_mode 'cyril-inspection-reviewer'" => Some(ReviewOperation::SelectMode),
-                    "set_config_option" => Some(ReviewOperation::SetConfiguration),
+                    SET_CONFIG_OPTION_OPERATION => Some(ReviewOperation::SetConfiguration),
                     "prompt" => Some(ReviewOperation::Prompt),
                     _ => None,
                 };
