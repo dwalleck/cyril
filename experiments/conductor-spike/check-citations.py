@@ -11,12 +11,14 @@ Citation format (lanes.md brief template):
     `<capture>.jsonl#<N>-<M>"<expect>"`    some frame in N..M contains <expect>
 
 Captures resolve against the FINDINGS file's directory, then its parent (the audit
-dir), then experiments/conductor-spike/. Bare "frame N" prose without a `file#N`
-citation is reported as UNVERIFIABLE (warning, not failure).
+dir), then experiments/conductor-spike/. Prose "frame N" / "frames N" outside a
+`file#N` citation is UNVERIFIABLE and fails, so a lane cannot pass by ignoring the
+format; a report with no frame references at all (a static lane) passes.
+`--prose-ok` downgrades UNVERIFIABLE to a warning, for reading pre-2.31.1 FINDINGS.
 
-Exit 1 when a capture is missing, an index is out of range, or an <expect> quote is
-absent from the cited frame(s); each failure prints the frame actually there, so a
-base or neighbour error is visible at a glance.
+Exit 1 when a capture is missing, an index is out of range, an <expect> quote is
+absent from the cited frame(s), or a prose frame reference is unverifiable; each
+failure prints the frame actually there, so a base or neighbour error is visible.
 """
 import json
 import pathlib
@@ -57,7 +59,7 @@ def resolve(name, findings):
     return None
 
 
-def main(paths):
+def main(paths, prose_ok=False):
     failures = warnings = checked = 0
     cache = {}
     for p in paths:
@@ -87,14 +89,16 @@ def main(paths):
                     for i in range(max(0, lo - 1), min(len(rows), hi + 2)):
                         print(f"       #{i}: {summarize(json.loads(rows[i]))}")
                     failures += 1
-            if not cites and BARE.search(line):
+            if BARE.search(CITE.sub("", line)):
                 warnings += 1
-                print(f"UNVERIFIABLE {findings.name}:{lineno}: {line.strip()[:140]}")
+                level = "WARN" if prose_ok else "FAIL"
+                print(f"{level} UNVERIFIABLE {findings.name}:{lineno}: {line.strip()[:140]}")
     print(f"checked {checked} citation(s): {failures} failure(s), {warnings} unverifiable line(s)")
-    return 1 if failures else 0
+    return 1 if failures or (warnings and not prose_ok) else 0
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    args = [a for a in sys.argv[1:] if a != "--prose-ok"]
+    if not args:
         sys.exit(__doc__)
-    sys.exit(main(sys.argv[1:]))
+    sys.exit(main(args, prose_ok="--prose-ok" in sys.argv[1:]))

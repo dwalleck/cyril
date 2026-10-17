@@ -56,7 +56,7 @@ background job you started before you hand back.
 Cite capture frames as `<capture>.jsonl#<N>"<expect>"`: N is the 0-based line index (Python
 enumerate; `grep -n`/`sed -n` are 1-based), <expect> a string the frame contains (the method,
 sessionUpdate or kind you are claiming). experiments/conductor-spike/check-citations.py
-FINDINGS.md must pass before hand-back.
+FINDINGS.md must pass before hand-back; a prose "frame N" outside that form fails it.
 
 Deliverable: FINDINGS.md with sections
   Summary (<=10 lines) ·
