@@ -16,9 +16,11 @@ method cyril never names is reported once as UNREAD <method> (whole notification
 
 A key counts as NAMED when cyril or the pinned agent-client-protocol crates mention it: as a
 string literal ("key"), a struct field (`key:` or its snake_case form, for serde rename_all),
-or a `rename = "key"`. Matching is by key name, not by path, so the output is a LOWER BOUND:
-every path listed is never named anywhere; a path not listed may still be dropped by a
-`.get()` that reads a same-named key elsewhere. Only the topmost unnamed path of a subtree is
+or a `rename = "key"`. The output is a LOWER BOUND: every path listed is never named anywhere,
+but a pass is "no obvious gaps", not coverage. Three gaps pass silently: matching is by key
+name, not path (a `name` read anywhere covers every `name`); a field the ACP crate deserialises
+counts as named even if cyril then ignores it; and a field no capture exercised is invisible.
+The runtime replay test proposed on cyril-58uv is the stronger check. Only the topmost unnamed path of a subtree is
 listed (its children are implied).
 
 --allowlist (default docs/wire-ignored-fields.txt) holds fnmatch globs, one per line, each with

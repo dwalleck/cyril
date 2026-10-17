@@ -96,7 +96,10 @@ arrive (the orchestrator sends them; include a positive control per handshake pr
 (4) `sweep-new-fields.py --diff <NEW capture> <OLD capture>` per pair, then `unread-fields.py` over
 the NEW captures cyril would receive (sweep, gate-off workflow, sub-agent, MCP; never a control
 arm), saved as <lane dir>/unread-fields-<NEW>.txt: triage every UNREAD line into a cyril fix, a
-docs/wire-ignored-fields.txt line with its reason or tracking issue, or a proposed issue;
+docs/wire-ignored-fields.txt line with its reason or tracking issue, or a proposed issue. It
+finds only fields cyril never names: a same-named key read elsewhere, a field the ACP crate
+parses but cyril ignores, and a field no capture exercised all pass it, so a HANDLED verdict
+still needs the consumer `file:line`;
 (5) the cyril-on-KAS leg
 below, against KAS_NEW; (6) v2 pair only when every KAS item is done and budget remains, archive
 bin/ first on PATH, child exe recorded.

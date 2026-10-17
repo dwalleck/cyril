@@ -71,9 +71,9 @@ Done when every lane's `FINDINGS.md` has all contract sections, every delta row 
 STATIC or LIVE and HANDLED, DROPPED or NOT-SENT with a cyril `file:line`,
 `experiments/conductor-spike/check-citations.py` passes on every `FINDINGS.md`, `v3-coverage` has
 ranked the flip blockers, and the live lane has run `sweep-new-fields.py --diff` over each OLD/NEW
-capture pair, `unread-fields.py` exits 0 on the NEW captures (every never-read wire field fixed,
-allowlisted with a reason, or filed), and the cyril-on-KAS leg has run (a user-visible verdict per
-flip blocker).
+capture pair, `unread-fields.py` exits 0 on the NEW captures (every field cyril never names is
+fixed, allowlisted with a reason, or filed; a pass means no obvious gaps, not full coverage), and
+the cyril-on-KAS leg has run (a user-visible verdict per flip blocker).
 
 ## 3. Fold
 
