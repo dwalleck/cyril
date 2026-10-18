@@ -1,0 +1,9 @@
+# kiro-tui-2.31.1.js -> kiro-tui-2.32.0.js (gate fn Bn -> Rn)
+## ext_notifications: 10 -> 11 added=['_kiro/mcp/oauthCompleted'] removed=[]
+## kind_case: 476 -> 483 added=['company', 'cost', 'fold', 'manage', 'move', 'target', 'unset'] removed=[]
+## kiro_meta_reads: 19 -> 19 added=[] removed=[]
+## ext_calls: 6 -> 6 added=[] removed=[]
+## rollout_gates old=[('background_execution', 4), ('c2s', 2), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 1), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates new=[('background_execution', 4), ('c2s', 2), ('cloud_config', 12), ('local_sandbox', 5), ('managed_settings', 5), ('memory', 2), ('memory_controls', 2), ('remote_sandbox', 4), ('session_dashboard', 3), ('workflows', 2)]
+## rollout_gates changed={'memory': (1, 2)}
+## ext_notifications(new)=['_kiro/customAgent/not_found', '_kiro/error/rate_limit', '_kiro/governance/state', '_kiro/mcp/governance_disabled', '_kiro/mcp/oauthCompleted', '_kiro/mcp/status', '_kiro/sandbox/status', '_kiro/sessions/changed', '_kiro/spec/phaseCheckpoint', '_kiro/spec/taskStatusChanged', '_kiro/tools/content_chunk']

@@ -1,0 +1,35 @@
+live   audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl: 1141 paths
+pinned audit-2.32.0/live/kas-workflow-gateoff-2.31.1.jsonl: 1118 paths
+
+ONLY under live (26) — new-field candidates:
+   + params.attention
+   + params.attention[].kind
+   + params.attention[].nodeId
+   + params.attention[].nodePath
+   + params.attention[].sessionId
+   + params.attention[].since
+   + params.finalState.attention
+   + params.finalState.attention[].kind
+   + params.finalState.attention[].nodeId
+   + params.finalState.attention[].nodePath
+   + params.finalState.attention[].sessionId
+   + params.finalState.attention[].since
+   + params.finalState.root.children[].attention
+   + params.finalState.root.children[].attention[].kind
+   + params.finalState.root.children[].attention[].since
+   + params.update._meta.kiro.notification.bufferOnly
+   + params.update._meta.kiro.notification.callerSessionId
+   + result.state.attention
+   + result.state.attention[].kind
+   + result.state.attention[].nodeId
+   + result.state.attention[].nodePath
+   + result.state.attention[].sessionId
+   + result.state.attention[].since
+   + result.state.root.children[].attention
+   + result.state.root.children[].attention[].kind
+   + result.state.root.children[].attention[].since
+
+ONLY under pinned (3) — usually just coverage:
+   - params.update.rawInput.cwd
+   - runs.loop.wake_after_cancel.turn_secs
+   - runs.loop.wake_after_cancel.turn_start_after_s

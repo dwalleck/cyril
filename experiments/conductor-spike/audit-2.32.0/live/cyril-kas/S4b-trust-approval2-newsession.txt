@@ -1,0 +1,48 @@
+⠧ sess_dfe69eca-1b0a-4459-9a07-ce243b722cae · trustprobe · auto · 15s
+Connecting to agent...
+
+Session created: sess_e1e4d5a3-1547-4904-93d8-cb1653c59756
+
+Mode set to trustprobe.
+
+You:
+  Use your shell tool to run exactly: echo TRUSTME   -- then reply with only its output.
+
+✓ Print a test string
+
+Kiro:
+TRUSTME
+
+
+You:
+  Use your shell tool to run exactly: echo TRUSTME   -- then reply with only its output.
+                                                  ┌ Permission Required ─────────────────────────────────────┐
+Kiro:                                             │echo TRUSTME                                              │
+TRUSTME                                           │                                                          │
+                                                  │  Preview unavailable                                     │
+                                                  │                                                          │
+Session created: sess_dfe69eca-1b0a-4459-9a07-ce24│▸ Allow                                                   │
+                                                  │  Always allow                                            │
+Mode set to trustprobe.                           │  Deny                                                    │
+                                                  │  Always deny                                             │
+You:                                              │                                                          │
+  Use your shell tool to run exactly: echo TRUSTME└──────────────────────────────────────────────────────────┘
+
+⏳  Run(echo TRUSTME)
+
+⠧ Running... 15s
+
+
+
+
+
+
+
+
+
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                             │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 2% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%

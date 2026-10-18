@@ -1,0 +1,9 @@
+cyril-k8wc pwsh delta (ca400c75) — Windows VM resourcefs-win11, rustc 1.94.0 (4a4ef493e 2026-03-02) msvc
+cargo test -p cyril-core --features kas --lib -- host_shell terminal_io
+head=ca400c7
+rustc 1.94.0 (4a4ef493e 2026-03-02)
+cargo-exit=0
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_12_pwsh ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_13_configured_pwsh ... ok
+test protocol::kas::terminal_io::tests::windows_powershell_lifecycle_smoke ... ok
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 1113 filtered out; finished in 0.65s

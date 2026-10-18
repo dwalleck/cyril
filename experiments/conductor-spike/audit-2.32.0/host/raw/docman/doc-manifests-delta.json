@@ -1,0 +1,29 @@
+[
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.31.1/extracted/kirocli/bin/kiro-cli-chat",
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat",
+    "old": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "new": [
+      [
+        "2026-10-12T02:11:59.964722",
+        103
+      ],
+      [
+        "2026-09-28T19:09:06.985120",
+        140
+      ]
+    ],
+    "added": {},
+    "removed": {},
+    "changed": {}
+  }
+]

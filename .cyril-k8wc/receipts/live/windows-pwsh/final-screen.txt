@@ -1,0 +1,24 @@
+sess_7d0066dd-c16e-43b5-84ab-54a244b00656 · vibe · auto
+Connecting to agent...
+Session created: sess_7d0066dd-c16e-43b5-84ab-54a244b00656
+You:
+  Reply with only the exact value of the Shell line in your system information, wrapped in square brackets, and nothing else
+Kiro:
+[pwsh]
+You:
+  Run this exact command with your shell tool, then reply with its output: Get-Date -Format yyyy && Write-Output ("PWSH" + (6+1) + "OK")
+Kiro:
+I'll run that command.
+✓ Print year and a computed string
+Kiro:
+Output:
+╭───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+│ 2026
+│ PWSH7OK
+╰───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+┌ > ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                   │
+│                                                                                                                                                    │
+│                                                                                                                                                    │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 1%  Responses 1%

@@ -1,0 +1,48 @@
+sess_673b51b6-dd6e-445c-b648-da0c411ab8f2 · vibe · auto
+Connecting to agent...
+
+Session created: sess_673b51b6-dd6e-445c-b648-da0c411ab8f2
+
+Thinking can't be toggled on the current model.
+Usage: /thinking [on|off]
+
+
+
+
+
+
+
+                                        ┌ model ───────────────────────────────────────────────────────────────────────┐
+                                        │Filter: █                                                                     ▲
+                                        │                                                                              █
+                                        │▸ auto ✓                                                                      █
+                                        │    Models chosen by task for optimal usage and consistent quality            █
+                                        │  claude-opus-5.5                                                             █
+                                        │  claude-sonnet-5.5                                                           █
+                                        │  claude-opus-5                                                               █
+                                        │  claude-sonnet-5                                                             █
+                                        │  claude-opus-4.8                                                             █
+                                        │  gpt-5.6-sol                                                                 ║
+                                        │  gpt-5.6-terra                                                               ║
+                                        │  gpt-5.6-luna                                                                ║
+                                        │  claude-opus-4.7                                                             ║
+                                        │  claude-opus-4.6                                                             ║
+                                        │  claude-sonnet-4.6                                                           ║
+                                        │  claude-opus-4.5                                                             ║
+                                        │  claude-sonnet-4.5                                                           ║
+                                        │  claude-haiku-4.5                                                            ▼
+                                        └──────────────────────────────────────────────────────────────────────────────┘
+
+
+
+
+
+
+
+
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                             │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%

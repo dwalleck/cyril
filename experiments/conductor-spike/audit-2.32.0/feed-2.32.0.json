@@ -1,0 +1,197 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-15",
+   "version": "2.32.0",
+   "title": "Version 2.32.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "`--cloud` and `--repo` now work in non-interactive runs, which print the cloud session id to resume or delete it"
+    },
+    {
+     "type": "added",
+     "description": "Report program status to supporting terminals with OSC 7501; opt out with `KIRO_NO_PROGRAM_STATUS`"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Write approvals let you allow a custom folder at session, workspace, or user scope"
+    },
+    {
+     "type": "added",
+     "description": "[V3] `/workflow run` opens a confirmation form with a plan preview before a workflow starts"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Proactive, Explanatory, and Learning output styles in `/settings display`"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Workflow coding, planning, and design steps can use Powers"
+    },
+    {
+     "type": "added",
+     "description": "[V3] Workflow design steps can use configured MCP servers"
+    },
+    {
+     "type": "changed",
+     "description": "Startup \"What's new\" now introduces memory, with next steps for your engine and memory setting"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] The Always Allow scope page now shows the selected scope, with `s` to cycle between them"
+    },
+    {
+     "type": "changed",
+     "description": "Subagents spawned from a V2 session now follow that session's model fallback configuration"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] A workflow step's session opens on its task instead of a copy of the parent conversation"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Creating a workflow from a prompt shows its plan for your approval before any step runs"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Kiro CLI no longer bundles the `sharp` and libvips native image libraries"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Running workflows accept plain-language changes to their remaining steps"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Saved-session lists refresh without blocking on periodic directory scans"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Workflow review loops pause after two rejected reviews and ask you how to continue"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/chat save` to a non-`.zip` name now says the file is a zip session archive"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/chat load` explains when a session archive was altered after saving"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Non-interactive `--resume-id` of a cloud session now resumes it instead of starting an empty local session"
+    },
+    {
+     "type": "fixed",
+     "description": "MCP OAuth links now disappear when their server connects, with the server named in the toast"
+    },
+    {
+     "type": "fixed",
+     "description": "Plain-text non-interactive runs now explain why a turn was cancelled or refused, or a session could not start"
+    },
+    {
+     "type": "fixed",
+     "description": "Non-interactive runs exit nonzero when stdout is closed instead of finishing the turn"
+    },
+    {
+     "type": "fixed",
+     "description": "Choosing None in the V2 `/model` fallback picker now turns fallback off instead of keeping the vendor default"
+    },
+    {
+     "type": "fixed",
+     "description": "The `/model` fallback row names the vendor default that would answer a refusal when no target is configured"
+    },
+    {
+     "type": "fixed",
+     "description": "A V2 crew whose stage cannot start now fails with that stage's error instead of waiting forever"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] A paused step in a parallel workflow branch finishes when it reports success or failure"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] A turn no longer ends early when the model spends its whole output budget on reasoning"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Buffered workflow messages survive an agent restart"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Command approval checks shell syntax for the shell that runs the command, including fish"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Completed workflow steps can send follow-up information to their parent"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP servers from an organization MCP registry use the registry's `oauth` and `oauthScopes` settings"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Oversized images retry at the provider's size limit instead of failing the turn"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Resumed sessions show their saved model and effort before the model list loads"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Workflow pause messages no longer say a run will resume on its own"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-14",
+   "version": "2.31.1",
+   "title": "Version 2.31.1",
+   "changes": [
+    {
+     "type": "added",
+     "description": "Mermaid flowchart, sequence, state and ER diagrams are drawn as terminal art in chat"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Non-interactive runs apply saved compaction and `toolSearch` settings like interactive sessions"
+    },
+    {
+     "type": "fixed",
+     "description": "Prompts with `chat.disableWrap` on or in lite session panes no longer copy with two leading spaces"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Herdr shows a session as blocked while a permission or question prompt is waiting"
+    },
+    {
+     "type": "fixed",
+     "description": "Model fallback now handles refusals that return no response text"
+    },
+    {
+     "type": "fixed",
+     "description": "Compaction no longer saves the model's refusal as the conversation summary"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/sandbox` setup on Windows no longer fails where policy blocks running programs from the temp folder"
+    },
+    {
+     "type": "fixed",
+     "description": "`/changelog` shows each entry on its own line"
+    },
+    {
+     "type": "fixed",
+     "description": "IAM Identity Center sign-in now works in isolated AWS partitions"
+    },
+    {
+     "type": "security",
+     "description": "[V3] Workflow recipe text can no longer emit terminal escape sequences in `/workflow`"
+    }
+   ]
+  }
+ ]
+}

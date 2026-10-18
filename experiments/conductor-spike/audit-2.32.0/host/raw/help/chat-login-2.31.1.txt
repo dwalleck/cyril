@@ -1,0 +1,32 @@
+Log in to Kiro
+
+Usage: kiro-cli-chat login [OPTIONS]
+
+Options:
+      --license <LICENSE>
+          License type (pro for Identity Center, free for Builder ID)
+
+          Possible values:
+          - free: Free license with Builder ID
+          - pro:  Pro license with Identity Center
+
+      --identity-provider <IDENTITY_PROVIDER>
+          Identity provider URL (for Identity Center)
+
+      --region <REGION>
+          Region (for Identity Center)
+
+      --social <SOCIAL>
+          Social provider (google or github)
+          
+          [possible values: google, github]
+
+      --use-device-flow
+          Always use the OAuth device flow for authentication. Useful for instances where browser
+          redirects cannot be handled
+
+  -v, --verbose...
+          Increase logging verbosity
+
+  -h, --help
+          Print help (see a summary with '-h')

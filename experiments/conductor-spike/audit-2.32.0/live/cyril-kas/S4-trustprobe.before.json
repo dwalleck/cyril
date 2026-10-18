@@ -1,0 +1,11 @@
+{
+  "name": "trustprobe",
+  "description": "trust probe agent",
+  "prompt": "You are a terse probe agent.",
+  "tools": [
+    "*"
+  ],
+  "permissions": {
+    "rules": []
+  }
+}
