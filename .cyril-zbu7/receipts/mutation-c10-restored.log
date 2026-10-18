@@ -1,0 +1,24 @@
+# rev: 2e89ee43845c22438dd59054b4258ccbb7abf2c6 (+ working tree changes: 9 paths)
+# cmd: cargo nextest run -p cyril-core --features kas --no-fail-fast -E test(/missing_helper|other_helper_failures/)
+# date: 2026-10-18T19:32:43Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 14.93s
+────────────
+ Nextest run ID bfa27fd5-a845-4133-9518-62574f0b6137 with nextest profile: default
+    Starting 13 tests across 11 binaries (1244 tests skipped)
+        PASS [   0.004s] ( 1/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_04_force_flag_unknown
+        PASS [   0.004s] ( 2/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_09_legacy_2_6_envelope
+        PASS [   0.005s] ( 3/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_05_other_subcommand_unknown
+        PASS [   0.005s] ( 4/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_10_malformed_json
+        PASS [   0.005s] ( 5/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_06_same_text_wrong_exit
+        PASS [   0.005s] ( 6/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1
+        PASS [   0.005s] ( 7/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_07_same_text_with_stdout
+        PASS [   0.005s] ( 8/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr
+        PASS [   0.005s] ( 9/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1
+        PASS [   0.005s] (10/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_08_error_envelope_logged_out
+        PASS [   0.022s] (11/13) cyril-core protocol::kas::auth::tests::other_helper_failures_never_fall_back
+        PASS [   0.025s] (12/13) cyril-core protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error
+        PASS [   0.025s] (13/13) cyril-core protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once
+────────────
+     Summary [   0.026s] 13 tests run: 13 passed, 1244 skipped
+exit=0

@@ -11,13 +11,13 @@ description = "Core protocol logic, types, and session management for the Cyril 
 workspace = true
 
 [features]
-# KAS engine support (ADR-0002). Default-off — the credential-reading code
-# (KAS-1 cyril-evwh, auth-source swap cyril-dcc6) is compiled in only under
-# `--features kas`; a default build cannot read the kiro credential store.
+# KAS engine support (ADR-0002). Default-off — the KAS host code, including the
+# `_kiro/auth/getAccessToken` responder that relays kiro-cli's `chat _
+# get-kas-token` answer (KAS-1 cyril-evwh, cyril-zbu7), is compiled in only
+# under `--features kas`; a default build never handles a KAS access token.
 # Pulls in `tokio/fs` for non-blocking file I/O on the bridge's single-threaded
 # executor, `tokio/io-util` for draining terminal pipes while a kill signal is
-# watched (terminal_io, cyril-lw67), `rusqlite` for read-only access to
-# kiro-cli's data.sqlite3, `tempfile` for the atomic host-io write path
+# watched (terminal_io, cyril-lw67), `tempfile` for the atomic host-io write path
 # (temp + fsync + rename, cyril-0v42), and `serde_path_to_error` for exact
 # field paths in workflow wire-rejection warnings (`convert/kas/workflow.rs`
 # deserialize).

@@ -57,9 +57,9 @@ impl Adapters {
     };
 }
 
-/// Marker: the engine answers `_kiro/auth/getAccessToken` from the host
-/// credential store. Unit today; the g9vt mediator may grow it into a real
-/// interface.
+/// Marker: the engine answers `_kiro/auth/getAccessToken` through kiro-cli's
+/// `chat _ get-kas-token` helper (cyril-zbu7). Unit today; the g9vt mediator may grow it
+/// into a real interface.
 #[cfg(feature = "kas")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct AuthAdapter;
