@@ -32,6 +32,23 @@ Result: 4 run, 0 passed, 4 failed.
   `height=6: input_top disagrees with the drawn input box`, `left: 2`. The
   summed row budget put the input two rows above the drawn box.
 
+## Review counterexamples (head `caf2d8b4`)
+
+The test file of `3b933531` was checked out onto a scratch branch at
+`caf2d8b4`, so the production code was the first fix without the review
+repairs.
+
+Command: `cargo nextest run -p cyril-ui --no-fail-fast -E 'test(later_pages)'`
+
+Result: 5 run, 3 passed, 2 failed.
+
+- `later_pages_confirm_only_what_is_drawn::folder_editor_long_folder`: FAIL,
+  `height=11 page=FolderLong: Enter must act exactly when drawn`. The wrapped
+  status pushed the editor out and Enter still granted the folder.
+- `later_pages_confirm_only_what_is_drawn::trust_page_long_pattern_list`:
+  FAIL, `height=17 page=TrustLong`.
+- `scope_page`, `folder_editor` and `trust_page`: PASS (unchanged behavior).
+
 ## Found during green
 
 With the guard in place but `input_top` still summing `FrameRows`, the App

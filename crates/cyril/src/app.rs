@@ -7500,8 +7500,8 @@ mod tests {
                 .expect("paste reason");
             let screen = vojx_draw(&mut app, height);
             let editor_drawn = screen.iter().any(|row| row.contains("why█"));
-            let on_screen = editor_drawn
-                && path.is_none_or(|path| screen.iter().any(|row| row.contains(path)));
+            let on_screen =
+                editor_drawn && path.is_none_or(|path| screen.iter().any(|row| row.contains(path)));
             editor_without_path += usize::from(editor_drawn && !on_screen);
             let context = format!(
                 "height={height} path={path:?} inner={:?}\n{}",

@@ -75,4 +75,33 @@ and state owners, and no premise is open.
   sweeps fail at the first height, and the three later-page sweeps and the
   `input_top` fence fail.
 - **Green and gate:** every ci.yml lane passes (`receipts/gate.md`).
-- **Independent review:** see the PR.
+- **Independent review:** a rust-code-reviewer subagent did a read-only
+  review of `8108e20d..caf2d8b4`. It found nothing blocking: the option and
+  reason guards match the drawn frame at every height, and no confirm path
+  bypasses `approval_confirm`. Its findings and their dispositions:
+  - **should-fix, the folder page wraps its status line.** A folder longer
+    than about 7 characters wraps "Allows writes in … for this session only."
+    to 2 rows. At inner height 2 that pushed the editor out of the popup while
+    the guard said it was drawn. Fixed in `3b933531`: a shared `FolderPage`
+    wraps the status itself (no `Paragraph` wrap) and draws it only when all
+    of its rows fit above the editor. Fenced by `folder_editor_long_folder`,
+    which is red on `caf2d8b4` at height 11.
+  - **should-fix, the trust page (v2) wraps a long pattern list**, which
+    pushes the selected tier below the popup. Fixed in `3b933531`: label and
+    pattern rows are cut to one row each and marked with `…`, so every tier
+    takes exactly the 3 rows its window reserves. Fenced by
+    `trust_page_long_pattern_list`, which is red on `caf2d8b4` at height 17.
+  - **nit, the sweeps did not prove both outcomes occur.** Fixed: every sweep
+    now asserts it saw both an answered and an ignored height. The reason
+    sweep also asserts that some heights draw the editor without the path
+    exactly when the call has one.
+  - **nit, a missing blank line.** Fixed.
+  - **nit, the guard ignores horizontal clipping.** Kept as a known limit. At
+    terminal widths of 5–8 columns, or with a very long option label at
+    height 1, the path can show as little as `…`, and the guard counts a
+    drawn path row as shown. Requiring a minimum visible path width is a
+    separate policy change.
+  - **nit, sweeps run at 80 columns only.** Width is covered by the cyril-rcub
+    sweeps; the long-row cases above cover the wrap failure class.
+  - **nit, Enter is inert on the reason page at inner 1–2 with a path.** This
+    is the documented design choice above, and it is flagged in the PR.
