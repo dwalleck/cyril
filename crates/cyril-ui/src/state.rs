@@ -115,6 +115,10 @@ pub struct UiState {
 
     // Overlays
     approvals: VecDeque<ApprovalState>,
+    /// The scope the KAS "Always allow" page last showed. Like Kiro's TUI
+    /// (`k2t` carries `trustScope` to the next approval), the next scope page
+    /// opens at it (cyril-auxt).
+    always_allow_scope: cyril_core::always_allow::GrantScope,
     picker: Option<PickerState>,
     review_form: Option<crate::traits::ReviewForm>,
     hooks_panel: Option<HooksPanelState>,
@@ -437,6 +441,7 @@ impl UiState {
             subagent_tracker: cyril_core::subagent::SubagentTracker::new(),
             workflow_streams: crate::workflow_ui::WorkflowUiState::new(),
             approvals: VecDeque::new(),
+            always_allow_scope: cyril_core::always_allow::GrantScope::Session,
             picker: None,
             review_form: None,
             hooks_panel: None,
@@ -2445,7 +2450,7 @@ impl UiState {
                         );
                         approval.phase = ApprovalPhase::SelectScope {
                             chosen_option_id,
-                            scope: cyril_core::always_allow::GrantScope::Session,
+                            scope: self.always_allow_scope,
                             owned,
                         };
                         approval.selected = 0;
@@ -2688,6 +2693,8 @@ impl UiState {
         if let ApprovalPhase::SelectScope { scope: current, .. } = &mut approval.phase {
             *current = scope.next();
         }
+        // A highlighted row the new scope no longer offers falls back to the
+        // first row, as the TUI's `osr` does.
         approval.selected = match highlighted {
             Some(cyril_core::always_allow::ScopeChoice::Folder(_)) | None => 0,
             Some(row) => approval
@@ -2696,6 +2703,7 @@ impl UiState {
                 .position(|choice| *choice == row)
                 .unwrap_or(0),
         };
+        self.always_allow_scope = scope.next();
     }
 
     /// Whether the front approval's folder editor owns the keyboard.

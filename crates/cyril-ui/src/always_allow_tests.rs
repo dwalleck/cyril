@@ -204,6 +204,54 @@ fn scope_cycle_keeps_the_highlighted_row_and_wraps() {
 }
 
 #[test]
+fn scope_cycle_follows_the_highlighted_row_when_rows_change() {
+    let mut state = with_main("main");
+    let (request, mut rx) = request("main", Some(write_consent()), Vec::new());
+    open_scope_page(&mut state, request);
+    state.approval_select_next();
+    state.approval_select_next(); // session rows: exact, folder, whole → whole (2)
+    state.approval_cycle_scope(); // workspace: exact, folder, whole
+    state.approval_cycle_scope(); // user: exact, whole → whole is now row 1
+    assert_eq!(state.approval().expect("open").selected, 1);
+    state.approval_confirm();
+
+    assert_eq!(
+        always_allow(rx.try_recv().expect("answered")),
+        grant(GrantScope::User, GrantResource::WholeTool)
+    );
+}
+
+#[test]
+fn scope_cycle_from_the_folder_row_returns_to_the_first_row() {
+    let mut state = with_main("main");
+    let (request, _rx) = request("main", Some(write_consent()), Vec::new());
+    open_scope_page(&mut state, request);
+    state.approval_select_next(); // folder row
+    state.approval_cycle_scope(); // its label names the scope, so it resets
+    assert_eq!(state.approval().expect("open").selected, 0);
+}
+
+#[test]
+fn next_scope_page_opens_at_the_last_scope() {
+    let mut state = with_main("main");
+    let (first, _first_rx) = request("main", Some(shell_consent()), Vec::new());
+    open_scope_page(&mut state, first);
+    state.approval_cycle_scope();
+    state.approval_cycle_scope(); // user
+    state.approval_confirm();
+
+    let (second, _second_rx) = request("main", Some(shell_consent()), Vec::new());
+    open_scope_page(&mut state, second);
+    assert!(matches!(
+        phase(&state),
+        ApprovalPhase::SelectScope {
+            scope: GrantScope::User,
+            ..
+        }
+    ));
+}
+
+#[test]
 fn esc_on_the_scope_page_returns_to_the_options() {
     let mut state = with_main("main");
     let (request, mut rx) = request("main", Some(shell_consent()), Vec::new());

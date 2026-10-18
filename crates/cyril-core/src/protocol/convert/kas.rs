@@ -102,7 +102,8 @@ pub(crate) fn attach_consent_echo(
         requested
             .and_then(|consent| consent.get(key))
             .and_then(serde_json::Value::as_str)
-            .filter(|value| !value.is_empty())
+            // The TUI's `oo`: a string with non-whitespace content, kept as sent.
+            .filter(|value| !value.trim().is_empty())
             .map(|value| serde_json::Value::String(value.to_owned()))
     };
     let mut consent = serde_json::Map::new();
@@ -2366,8 +2367,12 @@ mod tests {
         serde_json::to_value(&wire).expect("response serializes")
     }
 
+    /// The fixture's replies were sent by the 2.32.0 audit's probe client in
+    /// the TUI's echo shape, and KAS persisted from them (live). This pins
+    /// cyril's echo to that proven shape; that KAS honours cyril's own echo is
+    /// the live acceptance (`.cyril-auxt/receipts/live-summary.md`).
     #[test]
-    fn always_allow_exact_shell_command_echoes_the_captured_reply() {
+    fn always_allow_exact_shell_command_matches_the_audit_echo() {
         use crate::always_allow::{GrantScope, ScopeChoice};
         for (name, scope) in [
             ("shell_user", GrantScope::User),

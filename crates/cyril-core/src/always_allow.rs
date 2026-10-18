@@ -386,8 +386,9 @@ fn workspace_root(consent: &PermissionConsent) -> Option<&std::path::Path> {
         .filter(|root| root.to_str().is_none_or(|root| !root.trim().is_empty()))
 }
 
+/// The TUI's `oo`: a string with non-whitespace content, kept as sent.
 fn non_empty(value: Option<&str>) -> Option<&str> {
-    value.filter(|value| !value.is_empty())
+    value.filter(|value| !value.trim().is_empty())
 }
 
 /// `g2t`: characters that make a path a pattern.
