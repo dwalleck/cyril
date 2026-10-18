@@ -1,0 +1,19 @@
+# green: same tests after the fix (uncommitted on base 85becf9f)
+# HEAD: 85becf9f792e6aeaec607d8a31a3178141a06435; worktree diff:  2 files changed, 213 insertions(+), 47 deletions(-)
+# cmd: env -u CARGO_TARGET_DIR cargo nextest run -p cyril-core --features kas --no-fail-fast -E 'test(shell_type_reply)'
+        PASS [   0.008s] ( 1/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_01_sh
+        PASS [   0.007s] ( 2/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_13_windows_powershell
+        PASS [   0.008s] ( 3/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_09_configured_bash_overrides_shell
+        PASS [   0.007s] ( 4/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_08_unsupported_shell_falls_back_to_bash
+        PASS [   0.008s] ( 5/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_04_zsh
+        PASS [   0.008s] ( 6/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_07_absent_shell_falls_back_to_bash
+        PASS [   0.009s] ( 7/14) cyril-core protocol::kas::terminal_io::tests::shell_type_reply_names_the_registry_shell_not_its_family
+        PASS [   0.009s] ( 8/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_03_dash
+        PASS [   0.009s] ( 9/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_06_bare_zsh_on_path
+        PASS [   0.009s] (10/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_11_configured_fish
+        PASS [   0.009s] (11/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_12_pwsh
+        PASS [   0.010s] (12/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_05_ksh
+        PASS [   0.010s] (13/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_02_bash
+        PASS [   0.010s] (14/14) cyril-core protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_10_fish
+     Summary [   0.011s] 14 tests run: 14 passed, 1212 skipped
+# nextest exit: 0

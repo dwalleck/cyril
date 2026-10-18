@@ -1,0 +1,10 @@
+PASS session created
+  ASKED[norule #1]: echo AUDITY
+      overlay:                                              │▸ Allow                                                   │
+      overlay:                                              │  Always allow                                            │
+      overlay:                                              │  Deny                                                    │
+      overlay:                                              │  Always deny                                             │
+PASS norule → TURNONE_DONE (permission prompts: 1)
+PASS mode auditx visible
+PASS rule → TURNTWO_DONE (permission prompts: 0)
+DRIVE-DONE

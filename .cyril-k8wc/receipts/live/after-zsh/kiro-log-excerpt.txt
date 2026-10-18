@@ -1,0 +1,5 @@
+# after-zsh — KAS kiro.log lines (shell type + policy decisions)
+{"timestamp":"2026-10-18T19:14:25.270Z","level":"info","message":"shellType.probe {\"sessionId\":\"sess_e4f64374-4821-477f-a3f0-6b5411058200\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":0,\"timeoutMs\":2000}"}
+{"timestamp":"2026-10-18T19:14:25.273Z","level":"info","message":"shellType.resolved {\"sessionId\":\"sess_e4f64374-4821-477f-a3f0-6b5411058200\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":3}"}
+{"timestamp":"2026-10-18T19:14:31.380Z","level":"info","message":"acp.policy-eval.complete {\"toolId\":\"run_command\",\"effect\":\"ask\"}","conversationId":"sess_e4f64374-4821-477f-a3f0-6b5411058200","rootConversationId":"sess_e4f64374-4821-477f-a3f0-6b541105
+{"timestamp":"2026-10-18T19:14:46.503Z","level":"info","message":"acp.policy-eval.complete {\"toolId\":\"run_command\",\"effect\":\"allow\",\"capability\":\"shell\"}","conversationId":"sess_e4f64374-4821-477f-a3f0-6b5411058200","rootConversationId":"sess_e4f64

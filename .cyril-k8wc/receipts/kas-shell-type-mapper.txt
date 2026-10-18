@@ -1,0 +1,26 @@
+### kiro-cli 2.31.1  (@kiro/agent "version": "0.66.34")
+sha256(acp-server.js): 9a75422c1eed126f033da2cff574c95bc588f054f090583f7d58875c4780ccfb
+-- normaliser:
+function FNe(e){return(e.includes("/")||e.includes("\\")?e.split(/[/\\]/).pop()??e:e).toLowerCase().replace(/\.exe$/i,"").replace(/^-/,"")}function cb(e){let t=FNe(e);return t===
+-- dialect mapper:
+function cb(e){let t=FNe(e);return t==="fish"?"fish":t==="powershell"||t==="pwsh"||t==="pwsh-preview"?"powershell":t==="cmd"?"cmd":t==="bash"||t==="logbash"||t==="gitbash"||t==="wsl"||t==="zsh"||t==="logzsh"||t==="sh"||t==="dash"||t==="ksh"||t==="ash"||t==="mksh"||t==="pdksh"||t==="oksh"||t==="loksh"||t==="yash"||t==="busybox"||t==="tcsh"||t==="csh"?"posix":"unknown"}
+-- system-prompt shell label:
+function hB(e){switch(cb(e)){case"posix":return e.toLowerCase().replace(/\.exe$/i,"").split(/[/\\]/).pop()??"bash";case"fish":return"fish";case"powershell":return"PowerShell";case"cmd":return"cmd";default:return"shell"}}function Aae(e){retu
+-- isWindowsShell (tool selection execute_bash vs execute_pwsh):
+function Z9(e){let t=cb(e);return t==="cmd"||t==="powershell"}
+-- unknown-dialect warning:
+"policy.shell.type.unknown",{shellName:FNe(e)}):S.debug("policy.shell.type.resolved",{s
+
+### kiro-cli 2.32.0  (@kiro/agent "version": "0.66.43")
+sha256(acp-server.js): d4a1d28831cd07b5d5f68ff1264eaaf51e07be674fd26e69a6f1b74bbe36a325
+-- normaliser:
+function DMe(e){return(e.includes("/")||e.includes("\\")?e.split(/[/\\]/).pop()??e:e).toLowerCase().replace(/\.exe$/i,"").replace(/^-/,"")}function jh(e){let t=DMe(e);return t===
+-- dialect mapper:
+function jh(e){let t=DMe(e);return t==="fish"?"fish":t==="powershell"||t==="pwsh"||t==="pwsh-preview"?"powershell":t==="cmd"?"cmd":t==="bash"||t==="logbash"||t==="gitbash"||t==="wsl"||t==="zsh"||t==="logzsh"||t==="sh"||t==="dash"||t==="ksh"||t==="ash"||t==="mksh"||t==="pdksh"||t==="oksh"||t==="loksh"||t==="yash"||t==="busybox"||t==="tcsh"||t==="csh"?"posix":"unknown"}
+-- system-prompt shell label:
+function QB(e){switch(jh(e)){case"posix":return e.toLowerCase().replace(/\.exe$/i,"").split(/[/\\]/).pop()??"bash";case"fish":return"fish";case"powershell":return"PowerShell";case"cmd":return"cmd";default:return"shell"}}function Fce(e){retu
+-- isWindowsShell (tool selection execute_bash vs execute_pwsh):
+function B5(e){let t=jh(e);return t==="cmd"||t==="powershell"}
+-- unknown-dialect warning:
+"policy.shell.type.unknown",{shellName:DMe(e)}):S.debug("policy.shell.type.resolved",{s
+
