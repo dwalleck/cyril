@@ -1,0 +1,389 @@
+  [replace] ...M,getProviderPowersEnabled:L,isWorkflowStepSession:Z,lspSpawner:ce,onRepositoryCloned:ge,cgsDelegationEnabled:re=!1,  ‹-abToolLoadEnabled›  ‹+dynamicDelegation:de,memoryEnabled›  :q=!1,dynamicDelegation:de,memoryEnabled:Se=!1,backgroundExecution:H=!1,memoryAllowWrites...
+  [replace] ...:Z,lspSpawner:ce,onRepositoryCloned:ge,cgsDelegationEnabled:re=!1,abToolLoadEnabled:q=!1,  ‹-dynamicDelegation›  ‹+backgroundExecution›  :de,memoryEnabled:Se=!1,backgroundExecution:H=!1,memoryAllowWrites:ue=!1,clientInfo...
+  [delete] ...lspSpawner:ce,onRepositoryCloned:ge,cgsDelegationEnabled:re=!1,abToolLoadEnabled:q=!1,dynamicDelegation:de  ‹-,memoryEnabled:Se=!1,backgroundExecution:H›  ‹+›  =!1,memoryAllowWrites:ue=!1,clientInfo:le}...
+@@ 304212c305177  old#304212 new#305177
+  [replace] ...let Re=Y9r(t,r,v),  ‹-Ze=q,B=!q&&cR(oe,"toolSearch"),z›  ‹+Xe›  =new Set(oe.toolSearch?.neverDefer??[]),ie=new Set,ye,...
+  [replace] ...cR(oe,"toolSearch"),z=new Set(oe.toolSearch?.neverDefer??[]),  ‹-ie=new Set,ye,j›  ‹+B›  =()=>{...
+@@ 304224,304231d305188  old#304224 new#305188
+  - ,gt=()=>{
+  - let Y=Ue();
+  - return P&&(Y=Y.filter(xe=>{
+  - let He={
+  - id:xe.toolName,tags:[`@${xe.serverName}/${xe.toolName}`,et.MCP]}
+  - ;
+  - return P.some(at=>Aq(He,at))}
+  - )),Y.map(Ee)}
+@@ 304270,304290c305227  old#304270 new#305227
+  [replace] ...,  ‹-Or,Pr,Vn›  ‹+$e›  =()=>{ let Y=gt(); return Or&&Y.length=...
+  [replace] ...,Or,Pr,Vn=()=>  ‹-{ let Y=gt(); return Or&&Y.length===Pr||(Pr=Y.length,Or=kEe.fromToolSpecs(Y)),Or} ; B&&(ye=new yJ({ getIndex:Vn,activateTools:Y=>{ let xe=0; for(let He of Y)ie.has(He)||(ie.add(He),xe++); return xe} } )); let ei=Y=>{ if(Y)return Qt›  ‹+V›  ().belt; let xe=Ue().map(He=>Y0(He));...
+  [delete] ... )); let ei=Y=>{ if(Y)return Qt().belt  ‹-; let xe=Ue().map(He=>Y0(He)); return P&&(xe=xe.filter(He=>P.some(at=>Aq(He,at)))),B&&(xe=xe.filter(He=>{ let at=He.tags.find(Rt=>Rt.startsWith("@")&&Rt.includes("/")&&Rt!==et.MCP); if(!at)return!0; let rt=at.slice(1).replace("/","::"); return z.has(rt)||z.has(He.id)||q1.some(Rt=>He.tags.includes(`@${Rt}`))?!0:ie.has(rt)} )),xe} ›  ‹+›  ,_t=new Yze(G,ot,r,i),Pt=new WHe,cr=new...
+@@ 304312,304313c305249,305250  old#304312 new#305249
+  [replace] ...),Y0=  ‹-Y›  ‹+V0o(u),Pt=tn›  =>new TPt(Y,{ getConnection:xe=>u()?.getConnection(xe),...
+  [delete] ...),Y0=Y=>new TPt(Y,{ getConnection:xe  ‹-=>u()?›  ‹+›  .getConnection(xe),acpToolApproval:Ji,acpElicitationHandler:Vp}...
+  [delete] ...,Y0=Y=>new TPt(Y,{ getConnection:xe=>u()?.getConnection  ‹-(xe)›  ‹+›  ,acpToolApproval:Ji,acpElicitationHandler:Vp}...
+  [replace] ...Y,{ getConnection:xe=>u()?.getConnection(xe),acpToolApproval:Ji,acpElicitationHandler:  ‹-Vp›  ‹+Nr,coerceStringifiedArgs:!1,sessionReset:wt.sessionReset,isToolDisabled:wt.isToolDisabled,getServerIdentity:wt.getServerIdentity›  }...
+@@ 304318d305254  old#304318 new#305254
+  - if(He==="off")return Y;
+@@ 304355c305291  old#304355 new#305291
+  [delete] ...origin:"acp",store:new Z3(R.authority,w  ‹-??H0e.homedir()›  ‹+›  ),sessionId:r,resolveScope:vtr(U,J0),allowWrites:ue,approve:Ji,.....
+@@ 304388c305324  old#304388 new#305324
+  - if(!(He(q2.id)&&He(zae.id)||B&&He(yJ.id)))return Y;
+  + if(!(L($2.id)&&L(qae.id)))return tn;
+@@ 304396c305332  old#304396 new#305332
+  [insert] ...:Ji,recordingAuthority:R.authority,workspaceFolders:Ke,homeDir:e.homeDir??H0e.homedir()  ‹-›  ‹+,userConfigDir:v›  ,machineId:s,fs:ot,terminalManager:V,backgroundProcessManager:it,backgroundExecution:H,sessionEnv:ne,...
+@@ 304399c305335  old#304399 new#305335
+  [insert] ...):void 0,  ‹-›  ‹+X=›  rt=Y.getActiveAgentId(),Rt=Y.getDeferAllTools(),Mt=Ze||Rt,Ot=...
+  [delete] ...):void 0,rt  ‹-=Y›  ‹+›  .getActiveAgentId(),Rt=Y.getDeferAllTools(),Mt=Ze||Rt,Ot=()=...
+  [replace] ...):void 0,rt=Y.getActiveAgentId(),Rt=Y.getDeferAllTools(),  ‹-Mt=Ze||Rt,Ot›  ‹+ce›  =()=>N?.getProxyUrl(),yn=()=>({...
+@@ 304413,304414c305349,305350  old#304413 new#305349
+  [delete] ...let er=[...Bt,...Re,...ei(  ‹-Mt›  ‹+›  ),F1]; if(ye&&er.push(ye),wI&&er.push(...
+  [replace] ...),F1]; if(ye&&er.push(ye),wI&&er.push(  ‹-wI),F&&er.push(F›  ‹+BT›  ),Ev("c2s")){...
+@@ 304441c305377  old#304441 new#305377
+  [insert] ...let po=[...  ‹-›  ‹+G0e(›  z0e(Bt,p2o(Y,Ji,yg,_.c2sViews)),...Re,.....
+  [insert] ...let po=[...z0e  ‹-›  ‹+,J2o›  (Bt,p2o(Y,Ji,yg,_.c2sViews)),...Re,......
+  [delete] ...let po=[...z0e(  ‹-Bt,›  ‹+›  p2o(Y,Ji,yg,_.c2sViews)),...Re,...ei(Mt...
+  [delete] ...let po=[...z0e(Bt,p2o  ‹-(Y,Ji›  ‹+›  ,yg,_.c2sViews)),...Re,...ei(Mt)];...
+  [replace] ...let po=[...z0e(Bt,p2o(Y,Ji,yg,  ‹-_›  ‹+Dy,T›  .c2sViews)),...Re,...ei(Mt)];...
+  [delete] ...,p2o(Y,Ji,yg,_.c2sViews)),...Re,...ei(  ‹-Mt›  ‹+›  )];...
+@@ 304447c305383  old#304447 new#305383
+  [insert] ...Sg=[new Z2,new R0e(Ji),...v?.requirementsAnalysis?[new   ‹-›  ‹+I0e(›  k0e(Ji)]:[],z9r(Ji),V9r(Ji),...yt,....
+  [delete] ...=[new Z2,new R0e(Ji),...v?.requirementsAnalysis?[new k0e  ‹-(Ji›  ‹+›  )]:[],z9r(Ji),V9r(Ji),...yt,...Ht...
+  [insert] ...R0e(Ji),...v?.requirementsAnalysis?[new k0e(Ji)]:[],  ‹-›  ‹+Z9r(qr),›  z9r(Ji),V9r(Ji),...yt,...Ht,...ei(...
+  [replace] ...Ji),...v?.requirementsAnalysis?[new k0e(Ji)]:[],z9r(  ‹-Ji),V9r(Ji›  ‹+qr›  ),...yt,...Ht,...ei(Mt),...un,...
+  [delete] ...z9r(Ji),V9r(Ji),...yt,...Ht,...ei(  ‹-Mt›  ‹+›  ),...un,...ii];...
+@@ 304456c305392  old#304456 new#305392
+  [replace] ...,P$=(Yc,km)=>L1(ME(Yc),  ‹-US›  ‹+As,Xi›  ,km,I$),pD=Rt?"all-tools":Ze?"mcp-only":"off",TW=zT?hBe(Xo...
+  [delete] ...,P$=(Yc,km)=>L1(ME(Yc),US,km  ‹-,I$›  ‹+›  ),pD=Rt?"all-tools":Ze?"mcp-only":"off",TW=zT?hBe(Xo,po):...
+  [delete] ...,km)=>L1(ME(Yc),US,km,I$),pD=Rt?"all-tools":  ‹-Ze?›  ‹+›  "mcp-only":"off",TW=zT?hBe(Xo,po):Xo;...
+  [delete] ...=>L1(ME(Yc),US,km,I$),pD=Rt?"all-tools":Ze?"mcp-only"  ‹-:"off"›  ‹+›  ,TW=zT?hBe(Xo,po):Xo;...
+@@ 304458c305394  old#304458 new#305394
+  [delete] ...,customAgent:P$(TW,pD),specAgent:P$(po,pD),specOrchestrator:P$(Sg,  ‹-Mt?›  ‹+›  "mcp-only":"off"),taskOrchestrator:P$(Rs,Mt?"mcp-only":"off")}...
+  [delete] ...P$(TW,pD),specAgent:P$(po,pD),specOrchestrator:P$(Sg,Mt?"mcp-only"  ‹-:"off"›  ‹+›  ),taskOrchestrator:P$(Rs,Mt?"mcp-only":"off")}...
+  [delete] ...(po,pD),specOrchestrator:P$(Sg,Mt?"mcp-only":"off"),taskOrchestrator:P$(Rs,  ‹-Mt?›  ‹+›  "mcp-only":"off")}...
+  [delete] ...pD),specOrchestrator:P$(Sg,Mt?"mcp-only":"off"),taskOrchestrator:P$(Rs,Mt?"mcp-only"  ‹-:"off"›  ‹+›  )}...
+@@ 304987,305067d305922  old#304987 new#305922
+  - var DDt=class{
+  - constructor(t){
+  - this.options=t}
+  - options;
+  - resolved;
+  - evaluate(t){
+  - let{
+  - configDirs:r,sessionStore:n}
+  - =this.resolve(),i=new Set(t),o=[];
+  - for(let s of i){
+  - for(let{
+  - spellings:a,role:c}
+  - of r)for(let u of a){
+  - let l=z2o(s,u);
+  - if(l===void 0)continue;
+  - let d=this.restriction(avo(l,c),s);
+  - d&&o.push(d)}
+  - if(n&&[...n].some(a=>z2o(s,a)!==void 0)){
+  - let a=this.restriction(EB.sessions.home,s);
+  - a&&o.push(a)}
+  - }
+  - return o.find(s=>s.effect==="deny")??o[0]}
+  - resolve(){
+  - let{
+  - homeDir:t,workspaceRoots:r,sessionStorePath:n}
+  - =this.options;
+  - return this.resolved??={
+  - configDirs:[{
+  - spellings:this.spellings(t,ja),role:"home"}
+  - ,...r.flatMap(i=>[this.spellings(i,ja),...this.enclosingConfigDirs(i)].map(o=>({
+  - spellings:o,role:"workspace"}
+  - )))],...n!==void 0&&{
+  - sessionStore:this.spellings(n)}
+  - }
+  - ,this.resolved}
+  - enclosingConfigDirs(t){
+  - return[...this.spellings(t)].flatMap(r=>{
+  - let n=r.split("/"),i=H2o(r),o=i(ja);
+  - return n.flatMap((s,a)=>i(s)===o?[this.spellings(n.slice(0,a+1).join("/"))]:[])}
+  - )}
+  - spellings(t,r){
+  - let n=xbe(t,void 0,this.options.homeDir),i=o=>{
+  - let s=o.replace(/\/$/,"");
+  - return r===void 0?s||"/":`${s}/${r}`}
+  - ;
+  - return new Set([i(n),i(ST(n))])}
+  - restriction(t,r){
+  - let n=this.tierEffect(t);
+  - if(n!==void 0)return{
+  - effect:n,isExplicitAsk:n==="ask",matchedRule:{
+  - capability:"fs_write",effect:n,match:[r]}
+  - ,scope:"kiro",source:"kiro-scope",resource:r}
+  - }
+  - tierEffect(t){
+  - let{
+  - workspaceTrusted:r,userBlanketWrite:n,protectedWritesPreapproved:i}
+  - =this.options;
+  - switch(t){
+  - case"inherit":return;
+  - case"alwaysAsk":return i?void 0:"ask";
+  - case"deny":return"deny";
+  - case"untrustedAsk":return r||n?void 0:"ask";
+  - case"untrustedDeny":return r?void 0:"deny";
+  - default:return t}
+  - }
+  - }
+  - ;
+  - function z2o(e,t){
+  - let r=H2o(e),n=s=>s.split("/").map(r).join("/"),i=n(t),o=n(e);
+  - if(o===i)return"";
+  - if(o.startsWith(`${i}/`))return o.slice(i.length+1)}
+  - function H2o(e){
+  - let t=LAu(e),r=t||wb(e);
+  - return n=>{
+  - let i=t?n.replace(/[. ]+$/,""):n;
+  - return r?i.toLowerCase():i}
+  - }
+  - function LAu(e){
+  - return/^([A-Za-z]:\/|\/\/)/.test(e)}
+  - he();
+  - ns();
+@@ 305090,305093c305945,305946  old#305090 new#305945
+  [delete] ...function Y2o(e  ‹-={ } ›  ‹+›  ){ let t=[],r=[],n=new Map;...
+  [insert] ...={ } ){ let t=[],r=[],n=new Map  ‹-›  ‹+,i=e.userConfigDir›  ;...
+@@ 305110c305963  old#305110 new#305963
+  - let p=zN(o,".kiro","settings"),f=G2o(p,"user",n);
+  + let f=UN(i,"settings"),h=A$o(f,"user",n);
+@@ 305134c305987  old#305134 new#305987
+  [insert] ...homeDir  ‹-›  ‹+:s,userConfigDir›  :o,workspaceRoots:e.workspaceRoots??[],workspaceTrusted:e.workspaceTrusted??!1,userBlanketWrite:...
+@@ 305236,305237c306089  old#305236 new#306089
+  - let t=zN(e??JHe(),".kiro","settings");
+  - return Z2o(t)}
+  + return O$o(UN(e,"settings"))}
+@@ 305239c306091  old#305239 new#306091
+  - return Z2o($qr(e,t??JHe()))}
+  + return O$o(Kqr(e,t))}
+@@ 305361c306213  old#305361 new#306213
+  - let r=[],n=[],i=e.userHome??JHe();
+  + let r=[],n=[],i=e.userHome??aKr(),o=e.userConfigDir;
+@@ 305363c306215  old#305363 new#306215
+  - let o=zN(i,".kiro","settings","kiroignore"),s=LDt(o,t);
+  + let s=UN(o,"settings","kiroignore"),a=jDt(s,t);
+@@ 305564c306416  old#305564 new#306416
+  [delete] ...,this.maxSteeringScanDirectories=t.maxSteeringScanDirectories??BDt,this.globalOriginFor=t.globalOriginFor,this.homeConfigBase=w0  ‹-(t›  ‹+›  .homeDir),this.cloudConfigBases=t.cloudConfigBases??(()=>[])}...
+  [replace] ...maxSteeringScanDirectories=t.maxSteeringScanDirectories??BDt,this.globalOriginFor=t.globalOriginFor,this.homeConfigBase=w0(t.  ‹-homeDir)›  ‹+userConfigDir›  ,this.cloudConfigBases=t.cloudConfigBases??(()=>[])}...
+@@ 305574c306426  old#305574 new#306426
+  [insert] ...workspaceFolders:[...t],homeDir:this.homeDir  ‹-›  ‹+,userConfigDir:this.homeConfigBase›  ,workspaceTrusted:this.workspaceTrusted,cloudConfigBases:this.cloudConfigBases,agentIgnoreFiles:this.agentIgnoreFiles,ignoreEvaluatorLoader:this.ignoreEvaluator...
+@@ 305588c306440  old#305588 new#306440
+  - userHome:this.homeDir,workspaceRoots:this.workspaceFolders,agentIgnoreFiles:this.agentIgnoreFiles,workspaceTrusted:this.workspaceTrusted}
+  + userHome:this.homeDir,userConfigDir:this.homeConfigBase,workspaceRoots:this.workspaceFolders,agentIgnoreFiles:this.agentIgnoreFiles,workspaceTrusted:this.workspaceTrusted}
+@@ 306758c307610  old#306758 new#307610
+  [insert] ...workspaceFolders:t.workspaceFolders,homeDir:t.homeDir  ‹-›  ‹+,userConfigDir:t.userConfigDir›  ,workspaceTrusted:t.workspaceTrusted,cloudConfigBases:t.cloudConfigBases,agentIgnoreFiles:t.agentIgnoreFiles,documentCache:this.documentCache,...
+@@ 306760c307612  old#306760 new#307612
+  - watchPaths:[I$o.join(ja,_0),F9],homeDir:t.homeDir,onChange:()=>{
+  + watchPaths:[h3o.join(Mc,GT)],workspaceOnlyPaths:[Cq],userConfigDir:t.userConfigDir,onChange:()=>{
+@@ 307109c307961  old#307109 new#307961
+  - function WIu(e){
+  + function QPu(e,t){
+@@ 307111c307963  old#307111 new#307963
+  [insert] ...return   ‹-›  ‹+r===t?!0:›  aQ.basename(t)===F2&&aQ.basename(aQ.dirname(t))==...
+@@ 307113c307965,307966  old#307113 new#307965
+  [insert] ...  ‹-›  ‹+let t=qB.join(e,wI); ›  return aQ.basename(e)===c0t?!1:WIu(e)}...
+  [insert] ...return   ‹-›  ‹+r=>›  aQ.basename(e)===c0t?!1:WIu(e)}...
+  [insert] ...return aQ.basename(e)===c0t?!1:WIu(  ‹-›  ‹+r,›  e)}...
+@@ 307138c307991  old#307138 new#307991
+  [replace] ...j0e(t.items.files,t.items.defaults),this.broadcastOutboundFor=t.broadcastOutboundFor,this.  ‹-homeDir›  ‹+userConfigDir›  =t.homeDir,this.workspaceTrusted=t.workspaceTrusted,this.onItemsChanged=t.onItemsChanged}...
+  [replace] ...items.files,t.items.defaults),this.broadcastOutboundFor=t.broadcastOutboundFor,this.homeDir=t.  ‹-homeDir›  ‹+userConfigDir›  ,this.workspaceTrusted=t.workspaceTrusted,this.onItemsChanged=t.onItemsChanged}...
+@@ 307166c308019  old#307166 new#308019
+  [replace] ...watchPaths:[SKr.join(".kiro","skills"),SKr.join(".kiro","steering")],  ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,ignored:$$o,onChange:()=>{...
+  [replace] ...:[SKr.join(".kiro","skills"),SKr.join(".kiro","steering")],homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,ignored:$$o,onChange:()=>{...
+  [insert] ...join(".kiro","skills"),SKr.join(".kiro","steering")],homeDir:this.homeDir,ignored:  ‹-›  ‹+E3o(›  $$o,onChange:()=>{...
+  [insert] ...(".kiro","skills"),SKr.join(".kiro","steering")],homeDir:this.homeDir,ignored:$$o  ‹-›  ‹+.userConfigDir)›  ,onChange:()=>{...
+@@ 307318c308171  old#307318 new#308171
+  - this.homeConfigBase=w0(t),this.cloudConfigBases=n,this.globalOriginFor=r}
+  + this.homeConfigBase=t,this.cloudConfigBases=n,this.globalOriginFor=r}
+@@ 307870c308723  old#307870 new#308723
+  [replace] ...let a=cQ.join(s.origin==="workspace"?s.root  ‹-:›  ‹+(s.›  t,".kiro","prompts"),c=await uPu(a,r),u=await qe("prompt.dir.read"...
+  [insert] ...let a=cQ.join(s.origin==="workspace"?s.root:t,".kiro"  ‹-›  ‹+):t›  ,"prompts"),c=await uPu(a,r),u=await qe("prompt.dir.read","fs",...
+@@ 307917c308770  old#307917 new#308770
+  - homeDir:t.homeDir,watchPaths:[f9e.join(".kiro","prompts")],onChange:()=>{
+  + userConfigDir:t.userConfigDir,watchPaths:[X0e.join(".kiro","prompts")],onChange:()=>{
+@@ 307920c308773,308775  old#307920 new#308773
+  [replace] ...)  ‹-,›  ‹+; let r=X0e.resolve(t.userConfigDir); ›  this.watcher.addWorkspacePaths(this.workspacePaths.filter(r=>r!==f9e.resolve(t....
+  [insert] ...),this.watcher.addWorkspacePaths(this.workspacePaths.filter(r=>  ‹-›  ‹+X0e.›  r!==f9e.resolve(t.homeDir)))}...
+  [insert] ...),this.watcher.addWorkspacePaths(this.workspacePaths.filter(r=>r  ‹-›  ‹+(n,".kiro")›  !==f9e.resolve(t.homeDir)))}...
+  [delete] ...),this.watcher.addWorkspacePaths(this.workspacePaths.filter(r=>r!==f9e  ‹-.resolve(t.homeDir)›  ‹+›  ))}...
+@@ 307949c308804  old#307949 new#308804
+  - let n=new Map,i=await j$o(this.workspacePaths,this.options.homeDir,t,r);
+  + let n=new Map,i=await I3o(this.workspacePaths,this.options.userConfigDir,t,r);
+@@ 310454c311309  old#310454 new#311309
+  - this.path=hMu(t,C3o)}
+  + this.path=bNu(t,"settings","knowledge.json")}
+@@ 311197c312052  old#311197 new#312052
+  [replace] ..._9e,i,this.connection.place,new WN),this.knowledgeIndexTypeFile=new AOt(n.  ‹-homeDir›  ‹+fileRoots["user-local"]›  ,i),this.notifier=new S9e(this.connection,t,r,JRt,n.layerNames...
+@@ 312201c313056  old#312201 new#313056
+  [insert] ...pdate":case"_kiro/memory/delete":case"_kiro/safety/getProperties":case"_kiro/sandbox/applyConfig":case"_kiro/account/getUsage":case"_kiro/codeIntelligence":case  ‹-›  ‹+"_kiro/environment/start_ssh_session":case›  "_kiro/session/context":case"_kiro/session/compact":case"_kiro/session/history":case"_kiro/workflow/new":case"_kiro/workflow/invoke":case"_kiro/workflow/load":c...
+@@ 314983c315838  old#314983 new#315838
+  [insert] ...e"_kiro/memory/update":case"_kiro/memory/delete":case"_kiro/sourceProviders/list":case"_kiro/sourceProviders/listResources":case"_kiro/sandbox/applyConfig":case  ‹-›  ‹+"_kiro/environment/start_ssh_session":case›  "_kiro/spec/resolveSession":case"_kiro/workflow/listWatchHandlers":case"_kiro/workflow/resumeAll":case"_kiro/config/template":case"_kiro/configuration/getState"...
+@@ 315846c316701  old#315846 new#316701
+  - let t=sue.join(e,".kiro"),r={
+  + let t={
+@@ 319151d320005  old#319151 new#320005
+  - he();
+@@ 319289c320143  old#319289 new#320143
+  [replace] ...this.configRoot=NS.join(t.  ‹-homeDir,ja›  ‹+userConfigDir›  ,"cloud-cache",t.scope,"config"),this.resolvedRoot=NS.resolve(this.configRoot),this....
+  [replace] ...this.lockFilePath=NS.join(this.configRoot,nLu),this.stagingRoot=NS.join(t.  ‹-homeDir,ja›  ‹+userConfigDir›  ,"cloud-cache",t.scope,"staging"),this.lockWait=t.lockWait??z6o,this.keys=...
+@@ 319527c320381  old#319527 new#320381
+  - homeDir:t.homeDir,scope:V6o,keys:d6o}
+  + userConfigDir:t.userConfigDir,scope:IBo,keys:K6o}
+@@ 323129c323983  old#323129 new#323983
+  - homeDir:t,watchPaths:[w5e.join(ja,pN)],onChange:()=>{
+  + userConfigDir:t,watchPaths:[E5e.join(Mc,_I)],onChange:()=>{
+@@ 323312a324167,324199  old#323312 new#324167
+  + va();
+  + import*as I8o from"fs";
+  + import*as RE from"path";
+  + function P8o(e){
+  + let t=WT(e.homeDir),r=e.kiroHome?.trim();
+  + if(!r)return{
+  + dir:t,source:"default"}
+  + ;
+  + let n=O9u(r,e.homeDir);
+  + return n?{
+  + dir:t,source:"default",ignored:{
+  + value:r,reason:n}
+  + }
+  + :{
+  + dir:RE.resolve(r),source:"env"}
+  + }
+  + function O9u(e,t){
+  + if(!RE.isAbsolute(e))return"relative";
+  + let r=A8o(RE.resolve(e));
+  + if(RE.parse(r).root===r)return"root";
+  + let n=RE.relative(r,A8o(RE.resolve(t)));
+  + if(n===""||!n.startsWith("..")&&!RE.isAbsolute(n))return"contains-home"}
+  + function A8o(e){
+  + let t=[],r=e;
+  + for(;
+  + ;
+  + )try{
+  + return RE.join(I8o.realpathSync.native(r),...t.reverse())}
+  + catch{
+  + let n=RE.dirname(r);
+  + if(n===r)return e;
+  + t.push(RE.basename(r)),r=n}
+  + }
+@@ 323979d324865  old#323979 new#324865
+  - Jre();
+@@ 324228,324229c325114  old#324228 new#325114
+  - var n$t=tr(t8(),1),P8o=tr(Gy(),1);
+  - hr();
+  + var f$t=er(Jz(),1);
+@@ 324297,324299c325182  old#324297 new#325182
+  - ,maxAttempts:t,customUserAgent:o,requestHandler:new P8o.NodeHttpHandler({
+  - requestTimeout:15e3,connectionTimeout:15e3,httpsAgent:ob(l)}
+  - )}
+  + ,maxAttempts:t,customUserAgent:o,requestHandler:BG(l)}
+@@ 324931,324932c325814  old#324931 new#325814
+  - var l$t=tr(t8(),1),Z8o=tr(Gy(),1);
+  - n_();
+  + var w$t=er(Jz(),1);
+@@ 324964,324966c325846  old#324964 new#325846
+  - ,maxAttempts:t,customUserAgent:o,requestHandler:new Z8o.NodeHttpHandler({
+  - requestTimeout:15e3,connectionTimeout:15e3,httpsAgent:ob(l)}
+  - )}
+  + ,maxAttempts:t,customUserAgent:o,requestHandler:BG(l)}
+@@ 325765c326645  old#325765 new#326645
+  - this.root=mHo.join(t,ja,d0t)}
+  + this.root=QHo.join(t,Bje)}
+@@ 325937c326817  old#325937 new#326817
+  - constructor(t,r){
+  + constructor(t,r,n){
+@@ 325939a326820  old#325939 new#326820
+  + this.options=n;
+@@ 325942c326823,326824  old#325942 new#326823
+  - )))}
+  + )),void 0,void 0,void 0,n)}
+  + parent;
+@@ 325947c326829  old#325947 new#326829
+  [insert] ...?this:new e(()=>this.parent().withAnswers(t),this.rules  ‹-›  ‹+,this.options›  )}...
+@@ 325966,325967c326848,326849  old#325966 new#326848
+  - function Een(e,t){
+  - return new _en(e,t)}
+  + function $en(e,t,r){
+  + return new Fen(e,t,r)}
+@@ 326010a326893  old#326010 new#326893
+  + organizationPolicy;
+@@ 326023,326026c326906,326907  old#326023 new#326906
+  [delete] ...constructor(t  ‹-={ } ›  ‹+›  ){ this.homeDir=t.homeDir,this.workspaceRoots=t.workspaceRoots??[],this....
+  [insert] ...constructor(t={ } ){ this.homeDir=t.homeDir  ‹-›  ‹+,this.userConfigDir=t.userConfigDir›  ,this.workspaceRoots=t.workspaceRoots??[],this.notificationSink=t.notificationSink,t.initialSessionRules?...
+@@ 326034c326915  old#326034 new#326915
+  - kiroPaths:r.kiroPaths}
+  + kiroPaths:r.kiroPaths,userConfigDir:this.userConfigDir}
+@@ 326036c326917,326919  old#326036 new#326917
+  [insert] ...length>0&&(i=new bB(void 0,t.homeDir,this.workspaceRoots.length  ‹-›  ‹+,void 0,{ userConfigDir:this.userConfigDir} ›  )),this.engine=i,this.loadedInputs={...
+@@ 326107c326990  old#326107 new#326990
+  [replace] ...),...t,P$t.join(".kiro","settings","kiroignore")],workspaceOnlyPaths:this.agentIgnoreFiles,  ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,onChange:()=>{...
+  [replace] ....t,P$t.join(".kiro","settings","kiroignore")],workspaceOnlyPaths:this.agentIgnoreFiles,homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,onChange:()=>{...
+@@ 326142c327025,327027  old#326142 new#327025
+  - return Een(()=>r,i)}
+  + return $en(()=>r,i,{
+  + userConfigDir:this.userConfigDir}
+  + )}
+@@ 326172c327057  old#326172 new#327057
+  [replace] ....scope==="user")o=this.selfWrites.open(),await J2o(i,this.  ‹-homeDir›  ‹+userConfigDir›  ,r);...
+@@ 326185c327070  old#326185 new#327070
+  - o=this.selfWrites.open(),await Q2o(i,a,this.homeDir,r)}
+  + o=this.selfWrites.open(),await F$o(i,a,this.userConfigDir,r)}
+@@ 326198c327083  old#326198 new#327083
+  [insert] ...organizationRules:t,userHome:this.homeDir  ‹-›  ‹+,userConfigDir:this.userConfigDir›  ,workspaceRoots:this.workspaceRoots,agentRules:this.agentRules,agentRulesWorkspaceRoot:this.agentRulesWorkspaceRoot,sessionRules:this.sessionRules,...
+@@ 326204c327089  old#326204 new#327089
+  - kiroPaths:t.kiroPaths}
+  + kiroPaths:t.kiroPaths,userConfigDir:this.userConfigDir}
+@@ 326206c327091,327093  old#326206 new#327091
+  [insert] ...length>0&&(i=new bB(void 0,this.homeDir,this.workspaceRoots.length  ‹-›  ‹+,void 0,{ userConfigDir:this.userConfigDir} ›  ));...
+@@ 326357c327244  old#326357 new#327244
+  [delete] ...this.sessionsDir=Ten.join(r  ‹-,".kiro"›  ‹+›  ,"spec-sessions"),this.sessionsFilePath=Ten.join(this.sessionsDir,`${n}.json`)...
+@@ 326435d327321  old#326435 new#327321
+  - this.homeDir=r;
+@@ 326437,326438c327323,327325  old#326437 new#327323
+  - this.fs=n,this.storage=new OB(t,r)}
+  - workspacePaths;
+  + this.fs=n,this.storage=new PB(t,{
+  + userConfigDir:r}
+  + )}
+@@ 328103c328990  old#328103 new#328990
+  [insert] ...var f_l=6e4,pis=2e3,h_l="default_blocked",m_l=0,g_l=50,y_l=200  ‹-›  ‹+,Xis=Hne›  ,$ke=k.object({...
+@@ 328482a329370,329371  old#328482 new#329370
+  + sourceProviderCatalog;
+  + usageLimitsTransport;
+@@ 328801,328802c329690,329710  old#328801 new#329690
+  [insert] ...d=>this.handleIdentityChange(d)),this.homeDir=r.homeDir??q6t.homedir()  ‹-›  ‹+; let i=P8o({ kiroHome:process.env.KIRO_HOME›  ,this.clock=r.clock??YOt,this.customUserAgent=j$r(r.customUserAgent),this....
+  [insert] ...=>this.handleIdentityChange(d)),this.homeDir=r.homeDir??q6t.homedir(),  ‹-›  ‹+homeDir:this.homeDir} ); if(this.userConfigDir=i.dir,i.ignored&&S.warn("agent.userConfigDir.ignored",{ name:Rd.basename(i.ignored.value),reason:i.ignored.reason} ),i.source!=="default"){ S.info("agent.userConfigDir.resolved",{ name:Rd.basename(this.userConfigDir),source:i.source} ); try{ A$.mkdirSync(this.userConfigDir,{ recursive:!0,mode:xi} )} catch(p){ S.warn("agent.userConfigDir.createFailed",{ name:Rd.basename(this.userConfigDir),code:p.code} )} } ›  this.clock=r.clock??YOt,this.customUserAgent=j$r(r.customUserAgent),this.cloudConfig...
+  [replace] ...??YOt,this.customUserAgent=j$r(r.customUserAgent),this.cloudConfig=t5e.resolve({   ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,backend:r.cloudConfigBackend?.(this.homeDir)}...
+  [replace] ...this.customUserAgent=j$r(r.customUserAgent),this.cloudConfig=t5e.resolve({ homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,backend:r.cloudConfigBackend?.(this.homeDir)}...
+@@ 328808,328809c329716,329717  old#328808 new#329716
+  [delete] ...  ‹-homeDir:this.homeDir,›  ‹+›  environment:new WZ(process.env),fileRoots:{ "user-local":w0(this.homeDir),"user-synced"...
+  [delete] ...homeDir:this.homeDir,environment:new WZ(process.env),fileRoots:{ "user-local":w0  ‹-(this›  ‹+›  .homeDir),"user-synced":this.cloudConfig.roots.user,scoped:{...
+  [replace] ...this.homeDir,environment:new WZ(process.env),fileRoots:{ "user-local":w0(this.  ‹-homeDir)›  ‹+userConfigDir›  ,"user-synced":this.cloudConfig.roots.user,scoped:{...
+@@ 328826c329734  old#328826 new#329734
+  [replace] ...agentDefinitions=new qOt(this.configuration.sharedItems,i),this.enterpriseManagementCache=new m$t(this.  ‹-homeDir›  ‹+userConfigDir›  );...
+@@ 328847c329755  old#328847 new#329755
+  [replace] ....configuration.startup,this.profile),this.sessionsPath=r.sessionsPath??jf.join(this.  ‹-homeDir,".kiro"›  ‹+userConfigDir›  ,"sessions"),this.diskBudgetBytes=r.diskBudgetBytes??R2n,this.contentCollectionEnabled=r.contentCollectionEnabled??!...
+  [replace] ...],this.lspSpawner=r.lspSpawner,this.logsBasePath=r.logsBasePath??jf.join(this.  ‹-homeDir,".kiro"›  ‹+userConfigDir›  ,"logs"),this.hostTelemetry=r.telemetry,this.testTraffic=r.testTraffic,this.firstMessageWaitMs=r...
+  [insert] ...qClientFactory,this.remoteMCPClient=r.remoteMCPClient,this.remoteSessionSource=r.remoteSessionSource,this.remoteAgentLink=r.remoteAgentLink  ‹-›  ‹+,this.sshCredentialSource=r.sshCredentialSource??new xct›  ,this.sourceProviderCatalog=r.sourceProviderCatalog,this.usageLimitsTransport=r.usageLimitsTransport,this.executionEnvironment=r.executionEnvironment?...
+@@ 328858c329766  old#328858 new#329766
+  [insert] ...broadcastOutboundFor:d=>this.broadcastOutboundFor(d),workspaceFolders:[],homeDir:this.homeDir  ‹-›  ‹+,userConfigDir:this.userConfigDir›  ,workspaceTrusted:r.workspaceTrusted,cloudConfigBases:()=>this.cloudConfig.bases,agentIgnoreFiles:r.agentIgnoreFiles,...
+@@ 328861c329769  old#328861 new#329769
+  - ),this.agentProfileCache=new G2t(this.homeDir,Hzo,{
+  + ),this.agentProfileCache=new t$t(this.userConfigDir,C8o,{
+@@ 328868c329776  old#328868 new#329776
+  [replace] ...steering:this.steeringManager,items:this.configuration.sharedItems,source:new c9e(this.  ‹-homeDir›  ‹+userConfigDir›  ,d=>this.cloudConfig.globalOriginFor(d),()=>this.cloudConfig.bases),broadcastOutboundFor...
+  [replace] ...),()=>this.cloudConfig.bases),broadcastOutboundFor:d=>this.broadcastOutboundFor(d),  ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,workspaceTrusted:this.workspaceTrusted,onItemsChanged:()=>{...
+  [replace] ...=>this.cloudConfig.bases),broadcastOutboundFor:d=>this.broadcastOutboundFor(d),homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,workspaceTrusted:this.workspaceTrusted,onItemsChanged:()=>{...
+@@ 328915c329823  old#328915 new#329823
+  [replace] ...  ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,cloudConfigBases:()=>this.cloudConfig.bases,items:this.configuration.sharedItems,...
+  [replace] ...homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,cloudConfigBases:()=>this.cloudConfig.bases,items:this.configuration.sharedItems,globalOriginFor:d=...
+@@ 328938c329846  old#328938 new#329846
+  [replace] ...drainCheckpointSessionWrites:d=>this.persistence.drainSessionWrites(d),readWorkspaceTrust:()=>this.workspaceTrusted,  ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,cloudRecipeRoots:()=>this.cloudConfig.bases.map(d=>({...
+  [replace] ...=>this.persistence.drainSessionWrites(d),readWorkspaceTrust:()=>this.workspaceTrusted,homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,cloudRecipeRoots:()=>this.cloudConfig.bases.map(d=>({...
+@@ 329013c329921  old#329013 new#329921
+  - watchPaths:[".kiro/workflows"],homeDir:this.homeDir,onChange:()=>{
+  + watchPaths:[".kiro/workflows"],userConfigDir:this.userConfigDir,onChange:()=>{
+@@ 329081c329989  old#329081 new#329989
+  - homeDir:this.homeDir,workspaceTrusted:this.workspaceTrusted,onConfigChanged:()=>{

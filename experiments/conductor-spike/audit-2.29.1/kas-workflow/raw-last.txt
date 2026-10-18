@@ -1,0 +1,66 @@
+### counts
+  _kiro/session/notify          2->   2
+  recipes_changed               2->   2
+  "recipes"                     1->   2
+  includedFrom                  0->   8
+  "include"                     3->   6
+  workflow-continuation         4->   4
+  agent-initiated-prompt        4->   4
+  steering-injection            4->   4
+  "served"                     11->  16
+  "notEnabled"                 11->  12
+  bundled://                   13->  17
+  generated://                 13->  17
+  agent://                      8->   8
+  wf-workflow-creator           2->   2
+  includeCycle                  0->   0
+  include cycle                 0->   1
+
+##### '_kiro/session/notify'
+  @10957099: r directly instead.`,{suppressed:!0,reason:`workflow step already finished (${f})`});return a.recordToolSuccess(),y}let h={...p,sessionId:o,role:l};await this.deliverMessage(u,r.message,s,h),await this.emitNotification("_kiro/session/notify",cAt(u,r.message,s,h));let m;this.writeCompletionSignal&&l==="step"&&(m=await this.writeCompletionSignal(o,s,r.message));let g=c("Success",m?.warning??"Message sent.",{sessionId:u,severity:s});return a.recordToolSuccess
+  @11229985: {workflowId:r,nodeId:i,parentSessionId:n,phase:l,error:d instanceof Error?d.message:String(d)})};try{await this.deliverSendMessage(n,a,"info",c,!0)}catch(l){u("parent-wake",l);return}try{await this.host.extNotification("_kiro/session/notify",cAt(n,a,"info",c))}catch(l){u("client-notify",l)}}async deliverSendMessageAdmitted(t,r,n,i,o){let s=this.host.getSession(t),a=s?.workspacePaths??await this.resolveSessionWorkspacePaths(t);if(!a){S.warn("send_message.ta
+  ...more
+
+##### 'recipes_changed'
+  @12525589: t.configuration);try{await this.workflowRecipeCatalog.refreshSession(t.sessionId,"session-start")}catch{}}}emitRecipesChanged(t){this.broadcastOutboundFor(t.sessionId).extNotification("_kiro/workflow/recipes_changed",{sessionId:t.sessionId,workspacePaths:[...t.workspacePaths],recipes:[...t.recipes]}).catch(r=>{S.debug("workflow.recipes_changed.emit_failed",{sessionId:t.sessionId,error:String(r)})})}startCloudCon
+  @12525719: his.broadcastOutboundFor(t.sessionId).extNotification("_kiro/workflow/recipes_changed",{sessionId:t.sessionId,workspacePaths:[...t.workspacePaths],recipes:[...t.recipes]}).catch(r=>{S.debug("workflow.recipes_changed.emit_failed",{sessionId:t.sessionId,error:String(r)})})}startCloudConfigPull(t,r){t.cloudConfigReady=(async()=>{try{await this.pullCloudConfig(t,r)}catch(n){S.warn("[KiroAgent] Cloud-config pull fail
+  ...more
+
+##### '_kiro/session/notify'
+  @10702376: r directly instead.`,{suppressed:!0,reason:`workflow step already finished (${f})`});return a.recordToolSuccess(),y}let h={...p,sessionId:i,role:l};await this.deliverMessage(u,r.message,s,h),await this.emitNotification("_kiro/session/notify",v0t(u,r.message,s,h));let m;this.writeCompletionSignal&&l==="step"&&(m=await this.writeCompletionSignal(i,s,r.message));let g=c("Success",m?.warning??"Message sent.",{sessionId:u,severity:s});return a.recordToolSuccess
+  @10948890: {workflowId:r,nodeId:o,parentSessionId:n,phase:l,error:d instanceof Error?d.message:String(d)})};try{await this.deliverSendMessage(n,a,"info",c,!0)}catch(l){u("parent-wake",l);return}try{await this.host.extNotification("_kiro/session/notify",v0t(n,a,"info",c))}catch(l){u("client-notify",l)}}async deliverSendMessageAdmitted(t,r,n,o,i){let s=this.host.getSession(t),a=s?.workspacePaths??await this.resolveSessionWorkspacePaths(t);if(!a){v.warn("send_message.ta
+  ...more
+
+### 'include' near 'recipe' in NEW doc-text (3.2M-3.5M)
+  th that session\'s environment, and does not run at all if a configured sandbox cannot be prepared.\n\n### 6. include\n\nPuts another recipe\'s steps into this workflow in place of the node. Required: type, id, path. Opt
+  nto this workflow in place of the node. Required: type, id, path. Optional: inputs.\n\n```json\n{\n "type": "include",\n "id": "review",\n "path": "/abs/repo/.kiro/workflows/review.workflow.json",\n "inputs": { "targ
+  `read_file` the recipe and read its `inputs` block. Never copy the recipe\'s steps into your definition: the include node is the whole reference. If the recipe is too large to read, take its inputs from the brief.\n- Wh
+  he whole reference. If the recipe is too large to read, take its inputs from the brief.\n- When you save, the include becomes a `sequence` whose id is the include id, and every included node id and artifact name gets the
+  e to read, take its inputs from the brief.\n- When you save, the include becomes a `sequence` whose id is the include id, and every included node id and artifact name gets the prefix `<include id>/`. A later step reads `
+  puts from the brief.\n- When you save, the include becomes a `sequence` whose id is the include id, and every included node id and artifact name gets the prefix `<include id>/`. A later step reads `{{review/<step id>.out
+  comes a `sequence` whose id is the include id, and every included node id and artifact name gets the prefix `<include id>/`. A later step reads `{{review/<step id>.output}}` and `{{artifacts.review/<name>}}`. `{{review.o
+  mes the sequence, which has no output, and fails validation. `{{previous.output}}` in the step right after an include does not read the included recipe: it reads the last step before the include, or fails when there is n
+  s no output, and fails validation. `{{previous.output}}` in the step right after an include does not read the included recipe: it reads the last step before the include, or fails when there is none. Read an included resu
+  ut}}` in the step right after an include does not read the included recipe: it reads the last step before the include, or fails when there is none. Read an included result by its prefixed id.\n- If the recipe\'s `stopWhe
+  not read the included recipe: it reads the last step before the include, or fails when there is none. Read an included result by its prefixed id.\n- If the recipe\'s `stopWhen` is `{{<input>}} contains ...`, give that in
+  as `{{setup.output}}`; plain text there fails validation.\n- Included steps count toward the step cap, and an included recipe cannot itself contain an include. A bundled recipe arrives with its own includes already expan
+  ails validation.\n- Included steps count toward the step cap, and an included recipe cannot itself contain an include. A bundled recipe arrives with its own includes already expanded, so its ids can carry two prefixes.\n
+  the step cap, and an included recipe cannot itself contain an include. A bundled recipe arrives with its own includes already expanded, so its ids can carry two prefixes.\n- Artifact paths are not prefixed: a recipe inc
+  wn includes already expanded, so its ids can carry two prefixes.\n- Artifact paths are not prefixed: a recipe included twice writes the same files unless its output directory is one of its inputs.\n- Do not include a rec
+  ed: a recipe included twice writes the same files unless its output directory is one of its inputs.\n- Do not include a recipe whose steps may restructure the plan with `update_workflow` `replace_remaining`, such as `bun
+  d://feature-pipeline`. The replacement acts on this workflow\'s top-level steps: it drops the steps after the include, while the recipe\'s own steps still run.\n- The recipe is copied at save time: later edits to the rec
+  o be rejected:\n\n1. Max nesting depth: 8 levels\n2. Max step nodes: 50 per workflow, counting the steps each include adds\n3. Node IDs must be unique across the entire tree\n4. Repeat nodes must have exactly ONE of stop
+  toolCallId:n.id??"",status:"success",output:{type:"code_interpreter_output",returnCode:i??0,stderr:[0,void 0].includes(i)?void 0:String(o.logs),stdout:[0,void 0].includes(i)?String(o.logs):void 0}};continue}}continue}els
+  ode_interpreter_output",returnCode:i??0,stderr:[0,void 0].includes(i)?void 0:String(o.logs),stdout:[0,void 0].includes(i)?String(o.logs):void 0}};continue}}continue}else if(Mn(n,"mcp_call")){yield{id:n.id,type:"server_to
+  t type.`);if(typeof i[o]=="string"){if(o==="type")continue;if(["id","name","output_version","model_provider"].includes(o))s&&(i[o]=s);else{if(n.includes(o))continue;i[o]+=s}}else if(typeof i[o]=="number"){if(n.includes(o
+  ){if(o==="type")continue;if(["id","name","output_version","model_provider"].includes(o))s&&(i[o]=s);else{if(n.includes(o))continue;i[o]+=s}}else if(typeof i[o]=="number"){if(n.includes(o))continue;i[o]=i[o]+s}else if(typ
+  rovider"].includes(o))s&&(i[o]=s);else{if(n.includes(o))continue;i[o]+=s}}else if(typeof i[o]=="number"){if(n.includes(o))continue;i[o]=i[o]+s}else if(typeof i[o]=="object"&&!Array.isArray(i[o]))i[o]=mf(i[o],s,r);else if
+  tring"){let t=this.content.filter(r=>r.type==="tool_call").map(r=>r.id);for(let r of this.tool_calls)r.id&&!t.includes(r.id)&&e.push({...r,type:"tool_call",id:r.id,name:r.name,args:r.args})}return e}get _printableFields(
+  rkerGlobalScope",iai=()=>typeof window<"u"&&window.name==="nodejs"||typeof navigator<"u"&&navigator.userAgent.includes("jsdom"),fdt=()=>typeof Deno<"u",oai=()=>typeof process<"u"&&typeof process.versions<"u"&&typeof proc
+  CONFIG_FILE","LANGSMITH_PROJECT","LANGSMITH_SESSION"];for(let[n,i]of Object.entries(e))typeof i=="string"&&!r.includes(n)&&!n.toLowerCase().includes("key")&&!n.toLowerCase().includes("secret")&&!n.toLowerCase().includes(
+  T","LANGSMITH_SESSION"];for(let[n,i]of Object.entries(e))typeof i=="string"&&!r.includes(n)&&!n.toLowerCase().includes("key")&&!n.toLowerCase().includes("secret")&&!n.toLowerCase().includes("token")&&(n==="LANGCHAIN_REVI
+  i]of Object.entries(e))typeof i=="string"&&!r.includes(n)&&!n.toLowerCase().includes("key")&&!n.toLowerCase().includes("secret")&&!n.toLowerCase().includes("token")&&(n==="LANGCHAIN_REVISION_ID"?t.revision_id=i:t[n]=i);r
+  ect.entries(process.env))(t.startsWith("LANGCHAIN_")||t.startsWith("LANGSMITH_"))&&r!=null&&((t.toLowerCase().includes("key")||t.toLowerCase().includes("secret")||t.toLowerCase().includes("token"))&&typeof r=="string"?e[
+  sWith("LANGCHAIN_")||t.startsWith("LANGSMITH_"))&&r!=null&&((t.toLowerCase().includes("key")||t.toLowerCase().includes("secret")||t.toLowerCase().includes("token"))&&typeof r=="string"?e[t]=r.slice(0,2)+"*".repeat(r.leng
+  ANGSMITH_"))&&r!=null&&((t.toLowerCase().includes("key")||t.toLowerCase().includes("secret")||t.toLowerCase().includes("token"))&&typeof r=="string"?e[t]=r.slice(0,2)+"*".repeat(r.length-4)+r.slice(-2):e[t]=r)}catch{}ret
+  rkerGlobalScope",oxa=()=>typeof window<"u"&&window.name==="nodejs"||typeof navigator<"u"&&navigator.userAgent.includes("jsdom"),Eci=()=>typeof Deno<"u",sxa=()=>typeof process<"u"&&typeof process.versions<"u"&&typeof proc

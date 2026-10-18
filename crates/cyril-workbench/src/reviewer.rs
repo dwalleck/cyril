@@ -8,7 +8,7 @@ use cyril_core::{
     protocol::bridge::{BridgeSender, spawn_bridge},
     types::{
         BridgeCommand, Notification, PermissionRequest, PermissionResponse, PromptEnvelope,
-        RoutedNotification, SessionId, StopReason, ToolCallStatus,
+        RoutedNotification, SET_CONFIG_OPTION_OPERATION, SessionId, StopReason, ToolCallStatus,
     },
 };
 use evidence::{EvidenceCleanup, EvidenceTree};
@@ -204,7 +204,7 @@ impl Inspection {
                     self.collection_confirmed = options.iter().any(|option| {
                         option.key == "contentCollection"
                             && option.value.as_deref() == Some("disabled")
-                            && option.options.iter().any(|value| value == "disabled")
+                            && option.options.iter().any(|value| value.value == "disabled")
                     });
                     if !self.collection_confirmed {
                         self.fail(ReviewFailure::ConfigurationDrift);
@@ -215,7 +215,10 @@ impl Inspection {
                 // from an unconfirmed/wrong profile cannot survive its switch.
                 if let Some(mode) = options.iter().find(|option| option.key == "mode") {
                     self.mode_confirmed = mode.value.as_deref() == Some(runtime::MODE)
-                        && mode.options.iter().any(|value| value == runtime::MODE);
+                        && mode
+                            .options
+                            .iter()
+                            .any(|value| value.value == runtime::MODE);
                 }
                 if !self.mode_confirmed {
                     self.model_confirmed = false;
@@ -228,7 +231,7 @@ impl Inspection {
                         _ => continue,
                     };
                     let confirmed = option.value.as_deref() == Some(expected)
-                        && option.options.iter().any(|value| value == expected);
+                        && option.options.iter().any(|value| value.value == expected);
                     if self.started && !confirmed {
                         self.fail(ReviewFailure::ConfigurationDrift);
                         return;
@@ -299,7 +302,7 @@ impl Inspection {
                 let operation = match operation.as_str() {
                     "session/new" => Some(ReviewOperation::NewSession),
                     "set_mode 'cyril-inspection-reviewer'" => Some(ReviewOperation::SelectMode),
-                    "set_config_option" => Some(ReviewOperation::SetConfiguration),
+                    SET_CONFIG_OPTION_OPERATION => Some(ReviewOperation::SetConfiguration),
                     "prompt" => Some(ReviewOperation::Prompt),
                     _ => None,
                 };

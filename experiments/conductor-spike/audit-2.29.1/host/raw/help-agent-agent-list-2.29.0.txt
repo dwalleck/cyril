@@ -1,0 +1,8 @@
+List the available agents. Note that local agents are only discovered if the command is invoked at a
+directory that contains them
+
+Usage: kiro-cli-chat agent list [OPTIONS]
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

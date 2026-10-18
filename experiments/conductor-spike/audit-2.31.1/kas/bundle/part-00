@@ -1,0 +1,441 @@
+@@ 9734d9733  old#9734 new#9733
+  - import Lhs from"node:path";
+@@ 9762c9761  old#9762 new#9761
+  [delete] ...workspaceRoot:e.join(", "),kiroConfigDir:  ‹-Lhs.›  ‹+›  join(t,".kiro"),semanticReviewEnabled:n,ftaEnabled:i,validationEnabled:o,specPlanEnabled:s,specWorkflow:...
+  [delete] ...workspaceRoot:e.join(", "),kiroConfigDir:Lhs.join  ‹-(t,".kiro")›  ‹+›  ,semanticReviewEnabled:n,ftaEnabled:i,validationEnabled:o,specPlanEnabled:s,specWorkflow:a,specSkipClarificationEnabled:c}...
+@@ 9857c9856  old#9857 new#9856
+  - let r=CI.normalize(e),n=CI.join(t??l5t.homedir(),".kiro");
+  + let r=vI.normalize(e),n=vI.normalize(t);
+@@ 9877c9876  old#9877 new#9876
+  [replace] ...return Mln(r,t.  ‹-getHomeDir›  ‹+getUserConfigDir›  ())?new e(n,r):new e(n,t.asRelativePath(n)...
+@@ 10259a10259,10266  old#10259 new#10259
+  + import*as Zln from"path";
+  + function WT(e){
+  + return Zln.join(e,Mc)}
+  + var Mc,GT,wee,Cq,wI,Fje,DW,_I,O$,$je,hD,Uje,OW,Bje,va=E(()=>{
+  + "use strict";
+  + Mc=".kiro";
+  + GT="steering",wee=".md",Cq="AGENTS.md",wI="skills",Fje="SKILL.md",DW="specs",_I="agents",O$="hooks",$je="extensions",hD="powers",Uje="data",OW="workflows",Bje="enterprise-management"}
+  + );
+@@ 10513a10521  old#10513 new#10521
+  + LW();
+@@ 10540a10549  old#10540 new#10549
+  + _context;
+@@ 10542c10551  old#10542 new#10551
+  [insert] ...this.toolApproval=t.toolApproval,this.recordingAuthority=t.recordingAuthority,this._homeDir=t.homeDir  ‹-›  ‹+,this._userConfigDir=t.userConfigDir??WT(t.homeDir)›  ,this._workspaceFolders=t.workspaceFolders,this._machineId=t.machineId,this._fs=t.fs,...
+@@ 10586c10595  old#10586 new#10595
+  [insert] ...toolApproval:this.toolApproval,recordingAuthority:this.recordingAuthority,workspaceFolders:this._workspaceFolders,homeDir:this._homeDir  ‹-›  ‹+,userConfigDir:this._userConfigDir›  ,machineId:this._machineId,fs:this._fs,terminalManager:this._terminalManager,backgroundProcessManager:this._backgroundProcessManager,...
+@@ 10694a10704,10705  old#10694 new#10704
+  + return this._userConfigDir}
+  + getChatTools(){
+@@ 36409c36420  old#36409 new#36420
+  - var GZt=b(ZQe=>{
+  + var nJt=b(set=>{
+@@ 36411c36422  old#36411 new#36422
+  - Object.defineProperty(ZQe,"__esModule",{
+  + Object.defineProperty(set,"__esModule",{
+@@ 36414c36425  old#36414 new#36425
+  - ZQe.prepareSend=void 0;
+  + set.prepareSend=void 0;
+@@ 36416c36427  old#36416 new#36427
+  - Object.defineProperty(ZQe,"prepareSend",{
+  + Object.defineProperty(set,"prepareSend",{
+@@ 36820c36831  old#36820 new#36831
+  - var qIn=b(set=>{
+  + var oPn=b(get=>{
+@@ 36822c36833  old#36822 new#36833
+  - Object.defineProperty(set,"__esModule",{
+  + Object.defineProperty(get,"__esModule",{
+@@ 36825c36836  old#36825 new#36836
+  - set.OTLPMetricExporter=void 0;
+  + get.OTLPMetricExporter=void 0;
+@@ 36833c36844  old#36833 new#36844
+  - set.OTLPMetricExporter=iJt}
+  + get.OTLPMetricExporter=gJt}
+@@ 37264c37275  old#37264 new#37275
+  - var aPn=b(get=>{
+  + var xPn=b(Cet=>{
+@@ 37266c37277  old#37266 new#37277
+  - Object.defineProperty(get,"__esModule",{
+  + Object.defineProperty(Cet,"__esModule",{
+@@ 37269c37280  old#37269 new#37280
+  - get.NodeSDK=void 0;
+  + Cet.NodeSDK=void 0;
+@@ 37376c37387  old#37376 new#37387
+  - get.NodeSDK=hJt}
+  + Cet.NodeSDK=CJt}
+@@ 50671c50682,50694  old#50671 new#50682
+  [insert] ...  ‹-›  ‹+let r=Hjs(e); return r===void 0?t:`${t}.${r}`} function cOn(e){ let t=e.code; return typeof t=="string"&&Bjs.test(t)?t:void 0} function Hjs(e){ if(zjs.has(e.name))return cOn(e); if(e.name==="TypeError"&&e.cause instanceof Error){ let t=e.cause,r=cOn(t); if(r!==void 0)return r; let n=t.name; if(qjs.has(n))›  return t}...
+  [insert] ...return t}  ‹-›  ‹+ }›  ...
+@@ 50706c50729  old#50706 new#50729
+  - var VD,njs,M7,Br=E(()=>{
+  + var GD,Bjs,qjs,zjs,Wjs,N7,Fr=E(()=>{
+@@ 50711a50735,50736  old#50711 new#50735
+  + Bjs=/^[A-Z][A-Z0-9_]{0,63}$/,qjs=new Set(["AggregateError","BalancedPoolMissingUpstreamError","BodyTimeoutError","ClientClosedError","ClientDestroyedError","ConnectTimeoutError","HTTPParserError","HeadersOverflowError","HeadersTimeoutError","InformationalError","InvalidArgumentError","InvalidReturnValueError","MessageSizeExceededError","NotSupportedError","RequestAbortedError","RequestContentLengthMismatchError","RequestRetryError","ResponseContentLengthMismatchError","ResponseError","ResponseExceededMaxSizeError","ResponseStatusCodeError","SecureProxyConnectionError","SocketError","UndiciError"]);
+  + zjs=new Set(["SdkError","SdkHttpError"]);
+@@ 50902,50903d50926  old#50902 new#50926
+  - ,ToolSearch:{
+  - name:"tool_search",description:"Tracks tool search for deferred MCP tool loading"}
+@@ 51422c51445  old#51422 new#51445
+  [replace] ...name:"kiro-agent-monorepo",private:!0,description:"Kiro agent monorepo",version:  ‹-"0.66.33"›  ‹+"0.66.34"›  ,license:"AWS-IPL",repository:"https://github.com/kiro-team/kiro-agent.git",homepage:"https://github.com/kiro-team/kiro-agent",engines:{...
+@@ 51425c51448  old#51425 new#51448
+  [delete] ...mjs","test:eslint-rules":"node --test configuration/custom-eslint.test.mjs","test:coverage-thresholds":"node --test scripts/check-coverage-thresholds.test.mjs",  ‹-"test:nightly-heartbeat":"node --test scripts/nightly-heartbeat.test.mjs scripts/nightly-heartbeat-cli.test.mjs",›  ‹+›  "test:perf-sandbox-home":"node --test perf/sandbox-home.test.mjs","test:sync-versions":"node --test scripts/sync-workspace-versions.test.mjs","test:vendor-beare...
+@@ 54254c54277  old#54254 new#54277
+  [insert] ...,durationMs:Math.round(performance.now()-c),...n.okAttributes?.(  ‹-›  ‹+u›  )}...
+@@ 54257,54258c54280,54284  old#54257 new#54280
+  [replace] ...let l  ‹-=›  ‹+(i,o,s,›  Math.round(performance.now()-c); throw Sn(u)?i.debug(...
+  [replace] ...let l=Math.round(performance.now()-c)  ‹-;›  ‹+,u,n.expected,n.errorLevel),u}›   throw Sn(u)?i.debug(`${o}.aborted`,{...
+  [replace] ...let l=Math.round(performance.now()-c);   ‹-throw›  ‹+}›   Sn(u)?i.debug(`${o}.aborted`,{...
+  [replace] ...let l=Math.round(performance.now()-c); throw   ‹-Sn›  ‹+function kLn(e,t,r,n,i,o,s="warn"){ if(Tn›  (u)?i.debug(`${o}.aborted`,{...
+  [replace] ...let l=Math.round(performance.now()-c); throw Sn(u)  ‹-?›  ‹+){ ›  i.debug(`${o}.aborted`,{...
+@@ 54260c54286,54289  old#54260 new#54286
+  - ):i[n.errorLevel??"warn"](`${o}.error`,{
+  + );
+  + return}
+  + if(QKs(e,t,i,o)){
+  + e.debug(`${t}.expected`,{
+@@ 54262c54291,54301  old#54262 new#54291
+  [insert] ...  ‹-›  ‹+); return} e[s](`${t}.error`,{ ...r,durationMs:n,...Bn(i)} )} function QKs(e,t,r,n){ if(!n)return!1; try{ return n(r)} catch(i){ return e.warn(`${t}.expectedPredicateFailed`,Bn(i)›  ),u}...
+  [replace] ...),  ‹-u›  ‹+!1›  }...
+@@ 54276c54315  old#54276 new#54315
+  [insert] ...,durationMs:Math.round(performance.now()-c),...n.okAttributes?.(  ‹-›  ‹+u›  )}...
+@@ 54279,54284c54318  old#54279 new#54318
+  [replace] ...let l  ‹-=›  ‹+(i,o,s,›  Math.round(performance.now()-c); throw Sn(u)?i.debug(...
+  [replace] ...let l=Math.round(performance.now()-c)  ‹-; throw Sn(›  ‹+,›  u)?i.debug(`${o}.aborted`,{ ...s,durationMs:...
+  [replace] ...let l=Math.round(performance.now()-c); throw Sn(u  ‹-)?›  ‹+,›  i.debug(`${o}.aborted`,{ ...s,durationMs:l} ...
+  [replace] ...l=Math.round(performance.now()-c); throw Sn(u)?i.  ‹-debug(`${o}.aborted`›  ‹+expected›  ,{ ...s,durationMs:l} ):i[n.errorLevel??"warn"](...
+  [delete] ...-c); throw Sn(u)?i.debug(`${o}.aborted`,  ‹-{ ...s,durationMs:l} ):i[›  ‹+›  n.errorLevel??"warn"](`${o}.error`,{ ...s,durationMs...
+  [delete] ...o}.aborted`,{ ...s,durationMs:l} ):i[n.errorLevel  ‹-??"warn"](`${o}.error`,{ ...s,durationMs:l,...li(u)} ›  ‹+›  ),u}...
+@@ 55400c55434  old#55400 new#55434
+  - return iFn(e,".kiro","memories")}
+  + return xFn(e,"memories")}
+@@ 55554c55588  old#55554 new#55588
+  - this.homeDir=r}
+  + this.configDir=r}
+@@ 55560c55594  old#55560 new#55594
+  - return hrt(this.homeDir)}
+  + return brt(this.configDir)}
+@@ 55562c55596  old#55562 new#55596
+  - let t=hrt(this.homeDir);
+  + let t=brt(this.configDir);
+@@ 55568c55602  old#55568 new#55602
+  - let t=aFn(this.homeDir),r=new BKs(t);
+  + let t=RFn(this.configDir),r=new kYs(t);
+@@ 56054c56088  old#56054 new#56088
+  - mode:"read_write",reflection:!0}
+  + mode:"disabled",reflection:!1}
+@@ 56071c56105  old#56071 new#56105
+  [replace] ...var Dtr,PFn,MFn,Otr,Ltr,Trt,  ‹-QD›  ‹+ZD,Drt,XI›  ,xrt,eP,Cz,Ftr,Crt,$tr,vfe,ax,DFn,lYs,wfe,j7,...
+  [replace] ...var Dtr,PFn,MFn,Otr,Ltr,Trt,QD,xrt,eP,Cz,  ‹-Ftr,Crt›  ‹+Xtr›  ,$tr,vfe,ax,DFn,lYs,wfe,j7,dYs,pYs,fYs,hYs,Dg,...
+  [replace] ...,Otr,Ltr,Trt,QD,xrt,eP,Cz,Ftr,Crt,$tr,vfe,ax,  ‹-DFn›  ‹+ZYs,Efe,V7,JYs,QYs›  ,lYs,wfe,j7,dYs,pYs,fYs,hYs,Dg,Art,OFn,LFn,FFn,...
+  [replace] ...,Crt,$tr,vfe,ax,DFn,lYs,wfe,j7,dYs,pYs,fYs,hYs,  ‹-Dg,Art,OFn,LFn,FFn,V7›  ‹+K7›  ,_fe,Utr,Rz,Irt=E(()=>{...
+@@ 56125c56159  old#56125 new#56159
+  - ),Dg=k.object({
+  + ),of=k.object({
+@@ 59967c60001  old#59967 new#60001
+  - var Mz,Nz,of,qh,$nr=E(()=>{
+  + var Az,Iz,cf,Gh,Xnr=E(()=>{
+@@ 59969c60003  old#59969 new#60003
+  - Mz="AWS_REGION",Nz="region",of={
+  + Az="AWS_REGION",Iz="region",cf={
+@@ 60087c60121  old#60087 new#60121
+  - region:e=to(of),defaultsMode:t=to(k4n)}
+  + region:e=io(cf),defaultsMode:t=io(K4n)}
+@@ 65942c65976  old#65942 new#65976
+  - ...of,async default(){
+  + ...cf,async default(){
+@@ 67217c67251  old#67217 new#67251
+  - ...of,async default(){
+  + ...cf,async default(){
+@@ 70248c70282  old#70248 new#70282
+  - ),maxAttempts:e?.maxAttempts??to(bU,e),region:e?.region??to(of,{
+  + ),maxAttempts:e?.maxAttempts??io(EU,e),region:e?.region??io(cf,{
+@@ 73211a73246,73284  old#73211 new#73246
+  + function Q7n(e){
+  + return e!==void 0&&J7n.test(e)?e:void 0}
+  + function Wre(e){
+  + if(!e)return;
+  + let t=e.split(":");
+  + if(t.length<4||t[0]!=="arn")return;
+  + let r=t[3];
+  + return J7n.test(r)?r:void 0}
+  + var J7n,yat=E(()=>{
+  + "use strict";
+  + J7n=/^[a-z]{2,4}(-[a-z]+)+-\d{1,2}$/}
+  + );
+  + async function Gu(e){
+  + if(e.resolveIdentity)return e.resolveIdentity();
+  + let t=await e.getToken(),r=await e.getProfileArn(),n=e.readToken();
+  + return{
+  + accessToken:t,profileArn:r,region:e.region,authMethod:n?.authMethod,provider:n?.provider}
+  + }
+  + function DG(e){
+  + return Wre(e.profileArn)??Q7n(e.region)}
+  + function Aur(e){
+  + if(e.authMethod!==void 0&&wla.has(e.authMethod))return{
+  + kind:"machine"}
+  + ;
+  + let t=Wre(e.profileArn);
+  + return t===void 0?{
+  + kind:"sign-in-without-region"}
+  + :{
+  + kind:"region",region:t}
+  + }
+  + function rme(e,t){
+  + return e===t?!0:!e||!t?!1:e.accessToken===t.accessToken&&e.profileArn===t.profileArn}
+  + function nme(e){
+  + return e.provider==="Enterprise"||e.provider==="ExternalIdp"?"organization":e.authMethod==="api_key"||e.authMethod==="machine_token"?"ask-control-plane":"none"}
+  + var wla,Sat=E(()=>{
+  + "use strict";
+  + yat();
+  + wla=new Set(["api_key","machine_token"])}
+  + );
+@@ 75179,75217d75251  old#75179 new#75251
+  - return e!==void 0&&xGn.test(e)?e:void 0}
+  - function Vre(e){
+  - if(!e)return;
+  - let t=e.split(":");
+  - if(t.length<4||t[0]!=="arn")return;
+  - let r=t[3];
+  - return xGn.test(r)?r:void 0}
+  - var xGn,Cat=E(()=>{
+  - "use strict";
+  - xGn=/^[a-z]{2,4}(-[a-z]+)+-\d{1,2}$/}
+  - );
+  - async function Gu(e){
+  - if(e.resolveIdentity)return e.resolveIdentity();
+  - let t=await e.getToken(),r=await e.getProfileArn(),n=e.readToken();
+  - return{
+  - accessToken:t,profileArn:r,region:e.region,authMethod:n?.authMethod,provider:n?.provider}
+  - }
+  - function LG(e){
+  - return Vre(e.profileArn)??CGn(e.region)}
+  - function Bur(e){
+  - if(e.authMethod!==void 0&&Ada.has(e.authMethod))return{
+  - kind:"machine"}
+  - ;
+  - let t=Vre(e.profileArn);
+  - return t===void 0?{
+  - kind:"sign-in-without-region"}
+  - :{
+  - kind:"region",region:t}
+  - }
+  - function ime(e,t){
+  - return e===t?!0:!e||!t?!1:e.accessToken===t.accessToken&&e.profileArn===t.profileArn}
+  - function ome(e){
+  - return e.provider==="Enterprise"||e.provider==="ExternalIdp"?"organization":e.authMethod==="api_key"||e.authMethod==="machine_token"?"ask-control-plane":"none"}
+  - var Ada,kat=E(()=>{
+  - "use strict";
+  - Cat();
+  - Ada=new Set(["api_key","machine_token"])}
+  - );
+  - function Ida(e){
+@@ 75227a75262,75265  old#75227 new#75262
+  + function BG(e){
+  + return Fat(e,{
+  + connectionTimeoutMs:15e3,requestTimeoutMs:15e3}
+  + )}
+@@ 75230a75269  old#75230 new#75269
+  + mO();
+@@ 76086a76126,76131  old#76086 new#76126
+  + function gjn(e){
+  + if(typeof e!="object"||e===null)return;
+  + let t=e.thinking;
+  + if(typeof t!="object"||t===null)return;
+  + let r=t.display;
+  + return typeof r=="string"&&r.length>0?r:void 0}
+@@ 76100c76145  old#76100 new#76145
+  - var Zat,VGn,jGn,Epa,Tpa,ab,qG,mme,zG=E(()=>{
+  + var act,pjn,ufa,dfa,HC,WG,yme,GG=E(()=>{
+@@ 76104,76105d76148  old#76104 new#76148
+  - VGn=tr(Gy(),1);
+  - WC();
+@@ 76128,76130c76171  old#76128 new#76171
+  - ,maxAttempts:3,customUserAgent:Yre(o),requestHandler:new VGn.NodeHttpHandler({
+  - requestTimeout:15e3,connectionTimeout:15e3,httpsAgent:ob(l)}
+  - )}
+  + ,maxAttempts:3,customUserAgent:Zre(o),requestHandler:BG(l)}
+@@ 76911a76953,76989  old#76911 new#76953
+  + import{
+  + existsSync as Plr}
+  + from"fs";
+  + import{
+  + dirname as Zfa}
+  + from"path";
+  + function ub(e){
+  + if(process.platform==="win32")return!0;
+  + if(process.platform!=="darwin")return!1;
+  + let t=e;
+  + for(;
+  + t&&!Plr(t);
+  + ){
+  + let i=Zfa(t);
+  + if(i===t)break;
+  + t=i}
+  + let r=lVn.get(t);
+  + if(r!==void 0)return r;
+  + let n;
+  + if(!Plr(t))n=!0;
+  + else{
+  + let i=t.toUpperCase();
+  + t===i?n=!0:n=Plr(i)}
+  + return lVn.set(t,n),n}
+  + function SO(e,t){
+  + let r=t??ub(e),n=e.replace(/\\/g,"/").replace(/\/+$/,"");
+  + return r&&(n=n.toLowerCase()),n}
+  + function Tct(e,t,r){
+  + let n=r??ub(e);
+  + return SO(e,n)===SO(t,n)}
+  + function xs(e,t,r){
+  + let n=r??ub(t),i=SO(e,n),o=SO(t,n);
+  + return i===o||i.startsWith(o+"/")}
+  + var lVn,o_=E(()=>{
+  + "use strict";
+  + lVn=new Map}
+  + );
+@@ 88296c88374  old#88296 new#88374
+  - gen:V,schemaCode:pe,schemaType:te,def:be,it}
+  + gen:G,schemaCode:ye,schemaType:te,def:Te,it:rt}
+@@ 106802,106838d106879  old#106802 new#106879
+  - import{
+  - existsSync as Vyr}
+  - from"fs";
+  - import{
+  - dirname as NCa}
+  - from"path";
+  - function wb(e){
+  - if(process.platform==="win32")return!0;
+  - if(process.platform!=="darwin")return!1;
+  - let t=e;
+  - for(;
+  - t&&!Vyr(t);
+  - ){
+  - let i=NCa(t);
+  - if(i===t)break;
+  - t=i}
+  - let r=Bdi.get(t);
+  - if(r!==void 0)return r;
+  - let n;
+  - if(!Vyr(t))n=!0;
+  - else{
+  - let i=t.toUpperCase();
+  - t===i?n=!0:n=Vyr(i)}
+  - return Bdi.set(t,n),n}
+  - function qO(e,t){
+  - let r=t??wb(e),n=e.replace(/\\/g,"/").replace(/\/+$/,"");
+  - return r&&(n=n.toLowerCase()),n}
+  - function Gpt(e,t,r){
+  - let n=r??wb(e);
+  - return qO(e,n)===qO(t,n)}
+  - function Us(e,t,r){
+  - let n=r??wb(t),i=qO(e,n),o=qO(t,n);
+  - return i===o||i.startsWith(o+"/")}
+  - var Bdi,_b=E(()=>{
+  - "use strict";
+  - Bdi=new Map}
+  - );
+@@ 108204c108245  old#108204 new#108245
+  - ...of,async default(){
+  + ...cf,async default(){
+@@ 121293c121334  old#121293 new#121334
+  - var CSe,pmt,kSe,RSe,p2e,zie,fmt,ASe,hmt,ISe,f2e=E(()=>{
+  + var Emt,bmt,ISe,Tmt,h2e,PSe,xmt,Cmt,MSe,m2e=E(()=>{
+@@ 121328,121331d121368  old#121328 new#121368
+  - constructor(t){
+  - super(t),this.name="WebFetchRendererError"}
+  - }
+  - ,hmt=class extends Error{
+@@ 209343,209344d209379  old#209343 new#209379
+  - formatSearchCatalog(){
+  - return this.entries.length===0?"":`<available-deferred-tools>\n${[...this.entries].sort((n,i)=>n.toolId.localeCompare(i.toolId)).filter(n=>n.toolName.length>0).map(n=>`- ${n.toolId}: ${n.description}`).join(`\n`)}\n</available-deferred-tools>`}
+@@ 209493,209500d209527  old#209493 new#209527
+  - import*as Uso from"path";
+  - function w0(e){
+  - return Uso.join(e,ja)}
+  - var ja,_0,jse,F9,F2,c0t,FZ,pN,j6,u0t,$2,l0t,Vse,d0t,wu=E(()=>{
+  - "use strict";
+  - ja=".kiro";
+  - _0="steering",jse=".md",F9="AGENTS.md",F2="skills",c0t="SKILL.md",FZ="specs",pN="agents",j6="hooks",u0t="extensions",$2="powers",l0t="data",Vse="workflows",d0t="enterprise-management"}
+  - );
+@@ 210368c210395  old#210368 new#210395
+  - let r=t==="full"?1:t==="truncated"?2:t==="selective"?3:4;
+  + let r=t==="full"?1:t==="truncated"?2:3;
+@@ 211623a211651,211653  old#211623 new#211651
+  + let r=e.split(/[\\/]/);
+  + if(r[0]===Mc)return L9.join(t,...r.slice(1))}
+  + function oco(e,t){
+@@ 211638a211669  old#211638 new#211669
+  + va();
+@@ 211775,211776c211806,211813  old#211775 new#211806
+  [insert] ...let  ‹-›  ‹+{›   t=this.options.watchPaths.map(r=>UZ.join(this.options.homeDir,r...
+  [insert] ...let   ‹-›  ‹+userConfigDir:t} =this.options,r=L9.dirname(t),›  t=this.options.watchPaths.map(r=>UZ.join(this.options.homeDir,r)...
+  [replace] ...let t=this.options.watchPaths.map(r=>  ‹-UZ.›  ‹+{ let o=›  join(this.options.homeDir,r)); this.addBasePaths(t,this.options.homeDir)...
+  [delete] ...let t=this.options.watchPaths.map(r=>UZ.join(this  ‹-.options.homeDir›  ‹+›  ,r)); this.addBasePaths(t,this.options.homeDir)}...
+  [insert] ...t=this.options.watchPaths.map(r=>UZ.join(this.options.homeDir,r)  ‹-›  ‹+; if(o===void 0)throw new Error(`ConfigFileWatcher watchPaths entry "${i}" does not start with ${Mc}/; move it to workspaceOnlyPaths`); return o} ›  ); this.addBasePaths(t,this.options.homeDir)}...
+  [delete] ...r=>UZ.join(this.options.homeDir,r)); this.addBasePaths(t,this  ‹-.options.homeDir›  ‹+›  )}...
+@@ 211799,211800c211836,211838  old#211799 new#211836
+  [insert] ...  ‹-›  ‹+let r=t.userConfigDir; ›  this.homeGlobalHooksDir=M0t.join(w0(t.homeDir),j6),this.fileWatcher=new yy...
+  [delete] ...this.homeGlobalHooksDir=M0t.join(w0  ‹-(t.homeDir)›  ‹+›  ,j6),this.fileWatcher=new yy({ watchPaths:[M0t.join(ja,j6)...
+  [replace] ...),this.fileWatcher=new yy({ watchPaths:[M0t.join(ja,j6)],  ‹-homeDir›  ‹+userConfigDir›  :t.homeDir,onChange:()=>{...
+  [replace] ...fileWatcher=new yy({ watchPaths:[M0t.join(ja,j6)],homeDir:t.  ‹-homeDir›  ‹+userConfigDir›  ,onChange:()=>{...
+@@ 213127c213165  old#213127 new#213165
+  [delete] ...ck_refusal",MODEL_FALLBACK_AVAILABILITY:"model_fallback_availability",AB_MEMORY_INTERNAL:"memory_internal_enabled",AB_MEMORY_EXTERNAL:"memory_external_enabled",  ‹-AB_TOOL_LOAD:"tool_load_enabled",›  ‹+›  AB_UNIFIED_AGENT:"unified_agent_enabled",AB_VIBE_TO_DEFAULT_V2_ROUTING:"vibe_to_default_v2_routing_enabled",AB_MOM_CONFIG:"mom_config",COMPANION_SHADOW_MODE:"co...
+@@ 213167,213168d213204  old#213167 new#213204
+  - ,tool_load_enabled:{
+  - default:!1}
+@@ 213510c213546  old#213510 new#213546
+  [replace] ...FEATURE_KIRO_INFRA_SAFETY_MONITOR_ENABLED",[$n.AB_MEMORY_EXTERNAL]:"KIRO_FEATURE_MEMORY_EXTERNAL_ENABLED",[$n.AB_VALIDATION]:"KIRO_FEATURE_VALIDATION_ENABLED",[  ‹-$n.AB_TOOL_LOAD]:"KIRO_FEATURE_TOOL_LOAD_ENABLED",[$n›  ‹+Yn›  .BACKGROUND_EXECUTION]:"KIRO_FEATURE_BACKGROUND_EXECUTION_ENABLED",[$n.KUTS_TELEMETRY]:"KIRO_FEATURE_KUTS_TELEMETRY_ENABLED",[$n.SKILL_NAME_QUALIFIERS]:"KIRO_FE...
+@@ 214018,214024c214054,214055  old#214018 new#214054
+  [delete] ...  ‹-if(XGn(e)===ab)return{ reasoning:{ effort:"none"} } ; ›  ‹+›  let t=YGn(e); return t===void 0?{...
+  [replace] ...===ab)return{ reasoning:{ effort:"none"} } ; let t=  ‹-YGn›  ‹+mjn(e),r=hjn(e),n=gjn›  (e); return t===void 0?{...
+  [insert] ...} } ; let t=YGn(e); return t===void 0  ‹-›  ‹+&&r===void 0&&n===void 0›  ?{...
+@@ 214027a214059,214061  old#214027 new#214059
+  + ...t!==void 0&&{
+  + type:t}
+  + ,...r!==void 0&&{
+@@ 214028a214063,214065  old#214028 new#214063
+  + ,...n!==void 0&&{
+  + summary:n}
+  + }
+@@ 214933c214970  old#214933 new#214970
+  [replace] ...('node:worker_threads');\nconst photon = require(workerData.photonPath);\n\n//   ‹-Triangle›  ‹+Scales›   widens with the scale factor, so a downscale averages every source pixel...
+  [replace] ...);\nconst photon = require(workerData.photonPath);\n\n// Triangle   ‹-widens›  ‹+RGBA pixels›   with the scale factor, so a downscale averages every source pixel and...
+  [replace] ... = require(workerData.photonPath);\n\n// Triangle widens with the   ‹-scale factor,›  ‹+averaging›   so a downscale averages every source pixel and does not\n// ...
+  [insert] ...photonPath);\n\n// Triangle widens with the scale factor, so   ‹-›  ‹+source pixels whose centers ›  a downscale averages every source pixel and does not\n// alias; ...
+  [replace] ...;\n\n// Triangle widens with the scale factor, so a   ‹-downscale›  ‹+inside›   averages every source pixel and does not\n// alias; at 12...
+  [replace] ...n\n// Triangle widens with the scale factor, so a downscale   ‹-averages›  ‹+each›   every source pixel and does not\n// alias; at 12 MP...
+  [replace] ...n// Triangle widens with the scale factor, so a downscale averages   ‹-every source›  ‹+output›   pixel and does not\n// alias; at 12 MP it takes...
+  [insert] ... widens with the scale factor, so a downscale averages every source pixel  ‹-›  ‹+\n// (a center exactly›   and does not\n// alias; at 12 MP it takes half...
+  [delete] ... scale factor, so a downscale averages every source pixel and does not  ‹-\n//›  ‹+›   alias; at 12 MP it takes half the time of Lanczos3, ...
+  [replace] ... so a downscale averages every source pixel and does not\n//   ‹-alias; at 12 MP it takes›  ‹+between›   half the time of Lanczos3, and the softer edges do not affect...
+  [replace] ...n// alias; at 12 MP it takes half the time of   ‹-Lanczos3,›  ‹+first).\n// Done here rather›   and the softer edges do not affect what a model reads.\nfunction...
+  [replace] ...at 12 MP it takes half the time of Lanczos3, and the   ‹-softer›  ‹+photon.resize,›   edges do not affect what a model reads.\nfunction scaledInside(image, ...
+  [replace] ...12 MP it takes half the time of Lanczos3, and the softer   ‹-edges›  ‹+whose separable filter allocates a 32-bit float image the\n// width›   do not affect what a model reads.\nfunction scaledInside(image, maxWidth,...
+  [replace] ...of Lanczos3, and the softer edges do not affect what a model   ‹-reads›  ‹+of the target: 1.28 GB for 10000x10000 to 8000x8000. This holds\n// only the output and two rows of sums›  .\nfunction scaledInside(image, maxWidth, maxHeight) {\n  const width = ...
+  [replace] ...and the softer edges do not affect what a model reads.\nfunction   ‹-scaledInside›  ‹+scaleDown›  (image, maxWidth, maxHeight) {\n  const width = image.get_width()...
+  [replace] ... edges do not affect what a model reads.\nfunction scaledInside(image,   ‹-maxWidth›  ‹+width›  , maxHeight) {\n  const width = image.get_width();\n  const...
+  [replace] ...do not affect what a model reads.\nfunction scaledInside(image, maxWidth,   ‹-maxHeight›  ‹+height, outWidth, outHeight›  ) {\n  const width = image.get_width();\n  const height ...
+  [insert] ... a model reads.\nfunction scaledInside(image, maxWidth, maxHeight) {\n    ‹-›  ‹+// The first source pixel whose center falls in output pixel i, along a side of size pixels.\n  ›  const width = image.get_width();\n  const height = image.get_height(...
+  [replace] ... model reads.\nfunction scaledInside(image, maxWidth, maxHeight) {\n  const   ‹-width›  ‹+spanStart›   = image.get_width();\n  const height = image.get_height();\...
+  [replace] ....\nfunction scaledInside(image, maxWidth, maxHeight) {\n  const width =   ‹-image›  ‹+(i, size, outSize) => Math›  .get_width();\n  const height = image.get_height();\n  const ...
+  [replace] ...nfunction scaledInside(image, maxWidth, maxHeight) {\n  const width = image.  ‹-get_width›  ‹+min›  ();\n  const height = image.get_height();\n  const scale ...
+  [insert] ...scaledInside(image, maxWidth, maxHeight) {\n  const width = image.get_width(  ‹-›  ‹+size, Math.round((i * size) / outSize)›  );\n  const height = image.get_height();\n  const scale =...
+  [replace] ...{\n  const width = image.get_width();\n  const height =   ‹-image.get_height›  ‹+new Uint8Array›  ();\n  const scale = Math.min(maxWidth / width, maxHeight ...
+  [insert] ...const width = image.get_width();\n  const height = image.get_height(  ‹-›  ‹+outWidth * outHeight * 4›  );\n  const scale = Math.min(maxWidth / width, maxHeight /...
+  [delete] ...;\n  const height = image.get_height();\n  const scale =   ‹-Math.›  ‹+›  min(maxWidth / width, maxHeight / height, 1);\n  if (...
+  [insert] ...  const height = image.get_height();\n  const scale = Math.min  ‹-›  ‹+ Uint32Array›  (maxWidth / width, maxHeight / height, 1);\n  if (scale...
+  [replace] ...const height = image.get_height();\n  const scale = Math.min(  ‹-maxWidth›  ‹+outWidth›   / width, maxHeight / height, 1);\n  if (scale =...
+  [replace] ...height = image.get_height();\n  const scale = Math.min(maxWidth   ‹-/ width, maxHeight / height,›  ‹++›   1);\n  if (scale === 1) return image;\n...
+  [replace] ...min(maxWidth / width, maxHeight / height, 1);\n  if (  ‹-scale›  ‹+let x›   === 1) return image;\n  const scaled = photon.resize(...
+  [replace] ... / width, maxHeight / height, 1);\n  if (scale =  ‹-=›  ‹+ 0; x <›  = 1) return image;\n  const scaled = photon.resize(\n    ...
+  [replace] ...width, maxHeight / height, 1);\n  if (scale ===   ‹-1›  ‹+outWidth; x++›  ) return image;\n  const scaled = photon.resize(\n    image,\...
+  [replace] ...maxHeight / height, 1);\n  if (scale === 1)   ‹-return›  ‹+xStart[x]›   image;\n  const scaled = photon.resize(\n    image,\n    Math...
+  [replace] .../ height, 1);\n  if (scale === 1) return   ‹-image›  ‹+= spanStart(x, width, outWidth)›  ;\n  const scaled = photon.resize(\n    image,\n    Math.max...
+  [replace] ...if (scale === 1) return image;\n  const scaled =   ‹-photon.resize›  ‹+new Float64Array›  (\n    image,\n    Math.max(1, Math.round(width * scale...
+  [replace] ... === 1) return image;\n  const scaled = photon.resize(  ‹-\n    image,\n    Math.max(1, Math.round(width›  ‹+outWidth›   * scale)),\n    Math.max(1, Math.round(height * ...
+  [replace] ...resize(\n    image,\n    Math.max(1, Math.round(width *   ‹-scale)),\n    Math.max(1, Math.round(height * scale)),\n    photon.SamplingFilter.Triangle,\n  ›  ‹+4›  );\n  image.free();\n  return scaled;\n}\n\nfunction...
+  [delete] ...height * scale)),\n    photon.SamplingFilter.Triangle,\n  );\n    ‹-image.free();\n  return scaled;\n}\n\nfunction toRaw(image) {\n  ›  ‹+›  try {\n    return { data: image.get_raw_pixels(), width: image....
+  [replace] ...n  return scaled;\n}\n\nfunction toRaw(image) {\n  try   ‹-{\›  ‹+(›  n    return { data: image.get_raw_pixels(), width: image.get_width(),...
+  [delete] ... scaled;\n}\n\nfunction toRaw(image) {\n  try {\n  ‹-    return {›  ‹+›   data: image.get_raw_pixels(), width: image.get_width(), height: image...
+  [delete] ...\n\nfunction toRaw(image) {\n  try {\n    return { data  ‹-: image.get_raw_pixels(), width: image.get_width(), height: image.get_height() };\n  } finally {\n    image.free();\n  }\n}\n\nconst operations›  ‹+›   = {\n  decode: (m) => toRaw(scaledInside(photon.PhotonImage....
+  [replace] ...\n    image.free();\n  }\n}\n\nconst operations =   ‹-{\n  decode: (m) => toRaw(scaledInside(photon.PhotonImage.new_from_byteslice(m.bytes),›  ‹+0;›   m.maxWidth, m.maxHeight)),\n  resize: (m) => ...

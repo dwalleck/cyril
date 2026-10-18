@@ -150,6 +150,48 @@ impl UsageAccountCommandSource {
     }
 }
 
+/// Which registry `/model` `/effort` `/mode` come from, decided once at
+/// startup from the bound engine (cyril-vh69, design decision 1).
+///
+/// The two engines disagree structurally about model/mode control:
+///
+/// - **v2** advertises its own `model` (and mode switching) as `kiro.dev`
+///   commands, which arrive with `commands/available` and register as agent
+///   commands. `session/set_config_option` is "Method not found" there, so a
+///   builtin would be dead weight — and registering one would shadow the
+///   agent's command (`register_agent_commands` skips taken names).
+/// - **KAS** advertises no TUI commands at all; model, effort, and mode are
+///   select options of the session config catalog instead. Cyril supplies
+///   the three commands, driven by the [`crate::types::KasConfigSnapshot`]
+///   the session holds.
+///
+/// Gating at registration (not at execute time) makes the KAS surface
+/// unparseable input on v2 — there is no dead KAS path to reach with no
+/// catalog to validate against.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum ConfigCommandSource {
+    /// Cyril registers no config builtins; the agent's own advertised
+    /// commands keep the names (v2).
+    #[default]
+    Agent,
+    /// Cyril registers [`builtin::ConfigSelectCommand`] for `/model` and
+    /// `/mode`, and [`builtin::EffortCommand`] (KAS).
+    Kas,
+}
+
+impl ConfigCommandSource {
+    /// Resolve from the bound engine alone: unlike `/hooks` there is no
+    /// mode in which a KAS-bound session's model/mode live anywhere but the
+    /// config catalog.
+    #[must_use]
+    pub fn resolve(engine: crate::types::AgentEngine) -> Self {
+        match engine {
+            crate::types::AgentEngine::Kas => Self::Kas,
+            crate::types::AgentEngine::V2 => Self::Agent,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum MemoryCommandAction {
     Teach { text: String },
@@ -214,6 +256,16 @@ pub enum CommandResultKind {
     ShowPowers {
         powers: Vec<crate::types::PowerInfo>,
     },
+    /// Open the picker over a KAS session config select (`/model` `/effort`
+    /// `/mode`, cyril-vh69). Carries the validated, snapshot-derived picker —
+    /// the command layer can read the [`crate::types::KasConfigSnapshot`]
+    /// while the picker lives in `cyril-ui`, and the App owns both. The
+    /// command sends nothing itself; on confirm the App revalidates the
+    /// value against the latest snapshot and sends
+    /// `BridgeCommand::SetConfigOption`. The picker's
+    /// [`crate::types::ConfigTarget`] (not the display title) is the dispatch
+    /// key, so the confirm path never overloads presentation with routing.
+    ShowConfigPicker(crate::types::ConfigPicker),
     /// Open the `/review` consent form, prefilled from the arguments. The App
     /// owns the form, the git probes and the launch, so the command returns
     /// only the intent.
@@ -257,6 +309,13 @@ impl CommandResult {
     pub fn show_powers(powers: Vec<crate::types::PowerInfo>) -> Self {
         Self {
             kind: CommandResultKind::ShowPowers { powers },
+        }
+    }
+
+    /// Open the picker over a KAS session config select (cyril-vh69).
+    pub fn show_config_picker(picker: crate::types::ConfigPicker) -> Self {
+        Self {
+            kind: CommandResultKind::ShowConfigPicker(picker),
         }
     }
 
@@ -386,15 +445,25 @@ impl CommandRegistry {
     ///
     /// `hooks` decides whether cyril supplies its own `/hooks` — see
     /// [`HooksCommandSource`]. `workflows` decides whether the native
-    /// `/workflow` family exists — see [`WorkflowCommandSource`].
+    /// `/workflow` family exists — see [`WorkflowCommandSource`]. The KAS
+    /// config builtins (`/model` `/effort` `/mode`, cyril-vh69) never
+    /// register here — this constructor is the v2 shape; engine-gated
+    /// composition resolves a [`ConfigCommandSource`] and calls
+    /// [`with_builtin_sources`](Self::with_builtin_sources).
     pub fn with_builtins(hooks: HooksCommandSource, workflows: WorkflowCommandSource) -> Self {
-        Self::with_builtins_and_usage(hooks, workflows, UsageAccountCommandSource::None)
+        Self::with_builtin_sources(
+            hooks,
+            workflows,
+            UsageAccountCommandSource::None,
+            ConfigCommandSource::Agent,
+        )
     }
 
-    pub fn with_builtins_and_usage(
+    pub fn with_builtin_sources(
         hooks: HooksCommandSource,
         workflows: WorkflowCommandSource,
         usage_account: UsageAccountCommandSource,
+        config: ConfigCommandSource,
     ) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
@@ -404,6 +473,20 @@ impl CommandRegistry {
         if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
             registry.register(Arc::new(builtin::KasHooksCommand::new(workspace_root)));
+        }
+        // KAS-only config builtins (cyril-vh69): on v2 nothing registers, so
+        // the agent-advertised `model` keeps its name (register_agent_commands
+        // skips a name a builtin already took — a builtin here would shadow
+        // it). Names are pushed BEFORE `HelpCommand` copies the list: the
+        // snapshot is eager (the review-finding-2 trap `/powers` documents
+        // below).
+        if config == ConfigCommandSource::Kas {
+            names.push("model");
+            names.push("effort");
+            names.push("mode");
+            registry.register(Arc::new(builtin::ConfigSelectCommand::model()));
+            registry.register(Arc::new(builtin::EffortCommand));
+            registry.register(Arc::new(builtin::ConfigSelectCommand::mode()));
         }
         if let WorkflowCommandSource::Kas { workspace_root } = workflows {
             names.push("workflow");
@@ -1097,10 +1180,11 @@ mod tests {
             workflow_tracker: None,
             memory_status: None,
         };
-        let registry = CommandRegistry::with_builtins_and_usage(
+        let registry = CommandRegistry::with_builtin_sources(
             HooksCommandSource::Agent,
             WorkflowCommandSource::None,
             UsageAccountCommandSource::Kas,
+            ConfigCommandSource::Agent,
         );
         let (command, args) = registry.parse("/usage").expect("/usage is registered");
         let result = command.execute(&ctx, args).await.expect("/usage executes");
@@ -1729,7 +1813,10 @@ mod thinking_command_tests {
             key: "thinking".into(),
             label: "Thinking".into(),
             value: Some(value.into()),
-            options: vec!["on".into(), "off".into()],
+            options: vec![
+                crate::types::ConfigOptionValue::new("on", "On"),
+                crate::types::ConfigOptionValue::new("off", "Off"),
+            ],
         }])
     }
 
@@ -1954,7 +2041,7 @@ mod thinking_command_tests {
         let root = std::path::PathBuf::from("/workspace");
         for registry in [
             CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None),
-            CommandRegistry::with_builtins_and_usage(
+            CommandRegistry::with_builtin_sources(
                 HooksCommandSource::Kas {
                     workspace_root: root.clone(),
                 },
@@ -1962,6 +2049,7 @@ mod thinking_command_tests {
                     workspace_root: root.clone(),
                 },
                 UsageAccountCommandSource::Kas,
+                ConfigCommandSource::Kas,
             ),
         ] {
             let (command, args) = registry
@@ -1970,5 +2058,498 @@ mod thinking_command_tests {
             assert_eq!(command.name(), "thinking");
             assert_eq!(args, "off");
         }
+    }
+}
+
+// ── /model /effort /mode (cyril-vh69 C1, C4–C6, C12-registry) ────────────
+// Oracle: the design refusal matrix (§ Error handling) and capture frame
+// 24's cells (auto: no effort; claude-sonnet-5.5: default high;
+// claude-opus-5.5: default medium; mode select with wire labels and
+// descriptions), hand-written. Snapshot state is reached through the public
+// notification path, exactly as production builds it.
+#[cfg(test)]
+mod config_command_tests {
+    use super::*;
+    use crate::types::{
+        BridgeCommand, ConfigOption, ConfigOptionValue, EffortMetadata, Notification,
+    };
+
+    fn v2_registry() -> CommandRegistry {
+        CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None)
+    }
+
+    fn kas_registry() -> CommandRegistry {
+        let root = std::path::PathBuf::from("/workspace");
+        CommandRegistry::with_builtin_sources(
+            HooksCommandSource::Kas {
+                workspace_root: root.clone(),
+            },
+            WorkflowCommandSource::Kas {
+                workspace_root: root,
+            },
+            UsageAccountCommandSource::Kas,
+            ConfigCommandSource::Kas,
+        )
+    }
+
+    fn effort(levels: &[&str], default: &str) -> Option<EffortMetadata> {
+        EffortMetadata::new(
+            levels.iter().map(|level| (*level).to_string()).collect(),
+            Some(default.to_string()),
+        )
+    }
+
+    fn model_value(value: &str, name: &str, effort: Option<EffortMetadata>) -> ConfigOptionValue {
+        ConfigOptionValue {
+            value: value.into(),
+            name: name.into(),
+            description: None,
+            effort,
+        }
+    }
+
+    /// The mode select from capture frame 24 (trimmed to two values): wire
+    /// labels and descriptions ride through.
+    fn mode_option() -> ConfigOption {
+        ConfigOption {
+            key: "mode".into(),
+            label: "Mode".into(),
+            value: Some("vibe".into()),
+            options: vec![
+                ConfigOptionValue {
+                    value: "vibe".into(),
+                    name: "Default".into(),
+                    description: Some("General coding assistance".into()),
+                    effort: None,
+                },
+                ConfigOptionValue {
+                    value: "spec".into(),
+                    name: "Spec".into(),
+                    description: Some("Structured feature development".into()),
+                    effort: None,
+                },
+            ],
+        }
+    }
+
+    /// The frame-24 model cells: `auto` has no effort spec, sonnet 5.5
+    /// defaults to high, opus 5.5 defaults to medium.
+    fn catalog(current_model: &str) -> Notification {
+        Notification::ConfigOptionsUpdated(vec![
+            mode_option(),
+            ConfigOption {
+                key: "model".into(),
+                label: "Model".into(),
+                value: Some(current_model.into()),
+                options: vec![
+                    model_value("auto", "Auto", None),
+                    model_value(
+                        "claude-sonnet-5.5",
+                        "Claude Sonnet 5.5",
+                        effort(&["low", "medium", "high", "xhigh", "max"], "high"),
+                    ),
+                    model_value(
+                        "claude-opus-5.5",
+                        "Claude Opus 5.5",
+                        effort(&["low", "medium", "high", "xhigh", "max"], "medium"),
+                    ),
+                ],
+            },
+        ])
+    }
+
+    fn session(catalog: Option<Notification>, active: bool) -> crate::session::SessionController {
+        let mut session = crate::session::SessionController::new();
+        if active {
+            session.set_session(
+                crate::types::SessionId::new("sess"),
+                crate::types::SessionStatus::Active,
+            );
+        }
+        if let Some(notification) = catalog {
+            session.apply_notification(&notification);
+        }
+        session
+    }
+
+    /// Run a config command; returns the result kind (or error) and every
+    /// bridge command it sent — which must always be none.
+    async fn run(
+        cmd: &dyn Command,
+        session: &crate::session::SessionController,
+        args: &str,
+    ) -> (crate::Result<CommandResultKind>, Vec<BridgeCommand>) {
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let result = cmd.execute(&ctx, args).await.map(|r| r.kind);
+        let mut sent = Vec::new();
+        while let Ok(command) = rx.try_recv() {
+            sent.push(command);
+        }
+        (result, sent)
+    }
+
+    fn message(result: crate::Result<CommandResultKind>) -> String {
+        match result {
+            Ok(CommandResultKind::SystemMessage(text)) => text,
+            other => panic!("expected a system message, got {other:?}"),
+        }
+    }
+
+    fn picker(
+        result: crate::Result<CommandResultKind>,
+    ) -> (crate::types::ConfigTarget, Vec<crate::types::CommandOption>) {
+        match result {
+            Ok(CommandResultKind::ShowConfigPicker(picker)) => picker.into_parts(),
+            other => panic!("expected ShowConfigPicker, got {other:?}"),
+        }
+    }
+
+    /// C1: registration is engine-gated at construction. KAS parses the
+    /// three builtins; v2 parses none of them (the names stay free for the
+    /// agent's advertised commands).
+    #[test]
+    fn config_commands_register_only_on_kas() {
+        let v2 = v2_registry();
+        for input in ["/model", "/effort", "/mode"] {
+            assert!(v2.parse(input).is_none(), "v2 must not parse {input}");
+        }
+
+        let kas = kas_registry();
+        for (input, name) in [
+            ("/model", "model"),
+            ("/effort", "effort"),
+            ("/mode", "mode"),
+        ] {
+            let (cmd, args) = kas
+                .parse(input)
+                .unwrap_or_else(|| panic!("KAS parses {input}"));
+            assert_eq!(cmd.name(), name);
+            assert!(cmd.is_local(), "{input} is a cyril builtin");
+            assert_eq!(args, "");
+        }
+    }
+
+    /// C1 + C12's registry assertion: on v2 the agent-advertised `model`
+    /// still lands as an agent command; on KAS the builtin took the name and
+    /// `register_agent_commands` skips it.
+    #[test]
+    fn v2_agent_commands_keep_the_names() {
+        let advertised = [crate::types::CommandInfo::new(
+            "model",
+            "Model",
+            None::<&str>,
+            true,
+            true,
+            false,
+        )];
+
+        let mut v2 = v2_registry();
+        v2.register_agent_commands(&advertised);
+        let (cmd, _) = v2.parse("/model").expect("agent model lands on v2");
+        assert!(!cmd.is_local(), "v2 /model is the agent's command");
+
+        let mut kas = kas_registry();
+        kas.register_agent_commands(&advertised);
+        let (cmd, _) = kas.parse("/model").expect("KAS /model parses");
+        assert!(cmd.is_local(), "the KAS builtin keeps the name");
+    }
+
+    /// C1: `/help` snapshots the names eagerly, so the config commands
+    /// appear exactly on KAS.
+    #[tokio::test]
+    async fn help_lists_config_commands_on_kas_only() {
+        let session = session(None, false);
+        for (registry, want) in [(v2_registry(), false), (kas_registry(), true)] {
+            let (cmd, _) = registry.parse("/help").expect("/help is always registered");
+            let (result, sent) = run(cmd, &session, "").await;
+            let text = message(result);
+            for name in ["/model", "/effort", "/mode"] {
+                assert_eq!(
+                    text.contains(name),
+                    want,
+                    "/help mentions {name} exactly on KAS (want {want}):\n{text}"
+                );
+            }
+            assert!(sent.is_empty(), "/help sends nothing: {sent:?}");
+        }
+    }
+
+    /// C4: `/model`'s refusal matrix, one cell per design row.
+    #[tokio::test]
+    async fn model_command_refusal_matrix() {
+        let cmd = builtin::ConfigSelectCommand::model();
+
+        // Args are a usage error — no arg form exists (design non-goal).
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "gpt").await;
+        assert_eq!(message(result), "Usage: /model (no arguments)");
+        assert!(sent.is_empty(), "args send nothing: {sent:?}");
+
+        // No session: the shared error, checked before the snapshot.
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), false), "").await;
+        match result {
+            Err(error) => assert!(
+                matches!(error.kind(), crate::ErrorKind::NoSession),
+                "no session error kind, got {error}"
+            ),
+            Ok(kind) => panic!("expected the no-session error, got {kind:?}"),
+        }
+        assert!(sent.is_empty(), "no session sends nothing: {sent:?}");
+
+        // Session but pre-first-catalog: say why, open nothing.
+        let (result, sent) = run(&cmd, &session(None, true), "").await;
+        assert_eq!(
+            message(result),
+            "Model options haven't been reported yet — they arrive just after session start; try again."
+        );
+        assert!(sent.is_empty(), "no snapshot sends nothing: {sent:?}");
+
+        // Catalog without a model select: wire drift, named.
+        let (result, sent) = run(
+            &cmd,
+            &session(
+                Some(Notification::ConfigOptionsUpdated(vec![mode_option()])),
+                true,
+            ),
+            "",
+        )
+        .await;
+        assert_eq!(
+            message(result),
+            "The model select isn't offered by this session."
+        );
+        assert!(sent.is_empty(), "no option sends nothing: {sent:?}");
+    }
+
+    /// C4 happy path: the picker rows come from the snapshot, with
+    /// `is_current` on the reported `currentValue` only.
+    #[tokio::test]
+    async fn model_command_offers_the_snapshot_catalog() {
+        let (result, sent) = run(
+            &builtin::ConfigSelectCommand::model(),
+            &session(Some(catalog("claude-sonnet-5.5")), true),
+            "",
+        )
+        .await;
+        let (target, options) = picker(result);
+        assert_eq!(target, crate::types::ConfigTarget::Model);
+        assert_eq!(options.len(), 3);
+        assert_eq!(options[0].label, "Auto");
+        assert_eq!(options[1].label, "Claude Sonnet 5.5");
+        assert_eq!(options[1].value, "claude-sonnet-5.5");
+        let current: Vec<&str> = options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(
+            current,
+            ["claude-sonnet-5.5"],
+            "exactly the currentValue is marked"
+        );
+        assert!(sent.is_empty(), "/model itself sends nothing: {sent:?}");
+    }
+
+    /// C4, wire oracle: replaying capture frame 24 through the production
+    /// converter yields the 21-offered-model picker.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn model_command_offers_the_captured_21_model_catalog() {
+        let capture = include_str!(
+            "../../../../experiments/conductor-spike/audit-2.31.1/live/kas-live-sweep-2.31.1.jsonl"
+        );
+        let line = capture.lines().nth(24).expect("capture has frame 24");
+        let frame: serde_json::Value = serde_json::from_str(line).expect("frame 24 is JSON");
+        assert_eq!(
+            frame["msg"]["params"]["update"]["sessionUpdate"], "config_option_update",
+            "frame 24 of the 2.31.1 sweep must stay the config catalog frame"
+        );
+        let notification: agent_client_protocol::schema::v1::SessionNotification =
+            serde_json::from_value(frame["msg"]["params"].clone())
+                .expect("frame 24 params deserialize at the acp layer");
+        let agent_client_protocol::schema::v1::SessionUpdate::ConfigOptionUpdate(update) =
+            notification.update
+        else {
+            panic!("frame 24 is a config_option_update");
+        };
+        let options = crate::protocol::convert::to_config_options(&update.config_options);
+
+        let (result, sent) = run(
+            &builtin::ConfigSelectCommand::model(),
+            &session(Some(Notification::ConfigOptionsUpdated(options)), true),
+            "",
+        )
+        .await;
+        let (target, options) = picker(result);
+        assert_eq!(target, crate::types::ConfigTarget::Model);
+        assert_eq!(options.len(), 21, "21-offered-model catalog");
+        let current: Vec<&str> = options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(current, ["auto"], "the captured currentValue is marked");
+        assert!(sent.is_empty(), "/model itself sends nothing: {sent:?}");
+    }
+
+    /// C5: `/effort` reads the CURRENT model's metadata — picker on
+    /// effort-supporting models, named refusal on effort-less ones.
+    #[tokio::test]
+    async fn effort_command_cells() {
+        let cmd = builtin::EffortCommand;
+
+        // Sonnet 5.5: exactly its levels, default high marked.
+        let (result, sent) =
+            run(&cmd, &session(Some(catalog("claude-sonnet-5.5")), true), "").await;
+        let (target, options) = picker(result);
+        assert_eq!(
+            target,
+            crate::types::ConfigTarget::Effort {
+                model_id: "claude-sonnet-5.5".into()
+            }
+        );
+        let levels: Vec<&str> = options.iter().map(|o| o.value.as_str()).collect();
+        assert_eq!(levels, ["low", "medium", "high", "xhigh", "max"]);
+        let current: Vec<&str> = options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(current, ["high"], "sonnet 5.5 defaults to high");
+        assert!(sent.is_empty(), "/effort itself sends nothing: {sent:?}");
+
+        // Opus 5.5: default medium marked.
+        let (result, _) = run(&cmd, &session(Some(catalog("claude-opus-5.5")), true), "").await;
+        let (_, options) = picker(result);
+        let current: Vec<&str> = options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(current, ["medium"], "opus 5.5 defaults to medium");
+
+        // auto: no effort metadata — refuse and name the model, send nothing.
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "").await;
+        assert_eq!(
+            message(result),
+            "The current model (auto) has no effort levels — /effort applies to models with effort support."
+        );
+        assert!(sent.is_empty(), "effort-less model sends nothing: {sent:?}");
+
+        // No snapshot / no session / args cells.
+        let (result, sent) = run(&cmd, &session(None, true), "").await;
+        assert_eq!(
+            message(result),
+            "Effort levels haven't been reported yet — they arrive just after session start; try again."
+        );
+        assert!(sent.is_empty(), "no snapshot sends nothing: {sent:?}");
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), false), "").await;
+        assert!(
+            matches!(result, Err(ref error) if matches!(error.kind(), crate::ErrorKind::NoSession)),
+            "no session: {result:?}"
+        );
+        assert!(sent.is_empty(), "no session sends nothing: {sent:?}");
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "high").await;
+        assert_eq!(message(result), "Usage: /effort (no arguments)");
+        assert!(sent.is_empty(), "args send nothing: {sent:?}");
+    }
+
+    /// C5 + F19 (review round 4): standalone `/effort` ticks the level in
+    /// use — the `effortLevel` option's `currentValue` — not the model's
+    /// default; a reported value the model does not offer falls back to the
+    /// default (KAS "succeeds" on bogus levels).
+    #[tokio::test]
+    async fn effort_command_ticks_the_level_in_use() {
+        let with_effort = |current: &str| {
+            let Notification::ConfigOptionsUpdated(mut options) = catalog("claude-sonnet-5.5")
+            else {
+                unreachable!("catalog() is a ConfigOptionsUpdated");
+            };
+            options.push(ConfigOption {
+                key: "effortLevel".into(),
+                label: "Effort".into(),
+                value: Some(current.into()),
+                options: vec![],
+            });
+            Notification::ConfigOptionsUpdated(options)
+        };
+        for (in_use, want) in [("max", "max"), ("none", "high")] {
+            let (result, sent) = run(
+                &builtin::EffortCommand,
+                &session(Some(with_effort(in_use)), true),
+                "",
+            )
+            .await;
+            let (_, options) = picker(result);
+            let marked: Vec<&str> = options
+                .iter()
+                .filter(|o| o.is_current)
+                .map(|o| o.value.as_str())
+                .collect();
+            assert_eq!(marked, [want], "effortLevel currentValue {in_use:?}");
+            assert!(sent.is_empty(), "/effort itself sends nothing: {sent:?}");
+        }
+    }
+
+    /// C6: `/mode` picks over the wire values with labels and descriptions,
+    /// `is_current` on the reported value; same refusal matrix as /model.
+    #[tokio::test]
+    async fn mode_command_cells() {
+        let cmd = builtin::ConfigSelectCommand::mode();
+
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "").await;
+        let (target, options) = picker(result);
+        assert_eq!(target, crate::types::ConfigTarget::Mode);
+        assert_eq!(options.len(), 2);
+        assert_eq!(options[0].label, "Default");
+        assert_eq!(options[0].value, "vibe");
+        assert_eq!(
+            options[0].description.as_deref(),
+            Some("General coding assistance")
+        );
+        assert_eq!(
+            options[1].description.as_deref(),
+            Some("Structured feature development")
+        );
+        let current: Vec<&str> = options
+            .iter()
+            .filter(|o| o.is_current)
+            .map(|o| o.value.as_str())
+            .collect();
+        assert_eq!(current, ["vibe"]);
+        assert!(sent.is_empty(), "/mode itself sends nothing: {sent:?}");
+
+        // Catalog without a mode select.
+        let model_only = Notification::ConfigOptionsUpdated(vec![ConfigOption {
+            key: "model".into(),
+            label: "Model".into(),
+            value: Some("auto".into()),
+            options: vec![model_value("auto", "Auto", None)],
+        }]);
+        let (result, sent) = run(&cmd, &session(Some(model_only), true), "").await;
+        assert_eq!(
+            message(result),
+            "The mode select isn't offered by this session."
+        );
+        assert!(sent.is_empty(), "no option sends nothing: {sent:?}");
+
+        // No snapshot / args cells.
+        let (result, sent) = run(&cmd, &session(None, true), "").await;
+        assert_eq!(
+            message(result),
+            "Mode options haven't been reported yet — they arrive just after session start; try again."
+        );
+        assert!(sent.is_empty(), "no snapshot sends nothing: {sent:?}");
+        let (result, sent) = run(&cmd, &session(Some(catalog("auto")), true), "spec").await;
+        assert_eq!(message(result), "Usage: /mode (no arguments)");
+        assert!(sent.is_empty(), "args send nothing: {sent:?}");
     }
 }

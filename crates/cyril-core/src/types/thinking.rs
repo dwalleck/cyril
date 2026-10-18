@@ -212,7 +212,10 @@ mod tests {
             key: key.into(),
             label: key.into(),
             value: value.map(Into::into),
-            options: vec!["on".into(), "off".into()],
+            options: vec![
+                crate::types::ConfigOptionValue::new("on", "On"),
+                crate::types::ConfigOptionValue::new("off", "Off"),
+            ],
         }
     }
 

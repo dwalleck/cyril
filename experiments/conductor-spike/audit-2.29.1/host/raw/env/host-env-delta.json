@@ -1,0 +1,167 @@
+[
+ {
+  "from": "2.28.0",
+  "to": "2.29.0",
+  "bins": {
+   "kiro-cli": {
+    "added": [
+     {
+      "tok": "Q_BUNDLE_METADATPROCESS_LAUNCHED",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "XDG_SESSION_DESKQ",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "PROCESS_LAUNCHEDI",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_BUNDLE_METADAT",
+      "substring_in_new": 2
+     },
+     {
+      "tok": "XDG_SESSION_DESK",
+      "substring_in_new": 3
+     }
+    ]
+   },
+   "kiro-cli-chat": {
+    "added": [
+     {
+      "tok": "AMAZON_Q_CHAT_SHELL",
+      "substring_in_old": 2
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_CHAT_SHELLF",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_CLI_IS_CHILD_PROCESS",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_ENABLE_LOCAL_SANDBOX",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "KIRO_MODH",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_SESSION_IDZDOTDIR",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AMAZON_Q_CHAT_SHELLF",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTS",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_ENABLE_LOCAL_SANDBOXTREATMENT",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_MODI",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZONC",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_TRUST_CLASSIFIER_SHADOWI",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "RUST_MIN_STACKR",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "kiro-cli-term": {
+    "added": [],
+    "removed": []
+   }
+  }
+ },
+ {
+  "from": "2.29.0",
+  "to": "2.29.1",
+  "bins": {
+   "kiro-cli": {
+    "added": [
+     {
+      "tok": "PROCESS_LAUNCHEDD",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "Q_BUNDLE_METADAT",
+      "substring_in_old": 2
+     },
+     {
+      "tok": "XDG_SESSION_DESK",
+      "substring_in_old": 3
+     }
+    ],
+    "removed": [
+     {
+      "tok": "Q_BUNDLE_METADATPROCESS_LAUNCHED",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "XDG_SESSION_DESKQ",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "kiro-cli-chat": {
+    "added": [
+     {
+      "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZONC",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "OTEL_METRIC_EXPORT_INTERVALMAX_TOKENSMODEL_CONTEXT_WINDOW_EXCEEDEDPAUSE_TURNUNKNOWNBIOCYBERFRONTIER_LLMREASONING_EXTRACTION",
+      "substring_in_old": 0
+     }
+    ],
+    "removed": [
+     {
+      "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "OTEL_METRIC_EXPORT_INTERVALBIOCYBERFRONTIER_LLMREASONING_EXTRACTIONUNKNOWNMAX_TOKENSMODEL_CONTEXT_WINDOW_EXCEEDEDPAUSE_TURN",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "kiro-cli-term": {
+    "added": [
+     {
+      "tok": "Q_SHELLSHELLN",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": []
+   }
+  }
+ }
+]

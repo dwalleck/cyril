@@ -1,0 +1,1548 @@
+381c381,393
+< basename _ _,_ _ _,resolve _ _,_ _ _}
+---
+> _ _ _}
+> _"_";
+> function _(){
+> return process.env.HOME||process.env.USERPROFILE||_()}
+> function _(_){
+> _(_==="~")return _();
+> _(/^~[\\/]/.test(_))return _(_(),_.slice(2));
+> return _}
+> _ _=()=>{
+> }
+> ;
+> import{
+> realpathSync _ _}
+384c396
+< cpSync _ _,existsSync _ _,mkdtempSync _ _,readFileSync _ _,realpathSync _ _,renameSync _ _,rmSync _ _,statSync _ _,unlinkSync _ _,writeFileSync _ _}
+---
+> basename _ _,dirname _ _,isAbsolute _ _,_ _ _,relative _ _,resolve _ _}
+385a398,415
+> function _(_){
+> _ _=[],_=_;
+> _(;
+> ;
+> )_{
+> return _(_(_),...t)}
+> catch{
+> _ _=_(_);
+> _(_===_)return _;
+> _.unshift(_(_)),_=_}
+> }
+> function _(_,_){
+> _(!_(_))return"relative";
+> _ _=_(_(_));
+> _(_(_)===_)return"_";
+> _ _=_(_,_(_));
+> _(_===""||!_.startsWith("..")&&!_(_))return"contains-_";
+> return _}
+387c417,499
+< return _(_(),".kiro","powers")}
+---
+> _ _=process.env.KIRO_HOME,_=_();
+> _(_&&_.raw===_&&_.home===_)return _.dir;
+> _ _=_(_,".kiro"),_=_?.trim(),_=_;
+> _(_){
+> _ _=_(_,_);
+> _(_===_)_=_(_);
+> _ _(!_.has(_))_.add(_),_.warn(`[_-_] ignoring KIRO_HOME=_{
+> _}
+>  (_{
+> _}
+> );
+>  using _{
+> _}
+> `)}
+> return _={
+> _:_,_:_,_:_}
+> ,_}
+> function _(...e){
+> return _(_(),...e)}
+> _ _,_=_;
+> _ _=_(()=>{
+> _();
+> _();
+> _=_ _}
+> );
+> import{
+> basename _ _,dirname _ _,_ _ _,resolve _ _,_ _ _}
+> _"_";
+> import{
+> cpSync _ _,existsSync _ _,mkdtempSync _ _,readdirSync _ _,readFileSync _ _,realpathSync _ _,renameSync _ _,rmdirSync _ _,rmSync _ _,statSync _ _,unlinkSync _ _,writeFileSync _ _}
+> _"_";
+> function _(){
+> return _("powers")}
+> function _(_=_()){
+> _ _=_(_(),".kiro","powers"),_=_(_(_),_);
+> _(_===_||!_(_)||_(_))return!1;
+> _ _=_(_);
+> _(_==="populated")return _(_,_),!1;
+> _(_==="uninspectable")return!1;
+> _ _;
+> _{
+> _(_(_)),_=_(_(_(_),".powers-migrate-"));
+> _ _=_(_,"powers");
+> _(_,_,{
+> recursive:!0,force:!1,errorOnExist:!0}
+> ),_(_),_(_),_(_,_),_.info("[powers] copied legacy powers _ KIRO_HOME",{
+> _:_}
+> )}
+> catch(_){
+> return _.warn("[powers] could _ migrate legacy powers",{
+> error:String(_)}
+> ),!1}
+> finally{
+> _(_)_(_,{
+> recursive:!0,force:!0}
+> )}
+> return _(_,_),!0}
+> function _(_){
+> _(!_(_))return"empty";
+> _{
+> _(!_(_).isDirectory()||_(_(_)))return"populated";
+> return _(_,{
+> withFileTypes:!0}
+> ).every((_)=>_.isDirectory()&&_(_(_,_.name)).length===0)?"empty":"populated"}
+> catch(_){
+> return _.warn("[powers] could _ inspect _ relocated powers _",{
+> _:_,error:String(_)}
+> ),"uninspectable"}
+> }
+> function _(_){
+> _(!_(_))return;
+> _(_ _ _ _(_))_(_(_,_));
+> _(_)}
+> function _(_,_){
+> _{
+> _(_,`_{
+> _}
+> \n`)}
+> catch(_){
+> _.warn("[powers] could _ record _ powers migration",{
+> error:String(_)}
+> )}
+> }
+452c564,566
+< _ _=_.root??_(),_=_(_);
+---
+> _ _=_.root??_();
+> _(!_.root)_(_);
+> _ _=_(_);
+502a617
+> _(!_.root)_(_);
+512a628
+> _ _=".powers-migrated";
+514a631,632
+> _();
+> _();
+1002,1028d1119
+< import{
+< homedir _ _}
+< _"_";
+< import{
+< _ _ _}
+< _"_";
+< function _(){
+< return process.env.HOME||process.env.USERPROFILE||_()}
+< function _(_){
+< _(_==="~")return _();
+< _(/^~[\\/]/.test(_))return _(_(),_.slice(2));
+< return _}
+< _ _=()=>{
+< }
+< ;
+< import{
+< _ _ _}
+< _"_";
+< function _(){
+< _ _=process.env.KIRO_HOME;
+< _(_&&_.length>0)return _;
+< return _(_(),".kiro")}
+< function _(...e){
+< return _(_(),...e)}
+< _ _=_(()=>{
+< _()}
+< );
+6144a6236
+> _();
+6715c6807
+< ...Rxe.mergeOtlpSharedConfigurationWithDefaults(_,_,_),headers:_(_.headers,_.headers,_.headers),_:_(_.url)??_.url??_.url}
+---
+> ...Vxe.mergeOtlpSharedConfigurationWithDefaults(_,_,_),headers:_(_.headers,_.headers,_.headers),_:_(_.url)??_.url??_.url}
+6720c6812
+< ...Rxe.getSharedConfigurationDefaults(),headers:async()=>_,_:"_://localhost:4318/"+_}
+---
+> ...Vxe.getSharedConfigurationDefaults(),headers:async()=>_,_:"_://localhost:4318/"+_}
+6745c6837
+< ...Oxe.mergeOtlpHttpConfigurationWithDefaults(_,_,_),agentFactory:_.agentFactory??_.agentFactory??_.agentFactory,userAgent:_.userAgent}
+---
+> ...eBe.mergeOtlpHttpConfigurationWithDefaults(_,_,_),agentFactory:_.agentFactory??_.agentFactory??_.agentFactory,userAgent:_.userAgent}
+6750c6842
+< ...Oxe.getHttpConfigurationDefaults(_,_),agentFactory:_({
+---
+> ...eBe.getHttpConfigurationDefaults(_,_),agentFactory:_({
+7087c7179
+< ...RZt.getSharedConfigurationFromEnvironment(_),_:_(_)??_(_),headers:_.wrapStaticHeadersInFunction(_(_)),agentFactory:_.httpAgentFactoryFromOptions({
+---
+> ...lJt.getSharedConfigurationFromEnvironment(_),_:_(_)??_(_),headers:_.wrapStaticHeadersInFunction(_(_)),agentFactory:_.httpAgentFactoryFromOptions({
+7420a7513,7522
+> _ _=process.env.KIRO_TELEMETRY_EXPLICIT_HISTOGRAMS;
+> _(_&&_.has(_.trim().toLowerCase()))return[];
+> return _.map((_)=>({
+> instrumentName:_,aggregation:{
+> _:_.EXPONENTIAL_HISTOGRAM,options:{
+> maxSize:160,recordMinMax:!0}
+> }
+> }
+> ))}
+> function _(){
+7454c7556
+< readers:[_],resource:_()}
+---
+> readers:[_],resource:_(),views:_()}
+7547c7649
+< _ _=60000,_,_=1,_,_,_,_,_,_,_=0,_,_=30000,_,_=(_)=>_ _(_),_,_,_=_,_,_="_.tui",_=256,_,_="ClientType",_="_-_";
+---
+> _ _=60000,_,_=1,_,_,_,_,_,_,_=0,_,_=30000,_,_=(_)=>_ _(_),_,_,_=_,_,_="_.tui",_=256,_,_,_,_="ClientType",_="_-_";
+7570a7673
+> _=["kiro_cli_time_to_first_visible_response_ms","kiro_cli_user_turn_duration_seconds"],_=_ _(["1","_","_","_"]);
+7731c7834
+< names:[...ZBe,"inspect_workflow","Inspect Workflow","update_workflow","Update Workflow"],renderer:"workflow",_:"_"}
+---
+> names:[...gIe,"inspect_workflow","Inspect Workflow","update_workflow","Update Workflow"],renderer:"workflow",_:"_"}
+7914c8017
+< ...v5(_.access),memory_auto_updates:_.autoUpdates}
+---
+> ...N5(_.access),memory_auto_updates:_.autoUpdates}
+7921c8024
+< version_full:_.version,...uE(_.state)}
+---
+> version_full:_.version,...mE(_.state)}
+7940c8043
+< ,_,[...$Jt])}
+---
+> ,_,[...EXt])}
+8011c8114
+< ...qJt(_,_.version,_,_.executionContext??"_"),tool_outcome:_.outcome}
+---
+> ...kXt(_,_.version,_,_.executionContext??"_"),tool_outcome:_.outcome}
+8079c8182
+< version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_.engine??_,...uE(_.memory)}
+---
+> version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_.engine??_,...mE(_.memory)}
+8215c8318
+< version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_,...uE(_.memory)}
+---
+> version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_,...mE(_.memory)}
+8231c8334
+< version_full:_.version,agent_engine:_.engine??_,model:_.model||"unknown",token_type:_,...uE(_.memory)}
+---
+> version_full:_.version,agent_engine:_.engine??_,model:_.model||"unknown",token_type:_,...mE(_.memory)}
+8244c8347
+< version_full:_.version,model:_.model||"unknown",...uE(_.memory)}
+---
+> version_full:_.version,model:_.model||"unknown",...mE(_.memory)}
+9663c9766
+< ...J5(_,_(_,_)),submissions:_,clears:_?_:_.clears}
+---
+> ...ij(_,_(_,_)),submissions:_,clears:_?_:_.clears}
+9710c9813
+< ...Z5,nextId:_.nextId}
+---
+> ...oj,nextId:_.nextId}
+10052c10155
+< ...aj(_(),_.serverName),initErrors:_,mcpInitStatus:_}
+---
+> ...pj(_(),_.serverName),initErrors:_,mcpInitStatus:_}
+10167c10270
+< ...aj(_,_.serverName),mcpInitStatus:_}
+---
+> ...pj(_,_.serverName),mcpInitStatus:_}
+10201c10304
+< ,_,[...Oen])}
+---
+> ,_,[...ftn])}
+10409c10512
+< ,_=Object.keys(_.modifier),_=Object.keys(_.color),_=Object.keys(_.bgColor),_=[...Pen,...Uen];
+---
+> ,_=Object.keys(_.modifier),_=Object.keys(_.color),_=Object.keys(_.bgColor),_=[...ytn,..._tn];
+10526c10629
+< _(_==="_")return _("_",_,_,...md.hexToRgb(...r));
+---
+> _(_==="_")return _("_",_,_,...Ad.hexToRgb(...r));
+10601c10704
+< ...xE,level:{
+---
+> ...TE,level:{
+10872c10975
+< ...oc}
+---
+> ...ic}
+10898c11001
+< enabled:_,...IM(_)?{
+---
+> enabled:_,...RM(_)?{
+10932c11035
+< enabled:_,...IM(_)?{
+---
+> enabled:_,...RM(_)?{
+10969c11072
+< _ _=!_&&!_,_=_||_&&!_?"DEFAULT_BLOCKED":_.networkAccess,_=_.configuration.networkAccess,_=!_?_:_?_:_(_,_),_=!_&&!(_&&!_)&&_.mcpSandboxing||_.configuration.mcpSandboxing===!0,_=_||_!==_.networkAccess||_!==_.mcpSandboxing,_=[...n.diagnostics,...ctn(_,_,_,_.configuration,_)];
+---
+> _ _=!_&&!_,_=_||_&&!_?"DEFAULT_BLOCKED":_.networkAccess,_=_.configuration.networkAccess,_=!_?_:_?_:_(_,_),_=!_&&!(_&&!_)&&_.mcpSandboxing||_.configuration.mcpSandboxing===!0,_=_||_!==_.networkAccess||_!==_.mcpSandboxing,_=[...n.diagnostics,...$tn(_,_,_,_.configuration,_)];
+11044c11147
+< ...gj,sandboxRestorationBlocked:!1,sandboxRepair:_,sandboxExecution:{
+---
+> ...Cj,sandboxRestorationBlocked:!1,sandboxRepair:_,sandboxExecution:{
+11180c11283
+< global:_("settings","sandbox.json"),project:_(_,...Ntn),workspaceRoot:_}
+---
+> global:_("settings","sandbox.json"),project:_(_,...Ann),workspaceRoot:_}
+11522,11523c11625,11626
+< ),_.steps)_.push(...dy(_.steps,_.nodeId,_,_+1));
+< _(_.branches)_.push(...dy(_.branches,_.nodeId,_,_+1))}
+---
+> ),_.steps)_.push(...my(_.steps,_.nodeId,_,_+1));
+> _(_.branches)_.push(...my(_.branches,_.nodeId,_,_+1))}
+11732c11835
+< ...X1e(_,_.workflowId),archivedWorkflows:_,pauseRequestedWorkflowIds:_(_.pauseRequestedWorkflowIds,_.workflowId)}
+---
+> ...bTe(_,_.workflowId),archivedWorkflows:_,pauseRequestedWorkflowIds:_(_.pauseRequestedWorkflowIds,_.workflowId)}
+11793c11896
+< workflowId:_.workflowId,parentSessionId:_.parentSessionId??_?.parentSessionId,_:_.workflowName,status:"running",nodes:_?_(_,_.nodes):_,stepSessions:_?.stepSessions??[],startedAt:_?.startedAt??_,completedAt:_,...HM(_,_)}
+---
+> workflowId:_.workflowId,parentSessionId:_.parentSessionId??_?.parentSessionId,_:_.workflowName,status:"running",nodes:_?_(_,_.nodes):_,stepSessions:_?.stepSessions??[],startedAt:_?.startedAt??_,completedAt:_,...zM(_,_)}
+11811c11914
+< status:"running",pauseReason:_ 0,stopInitiator:_ 0,stopReason:_ 0,...HM(_,_)}
+---
+> status:"running",pauseReason:_ 0,stopInitiator:_ 0,stopReason:_ 0,...zM(_,_)}
+11865c11968
+< ...t,status:"paused",...Dj(_,_),pauseReason:_.pauseReason,stopInitiator:_.initiator,stopReason:_.initiatorReason}
+---
+> ...t,status:"paused",...Pj(_,_),pauseReason:_.pauseReason,stopInitiator:_.initiator,stopReason:_.initiatorReason}
+11944c12047
+< ...aTe(),history:{
+---
+> ...ETe(),history:{
+11947c12050
+< ...rTe}
+---
+> ...wTe}
+12042c12145
+< ...a,...U1e(_,_)}
+---
+> ...a,...aTe(_,_)}
+12045c12148
+< ...aTe(),history:{
+---
+> ...ETe(),history:{
+12048c12151
+< ...rTe}
+---
+> ...wTe}
+12348c12451
+< ...oc,requestedState:"_"}
+---
+> ...ic,requestedState:"_"}
+12560c12663
+< ...DE(_.kiro),snapshot:_.snapshot,previous:_}
+---
+> ...NE(_.kiro),snapshot:_.snapshot,previous:_}
+12782c12885
+< ...QE(_,_),requestedState:_}
+---
+> ...OE(_,_),requestedState:_}
+12792c12895
+< ...iTe(_,_,{
+---
+> ...kTe(_,_,{
+14216c14319
+< _:_,width:_,lines:_.lines.length>0?_.lines:[...QB],ascii:_,appendBody:_,trailingAnsi:_,tailSourceOffset:_,tailOutputOffset:_.tailOutputOffset,tailStartActiveCodes:_.tailStartActiveCodes}
+---
+> _:_,width:_,lines:_.lines.length>0?_.lines:[...UB],ascii:_,appendBody:_,trailingAnsi:_,tailSourceOffset:_,tailOutputOffset:_.tailOutputOffset,tailStartActiveCodes:_.tailStartActiveCodes}
+27707c27810
+< ')),_=[...Ip,_]}
+---
+> ')),_=[...Tp,_]}
+27734c27837
+< ')),_=[...Ip,_]}
+---
+> ')),_=[...Tp,_]}
+27826c27929
+< ')),_=[...Ip,...pf,_]}
+---
+> ')),_=[...Tp,...Af,_]}
+27865c27968
+< ')),_=[...pr,...Ip,...aO,...pf,...oO,_]}
+---
+> ')),_=[...pr,...Tp,...sO,...Af,...cO,_]}
+29165c29268
+< ')),_=[...nA,_]}
+---
+> ')),_=[...aA,_]}
+29218c29321
+< ')),_=[...oz,...pf,_]}
+---
+> ')),_=[...mz,...Af,_]}
+35921c36024
+< ')),_=[...Ip,...uDe,...pDe,...aO,...pf,...oO,_]}
+---
+> ')),_=[...Tp,...BDe,...TDe,...sO,...Af,...cO,_]}
+39935c40038
+< ')),_=[...FB,_]}
+---
+> ')),_=[...jB,_]}
+40930c41033
+< ')),_=[...pr,...vi,...hr,...Bn,...Dc,_]}
+---
+> ')),_=[...pr,...vi,...hr,...Bn,...Qc,_]}
+62531c62634
+< ')),_=[...Dc,...Bn,...Ka,...hr,...py,...UB,_]}
+---
+> ')),_=[...Qc,...Bn,...Wa,...hr,...Ay,...KB,_]}
+70672c70775
+< ')),_=[...Ed,...pr,...vi,...Io,...Bn,...Dc,...hr,_]}
+---
+> ')),_=[...Cd,...pr,...vi,...Io,...Bn,...Qc,...hr,_]}
+71007c71110
+< ')),_=[...sz,_]}
+---
+> ')),_=[...gz,_]}
+78529c78632
+< ')),_=[...kd,_]}
+---
+> ')),_=[...Sd,_]}
+80170c80273
+< ')),_=[...pr,...FB,_]}
+---
+> ')),_=[...pr,...jB,_]}
+82870c82973
+< ')),_=[...Cd,_]}
+---
+> ')),_=[...kd,_]}
+90203c90306
+< ')),_=[...GB,...Sd,...Io,_]}
+---
+> ')),_=[...WB,...vd,...Io,_]}
+103131c103234
+< ')),_=[...NRe,...GB,...Sd,...Io,_]}
+---
+> ')),_=[...JRe,...WB,...vd,...Io,_]}
+106002c106105
+< `)),_=[...pr,...Io,...hr,...Cd,...Bn,...Rc,_]}
+---
+> `)),_=[...pr,...Io,...hr,...kd,...Bn,...Nc,_]}
+114253c114356
+< ')),_=[...Ka,...pr,...Ed,_]}
+---
+> ')),_=[...Wa,...pr,...Cd,_]}
+115317c115420
+< ')),_=[...Sd,_]}
+---
+> ')),_=[...vd,_]}
+123589c123692
+< ')),_=[...Bn,...Ka,...yz,...UB,_]}
+---
+> ')),_=[...Bn,...Wa,...xz,...KB,_]}
+124182c124285
+< `)),_=[...Cd,_]}
+---
+> `)),_=[...kd,_]}
+126605c126708
+< ')),_=[...pr,...bz,...vi,...Io,...hy,...hr,...by,...Cd,...Bn,...Rc,...qB,...oA,_]}
+---
+> ')),_=[...pr,...Sz,...vi,...Io,..._y,...hr,...yy,...kd,...Bn,...Nc,...ZB,...sA,_]}
+126709c126812
+< ')),_=[...pr,...iA,_]}
+---
+> ')),_=[...pr,...cA,_]}
+130694c130797
+< `)),_=[...sA,_]}
+---
+> `)),_=[...lA,_]}
+135010c135113
+< ')),_=[...wz,_]}
+---
+> ')),_=[...Iz,_]}
+136207c136310
+< ')),_=[...sA,_]}
+---
+> ')),_=[...lA,_]}
+137365c137468
+< ')),_=[...Cz,...Sz,_]}
+---
+> ')),_=[...Dz,...Qz,_]}
+137619c137722
+< ')),_=[...gz,_]}
+---
+> ')),_=[...Cz,_]}
+137664c137767
+< ')),_=[...Rc,_]}
+---
+> ')),_=[...Nc,_]}
+138737c138840
+< ')),_=[...Bn,...Ka,...hr,...pr,_]}
+---
+> ')),_=[...Bn,...Wa,...hr,...pr,_]}
+139692c139795
+< ')),_=[...Ka,...hr,...Bn,...pr,_]}
+---
+> ')),_=[...Wa,...hr,...Bn,...pr,_]}
+145441c145544
+< ')),_=[...pr,...hr,...Bn,...oA,_]}
+---
+> ')),_=[...pr,...hr,...Bn,...sA,_]}
+150825c150928
+< ')),_=[...Rc,...Dc,...vi,...hy,_]}
+---
+> ')),_=[...Nc,...Qc,...vi,..._y,_]}
+150993c151096
+< ')),_=[...hy,...vi,...mz,_]}
+---
+> ')),_=[..._y,...vi,...wz,_]}
+151042c151145
+< ')),_=[...Iz,_]}
+---
+> ')),_=[...Lz,_]}
+153253c153356
+< ')),_=[...RNe,_]}
+---
+> ')),_=[...VNe,_]}
+156215c156318
+< `)),_=[...by,...kd,...Bn,...jB,...Io,_]}
+---
+> `)),_=[...yy,...Sd,...Bn,...JB,...Io,_]}
+158526c158629
+< ')),_=[...Rc,...Bn,...Ka,...Qz,...kd,...iA,_]}
+---
+> ')),_=[...Nc,...Bn,...Wa,...Gz,...Sd,...cA,_]}
+159695c159798
+< ')),_=[...jB,_]}
+---
+> ')),_=[...JB,_]}
+162908c163011
+< ')),_=[...Mz,_]}
+---
+> ')),_=[...Hz,_]}
+167587c167690
+< ')),_=[...pr,...hr,...Dc,...Bn,_]}
+---
+> ')),_=[...pr,...hr,...Qc,...Bn,_]}
+169762c169865
+< ')),_=[...hr,...zB,...nA,...Ka,_]}
+---
+> ')),_=[...hr,...XB,...aA,...Wa,_]}
+170868c170971
+< `)),_=[...sA,...oA,...Ed,_]}
+---
+> `)),_=[...lA,...sA,...Cd,_]}
+181268c181371
+< ')),_=[...Lz,_]}
+---
+> ')),_=[...jz,_]}
+182750c182853
+< `)),_=[...qB,_]}
+---
+> `)),_=[...ZB,_]}
+183688c183791
+< ')),_=[...Cd,...pr,...vi,...Bn,...hr,...Sd,...sA,_]}
+---
+> ')),_=[...kd,...pr,...vi,...Bn,...hr,...vd,...lA,_]}
+184510c184613
+< ')),_=[...ZMe,_]}
+---
+> ')),_=[...gOe,_]}
+197951c198054
+< ')),_=[...pr,...vi,...Io,...Bn,...Dc,...hr,_]}
+---
+> ')),_=[...pr,...vi,...Io,...Bn,...Qc,...hr,_]}
+206965c207068
+< ')),_=[...pr,...dz,_]}
+---
+> ')),_=[...pr,...yz,_]}
+208301c208404
+< ')),_=[...Ed,...by,...kd,...Bn,...Rc,...oA,...lz,...iA,_]}
+---
+> ')),_=[...Cd,...yy,...Sd,...Bn,...Nc,...sA,...bz,...cA,_]}
+211905c212008
+< ')),_=[...Dz,_]}
+---
+> ')),_=[...Pz,_]}
+211934c212037
+< ')),_=[...Rc,_]}
+---
+> ')),_=[...Nc,_]}
+213528c213631
+< ')),_=[...Gz,_]}
+---
+> ')),_=[...Yz,_]}
+217787c217890
+< ')),_=[...Bn,...Ka,...hr,...py,_]}
+---
+> ')),_=[...Bn,...Wa,...hr,...Ay,_]}
+223584c223687
+< ')),_=[...xz,...Bn,...hr,_]}
+---
+> ')),_=[...Mz,...Bn,...hr,_]}
+224447c224550
+< ')),_=[...Ka,...hr,...Bn,_]}
+---
+> ')),_=[...Wa,...hr,...Bn,_]}
+224520c224623
+< ')),_=[...Ka,...Sd,...Bn,_]}
+---
+> ')),_=[...Wa,...vd,...Bn,_]}
+224607c224710
+< ')),_=[...Ka,...pr,...Bn,_]}
+---
+> ')),_=[...Wa,...pr,...Bn,_]}
+224675c224778
+< ')),_=[...Ka,...Io,_]}
+---
+> ')),_=[...Wa,...Io,_]}
+224738c224841
+< ')),_=[...Ka,...cFe,...uFe,...pFe,...AFe,...fFe,_]}
+---
+> ')),_=[...Wa,...vFe,...BFe,...TFe,...RFe,...NFe,_]}
+225690c225793
+< ')),_=[...hr,...Bn,...nA,...Pz,...kd,...iA,_]}
+---
+> ')),_=[...hr,...Bn,...aA,...Kz,...Sd,...cA,_]}
+230248c230351
+< `)),_=[...hr,...Bn,...Ka,...Dc,...pr,...Ed,...UFe,...$Fe,...qFe,...zFe,_]}
+---
+> `)),_=[...hr,...Bn,...Wa,...Qc,...pr,...Cd,...aPe,...iPe,...cPe,...uPe,_]}
+237687c237790
+< ')),_=[...hr,...nA,...zB,...Hz,...py,...Bn,_]}
+---
+> ')),_=[...hr,...aA,...XB,...Zz,...Ay,...Bn,_]}
+246482c246585
+< ...Tdn,...Ddn}
+---
+> ...upn,...dpn}
+248976c249079
+< return[...t.pre,...t.normal,...t.post,...Emn]}
+---
+> return[...t.pre,...t.normal,...t.post,...nAn]}
+284066c284169
+< Config:_.Config,_:_.Node,...mGe}
+---
+> Config:_.Config,_:_.Node,...DGe}
+286572c286675
+< ...IK,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+---
+> ...LK,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+286588c286691
+< ...IK,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+---
+> ...LK,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+286645c286748
+< ...DK,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+---
+> ...PK,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+286647c286750
+< ...DK,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+---
+> ...PK,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+286662c286765
+< ...CK,_:_(_).replace("{
+---
+> ...DK,_:_(_).replace("{
+287379c287482
+< _ _=[...Ny.segment(_.value.slice(0,_.cursor))],_=_[_.length-1];
+---
+> _ _=[...Oy.segment(_.value.slice(0,_.cursor))],_=_[_.length-1];
+287384c287487
+< _ _=[...Ny.segment(_.value.slice(_.cursor))];
+---
+> _ _=[...Oy.segment(_.value.slice(_.cursor))];
+287409c287512
+< _ _=[...Ny.segment(_.value.slice(0,_.cursor))],_=_[_.length-1],_=_?_.segment.length:1;
+---
+> _ _=[...Oy.segment(_.value.slice(0,_.cursor))],_=_[_.length-1],_=_?_.segment.length:1;
+287415c287518
+< _ _=[...Ny.segment(_.value.slice(_.cursor))],_=_[0]?_[0].segment.length:1;
+---
+> _ _=[...Oy.segment(_.value.slice(_.cursor))],_=_[0]?_[0].segment.length:1;
+287474c287577
+< _ _=[...Ny.segment(_.value.slice(0,_.cursor))];
+---
+> _ _=[...Oy.segment(_.value.slice(0,_.cursor))];
+287528c287631
+< _ _=[...Ny.segment(_.slice(_))][0],_=_.slice(0,_),_=_?.segment??" ",_=_.slice(_+_.length),_=_.focused?_:"",_=`\_[7m${
+---
+> _ _=[...Oy.segment(_.slice(_))][0],_=_.slice(0,_),_=_?.segment??" ",_=_.slice(_+_.length),_=_.focused?_:"",_=`\_[7m${
+287717c287820
+< _ _=[],_=[...ehn.segment(_)],_=0,_=0,_=-1,_=0;
+---
+> _ _=[],_=[...Nhn.segment(_)],_=0,_=0,_=-1,_=0;
+287881c287984
+< _ _=[...kf.segment(_)][0]?.segment||"",_=_(_);
+---
+> _ _=[...vf.segment(_)][0]?.segment||"",_=_(_);
+288135c288238
+< _ _=_.state.lines[_.state.cursorLine]||"",_=[...kf.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1],_=_?_.segment.length:1;
+---
+> _ _=_.state.lines[_.state.cursorLine]||"",_=[...vf.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1],_=_?_.segment.length:1;
+288147c288250
+< _ _=[...kf.segment(_.slice(_.state.cursorCol))],_=_[0]?_[0].segment.length:1;
+---
+> _ _=[...vf.segment(_.slice(_.state.cursorCol))],_=_[0]?_[0].segment.length:1;
+288236c288339
+< _ _=[...kf.segment(_.slice(_.state.cursorCol))];
+---
+> _ _=[...vf.segment(_.slice(_.state.cursorCol))];
+288240c288343
+< _ _=[...kf.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1];
+---
+> _ _=[...vf.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1];
+288250c288353
+< _ _=[...kf.segment(_.slice(0,_.state.cursorCol))],_=_.state.cursorCol;
+---
+> _ _=[...vf.segment(_.slice(0,_.state.cursorCol))],_=_.state.cursorCol;
+289266c289369
+< _ _=[...P$e.segment(_)].map(({
+---
+> _ _=[...r6e.segment(_)].map(({
+289397c289500
+< _:_(_),...$$e(_,{
+---
+> _:_(_),...i6e(_,{
+290317c290420
+< sessionId:_==="_"||_===_ 0?_(_.sessionId):_.sessionId,_:_(_.cwd),...zI(_.title)!==_ 0?{
+---
+> sessionId:_==="_"||_===_ 0?_(_.sessionId):_.sessionId,_:_(_.cwd),...XI(_.title)!==_ 0?{
+290321c290424
+< ,...zI(_.updatedAt)!==_ 0?{
+---
+> ,...XI(_.updatedAt)!==_ 0?{
+290666c290769
+< ...e,...xyn(_)}
+---
+> ...e,...s_n(_)}
+290680c290783
+< ...Tf,_:_==="_"&&_!=="remote"?_.v2.filter((_)=>_.sessionId!==_):_.v2}
+---
+> ...Rf,_:_==="_"&&_!=="remote"?_.v2.filter((_)=>_.sessionId!==_):_.v2}
+291663c291766
+< chunks:_.chunks,partial:_?"\_":"",...vHe(_,_.droppedLines)}
+---
+> chunks:_.chunks,partial:_?"\_":"",...qHe(_,_.droppedLines)}
+291669c291772
+< chunks:_.chunks,partial:_+(_?"\_":""),...vHe(_,_.droppedLines)}
+---
+> chunks:_.chunks,partial:_+(_?"\_":""),...qHe(_,_.droppedLines)}
+295194c295297
+< ...Uwn}
+---
+> ..._En}
+296301c296404
+< filters:[...t_("default",_)],display:_(_("default",_))}
+---
+> filters:[...r_("default",_)],display:_(_("default",_))}
+296438c296541
+< _ _=_(_,_),_=[...t_(_,_)];
+---
+> _ _=_(_,_),_=[...r_(_,_)];
+296477,296478c296580,296581
+< ...wP,...e,subagent:{
+< ...wP.subagent,...e.subagent}
+---
+> ...kP,...e,subagent:{
+> ...kP.subagent,...e.subagent}
+296496c296599
+< ...wP,showToolReasoning:!1,showElapsed:!1,subagent:{
+---
+> ...kP,showToolReasoning:!1,showElapsed:!1,subagent:{
+296506c296609
+< ...wP}
+---
+> ...kP}
+296512c296615
+< ,_=[...VBe,"_"],_=["_","-subagent"],_={
+---
+> ,_=[...AIe,"_"],_=["_","-subagent"],_={
+296517c296620
+< ...rje,default:_}
+---
+> ...wje,default:_}
+296519c296622
+< ...aje,default:_}
+---
+> ...Eje,default:_}
+296551c296654
+< _=[_.CHAT_TOOLS_FILTERS,_.toolArgsMode.setting,_.thinkingDisplay.setting,...Object.values(_),...vP.map((_)=>_[_].setting),...Object.values(_)]}
+---
+> _=[_.CHAT_TOOLS_FILTERS,_.toolArgsMode.setting,_.thinkingDisplay.setting,...Object.values(_),...IP.map((_)=>_[_].setting),...Object.values(_)]}
+296689c296792
+< ,...ZC.map((_)=>({
+---
+> ,...ek.map((_)=>({
+299036c299139
+< stdio:["_","_","ignore"],_:_.cwd,_:_.env??process.env,...wze?{
+---
+> stdio:["_","_","ignore"],_:_.cwd,_:_.env??process.env,...Pze?{
+301833c301936
+< ...NV,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+---
+> ...$V,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+301849c301952
+< ...NV,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+---
+> ...$V,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+301906c302009
+< ...OV,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+---
+> ...qV,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+301908c302011
+< ...OV,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+---
+> ...qV,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+301923c302026
+< ...BV,_:_(_).replace("{
+---
+> ...OV,_:_(_).replace("{
+302740c302843
+< field:_,...qSn(_)}
+---
+> field:_,...kvn(_)}
+302851c302954
+< _=["_","bytes","mtime_ms","_","ctime_ms","title_hash","head_hash","tail_hash","capped","prompt_count","parse_complete","revision"],_=[...$7e,"response_capped","response_derived"]}
+---
+> _=["_","bytes","mtime_ms","_","ctime_ms","title_hash","head_hash","tail_hash","capped","prompt_count","parse_complete","revision"],_=[...iKe,"response_capped","response_derived"]}
+304949c305052
+< _(_.issues.length)_.issues.push(...ab(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ib(_,_.issues));
+304955c305058
+< _.issues.push(...ab(_,_.issues))}
+---
+> _.issues.push(...ib(_,_.issues))}
+305653c305756
+< _(_.issues.length)_.issues.push(...ab(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ib(_,_.issues));
+305657c305760
+< _(_.issues.length)_.issues.push(...ab(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ib(_,_.issues));
+305692c305795
+< _(_.issues.length)_.issues.push(...ab(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ib(_,_.issues));
+305696c305799
+< _(_.issues.length)_.issues.push(...ab(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ib(_,_.issues));
+313196c313299
+< sessionId:_,...YDn(_?._meta)}
+---
+> sessionId:_,...IRn(_?._meta)}
+313348c313451
+< ,...Q9(_?.elapsedMs)&&{
+---
+> ,...O9(_?.elapsedMs)&&{
+313444c313547
+< sessionId:_,...TJe(_)}
+---
+> sessionId:_,...WJe(_)}
+314106c314209
+< workflowId:_,...Hee(_)}
+---
+> workflowId:_,...Zee(_)}
+314112c314215
+< workflowId:_,...Hee(_)}
+---
+> workflowId:_,...Zee(_)}
+314132c314235
+< ,...Hee(_)}
+---
+> ,...Zee(_)}
+314225c314328
+< ...j9(_.kiro),outputStyle:_}
+---
+> ...W9(_.kiro),outputStyle:_}
+314235c314338
+< ...j9(_.kiro),displayText:_}
+---
+> ...W9(_.kiro),displayText:_}
+314245c314348
+< ],sessionId:_,...Pet({
+---
+> ],sessionId:_,...rtt({
+314792c314895
+< _=_ _(["turn_summary","turn_end","auth_error","session_error"]),_=_ _(["user_message","content","thought","tool_call","tool_call_update","tool_call_finished"]),_=_ _([...Zet,"content","thought","tool_call","tool_call_update","tool_call_finished","approval_request","question_request","model_refusal"])}
+---
+> _=_ _(["turn_summary","turn_end","auth_error","session_error"]),_=_ _(["user_message","content","thought","tool_call","tool_call_update","tool_call_finished"]),_=_ _([...gtt,"content","thought","tool_call","tool_call_update","tool_call_finished","approval_request","question_request","model_refusal"])}
+316157c316260,316262
+< function _(_){
+---
+> function _(_,_={
+> }
+> ){
+316172c316277
+< =_,_=_.initialized?"initialized":"not_initialized",_=_.initialized?"Workspace initialized":"Workspace _ initialized. _ /_ _ _ initialize.";
+---
+> =_,_=_.initialized?"initialized":"not_initialized",_=_.initialized?"Workspace initialized":"Workspace _ initialized. _ /_ _ _ initialize.",_=_.remote?_:process.cwd(),_=_(_.rootPath)??_,_=_(_.configPath)??(_.remote?_:".kiro/settings/_.json");
+316175,316177c316280,316290
+< status:_,message:_,rootPath:process.cwd(),detectedLanguages:_.languages,projectMarkers:[],_:(_.lspServers??[]).map((_)=>({
+< _:_.name,languages:_.languages,status:_.status,isAvailable:_.isAvailable,initDurationMs:_,workspaceFolders:[process.cwd()]}
+< )),configPath:".kiro/settings/_.json",docUrl:"https://_.dev/_/_/_-intelligence/"}
+---
+> status:_,message:_,...s?{
+> rootPath:_}
+> :{
+> }
+> ,detectedLanguages:_.languages,projectMarkers:[],_:(_.lspServers??[]).map((_)=>({
+> _:_.name,languages:_.languages,status:_.status,isAvailable:_.isAvailable,initDurationMs:_,workspaceFolders:_?[_]:[]}
+> )),...c?{
+> configPath:_}
+> :{
+> }
+> ,docUrl:"https://_.dev/_/_/_-intelligence/"}
+316183a316297,316298
+> return typeof _==="string"&&_!==""?_:_}
+> function _(_){
+316471c316586,316588
+< _(_.success)return _(_);
+---
+> _(_.success)return _(_,{
+> remote:_.startedCloudSession}
+> );
+316473c316590,316596
+< return _(_)}
+---
+> return _(_,{
+> remote:_.startedCloudSession}
+> )}
+> async function _(){
+> _ _=_.kiroCapabilities.extensionMethods??[];
+> _(_.length>0&&!_.includes("_kiro/codeIntelligence"))return;
+> return _.executeCode("status")}
+317197c317320
+< ...qQn({
+---
+> ...kNn({
+317212c317335
+< ),_=_.endpoints,_=(_.spawnProcess??_)(_.executable,[...r.prefix,"--experimental-_-modules",_.server,"--transport=stdio","--_=_-callback",...jet(_.policy),...a.krsEndpoint?[`--endpoint=_{
+---
+> ),_=_.endpoints,_=(_.spawnProcess??_)(_.executable,[...r.prefix,"--experimental-_-modules",_.server,"--transport=stdio","--_=_-callback",...ltt(_.policy),...a.krsEndpoint?[`--endpoint=_{
+317220c317343
+< ...process.env,NODE_USE_SYSTEM_CA:process.env.NODE_USE_SYSTEM_CA??"1",NODE_CHANNEL_FD:_ 0,NODE_CHANNEL_SERIALIZATION_MODE:_ 0,...hnt(_,_),KIRO_CUSTOM_USER_AGENT:_.userAgent}
+---
+> ...process.env,NODE_USE_SYSTEM_CA:process.env.NODE_USE_SYSTEM_CA??"1",NODE_CHANNEL_FD:_ 0,NODE_CHANNEL_SERIALIZATION_MODE:_ 0,...Fnt(_,_),KIRO_CUSTOM_USER_AGENT:_.userAgent}
+317228c317351
+< _:_,...ynt(_,_.executable,_,_)}
+---
+> _:_,...Pnt(_,_.executable,_,_)}
+317254c317377
+< prompt:_,sessionId:_.sessionId,...Uet(_.perf.promptMetadata(),_)}
+---
+> prompt:_,sessionId:_.sessionId,...att(_.perf.promptMetadata(),_)}
+317552c317675
+< ...tXe(_),executionContext:_}
+---
+> ...yXe(_),executionContext:_}
+318037a318161
+> codeIntelligenceStatus=_.bind(_.operationHost);
+319373c319497
+< ,...wA.map((_)=>({
+---
+> ,...CA.map((_)=>({
+319398c319522
+< ...Nje(_),...Tze(_),...frt,..._rt,...Ert}
+---
+> ...Jje(_),...Wze(_),...Ort,...Urt,...$rt}
+320828c320952,320954
+< _(!_(_.agentEngine))return;
+---
+> _(!_(_.agentEngine)){
+> _.addSystemMessage("Autonomous _ _ _ available _ _ session",!0);
+> return}
+321337c321463
+< ...F9(_),...u===_ 0?{
+---
+> ...G9(_),...u===_ 0?{
+322254c322380
+< ,...Xat(_),memoryConfig:_,sessionModelBaselinePending:!1}
+---
+> ,...yot(_),memoryConfig:_,sessionModelBaselinePending:!1}
+322263c322389
+< ...B.kas,sessionOrigin:_,launchEffort:_,sessionAttemptGeneration:_+1,sessionAttemptInFlight:!1,sessionModelBaselinePending:!1,previousModelId:_,...Xat(_),memoryConfig:_}
+---
+> ...B.kas,sessionOrigin:_,launchEffort:_,sessionAttemptGeneration:_+1,sessionAttemptInFlight:!1,sessionModelBaselinePending:!1,previousModelId:_,...yot(_),memoryConfig:_}
+322361c322487
+< ...one,claimEsc:(_)=>_((_)=>_.escOwners.includes(_)?_:{
+---
+> ...mne,claimEsc:(_)=>_((_)=>_.escOwners.includes(_)?_:{
+322576,322583d322701
+< ,setShowCodePanel:(_,_)=>{
+< _({
+< showCodePanel:_,codeData:_??_,...a?.status==="initialized"?{
+< codeIntelligenceActive:!0}
+< :{
+< }
+< }
+< )}
+322803c322921
+< _:_.kiro,agentEngine:_.agentEngine,cloudSessionActive:_.cloudSessionActive,slashCommands:_,kasCommands:_.kasCommands,prompts:_.prompts,skills:_.skills,steering:_.steering,kasAvailableModels:_.kas.availableModels,kasAvailableAgents:_.kas.availableAgents,kasAvailableEfforts:_.kas.availableEfforts,...pTe(_,_),showAlert:(_,_,_=3000)=>_.showTransientAlert({
+---
+> _:_.kiro,agentEngine:_.agentEngine,cloudSessionActive:_.cloudSessionActive,slashCommands:_,kasCommands:_.kasCommands,prompts:_.prompts,skills:_.skills,steering:_.steering,kasAvailableModels:_.kas.availableModels,kasAvailableAgents:_.kas.availableAgents,kasAvailableEfforts:_.kas.availableEfforts,...TTe(_,_),showAlert:(_,_,_=3000)=>_.showTransientAlert({
+322825c322943
+< ,setUpgradeDiagnostics:_.setUpgradeDiagnostics,setUpgradeRunPreview:_.setUpgradeRunPreview,setShowMcpPanel:_.setShowMcpPanel,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,setShowToolsPanel:_.setShowToolsPanel,requestTrustAllTools:_.requestTrustAllTools,setShowGoalPanel:_.setShowGoalPanel,setGoalStatus:_.setGoalStatus,setShowStatsPanel:_.setShowStatsPanel,setShowHooksPanel:_.setShowHooksPanel,hooksList:_.hooksList,promptSourceProviderConnection:_.promptSourceProviderConnection,setCloudProviderConnected:_.setCloudProviderConnected,setCloudProvider:_.setCloudProvider,...sot(_),resetCloudSessionScope:_.resetCloudSessionScope,stashCloudSessionScope:_.stashCloudSessionScope,restoreCloudSessionScope:_.restoreCloudSessionScope,applyRepoFooter:_.applyRepoFooter,setCloudNewSessionChecklist:_.setCloudNewSessionChecklist,setCloudSessionActive:_.setCloudSessionActive,setShowKeybindingsPanel:_.setShowKeybindingsPanel,setShowDisplaySettingsPanel:_.setShowDisplaySettingsPanel,setShowThemePanel:_.setShowThemePanel,setShowCloudQuitPrompt:_.setShowCloudQuitPrompt,setShowSettingsPanel:_.setShowSettingsPanel,setShowConfigPanel:_.setShowConfigPanel,setConfigReturnOnEscape:_.setConfigReturnOnEscape,endConfigHandoff:_.endConfigHandoff,getConfigHandoffToken:()=>_().configHandoffToken,claimLoadingMessage:(_)=>{
+---
+> ,setUpgradeDiagnostics:_.setUpgradeDiagnostics,setUpgradeRunPreview:_.setUpgradeRunPreview,setShowMcpPanel:_.setShowMcpPanel,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,setShowToolsPanel:_.setShowToolsPanel,requestTrustAllTools:_.requestTrustAllTools,setShowGoalPanel:_.setShowGoalPanel,setGoalStatus:_.setGoalStatus,setShowStatsPanel:_.setShowStatsPanel,setShowHooksPanel:_.setShowHooksPanel,hooksList:_.hooksList,promptSourceProviderConnection:_.promptSourceProviderConnection,setCloudProviderConnected:_.setCloudProviderConnected,setCloudProvider:_.setCloudProvider,...xot(_),resetCloudSessionScope:_.resetCloudSessionScope,stashCloudSessionScope:_.stashCloudSessionScope,restoreCloudSessionScope:_.restoreCloudSessionScope,applyRepoFooter:_.applyRepoFooter,setCloudNewSessionChecklist:_.setCloudNewSessionChecklist,setCloudSessionActive:_.setCloudSessionActive,setShowKeybindingsPanel:_.setShowKeybindingsPanel,setShowDisplaySettingsPanel:_.setShowDisplaySettingsPanel,setShowThemePanel:_.setShowThemePanel,setShowCloudQuitPrompt:_.setShowCloudQuitPrompt,setShowSettingsPanel:_.setShowSettingsPanel,setShowConfigPanel:_.setShowConfigPanel,setConfigReturnOnEscape:_.setConfigReturnOnEscape,endConfigHandoff:_.endConfigHandoff,getConfigHandoffToken:()=>_().configHandoffToken,claimLoadingMessage:(_)=>{
+322847c322965
+< activeCommand:_,showContextBreakdown:!1,showHelpPanel:!1,showUsagePanel:!1,showRewindExplorer:!1,showTangentExplorer:!1,showMcpPanel:!1,showToolsPanel:!1,showStatsPanel:!1,showHooksPanel:!1,showRepoPicker:!1,showSourceProviderGate:!1,showKeybindingsPanel:!1,showThemePanel:!1,showStatusLinePanel:!1,sandboxStatus:_,sandboxMenuStatus:_,...gj,...iot,settingsReturnOnEscape:!1,...one,configReturnOnEscape:!1,verboseReturnOnEscape:_,themeReturnOnEscape:_,showKnowledgePanel:!1,showConfigPanel:!1,configPanelCategory:_,configPanelStandalone:!1,configHandoffToken:0,cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,contextBreakdown:_,usageData:_,tangentName:_,pendingSpecDescription:_,contextUsagePercent:_,lastTurnTokens:_,goalStatus:_,goalCancelFailed:!1,...r}
+---
+> activeCommand:_,showContextBreakdown:!1,showHelpPanel:!1,showUsagePanel:!1,showRewindExplorer:!1,showTangentExplorer:!1,showMcpPanel:!1,showToolsPanel:!1,showStatsPanel:!1,showHooksPanel:!1,showRepoPicker:!1,showSourceProviderGate:!1,showKeybindingsPanel:!1,showThemePanel:!1,showStatusLinePanel:!1,sandboxStatus:_,sandboxMenuStatus:_,...Cj,...vot,settingsReturnOnEscape:!1,...mne,configReturnOnEscape:!1,verboseReturnOnEscape:_,themeReturnOnEscape:_,showKnowledgePanel:!1,showConfigPanel:!1,configPanelCategory:_,configPanelStandalone:!1,configHandoffToken:0,cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,contextBreakdown:_,usageData:_,tangentName:_,pendingSpecDescription:_,contextUsagePercent:_,lastTurnTokens:_,goalStatus:_,goalCancelFailed:!1,...r}
+323832c323950
+< ,...jk(_,"_-execution")}
+---
+> ,...Wk(_,"_-execution")}
+324277a324396,324461
+> import{
+> existsSync _ _}
+> _"_";
+> import{
+> _ _ _}
+> _"_";
+> async function _(_){
+> _{
+> _ _=await _.codeIntelligenceStatus();
+> _(!_)return"_";
+> _(_.success!==!0)return"failed";
+> _ _=_.data?.status;
+> return _(_)===!0?"initialized":"_"}
+> catch(_){
+> return _.debug("_ intelligence status query failed",{
+> caller:"readSandboxStatus",_:_ instanceof Error?_.message:String(_)}
+> ),"failed"}
+> }
+> function _(_){
+> _ _=(_)=>queueMicrotask(()=>{
+> _.getState().refreshCodeIntelligenceIndicator(_)}
+> );
+> _.subscribe((_,_)=>{
+> _ _=_.cloudSessionActive!==_.cloudSessionActive,_=_.cloudSessionActive&&!!_.sessionId&&_.sessionId!==_.sessionId;
+> _(_||_)_("switch");
+> _ _(_.cloudSessionActive&&_(_.cloudSessionStatus)&&!_(_.cloudSessionStatus))_("readiness")}
+> )}
+> _ _=()=>_(_(process.cwd(),".kiro","settings","_.json")),_=(_)=>_==="initialized"?!0:_==="not_initialized"?!1:_ 0,_=5000,_=(_,_)=>{
+> _ _=0,_=async(_)=>{
+> _ _=++_,{
+> _:_,cloudSessionActive:_,sessionId:_}
+> =_();
+> _(!_?.isCloudSessionActive?.()){
+> _({
+> codeIntelligenceActive:_?!1:_()}
+> );
+> return}
+> _(_==="switch")_({
+> codeIntelligenceActive:!1}
+> );
+> _(!_)return;
+> _ _=await _(_);
+> _(_!==_)return;
+> _(_({
+> codeIntelligenceActive:_==="initialized"}
+> ),_==="failed"&&_!=="retry")setTimeout(()=>{
+> _(_===_)_("retry")}
+> ,_).unref?.()}
+> ;
+> return{
+> setShowCodePanel:(_,_)=>{
+> _ _=_(_?.status);
+> _(_!==_ 0)_+=1;
+> _({
+> showCodePanel:_,codeData:_??_,...i!==_ 0?{
+> codeIntelligenceActive:_}
+> :{
+> }
+> }
+> )}
+> ,refreshCodeIntelligenceIndicator:(_="switch")=>_(_)}
+> }
+> ,_=(_)=>_!==_&&_!=="provisioning"&&_!=="failed";
+> _ _=_(()=>{
+> _()}
+> );
+324321c324505
+< _(_),_(_),_(_);
+---
+> _(_),_(_),_(_),_(_);
+324374a324559
+> _();
+324438c324623
+< capability:_,...UOn(_,_),scope:_,ownerSessionId:_,...i!=="session"?{
+---
+> capability:_,...kLn(_,_),scope:_,ownerSessionId:_,...i!=="session"?{
+324702c324887
+< ...yA(_,_),approvalQueue:_,pendingApproval:_?_[0]??_:_.pendingApproval,...l?{
+---
+> ...wA(_,_),approvalQueue:_,pendingApproval:_?_[0]??_:_.pendingApproval,...l?{
+324726c324911
+< ...yA(_,_),questionQueue:_,pendingQuestion:_&&_(_)?_[0]??_:_.pendingQuestion,...m?{
+---
+> ...wA(_,_),questionQueue:_,pendingQuestion:_&&_(_)?_[0]??_:_.pendingQuestion,...m?{
+325553c325738
+< currentModel:_,...Dit(_)}
+---
+> currentModel:_,...tst(_)}
+326259c326444
+< _(_ _ _[_,...Ast(_)]){
+---
+> _(_ _ _[_,...Fst(_)]){
+327426c327611
+< ...c,_:_,isFinished:!0,status:_(_,_,_),presumedCancelled:_?!1:_.presumedCancelled,result:_(_),...EFn(_,_.meta?.kiro),...E&&{
+---
+> ...c,_:_,isFinished:!0,status:_(_,_,_),presumedCancelled:_?!1:_.presumedCancelled,result:_(_),...iPn(_,_.meta?.kiro),...E&&{
+327579c327764
+< ...Dt,content:_,thinking:_||_.thinking,thinkingMs:_??_.thinkingMs}
+---
+> ...Rt,content:_,thinking:_||_.thinking,thinkingMs:_??_.thinkingMs}
+327682c327867
+< ,sessionId:_.sessionId,pipelineGroupId:_.meta?.kiro?.pipeline?.groupId,...kA(_)&&{
+---
+> ,sessionId:_.sessionId,pipelineGroupId:_.meta?.kiro?.pipeline?.groupId,...vA(_)&&{
+327684c327869
+< ,_:_.kind,content:_,purpose:_,_:_,locations:_.locations,agentName:_,...Jk(_.meta?.kiro)&&{
+---
+> ,_:_.kind,content:_,purpose:_,_:_,locations:_.locations,agentName:_,...tS(_.meta?.kiro)&&{
+327688c327873
+< ,...Wnt(_.agentEngine,_,_.open,!_.isProcessing,_,_)&&{
+---
+> ,...Art(_.agentEngine,_,_.open,!_.isProcessing,_,_)&&{
+327748c327933
+< ",agentName:_,...Dt&&{
+---
+> ",agentName:_,...Rt&&{
+327779c327964
+< _([...Dt.keys()].some((_)=>!_.has(_)))_{
+---
+> _([...Rt.keys()].some((_)=>!_.has(_)))_{
+328581c328766
+< ...Zne}
+---
+> ...sre}
+328591c328776
+< ...Zne}
+---
+> ...sre}
+328596c328781
+< ...Zne}
+---
+> ...sre}
+329090,329095d329274
+< import{
+< existsSync _ _}
+< _"_";
+< import{
+< _ _ _}
+< _"_";
+329129c329308
+< ,linkNoticeShown:!1,toolCallOutput:_ _,...oTe,steerQueue:_,pendingSteerContent:_,slashCommands:_(_ 0,_),kasCommands:_==="_"?[...JF()]:[],cloudSessionActive:!1,windowsSandboxEnablementPending:!1,windowsSandboxSetup:_,sandboxStatus:_,sandboxRestarting:!1,...w1e,localSandboxConfiguration:_,sandboxMenuStatus:_,cloudSnapshotReadiness:{
+---
+> ,linkNoticeShown:!1,toolCallOutput:_ _,...CTe,steerQueue:_,pendingSteerContent:_,slashCommands:_(_ 0,_),kasCommands:_==="_"?[...tP()]:[],cloudSessionActive:!1,windowsSandboxEnablementPending:!1,windowsSandboxSetup:_,sandboxStatus:_,sandboxRestarting:!1,...P1e,localSandboxConfiguration:_,sandboxMenuStatus:_,cloudSnapshotReadiness:{
+329135c329314
+< ,specReviewView:_,specTaskRunConfirmation:_,specTaskRun:_,pendingSpecDescription:_,approvalMode:"dropdown",autoApproveCrewTools:!1,autoApproveSpecTaskTools:!1,focusedCrewIndex:0,...Rit(_),currentAgent:_,previousAgentName:_,settings:_,goalStatus:_,goalCancelFailed:!1,activeCommand:_,commandInputValue:"",activeTrigger:_,filePickerHasResults:!1,promptHint:_,commandShadowText:_,...vst(_),input:_(),reverseSearchActive:!1,setReverseSearchActive:(_)=>{
+---
+> ,specReviewView:_,specTaskRunConfirmation:_,specTaskRun:_,pendingSpecDescription:_,approvalMode:"dropdown",autoApproveCrewTools:!1,autoApproveSpecTaskTools:!1,focusedCrewIndex:0,...nst(_),currentAgent:_,previousAgentName:_,settings:_,goalStatus:_,goalCancelFailed:!1,activeCommand:_,commandInputValue:"",activeTrigger:_,filePickerHasResults:!1,promptHint:_,commandShadowText:_,...Vst(_),input:_(),reverseSearchActive:!1,setReverseSearchActive:(_)=>{
+329159c329338
+< ,mcpMode:"_",showToolsPanel:!1,showGoalPanel:!1,toolsList:[],showStatsPanel:!1,statsList:[],statsSummary:_,showHooksPanel:!1,hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,showRepoPicker:!1,repoPickerResources:[],attachedRepos:[],cloudProviderChecked:!1,cloudProviderConnected:_,showSourceProviderGate:!1,showSessionPicker:!1,sessionPickerRows:[],sessionPickerTitle:"/sessions",showSessionDashboard:!1,sessionDashboardSessions:[],sessionDashboardEntry:"_other_",dashboardHighlightedSession:_,showKeybindingsPanel:!1,showDisplaySettingsPanel:!1,showThemePanel:!1,showStatusLinePanel:!1,showCloudQuitPrompt:!1,showSettingsPanel:!1,showConfigPanel:!1,configPanelCategory:_,configPanelStandalone:!1,configHandoffToken:0,themePreview:_,preserveScrollback:_(_.CHAT_PRESERVE_SCROLLBACK,_),terminalTitleEnabled:_(_.CHAT_TERMINAL_TITLE,!1),highPerformanceMode:_(_.CHAT_HIGH_PERFORMANCE_MODE),settingsReturnOnEscape:!1,configReturnOnEscape:!1,verboseReturnOnEscape:_,themeReturnOnEscape:_,showKnowledgePanel:!1,knowledgeEntries:[],knowledgeStatus:_,showCodePanel:!1,codeData:_,codeIntelligenceActive:_(_(process.cwd(),".kiro","settings","_.json")),attachedFiles:[],_userColorsSetter:_,_baseThemeSetter:_,_themeDiffHexGetter:_,_autoPreviewGetter:_,_armSandboxStartupConfirmation:_,pendingFileAttachment:_,pendingImages:[],currentAbortController:_,cancelInProgress:_,isShellEscape:!1,_shellEscapeWriter:_,_activeStreamHandler:_,_liveStreamHandler:_,setLiveStreamHandler:(_)=>{
+---
+> ,mcpMode:"_",showToolsPanel:!1,showGoalPanel:!1,toolsList:[],showStatsPanel:!1,statsList:[],statsSummary:_,showHooksPanel:!1,hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,showRepoPicker:!1,repoPickerResources:[],attachedRepos:[],cloudProviderChecked:!1,cloudProviderConnected:_,showSourceProviderGate:!1,showSessionPicker:!1,sessionPickerRows:[],sessionPickerTitle:"/sessions",showSessionDashboard:!1,sessionDashboardSessions:[],sessionDashboardEntry:"_other_",dashboardHighlightedSession:_,showKeybindingsPanel:!1,showDisplaySettingsPanel:!1,showThemePanel:!1,showStatusLinePanel:!1,showCloudQuitPrompt:!1,showSettingsPanel:!1,showConfigPanel:!1,configPanelCategory:_,configPanelStandalone:!1,configHandoffToken:0,themePreview:_,preserveScrollback:_(_.CHAT_PRESERVE_SCROLLBACK,_),terminalTitleEnabled:_(_.CHAT_TERMINAL_TITLE,!1),highPerformanceMode:_(_.CHAT_HIGH_PERFORMANCE_MODE),settingsReturnOnEscape:!1,configReturnOnEscape:!1,verboseReturnOnEscape:_,themeReturnOnEscape:_,showKnowledgePanel:!1,knowledgeEntries:[],knowledgeStatus:_,showCodePanel:!1,codeData:_,codeIntelligenceActive:_(),attachedFiles:[],_userColorsSetter:_,_baseThemeSetter:_,_themeDiffHexGetter:_,_autoPreviewGetter:_,_armSandboxStartupConfirmation:_,pendingFileAttachment:_,pendingImages:[],currentAbortController:_,cancelInProgress:_,isShellEscape:!1,_shellEscapeWriter:_,_activeStreamHandler:_,_liveStreamHandler:_,setLiveStreamHandler:(_)=>{
+329171c329350
+< ),...not(_),trustAllToolsRequested:_.trustAllTools??!1,recommendLiteUi:!1,surveyState:(()=>{
+---
+> ),...Eot(_),trustAllToolsRequested:_.trustAllTools??!1,recommendLiteUi:!1,surveyState:(()=>{
+329179c329358
+< )(),completedTurnCount:0,showSurveyPanel:!1,activeSurvey:_,surveyPrompt:_,surveyContext:_,workflowSurveyState:_(),...kst(_,_,{
+---
+> )(),completedTurnCount:0,showSurveyPanel:!1,activeSurvey:_,surveyPrompt:_,surveyContext:_,workflowSurveyState:_(),...Wst(_,_,{
+329195c329374
+< ),...bct(_,_),...ATe(_,_,_,_.isCommandDispatchInProgress),...c5e(_,_),...wot(_,_),...Pot(_,_),...Qot(_,_),setAutoApproveCrewTools:(_)=>_({
+---
+> ),...Gct(_,_),...RTe(_,_,_,_.isCommandDispatchInProgress),...v5e(_,_),...Got(_,_),...oit(_,_),...Xot(_,_),setAutoApproveCrewTools:(_)=>_({
+329214c329393
+< ,...l(_(_,_,_),_),...Zot(_,_,_.kiro),clearTranscriptForShellClear:()=>{
+---
+> ,...l(_(_,_,_),_),...bit(_,_,_.kiro),clearTranscriptForShellClear:()=>{
+329230c329409
+< ,...wit(_,{
+---
+> ,...jit(_,{
+329232c329411
+< ),...fot(_,_,_,_.retire),...Cot(_,_,_.retire),...Got(_,_,_),...Oct(_,_,_),...vit(_),navigateHistory:(_)=>_.getInstance().navigate(_),setMode:(_)=>{
+---
+> ),...Oot(_,_,_,_.retire),...Hot(_,_,_.retire),...sit(_,_,_),...ilt(_,_,_),...Vit(_),navigateHistory:(_)=>_.getInstance().navigate(_),setMode:(_)=>{
+329240c329419
+< ...jk(_,_),...h.artifactGenerating===_?_:{
+---
+> ...Wk(_,_),...h.artifactGenerating===_?_:{
+329246c329425
+< ...Wp(_),...b.artifactGenerating===_?_:{
+---
+> ...Yp(_),...b.artifactGenerating===_?_:{
+329250c329429
+< ,...Lit(_,_),cancelCrewApprovals:async()=>{
+---
+> ,...sst(_,_),cancelCrewApprovals:async()=>{
+329285c329464
+< ,...kit(_,_,{
+---
+> ,...Wit(_,_,{
+329287c329466
+< ),...tot(_,_),setLoadingMessage:(_)=>{
+---
+> ),...wot(_,_),setLoadingMessage:(_)=>{
+329329c329508
+< ,...yit(_,_,{
+---
+> ,...Hit(_,_,{
+329331c329510
+< ),...Qit(_,_),...dit(_,_,{
+---
+> ),...rst(_,_),...Mit(_,_,{
+329333c329512
+< ),...Cit(_,_),...u(_(_),_),...Tit(_),...cot(_,_,{
+---
+> ),...Kit(_,_),...u(_(_),_),...est(_),...wit(_,_),...Bot(_,_,{
+329343c329522
+< ),...fit(_,_,()=>_(_)),...hit(_,_),toggleToolOutputsExpanded:()=>{
+---
+> ),...Uit(_,_,()=>_(_)),...$it(_,_),toggleToolOutputsExpanded:()=>{
+329386c329565
+< ,...B5e(_,_,()=>_(_)),...Fct(_,_,{
+---
+> ,...z5e(_,_,()=>_(_)),...clt(_,_,{
+329450a329630
+> _();
+329565c329745
+< ...vf(),_:"manual",facing:_,leanX:_.leanX,leanY:_.leanY,idleAmount:_.idleAmount}
+---
+> ...Bf(),_:"manual",facing:_,leanX:_.leanX,leanY:_.leanY,idleAmount:_.idleAmount}
+329567c329747
+< ...AC(_,24,24,{
+---
+> ...bC(_,24,24,{
+329608c329788
+< ...vf(),_:_.x>_.left?(_-_.left)/(_.x-_.left):0.5,_:_.y>_.top?(_-_.top)/(_.y-_.top):0.5,driftStartMs:_}
+---
+> ...Bf(),_:_.x>_.left?(_-_.left)/(_.x-_.left):0.5,_:_.y>_.top?(_-_.top)/(_.y-_.top):0.5,driftStartMs:_}
+339625c339805
+< className:"keyword",begin:_(/\./,_(_(...jft,...Ore))),_:_(...jft,...Ore),excludeBegin:!0}
+---
+> className:"keyword",begin:_(/\./,_(_(...gbt,...zre))),_:_(...gbt,...zre),excludeBegin:!0}
+339627c339807
+< match:_(/\./,_(...Lre)),relevance:0}
+---
+> match:_(/\./,_(...Kre)),relevance:0}
+339630c339810
+< className:"keyword",match:_(...s,...Ore)}
+---
+> className:"keyword",match:_(...s,...zre)}
+339635c339815
+< match:_(/\./,_(...Kft)),relevance:0}
+---
+> match:_(/\./,_(...bbt)),relevance:0}
+339637c339817
+< className:"built_in",match:_(/\_/,_(...Kft),/(?=\()/)}
+---
+> className:"built_in",match:_(/\_/,_(...bbt),/(?=\()/)}
+339693c339873
+< className:"keyword",match:_(/@/,_(...DGn))}
+---
+> className:"keyword",match:_(/@/,_(...m3n))}
+339746c339926
+< /,relevance:0,endsParent:!0,keywords:[...IGn,...zft],contains:[_]}
+---
+> /,relevance:0,endsParent:!0,keywords:[...d3n,...fbt],contains:[_]}
+344386c344566
+< ...xS,level:{
+---
+> ...TS,level:{
+345376c345556
+< _.push(...P_t(_,_.styles))}
+---
+> _.push(...lwt(_,_.styles))}
+345465c345645
+< _.push(...q5n(_,{
+---
+> _.push(...vjn(_,{
+345476c345656
+< _=_(_,_,_,_,_),_.push(...j5n(_,{
+---
+> _=_(_,_,_,_,_),_.push(...xjn(_,{
+345566c345746
+< _(_)_.push(...eU(_.lex(_),_,_));
+---
+> _(_)_.push(...rU(_.lex(_),_,_));
+345621c345801
+< return[...Rae(_,_,!1),_(_.replace(/^\_+|\_\_*_/_,""),_||_ 0,_!==-1,_.fence==="```"?_ 0:_.fence),...Rae(_,_,_)]}
+---
+> return[...$ae(_,_,!1),_(_.replace(/^\_+|\_\_*_/_,""),_||_ 0,_!==-1,_.fence==="```"?_ 0:_.fence),...$ae(_,_,_)]}
+345672c345852
+< ,...YA(_.lexInline(_.text),{
+---
+> ,...ZA(_.lexInline(_.text),{
+346472c346652
+< _.push(...gc(_[_]??"",_,_))}
+---
+> _.push(...fc(_[_]??"",_,_))}
+346749c346929
+< _(_.push(...QS(_,_,_).split(`\n`)),_.isComplete)_.push(_.dim(_));
+---
+> _(_.push(...OS(_,_,_).split(`\n`)),_.isComplete)_.push(_.dim(_));
+347189c347369
+< _(_ _ _ _.slice(1,_))_.push(...Gae(_(_,_),_,_));
+---
+> _(_ _ _ _.slice(1,_))_.push(...Zae(_(_,_),_,_));
+347234c347414
+< _(_[_,_]_ Object.entries(_))_.push(...qb(_,_,_+2,_,_,_))}
+---
+> _(_[_,_]_ Object.entries(_))_.push(...zb(_,_,_+2,_,_,_))}
+347263c347443
+< _(_[_,_]_ _)_.push(...qb(_,_,_+1,_,_,_));
+---
+> _(_[_,_]_ _)_.push(...zb(_,_,_+1,_,_,_));
+347279c347459
+< _(_.path)_.push(...UT("  _: ",_(String(_.path),_),4,_));
+---
+> _(_.path)_.push(...KT("  _: ",_(String(_.path),_),4,_));
+347291c347471
+< _(_[_,_]_ _)_.push(...qb(_,_,1,4,_,_,_));
+---
+> _(_[_,_]_ _)_.push(...zb(_,_,1,4,_,_,_));
+347455c347635
+< _ _=_.trim().length>0&&_(_,_,_,_)?[...am(_,_,_,_.dim,_),...am(_,_,_,_.red,_.red)]:_(_,_,_,_.red,_.red);
+---
+> _ _=_.trim().length>0&&_(_,_,_,_)?[...om(_,_,_,_.dim,_),...om(_,_,_,_.red,_.red)]:_(_,_,_,_.red,_.red);
+347513c347693
+< _(_[_,_]_ Object.entries(_))_.push(...qb(_,_,1,Number.POSITIVE_INFINITY,_,_))}
+---
+> _(_[_,_]_ Object.entries(_))_.push(...zb(_,_,1,Number.POSITIVE_INFINITY,_,_))}
+347523c347703
+< _(_[_,_]_ Object.entries(_))_.push(...qb(_,_,0,Number.POSITIVE_INFINITY,_,_))}
+---
+> _(_[_,_]_ Object.entries(_))_.push(...zb(_,_,0,Number.POSITIVE_INFINITY,_,_))}
+347993c348173
+< _.push(...qjn(_,_,_,_))}
+---
+> _.push(...vzn(_,_,_,_))}
+348030c348210
+< _ _.push(...gc(_,_,_));
+---
+> _ _.push(...fc(_,_,_));
+348062c348242
+< _(_.length>0)_.push(...qwt(_,_.task,{
+---
+> _(_.length>0)_.push(...AEt(_,_.task,{
+348122c348302
+< _(_.length>0)_.push(...ooe(_.bold("  response:"),_,{
+---
+> _(_.length>0)_.push(...goe(_.bold("  response:"),_,{
+348133c348313
+< _(_.length>0)_.push(...ooe(_.red.bold("  _ output:"),_,{
+---
+> _(_.length>0)_.push(...goe(_.red.bold("  _ output:"),_,{
+348141c348321
+< _(_.subagent.responses&&_&&_.length>0)_.push(...kU(_,_,{
+---
+> _(_.subagent.responses&&_&&_.length>0)_.push(...xU(_,_,{
+348174c348354
+< _(_.pipeline&&_.length>0)_.push(...qwt(_,_,{
+---
+> _(_.pipeline&&_.length>0)_.push(...AEt(_,_,{
+348177c348357
+< return _.push(...Kjn(_,_,_,_,_,_,_,_,_)),_.push(...zjn(_,_,_)),_.join(`\n`)}
+---
+> return _.push(...Izn(_,_,_,_,_,_,_,_,_)),_.push(...Bzn(_,_,_)),_.join(`\n`)}
+348958c349138,349142
+< return _ _([...wEt,...bzn])}
+---
+> return _ _([...jEt,...Xzn])}
+> function _(_){
+> _ _=_.arguments;
+> _(typeof _.tool_id!=="string"||typeof _!=="object"||_===_||Array.isArray(_))return _;
+> return _}
+348964c349148
+< _ _=_(),_=[];
+---
+> _ _=_(_)??_,_=_(),_=[];
+349065c349249
+< `:_,_=_?_:_,_=_?_(_,_,_):[],_=_??(_&&!_?"  ...":_),_=_.length===0?_:_.length===0?_:_?[...F,_,...pe]:[...F.slice(0,-1),...ep(_([_[_.length-1]??""],_,_,_),_,_)],_=_?_||_:_.length===0?_:_;
+---
+> `:_,_=_?_:_,_=_?_(_,_,_):[],_=_??(_&&!_?"  ...":_),_=_.length===0?_:_.length===0?_:_?[...F,_,...pe]:[...F.slice(0,-1),...tp(_([_[_.length-1]??""],_,_,_),_,_)],_=_?_||_:_.length===0?_:_;
+352168c352352
+< return(_.surface==="_"?[...fkt,...A7n]:[...fkt,...g7n]).filter((_)=>(!_.requiresFlag||_(_.requiresFlag))&&(!_.engines||_.engines.includes(_.engine))&&(!_.when||_.when(_)))}
+---
+> return(_.surface==="_"?[...Ukt,...Z7n]:[...Ukt,...J7n]).filter((_)=>(!_.requiresFlag||_(_.requiresFlag))&&(!_.engines||_.engines.includes(_.engine))&&(!_.when||_.when(_)))}
+357398c357582
+< title:_,onClose:_,closeHintLabel:_?"_ running":"close",...zu({
+---
+> title:_,onClose:_,closeHintLabel:_?"_ running":"close",...Ku({
+358038c358222
+< _=_.max(...TG.map((_)=>_.keys.length))+2}
+---
+> _=_.max(...QG.map((_)=>_.keys.length))+2}
+361112c361296
+< _(_.push(...Bxt(_,_(_,_.length,_))),_.length<_){
+---
+> _(_.push(...Jxt(_,_(_,_.length,_))),_.length<_){
+361558c361742
+< ,...jWn],{
+---
+> ,...BYn],{
+363266c363450
+< __divider`),_.current.set(_.userMessage.id,_ _([_.userMessage.id,...Rt.aiMessages.map((_)=>_.id)]));
+---
+> __divider`),_.current.set(_.userMessage.id,_ _([_.userMessage.id,...Qt.aiMessages.map((_)=>_.id)]));
+363268c363452
+< _ _="agentName"_ _.userMessage?_.userMessage.agentName:_ 0,_=_?_(_,_).hex:_ 0,_=[_.userMessage,...Rt.aiMessages],_=_.filter((_)=>!_.has(_.id));
+---
+> _ _="agentName"_ _.userMessage?_.userMessage.agentName:_ 0,_=_?_(_,_).hex:_ 0,_=[_.userMessage,...Qt.aiMessages],_=_.filter((_)=>!_.has(_.id));
+363919c364103
+< ...UYn(_)}
+---
+> ...CVn(_)}
+363997c364181
+< ]:[],...o1t(_,_)];
+---
+> ]:[],...I1t(_,_)];
+364208c364392
+< _ _=_.rolloutEnabled?[_[0],_,...uce.slice(1)]:_;
+---
+> _ _=_.rolloutEnabled?[_[0],_,..._ce.slice(1)]:_;
+366411c366595
+< ...wce(_,_),_:_,scroll:_,search:_,currentRow:(_)=>_.current.mode===_?_().row:_ 0}
+---
+> ...Dce(_,_),_:_,scroll:_,search:_,currentRow:(_)=>_.current.mode===_?_().row:_ 0}
+366778c366962
+< title:_,onClose:_,searchable:!0,onSearchChange:_,...zu({
+---
+> title:_,onClose:_,searchable:!0,onSearchChange:_,...Ku({
+367011c367195
+< `,onClose:_,searchable:!0,onSearchChange:_,...zu({
+---
+> `,onClose:_,searchable:!0,onSearchChange:_,...Ku({
+367085c367269
+< `,onClose:_,closeHintLabel:_?"_ _ _":"_ close",searchable:!0,onSearchChange:_,...zu({
+---
+> `,onClose:_,closeHintLabel:_?"_ _ _":"_ close",searchable:!0,onSearchChange:_,...Ku({
+367443c367627
+< `,onClose:_,searchable:_.length>0,onSearchChange:_,...zu({
+---
+> `,onClose:_,searchable:_.length>0,onSearchChange:_,...Ku({
+367528,367529c367712,367713
+< ),_.rootPath?_(_,{
+< flexDirection:"column",marginTop:1,children:[_(_,{
+---
+> ),_.rootPath||_.detectedLanguages.length>0||_.projectMarkers.length>0?_(_,{
+> flexDirection:"column",marginTop:1,children:[_.rootPath?_(_,{
+367531c367715
+< ),_.detectedLanguages.length>0&&_(_,{
+---
+> ):_,_.detectedLanguages.length>0&&_(_,{
+367550c367734
+< ),_(_,{
+---
+> ),_.configPath?_(_,{
+367554c367738
+< ),_.docUrl&&_(_,{
+---
+> ):_,_.docUrl&&_(_,{
+367607c367791
+<  entries`,onClose:_,searchable:_.length>0,onSearchChange:_,...zu({
+---
+>  entries`,onClose:_,searchable:_.length>0,onSearchChange:_,...Ku({
+368034c368218
+< ,...jTt(_.summary.trim()||"(empty)",_).map((_)=>({
+---
+> ,...gDt(_.summary.trim()||"(empty)",_).map((_)=>({
+368631c368815
+< return[...SZn,...e.showSessionDashboard?[_]:[],...e.showMoveToBackground?[_]:[]]}
+---
+> return[...cJn,...e.showSessionDashboard?[_]:[],...e.showMoveToBackground?[_]:[]]}
+368785c368969
+< ,...T3()}
+---
+> ,...Q3()}
+368793c368977
+< ,...T3()}
+---
+> ,...Q3()}
+368928c369112
+< )),[_,_,_]),[_,_]=_("display"),[_,_]=_(()=>Object.fromEntries([...U,...lDt].filter((_)=>!_.opensPanel).map((_)=>[_.key,_.cycle?_.key===_.CHAT_SHOW_THINKING?_:_.key===_.CHAT_UI_MODE?_()??String(_.defaultValue):_.key===_.CHAT_FULLSCREEN_WHEEL_ROWS?String(_):_.key===_.CHAT_SCREEN_READER?_.setting:_(_.key,String(_.defaultValue)):_(_.key,_.defaultValue===!0)]))),_=_(()=>({
+---
+> )),[_,_,_]),[_,_]=_("display"),[_,_]=_(()=>Object.fromEntries([...U,...QDt].filter((_)=>!_.opensPanel).map((_)=>[_.key,_.cycle?_.key===_.CHAT_SHOW_THINKING?_:_.key===_.CHAT_UI_MODE?_()??String(_.defaultValue):_.key===_.CHAT_FULLSCREEN_WHEEL_ROWS?String(_):_.key===_.CHAT_SCREEN_READER?_.setting:_(_.key,String(_.defaultValue)):_(_.key,_.defaultValue===!0)]))),_=_(()=>({
+369000c369184
+<  cursor follows replies _ screen readers`,defaultValue:"_",cycle:[...MW]}
+---
+>  cursor follows replies _ screen readers`,defaultValue:"_",cycle:[...HW]}
+371294c371478
+< ]:[],...uJn.map((_)=>({
+---
+> ]:[],...KJn.map((_)=>({
+372723c372907
+< agentEngine:_.agentEngine,sandboxStatus:_.sandboxStatus,sandboxBypassed:_.sandboxExecution.phase==="bypassed",effort:_.currentEffort,thinkingToggleable:_.currentReasoning?.support==="toggleable",thinkingEnabled:_.currentReasoning?.thinkingEnabled??_,goalStatus:_.goalStatus,tangentName:_.tangentName,cloudSessionActive:_.cloudSessionActive,cloudRepo:_.cloudRepo,cloudBranch:_.cloudBranch,cloudExtraRepos:_.cloudExtraRepos,codeIntelligenceActive:_.codeIntelligenceActive,...RJn(_),workspacePath:process.cwd()}
+---
+> agentEngine:_.agentEngine,sandboxStatus:_.sandboxStatus,sandboxBypassed:_.sandboxExecution.phase==="bypassed",effort:_.currentEffort,thinkingToggleable:_.currentReasoning?.support==="toggleable",thinkingEnabled:_.currentReasoning?.thinkingEnabled??_,goalStatus:_.goalStatus,tangentName:_.tangentName,cloudSessionActive:_.cloudSessionActive,cloudRepo:_.cloudRepo,cloudBranch:_.cloudBranch,cloudExtraRepos:_.cloudExtraRepos,codeIntelligenceActive:_.codeIntelligenceActive,...gXn(_),workspacePath:process.cwd()}
+377112,377115c377296
+< readFileSync _ _,writeFileSync _ _}
+< _"_";
+< import{
+< homedir _ _}
+---
+> existsSync _ _,readFileSync _ _,writeFileSync _ _}
+377121c377302,377321
+< return _(_(),".kiro",_)}
+---
+> return _(_)}
+> function _(_=_()){
+> _ _=_(_(),".kiro",_),_=_(_(_),_);
+> _(_===_||!_(_)||_(_))return;
+> _(!_(_))_{
+> _(_(_)),_(_,_(_)),_.info("[secret-storage] copied legacy secrets _ KIRO_HOME")}
+> catch(_){
+> _.warn("[secret-storage] could _ migrate legacy secrets",{
+> error:String(_)}
+> );
+> return}
+> _{
+> _(_,`_{
+> _}
+> \n`)}
+> catch(_){
+> _.warn("[secret-storage] could _ record _ secrets migration",{
+> error:String(_)}
+> )}
+> }
+377135c377335,377337
+< function _(_=_()){
+---
+> function _(_){
+> _ _=_??_();
+> _(_===_ 0)_(_);
+377170c377372
+< _ _="secrets.json";
+---
+> _ _="secrets.json",_=".secrets-migrated";
+377172a377375,377376
+> _();
+> _();
+377239c377443
+< _=_(_,_,{
+---
+> _(),_=_(_,_,{
+377319a377524
+> _();
+377351c377556
+< _=_ _(["mcp_server_init_failure","mcp_oauth_request","mcp_server_initialized","mcp_oauth_cleared","mcp_governance_disabled","web_tools_governance_disabled","agent_not_found","agent_config_error","hooks_update","powers_update","steering_documents_update","diagnostics_update","mcp_server_snapshot","mcp_registry_snapshot","rate_limit_error","system_notice"]),_=_ _(["steering_queued","steering_consumed","steering_cleared"]),_=_ _(["question_request","system_notice","turn_start","turn_end","notification_injected",...Ier])}
+---
+> _=_ _(["mcp_server_init_failure","mcp_oauth_request","mcp_server_initialized","mcp_oauth_cleared","mcp_governance_disabled","web_tools_governance_disabled","agent_not_found","agent_config_error","hooks_update","powers_update","steering_documents_update","diagnostics_update","mcp_server_snapshot","mcp_registry_snapshot","rate_limit_error","system_notice"]),_=_ _(["steering_queued","steering_consumed","steering_cleared"]),_=_ _(["question_request","system_notice","turn_start","turn_end","notification_injected",...ctr])}
+378301a378507,378509
+> async codeIntelligenceStatus(){
+> _(!_.sessionClient)throw Error("_ _ initialized");
+> return _.sessionClient.codeIntelligenceStatus?.()}

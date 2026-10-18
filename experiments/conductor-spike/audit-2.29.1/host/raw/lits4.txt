@@ -1,0 +1,10 @@
+access-token
+access_token
+AuthMethod
+_authMethod
+KIRO_AUTH
+authMethod
+token request
+--auth-method=client
+auth-method=client
+acp-client

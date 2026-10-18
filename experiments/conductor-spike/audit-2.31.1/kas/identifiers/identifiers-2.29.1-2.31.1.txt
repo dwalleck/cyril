@@ -1,0 +1,158 @@
+# 2.29.1 -> 2.31.1: ids 18363 -> 18466 (+114 -11); prose +14 -14
+## ADDED ids (count in new)
++   1 ABORT
++   1 AUTH
++   1 BUSY
++   1 BalancedPoolMissingUpstreamError
++   1 BodyTimeoutError
++   1 CANTOPEN
++   1 CONSTRAINT
++   1 CORRUPT
++   1 ClientClosedError
++   1 ClientDestroyedError
++   1 ConnectTimeoutError
++   1 DispatchedCallCancelledError
++   1 FORMAT
++   1 FileNotFoundError
++   1 HTTPParserError
++   1 HeadersOverflowError
++   1 HeadersTimeoutError
++   1 INTERRUPT
++   1 IOERR
++   1 InformationalError
++   1 InvalidArgumentError
++   1 InvalidReturnValueError
++   1 MCPSessionShutdownError
++   1 MISMATCH
++   1 MISUSE
++   1 MessageSizeExceededError
++   1 NOLFS
++   1 NOMEM
++   1 NOTADB
++   1 NOTFOUND
++   1 NOTICE
++   1 PERM
++   1 PROTOCOL
++   1 RANGE
++   1 READONLY
++   1 RequestAbortedError
++   1 RequestContentLengthMismatchError
++   1 RequestRetryError
++   1 ResponseContentLengthMismatchError
++   1 ResponseExceededMaxSizeError
++   1 ResponseStatusCodeError
++   1 SCHEMA
++   1 SecureProxyConnectionError
++   1 SocketError
++   1 TOOBIG
++   1 TokenEstimationError
++   1 UndiciError
++   1 WARNING
++   4 _kiro/environment/start_ssh_session
++   1 agent.userConfigDir.createFailed
++   1 agent.userConfigDir.ignored
++   1 agent.userConfigDir.resolved
++   1 callTool
++   1 closeConnection
++   3 collateral
++   1 conclusion
++   3 connection-reset
++   1 environment.resumeEnvironment
++   1 environment.startSshSession
++   1 environment.start_ssh_session.resume_failed
++   1 environment.start_ssh_session.resume_requested
++   2 environmentNotReady
++   2 json-rpc
++   1 knowledge.json
++   1 listTools
++   1 mcp.closeConnection.absorbed
++   1 mcp.dispose.resetDrainExpired
++   1 mcp.dispose.resetDrained
++   1 mcp.listTools.refreshAbsorbed
++   1 mcp.toolCall.absentConnectionAfterTeardown
++   1 mcp.toolCall.absentConnectionServerGone
++   1 mcp.toolCall.absentConnectionSuperseded
++   1 mcp.toolCall.approvalOriginUnknown
++   1 mcp.toolCall.awaitingSessionReset
++   1 mcp.toolCall.canceled
++   1 mcp.toolCall.canceledAfterDispatch
++   1 mcp.toolCall.resetCollateral
++   2 mcp.toolCall.resetCollateralUnresolved
++   1 mcp.toolCall.retryBarrierRefused
++   1 mcp.toolCall.retryTargetResetUnresolved
++   1 mcp.toolCall.serverGoneDuringRetry
++   1 mcp.toolCall.serverReplacedDuringRetry
++   1 mcp.toolCall.sessionAlreadyRecovered
++   1 mcp.toolCall.sessionLost
++   1 mcp.toolCall.sessionRecovered
++   3 mcp.toolCall.sessionResetUnresolved
++   2 mcp.toolCall.sessionResetWaitExpired
++   1 mcp.toolCall.sessionShutdown
++   1 mcp.toolCall.toolDisabledDuringRetry
++   1 mcp.toolCall.urlElicitationAccepted
++   1 mcp.toolCall.urlElicitationNotAccepted
++   1 mcp.toolCall.urlElicitationRequired
++   1 origin-unknown
++  10 reconnected
++   1 released
++   2 report
++   1 resetCollateral
++   1 resetServer
++   2 revoked
++   1 sandbox-reconnect
++   3 session-expired
++   3 session-loss
++   2 session-status
++   1 sessionReset
++   1 user-retry
++   4 waitExpired
++   2 worded-status
++   1 workflow.inspect.liveness_failed
++   1 workflow.liveness.claim
++   1 workflow.liveness.claim_local_holder_overstayed
++   1 workflow.liveness.claim_queued_local
++   1 workflow.new.launch_defaults
++   1 workflow.nodePlan.disk_load_failed
++   1 workflow.step.signal_unrecorded
+## REMOVED ids (count in old)
+-   1 AGENTS.md
+-   1 InternalSearch
+-   1 KIRO_FEATURE_TOOL_LOAD_ENABLED
+-   1 SKILL.md
+-   1 ToolSearch
+-   1 WebFetchRendererError
+-   1 builder-mcp
+-   1 builder-mcp::InternalSearch
+-   1 server_name
+-   1 test:nightly-heartbeat
+-   1 tool_name
+## ADDED prose
++ ))throw uM.create(this._globalObject,['Processing instruction data cannot contain the string 
++ ),runLabel:Ort.optional().describe(`Display label for this run, shown in run lists and notifications instead of the recipe name. Recommended whenever launching a reusable recipe: use a descriptive <recipe>-<topic> label, e.g. 
++ ?queueMicrotask.bind(Lie):typeof process<
++ Connect abandoned before dialing, pool disposed
++ Error closing in-flight connection during dispose
++ Fetch mode: "full" fetches complete content (up to 10MB), "truncated" fetches only first 8KB for quick preview, "selective" fetches only sections containing the search phrase. Default is "truncated".
++ MCP tool call canceled after it was dispatched
++ The inspection read a file it was not approved for.
++ The owning process will finalize the step from its own state.
++ The workflow location changed after approval.
++ This step will pause for the user when this turn ends instead of finishing.
++ [KiroAgent] mcp.resetServer.responseCeilingExpired
++ s step status, or, from the owning parent with nodeId omitted, pauses ("paused"), resumes ("running"), or stops ("aborted") the run. "replace_remaining" replaces all steps after the current one. "extend_repeat" grants more iterations to a repeat paused on maxIterations and resumes the run.`),status:k.enum(Nru).optional().describe(`New status for the caller
++ t set their own. Omit to inherit this session
+## REMOVED prose
+- ))throw pM.create(this._globalObject,['Processing instruction data cannot contain the string 
+- ),runLabel:Crt.optional().describe(`Display label for this run, shown in run lists and notifications instead of the recipe name. Recommended whenever launching a reusable recipe: use a descriptive <recipe>-<topic> label, e.g. 
+- ?queueMicrotask.bind(Nie):typeof process<
+- All URL elicitations accepted, retrying tool call
+- Connection completed but a newer same-name attempt superseded it, discarding
+- Connection failed but a newer same-name attempt superseded it, suppressing error
+- Exact tool identifier to load (from available-deferred-tools list, format: server_name::tool_name). The tool is loaded and immediately available.
+- Failed to refresh tools after tools/list_changed
+- Fetch mode: "full" fetches complete content (up to 10MB), "truncated" fetches only first 8KB for quick preview, "selective" fetches only sections containing the search phrase, "rendered" uses a full browser engine to render JavaScript-heavy pages (use only as a retry when a previous fetch returned insufficient content). Default is "truncated".
+- Keywords to search for tools. All matching tools are loaded and immediately available.
+- Maximum number of results to return (default: 5)
+- Provide either tool_id or query, not both
+- node --test scripts/nightly-heartbeat.test.mjs scripts/nightly-heartbeat-cli.test.mjs
+- s step status, or, from the owning parent with nodeId omitted, pauses ("paused"), resumes ("running"), or stops ("aborted") the run. "replace_remaining" replaces all steps after the current one. "extend_repeat" grants more iterations to a repeat paused on maxIterations and resumes the run.`),status:k.enum(ztu).optional().describe(`New status for the caller

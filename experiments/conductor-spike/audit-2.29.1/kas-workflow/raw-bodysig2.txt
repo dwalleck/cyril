@@ -1,0 +1,69 @@
+=== FULL sig diff for _kiro/workflow/new
+--- 
++++ 
+@@ -10,4 +10,6 @@
+ "it cannot launch a workflow; use a session with a folder open"
+ .workflow
++.workflow
++.length
+ .safeParse
+ .workflow
+@@ -37,4 +39,5 @@
+ .host
+ .recipeFs
++.host
+ .startsWith
+ .slice
+@@ -55,4 +58,7 @@
+ .host
+ .recipeFs
++.host
++.host
++.recipeInForce
+ .host
+ .resolveWorkspacePathForNew
+@@ -141,12 +147,12 @@
+ parentModelId:
+ parentEffortLevel:
+-.C
++.x
+ policyPresetIds:
+-.A
++.R
+ backgroundExecution:
+ rootConversationId:
+ .d
+ runLabel:
+-.R
++.I
+ .length
+ originalUserMessages:
+
+=== consent round cap hunt (20 anywhere near approval)
+  [OLD] @11012323: xt},...u.workflowWatch&&{workflowWatch:u.workflowWatch},...d&&{consent:d},...p!==void 0&&{consentRound:p},...u.mcpTool&&{mcpTool:EKt(u.mcpTool)}}}}),w=W6e(o,r,n,{interactionType:"tool_approval
+  [NEW] @2039261: le:k.string(),description:k.string().optional()})).optional()}))]),executionId:k.string(),consentRound:k.number().optional(),_meta:k.record(k.unknown()).optional()}),ZYs=k.object({type:k.liter
+  regex '>=20': OLD=16 NEW=17
+  regex '>20': OLD=20 NEW=20
+  regex '===20': OLD=9 NEW=9
+  regex 'rounds?': OLD=727 NEW=742
+  regex 'retryLimit': OLD=0 NEW=0
+  regex 'maxAttempts': OLD=100 NEW=107
+
+=== NEW consentRound full context (round increment site)
+  @2039261: {optionId:k.string(),name:k.string(),kind:k.string()})),k.array(k.object({title:k.string(),description:k.string().optional(),recommended:k.boolean().optional(),subOptionsLabel:k.string().optional(),subOptions:k.array(k.object({title:k.string(),description:k.string().optional()})).optional()}))]),executionId:k.string(),consentRound:k.number().optional(),_meta:k.record(k.unknown()).optional()}),ZYs=k.object({type:k.literal("inte
+  @2039491: le:k.string(),description:k.string().optional()})).optional()}))]),executionId:k.string(),consentRound:k.number().optional(),_meta:k.record(k.unknown()).optional()}),ZYs=k.object({type:k.literal("interaction_resolved"),toolCallId:k.string(),outcome:k.string(),selectedOption:k.string().optional(),executionId:k.string(),consentRound:k.number().optional()}),JYs=k.object({type:k.literal("session_metadata"),key:k.string(),value:k.u
+  @11063695: ||r.exitCode!=null)&&{result:{...r.output!=null&&{output:r.output},...r.exitCode!=null&&{exitCode:r.exitCode}}}}}};return[fa({kind:"hook_update",hook:i})]}case"pending_interaction":return[fa({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved"
+  @11063719: sult:{...r.output!=null&&{output:r.output},...r.exitCode!=null&&{exitCode:r.exitCode}}}}}};return[fa({kind:"hook_update",hook:i})]}case"pending_interaction":return[fa({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"intera
+  @11063734: ut!=null&&{output:r.output},...r.exitCode!=null&&{exitCode:r.exitCode}}}}}};return[fa({kind:"hook_update",hook:i})]}case"pending_interaction":return[fa({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved"
+  @11063947: onType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}func
+  @11063971: ,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}function nou(e,t){switch(e){
+  @11063986: stion,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}function nou(e,t){switch(e){case"memoryExtr
+  @11290515: }async receive(t){try{this.settle({kind:"answered",response:await t()})}catch(r){this.settle({kind:"failed",error:r instanceof Error?r:new Error(String(r))})}}settle(t){this.end.isSettled||(this.party.signal?.removeEventListener("abort",this.abandon),this.releaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}fun
+  @11290541: .settle({kind:"answered",response:await t()})}catch(r){this.settle({kind:"failed",error:r instanceof Error?r:new Error(String(r))})}}settle(t){this.end.isSettled||(this.party.signal?.removeEventListener("abort",this.abandon),this.releaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta
+  @11290556: answered",response:await t()})}catch(r){this.settle({kind:"failed",error:r instanceof Error?r:new Error(String(r))})}}settle(t){this.end.isSettled||(this.party.signal?.removeEventListener("abort",this.abandon),this.releaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta;return Zze(t)&
+  @11290773: leaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta;return Zze(t)&&Zze(t.kiro)?t.kiro:void 0}function i0o(e,t){if(typeof e=="string")return typeof t=="number"?{toolCallId:e,consentRound:t}:{toolCallId:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o
+  @11290905: {return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta;return Zze(t)&&Zze(t.kiro)?t.kiro:void 0}function i0o(e,t){if(typeof e=="string")return typeof t=="number"?{toolCallId:e,consentRound:t}:{toolCallId:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.too
+  @11291025: (e,t){if(typeof e=="string")return typeof t=="number"?{toolCallId:e,consentRound:t}:{toolCallId:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===t.consentRound}he(
+  @11291102: und:t}:{toolCallId:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===t.consentRound}he();async function wce(e,t,r,n,i,o){let{ask:s}=n,{toolCallId:a}=s,c=async h=>{i
+  @11291119: d:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===t.consentRound}he();async function wce(e,t,r,n,i,o){let{ask:s}=n,{toolCallId:a}=s,c=async h=>{if(o)try{await o.s
+  @11294906: or:String(d)}))};return async(u,l,d,p)=>{let f={toolId:u.toolId,operationId:u.operationId};S.info("acp.tool_approval.request",f);let h=new sPt(l);try{let m=t0o(d),g=u.command??u.title??(u.toolTags.includes("@mcp")&&u.path?`@${u.path}`:void 0)??u5({toolId:u.toolId,actionType:u.toolId}).title,y={toolCallId:u.operationId,consentRound:p},w=()=>t.requestPermission({sessionId:r,toolCall:{toolCallId:y.toolCallId,status:"pending",titl

@@ -1,0 +1,27 @@
+  [OLD] v9r @9368729: eringDocument$){};ZIt.CreateSteeringDocumentCommand=g9r});var w9r=E(JIt=>{"use strict";Object.defineProperty(JIt,"__esModule",{value:!0});JIt.DeleteMcpServerConfigCommand=void 0;var S9r=Xs(),D_u=Ts(),v9r=class extends(0,S9r.command)(S9r._ep0,S9r._mw0,"DeleteMcpServerConfig",D_u.DeleteMcpServerConfig$){};JIt.DeleteMcpServerConfigCommand=v9r});var b9r=E(QIt=>{"use strict";Object.defineProperty(QIt,"__esModule",{value:!0});QIt.DeleteSpaceCommand=void 0;var _9r=X
+  [NEW] v$r @7915098: fectivePrompt:r.combinedAppendix.length>0?`${e.prompt} ${r.combinedAppendix}`:e.prompt,blocked:!1}}var y$r=E(()=>{"use strict";V6();rp()});function S$r(e,t){return _$r("PostFileCreate",e,t)}function v$r(e,t){return _$r("PostFileSave",e,t)}function w$r(e,t){return _$r("PostFileDelete",e,t)}async function _$r(e,t,r){let n=await fw(e,{trigger:e,sessionId:t.sessionId,rootConversationId:t.rootConversationId,cwd:t.cwd,signal:t.signal,matchContext:{trigger:e,filePa
+
+##### 'allow_always'
+  @255134: …
+  @11287663: :(this.admitted=!0,Promise.resolve("admitted"))}release(){this.queue.length>0?this.queue[0].settle("admitted"):this.admitted=!1}};Si();yi();Br();he();yD();HA();he();function t0o(e){let t=e&&e.persistableConsent!==!1,r=t&&e.askType!=="explicit";return[{optionId:"accept",name:"Allow",kind:"allow_once"},...r?[{optionId:"always-accept",name:"Always allow",kind:"allow_always"}]:[],{optionId:"reject",name:"Deny",kind:"reject_once"},...t?[{optionId:"always-reject",name:"Always deny",kind:"reject_always"}]:[]]}function r0o(e,t,r,n,i,o,s){let c=t.find(m=>m.optionId===e)?.kind,u=c==="allow_once"||c==="allow_always",l=c==="allow_always"||c==="reject_always",d;if(l){let …
+  @11287902: cit";return[{optionId:"accept",name:"Allow",kind:"allow_once"},...r?[{optionId:"always-accept",name:"Always allow",kind:"allow_always"}]:[],{optionId:"reject",name:"Deny",kind:"reject_once"},...t?[{optionId:"always-reject",name:"Always deny",kind:"reject_always"}]:[]]}function r0o(e,t,r,n,i,o,s){let c=t.find(m=>m.optionId===e)?.kind,u=c==="allow_once"||c==="allow_always",l=c==="allow_always"||c==="reject_always",d;if(l){let m=c==="allow_always"&&n?.askType==="explicit",g=n?.persistableConsent===!1,y=n?.capability??jT(i,o);if(y&&!m&&!g){let …
+   ...more
+
+##### 'allow_always'
+  @255102: …
+  @11005280: :(this.admitted=!0,Promise.resolve("admitted"))}release(){this.queue.length>0?this.queue[0].settle("admitted"):this.admitted=!1}};Mi();fo();sn();Ee();bM();CN();Ee();function ouo(e){let t=e&&e.persistableConsent!==!1,r=t&&e.askType!=="explicit";return[{optionId:"accept",name:"Allow",kind:"allow_once"},...r?[{optionId:"always-accept",name:"Always allow",kind:"allow_always"}]:[],{optionId:"reject",name:"Deny",kind:"reject_once"},...t?[{optionId:"always-reject",name:"Always deny",kind:"reject_always"}]:[]]}function suo(e,t,r,n,o,i,s){let c=t.find(m=>m.optionId===e)?.kind,u=c==="allow_once"||c==="allow_always",l=c==="allow_always"||c==="reject_always",d;if(l){let …
+  @11005519: cit";return[{optionId:"accept",name:"Allow",kind:"allow_once"},...r?[{optionId:"always-accept",name:"Always allow",kind:"allow_always"}]:[],{optionId:"reject",name:"Deny",kind:"reject_once"},...t?[{optionId:"always-reject",name:"Always deny",kind:"reject_always"}]:[]]}function suo(e,t,r,n,o,i,s){let c=t.find(m=>m.optionId===e)?.kind,u=c==="allow_once"||c==="allow_always",l=c==="allow_always"||c==="reject_always",d;if(l){let m=c==="allow_always"&&n?.askType==="explicit",g=n?.persistableConsent===!1,y=n?.capability??dT(o,i);if(y&&!m&&!g){let …
+   ...more
+
+### consent loop / round cap
+  maxRounds              6->  6
+  MAX_CONSENT            0->  0
+  consentRounds          0->  0
+  roundLimit             0->  0
+  allow_always           7->  7
+  alwaysAllow            0->  0
+  allowAlways            0->  0
+  consentRound           1-> 17
+
+### OLD: where does p (consentRound) come from in requestPermission meta
+   d=>({scope:"session",source:"consent",message:d,fatal:!1}))};t.extNotification("_kiro/policy/error",l).catch(d=>v.warn("acp.tool_approval.persist_warning_emit_failed",{error:String(d)}))};return async(u,l,d,p)=>{let f={toolId:u.toolId,operationId:u.operationId};v.info("acp.tool_approval.request",f);let h=new iCt(l);try{let m=ouo(d),g=u.command??u.title??(u.toolTags.includes("@mcp")&&u.path?`@${u.path}`:void 0)??c5({toolId:u.toolId,actionType:u.toolId}).title,y=()=>t.requestPermission({sessionId:r,toolCall:{toolCallId:u.operationId,status:"pending",title:g,...u.records!==void 0&&{locations:u.records.files.map(T=>({path:T}))}},options:m,_meta:{kiro:{toolId:u.toolId,...u.command&&{command:u.command},...u.agentManagesTrust&&{agentManagesTrust:!0},...u.disclosedContext&&{disclosedContext:u.disclosedContext},...u.workflowWatch&&{workflowWatch:u.workflowWatch},...d&&{consent:d},...p!==void …

@@ -1,0 +1,2765 @@
+1029c1029
+< _ _,_,_=!0,_=!0,_="Default _ _ startup, fullscreen startup, animations, ASCII _, icons, thinking, _ scrollback";
+---
+> _ _,_,_=!0,_=!0,_="Default _ _ startup, fullscreen startup, animations, ASCII _, icons, screen reader, thinking, _ scrollback";
+1032c1032
+< CHAT_GREETING_ENABLED:"_.greeting.enabled",CHAT_ENABLE_NOTIFICATIONS:"_.enableNotifications",CHAT_NOTIFICATION_METHOD:"_.notificationMethod",CHAT_AUTO_EXPAND_TOOL_OUTPUT:"_.autoExpandToolOutput",CHAT_DISABLE_WRAP:"_.disableWrap",CHAT_PRESERVE_SCROLLBACK:"_.preserveScrollback",CHAT_START_FULLSCREEN:"_.startFullscreen",CHAT_FULLSCREEN_WHEEL_ROWS:"_.fullscreenWheelRows",CHAT_FULLSCREEN_COPY_ON_SELECT:"_.fullscreenCopyOnSelect",CHAT_DISABLE_TRUST_ALL_CONFIRMATION:"_.disableTrustAllConfirmation",CHAT_KEYBINDINGS_CANCEL_STREAM:"_.keybindings.cancelStream",CHAT_KEYBINDINGS_CLOSE_MENU:"_.keybindings.closeMenu",CHAT_KEYBINDINGS_QUIT:"_.keybindings.quit",CHAT_UI_MODE:"_.uiMode",CHAT_ASCII_MODE:"_.allowAsciiArt",CHAT_ANIMATIONS:"_.allowAnimations",CHAT_ICONS:"_.allowIcons",CHAT_SHOW_THINKING:"_.showThinking",CHAT_SHOW_THINKING_TIPS:"_.showThinkingTips",CHAT_SPINNER_VERBS:"_.spinnerVerbs",CHAT_ENABLE_CUSTOM_SPINNER_VERBS:"_.enableCustomSpinnerVerbs",CHAT_HISTORY_MODE:"_.historyMode",CHAT_OUTPUT_STYLE:"_.outputStyle",CHAT_VERBOSITY_LITE:"_.verbosity.lite",CHAT_VERBOSITY_TUI:"_.verbosity.tui",CHAT_TOOLS_FILTERS:"_.tools.filters",CHAT_TOOLS_SHOW_REASONING:"_.tools.showReasoning",CHAT_TOOLS_ARGS_MODE:"_.tools.argsMode",CHAT_TOOLS_SHOW_ELAPSED:"_.tools.showElapsed",CHAT_TOOLS_ARGS_MAX_LINES:"_.tools.argsMaxLines",CHAT_TOOLS_OUTPUT_MAX_LINES:"_.tools.outputMaxLines",CHAT_TOOLS_ARGS_MAX_CHARS:"_.tools.argsMaxChars",CHAT_TOOLS_OUTPUT_MAX_CHARS:"_.tools.outputMaxChars",CHAT_TOOLS_PERSIST_OUTPUT:"_.tools.persistOutput",CHAT_TOOLS_SHOW_WRITE_DIFFS:"_.tools.showWriteDiffs",CHAT_SHOW_TASKS:"_.showTasks",CHAT_SUBAGENT_SHOW_PIPELINE:"_.subagent.showPipeline",CHAT_SUBAGENT_SHOW_PROMPTS:"_.subagent.showPrompts",CHAT_SUBAGENT_SHOW_ROLES:"_.subagent.showRoles",CHAT_SUBAGENT_SHOW_DEPS:"_.subagent.showDeps",CHAT_SUBAGENT_SHOW_RESPONSES:"_.subagent.showResponses",CHAT_TERMINAL_TITLE:"_.terminalTitle",CHAT_STATUS_LINE_TUI:"_.statusLine.tui",CHAT_STATUS_LINE_LITE:"_.statusLine.lite",CHAT_DEFAULT_INTERRUPT_BEHAVIOR:"_.defaultInterruptBehavior",CHAT_KEYBINDINGS_TOGGLE_INTERRUPT_BEHAVIOR:"_.keybindings.toggleInterruptBehavior",CHAT_KEYBINDINGS_TOGGLE_SESSION_DASHBOARD:"_.keybindings.toggleSessionDashboard",CHAT_KEYBINDINGS_MOVE_TO_BACKGROUND:"_.keybindings.moveToBackground",CHAT_SESSION_DASHBOARD_GROUP_BY:"_.sessionDashboard.groupBy",CHAT_SESSION_DASHBOARD_SORT_BY:"_.sessionDashboard.sortBy",CHAT_SESSION_DASHBOARD_SCOPE:"_.sessionDashboard.scope",CHAT_SESSION_DASHBOARD_INDEX_RESPONSES:"_.sessionDashboard.indexResponses",CHAT_DEFAULT_MODEL:"_.defaultModel",CHAT_MODEL_DEFAULTS:"_.modelDefaults",CHAT_ENABLE_INFRA_SAFETY_MONITOR:"_.enableInfraSafetyMonitor",CHAT_ENABLE_INFRA_SAFETY_ENFORCE:"_.enableInfraSafetyEnforce",CHAT_ENABLE_WORKFLOWS:"_.enableWorkflows",CHAT_ENABLE_C2S:"_.enableC2s",CHAT_HIGH_PERFORMANCE_MODE:"_.highPerformanceMode",MEMORY_MODE:"memory.mode",MEMORY_REFLECTION:"memory.reflection",WORKFLOW_MONITOR_MOUSE:"_.workflowMonitor.mouseEnabled",WORKFLOW_CONTINUE_INTERRUPTED:"_.workflow.continueInterrupted",SPEC_REVIEW_MOUSE:"_.specReview.mouseEnabled",CHAT_TURN_USAGE_THIS_TURN:"_.turnUsage.thisTurn",CHAT_TURN_USAGE_THIS_SESSION:"_.turnUsage.thisSession",CHAT_TURN_USAGE_TIME:"_.turnUsage.time"}
+---
+> CHAT_GREETING_ENABLED:"_.greeting.enabled",CHAT_ENABLE_NOTIFICATIONS:"_.enableNotifications",CHAT_NOTIFICATION_METHOD:"_.notificationMethod",CHAT_AUTO_EXPAND_TOOL_OUTPUT:"_.autoExpandToolOutput",CHAT_DISABLE_WRAP:"_.disableWrap",CHAT_PRESERVE_SCROLLBACK:"_.preserveScrollback",CHAT_START_FULLSCREEN:"_.startFullscreen",CHAT_FULLSCREEN_WHEEL_ROWS:"_.fullscreenWheelRows",CHAT_FULLSCREEN_COPY_ON_SELECT:"_.fullscreenCopyOnSelect",CHAT_DISABLE_TRUST_ALL_CONFIRMATION:"_.disableTrustAllConfirmation",CHAT_KEYBINDINGS_CANCEL_STREAM:"_.keybindings.cancelStream",CHAT_KEYBINDINGS_CLOSE_MENU:"_.keybindings.closeMenu",CHAT_KEYBINDINGS_QUIT:"_.keybindings.quit",CHAT_UI_MODE:"_.uiMode",CHAT_ASCII_MODE:"_.allowAsciiArt",CHAT_ANIMATIONS:"_.allowAnimations",CHAT_ICONS:"_.allowIcons",CHAT_SCREEN_READER:"_.screenReader",CHAT_SHOW_THINKING:"_.showThinking",CHAT_SHOW_THINKING_TIPS:"_.showThinkingTips",CHAT_SPINNER_VERBS:"_.spinnerVerbs",CHAT_ENABLE_CUSTOM_SPINNER_VERBS:"_.enableCustomSpinnerVerbs",CHAT_HISTORY_MODE:"_.historyMode",CHAT_OUTPUT_STYLE:"_.outputStyle",CHAT_VERBOSITY_LITE:"_.verbosity.lite",CHAT_VERBOSITY_TUI:"_.verbosity.tui",CHAT_TOOLS_FILTERS:"_.tools.filters",CHAT_TOOLS_SHOW_REASONING:"_.tools.showReasoning",CHAT_TOOLS_ARGS_MODE:"_.tools.argsMode",CHAT_TOOLS_SHOW_ELAPSED:"_.tools.showElapsed",CHAT_TOOLS_ARGS_MAX_LINES:"_.tools.argsMaxLines",CHAT_TOOLS_OUTPUT_MAX_LINES:"_.tools.outputMaxLines",CHAT_TOOLS_ARGS_MAX_CHARS:"_.tools.argsMaxChars",CHAT_TOOLS_OUTPUT_MAX_CHARS:"_.tools.outputMaxChars",CHAT_TOOLS_PERSIST_OUTPUT:"_.tools.persistOutput",CHAT_TOOLS_SHOW_WRITE_DIFFS:"_.tools.showWriteDiffs",CHAT_SHOW_TASKS:"_.showTasks",CHAT_SUBAGENT_SHOW_PIPELINE:"_.subagent.showPipeline",CHAT_SUBAGENT_SHOW_PROMPTS:"_.subagent.showPrompts",CHAT_SUBAGENT_SHOW_ROLES:"_.subagent.showRoles",CHAT_SUBAGENT_SHOW_DEPS:"_.subagent.showDeps",CHAT_SUBAGENT_SHOW_RESPONSES:"_.subagent.showResponses",CHAT_TERMINAL_TITLE:"_.terminalTitle",CHAT_STATUS_LINE_TUI:"_.statusLine.tui",CHAT_STATUS_LINE_LITE:"_.statusLine.lite",CHAT_DEFAULT_INTERRUPT_BEHAVIOR:"_.defaultInterruptBehavior",CHAT_KEYBINDINGS_TOGGLE_INTERRUPT_BEHAVIOR:"_.keybindings.toggleInterruptBehavior",CHAT_KEYBINDINGS_TOGGLE_SESSION_DASHBOARD:"_.keybindings.toggleSessionDashboard",CHAT_KEYBINDINGS_MOVE_TO_BACKGROUND:"_.keybindings.moveToBackground",CHAT_SESSION_DASHBOARD_GROUP_BY:"_.sessionDashboard.groupBy",CHAT_SESSION_DASHBOARD_SORT_BY:"_.sessionDashboard.sortBy",CHAT_SESSION_DASHBOARD_SCOPE:"_.sessionDashboard.scope",CHAT_SESSION_DASHBOARD_INDEX_RESPONSES:"_.sessionDashboard.indexResponses",CHAT_DEFAULT_MODEL:"_.defaultModel",CHAT_MODEL_DEFAULTS:"_.modelDefaults",CHAT_ENABLE_INFRA_SAFETY_MONITOR:"_.enableInfraSafetyMonitor",CHAT_ENABLE_INFRA_SAFETY_ENFORCE:"_.enableInfraSafetyEnforce",CHAT_ENABLE_WORKFLOWS:"_.enableWorkflows",CHAT_ENABLE_C2S:"_.enableC2s",CHAT_HIGH_PERFORMANCE_MODE:"_.highPerformanceMode",MEMORY_MODE:"memory.mode",MEMORY_REFLECTION:"memory.reflection",WORKFLOW_MONITOR_MOUSE:"_.workflowMonitor.mouseEnabled",WORKFLOW_CONTINUE_INTERRUPTED:"_.workflow.continueInterrupted",SPEC_REVIEW_MOUSE:"_.specReview.mouseEnabled",CHAT_TURN_USAGE_THIS_TURN:"_.turnUsage.thisTurn",CHAT_TURN_USAGE_THIS_SESSION:"_.turnUsage.thisSession",CHAT_TURN_USAGE_TIME:"_.turnUsage.time"}
+1169c1169
+< dotFilled:"\u25CF",dotEmpty:"\u25CB",dotLoading:"\u25CC",checkmark:"\u2713",cross:"\u2717",warning:"\u26A0",chevron:"\u276F",prompt:"\u203A",arrowRight:"\u25B8",arrowDown:"\u2193",diamond:"\u25C7",_:"\u25C9",smallDot:"\_",bullet:"\u2022",clipboard:"\uD83D\uDCCB",sparkle:"\u2728",progress0:"\u25F7",progress25:"\u25D4",progress50:"\u25D1",progress75:"\u25D5",executing:"\u25D0",lineHorizontal:"\u2500",lineHorizontalHeavy:"\u2501",lineVertical:"\u2502",cornerTopRight:"\u2510",cornerBottomRight:"\u2518",cornerBottomLeft:"\u2514",cornerBottomLeftRound:"\u2570",teeLeft:"\u2524",teeRight:"\u251C",arrow:"\u2192",arrowLeft:"\u2190",cornerTopLeft:"\u250C",teeTop:"\u252C",teeBottom:"\u2534",tableCross:"\u253C",treeCorner:"\u2514\u2500\u2500",treeBranch:"\u251C\u2500\u2500",ellipsis:"\u2026",midEllipsis:"\u22EF",arrowUp:"\u2191",enter:"\u21B5",triangleLeft:"\u25C0",triangleRight:"\u25B6",_:"\u21BB",refresh:"\u27F3",codeIntelligence:"\u03BB",times:"\_",pause:"\u23F8",_:"\u2588",pencil:"\u270E",wrench:"\uD83D\uDD27",emDash:"\u2014",cloud:"\u2601\uFE0F",dotDouble:"\u25C9",dotDashed:"\u25CC",search:"\u2315",rewind:"\u21A9",shift:"\u21E7",_:"\u2699"}
+---
+> dotFilled:"\u25CF",dotEmpty:"\u25CB",dotLoading:"\u25CC",checkmark:"\u2713",cross:"\u2717",warning:"\u26A0",chevron:"\u276F",prompt:"\u203A",arrowRight:"\u25B8",arrowDown:"\u2193",diamond:"\u25C7",_:"\u25C9",smallDot:"\_",bullet:"\u2022",clipboard:"\u2338",sparkle:"\u2727",progress0:"\u25F7",progress25:"\u25D4",progress50:"\u25D1",progress75:"\u25D5",executing:"\u25D0",lineHorizontal:"\u2500",lineHorizontalHeavy:"\u2501",lineVertical:"\u2502",cornerTopRight:"\u2510",cornerBottomRight:"\u2518",cornerBottomLeft:"\u2514",cornerBottomLeftRound:"\u2570",teeLeft:"\u2524",teeRight:"\u251C",arrow:"\u2192",arrowLeft:"\u2190",cornerTopLeft:"\u250C",teeTop:"\u252C",teeBottom:"\u2534",tableCross:"\u253C",treeCorner:"\u2514\u2500\u2500",treeBranch:"\u251C\u2500\u2500",ellipsis:"\u2026",midEllipsis:"\u22EF",arrowUp:"\u2191",enter:"\u21B5",triangleLeft:"\u25C0",triangleRight:"\u25B6",_:"\u21BB",refresh:"\u27F3",codeIntelligence:"\u03BB",times:"\_",pause:"\u23F8",_:"\u2588",pencil:"\u270E",wrench:"\u2692",emDash:"\u2014",cloud:"\u2601",dotDouble:"\u25C9",dotDashed:"\u25CC",search:"\u2315",rewind:"\u21A9",shift:"\u21E7",_:"\u2699"}
+6715c6715
+< ...dxe.mergeOtlpSharedConfigurationWithDefaults(_,_,_),headers:_(_.headers,_.headers,_.headers),_:_(_.url)??_.url??_.url}
+---
+> ...Rxe.mergeOtlpSharedConfigurationWithDefaults(_,_,_),headers:_(_.headers,_.headers,_.headers),_:_(_.url)??_.url??_.url}
+6720c6720
+< ...dxe.getSharedConfigurationDefaults(),headers:async()=>_,_:"_://localhost:4318/"+_}
+---
+> ...Rxe.getSharedConfigurationDefaults(),headers:async()=>_,_:"_://localhost:4318/"+_}
+6745c6745
+< ...gxe.mergeOtlpHttpConfigurationWithDefaults(_,_,_),agentFactory:_.agentFactory??_.agentFactory??_.agentFactory,userAgent:_.userAgent}
+---
+> ...Oxe.mergeOtlpHttpConfigurationWithDefaults(_,_,_),agentFactory:_.agentFactory??_.agentFactory??_.agentFactory,userAgent:_.userAgent}
+6750c6750
+< ...gxe.getHttpConfigurationDefaults(_,_),agentFactory:_({
+---
+> ...Oxe.getHttpConfigurationDefaults(_,_),agentFactory:_({
+7087c7087
+< ...ZVt.getSharedConfigurationFromEnvironment(_),_:_(_)??_(_),headers:_.wrapStaticHeadersInFunction(_(_)),agentFactory:_.httpAgentFactoryFromOptions({
+---
+> ...RZt.getSharedConfigurationFromEnvironment(_),_:_(_)??_(_),headers:_.wrapStaticHeadersInFunction(_(_)),agentFactory:_.httpAgentFactoryFromOptions({
+7731c7731
+< names:[...TBe,"inspect_workflow","Inspect Workflow","update_workflow","Update Workflow"],renderer:"workflow",_:"_"}
+---
+> names:[...ZBe,"inspect_workflow","Inspect Workflow","update_workflow","Update Workflow"],renderer:"workflow",_:"_"}
+7914c7914
+< ...d5(_.access),memory_auto_updates:_.autoUpdates}
+---
+> ...v5(_.access),memory_auto_updates:_.autoUpdates}
+7921c7921
+< version_full:_.version,...iE(_.state)}
+---
+> version_full:_.version,...uE(_.state)}
+7940c7940
+< ,_,[...sJt])}
+---
+> ,_,[...$Jt])}
+8011c8011
+< ...lJt(_,_.version,_,_.executionContext??"_"),tool_outcome:_.outcome}
+---
+> ...qJt(_,_.version,_,_.executionContext??"_"),tool_outcome:_.outcome}
+8079c8079
+< version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_.engine??_,...iE(_.memory)}
+---
+> version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_.engine??_,...uE(_.memory)}
+8215c8215
+< version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_,...iE(_.memory)}
+---
+> version_full:_.version,session_interface:_,agent_mode:_(_.mode),agent_engine:_,...uE(_.memory)}
+8231c8231
+< version_full:_.version,agent_engine:_.engine??_,model:_.model||"unknown",token_type:_,...iE(_.memory)}
+---
+> version_full:_.version,agent_engine:_.engine??_,model:_.model||"unknown",token_type:_,...uE(_.memory)}
+8244c8244
+< version_full:_.version,model:_.model||"unknown",...iE(_.memory)}
+---
+> version_full:_.version,model:_.model||"unknown",...uE(_.memory)}
+9389a9390,9392
+> _(typeof _!=="string"||_.length>_)return _;
+> return _.test(_)?_:_}
+> function _(_){
+9392c9395
+< _ _,_;
+---
+> _ _,_,_=1024,_;
+9395c9398,9403
+< _=_(),_=_()}
+---
+> _=_(),_=_();
+> _=_ RegExp(`^[_-_-_-9._:-]{
+> 1,_{
+> _}
+> }
+> _`)}
+9655c9663
+< ...L5(_,_(_,_)),submissions:_,clears:_?_:_.clears}
+---
+> ...J5(_,_(_,_)),submissions:_,clears:_?_:_.clears}
+9702c9710
+< ...O5,nextId:_.nextId}
+---
+> ...Z5,nextId:_.nextId}
+10044c10052
+< ...H5(_(),_.serverName),initErrors:_,mcpInitStatus:_}
+---
+> ...aj(_(),_.serverName),initErrors:_,mcpInitStatus:_}
+10078c10086
+< ..._i(_(_().steerQueue,{
+---
+> ...Ei(_(_().steerQueue,{
+10084c10092
+< ..._i(_(_().steerQueue,_.messageIds)),editingSteerLineIndex:_}
+---
+> ...Ei(_(_().steerQueue,_.messageIds)),editingSteerLineIndex:_}
+10159c10167
+< ...H5(_,_.serverName),mcpInitStatus:_}
+---
+> ...aj(_,_.serverName),mcpInitStatus:_}
+10193c10201
+< ,_,[...een])}
+---
+> ,_,[...Oen])}
+10401c10409
+< ,_=Object.keys(_.modifier),_=Object.keys(_.color),_=Object.keys(_.bgColor),_=[...ren,...aen];
+---
+> ,_=Object.keys(_.modifier),_=Object.keys(_.color),_=Object.keys(_.bgColor),_=[...Pen,...Uen];
+10518c10526
+< _(_==="_")return _("_",_,_,...pd.hexToRgb(...r));
+---
+> _(_==="_")return _("_",_,_,...md.hexToRgb(...r));
+10593c10601
+< ...EE,level:{
+---
+> ...xE,level:{
+10864c10872
+< ...tc}
+---
+> ...oc}
+10890c10898
+< enabled:_,..._M(_)?{
+---
+> enabled:_,...IM(_)?{
+10924c10932
+< enabled:_,..._M(_)?{
+---
+> enabled:_,...IM(_)?{
+10961c10969
+< _ _=!_&&!_,_=_||_&&!_?"DEFAULT_BLOCKED":_.networkAccess,_=_.configuration.networkAccess,_=!_?_:_?_:_(_,_),_=!_&&!(_&&!_)&&_.mcpSandboxing||_.configuration.mcpSandboxing===!0,_=_||_!==_.networkAccess||_!==_.mcpSandboxing,_=[...n.diagnostics,...ven(_,_,_,_.configuration,_)];
+---
+> _ _=!_&&!_,_=_||_&&!_?"DEFAULT_BLOCKED":_.networkAccess,_=_.configuration.networkAccess,_=!_?_:_?_:_(_,_),_=!_&&!(_&&!_)&&_.mcpSandboxing||_.configuration.mcpSandboxing===!0,_=_||_!==_.networkAccess||_!==_.mcpSandboxing,_=[...n.diagnostics,...ctn(_,_,_,_.configuration,_)];
+11036c11044
+< ...ej,sandboxRestorationBlocked:!1,sandboxRepair:_,sandboxExecution:{
+---
+> ...gj,sandboxRestorationBlocked:!1,sandboxRepair:_,sandboxExecution:{
+11172c11180
+< global:_("settings","sandbox.json"),project:_(_,...Jen),workspaceRoot:_}
+---
+> global:_("settings","sandbox.json"),project:_(_,...Ntn),workspaceRoot:_}
+11514,11515c11522,11523
+< ),_.steps)_.push(...ly(_.steps,_.nodeId,_,_+1));
+< _(_.branches)_.push(...ly(_.branches,_.nodeId,_,_+1))}
+---
+> ),_.steps)_.push(...dy(_.steps,_.nodeId,_,_+1));
+> _(_.branches)_.push(...dy(_.branches,_.nodeId,_,_+1))}
+11724c11732
+< ...D1e(_,_.workflowId),archivedWorkflows:_,pauseRequestedWorkflowIds:_(_.pauseRequestedWorkflowIds,_.workflowId)}
+---
+> ...X1e(_,_.workflowId),archivedWorkflows:_,pauseRequestedWorkflowIds:_(_.pauseRequestedWorkflowIds,_.workflowId)}
+11785c11793
+< workflowId:_.workflowId,parentSessionId:_.parentSessionId??_?.parentSessionId,_:_.workflowName,status:"running",nodes:_?_(_,_.nodes):_,stepSessions:_?.stepSessions??[],startedAt:_?.startedAt??_,completedAt:_,...NM(_,_)}
+---
+> workflowId:_.workflowId,parentSessionId:_.parentSessionId??_?.parentSessionId,_:_.workflowName,status:"running",nodes:_?_(_,_.nodes):_,stepSessions:_?.stepSessions??[],startedAt:_?.startedAt??_,completedAt:_,...HM(_,_)}
+11803c11811
+< status:"running",pauseReason:_ 0,stopInitiator:_ 0,stopReason:_ 0,...NM(_,_)}
+---
+> status:"running",pauseReason:_ 0,stopInitiator:_ 0,stopReason:_ 0,...HM(_,_)}
+11857c11865
+< ...t,status:"paused",...fj(_,_),pauseReason:_.pauseReason,stopInitiator:_.initiator,stopReason:_.initiatorReason}
+---
+> ...t,status:"paused",...Dj(_,_),pauseReason:_.pauseReason,stopInitiator:_.initiator,stopReason:_.initiatorReason}
+11936c11944
+< ...O1e(),history:{
+---
+> ...aTe(),history:{
+11939c11947
+< ...M1e}
+---
+> ...rTe}
+12034c12042
+< ...a,...h1e(_,_)}
+---
+> ...a,...U1e(_,_)}
+12037c12045
+< ...O1e(),history:{
+---
+> ...aTe(),history:{
+12040c12048
+< ...M1e}
+---
+> ...rTe}
+12340c12348
+< ...tc,requestedState:"_"}
+---
+> ...oc,requestedState:"_"}
+12552c12560
+< ...vE(_.kiro),snapshot:_.snapshot,previous:_}
+---
+> ...DE(_.kiro),snapshot:_.snapshot,previous:_}
+12774c12782
+< ...BE(_,_),requestedState:_}
+---
+> ...QE(_,_),requestedState:_}
+12784c12792
+< ...F1e(_,_,{
+---
+> ...iTe(_,_,{
+14208c14216
+< _:_,width:_,lines:_.lines.length>0?_.lines:[...BB],ascii:_,appendBody:_,trailingAnsi:_,tailSourceOffset:_,tailOutputOffset:_.tailOutputOffset,tailStartActiveCodes:_.tailStartActiveCodes}
+---
+> _:_,width:_,lines:_.lines.length>0?_.lines:[...QB],ascii:_,appendBody:_,trailingAnsi:_,tailSourceOffset:_,tailOutputOffset:_.tailOutputOffset,tailStartActiveCodes:_.tailStartActiveCodes}
+26953c26961
+< ')),_=[...In,...br,_]}
+---
+> ')),_=[...Bn,...hr,_]}
+27699c27707
+< ')),_=[...xp,_]}
+---
+> ')),_=[...Ip,_]}
+27726c27734
+< ')),_=[...xp,_]}
+---
+> ')),_=[...Ip,_]}
+27818c27826
+< ')),_=[...xp,...uf,_]}
+---
+> ')),_=[...Ip,...pf,_]}
+27857c27865
+< ')),_=[...pr,...xp,...YM,...uf,...VM,_]}
+---
+> ')),_=[...pr,...Ip,...aO,...pf,...oO,_]}
+29091c29099
+< ')),_=[...br,_]}
+---
+> ')),_=[...hr,_]}
+29157c29165
+< ')),_=[...tA,_]}
+---
+> ')),_=[...nA,_]}
+29210c29218
+< ')),_=[...qj,...uf,_]}
+---
+> ')),_=[...oz,...pf,_]}
+35913c35921
+< ')),_=[...xp,...$Te,...qTe,...YM,...uf,...VM,_]}
+---
+> ')),_=[...Ip,...uDe,...pDe,...aO,...pf,...oO,_]}
+39927c39935
+< ')),_=[...QB,_]}
+---
+> ')),_=[...FB,_]}
+40922c40930
+< ')),_=[...pr,...ki,...br,...In,...Tc,_]}
+---
+> ')),_=[...pr,...vi,...hr,...Bn,...Dc,_]}
+62523c62531
+< ')),_=[...Tc,...In,...Ka,...br,...uy,...MB,_]}
+---
+> ')),_=[...Dc,...Bn,...Ka,...hr,...py,...UB,_]}
+70664c70672
+< ')),_=[...wd,...pr,...ki,...xo,...In,...Tc,...br,_]}
+---
+> ')),_=[...Ed,...pr,...vi,...Io,...Bn,...Dc,...hr,_]}
+70999c71007
+< ')),_=[...zj,_]}
+---
+> ')),_=[...sz,_]}
+78521c78529
+< ')),_=[...Cd,_]}
+---
+> ')),_=[...kd,_]}
+80162c80170
+< ')),_=[...pr,...QB,_]}
+---
+> ')),_=[...pr,...FB,_]}
+81931c81939
+< `)),_=[...In,_]}
+---
+> `)),_=[...Bn,_]}
+82862c82870
+< ')),_=[...Ed,_]}
+---
+> ')),_=[...Cd,_]}
+90195c90203
+< ')),_=[...OB,...kd,...xo,_]}
+---
+> ')),_=[...GB,...Sd,...Io,_]}
+103123c103131
+< ')),_=[...pRe,...OB,...kd,...xo,_]}
+---
+> ')),_=[...NRe,...GB,...Sd,...Io,_]}
+105994c106002
+< `)),_=[...pr,...xo,...br,...Ed,...In,...Dc,_]}
+---
+> `)),_=[...pr,...Io,...hr,...Cd,...Bn,...Rc,_]}
+114245c114253
+< ')),_=[...Ka,...pr,...wd,_]}
+---
+> ')),_=[...Ka,...pr,...Ed,_]}
+115309c115317
+< ')),_=[...kd,_]}
+---
+> ')),_=[...Sd,_]}
+116529c116537
+< ')),_=[...In,...br,_]}
+---
+> ')),_=[...Bn,...hr,_]}
+123581c123589
+< ')),_=[...In,...Ka,...az,...MB,_]}
+---
+> ')),_=[...Bn,...Ka,...yz,...UB,_]}
+124174c124182
+< `)),_=[...Ed,_]}
+---
+> `)),_=[...Cd,_]}
+126597c126605
+< ')),_=[...pr,...nz,...ki,...xo,...fy,...br,...gy,...Ed,...In,...Dc,...PB,...aA,_]}
+---
+> ')),_=[...pr,...bz,...vi,...Io,...hy,...hr,...by,...Cd,...Bn,...Rc,...qB,...oA,_]}
+126701c126709
+< ')),_=[...pr,...oA,_]}
+---
+> ')),_=[...pr,...iA,_]}
+130686c130694
+< `)),_=[...iA,_]}
+---
+> `)),_=[...sA,_]}
+135002c135010
+< ')),_=[...iz,_]}
+---
+> ')),_=[...wz,_]}
+136199c136207
+< ')),_=[...iA,_]}
+---
+> ')),_=[...sA,_]}
+137357c137365
+< ')),_=[...cz,...uz,_]}
+---
+> ')),_=[...Cz,...Sz,_]}
+137611c137619
+< ')),_=[...ez,_]}
+---
+> ')),_=[...gz,_]}
+137656c137664
+< ')),_=[...Dc,_]}
+---
+> ')),_=[...Rc,_]}
+138729c138737
+< ')),_=[...In,...Ka,...br,...pr,_]}
+---
+> ')),_=[...Bn,...Ka,...hr,...pr,_]}
+139684c139692
+< ')),_=[...Ka,...br,...In,...pr,_]}
+---
+> ')),_=[...Ka,...hr,...Bn,...pr,_]}
+144887c144895
+< ')),_=[...pr,...xo,_]}
+---
+> ')),_=[...pr,...Io,_]}
+145433c145441
+< ')),_=[...pr,...br,...In,...aA,_]}
+---
+> ')),_=[...pr,...hr,...Bn,...oA,_]}
+150817c150825
+< ')),_=[...Dc,...Tc,...ki,...fy,_]}
+---
+> ')),_=[...Rc,...Dc,...vi,...hy,_]}
+150985c150993
+< ')),_=[...fy,...ki,...Jj,_]}
+---
+> ')),_=[...hy,...vi,...mz,_]}
+151034c151042
+< ')),_=[...Az,_]}
+---
+> ')),_=[...Iz,_]}
+153245c153253
+< ')),_=[...uNe,_]}
+---
+> ')),_=[...RNe,_]}
+153655c153663
+< ')),_=[...In,_]}
+---
+> ')),_=[...Bn,_]}
+156207c156215
+< `)),_=[...gy,...Cd,...In,...UB,...xo,_]}
+---
+> `)),_=[...by,...kd,...Bn,...jB,...Io,_]}
+158046c158054
+< ')),_=[...pr,...ki,...br,...In,...xo,_]}
+---
+> ')),_=[...pr,...vi,...hr,...Bn,...Io,_]}
+158518c158526
+< ')),_=[...Dc,...In,...Ka,...hz,...Cd,...oA,_]}
+---
+> ')),_=[...Rc,...Bn,...Ka,...Qz,...kd,...iA,_]}
+159687c159695
+< ')),_=[...UB,_]}
+---
+> ')),_=[...jB,_]}
+162900c162908
+< ')),_=[..._z,_]}
+---
+> ')),_=[...Mz,_]}
+167579c167587
+< ')),_=[...pr,...br,...Tc,...In,_]}
+---
+> ')),_=[...pr,...hr,...Dc,...Bn,_]}
+169754c169762
+< ')),_=[...br,...GB,...tA,...Ka,_]}
+---
+> ')),_=[...hr,...zB,...nA,...Ka,_]}
+170860c170868
+< `)),_=[...iA,...aA,...wd,_]}
+---
+> `)),_=[...sA,...oA,...Ed,_]}
+181260c181268
+< ')),_=[...Ez,_]}
+---
+> ')),_=[...Lz,_]}
+182742c182750
+< `)),_=[...PB,_]}
+---
+> `)),_=[...qB,_]}
+183680c183688
+< ')),_=[...Ed,...pr,...ki,...In,...br,...kd,...iA,_]}
+---
+> ')),_=[...Cd,...pr,...vi,...Bn,...hr,...Sd,...sA,_]}
+184502c184510
+< ')),_=[...IMe,_]}
+---
+> ')),_=[...ZMe,_]}
+197943c197951
+< ')),_=[...pr,...ki,...xo,...In,...Tc,...br,_]}
+---
+> ')),_=[...pr,...vi,...Io,...Bn,...Dc,...hr,_]}
+201405c201413
+< ')),_=[...In,...br,...pr,_]}
+---
+> ')),_=[...Bn,...hr,...pr,_]}
+203989c203997
+< ')),_=[...In,_]}
+---
+> ')),_=[...Bn,_]}
+206957c206965
+< ')),_=[...pr,...Vj,_]}
+---
+> ')),_=[...pr,...dz,_]}
+208293c208301
+< ')),_=[...wd,...gy,...Cd,...In,...Dc,...aA,...Wj,...oA,_]}
+---
+> ')),_=[...Ed,...by,...kd,...Bn,...Rc,...oA,...lz,...iA,_]}
+209195c209203
+< ')),_=[...xo,_]}
+---
+> ')),_=[...Io,_]}
+211897c211905
+< ')),_=[...fz,_]}
+---
+> ')),_=[...Dz,_]}
+211926c211934
+< ')),_=[...Dc,_]}
+---
+> ')),_=[...Rc,_]}
+213520c213528
+< ')),_=[...vz,_]}
+---
+> ')),_=[...Gz,_]}
+215581c215589
+< ')),_=[...xo,_]}
+---
+> ')),_=[...Io,_]}
+217058c217066
+< ')),_=[...In,_]}
+---
+> ')),_=[...Bn,_]}
+217779c217787
+< ')),_=[...In,...Ka,...br,...uy,_]}
+---
+> ')),_=[...Bn,...Ka,...hr,...py,_]}
+223576c223584
+< ')),_=[...pz,...In,...br,_]}
+---
+> ')),_=[...xz,...Bn,...hr,_]}
+224439c224447
+< ')),_=[...Ka,...br,...In,_]}
+---
+> ')),_=[...Ka,...hr,...Bn,_]}
+224512c224520
+< ')),_=[...Ka,...kd,...In,_]}
+---
+> ')),_=[...Ka,...Sd,...Bn,_]}
+224599c224607
+< ')),_=[...Ka,...pr,...In,_]}
+---
+> ')),_=[...Ka,...pr,...Bn,_]}
+224667c224675
+< ')),_=[...Ka,...xo,_]}
+---
+> ')),_=[...Ka,...Io,_]}
+224710c224718
+< ')),_=[...ki,_]}
+---
+> ')),_=[...vi,_]}
+224730c224738
+< ')),_=[...Ka,...ULe,...$Le,...qLe,...zLe,...WLe,_]}
+---
+> ')),_=[...Ka,...cFe,...uFe,...pFe,...AFe,...fFe,_]}
+225682c225690
+< ')),_=[...br,...In,...tA,...kz,...Cd,...oA,_]}
+---
+> ')),_=[...hr,...Bn,...nA,...Pz,...kd,...iA,_]}
+229360c229368
+< `)),_=[...In,_]}
+---
+> `)),_=[...Bn,_]}
+230240c230248
+< `)),_=[...br,...In,...Ka,...Tc,...pr,...wd,...hFe,..._Fe,...EFe,...kFe,_]}
+---
+> `)),_=[...hr,...Bn,...Ka,...Dc,...pr,...Ed,...UFe,...$Fe,...qFe,...zFe,_]}
+230582c230590
+< ')),_=[...In,_]}
+---
+> ')),_=[...Bn,_]}
+237679c237687
+< ')),_=[...br,...tA,...GB,...Bz,...uy,...In,_]}
+---
+> ')),_=[...hr,...nA,...zB,...Hz,...py,...Bn,_]}
+245657c245665
+< `)),_=[...ki,_]}
+---
+> `)),_=[...vi,_]}
+246474c246482
+< ...Wun,...Yun}
+---
+> ...Tdn,...Ddn}
+248968c248976
+< return[...t.pre,...t.normal,...t.post,...Upn]}
+---
+> return[...t.pre,...t.normal,...t.post,...Emn]}
+275972a275981,275992
+> function _(_){
+> _ _=[],_="",_=0,_=_.indexOf(_);
+> while(_!==-1){
+> _ _=_.findIndex((_)=>_.startsWith(_,_));
+> _(_===-1)_+=_.slice(_,_+_.length),_=_+_.length;
+> _ _+=_.slice(_,_),_.push({
+> _:_.length,_:_}
+> ),_=_+_[_].length;
+> _=_.indexOf(_,_)}
+> return{
+> _:_+_.slice(_),found:_}
+> }
+276034c276054
+< _ _="\x1B_k\_",_="\x1B_b",_="\x1B_o",_="\x1B_r",_="\_";
+---
+> _ _="\x1B_k\_",_="\x1B_kt\_",_="\x1B_ki\_",_="\x1B_k",_,_,_,_="\x1B_b",_="\x1B_o",_="\x1B_r",_="\_";
+276036c276056,276057
+< _()}
+---
+> _();
+> _=[_,_,_],_=_.indexOf(_),_=_.indexOf(_)}
+276929c276950
+< _ _=1,_;
+---
+> _ _=1,_="\_[2K\_\_[1B\_[_\_",_;
+277796,277797c277817,277818
+< extractCursorPosition(_,_,_=0){
+< _ _=_.max(0,_.length-_);
+---
+> extractCursorPosition(_,_,_,_=0){
+> _ _=_.max(0,_.length-_),_=_,_=!1;
+277801,277806c277822,277833
+< _ _=_[_],_=_.indexOf(_);
+< _(_!==-1){
+< _ _=_(_.slice(0,_)),_=_.slice(0,_)+_.slice(_+_.length);
+< _(_.showHardwareCursor)_=_(_,_);
+< return _[_]=_,{
+< _:_,_:_}
+---
+> _(!_[_].includes(_))continue;
+> _{
+> _:_,found:_}
+> =_(_[_]);
+> _[_]=_;
+> _(_ _ _ _){
+> _(_.rank===_)_=!0;
+> _(_&&_.rank>=_.rank)continue;
+> _ _=_(_.slice(0,_.idx));
+> _(_.rank===_&&(_.showHardwareCursor||_>_))continue;
+> _={
+> _:_,_:_,...u}
+277808a277836,277837
+> _(_?.rank===_&&!_)_=_;
+> _(_&&_.showHardwareCursor)_[_.row]=_(_[_.row],_.idx);
+277812,277818c277841,277844
+< _--){
+< _ _=_[_].indexOf(_);
+< _(_!==-1){
+< _[_]=_[_].slice(0,_)+_[_].slice(_+_.length);
+< break}
+< }
+< return _}
+---
+> _--)_(_[_].includes(_))_[_]=_(_[_]).line;
+> return _?{
+> _:_.row,_:_.col}
+> :_}
+277843,277844c277869,277870
+< _ _=_(_[_]).line,_=_.indexOf(_);
+< _[_]=_.applyResetToLine(_===-1?_:_.slice(0,_)+_.slice(_+_.length))}
+---
+> _ _=_(_[_]).line;
+> _[_]=_.applyResetToLine(_.includes(_)?_(_).line:_)}
+277943c277969
+< _.terminal.write(_+"\_\_[_"),_.invalidateFrame(),_.hardwareCursorRow=0,_.cursorRow=0,_.maxLinesRendered=0,_.previousViewportTop=0,_.ownedTopRow=0}
+---
+> _.terminal.write(_+"\_"+_),_.invalidateFrame(),_.hardwareCursorRow=0,_.cursorRow=0,_.maxLinesRendered=0,_.previousViewportTop=0,_.ownedTopRow=0}
+278134c278160
+< _ _=_?[...fe,...d.slice(_.scrollableEnd)]:_;
+---
+> _ _=_?[...ge,...d.slice(_.scrollableEnd)]:_;
+278189c278215
+< _ _=_.extractCursorPosition(_,_,_?0:_.max(_,_));
+---
+> _ _=_.extractCursorPosition(_,_,_,_.max(_,_));
+278392c278418
+< _(_.length>0&&!_)_.push(...an.map(({
+---
+> _(_.length>0&&!_)_.push(...cn.map(({
+278421c278447
+< _+="\_\_[_";
+---
+> _+="\_"+_;
+278444c278470
+< _(_.altScreen||_?_:_?_:"\_[_","first");
+---
+> _(_.altScreen||_?_:_?_:"\_"+_,"first");
+278479c278505
+< _ _=_.previousTransientCellBackgrounds.get(_),_=_.get(_),_=_ _([...kt?.keys()??[],...De?.keys()??[]]);
+---
+> _ _=_.previousTransientCellBackgrounds.get(_),_=_.get(_),_=_ _([...ht?.keys()??[],...De?.keys()??[]]);
+278613c278639
+< _+="\_[_",_=_.length-1;
+---
+> _+=_,_=_.length-1;
+284040c284066
+< Config:_.Config,_:_.Node,...qUe}
+---
+> Config:_.Config,_:_.Node,...mGe}
+284240a284267,284271
+> _ _=_(_,_);
+> _(!_.props.streamTailCursor||_.length===0)return _;
+> _ _=_.slice();
+> return _[_.length-1]+=_,_}
+> function _(_,_){
+284273a284305
+> _();
+286540c286572
+< ...mK,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+---
+> ...IK,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+286556c286588
+< ...mK,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+---
+> ...IK,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+286613c286645
+< ...gK,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+---
+> ...DK,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+286615c286647
+< ...gK,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+---
+> ...DK,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+286630c286662
+< ...sK,_:_(_).replace("{
+---
+> ...CK,_:_(_).replace("{
+287347c287379
+< _ _=[...Ty.segment(_.value.slice(0,_.cursor))],_=_[_.length-1];
+---
+> _ _=[...Ny.segment(_.value.slice(0,_.cursor))],_=_[_.length-1];
+287352c287384
+< _ _=[...Ty.segment(_.value.slice(_.cursor))];
+---
+> _ _=[...Ny.segment(_.value.slice(_.cursor))];
+287377c287409
+< _ _=[...Ty.segment(_.value.slice(0,_.cursor))],_=_[_.length-1],_=_?_.segment.length:1;
+---
+> _ _=[...Ny.segment(_.value.slice(0,_.cursor))],_=_[_.length-1],_=_?_.segment.length:1;
+287383c287415
+< _ _=[...Ty.segment(_.value.slice(_.cursor))],_=_[0]?_[0].segment.length:1;
+---
+> _ _=[...Ny.segment(_.value.slice(_.cursor))],_=_[0]?_[0].segment.length:1;
+287442c287474
+< _ _=[...Ty.segment(_.value.slice(0,_.cursor))];
+---
+> _ _=[...Ny.segment(_.value.slice(0,_.cursor))];
+287496c287528
+< _ _=[...Ty.segment(_.slice(_))][0],_=_.slice(0,_),_=_?.segment??" ",_=_.slice(_+_.length),_=_.focused?_:"",_=`\_[7m${
+---
+> _ _=[...Ny.segment(_.slice(_))][0],_=_.slice(0,_),_=_?.segment??" ",_=_.slice(_+_.length),_=_.focused?_:"",_=`\_[7m${
+287685c287717
+< _ _=[],_=[...bbn.segment(_)],_=0,_=0,_=-1,_=0;
+---
+> _ _=[],_=[...ehn.segment(_)],_=0,_=0,_=-1,_=0;
+287849c287881
+< _ _=[...Ef.segment(_)][0]?.segment||"",_=_(_);
+---
+> _ _=[...kf.segment(_)][0]?.segment||"",_=_(_);
+288103c288135
+< _ _=_.state.lines[_.state.cursorLine]||"",_=[...Ef.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1],_=_?_.segment.length:1;
+---
+> _ _=_.state.lines[_.state.cursorLine]||"",_=[...kf.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1],_=_?_.segment.length:1;
+288115c288147
+< _ _=[...Ef.segment(_.slice(_.state.cursorCol))],_=_[0]?_[0].segment.length:1;
+---
+> _ _=[...kf.segment(_.slice(_.state.cursorCol))],_=_[0]?_[0].segment.length:1;
+288204c288236
+< _ _=[...Ef.segment(_.slice(_.state.cursorCol))];
+---
+> _ _=[...kf.segment(_.slice(_.state.cursorCol))];
+288208c288240
+< _ _=[...Ef.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1];
+---
+> _ _=[...kf.segment(_.slice(0,_.state.cursorCol))],_=_[_.length-1];
+288218c288250
+< _ _=[...Ef.segment(_.slice(0,_.state.cursorCol))],_=_.state.cursorCol;
+---
+> _ _=[...kf.segment(_.slice(0,_.state.cursorCol))],_=_.state.cursorCol;
+289234c289266
+< _ _=[...f$e.segment(_)].map(({
+---
+> _ _=[...P$e.segment(_)].map(({
+289365c289397
+< _:_(_),...y$e(_,{
+---
+> _:_(_),...$$e(_,{
+290250c290282
+< ,...uo(_)?{
+---
+> ,...po(_)?{
+290285c290317
+< sessionId:_==="_"||_===_ 0?_(_.sessionId):_.sessionId,_:_(_.cwd),...GI(_.title)!==_ 0?{
+---
+> sessionId:_==="_"||_===_ 0?_(_.sessionId):_.sessionId,_:_(_.cwd),...zI(_.title)!==_ 0?{
+290289c290321
+< ,...GI(_.updatedAt)!==_ 0?{
+---
+> ,...zI(_.updatedAt)!==_ 0?{
+290634c290666
+< ...e,...qhn(_)}
+---
+> ...e,...xyn(_)}
+290648c290680
+< ...Bf,_:_==="_"&&_!=="remote"?_.v2.filter((_)=>_.sessionId!==_):_.v2}
+---
+> ...Tf,_:_==="_"&&_!=="remote"?_.v2.filter((_)=>_.sessionId!==_):_.v2}
+291631c291663
+< chunks:_.chunks,partial:_?"\_":"",...rHe(_,_.droppedLines)}
+---
+> chunks:_.chunks,partial:_?"\_":"",...vHe(_,_.droppedLines)}
+291637c291669
+< chunks:_.chunks,partial:_+(_?"\_":""),...rHe(_,_.droppedLines)}
+---
+> chunks:_.chunks,partial:_+(_?"\_":""),...vHe(_,_.droppedLines)}
+292515c292547
+< AppView:_,appStore:_,initialize:_,renderApp:_=_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_}
+---
+> AppView:_,appStore:_,initialize:_,renderApp:_=_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_,screenReaderDetection:_}
+292518c292550
+< appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_}
+---
+> appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_,screenReaderDetection:_}
+292530a292563,292665
+> execFileSync _ _}
+> _"child_process";
+> import{
+> readFileSync _ _}
+> _"_";
+> function _(){
+> _(process.platform!=="linux")return!1;
+> _{
+> _ _=_("/_/_/kernel/osrelease","_").toLowerCase();
+> return _.includes("microsoft")||_.includes("_")}
+> catch{
+> return!1}
+> }
+> function _(_,_,_=!1){
+> _(_==="darwin")return{
+> _:"_",_:[_]}
+> ;
+> _(_==="win32")return{
+> _:"rundll32",_:["_.dll,FileProtocolHandler",_]}
+> ;
+> _(_)return{
+> _:"wslview",_:[_]}
+> ;
+> return{
+> _:"_-_",_:[_]}
+> }
+> function _(_=process.env){
+> _ _=(_)=>_[_]!==_ 0;
+> return _("KIRO_FAKE_IS_REMOTE")||_("Q_FAKE_IS_REMOTE")||_("SSH_CLIENT")||_("SSH_CONNECTION")||_("SSH_TTY")}
+> function _(_){
+> _{
+> _{
+> _:_,_:_}
+> =_(process.platform,_,_());
+> return _(_,_,{
+> stdio:"ignore"}
+> ),!0}
+> catch{
+> return!1}
+> }
+> _ _=()=>{
+> }
+> ;
+> import{
+> execFile _ _}
+> _"child_process";
+> async function _({
+> platform:_=process.platform,_:_=process.env,listProcesses:_=_,timeoutMs:_=_}
+> ={
+> }
+> ){
+> _(_!=="darwin"||_(_))return!1;
+> _ _;
+> _{
+> _ _=await Promise.race([_(_),_ Promise((_,_)=>{
+> _=setTimeout(()=>_(Error("process listing timed _")),_)}
+> )]);
+> return _(_)}
+> catch{
+> return!1}
+> finally{
+> clearTimeout(_)}
+> }
+> function _(_){
+> _ _=!1,_=!1,_=!1,_=_ _,_=(_)=>{
+> _=_,_=!0;
+> _(_ _ _ _)_()}
+> ;
+> return{
+> isDetected:()=>_,isSettled:()=>_,subscribe:(_)=>(_.add(_),()=>_.delete(_)),start:()=>{
+> _(_)return;
+> _=!0,_().then((_)=>_(_===!0),()=>_(!1))}
+> }
+> }
+> function _(_,{
+> _:_=process.env,setting:_=_()}
+> ={
+> }
+> ){
+> _ _=_(_);
+> _(!_||_==="_"||_==="_")return _;
+> _ _=_(_);
+> _(_(_,_)==="_")_.start();
+> return _}
+> _ _,_="_",_="/VoiceOver.app/Contents/MacOS/VoiceOver",_=500,_=(_)=>_.find((_)=>_===_),_=(_=process.env)=>_(_.KIRO_SCREEN_READER),_=()=>_(_(_.CHAT_SCREEN_READER,_))??_,_=(_,_=process.env)=>_(_)??_,_=(_,_)=>_==="_"||_==="_"&&_,_=(_)=>_.split(`\n`).some((_)=>_.trim().endsWith(_)),_=(_)=>_ Promise((_,_)=>{
+> _("/_/_",["-_","_="],{
+> timeout:_,killSignal:"SIGKILL",maxBuffer:8388608}
+> ,(_,_)=>_?_(_):_(_))}
+> ),_;
+> _ _=_(()=>{
+> _();
+> _();
+> _();
+> _=["_","_","_"];
+> _={
+> isDetected:()=>!1,isSettled:()=>!0,subscribe:()=>()=>{
+> }
+> ,start:()=>{
+> }
+> }
+> }
+> );
+> import{
+292535c292670
+< AppView:_.AppView,renderApp:_.renderApp,initialize:_.initialize??_,resolveSession:_.resolveSession??_,startTelemetryBinding:_.startTelemetryBinding??_}
+---
+> AppView:_.AppView,renderApp:_.renderApp,initialize:_.initialize??_,resolveSession:_.resolveSession??_,startTelemetryBinding:_.startTelemetryBinding??_,detectScreenReader:_.detectScreenReader}
+292554c292689
+< AppView:_,initialize:_,renderApp:_,resolveSession:_,startTelemetryBinding:_}
+---
+> AppView:_,initialize:_,renderApp:_,resolveSession:_,startTelemetryBinding:_,detectScreenReader:_}
+292611c292746
+< ;
+---
+> ,_=_(_);
+292614c292749
+< AppView:_,appStore:_,initialize:()=>_(_,_),renderApp:_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_}
+---
+> AppView:_,appStore:_,initialize:()=>_(_,_),renderApp:_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_,screenReaderDetection:_}
+292679a292815
+> _();
+293854a293991,294014
+> _ _,_,_=({
+> detection:_=_,children:_}
+> )=>{
+> _[_,_]=_(_),_=_((_)=>{
+> _(_==="_")_.start();
+> _(_)}
+> ,[_]),_=_(_.subscribe,_.isDetected,_.isDetected),_=_(_.subscribe,_.isSettled,_.isSettled),_=_(()=>({
+> setting:_,setSetting:_,envOverride:_(),voiceOverDetected:_,voiceOverChecked:_,checkVoiceOver:_.start,active:_(_(_),_)}
+> ),[_,_,_,_,_]);
+> return _(_.Provider,{
+> value:_}
+> ,_)}
+> ,_=()=>_(_);
+> _ _=_(()=>{
+> _();
+> _();
+> _={
+> setting:"_",setSetting:()=>{
+> }
+> ,envOverride:_ 0,voiceOverDetected:!1,voiceOverChecked:!0,checkVoiceOver:()=>{
+> }
+> ,active:!1}
+> ,_=_(_)}
+> );
+295034c295194
+< ...z_n}
+---
+> ...Uwn}
+296141c296301
+< filters:[...Zy("default",_)],display:_(_("default",_))}
+---
+> filters:[...t_("default",_)],display:_(_("default",_))}
+296278c296438
+< _ _=_(_,_),_=[...Zy(_,_)];
+---
+> _ _=_(_,_),_=[...t_(_,_)];
+296317,296318c296477,296478
+< ...rP,...e,subagent:{
+< ...rP.subagent,...e.subagent}
+---
+> ...wP,...e,subagent:{
+> ...wP.subagent,...e.subagent}
+296336c296496
+< ...rP,showToolReasoning:!1,showElapsed:!1,subagent:{
+---
+> ...wP,showToolReasoning:!1,showElapsed:!1,subagent:{
+296346c296506
+< ...rP}
+---
+> ...wP}
+296352c296512
+< ,_=[...IBe,"_"],_=["_","-subagent"],_={
+---
+> ,_=[...VBe,"_"],_=["_","-subagent"],_={
+296357c296517
+< ...I5e,default:_}
+---
+> ...rje,default:_}
+296359c296519
+< ...T5e,default:_}
+---
+> ...aje,default:_}
+296391c296551
+< _=[_.CHAT_TOOLS_FILTERS,_.toolArgsMode.setting,_.thinkingDisplay.setting,...Object.values(_),...cP.map((_)=>_[_].setting),...Object.values(_)]}
+---
+> _=[_.CHAT_TOOLS_FILTERS,_.toolArgsMode.setting,_.thinkingDisplay.setting,...Object.values(_),...vP.map((_)=>_[_].setting),...Object.values(_)]}
+296529c296689
+< ,...zC.map((_)=>({
+---
+> ,...ZC.map((_)=>({
+298876c299036
+< stdio:["_","_","ignore"],_:_.cwd,_:_.env??process.env,...Kje?{
+---
+> stdio:["_","_","ignore"],_:_.cwd,_:_.env??process.env,...wze?{
+301673c301833
+< ...gV,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+---
+> ...NV,lheading:_,table:_,paragraph:_(_).replace("_",_).replace("heading"," {
+301689c301849
+< ...gV,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+---
+> ...NV,_:_(`^ *(?:comment *(?:\\_|\\_*_)|<(_)[\\_\\_]+?</\\1> *(?:\\_{
+301746c301906
+< ...bV,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+---
+> ...OV,_:_(/^!?\[(label)\]\((.*?)\)/).replace("label",_).getRegex(),reflink:_(/^!?\[(label)\]\_*\[([^\]]*)\]/).replace("label",_).getRegex()}
+301748c301908
+< ...bV,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+---
+> ...OV,emStrongRDelimAst:_,emStrongLDelim:_,delLDelim:_,delRDelim:_,_:_(/^((?:protocol):\/\/|_\.)(?:[_-_-_-9\-]+\.?)+[^\_<]*|^email/).replace("protocol",_).replace("email",/[_-_-_-9._+-]+(@)[_-_-_-9-_]+(?:\.[_-_-_-9-_]*[_-_-_-9])+(?![-_])/).getRegex(),_backpedal:/(?:[^?!.,:;
+301763c301923
+< ...lV,_:_(_).replace("{
+---
+> ...BV,_:_(_).replace("{
+302580c302740
+< field:_,...Vkn(_)}
+---
+> field:_,...qSn(_)}
+302691c302851
+< _=["_","bytes","mtime_ms","_","ctime_ms","title_hash","head_hash","tail_hash","capped","prompt_count","parse_complete","revision"],_=[...A7e,"response_capped","response_derived"]}
+---
+> _=["_","bytes","mtime_ms","_","ctime_ms","title_hash","head_hash","tail_hash","capped","prompt_count","parse_complete","revision"],_=[...$7e,"response_capped","response_derived"]}
+304789c304949
+< _(_.issues.length)_.issues.push(...nb(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ab(_,_.issues));
+304795c304955
+< _.issues.push(...nb(_,_.issues))}
+---
+> _.issues.push(...ab(_,_.issues))}
+305493c305653
+< _(_.issues.length)_.issues.push(...nb(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ab(_,_.issues));
+305497c305657
+< _(_.issues.length)_.issues.push(...nb(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ab(_,_.issues));
+305532c305692
+< _(_.issues.length)_.issues.push(...nb(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ab(_,_.issues));
+305536c305696
+< _(_.issues.length)_.issues.push(...nb(_,_.issues));
+---
+> _(_.issues.length)_.issues.push(...ab(_,_.issues));
+305837c305997
+< _:"string",...$n(_)}
+---
+> _:"string",...qn(_)}
+305841c306001
+< _:"string",format:"email",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"email",check:"string_format",abort:!1,...qn(_)}
+305845c306005
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305849c306009
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305853c306013
+< _:"string",format:"_",check:"string_format",abort:!1,version:"_",...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,version:"_",...qn(_)}
+305857c306017
+< _:"string",format:"_",check:"string_format",abort:!1,version:"_",...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,version:"_",...qn(_)}
+305861c306021
+< _:"string",format:"_",check:"string_format",abort:!1,version:"_",...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,version:"_",...qn(_)}
+305865c306025
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305869c306029
+< _:"string",format:"emoji",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"emoji",check:"string_format",abort:!1,...qn(_)}
+305873c306033
+< _:"string",format:"nanoid",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"nanoid",check:"string_format",abort:!1,...qn(_)}
+305877c306037
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305881c306041
+< _:"string",format:"cuid2",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"cuid2",check:"string_format",abort:!1,...qn(_)}
+305885c306045
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305889c306049
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305893c306053
+< _:"string",format:"ksuid",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"ksuid",check:"string_format",abort:!1,...qn(_)}
+305897c306057
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305901c306061
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305905c306065
+< _:"string",format:"cidrv4",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"cidrv4",check:"string_format",abort:!1,...qn(_)}
+305909c306069
+< _:"string",format:"cidrv6",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"cidrv6",check:"string_format",abort:!1,...qn(_)}
+305913c306073
+< _:"string",format:"base64",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"base64",check:"string_format",abort:!1,...qn(_)}
+305917c306077
+< _:"string",format:"base64url",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"base64url",check:"string_format",abort:!1,...qn(_)}
+305921c306081
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305925c306085
+< _:"string",format:"_",check:"string_format",abort:!1,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",abort:!1,...qn(_)}
+305929c306089
+< _:"string",format:"datetime",check:"string_format",offset:!1,local:!1,precision:_,...$n(_)}
+---
+> _:"string",format:"datetime",check:"string_format",offset:!1,local:!1,precision:_,...qn(_)}
+305933c306093
+< _:"string",format:"_",check:"string_format",...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",...qn(_)}
+305937c306097
+< _:"string",format:"_",check:"string_format",precision:_,...$n(_)}
+---
+> _:"string",format:"_",check:"string_format",precision:_,...qn(_)}
+305941c306101
+< _:"string",format:"duration",check:"string_format",...$n(_)}
+---
+> _:"string",format:"duration",check:"string_format",...qn(_)}
+305945c306105
+< _:"number",checks:[],...$n(_)}
+---
+> _:"number",checks:[],...qn(_)}
+305949c306109
+< _:"number",check:"number_format",abort:!1,format:"safeint",...$n(_)}
+---
+> _:"number",check:"number_format",abort:!1,format:"safeint",...qn(_)}
+305953c306113
+< _:"boolean",...$n(_)}
+---
+> _:"boolean",...qn(_)}
+305961c306121
+< _:"never",...$n(_)}
+---
+> _:"never",...qn(_)}
+305965c306125
+< check:"less_than",...$n(_),value:_,inclusive:!1}
+---
+> check:"less_than",...qn(_),value:_,inclusive:!1}
+305969c306129
+< check:"less_than",...$n(_),value:_,inclusive:!0}
+---
+> check:"less_than",...qn(_),value:_,inclusive:!0}
+305973c306133
+< check:"greater_than",...$n(_),value:_,inclusive:!1}
+---
+> check:"greater_than",...qn(_),value:_,inclusive:!1}
+305977c306137
+< check:"greater_than",...$n(_),value:_,inclusive:!0}
+---
+> check:"greater_than",...qn(_),value:_,inclusive:!0}
+305981c306141
+< check:"multiple_of",...$n(_),value:_}
+---
+> check:"multiple_of",...qn(_),value:_}
+305985c306145
+< check:"max_length",...$n(_),maximum:_}
+---
+> check:"max_length",...qn(_),maximum:_}
+305989c306149
+< check:"min_length",...$n(_),minimum:_}
+---
+> check:"min_length",...qn(_),minimum:_}
+305993c306153
+< check:"length_equals",...$n(_),length:_}
+---
+> check:"length_equals",...qn(_),length:_}
+305997c306157
+< check:"string_format",format:"regex",...$n(_),pattern:_}
+---
+> check:"string_format",format:"regex",...qn(_),pattern:_}
+306001c306161
+< check:"string_format",format:"lowercase",...$n(_)}
+---
+> check:"string_format",format:"lowercase",...qn(_)}
+306005c306165
+< check:"string_format",format:"uppercase",...$n(_)}
+---
+> check:"string_format",format:"uppercase",...qn(_)}
+306009c306169
+< check:"string_format",format:"includes",...$n(_),includes:_}
+---
+> check:"string_format",format:"includes",...qn(_),includes:_}
+306013c306173
+< check:"string_format",format:"starts_with",...$n(_),prefix:_}
+---
+> check:"string_format",format:"starts_with",...qn(_),prefix:_}
+306017c306177
+< check:"string_format",format:"ends_with",...$n(_),suffix:_}
+---
+> check:"string_format",format:"ends_with",...qn(_),suffix:_}
+306035c306195
+< _:"array",element:_,...$n(_)}
+---
+> _:"array",element:_,...qn(_)}
+306039c306199
+< _:"custom",check:"custom",_:_,...$n(_)}
+---
+> _:"custom",check:"custom",_:_,...qn(_)}
+306053c306213
+< check:"custom",...$n(_)}
+---
+> check:"custom",...qn(_)}
+306636c306796
+< ,...$n(_)}
+---
+> ,...qn(_)}
+306641c306801
+< _:"union",options:_,...$n(_)}
+---
+> _:"union",options:_,...qn(_)}
+306649c306809
+< _:"record",keyType:_(),valueType:_,...$n(_)}
+---
+> _:"record",keyType:_(),valueType:_,...qn(_)}
+306652c306812
+< _:"record",keyType:_,valueType:_,...$n(_)}
+---
+> _:"record",keyType:_,valueType:_,...qn(_)}
+306657c306817
+< _:"_",entries:_,...$n(_)}
+---
+> _:"_",entries:_,...qn(_)}
+306661c306821
+< _:"literal",values:Array.isArray(_)?_:[_],...$n(_)}
+---
+> _:"literal",values:Array.isArray(_)?_:[_],...qn(_)}
+306693c306853
+< _:"nonoptional",innerType:_,...$n(_)}
+---
+> _:"nonoptional",innerType:_,...qn(_)}
+307017c307177
+< ...t,checks:[],...$n(_),entries:_}
+---
+> ...t,checks:[],...qn(_),entries:_}
+307028c307188
+< ...t,checks:[],...$n(_),entries:_}
+---
+> ...t,checks:[],...qn(_),entries:_}
+309862,309863d310021
+< return _===_||typeof _==="string"}
+< function _(_){
+310019c310177,310186
+< _(typeof _.from!=="string"||!_(_.to)||!_(_.cause,_)||_.promoted!==_ 0&&typeof _.promoted!=="boolean")return _;
+---
+> _ _=_(_.from),_=_.to===_?_:_(_.to);
+> _(_===_||_===_&&_.to!==_)return _.warn("Dropping model_fallback update _ _ unreadable model _",{
+> _:_.from,_:_.to}
+> ),_;
+> _(!_(_.cause,_))return _.warn("Dropping model_fallback update _ _ unrecognized cause",{
+> cause:_.cause}
+> ),_;
+> _(_.promoted!==_ 0&&typeof _.promoted!=="boolean")return _.warn("Dropping model_fallback update _ _ malformed promoted",{
+> promoted:_.promoted}
+> ),_;
+310026c310193
+< sessionUpdate:"model_fallback",_:_.from,_:_.to,cause:_.cause,promoted:_.promoted===!0}
+---
+> sessionUpdate:"model_fallback",_:_,_:_,cause:_.cause,promoted:_.promoted===!0}
+310115c310282,310284
+< _=["agent-subtask","system-notification","workflow-progress"],_=["pending","running","completed","failed"],_=["system-notification","workflow-progress"],_=["refused","unavailable"]}
+---
+> _();
+> _();
+> _=["agent-subtask","system-notification","workflow-progress"],_=["pending","running","completed","failed"],_=["system-notification","workflow-progress"],_=["refused","unavailable","unknown"]}
+310444a310614,310674
+> return _?.kind==="model_fallback"||_?.kind==="model_fallback_promoted"}
+> function _(_){
+> _(_==="refusal")return"refused";
+> _(_==="availability")return"unavailable";
+> return _.warn("Unrecognized model_fallback trigger _ _",{
+> trigger:_}
+> ),"unknown"}
+> function _(_){
+> _(typeof _.agentSubtaskId==="string"&&_.agentSubtaskId)return _.info("Ignoring _-agent model fallback notice",{
+> _:_.kind,agentSubtaskId:_.agentSubtaskId}
+> ),!0;
+> _(_.agentSubtaskId!=_&&typeof _.agentSubtaskId!=="string")_.warn("Model fallback notice carries _ _-string agentSubtaskId",{
+> _:_.kind,agentSubtaskId:_.agentSubtaskId}
+> );
+> return!1}
+> function _(_){
+> _ _=_(_.from),_=_.to===_ 0?_:_(_.to);
+> _(_===_||_.to!==_ 0&&_===_)return _.warn("Dropping model fallback notice _ _ unreadable model _",{
+> _:_.kind,_:_.from,_:_.to}
+> ),_;
+> return{
+> _:_,_:_}
+> }
+> function _(_){
+> _(_(_))return[];
+> _ _=_(_);
+> _(_===_)return[];
+> return _.kind==="model_fallback_promoted"?_(_,_):_(_,_)}
+> function _(_,{
+> _:_,_:_}
+> ){
+> _ _={
+> _:"model_fallback",_:_,_:_,cause:_(_.trigger),promoted:!1}
+> ;
+> _(_===_)return[_];
+> _(_.scope==="session")return[_,{
+> ...r,promoted:!0}
+> ];
+> _(_.scope!=="_")_.warn("Unrecognized model_fallback scope _ _;
+>  _ promoting",{
+> scope:_.scope}
+> );
+> return[_]}
+> function _(_,{
+> _:_,_:_}
+> ){
+> _(_===_)return _.warn("Dropping model_fallback_promoted notice without _ target",{
+> _:_}
+> ),[];
+> _(_.trigger!=="refusal")return _.warn("Dropping model_fallback_promoted notice _ _ _-refusal trigger",{
+> _:_,_:_,trigger:_.trigger}
+> ),[];
+> return[{
+> _:"model_fallback",_:_,_:_,cause:"refused",promoted:!0}
+> ]}
+> _ _=_(()=>{
+> _();
+> _();
+> _()}
+> );
+> function _(_){
+310789a311020,311022
+> _(_(_)){
+> _(_ _ _ _(_))_.emitSideEffect(_);
+> return _}
+310822a311056
+> _();
+312962c313196
+< sessionId:_,...ZTn(_?._meta)}
+---
+> sessionId:_,...YDn(_?._meta)}
+313114c313348
+< ,...g9(_?.elapsedMs)&&{
+---
+> ,...Q9(_?.elapsedMs)&&{
+313210c313444
+< sessionId:_,...nJe(_)}
+---
+> sessionId:_,...TJe(_)}
+313872c314106
+< workflowId:_,...kee(_)}
+---
+> workflowId:_,...Hee(_)}
+313878c314112
+< workflowId:_,...kee(_)}
+---
+> workflowId:_,...Hee(_)}
+313898c314132
+< ,...kee(_)}
+---
+> ,...Hee(_)}
+313991c314225
+< ...x9(_.kiro),outputStyle:_}
+---
+> ...j9(_.kiro),outputStyle:_}
+314001c314235
+< ...x9(_.kiro),displayText:_}
+---
+> ...j9(_.kiro),displayText:_}
+314011c314245
+< ],sessionId:_,...iet({
+---
+> ],sessionId:_,...Pet({
+314558c314792
+< _=_ _(["turn_summary","turn_end","auth_error","session_error"]),_=_ _(["user_message","content","thought","tool_call","tool_call_update","tool_call_finished"]),_=_ _([...yet,"content","thought","tool_call","tool_call_update","tool_call_finished","approval_request","question_request","model_refusal"])}
+---
+> _=_ _(["turn_summary","turn_end","auth_error","session_error"]),_=_ _(["user_message","content","thought","tool_call","tool_call_update","tool_call_finished"]),_=_ _([...Zet,"content","thought","tool_call","tool_call_update","tool_call_finished","approval_request","question_request","model_refusal"])}
+315769,315812d316002
+< execFileSync _ _}
+< _"child_process";
+< import{
+< readFileSync _ _}
+< _"_";
+< function _(){
+< _(process.platform!=="linux")return!1;
+< _{
+< _ _=_("/_/_/kernel/osrelease","_").toLowerCase();
+< return _.includes("microsoft")||_.includes("_")}
+< catch{
+< return!1}
+< }
+< function _(_,_,_=!1){
+< _(_==="darwin")return{
+< _:"_",_:[_]}
+< ;
+< _(_==="win32")return{
+< _:"rundll32",_:["_.dll,FileProtocolHandler",_]}
+< ;
+< _(_)return{
+< _:"wslview",_:[_]}
+< ;
+< return{
+< _:"_-_",_:[_]}
+< }
+< function _(_=process.env){
+< _ _=(_)=>_[_]!==_ 0;
+< return _("KIRO_FAKE_IS_REMOTE")||_("Q_FAKE_IS_REMOTE")||_("SSH_CLIENT")||_("SSH_CONNECTION")||_("SSH_TTY")}
+< function _(_){
+< _{
+< _{
+< _:_,_:_}
+< =_(process.platform,_,_());
+< return _(_,_,{
+< stdio:"ignore"}
+< ),!0}
+< catch{
+< return!1}
+< }
+< _ _=()=>{
+< }
+< ;
+< import{
+317007c317197
+< ...VRn({
+---
+> ...qQn({
+317022c317212
+< ),_=_.endpoints,_=(_.spawnProcess??_)(_.executable,[...r.prefix,"--experimental-_-modules",_.server,"--transport=stdio","--_=_-callback",...met(_.policy),...a.krsEndpoint?[`--endpoint=_{
+---
+> ),_=_.endpoints,_=(_.spawnProcess??_)(_.executable,[...r.prefix,"--experimental-_-modules",_.server,"--transport=stdio","--_=_-callback",...jet(_.policy),...a.krsEndpoint?[`--endpoint=_{
+317030c317220
+< ...process.env,NODE_USE_SYSTEM_CA:process.env.NODE_USE_SYSTEM_CA??"1",NODE_CHANNEL_FD:_ 0,NODE_CHANNEL_SERIALIZATION_MODE:_ 0,...$tt(_,_),KIRO_CUSTOM_USER_AGENT:_.userAgent}
+---
+> ...process.env,NODE_USE_SYSTEM_CA:process.env.NODE_USE_SYSTEM_CA??"1",NODE_CHANNEL_FD:_ 0,NODE_CHANNEL_SERIALIZATION_MODE:_ 0,...hnt(_,_),KIRO_CUSTOM_USER_AGENT:_.userAgent}
+317038c317228
+< _:_,...Htt(_,_.executable,_,_)}
+---
+> _:_,...ynt(_,_.executable,_,_)}
+317064c317254
+< prompt:_,sessionId:_.sessionId,...set(_.perf.promptMetadata(),_)}
+---
+> prompt:_,sessionId:_.sessionId,...Uet(_.perf.promptMetadata(),_)}
+317362c317552
+< ...kJe(_),executionContext:_}
+---
+> ...tXe(_),executionContext:_}
+317513,317515c317703,317705
+< ...P,_meta:{
+< ...P._meta,_:{
+< ...P._meta?.kiro,loadWindowLiveCapture:!0}
+---
+> ...L,_meta:{
+> ...L._meta,_:{
+> ...L._meta?.kiro,loadWindowLiveCapture:!0}
+319183c319373
+< ,...yA.map((_)=>({
+---
+> ,...wA.map((_)=>({
+319208c319398
+< ...ije(_),...nze(_),...Unt,...qnt,...znt}
+---
+> ...Nje(_),...Tze(_),...frt,..._rt,...Ert}
+320512c320702
+< classification:"_-_",label:"_",actionDescription:"Upgrade _ universal (_ + _) config"}
+---
+> classification:"_-_",label:"_ _ earlier upgrade",actionDescription:"Upgrade _ refresh _ universal (_ + _) config"}
+321147c321337
+< ..._9(_),...u===_ 0?{
+---
+> ...F9(_),...u===_ 0?{
+322064c322254
+< ,...Cat(_),memoryConfig:_,sessionModelBaselinePending:!1}
+---
+> ,...Xat(_),memoryConfig:_,sessionModelBaselinePending:!1}
+322073c322263
+< ...B.kas,sessionOrigin:_,launchEffort:_,sessionAttemptGeneration:_+1,sessionAttemptInFlight:!1,sessionModelBaselinePending:!1,previousModelId:_,...Cat(_),memoryConfig:_}
+---
+> ...B.kas,sessionOrigin:_,launchEffort:_,sessionAttemptGeneration:_+1,sessionAttemptInFlight:!1,sessionModelBaselinePending:!1,previousModelId:_,...Xat(_),memoryConfig:_}
+322171c322361
+< ...Ute,claimEsc:(_)=>_((_)=>_.escOwners.includes(_)?_:{
+---
+> ...one,claimEsc:(_)=>_((_)=>_.escOwners.includes(_)?_:{
+322613c322803
+< _:_.kiro,agentEngine:_.agentEngine,cloudSessionActive:_.cloudSessionActive,slashCommands:_,kasCommands:_.kasCommands,prompts:_.prompts,skills:_.skills,steering:_.steering,kasAvailableModels:_.kas.availableModels,kasAvailableAgents:_.kas.availableAgents,kasAvailableEfforts:_.kas.availableEfforts,...q1e(_,_),showAlert:(_,_,_=3000)=>_.showTransientAlert({
+---
+> _:_.kiro,agentEngine:_.agentEngine,cloudSessionActive:_.cloudSessionActive,slashCommands:_,kasCommands:_.kasCommands,prompts:_.prompts,skills:_.skills,steering:_.steering,kasAvailableModels:_.kas.availableModels,kasAvailableAgents:_.kas.availableAgents,kasAvailableEfforts:_.kas.availableEfforts,...pTe(_,_),showAlert:(_,_,_=3000)=>_.showTransientAlert({
+322635c322825
+< ,setUpgradeDiagnostics:_.setUpgradeDiagnostics,setUpgradeRunPreview:_.setUpgradeRunPreview,setShowMcpPanel:_.setShowMcpPanel,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,setShowToolsPanel:_.setShowToolsPanel,requestTrustAllTools:_.requestTrustAllTools,setShowGoalPanel:_.setShowGoalPanel,setGoalStatus:_.setGoalStatus,setShowStatsPanel:_.setShowStatsPanel,setShowHooksPanel:_.setShowHooksPanel,hooksList:_.hooksList,promptSourceProviderConnection:_.promptSourceProviderConnection,setCloudProviderConnected:_.setCloudProviderConnected,setCloudProvider:_.setCloudProvider,...Dat(_),resetCloudSessionScope:_.resetCloudSessionScope,stashCloudSessionScope:_.stashCloudSessionScope,restoreCloudSessionScope:_.restoreCloudSessionScope,applyRepoFooter:_.applyRepoFooter,setCloudNewSessionChecklist:_.setCloudNewSessionChecklist,setCloudSessionActive:_.setCloudSessionActive,setShowKeybindingsPanel:_.setShowKeybindingsPanel,setShowDisplaySettingsPanel:_.setShowDisplaySettingsPanel,setShowThemePanel:_.setShowThemePanel,setShowCloudQuitPrompt:_.setShowCloudQuitPrompt,setShowSettingsPanel:_.setShowSettingsPanel,setShowConfigPanel:_.setShowConfigPanel,setConfigReturnOnEscape:_.setConfigReturnOnEscape,endConfigHandoff:_.endConfigHandoff,getConfigHandoffToken:()=>_().configHandoffToken,claimLoadingMessage:(_)=>{
+---
+> ,setUpgradeDiagnostics:_.setUpgradeDiagnostics,setUpgradeRunPreview:_.setUpgradeRunPreview,setShowMcpPanel:_.setShowMcpPanel,mcpServerCache:_.mcpServerCache,mcpRegistryCache:_.mcpRegistryCache,setShowToolsPanel:_.setShowToolsPanel,requestTrustAllTools:_.requestTrustAllTools,setShowGoalPanel:_.setShowGoalPanel,setGoalStatus:_.setGoalStatus,setShowStatsPanel:_.setShowStatsPanel,setShowHooksPanel:_.setShowHooksPanel,hooksList:_.hooksList,promptSourceProviderConnection:_.promptSourceProviderConnection,setCloudProviderConnected:_.setCloudProviderConnected,setCloudProvider:_.setCloudProvider,...sot(_),resetCloudSessionScope:_.resetCloudSessionScope,stashCloudSessionScope:_.stashCloudSessionScope,restoreCloudSessionScope:_.restoreCloudSessionScope,applyRepoFooter:_.applyRepoFooter,setCloudNewSessionChecklist:_.setCloudNewSessionChecklist,setCloudSessionActive:_.setCloudSessionActive,setShowKeybindingsPanel:_.setShowKeybindingsPanel,setShowDisplaySettingsPanel:_.setShowDisplaySettingsPanel,setShowThemePanel:_.setShowThemePanel,setShowCloudQuitPrompt:_.setShowCloudQuitPrompt,setShowSettingsPanel:_.setShowSettingsPanel,setShowConfigPanel:_.setShowConfigPanel,setConfigReturnOnEscape:_.setConfigReturnOnEscape,endConfigHandoff:_.endConfigHandoff,getConfigHandoffToken:()=>_().configHandoffToken,claimLoadingMessage:(_)=>{
+322648c322838
+< ..._i(_(_.steerQueue)),_steerReplayArmed:!1,editingSteerLineIndex:_}
+---
+> ...Ei(_(_.steerQueue)),_steerReplayArmed:!1,editingSteerLineIndex:_}
+322657c322847
+< activeCommand:_,showContextBreakdown:!1,showHelpPanel:!1,showUsagePanel:!1,showRewindExplorer:!1,showTangentExplorer:!1,showMcpPanel:!1,showToolsPanel:!1,showStatsPanel:!1,showHooksPanel:!1,showRepoPicker:!1,showSourceProviderGate:!1,showKeybindingsPanel:!1,showThemePanel:!1,showStatusLinePanel:!1,sandboxStatus:_,sandboxMenuStatus:_,...ej,...Tat,settingsReturnOnEscape:!1,...Ute,configReturnOnEscape:!1,verboseReturnOnEscape:_,themeReturnOnEscape:_,showKnowledgePanel:!1,showConfigPanel:!1,configPanelCategory:_,configPanelStandalone:!1,configHandoffToken:0,cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,contextBreakdown:_,usageData:_,tangentName:_,pendingSpecDescription:_,contextUsagePercent:_,lastTurnTokens:_,goalStatus:_,goalCancelFailed:!1,...r}
+---
+> activeCommand:_,showContextBreakdown:!1,showHelpPanel:!1,showUsagePanel:!1,showRewindExplorer:!1,showTangentExplorer:!1,showMcpPanel:!1,showToolsPanel:!1,showStatsPanel:!1,showHooksPanel:!1,showRepoPicker:!1,showSourceProviderGate:!1,showKeybindingsPanel:!1,showThemePanel:!1,showStatusLinePanel:!1,sandboxStatus:_,sandboxMenuStatus:_,...gj,...iot,settingsReturnOnEscape:!1,...one,configReturnOnEscape:!1,verboseReturnOnEscape:_,themeReturnOnEscape:_,showKnowledgePanel:!1,showConfigPanel:!1,configPanelCategory:_,configPanelStandalone:!1,configHandoffToken:0,cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,contextBreakdown:_,usageData:_,tangentName:_,pendingSpecDescription:_,contextUsagePercent:_,lastTurnTokens:_,goalStatus:_,goalCancelFailed:!1,...r}
+323642c323832
+< ,...Uk(_,"_-execution")}
+---
+> ,...jk(_,"_-execution")}
+324248c324438
+< capability:_,...zMn(_,_),scope:_,ownerSessionId:_,...i!=="session"?{
+---
+> capability:_,...UOn(_,_),scope:_,ownerSessionId:_,...i!=="session"?{
+324397c324587
+< ...P,status:_?"rejected":"approved",isFinished:_?!0:_.isFinished,startTime:_?_.startTime:_}
+---
+> ...L,status:_?"rejected":"approved",isFinished:_?!0:_.isFinished,startTime:_?_.startTime:_}
+324400c324590
+< ...P,status:"approved"}
+---
+> ...L,status:"approved"}
+324403c324593
+< ...P,startTime:_}
+---
+> ...L,startTime:_}
+324429c324619
+< outcome:"selected",optionId:_,...L?{
+---
+> outcome:"selected",optionId:_,...F?{
+324512c324702
+< ...bA(_,_),approvalQueue:_,pendingApproval:_?_[0]??_:_.pendingApproval,...l?{
+---
+> ...yA(_,_),approvalQueue:_,pendingApproval:_?_[0]??_:_.pendingApproval,...l?{
+324536c324726
+< ...bA(_,_),questionQueue:_,pendingQuestion:_&&_(_)?_[0]??_:_.pendingQuestion,...m?{
+---
+> ...yA(_,_),questionQueue:_,pendingQuestion:_&&_(_)?_[0]??_:_.pendingQuestion,...m?{
+325363c325553
+< currentModel:_,...tit(_)}
+---
+> currentModel:_,...Dit(_)}
+326069c326259
+< _(_ _ _[_,...Fit(_)]){
+---
+> _(_ _ _[_,...Ast(_)]){
+326350c326540
+< _ _=_.now(),_=[...P._recentLocalUserMessages.filter((_)=>_-_.at<_),{
+---
+> _ _=_.now(),_=[...L._recentLocalUserMessages.filter((_)=>_-_.at<_),{
+326354c326544
+< isProcessing:!0,streamingContent:"",streamingMessageId:_,thinkingContent:"",agentError:_,agentErrorGuidance:_,_observerQueueBlocked:!1,wasCancelled:!1,lastTurnErrored:!1,...P.goalStatus?.state==="paused"?{
+---
+> isProcessing:!0,streamingContent:"",streamingMessageId:_,thinkingContent:"",agentError:_,agentErrorGuidance:_,_observerQueueBlocked:!1,wasCancelled:!1,lastTurnErrored:!1,...L.goalStatus?.state==="paused"?{
+326356c326546
+< ...P.goalStatus,state:"active"}
+---
+> ...L.goalStatus,state:"active"}
+326360c326550
+< ,pendingCheckpointTaskRun:_,...P.tasks.length>0&&_.tasks.every((_)=>_.status==="completed")?{
+---
+> ,pendingCheckpointTaskRun:_,...L.tasks.length>0&&_.tasks.every((_)=>_.status==="completed")?{
+326364c326554
+< ,autoApproveCrewTools:!1,cloudNewSessionChecklist:!1,messages:[...P.messages,_],_recentLocalUserMessages:_,...l?{
+---
+> ,autoApproveCrewTools:!1,cloudNewSessionChecklist:!1,messages:[...L.messages,_],_recentLocalUserMessages:_,...l?{
+326520c326710
+< ..._i(_),_steerReplayArmed:_||_.length>0}
+---
+> ...Ei(_),_steerReplayArmed:_||_.length>0}
+326550c326740
+< ..._i(_(_().steerQueue,_).state),_steerReplayArmed:!0}
+---
+> ...Ei(_(_().steerQueue,_).state),_steerReplayArmed:!0}
+326597c326787
+< ..._i(_(_().steerQueue)),_steerReplayArmed:!1}
+---
+> ...Ei(_(_().steerQueue)),_steerReplayArmed:!1}
+326859c327049
+< ..._i(_.state),_steerReplayArmed:!1,editingSteerLineIndex:_,messages:[...s.messages,{
+---
+> ...Ei(_.state),_steerReplayArmed:!1,editingSteerLineIndex:_,messages:[...s.messages,{
+327029a327220,327227
+> _(_.hops.length>0)_.answerRowIds.add(_)}
+> function _(_,_){
+> _(_.answerRowIds.size===0)return!1;
+> return _.some((_)=>_.role==="model"&&_.answerRowIds.has(_.id)&&_.content.trim().length>0)}
+> function _(_){
+> _ _=_(_),_=_().ellipsis;
+> return(_)=>_(_)??_(_,_)}
+> function _(_){
+327032,327033c327230,327231
+< =_();
+< return[...n,...r.availableModels].find((_)=>_.id===_)?.name??_}
+---
+> =_(),_=[...t,...n.availableModels];
+> return(_)=>_.find((_)=>_.id===_)?.name}
+327035,327038c327233,327235
+< _ _=_(_,_);
+< _(_.cause==="unavailable")return`_{
+< _}
+<  _ unavailable`;
+---
+> return _(_)(_)}
+> function _(_,_){
+> _(_.length<=_)return _;
+327039a327237,327238
+> _.slice(0,_-_.length)}
+> _{
+327041,327042c327240,327251
+<  refused`}
+< function _(_,_,_){
+---
+> `}
+> function _(_){
+> _(_==="unavailable")return"_ unavailable";
+> _(_==="unknown")return"yielded";
+> return"refused"}
+> function _(_,_){
+> return`_{
+> _(_,_)}
+>  _{
+> _(_.cause)}
+> `}
+> function _(_,_,_,_){
+327045c327254,327256
+< _ _=_(_,_),_=_(_,_);
+---
+> _ _=_(_,_),_=_(_,_),_=_.promotedTo?` _{
+> _(_.promotedTo)}
+>  _ _ _ conversation'_ model.`:"";
+327050c327261,327263
+<  cancelled.`,success:!1,reasons:_}
+---
+>  cancelled.${
+> _}
+> `,success:!1,reasons:_}
+327055c327268,327270
+< . _ model answered. _ _ different model _ /model.`,success:!1,reasons:_}
+---
+> . _ model answered. _ _ different model _ /model.${
+> _}
+> `,success:!1,reasons:_}
+327057c327272,327286
+< _(_==="unanswered")return{
+---
+> _(_==="faulted"&&!_)return{
+> content:_.hops.length>1?`_{
+> _}
+> ;
+>  _{
+> _(_.to)}
+>  produced _ answer.${
+> _}
+> `:`_{
+> _}
+> . _ model answered.${
+> _}
+> `,success:!1,reasons:_}
+> ;
+> _(_.promotedTo===_.to)return{
+327060d327288
+< . _ model answered.`,success:!1,reasons:_}
+327062c327290,327293
+< _ _=_.promotedTo?", _ _ conversation'_ model.":" _ _ _.";
+---
+>  answered _ _{
+> _(_.to)}
+> , _ _ conversation'_ model.`,success:!0,reasons:_}
+> ;
+327069c327300
+< _{
+---
+>  _ _ _.${
+327073a327305
+> _ _=[...t.hops].reverse().find((_)=>_.to!==_)?.to;
+327075c327307
+< _:_.modelId??_().currentModel?.id??_,explanation:_.explanation??_}
+---
+> _:_.modelId??_??_().currentModel?.id??_,explanation:_.explanation??_}
+327080c327312,327323
+< =_;
+---
+> =_,_=_(_);
+> _(_!==_&&_===_.from){
+> _(_.pendingRefusal=_,!_.promoted){
+> _ _=(_.from?_(_,_.from):_ 0)||"_ model",_=_().ellipsis;
+> _().setRetryStatus({
+> message:`_{
+> _}
+>  couldn'_ complete _ response. Retrying${
+> _}
+> `}
+> )}
+> return}
+327084c327327
+< _:_,_:_(_,_)}
+---
+> _:_,_:_(_)}
+327087,327089c327330
+< _(_.hops.push(_.cause==="refused"?{
+< _:_.from,_:_,cause:"refused",explanation:_.pendingRefusal?.explanation??_}
+< :{
+---
+> _(_.hops.push(_.cause==="unavailable"?{
+327091c327332,327334
+< ),_.pendingRefusal=_,_===_)return;
+---
+> :{
+> _:_.from,_:_,cause:_.cause,explanation:_.pendingRefusal?.explanation??_}
+> ),_.pendingRefusal=_,_.answerRowIds=_ _,_===_)return;
+327094c327337
+< _(_,(_)=>_(_,_))}
+---
+> _(_,_)}
+327097c327340
+< _(_,_)}
+---
+> _(_)}
+327104c327347
+< _ _=_(_,_,(_)=>_(_,_));
+---
+> _ _=_(_,_,_(_),_(_,_().messages));
+327112,327114c327355,327357
+< _:[],pendingRefusal:_,promotedTo:_}
+< ),_=(_,_)=>_.from?_(_.from):"_ model",_=(_,_)=>_.hops.map((_)=>_(_,_)).join(";
+<  "),_=(_,_)=>_.hops.flatMap((_)=>_.cause==="refused"&&_.explanation?[{
+---
+> _:[],pendingRefusal:_,promotedTo:_,answerRowIds:_ _}
+> ),_=64,_=(_,_)=>_.from?_(_.from):"_ model",_=(_,_)=>_.hops.map((_)=>_(_,_)).join(";
+>  "),_=(_,_)=>_.hops.flatMap((_)=>_.cause!=="unavailable"&&_.explanation?[{
+327117a327361
+> _();
+327182c327426
+< ...c,_:_,isFinished:!0,status:_(_,_,_),presumedCancelled:_?!1:_.presumedCancelled,result:_(_),...kLn(_,_.meta?.kiro),...E&&{
+---
+> ...c,_:_,isFinished:!0,status:_(_,_,_),presumedCancelled:_?!1:_.presumedCancelled,result:_(_),...EFn(_,_.meta?.kiro),...E&&{
+327322a327567
+> _(_!=_)_(_,_);
+327332c327577
+< _ _=[...ut.messages];
+---
+> _ _=[...ct.messages];
+327334c327579
+< ...Rt,content:_,thinking:_||_.thinking,thinkingMs:_??_.thinkingMs}
+---
+> ...Dt,content:_,thinking:_||_.thinking,thinkingMs:_??_.thinkingMs}
+327348,327349c327593,327594
+< _=_,_=_!==_,_.push(_),_((_)=>({
+< messages:[...Ne.messages,{
+---
+> _=_,_=_!==_,_.push(_),_(_,_),_((_)=>({
+> messages:[...Qe.messages,{
+327368c327613
+< ...fe,thinkingMs:_}
+---
+> ...ge,thinkingMs:_}
+327370c327615
+< ...Ne,messages:_}
+---
+> ...Qe,messages:_}
+327388c327633
+< agentError:_,agentErrorGuidance:_,isProcessing:!1,_observerQueueBlocked:!0,...ut}
+---
+> agentError:_,agentErrorGuidance:_,isProcessing:!1,_observerQueueBlocked:!0,...ct}
+327416c327661
+< _ _=[...ut.messages];
+---
+> _ _=[...ct.messages];
+327432c327677
+< sessions:_,sessionEventBuffer:_,messages:[...fe,{
+---
+> sessions:_,sessionEventBuffer:_,messages:[...ge,{
+327435c327680
+< ,origin:_.origin,originalTitle:_.originalTitle,...tt?.toolId&&{
+---
+> ,origin:_.origin,originalTitle:_.originalTitle,...nt?.toolId&&{
+327437c327682
+< ,sessionId:_.sessionId,pipelineGroupId:_.meta?.kiro?.pipeline?.groupId,...EA(_)&&{
+---
+> ,sessionId:_.sessionId,pipelineGroupId:_.meta?.kiro?.pipeline?.groupId,...kA(_)&&{
+327439c327684
+< ,_:_.kind,content:_,purpose:_,_:_,locations:_.locations,agentName:_,...Kk(_.meta?.kiro)&&{
+---
+> ,_:_.kind,content:_,purpose:_,_:_,locations:_.locations,agentName:_,...Jk(_.meta?.kiro)&&{
+327441c327686
+< ,...ce.sessionId&&{
+---
+> ,...se.sessionId&&{
+327443c327688
+< ,...hnt(_.agentEngine,_,_.open,!_.isProcessing,_,_)&&{
+---
+> ,...Wnt(_.agentEngine,_,_.open,!_.isProcessing,_,_)&&{
+327445c327690
+< ,...Ve&&{
+---
+> ,...Ze&&{
+327469c327714
+< _ _=[...Je.approvalQueue,_.value],_=_.value.toolCall.toolCallId;
+---
+> _ _=[...et.approvalQueue,_.value],_=_.value.toolCall.toolCallId;
+327472c327717
+< ...tt,status:"pending"}
+---
+> ...nt,status:"pending"}
+327499,327500c327744,327745
+< ...Ze,_:_.value.question,isQuestion:!0,status:"pending"}
+< :_):[...dt.messages,{
+---
+> ...Ve,_:_.value.question,isQuestion:!0,status:"pending"}
+> :_):[...pt.messages,{
+327503c327748
+< ",agentName:_,...Rt&&{
+---
+> ",agentName:_,...Dt&&{
+327506c327751
+< ],_=[...dt.questionQueue,_.value];
+---
+> ],_=[...pt.questionQueue,_.value];
+327526c327771
+< ...It,pendingStatusChanges:[...It.pendingStatusChanges,...ce.changes]}
+---
+> ...It,pendingStatusChanges:[...It.pendingStatusChanges,...se.changes]}
+327534c327779
+< _([...Rt.keys()].some((_)=>!_.has(_)))_{
+---
+> _([...Dt.keys()].some((_)=>!_.has(_)))_{
+327540c327785
+< _=[...Ot,...Ve.tasks.filter((_)=>!_.has(_.id))]}
+---
+> _=[...Ot,...Ze.tasks.filter((_)=>!_.has(_.id))]}
+327578c327823
+< ...tt.specTaskRun,status:_}
+---
+> ...nt.specTaskRun,status:_}
+327601c327846
+< messages:[...ut.messages,{
+---
+> messages:[...ct.messages,{
+327610,327611c327855,327856
+< ...Je.specTaskRun,pendingTurnEnd:{
+< executionId:_,...ce.stopReason?{
+---
+> ...et.specTaskRun,pendingTurnEnd:{
+> executionId:_,...se.stopReason?{
+327631c327876
+< ...kt,status:_(_.tasks,_.stopReason)}
+---
+> ...ht,status:_(_.tasks,_.stopReason)}
+327640c327885
+< _(_.open=!1,_.blocked=!1,_=[],_.clearWatchdog(),_(),_(),_.drain(),_(),_.removeEmptyOpener(),_(_.stopReason==="cancelled"?"cancelled":"answered"),_.stopReason==="cancelled")_((_)=>_(_));
+---
+> _(_.open=!1,_.blocked=!1,_=[],_.clearWatchdog(),_(),_(),_.drain(),_(),_.removeEmptyOpener(),_(_.stopReason==="cancelled"?"cancelled":_.stopReason==="error"||_.stopReason==="content_filtered"?"faulted":"answered"),_.stopReason==="cancelled")_((_)=>_(_));
+327665c327910
+< _(_.type!=="retry_warning"&&_.type!=="stall_notice"&&_().retryStatus)_().setRetryStatus(_);
+---
+> _(_.type!=="retry_warning"&&_.type!=="stall_notice"&&(_.type!=="model_fallback"||!_.promoted)&&_().retryStatus)_().setRetryStatus(_);
+327699c327944,327945
+< _"model_fallback":_(_,_,_);
+---
+> _"model_fallback":_(!_.promoted&&_.to!==_.from)_(),_=[];
+> _(_,_,_);
+327720c327966
+< _(![...Ve].some((_)=>_.toolCallOutput.has(_)))return _.toolCallOutput;
+---
+> _(![...Ze].some((_)=>_.toolCallOutput.has(_)))return _.toolCallOutput;
+327780c328026
+< _ _=[...Ve.messages];
+---
+> _ _=[...Ze.messages];
+327782c328028
+< ...dt,thinkingMs:_}
+---
+> ...pt,thinkingMs:_}
+327795c328041
+< ),_(_().wasCancelled?"cancelled":"unanswered")}
+---
+> ),_(_().wasCancelled?"cancelled":"faulted")}
+328335c328581
+< ...Dne}
+---
+> ...Zne}
+328345c328591
+< ...Dne}
+---
+> ...Zne}
+328350c328596
+< ...Dne}
+---
+> ...Zne}
+328523c328769
+< ..._i(_(_(_().steerQueue),_).state),editingSteerLineIndex:_}
+---
+> ...Ei(_(_(_().steerQueue),_).state),editingSteerLineIndex:_}
+328528c328774
+< ..._i(_.state),editingSteerLineIndex:_}
+---
+> ...Ei(_.state),editingSteerLineIndex:_}
+328569c328815
+< ..._i(_(_().steerQueue)),editingSteerLineIndex:_}
+---
+> ...Ei(_(_().steerQueue)),editingSteerLineIndex:_}
+328574c328820
+< ..._i(_.state),editingSteerLineIndex:_}
+---
+> ...Ei(_.state),editingSteerLineIndex:_}
+328883c329129
+< ,linkNoticeShown:!1,toolCallOutput:_ _,...L1e,steerQueue:_,pendingSteerContent:_,slashCommands:_(_ 0,_),kasCommands:_==="_"?[...NF()]:[],cloudSessionActive:!1,windowsSandboxEnablementPending:!1,windowsSandboxSetup:_,sandboxStatus:_,sandboxRestarting:!1,...X0e,localSandboxConfiguration:_,sandboxMenuStatus:_,cloudSnapshotReadiness:{
+---
+> ,linkNoticeShown:!1,toolCallOutput:_ _,...oTe,steerQueue:_,pendingSteerContent:_,slashCommands:_(_ 0,_),kasCommands:_==="_"?[...JF()]:[],cloudSessionActive:!1,windowsSandboxEnablementPending:!1,windowsSandboxSetup:_,sandboxStatus:_,sandboxRestarting:!1,...w1e,localSandboxConfiguration:_,sandboxMenuStatus:_,cloudSnapshotReadiness:{
+328889c329135
+< ,specReviewView:_,specTaskRunConfirmation:_,specTaskRun:_,pendingSpecDescription:_,approvalMode:"dropdown",autoApproveCrewTools:!1,autoApproveSpecTaskTools:!1,focusedCrewIndex:0,...nit(_),currentAgent:_,previousAgentName:_,settings:_,goalStatus:_,goalCancelFailed:!1,activeCommand:_,commandInputValue:"",activeTrigger:_,filePickerHasResults:!1,promptHint:_,commandShadowText:_,...Vit(_),input:_(),reverseSearchActive:!1,setReverseSearchActive:(_)=>{
+---
+> ,specReviewView:_,specTaskRunConfirmation:_,specTaskRun:_,pendingSpecDescription:_,approvalMode:"dropdown",autoApproveCrewTools:!1,autoApproveSpecTaskTools:!1,focusedCrewIndex:0,...Rit(_),currentAgent:_,previousAgentName:_,settings:_,goalStatus:_,goalCancelFailed:!1,activeCommand:_,commandInputValue:"",activeTrigger:_,filePickerHasResults:!1,promptHint:_,commandShadowText:_,...vst(_),input:_(),reverseSearchActive:!1,setReverseSearchActive:(_)=>{
+328925c329171
+< ),...vat(_),trustAllToolsRequested:_.trustAllTools??!1,recommendLiteUi:!1,surveyState:(()=>{
+---
+> ),...not(_),trustAllToolsRequested:_.trustAllTools??!1,recommendLiteUi:!1,surveyState:(()=>{
+328933c329179
+< )(),completedTurnCount:0,showSurveyPanel:!1,activeSurvey:_,surveyPrompt:_,surveyContext:_,workflowSurveyState:_(),...Wit(_,_,{
+---
+> )(),completedTurnCount:0,showSurveyPanel:!1,activeSurvey:_,surveyPrompt:_,surveyContext:_,workflowSurveyState:_(),...kst(_,_,{
+328949c329195
+< ),...Fst(_,_),...z1e(_,_,_,_.isCommandDispatchInProgress),...Nqe(_,_),...jat(_,_),...lot(_,_),...rot(_,_),setAutoApproveCrewTools:(_)=>_({
+---
+> ),...bct(_,_),...ATe(_,_,_,_.isCommandDispatchInProgress),...c5e(_,_),...wot(_,_),...Pot(_,_),...Qot(_,_),setAutoApproveCrewTools:(_)=>_({
+328968c329214
+< ,...l(_(_,_,_),_),...wot(_,_,_.kiro),clearTranscriptForShellClear:()=>{
+---
+> ,...l(_(_,_,_),_),...Zot(_,_,_.kiro),clearTranscriptForShellClear:()=>{
+328984c329230
+< ,...jot(_,{
+---
+> ,...wit(_,{
+328986c329232
+< ),...Uat(_,_,_,_.retire),...Kat(_,_,_.retire),...dot(_,_,_),...rct(_,_,_),...Vot(_),navigateHistory:(_)=>_.getInstance().navigate(_),setMode:(_)=>{
+---
+> ),...fot(_,_,_,_.retire),...Cot(_,_,_.retire),...Got(_,_,_),...Oct(_,_,_),...vit(_),navigateHistory:(_)=>_.getInstance().navigate(_),setMode:(_)=>{
+328994c329240
+< ...Uk(_,_),...h.artifactGenerating===_?_:{
+---
+> ...jk(_,_),...h.artifactGenerating===_?_:{
+329000c329246
+< ...zp(_),...b.artifactGenerating===_?_:{
+---
+> ...Wp(_),...b.artifactGenerating===_?_:{
+329004c329250
+< ,...sit(_,_),cancelCrewApprovals:async()=>{
+---
+> ,...Lit(_,_),cancelCrewApprovals:async()=>{
+329039c329285
+< ,...Wot(_,_,{
+---
+> ,...kit(_,_,{
+329041c329287
+< ),...Sat(_,_),setLoadingMessage:(_)=>{
+---
+> ),...tot(_,_),setLoadingMessage:(_)=>{
+329083c329329
+< ,...Hot(_,_,{
+---
+> ,...yit(_,_,{
+329085c329331
+< ),...rit(_,_),...Mot(_,_,{
+---
+> ),...Qit(_,_),...dit(_,_,{
+329087c329333
+< ),...Kot(_,_),...u(_(_),_),...eit(_),...Rat(_,_,{
+---
+> ),...Cit(_,_),...u(_(_),_),...Tit(_),...cot(_,_,{
+329097c329343
+< ),...Uot(_,_,()=>_(_)),...$ot(_,_),toggleToolOutputsExpanded:()=>{
+---
+> ),...fit(_,_,()=>_(_)),...hit(_,_),toggleToolOutputsExpanded:()=>{
+329140c329386
+< ,...e5e(_,_,()=>_(_)),...oct(_,_,{
+---
+> ,...B5e(_,_,()=>_(_)),...Fct(_,_,{
+329319c329565
+< ...kf(),_:"manual",facing:_,leanX:_.leanX,leanY:_.leanY,idleAmount:_.idleAmount}
+---
+> ...vf(),_:"manual",facing:_,leanX:_.leanX,leanY:_.leanY,idleAmount:_.idleAmount}
+329321c329567
+< ...uC(_,24,24,{
+---
+> ...AC(_,24,24,{
+329362c329608
+< ...kf(),_:_.x>_.left?(_-_.left)/(_.x-_.left):0.5,_:_.y>_.top?(_-_.top)/(_.y-_.top):0.5,driftStartMs:_}
+---
+> ...vf(),_:_.x>_.left?(_-_.left)/(_.x-_.left):0.5,_:_.y>_.top?(_-_.top)/(_.y-_.top):0.5,driftStartMs:_}
+329405c329651
+< ...j,_ _(){
+---
+> ...z,_ _(){
+329410c329656
+< ...P.aura,defaultBackground:_}
+---
+> ...L.aura,defaultBackground:_}
+339379c339625
+< className:"keyword",begin:_(/\./,_(_(...pft,...fre))),_:_(...pft,...fre),excludeBegin:!0}
+---
+> className:"keyword",begin:_(/\./,_(_(...jft,...Ore))),_:_(...jft,...Ore),excludeBegin:!0}
+339381c339627
+< match:_(/\./,_(...bre)),relevance:0}
+---
+> match:_(/\./,_(...Lre)),relevance:0}
+339384c339630
+< className:"keyword",match:_(...s,...fre)}
+---
+> className:"keyword",match:_(...s,...Ore)}
+339389c339635
+< match:_(/\./,_(...Aft)),relevance:0}
+---
+> match:_(/\./,_(...Kft)),relevance:0}
+339391c339637
+< className:"built_in",match:_(/\_/,_(...Aft),/(?=\()/)}
+---
+> className:"built_in",match:_(/\_/,_(...Kft),/(?=\()/)}
+339447c339693
+< className:"keyword",match:_(/@/,_(...QUn))}
+---
+> className:"keyword",match:_(/@/,_(...DGn))}
+339500c339746
+< /,relevance:0,endsParent:!0,keywords:[...DUn,...mft],contains:[_]}
+---
+> /,relevance:0,endsParent:!0,keywords:[...IGn,...zft],contains:[_]}
+344140c344386
+< ...ES,level:{
+---
+> ...xS,level:{
+345130c345376
+< _.push(...i_t(_,_.styles))}
+---
+> _.push(...P_t(_,_.styles))}
+345219c345465
+< _.push(...zqn(_,{
+---
+> _.push(...q5n(_,{
+345230c345476
+< _=_(_,_,_,_,_),_.push(...Kqn(_,{
+---
+> _=_(_,_,_,_,_),_.push(...j5n(_,{
+345320c345566
+< _(_)_.push(...P4(_.lex(_),_,_));
+---
+> _(_)_.push(...eU(_.lex(_),_,_));
+345375c345621
+< return[...pae(_,_,!1),_(_.replace(/^\_+|\_\_*_/_,""),_||_ 0,_!==-1,_.fence==="```"?_ 0:_.fence),...pae(_,_,_)]}
+---
+> return[...Rae(_,_,!1),_(_.replace(/^\_+|\_\_*_/_,""),_||_ 0,_!==-1,_.fence==="```"?_ 0:_.fence),...Rae(_,_,_)]}
+345426c345672
+< ,...KA(_.lexInline(_.text),{
+---
+> ,...YA(_.lexInline(_.text),{
+345770a346017,346021
+> _ _=_(()=>{
+> _();
+> _=_(!1)}
+> );
+> _ _;
+345779c346030,346031
+< await _([_(),_(),_(),_()]);
+---
+> _();
+> await _([_(),_(),_(),_(),_()]);
+345783c346035
+< _ _=_?"overflow":"_",_=_(),{
+---
+> _ _=_?"overflow":"_",_=_(_)&&_&&!_,_=_(),{
+345815c346067,346079
+< ),[_,_,_,_,_,_,_,_,_]);
+---
+> ),[_,_,_,_,_,_,_,_,_]),_=_(()=>{
+> _(!_)return _;
+> _(_ _=_.length-1;
+> _>=0;
+> _--){
+> _ _=_[_].lines;
+> _(_ _=_.length-1;
+> _>=0;
+> _--)_(_(_[_])>0)return{
+> block:_,_:_}
+> }
+> return _}
+> ,[_,_]);
+345821c346085
+< _:_,children:_}
+---
+> _:_,streamTailCursor:_?.block===_&&_.line===_,children:_}
+346208c346472
+< _.push(...dc(_[_]??"",_,_))}
+---
+> _.push(...gc(_[_]??"",_,_))}
+346485c346749
+< _(_.push(...BS(_,_,_).split(`\n`)),_.isComplete)_.push(_.dim(_));
+---
+> _(_.push(...QS(_,_,_).split(`\n`)),_.isComplete)_.push(_.dim(_));
+346925c347189
+< _(_ _ _ _.slice(1,_))_.push(..._ae(_(_,_),_,_));
+---
+> _(_ _ _ _.slice(1,_))_.push(...Gae(_(_,_),_,_));
+346970c347234
+< _(_[_,_]_ Object.entries(_))_.push(...$b(_,_,_+2,_,_,_))}
+---
+> _(_[_,_]_ Object.entries(_))_.push(...qb(_,_,_+2,_,_,_))}
+346999c347263
+< _(_[_,_]_ _)_.push(...$b(_,_,_+1,_,_,_));
+---
+> _(_[_,_]_ _)_.push(...qb(_,_,_+1,_,_,_));
+347015c347279
+< _(_.path)_.push(...DT("  _: ",_(String(_.path),_),4,_));
+---
+> _(_.path)_.push(...UT("  _: ",_(String(_.path),_),4,_));
+347027c347291
+< _(_[_,_]_ _)_.push(...$b(_,_,1,4,_,_,_));
+---
+> _(_[_,_]_ _)_.push(...qb(_,_,1,4,_,_,_));
+347191c347455
+< _ _=_.trim().length>0&&_(_,_,_,_)?[...nm(_,_,_,_.dim,_),...nm(_,_,_,_.red,_.red)]:_(_,_,_,_.red,_.red);
+---
+> _ _=_.trim().length>0&&_(_,_,_,_)?[...am(_,_,_,_.dim,_),...am(_,_,_,_.red,_.red)]:_(_,_,_,_.red,_.red);
+347249c347513
+< _(_[_,_]_ Object.entries(_))_.push(...$b(_,_,1,Number.POSITIVE_INFINITY,_,_))}
+---
+> _(_[_,_]_ Object.entries(_))_.push(...qb(_,_,1,Number.POSITIVE_INFINITY,_,_))}
+347259c347523
+< _(_[_,_]_ Object.entries(_))_.push(...$b(_,_,0,Number.POSITIVE_INFINITY,_,_))}
+---
+> _(_[_,_]_ Object.entries(_))_.push(...qb(_,_,0,Number.POSITIVE_INFINITY,_,_))}
+347729c347993
+< _.push(...z5n(_,_,_,_))}
+---
+> _.push(...qjn(_,_,_,_))}
+347766c348030
+< _ _.push(...dc(_,_,_));
+---
+> _ _.push(...gc(_,_,_));
+347798c348062
+< _(_.length>0)_.push(...dwt(_,_.task,{
+---
+> _(_.length>0)_.push(...qwt(_,_.task,{
+347858c348122
+< _(_.length>0)_.push(...Fae(_.bold("  response:"),_,{
+---
+> _(_.length>0)_.push(...ooe(_.bold("  response:"),_,{
+347869c348133
+< _(_.length>0)_.push(...Fae(_.red.bold("  _ output:"),_,{
+---
+> _(_.length>0)_.push(...ooe(_.red.bold("  _ output:"),_,{
+347877c348141
+< _(_.subagent.responses&&_&&_.length>0)_.push(...cU(_,_,{
+---
+> _(_.subagent.responses&&_&&_.length>0)_.push(...kU(_,_,{
+347910c348174
+< _(_.pipeline&&_.length>0)_.push(...dwt(_,_,{
+---
+> _(_.pipeline&&_.length>0)_.push(...qwt(_,_,{
+347913c348177
+< return _.push(...Y5n(_,_,_,_,_,_,_,_,_)),_.push(...W5n(_,_,_)),_.join(`\n`)}
+---
+> return _.push(...Kjn(_,_,_,_,_,_,_,_,_)),_.push(...zjn(_,_,_)),_.join(`\n`)}
+348694c348958
+< return _ _([...$wt,...yjn])}
+---
+> return _ _([...wEt,...bzn])}
+348801c349065
+< `:_,_=_?_:_,_=_?_(_,_,_):[],_=_??(_&&!_?"  ...":_),_=_.length===0?_:_.length===0?_:_?[...L,_,...pe]:[...L.slice(0,-1),...Xd(_([_[_.length-1]??""],_,_,_),_,_)],_=_?_||_:_.length===0?_:_;
+---
+> `:_,_=_?_:_,_=_?_(_,_,_):[],_=_??(_&&!_?"  ...":_),_=_.length===0?_:_.length===0?_:_?[...F,_,...pe]:[...F.slice(0,-1),...ep(_([_[_.length-1]??""],_,_,_),_,_)],_=_?_||_:_.length===0?_:_;
+349731c349995
+< outputChunks:[],trailingPartial:"",...Ce}
+---
+> outputChunks:[],trailingPartial:"",...xe}
+349735c349999
+< outputChunks:_.length>0?[_]:[],trailingPartial:"",...Ce}
+---
+> outputChunks:_.length>0?[_]:[],trailingPartial:"",...xe}
+351904c352168
+< return(_.surface==="_"?[...LCt,...fzn]:[...LCt,...bzn]).filter((_)=>(!_.requiresFlag||_(_.requiresFlag))&&(!_.engines||_.engines.includes(_.engine))&&(!_.when||_.when(_)))}
+---
+> return(_.surface==="_"?[...fkt,...A7n]:[...fkt,...g7n]).filter((_)=>(!_.requiresFlag||_(_.requiresFlag))&&(!_.engines||_.engines.includes(_.engine))&&(!_.when||_.when(_)))}
+352924c353188
+< "`:_ 0,_=[...P&&_?[{
+---
+> "`:_ 0,_=[...L&&_?[{
+352991c353255
+< kasScope:_,...Se?.resource?{
+---
+> kasScope:_,...ke?.resource?{
+352995c353259
+< ,...Se?.wholeCapability?{
+---
+> ,...ke?.wholeCapability?{
+353218c353482
+< _.push(...L.sort(_));
+---
+> _.push(...F.sort(_));
+355250c355514
+< segments:_,cursor:_,voiceCursorChar:_,menuHasCursor:_,CursorBlock:_}
+---
+> segments:_,cursor:_,voiceCursorChar:_,menuHasCursor:_}
+355257c355521
+< _ _(_.type==="_")_.push(_(_,_&&_===_,_,_,_,_(_,{
+---
+> _ _(_.type==="_")_.push(_(_,_&&_===_,_,_,_(_,{
+355262c355526
+< _ _(_.type==="paste")_.push(_(_,_&&_===_,_,_,_,_(_,{
+---
+> _ _(_.type==="paste")_.push(_(_,_&&_===_,_,_,_(_,{
+355267c355531
+< _ _(_.type==="image")_.push(_(_,_&&_===_,_,_,_,_(_,{
+---
+> _ _(_.type==="image")_.push(_(_,_&&_===_,_,_,_(_,{
+355285c355549
+< commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_,CursorBlock:_}
+---
+> commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_}
+355304c355568
+< function _(_,_,_,_,_,_,_){
+---
+> function _(_,_,_,_,_,_){
+355341a355606,355616
+> _ _=({
+> _:_=" ",markerOwnedElsewhere:_=!1,marker:_=_}
+> )=>_(_,{
+> children:[!_&&_(_,{
+> children:_}
+> ),_(_,{
+> inverse:!0,children:_}
+> )]}
+> ),_=(_)=>_(_,{
+> ...e,marker:_}
+> );
+355346c355621
+< await _([_(),_(),_(),_()])}
+---
+> await _([_(),_(),_(),_(),_()])}
+355364,355372c355639
+< _ _="Press _ _ expand",_=({
+< _:_=" ",markerOwnedElsewhere:_=!1}
+< )=>_(_,{
+< children:[!_&&_(_,{
+< children:_}
+< ),_(_,{
+< inverse:!0,children:_}
+< )]}
+< ),_=(_)=>_.map((_)=>{
+---
+> _ _="Press _ _ expand",_=(_)=>_.map((_)=>{
+355430c355697
+< onSubmit:_,isProcessing:_,triggerRules:_=[],onTriggerDetected:_,placeholder:_,suppressArrows:_=!1,suppressPromptGlyph:_=!1,isInputOwnedExternally:_}
+---
+> onSubmit:_,isProcessing:_,triggerRules:_=[],onTriggerDetected:_,placeholder:_,suppressArrows:_=!1,suppressPromptGlyph:_=!1,isInputOwnedExternally:_,yieldCursorWhenEmpty:_=!1}
+355542c355809
+< _ _=[...Jt.slice(0,_),{
+---
+> _ _=[...ln.slice(0,_),{
+355546c355813
+< ,...Jt.slice(_+1)],_=_(_);
+---
+> ,...ln.slice(_+1)],_=_(_);
+355556c355823
+< _ _=[...Jt.slice(0,_),{
+---
+> _ _=[...ln.slice(0,_),{
+355560c355827
+< ,...Jt.slice(_+1)],_=_(_);
+---
+> ,...ln.slice(_+1)],_=_(_);
+355588c355855
+< _ _=(_>0&&_.value[_-1]!==" "?" ":"")+_,_=_.value.slice(0,_)+_+_.value.slice(_),_=[...At];
+---
+> _ _=(_>0&&_.value[_-1]!==" "?" ":"")+_,_=_.value.slice(0,_)+_+_.value.slice(_),_=[...vt];
+355610c355877
+< _ _=_.value.slice(0,_)+_+_.value.slice(_),_=[...$t];
+---
+> _ _=_.value.slice(0,_)+_+_.value.slice(_),_=[...Lt];
+355615c355882
+< _ _=[...$t.slice(0,_+1),{
+---
+> _ _=[...Lt.slice(0,_+1),{
+355617c355884
+< ,...$t.slice(_+1)];
+---
+> ,...Lt.slice(_+1)];
+355627c355894
+< _ _=_?.type==="_"?_([...At.slice(0,_),{
+---
+> _ _=_?.type==="_"?_([...vt.slice(0,_),{
+355631c355898
+< ,...At.slice(_+1)]):_([...At.slice(0,_===0?_:_+1),_,...At.slice(_===0?_:_+1)]);
+---
+> ,...vt.slice(_+1)]):_([...vt.slice(0,_===0?_:_+1),_,...vt.slice(_===0?_:_+1)]);
+355647c355914
+< _ _=_([...Vn.slice(0,_),{
+---
+> _ _=_([...Un.slice(0,_),{
+355651c355918
+< ,...Vn.slice(_+1)]);
+---
+> ,...Un.slice(_+1)]);
+355655c355922
+< _ _=_===0?_:_+1,_=_([...Vn.slice(0,_),_,...Vn.slice(_)]);
+---
+> _ _=_===0?_:_+1,_=_([...Un.slice(0,_),_,...Un.slice(_)]);
+355673c355940
+< _ _=_([...Wt.current.slice(0,_),{
+---
+> _ _=_([...zt.current.slice(0,_),{
+355677c355944
+< ,...Wt.current.slice(_+1)]);
+---
+> ,...zt.current.slice(_+1)]);
+355696c355963
+< _ _=_.value.slice(0,_-1)+_.value.slice(_),_=[...At];
+---
+> _ _=_.value.slice(0,_-1)+_.value.slice(_),_=[...vt];
+355703c355970
+< _ _=[...At];
+---
+> _ _=[...vt];
+355708c355975
+< _ _=[...At.slice(0,_-1),...At.slice(_)];
+---
+> _ _=[...vt.slice(0,_-1),...vt.slice(_)];
+355712c355979
+< _ _=[...At.slice(0,_),...At.slice(_+1)];
+---
+> _ _=[...vt.slice(0,_),...vt.slice(_+1)];
+355854c356121
+< ...Pt,buildContent:_}
+---
+> ...Wt,buildContent:_}
+355898c356165
+< _(_(_)===0)return _(_,_,_,_.smallDot,_,_,_,_);
+---
+> _(_(_)===0)return _(_,_,_,_.smallDot,_,_,_,_?_:_);
+355900c356167
+< segments:_,cursor:_,commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_,CursorBlock:_}
+---
+> segments:_,cursor:_,commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_}
+355907c356174
+< _ _=[...Be].sort(),_=_.max(...ue.map((_)=>_.length))+2,_=_.max(1,_.floor(_/_)),_=[];
+---
+> _ _=[...Qe].sort(),_=_.max(...dt.map((_)=>_.length))+2,_=_.max(1,_.floor(_/_)),_=[];
+355940c356207
+< header:_,subHeader:_,children:_,onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,_:_,hideInput:_=!1,isInputOwnedExternally:_}
+---
+> header:_,subHeader:_,children:_,onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,_:_,hideInput:_=!1,isInputOwnedExternally:_,yieldCursorWhenEmpty:_}
+355954c356221
+< onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,isInputOwnedExternally:_}
+---
+> onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,isInputOwnedExternally:_,yieldCursorWhenEmpty:_}
+356563c356830
+< _ _=_(_,(_)=>[...ft.workflows.values()].some((_)=>_.status==="running"&&_.startedAt!==_&&_.completedAt===_));
+---
+> _ _=_(_,(_)=>[...gt.workflows.values()].some((_)=>_.status==="running"&&_.startedAt!==_&&_.completedAt===_));
+357131c357398
+< title:_,onClose:_,closeHintLabel:_?"_ running":"close",...ju({
+---
+> title:_,onClose:_,closeHintLabel:_?"_ running":"close",...zu({
+357771c358038
+< _=_.max(...gG.map((_)=>_.keys.length))+2}
+---
+> _=_.max(...TG.map((_)=>_.keys.length))+2}
+359549c359816
+< ...xe,filterFocused:_}
+---
+> ...we,filterFocused:_}
+359739c360006
+< ,...lt.filter((_)=>_.sessions.length>0)]}
+---
+> ,...it.filter((_)=>_.sessions.length>0)]}
+359775c360042
+< ..._t,sessions:_}
+---
+> ...wt,sessions:_}
+360689c360956
+< _ _=_.legs.live?.sessions??[],_=_ _([...st.legs.diskV2?.sessions??[],...st.legs.diskKas?.sessions??[],...st.legs.classic?.sessions??[]].map(_)),_=_ _(_.map(_)),_=_ _(_({
+---
+> _ _=_.legs.live?.sessions??[],_=_ _([...lt.legs.diskV2?.sessions??[],...lt.legs.diskKas?.sessions??[],...lt.legs.classic?.sessions??[]].map(_)),_=_ _(_.map(_)),_=_ _(_({
+360709c360976
+< _(_==="_")_(_.complete)_.current=[...gn.sessions];
+---
+> _(_==="_")_(_.complete)_.current=[...fn.sessions];
+360711c360978
+< sessions:_([...gn.sessions],_.current),complete:!1,...gn.localComplete===!0?{
+---
+> sessions:_([...fn.sessions],_.current),complete:!1,...fn.localComplete===!0?{
+360845c361112
+< _(_.push(...Wvt(_,_(_,_.length,_))),_.length<_){
+---
+> _(_.push(...Bxt(_,_(_,_.length,_))),_.length<_){
+361291c361558
+< ,...KKn],{
+---
+> ,...jWn],{
+362339a362607
+> _();
+362342c362610
+< content:_,_:_,status:_,isStreaming:_,barColor:_,onReadyToFlush:_,selectionSource:_}
+---
+> content:_,_:_,status:_,isStreaming:_,barColor:_,onReadyToFlush:_,selectionSource:_,ownsStreamTail:_=!1}
+362347c362615,362616
+< return _(_,{
+---
+> return _(_.Provider,{
+> value:_,children:_(_,{
+362352a362622
+> )}
+362631a362902
+> _();
+362640c362911,362913
+< =_(),_=_(),_=_(()=>{
+---
+> =_(),_=_(),{
+> active:_}
+> =_(),_=_(()=>{
+362682c362955
+< content:_,_:"agent",isStreaming:_,barColor:_,onReadyToFlush:_,selectionSource:_?_ 0:_.id}
+---
+> content:_,_:"agent",isStreaming:_,ownsStreamTail:_&&_,barColor:_,onReadyToFlush:_,selectionSource:_?_ 0:_.id}
+362926c363199
+< ,[_,_,_]),_=_(_?[...dt,_]:_,_),_=_.slice(0,_.length),_=_?_[_.length]:_ 0,_=(_||_)&&!_&&_!==_ 0,_=!_&&_!==_ 0&&(()=>{
+---
+> ,[_,_,_]),_=_(_?[...pt,_]:_,_),_=_.slice(0,_.length),_=_?_[_.length]:_ 0,_=(_||_)&&!_&&_!==_ 0,_=!_&&_!==_ 0&&(()=>{
+362935c363208
+< )(),_=(_||_)&&_?[...Ne,{
+---
+> )(),_=(_||_)&&_?[...Qe,{
+362943c363216
+< ).tailSize,_=_&&"agentName"_ _.userMessage?_.userMessage.agentName:_ 0,_=_?_(_,_).hex:_ 0,_=_?[_.userMessage,...tt.aiMessages]:[],_=_?_ _:_(_,_,_??_,_?_.current.get(_):_ 0,_),_=_.filter((_)=>_.has(_.id)),{
+---
+> ).tailSize,_=_&&"agentName"_ _.userMessage?_.userMessage.agentName:_ 0,_=_?_(_,_).hex:_ 0,_=_?[_.userMessage,...nt.aiMessages]:[],_=_?_ _:_(_,_,_??_,_?_.current.get(_):_ 0,_),_=_.filter((_)=>_.has(_.id)),{
+362968c363241
+< rowsAbove:_,firstGapAbove:_,visibility:_,...da}
+---
+> rowsAbove:_,firstGapAbove:_,visibility:_,...xa}
+362993c363266
+< __divider`),_.current.set(_.userMessage.id,_ _([_.userMessage.id,...Tt.aiMessages.map((_)=>_.id)]));
+---
+> __divider`),_.current.set(_.userMessage.id,_ _([_.userMessage.id,...Rt.aiMessages.map((_)=>_.id)]));
+362995c363268
+< _ _="agentName"_ _.userMessage?_.userMessage.agentName:_ 0,_=_?_(_,_).hex:_ 0,_=[_.userMessage,...Tt.aiMessages],_=_.filter((_)=>!_.has(_.id));
+---
+> _ _="agentName"_ _.userMessage?_.userMessage.agentName:_ 0,_=_?_(_,_).hex:_ 0,_=[_.userMessage,...Rt.aiMessages],_=_.filter((_)=>!_.has(_.id));
+363035c363308
+< _(_(_,_.current,_.current,_,_.current),_>0||_>0||_.current.length!==_.current)_.current=_.current.length,_.current=[...j.current];
+---
+> _(_(_,_.current,_.current,_,_.current),_>0||_>0||_.current.length!==_.current)_.current=_.current.length,_.current=[...z.current];
+363493a363767,363768
+> ,"skill-_-restrictions":{
+> title:"_ restrictions _ skills",attribute:"toolsSettings deniedPaths",change:"_ doesn'_ apply _ restrictions _ skill loading _",mitigation:"Replace _ skill _ _ _ skill _ rules _ blocked skills, _ _ _ skill allow _ _ _ should _ without asking"}
+363644c363919
+< ...$Wn(_)}
+---
+> ...UYn(_)}
+363722c363997
+< ]:[],...S0t(_,_)];
+---
+> ]:[],...o1t(_,_)];
+363928c364203
+< _(_.id==="display"&&!_.rolloutEnabled)return"Animations, ASCII _, icons, thinking, _ scrollback";
+---
+> _(_.id==="display"&&!_.rolloutEnabled)return"Animations, ASCII _, icons, screen reader, thinking, _ scrollback";
+363933c364208
+< _ _=_.rolloutEnabled?[_[0],_,...Hse.slice(1)]:_;
+---
+> _ _=_.rolloutEnabled?[_[0],_,...uce.slice(1)]:_;
+364344c364619
+< _ _=_||_,_=_.footerHints?_.footerHints:_.slice(1).filter((_)=>!(_&&_.label==="_ navigate")),_=_==="stacked"?[...ht.filter((_)=>_.label!=="_ navigate"),...ht.filter((_)=>_.label==="_ navigate")]:_;
+---
+> _ _=_||_,_=_.footerHints?_.footerHints:_.slice(1).filter((_)=>!(_&&_.label==="_ navigate")),_=_==="stacked"?[..._t.filter((_)=>_.label!=="_ navigate"),..._t.filter((_)=>_.label==="_ navigate")]:_;
+364482c364757
+< ...ke.byModel,[_]:_}
+---
+> ...Ce.byModel,[_]:_}
+364486,364487c364761,364762
+< ...ke,byModel:{
+< ...ke.byModel,[_]:_ 0}
+---
+> ...Ce,byModel:{
+> ...Ce.byModel,[_]:_ 0}
+364529c364804
+< ,...gt]:_,value:_?_:_.thinkingOn?"_":"_",onChange:(_)=>{
+---
+> ,...bt]:_,value:_?_:_.thinkingOn?"_":"_",onChange:(_)=>{
+364556c364831
+< ,...gt]:_,value:_.effort??_,onChange:(_)=>{
+---
+> ,...bt]:_,value:_.effort??_,onChange:(_)=>{
+364599c364874
+< ,_]:_?.kind==="navigate"?[_,..._e?[{
+---
+> ,_]:_?.kind==="navigate"?[_,...he?[{
+366136c366411
+< ...ece(_,_),_:_,scroll:_,search:_,currentRow:(_)=>_.current.mode===_?_().row:_ 0}
+---
+> ...wce(_,_),_:_,scroll:_,search:_,currentRow:(_)=>_.current.mode===_?_().row:_ 0}
+366190c366465
+< ,[_,_,_,_]),_=_?[...P?[{
+---
+> ,[_,_,_,_]),_=_?[...L?[{
+366202c366477
+< ,...L?[{
+---
+> ,...F?[{
+366223c366498
+< return[...mt,{
+---
+> return[...At,{
+366249c366524
+< ,...L?[{
+---
+> ,...F?[{
+366503c366778
+< title:_,onClose:_,searchable:!0,onSearchChange:_,...ju({
+---
+> title:_,onClose:_,searchable:!0,onSearchChange:_,...zu({
+366736c367011
+< `,onClose:_,searchable:!0,onSearchChange:_,...ju({
+---
+> `,onClose:_,searchable:!0,onSearchChange:_,...zu({
+366810c367085
+< `,onClose:_,closeHintLabel:_?"_ _ _":"_ close",searchable:!0,onSearchChange:_,...ju({
+---
+> `,onClose:_,closeHintLabel:_?"_ _ _":"_ close",searchable:!0,onSearchChange:_,...zu({
+367168c367443
+< `,onClose:_,searchable:_.length>0,onSearchChange:_,...ju({
+---
+> `,onClose:_,searchable:_.length>0,onSearchChange:_,...zu({
+367332c367607
+<  entries`,onClose:_,searchable:_.length>0,onSearchChange:_,...ju({
+---
+>  entries`,onClose:_,searchable:_.length>0,onSearchChange:_,...zu({
+367478c367753,367755
+< _ _=2,_=({
+---
+> _ _=2,_=(_,_)=>_.replace(/^(\*\*.+ _'_ _ _ .+)\*\*_/_,`_ (_{
+> _}
+> )**`),_=({
+367487c367764
+< =_(),_=_(),[_,_]=_(0);
+---
+> =_(),[_,_]=_(0);
+367498,367502c367775
+< ),[_,_]),_=_(()=>_.map((_)=>_.content.replace(/^\*\*\u2728 _'_ _ _ (.*)\*\*_/_,`**_{
+< _.sparkle}
+<  _'_ _ _ _ (_{
+< _.date}
+< )**`)).join(`\n\n---\n\n`),[_,_.sparkle]),_=_.max(_.floor(_/2),8),_=_(()=>_.split(`\n`),[_]),[_,_]=_(0),_=_.slice(_,_+_).join(`\n`),_=_>0,_=_+_<_.length;
+---
+> ),[_,_]),_=_(()=>_.map((_)=>_(_.content,_.date)).join(`\n\n---\n\n`),[_]),_=_.max(_.floor(_/2),8),_=_(()=>_.split(`\n`),[_]),[_,_]=_(0),_=_.slice(_,_+_).join(`\n`),_=_>0,_=_+_<_.length;
+367761c368034
+< ,...dTt(_.summary.trim()||"(empty)",_).map((_)=>({
+---
+> ,...jTt(_.summary.trim()||"(empty)",_).map((_)=>({
+367994c368267
+< `]:[],...fe>0?[`(+_{
+---
+> `]:[],...ge>0?[`(+_{
+368358c368631
+< return[...vVn,...e.showSessionDashboard?[_]:[],...e.showMoveToBackground?[_]:[]]}
+---
+> return[...SZn,...e.showSessionDashboard?[_]:[],...e.showMoveToBackground?[_]:[]]}
+368512c368785
+< ,...g3()}
+---
+> ,...T3()}
+368520c368793
+< ,...g3()}
+---
+> ,...T3()}
+368599c368872,368875
+< return[...n==="_"?_.filter((_)=>_.opensPanel!=="fullscreen"):_,_]}
+---
+> return[...n==="_"?_.filter((_)=>_.opensPanel!=="fullscreen"&&_.key!==_.CHAT_SCREEN_READER):_,_]}
+> function _(_,_){
+> _(_==="_")return(_===_ 0?"_ (...)":_?"_ (_)":"_ (_)").padEnd(_);
+> return _==="_"?"_":"_"}
+368612a368889,368892
+> _ _(_.key===_.CHAT_SCREEN_READER){
+> _ _=_(_);
+> _(_===_ 0)return;
+> await _.onPersistSetting(_.key,_),_.setScreenReaderSetting(_)}
+368629c368909
+< _ _,_,_,_,_,_,_=({
+---
+> _ _,_,_,_="_ input _ _",_=10,_,_,_,_=({
+368638c368918,368924
+< =_(),{
+---
+> =_(),_=_(),_=_.setSetting,{
+> checkVoiceOver:_}
+> =_,_=_!=="_";
+> _(()=>{
+> _(_)_()}
+> ,[_,_]);
+> _ _=_("_"),_=_!=="_"?_(_,!1):_.voiceOverChecked?_.voiceOverDetected:_ 0,{
+368641,368644c368927,368930
+< ...j,description:_.description.split("\_").join(_.smallDot)}
+< )),[_,_,_]),[_,_]=_("display"),[_,_]=_(()=>Object.fromEntries([...M,...ITt].filter((_)=>!_.opensPanel).map((_)=>[_.key,_.cycle?_.key===_.CHAT_SHOW_THINKING?_:_.key===_.CHAT_UI_MODE?_()??String(_.defaultValue):_.key===_.CHAT_FULLSCREEN_WHEEL_ROWS?String(_):_(_.key,String(_.defaultValue)):_(_.key,_.defaultValue===!0)]))),_=_(()=>({
+< onPersistSetting:_,onUiModeChanged:_,setPreserveScrollback:_,setTerminalTitleEnabled:_,setFullscreenWheelRows:_,setFullscreenCopyOnSelect:_,setAllowAsciiArt:_,setAllowAnimations:_,setAllowIcons:_,setWordWrap:_,onFullscreenPreferenceChanged:_,setValues:_}
+< ),[_,_,_,_,_,_,_,_,_,_,_]),_=_(()=>_({
+---
+> ...te,description:_.description.split("\_").join(_.smallDot)}
+> )),[_,_,_]),[_,_]=_("display"),[_,_]=_(()=>Object.fromEntries([...U,...lDt].filter((_)=>!_.opensPanel).map((_)=>[_.key,_.cycle?_.key===_.CHAT_SHOW_THINKING?_:_.key===_.CHAT_UI_MODE?_()??String(_.defaultValue):_.key===_.CHAT_FULLSCREEN_WHEEL_ROWS?String(_):_.key===_.CHAT_SCREEN_READER?_.setting:_(_.key,String(_.defaultValue)):_(_.key,_.defaultValue===!0)]))),_=_(()=>({
+> onPersistSetting:_,onUiModeChanged:_,setPreserveScrollback:_,setTerminalTitleEnabled:_,setFullscreenWheelRows:_,setFullscreenCopyOnSelect:_,setAllowAsciiArt:_,setAllowAnimations:_,setAllowIcons:_,setScreenReaderSetting:_,setWordWrap:_,onFullscreenPreferenceChanged:_,setValues:_}
+> ),[_,_,_,_,_,_,_,_,_,_,_,_]),_=_(()=>_({
+368653,368655c368939,368948
+< _(_.cycle)return{
+< _:"cycle",label:_.label,description:_.description,options:_.cycle.map((_)=>({
+< value:_,label:_}
+---
+> _(_.cycle){
+> _ _=_.key===_.CHAT_SCREEN_READER;
+> return{
+> _:"cycle",label:_.label,description:_&&_.envOverride?`_{
+> _}
+> ;
+>  KIRO_SCREEN_READER=_{
+> _.envOverride}
+> `:_.description,options:_.cycle.map((_)=>({
+> value:_,label:_?_(_,_):_}
+368659c368952
+< ;
+---
+> }
+368669c368962
+< ,[_,_,_,_,_,_,_]);
+---
+> ,[_,_,_,_,_,_,_,_.envOverride,_]);
+368689a368983,368984
+> _();
+> _();
+368701a368997,369001
+> _:_.CHAT_SCREEN_READER,label:"Screen reader",description:`_{
+> _}
+> ;
+>  cursor follows replies _ screen readers`,defaultValue:"_",cycle:[...MW]}
+> ,{
+369915c370215
+< label:_,width:_([_,...j.rows.map((_)=>_[_]??"")],8)}
+---
+> label:_,width:_([_,...z.rows.map((_)=>_[_]??"")],8)}
+369938c370238
+< ,...ie?[{
+---
+> ,...te?[{
+369950c370250
+< ,...ie?[{
+---
+> ,...te?[{
+370994c371294
+< ]:[],...lZn.map((_)=>({
+---
+> ]:[],...uJn.map((_)=>({
+371069c371369
+< .`:""].filter(Boolean),_=[...L,!_.mcpSandboxing&&_.mcpSandboxing?_==="project"?"Global policy keeps _ sandboxing _.":"Project policy keeps _ sandboxing _.":""].filter(Boolean),_=async()=>{
+---
+> .`:""].filter(Boolean),_=[...F,!_.mcpSandboxing&&_.mcpSandboxing?_==="project"?"Global policy keeps _ sandboxing _.":"Project policy keeps _ sandboxing _.":""].filter(Boolean),_=async()=>{
+371082c371382
+< ...ge,networkAccess:_}
+---
+> ...ue,networkAccess:_}
+371112c371412
+< ...ge,requestedState:_?"_":"_"}
+---
+> ...ue,requestedState:_?"_":"_"}
+371118c371418
+< ...ge,mcpSandboxing:_}
+---
+> ...ue,mcpSandboxing:_}
+371632c371932
+< ...ue,status:"_-required"}
+---
+> ...Ue,status:"_-required"}
+371776c372076
+< ...ue,sourcesReported:_(_)}
+---
+> ...Ue,sourcesReported:_(_)}
+372031c372331
+< ..._e,handleCloseWorkflowHistory:_,handleCloseSettingsPanel:_,handleTabFromContext:_,handleTabFromUsage:_,handleRefreshCodePanel:_,handleRewindSelect:_,handleSessionSelect:_,handleSourceProviderRetry:_,handleSourceProviderCancel:_,handleTangentSelect:_}
+---
+> ...he,handleCloseWorkflowHistory:_,handleCloseSettingsPanel:_,handleTabFromContext:_,handleTabFromUsage:_,handleRefreshCodePanel:_,handleRewindSelect:_,handleSessionSelect:_,handleSourceProviderRetry:_,handleSourceProviderCancel:_,handleTangentSelect:_}
+372423c372723
+< agentEngine:_.agentEngine,sandboxStatus:_.sandboxStatus,sandboxBypassed:_.sandboxExecution.phase==="bypassed",effort:_.currentEffort,thinkingToggleable:_.currentReasoning?.support==="toggleable",thinkingEnabled:_.currentReasoning?.thinkingEnabled??_,goalStatus:_.goalStatus,tangentName:_.tangentName,cloudSessionActive:_.cloudSessionActive,cloudRepo:_.cloudRepo,cloudBranch:_.cloudBranch,cloudExtraRepos:_.cloudExtraRepos,codeIntelligenceActive:_.codeIntelligenceActive,...DZn(_),workspacePath:process.cwd()}
+---
+> agentEngine:_.agentEngine,sandboxStatus:_.sandboxStatus,sandboxBypassed:_.sandboxExecution.phase==="bypassed",effort:_.currentEffort,thinkingToggleable:_.currentReasoning?.support==="toggleable",thinkingEnabled:_.currentReasoning?.thinkingEnabled??_,goalStatus:_.goalStatus,tangentName:_.tangentName,cloudSessionActive:_.cloudSessionActive,cloudRepo:_.cloudRepo,cloudBranch:_.cloudBranch,cloudExtraRepos:_.cloudExtraRepos,codeIntelligenceActive:_.codeIntelligenceActive,...RJn(_),workspacePath:process.cwd()}
+372936c373236
+< ...We,agentName:_?.name??_,autonomousModeActive:_(_?.name??_),modelName:_?.name??_,contextUsagePercent:_,gitBranch:_,usagePercent:_.usagePercent,creditsRemaining:_.creditsRemaining,midwaySession:_}
+---
+> ...qe,agentName:_?.name??_,autonomousModeActive:_(_?.name??_),modelName:_?.name??_,contextUsagePercent:_,gitBranch:_,usagePercent:_.usagePercent,creditsRemaining:_.creditsRemaining,midwaySession:_}
+372941c373241
+< ...We,agentName:_?.name??_,autonomousModeActive:_(_?.name??_),modelName:_?.name??_,contextUsagePercent:_,gitBranch:_,goalStatus:_,dimmed:!0,usagePercent:_.usagePercent,creditsRemaining:_.creditsRemaining,midwaySession:_}
+---
+> ...qe,agentName:_?.name??_,autonomousModeActive:_(_?.name??_),modelName:_?.name??_,contextUsagePercent:_,gitBranch:_,goalStatus:_,dimmed:!0,usagePercent:_.usagePercent,creditsRemaining:_.creditsRemaining,midwaySession:_}
+373062c373362
+<  /_ _ clipboard`:"/_ _ clipboard",...ho}
+---
+>  /_ _ clipboard`:"/_ _ clipboard",...$a}
+373090a373391
+> _();
+373104a373406,373407
+> =_(),{
+> active:_}
+373119c373422
+< ...t,isInputOwnedExternally:_}
+---
+> ...t,isInputOwnedExternally:_,yieldCursorWhenEmpty:_}
+373330c373633
+< _ _=_.partial===""?_.chunks:[...Je.chunks,[_.partial]];
+---
+> _ _=_.partial===""?_.chunks:[...et.chunks,[_.partial]];
+374120c374423
+< messages:[...Pe.messages,{
+---
+> messages:[...Fe.messages,{
+374167c374470
+< _.current.push(...Jt.current),_.current.length=0,_(_.current,_.current,_()??_,_),_((_)=>_+1)}
+---
+> _.current.push(...$t.current),_.current.length=0,_(_.current,_.current,_()??_,_),_((_)=>_+1)}
+374330c374633
+< StatusLine:_,isProcessing:_,...We,agentName:_,autonomousModeActive:_(_),modelName:_,contextUsagePercent:_,pendingAgentName:_,animationFrame:_,usagePercent:_.usagePercent,creditsRemaining:_.creditsRemaining,midwaySession:_}
+---
+> StatusLine:_,isProcessing:_,...qe,agentName:_,autonomousModeActive:_(_),modelName:_,contextUsagePercent:_,pendingAgentName:_,animationFrame:_,usagePercent:_.usagePercent,creditsRemaining:_.creditsRemaining,midwaySession:_}
+375151c375454
+< )),_="Entire _",_=[...L.map((_)=>({
+---
+> )),_="Entire _",_=[...F.map((_)=>({
+375168c375471
+< ,_=[...Qe&&_?[{
+---
+> ,_=[...Re&&_?[{
+375176c375479
+< ]:[],...We&&_!==_?[{
+---
+> ]:[],...qe&&_!==_?[{
+375300c375603
+< ...Ve,status:"pending"}
+---
+> ...Ze,status:"pending"}
+375465c375768
+< ]:[],...j&&_!==_?[{
+---
+> ]:[],...z&&_!==_?[{
+376651c376954
+< appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_=!1}
+---
+> appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_=!1,screenReaderDetection:_}
+376666a376970
+> detection:_,children:_(_,{
+376684a376989
+> )}
+376693a376999
+> _();
+377045c377351
+< _=_ _(["mcp_server_init_failure","mcp_oauth_request","mcp_server_initialized","mcp_oauth_cleared","mcp_governance_disabled","web_tools_governance_disabled","agent_not_found","agent_config_error","hooks_update","powers_update","steering_documents_update","diagnostics_update","mcp_server_snapshot","mcp_registry_snapshot","rate_limit_error","system_notice"]),_=_ _(["steering_queued","steering_consumed","steering_cleared"]),_=_ _(["question_request","system_notice","turn_start","turn_end","notification_injected",...BXn])}
+---
+> _=_ _(["mcp_server_init_failure","mcp_oauth_request","mcp_server_initialized","mcp_oauth_cleared","mcp_governance_disabled","web_tools_governance_disabled","agent_not_found","agent_config_error","hooks_update","powers_update","steering_documents_update","diagnostics_update","mcp_server_snapshot","mcp_registry_snapshot","rate_limit_error","system_notice"]),_=_ _(["steering_queued","steering_consumed","steering_cleared"]),_=_ _(["question_request","system_notice","turn_start","turn_end","notification_injected",...Ier])}
+378582c378888
+< AppView:_}
+---
+> AppView:_,detectScreenReader:_}
+378584a378891
+> _();

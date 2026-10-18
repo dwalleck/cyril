@@ -1,0 +1,18 @@
+tool_tags
+fs_write
+allowedPaths
+authorization URL
+authorizationUrl
+authorization_url
+issuer
+KIRO_DISABLE_TELEMETRY
+telemetry.enabled
+--auth-method
+auth_method
+auth-method
+fs_read
+upgrade-agent
+/memories
+us-east-1
+UserPromptSubmit
+symlink

@@ -1,0 +1,44 @@
+ \u2014 it is shown above
+" is managed by AIM and isn't set up for this agent engine yet, so using "
+". Update it in AIM (merge from live) to get the V3 version.
+(also copied to your clipboard):
+AIM-managed
+Also isolate stdio MCP server processes
+Automatic memory updates are off for this session. Turn them on in config.
+Couldn't copy to the clipboard. Open this URL to
+Edit the hook if it should stay narrower
+Global policy keeps MCP sandboxing on.
+Hook matcher not portable
+Hook matcher widened
+Left as written. The engines select different tools for it (regex, engine-only tool name, glob, subagent/<name>, or empty)
+Legacy tool name rewritten to its tag group, which covers more tools on V2
+Memory access is
+Network and MCP sandboxing settings take effect when sandbox is on.
+Network and MCP sandboxing settings take effect when this project requires the sandbox.
+No agents to upgrade.
+Open this URL to
+Project policy keeps MCP sandboxing on.
+Starting OAuth for "
+Use read, write, shell, web, @builtin, @mcp, @server, @server/tool, or *
+[copy-url] Copied URL to clipboard and showed it
+[copy-url] No clipboard tool found; showed the URL only
+backend_unavailable
+components.contextBreakdown.memory
+fallback_unsandboxed
+for this session. Changes in config apply to new sessions.
+hooks[].matcher
+in AIM (merge from live).
+interaction_resolved
+is managed by AIM \u2014 update it in AIM (merge from live)
+kiro_cli_sandbox_session_outcome_total
+lifecycle; update
+linkUrl
+managed by AIM
+not_applicable
+not_applied
+overrideSessionId
+recordTuiSandboxSessionOutcome
+skipped \u2014 AIM owns
+unportable-hook-matcher
+user_bypass
+widened-hook-matcher

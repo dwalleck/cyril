@@ -1,0 +1,109 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-14",
+   "version": "2.31.1",
+   "title": "Version 2.31.1",
+   "changes": [
+    {
+     "type": "added",
+     "description": "Mermaid flowchart, sequence, state and ER diagrams are drawn as terminal art in chat"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Non-interactive runs apply saved compaction and `toolSearch` settings like interactive sessions"
+    },
+    {
+     "type": "fixed",
+     "description": "Prompts with `chat.disableWrap` on or in lite session panes no longer copy with two leading spaces"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Herdr shows a session as blocked while a permission or question prompt is waiting"
+    },
+    {
+     "type": "fixed",
+     "description": "Model fallback now handles refusals that return no response text"
+    },
+    {
+     "type": "fixed",
+     "description": "Compaction no longer saves the model's refusal as the conversation summary"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] `/sandbox` setup on Windows no longer fails where policy blocks running programs from the temp folder"
+    },
+    {
+     "type": "fixed",
+     "description": "`/changelog` shows each entry on its own line"
+    },
+    {
+     "type": "fixed",
+     "description": "IAM Identity Center sign-in now works in isolated AWS partitions"
+    },
+    {
+     "type": "security",
+     "description": "[V3] Workflow recipe text can no longer emit terminal escape sequences in `/workflow`"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-13",
+   "version": "2.31.0",
+   "title": "Version 2.31.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] `/sandbox` and local `/autonomous` mode are now available to all users, off by default"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] MCP tools now load on demand for every user, keeping unused tool schemas out of requests"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] `KIRO_HOME` now also relocates MCP config, permissions, sessions, powers and agent state"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] A saved `sandbox.json` with `enabled: true` now applies to headless runs"
+    },
+    {
+     "type": "fixed",
+     "description": "`--no-interactive` chat on the V1 engine now exits non-zero with the error that ended the turn instead of a misleading tool-approval error"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP sign-ins are saved under `KIRO_HOME` when set; existing ones are copied over once"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Animated WebP images are now sent to the model as PNG"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Cloud config and other Kiro service requests fail after 15 seconds instead of hanging"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] MCP tools on streamable-HTTP servers keep working after the server drops its session"
+    },
+    {
+     "type": "fixed",
+     "description": "A relative, root, or home-folder `KIRO_HOME` is ignored and `~/.kiro` is used instead"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] In cloud sessions, the code intelligence indicator and `/code` panel now reflect the cloud workspace"
+    },
+    {
+     "type": "fixed",
+     "description": "GitHub and Google sign-ins are no longer signed out when the auth service returns a temporary error during token refresh"
+    }
+   ]
+  }
+ ]
+}

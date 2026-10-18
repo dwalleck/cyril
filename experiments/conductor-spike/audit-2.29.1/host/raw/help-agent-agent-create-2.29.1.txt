@@ -1,0 +1,16 @@
+Create an agent config. If path is not provided, Kiro CLI shall create this config in the global
+agent directory
+
+Usage: kiro-cli-chat agent create [OPTIONS] [NAME]
+
+Arguments:
+  [NAME]  Name of the agent to be created (can also be provided via --name for backwards
+          compatibility)
+
+Options:
+  -d, --directory <DIRECTORY>  The directory where the agent will be saved. If not provided, the
+                               agent will be saved in the global agent directory
+  -f, --from <FROM>            The name of an agent that shall be used as the starting point for the
+                               agent creation
+  -v, --verbose...             Increase logging verbosity
+  -h, --help                   Print help

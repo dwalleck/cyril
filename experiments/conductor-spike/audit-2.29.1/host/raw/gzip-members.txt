@@ -1,0 +1,15 @@
+#### 2.29.0 215572200
+  @5169046: gzip member csize=693139 dsize=2232320 tail_bytes_unused=209710015 head=b'./\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  @20197061: Error -3 while decompressing data: header crc mismatch
+  @98977969: gzip member csize=868903 dsize=2750464 tail_bytes_unused=115725328 head=b'._.\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  @151882544: Error -3 while decompressing data: unknown header flags set
+  @171766240: Error -3 while decompressing data: unknown header flags set
+  @189572842: Error -3 while decompressing data: invalid stored block lengths
+  @199441680: Error -3 while decompressing data: unknown header flags set
+#### 2.29.1 215787048
+  @5169158: gzip member csize=693139 dsize=2232320 tail_bytes_unused=209924751 head=b'./\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  @98982265: gzip member csize=868903 dsize=2750464 tail_bytes_unused=115935880 head=b'._.\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+  @151921392: Error -3 while decompressing data: unknown header flags set
+  @171514288: Error -3 while decompressing data: unknown header flags set
+  @189785258: Error -3 while decompressing data: invalid stored block lengths
+  @199654080: Error -3 while decompressing data: unknown header flags set

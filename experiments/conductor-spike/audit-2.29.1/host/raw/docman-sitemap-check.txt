@@ -1,0 +1,67 @@
+sitemap locs 1192
+== 2.28.0: documents=164 category:feature=37 feature-stems-with-NO-sitemap-path=26
+== 2.29.0: documents=164 category:feature=37 feature-stems-with-NO-sitemap-path=26
+== 2.29.1: documents=164 category:feature=37 feature-stems-with-NO-sitemap-path=26
+   MISSING features/agent-configuration.md
+   MISSING features/api-key-authentication.md
+   MISSING features/classic-vs-tui.md
+   MISSING features/cmux-integration.md
+   MISSING features/config-hot-reload.md
+   MISSING features/error-recovery.md
+   MISSING features/experiments.md
+   MISSING features/help-agent.md
+   MISSING features/input-editing.md
+   MISSING features/mcp-registry.md
+   MISSING features/mid-turn-steering.md
+   MISSING features/midway-session-indicator.md
+   MISSING features/model-refusal-alerts.md
+   MISSING features/paste-chips.md
+   MISSING features/path-tab-completion.md
+   MISSING features/planning-agent.md
+   MISSING features/rate-limit-errors.md
+   MISSING features/research-surveys.md
+   MISSING features/reverse-search.md
+   MISSING features/shell-escape.md
+   MISSING features/steering-files.md
+   MISSING features/terminal-progress-indicator.md
+   MISSING features/tool-approval-flow.md
+   MISSING features/trust-configuration.md
+   MISSING features/turn-usage-summary.md
+   MISSING features/voice-mode.md
+   -- features/agent-configuration.md -> []
+   -- features/api-key-authentication.md -> []
+   -- features/classic-vs-tui.md -> []
+   -- features/cmux-integration.md -> []
+   ok features/code-intelligence.md -> ['https://kiro.dev/docs/tools/code-intelligence/', 'https://kiro.dev/fr/docs/tools/code-intelligence/']
+   -- features/config-hot-reload.md -> []
+   ok features/diff-tool.md -> ['https://kiro.dev/docs/cli/chat/diff-tools/', 'https://kiro.dev/fr/docs/cli/chat/diff-tools/']
+   -- features/error-recovery.md -> []
+   ok features/exit-codes.md -> ['https://kiro.dev/docs/reference/exit-codes/', 'https://kiro.dev/fr/docs/reference/exit-codes/']
+   -- features/experiments.md -> []
+   ok features/file-references.md -> ['https://kiro.dev/fr/docs/cli/chat/file-references/', 'https://kiro.dev/docs/cli/chat/file-references/']
+   -- features/help-agent.md -> []
+   ok features/hooks.md -> ['https://kiro.dev/fr/docs/hooks/actions/', 'https://kiro.dev/fr/docs/hooks/examples/']
+   -- features/input-editing.md -> []
+   ok features/keyboard-shortcuts.md -> ['https://kiro.dev/docs/ide/editor/keyboard-shortcuts/', 'https://kiro.dev/fr/docs/ide/editor/keyboard-shortcuts/']
+   ok features/knowledge-management.md -> ['https://kiro.dev/fr/docs/cli/experimental/knowledge-management/', 'https://kiro.dev/docs/cli/experimental/knowledge-management/']
+   -- features/mcp-registry.md -> []
+   -- features/mid-turn-steering.md -> []
+   -- features/midway-session-indicator.md -> []
+   -- features/model-refusal-alerts.md -> []
+   -- features/paste-chips.md -> []
+   -- features/path-tab-completion.md -> []
+   -- features/planning-agent.md -> []
+   -- features/rate-limit-errors.md -> []
+   -- features/research-surveys.md -> []
+   -- features/reverse-search.md -> []
+   ok features/session-management.md -> ['https://kiro.dev/docs/cli/chat/session-management/', 'https://kiro.dev/fr/docs/cli/chat/session-management/']
+   -- features/shell-escape.md -> []
+   ok features/skills.md -> ['https://kiro.dev/fr/blog/custom-subagents-skills-and-enterprise-controls/', 'https://kiro.dev/blog/custom-subagents-skills-and-enterprise-controls/']
+   -- features/steering-files.md -> []
+   ok features/tangent-mode.md -> ['https://kiro.dev/docs/cli/experimental/tangent-mode/', 'https://kiro.dev/fr/docs/cli/experimental/tangent-mode/']
+   -- features/terminal-progress-indicator.md -> []
+   -- features/tool-approval-flow.md -> []
+   ok features/tool-search.md -> ['https://kiro.dev/fr/docs/mcp/tool-search/', 'https://kiro.dev/docs/mcp/tool-search/']
+   -- features/trust-configuration.md -> []
+   -- features/turn-usage-summary.md -> []
+   -- features/voice-mode.md -> []

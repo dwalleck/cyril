@@ -1,0 +1,86 @@
+(actor)
+); showing its source.
+-->>
+/config \u2014 managed
+0..1
+0..n
+1..n
+Could not read your organization profile; disabled settings are conservative defaults.
+Diagram cannot be drawn here (
+Diagram is too large to draw here; showing its source.
+Diagram is wider than the space available here; showing its source.
+Drawing diagram
+Managed by
+Managed by your organization. Contact your administrator to request changes.
+No managed settings to show: none have been reported for this session
+No managed settings to show: this account is not managed by an organization
+No organization control plane is configured; disabled settings are conservative defaults.
+Simplified:
+This agent reported no governed settings.
+This agent reported no managed settings.
+[*]end
+[*]start
+[herdr] failed to queue state report
+[kas] config/template failed:
+\` outside a block
+\u2504
+\u2506
+\u256A
+\u256B
+\u25BA
+\u25C4
+\u25C9 end
+\u25CF start
+`end` without a block
+a block is missing `end`
+admin_disabled
+autonomous agents
+autonomousAgents
+blocks nested over
+cannot read "
+canvas write out of bounds at
+code reference tracker
+codeReferenceTracker
+columns, has
+composite states
+content collection
+contentCollection
+diagrams are not drawn in the terminal yet; showing the source.
+edges over the
+empty diagram
+expected a node at "
+fan-out of
+governance_state_update
+hidden: your organization allows only servers from its MCP registry.
+is not closed
+left of
+link label without a closing arrow
+managed_settings
+mcpEnabled
+message numbers are not shown
+no participants
+node metadata `@{...}`
+notes are not shown
+outage
+participant boxes are not shown
+participant creation and removal are not shown
+participants
+prompt logging
+promptLogging
+release-local
+release-notes
+right of
+server is
+source over
+stadium
+stateDiagram-v2
+statement over
+subgraphs
+the title is not shown
+tooWide
+unclosed node shape
+unsupportedType
+unterminated note
+unterminated quoted label
+usage analytics
+usageAnalytics
