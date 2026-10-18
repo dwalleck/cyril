@@ -564,12 +564,12 @@ impl App {
         }
     }
 
-    /// The one seam every prompt leaves through — typed submit, the startup
-    /// `--prompt`, and `/code` follow-ups all land here — so first-prompt
-    /// project lessons (cyril-ezgo) are prepended in exactly one place.
+    /// Ordinary prompts — typed chat, startup `--prompt`, and `/code`
+    /// follow-ups — prepare first-prompt project lessons here (cyril-ezgo).
+    /// Registered agent slash prompts bypass preparation and leave it pending.
     ///
-    /// A fresh session's first non-empty prompt is held while its lessons
-    /// load on a spawned task (bounded by
+    /// A fresh session's first ordinary non-empty prompt is held while its
+    /// lessons load on a spawned task (bounded by
     /// [`crate::memory_runtime::FIRST_PROMPT_CONTEXT_TIMEOUT`]); the event
     /// loop keeps servicing input and agent traffic, and the prompt goes out
     /// from `handle_memory_task_result`. Every other prompt is sent directly.
@@ -1508,7 +1508,7 @@ impl App {
             prompts: ref prompt_list,
         } = notification
         {
-            self.commands.register_agent_commands(cmds);
+            self.commands.replace_agent_commands(cmds);
             // Update autocomplete with all command info (name + description)
             let mut info: Vec<(String, Option<String>)> = self
                 .commands
@@ -2130,6 +2130,7 @@ impl App {
 
         self.last_activity = Instant::now();
 
+        let mut agent_prompt = false;
         // Try as slash command
         if let Some((cmd, args)) = self.commands.parse(&text) {
             let ctx = CommandContext {
@@ -2143,6 +2144,11 @@ impl App {
             let command_name = cmd.name().to_string();
             let args = args.to_string();
             match cmd.execute(&ctx, &args).await {
+                Ok(CommandResult {
+                    kind: CommandResultKind::SubmitAgentPrompt,
+                }) => {
+                    agent_prompt = true;
+                }
                 // /steer needs the async steer path (echo + SteerSession); route it
                 // through the same dispatch_steer as Enter-while-busy.
                 Ok(CommandResult {
@@ -2184,7 +2190,9 @@ impl App {
                         .add_system_message(format!("Command error: {e}"));
                 }
             }
-            return Ok(());
+            if !agent_prompt {
+                return Ok(());
+            }
         }
 
         // Route by session state (K1b, cyril-bm1j): a busy turn steers instead of
@@ -2211,6 +2219,14 @@ impl App {
         self.session.set_status(SessionStatus::Busy);
         self.ui_state.set_activity(Activity::Sending);
 
+        // KAS joins text blocks before slash parsing. Registered agent prompts
+        // must retain one raw block, without file/lesson text changing its args.
+        // Leave first-prompt lessons pending for the next ordinary chat turn.
+        if agent_prompt {
+            return self
+                .dispatch_prompt(session_id, PromptEnvelope::original(vec![text]))
+                .await;
+        }
         let mut content_blocks = vec![text.clone()];
 
         if let Some(completer) = self.ui_state.file_completer() {
@@ -2245,6 +2261,9 @@ impl App {
             }
             CommandResultKind::NotACommand(_text) => {
                 // Should not happen since we already checked parse()
+            }
+            CommandResultKind::SubmitAgentPrompt => {
+                tracing::error!("SubmitAgentPrompt reached synchronous result routing");
             }
             CommandResultKind::ShowThemePicker => {
                 // Local: the palette catalog lives in cyril-ui, so the picker
@@ -2525,15 +2544,14 @@ enum SubmitRoute {
     NoSession,
 }
 
-/// Classify a non-empty, non-command Enter submit. Pure decision (the CI-testable
-/// seam behind `submit_input`): only `Busy` steers; everything else with a session
-/// prompts; no session is advisory. `has_session` is checked first — you cannot
-/// steer or prompt a session that does not exist.
+/// Classify non-empty prompt input, including registered agent prompt intents.
+/// Only `Busy` steers; everything else with a session prompts; no session is
+/// advisory. `has_session` is checked first — you cannot steer or prompt a
+/// session that does not exist.
 ///
-/// Precondition (sanity-hint, caller-guaranteed): called only for non-empty,
-/// non-command text — `submit_input` early-returns on empty and dispatches slash
-/// commands before reaching here. The function ignores text content, so a
-/// violation still yields a correct route; no runtime enforcement is needed.
+/// Precondition: `submit_input` has rejected empty input and handled local or
+/// bridge commands before reaching this decision. Text content does not affect
+/// the route.
 fn classify_submit(status: &SessionStatus, has_session: bool) -> SubmitRoute {
     if !has_session {
         SubmitRoute::NoSession
@@ -3724,6 +3742,307 @@ mod tests {
         }));
     }
 
+    fn advertise_agent_command(
+        app: &mut App,
+        name: &str,
+        route: cyril_core::types::AgentCommandRoute,
+        is_selection: bool,
+    ) {
+        app.handle_notification(RoutedNotification::global(Notification::CommandsUpdated {
+            commands: vec![cyril_core::types::CommandInfo::new(
+                name,
+                "Advertised command",
+                None::<String>,
+                true,
+                is_selection,
+                false,
+                route,
+            )],
+            prompts: Vec::new(),
+        }));
+    }
+
+    #[tokio::test]
+    async fn kas_advertised_command_submits_original_prompt() {
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        let main = SessionId::new("sess_kas_command");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "general-task-execution",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        for raw in [
+            "/general-task-execution",
+            "/general-task-execution \"inspect foo\"",
+            "  /general-task-execution   \"inspect foo\"  and\tbar  ",
+        ] {
+            app.ui_state.insert_text(raw);
+            app.submit_input().await.expect("submit advertised command");
+            match commands.try_recv().expect("one outbound command") {
+                BridgeCommand::SendPrompt { session_id, prompt } => {
+                    assert_eq!(session_id, main);
+                    assert_eq!(prompt.original_blocks(), [raw]);
+                    assert_eq!(prompt.into_wire_blocks(), [raw]);
+                }
+                other => panic!("KAS command must use session/prompt, got {other:?}"),
+            }
+            assert!(commands.try_recv().is_err(), "no V2 command RPC");
+            assert!(app.ui_state.messages().iter().any(
+                |message| matches!(message.kind(), ChatMessageKind::UserText(text) if text == raw)
+            ));
+            assert!(matches!(app.session.status(), SessionStatus::Busy));
+            app.handle_notification(RoutedNotification::scoped(
+                main.clone(),
+                Notification::TurnCompleted {
+                    stop_reason: StopReason::EndTurn,
+                },
+            ));
+        }
+        assert_eq!(
+            app.usage_log
+                .snapshot()
+                .expect("usage snapshot")
+                .overview
+                .requests,
+            3,
+            "registered agent prompts use ordinary usage bookkeeping"
+        );
+    }
+
+    #[tokio::test]
+    async fn kas_command_no_session_and_busy_steering_keep_prompt_lifecycle() {
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        advertise_agent_command(
+            &mut app,
+            "general-task-execution",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            true,
+        );
+        app.ui_state.insert_text("/general-task-execution");
+        app.submit_input().await.expect("sessionless command");
+        assert_eq!(
+            last_system_message(&app),
+            "No active session. Use /new to create one."
+        );
+        assert!(commands.try_recv().is_err());
+
+        let main = SessionId::new("sess_kas_busy_command");
+        establish_main_session(&mut app, &main);
+        app.ui_state.insert_text("/general-task-execution");
+        app.submit_input().await.expect("no-argument prompt");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::SendPrompt { .. })
+        ));
+        let raw = " /general-task-execution   \"next task\"  ";
+        app.ui_state.insert_text(raw);
+        app.submit_input().await.expect("busy command steers");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::SteerSession { session_id, message })
+                if session_id == main && message == raw
+        ));
+        assert!(commands.try_recv().is_err());
+        assert!(matches!(app.session.status(), SessionStatus::Busy));
+        app.handle_key(key(KeyCode::Esc))
+            .await
+            .expect("cancel active turn");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::CancelRequest)
+        ));
+        app.handle_notification(RoutedNotification::scoped(
+            main,
+            Notification::TurnCompleted {
+                stop_reason: StopReason::Cancelled,
+            },
+        ));
+        assert_eq!(
+            app.usage_log
+                .snapshot()
+                .expect("usage snapshot")
+                .overview
+                .requests,
+            1,
+            "busy command is a steer, not a second turn"
+        );
+    }
+
+    #[tokio::test]
+    async fn advertised_commands_keep_builtin_precedence_and_take_the_latest_route() {
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        let main = SessionId::new("sess_command_collisions");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "help",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        app.ui_state.insert_text("/help");
+        app.submit_input().await.expect("builtin help");
+        assert!(last_system_message(&app).contains("/help"));
+        assert!(commands.try_recv().is_err());
+
+        // Codex P2 on #169: a later advertisement replaces the earlier one,
+        // so a re-advertised name takes its new route.
+        advertise_agent_command(
+            &mut app,
+            "readvertised",
+            cyril_core::types::AgentCommandRoute::BridgeExecute,
+            false,
+        );
+        advertise_agent_command(
+            &mut app,
+            "readvertised",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        let raw = "/readvertised now a prompt";
+        app.ui_state.insert_text(raw);
+        app.submit_input().await.expect("latest route wins");
+        let (session_id, original, wire) = recv_prompt(&mut commands).await;
+        assert_eq!(session_id, main);
+        assert_eq!(original, [raw]);
+        assert_eq!(wire, [raw]);
+        assert!(commands.try_recv().is_err());
+        app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            Notification::TurnCompleted {
+                stop_reason: StopReason::EndTurn,
+            },
+        ));
+
+        // Within one advertisement the first entry for a name still wins.
+        let entry = |route| {
+            cyril_core::types::CommandInfo::new(
+                "duplicate",
+                "Advertised command",
+                None::<String>,
+                true,
+                false,
+                false,
+                route,
+            )
+        };
+        app.handle_notification(RoutedNotification::global(Notification::CommandsUpdated {
+            commands: vec![
+                entry(cyril_core::types::AgentCommandRoute::BridgeExecute),
+                entry(cyril_core::types::AgentCommandRoute::Prompt),
+            ],
+            prompts: Vec::new(),
+        }));
+        app.ui_state.insert_text("/duplicate first");
+        app.submit_input().await.expect("first entry wins");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::ExecuteCommand { command, args, .. })
+                if command == "duplicate" && args == serde_json::json!({"value": "first"})
+        ));
+        assert!(commands.try_recv().is_err());
+    }
+
+    /// Codex P2 on #169: a command the latest advertisement omits is no
+    /// longer offered or dispatched; its text falls back to ordinary chat.
+    #[tokio::test]
+    async fn command_omitted_by_a_later_advertisement_falls_back_to_chat() {
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        let main = SessionId::new("sess_command_withdrawn");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "context-gatherer",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        advertise_agent_command(
+            &mut app,
+            "general-task-execution",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        assert!(app.commands.parse("/context-gatherer").is_none());
+        assert!(app.commands.parse("/general-task-execution").is_some());
+
+        app.ui_state.insert_text("/");
+        let offered: Vec<&str> =
+            cyril_ui::traits::TuiState::autocomplete_suggestions(&app.ui_state)
+                .iter()
+                .map(|suggestion| suggestion.text.as_str())
+                .collect();
+        assert!(offered.contains(&"/general-task-execution"), "{offered:?}");
+        assert!(!offered.contains(&"/context-gatherer"), "{offered:?}");
+        app.ui_state.take_input();
+
+        app.ui_state.insert_text("/context-gatherer task");
+        app.submit_input().await.expect("withdrawn command");
+        match commands.try_recv().expect("ordinary chat fallback") {
+            BridgeCommand::SendPrompt { session_id, prompt } => {
+                assert_eq!(session_id, main);
+                assert_eq!(prompt.original_blocks(), ["/context-gatherer task"]);
+            }
+            other => panic!("expected ordinary chat fallback, got {other:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn v2_advertised_commands_keep_options_and_execute() {
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::V2);
+        let main = SessionId::new("sess_v2_commands");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "agent-selection",
+            cyril_core::types::AgentCommandRoute::BridgeExecute,
+            true,
+        );
+        app.ui_state.insert_text("/agent-selection");
+        app.submit_input().await.expect("query V2 options");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::QueryCommandOptions { command, session_id })
+                if command == "agent-selection" && session_id == main
+        ));
+        app.ui_state.insert_text("/agent-selection selected");
+        app.submit_input().await.expect("execute V2 selection");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::ExecuteCommand { command, session_id, args })
+                if command == "agent-selection" && session_id == main
+                    && args == serde_json::json!({"value": "selected"})
+        ));
+        advertise_agent_command(
+            &mut app,
+            "agent-task",
+            cyril_core::types::AgentCommandRoute::BridgeExecute,
+            false,
+        );
+        for (text, expected) in [
+            ("/agent-task", serde_json::json!({})),
+            (
+                "/agent-task  \"inspect foo\"  ",
+                serde_json::json!({"value": "\"inspect foo\""}),
+            ),
+        ] {
+            app.ui_state.insert_text(text);
+            app.submit_input().await.expect("execute V2 task");
+            assert!(matches!(
+                commands.try_recv(),
+                Ok(BridgeCommand::ExecuteCommand { command, session_id, args })
+                    if command == "agent-task" && session_id == main && args == expected
+            ));
+        }
+        assert!(commands.try_recv().is_err());
+        assert!(
+            !app.ui_state
+                .messages()
+                .iter()
+                .any(|message| matches!(message.kind(), ChatMessageKind::UserText(_)))
+        );
+    }
+
     #[tokio::test]
     async fn usage_modal_command_and_key_priority() {
         let (mut app, mut rx) = test_app_with_command_rx();
@@ -4898,7 +5217,6 @@ mod tests {
         app.handle_memory_task_result(result).await;
     }
 
-    #[cfg(unix)]
     async fn recv_prompt(
         commands: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
     ) -> (SessionId, Vec<String>, Vec<String>) {
@@ -4925,6 +5243,204 @@ mod tests {
                 _ => None,
             })
             .expect("a system message")
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn kas_command_preserves_lessons_for_next_ordinary_prompt() {
+        let runtime = crate::memory_runtime::test_support::InProcessRuntime::start().await;
+        let workspace = tempfile::tempdir().expect("workspace");
+        std::fs::write(workspace.path().join("notes.txt"), "file context").expect("file fixture");
+        let memory = runtime.bind(workspace.path());
+        memory
+            .teach(cyril_memory::LessonText::new("prefer boring Rust").expect("lesson"))
+            .await
+            .expect("teach");
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        app.set_memory_runtime(
+            MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
+            ProjectBinding::Bound(memory),
+        );
+        app.ui_state.set_file_completer(
+            cyril_ui::file_completer::FileCompleter::from_files_with_root(
+                workspace.path().to_path_buf(),
+                vec!["notes.txt".to_owned()],
+            ),
+        );
+        let main = SessionId::new("sess_command_lessons");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "general-task-execution",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+
+        let raw = " /general-task-execution   \"inspect foo\" @notes.txt  ";
+        app.ui_state.insert_text(raw);
+        app.submit_input()
+            .await
+            .expect("command with local context available");
+        let (session_id, original, wire) = recv_prompt(&mut commands).await;
+        assert_eq!(session_id, main);
+        assert_eq!(original, [raw]);
+        assert_eq!(
+            wire,
+            [raw],
+            "lessons and file text must not become command args"
+        );
+
+        let busy = "/general-task-execution \"queued task\" @notes.txt";
+        app.ui_state.insert_text(busy);
+        app.submit_input().await.expect("busy command steers");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::SteerSession { message, .. }) if message == busy
+        ));
+        app.handle_key(key(KeyCode::Esc))
+            .await
+            .expect("cancel command turn");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::CancelRequest)
+        ));
+        app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            Notification::TurnCompleted {
+                stop_reason: StopReason::Cancelled,
+            },
+        ));
+
+        let ordinary = "ordinary @notes.txt";
+        app.ui_state.insert_text(ordinary);
+        app.submit_input().await.expect("next ordinary chat prompt");
+        drain_one_memory_result(&mut app).await;
+        let (session_id, original, wire) = recv_prompt(&mut commands).await;
+        assert_eq!(session_id, main);
+        assert_eq!(
+            original,
+            [ordinary, "<file path=\"notes.txt\">\nfile context\n</file>"]
+        );
+        assert_eq!(
+            wire.len(),
+            3,
+            "ordinary chat retains lessons and file expansion"
+        );
+        assert!(wire[0].starts_with("<CYRIL_LESSONS"));
+        assert!(wire[0].contains("- prefer boring Rust"));
+        assert_eq!(&wire[1..], original);
+        assert!(!original.iter().any(|text| text.contains("<CYRIL_LESSONS")));
+        let user_texts = app
+            .ui_state
+            .messages()
+            .iter()
+            .filter_map(|message| match message.kind() {
+                ChatMessageKind::UserText(text) => Some(text.as_str()),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert!(user_texts.contains(&raw));
+        assert!(user_texts.contains(&ordinary));
+        assert!(
+            !user_texts
+                .iter()
+                .any(|text| text.contains("CYRIL_LESSONS") || text.contains("file context"))
+        );
+
+        app.handle_notification(RoutedNotification::scoped(
+            main,
+            Notification::TurnCompleted {
+                stop_reason: StopReason::EndTurn,
+            },
+        ));
+        app.ui_state.insert_text("third prompt");
+        app.submit_input()
+            .await
+            .expect("ordinary context is once per session");
+        let (_, original, wire) = recv_prompt(&mut commands).await;
+        assert_eq!(original, ["third prompt"]);
+        assert_eq!(wire, ["third prompt"]);
+        runtime.shutdown().await;
+    }
+
+    #[tokio::test]
+    async fn kas_unknown_slash_fallback_keeps_raw_file_context() {
+        let workspace = tempfile::tempdir().expect("workspace");
+        std::fs::write(workspace.path().join("notes.txt"), "file context").expect("file fixture");
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        app.ui_state.set_file_completer(
+            cyril_ui::file_completer::FileCompleter::from_files_with_root(
+                workspace.path().to_path_buf(),
+                vec!["notes.txt".to_owned()],
+            ),
+        );
+        let main = SessionId::new("sess_command_fallback");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "general-task-execution",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        for raw in [" /unknown-slash   @notes.txt  ", "ordinary @notes.txt"] {
+            app.ui_state.insert_text(raw);
+            app.submit_input().await.expect("raw prompt fallback");
+            match commands.try_recv().expect("fallback prompt") {
+                BridgeCommand::SendPrompt { prompt, .. } => {
+                    assert_eq!(
+                        prompt.original_blocks(),
+                        [raw, "<file path=\"notes.txt\">\nfile context\n</file>"]
+                    );
+                    assert_eq!(
+                        prompt.into_wire_blocks(),
+                        [raw, "<file path=\"notes.txt\">\nfile context\n</file>"]
+                    );
+                }
+                other => panic!("expected ordinary fallback prompt, got {other:?}"),
+            }
+            app.handle_notification(RoutedNotification::scoped(
+                main.clone(),
+                Notification::TurnCompleted {
+                    stop_reason: StopReason::EndTurn,
+                },
+            ));
+        }
+    }
+
+    /// KAS ends a slash name at any whitespace (`/\s/`), so a tab, newline or
+    /// Unicode space after a registered name is still that command: it must go
+    /// out as the one raw block, never as chat with `@file` text appended.
+    /// (`\r\n` is pinned at the parser; the textarea normalises it to `\n`.)
+    #[rstest::rstest]
+    #[case::space("/general-task-execution @notes.txt")]
+    #[case::tab("/general-task-execution\t@notes.txt")]
+    #[case::newline("/general-task-execution\n@notes.txt")]
+    #[case::no_break_space("/general-task-execution\u{a0}@notes.txt")]
+    #[tokio::test]
+    async fn kas_command_name_ends_at_any_whitespace(#[case] raw: &str) {
+        let workspace = tempfile::tempdir().expect("workspace");
+        std::fs::write(workspace.path().join("notes.txt"), "file context").expect("file fixture");
+        let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+        app.ui_state.set_file_completer(
+            cyril_ui::file_completer::FileCompleter::from_files_with_root(
+                workspace.path().to_path_buf(),
+                vec!["notes.txt".to_owned()],
+            ),
+        );
+        let main = SessionId::new("sess_command_whitespace");
+        establish_main_session(&mut app, &main);
+        advertise_agent_command(
+            &mut app,
+            "general-task-execution",
+            cyril_core::types::AgentCommandRoute::Prompt,
+            false,
+        );
+        app.ui_state.insert_text(raw);
+        app.submit_input().await.expect("command prompt");
+        let (session_id, original, wire) = recv_prompt(&mut commands).await;
+        assert_eq!(session_id, main);
+        assert_eq!(original, [raw], "the registered command");
+        assert_eq!(wire, [raw], "no file expansion");
     }
 
     #[cfg(unix)]
@@ -9144,13 +9660,14 @@ mod tests {
             });
         // v2's advertised commands arrive via CommandsUpdated; the App
         // registers them on the registry.
-        app.commands.register_agent_commands(&[CommandInfo::new(
+        app.commands.replace_agent_commands(&[CommandInfo::new(
             "model",
             "Model",
             None::<&str>,
             true,
             true,
             false,
+            cyril_core::types::AgentCommandRoute::BridgeExecute,
         )]);
         app.ui_state.insert_text("/model");
         app.submit_input().await.expect("v2 /model executes");

@@ -1,3 +1,12 @@
+/// Engine-classified dispatch for an advertised agent command.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AgentCommandRoute {
+    /// V2 execute/options extensions.
+    BridgeExecute,
+    /// Ordinary prompt submission with the original slash invocation.
+    Prompt,
+}
+
 /// Metadata about an available slash command (from Kiro or builtin).
 #[derive(Debug, Clone)]
 pub struct CommandInfo {
@@ -7,6 +16,7 @@ pub struct CommandInfo {
     has_options: bool,
     is_selection: bool,
     is_local: bool,
+    route: AgentCommandRoute,
 }
 
 impl CommandInfo {
@@ -17,6 +27,7 @@ impl CommandInfo {
         has_options: bool,
         is_selection: bool,
         is_local: bool,
+        route: AgentCommandRoute,
     ) -> Self {
         Self {
             name: name.into(),
@@ -25,6 +36,7 @@ impl CommandInfo {
             has_options: has_options || is_selection,
             is_selection,
             is_local,
+            route,
         }
     }
 
@@ -50,6 +62,10 @@ impl CommandInfo {
 
     pub fn is_local(&self) -> bool {
         self.is_local
+    }
+
+    pub fn route(&self) -> AgentCommandRoute {
+        self.route
     }
 }
 
@@ -177,6 +193,7 @@ mod tests {
             true,
             true,
             false,
+            AgentCommandRoute::BridgeExecute,
         );
         assert_eq!(cmd.name(), "model");
         assert_eq!(cmd.label(), "Switch model");
@@ -188,7 +205,15 @@ mod tests {
 
     #[test]
     fn command_info_no_description() {
-        let cmd = CommandInfo::new("quit", "Quit", None::<&str>, false, false, true);
+        let cmd = CommandInfo::new(
+            "quit",
+            "Quit",
+            None::<&str>,
+            false,
+            false,
+            true,
+            AgentCommandRoute::BridgeExecute,
+        );
         assert_eq!(cmd.description(), None);
         assert!(!cmd.has_options());
         assert!(!cmd.is_selection());
@@ -211,7 +236,15 @@ mod tests {
 
     #[test]
     fn command_info_selection_implies_has_options() {
-        let cmd = CommandInfo::new("model", "Model", None::<&str>, false, true, false);
+        let cmd = CommandInfo::new(
+            "model",
+            "Model",
+            None::<&str>,
+            false,
+            true,
+            false,
+            AgentCommandRoute::BridgeExecute,
+        );
         assert!(cmd.has_options(), "is_selection should imply has_options");
     }
 
