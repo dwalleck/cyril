@@ -5217,7 +5217,6 @@ mod tests {
         app.handle_memory_task_result(result).await;
     }
 
-    #[cfg(unix)]
     async fn recv_prompt(
         commands: &mut tokio::sync::mpsc::Receiver<BridgeCommand>,
     ) -> (SessionId, Vec<String>, Vec<String>) {
