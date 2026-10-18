@@ -117,7 +117,8 @@ pub struct UiState {
     approvals: VecDeque<ApprovalState>,
     /// The scope the KAS "Always allow" page last showed. Like Kiro's TUI
     /// (`k2t` carries `trustScope` to the next approval), the next scope page
-    /// opens at it (cyril-auxt).
+    /// opens at it while approvals stay queued; it resets to session when a
+    /// request arrives to an empty queue (cyril-auxt).
     always_allow_scope: cyril_core::always_allow::GrantScope,
     picker: Option<PickerState>,
     review_form: Option<crate::traits::ReviewForm>,
@@ -1751,6 +1752,12 @@ impl UiState {
 
     /// Queue an approval dialog from a permission request.
     pub fn show_approval(&mut self, request: PermissionRequest) {
+        if self.approvals.is_empty() {
+            // Kiro's TUI keeps the scope carry-over in the approval panel's
+            // own state, mounted only while an approval is pending, so a
+            // request arriving to an empty queue starts at session again.
+            self.always_allow_scope = cyril_core::always_allow::GrantScope::Session;
+        }
         self.approvals.push_back(ApprovalState {
             session_id: request.session_id,
             tool_call: TrackedToolCall::new(request.tool_call),
@@ -2520,6 +2527,7 @@ impl UiState {
                         approval.phase = ApprovalPhase::EnterFolder {
                             chosen_option_id,
                             scope,
+                            owned,
                             offer,
                             editor,
                             attempted: false,
@@ -2548,6 +2556,7 @@ impl UiState {
             ApprovalPhase::EnterFolder {
                 ref chosen_option_id,
                 scope,
+                owned,
                 ref offer,
                 ref editor,
                 ..
@@ -2555,12 +2564,10 @@ impl UiState {
                 match offer.validate(editor.text()) {
                     Ok(folder) => {
                         let chosen_option_id = chosen_option_id.clone();
-                        // Only a main-session request is offered a folder
-                        // (`FolderOffer::for_consent`), so the grant is owned.
                         self.approval_send_grant(
                             approval,
                             chosen_option_id,
-                            true,
+                            owned,
                             cyril_core::always_allow::AlwaysAllowGrant::new(
                                 scope,
                                 cyril_core::always_allow::GrantResource::Folder(folder),
@@ -2693,13 +2700,14 @@ impl UiState {
                 ApprovalPhase::EnterFolder {
                     chosen_option_id,
                     scope,
+                    owned,
                     ..
                 } => {
                     // Back to the scope page, on the folder row.
                     approval.phase = ApprovalPhase::SelectScope {
                         chosen_option_id: chosen_option_id.clone(),
                         scope: *scope,
-                        owned: true,
+                        owned: *owned,
                     };
                     approval.selected = approval
                         .scope_choices()

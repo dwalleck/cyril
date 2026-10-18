@@ -529,9 +529,11 @@ pub enum ApprovalPhase {
     /// KAS "Always allow" folder grant: type the folder. The editor starts
     /// with the offer's prefill; `attempted` is set once Enter was pressed on
     /// an invalid folder, so the reason renders as an error from then on.
+    /// `owned` is carried over from the scope page.
     EnterFolder {
         chosen_option_id: cyril_core::types::PermissionOptionId,
         scope: cyril_core::always_allow::GrantScope,
+        owned: bool,
         offer: cyril_core::always_allow::FolderOffer,
         editor: RejectionFeedback,
         attempted: bool,

@@ -82,15 +82,24 @@ pub(crate) fn attach_consent_echo(
     if engine != AgentEngine::Kas {
         return response;
     }
-    if !args.options.iter().any(|option| {
-        option.option_id.0.as_ref() == option_id.as_str()
-            && option.kind == acp::PermissionOptionKind::AllowAlways
-    }) {
-        tracing::warn!(
-            %option_id,
-            "always-allow grant names no offered allow_always option; answered without the consent echo"
-        );
-        return response;
+    // A foreign id was already reported by the converter's
+    // `warn_if_foreign_permission_option`; only an offered option of another
+    // kind is new information here.
+    match args
+        .options
+        .iter()
+        .find(|option| option.option_id.0.as_ref() == option_id.as_str())
+    {
+        None => return response,
+        Some(option) if option.kind != acp::PermissionOptionKind::AllowAlways => {
+            tracing::warn!(
+                %option_id,
+                kind = ?option.kind,
+                "always-allow grant names an option that is not allow_always; answered without the consent echo"
+            );
+            return response;
+        }
+        Some(_) => {}
     }
     let requested = args
         .meta

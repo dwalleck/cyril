@@ -31,7 +31,7 @@
 
 ## Behaviour
 
-**Scope page.** Picking an `allow_always` option on a request that carries KAS metadata (`_meta.kiro`, typed as `PermissionConsent`) and no V2 `trustOptions` opens `Always Allow — Choose Scope` instead of answering — the TUI's `De` (KAS engine, no trust tiers). It opens at the scope the previous scope page last showed (`k2t` carries `trustScope`), initially `session`. It shows `capability → resource`, the scope line, and rows built from the consent:
+**Scope page.** Picking an `allow_always` option on a request that carries KAS metadata (`_meta.kiro`, typed as `PermissionConsent`) and no V2 `trustOptions` opens `Always Allow — Choose Scope` instead of answering — the TUI's `De` (KAS engine, no trust tiers). It opens at the scope the previous scope page last showed while approvals stay queued (`k2t` carries `trustScope`), and at `session` when a request arrives to an empty queue (the TUI's approval panel, which holds that state, is mounted only while an approval is pending — byte 13561339). It shows `capability → resource`, the scope line, and rows built from the consent:
 
 | Row | When | Echoed resource |
 |---|---|---|

@@ -232,20 +232,43 @@ fn scope_cycle_from_the_folder_row_returns_to_the_first_row() {
 }
 
 #[test]
-fn next_scope_page_opens_at_the_last_scope() {
+fn next_queued_scope_page_opens_at_the_last_scope() {
+    let mut state = with_main("main");
+    let (first, _first_rx) = request("main", Some(shell_consent()), Vec::new());
+    open_scope_page(&mut state, first);
+    let (second, _second_rx) = queued("main", "tc_2", shell_command("cargo build"));
+    state.show_approval(second); // waiting while the first is answered
+    state.approval_cycle_scope();
+    state.approval_cycle_scope(); // user
+    state.approval_confirm(); // exact grant: the second stays queued
+
+    state.approval_select_next();
+    state.approval_confirm(); // second's Always allow
+    assert!(matches!(
+        phase(&state),
+        ApprovalPhase::SelectScope {
+            scope: GrantScope::User,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn scope_resets_to_session_once_the_queue_drains() {
     let mut state = with_main("main");
     let (first, _first_rx) = request("main", Some(shell_consent()), Vec::new());
     open_scope_page(&mut state, first);
     state.approval_cycle_scope();
     state.approval_cycle_scope(); // user
     state.approval_confirm();
+    assert!(!state.has_approval(), "queue drained");
 
     let (second, _second_rx) = request("main", Some(shell_consent()), Vec::new());
     open_scope_page(&mut state, second);
     assert!(matches!(
         phase(&state),
         ApprovalPhase::SelectScope {
-            scope: GrantScope::User,
+            scope: GrantScope::Session,
             ..
         }
     ));

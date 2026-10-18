@@ -20,3 +20,15 @@ discipline violations.
 | N6 | `unwrap_or(0)` cursor restores | Accepted: these mirror the existing SelectTrust restore and the TUI's `osr` fallback. Not an error path. |
 
 The repairs were re-run in the affected tests (81 passed) and in the full gate (`receipts/gate.txt`).
+
+## Round 2 — independent cross-model review of 1a7b079d (2026-10-18, relayed by the coordinator)
+
+Verdict: approve-with-nits. The reviewer checked wire placement against KAS 0.66.43's `S8e` reader and re-checked TUI
+parity at every offset. Its mutations M1–M3 were all caught. The repairs below are in their own commit, separate from
+the queued-approval change (1cea60dd).
+
+| # | Finding | Repair |
+|---|---|---|
+| R1 | `UiState.always_allow_scope` lasted for the whole process. After one `user` grant, every later scope page opened at the widest scope. The TUI's `k2t` carry-over lives in the approval component, which is mounted only while an approval is pending (byte 13561339), so it resets when the queue drains. | It now resets to `session` when a request arrives to an empty queue (`show_approval`). Red: `scope_resets_to_session_once_the_queue_drains` failed before the repair (`receipts/scope-reset-red.txt`). Carry-over within one queue is pinned by `next_queued_scope_page_opens_at_the_last_scope`. |
+| R2 | `approval_cancel` EnterFolder→SelectScope hard-coded `owned: true`. | `EnterFolder` now carries `owned`, which is used by both confirm and cancel. Behaviour is unchanged, because only owned requests are offered a folder. |
+| R3 | A foreign option id was logged twice (the converter's foreign-id warn and `attach_consent_echo`'s warn). | `attach_consent_echo` now warns only for an offered option of another kind. A foreign id returns silently, since the converter has already warned. |
