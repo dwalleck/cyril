@@ -2435,9 +2435,28 @@ impl UiState {
     /// `TrustOption`** so the caller (App) can decide whether the grant belongs
     /// to the active agent's durable config. Returns `None` in every other case
     /// (trust transition, ordinary or feedback decision, no active dialog).
+    ///
+    /// A confirm acts only on what is on screen (cyril-vojx): while the frame
+    /// the state reports leaves the selection (or the reason editor), or the
+    /// call's target path, undrawn, this does nothing. Esc still answers
+    /// through [`approval_cancel`](Self::approval_cancel). The one exception
+    /// is an option-page selection that names no option, which answers
+    /// Cancel exactly as Esc would: it decides nothing the user could need to
+    /// see.
     pub fn approval_confirm(
         &mut self,
     ) -> Option<(cyril_core::types::SessionId, cyril_core::types::TrustOption)> {
+        let decides = self.approvals.front().is_some_and(|approval| {
+            !matches!(approval.phase, ApprovalPhase::SelectOption)
+                || approval.options.get(approval.selected).is_some()
+        });
+        if decides && !crate::widgets::approval::confirm_on_screen(self) {
+            tracing::debug!(
+                terminal_size = ?self.terminal_size,
+                "approval confirm ignored: the selection or its target path is not on screen"
+            );
+            return None;
+        }
         // Pop ownership upfront. Only the phase-2 transition restores the same
         // request at the front; terminal paths expose the next queued request.
         let mut approval = self.approvals.pop_front()?;

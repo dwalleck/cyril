@@ -579,3 +579,94 @@ fn tiny_viewport_does_not_panic() -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+/// The pages an "Always allow" pick leads to, for the cyril-vojx sweep.
+#[derive(Debug, Clone, Copy)]
+enum LaterPage {
+    /// KAS scope rows.
+    Scope,
+    /// KAS folder editor, prefilled with a valid folder.
+    Folder,
+    /// v2 trust tiers.
+    Trust,
+}
+
+/// A fresh request opened on `page` at the default 80x24 frame.
+fn open_later_page(page: LaterPage) -> (UiState, Receiver<PermissionResponse>) {
+    let mut state = with_main("main");
+    let rx = match page {
+        LaterPage::Scope => {
+            let (request, rx) = request("main", Some(shell_consent()), Vec::new());
+            open_scope_page(&mut state, request);
+            rx
+        }
+        LaterPage::Folder => {
+            let (request, rx) = request("main", Some(write_consent()), Vec::new());
+            open_scope_page(&mut state, request);
+            state.approval_select_next(); // session rows: exact, folder, whole
+            state.approval_confirm();
+            assert!(state.approval_folder_active(), "folder editor must open");
+            rx
+        }
+        LaterPage::Trust => {
+            let tier = TrustOption {
+                label: "Full command".into(),
+                display: "echo AUXTV1 now".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo AUXTV1 now".into()],
+            };
+            let (request, rx) = request("main", None, vec![tier]);
+            open_scope_page(&mut state, request);
+            assert!(matches!(phase(&state), ApprovalPhase::SelectTrust { .. }));
+            rx
+        }
+    };
+    (state, rx)
+}
+
+/// Record an 80x`height` frame in the state, as the App's draw path does,
+/// and return that frame's text.
+fn screen_at(state: &mut UiState, height: u16) -> anyhow::Result<String> {
+    state.set_terminal_size(80, height);
+    let mut terminal = Terminal::new(TestBackend::new(80, height))?;
+    terminal.draw(|frame| crate::render::draw(frame, &*state as &dyn TuiState))?;
+    let buffer = terminal.backend().buffer().clone();
+    Ok(buffer
+        .content()
+        .chunks(80)
+        .map(|row| row.iter().map(|cell| cell.symbol()).collect::<String>())
+        .collect::<Vec<_>>()
+        .join("\n"))
+}
+
+/// REGRESSION FENCE (cyril-vojx): the pages after an "Always allow" pick
+/// answer Enter only while their selection (or, on the folder page, the
+/// folder editor) is drawn — at every frame height, including a popup
+/// clamped to its borders (inner height 0) and no popup at all.
+#[rstest::rstest]
+#[case::scope_page(LaterPage::Scope)]
+#[case::folder_editor(LaterPage::Folder)]
+#[case::trust_page(LaterPage::Trust)]
+fn later_pages_confirm_only_what_is_drawn(#[case] page: LaterPage) -> anyhow::Result<()> {
+    let mut inert = 0;
+    for height in 4u16..=22 {
+        let (mut state, mut rx) = open_later_page(page);
+        let text = screen_at(&mut state, height)?;
+        let drawn = match page {
+            LaterPage::Folder => text.contains("src/a█"),
+            LaterPage::Scope | LaterPage::Trust => text.contains('▸'),
+        };
+        state.approval_confirm();
+        let answered = rx.try_recv().is_ok();
+        assert_eq!(
+            answered, drawn,
+            "height={height} page={page:?}: Enter must act exactly when drawn\n{text}"
+        );
+        inert += usize::from(!drawn);
+    }
+    anyhow::ensure!(
+        inert > 0,
+        "the sweep never reached a height that hides the page"
+    );
+    Ok(())
+}
