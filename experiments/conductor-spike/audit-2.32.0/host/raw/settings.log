@@ -1,0 +1,7 @@
+2.31.1 120
+2.32.0 124
+### 2.31.1 -> 2.32.0
+  + chat.disabledModelFallbacks
+  + chat.modelPicker.lastUsed
+  + chat.modelPicker.sortBy
+  + mcp.rsNo

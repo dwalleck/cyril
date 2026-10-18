@@ -1,0 +1,138 @@
+0.66.34  sha=9a75422c1eed126f bytes=12702158 method_literals=123 acp_methods=25 env_reads=68 env_literals=165 snake_kinds=44 kind_values=1129 zod_keys=563 log_ids=2176 meta_kiro_keys=15 settings_keys=11
+0.66.43  sha=d4a1d28831cd07b5 bytes=12963334 method_literals=123 acp_methods=25 env_reads=68 env_literals=167 snake_kinds=47 kind_values=1191 zod_keys=615 log_ids=2250 meta_kiro_keys=15 settings_keys=11
+
+=== 0.66.34 -> 0.66.43 ===
+  method_literals: 123 -> 123 (+0 -0)
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 68 -> 68 (+0 -0)
+  env_literals: 165 -> 167 (+2 -0)
+     + KIRO_EVAL_STRATEGY
+     + KIRO_EVAL_TREATMENTS
+  snake_kinds: 44 -> 47 (+3 -0)
+     + plan_changed
+     + sandbox_changed
+     + save_failed
+  kind_values: 1129 -> 1191 (+62 -0)
+     + action:replace_remaining
+     + category:ABSTRACT_DOMAIN
+     + category:CONTRACT
+     + category:ESCAPE
+     + category:INVARIANT
+     + category:PSEUDOCODE
+     + category:RECURRENCE
+     + category:REFINEMENT_TYPE
+     + category:SEMANTIC
+     + category:TYPESTATE
+     + kind:as_stored
+     + kind:ask
+     + kind:built
+     + kind:class
+     + kind:denied
+     + kind:depends-on
+     + kind:directory
+     + kind:directory_edge
+     + kind:directory_node
+     + kind:directory_subject_empty
+     + kind:draft
+     + kind:duplicate_node
+     + kind:external_kind_invalid
+     + kind:finished
+     + kind:fit
+     + kind:ignored_option
+     + kind:ignored_site
+     + kind:question
+     + kind:ref_form_not_drawn
+     + kind:ref_form_other_template
+     + kind:ref_form_rewrite
+     + kind:remove
+     + kind:repeated_edge
+     + kind:schema
+     + kind:store
+     + kind:too_large
+     + kind:unknown_ref_form
+     + kind:unreadable
+     + kind:wait
+     + kind:withdrawn
+     + outcome:bucket_gone
+     + outcome:landed
+     + outcome:no_manifest
+     + outcome:placeholder_rejected
+     + reason:ambiguous
+     + reason:client_override
+     + reason:forF
+     + reason:handoff_missing
+     + reason:invalid_input
+     + reason:over_limit
+     + reason:plan_changed
+     + reason:plan_refused
+     + reason:run_finished
+     + reason:run_loop_active
+     + reason:run_missing
+     + reason:run_unavailable
+     + reason:runtime_unavailable
+     + reason:step_moved_on
+     + reason:too_large
+     + status:ambiguous
+     + status:unresolved
+     + type:AgentExecutionMaxTokensRecoveryNudge
+  zod_keys: 563 -> 615 (+54 -2)
+     + about
+     + additions
+     + askedAt
+     + attention
+     + bufferOnly
+     + callerSessionId
+     + caption
+     + capturePinned
+     + condition
+     + creatorEffort
+     + diagram
+     + diagramError
+     + direction
+     + dynamic
+     + edges
+     + emphasize
+     + fromSymbol
+     + graph
+     + groups
+     + handoff
+     + hidden_size
+     + inputDeclarations
+     + inputValues
+     + irType
+     + keepThroughIndex
+     + keptStepIds
+     + layout
+     + locations
+     + members
+     + nodes
+     + operands
+     + orientation
+     + origin
+     + participants
+     + planText
+     + presentation
+     + shape
+     + shapeText
+     + since
+     + sinks
+     + sites
+     + sources
+     + stamps
+     + steeringAfterPromptBodyForMsg0
+     + step
+     + stepSessionId
+     + subjects
+     + symbol
+     + symbols
+     + template
+     + toSymbol
+     + typeOnly
+     + unlinked
+     + workflowRef
+     - steeringAfterPromptBody
+     - thinking
+  log_ids: 2176 -> 2250 (+77 -3)
+  meta_kiro_keys: 15 -> 15 (+0 -0)
+  settings_keys: 11 -> 11 (+0 -0)
+  deps changed: {"@huggingface/tokenizers": {"old": null, "new": "0.2.0"}, "@huggingface/transformers": {"old": "^3.4.1", "new": null}, "@kiro/sandbox-proxy": {"old": "0.66.34", "new": "0.66.43"}, "onnxruntime-node": {"old": null, "new": "1.21.0"}}

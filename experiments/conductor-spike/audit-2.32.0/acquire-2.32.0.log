@@ -1,0 +1,17 @@
+downloading https://desktop-release.q.us-east-1.amazonaws.com/2.32.0/kirocli-x86_64-linux.tar.xz
+sha256 9d1527e4ed76197a48241e093f5240e39dfb3177f098f17b3dd019032dd508f3
+MATCHES latest manifest
+BUILD_DATE=2026-10-15T21:16:42.279145+00:00
+BUILD_HASH=d6fb1e94d58ae3e7550941e520f060084f219a8e
+BUILD_TARGET_TRIPLE=x86_64-unknown-linux-gnu
+BUILD_VERSION=2.32.0
+total 278812
+drwxr-xr-x 1 dwalleck dwalleck        80 Oct 15 16:35 .
+drwxr-xr-x 1 dwalleck dwalleck        58 Oct 15 16:35 ..
+-rwxr-xr-x 1 dwalleck dwalleck  43931168 Oct 15 16:35 kiro-cli
+-rwxr-xr-x 1 dwalleck dwalleck 207496744 Oct 15 15:11 kiro-cli-chat
+-rwxr-xr-x 1 dwalleck dwalleck  34060512 Oct 15 16:35 kiro-cli-term
+-rwxr-xr-x 1 dwalleck dwalleck        65 Oct 15 16:35 q
+-rwxr-xr-x 1 dwalleck dwalleck        70 Oct 15 16:35 qchat
+installed kiro-cli-chat == archived 2.32.0
+ACQUIRE-OK 2.32.0

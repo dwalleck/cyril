@@ -1,0 +1,59 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.34"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] (node:663077) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":7}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":0}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":11}
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=30
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=64
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=56
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=24
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=24
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=29
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=13
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=13
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=16
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=17
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[ERROR] [KRS] HTTP 400 requestId=7568912a-71a3-47f8-93e7-3e7463887373 body={"__type":"com.amazon.kiro.runtimeservice#ValidationException","message":"Invalid model ID. Please select a different model to continue.","reason":"INVALID_MODEL_ID"}
+[ERROR] [KRS] HTTP 400 requestId=935865f2-d263-4720-999c-a9da62189c25 body={"__type":"com.amazon.kiro.runtimeservice#ValidationException","message":"Invalid model ID. Please select a different model to continue.","reason":"INVALID_MODEL_ID"}
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=13
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=17
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=16
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=21
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=10
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=19
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8

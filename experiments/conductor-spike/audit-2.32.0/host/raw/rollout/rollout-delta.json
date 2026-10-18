@@ -1,0 +1,18 @@
+[
+  {
+    "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.31.1/extracted/kirocli/bin/kiro-cli-chat",
+    "overrides_changed": false,
+    "rows": {
+      "v3_prompt": {
+        "fields": {
+          "internal_treatment_percent": [
+            50,
+            75
+          ]
+        },
+        "kind": "CHANGED"
+      }
+    },
+    "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat"
+  }
+]

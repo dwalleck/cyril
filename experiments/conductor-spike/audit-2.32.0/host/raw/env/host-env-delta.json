@@ -1,0 +1,159 @@
+[
+ {
+  "from": "2.31.1",
+  "to": "2.32.0",
+  "bins": {
+   "kiro-cli": {
+    "added": [],
+    "removed": [
+     {
+      "tok": "Q_SET_PARENT_CHET",
+      "substring_in_new": 1
+     }
+    ]
+   },
+   "kiro-cli-chat": {
+    "added": [
+     {
+      "tok": "AMAZON_Q_CHAT_SHELL",
+      "substring_in_old": 2
+     },
+     {
+      "tok": "AWS_ENDPOINT_URL",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTSA",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "AWS_REQUEST_CHECKSUM_CALCULATION",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "AWS_ROLE_SESSION_NAME",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "AWS_WEB_IDENTITY_TOKEN_FILE",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "KIRO_API_KEYU",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_CLII9",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_CLI_CLIENT_APPLICATIONF",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_CONI3",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_KAS_SERVER_PATH8KAS",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_MODI",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_STANDALONE_CUTOVER",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZONC",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "KIRO_WEBI9",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "Q_OVERFLOW",
+      "substring_in_old": 1
+     },
+     {
+      "tok": "RUST_SPANTRACEL",
+      "substring_in_old": 0
+     },
+     {
+      "tok": "XDG_SESSION_TYPE",
+      "substring_in_old": 1
+     }
+    ],
+    "removed": [
+     {
+      "tok": "AMAZON_Q_CHAT_SHELLF",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "AWS_MAX_ATTEMPTS",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "AWS_REQUEST_CHECKSUM_CALCULATIONF",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_CLI_CLIENT_APPLICATION",
+      "substring_in_new": 2
+     },
+     {
+      "tok": "KIRO_KAS_SERVER_PATHKAS",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_MODH",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_TELEMETRY_IS_INTERNAL_AMAZON",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "KIRO_TEST_MODEF",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "KIRO_TRUST_CLASSIFIER_SHADOWI",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCEI",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_DEV_BEH3",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "Q_OVERFLOWUNMOUNT0",
+      "substring_in_new": 0
+     },
+     {
+      "tok": "RUST_SPANTRACE",
+      "substring_in_new": 1
+     },
+     {
+      "tok": "XDG_SESSION_TYPE8",
+      "substring_in_new": 0
+     }
+    ]
+   },
+   "kiro-cli-term": {
+    "added": [],
+    "removed": []
+   }
+  }
+ }
+]
