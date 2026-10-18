@@ -2449,16 +2449,72 @@ mod tests {
             None,
             None,
         )];
+        // Checked on the rows the widget hands ratatui, before ratatui's own
+        // grapheme filtering could hide a leak (review round 1).
+        let rows: Vec<String> =
+            crate::widgets::workflow_plan::plan_lines(&plan, None, 80, &theme())
+                .iter()
+                .map(|line| {
+                    line.spans
+                        .iter()
+                        .map(|span| span.content.as_ref())
+                        .collect()
+                })
+                .collect();
+        assert!(
+            rows.iter()
+                .all(|row| !row.contains('\u{202E}') && !row.contains('\u{1b}')),
+            "raw controls left the widget: {rows:?}"
+        );
+        assert!(
+            rows.iter()
+                .any(|row| row.contains("evil txt.exe: wf [31mcoder")),
+            "cleaned as KAS cleans (each control becomes a space): {rows:?}"
+        );
         let terminal = render_at(&plan_approval(plan), 90, 40, 40);
         let screen = screen_rows(&terminal).join("\n");
         assert!(
-            !screen.contains('\u{202E}') && !screen.contains('\u{1b}'),
-            "raw controls reached the screen:\n{screen}"
+            screen.contains("evil txt.exe: wf [31mcoder"),
+            "the cleaned row is what the screen shows:\n{screen}"
+        );
+    }
+
+    /// Review round 1 (Medium): the comparison line is the only place an
+    /// edit names the steps it removes, so a plan whose step tree overflows
+    /// the row cap truncates the tree, never the comparison — as KAS's own
+    /// text reserves room for it (`R_o`).
+    #[test]
+    fn overflowing_edit_plan_keeps_the_comparison_line() {
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        plan.steps = (1..=15)
+            .map(|n| plan_step(&format!("step-{n:02}"), "wf-coder", None, None))
+            .collect();
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(
+            "Steps to add after 'edit-workflow-r1':\n\n(steps)\n\nCompared with the replaced steps: removed 'old-step'; added 'step-01'; changed none.",
+        ));
+        let terminal = render_at(&state, 90, 50, 50);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        let marker = rows
+            .iter()
+            .position(|row| row.contains("more lines"))
+            .unwrap_or_else(|| panic!("the tree must be marked as cut:\n{screen}"));
+        let comparison = rows
+            .iter()
+            .position(|row| row.contains("Compared with the replaced steps: removed"))
+            .unwrap_or_else(|| panic!("the comparison line was cut:\n{screen}"));
+        assert!(
+            screen.contains("'old-step'"),
+            "the removed id must show:\n{screen}"
         );
         assert!(
-            screen.contains("evil txt.exe: wf [31mcoder"),
-            "cleaned as KAS cleans:\n{screen}"
+            marker < comparison,
+            "the tree is cut, then the comparison follows:\n{screen}"
         );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        insta::assert_snapshot!("8wh0_workflow_plan_overflow_keeps_comparison_90x50", screen);
     }
 
     /// cyril-8wh0 review: a plan approval without a usable typed plan falls
@@ -2491,13 +2547,20 @@ mod tests {
             .collect();
         let terminal = render_at(&plan_approval(plan), 90, 50, 50);
         let screen = screen_rows(&terminal).join("\n");
-        assert!(screen.contains("step-10:"), "rows up to the cap:\n{screen}");
-        assert!(!screen.contains("step-11:"), "rows past the cap:\n{screen}");
+        // 22 rows (header, keeps, 20 steps) into a 12-row budget whose last
+        // row is the marker: header, keeps and steps 1-9, then the marker.
+        let max = crate::widgets::workflow_plan::MAX_PLAN_ROWS;
+        let last_shown = max - 3;
         assert!(
-            screen.contains(&format!(
-                "...{} more lines",
-                22 - crate::widgets::workflow_plan::MAX_PLAN_ROWS
-            )),
+            screen.contains(&format!("step-{last_shown:02}:")),
+            "rows up to the cap:\n{screen}"
+        );
+        assert!(
+            !screen.contains(&format!("step-{:02}:", last_shown + 1)),
+            "rows past the cap:\n{screen}"
+        );
+        assert!(
+            screen.contains(&format!("...{} more lines", 22 - (max - 1))),
             "omission marker:\n{screen}"
         );
         assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");

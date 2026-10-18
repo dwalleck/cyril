@@ -63,15 +63,21 @@ pub(crate) fn plan_lines(
     if plan.omitted == Some(WorkflowPlanOmission::Details) {
         rows.push("(step details left out to fit the plan)".to_owned());
     }
-    if let Some(comparison) = comparison {
-        rows.push(clean(comparison, LIST_CHARS));
-    }
+    let tree: Vec<String> = rows.iter().flat_map(|row| wrap_words(row, width)).collect();
+    // The comparison is the only line naming the steps an edit removes, so
+    // its rows are reserved before the tree is cut — as KAS reserves room
+    // for it in its own text (`R_o`: the plan is cut to `Tiu` minus the
+    // comparison's length, then the comparison is appended). Its rows are
+    // capped too, so it can never crowd out the header.
+    let tail: Vec<String> = match comparison {
+        Some(comparison) => wrap_words(&clean(comparison, LIST_CHARS), width),
+        None => Vec::new(),
+    };
+    let tail = cap_rows(tail, MAX_COMPARISON_ROWS);
+    let tree = cap_rows(tree, MAX_PLAN_ROWS.saturating_sub(tail.len()));
 
-    let wrapped: Vec<String> = rows.iter().flat_map(|row| wrap_words(row, width)).collect();
-    let total = wrapped.len();
-    let mut lines: Vec<Line<'static>> = wrapped
-        .into_iter()
-        .take(MAX_PLAN_ROWS)
+    tree.into_iter()
+        .chain(tail)
         .enumerate()
         .map(|(index, row)| {
             let style = if index == 0 {
@@ -81,14 +87,25 @@ pub(crate) fn plan_lines(
             };
             Line::styled(format!("{INDENT}{row}"), style)
         })
-        .collect();
-    if total > MAX_PLAN_ROWS {
-        lines.push(Line::styled(
-            format!("{INDENT}...{} more lines", total - MAX_PLAN_ROWS),
-            Style::default().fg(theme.subdued),
-        ));
+        .collect()
+}
+
+/// Rows the comparison line may take before it is itself cut.
+const MAX_COMPARISON_ROWS: usize = 4;
+
+/// `rows` cut to at most `max` rows: the first `max` as they are, or, when
+/// there are more, the first `max - 1` and a marker naming how many rows
+/// were left out (so the marker takes a row of the budget; with a budget of
+/// one, only the marker).
+fn cap_rows(mut rows: Vec<String>, max: usize) -> Vec<String> {
+    if rows.len() <= max {
+        return rows;
     }
-    lines
+    let kept = max.saturating_sub(1);
+    let omitted = rows.len() - kept;
+    rows.truncate(kept);
+    rows.push(format!("...{omitted} more lines"));
+    rows
 }
 
 /// A recipe string as KAS's plan text shows it (`Ay` over `D_o`): control
@@ -392,6 +409,22 @@ mod tests {
         for row in &rows {
             assert!(row.width() <= width, "{row:?} wider than {width}");
         }
+    }
+
+    /// `cap_rows` keeps everything that fits; otherwise the marker takes the
+    /// budget's last row and names every row it replaced.
+    #[rstest::rstest]
+    #[case::fits(3, 3, &["r1", "r2", "r3"])]
+    #[case::cut(5, 3, &["r1", "r2", "...3 more lines"])]
+    #[case::marker_only(5, 1, &["...5 more lines"])]
+    #[case::no_rows(0, 0, &[])]
+    fn cap_rows_marks_what_it_cuts(
+        #[case] count: usize,
+        #[case] max: usize,
+        #[case] expected: &[&str],
+    ) {
+        let rows: Vec<String> = (1..=count).map(|n| format!("r{n}")).collect();
+        assert_eq!(cap_rows(rows, max), expected);
     }
 
     /// Recipe strings are cleaned as KAS cleans its own plan text: controls

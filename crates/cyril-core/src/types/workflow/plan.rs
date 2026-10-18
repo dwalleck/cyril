@@ -100,6 +100,10 @@ pub enum WorkflowPlanNodeKind {
     },
     Parallel {
         branches: Vec<WorkflowPlanNode>,
+        /// Required on the wire in 0.66.43 (the recipe schema's `Dir` is not
+        /// optional, and `Ydu` always copies it), but modelled as `Option` on
+        /// purpose: the plan is display data, and a future KAS that drops the
+        /// field should still show the plan instead of being rejected.
         join_policy: Option<WorkflowJoinPolicy>,
     },
     Watch {

@@ -48,3 +48,23 @@ Each one pins a counterexample the review demonstrated by reading the code:
 - an edit's "Compared with…" line is never shown;
 - the Text fallback is cut to 5 rows;
 - `wrap_words` exceeds its width.
+
+## 3. Review round 1: the comparison line survives an overflowing tree
+
+State: head `b6bcae11` plus the new test only (no production change).
+
+Command: `cargo nextest run -p cyril-ui --no-fail-fast -E 'test(keeps_the_comparison) | test(strips_bidi)'`
+
+Result: 2 run, 1 passed, 1 failed.
+
+- `overflowing_edit_plan_keeps_the_comparison_line`: FAIL, "the comparison
+  line was cut". A 15-step edit plan rendered header, keeps, step-01..step-10
+  and `...7 more lines`; "Compared with the replaced steps: removed
+  'old-step'" was among the cut rows.
+- `workflow_plan_strips_bidi_and_control_characters` (with its strengthened,
+  pre-render assertion): PASS on the pre-fix head as well. It is a coverage
+  repair, not a defect fix.
+
+After the fix both pass. The rendering is pinned by insta
+`8wh0_workflow_plan_overflow_keeps_comparison_90x50`: header, keeps,
+step-01..step-07, `...8 more lines`, then the 2-row comparison.

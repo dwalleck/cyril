@@ -1,6 +1,13 @@
 # cyril-8wh0 gate receipt
 
-Head `a17d8584`, clean tree. Every lane is run with `env -u CARGO_TARGET_DIR`.
+## Review round 1: head `e75c745a` (code identical to the commit carrying this receipt)
+
+All ten lanes OK: fmt; the three clippy lanes (all features, kas, default);
+clippy for core without default features; doctest. nextest: 2600 passed
+with all features, 1606 with kas, 2593 default, 966 for core without
+default features.
+
+## Before review round 1: head `a17d8584`, clean tree. Every lane is run with `env -u CARGO_TARGET_DIR`.
 
 | Lane | Command | Result |
 |---|---|---|

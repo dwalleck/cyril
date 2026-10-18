@@ -3,7 +3,7 @@
     "issue": "cyril-8wh0",
     "engine": "KAS 0.66.43 (kiro-cli 2.32.0)",
     "launch_live": "session/request_permission params, experiments/conductor-spike/kas-workflow-plan-2.32.0.jsonl frame 2 (= audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl frame 93), paths already scrubbed to <LIVE_TMP>",
-    "replace_live": "session/request_permission params, audit-2.32.0/live/kas-clientcreator-2.32.0.jsonl frame 67 (client-launched creator, kind replace), workspace path scrubbed to <LIVE_TMP>",
+    "replace_live": "session/request_permission params, experiments/conductor-spike/audit-2.32.0/live/kas-clientcreator-2.32.0.jsonl frame 67 (0-based line; client-launched creator, kind replace; capture committed with cyril-8wh0, sha256 edccfbd6…be81, auth reply already <REDACTED>), workspace path scrubbed to <LIVE_TMP>",
     "full_shape_synthetic": "SYNTHETIC: every node type and optional field the 0.66.43 bundle can emit (P0o/M0o/Ydu/nxe/wHr in node_modules/@kiro/agent/dist/server/acp-server.js); the live captures only exercise single steps"
   },
   "launch_live": {
