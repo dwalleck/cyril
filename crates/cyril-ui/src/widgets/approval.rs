@@ -2,7 +2,7 @@ use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 
 use crate::theme::Theme;
-use crate::traits::{ApprovalPhase, ApprovalState};
+use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody};
 
 /// Render the permission approval overlay.
 ///
@@ -72,10 +72,12 @@ const MAX_PREVIEW_LINES: usize = 5;
 /// no displayable payload yields a single `Preview unavailable` line — the
 /// degraded-but-actionable contract from cyril-j1b3's spec: the operator
 /// still sees the request's own title/message and every option.
+///
+/// Runs every frame, so it never logs: a malformed payload's warning is
+/// emitted once when the approval is installed (cyril-q0kg).
 fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
-    let mut has_body = false;
 
     if let Some(path) = tc.primary_path() {
         lines.push(Line::styled(
@@ -84,70 +86,30 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
         ));
     }
 
-    let has_diff = tc
-        .content()
-        .iter()
-        .any(|c| matches!(c, cyril_core::types::ToolCallContent::Diff { .. }));
-    if has_diff {
-        super::chat::render_diff_lines(&mut lines, tc, theme);
-        return lines;
-    }
-
-    if let Some(raw) = tc.raw_input() {
-        match raw
-            .get("text")
-            .or_else(|| raw.get("content"))
-            .and_then(|v| v.as_str())
-        {
-            Some(text) => {
-                has_body = true;
-                let total = text.lines().count();
-                for line in text.lines().take(MAX_PREVIEW_LINES) {
-                    lines.push(Line::styled(
-                        format!("    {line}"),
-                        Style::default().fg(theme.subdued),
-                    ));
-                }
-                if total > MAX_PREVIEW_LINES {
-                    lines.push(Line::styled(
-                        format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
-                        Style::default().fg(theme.subdued),
-                    ));
-                }
+    match tc.preview_body() {
+        PreviewBody::Diff => super::chat::render_diff_lines(&mut lines, tc, theme),
+        PreviewBody::Text(text) => {
+            let total = text.lines().count();
+            for line in text.lines().take(MAX_PREVIEW_LINES) {
+                lines.push(Line::styled(
+                    format!("    {line}"),
+                    Style::default().fg(theme.subdued),
+                ));
             }
-            None => {
-                // raw_input present but text/content absent or non-string:
-                // do not coerce arbitrary values (cyril-j1b3 spec) — log the
-                // malformed shape and fall through to the degraded marker.
-                tracing::warn!(
-                    tool_call_id = %tc.id(),
-                    raw_input_shape = %shape_of(raw),
-                    "approval preview raw_input has no string text/content field"
-                );
+            if total > MAX_PREVIEW_LINES {
+                lines.push(Line::styled(
+                    format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
+                    Style::default().fg(theme.subdued),
+                ));
             }
         }
-    }
-
-    if !has_body {
-        lines.push(Line::styled(
+        // Never coerce a non-string payload (cyril-j1b3 spec).
+        PreviewBody::Absent | PreviewBody::Malformed { .. } => lines.push(Line::styled(
             "  Preview unavailable",
             Style::default().fg(theme.subdued),
-        ));
+        )),
     }
     lines
-}
-
-/// One-word JSON shape tag for the malformed-raw_input log (never the value
-/// itself, which can carry file contents).
-fn shape_of(v: &serde_json::Value) -> &'static str {
-    match v {
-        serde_json::Value::Object(_) => "object",
-        serde_json::Value::Array(_) => "array",
-        serde_json::Value::String(_) => "string",
-        serde_json::Value::Number(_) => "number",
-        serde_json::Value::Bool(_) => "bool",
-        serde_json::Value::Null => "null",
-    }
 }
 
 fn render_option_phase(
@@ -1259,5 +1221,121 @@ mod tests {
             "non-string text must not be coerced:\n{text}"
         );
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    // ---------- cyril-q0kg: malformed-preview warning is not per-frame ----------
+
+    const MALFORMED_PREVIEW_WARNING: &str =
+        "approval preview raw_input has no string text/content field";
+
+    /// A permission-request tool call with the given raw input, optionally
+    /// carrying diff content (which takes precedence over raw input).
+    fn preview_tool_call(raw_input: Option<serde_json::Value>, with_diff: bool) -> ToolCall {
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_q0kg"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            raw_input,
+        );
+        if with_diff {
+            tc.with_content(vec![ToolCallContent::Diff {
+                path: "/tmp/q0kg.md".into(),
+                old_text: None,
+                new_text: "new body".into(),
+            }])
+        } else {
+            tc
+        }
+    }
+
+    /// Install `tc` as an approval through the production `show_approval`
+    /// path, with a reject option so the feedback phase can be entered too.
+    fn approval_ui_for(tc: ToolCall) -> UiState {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: tc,
+            message: "Write File".into(),
+            options: vec![option("reject", "Reject")],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+        });
+        ui
+    }
+
+    fn malformed_preview_warnings(events: &[serde_json::Value]) -> Vec<&serde_json::Value> {
+        events
+            .iter()
+            .filter(|event| event["fields"]["message"] == MALFORMED_PREVIEW_WARNING)
+            .collect()
+    }
+
+    /// cyril-q0kg fence: installing an approval and rendering it for many
+    /// frames — in both the option and the reject-with-reason phase — logs
+    /// the malformed-shape warning at most once for the tool call (the
+    /// cyril-j1b3 intent), never once per frame. Payloads that render a body
+    /// (string text, diff) or carry no raw input never warn.
+    #[rstest::rstest]
+    #[case::non_string_text(Some(serde_json::json!({"path": "/tmp/ok.md", "text": 42})), false, 1)]
+    #[case::shell_command_shape(Some(serde_json::json!({"command": "ls -la"})), false, 1)]
+    #[case::string_text(Some(serde_json::json!({"text": "hello"})), false, 0)]
+    #[case::string_content(Some(serde_json::json!({"content": "hello"})), false, 0)]
+    #[case::no_raw_input(None, false, 0)]
+    #[case::diff_takes_precedence(Some(serde_json::json!({"command": "ls"})), true, 0)]
+    fn malformed_preview_warning_is_not_repeated_per_frame(
+        #[case] raw_input: Option<serde_json::Value>,
+        #[case] with_diff: bool,
+        #[case] expected_warnings: usize,
+    ) {
+        let (_guard, capture, dispatch) = cyril_core::test_support::capture_json_subscriber();
+        tracing::dispatcher::with_default(&dispatch, || {
+            let mut ui = approval_ui_for(preview_tool_call(raw_input, with_diff));
+            for _ in 0..3 {
+                render_ui(&ui, 80, 24, 24);
+            }
+            assert!(ui.approval_begin_feedback(), "feedback phase must open");
+            for _ in 0..3 {
+                render_ui(&ui, 80, 24, 24);
+            }
+        });
+
+        let events = capture.captured();
+        let warnings = malformed_preview_warnings(&events);
+        assert_eq!(
+            warnings.len(),
+            expected_warnings,
+            "malformed-preview warnings across 6 frames: {events:?}"
+        );
+        for warning in warnings {
+            assert_eq!(warning["level"], "WARN", "at warn level: {warning:?}");
+            assert_eq!(
+                warning["fields"]["tool_call_id"], "tooluse_q0kg",
+                "names the tool call: {warning:?}"
+            );
+            assert_eq!(
+                warning["fields"]["raw_input_shape"], "object",
+                "names the shape, never the value: {warning:?}"
+            );
+        }
+    }
+
+    /// cyril-q0kg: the degraded marker still renders on every frame for a
+    /// payload that warned once at install time.
+    #[test]
+    fn malformed_preview_marker_survives_repeated_renders() {
+        let ui = approval_ui_for(preview_tool_call(
+            Some(serde_json::json!({"command": "ls -la"})),
+            false,
+        ));
+        for _ in 0..2 {
+            let text = buffer_text(&render_ui(&ui, 80, 24, 24));
+            assert!(
+                text.contains("Preview unavailable"),
+                "degraded marker missing:\n{text}"
+            );
+        }
     }
 }

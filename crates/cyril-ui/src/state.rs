@@ -1770,6 +1770,21 @@ impl UiState {
             responder: request.responder,
             consent: request.consent,
         });
+
+        // A malformed preview payload is logged here, once per request,
+        // rather than by the renderer, which redraws the overlay every frame
+        // and once wrote ~14k identical warnings per approval (cyril-q0kg).
+        // The approval's tool call is not mutated after install, so the
+        // classification cannot change while the overlay is open.
+        if let Some(approval) = self.approvals.back()
+            && let PreviewBody::Malformed { raw_input_shape } = approval.tool_call.preview_body()
+        {
+            tracing::warn!(
+                tool_call_id = %approval.tool_call.id(),
+                raw_input_shape = %raw_input_shape,
+                "approval preview raw_input has no string text/content field"
+            );
+        }
     }
 
     /// Take the current input text, clearing the input buffer, cursor, and

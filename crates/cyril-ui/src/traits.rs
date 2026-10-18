@@ -318,6 +318,37 @@ impl ChatMessage {
     }
 }
 
+/// Which body an approval preview shows for a tool call (cyril-j1b3).
+///
+/// Classification only — no logging — so the renderer can call it every
+/// frame; the one-time malformed-shape warning is logged where the approval
+/// is installed (`UiState::show_approval`, cyril-q0kg).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PreviewBody<'a> {
+    /// Diff content, rendered by the diff projection.
+    Diff,
+    /// The raw-input string `text` (or, failing that, `content`) payload.
+    Text(&'a str),
+    /// No raw input and no diff: nothing to show.
+    Absent,
+    /// Raw input present without a string `text`/`content` field. The value
+    /// is never coerced; only its JSON shape is reported.
+    Malformed { raw_input_shape: &'static str },
+}
+
+/// One-word JSON shape tag for the malformed-raw_input log (never the value
+/// itself, which can carry file contents).
+fn json_shape(v: &serde_json::Value) -> &'static str {
+    match v {
+        serde_json::Value::Object(_) => "object",
+        serde_json::Value::Array(_) => "array",
+        serde_json::Value::String(_) => "string",
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::Bool(_) => "bool",
+        serde_json::Value::Null => "null",
+    }
+}
+
 /// A tool call enriched for display (wraps `cyril_core::types::ToolCall`).
 #[derive(Debug, Clone)]
 pub struct TrackedToolCall {
@@ -389,6 +420,32 @@ impl TrackedToolCall {
             .or_else(|| raw.get("path").and_then(serde_json::Value::as_str))
             .or_else(|| raw.get("operations")?.get(0)?.get("path")?.as_str())
             .filter(|path| !path.is_empty())
+    }
+
+    /// Classify the approval-preview body: diff content wins, then a string
+    /// raw-input `text`/`content` payload; otherwise absent or malformed.
+    pub fn preview_body(&self) -> PreviewBody<'_> {
+        let has_diff = self
+            .inner
+            .content()
+            .iter()
+            .any(|c| matches!(c, cyril_core::types::ToolCallContent::Diff { .. }));
+        if has_diff {
+            return PreviewBody::Diff;
+        }
+        let Some(raw) = self.inner.raw_input() else {
+            return PreviewBody::Absent;
+        };
+        match raw
+            .get("text")
+            .or_else(|| raw.get("content"))
+            .and_then(serde_json::Value::as_str)
+        {
+            Some(text) => PreviewBody::Text(text),
+            None => PreviewBody::Malformed {
+                raw_input_shape: json_shape(raw),
+            },
+        }
     }
 
     /// Extract command string from raw_input for Execute kind.
@@ -1396,6 +1453,55 @@ mod tests {
             ToolCallStatus::InProgress,
             Some(raw_input),
         ))
+    }
+
+    /// cyril-q0kg: the preview classification the renderer and the
+    /// install-time warning share. `text` wins over `content`; a non-string
+    /// `text` does not fall through to `content` (the cyril-j1b3 lookup).
+    #[rstest::rstest]
+    #[case::text(serde_json::json!({"text": "t", "content": "c"}), PreviewBody::Text("t"))]
+    #[case::content(serde_json::json!({"content": "c"}), PreviewBody::Text("c"))]
+    #[case::non_string_text(
+        serde_json::json!({"text": 42, "content": "c"}),
+        PreviewBody::Malformed { raw_input_shape: "object" }
+    )]
+    #[case::command_only(
+        serde_json::json!({"command": "ls"}),
+        PreviewBody::Malformed { raw_input_shape: "object" }
+    )]
+    #[case::array(serde_json::json!(["x"]), PreviewBody::Malformed { raw_input_shape: "array" })]
+    #[case::string(serde_json::json!("x"), PreviewBody::Malformed { raw_input_shape: "string" })]
+    #[case::null(serde_json::Value::Null, PreviewBody::Malformed { raw_input_shape: "null" })]
+    fn preview_body_classifies_raw_input(
+        #[case] raw_input: serde_json::Value,
+        #[case] expected: PreviewBody<'static>,
+    ) {
+        assert_eq!(read_call_with_raw_input(raw_input).preview_body(), expected);
+    }
+
+    #[test]
+    fn preview_body_diff_wins_and_missing_raw_input_is_absent() {
+        use cyril_core::types::*;
+        let bare = ToolCall::new(
+            ToolCallId::new("tc_w"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            None,
+        );
+        assert_eq!(
+            TrackedToolCall::new(bare.clone()).preview_body(),
+            PreviewBody::Absent
+        );
+        let with_diff = bare.with_content(vec![ToolCallContent::Diff {
+            path: "/tmp/a.md".into(),
+            old_text: None,
+            new_text: "x".into(),
+        }]);
+        assert_eq!(
+            TrackedToolCall::new(with_diff).preview_body(),
+            PreviewBody::Diff
+        );
     }
 
     /// The v2 `fs_read` shape nests the path under `operations[]` and has no
