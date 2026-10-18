@@ -1,5 +1,6 @@
-//! Header and notice text for agent-initiated turns and engine-injected
-//! messages (cyril-lki9 spec B1/B3/B4/B5).
+//! Header, footer and notice text for agent-initiated turns and
+//! engine-injected messages (cyril-lki9 spec B1/B3/B4/B5; repeat-cap wakes
+//! cyril-6lql; credit footers cyril-2lh8).
 //!
 //! One pure function per concern, like `workflow_format`: `UiState` and the
 //! subagent streams turn each announcement or injection into exactly one
@@ -7,7 +8,7 @@
 //! lives in this module (module-shape fence C21 R2).
 
 use cyril_core::types::{AgentInitiation, WorkflowRunStatus};
-use cyril_core::workflow::WakeLabel;
+use cyril_core::workflow::{AgentTurnClose, WakeLabel};
 
 /// The header line that opens an agent-initiated turn.
 ///
@@ -77,6 +78,40 @@ pub(crate) fn step_notice_text(severity: Option<&str>, content: Option<&str>) ->
     format!("⚙ workflow step · {severity}: {}", content.unwrap_or(""))
 }
 
+/// The line that closes an agent-initiated turn (cyril-2lh8), shown after
+/// its `turn_end`:
+///
+/// - the wake that follows a run's end — the run's completion line →
+///   `╰─ ⚙ workflow "<name>" <status> · run <total> credits · follow-up <turn> credits`
+/// - any other agent-initiated turn → `╰─ ⚙ agent follow-up · <turn> credits`
+///
+/// A figure the engine never metered is left out — never shown as 0 — and a
+/// close with no figure at all is `None`: no line.
+#[must_use]
+pub(crate) fn footer_text(close: &AgentTurnClose) -> Option<String> {
+    let follow_up = close.credits().map(credits_text);
+    match (close.run(), follow_up) {
+        (Some(run), follow_up) => {
+            let mut text = format!(
+                "╰─ ⚙ workflow \"{}\" {} · run {}",
+                run.label().name(),
+                status_word(run.label().status()),
+                credits_text(run.total())
+            );
+            if let Some(follow_up) = follow_up {
+                text.push_str(&format!(" · follow-up {follow_up}"));
+            }
+            Some(text)
+        }
+        (None, Some(follow_up)) => Some(format!("╰─ ⚙ agent follow-up · {follow_up}")),
+        (None, None) => None,
+    }
+}
+
+fn credits_text(credits: f64) -> String {
+    format!("{credits:.2} credits")
+}
+
 fn status_word(status: WorkflowRunStatus) -> &'static str {
     status.as_str()
 }
@@ -85,6 +120,7 @@ fn status_word(status: WorkflowRunStatus) -> &'static str {
 mod tests {
     use super::*;
     use cyril_core::types::{WorkflowNodeId, WorkflowRepeatCap};
+    use cyril_core::workflow::RunCredits;
 
     fn origin(reason: Option<&str>, workflow_completion: bool) -> AgentInitiation {
         AgentInitiation::new(reason.map(str::to_owned), workflow_completion)
@@ -163,6 +199,35 @@ mod tests {
         #[case] want: &str,
     ) {
         assert_eq!(header_text(&origin, Some(&label)), want);
+    }
+
+    fn close(credits: Option<f64>, run: Option<(&str, WorkflowRunStatus, f64)>) -> AgentTurnClose {
+        AgentTurnClose::new(
+            credits,
+            run.map(|(name, status, total)| RunCredits::new(label(name, status), total)),
+        )
+    }
+
+    /// cyril-2lh8: the line that closes an agent-initiated turn shows what it
+    /// cost; the wake that follows a run's end is the run's completion line
+    /// and shows the run's total. Missing metering shows no figure — never 0
+    /// — and a close with no figure at all renders no line.
+    #[rstest::rstest]
+    #[case::generic_wake(
+        close(Some(0.2227906), None),
+        Some("╰─ ⚙ agent follow-up · 0.22 credits")
+    )]
+    #[case::run_completion(
+        close(Some(0.2378933), Some(("audit-linear", WorkflowRunStatus::Completed, 0.6214264))),
+        Some("╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.24 credits")
+    )]
+    #[case::run_completion_unmetered_wake(
+        close(None, Some(("loop", WorkflowRunStatus::Aborted, 0.38))),
+        Some("╰─ ⚙ workflow \"loop\" aborted · run 0.38 credits")
+    )]
+    #[case::nothing_metered(close(None, None), None)]
+    fn footer_strings(#[case] close: AgentTurnClose, #[case] want: Option<&str>) {
+        assert_eq!(footer_text(&close).as_deref(), want);
     }
 
     /// B5 exact strings for both injection kinds, with the stress rows.

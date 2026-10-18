@@ -1,0 +1,48 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 41.30s
+     Running unittests src/lib.rs (target/debug/deps/cyril_ui-e2af3c1da0e3aa98)
+
+running 8 tests
+test turn_labels::tests::footer_strings::case_3_run_completion_unmetered_wake ... FAILED
+test turn_labels::tests::footer_strings::case_4_nothing_metered ... ok
+test turn_labels::tests::footer_strings::case_1_generic_wake ... FAILED
+test turn_labels::tests::notice_strings ... ok
+test turn_labels::tests::header_strings ... ok
+test turn_labels::tests::footer_strings::case_2_run_completion ... FAILED
+test turn_labels::tests::repeat_cap_header_strings::case_1_send_message_wake ... ok
+test turn_labels::tests::repeat_cap_header_strings::case_2_reasonless_wake ... ok
+
+failures:
+
+---- turn_labels::tests::footer_strings::case_3_run_completion_unmetered_wake stdout ----
+
+thread 'turn_labels::tests::footer_strings::case_3_run_completion_unmetered_wake' (2819069) panicked at crates/cyril-ui/src/turn_labels.rs:202:9:
+assertion `left == right` failed
+  left: None
+ right: Some("╰─ ⚙ workflow \"loop\" aborted · run 0.38 credits")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- turn_labels::tests::footer_strings::case_1_generic_wake stdout ----
+
+thread 'turn_labels::tests::footer_strings::case_1_generic_wake' (2819067) panicked at crates/cyril-ui/src/turn_labels.rs:202:9:
+assertion `left == right` failed
+  left: None
+ right: Some("╰─ ⚙ agent follow-up · 0.22 credits")
+
+---- turn_labels::tests::footer_strings::case_2_run_completion stdout ----
+
+thread 'turn_labels::tests::footer_strings::case_2_run_completion' (2819068) panicked at crates/cyril-ui/src/turn_labels.rs:202:9:
+assertion `left == right` failed
+  left: None
+ right: Some("╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.24 credits")
+
+
+failures:
+    turn_labels::tests::footer_strings::case_1_generic_wake
+    turn_labels::tests::footer_strings::case_2_run_completion
+    turn_labels::tests::footer_strings::case_3_run_completion_unmetered_wake
+
+test result: FAILED. 5 passed; 3 failed; 0 ignored; 0 measured; 685 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-ui --lib`

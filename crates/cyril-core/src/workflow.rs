@@ -6,13 +6,14 @@ use crate::types::workflow::{
     WorkflowSnapshotParts,
 };
 use crate::types::{
-    AgentInitiation, SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
-    WorkflowEvent, WorkflowId, WorkflowLoopIteration, WorkflowNodeCompleted,
-    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
-    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted, WorkflowNodeStatus,
-    WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution, WorkflowRepeatCap,
-    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
-    WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+    AgentInitiation, SessionId, TurnMetering, TurnMeteringUpdate, WorkflowCompletionSignal,
+    WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId, WorkflowLoopIteration,
+    WorkflowNodeCompleted, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
+    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted,
+    WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution,
+    WorkflowRepeatCap, WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted,
+    WorkflowRunStatus, WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome,
+    WorkflowWatchPoll,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -466,6 +467,23 @@ pub struct WorkflowTracker {
     /// the rest belonged to wakes that never rendered a header and are
     /// discarded at the next claim.
     claimed_wake_labels: HashMap<SessionId, Vec<WakeCause>>,
+    /// cyril-2lh8: the agent-initiated turn running on each session — the
+    /// run its wake is attributed to and the credits KAS metered for it —
+    /// from its announcement until it ends or the session's next turn starts.
+    turns: HashMap<SessionId, TurnRecord>,
+    /// cyril-2lh8: credits attributed to each run. Kept apart from
+    /// [`WorkflowRun`] on purpose: a retry's `run_start` replaces the run's
+    /// state but continues the same run and its bill.
+    run_credits: HashMap<WorkflowId, f64>,
+}
+
+/// The tracker's view of one running agent-initiated turn (cyril-2lh8).
+#[derive(Debug, Default)]
+struct TurnRecord {
+    /// The run whose wake this turn is, as its header named it.
+    wake: Option<(WorkflowId, WakeLabel)>,
+    /// What KAS metered for the turn; `None` until (unless) it reports.
+    credits: Option<f64>,
 }
 
 /// A `run_complete` KAS wakes the parent session for.
@@ -536,6 +554,58 @@ impl WakeLabel {
             WakeLabelCause::Ended(_) => None,
             WakeLabelCause::RepeatCap(repeat_cap) => Some(repeat_cap),
         }
+    }
+}
+
+/// How an agent-initiated turn closes (cyril-2lh8): what the turn cost and,
+/// when it is the wake that follows a run's end, that run's credit total —
+/// its step and creator turns plus every parent wake attributed to it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentTurnClose {
+    credits: Option<f64>,
+    run: Option<RunCredits>,
+}
+
+impl AgentTurnClose {
+    /// A close with the turn's credits (`None` when the engine reported none)
+    /// and, for a run-completion wake, the run's total.
+    pub fn new(credits: Option<f64>, run: Option<RunCredits>) -> Self {
+        Self { credits, run }
+    }
+
+    /// The turn's own credits; `None` when the engine metered none — never
+    /// a stand-in 0.
+    pub fn credits(&self) -> Option<f64> {
+        self.credits
+    }
+
+    /// The ended run this wake followed, with its credit total; `None` for
+    /// any other agent-initiated turn, or a run no turn ever metered.
+    pub fn run(&self) -> Option<&RunCredits> {
+        self.run.as_ref()
+    }
+}
+
+/// An ended run's credit total, for its completion line (cyril-2lh8).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RunCredits {
+    label: WakeLabel,
+    total: f64,
+}
+
+impl RunCredits {
+    /// The run, named as its wake header names it, with its credit total.
+    pub fn new(label: WakeLabel, total: f64) -> Self {
+        Self { label, total }
+    }
+
+    pub fn label(&self) -> &WakeLabel {
+        &self.label
+    }
+
+    /// Credits summed over every metered turn attributed to the run.
+    pub fn total(&self) -> f64 {
+        self.total
     }
 }
 
@@ -919,18 +989,91 @@ impl WorkflowTracker {
             .insert(session.clone(), queued.into_iter().collect());
     }
 
+    /// A turn began on `session` (KAS `turn_start`): it claims the session's
+    /// queued wake causes ([`Self::claim_wake_labels`]) and opens the turn's
+    /// credit record (cyril-2lh8).
+    pub fn begin_turn(&mut self, session: &SessionId) {
+        self.claim_wake_labels(session);
+        self.turns.remove(session);
+    }
+
+    /// Records the credits KAS metered for the current turn on `session`
+    /// (`turn_completion`, cyril-2lh8) and attributes them to a run: the run
+    /// whose wake the turn is, else the run whose step or creator owns the
+    /// session. Attributed on arrival, not at the turn's end: a step turn's
+    /// `turn_end` reaches the App only while the parent is busy (the
+    /// mediator drops an idle foreign terminal), its `turn_completion`
+    /// always does. KAS reports once per turn; reports are summed. A report
+    /// with no credit charge records nothing — never a stand-in 0.
+    pub fn record_turn_metering(&mut self, session: &SessionId, update: &TurnMeteringUpdate) {
+        let Some(credits) = TurnMetering::from_charges(update.charges().to_vec(), None).credits()
+        else {
+            tracing::debug!(session = %session, "turn metering carried no credits; no figure");
+            return;
+        };
+        let wake_run = self.turns.get_mut(session).and_then(|record| {
+            *record.credits.get_or_insert(0.0) += credits;
+            record
+                .wake
+                .as_ref()
+                .map(|(workflow_id, _)| workflow_id.clone())
+        });
+        let run = wake_run.or_else(|| {
+            self.session_owner(session)
+                .map(|(workflow_id, _)| workflow_id.clone())
+        });
+        if let Some(run) = run {
+            *self.run_credits.entry(run).or_insert(0.0) += credits;
+        }
+    }
+
+    /// The turn on `session` ended (cyril-2lh8). An agent-initiated turn
+    /// closes with its credits and, when it is the wake that follows a run's
+    /// end, that run's total. `None` for every turn cyril or the user
+    /// started.
+    pub fn finish_turn(&mut self, session: &SessionId) -> Option<AgentTurnClose> {
+        let record = self.turns.remove(session)?;
+        if record.credits.is_none() {
+            tracing::debug!(session = %session, "agent-initiated turn ended without credit metering; no figure shown");
+        }
+        let ended_run = record.wake.and_then(|(workflow_id, label)| {
+            if label.repeat_cap().is_some() {
+                return None;
+            }
+            let total = self.run_credits(&workflow_id);
+            if total.is_none() {
+                tracing::debug!(workflow_id = %workflow_id, "run ended without credit metering; no total shown");
+            }
+            total.map(|total| RunCredits::new(label, total))
+        });
+        Some(AgentTurnClose::new(record.credits, ended_run))
+    }
+
+    /// The credits attributed to a run so far (cyril-2lh8): every metered
+    /// turn of its step and creator sessions plus its parent wakes. `None`
+    /// until one of them reports credits — never a stand-in 0.
+    pub fn run_credits(&self, workflow_id: &WorkflowId) -> Option<f64> {
+        self.run_credits.get(workflow_id).copied()
+    }
+
     /// The header label for the current turn on `session`: the NEWEST
     /// terminal completion it claimed at its start (the run whose completion
     /// triggered the wake), consuming the claim; `None` when it claimed none.
     /// Only workflow-completion wakes ask, so `None` is spec B4's run-less
     /// wake and is logged.
     pub fn take_wake_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        self.take_ended(session).map(|(_, label)| label)
+    }
+
+    fn take_ended(&mut self, session: &SessionId) -> Option<(WorkflowId, WakeLabel)> {
         let label = self
             .claimed_wake_labels
             .remove(session)
             .and_then(|claimed| {
-                claimed.iter().rev().find_map(|cause| match cause {
-                    WakeCause::Ended(workflow_id) => wake_label(&self.runs, workflow_id),
+                claimed.into_iter().rev().find_map(|cause| match cause {
+                    WakeCause::Ended(workflow_id) => {
+                        wake_label(&self.runs, &workflow_id).map(|label| (workflow_id, label))
+                    }
                     WakeCause::RepeatCap(..) => None,
                 })
             });
@@ -945,23 +1088,30 @@ impl WorkflowTracker {
     /// ([`Self::take_wake_label`], cyril-lki9); any other wake names the
     /// newest repeat-cap pause the turn claimed (cyril-6lql: KAS 0.66.43
     /// wakes the parent for one as a message wake), or nothing — a generic
-    /// wake.
+    /// wake. The turn is recorded as agent-initiated, its wake attributed to
+    /// the named run (cyril-2lh8).
     pub fn take_turn_label(
         &mut self,
         session: &SessionId,
         origin: &AgentInitiation,
     ) -> Option<WakeLabel> {
-        if origin.is_workflow_completion() {
-            self.take_wake_label(session)
+        let wake = if origin.is_workflow_completion() {
+            self.take_ended(session)
         } else {
-            self.take_repeat_cap_label(session)
+            self.take_repeat_cap(session)
+        };
+        let label = wake.as_ref().map(|(_, label)| label.clone());
+        let record = self.turns.entry(session.clone()).or_default();
+        if wake.is_some() {
+            record.wake = wake;
         }
+        label
     }
 
     /// Consumes the repeat-cap pauses the current turn on `session` claimed
     /// and names the newest; its terminal completions stay claimed for a
     /// workflow-completion announcement.
-    fn take_repeat_cap_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+    fn take_repeat_cap(&mut self, session: &SessionId) -> Option<(WorkflowId, WakeLabel)> {
         let claimed = self.claimed_wake_labels.get_mut(session)?;
         let mut label = None;
         claimed.retain(|cause| match cause {
@@ -969,9 +1119,9 @@ impl WorkflowTracker {
             WakeCause::RepeatCap(workflow_id, repeat_cap) => {
                 // Causes are in arrival order: the last resolvable one wins.
                 if let Some(run) = wake_label(&self.runs, workflow_id) {
-                    label = Some(WakeLabel::paused_at_repeat_cap(
-                        run.name,
-                        repeat_cap.clone(),
+                    label = Some((
+                        workflow_id.clone(),
+                        WakeLabel::paused_at_repeat_cap(run.name, repeat_cap.clone()),
                     ));
                 }
                 false
@@ -4511,6 +4661,172 @@ mod tests {
             label_view(tracker.take_turn_label(&s, &complete)),
             Some(("recipe-B".to_owned(), WorkflowRunStatus::Failed, None)),
             "the same claim still names its terminal run for a completion wake"
+        );
+    }
+
+    /// A KAS `turn_completion` reporting `credits` (cyril-2lh8); `None`
+    /// reports no charge at all (`promptTurnSummaries: []`, an aborted turn).
+    fn metering(credits: Option<f64>) -> crate::types::TurnMeteringUpdate {
+        let charges = credits
+            .map(|amount| {
+                crate::types::MeteredAmount::try_new(amount, "credit", "credits")
+                    .unwrap_or_else(|e| panic!("credit fixture: {e}"))
+            })
+            .into_iter()
+            .collect();
+        crate::types::TurnMeteringUpdate::new(charges, None, None, Vec::new(), None)
+    }
+
+    /// One turn on `session`: start, optional announcement, metering, end —
+    /// the App's per-session sequence (cyril-2lh8).
+    fn run_turn(
+        tracker: &mut WorkflowTracker,
+        session: &SessionId,
+        origin: Option<&AgentInitiation>,
+        credits: Option<f64>,
+    ) -> Option<AgentTurnClose> {
+        tracker.begin_turn(session);
+        if let Some(origin) = origin {
+            tracker.take_turn_label(session, origin);
+        }
+        tracker.record_turn_metering(session, &metering(credits));
+        tracker.finish_turn(session)
+    }
+
+    /// `(turn credits, Option<(run name, status, run total)>)`.
+    type CloseView = (Option<f64>, Option<(String, WorkflowRunStatus, f64)>);
+
+    fn close_view(close: Option<AgentTurnClose>) -> Option<CloseView> {
+        close.map(|close| {
+            (
+                close.credits(),
+                close.run().map(|run| {
+                    (
+                        run.label().name().to_owned(),
+                        run.label().status(),
+                        run.total(),
+                    )
+                }),
+            )
+        })
+    }
+
+    /// A run `w` whose step ran in session `step` (cyril-2lh8 fixtures).
+    fn run_with_step(tracker: &mut WorkflowTracker, step: &SessionId) -> WorkflowId {
+        let id = workflow_id("w");
+        opened(tracker, &id);
+        assert_eq!(
+            tracker.apply_event(started(
+                &id,
+                "step",
+                &["w", "step"],
+                WorkflowNodeStartDetails::new().with_session_id(step.clone()),
+            )),
+            Ok(true)
+        );
+        id
+    }
+
+    /// cyril-2lh8: a step turn's credits count toward its run; the parent
+    /// wake that follows the run's end closes with its own credits and the
+    /// run's total — steps plus the wakes attributed to it.
+    #[test]
+    fn completion_wake_closes_with_its_credits_and_the_run_total() {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &step, None, Some(0.25))),
+            None,
+            "a step's own turn is not agent-initiated: no footer"
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+        ));
+        let wake = initiation(Some("workflow-complete-wake"), true);
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, Some(&wake), Some(0.5))),
+            Some((
+                Some(0.5),
+                Some(("recipe-W".to_owned(), WorkflowRunStatus::Completed, 0.75))
+            ))
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.75));
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, None, Some(1.0))),
+            None,
+            "the user's own next turn closes with no footer and is not the run's"
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.75));
+    }
+
+    /// cyril-2lh8: a repeat-cap wake (cyril-6lql) closes with its own credits
+    /// only — the run has not ended — and its credits count toward the run;
+    /// a wake with no run closes with its credits alone.
+    #[test]
+    fn repeat_cap_and_generic_wakes_close_with_turn_credits_only() {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let message_wake = initiation(Some("send-message-wake"), false);
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("w", "W", Some("s"), "loop", 1)
+        ));
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, Some(&message_wake), Some(0.25))),
+            Some((Some(0.25), None))
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, Some(&message_wake), Some(0.5))),
+            Some((Some(0.5), None)),
+            "no pause claimed: a generic wake, its credits are no run's"
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+    }
+
+    /// cyril-2lh8: missing metering degrades to NO figure, never 0, with a
+    /// debug log — for the wake itself, and for a run none of whose turns
+    /// reported credits.
+    #[rstest::rstest]
+    #[case::completion_wake_keeps_the_run_total(
+        initiation(Some("workflow-complete-wake"), true),
+        Some(0.25),
+        Some((None, Some(("recipe-W".to_owned(), WorkflowRunStatus::Completed, 0.25))))
+    )]
+    #[case::completion_wake_of_an_unmetered_run(
+        initiation(Some("workflow-complete-wake"), true),
+        None,
+        Some((None, None))
+    )]
+    #[case::generic_wake(initiation(Some("send-message-wake"), false), Some(0.25), Some((None, None)))]
+    fn missing_metering_is_no_figure(
+        #[case] origin: AgentInitiation,
+        #[case] step_credits: Option<f64>,
+        #[case] want: Option<CloseView>,
+    ) {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        run_turn(&mut tracker, &step, None, step_credits);
+        assert_eq!(tracker.run_credits(&id), step_credits, "never a 0 total");
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+        ));
+        let (close, logs) = with_captured_logs(tracing::Level::DEBUG, || {
+            run_turn(&mut tracker, &s, Some(&origin), None)
+        });
+        assert_eq!(close_view(close), want);
+        assert!(
+            logs.contains("turn ended without credit metering"),
+            "missing-metering debug log: {logs}"
         );
     }
 }

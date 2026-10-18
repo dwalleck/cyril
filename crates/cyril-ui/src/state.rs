@@ -1375,6 +1375,19 @@ impl UiState {
         self.push_transcript_system(transcript, text);
     }
 
+    /// Close an agent-initiated turn in `transcript` with what it cost, and —
+    /// for the wake after a run's end — the run's credit total (cyril-2lh8);
+    /// text from [`crate::turn_labels::footer_text`]. Nothing metered, no line.
+    pub fn end_agent_initiated_turn(
+        &mut self,
+        transcript: Transcript<'_>,
+        close: &cyril_core::workflow::AgentTurnClose,
+    ) {
+        if let Some(text) = crate::turn_labels::footer_text(close) {
+            self.push_transcript_system(transcript, text);
+        }
+    }
+
     /// Show a message the engine injected into a running turn (cyril-lki9
     /// B5): a busy-session workflow completion, or a relayed step verdict.
     pub fn show_engine_injection(
