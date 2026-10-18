@@ -1,0 +1,27 @@
+# 2.29.1__2.30.0: +41 -10 literals; +19 -1 props
+## env reads added: []
+## env reads removed: []
+## method:_kiro/kiro.dev (+0)
+## method:_kiro/kiro.dev REMOVED (-0)
+## method:acp (+0)
+## method:acp REMOVED (-0)
+## path-like a/b (+0)
+## path-like a/b REMOVED (-0)
+## env-like (+0)
+## env-like REMOVED (-0)
+## setting:dotted (+1)
+  chat.screenReader
+## setting:dotted REMOVED (-0)
+## SCREAMING_CONST (+0)
+## SCREAMING_CONST REMOVED (-0)
+## slash-command (+0)
+## slash-command REMOVED (-0)
+## snake_kind (+2)
+  content_filtered
+  model_fallback_promoted
+## snake_kind REMOVED (-0)
+## kebab-id (+1)
+  skill-read-restrictions
+## kebab-id REMOVED (-0)
+## camelIdent (+0)
+## camelIdent REMOVED (-0)

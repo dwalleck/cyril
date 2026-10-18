@@ -1,0 +1,204 @@
+  + userConfigDir:this.userConfigDir,workspaceTrusted:this.workspaceTrusted,onConfigChanged:()=>{
+@@ 329213,329214c330121,330124  old#329213 new#330121
+  [replace] ...if(y4o(this.  ‹-homeDir›  ‹+userConfigDir›  ),this.enterpriseManagementCache.sweep(),this.sandboxConfig)try{ let n=await A$t(...
+  [insert] ...(),this.sandboxConfig)try{ let n=await A$t(this.sandboxConfig,[],  ‹-›  ‹+{ homeDir:›  this.homeDir),i=this.sandboxConfig.networkMode??h_l,o=this.sandboxConfig.mcpSandboxing?!...
+  [insert] ...this.sandboxConfig)try{ let n=await A$t(this.sandboxConfig,[],this.homeDir  ‹-›  ‹+,userConfigDir:this.userConfigDir} ›  ),i=this.sandboxConfig.networkMode??h_l,o=this.sandboxConfig.mcpSandboxing?!0:void...
+@@ 329253c330163,330165  old#329253 new#330163
+  - await OB.clearAllStaleExecutionStatuses(this.homeDir),S.info("[KiroAgent] Cleared stale task execution statuses")}
+  + await PB.clearAllStaleExecutionStatuses({
+  + userConfigDir:this.userConfigDir}
+  + ),S.info("[KiroAgent] Cleared stale task execution statuses")}
+@@ 329384c330296  old#329384 new#330296
+  [insert] ... _6e(p),clock:new w6e,telemetry:p,logger:S,homeDir:this.homeDir  ‹-›  ‹+,userConfigDir:this.userConfigDir›  ,cloudConfigBases:()=>this.cloudConfig.bases,globalOriginFor:f=>this.cloudConfig.globalOriginFor(f...
+@@ 329426c330338  old#329426 new#330338
+  [insert] ...!0,sessionList:!0,policyNotifications:!0,extensionMethods:["_kiro/knowledge",...urr,"_kiro/codeIntelligence",  ‹-›  ‹+"_kiro/environment/start_ssh_session",›  "_kiro/session/context","_kiro/session/compact","_kiro/session/export","_kiro/session/history","_kiro/config/template","_kiro/configuration/getState",...v9r,......
+@@ 329438c330350  old#329438 new#330350
+  [insert] ...t)),"_kiro/account/getUsage":t=>this.handleGetUsage(t),"_kiro/codeIntelligence":t=>this.handleCodeIntelligence(  ‹-›  ‹+t),"_kiro/environment/start_ssh_session":t=>hVn(this.sshCredentialSource,›  t),"_kiro/session/context":t=>this.handleContext(t),"_kiro/memory/list":t=>this.withMemoryController(t...
+@@ 329608c330520  old#329608 new#330520
+  - ,s=Rje(r,this.homeDir,o),{
+  + ,s=Nje(r,this.userConfigDir,o),{
+@@ 330001c330913  old#330001 new#330913
+  [delete] ...=performance.now(),Z=this.buildFeatureConfigRegistry(i),ce=Z.get($n.AB_CGS_DELEGATION  ‹-),ge=Z.get($n.AB_TOOL_LOAD›  ‹+›  ),re=this.resolveDynamicDelegation(Z,r?.modelId),q=BVr({...
+@@ 330008c330920  old#330008 new#330920
+  [delete] ...:H,specPlanEnabled:N.enabled,specWorkflow:N.workflow,specSkipClarificationEnabled:N.skipClarification,cgsDelegationEnabled:ce,  ‹-abToolLoadEnabled:ge,›  ‹+›  ...re!==void 0&&{...
+@@ 330223c331135  old#330223 new#331135
+  - let{
+  + let i=xs(this.userConfigDir,this.homeDir)?this.homeDir:this.userConfigDir,{
+@@ 330225c331137  old#330225 new#331137
+  [replace] ...=await qe("loadAgentProfiles","fs",()=>this.agentProfileCache.get(jf.join(w0  ‹-(›  ‹+.userConfigDir,›  this.homeDir),pN),this.homeDir),{...
+  [delete] ...await qe("loadAgentProfiles","fs",()=>this.agentProfileCache.get(jf.join(w0(this  ‹-.homeDir›  ‹+›  ),pN),this.homeDir),{...
+  [delete] ...,()=>this.agentProfileCache.get(jf.join(w0(this.homeDir),pN),  ‹-this.homeDir),›  ‹+›  {...
+@@ 331223c332135,332139  old#331223 new#332135
+  [insert] ...let h=s?.firstMessageWaitMs??this.firstMessageWaitMs,  ‹-›  ‹+{ persisted:›  m=await n.time("read-messages","Read transcript",()=>s?.noReplay?this.messageStore....
+  [insert] ...let h=s?.firstMessageWaitMs??this.firstMessageWaitMs,m  ‹-›  ‹+,arrivedDuringLoad:g} ›  =await n.time("read-messages","Read transcript",()=>s?.noReplay?this.messageStore.loadSession...
+  [insert] ... h=s?.firstMessageWaitMs??this.firstMessageWaitMs,m=await n.time("read-messages","Read transcript",  ‹-›  ‹+async›  ()=>s?.noReplay?this.messageStore.loadSession(t.sessionId,f.workspacePaths):this...
+  [insert] ...this.firstMessageWaitMs,m=await n.time("read-messages","Read transcript",()=>s?.noReplay?  ‹-›  ‹+{ persisted:await ›  this.messageStore.loadSession(t.sessionId,f.workspacePaths):this.loadMessagesWithRaceGuard(t.sessionId,f,...
+  [insert] ..."Read transcript",()=>s?.noReplay?this.messageStore.loadSession(t.sessionId,f.workspacePaths)  ‹-›  ‹+,arrivedDuringLoad:!1} ›  :this.loadMessagesWithRaceGuard(t.sessionId,f,h));...
+@@ 331231c332147  old#331231 new#332147
+  - let T=await this.maybeReplayAbandonedPromptClosure(u,t.sessionId,m,i);
+  + let C=await this.maybeReplayAbandonedPromptClosure(u,f,m,i&&!g);
+@@ 331327c332243,332245  old#331327 new#332243
+  - if(!i||i.messages.length>0||n<=0)return i;
+  + if(!i||i.messages.length>0||n<=0)return{
+  + persisted:i,arrivedDuringLoad:!1}
+  + ;
+@@ 331331c332249,332251  old#331331 new#332249
+  [insert] ...session=${t}) at=${new Date().toISOString()}`),  ‹-›  ‹+{ persisted:›  s}...
+  [insert] ...=${t}) at=${new Date().toISOString()}`),s  ‹-›  ‹+,arrivedDuringLoad:(s?.messages.length??0)>0›  }...
+  [insert] ...${t}) at=${new Date().toISOString()}`),s}  ‹-›  ‹+ }›  ...
+@@ 331351c332271,332273  old#331351 new#332271
+  [replace] ...if(!i  ‹-||›  ‹+)return 0; let o=r.sessionId; if(kae(r,›  this.controller.hasActiveExecution(r)||this.controller.hasQueuedExecution(r))return 0;...
+  [delete] ...if(!i||this.controller  ‹-.hasActiveExecution(r›  ‹+›  )||this.controller.hasQueuedExecution(r))return 0;...
+@@ 331720c332642,332644  old#331720 new#332642
+  [insert] ...=await qe("createSandbox","sandbox",()=>A$t(r,t,  ‹-›  ‹+{ homeDir:›  this.homeDir));...
+  [insert] ...=await qe("createSandbox","sandbox",()=>A$t(r,t,this.homeDir  ‹-›  ‹+,userConfigDir:this.userConfigDir} ›  ));...
+@@ 331746c332670,332672  old#331746 new#332670
+  - =await A$t(t,[],this.homeDir);
+  + =await B$t(t,[],{
+  + homeDir:this.homeDir,userConfigDir:this.userConfigDir}
+  + );
+@@ 332425c333351  old#332425 new#333351
+  [replace] ...let u=await a("storeInit",()=>new Z3(Eje,this.  ‹-homeDir›  ‹+userConfigDir›  )),l=await a("scopeResolution",()=>MPe(t[0]));...
+@@ 332502c333428  old#332502 new#333428
+  [delete] ...w.enabled,specWorkflow:w.workflow,specSkipClarificationEnabled:w.skipClarification,cgsDelegationEnabled:u.get($n.AB_CGS_DELEGATION  ‹-),abToolLoadEnabled:u.get($n.AB_TOOL_LOAD›  ‹+›  ),...l!==void 0&&{...
+@@ 332509c333435  old#332509 new#333435
+  [insert] ...homeDir:this.homeDir  ‹-›  ‹+,userConfigDir:this.userConfigDir›  ,workspaceRoots:r,organizationPolicy:this.organizationPolicy,...this.resolveAgentPermissions(n,i),initialSessionRules:...
+@@ 332524c333450  old#332524 new#333450
+  [replace] ...=await this.buildSessionAgentRegistry(t,n.workspacePaths,o.modeId,Rje(n.workspacePaths,this.  ‹-homeDir›  ‹+userConfigDir›  ,i),i,this.detachedAgentDefinitions(t),void 0,o.routedFrom),c=this...
+@@ 332539c333465  old#332539 new#333465
+  - let g=Rje(r,this.homeDir,c),y=sx(c.memoryConfig);
+  + let g=Nje(r,this.userConfigDir,c),y=sx(c.memoryConfig);
+@@ 332613c333539  old#332613 new#333539
+  [delete] ...,machineId:"acp-client",cgsDelegationEnabled:c.cgsDelegationEnabled??!1,backgroundExecution:c.backgroundExecution??!1,  ‹-abToolLoadEnabled:c.abToolLoadEnabled??!1,›  ‹+›  ...c.dynamicDelegation!==void 0&&{...
+@@ 332617c333543  old#332617 new#333543
+  [insert] ....messageStore,sessionInfoEmitter:le,progressiveContextManager:this.progressiveContextManager,powersManager:this.powersManager,homeDir:this.homeDir,  ‹-›  ‹+userConfigDir:this.userConfigDir,›  clientMeta:u,capabilities:this.resolvedCapabilities,shellTypeInfo:s,policySession:Z,sandbox:H,globalSandbox:this...
+@@ 332689c333615  old#332689 new#333615
+  [replace] ...  ‹-homeDir›  ‹+userConfigDir›  :this.homeDir,workspacePaths:r,workspaceTrusted:this.workspaceTrusted,hasNonPromptCommandNamed:wt=>this.slashCommandManager.hasNonPromptCommandNamed...
+  [replace] ...homeDir:this.  ‹-homeDir›  ‹+userConfigDir›  ,workspacePaths:r,workspaceTrusted:this.workspaceTrusted,hasNonPromptCommandNamed:wt=>this.slashCommandManager.hasNonPromptCommandNamed(t,wt...
+@@ 333132,333133c334058,334061  old#333132 new#334058
+  [replace] ...=t  ‹-; return await ›  ‹+,i=›  this.mcpPool?.resetServer(r,n??!1),{...
+  [insert] ...=t; return await this.mcpPool?.resetServer(r,  ‹-›  ‹+{ startOAuth:›  n??!1),{...
+  [insert] ...=t; return await this.mcpPool?.resetServer(r,n??!1  ‹-›  ‹+,coalesce:!1,trigger:"user-retry"} ); return i&&await NE.awaitBoundedReset(r,i›  ),{...
+@@ 333150a334079,334085  old#333150 new#334079
+  + static async awaitBoundedReset(t,r){
+  + if(await Dxe(r,Xis)==="expired"){
+  + S.warn("[KiroAgent] mcp.resetServer.responseCeilingExpired",{
+  + serverName:t,ceilingMs:Xis}
+  + );
+  + return}
+  + await r}
+@@ 333314c334249  old#333314 new#334249
+  [replace] ...return n||(n=new D$t(t,this.  ‹-homeDir›  ‹+userConfigDir›  ),this.specSessionTrackers.set(r,n),n.initialize().catch(i=>{...
+@@ 333319c334254  old#333319 new#334254
+  [replace] ...return n||(n=new O$t(t,this.  ‹-homeDir›  ‹+userConfigDir›  ,void 0,i=>this.broadcastOutboundFor(i)),this.specTaskStatusTrackers.set(r,n...
+@@ 333580c334515,334517  old#333580 new#334515
+  [insert] ...),u=jf.basename(jf.dirname(n)),l=new OB(a.workspacePaths  ‹-›  ‹+,{ userConfigDir:this.userConfigDir} ›  ),d="Run all tasks for this spec.",p=await l.loadCheckpoint(u);...
+@@ 333633c334570  old#333633 new#334570
+  [insert] ...folders.map(I=>I.uri.fsPath),P=await C(x,n,R  ‹-›  ‹+,this.userConfigDir›  ),N=new Set(v);...
+@@ 333882c334819  old#333882 new#334819
+  [delete] ...Promise.resolve().then(()=>(szr(),Qvo)),i=this.  ‹-homeDir||process.env.HOME||process.env.USERPROFILE||"",o=n.›  ‹+›  resolve(Dzo(this.configuration.startup)),s=new t(()=>r(i...
+  [insert] ...resolve(Dzo(this.configuration.startup)),s=new t(()=>r(i  ‹-›  ‹+.userConfigDir›  ),o,i);...
+  [insert] ....configuration.startup)),s=new t(()=>r(i),o,i  ‹-›  ‹+.userConfigDir›  );...
+@@ 334011c334948  old#334011 new#334948
+  - return await r(new qPe(new Z3(mee,this.homeDir)))}
+  + return await r(new WPe(new X3(mee,this.userConfigDir)))}
+@@ 334337c335274  old#334337 new#335274
+  [delete] ...let T=new Set([  ‹-q2.id,›  ‹+›  yJ.id]),C=r.previousMessages??[],x=C.at(0),...
+@@ 335534a336472,336553  old#335534 new#336472
+  + var jQ=er(nW(),1);
+  + ui();
+  + Fr();
+  + pe();
+  + var bBt=class{
+  + constructor(t){
+  + this.now=t}
+  + now;
+  + latest=new Map;
+  + begin(t){
+  + let r=this.now();
+  + for(let[i,o]of this.latest)r-o.sentAt>=3e4&&this.latest.delete(i);
+  + if(this.latest.has(t))return;
+  + let n={
+  + sentAt:r}
+  + ;
+  + return this.latest.set(t,n),n}
+  + fail(t,r){
+  + this.latest.get(t)===r&&this.latest.delete(t)}
+  + clear(t){
+  + this.latest.delete(t)}
+  + }
+  + ;
+  + var TBt=class{
+  + client;
+  + throttle;
+  + constructor(t){
+  + this.client=t.client,this.throttle=new bBt(t.now??Date.now)}
+  + async startSshSession(t){
+  + let r=await Pe("environment.startSshSession","network",()=>this.mint(t),{
+  + okLevel:"debug",okAttributes:n=>({
+  + outcome:n.kind}
+  + )}
+  + );
+  + return this.afterOutcome(t,r)}
+  + async mint(t){
+  + try{
+  + let r=await this.client.send(new jQ.StartSshSessionCommand({
+  + identifier:{
+  + sessionId:t}
+  + }
+  + ));
+  + return{
+  + kind:"ready",ssmSessionId:r.ssmSessionId,streamUrl:r.streamUrl,tokenValue:r.tokenValue}
+  + }
+  + catch(r){
+  + if(r instanceof jQ.ResourceNotFoundException)return{
+  + kind:"notFound",message:r.message}
+  + ;
+  + if(r instanceof jQ.EnvironmentNotReadyException)return{
+  + kind:"environmentNotReady",message:r.message}
+  + ;
+  + throw r}
+  + }
+  + async afterOutcome(t,r){
+  + switch(r.kind){
+  + case"environmentNotReady":return await this.requestResume(t),r;
+  + case"ready":return this.throttle.clear(t),r;
+  + case"notFound":return r}
+  + }
+  + async requestResume(t){
+  + let r=this.throttle.begin(t);
+  + if(r===void 0)return;
+  + let n=new AbortController;
+  + try{
+  + await Pe("environment.resumeEnvironment","network",()=>this.client.send(new jQ.LoadSessionCommand(ane(t,{
+  + }
+  + )),{
+  + abortSignal:n.signal}
+  + ),{
+  + errorLevel:"debug"}
+  + )}
+  + catch(i){
+  + this.throttle.fail(t,r),S.debug("environment.start_ssh_session.resume_failed",{
+  + sessionId:t,error:Dg(i)}
+  + );
+  + return}
+  + n.abort(),S.info("environment.start_ssh_session.resume_requested",{
+  + sessionId:t}
+  + )}
+  + }
+  + ;
+@@ 336586a337606,337607  old#336586 new#337606
+  + ),sshSession:new TBt({
+  + client:r}
+@@ 336701c337722  old#336701 new#337722
+  [insert] ...:void 0,EBt=CBt?.source,bBt=CBt?.link,TBt=CBt?.providers  ‹-›  ‹+,$Bt=G7e?.sshSession›  ;...
+@@ 336730a337752,337755  old#336730 new#337752
+  + ,...$Bt?{
+  + sshCredentialSource:$Bt}
+  + :{
+  + }
+@@ 336766a337792,337795  old#336766 new#337792
+  + :{
+  + }
+  + ,...$Bt?{
+  + sshCredentialSource:$Bt}

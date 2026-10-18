@@ -1,0 +1,39 @@
+{
+"old": [
+"\"_kiro/workflow/inspect\"",
+".registry",
+".get",
+".workflowId",
+"state:",
+"baseDir:",
+".workflowId",
+".workflowId",
+".workflowId",
+".host",
+".stateFs",
+"workflowId:",
+".workflowId",
+"state:",
+".p",
+"nodePlan:"
+],
+"new": [
+"\"_kiro/workflow/inspect\"",
+".registry",
+".get",
+".workflowId",
+"state:",
+"baseDir:",
+".workflowId",
+".workflowId",
+".workflowId",
+".host",
+".stateFs",
+"workflowId:",
+".workflowId",
+"state:",
+".p",
+"nodePlan:"
+],
+"identical": true
+}

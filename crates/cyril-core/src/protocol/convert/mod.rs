@@ -74,6 +74,36 @@ fn to_money(cost: &acp::Cost) -> Option<Money> {
     }
 }
 
+/// Convert one wire select-option value into the domain
+/// [`ConfigOptionValue`]. The engine-neutral fields map straight across; the
+/// KAS `_meta.kiro` effort block is parsed by the KAS converter (KAS quirks
+/// live there per the conversion-boundary rule), degrading to `None` with a
+/// warning on anything malformed — never a catalog failure.
+fn to_config_option_value(value: &acp::SessionConfigSelectOption) -> ConfigOptionValue {
+    ConfigOptionValue {
+        value: value.value.to_string(),
+        name: value.name.clone(),
+        description: value.description.clone(),
+        effort: select_option_effort(value.meta.as_ref()),
+    }
+}
+
+#[cfg(feature = "kas")]
+fn select_option_effort(
+    meta: Option<&serde_json::Map<String, serde_json::Value>>,
+) -> Option<EffortMetadata> {
+    kas::effort_metadata(meta)
+}
+
+/// Without KAS support compiled in there is no `_meta.kiro` dialect to parse;
+/// every value converts effort-free.
+#[cfg(not(feature = "kas"))]
+fn select_option_effort(
+    _meta: Option<&serde_json::Map<String, serde_json::Value>>,
+) -> Option<EffortMetadata> {
+    None
+}
+
 pub(crate) fn to_config_options(options: &[acp::SessionConfigOption]) -> Vec<ConfigOption> {
     options
         .iter()
@@ -81,11 +111,11 @@ pub(crate) fn to_config_options(options: &[acp::SessionConfigOption]) -> Vec<Con
             acp::SessionConfigKind::Select(select) => {
                 let values = match &select.options {
                     acp::SessionConfigSelectOptions::Ungrouped(flat) => {
-                        flat.iter().map(|value| value.value.to_string()).collect()
+                        flat.iter().map(to_config_option_value).collect()
                     }
                     acp::SessionConfigSelectOptions::Grouped(groups) => groups
                         .iter()
-                        .flat_map(|group| group.options.iter().map(|value| value.value.to_string()))
+                        .flat_map(|group| group.options.iter().map(to_config_option_value))
                         .collect(),
                     _ => Vec::new(),
                 };
@@ -2868,8 +2898,204 @@ mod tests {
                 "step {name}: thinking option value after conversion"
             );
             if let Some(option) = thinking {
-                assert_eq!(option.options, ["on", "off"], "step {name}: choices");
+                let choices: Vec<&str> = option.options.iter().map(|o| o.value.as_str()).collect();
+                assert_eq!(choices, ["on", "off"], "step {name}: choices");
             }
         }
+    }
+
+    /// cyril-vh69 C2 (wire oracle): capture frame 24 of the kiro-cli 2.31.1
+    /// KAS live sweep — the first `config_option_update` after `session/new` —
+    /// replayed through the acp deser layer and `to_config_options`. The model
+    /// select must arrive as a 21-value catalog with wire names, descriptions,
+    /// and per-value `_meta.kiro` effort metadata; `hasEffort: false` values
+    /// (`auto`, `claude-sonnet-4`, …) carry no effort spec.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_2311_model_catalog_carries_labels_descriptions_and_effort() {
+        let capture = include_str!(
+            "../../../../../experiments/conductor-spike/audit-2.31.1/live/kas-live-sweep-2.31.1.jsonl"
+        );
+        // Frame 24, 0-indexed — the frame the design pass verified as the
+        // first config_option_update. Pin the position, then replay it.
+        let line = capture.lines().nth(24).expect("capture has frame 24");
+        let frame: serde_json::Value = serde_json::from_str(line).expect("frame 24 is JSON");
+        assert_eq!(
+            frame["msg"]["params"]["update"]["sessionUpdate"], "config_option_update",
+            "frame 24 of the 2.31.1 sweep must stay the config catalog frame"
+        );
+        let notification: acp::SessionNotification =
+            serde_json::from_value(frame["msg"]["params"].clone())
+                .expect("frame 24 params deserialize at the acp layer");
+        let acp::SessionUpdate::ConfigOptionUpdate(update) = notification.update else {
+            panic!("frame 24 is a config_option_update");
+        };
+        let options = to_config_options(&update.config_options);
+
+        let ids: Vec<&str> = options.iter().map(|o| o.key.as_str()).collect();
+        assert_eq!(
+            ids,
+            [
+                "mode",
+                "model",
+                "memoryReflection",
+                "autopilot",
+                "contentCollection"
+            ],
+            "wire option ids and order"
+        );
+
+        let model = options
+            .iter()
+            .find(|o| o.key == "model")
+            .expect("model select present");
+        assert_eq!(model.value.as_deref(), Some("auto"));
+        assert_eq!(model.options.len(), 21, "21-offered-model catalog");
+
+        // Engine-neutral fields ride through verbatim.
+        let auto = &model.options[0];
+        assert_eq!(auto.value, "auto");
+        assert_eq!(auto.name, "Auto");
+        assert_eq!(
+            auto.description.as_deref(),
+            Some("Models chosen by task for optimal usage and consistent quality")
+        );
+        assert!(!auto.has_effort(), "auto carries no effort spec");
+
+        let effort_of = |value: &str| {
+            model
+                .options
+                .iter()
+                .find(|o| o.value == value)
+                .unwrap_or_else(|| panic!("{value} is offered"))
+                .effort
+                .as_ref()
+        };
+        let opus = effort_of("claude-opus-5.5").expect("opus 5.5 has effort");
+        assert_eq!(opus.levels(), ["low", "medium", "high", "xhigh", "max"]);
+        assert_eq!(opus.default_level(), Some("medium"));
+        let sonnet = effort_of("claude-sonnet-5.5").expect("sonnet 5.5 has effort");
+        assert_eq!(sonnet.default_level(), Some("high"));
+        let gpt = effort_of("gpt-5.6-sol").expect("gpt sol has effort");
+        assert_eq!(
+            gpt.levels(),
+            ["none", "low", "medium", "high", "xhigh", "max"],
+            "GPT levels include `none` verbatim"
+        );
+        assert_eq!(gpt.default_level(), Some("high"));
+        for effort_free in [
+            "auto",
+            "claude-opus-4.5",
+            "claude-sonnet-4.5",
+            "claude-sonnet-4",
+            "claude-haiku-4.5",
+            "deepseek-3.2",
+            "minimax-m2.5",
+            "minimax-m2.1",
+            "glm-5",
+            "qwen3-coder-next",
+        ] {
+            assert!(
+                effort_of(effort_free).is_none(),
+                "{effort_free} hasEffort:false carries no effort spec"
+            );
+        }
+
+        // The mode select carries labels and descriptions, never effort.
+        let mode = options
+            .iter()
+            .find(|o| o.key == "mode")
+            .expect("mode select present");
+        assert_eq!(mode.value.as_deref(), Some("vibe"));
+        assert_eq!(mode.options.len(), 7);
+        assert_eq!(mode.options[0].value, "vibe");
+        assert_eq!(mode.options[0].name, "Default");
+        assert_eq!(
+            mode.options[0].description.as_deref(),
+            Some("General coding assistance")
+        );
+        assert!(mode.options.iter().all(|o| !o.has_effort()));
+    }
+
+    /// cyril-vh69 C2 (malformed cells): each broken `_meta.kiro` effort block
+    /// degrades to `effort: None` (or a dropped default) with a warning —
+    /// never a catalog failure, never a levels-less effort model.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_effort_metadata_degrades_per_malformed_cell() {
+        use serde::Deserialize;
+
+        fn convert_with_meta(meta: serde_json::Value) -> crate::types::ConfigOptionValue {
+            let raw = serde_json::json!([{
+                "id": "model", "name": "Model", "category": "model", "type": "select",
+                "currentValue": "m",
+                "options": [{"value": "m", "name": "M", "_meta": meta}],
+            }]);
+            let options = Vec::<acp::SessionConfigOption>::deserialize(&raw)
+                .expect("hand-written select option deserializes");
+            let converted = to_config_options(&options);
+            converted
+                .into_iter()
+                .next()
+                .and_then(|o| o.options.into_iter().next())
+                .expect("one converted value")
+        }
+
+        // Full valid block: survives.
+        let value = convert_with_meta(serde_json::json!({"kiro": {
+            "hasEffort": true,
+            "effortLevels": ["low", "high"],
+            "defaultEffortLevel": "high",
+        }}));
+        let effort = value.effort.expect("valid block converts");
+        assert_eq!(effort.levels(), ["low", "high"]);
+        assert_eq!(effort.default_level(), Some("high"));
+
+        // No _meta at all / no kiro key / hasEffort:false without fields: silent None.
+        for meta in [
+            serde_json::json!(null),
+            serde_json::json!({}),
+            serde_json::json!({"kiro": {"hasEffort": false}}),
+            serde_json::json!({"kiro": {"rateMultiplier": 1}}),
+        ] {
+            assert!(
+                convert_with_meta(meta.clone()).effort.is_none(),
+                "effort-free cell {meta}"
+            );
+        }
+
+        // hasEffort:true with missing / empty / wrong-typed levels, or
+        // non-string entries: warned None, never a trusted flag.
+        for meta in [
+            serde_json::json!({"kiro": {"hasEffort": true}}),
+            serde_json::json!({"kiro": {"hasEffort": true, "effortLevels": []}}),
+            serde_json::json!({"kiro": {"effortLevels": "high"}}),
+            serde_json::json!({"kiro": {"effortLevels": ["low", 42]}}),
+            serde_json::json!({"kiro": {"effortLevels": ["low", ""]}}),
+        ] {
+            assert!(
+                convert_with_meta(meta.clone()).effort.is_none(),
+                "malformed cell {meta}"
+            );
+        }
+
+        // defaultEffortLevel outside the levels: levels survive, default dropped.
+        let value = convert_with_meta(serde_json::json!({"kiro": {
+            "hasEffort": true,
+            "effortLevels": ["low", "high"],
+            "defaultEffortLevel": "turbo",
+        }}));
+        let effort = value.effort.expect("levels still convert");
+        assert_eq!(effort.levels(), ["low", "high"]);
+        assert_eq!(effort.default_level(), None);
+
+        // A wrong-typed defaultEffortLevel: ignored, levels survive.
+        let value = convert_with_meta(serde_json::json!({"kiro": {
+            "hasEffort": true,
+            "effortLevels": ["low", "high"],
+            "defaultEffortLevel": 3,
+        }}));
+        let effort = value.effort.expect("levels still convert");
+        assert_eq!(effort.default_level(), None);
     }
 }

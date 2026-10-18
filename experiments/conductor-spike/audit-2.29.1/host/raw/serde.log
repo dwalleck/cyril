@@ -1,0 +1,28 @@
+2.28.0 484 shapes 143 tagged enums
+2.29.0 486 shapes 144 tagged enums
+2.29.1 484 shapes 145 tagged enums
+### 2.28.0 -> 2.29.0
+  + struct variant TestCommand::PushSendMessageResponse [2]
+  + struct variant TodoList::Add [4]
+  + struct variant UserMessageContent::ToolUseResults [1]
+  - struct variant UserMessageContent::CancelledToolUses [2]
+  ~ struct AuthProfile [2] -> [3]
+  +tag internally tagged enum ComplexResourceSkillComplexweb
+  +tag untagged enum ResourceContentselicitation
+  -tag internally tagged enum ComplexResourceSkillComplexwebweb
+### 2.29.0 -> 2.29.1
+  + struct Notification [3]
+  + struct variant ConverseStreamErrorKind::Unknown [2]
+  - struct variant ConverseStreamErrorKind::InvalidModelId [1]
+  - struct variant SessionTool::ReviveSession [2]
+  - struct variant SessionTool::WaitForGroup [1]
+  - struct variant TodoList::Remove [3]
+  +tag untagged enum AvailableCommandInputCreateTerminalResponseFileSystemCapabilitiesTerminalOutputResponseexitStatusReleaseTerminalResponseRequestPermissionOutcomeoutcomeRequestPermissionResponseSelectedPermissionOutcomeAnnotationsTextContentAudioContentContentBlockAudioResourceLinkImageContentinternally
+  +tag untagged enum EmbeddedResourceResourceProtocolVersionContentToolCallContentinternally
+  +tag untagged enum RequestIdMcpServerMcpServerStdiodata
+  +tag untagged enum ResourceContentssampling
+  +tag untagged enum SessionConfigOptionCategoryUsageUpdateContentChunkSessionUpdateAgentMessageChunkAgentThoughtChunkToolCallUpdateAvailableCommandsUpdateCurrentModeUpdateConfigOptionUpdateSessionInfoUpdateinternally
+  -tag internally tagged enum ContentBlockdata
+  -tag untagged enum EmbeddedResourceResourceProtocolVersionoldTextnewTextContenttoolCallIdlocationsrawOutputexecutethinkfetchswitch
+  -tag untagged enum RequestIdin
+  -tag untagged enum ResourceContentsroots

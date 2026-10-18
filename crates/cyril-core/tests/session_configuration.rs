@@ -144,8 +144,9 @@ fn assert_model(options: &[ConfigOption], expected: &str) -> Result<()> {
         .find(|option| option.key == "model")
         .context("missing returned model option")?;
     assert_eq!(model.value.as_deref(), Some(expected));
+    let values: Vec<&str> = model.options.iter().map(|o| o.value.as_str()).collect();
     assert_eq!(
-        model.options,
+        values,
         ["requested-model", "server-model", "unsolicited-model"]
     );
     Ok(())

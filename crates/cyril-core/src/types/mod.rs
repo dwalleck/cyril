@@ -5,6 +5,7 @@ pub mod command;
 pub mod config;
 pub mod event;
 pub mod hook;
+pub mod kas_config;
 pub mod kas_hooks;
 pub mod kas_spawn;
 pub mod memory;
@@ -30,12 +31,18 @@ pub mod workflow_command;
 pub use agent_command::AgentCommand;
 pub use agent_engine::AgentEngine;
 pub use code_panel::{CodeCommandResponse, CodePanelData, LspServerInfo, LspStatus};
-pub use command::{AgentCommandRoute, CommandInfo, CommandOption, ConfigOption};
+pub use command::{
+    AgentCommandRoute, CommandInfo, CommandOption, ConfigOption, ConfigOptionValue, EffortMetadata,
+};
 pub use event::{
     AgentInitiation, BridgeCommand, Notification, PermissionOption, PermissionOptionId,
-    PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification, TrustOption,
+    PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification,
+    SET_CONFIG_OPTION_OPERATION, TrustOption,
 };
 pub use hook::HookInfo;
+pub use kas_config::{
+    ConfigPicker, ConfigTarget, KasConfigId, KasConfigRequest, KasConfigSnapshot,
+};
 pub use kas_spawn::KasSpawn;
 pub use memory::{
     MemoryBoundedTextView, MemoryDisabledReason, MemoryLessonListView, MemoryLessonMetadataView,

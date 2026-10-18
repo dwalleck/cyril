@@ -481,6 +481,73 @@ mod tests {
         });
     }
 
+    /// cyril-vh69 C11: after a KAS catalog sequence the toolbar chips read
+    /// mode, model, and effort purely from the catalog's returned
+    /// `currentValue`s — rendered from a REAL UiState, so the feed and the
+    /// widget are tested together.
+    #[test]
+    fn toolbar_follows_a_kas_catalog_sequence() {
+        use cyril_core::types::{ConfigOption, Notification};
+
+        let option = |key: &str, value: Option<&str>| ConfigOption {
+            key: key.into(),
+            label: key.into(),
+            value: value.map(str::to_string),
+            options: vec![],
+        };
+        let catalog = |mode: &str, model: &str, effort: Option<&str>| {
+            Notification::ConfigOptionsUpdated(vec![
+                option("mode", Some(mode)),
+                option("model", Some(model)),
+                option("effortLevel", effort),
+            ])
+        };
+        let render_with = |state: &crate::state::UiState| {
+            let backend = TestBackend::new(100, 1);
+            let mut terminal = Terminal::new(backend).expect("test terminal");
+            terminal
+                .draw(|frame| render(frame, frame.area(), state, &cyril_dark()))
+                .expect("draw");
+            let buf = terminal.backend().buffer();
+            (0..100)
+                .map(|x| buf[(x, 0)].symbol().chars().next().unwrap_or(' '))
+                .collect::<String>()
+        };
+
+        let mut state = crate::state::UiState::new(500);
+        state.apply_notification(&catalog("vibe", "auto", None));
+        let text = render_with(&state);
+        assert!(
+            text.contains("vibe"),
+            "mode chip from mode.currentValue: {text:?}"
+        );
+        assert!(text.contains("auto"), "model chip: {text:?}");
+        assert!(!text.contains("◇"), "auto carries no effort chip: {text:?}");
+
+        state.apply_notification(&catalog("spec", "claude-sonnet-5.5", Some("high")));
+        let text = render_with(&state);
+        assert!(
+            text.contains("spec"),
+            "mode chip follows the catalog: {text:?}"
+        );
+        assert!(
+            text.contains("claude-sonnet-5.5"),
+            "model chip follows: {text:?}"
+        );
+        assert!(
+            text.contains("◇ high"),
+            "effort chip from effortLevel.currentValue: {text:?}"
+        );
+
+        // Switch to auto: the effort chip must NOT survive the model change.
+        state.apply_notification(&catalog("vibe", "auto", None));
+        let text = render_with(&state);
+        assert!(
+            !text.contains("◇"),
+            "effort never crosses a model switch (cyril-838u): {text:?}"
+        );
+    }
+
     #[test]
     fn status_bar_renders_context_usage() {
         let state = MockTuiState {
@@ -862,7 +929,8 @@ mod tests {
     fn thinking_segment_per_state() {
         use crate::state::UiState;
         use cyril_core::types::{
-            ConfigOption, EffortUpdate, Notification, ReasoningInfo, ReasoningSupport,
+            ConfigOption, ConfigOptionValue, EffortUpdate, Notification, ReasoningInfo,
+            ReasoningSupport,
         };
 
         let metadata = |support, enabled| Notification::MetadataUpdated {
@@ -880,7 +948,10 @@ mod tests {
                 key: "thinking".into(),
                 label: "Thinking".into(),
                 value: Some(value.into()),
-                options: vec!["on".into(), "off".into()],
+                options: vec![
+                    ConfigOptionValue::new("on", "on"),
+                    ConfigOptionValue::new("off", "off"),
+                ],
             }])
         };
         // (label, notification, expected segment)

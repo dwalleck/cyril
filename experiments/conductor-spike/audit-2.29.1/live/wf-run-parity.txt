@@ -1,0 +1,50 @@
+gate-on workflowNames OLD: ['agent-wf-coder', 'bgwatch', 'branches', 'fail', 'linear', 'loop', 'loopnone', 'park', 'usertier', 'watch']
+gate-on workflowNames NEW: ['agent-wf-coder', 'bgwatch', 'branches', 'fail', 'linear', 'loop', 'loopnone', 'park', 'usertier', 'watch']
+
+[agent-wf-coder] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+
+[bgwatch] MATCH
+  OLD: ['run_start', 'node_start', 'watch_poll', 'watch_poll', 'watch_poll', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'watch_poll', 'watch_poll', 'watch_poll', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+
+[branches] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'node_complete:completed', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'node_complete:completed', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+
+[fail] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_complete:failed', 'run_complete:failed', 'run_start', 'node_start', 'node_start', 'node_complete:failed', 'run_complete:failed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_complete:failed', 'run_complete:failed', 'run_start', 'node_start', 'node_start', 'node_complete:failed', 'run_complete:failed']
+
+[linear] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_paused', 'paused', 'run_complete:paused', 'run_start', 'node_start', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed', 'run_start', 'node_start', 'node_start', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_paused', 'paused', 'run_complete:paused', 'run_start', 'node_start', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed', 'run_start', 'node_start', 'node_start', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+
+[loop] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'paused', 'run_complete:paused', 'run_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'paused', 'run_complete:paused', 'run_complete:aborted', 'run_start', 'node_start', 'loop_iteration', 'paused', 'run_complete:paused', 'run_complete:aborted']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'paused', 'run_complete:paused', 'run_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'paused', 'run_complete:paused', 'run_complete:aborted', 'run_start', 'node_start', 'loop_iteration', 'paused', 'run_complete:paused', 'run_complete:aborted']
+
+[loopnone] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'node_complete:completed', 'run_complete:completed']
+
+[park] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_paused', 'paused', 'run_complete:paused', 'run_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_paused', 'paused', 'run_complete:paused', 'run_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+
+[usertier] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'node_complete:completed', 'run_complete:completed']
+
+[watch] MATCH
+  OLD: ['run_start', 'node_start', 'node_start', 'watch_poll', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'node_complete:completed', 'run_complete:completed']
+  NEW: ['run_start', 'node_start', 'node_start', 'watch_poll', 'node_complete:completed', 'node_start', 'node_start', 'node_complete:completed', 'loop_iteration', 'node_complete:completed', 'run_complete:completed']
+
+=== gate-off names OLD: ['agent-wf-coder', 'bgwatch', 'linear', 'loop', 'park', 'watch']  NEW: ['agent-wf-coder', 'bgwatch', 'linear', 'loop', 'park', 'watch']
+[agent-wf-coder] MATCH
+[bgwatch] MATCH
+[linear] MATCH
+[loop] MATCH
+[park] MATCH
+[watch] MATCH

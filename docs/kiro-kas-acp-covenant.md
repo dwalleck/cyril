@@ -199,7 +199,7 @@ Layered onto standard ACP `requestPermission` / `selectedPermissionOutcome` / `t
 - `requestPermission._meta.kiro`: `KiroPermissionRequestMeta {toolId, command?, agentManagesTrust?, consent?: ConsentRequestContext}` where `ConsentRequestContext {capability, resource, askType:'explicit'|'implicit', matchedRule?, scope?, source?, workspaceRoot?}`.
 - `selectedPermissionOutcome._meta.kiro`: `KiroPermissionOutcomeMeta {consent?: ClientConsentContext {scope:'invocation'|'session'|'user'|'workspace', resource?, workspaceRoot?}, editedCommand?}` — lets the client persist a consent scope and supply a user-edited replacement command.
 
-`PolicyScope = 'kiro'|'administration'|'user'|'workspace'|'agent'|'session'`. The agent-side evaluation path is exposed to clients via `_kiro/policy/check`, `_kiro/permissions/{list,explain}` (§1b).
+`PolicyScope = 'kiro'|'organization'|'administration'|'user'|'workspace'|'agent'|'session'`. Allowed effects per scope (KAS 0.66.34 static): `kiro` and `administration` admit `deny`/`ask` only; the remaining scopes, `organization` included, admit `deny`/`ask`/`allow`. The agent-side evaluation path is exposed to clients via `_kiro/policy/check`, `_kiro/permissions/{list,explain}` (§1b).
 
 ---
 

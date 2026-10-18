@@ -1,0 +1,28 @@
+### pattern: modelFallbackReporting
+   kas-init-2.28.0-callback.jsonl: count=0
+   kas-init-2.29.1-callback.jsonl: count=2
+      ctx: ""local"], "sourceProviders": false, "replayMarking": true, "modelFallbackReporting": true, "logging": {"logDir": "/home/dwalleck/repos/cyril/experiments/conductor-spike/aud"
+
+### pattern: _kiro/configuration/getState
+   kas-live-sweep-2.28.0.jsonl: count=16
+      ctx: "5556.971, "conn": "main", "dir": "client->agent", "tag": "m:_kiro/configuration/getState", "msg": {"jsonrpc": "2.0", "id": 1013, "method": "_kiro/configuration/getState", "params"
+   kas-live-sweep-2.29.1.jsonl: count=12
+      ctx: "export", "_kiro/session/history", "_kiro/config/template", "_kiro/configuration/getState", "_kiro/workflow/new", "_kiro/workflow/invoke", "_kiro/workflow/load", "_kiro/workflow/i"
+
+### pattern: consentRound
+   kas-live-sweep-2.28.0.jsonl: count=1
+      ctx: "pike/audit-2.29.1/live/tmp/kas-sweep-2.28.0-ws-xn7bn853"}, "consentRound": 1}}}}} {"ts": 1791755551.638, "conn": "main", "dir": "client->agent", "tag": "p2_shell""
+   kas-live-sweep-2.29.1.jsonl: count=3
+      ctx: "reject", "name": "Always deny", "kind": "reject_always"}], "consentRound": 1}}}}}} {"ts": 1791755599.972, "conn": "main", "dir": "agent->client", "tag": "p2_shell"
+
+### pattern: provider\": \"github
+   kas-live-sweep-2.28.0.jsonl: count=0
+   kas-live-sweep-2.29.1.jsonl: count=3
+      ctx: "l}, "_meta": {"kiro": {"toolOrigin": "acp", "resources": [{"provider": "github", "owner": "dwalleck", "name": "cyril"}]}}}}}} {"ts": 1791755592.389, "conn": "main", "di"
+
+### pattern: architecture-selection
+   kas-lead-commands-2.28.0.jsonl: count=23
+      ctx: "99c9fe2c5710", "status": "success", "documents": [{"name": "architecture-selection", "type": "steering", "scope": "global", "uri": "builtin:architecture-selection", "inclus"
+   kas-lead-commands-2.29.1.jsonl: count=13
+      ctx: "nd"}], "items": [{"krn": "krn:kiro-agent-defaults::steering/architecture-selection", "layer": "kiro-agent-defaults", "standing": {"kind": "active"}, "value": {"name": "arch"
+

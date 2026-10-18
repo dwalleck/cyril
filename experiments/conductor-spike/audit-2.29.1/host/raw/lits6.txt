@@ -1,0 +1,6 @@
+auth/getAccessToken
+kiro/auth
+/requestAccessToken
+accessToken
+tokenResponse
+authToken

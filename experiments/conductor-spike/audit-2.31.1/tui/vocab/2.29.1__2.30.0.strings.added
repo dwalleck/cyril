@@ -1,0 +1,41 @@
+-axo
+/VoiceOver.app/Contents/MacOS/VoiceOver
+; KIRO_SCREEN_READER=
+; cursor follows replies for screen readers
+Animations, ASCII art, icons, screen reader, thinking, and scrollback
+Auto (...)
+Auto (off)
+Auto (on)
+Default UI at startup, fullscreen startup, animations, ASCII art, icons, screen reader, thinking, and scrollback
+Dropping model fallback notice with an unreadable model id
+Dropping model_fallback update with a malformed promoted
+Dropping model_fallback update with an unreadable model id
+Dropping model_fallback update with an unrecognized cause
+Dropping model_fallback_promoted notice with a non-refusal trigger
+Dropping model_fallback_promoted notice without a target
+IME input may move
+Ignoring sub-agent model fallback notice
+Model fallback notice carries a non-string agentSubtaskId
+Read restrictions and skills
+Replace any skill ask rule with skill deny rules for blocked skills, and add a skill allow if the rest should load without asking
+Screen reader
+Unrecognized model_fallback scope from KAS; not promoting
+Unrecognized model_fallback trigger from KAS
+Upgrade or refresh the universal (V2 + V3) config
+V2 or earlier upgrade
+V3 doesn't apply read restrictions to skill loading yet
+\u2692
+\u2727
+\x1B[2K\x1B7\x1B[1B\x1B[J\x1B8
+\x1B_ki\x07
+\x1B_kt\x07
+^[A-Za-z0-9._:-]{1,
+chat.screenReader
+content_filtered
+couldn't complete this response. Retrying
+is now this conversation's model.
+model_fallback_promoted
+process listing timed out
+produced no answer.
+skill-read-restrictions
+toolsSettings deniedPaths

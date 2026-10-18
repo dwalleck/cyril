@@ -1,0 +1,398 @@
+@@ 381c381,393
+- basename _ _,_ _ _,resolve _ _,_ _ _}
++ _ _ _}
++ _"_";
++ function _(){
++ return process.env.HOME||process.env.USERPROFILE||_()}
++ function _(_){
++ _(_==="~")return _();
++ _(/^~[\\/]/.test(_))return _(_(),_.slice(2));
++ return _}
++ _ _=()=>{
++ }
++ ;
++ import{
++ realpathSync _ _}
+@@ 384c396
+- cpSync _ _,existsSync _ _,mkdtempSync _ _,readFileSync _ _,realpathSync _ _,renameSync _ _,rmSync _ _,statSync _ _,unlinkSync _ _,writeFileSync _ _}
++ basename _ _,dirname _ _,isAbsolute _ _,_ _ _,relative _ _,resolve _ _}
+@@ 385a398,415
++ function _(_){
++ _ _=[],_=_;
++ _(;
++ ;
++ )_{
++ return _(_(_),...t)}
++ catch{
++ _ _=_(_);
++ _(_===_)return _;
++ _.unshift(_(_)),_=_}
++ }
++ function _(_,_){
++ _(!_(_))return"relative";
++ _ _=_(_(_));
++ _(_(_)===_)return"_";
++ _ _=_(_,_(_));
++ _(_===""||!_.startsWith("..")&&!_(_))return"contains-_";
++ return _}
+@@ 387c417,499
+- return _(_(),".kiro","powers")}
++ _ _=process.env.KIRO_HOME,_=_();
++ _(_&&_.raw===_&&_.home===_)return _.dir;
++ _ _=_(_,".kiro"),_=_?.trim(),_=_;
++ _(_){
++ _ _=_(_,_);
++ _(_===_)_=_(_);
++ _ _(!_.has(_))_.add(_),_.warn(`[_-_] ignoring KIRO_HOME=_{
++ _}
++  (_{
++ _}
++ );
++  using _{
++ _}
++ `)}
++ return _={
++ _:_,_:_,_:_}
++ ,_}
++ function _(...e){
++ return _(_(),...e)}
++ _ _,_=_;
++ _ _=_(()=>{
++ _();
++ _();
++ _=_ _}
++ );
++ import{
++ basename _ _,dirname _ _,_ _ _,resolve _ _,_ _ _}
++ _"_";
++ import{
++ cpSync _ _,existsSync _ _,mkdtempSync _ _,readdirSync _ _,readFileSync _ _,realpathSync _ _,renameSync _ _,rmdirSync _ _,rmSync _ _,statSync _ _,unlinkSync _ _,writeFileSync _ _}
++ _"_";
++ function _(){
++ return _("powers")}
++ function _(_=_()){
++ _ _=_(_(),".kiro","powers"),_=_(_(_),_);
++ _(_===_||!_(_)||_(_))return!1;
++ _ _=_(_);
++ _(_==="populated")return _(_,_),!1;
++ _(_==="uninspectable")return!1;
++ _ _;
++ _{
++ _(_(_)),_=_(_(_(_),".powers-migrate-"));
++ _ _=_(_,"powers");
++ _(_,_,{
++ recursive:!0,force:!1,errorOnExist:!0}
++ ),_(_),_(_),_(_,_),_.info("[powers] copied legacy powers _ KIRO_HOME",{
++ _:_}
++ )}
++ catch(_){
++ return _.warn("[powers] could _ migrate legacy powers",{
++ error:String(_)}
++ ),!1}
++ finally{
++ _(_)_(_,{
++ recursive:!0,force:!0}
++ )}
++ return _(_,_),!0}
++ function _(_){
++ _(!_(_))return"empty";
++ _{
++ _(!_(_).isDirectory()||_(_(_)))return"populated";
++ return _(_,{
++ withFileTypes:!0}
++ ).every((_)=>_.isDirectory()&&_(_(_,_.name)).length===0)?"empty":"populated"}
++ catch(_){
++ return _.warn("[powers] could _ inspect _ relocated powers _",{
++ _:_,error:String(_)}
++ ),"uninspectable"}
++ }
++ function _(_){
++ _(!_(_))return;
++ _(_ _ _ _(_))_(_(_,_));
++ _(_)}
++ function _(_,_){
++ _{
++ _(_,`_{
++ _}
++ \n`)}
++ catch(_){
++ _.warn("[powers] could _ record _ powers migration",{
++ error:String(_)}
++ )}
++ }
+@@ 452c564,566
+- _ _=_.root??_(),_=_(_);
++ _ _=_.root??_();
++ _(!_.root)_(_);
++ _ _=_(_);
+@@ 502a617
++ _(!_.root)_(_);
+@@ 512a628
++ _ _=".powers-migrated";
+@@ 514a631,632
++ _();
++ _();
+@@ 1002,1028d1119
+- import{
+- homedir _ _}
+- _"_";
+- import{
+- _ _ _}
+- _"_";
+- function _(){
+- return process.env.HOME||process.env.USERPROFILE||_()}
+- function _(_){
+- _(_==="~")return _();
+- _(/^~[\\/]/.test(_))return _(_(),_.slice(2));
+- return _}
+- _ _=()=>{
+- }
+- ;
+- import{
+- _ _ _}
+- _"_";
+- function _(){
+- _ _=process.env.KIRO_HOME;
+- _(_&&_.length>0)return _;
+- return _(_(),".kiro")}
+- function _(...e){
+- return _(_(),...e)}
+- _ _=_(()=>{
+- _()}
+- );
+@@ 6144a6236
++ _();
+@@ 7420a7513,7522
++ _ _=process.env.KIRO_TELEMETRY_EXPLICIT_HISTOGRAMS;
++ _(_&&_.has(_.trim().toLowerCase()))return[];
++ return _.map((_)=>({
++ instrumentName:_,aggregation:{
++ _:_.EXPONENTIAL_HISTOGRAM,options:{
++ maxSize:160,recordMinMax:!0}
++ }
++ }
++ ))}
++ function _(){
+@@ 7454c7556
+- readers:[_],resource:_()}
++ readers:[_],resource:_(),views:_()}
+@@ 7547c7649
+- _ _=60000,_,_=1,_,_,_,_,_,_,_=0,_,_=30000,_,_=(_)=>_ _(_),_,_,_=_,_,_="_.tui",_=256,_,_="ClientType",_="_-_";
++ _ _=60000,_,_=1,_,_,_,_,_,_,_=0,_,_=30000,_,_=(_)=>_ _(_),_,_,_=_,_,_="_.tui",_=256,_,_,_,_="ClientType",_="_-_";
+@@ 7570a7673
++ _=["kiro_cli_time_to_first_visible_response_ms","kiro_cli_user_turn_duration_seconds"],_=_ _(["1","_","_","_"]);
+@@ 316157c316260,316262
+- function _(_){
++ function _(_,_={
++ }
++ ){
+@@ 316172c316277
+- =_,_=_.initialized?"initialized":"not_initialized",_=_.initialized?"Workspace initialized":"Workspace _ initialized. _ /_ _ _ initialize.";
++ =_,_=_.initialized?"initialized":"not_initialized",_=_.initialized?"Workspace initialized":"Workspace _ initialized. _ /_ _ _ initialize.",_=_.remote?_:process.cwd(),_=_(_.rootPath)??_,_=_(_.configPath)??(_.remote?_:".kiro/settings/_.json");
+@@ 316175,316177c316280,316290
+- status:_,message:_,rootPath:process.cwd(),detectedLanguages:_.languages,projectMarkers:[],_:(_.lspServers??[]).map((_)=>({
+- _:_.name,languages:_.languages,status:_.status,isAvailable:_.isAvailable,initDurationMs:_,workspaceFolders:[process.cwd()]}
+- )),configPath:".kiro/settings/_.json",docUrl:"https://_.dev/_/_/_-intelligence/"}
++ status:_,message:_,...s?{
++ rootPath:_}
++ :{
++ }
++ ,detectedLanguages:_.languages,projectMarkers:[],_:(_.lspServers??[]).map((_)=>({
++ _:_.name,languages:_.languages,status:_.status,isAvailable:_.isAvailable,initDurationMs:_,workspaceFolders:_?[_]:[]}
++ )),...c?{
++ configPath:_}
++ :{
++ }
++ ,docUrl:"https://_.dev/_/_/_-intelligence/"}
+@@ 316183a316297,316298
++ return typeof _==="string"&&_!==""?_:_}
++ function _(_){
+@@ 316471c316586,316588
+- _(_.success)return _(_);
++ _(_.success)return _(_,{
++ remote:_.startedCloudSession}
++ );
+@@ 316473c316590,316596
+- return _(_)}
++ return _(_,{
++ remote:_.startedCloudSession}
++ )}
++ async function _(){
++ _ _=_.kiroCapabilities.extensionMethods??[];
++ _(_.length>0&&!_.includes("_kiro/codeIntelligence"))return;
++ return _.executeCode("status")}
+@@ 318037a318161
++ codeIntelligenceStatus=_.bind(_.operationHost);
+@@ 320828c320952,320954
+- _(!_(_.agentEngine))return;
++ _(!_(_.agentEngine)){
++ _.addSystemMessage("Autonomous _ _ _ available _ _ session",!0);
++ return}
+@@ 322576,322583d322701
+- ,setShowCodePanel:(_,_)=>{
+- _({
+- showCodePanel:_,codeData:_??_,...a?.status==="initialized"?{
+- codeIntelligenceActive:!0}
+- :{
+- }
+- }
+- )}
+@@ 324277a324396,324461
++ import{
++ existsSync _ _}
++ _"_";
++ import{
++ _ _ _}
++ _"_";
++ async function _(_){
++ _{
++ _ _=await _.codeIntelligenceStatus();
++ _(!_)return"_";
++ _(_.success!==!0)return"failed";
++ _ _=_.data?.status;
++ return _(_)===!0?"initialized":"_"}
++ catch(_){
++ return _.debug("_ intelligence status query failed",{
++ caller:"readSandboxStatus",_:_ instanceof Error?_.message:String(_)}
++ ),"failed"}
++ }
++ function _(_){
++ _ _=(_)=>queueMicrotask(()=>{
++ _.getState().refreshCodeIntelligenceIndicator(_)}
++ );
++ _.subscribe((_,_)=>{
++ _ _=_.cloudSessionActive!==_.cloudSessionActive,_=_.cloudSessionActive&&!!_.sessionId&&_.sessionId!==_.sessionId;
++ _(_||_)_("switch");
++ _ _(_.cloudSessionActive&&_(_.cloudSessionStatus)&&!_(_.cloudSessionStatus))_("readiness")}
++ )}
++ _ _=()=>_(_(process.cwd(),".kiro","settings","_.json")),_=(_)=>_==="initialized"?!0:_==="not_initialized"?!1:_ 0,_=5000,_=(_,_)=>{
++ _ _=0,_=async(_)=>{
++ _ _=++_,{
++ _:_,cloudSessionActive:_,sessionId:_}
++ =_();
++ _(!_?.isCloudSessionActive?.()){
++ _({
++ codeIntelligenceActive:_?!1:_()}
++ );
++ return}
++ _(_==="switch")_({
++ codeIntelligenceActive:!1}
++ );
++ _(!_)return;
++ _ _=await _(_);
++ _(_!==_)return;
++ _(_({
++ codeIntelligenceActive:_==="initialized"}
++ ),_==="failed"&&_!=="retry")setTimeout(()=>{
++ _(_===_)_("retry")}
++ ,_).unref?.()}
++ ;
++ return{
++ setShowCodePanel:(_,_)=>{
++ _ _=_(_?.status);
++ _(_!==_ 0)_+=1;
++ _({
++ showCodePanel:_,codeData:_??_,...i!==_ 0?{
++ codeIntelligenceActive:_}
++ :{
++ }
++ }
++ )}
++ ,refreshCodeIntelligenceIndicator:(_="switch")=>_(_)}
++ }
++ ,_=(_)=>_!==_&&_!=="provisioning"&&_!=="failed";
++ _ _=_(()=>{
++ _()}
++ );
+@@ 324321c324505
+- _(_),_(_),_(_);
++ _(_),_(_),_(_),_(_);
+@@ 324374a324559
++ _();
+@@ 329090,329095d329274
+- import{
+- existsSync _ _}
+- _"_";
+- import{
+- _ _ _}
+- _"_";
+@@ 329159c329338
+- ,mcpMode:"_",showToolsPanel:!1,showGoalPanel:!1,toolsList:[],showStatsPanel:!1,statsList:[],statsSummary:_,showHooksPanel:!1,hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,showRepoPicker:!1,repoPickerResources:[],attachedRepos:[],cloudProviderChecked:!1,cloudProviderConnected:_,showSourceProviderGate:!1,showSessionPicker:!1,sessionPickerRows:
++ ,mcpMode:"_",showToolsPanel:!1,showGoalPanel:!1,toolsList:[],showStatsPanel:!1,statsList:[],statsSummary:_,showHooksPanel:!1,hooksList:[],powersList:[],steeringDocs:[],cloudConfigDiagnostics:[],cloudConfigDiagnosticsReceived:!1,showRepoPicker:!1,repoPickerResources:[],attachedRepos:[],cloudProviderChecked:!1,cloudProviderConnected:_,showSourceProviderGate:!1,showSessionPicker:!1,sessionPickerRows:
+@@ 329333c329512
+- ),...Cit(_,_),...u(_(_),_),...Tit(_),...cot(_,_,{
++ ),...Kit(_,_),...u(_(_),_),...est(_),...wit(_,_),...Bot(_,_,{
+@@ 329450a329630
++ _();
+@@ 348958c349138,349142
+- return _ _([...wEt,...bzn])}
++ return _ _([...jEt,...Xzn])}
++ function _(_){
++ _ _=_.arguments;
++ _(typeof _.tool_id!=="string"||typeof _!=="object"||_===_||Array.isArray(_))return _;
++ return _}
+@@ 348964c349148
+- _ _=_(),_=[];
++ _ _=_(_)??_,_=_(),_=[];
+@@ 367528,367529c367712,367713
+- ),_.rootPath?_(_,{
+- flexDirection:"column",marginTop:1,children:[_(_,{
++ ),_.rootPath||_.detectedLanguages.length>0||_.projectMarkers.length>0?_(_,{
++ flexDirection:"column",marginTop:1,children:[_.rootPath?_(_,{
+@@ 367531c367715
+- ),_.detectedLanguages.length>0&&_(_,{
++ ):_,_.detectedLanguages.length>0&&_(_,{
+@@ 367550c367734
+- ),_(_,{
++ ),_.configPath?_(_,{
+@@ 367554c367738
+- ),_.docUrl&&_(_,{
++ ):_,_.docUrl&&_(_,{
+@@ 377112,377115c377296
+- readFileSync _ _,writeFileSync _ _}
+- _"_";
+- import{
+- homedir _ _}
++ existsSync _ _,readFileSync _ _,writeFileSync _ _}
+@@ 377121c377302,377321
+- return _(_(),".kiro",_)}
++ return _(_)}
++ function _(_=_()){
++ _ _=_(_(),".kiro",_),_=_(_(_),_);
++ _(_===_||!_(_)||_(_))return;
++ _(!_(_))_{
++ _(_(_)),_(_,_(_)),_.info("[secret-storage] copied legacy secrets _ KIRO_HOME")}
++ catch(_){
++ _.warn("[secret-storage] could _ migrate legacy secrets",{
++ error:String(_)}
++ );
++ return}
++ _{
++ _(_,`_{
++ _}
++ \n`)}
++ catch(_){
++ _.warn("[secret-storage] could _ record _ secrets migration",{
++ error:String(_)}
++ )}
++ }
+@@ 377135c377335,377337
+- function _(_=_()){
++ function _(_){
++ _ _=_??_();
++ _(_===_ 0)_(_);
+@@ 377170c377372
+- _ _="secrets.json";
++ _ _="secrets.json",_=".secrets-migrated";
+@@ 377172a377375,377376
++ _();
++ _();
+@@ 377239c377443
+- _=_(_,_,{
++ _(),_=_(_,_,{
+@@ 377319a377524
++ _();
+@@ 378301a378507,378509
++ async codeIntelligenceStatus(){
++ _(!_.sessionClient)throw Error("_ _ initialized");
++ return _.sessionClient.codeIntelligenceStatus?.()}

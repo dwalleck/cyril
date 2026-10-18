@@ -249,9 +249,10 @@ All agent interactions are notification-driven. Commands return immediately; res
 |---|---|---|---|
 | Send prompt | `SendPrompt` | `AgentMessage`, `ToolCallStarted`, `TurnCompleted` | Streams to chat |
 | `/new` | `NewSession` | `SessionCreated` | Updates session state |
-| `/model` (no args) | `QueryCommandOptions` | `CommandOptionsReceived` | Opens picker |
-| `/tools` | `ExecuteCommand` | `CommandExecuted` | Shows formatted response |
-| Picker confirms | `ExecuteCommand` | `CommandExecuted` | Shows confirmation |
+| `/model` (no args), v2 | `QueryCommandOptions` | `CommandOptionsReceived` | Opens picker |
+| `/tools`, v2 | `ExecuteCommand` | `CommandExecuted` | Shows formatted response |
+| Picker confirms, v2 | `ExecuteCommand` | `CommandExecuted` | Shows confirmation |
+| `/thinking`, KAS | `SetConfigOption` | `ConfigOptionSet` | Updates toolbar |
 
 **The event loop must NEVER block on command execution.** Commands send a `BridgeCommand` and return `Dispatched`. Results come back asynchronously as notifications.
 
@@ -259,7 +260,7 @@ All agent interactions are notification-driven. Commands return immediately; res
 
 Kiro v1.29+ supports subagents — child sessions spawned from the main agent that run in parallel with their own tool access and message streams. Cyril observes, displays, and controls these via:
 
-> **KAS uses a different subagent model.** This whole section describes the **v1/v2** engine (`agent_crew` + `kiro.dev/subagent/list_update`, which `SubagentTracker`/`crew_panel` key off). The **KAS** engine sends **no `list_update`** — its subagents are plain `tool_call`s tagged `_meta.kiro.kind: "agent-subtask"`, grouped by `agentSubtaskId`, with an `OrchestrateSubAgent` fail-fast DAG tool (**correction:** the earlier "no loop" is stale — it ships a bounded `repeat` loop, `maxIterations` 1–20 + `stopCondition` + `onMaxIterations`, present at least since KAS 0.18.2 / kiro-cli 2.13.0. **LIVE-CONFIRMED 2026-08-01 on 2.16.0** (was static-only until then). The tool is **client-gated**: it only appears when `subagentOrchestration` is set in **`initialize.clientCapabilities._meta.kiro.settings`** — NOT the initialize request's top-level `_meta`, which KAS never reads (a 2.28.0 probe that used the top-level form wrongly concluded the setting was dead). The `session/new` form does not work either — the initialize form is what overrides the backend flag `prompts.ts` reads). Measured rawInput: `{task, stages[{name, role, prompt_template, depends_on?, inlineAgent?}], repeat?{maxIterations 1-20, stopCondition{containsText}, onMaxIterations continue|abort}}`. The tool_call also carries **`_meta.kiro.pipeline {groupId, stages[{name, role, status, dependsOn[], agentSubtaskId}]}`** — that is the render contract. **Rendering trap:** the pipeline meta has NO iteration counter, so across `repeat` iterations the same stage entry cycles running→completed→running→completed; only `agentSubtaskId` distinguishes iterations. See [docs/kiro-2.16.0-wire-audit.md](docs/kiro-2.16.0-wire-audit.md).** See [docs/kiro-2.14.1-wire-audit.md](docs/kiro-2.14.1-wire-audit.md)) and bundled verification agents (`semantic_reviewer`, `functional_task_alignment`). Rendering KAS crews needs a separate path — see ROADMAP KAS-3 and [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md).
+> **KAS uses a different subagent model; nothing in this section applies to it.** This section is the v1/v2 engine (`agent_crew` + `kiro.dev/subagent/list_update`). On KAS a sub-agent is an `invoke_sub_agent` tool call tagged `_meta.kiro.kind:"agent-subtask"` + `agentSubtaskId`; every child frame, including its own tool calls, rides the **parent** session id, the child streams no text, and its answer arrives as an orphan "Subagent Response" `tool_call_update` (LIVE, [2.31.1 audit](docs/kiro-2.31.1-wire-audit.md) §2b). The `orchestrate_subagent` DAG tool and its `subagentOrchestration` gate were removed in KAS 0.66.33 (history: [2.16.0 audit](docs/kiro-2.16.0-wire-audit.md)). KAS crew rendering: cyril-ebqu, ROADMAP KAS-3; `/spawn` `/kill` `/msg` `/sessions` on KAS: cyril-a8se.
 
 **Components:**
 
@@ -343,13 +344,11 @@ When active, two path families translate (cyril-8tq6):
 
 For the comprehensive protocol reference with example requests/responses, see **[docs/kiro-acp-protocol.md](docs/kiro-acp-protocol.md)**.
 
-> **Engine scope:** The notes below describe **v1/v2 (Rust)** unless marked otherwise, not Cyril's normal KAS default. Explicit v2 selection remains supported. Current feature/security/first-run policy lives in the [README](README.md#engines-and-first-run) and [amended ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md); the [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d) records assembled acceptance status and remaining limits.
->
-> **KAS references:** For `_kiro/*` shapes, read the [covenant doc/package FIRST](docs/kiro-kas-acp-covenant.md), then release-specific implementation/audit evidence for runtime behavior. The [2.7.1 audit](docs/kiro-2.7.1-wire-audit.md) preserves the original integration evidence, not current-release qualification.
+> **⚠️ Two engines as of kiro-cli 2.7.1; KAS is cyril's default (cyril-4c4d).** The generic notes below hold for both engines; v2-only detail lives in [docs/kiro-acp-protocol.md §12](docs/kiro-acp-protocol.md#12-v1v2-engine-notes-moved-from-claudemd-2026-10-15), and the KAS section at the end is the one to design for. 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. Explicit v2 selection remains supported. Current feature/security/first-run policy lives in the [README](README.md#engines-and-first-run) and [amended ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md); the [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d) records acceptance status and remaining limits. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Original KAS integration evidence: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (not current-release qualification — use the release-specific audits for runtime behavior) (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
 - The `agent-client-protocol` crate (v2.0.0, pinned with `=`) from crates.io is the source of truth for ACP types. Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
-- Tool calls with `kind == ToolKind::Other` are "planning" steps from the agent and are filtered from display.
+- Tool calls with `kind == ToolKind::Other` (KAS sub-agent invocations, planning steps) are rendered by their title (`widgets/chat.rs`); nothing is filtered.
 - **Kiro logs**: `$XDG_RUNTIME_DIR/kiro-log/kiro-chat.log` (Linux). Set `KIRO_LOG_LEVEL=debug` for verbose output.
 - **Wire format = binary × backend.** What kiro-cli emits depends on both the binary version and the AWS backend's current behavior. Same-day captures with different binaries isolate binary changes; same-binary captures across time isolate backend rollouts. Mixing the axes conflates both — the metering fields appearing on `_kiro.dev/metadata` between April and May 2026 was a backend rollout, not a binary change.
 - **Wire-format audit artifacts:** [`experiments/conductor-spike/`](experiments/conductor-spike/README.md) has same-day 2.1.0/2.2.0 baselines, the `diff_fields.py` structural differ, and reproducible wrapper scripts. Use these for any wire-format investigation rather than rebuilding from scratch.
@@ -382,30 +381,18 @@ A server-to-client request (has an `id`, expects a JSON-RPC response). The agent
 
 A notification (fire-and-forget, no response expected). Cyril sends this on Esc when `is_busy`.
 
-### V2 Kiro Extension Commands (`kiro.dev/commands/*`)
+### KAS (v3) — the engine to design for
 
-**`commands/execute`** — The `command` field must be an object `{"command": "<name>", "args": {<args>}}` (a `TuiCommand` adjacently tagged enum), NOT a plain string. Sending a string crashes kiro-cli. Selection commands pass their value as `{"value": "<selected>"}` in args.
+KAS is cyril's default engine (cyril-4c4d); v2 stays selectable (`--agent-engine v2`, `[agent] engine = "v2"`)
+but its backend is retiring: design new work for KAS and treat v2 behaviour as legacy. v2-only notes (`kiro.dev/commands/*`, v2 `session/new`
+fields, methods v2 lacks) moved to [docs/kiro-acp-protocol.md §12](docs/kiro-acp-protocol.md#12-v1v2-engine-notes-moved-from-claudemd-2026-10-15).
+Live-verified on KAS 0.66.34 ([2.31.1 audit](docs/kiro-2.31.1-wire-audit.md)):
 
-**`commands/options`** — Query available options for selection commands. Options use `label` (not `name`) for display, plus `value`, `description`, `group`, and optional `current` boolean.
-
-**`commands/available`** — Notification sent after session creation with the full command list, tools, and MCP servers.
-
-**`metadata`** — Notification with `contextUsagePercentage` after each turn. Not in official docs.
-
-### `session/new` Response
-
-Includes more than just `session_id`:
-- `modes` — `SessionModeState` with `current_mode_id` and `available_modes` list (displayed in toolbar)
-- `config_options` — **absent entirely** on the v1/v2 engine (re-verified 2.20.1: the `session/new` result carries only `['models', 'modes', 'sessionId']` — the key is not present, not `null`), and `session/set_config_option` returns `-32601 Method not found` with `data: "session/set_config_option"`. **KAS populates it** (`mode`/`autopilot`/`contentCollection`) and `set_config_option` works there.
-- `models` — v1/v2 DOES return `{currentModelId, availableModels[{modelId, name, description}]}` on `session/new` (19 models on 2.20.1). The `description` carries the context window in prose ("...with 1M context window", `gpt-5.6-*` "272k context window"), so a model→window map is available without `--list-models`. No `current` flag on `commands/options` entries (cyril-imjx).
-
-### Methods NOT implemented by the v1/v2 engine (KAS differs — see the KAS audit)
-
-These are v1/v2-specific notes. **KAS implements several of these methods** — consult the covenant and release-specific KAS audits before assuming a method is unavailable on the default engine.
-
-- `session/set_config_option` — v1/v2: "Method not found" (use `kiro.dev/commands/execute` with `model`). **KAS: works** (`{sessionId, configId, value}` → rebuilt `configOptions`).
-- `session/set_model` — **works on v1/v2** (live-probed 2.20.1: served id acked in **1.4 ms** with an empty `{}` result, and the session sidecar confirms the turn billed the new model). It is *not* advertised — `agentCapabilities.sessionCapabilities` is `{}` — so absence from capabilities is not absence of the method. **It does NOT validate**: a bogus `modelId` is accepted in 0.4 ms, and the *next* `session/prompt` fails in 0.4 s with `-32603` → `"Encountered an error in the response stream: The model 'X' is not available..."` and zero `session/update` frames. Guard picks against `session/new`'s `models.availableModels` (cyril-fj6j). Probe: `experiments/conductor-spike/probe-v2-set-model-2.20.1.py`.
-- `session/fork`, `session/resume`, `session/list` — v1/v2: unstable, `sessionCapabilities: {}`. **KAS: `sessionCapabilities {list, fork}` are non-empty and functional.**
+- **Settings are session configOptions**, written with `session/set_config_option` (`BridgeCommand::SetConfigOption`). Model and effort are merged: `configId:"model"` arrives in a `config_option_update` (possibly after `session/new`), each option carrying `_meta.kiro.{hasEffort, effortLevels[], defaultEffortLevel}`; effort is `configId:"effortLevel"`, thinking `"thinking"`, mode `"mode"`. KAS accepts unoffered values silently — read back `currentValue`. `session/set_model` is -32603 on KAS.
+- **Advertised commands** (`_meta.kiro.type` skill / prompt / custom-agent) run as prompt text `/name args`; `kiro.dev/commands/*` is v2-only (cyril-oieu).
+- **Permissions persist** in the agent file's V3 `permissions.rules`; KAS ignores V2 `toolsSettings.allowedCommands` (cyril-auxt).
+- **Tool-call updates can be orphans** (no prior `tool_call`): "Tool Load" for on-demand MCP tools and "Subagent Response" for a sub-agent's answer (cyril-1v25).
+- **`KIRO_HOME`** relocates agents, hooks, MCP config, sessions and memory; relative, `/` and home-containing values are ignored (cyril-d7ve).
 
 ### KAS advertised commands and local context
 

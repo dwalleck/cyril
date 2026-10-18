@@ -1,0 +1,36 @@
+# 2.28.0__2.29.1: +44 -3 literals; +14 -0 props
+## env reads added: []
+## env reads removed: []
+## method:_kiro/kiro.dev (+0)
+## method:_kiro/kiro.dev REMOVED (-0)
+## method:acp (+0)
+## method:acp REMOVED (-0)
+## path-like a/b (+0)
+## path-like a/b REMOVED (-0)
+## env-like (+0)
+## env-like REMOVED (-0)
+## setting:dotted (+1)
+  components.contextBreakdown.memory
+## setting:dotted REMOVED (-0)
+## SCREAMING_CONST (+0)
+## SCREAMING_CONST REMOVED (-0)
+## slash-command (+0)
+## slash-command REMOVED (-0)
+## snake_kind (+7)
+  backend_unavailable
+  fallback_unsandboxed
+  interaction_resolved
+  kiro_cli_sandbox_session_outcome_total
+  not_applicable
+  not_applied
+  user_bypass
+## snake_kind REMOVED (-0)
+## kebab-id (+2)
+  unportable-hook-matcher
+  widened-hook-matcher
+## kebab-id REMOVED (-0)
+## camelIdent (+3)
+  linkUrl
+  overrideSessionId
+  recordTuiSandboxSessionOutcome
+## camelIdent REMOVED (-0)

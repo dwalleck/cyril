@@ -1,0 +1,147 @@
+{
+ "bin": "/home/dwalleck/.local/share/kiro-research/binaries/2.31.1/extracted/kirocli/bin",
+ "version": "kiro-cli 2.31.1",
+ "arms": {
+  "A_control": {
+   "steps": [
+    {
+     "tag": "upgrade1",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/A_control\n  \u2713 upgraded   probe.json\n\n1 upgraded \u00b7 0 unchanged/skipped \u00b7 0 errors\nOriginals backed up next to each upgraded file (*.json.bak)\n"
+    },
+    {
+     "tag": "upgrade2",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/A_control\n  = unchanged  probe.json  already universal\n\n0 upgraded \u00b7 1 unchanged/skipped \u00b7 0 errors\n"
+    }
+   ],
+   "after_upgrade1": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "after_edit": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "after_upgrade2": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "kiroUpgrade_1": {
+    "revision": 2,
+    "fingerprint": "sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896",
+    "source": "sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d"
+   },
+   "kiroUpgrade_2": {
+    "revision": 2,
+    "fingerprint": "sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896",
+    "source": "sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d"
+   },
+   "files": [
+    "probe.json",
+    "probe.json.bak"
+   ]
+  },
+  "B_v2edit_raw": {
+   "steps": [
+    {
+     "tag": "upgrade1",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/B_v2edit_raw\n  \u2713 upgraded   probe.json\n\n1 upgraded \u00b7 0 unchanged/skipped \u00b7 0 errors\nOriginals backed up next to each upgraded file (*.json.bak)\n"
+    },
+    {
+     "tag": "upgrade2",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/B_v2edit_raw\n  \u2713 upgraded   probe.json\n\n1 upgraded \u00b7 0 unchanged/skipped \u00b7 0 errors\nOriginals backed up next to each upgraded file (*.json.bak)\n"
+    }
+   ],
+   "after_upgrade1": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "after_edit": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\",\n        \"echo CYRILTRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "after_upgrade2": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\",\n        \"echo CYRILTRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\",\n          \"echo CYRILTRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:2dee8580989843858552300a5d9aaa0e3f93ef136d01151e59cca85c98eb41a2\",\n    \"source\": \"sha256:a81b7ce29d963086cfda8ec47570062fa1a52d877b2468e8e3fd85896c94e125\"\n  }\n}\n",
+   "kiroUpgrade_1": {
+    "revision": 2,
+    "fingerprint": "sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896",
+    "source": "sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d"
+   },
+   "kiroUpgrade_2": {
+    "revision": 2,
+    "fingerprint": "sha256:2dee8580989843858552300a5d9aaa0e3f93ef136d01151e59cca85c98eb41a2",
+    "source": "sha256:a81b7ce29d963086cfda8ec47570062fa1a52d877b2468e8e3fd85896c94e125"
+   },
+   "files": [
+    "probe.json",
+    "probe.json.bak",
+    "probe.json.bak.1"
+   ]
+  },
+  "C_cyril_append": {
+   "steps": [
+    {
+     "tag": "upgrade1",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/C_cyril_append\n  \u2713 upgraded   probe.json\n\n1 upgraded \u00b7 0 unchanged/skipped \u00b7 0 errors\nOriginals backed up next to each upgraded file (*.json.bak)\n"
+    },
+    {
+     "tag": "upgrade2",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/C_cyril_append\n  \u2713 upgraded   probe.json\n\n1 upgraded \u00b7 0 unchanged/skipped \u00b7 0 errors\nOriginals backed up next to each upgraded file (*.json.bak)\n"
+    }
+   ],
+   "after_upgrade1": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "after_edit": "{\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"description\": \"probe v2 agent\",\n  \"kiroUpgrade\": {\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"revision\": 2,\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  },\n  \"name\": \"probe\",\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"effect\": \"allow\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ]\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\",\n        \"match\": [\n          \"./docs\"\n        ]\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\",\n        \"echo CYRILTRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  }\n}",
+   "after_upgrade2": "{\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"description\": \"probe v2 agent\",\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\",\n        \"echo CYRILTRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"name\": \"probe\",\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\",\n          \"echo CYRILTRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:2dee8580989843858552300a5d9aaa0e3f93ef136d01151e59cca85c98eb41a2\",\n    \"source\": \"sha256:a81b7ce29d963086cfda8ec47570062fa1a52d877b2468e8e3fd85896c94e125\"\n  }\n}\n",
+   "kiroUpgrade_1": {
+    "revision": 2,
+    "fingerprint": "sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896",
+    "source": "sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d"
+   },
+   "kiroUpgrade_2": {
+    "revision": 2,
+    "fingerprint": "sha256:2dee8580989843858552300a5d9aaa0e3f93ef136d01151e59cca85c98eb41a2",
+    "source": "sha256:a81b7ce29d963086cfda8ec47570062fa1a52d877b2468e8e3fd85896c94e125"
+   },
+   "files": [
+    "probe.json",
+    "probe.json.bak",
+    "probe.json.bak.1"
+   ]
+  },
+  "D_cyril_noop_reformat": {
+   "steps": [
+    {
+     "tag": "upgrade1",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/D_cyril_noop_reformat\n  \u2713 upgraded   probe.json\n\n1 upgraded \u00b7 0 unchanged/skipped \u00b7 0 errors\nOriginals backed up next to each upgraded file (*.json.bak)\n"
+    },
+    {
+     "tag": "upgrade2",
+     "rc": 0,
+     "out": "",
+     "err": "Upgrading agents in /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/h5-ouix0k0e/D_cyril_noop_reformat\n  = unchanged  probe.json  already universal\n\n0 upgraded \u00b7 1 unchanged/skipped \u00b7 0 errors\n"
+    }
+   ],
+   "after_upgrade1": "{\n  \"name\": \"probe\",\n  \"description\": \"probe v2 agent\",\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  },\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"match\": [\n          \"./docs\"\n        ],\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"kiroUpgrade\": {\n    \"revision\": 2,\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  }\n}\n",
+   "after_edit": "{\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"description\": \"probe v2 agent\",\n  \"kiroUpgrade\": {\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"revision\": 2,\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  },\n  \"name\": \"probe\",\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"effect\": \"allow\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ]\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\",\n        \"match\": [\n          \"./docs\"\n        ]\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  }\n}",
+   "after_upgrade2": "{\n  \"allowedTools\": [\n    \"fs_read\"\n  ],\n  \"description\": \"probe v2 agent\",\n  \"kiroUpgrade\": {\n    \"fingerprint\": \"sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896\",\n    \"revision\": 2,\n    \"source\": \"sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d\"\n  },\n  \"name\": \"probe\",\n  \"permissions\": {\n    \"rules\": [\n      {\n        \"capability\": \"shell\",\n        \"effect\": \"allow\",\n        \"match\": [\n          \"echo V2TRUST\"\n        ]\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\",\n        \"match\": [\n          \"./docs\"\n        ]\n      },\n      {\n        \"capability\": \"fs_read\",\n        \"effect\": \"allow\"\n      },\n      {\n        \"capability\": \"skill\",\n        \"effect\": \"allow\"\n      }\n    ]\n  },\n  \"prompt\": \"You are a probe.\",\n  \"tools\": [\n    \"read\",\n    \"shell\"\n  ],\n  \"toolsSettings\": {\n    \"execute_bash\": {\n      \"allowedCommands\": [\n        \"echo V2TRUST\"\n      ]\n    },\n    \"fs_read\": {\n      \"allowedPaths\": [\n        \"./docs\"\n      ]\n    }\n  }\n}",
+   "kiroUpgrade_1": {
+    "revision": 2,
+    "fingerprint": "sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896",
+    "source": "sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d"
+   },
+   "kiroUpgrade_2": {
+    "fingerprint": "sha256:557588abd229783e2d4608d689a6ea75097a9f768e7d0b9d3a89d719cbfd3896",
+    "revision": 2,
+    "source": "sha256:8a19ccae3fc2f76fbe1c902dc9e91f1cdddef43ea6e308ece701ceaa434a373d"
+   },
+   "files": [
+    "probe.json",
+    "probe.json.bak"
+   ]
+  }
+ },
+ "home_tree": [
+  "home/.kiro/settings/cli.json.lock",
+  "home/.kiro/settings/cli.json",
+  "xdg/kiro-cli/data.sqlite3",
+  "xdg/kiro-cli/telemetry-export-drops.lock",
+  "xdg/kiro-cli/run-receipts/.reaper.lock"
+ ]
+}

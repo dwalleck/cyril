@@ -1,0 +1,24 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.33"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/AGENTS.md
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:2899698) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":1}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":7}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":10}
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/steering)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/workflows)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/workflows
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/agents)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.31.1/live/tmp/kas-v3d-fallback-home-zmwp000p/.kiro/agents
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=5

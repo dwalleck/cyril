@@ -1,0 +1,99 @@
+### wf_methods (quoted _kiro/workflow/* ) quoted-occurrence old -> new
+  _kiro/workflow/cancel                            8->  8
+  _kiro/workflow/delete                           16-> 16
+  _kiro/workflow/inspect                           8->  8
+  _kiro/workflow/invoke                            8->  8
+  _kiro/workflow/list                             11-> 11
+  _kiro/workflow/listRecipes                      10-> 10
+  _kiro/workflow/listWatchHandlers                 6->  6
+  _kiro/workflow/load                              8->  8
+  _kiro/workflow/loop_iteration                    1->  1
+  _kiro/workflow/new                              16-> 16
+  _kiro/workflow/node_complete                     2->  2
+  _kiro/workflow/node_failed                       1->  1
+  _kiro/workflow/node_paused                       2->  2
+  _kiro/workflow/node_start                        2->  2
+  _kiro/workflow/pause                             7->  7
+  _kiro/workflow/paused                            1->  1
+  _kiro/workflow/recipes_changed                   1->  1
+  _kiro/workflow/resume                           10-> 10
+  _kiro/workflow/resumeAll                         7->  7
+  _kiro/workflow/retry                             7->  7
+  _kiro/workflow/run_complete                      3->  3
+  _kiro/workflow/run_start                         1->  1
+  _kiro/workflow/steps_queued                      1->  1
+  _kiro/workflow/update                            7->  7
+  _kiro/workflow/watch_poll                        1->  1
+
+### wf_agents (quoted wf-*)
+  wf-auto-researcher               2->  2
+  wf-coder                        12-> 15
+  wf-design                        3->  4
+  wf-design-reviewer               2->  3
+  wf-planner                       5-> 12
+  wf-pr-responder                  3->  3
+  wf-pr-submitter                  3->  3
+  wf-review-aggregator             3->  4
+  wf-workflow-creator              1->  1
+
+### notify (_kiro/session/*)
+  _kiro/session/compact                      4->  4
+  _kiro/session/context                      4->  4
+  _kiro/session/delete                       4->  4
+  _kiro/session/export                       4->  4
+  _kiro/session/history                      4->  4
+  _kiro/session/list                         4->  4
+  _kiro/session/notify                       2->  2
+  _kiro/session/rename                       3->  3
+
+### workflow lifecycle / event literal candidates
+  agent_action                                     1->  1
+  agent_end                                        1->  1
+  agent_enrichment                                 1->  1
+  agent_fault                                      1->  1
+  agent_message_chunk                             12-> 12
+  agent_model_pin                                  1->  1
+  agent_note                                      12-> 15
+  agent_thought_chunk                              8->  8
+  loop_iteration                                   4->  4
+  node_complete                                    3->  3
+  node_modules                                     9->  9
+  node_paused                                     20-> 20
+  node_start                                       5->  5
+  run_collector                                    1->  1
+  run_command                                      8->  8
+  run_complete                                    13-> 13
+  run_dir                                          2->  3
+  run_id                                           1->  1
+  run_in_background                                1->  1
+  run_start                                        4->  4
+  run_type                                         4->  4
+  run_workflow                                    17-> 19
+  watch_expired                                    1->  1
+  watch_poll                                       5->  5
+
+### renamed-literal probes for removed snake tokens
+  orchestrate_subagent: old_raw=12 new_raw=0 new_raw_variants={}
+  content_filter: old_raw=5 new_raw=4 new_raw_variants={}
+  inline_agent: old_raw=1 new_raw=0 new_raw_variants={}
+  stage_failure: old_raw=1 new_raw=0 new_raw_variants={}
+
+### context: consentRound (zod key region)
+  [OLD] ...gesTrust:!0},...u.disclosedContext&&{disclosedContext:u.disclosedContext},...u.workflowWatch&&{workflowWatch:u.workflowWatch},...d&&{consent:d},...p!==void 0&&{consentRound:p},...u.mcpTool&&{mcpTool:EKt(u.mcpTool)}}}}),w=W6e(o,r,n,{interactionType:"tool_approval",toolCallId:u.operationId,question:g,options:m,executionId:l.executionId},async()=>{try{return await rt("requ...
+  [NEW] ...subOptionsLabel:k.string().optional(),subOptions:k.array(k.object({title:k.string(),description:k.string().optional()})).optional()}))]),executionId:k.string(),consentRound:k.number().optional(),_meta:k.record(k.unknown()).optional()}),ZYs=k.object({type:k.literal("interaction_resolved"),toolCallId:k.string(),outcome:k.string(),selectedOption:k.string().optional(),execu...
+  [NEW] ...l()}),ZYs=k.object({type:k.literal("interaction_resolved"),toolCallId:k.string(),outcome:k.string(),selectedOption:k.string().optional(),executionId:k.string(),consentRound:k.number().optional()}),JYs=k.object({type:k.literal("session_metadata"),key:k.string(),value:k.unknown(),executionId:k.string()}),QYs=k.object({type:k.literal("session_start"),agentType:k.string(),b...
+  [NEW] ...pending_interaction":return[fa({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&...
+  [NEW] ...urn[fa({kind:"pending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selec...
+  [NEW] ...ending_interaction",toolCallId:r.toolCallId,interactionType:r.interactionType,question:r.question,options:r.options,...r.consentRound!==void 0&&{consentRound:r.consentRound},...r._meta&&{_meta:r._meta}})];case"interaction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r...
+  [NEW] ...eraction_resolved":return[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}function nou(e,t){switch(e){case"memoryExtractionWatermark":return[];case"contextUsage":return[fa({kind:"c...
+  [NEW] ...n[fa({kind:"interaction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}function nou(e,t){switch(e){case"memoryExtractionWatermark":return[];case"contextUsage":return[fa({kind:"context_usage",usagePerce...
+  [NEW] ...eraction_resolved",toolCallId:r.toolCallId,outcome:r.outcome,...r.selectedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}function nou(e,t){switch(e){case"memoryExtractionWatermark":return[];case"contextUsage":return[fa({kind:"context_usage",usagePercentage:t.usagePe...
+  [NEW] ...ettle(t){this.end.isSettled||(this.party.signal?.removeEventListener("abort",this.abandon),this.releaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta;return Zze(t)&&Zze(t.kiro)?t.kiro:void 0}function i0o(e,t){if(typeof e=="st...
+  [NEW] ...d||(this.party.signal?.removeEventListener("abort",this.abandon),this.releaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta;return Zze(t)&&Zze(t.kiro)?t.kiro:void 0}function i0o(e,t){if(typeof e=="string")return typeof t=="nu...
+  [NEW] ...signal?.removeEventListener("abort",this.abandon),this.releaseHold?.(),this.end.resolve(t))}};function vce(e){return e.consentRound===void 0?{}:{consentRound:e.consentRound}}function Zze(e){return typeof e=="object"&&e!==null}function n0o(e){let t=e._meta;return Zze(t)&&Zze(t.kiro)?t.kiro:void 0}function i0o(e,t){if(typeof e=="string")return typeof t=="number"?{toolCall...
+  [NEW] ...e!==null}function n0o(e){let t=e._meta;return Zze(t)&&Zze(t.kiro)?t.kiro:void 0}function i0o(e,t){if(typeof e=="string")return typeof t=="number"?{toolCallId:e,consentRound:t}:{toolCallId:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="i...
+  [NEW] ...f t=="number"?{toolCallId:e,consentRound:t}:{toolCallId:e}}function aPt(e){if(!Zze(e))return;let t=Zze(e.toolCall)?e.toolCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===...
+  [NEW] ...lCall:e;return i0o(t.toolCallId,n0o(e)?.consentRound)}function cPt(e){if(!Zze(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===t.consentRound}he();async function wce(e,t,r,n,i,o){let{ask:s}=n,{toolCallId:a}=s,c=async h=>{if(o)try{await o.send(h)}c...
+  [NEW] ...(e))return;let t=n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===t.consentRound}he();async function wce(e,t,r,n,i,o){let{ask:s}=n,{toolCallId:a}=s,c=async h=>{if(o)try{await o.send(h)}catch(m){S.warn("[withPersistedInteraction] Failed to emit live interaction up...
+  [NEW] ...n0o(e);return t?.kind==="interaction_resolved"?i0o(t.toolCallId,t.consentRound):void 0}function uPt(e,t){return e.toolCallId===t.toolCallId&&e.consentRound===t.consentRound}he();async function wce(e,t,r,n,i,o){let{ask:s}=n,{toolCallId:a}=s,c=async h=>{if(o)try{await o.send(h)}catch(m){S.warn("[withPersistedInteraction] Failed to emit live interaction update",{sessionId:...
+  [NEW] ...d),g=u.command??u.title??(u.toolTags.includes("@mcp")&&u.path?`@${u.path}`:void 0)??u5({toolId:u.toolId,actionType:u.toolId}).title,y={toolCallId:u.operationId,consentRound:p},w=()=>t.requestPermission({sessionId:r,toolCall:{toolCallId:y.toolCallId,status:"pending",title:g,...u.records!==void 0&&{locations:u.records.files.map(C=>({path:C}))}},options:m,_meta:{kiro:{tool...

@@ -109,29 +109,10 @@ fn dispatch_extension(
                 );
                 return;
             }
-            let tool_tags = match callbacks::parse_hook_tool_tags(&params) {
-                Ok(tags) => tags,
-                Err(error) => {
-                    respond_extension_error(
-                        responder,
-                        &method,
-                        agent_client_protocol::Error::invalid_params().data(error),
-                    );
-                    return;
-                }
-            };
             let (reply, response_rx) = tokio::sync::oneshot::channel();
             (
                 callbacks::HostCallback::HooksList {
-                    trigger: params
-                        .get("trigger")
-                        .and_then(serde_json::Value::as_str)
-                        .map(str::to_owned),
-                    tool_id: params
-                        .get("toolId")
-                        .and_then(serde_json::Value::as_str)
-                        .map(str::to_owned),
-                    tool_tags,
+                    args: hooks::HooksListArgs::parse(&params),
                     reply,
                 },
                 response_rx,
@@ -296,7 +277,7 @@ fn spawn_job(
 
 #[cfg(all(test, feature = "kas"))]
 mod tests {
-    #![allow(clippy::unwrap_used, clippy::expect_used)]
+    #![allow(clippy::unwrap_used)]
 
     use agent_client_protocol::schema::v1 as acp;
     use agent_client_protocol::{Agent, Client, ConnectionTo};
@@ -311,7 +292,7 @@ mod tests {
     use crate::protocol::source_observer::IngressTracker;
 
     #[tokio::test(flavor = "current_thread")]
-    async fn hook_tags_cross_host_callback_boundary_and_invalid_tags_are_refused() {
+    async fn hook_tags_cross_host_callback_boundary_and_malformed_tags_degrade() {
         tokio::task::LocalSet::new()
             .run_until(async {
                 let ws = tempfile::tempdir().unwrap();
@@ -355,7 +336,10 @@ mod tests {
                                     connection: ConnectionTo<Client>| {
                             let callback_connection = connection.clone();
                             connection.spawn(async move {
-                                let valid = [
+                                // Malformed tags degrade to ID matching (string members
+                                // kept) rather than refusing: KAS skips every hook for a
+                                // tool whose list call fails.
+                                let cases = [
                                     (
                                         serde_json::json!({
                                             "trigger": "preToolUse",
@@ -374,20 +358,28 @@ mod tests {
                                     (
                                         serde_json::json!({
                                             "trigger": "preToolUse",
-                                            "toolId": "execute_bash",
-                                            "toolTags": []
+                                            "toolTags": ["shell", "@builtin"]
                                         }),
                                         vec!["tags:always"],
                                     ),
                                     (
                                         serde_json::json!({
                                             "trigger": "preToolUse",
-                                            "toolTags": ["shell", "@builtin"]
+                                            "toolId": "execute_bash",
+                                            "toolTags": "shell"
                                         }),
                                         vec!["tags:always"],
                                     ),
+                                    (
+                                        serde_json::json!({
+                                            "trigger": "preToolUse",
+                                            "toolId": "execute_bash",
+                                            "toolTags": ["shell", 42]
+                                        }),
+                                        vec!["tags:always", "tags:shell"],
+                                    ),
                                 ];
-                                for (params, expected) in valid {
+                                for (params, expected) in cases {
                                     let response = callback_connection
                                         .send_request(UntypedMessage::new(
                                             "_kiro/hooks/list",
@@ -402,36 +394,6 @@ mod tests {
                                         .map(|hook| hook["id"].as_str().unwrap())
                                         .collect();
                                     assert_eq!(ids, expected);
-                                }
-                                for tags in [
-                                    serde_json::json!(null),
-                                    serde_json::json!("shell"),
-                                    serde_json::json!(42),
-                                    serde_json::json!(false),
-                                    serde_json::json!({"tag": "shell"}),
-                                    serde_json::json!(["shell", null]),
-                                    serde_json::json!(["shell", 42]),
-                                    serde_json::json!(["shell", false]),
-                                    serde_json::json!(["shell", ["@builtin"]]),
-                                    serde_json::json!(["shell", {"tag": "@builtin"}]),
-                                ] {
-                                    let error = callback_connection
-                                        .send_request(UntypedMessage::new(
-                                            "_kiro/hooks/list",
-                                            serde_json::json!({
-                                                "trigger": "preToolUse",
-                                                "toolId": "execute_bash",
-                                                "toolTags": tags
-                                            }),
-                                        )?)
-                                        .block_task()
-                                        .await
-                                        .unwrap_err();
-                                    assert_eq!(error.code, acp::ErrorCode::InvalidParams);
-                                    assert!(
-                                        error.data.unwrap().to_string().contains("toolTags"),
-                                        "the wire error identifies the malformed field"
-                                    );
                                 }
                                 responder
                                     .respond(acp::InitializeResponse::new(request.protocol_version))

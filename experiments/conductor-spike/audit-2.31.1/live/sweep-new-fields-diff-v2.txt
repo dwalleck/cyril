@@ -1,0 +1,8 @@
+live   v2-live-sweep-2.31.1.jsonl: 320 paths
+pinned v2-live-sweep-2.29.1.jsonl: 320 paths
+
+ONLY under live (0) — new-field candidates:
+
+ONLY under pinned (0) — usually just coverage:
+
+IDENTICAL field sets — no shape change on this workload.

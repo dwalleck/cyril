@@ -1,0 +1,7 @@
+acp-callback
+--auth=
+--auth
+auth=cli
+SelfAuth
+acpCallback
+forwardAuth

@@ -1,0 +1,32 @@
+0.66.33  sha=ca0672e74c07a925 bytes=12669464 method_literals=122 acp_methods=25 env_reads=70 env_literals=166 snake_kinds=44 kind_values=1119 zod_keys=564 log_ids=2135 meta_kiro_keys=15 settings_keys=11
+0.66.34  sha=9a75422c1eed126f bytes=12702158 method_literals=123 acp_methods=25 env_reads=68 env_literals=165 snake_kinds=44 kind_values=1129 zod_keys=563 log_ids=2176 meta_kiro_keys=15 settings_keys=11
+
+=== 0.66.33 -> 0.66.34 ===
+  method_literals: 122 -> 123 (+1 -0)
+     + _kiro/environment/start_ssh_session
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 70 -> 68 (+1 -3)
+     + KIRO_HOME
+     - HOME
+     - KIRO_TOOL_SEARCH_THRESHOLD
+     - USERPROFILE
+  env_literals: 166 -> 165 (+0 -1)
+     - KIRO_FEATURE_TOOL_LOAD_ENABLED
+  snake_kinds: 44 -> 44 (+0 -0)
+  kind_values: 1119 -> 1129 (+10 -0)
+     + kind:environmentNotReady
+     + kind:notFound
+     + kind:replaced
+     + outcome:environmentNotReady
+     + outcome:notFound
+     + outcome:reconnected
+     + outcome:refused
+     + outcome:shutdown
+     + outcome:superseded
+     + outcome:unresolved
+  zod_keys: 564 -> 563 (+0 -1)
+     - max_results
+  log_ids: 2135 -> 2176 (+41 -0)
+  meta_kiro_keys: 15 -> 15 (+0 -0)
+  settings_keys: 11 -> 11 (+0 -0)
+  deps changed: {"@kiro/sandbox-proxy": {"old": "0.66.33", "new": "0.66.34"}}

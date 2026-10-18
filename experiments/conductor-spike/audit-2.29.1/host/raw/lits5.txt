@@ -1,0 +1,11 @@
+Forward the v3 engine
+Resolve access tokens
+Authentication owner for the v3 engine
+KIRO_ACCESS_TOKEN
+KIRO_AUTH_TOKEN
+KIRO_TOKEN
+KIRO_BEARER
+KIRO_CREDENTIAL
+KIRO_SESSION_TOKEN
+KAS_AUTH
+KIRO_KAS

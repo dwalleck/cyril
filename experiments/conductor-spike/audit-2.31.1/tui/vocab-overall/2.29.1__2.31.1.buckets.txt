@@ -1,0 +1,43 @@
+# 2.29.1__2.31.1: +145 -12 literals; +71 -10 props
+## env reads added: ['KIRO_TELEMETRY_EXPLICIT_HISTOGRAMS']
+## env reads removed: []
+## method:_kiro/kiro.dev (+0)
+## method:_kiro/kiro.dev REMOVED (-0)
+## method:acp (+0)
+## method:acp REMOVED (-0)
+## path-like a/b (+0)
+## path-like a/b REMOVED (-0)
+## env-like (+0)
+## env-like REMOVED (-0)
+## setting:dotted (+1)
+  chat.screenReader
+## setting:dotted REMOVED (-0)
+## SCREAMING_CONST (+0)
+## SCREAMING_CONST REMOVED (-0)
+## slash-command (+0)
+## slash-command REMOVED (-0)
+## snake_kind (+5)
+  admin_disabled
+  content_filtered
+  governance_state_update
+  managed_settings
+  model_fallback_promoted
+## snake_kind REMOVED (-0)
+## kebab-id (+4)
+  contains-home
+  release-local
+  release-notes
+  skill-read-restrictions
+## kebab-id REMOVED (-1)
+  -report-agent-session
+## camelIdent (+9)
+  autonomousAgents
+  codeReferenceTracker
+  contentCollection
+  mcpEnabled
+  promptLogging
+  readSandboxStatus
+  tooWide
+  unsupportedType
+  usageAnalytics
+## camelIdent REMOVED (-0)

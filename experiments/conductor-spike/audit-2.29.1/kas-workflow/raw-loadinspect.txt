@@ -1,0 +1,23 @@
+### counts OLD->NEW
+  subscribe                 154-> 158
+  unsubscribe                52->  52
+  attached                   56->  57
+  attachment                 49->  49
+  workflowSubscription        0->   0
+  onWorkflowEvent             0->   0
+  notifySubscribers           2->   2
+  broadcastOutboundFor       67->  68
+  replayState                 0->   0
+  catchUp                     0->   0
+  catch-up                    2->   2
+  readPath                   16->  16
+  reconcile                  79->  85
+
+##### '"subscribeWorkflow'
+
+##### 'workflowSubscription'
+
+##### 'case"_kiro/workflow/load"'
+  @11888739: fig":case"_kiro/account/getUsage":case"_kiro/codeIntelligence":case"_kiro/session/context":case"_kiro/session/compact":case"_kiro/session/history":case"_kiro/workflow/new":case"_kiro/workflow/invoke":case"_kiro/workflow/load":case"_kiro/workflow/pause":case"_kiro/workflow/cancel":case"_kiro/workflow/delete":case"_kiro/workflow/list":case"_kiro/workflow/inspect":case"_kiro/workflow/listRecipes":case"_kiro/workflow/listWatchHandlers":case"_kiro/workflow/resumeAll":case"_kiro/workflow/resume":case"_kiro/workflow/update":case"_kiro/workflow/retry":case"_kiro/sourceProvider
+  @11971698: figuration/getState":case"_kiro/configuration/contribute":return"localOnly";case"_kiro/policy/ignore_files_changed":case"_kiro/terminal/settings_changed":return"localOnly";case"_kiro/workflow/invoke":case"_kiro/workflow/load":case"_kiro/workflow/pause":case"_kiro/workflow/cancel":case"_kiro/workflow/delete":case"_kiro/workflow/inspect":case"_kiro/workflow/resume":case"_kiro/workflow/update":case"_kiro/workflow/retry":return"workflowOwned";case"_kiro/workflow/new":case"_kiro/workflow/list":case"_kiro/workflow/listRecipes":return"workflowScoped";case"_kiro/hooks/setEnabl
+   ...more

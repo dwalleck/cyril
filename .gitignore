@@ -19,3 +19,11 @@ __pycache__/
 # cyril-a71q artifact-only runtime probe scratch
 .cyril-a71q/probes/runtime/target/
 .cyril-a71q/probes/.tmp-fake-home/
+
+# kiro-release-audit: regenerable lane bulk (lanes write it to <lane>/tmp/; see
+# .claude/skills/kiro-release-audit/references/lanes.md). Small raw/ evidence stays committable.
+experiments/conductor-spike/audit-*/**/tmp/
+experiments/conductor-spike/audit-*/kas/bundle/*.raw
+experiments/conductor-spike/audit-*/kas/bundle/*.norm
+experiments/conductor-spike/audit-*/snapshot-installed/
+experiments/conductor-spike/audit-2.31.1/host/raw/

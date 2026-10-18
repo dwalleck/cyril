@@ -1,0 +1,37 @@
+# 2.31.0__2.31.1: +86 -3 literals; +48 -9 props
+## env reads added: []
+## env reads removed: []
+## method:_kiro/kiro.dev (+0)
+## method:_kiro/kiro.dev REMOVED (-0)
+## method:acp (+0)
+## method:acp REMOVED (-0)
+## path-like a/b (+0)
+## path-like a/b REMOVED (-0)
+## env-like (+0)
+## env-like REMOVED (-0)
+## setting:dotted (+0)
+## setting:dotted REMOVED (-0)
+## SCREAMING_CONST (+0)
+## SCREAMING_CONST REMOVED (-0)
+## slash-command (+0)
+## slash-command REMOVED (-0)
+## snake_kind (+3)
+  admin_disabled
+  governance_state_update
+  managed_settings
+## snake_kind REMOVED (-0)
+## kebab-id (+2)
+  release-local
+  release-notes
+## kebab-id REMOVED (-1)
+  -report-agent-session
+## camelIdent (+8)
+  autonomousAgents
+  codeReferenceTracker
+  contentCollection
+  mcpEnabled
+  promptLogging
+  tooWide
+  unsupportedType
+  usageAnalytics
+## camelIdent REMOVED (-0)

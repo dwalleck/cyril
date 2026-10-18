@@ -1,0 +1,72 @@
+token                                2.28.0   2.29.1
+overrideSessionId                         0        1  <== DELTA
+agentMarksReplay                          0        2  <== DELTA
+openPermissionRequests                    0        3  <== DELTA
+replayMarking                            14       15  <== DELTA
+interaction_resolved                      0        1  <== DELTA
+KIRO_CLI_IS_CHILD_PROCESS                 0        1  <== DELTA
+memoryEnable                              1        1
+memoryReflection                          4        4
+memory_config_update                      4        4
+memoryConfig                             19       23  <== DELTA
+"memory.enabled"                          2        1  <== DELTA
+memory.enabled                            2        1  <== DELTA
+userMemoryOptIn                           1        1
+_meta.memoryConfig                        0        0
+linkUrl                                   0       11  <== DELTA
+addLinkNotice                             0        7  <== DELTA
+linkNoticeShown                           0        4  <== DELTA
+copyUrlToClipboard                        3        3
+externallyManaged                         0        3  <== DELTA
+skippedManaged                            0        1  <== DELTA
+tool_tags                                 0        0
+toolTags                                  0        0
+@builtin                                  0        1  <== DELTA
+@mcp                                      0        1  <== DELTA
+local_sandbox                             6        6
+memory_controls                           2        2
+"memory"                                  5        5
+background_execution                      7        7
+c2s                                      11       11
+workflows                               145      145
+goal                                    127      127
+largeToolOutputHandler                    2        2
+workflowNotifications                     5        5
+infraSafetyMonitor                        2        2
+infraSafetyEnforce                        1        1
+subagentOrchestration                     0        0
+KIRO_INTERNAL                             1        1
+system_notice                             5        7  <== DELTA
+_kiro/system/notify                       0        0
+_kiro/openExternalUrl                     1        1
+_kiro/session/history                     1        1
+_kiro/memory/list                         2        2
+_kiro/memory/get                          2        2
+/_memories                                0        0
+/upgrade-agent                           12       12
+/effort                                   7        7
+/workflow                                69       69
+provenance                                1        1
+displayText                               3        3
+replay:!0                                 0        0
+127.0.0.1                                 2        3  <== DELTA
+method literal set sizes: 101 101 symdiff: []
+slash set sizes: 74 74 symdiff: []
+KIRO_ env set: 91 92 symdiff: ['KIRO_CLI_IS_CHILD_PROCESS']
+
+## verification pass 2026-10-11 (raw, both bundles; KAS rows from the carves)
+# TUI bundle (kiro-tui-2.28.0.js / 2.29.1.js)
+subagentOrchestration 0 0
+tool_tags 0 0 | toolTags 0 0 | toolTag 0 0
+--auth-method 0 0 | auth-method 1 1 (ispell word list) | auth-method=client 0 0 | authMethod 4 4
+replayMarking 14 15 | memoryConfig 19 23 | /memories 10 10
+consentContext 28 28 | provenance 1 1
+largeToolOutputHandler 2 2 | c2s 11 11 | workflowNotifications 5 5 | background_execution 7 7
+effortLevels 35 35 | openExternalUrl 2 2 | linkUrl 0 11 | addLinkNotice 0 7
+externallyManaged 0 3 | skippedManaged 0 1 | KIRO_LOCAL_SANDBOX_ROLLOUT_ENABLED 1 1
+upgrade-agent 15 15 | memory_controls 2 2 | photon 0 0 | 127.0.0.1 2 3
+# KAS carves (node_modules/@kiro/agent/dist/server/acp-server.js)
+effortLevels 29 33
+overrideSessionId 3 3
+newSessionAdmitted 2 2
+replay:!0 1 1

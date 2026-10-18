@@ -1,0 +1,413 @@
+  + ir.debug("mcp.toolCall.sessionLost",{
+  + serverName:s}
+  + );
+  + let a=this.options.sessionReset;
+  + e.reportIfCanceled(i.abortSignal,o);
+  + let c=Date.now()+c5r,u=await this.awaitPendingReset(s,i.abortSignal,c);
+  + if(e.reportIfCanceled(i.abortSignal,o),u==="expired")throw ir.debug("mcp.toolCall.sessionResetUnresolved",{
+  + serverName:s}
+  + ),o("waitExpired"),t;
+  + let l=this.options.getConnection(s);
+  + if(l&&l.mcpClient!==r.mcpClient){
+  + ir.debug("mcp.toolCall.sessionAlreadyRecovered",{
+  + serverName:s}
+  + );
+  + let g=this.recoveredOrReplaced(l,r,n,"session-expired","reconnected");
+  + return o(g.outcome),g.output}
+  + let d=a.reset(s),p=e.captureFailure(d);
+  + if(await this.awaitReconnect(p,i.abortSignal,c)==="expired")throw o("waitExpired"),t;
+  + e.reportIfCanceled(i.abortSignal,o);
+  + let f=await p;
+  + if(f)throw o("unresolved"),f.cause;
+  + let h=await this.awaitPendingReset(s,i.abortSignal,c);
+  + if(e.reportIfCanceled(i.abortSignal,o),h==="expired"||this.stillQueued(s))throw ir.debug("mcp.toolCall.sessionResetUnresolved",{
+  + serverName:s}
+  + ),o("unresolved"),t;
+  + let m=this.classifyPostWaitState(r);
+  + switch(m.state){
+  + case"unresolved":throw ir.debug("mcp.toolCall.sessionResetUnresolved",{
+  + serverName:s}
+  + ),o("unresolved"),t;
+  + case"disposed":throw o("shutdown"),e.sessionShutdownError(s);
+  + case"gone":{
+  + let g=this.classifyAbsentConnection(s,n,"sessionReset",new Error(`MCP server "${s}" did not reconnect after session reset`));
+  + if(o(g.outcome),g.output===void 0)throw g.failure;
+  + return g.output}
+  + case"replaced":case"reconnected":case"unchanged":{
+  + let g=this.recoveredOrReplaced(m.current,r,n,"session-expired",m.state==="reconnected"?"reconnected":"unchanged");
+  + return o(g.outcome),g.output}
+  + }
+  + }
+  + classifyAbsentConnection(t,r,n,i){
+  + let o=this.options.sessionReset;
+  + return o.torndown()?(ir.debug("mcp.toolCall.absentConnectionAfterTeardown",{
+  + serverName:t,extra:{
+  + phase:n}
+  + }
+  + ),{
+  + outcome:"shutdown",failure:e.sessionShutdownError(t)}
+  + ):o.reconnecting(t)?(ir.debug("mcp.toolCall.absentConnectionSuperseded",{
+  + serverName:t,extra:{
+  + phase:n}
+  + }
+  + ),{
+  + outcome:"refused",output:this.reportRefusal("replaced",r)}
+  + ):this.options.getServerIdentity(t)===void 0?(ir.debug("mcp.toolCall.absentConnectionServerGone",{
+  + serverName:t,extra:{
+  + phase:n}
+  + }
+  + ),{
+  + outcome:"refused",output:this.reportRefusal("gone",r)}
+  + ):{
+  + outcome:"unresolved",failure:i}
+  + }
+  + recoveredOrReplaced(t,r,n,i,o){
+  + return t.serverIdentity!==r.serverIdentity?{
+  + outcome:"refused",output:this.reportRefusal("replaced",n)}
+  + :{
+  + outcome:o,output:this.reportSessionRecovered(n,i)}
+  + }
+  + isResetCollateral(t,r){
+  + if(!BCo(t))return!1;
+  + let n=this.toolConfig.serverName;
+  + if(this.options.sessionReset.pending(n)!==void 0)return!0;
+  + let i=this.options.getConnection(n);
+  + return i!==void 0&&i.mcpClient!==r.mcpClient&&i.serverIdentity===r.serverIdentity}
+  + async reportResetCollateral(t,r,n,i){
+  + let o;
+  + try{
+  + return await this.attemptResetCollateralReport(t,r,n,i,s=>{
+  + o=s}
+  + )}
+  + finally{
+  + e.recordRecoveryOutcome(o??"unresolved","collateral")}
+  + }
+  + async attemptResetCollateralReport(t,r,n,i,o){
+  + let s=this.toolConfig.serverName;
+  + ir.debug("mcp.toolCall.resetCollateral",{
+  + serverName:s}
+  + );
+  + let c=await this.awaitPendingReset(s,i.abortSignal)!=="expired";
+  + e.reportIfCanceled(i.abortSignal,o);
+  + let u=this.classifyPostWaitState(r);
+  + switch(u.state){
+  + case"disposed":throw o("shutdown"),e.sessionShutdownError(s);
+  + case"gone":{
+  + let l=this.classifyAbsentConnection(s,n,"resetCollateral",t);
+  + if(o(l.outcome),l.output===void 0)throw l.failure;
+  + return l.output}
+  + case"unresolved":throw ir.debug("mcp.toolCall.resetCollateralUnresolved",{
+  + serverName:s}
+  + ),o(c?"unresolved":"waitExpired"),t;
+  + case"replaced":case"reconnected":{
+  + let l=this.recoveredOrReplaced(u.current,r,n,"connection-reset","reconnected");
+  + return o(l.outcome),l.output}
+  + case"unchanged":{
+  + if(!c)throw ir.debug("mcp.toolCall.resetCollateralUnresolved",{
+  + serverName:s}
+  + ),o("waitExpired"),t;
+  + let l=this.recoveredOrReplaced(u.current,r,n,"connection-reset","unchanged");
+  + return o(l.outcome),l.output}
+  + }
+  + }
+  + reportServerReplaced(t){
+  + let r=this.toolConfig.serverName;
+  + return ir.debug("mcp.toolCall.serverReplacedDuringRetry",{
+  + serverName:r}
+  + ),e.errorReport(`The "${r}" MCP server configuration changed while this call was waiting, so "${t}" was not sent: the approval covered the previous server. Call it again to run against the current configuration.`)}
+  + reportServerGone(t){
+  + let r=this.toolConfig.serverName;
+  + return ir.debug("mcp.toolCall.serverGoneDuringRetry",{
+  + serverName:r}
+  + ),e.errorReport(`The "${r}" MCP server is no longer connected \u2014 it was removed, disabled, or did not come back while this call was waiting \u2014 so "${t}" was not sent. Check the server is available before calling it again.`)}
+  + reportToolRevoked(t){
+  + let r=this.toolConfig.serverName;
+  + return ir.debug("mcp.toolCall.toolDisabledDuringRetry",{
+  + serverName:r}
+  + ),e.errorReport(`"${t}" is not available on the "${r}" MCP server \u2014 it was disabled, or the server stopped offering it \u2014 so it was not sent. Do not call it again unless it becomes available.`)}
+  + reportApprovalOriginUnknown(t){
+  + let r=this.toolConfig.serverName;
+  + return ir.debug("mcp.toolCall.approvalOriginUnknown",{
+  + serverName:r}
+  + ),e.errorReport(`The "${r}" MCP server was not connectable when "${t}" was approved, so it cannot be confirmed that the server now answering to that name is the one the approval covered, and the call was not sent. Call it again to run against the server that is connected now.`)}
+  + reportSessionRecovered(t,r){
+  + let n=this.toolConfig.serverName;
+  + ir.debug("mcp.toolCall.sessionRecovered",{
+  + serverName:n,extra:{
+  + cause:r}
+  + }
+  + );
+  + let i=r==="session-expired"?`The "${n}" MCP session expired during this call`:`The connection to the "${n}" MCP server was reset during this call`;
+  + return e.errorReport(`${i}, so it is unknown whether "${t}" took effect. The connection has been re-established. Confirm the current state before calling it again.`)}
+@@ 296851a297607,297639  old#296851 new#297607
+  + Ug();
+  + import{
+  + createHash as wdu}
+  + from"node:crypto";
+  + function Fxe(e){
+  + return e===void 0||typeof e=="function"||typeof e=="symbol"?vdu:JSON.stringify(v5r(e))}
+  + var vdu="undefined";
+  + function v5r(e){
+  + if(Array.isArray(e))return e.map(v5r);
+  + if(e===null||typeof e!="object"||Object.getPrototypeOf(e)!==Object.prototype)return e;
+  + let t=e,r={
+  + }
+  + ;
+  + for(let n of Object.keys(t).sort())r[n]=v5r(t[n]);
+  + return r}
+  + var w5r={
+  + disabledTools:"metadata",timeout:"metadata",waitForReady:"metadata",autoApprove:"none"}
+  + ,_du=new Set(Object.keys(w5r)),Edu=Object.keys(w5r).filter(e=>w5r[e]==="metadata");
+  + function _5r(e){
+  + let t={
+  + versionNegotiation:jge(e)}
+  + ,r=e;
+  + for(let n of Object.keys(r))_du.has(n)||n in t||(t[n]=r[n]);
+  + return t}
+  + function Nko(e,t){
+  + return Fxe(_5r(e))===Fxe(_5r(t))}
+  + function Dko(e,t){
+  + return Edu.some(r=>Fxe(e[r])!==Fxe(t[r]))}
+  + function LPt(e,t){
+  + let r={
+  + config:_5r(e),facts:t}
+  + ;
+  + return wdu("sha256").update(Fxe(r)).digest("hex")}
+@@ 297244a298033  old#297244 new#298033
+  + Ke();
+@@ 297307a298097  old#297307 new#298097
+  + closePromise;
+@@ 297484a298275,298276  old#297484 new#298275
+  + return this.closePromise??=this.performClose(),this.closePromise}
+  + async performClose(){
+@@ 297489c298281,298285  old#297489 new#298281
+  - await this.mcpClient.close()}
+  + await Pe("closeConnection","mcp",()=>this.mcpClient.close(),{
+  + attributes:{
+  + serverName:this.serverName,transport:this.config.transport}
+  + ,logger:ir}
+  + )}
+@@ 297491,297492c298287,298288  old#297491 new#298287
+  - jr.warn("Error closing connection",{
+  - serverName:this.serverName,error:t instanceof Error?t.message:String(t)}
+  + ir.debug("mcp.closeConnection.absorbed",{
+  + serverName:this.serverName,...Bn(t)}
+@@ 297500c298296  old#297500 new#298296
+  - jr.info("Connection closed successfully",{
+  + ir.debug("Connection closed successfully",{
+@@ 297503a298300,298308  old#297503 new#298300
+  + return this.config.transport}
+  + get httpSessionId(){
+  + let t=this.mcpClient.transport;
+  + return t instanceof _Le?t.sessionId:void 0}
+  + get serverIdentity(){
+  + return LPt(this.config,{
+  + serverName:this.serverName,workspaceFolder:this.cwd}
+  + )}
+  + get lastAuthorizationUrl(){
+@@ 297514a298320,298322  old#297514 new#298320
+  + if(this.disposed)return ir.debug("Lazy auth skipped: connection closed",{
+  + serverName:this.serverName}
+  + ),!1;
+@@ 297541a298350,298351  old#297541 new#298350
+  + adoptAuthRetryWindow(){
+  + this.postAuthRetryPending=!0}
+@@ 297564c298374  old#297564 new#298374
+  - return(await this.collectPaginatedList(s=>this.mcpClient.listTools({
+  + return(await Pe("listTools","mcp",()=>this.collectPaginatedList(s=>this.mcpClient.listTools({
+@@ 297568c298378,298382  old#297568 new#298378
+  [insert] ...),s=>s.tools)  ‹-›  ‹+,{ logger:ir,attributes:{ serverName:t,transport:this.config.transport} ,expected:s=>s instanceof ea&&s.code===Ei.MethodNotFound.valueOf()} )›  ).map(s=>{...
+@@ 297593,297595c298407,298408  old#297593 new#298407
+  - let o=i instanceof Error?i.message:String(i);
+  - jr.warn("Failed to refresh tools after tools/list_changed",{
+  - serverName:this.serverName,error:o}
+  + ir.debug("mcp.listTools.refreshAbsorbed",{
+  + serverName:this.serverName,...Bn(i)}
+@@ 297751,297752c298564,298584  old#297751 new#298564
+  [insert] ...  ‹-›  ‹+ui(); Xt(); Ke(); ›  var Alu=4; var s8e=class{...
+  [insert] ...var Alu=4  ‹-›  ‹+,qko=2e3›  ; var s8e=class{...
+  [insert] ...var Alu=4;  ‹-›  ‹+ var BPt=class extends Error{ constructor(t,r){ super(`MCP server "${t}" did not reconnect after reset (status: ${r})`),this.name="ResetReconnectFailedError"} } ; function $du(e,t,r){ let n=t?.status??"removed",i=!t||n==="disabled"||n==="unavailable"; return n==="failed"?{ outcome:"failed",logLevel:"debug",spanError:new BPt(e,n)} :i?{ outcome:"skipped",logLevel:"info",spanError:void 0} :n!=="connected"||r.aborted?{ outcome:"superseded",logLevel:"info",spanError:void 0} :{ outcome:"reconnected",logLevel:"debug",spanError:void 0} }›   var s8e=class{...
+  [insert] ...var Alu=4; var s8e=class  ‹-›  ‹+ e›  {...
+@@ 297765a298598,298603  old#297765 new#298598
+  + inFlightResets=new Map;
+  + inFlightUpdates=new Set;
+  + liveConnections=new Set;
+  + disposed=!1;
+  + isDisposed(){
+  + return this.disposed}
+@@ 297781c298619,298621  old#297781 new#298619
+  [replace] ...await Promise.allSettled(r),await Promise.allSettled(t.map(n=>this.  ‹-resetServer›  ‹+enqueueReset›  (n)))}...
+  [insert] ...Promise.allSettled(r),await Promise.allSettled(t.map(n=>this.resetServer(n  ‹-›  ‹+,{ startOAuth:!1,coalesce:!1,trigger:"sandbox-reconnect"} ›  )))}...
+@@ 297791a298632,298638  old#297791 new#298632
+  + if(this.isDisposed())return ir.debug("Update ignored, pool disposed",{
+  + extra:{
+  + servers:t.length}
+  + }
+  + ),{
+  + settled:Promise.resolve(),readyNames:[]}
+  + ;
+@@ 297793c298640  old#297793 new#298640
+  [insert] ...,i=[],o=[],s=[],a=[],c=[]  ‹-›  ‹+,u=[]›  ;...
+@@ 297820c298667,298673  old#297820 new#298667
+  [replace] ...this.  ‹-classifyConfigChange›  ‹+classifyDeclarationChange›  (f.config,m.config)!=="none"&&s.push(m);...
+  [delete] ...this.classifyConfigChange(f  ‹-.config›  ‹+›  ,m.config)!=="none"&&s.push(m);...
+  [delete] ...this.classifyConfigChange(f.config,m  ‹-.config›  ‹+›  )!=="none"&&s.push(m);...
+  [insert] ...this.classifyConfigChange(f.config,m.config)!=="none"&&s.push(m);  ‹-›  ‹+ continue} if(h.status==="connected"){ let w=this.classifyDeclarationChange(h,g); w==="connection"?s.push(g):w==="metadata"&&a.push({ state:h,config:g.config} );›  ...
+@@ 297822c298675  old#297822 new#298675
+  - let g=this.classifyConfigChange(f.config,m.config);
+  + let y=this.classifyDeclarationChange(h,g);
+@@ 297832c298685,298688  old#297832 new#298685
+  [delete] ...of a)  ‹-p.status==="connected"&&›  ‹+›  this.applyToolOptions(p.tools,f),p.config=f;...
+  [insert] ....status==="connected"&&this.applyToolOptions(p.tools,f),p.config=f;  ‹-›  ‹+ for(let{ state:f,config:h} of c)f.config=h;›  ...
+@@ 297849a298706  old#297849 new#298706
+  + let h=e.toolsToPreserve(this.serverStates.get(f.name));
+@@ 297853c298710  old#297853 new#298710
+  [insert] ...p.workspaceFolder,authType:p.config.transport==="http"?"oauth":void 0,abort:f  ‹-›  ‹+,previousTools:h›  }...
+@@ 297867c298724,298734  old#297867 new#298724
+  [insert] ...settled:  ‹-›  ‹+this.trackUpdate(›  this.finishUpdate(u,l,d),readyNames:this.readyServerNames()}...
+  [insert] ...settled:this.finishUpdate(u,l,d)  ‹-›  ‹+)›  ,readyNames:this.readyServerNames()}...
+  [insert] ...settled:this.finishUpdate(u,l,d),readyNames:this.readyServerNames()}  ‹-›  ‹+ } trackUpdate(t){ return this.inFlightUpdates.add(t),this.untrackUpdateWhenSettled(t),t} async untrackUpdateWhenSettled(t){ try{ await t} catch{ } finally{ this.inFlightUpdates.delete(t)}›  ...
+@@ 297871c298738  old#297871 new#298738
+  - n&&this.notifyStatusChanged(),await Promise.allSettled(t);
+  + n&&!this.isDisposed()&&this.notifyStatusChanged(),await Promise.allSettled(t);
+@@ 297884c298751  old#297884 new#298751
+  [insert] ...for(let r of this.serverStates.values())r.status==="connected"  ‹-›  ‹+?t.push(...r.tools):r.status==="connecting"&&r.previousTools›  &&t.push(...r.tools);...
+  [replace] ....serverStates.values())r.status==="connected"&&t.push(...r.  ‹-tools›  ‹+previousTools›  );...
+@@ 297885a298753,298759  old#297885 new#298753
+  + isToolDisabled(t,r){
+  + let n=this.serverStates.get(t);
+  + if(n?.status!=="connected")return!1;
+  + let i=n.tools.find(o=>o.toolName===r);
+  + return i===void 0||i.disabled}
+  + isConnecting(t){
+  + return this.serverStates.get(t)?.status==="connecting"}
+@@ 297888a298763,298767  old#297888 new#298763
+  + serverIdentity(t){
+  + let r=this.serverStates.get(t);
+  + if(!(!r||r.status==="disabled"||r.status==="unavailable"))return LPt(r.config,{
+  + serverName:t,workspaceFolder:r.workspaceFolder}
+  + )}
+@@ 297949c298828,298878  old#297949 new#298828
+  [delete] ...  ‹-async ›  ‹+›  resetServer(t,r=!1){...
+  [insert] ...async resetServer(t,r=  ‹-›  ‹+{ } ){ return this.enqueueReset(t,{ startOAuth:r.startOAuth??›  !1){...
+  [insert] ...async resetServer(t,r=!1  ‹-›  ‹+,coalesce:r.coalesce??!0,trigger:r.trigger??"unknown"} )} enqueueReset(t,r›  ){...
+  [insert] ...async resetServer(t,r=!1){  ‹-›  ‹+ let{ startOAuth:n,coalesce:i,trigger:o} =r; if(this.isDisposed())return Promise.resolve(); let s=this.inFlightResets.get(t); if(i&&s?.startOAuth===n)return s.promise; let a={ startOAuth:n,promise:Promise.resolve()} ; return a.promise=this.runResetSerialized(t,n,s?.promise,a,o),this.inFlightResets.set(t,a),a.promise} pendingReset(t){ return this.inFlightResets.get(t)?.promise} async runResetSerialized(t,r,n,i,o){ if(n)try{ await n} catch{ } if(!this.isDisposed())try{ await this.performReset(t,r,o)} finally{ this.inFlightResets.get(t)===i&&this.inFlightResets.delete(t)} } async performReset(t,r,n){ if(!this.isDisposed())try{ let i=await Pe("resetServer","mcp",()=>this.runReset(t,r),{ attributes:{ serverName:t,startOAuth:r} ,logger:ir} ); e.reportResetOutcome(i,n)} catch(i){ if(e.reportResetOutcome("failed",n),i instanceof BPt)return; throw i} } static toolsToPreserve(t){ if(t?.status==="connected")return t.tools; if(t?.status==="connecting")return t.previousTools} static reportResetOutcome(t,r){ ze("kiro.io","mcp").reportCountMetrics({ resetServerOutcome:1} ,{ outcome:t,trigger:r} )} async runReset(t,r){›  ...
+@@ 297956c298885  old#297956 new#298885
+  - n&&await n.catch(()=>{
+  + if(n&&await n.catch(()=>{
+@@ 297958c298887,298891  old#297958 new#298887
+  - ),await this.transitionOut(t);
+  + ),await this.transitionOut(t),this.isDisposed())return ir.debug("Reset abandoned, pool disposed",{
+  + serverName:t,extra:{
+  + startOAuth:r}
+  + }
+  + ),"skipped";
+@@ 297961c298894,298895  old#297961 new#298894
+  - jr.info("Reset skipped, server has no connectable config",{
+  + let h=i?.status??"removed";
+  + return ir.info("Reset skipped, server has no connectable config",{
+@@ 297963c298897  old#297963 new#298897
+  - status:i?.status??"removed"}
+  + status:h}
+@@ 297965,297967c298899,298901  old#297965 new#298899
+  [insert] ...),this.notifyStatusChanged()  ‹-›  ‹+,"skipped"} i.status==="connecting"&&i.abort.abort()›  ; return} let o=new AbortController;...
+  [delete] ...),this.notifyStatusChanged();  ‹- return}›  ‹+›   let o=new AbortController;...
+  [insert] ...),this.notifyStatusChanged(); return} let o=new AbortController  ‹-›  ‹+,s=e.toolsToPreserve(i)›  ;...
+@@ 297969c298903  old#297969 new#298903
+  [insert] ...i.workspaceFolder,authType:i.config.transport==="http"?"oauth":void 0,abort:o  ‹-›  ‹+,previousTools:s›  }...
+@@ 297980c298914,298923  old#297980 new#298914
+  [insert] ...this.trackConnectionPromise(t,a),await a  ‹-›  ‹+; let u=this.serverStates.get(t),{ outcome:l,logLevel:d,spanError:p›  }...
+  [insert] ...this.trackConnectionPromise(t,a),await a}  ‹-›  ‹+ =$du(t,u,o.signal),f={ serverName:t,extra:{ startOAuth:r,status:u?.status??"removed"} } ; if(ir[d]("Reset finished",f),p)throw p; return l}›  ...
+@@ 298034,298035c298977,299002  old#298034 new#298977
+  [insert] ...  ‹-›  ‹+this.disposed=!0; ›  let t=[...this.serverStates.keys()]; await Promise.allSettled(t...
+  [replace] ...let t=[...this.  ‹-serverStates›  ‹+inFlightResets›  .keys()]; await Promise.allSettled(t.map(r=>this.transitionOut(r...
+  [delete] ...let t=[...this.serverStates.keys()]  ‹-; await Promise.allSettled(t›  ‹+›  .map(r=>this.transitionOut(r))),this.serverStates.clear(),this....
+  [replace] ...this.serverStates.keys()]; await Promise.allSettled(t.map(r=>this.  ‹-transitionOut›  ‹+promise); t.push(...this.inFlightUpdates),this.inFlightResets.clear(),this.inFlightUpdates.clear(),await this.tearDownAllServers(),await this.closeLiveConnections(),await this.drainResets›  (r))),this.serverStates.clear(),this.desiredOrder=[],this.serverConnectionPromises....
+  [insert] ...keys()]; await Promise.allSettled(t.map(r=>this.transitionOut(r)  ‹-›  ‹+,await this.tearDownAllServers(›  )),this.serverStates.clear(),this.desiredOrder=[],this.serverConnectionPromises.clear()...
+  [insert] ...()]; await Promise.allSettled(t.map(r=>this.transitionOut(r))  ‹-›  ‹+,await this.closeLiveConnections(›  ),this.serverStates.clear(),this.desiredOrder=[],this.serverConnectionPromises.clear(),...
+  [delete] ...allSettled(t.map(r=>this.transitionOut(r))),this.serverStates.clear()  ‹-,this.desiredOrder=[]›  ‹+›  ,this.serverConnectionPromises.clear(),this.connectTimings.clear()}...
+  [insert] ...(),this.desiredOrder=[],this.serverConnectionPromises.clear(),this.connectTimings.clear()  ‹-›  ‹+,this.desiredOrder=[]›  }...
+  [insert] ...),this.desiredOrder=[],this.serverConnectionPromises.clear(),this.connectTimings.clear()}  ‹-›  ‹+ async drainResets(t){ if(t.length===0)return; await Dxe(Promise.allSettled(t),qko)==="expired"?ir.warn("mcp.dispose.resetDrainExpired",{ extra:{ pendingResets:t.length,ceilingMs:qko} } ):ir.debug("mcp.dispose.resetDrained",{ extra:{ pendingResets:t.length} } )} async closeLiveConnections(){ if(this.liveConnections.size===0)return; let t=[...this.liveConnections]; this.liveConnections.clear(); let r=await Promise.allSettled(t.map(n=>n.close())); for(let n of r)n.status==="rejected"&&ir.warn("Error closing in-flight connection during dispose",{ error:n.reason instanceof Error?n.reason.message:String(n.reason)} )} async tearDownAllServers(){ let t=[...this.serverStates.entries()]; for(let[r]of t)this.serverStates.delete(r),this.serverConnectionPromises.delete(r); await Promise.allSettled(t.map(([r,n])=>this.closeState(r,n)))}›  ...
+@@ 298044a299012,299016  old#298044 new#299012
+  + if(this.isDisposed()){
+  + ir.info("Connect abandoned before dialing, pool disposed",{
+  + serverName:o}
+  + );
+  + return}
+@@ 298048c299020  old#298048 new#299020
+  - );
+  + ),this.liveConnections.add(u);
+@@ 298052,298054c299024,299025  old#298052 new#299024
+  [insert] ...if(!g||g.status!=="connecting"||g.abort!==r  ‹-›  ‹+||this.isDisposed()›  ){ let w=g?.status==="connecting"&&g.abort!==r;...
+  [delete] ...if(!g||g.status!=="connecting"||g.abort!==r){  ‹- let w=g?.status==="connecting"&&g.abort!==r;›  ‹+›   jr.info(w?"Connection completed but a newer same-name attempt superseded it, discarding":"Connection completed but server was removed or changed status, discar...
+  [delete] ...w=g?.status==="connecting"&&g.abort!==r; jr.info(  ‹-w?"Connection completed but a newer same-name attempt superseded it, discarding":›  ‹+›  "Connection completed but server was removed or changed status, discarding",{...
+@@ 298056c299027  old#298056 new#299027
+  - actualStatus:g?.status??"removed",superseded:w}
+  + actualStatus:g?.status??"removed",superseded:g?.status==="connecting"&&g.abort!==r,disposed:this.isDisposed()}
+@@ 298060,298062c299031,299033  old#298060 new#299031
+  [insert] ...let   ‹-›  ‹+y=g.config,›  y=p??[]; this.applyToolOptions(y,g.config),this.stampToolOrigins(y...
+  [delete] ...let y=p??[]; this.applyToolOptions(y,g  ‹-.config›  ‹+›  ),this.stampToolOrigins(y,g.origin),this.serverStates.set(o,{ status:...
+  [delete] ...??[],resources:h??[],resourceTemplates:m??[],authType:g.  ‹-config.›  ‹+›  transport==="http"?"oauth":void 0,config:g.config}...
+  [delete] ...?[],authType:g.config.transport==="http"?"oauth":void 0,config:g  ‹-.config›  ‹+›  }...
+@@ 298068,298070c299039,299040  old#298068 new#299039
+  [insert] ...if(!d||d.status!=="connecting"||d.abort!==r  ‹-›  ‹+||this.isDisposed()›  ){ let y=d?.status==="connecting"&&d.abort!==r;...
+  [delete] ...if(!d||d.status!=="connecting"||d.abort!==r){  ‹- let y=d?.status==="connecting"&&d.abort!==r;›  ‹+›   jr.info(y?"Connection failed but a newer same-name attempt superseded it, suppressing error":"Connection failed but server was removed or changed status, suppr...
+  [delete] ...y=d?.status==="connecting"&&d.abort!==r; jr.info(  ‹-y?"Connection failed but a newer same-name attempt superseded it, suppressing error":›  ‹+›  "Connection failed but server was removed or changed status, suppressing error",{...
+@@ 298072c299042  old#298072 new#299042
+  - actualStatus:d?.status??"removed",superseded:y}
+  + actualStatus:d?.status??"removed",superseded:d?.status==="connecting"&&d.abort!==r,disposed:this.isDisposed()}
+@@ 298083c299053  old#298083 new#299053
+  [insert] ...(),n.settledAt===void 0&&(n.settledAt=performance.now())  ‹-›  ‹+,u&&this.liveConnections.delete(u)›  ;...
+@@ 298085c299055  old#298085 new#299055
+  - if(this.notifyStatusChanged(),!d)try{
+  + if(this.isDisposed()||this.notifyStatusChanged(),!d)try{
+@@ 298094c299064,299066  old#298094 new#299064
+  [insert] ...  ‹-›  ‹+return t.workspaceFolder!==r.workspaceFolder&&t.workspaceFolder!==void 0&&r.workspaceFolder!==void 0?"connection":this.classifyConfigChange(t.config,r.config)} classifyConfigChange(t,r){ ›  return t.transport!==r.transport||JSON.stringify(rko(t))!==...
+  [replace] ...return t.transport!==r.transport||  ‹-JSON.stringify›  ‹+!Nko›  (rko(t))!==JSON.stringify(rko(r))?"connection":JSON.stringify(...
+  [replace] ...return t.transport!==r.transport||JSON.stringify(rko  ‹-(›  ‹+,›  t))!==JSON.stringify(rko(r))?"connection":JSON.stringify(t.disabledTools...
+  [delete] ...return t.transport!==r.transport||JSON.stringify(rko(t  ‹-))!==JSON.stringify(rko(r)›  ‹+›  )?"connection":JSON.stringify(t.disabledTools)!==JSON.stringify(r.disabledTools)||...
+  [replace] ...|JSON.stringify(rko(t))!==JSON.stringify(rko(r))?"connection":  ‹-JSON.stringify›  ‹+Dko›  (t.disabledTools)!==JSON.stringify(r.disabledTools)||t.timeout!==r...
+  [replace] ...rko(t))!==JSON.stringify(rko(r))?"connection":JSON.stringify(t  ‹-.disabledTools›  ‹+,r›  )!==JSON.stringify(r.disabledTools)||t.timeout!==r.timeout||...
+  [delete] ...))!==JSON.stringify(rko(r))?"connection":JSON.stringify(t.disabledTools)  ‹-!==JSON.stringify(r.disabledTools)||t.timeout!==r.timeout||t.waitForReady!==r.waitForReady›  ‹+›  ?"metadata":"none"}...
+@@ 298107c299079,299080  old#298107 new#299079
+  - if(r){
+  + r&&await this.closeState(t,r)}
+  + async closeState(t,r){
+@@ 298117d299089  old#298117 new#299089
+  - }
+@@ 298119,298124d299090  old#298119 new#299090
+  - function rko(e){
+  - return e.transport==="stdio"?{
+  - command:e.command,args:e.args,cwd:e.cwd,env:e.env,versionNegotiation:Bne(e)}
+  - :{
+  - url:e.url,headers:e.headers,env:e.env,oauth:e.oauth,oauthScopes:e.oauthScopes,versionNegotiation:Bne(e)}
+  - }
+@@ 298332c299298  old#298332 new#299298
+  [replace] ...this.  ‹-homeDir›  ‹+userConfigBase›  =t.homeDir,this.workspaceTrusted=t.workspaceTrusted,this.onConfigChanged=t.onConfigChanged,this.globalEnvVars=...
+  [replace] ...this.homeDir=t.  ‹-homeDir›  ‹+userConfigDir›  ,this.workspaceTrusted=t.workspaceTrusted,this.onConfigChanged=t.onConfigChanged,this.globalEnvVars=t.globalEnvVars?...
+@@ 298342c299308  old#298342 new#299308
+  - watchPaths:[qPt.join(".kiro","settings",U5r)],homeDir:this.homeDir,onChange:()=>{
+  + watchPaths:[QPt.join(".kiro","settings",eWr)],userConfigDir:this.userConfigBase,onChange:()=>{
+@@ 298367c299333  old#298367 new#299333
+  - let t=qPt.join(this.homeDir,".kiro","settings",U5r);
+  + let t=QPt.join(this.userConfigBase,"settings",eWr);
+@@ 298683c299649  old#298683 new#299649
+  - let r=Spu(e),n=process.env.XDG_CACHE_HOME||Z5r.join(t,".kiro","cache");
+  + let r=kfu(e),n=process.env.XDG_CACHE_HOME||pWr.join(t,"cache");
+@@ 299584c300550  old#299584 new#300550
+  - let V=T8e(i,n.execution.workspace.getHomeDir()),pe=!1,te;
+  + let G=k8e(i,n.execution.workspace.getUserConfigDir()),ye=!1,te;
+@@ 301199c302165  old#301199 new#302165
+  - workspaceRoot:d,storeDir:T8e(d,r.state.execution.workspace.getHomeDir())}
+  + workspaceRoot:d,storeDir:k8e(d,r.state.execution.workspace.getUserConfigDir())}
+@@ 303628d304593  old#303628 new#304593
+  - broadcastOutboundFor;
+@@ 303649c304614  old#303649 new#304614
+  [delete] ...  ‹-this.homeDir=t.homeDir,›  ‹+›  this.homeConfigBase=w0(t.homeDir),this.cloudConfigBases=t.cloudConfigBases??(()=>...
+  [delete] ...this.homeDir=t.homeDir,this.homeConfigBase=w0  ‹-(t›  ‹+›  .homeDir),this.cloudConfigBases=t.cloudConfigBases??(()=>[]),this.files...
+  [replace] ...this.homeDir=t.homeDir,this.homeConfigBase=w0(t.  ‹-homeDir)›  ‹+userConfigDir›  ,this.cloudConfigBases=t.cloudConfigBases??(()=>[]),this.files=t....
+@@ 303663c304628  old#303663 new#304628
+  - watchPaths:[TE.join(ja,$2,NVr)],homeDir:this.homeDir,onChange:()=>{
+  + watchPaths:[TE.join(Mc,hD,YVr)],userConfigDir:this.homeConfigBase,onChange:()=>{
+@@ 304179c305144  old#304179 new#305144
+  [insert] ...,messageStore:f,sessionInfoEmitter:h,contextProviderRegistry:m,progressiveContextManager:g,powersManager:y,homeDir:w,  ‹-›  ‹+userConfigDir:v,›  clientMeta:v,capabilities:_,fileSystem:T,terminalManager:C,shellTypeInfo:x,policySession:R,mcpAllowedTools...

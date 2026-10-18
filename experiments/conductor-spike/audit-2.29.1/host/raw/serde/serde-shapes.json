@@ -1,0 +1,4943 @@
+{
+ "records": {
+  "/home/dwalleck/.local/share/kiro-research/binaries/2.28.0/extracted/kirocli/bin/kiro-cli-chat": {
+   "shapes": {
+    "struct NFKDHelper": [
+     1
+    ],
+    "struct DataPoint": [
+     3
+    ],
+    "struct ModelInfo": [
+     4,
+     6,
+     7
+    ],
+    "struct WordPiece": [
+     2
+    ],
+    "struct NFKCHelper": [
+     1
+    ],
+    "struct ErrorData": [
+     3
+    ],
+    "struct TaskInput": [
+     2
+    ],
+    "struct EffortArgs": [
+     1
+    ],
+    "struct SymbolDef": [
+     3
+    ],
+    "struct BPEDecoder": [
+     1
+    ],
+    "struct RewindArgs": [
+     1
+    ],
+    "struct McpServers": [
+     1
+    ],
+    "struct UseAwsRaw": [
+     7
+    ],
+    "struct AgentCrew": [
+     3
+    ],
+    "struct ToolChoice": [
+     1
+    ],
+    "struct PlanEntry": [
+     4
+    ],
+    "struct Range": [
+     2
+    ],
+    "struct Location": [
+     2
+    ],
+    "struct Position": [
+     2
+    ],
+    "struct Icon": [
+     4
+    ],
+    "struct Diagnostic": [
+     9
+    ],
+    "struct ServerInfo": [
+     2
+    ],
+    "struct SaveOptions": [
+     1
+    ],
+    "struct ModelHint": [
+     1
+    ],
+    "struct DocumentFilter": [
+     3
+    ],
+    "struct CodeDescription": [
+     1
+    ],
+    "struct InitializeResult": [
+     2,
+     5
+    ],
+    "struct ElicitResult": [
+     3
+    ],
+    "struct JsonRpcError": [
+     3
+    ],
+    "struct ServerCapabilities": [
+     7,
+     33
+    ],
+    "struct CompleteResult": [
+     3
+    ],
+    "struct CompletionInfo": [
+     3
+    ],
+    "struct DiscoverResult": [
+     7
+    ],
+    "struct Implementation": [
+     4,
+     6
+    ],
+    "struct GetPromptResult": [
+     4
+    ],
+    "struct ListToolsResult": [
+     6
+    ],
+    "struct SamplingMessage": [
+     3
+    ],
+    "struct ModelPreferences": [
+     4
+    ],
+    "struct Tool": [
+     2,
+     8
+    ],
+    "struct ListPromptsResult": [
+     6
+    ],
+    "struct ReadResourceResult": [
+     5
+    ],
+    "struct TextDocumentSyncOptions": [
+     5
+    ],
+    "struct ListResourcesResult": [
+     6
+    ],
+    "struct PublishDiagnosticsParams": [
+     3
+    ],
+    "struct Prompt": [
+     6
+    ],
+    "struct WorkspaceServerCapabilities": [
+     2
+    ],
+    "struct DiagnosticRelatedInformation": [
+     2
+    ],
+    "struct SubscriptionsListenResult": [
+     2
+    ],
+    "struct ListResourceTemplatesResult": [
+     6
+    ],
+    "struct ToolAnnotations": [
+     5
+    ],
+    "struct LogMessageParams": [
+     2
+    ],
+    "struct Resource": [
+     9
+    ],
+    "struct ShowMessageParams": [
+     2
+    ],
+    "struct TextContent": [
+     3
+    ],
+    "struct PromptMessage": [
+     2
+    ],
+    "struct AudioContent": [
+     4
+    ],
+    "struct ImageContent": [
+     4,
+     5
+    ],
+    "struct PromptArgument": [
+     4
+    ],
+    "struct Glob": [
+     4
+    ],
+    "struct Grep": [
+     9
+    ],
+    "struct Task": [
+     3,
+     5
+    ],
+    "struct ToolUseContent": [
+     4
+    ],
+    "struct StaticTextDocumentRegistrationOptions": [
+     2
+    ],
+    "struct CodeLensOptions": [
+     1
+    ],
+    "struct JsonRpcResponse": [
+     3
+    ],
+    "struct Annotations": [
+     3,
+     4
+    ],
+    "struct EmbeddedResource": [
+     3
+    ],
+    "struct ToolResultContent": [
+     5
+    ],
+    "struct variant GoalTool::Complete": [
+     1
+    ],
+    "struct ResourceTemplate": [
+     8
+    ],
+    "struct FsRead": [
+     1,
+     2
+    ],
+    "struct Summary": [
+     4
+    ],
+    "struct GetHoverParams": [
+     3
+    ],
+    "struct Insert": [
+     3
+    ],
+    "struct ResourceServerMetadata": [
+     4
+    ],
+    "struct ProjectMetadata": [
+     3
+    ],
+    "struct StandardErrorResponse": [
+     3
+    ],
+    "struct ToolsCapability": [
+     1
+    ],
+    "struct variant SessionTool::InjectContext": [
+     2
+    ],
+    "struct variant SessionTool::ValidateAgents": [
+     1
+    ],
+    "struct variant SessionTool::SpawnSession": [
+     7
+    ],
+    "struct variant SessionTool::ManageGroup": [
+     4
+    ],
+    "struct variant SessionTool::CancelGroup": [
+     1
+    ],
+    "struct variant SessionTool::Interrupt": [
+     2
+    ],
+    "struct variant SessionTool::WaitForGroup": [
+     1
+    ],
+    "struct variant SessionTool::GetSessionStatus": [
+     2
+    ],
+    "struct variant SessionTool::ReviveSession": [
+     2
+    ],
+    "struct PromptsCapability": [
+     1
+    ],
+    "struct RenameSymbolParams": [
+     5
+    ],
+    "struct FileCreate": [
+     2
+    ],
+    "struct StrReplace": [
+     4
+    ],
+    "struct WebFetch": [
+     3
+    ],
+    "struct OAuthConfig": [
+     5
+    ],
+    "struct LookupSymbolsParams": [
+     3
+    ],
+    "struct PatternSearchParams": [
+     5
+    ],
+    "struct SearchSymbolsParams": [
+     6
+    ],
+    "struct variant Knowledge::Search": [
+     7
+    ],
+    "struct variant Knowledge::Add": [
+     2
+    ],
+    "struct ResourcesCapability": [
+     2
+    ],
+    "struct Registration": [
+     4
+    ],
+    "struct FindReferencesParams": [
+     5
+    ],
+    "struct GetCodeActionsParams": [
+     6
+    ],
+    "struct GetCompletionsParams": [
+     7
+    ],
+    "struct GetDiagnosticsParams": [
+     1
+    ],
+    "struct GotoDefinitionParams": [
+     4
+    ],
+    "struct PatternRewriteParams": [
+     6
+    ],
+    "struct StaticTextDocumentColorProviderOptions": [
+     2
+    ],
+    "struct ApplyCodeActionParams": [
+     5
+    ],
+    "struct WebSearch": [
+     1
+    ],
+    "struct BM25DataPoint": [
+     3
+    ],
+    "struct LoopConfig": [
+     3
+    ],
+    "struct FileOperationPattern": [
+     3
+    ],
+    "struct SemanticTokensLegend": [
+     2
+    ],
+    "struct ConstTitle": [
+     2
+    ],
+    "struct CompletionOptionsCompletionItem": [
+     1
+    ],
+    "struct DocumentOnTypeFormattingOptions": [
+     2
+    ],
+    "struct TitledItems": [
+     1
+    ],
+    "struct GetDocumentSymbolsParams": [
+     2
+    ],
+    "struct FileOp": [
+     3
+    ],
+    "struct ToolSearch": [
+     3
+    ],
+    "struct variant ElicitRequestParamsWire::Url": [
+     4
+    ],
+    "struct variant ElicitRequestParamsWire::Form": [
+     3
+    ],
+    "struct NumberSchema": [
+     6
+    ],
+    "struct StringSchema": [
+     7
+    ],
+    "struct KnowledgeContext": [
+     12
+    ],
+    "struct PipelineStage": [
+     6
+    ],
+    "struct BooleanSchema": [
+     4
+    ],
+    "struct IntegerSchema": [
+     6
+    ],
+    "struct UntitledItems": [
+     2
+    ],
+    "struct ImageOp": [
+     1
+    ],
+    "struct Proxy": [
+     2
+    ],
+    "struct PendingStageSpec": [
+     6
+    ],
+    "struct LegacyEnumSchema": [
+     6
+    ],
+    "struct FileOperationPatternOptions": [
+     1
+    ],
+    "struct ElicitationSchema": [
+     5
+    ],
+    "struct variant TaskTool::Add": [
+     2
+    ],
+    "struct variant TaskTool::Create": [
+     2
+    ],
+    "struct variant TaskTool::Remove": [
+     2
+    ],
+    "struct variant TaskTool::Complete": [
+     3
+    ],
+    "struct variant ComplexResource::KnowledgeBase": [
+     7
+    ],
+    "struct FileOperationRegistrationOptions": [
+     1
+    ],
+    "struct ExecuteCmd": [
+     2
+    ],
+    "struct DirectoryOp": [
+     3
+    ],
+    "struct TitledMultiSelectEnumSchema": [
+     7
+    ],
+    "struct WorkspaceFoldersServerCapabilities": [
+     2
+    ],
+    "struct TitledSingleSelectEnumSchema": [
+     5
+    ],
+    "struct ProxyOptionalParam": [
+     2
+    ],
+    "struct UntitledMultiSelectEnumSchema": [
+     7
+    ],
+    "struct variant WireHookAction::Command": [
+     1
+    ],
+    "struct UntitledSingleSelectEnumSchema": [
+     5
+    ],
+    "struct WorkspaceFileOperationsServerCapabilities": [
+     6
+    ],
+    "struct WireHookDocument": [
+     8
+    ],
+    "struct SwitchToExecution": [
+     1
+    ],
+    "struct LocalMcpServerConfig": [
+     6
+    ],
+    "struct RemoteMcpServerConfig": [
+     8
+    ],
+    "struct RegistryMcpServerConfig": [
+     6
+    ],
+    "struct SwitchToExecutionResult": [
+     2
+    ],
+    "struct GroupResult": [
+     3
+    ],
+    "struct Helper": [
+     2,
+     4,
+     5
+    ],
+    "struct CancelResponse": [
+     1
+    ],
+    "struct StageActivityDto": [
+     2
+    ],
+    "struct Plan": [
+     2
+    ],
+    "struct Usage": [
+     6
+    ],
+    "struct Cost": [
+     2
+    ],
+    "struct AuthEnvVar": [
+     5
+    ],
+    "struct EnvVariable": [
+     3
+    ],
+    "struct SessionInfo": [
+     6
+    ],
+    "struct SessionMode": [
+     4
+    ],
+    "struct NesCapabilities": [
+     3
+    ],
+    "struct Diff": [
+     4
+    ],
+    "struct UsageUpdate": [
+     4
+    ],
+    "struct PromptResponse": [
+     4
+    ],
+    "struct ContentChunk": [
+     3
+    ],
+    "struct AuthMethodAgent": [
+     4
+    ],
+    "struct McpCapabilities": [
+     3
+    ],
+    "struct Content": [
+     2
+    ],
+    "struct AuthMethodEnvVar": [
+     6
+    ],
+    "struct SessionModeState": [
+     3
+    ],
+    "struct ResourceLink": [
+     8
+    ],
+    "struct NesEventCapabilities": [
+     2
+    ],
+    "struct Terminal": [
+     2
+    ],
+    "struct ToolCall": [
+     9
+    ],
+    "struct AgentCapabilities": [
+     8
+    ],
+    "struct SessionModelState": [
+     3
+    ],
+    "struct AuthMethodTerminal": [
+     6
+    ],
+    "struct InitializeResponse": [
+     5
+    ],
+    "struct LogoutCapabilities": [
+     1
+    ],
+    "struct NewSessionResponse": [
+     5
+    ],
+    "struct PromptCapabilities": [
+     4
+    ],
+    "struct AvailableCommand": [
+     4
+    ],
+    "struct PermissionOption": [
+     4
+    ],
+    "struct NesContextCapabilities": [
+     7
+    ],
+    "struct LoadSessionResponse": [
+     4
+    ],
+    "struct SessionCapabilities": [
+     6
+    ],
+    "struct CurrentModeUpdate": [
+     2
+    ],
+    "struct SessionInfoUpdate": [
+     3
+    ],
+    "struct ListSessionsResponse": [
+     3
+    ],
+    "struct ConfigOptionUpdate": [
+     2
+    ],
+    "struct NesOpenFilesCapabilities": [
+     1
+    ],
+    "struct AgentAuthCapabilities": [
+     2
+    ],
+    "struct KillTerminalRequest": [
+     3
+    ],
+    "struct ReadTextFileRequest": [
+     5
+    ],
+    "struct SessionNotification": [
+     3
+    ],
+    "struct SetSessionModeResponse": [
+     1
+    ],
+    "struct NesDiagnosticsCapabilities": [
+     1
+    ],
+    "struct NesRecentFilesCapabilities": [
+     2
+    ],
+    "struct NesUserActionsCapabilities": [
+     2
+    ],
+    "struct SessionForkCapabilities": [
+     1
+    ],
+    "struct SetSessionModelResponse": [
+     1
+    ],
+    "struct CreateTerminalRequest": [
+     7
+    ],
+    "struct TerminalOutputRequest": [
+     3
+    ],
+    "struct SessionCloseCapabilities": [
+     1
+    ],
+    "struct SessionConfigSelectGroup": [
+     4
+    ],
+    "struct ReleaseTerminalRequest": [
+     3
+    ],
+    "struct BlobResourceContents": [
+     4
+    ],
+    "struct TextResourceContents": [
+     4
+    ],
+    "struct NesDocumentEventCapabilities": [
+     6
+    ],
+    "struct ToolCallLocation": [
+     3
+    ],
+    "struct SessionConfigSelectOption": [
+     4
+    ],
+    "struct SessionResumeCapabilities": [
+     1
+    ],
+    "struct AvailableCommandsUpdate": [
+     2
+    ],
+    "struct RequestPermissionRequest": [
+     4
+    ],
+    "struct UnstructuredCommandInput": [
+     2
+    ],
+    "struct NesDocumentDidOpenCapabilities": [
+     1
+    ],
+    "struct NesRelatedSnippetsCapabilities": [
+     1
+    ],
+    "struct NesDocumentDidCloseCapabilities": [
+     1
+    ],
+    "struct WaitForTerminalExitRequest": [
+     3
+    ],
+    "struct NesDocumentDidChangeCapabilities": [
+     2
+    ],
+    "struct SetSessionConfigOptionResponse": [
+     2
+    ],
+    "struct SessionAdditionalDirectoriesCapabilities": [
+     1
+    ],
+    "struct Error": [
+     3
+    ],
+    "struct Feed": [
+     1
+    ],
+    "struct Entry": [
+     5
+    ],
+    "struct Change": [
+     2
+    ],
+    "struct KasMcpStatus": [
+     2
+    ],
+    "struct Agent": [
+     15
+    ],
+    "struct Request": [
+     5
+    ],
+    "struct AuthProfile": [
+     2
+    ],
+    "struct McpStartupStatus": [
+     3
+    ],
+    "struct FeatureRollout": [
+     4
+    ],
+    "struct Response": [
+     5
+    ],
+    "struct KasMcpServerStatus": [
+     3
+    ],
+    "struct CredentialsJson": [
+     4
+    ],
+    "struct AgentNotFoundParams": [
+     4
+    ],
+    "struct RejectedAgentConfig": [
+     3
+    ],
+    "struct Argument": [
+     2
+    ],
+    "struct TurnMarker": [
+     8
+    ],
+    "struct Transport": [
+     1
+    ],
+    "struct HttpHeader": [
+     2,
+     3
+    ],
+    "struct SocialToken": [
+     6
+    ],
+    "struct Hook": [
+     6
+    ],
+    "struct TokenResponse": [
+     3,
+     4
+    ],
+    "struct PackageConfig": [
+     7
+    ],
+    "struct McsSession": [
+     2
+    ],
+    "struct CachedRegistry": [
+     3
+    ],
+    "struct ToolSpec": [
+     3,
+     4
+    ],
+    "struct SandboxFileConfig": [
+     3
+    ],
+    "struct EnvState": [
+     3
+    ],
+    "struct DevicePollResponse": [
+     6
+    ],
+    "struct RemoteServerConfig": [
+     3
+    ],
+    "struct EnvironmentVariable": [
+     2
+    ],
+    "struct McpRegistryResponse": [
+     1
+    ],
+    "struct McpServerDefinition": [
+     6
+    ],
+    "struct ImageBlock": [
+     2
+    ],
+    "struct BuilderIdToken": [
+     8
+    ],
+    "struct variant WireHookAction::Agent": [
+     1
+    ],
+    "struct McpRegistryServerEntry": [
+     1
+    ],
+    "struct UserMessage": [
+     5
+    ],
+    "struct ToolInputSchema": [
+     1
+    ],
+    "struct OidcDiscovery": [
+     3
+    ],
+    "struct ToolUseResult": [
+     3
+    ],
+    "struct RequestMetadata": [
+     20
+    ],
+    "struct RawIncomingMessage": [
+     5
+    ],
+    "struct DeviceRegistration": [
+     6
+    ],
+    "struct ContextManager": [
+     4
+    ],
+    "struct UserEnvContext": [
+     1
+    ],
+    "struct ToolSpecification": [
+     3
+    ],
+    "struct DeviceAuthorizationResponse": [
+     6
+    ],
+    "struct FileOperationFilter": [
+     2
+    ],
+    "struct RawValidationError": [
+     2
+    ],
+    "struct ExternalIdpToken": [
+     8
+    ],
+    "struct AssistantToolUse": [
+     5
+    ],
+    "struct variant TodoList::Complete": [
+     4
+    ],
+    "struct variant TodoList::Create": [
+     2
+    ],
+    "struct variant TodoList::Load": [
+     1
+    ],
+    "struct variant TodoList::Remove": [
+     3
+    ],
+    "struct RefusalInfo": [
+     3
+    ],
+    "struct ArtifactEntry": [
+     10
+    ],
+    "struct FsLine": [
+     3
+    ],
+    "struct FsImage": [
+     1
+    ],
+    "struct Session": [
+     3
+    ],
+    "struct TodoListState": [
+     6
+    ],
+    "struct VersionManifest": [
+     2
+    ],
+    "struct HistoryEntry": [
+     3
+    ],
+    "struct FsSearch": [
+     3
+    ],
+    "struct SessionInfoEntry": [
+     7
+    ],
+    "struct variant FsWrite::Create": [
+     4
+    ],
+    "struct variant FsWrite::StrReplace": [
+     4
+    ],
+    "struct variant FsWrite::Append": [
+     3
+    ],
+    "struct variant FsWrite::Insert": [
+     4
+    ],
+    "struct GhIssue": [
+     4
+    ],
+    "struct ReasoningContentForHistory": [
+     5
+    ],
+    "struct LegacyHook": [
+     7
+    ],
+    "struct Delegate": [
+     3
+    ],
+    "struct Thinking": [
+     1
+    ],
+    "struct FileLineTracker": [
+     6
+    ],
+    "struct FsDirectory": [
+     5
+    ],
+    "struct SettingInfo": [
+     4
+    ],
+    "struct McpServerSse": [
+     4
+    ],
+    "struct UserTurnMetadata": [
+     3,
+     20
+    ],
+    "struct ProcessHealthPayload": [
+     20
+    ],
+    "struct McpServerHttp": [
+     4
+    ],
+    "struct PromptRequest": [
+     4
+    ],
+    "struct ConversationState": [
+     21
+    ],
+    "struct MeteringUsageInfo": [
+     3
+    ],
+    "struct McpServerStdio": [
+     5
+    ],
+    "struct ExecuteCommand": [
+     3
+    ],
+    "struct NesJumpCapabilities": [
+     1
+    ],
+    "struct SessionResponse": [
+     6
+    ],
+    "struct KnowledgeAdd": [
+     2
+    ],
+    "struct InitializeRequest": [
+     4
+    ],
+    "struct NewSessionRequest": [
+     4
+    ],
+    "struct ClientNesCapabilities": [
+     4
+    ],
+    "struct NesRenameCapabilities": [
+     1
+    ],
+    "struct UiModeChangedNotification": [
+     4
+    ],
+    "struct CancelNotification": [
+     2
+    ],
+    "struct LoadSessionRequest": [
+     5
+    ],
+    "struct AuthCapabilities": [
+     2
+    ],
+    "struct ConversationCheckpoint": [
+     5
+    ],
+    "struct KnowledgeClear": [
+     1
+    ],
+    "struct KnowledgeCancel": [
+     1
+    ],
+    "struct KnowledgeSearch": [
+     7
+    ],
+    "struct ClientCapabilities": [
+     7
+    ],
+    "struct SetSessionModeRequest": [
+     3
+    ],
+    "struct SetSessionModelRequest": [
+     3
+    ],
+    "struct UiModeSessionStartNotification": [
+     4
+    ],
+    "struct FileSystemCapabilities": [
+     3
+    ],
+    "struct CustomToolConfig": [
+     11
+    ],
+    "struct InvokeSubagent": [
+     5
+    ],
+    "struct UiModeDefaultChangedNotification": [
+     3
+    ],
+    "struct NesSearchAndReplaceCapabilities": [
+     1
+    ],
+    "struct EndpointOverride": [
+     2
+    ],
+    "struct ElicitationCapabilities": [
+     3
+    ],
+    "struct ElicitationUrlCapabilities": [
+     1
+    ],
+    "struct SwitchResponse": [
+     3
+    ],
+    "struct ElicitationFormCapabilities": [
+     1
+    ],
+    "struct variant AssistantMessage::ToolUse": [
+     4
+    ],
+    "struct variant AssistantMessage::Response": [
+     3
+    ],
+    "struct variant UserMessageContent::CancelledToolUses": [
+     2
+    ],
+    "struct variant UserMessageContent::Prompt": [
+     1
+    ],
+    "struct SubagentExecutionSummary": [
+     3
+    ],
+    "struct AgentId": [
+     3
+    ],
+    "struct GoalDefinition": [
+     2
+    ],
+    "struct LastContextUsage": [
+     2
+    ],
+    "struct TrustOption": [
+     4
+    ],
+    "struct McpTool": [
+     4
+    ],
+    "struct ToolResult": [
+     2
+    ],
+    "struct CompactStrategy": [
+     4
+    ],
+    "struct ToolExecutionOutput": [
+     1
+    ],
+    "struct ConversationMetadata": [
+     4
+    ],
+    "struct AgentLoopId": [
+     2
+    ],
+    "struct InvalidToolUse": [
+     3
+    ],
+    "struct RtsStateSnapshot": [
+     4
+    ],
+    "struct SessionData": [
+     10
+    ],
+    "struct SessionLock": [
+     2
+    ],
+    "struct variant SessionTool::GroupLastActivity": [
+     1
+    ],
+    "struct variant SessionTool::CancelGroupStage": [
+     3
+    ],
+    "struct variant SessionTool::RegisterPendingStages": [
+     2
+    ],
+    "struct RuntimePermissions": [
+     4
+    ],
+    "struct SessionStateV1": [
+     5
+    ],
+    "struct Message": [
+     4
+    ],
+    "struct SessionDataView": [
+     8
+    ],
+    "struct FileSystemPermissions": [
+     4
+    ],
+    "struct variant TestCommand::SetModelListFailure": [
+     1
+    ],
+    "struct variant TestCommand::GetCapturedRequests": [
+     1
+    ],
+    "struct StreamError": [
+     4
+    ],
+    "struct ToolUseBlock": [
+     3
+    ],
+    "struct ThinkingBlock": [
+     5
+    ],
+    "struct ToolResultBlock": [
+     3
+    ],
+    "struct GoalIterationResult": [
+     3
+    ],
+    "struct ChatArgs": [
+     1
+    ],
+    "struct PlanArgs": [
+     1
+    ],
+    "struct TestMessageCommand": [
+     3
+    ],
+    "struct AgentArgs": [
+     1
+    ],
+    "struct ModelArgs": [
+     1
+    ],
+    "struct ConverseStreamError": [
+     3
+    ],
+    "struct MessageSendRequest": [
+     2
+    ],
+    "struct SettingsSetRequest": [
+     2
+    ],
+    "struct CompactArgs": [
+     1
+    ],
+    "struct PromptsArgs": [
+     1
+    ],
+    "struct ListSessionsRequest": [
+     2
+    ],
+    "struct SessionSpawnRequest": [
+     5
+    ],
+    "struct SessionSteerRequest": [
+     2
+    ],
+    "struct FallbackArgs": [
+     2
+    ],
+    "struct FeedbackArgs": [
+     1
+    ],
+    "struct SendRequestArgs": [
+     4
+    ],
+    "struct KnowledgeArgs": [
+     1
+    ],
+    "struct ReasoningArgs": [
+     4
+    ],
+    "struct CommandExecuteRequest": [
+     2
+    ],
+    "struct CommandOptionsRequest": [
+     3
+    ],
+    "struct KiroV1": [
+     2
+    ],
+    "struct McpStartupStatusRequest": [
+     1
+    ],
+    "struct TerminateSessionRequest": [
+     1
+    ],
+    "struct DeleteSessionResponse": [
+     1
+    ],
+    "struct SessionSteerClearRequest": [
+     1
+    ],
+    "struct LegacyLs": [
+     3
+    ],
+    "struct LegacyTool": [
+     2
+    ],
+    "struct LegacyFsRead": [
+     1
+    ],
+    "struct AdditionalModelFields": [
+     2
+    ],
+    "struct LegacyImageRead": [
+     1
+    ],
+    "struct variant GoalState::Exhausted": [
+     1
+    ],
+    "struct variant CanonicalToolName::Mcp": [
+     2
+    ],
+    "struct variant CanonicalToolName::Agent": [
+     1
+    ],
+    "struct variant ConverseStreamErrorKind::InvalidModelId": [
+     1
+    ],
+    "struct SwitchResult": [
+     2
+    ],
+    "struct Command": [
+     3
+    ],
+    "struct TextEdit": [
+     2
+    ],
+    "struct CreateFile": [
+     3
+    ],
+    "struct DeleteFile": [
+     2
+    ],
+    "struct RenameFile": [
+     4
+    ],
+    "struct LocationLink": [
+     4
+    ],
+    "struct MarkupContent": [
+     2
+    ],
+    "struct WorkspaceEdit": [
+     3
+    ],
+    "struct LanguageString": [
+     2
+    ],
+    "struct ChangeAnnotation": [
+     3
+    ],
+    "struct TextDocumentEdit": [
+     2
+    ],
+    "struct CreateFileOptions": [
+     2
+    ],
+    "struct DeleteFileOptions": [
+     3
+    ],
+    "struct RenameFileOptions": [
+     2
+    ],
+    "struct Hover": [
+     2
+    ],
+    "struct CodeAction": [
+     8
+    ],
+    "struct CompletionItem": [
+     18
+    ],
+    "struct CompletionList": [
+     2
+    ],
+    "struct OptionalVersionedTextDocumentIdentifier": [
+     2
+    ],
+    "struct InsertReplaceEdit": [
+     3
+    ],
+    "struct CodeActionDisabled": [
+     1
+    ],
+    "struct DocumentSymbol": [
+     8
+    ],
+    "struct SymbolInformation": [
+     6
+    ],
+    "struct WorkspaceSymbol": [
+     6
+    ],
+    "struct WorkspaceLocation": [
+     1
+    ],
+    "struct CallDef": [
+     1
+    ],
+    "struct ImportDef": [
+     1
+    ],
+    "struct LanguageDef": [
+     4
+    ],
+    "struct LanguageConfig": [
+     10
+    ],
+    "struct LanguagesConfig": [
+     1
+    ],
+    "struct FullDocumentDiagnosticReport": [
+     2
+    ],
+    "struct UnchangedDocumentDiagnosticReport": [
+     1
+    ],
+    "struct ReceiptData": [
+     10
+    ],
+    "struct NesDocumentDidSaveCapabilities": [
+     1
+    ],
+    "struct RequestPermissionResponse": [
+     2
+    ],
+    "struct SelectedPermissionOutcome": [
+     2
+    ],
+    "struct TensorInfo": [
+     3
+    ],
+    "struct PrecompiledDeserializer": [
+     1
+    ],
+    "struct Fuse": [
+     1
+    ],
+    "struct Strip": [
+     2
+    ],
+    "struct PaddingParams": [
+     6
+    ],
+    "struct Sequence": [
+     1
+    ],
+    "struct BertProcessing": [
+     2
+    ],
+    "struct Prepend": [
+     1
+    ],
+    "struct NFCHelper": [
+     1
+    ],
+    "struct NmtHelper": [
+     1
+    ],
+    "struct TruncationParams": [
+     4
+    ],
+    "struct LowercaseHelper": [
+     1
+    ],
+    "struct SpecialToken": [
+     3
+    ],
+    "struct StripAccentsHelper": [
+     1
+    ],
+    "struct ByteFallback": [
+     1
+    ],
+    "struct ByteLevelHelper": [
+     1
+    ],
+    "struct WhitespaceHelper": [
+     1
+    ],
+    "struct TemplateProcessingDeserializer": [
+     3
+    ],
+    "struct WhitespaceSplitHelper": [
+     1
+    ],
+    "struct variant Piece::Sequence": [
+     2
+    ],
+    "struct variant Piece::SpecialToken": [
+     2
+    ],
+    "struct UnicodeScriptsHelper": [
+     1
+    ],
+    "struct SplitHelper": [
+     4
+    ],
+    "struct MetaspaceHelper": [
+     6
+    ],
+    "struct ScopeStack": [
+     2
+    ],
+    "struct Theme": [
+     4
+    ],
+    "struct StyleModifier": [
+     3
+    ],
+    "struct ThemeSettings": [
+     30
+    ],
+    "struct ScopeSelector": [
+     2
+    ],
+    "struct Context": [
+     7
+    ],
+    "struct MatchPattern": [
+     6
+    ],
+    "struct variant ContextReference::ByScope": [
+     3
+    ],
+    "struct variant ContextReference::File": [
+     3
+    ]
+   },
+   "tagged": [
+    "adjacently tagged enum ChatResponseStreamstruct",
+    "adjacently tagged enum ContentBlockstruct",
+    "adjacently tagged enum ImageSourcestruct",
+    "adjacently tagged enum LogEntryV1struct",
+    "adjacently tagged enum MockStreamItemGetCredentialsForIdentityGetIdstruct",
+    "adjacently tagged enum StreamErrorKindstruct",
+    "adjacently tagged enum ToolResultContentBlockstruct",
+    "adjacently tagged enum TuiCommandstruct",
+    "adjacently tagged enum UseSubagentUseSubagentListAgentsInvokeSubagentsstruct",
+    "internally tagged enum CodeFile",
+    "internally tagged enum CodeGetHoverParamsInitializeWorkspaceinternally",
+    "internally tagged enum CodeSearchSymbolsParamsFindReferencesParamsGotoDefinitionParamsRenameSymbolParamsGetDocumentSymbolsParamsLookupSymbolsParamsGetDiagnosticsParamsGetHoverParamsGetCompletionsParamsGetCodeActionsParamsApplyCodeActionParamsInitializeWorkspacePatternSearchParamsPatternRewriteParamsGenerateCodebaseOverviewParamsSearchCodebaseMapParamsRenamedWould",
+    "internally tagged enum ComplexResourceSkillComplexwebweb",
+    "internally tagged enum ComplexResourceaskdetailattributeconvertedregex",
+    "internally tagged enum ComplexResourcecontextWindowrateMultiplierShow",
+    "internally tagged enum ContentBlockTextResourceContentsBlobResourceContentsdata",
+    "internally tagged enum ContentBlockdata",
+    "internally tagged enum ExportFormatevent",
+    "internally tagged enum FsReadOperationFileOpDirectoryOpImageOpFsReadFailed",
+    "internally tagged enum FsReadOperationfrom",
+    "internally tagged enum FsWriteFileCreateStatusAgentIdConversationMetadataCompactStrategyinternally",
+    "internally tagged enum FsWriteFileCreateStrReplaceInsertSuccessfully",
+    "internally tagged enum FsWriteevent",
+    "internally tagged enum GoalTool",
+    "internally tagged enum Knowledge",
+    "internally tagged enum McpServerpinned",
+    "internally tagged enum RequestPermissionOutcomeCancelledlastModifiedContentBlockImageAudioResourceLinkresource",
+    "internally tagged enum SessionStateevent",
+    "internally tagged enum SessionTool",
+    "internally tagged enum SessionToolResponse",
+    "internally tagged enum TaskToolTaskInputFsReadOperationinternally",
+    "internally tagged enum TaskToolTaskInputNo",
+    "internally tagged enum TestCommandTestCommandGetCapturedTelemetryEventsGetModelListCallCountPUSH",
+    "internally tagged enum TodoListTime",
+    "untagged enum AgentConfigGlobSettingsGrepSettingsToolsSettingsFsReadSettingsUseAwsSettingsinternally",
+    "untagged enum AgentConfigHookTriggerInputSchemaGlobSettingsGrepSettingsToolsSettingsFsReadSettingsUseAwsSettingsinternally",
+    "untagged enum AuthMethodinternally",
+    "untagged enum AvailableCommandInputinternally",
+    "untagged enum CallHierarchyServerCapabilitydata",
+    "untagged enum CodeActionOrCommandcodeActionLiteralSupportisPreferredSupportdisabledSupportdataSupporthonorsChangeAnnotationsCodeActionKindLiteralSupportdata",
+    "untagged enum CodeActionProviderCapabilityCodeActionCapabilityResolveSupportdata",
+    "untagged enum ColorProviderCapabilitycontentFormatdata",
+    "untagged enum ColorProviderCapabilitydata",
+    "untagged enum CompletionResponsedata",
+    "untagged enum CompletionTextEdittabSizeinsertSpacestrimTrailingWhitespaceinsertFinalNewlinetrimFinalNewlinesdata",
+    "untagged enum DeclarationCapabilitydata",
+    "untagged enum DeclarationCapabilityregularExpressionsstaleRequestSupportMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DeclarationCapabilityregularExpressionsstaleRequestSupportpositionEncodingsMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DecoderHelperdata",
+    "untagged enum DecoderUntaggedinternal",
+    "untagged enum DiagnosticServerCapabilitiesdata",
+    "untagged enum DiagnosticServerCapabilitiesinternally",
+    "untagged enum DocumentChangeOperationregularExpressionsstaleRequestSupportpositionEncodingsMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DocumentChangesprocessIdinitializationOptionslocalelanguageIddata",
+    "untagged enum DocumentSymbolResponsehierarchicalDocumentSymbolSupportWorkspaceSymbolClientCapabilitiesWorkspaceSymbolResolveSupportCapabilityinternally",
+    "untagged enum DocumentationlinkSupportdata",
+    "untagged enum ElicitRequestParamsWireinternally",
+    "untagged enum EmbeddedResourceResourceProtocolVersionoldTextnewTextContenttoolCallIdlocationsrawOutputexecutethinkfetchswitch",
+    "untagged enum EmbeddedResourceResourceinternally",
+    "untagged enum EnumSchemaTitledItemsNumberSchemaStringSchemaBooleanSchemaIntegerSchemaUntitledItemsTitledStringNumberIntegerBooleanTitledMultiSelectEnumSchemaTitledSingleSelectEnumSchemaUntitledMultiSelectEnumSchemadata",
+    "untagged enum EnumSchemaTitledItemsUntitledItemsElicitationSchemaUntitledMultiSelectEnumSchemaTitledMultiSelectEnumSchemadata",
+    "untagged enum EnumSchemaTitledItemsUntitledItemsUntitledMultiSelectEnumSchemaTitledMultiSelectEnumSchemadata",
+    "untagged enum FoldingRangeProviderCapabilitydata",
+    "untagged enum GotoDefinitionResponsedata",
+    "untagged enum HookConfigExecuteCmdSettingsLocalMcpServerConfigRemoteMcpServerConfiginternally",
+    "untagged enum HookConfigInputSchemadata",
+    "untagged enum HookConfigdata",
+    "untagged enum HoverContentscontentFormatdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviorMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiesShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviorMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiessupportShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviornewNameMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiessupportShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum Iddata",
+    "untagged enum ImplementationProviderCapabilitydata",
+    "untagged enum InlayHintServerCapabilitiesrefreshSupportcodeActionLiteralSupportisPreferredSupportdisabledSupportdataSupporthonorsChangeAnnotationsCodeActionKindLiteralSupportdata",
+    "untagged enum InlayHintServerCapabilitiesrefreshSupportincludeDeclarationCommanddata",
+    "untagged enum InlineValueServerCapabilitiestooltipSupportFoldingRangeCapabilitycollapsedTextFoldingRangeKindCapabilityrangeLimitlineFoldingOnlydata",
+    "untagged enum InlineValueServerCapabilitiestooltipSupportFoldingRangeCapabilitycollapsedTextrangeLimitlineFoldingOnlydata",
+    "untagged enum InputRequestToolAnnotations",
+    "untagged enum InputRequestToolAnnotationsPromptMessagePromptArgumentContentBlockResourceLinkinternally",
+    "untagged enum InputRequestToolAnnotationsPromptMessagePromptArgumentdata",
+    "untagged enum JsonRpcMessageErrorCodeErrorDataModelHintref",
+    "untagged enum JsonRpcMessageSubscriptionsAcknowledgedNotificationParamsErrorDataReferenceref",
+    "untagged enum LinkedEditingRangeServerCapabilitiesParameterInformationSettingslabelOffsetSupportSignatureInformationSettingsparameterInformationactiveParameterSupportsignatureInformationdata",
+    "untagged enum MarkedStringdata",
+    "untagged enum McpServerConfigAgentCrewSettingsExecuteCmdSettingsfailed",
+    "untagged enum McpServerConfigAgentSpawnPreToolUsePostToolUse",
+    "untagged enum McpServerMcpServerHttpMcpServerSsemax",
+    "untagged enum MergeTypehttps",
+    "untagged enum MessageErrorIddata",
+    "untagged enum ModelHelperdata",
+    "untagged enum ModelUntaggedentering",
+    "untagged enum MonikerServerCapabilitiesFailed",
+    "untagged enum MonikerServerCapabilitiesLazy",
+    "untagged enum MonikerServerCapabilitiesworkDoneToken",
+    "untagged enum MultiSelectEnumSchemaTitledSingleSelectEnumSchemadata",
+    "untagged enum MultiSelectEnumSchemadata",
+    "untagged enum NormalizerHelperdata",
+    "untagged enum NormalizerUntaggedMissing",
+    "untagged enum NumberOrStringdata",
+    "untagged enum NumberOrStringprocessIdinitializationOptionslocaledata",
+    "untagged enum NumberOrStringprocessIdinitializationOptionslocalelanguageIddata",
+    "untagged enum OneOftextOnlyTransactionalTagSupportdata",
+    "untagged enum OneOftextOnlyTransactionalpartialResultTokenTagSupportdata",
+    "untagged enum ParamsInvalid",
+    "untagged enum Paramsmissing",
+    "untagged enum PostProcessorWrapperprocessorsABSpecialTokenididstokenssinglespecial",
+    "untagged enum PreTokenizerHelperdata",
+    "untagged enum PreTokenizerUntaggedadd",
+    "untagged enum PrimitiveSchemaDefinitionLoggingMessageNotificationParamJsonRpcResponseJsonRpcErrordata",
+    "untagged enum PrimitiveSchemaDefinitionLoggingMessageNotificationParamJsonRpcResponsedata",
+    "untagged enum PrimitiveSchemaDefinitionSingleMultiLegacyLoggingMessageNotificationParamSubscriptionsAcknowledgedNotificationParamsJsonRpcResponseJsonRpcErrordata",
+    "untagged enum Reprforce",
+    "untagged enum Reprthe",
+    "untagged enum RequestIdin",
+    "untagged enum ResourceContentsio",
+    "untagged enum ResourceContentsroots",
+    "untagged enum SamplingContentImageAudioToolUseToolResultinternally",
+    "untagged enum SamplingContentProgressNotificationParamReadResourceRequestParamsResourceTemplateReferenceSubscriptionsListenResultCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockAudioToolUseToolResultListResourceTemplatesResultinternally",
+    "untagged enum SamplingContentProgressNotificationParamReadResourceRequestParamsResourceTemplateReferenceSubscriptionsListenResultCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockToolResultListResourceTemplatesResultinternally",
+    "untagged enum SelectionRangeProviderCapabilitySemanticTokensFullOptionsdata",
+    "untagged enum SemanticTokensFullOptionsoverlappingTokenSupportmultilineTokenSupportserverCancelSupportaugmentsSyntaxTokensdata",
+    "untagged enum SemanticTokensServerCapabilitiesdata",
+    "untagged enum SemanticTokensServerCapabilitieshierarchicalDocumentSymbolSupportWorkspaceSymbolClientCapabilitiesWorkspaceSymbolResolveSupportCapabilityrelatedDocumentSupportdata",
+    "untagged enum ServerNotificationCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockNotificationNoParamTaskStatusNotificationParamsdata",
+    "untagged enum ServerNotificationListResourcesResultCallToolRequestParamsCompleteRequestParamsrefDiscoverRequestParamsSetLevelRequestParamsGetPromptRequestParamsPaginatedRequestParamsSubscribeRequestParamsInitializeRequestParamsdata",
+    "untagged enum ServerNotificationstopReasonListResourcesResultCallToolRequestParamsCompleteRequestParamsrefDiscoverRequestParamsSetLevelRequestParamsGetPromptRequestParamsPaginatedRequestParamscursorSubscribeRequestParamsInitializeRequestParamsdata",
+    "untagged enum ServerRequestCompletionInfoListRootsResultPromptReferenceSamplingMessageGetPromptResultListToolsResultCompletionContextListPromptsResultSubscriptionFilterReadResourceResultdata",
+    "untagged enum ServerRequestImplementationCompletionInfoListRootsResultPromptReferenceSamplingMessageGetPromptResultListToolsResultCompletionContextListPromptsResultSubscriptionFilterReadResourceResultdata",
+    "untagged enum ServerRequestcursorRequestNoParamNotificationProgressNotificationParamdata",
+    "untagged enum ServerResultGetTaskParamsdata",
+    "untagged enum ServerResultRequestdata",
+    "untagged enum SessionConfigOptionCategorySessionAdditionalDirectoriesCapabilitiessession",
+    "untagged enum SessionConfigOptionCategorysessionUpdateinternally",
+    "untagged enum SessionConfigSelectOptionsdata",
+    "untagged enum SingleSelectEnumSchemaStringSchemaNumberSchemaIntegerSchemaBooleanSchemadata",
+    "untagged enum SingleSelectEnumSchemadata",
+    "untagged enum TextDocumentSyncCapabilityapplyEditdidChangeConfigurationdidChangeWatchedFilesexecuteCommandconfigurationinlineValuedata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationdefinitiontypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyWorkspaceEditClientCapabilitiesdocumentChangesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationdefinitiontypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyrangeLengthWorkspaceEditClientCapabilitiesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationtypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyWorkspaceEditClientCapabilitiesdocumentChangesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesengineStaleRequestSupportClientCapabilitiescancelretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabelResourceOpinternally",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesengineStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata"
+   ]
+  },
+  "/home/dwalleck/.local/share/kiro-research/binaries/2.29.0/extracted/kirocli/bin/kiro-cli-chat": {
+   "shapes": {
+    "struct NFKDHelper": [
+     1
+    ],
+    "struct DataPoint": [
+     3
+    ],
+    "struct ModelInfo": [
+     4,
+     6,
+     7
+    ],
+    "struct WordPiece": [
+     2
+    ],
+    "struct NFKCHelper": [
+     1
+    ],
+    "struct ErrorData": [
+     3
+    ],
+    "struct TaskInput": [
+     2
+    ],
+    "struct EffortArgs": [
+     1
+    ],
+    "struct SymbolDef": [
+     3
+    ],
+    "struct BPEDecoder": [
+     1
+    ],
+    "struct RewindArgs": [
+     1
+    ],
+    "struct McpServers": [
+     1
+    ],
+    "struct UseAwsRaw": [
+     7
+    ],
+    "struct AgentCrew": [
+     3
+    ],
+    "struct ToolChoice": [
+     1
+    ],
+    "struct PlanEntry": [
+     4
+    ],
+    "struct Range": [
+     2
+    ],
+    "struct Location": [
+     2
+    ],
+    "struct Position": [
+     2
+    ],
+    "struct Icon": [
+     4
+    ],
+    "struct Diagnostic": [
+     9
+    ],
+    "struct ServerInfo": [
+     2
+    ],
+    "struct SaveOptions": [
+     1
+    ],
+    "struct ModelHint": [
+     1
+    ],
+    "struct DocumentFilter": [
+     3
+    ],
+    "struct CodeDescription": [
+     1
+    ],
+    "struct InitializeResult": [
+     2,
+     5
+    ],
+    "struct ElicitResult": [
+     3
+    ],
+    "struct JsonRpcError": [
+     3
+    ],
+    "struct ServerCapabilities": [
+     7,
+     33
+    ],
+    "struct CompleteResult": [
+     3
+    ],
+    "struct CompletionInfo": [
+     3
+    ],
+    "struct DiscoverResult": [
+     7
+    ],
+    "struct Implementation": [
+     4,
+     6
+    ],
+    "struct GetPromptResult": [
+     4
+    ],
+    "struct ListToolsResult": [
+     6
+    ],
+    "struct SamplingMessage": [
+     3
+    ],
+    "struct ModelPreferences": [
+     4
+    ],
+    "struct Tool": [
+     2,
+     8
+    ],
+    "struct ListPromptsResult": [
+     6
+    ],
+    "struct ReadResourceResult": [
+     5
+    ],
+    "struct TextDocumentSyncOptions": [
+     5
+    ],
+    "struct ListResourcesResult": [
+     6
+    ],
+    "struct PublishDiagnosticsParams": [
+     3
+    ],
+    "struct Prompt": [
+     6
+    ],
+    "struct WorkspaceServerCapabilities": [
+     2
+    ],
+    "struct DiagnosticRelatedInformation": [
+     2
+    ],
+    "struct SubscriptionsListenResult": [
+     2
+    ],
+    "struct ListResourceTemplatesResult": [
+     6
+    ],
+    "struct ToolAnnotations": [
+     5
+    ],
+    "struct LogMessageParams": [
+     2
+    ],
+    "struct Resource": [
+     9
+    ],
+    "struct ShowMessageParams": [
+     2
+    ],
+    "struct TextContent": [
+     3
+    ],
+    "struct PromptMessage": [
+     2
+    ],
+    "struct AudioContent": [
+     4
+    ],
+    "struct ImageContent": [
+     4,
+     5
+    ],
+    "struct PromptArgument": [
+     4
+    ],
+    "struct Glob": [
+     4
+    ],
+    "struct Grep": [
+     9
+    ],
+    "struct Task": [
+     3,
+     5
+    ],
+    "struct ToolUseContent": [
+     4
+    ],
+    "struct StaticTextDocumentRegistrationOptions": [
+     2
+    ],
+    "struct CodeLensOptions": [
+     1
+    ],
+    "struct JsonRpcResponse": [
+     3
+    ],
+    "struct Annotations": [
+     3,
+     4
+    ],
+    "struct EmbeddedResource": [
+     3
+    ],
+    "struct ToolResultContent": [
+     5
+    ],
+    "struct variant GoalTool::Complete": [
+     1
+    ],
+    "struct ResourceTemplate": [
+     8
+    ],
+    "struct FsRead": [
+     1,
+     2
+    ],
+    "struct Summary": [
+     4
+    ],
+    "struct GetHoverParams": [
+     3
+    ],
+    "struct Insert": [
+     3
+    ],
+    "struct ResourceServerMetadata": [
+     4
+    ],
+    "struct ProjectMetadata": [
+     3
+    ],
+    "struct StandardErrorResponse": [
+     3
+    ],
+    "struct ToolsCapability": [
+     1
+    ],
+    "struct variant SessionTool::WaitForGroup": [
+     1
+    ],
+    "struct variant SessionTool::SpawnSession": [
+     7
+    ],
+    "struct variant SessionTool::ValidateAgents": [
+     1
+    ],
+    "struct variant SessionTool::Interrupt": [
+     2
+    ],
+    "struct variant SessionTool::GetSessionStatus": [
+     2
+    ],
+    "struct variant SessionTool::ReviveSession": [
+     2
+    ],
+    "struct variant SessionTool::CancelGroupStage": [
+     3
+    ],
+    "struct variant SessionTool::RegisterPendingStages": [
+     2
+    ],
+    "struct variant SessionTool::InjectContext": [
+     2
+    ],
+    "struct variant SessionTool::GroupLastActivity": [
+     1
+    ],
+    "struct PromptsCapability": [
+     1
+    ],
+    "struct RenameSymbolParams": [
+     5
+    ],
+    "struct FileCreate": [
+     2
+    ],
+    "struct StrReplace": [
+     4
+    ],
+    "struct WebFetch": [
+     3
+    ],
+    "struct OAuthConfig": [
+     5
+    ],
+    "struct LookupSymbolsParams": [
+     3
+    ],
+    "struct PatternSearchParams": [
+     5
+    ],
+    "struct SearchSymbolsParams": [
+     6
+    ],
+    "struct variant Knowledge::Add": [
+     2
+    ],
+    "struct variant Knowledge::Search": [
+     7
+    ],
+    "struct ResourcesCapability": [
+     2
+    ],
+    "struct Registration": [
+     4
+    ],
+    "struct FindReferencesParams": [
+     5
+    ],
+    "struct GetCodeActionsParams": [
+     6
+    ],
+    "struct GetCompletionsParams": [
+     7
+    ],
+    "struct GetDiagnosticsParams": [
+     1
+    ],
+    "struct GotoDefinitionParams": [
+     4
+    ],
+    "struct PatternRewriteParams": [
+     6
+    ],
+    "struct StaticTextDocumentColorProviderOptions": [
+     2
+    ],
+    "struct ApplyCodeActionParams": [
+     5
+    ],
+    "struct WebSearch": [
+     1
+    ],
+    "struct BM25DataPoint": [
+     3
+    ],
+    "struct LoopConfig": [
+     3
+    ],
+    "struct FileOperationPattern": [
+     3
+    ],
+    "struct SemanticTokensLegend": [
+     2
+    ],
+    "struct ConstTitle": [
+     2
+    ],
+    "struct CompletionOptionsCompletionItem": [
+     1
+    ],
+    "struct DocumentOnTypeFormattingOptions": [
+     2
+    ],
+    "struct TitledItems": [
+     1
+    ],
+    "struct GetDocumentSymbolsParams": [
+     2
+    ],
+    "struct FileOp": [
+     3
+    ],
+    "struct ToolSearch": [
+     3
+    ],
+    "struct variant ElicitRequestParamsWire::Url": [
+     4
+    ],
+    "struct variant ElicitRequestParamsWire::Form": [
+     3
+    ],
+    "struct NumberSchema": [
+     6
+    ],
+    "struct StringSchema": [
+     7
+    ],
+    "struct KnowledgeContext": [
+     12
+    ],
+    "struct PipelineStage": [
+     6
+    ],
+    "struct BooleanSchema": [
+     4
+    ],
+    "struct IntegerSchema": [
+     6
+    ],
+    "struct UntitledItems": [
+     2
+    ],
+    "struct ImageOp": [
+     1
+    ],
+    "struct Proxy": [
+     2
+    ],
+    "struct PendingStageSpec": [
+     6
+    ],
+    "struct LegacyEnumSchema": [
+     6
+    ],
+    "struct FileOperationPatternOptions": [
+     1
+    ],
+    "struct ElicitationSchema": [
+     5
+    ],
+    "struct variant TaskTool::Add": [
+     2
+    ],
+    "struct variant TaskTool::Create": [
+     2
+    ],
+    "struct variant TaskTool::Complete": [
+     3
+    ],
+    "struct variant TaskTool::Remove": [
+     2
+    ],
+    "struct variant ComplexResource::KnowledgeBase": [
+     7
+    ],
+    "struct FileOperationRegistrationOptions": [
+     1
+    ],
+    "struct ExecuteCmd": [
+     2
+    ],
+    "struct DirectoryOp": [
+     3
+    ],
+    "struct TitledMultiSelectEnumSchema": [
+     7
+    ],
+    "struct WorkspaceFoldersServerCapabilities": [
+     2
+    ],
+    "struct TitledSingleSelectEnumSchema": [
+     5
+    ],
+    "struct ProxyOptionalParam": [
+     2
+    ],
+    "struct UntitledMultiSelectEnumSchema": [
+     7
+    ],
+    "struct variant WireHookAction::Command": [
+     1
+    ],
+    "struct UntitledSingleSelectEnumSchema": [
+     5
+    ],
+    "struct WorkspaceFileOperationsServerCapabilities": [
+     6
+    ],
+    "struct WireHookDocument": [
+     8
+    ],
+    "struct SwitchToExecution": [
+     1
+    ],
+    "struct LocalMcpServerConfig": [
+     6
+    ],
+    "struct RemoteMcpServerConfig": [
+     8
+    ],
+    "struct RegistryMcpServerConfig": [
+     6
+    ],
+    "struct SwitchToExecutionResult": [
+     2
+    ],
+    "struct GroupResult": [
+     3
+    ],
+    "struct Helper": [
+     2,
+     4,
+     5
+    ],
+    "struct CancelResponse": [
+     1
+    ],
+    "struct StageActivityDto": [
+     2
+    ],
+    "struct Plan": [
+     2
+    ],
+    "struct Usage": [
+     6
+    ],
+    "struct Cost": [
+     2
+    ],
+    "struct AuthEnvVar": [
+     5
+    ],
+    "struct EnvVariable": [
+     3
+    ],
+    "struct SessionInfo": [
+     6
+    ],
+    "struct SessionMode": [
+     4
+    ],
+    "struct NesCapabilities": [
+     3
+    ],
+    "struct Diff": [
+     4
+    ],
+    "struct UsageUpdate": [
+     4
+    ],
+    "struct PromptResponse": [
+     4
+    ],
+    "struct ContentChunk": [
+     3
+    ],
+    "struct AuthMethodAgent": [
+     4
+    ],
+    "struct McpCapabilities": [
+     3
+    ],
+    "struct Content": [
+     2
+    ],
+    "struct AuthMethodEnvVar": [
+     6
+    ],
+    "struct SessionModeState": [
+     3
+    ],
+    "struct ResourceLink": [
+     8
+    ],
+    "struct NesEventCapabilities": [
+     2
+    ],
+    "struct Terminal": [
+     2
+    ],
+    "struct ToolCall": [
+     9
+    ],
+    "struct AgentCapabilities": [
+     8
+    ],
+    "struct SessionModelState": [
+     3
+    ],
+    "struct AuthMethodTerminal": [
+     6
+    ],
+    "struct InitializeResponse": [
+     5
+    ],
+    "struct LogoutCapabilities": [
+     1
+    ],
+    "struct NewSessionResponse": [
+     5
+    ],
+    "struct PromptCapabilities": [
+     4
+    ],
+    "struct AvailableCommand": [
+     4
+    ],
+    "struct PermissionOption": [
+     4
+    ],
+    "struct NesContextCapabilities": [
+     7
+    ],
+    "struct LoadSessionResponse": [
+     4
+    ],
+    "struct SessionCapabilities": [
+     6
+    ],
+    "struct CurrentModeUpdate": [
+     2
+    ],
+    "struct SessionInfoUpdate": [
+     3
+    ],
+    "struct ListSessionsResponse": [
+     3
+    ],
+    "struct ConfigOptionUpdate": [
+     2
+    ],
+    "struct NesOpenFilesCapabilities": [
+     1
+    ],
+    "struct AgentAuthCapabilities": [
+     2
+    ],
+    "struct KillTerminalRequest": [
+     3
+    ],
+    "struct ReadTextFileRequest": [
+     5
+    ],
+    "struct SessionNotification": [
+     3
+    ],
+    "struct SetSessionModeResponse": [
+     1
+    ],
+    "struct NesDiagnosticsCapabilities": [
+     1
+    ],
+    "struct NesRecentFilesCapabilities": [
+     2
+    ],
+    "struct NesUserActionsCapabilities": [
+     2
+    ],
+    "struct SessionForkCapabilities": [
+     1
+    ],
+    "struct SetSessionModelResponse": [
+     1
+    ],
+    "struct CreateTerminalRequest": [
+     7
+    ],
+    "struct TerminalOutputRequest": [
+     3
+    ],
+    "struct SessionCloseCapabilities": [
+     1
+    ],
+    "struct SessionConfigSelectGroup": [
+     4
+    ],
+    "struct ReleaseTerminalRequest": [
+     3
+    ],
+    "struct BlobResourceContents": [
+     4
+    ],
+    "struct TextResourceContents": [
+     4
+    ],
+    "struct NesDocumentEventCapabilities": [
+     6
+    ],
+    "struct ToolCallLocation": [
+     3
+    ],
+    "struct SessionConfigSelectOption": [
+     4
+    ],
+    "struct SessionResumeCapabilities": [
+     1
+    ],
+    "struct AvailableCommandsUpdate": [
+     2
+    ],
+    "struct RequestPermissionRequest": [
+     4
+    ],
+    "struct UnstructuredCommandInput": [
+     2
+    ],
+    "struct NesDocumentDidOpenCapabilities": [
+     1
+    ],
+    "struct NesRelatedSnippetsCapabilities": [
+     1
+    ],
+    "struct NesDocumentDidCloseCapabilities": [
+     1
+    ],
+    "struct WaitForTerminalExitRequest": [
+     3
+    ],
+    "struct NesDocumentDidChangeCapabilities": [
+     2
+    ],
+    "struct SetSessionConfigOptionResponse": [
+     2
+    ],
+    "struct SessionAdditionalDirectoriesCapabilities": [
+     1
+    ],
+    "struct Error": [
+     3
+    ],
+    "struct Feed": [
+     1
+    ],
+    "struct Entry": [
+     5
+    ],
+    "struct Change": [
+     2
+    ],
+    "struct KasMcpStatus": [
+     2
+    ],
+    "struct Agent": [
+     15
+    ],
+    "struct Request": [
+     5
+    ],
+    "struct AuthProfile": [
+     3
+    ],
+    "struct McpStartupStatus": [
+     3
+    ],
+    "struct FeatureRollout": [
+     4
+    ],
+    "struct Response": [
+     5
+    ],
+    "struct KasMcpServerStatus": [
+     3
+    ],
+    "struct CredentialsJson": [
+     4
+    ],
+    "struct AgentNotFoundParams": [
+     4
+    ],
+    "struct RejectedAgentConfig": [
+     3
+    ],
+    "struct Argument": [
+     2
+    ],
+    "struct TurnMarker": [
+     8
+    ],
+    "struct Transport": [
+     1
+    ],
+    "struct HttpHeader": [
+     2,
+     3
+    ],
+    "struct SocialToken": [
+     6
+    ],
+    "struct Hook": [
+     6
+    ],
+    "struct TokenResponse": [
+     3,
+     4
+    ],
+    "struct PackageConfig": [
+     7
+    ],
+    "struct McsSession": [
+     2
+    ],
+    "struct CachedRegistry": [
+     3
+    ],
+    "struct ToolSpec": [
+     3,
+     4
+    ],
+    "struct SandboxFileConfig": [
+     3
+    ],
+    "struct EnvState": [
+     3
+    ],
+    "struct DevicePollResponse": [
+     6
+    ],
+    "struct RemoteServerConfig": [
+     3
+    ],
+    "struct EnvironmentVariable": [
+     2
+    ],
+    "struct McpRegistryResponse": [
+     1
+    ],
+    "struct McpServerDefinition": [
+     6
+    ],
+    "struct ImageBlock": [
+     2
+    ],
+    "struct BuilderIdToken": [
+     8
+    ],
+    "struct variant WireHookAction::Agent": [
+     1
+    ],
+    "struct McpRegistryServerEntry": [
+     1
+    ],
+    "struct UserMessage": [
+     5
+    ],
+    "struct ToolInputSchema": [
+     1
+    ],
+    "struct OidcDiscovery": [
+     3
+    ],
+    "struct ToolUseResult": [
+     3
+    ],
+    "struct RequestMetadata": [
+     20
+    ],
+    "struct RawIncomingMessage": [
+     5
+    ],
+    "struct DeviceRegistration": [
+     6
+    ],
+    "struct ContextManager": [
+     4
+    ],
+    "struct UserEnvContext": [
+     1
+    ],
+    "struct ToolSpecification": [
+     3
+    ],
+    "struct DeviceAuthorizationResponse": [
+     6
+    ],
+    "struct FileOperationFilter": [
+     2
+    ],
+    "struct RawValidationError": [
+     2
+    ],
+    "struct ExternalIdpToken": [
+     8
+    ],
+    "struct AssistantToolUse": [
+     5
+    ],
+    "struct variant TodoList::Complete": [
+     4
+    ],
+    "struct variant TodoList::Add": [
+     4
+    ],
+    "struct variant TodoList::Remove": [
+     3
+    ],
+    "struct variant TodoList::Create": [
+     2
+    ],
+    "struct variant TodoList::Load": [
+     1
+    ],
+    "struct RefusalInfo": [
+     3
+    ],
+    "struct ArtifactEntry": [
+     10
+    ],
+    "struct FsLine": [
+     3
+    ],
+    "struct FsImage": [
+     1
+    ],
+    "struct Session": [
+     3
+    ],
+    "struct TodoListState": [
+     6
+    ],
+    "struct VersionManifest": [
+     2
+    ],
+    "struct HistoryEntry": [
+     3
+    ],
+    "struct FsSearch": [
+     3
+    ],
+    "struct SessionInfoEntry": [
+     7
+    ],
+    "struct variant FsWrite::Insert": [
+     4
+    ],
+    "struct variant FsWrite::Create": [
+     4
+    ],
+    "struct variant FsWrite::StrReplace": [
+     4
+    ],
+    "struct variant FsWrite::Append": [
+     3
+    ],
+    "struct GhIssue": [
+     4
+    ],
+    "struct ReasoningContentForHistory": [
+     5
+    ],
+    "struct LegacyHook": [
+     7
+    ],
+    "struct Delegate": [
+     3
+    ],
+    "struct Thinking": [
+     1
+    ],
+    "struct FileLineTracker": [
+     6
+    ],
+    "struct FsDirectory": [
+     5
+    ],
+    "struct SettingInfo": [
+     4
+    ],
+    "struct McpServerSse": [
+     4
+    ],
+    "struct UserTurnMetadata": [
+     3,
+     20
+    ],
+    "struct ProcessHealthPayload": [
+     20
+    ],
+    "struct McpServerHttp": [
+     4
+    ],
+    "struct PromptRequest": [
+     4
+    ],
+    "struct ConversationState": [
+     21
+    ],
+    "struct MeteringUsageInfo": [
+     3
+    ],
+    "struct McpServerStdio": [
+     5
+    ],
+    "struct ExecuteCommand": [
+     3
+    ],
+    "struct NesJumpCapabilities": [
+     1
+    ],
+    "struct SessionResponse": [
+     6
+    ],
+    "struct KnowledgeAdd": [
+     2
+    ],
+    "struct InitializeRequest": [
+     4
+    ],
+    "struct NewSessionRequest": [
+     4
+    ],
+    "struct ClientNesCapabilities": [
+     4
+    ],
+    "struct NesRenameCapabilities": [
+     1
+    ],
+    "struct UiModeChangedNotification": [
+     4
+    ],
+    "struct CancelNotification": [
+     2
+    ],
+    "struct LoadSessionRequest": [
+     5
+    ],
+    "struct AuthCapabilities": [
+     2
+    ],
+    "struct ConversationCheckpoint": [
+     5
+    ],
+    "struct KnowledgeClear": [
+     1
+    ],
+    "struct KnowledgeCancel": [
+     1
+    ],
+    "struct KnowledgeSearch": [
+     7
+    ],
+    "struct ClientCapabilities": [
+     7
+    ],
+    "struct SetSessionModeRequest": [
+     3
+    ],
+    "struct SetSessionModelRequest": [
+     3
+    ],
+    "struct UiModeSessionStartNotification": [
+     4
+    ],
+    "struct FileSystemCapabilities": [
+     3
+    ],
+    "struct CustomToolConfig": [
+     11
+    ],
+    "struct InvokeSubagent": [
+     5
+    ],
+    "struct UiModeDefaultChangedNotification": [
+     3
+    ],
+    "struct NesSearchAndReplaceCapabilities": [
+     1
+    ],
+    "struct EndpointOverride": [
+     2
+    ],
+    "struct ElicitationCapabilities": [
+     3
+    ],
+    "struct ElicitationUrlCapabilities": [
+     1
+    ],
+    "struct SwitchResponse": [
+     3
+    ],
+    "struct ElicitationFormCapabilities": [
+     1
+    ],
+    "struct variant AssistantMessage::ToolUse": [
+     4
+    ],
+    "struct variant AssistantMessage::Response": [
+     3
+    ],
+    "struct variant UserMessageContent::Prompt": [
+     1
+    ],
+    "struct variant UserMessageContent::ToolUseResults": [
+     1
+    ],
+    "struct SubagentExecutionSummary": [
+     3
+    ],
+    "struct AgentId": [
+     3
+    ],
+    "struct GoalDefinition": [
+     2
+    ],
+    "struct LastContextUsage": [
+     2
+    ],
+    "struct TrustOption": [
+     4
+    ],
+    "struct McpTool": [
+     4
+    ],
+    "struct ToolResult": [
+     2
+    ],
+    "struct CompactStrategy": [
+     4
+    ],
+    "struct ToolExecutionOutput": [
+     1
+    ],
+    "struct ConversationMetadata": [
+     4
+    ],
+    "struct AgentLoopId": [
+     2
+    ],
+    "struct InvalidToolUse": [
+     3
+    ],
+    "struct RtsStateSnapshot": [
+     4
+    ],
+    "struct SessionData": [
+     10
+    ],
+    "struct SessionLock": [
+     2
+    ],
+    "struct variant SessionTool::CancelGroup": [
+     1
+    ],
+    "struct variant SessionTool::ManageGroup": [
+     4
+    ],
+    "struct RuntimePermissions": [
+     4
+    ],
+    "struct SessionStateV1": [
+     5
+    ],
+    "struct Message": [
+     4
+    ],
+    "struct SessionDataView": [
+     8
+    ],
+    "struct FileSystemPermissions": [
+     4
+    ],
+    "struct variant TestCommand::GetCapturedRequests": [
+     1
+    ],
+    "struct variant TestCommand::PushSendMessageResponse": [
+     2
+    ],
+    "struct variant TestCommand::SetModelListFailure": [
+     1
+    ],
+    "struct StreamError": [
+     4
+    ],
+    "struct ToolUseBlock": [
+     3
+    ],
+    "struct ThinkingBlock": [
+     5
+    ],
+    "struct ToolResultBlock": [
+     3
+    ],
+    "struct GoalIterationResult": [
+     3
+    ],
+    "struct ChatArgs": [
+     1
+    ],
+    "struct PlanArgs": [
+     1
+    ],
+    "struct TestMessageCommand": [
+     3
+    ],
+    "struct AgentArgs": [
+     1
+    ],
+    "struct ModelArgs": [
+     1
+    ],
+    "struct ConverseStreamError": [
+     3
+    ],
+    "struct MessageSendRequest": [
+     2
+    ],
+    "struct SettingsSetRequest": [
+     2
+    ],
+    "struct CompactArgs": [
+     1
+    ],
+    "struct PromptsArgs": [
+     1
+    ],
+    "struct ListSessionsRequest": [
+     2
+    ],
+    "struct SessionSpawnRequest": [
+     5
+    ],
+    "struct SessionSteerRequest": [
+     2
+    ],
+    "struct FallbackArgs": [
+     2
+    ],
+    "struct FeedbackArgs": [
+     1
+    ],
+    "struct SendRequestArgs": [
+     4
+    ],
+    "struct KnowledgeArgs": [
+     1
+    ],
+    "struct ReasoningArgs": [
+     4
+    ],
+    "struct CommandExecuteRequest": [
+     2
+    ],
+    "struct CommandOptionsRequest": [
+     3
+    ],
+    "struct KiroV1": [
+     2
+    ],
+    "struct McpStartupStatusRequest": [
+     1
+    ],
+    "struct TerminateSessionRequest": [
+     1
+    ],
+    "struct DeleteSessionResponse": [
+     1
+    ],
+    "struct SessionSteerClearRequest": [
+     1
+    ],
+    "struct LegacyLs": [
+     3
+    ],
+    "struct LegacyTool": [
+     2
+    ],
+    "struct LegacyFsRead": [
+     1
+    ],
+    "struct AdditionalModelFields": [
+     2
+    ],
+    "struct LegacyImageRead": [
+     1
+    ],
+    "struct variant GoalState::Exhausted": [
+     1
+    ],
+    "struct variant CanonicalToolName::Mcp": [
+     2
+    ],
+    "struct variant CanonicalToolName::Agent": [
+     1
+    ],
+    "struct variant ConverseStreamErrorKind::InvalidModelId": [
+     1
+    ],
+    "struct SwitchResult": [
+     2
+    ],
+    "struct Command": [
+     3
+    ],
+    "struct TextEdit": [
+     2
+    ],
+    "struct CreateFile": [
+     3
+    ],
+    "struct DeleteFile": [
+     2
+    ],
+    "struct RenameFile": [
+     4
+    ],
+    "struct LocationLink": [
+     4
+    ],
+    "struct MarkupContent": [
+     2
+    ],
+    "struct WorkspaceEdit": [
+     3
+    ],
+    "struct LanguageString": [
+     2
+    ],
+    "struct ChangeAnnotation": [
+     3
+    ],
+    "struct TextDocumentEdit": [
+     2
+    ],
+    "struct CreateFileOptions": [
+     2
+    ],
+    "struct DeleteFileOptions": [
+     3
+    ],
+    "struct RenameFileOptions": [
+     2
+    ],
+    "struct Hover": [
+     2
+    ],
+    "struct CodeAction": [
+     8
+    ],
+    "struct CompletionItem": [
+     18
+    ],
+    "struct CompletionList": [
+     2
+    ],
+    "struct OptionalVersionedTextDocumentIdentifier": [
+     2
+    ],
+    "struct InsertReplaceEdit": [
+     3
+    ],
+    "struct CodeActionDisabled": [
+     1
+    ],
+    "struct DocumentSymbol": [
+     8
+    ],
+    "struct SymbolInformation": [
+     6
+    ],
+    "struct WorkspaceSymbol": [
+     6
+    ],
+    "struct WorkspaceLocation": [
+     1
+    ],
+    "struct CallDef": [
+     1
+    ],
+    "struct ImportDef": [
+     1
+    ],
+    "struct LanguageDef": [
+     4
+    ],
+    "struct LanguageConfig": [
+     10
+    ],
+    "struct LanguagesConfig": [
+     1
+    ],
+    "struct FullDocumentDiagnosticReport": [
+     2
+    ],
+    "struct UnchangedDocumentDiagnosticReport": [
+     1
+    ],
+    "struct ReceiptData": [
+     10
+    ],
+    "struct NesDocumentDidSaveCapabilities": [
+     1
+    ],
+    "struct RequestPermissionResponse": [
+     2
+    ],
+    "struct SelectedPermissionOutcome": [
+     2
+    ],
+    "struct TensorInfo": [
+     3
+    ],
+    "struct PrecompiledDeserializer": [
+     1
+    ],
+    "struct Fuse": [
+     1
+    ],
+    "struct Strip": [
+     2
+    ],
+    "struct PaddingParams": [
+     6
+    ],
+    "struct Sequence": [
+     1
+    ],
+    "struct BertProcessing": [
+     2
+    ],
+    "struct Prepend": [
+     1
+    ],
+    "struct NFCHelper": [
+     1
+    ],
+    "struct NmtHelper": [
+     1
+    ],
+    "struct TruncationParams": [
+     4
+    ],
+    "struct LowercaseHelper": [
+     1
+    ],
+    "struct SpecialToken": [
+     3
+    ],
+    "struct StripAccentsHelper": [
+     1
+    ],
+    "struct ByteFallback": [
+     1
+    ],
+    "struct ByteLevelHelper": [
+     1
+    ],
+    "struct WhitespaceHelper": [
+     1
+    ],
+    "struct TemplateProcessingDeserializer": [
+     3
+    ],
+    "struct WhitespaceSplitHelper": [
+     1
+    ],
+    "struct variant Piece::SpecialToken": [
+     2
+    ],
+    "struct variant Piece::Sequence": [
+     2
+    ],
+    "struct UnicodeScriptsHelper": [
+     1
+    ],
+    "struct SplitHelper": [
+     4
+    ],
+    "struct MetaspaceHelper": [
+     6
+    ],
+    "struct ScopeStack": [
+     2
+    ],
+    "struct Theme": [
+     4
+    ],
+    "struct StyleModifier": [
+     3
+    ],
+    "struct ThemeSettings": [
+     30
+    ],
+    "struct ScopeSelector": [
+     2
+    ],
+    "struct Context": [
+     7
+    ],
+    "struct MatchPattern": [
+     6
+    ],
+    "struct variant ContextReference::ByScope": [
+     3
+    ],
+    "struct variant ContextReference::File": [
+     3
+    ]
+   },
+   "tagged": [
+    "adjacently tagged enum ChatResponseStreamstruct",
+    "adjacently tagged enum ContentBlockstruct",
+    "adjacently tagged enum ImageSourcestruct",
+    "adjacently tagged enum LogEntryV1struct",
+    "adjacently tagged enum MockStreamItemGetCredentialsForIdentityGetIdstruct",
+    "adjacently tagged enum StreamErrorKindstruct",
+    "adjacently tagged enum ToolResultContentBlockstruct",
+    "adjacently tagged enum TuiCommandstruct",
+    "adjacently tagged enum UseSubagentUseSubagentListAgentsInvokeSubagentsstruct",
+    "internally tagged enum CodeFile",
+    "internally tagged enum CodeGetHoverParamsInitializeWorkspaceinternally",
+    "internally tagged enum CodeSearchSymbolsParamsFindReferencesParamsGotoDefinitionParamsRenameSymbolParamsGetDocumentSymbolsParamsLookupSymbolsParamsGetDiagnosticsParamsGetHoverParamsGetCompletionsParamsGetCodeActionsParamsApplyCodeActionParamsInitializeWorkspacePatternSearchParamsPatternRewriteParamsGenerateCodebaseOverviewParamsSearchCodebaseMapParamsRenamedWould",
+    "internally tagged enum ComplexResourceSkillComplexweb",
+    "internally tagged enum ComplexResourceaskdetailattributeconvertedregex",
+    "internally tagged enum ComplexResourcecontextWindowrateMultiplierShow",
+    "internally tagged enum ContentBlockTextResourceContentsBlobResourceContentsdata",
+    "internally tagged enum ContentBlockdata",
+    "internally tagged enum ExportFormatevent",
+    "internally tagged enum FsReadOperationFileOpDirectoryOpImageOpFsReadFailed",
+    "internally tagged enum FsReadOperationfrom",
+    "internally tagged enum FsWriteFileCreateStatusAgentIdConversationMetadataCompactStrategyinternally",
+    "internally tagged enum FsWriteFileCreateStrReplaceInsertSuccessfully",
+    "internally tagged enum FsWriteevent",
+    "internally tagged enum GoalTool",
+    "internally tagged enum Knowledge",
+    "internally tagged enum McpServerpinned",
+    "internally tagged enum RequestPermissionOutcomeCancelledlastModifiedContentBlockImageAudioResourceLinkresource",
+    "internally tagged enum SessionStateevent",
+    "internally tagged enum SessionTool",
+    "internally tagged enum SessionToolResponse",
+    "internally tagged enum TaskToolTaskInputFsReadOperationinternally",
+    "internally tagged enum TaskToolTaskInputNo",
+    "internally tagged enum TestCommandTestCommandGetCapturedTelemetryEventsGetModelListCallCountPUSH",
+    "internally tagged enum TodoListTime",
+    "untagged enum AgentConfigGlobSettingsGrepSettingsToolsSettingsFsReadSettingsUseAwsSettingsinternally",
+    "untagged enum AgentConfigHookTriggerInputSchemaGlobSettingsGrepSettingsToolsSettingsFsReadSettingsUseAwsSettingsinternally",
+    "untagged enum AuthMethodinternally",
+    "untagged enum AvailableCommandInputinternally",
+    "untagged enum CallHierarchyServerCapabilitydata",
+    "untagged enum CodeActionOrCommandcodeActionLiteralSupportisPreferredSupportdisabledSupportdataSupporthonorsChangeAnnotationsCodeActionKindLiteralSupportdata",
+    "untagged enum CodeActionProviderCapabilityCodeActionCapabilityResolveSupportdata",
+    "untagged enum ColorProviderCapabilitycontentFormatdata",
+    "untagged enum ColorProviderCapabilitydata",
+    "untagged enum CompletionResponsedata",
+    "untagged enum CompletionTextEdittabSizeinsertSpacestrimTrailingWhitespaceinsertFinalNewlinetrimFinalNewlinesdata",
+    "untagged enum DeclarationCapabilitydata",
+    "untagged enum DeclarationCapabilityregularExpressionsstaleRequestSupportMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DeclarationCapabilityregularExpressionsstaleRequestSupportpositionEncodingsMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DecoderHelperdata",
+    "untagged enum DecoderUntaggedinternal",
+    "untagged enum DiagnosticServerCapabilitiesdata",
+    "untagged enum DiagnosticServerCapabilitiesinternally",
+    "untagged enum DocumentChangeOperationregularExpressionsstaleRequestSupportpositionEncodingsMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DocumentChangesprocessIdinitializationOptionslocalelanguageIddata",
+    "untagged enum DocumentSymbolResponsehierarchicalDocumentSymbolSupportWorkspaceSymbolClientCapabilitiesWorkspaceSymbolResolveSupportCapabilityinternally",
+    "untagged enum DocumentationlinkSupportdata",
+    "untagged enum ElicitRequestParamsWireinternally",
+    "untagged enum EmbeddedResourceResourceProtocolVersionoldTextnewTextContenttoolCallIdlocationsrawOutputexecutethinkfetchswitch",
+    "untagged enum EmbeddedResourceResourceinternally",
+    "untagged enum EnumSchemaTitledItemsNumberSchemaStringSchemaBooleanSchemaIntegerSchemaUntitledItemsTitledStringNumberIntegerBooleanTitledMultiSelectEnumSchemaTitledSingleSelectEnumSchemaUntitledMultiSelectEnumSchemadata",
+    "untagged enum EnumSchemaTitledItemsUntitledItemsElicitationSchemaUntitledMultiSelectEnumSchemaTitledMultiSelectEnumSchemadata",
+    "untagged enum EnumSchemaTitledItemsUntitledItemsUntitledMultiSelectEnumSchemaTitledMultiSelectEnumSchemadata",
+    "untagged enum FoldingRangeProviderCapabilitydata",
+    "untagged enum GotoDefinitionResponsedata",
+    "untagged enum HookConfigExecuteCmdSettingsLocalMcpServerConfigRemoteMcpServerConfiginternally",
+    "untagged enum HookConfigInputSchemadata",
+    "untagged enum HookConfigdata",
+    "untagged enum HoverContentscontentFormatdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviorMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiesShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviorMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiessupportShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviornewNameMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiessupportShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum Iddata",
+    "untagged enum ImplementationProviderCapabilitydata",
+    "untagged enum InlayHintServerCapabilitiesrefreshSupportcodeActionLiteralSupportisPreferredSupportdisabledSupportdataSupporthonorsChangeAnnotationsCodeActionKindLiteralSupportdata",
+    "untagged enum InlayHintServerCapabilitiesrefreshSupportincludeDeclarationCommanddata",
+    "untagged enum InlineValueServerCapabilitiestooltipSupportFoldingRangeCapabilitycollapsedTextFoldingRangeKindCapabilityrangeLimitlineFoldingOnlydata",
+    "untagged enum InlineValueServerCapabilitiestooltipSupportFoldingRangeCapabilitycollapsedTextrangeLimitlineFoldingOnlydata",
+    "untagged enum InputRequestToolAnnotations",
+    "untagged enum InputRequestToolAnnotationsPromptMessagePromptArgumentContentBlockResourceLinkinternally",
+    "untagged enum InputRequestToolAnnotationsPromptMessagePromptArgumentdata",
+    "untagged enum JsonRpcMessageErrorCodeErrorDataModelHintref",
+    "untagged enum JsonRpcMessageSubscriptionsAcknowledgedNotificationParamsErrorDataReferenceref",
+    "untagged enum LinkedEditingRangeServerCapabilitiesParameterInformationSettingslabelOffsetSupportSignatureInformationSettingsparameterInformationactiveParameterSupportsignatureInformationdata",
+    "untagged enum MarkedStringdata",
+    "untagged enum McpServerConfigAgentCrewSettingsExecuteCmdSettingsfailed",
+    "untagged enum McpServerConfigAgentSpawnPreToolUsePostToolUse",
+    "untagged enum McpServerMcpServerHttpMcpServerSsemax",
+    "untagged enum MergeTypehttps",
+    "untagged enum MessageErrorIddata",
+    "untagged enum ModelHelperdata",
+    "untagged enum ModelUntaggedentering",
+    "untagged enum MonikerServerCapabilitiesFailed",
+    "untagged enum MonikerServerCapabilitiesLazy",
+    "untagged enum MonikerServerCapabilitiesworkDoneToken",
+    "untagged enum MultiSelectEnumSchemaTitledSingleSelectEnumSchemadata",
+    "untagged enum MultiSelectEnumSchemadata",
+    "untagged enum NormalizerHelperdata",
+    "untagged enum NormalizerUntaggedMissing",
+    "untagged enum NumberOrStringdata",
+    "untagged enum NumberOrStringprocessIdinitializationOptionslocaledata",
+    "untagged enum NumberOrStringprocessIdinitializationOptionslocalelanguageIddata",
+    "untagged enum OneOftextOnlyTransactionalTagSupportdata",
+    "untagged enum OneOftextOnlyTransactionalpartialResultTokenTagSupportdata",
+    "untagged enum ParamsInvalid",
+    "untagged enum Paramsmissing",
+    "untagged enum PostProcessorWrapperprocessorsABSpecialTokenididstokenssinglespecial",
+    "untagged enum PreTokenizerHelperdata",
+    "untagged enum PreTokenizerUntaggedadd",
+    "untagged enum PrimitiveSchemaDefinitionLoggingMessageNotificationParamJsonRpcResponseJsonRpcErrordata",
+    "untagged enum PrimitiveSchemaDefinitionLoggingMessageNotificationParamJsonRpcResponsedata",
+    "untagged enum PrimitiveSchemaDefinitionSingleMultiLegacyLoggingMessageNotificationParamSubscriptionsAcknowledgedNotificationParamsJsonRpcResponseJsonRpcErrordata",
+    "untagged enum Reprforce",
+    "untagged enum Reprthe",
+    "untagged enum RequestIdin",
+    "untagged enum ResourceContentselicitation",
+    "untagged enum ResourceContentsio",
+    "untagged enum ResourceContentsroots",
+    "untagged enum SamplingContentImageAudioToolUseToolResultinternally",
+    "untagged enum SamplingContentProgressNotificationParamReadResourceRequestParamsResourceTemplateReferenceSubscriptionsListenResultCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockAudioToolUseToolResultListResourceTemplatesResultinternally",
+    "untagged enum SamplingContentProgressNotificationParamReadResourceRequestParamsResourceTemplateReferenceSubscriptionsListenResultCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockToolResultListResourceTemplatesResultinternally",
+    "untagged enum SelectionRangeProviderCapabilitySemanticTokensFullOptionsdata",
+    "untagged enum SemanticTokensFullOptionsoverlappingTokenSupportmultilineTokenSupportserverCancelSupportaugmentsSyntaxTokensdata",
+    "untagged enum SemanticTokensServerCapabilitiesdata",
+    "untagged enum SemanticTokensServerCapabilitieshierarchicalDocumentSymbolSupportWorkspaceSymbolClientCapabilitiesWorkspaceSymbolResolveSupportCapabilityrelatedDocumentSupportdata",
+    "untagged enum ServerNotificationCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockNotificationNoParamTaskStatusNotificationParamsdata",
+    "untagged enum ServerNotificationListResourcesResultCallToolRequestParamsCompleteRequestParamsrefDiscoverRequestParamsSetLevelRequestParamsGetPromptRequestParamsPaginatedRequestParamsSubscribeRequestParamsInitializeRequestParamsdata",
+    "untagged enum ServerNotificationstopReasonListResourcesResultCallToolRequestParamsCompleteRequestParamsrefDiscoverRequestParamsSetLevelRequestParamsGetPromptRequestParamsPaginatedRequestParamscursorSubscribeRequestParamsInitializeRequestParamsdata",
+    "untagged enum ServerRequestCompletionInfoListRootsResultPromptReferenceSamplingMessageGetPromptResultListToolsResultCompletionContextListPromptsResultSubscriptionFilterReadResourceResultdata",
+    "untagged enum ServerRequestImplementationCompletionInfoListRootsResultPromptReferenceSamplingMessageGetPromptResultListToolsResultCompletionContextListPromptsResultSubscriptionFilterReadResourceResultdata",
+    "untagged enum ServerRequestcursorRequestNoParamNotificationProgressNotificationParamdata",
+    "untagged enum ServerResultGetTaskParamsdata",
+    "untagged enum ServerResultRequestdata",
+    "untagged enum SessionConfigOptionCategorySessionAdditionalDirectoriesCapabilitiessession",
+    "untagged enum SessionConfigOptionCategorysessionUpdateinternally",
+    "untagged enum SessionConfigSelectOptionsdata",
+    "untagged enum SingleSelectEnumSchemaStringSchemaNumberSchemaIntegerSchemaBooleanSchemadata",
+    "untagged enum SingleSelectEnumSchemadata",
+    "untagged enum TextDocumentSyncCapabilityapplyEditdidChangeConfigurationdidChangeWatchedFilesexecuteCommandconfigurationinlineValuedata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationdefinitiontypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyWorkspaceEditClientCapabilitiesdocumentChangesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationdefinitiontypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyrangeLengthWorkspaceEditClientCapabilitiesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationtypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyWorkspaceEditClientCapabilitiesdocumentChangesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesengineStaleRequestSupportClientCapabilitiescancelretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabelResourceOpinternally",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesengineStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata"
+   ]
+  },
+  "/home/dwalleck/.local/share/kiro-research/binaries/2.29.1/extracted/kirocli/bin/kiro-cli-chat": {
+   "shapes": {
+    "struct NFKDHelper": [
+     1
+    ],
+    "struct DataPoint": [
+     3
+    ],
+    "struct ModelInfo": [
+     4,
+     6,
+     7
+    ],
+    "struct WordPiece": [
+     2
+    ],
+    "struct NFKCHelper": [
+     1
+    ],
+    "struct ErrorData": [
+     3
+    ],
+    "struct TaskInput": [
+     2
+    ],
+    "struct EffortArgs": [
+     1
+    ],
+    "struct SymbolDef": [
+     3
+    ],
+    "struct BPEDecoder": [
+     1
+    ],
+    "struct RewindArgs": [
+     1
+    ],
+    "struct McpServers": [
+     1
+    ],
+    "struct UseAwsRaw": [
+     7
+    ],
+    "struct AgentCrew": [
+     3
+    ],
+    "struct ToolChoice": [
+     1
+    ],
+    "struct PlanEntry": [
+     4
+    ],
+    "struct Range": [
+     2
+    ],
+    "struct Location": [
+     2
+    ],
+    "struct Position": [
+     2
+    ],
+    "struct Icon": [
+     4
+    ],
+    "struct Diagnostic": [
+     9
+    ],
+    "struct ServerInfo": [
+     2
+    ],
+    "struct SaveOptions": [
+     1
+    ],
+    "struct ModelHint": [
+     1
+    ],
+    "struct DocumentFilter": [
+     3
+    ],
+    "struct CodeDescription": [
+     1
+    ],
+    "struct InitializeResult": [
+     2,
+     5
+    ],
+    "struct ElicitResult": [
+     3
+    ],
+    "struct JsonRpcError": [
+     3
+    ],
+    "struct ServerCapabilities": [
+     7,
+     33
+    ],
+    "struct CompleteResult": [
+     3
+    ],
+    "struct CompletionInfo": [
+     3
+    ],
+    "struct DiscoverResult": [
+     7
+    ],
+    "struct Implementation": [
+     4,
+     6
+    ],
+    "struct GetPromptResult": [
+     4
+    ],
+    "struct ListToolsResult": [
+     6
+    ],
+    "struct SamplingMessage": [
+     3
+    ],
+    "struct ModelPreferences": [
+     4
+    ],
+    "struct Tool": [
+     2,
+     8
+    ],
+    "struct ListPromptsResult": [
+     6
+    ],
+    "struct ReadResourceResult": [
+     5
+    ],
+    "struct TextDocumentSyncOptions": [
+     5
+    ],
+    "struct ListResourcesResult": [
+     6
+    ],
+    "struct PublishDiagnosticsParams": [
+     3
+    ],
+    "struct Prompt": [
+     6
+    ],
+    "struct WorkspaceServerCapabilities": [
+     2
+    ],
+    "struct DiagnosticRelatedInformation": [
+     2
+    ],
+    "struct SubscriptionsListenResult": [
+     2
+    ],
+    "struct ListResourceTemplatesResult": [
+     6
+    ],
+    "struct ToolAnnotations": [
+     5
+    ],
+    "struct LogMessageParams": [
+     2
+    ],
+    "struct Resource": [
+     9
+    ],
+    "struct ShowMessageParams": [
+     2
+    ],
+    "struct TextContent": [
+     3
+    ],
+    "struct PromptMessage": [
+     2
+    ],
+    "struct AudioContent": [
+     4
+    ],
+    "struct ImageContent": [
+     4,
+     5
+    ],
+    "struct PromptArgument": [
+     4
+    ],
+    "struct Glob": [
+     4
+    ],
+    "struct Grep": [
+     9
+    ],
+    "struct Task": [
+     3,
+     5
+    ],
+    "struct ToolUseContent": [
+     4
+    ],
+    "struct StaticTextDocumentRegistrationOptions": [
+     2
+    ],
+    "struct CodeLensOptions": [
+     1
+    ],
+    "struct JsonRpcResponse": [
+     3
+    ],
+    "struct Annotations": [
+     3,
+     4
+    ],
+    "struct EmbeddedResource": [
+     3
+    ],
+    "struct ToolResultContent": [
+     5
+    ],
+    "struct variant GoalTool::Complete": [
+     1
+    ],
+    "struct ResourceTemplate": [
+     8
+    ],
+    "struct FsRead": [
+     1,
+     2
+    ],
+    "struct Summary": [
+     4
+    ],
+    "struct GetHoverParams": [
+     3
+    ],
+    "struct Insert": [
+     3
+    ],
+    "struct ResourceServerMetadata": [
+     4
+    ],
+    "struct ProjectMetadata": [
+     3
+    ],
+    "struct StandardErrorResponse": [
+     3
+    ],
+    "struct ToolsCapability": [
+     1
+    ],
+    "struct variant SessionTool::InjectContext": [
+     2
+    ],
+    "struct variant SessionTool::GroupLastActivity": [
+     1
+    ],
+    "struct variant SessionTool::ValidateAgents": [
+     1
+    ],
+    "struct variant SessionTool::GetSessionStatus": [
+     2
+    ],
+    "struct variant SessionTool::CancelGroup": [
+     1
+    ],
+    "struct variant SessionTool::RegisterPendingStages": [
+     2
+    ],
+    "struct variant SessionTool::SpawnSession": [
+     7
+    ],
+    "struct variant SessionTool::CancelGroupStage": [
+     3
+    ],
+    "struct variant SessionTool::ManageGroup": [
+     4
+    ],
+    "struct PromptsCapability": [
+     1
+    ],
+    "struct RenameSymbolParams": [
+     5
+    ],
+    "struct FileCreate": [
+     2
+    ],
+    "struct StrReplace": [
+     4
+    ],
+    "struct WebFetch": [
+     3
+    ],
+    "struct OAuthConfig": [
+     5
+    ],
+    "struct LookupSymbolsParams": [
+     3
+    ],
+    "struct PatternSearchParams": [
+     5
+    ],
+    "struct SearchSymbolsParams": [
+     6
+    ],
+    "struct variant Knowledge::Add": [
+     2
+    ],
+    "struct variant Knowledge::Search": [
+     7
+    ],
+    "struct ResourcesCapability": [
+     2
+    ],
+    "struct Registration": [
+     4
+    ],
+    "struct FindReferencesParams": [
+     5
+    ],
+    "struct GetCodeActionsParams": [
+     6
+    ],
+    "struct GetCompletionsParams": [
+     7
+    ],
+    "struct GetDiagnosticsParams": [
+     1
+    ],
+    "struct GotoDefinitionParams": [
+     4
+    ],
+    "struct PatternRewriteParams": [
+     6
+    ],
+    "struct StaticTextDocumentColorProviderOptions": [
+     2
+    ],
+    "struct ApplyCodeActionParams": [
+     5
+    ],
+    "struct WebSearch": [
+     1
+    ],
+    "struct BM25DataPoint": [
+     3
+    ],
+    "struct LoopConfig": [
+     3
+    ],
+    "struct FileOperationPattern": [
+     3
+    ],
+    "struct SemanticTokensLegend": [
+     2
+    ],
+    "struct ConstTitle": [
+     2
+    ],
+    "struct CompletionOptionsCompletionItem": [
+     1
+    ],
+    "struct DocumentOnTypeFormattingOptions": [
+     2
+    ],
+    "struct TitledItems": [
+     1
+    ],
+    "struct GetDocumentSymbolsParams": [
+     2
+    ],
+    "struct FileOp": [
+     3
+    ],
+    "struct ToolSearch": [
+     3
+    ],
+    "struct variant ElicitRequestParamsWire::Url": [
+     4
+    ],
+    "struct variant ElicitRequestParamsWire::Form": [
+     3
+    ],
+    "struct NumberSchema": [
+     6
+    ],
+    "struct StringSchema": [
+     7
+    ],
+    "struct KnowledgeContext": [
+     12
+    ],
+    "struct PipelineStage": [
+     6
+    ],
+    "struct BooleanSchema": [
+     4
+    ],
+    "struct IntegerSchema": [
+     6
+    ],
+    "struct UntitledItems": [
+     2
+    ],
+    "struct ImageOp": [
+     1
+    ],
+    "struct Proxy": [
+     2
+    ],
+    "struct PendingStageSpec": [
+     6
+    ],
+    "struct LegacyEnumSchema": [
+     6
+    ],
+    "struct FileOperationPatternOptions": [
+     1
+    ],
+    "struct ElicitationSchema": [
+     5
+    ],
+    "struct variant TaskTool::Add": [
+     2
+    ],
+    "struct variant TaskTool::Create": [
+     2
+    ],
+    "struct variant TaskTool::Remove": [
+     2
+    ],
+    "struct variant TaskTool::Complete": [
+     3
+    ],
+    "struct variant ComplexResource::KnowledgeBase": [
+     7
+    ],
+    "struct FileOperationRegistrationOptions": [
+     1
+    ],
+    "struct ExecuteCmd": [
+     2
+    ],
+    "struct DirectoryOp": [
+     3
+    ],
+    "struct TitledMultiSelectEnumSchema": [
+     7
+    ],
+    "struct WorkspaceFoldersServerCapabilities": [
+     2
+    ],
+    "struct TitledSingleSelectEnumSchema": [
+     5
+    ],
+    "struct ProxyOptionalParam": [
+     2
+    ],
+    "struct UntitledMultiSelectEnumSchema": [
+     7
+    ],
+    "struct variant WireHookAction::Command": [
+     1
+    ],
+    "struct UntitledSingleSelectEnumSchema": [
+     5
+    ],
+    "struct WorkspaceFileOperationsServerCapabilities": [
+     6
+    ],
+    "struct WireHookDocument": [
+     8
+    ],
+    "struct SwitchToExecution": [
+     1
+    ],
+    "struct LocalMcpServerConfig": [
+     6
+    ],
+    "struct RemoteMcpServerConfig": [
+     8
+    ],
+    "struct RegistryMcpServerConfig": [
+     6
+    ],
+    "struct SwitchToExecutionResult": [
+     2
+    ],
+    "struct GroupResult": [
+     3
+    ],
+    "struct Helper": [
+     2,
+     4,
+     5
+    ],
+    "struct CancelResponse": [
+     1
+    ],
+    "struct StageActivityDto": [
+     2
+    ],
+    "struct Plan": [
+     2
+    ],
+    "struct Usage": [
+     6
+    ],
+    "struct Cost": [
+     2
+    ],
+    "struct AuthEnvVar": [
+     5
+    ],
+    "struct EnvVariable": [
+     3
+    ],
+    "struct SessionInfo": [
+     6
+    ],
+    "struct SessionMode": [
+     4
+    ],
+    "struct NesCapabilities": [
+     3
+    ],
+    "struct Diff": [
+     4
+    ],
+    "struct UsageUpdate": [
+     4
+    ],
+    "struct PromptResponse": [
+     4
+    ],
+    "struct ContentChunk": [
+     3
+    ],
+    "struct AuthMethodAgent": [
+     4
+    ],
+    "struct McpCapabilities": [
+     3
+    ],
+    "struct Content": [
+     2
+    ],
+    "struct AuthMethodEnvVar": [
+     6
+    ],
+    "struct SessionModeState": [
+     3
+    ],
+    "struct ResourceLink": [
+     8
+    ],
+    "struct NesEventCapabilities": [
+     2
+    ],
+    "struct Terminal": [
+     2
+    ],
+    "struct ToolCall": [
+     9
+    ],
+    "struct AgentCapabilities": [
+     8
+    ],
+    "struct SessionModelState": [
+     3
+    ],
+    "struct AuthMethodTerminal": [
+     6
+    ],
+    "struct InitializeResponse": [
+     5
+    ],
+    "struct LogoutCapabilities": [
+     1
+    ],
+    "struct NewSessionResponse": [
+     5
+    ],
+    "struct PromptCapabilities": [
+     4
+    ],
+    "struct AvailableCommand": [
+     4
+    ],
+    "struct PermissionOption": [
+     4
+    ],
+    "struct NesContextCapabilities": [
+     7
+    ],
+    "struct LoadSessionResponse": [
+     4
+    ],
+    "struct SessionCapabilities": [
+     6
+    ],
+    "struct CurrentModeUpdate": [
+     2
+    ],
+    "struct SessionInfoUpdate": [
+     3
+    ],
+    "struct ListSessionsResponse": [
+     3
+    ],
+    "struct ConfigOptionUpdate": [
+     2
+    ],
+    "struct NesOpenFilesCapabilities": [
+     1
+    ],
+    "struct AgentAuthCapabilities": [
+     2
+    ],
+    "struct KillTerminalRequest": [
+     3
+    ],
+    "struct ReadTextFileRequest": [
+     5
+    ],
+    "struct SessionNotification": [
+     3
+    ],
+    "struct SetSessionModeResponse": [
+     1
+    ],
+    "struct NesDiagnosticsCapabilities": [
+     1
+    ],
+    "struct NesRecentFilesCapabilities": [
+     2
+    ],
+    "struct NesUserActionsCapabilities": [
+     2
+    ],
+    "struct SessionForkCapabilities": [
+     1
+    ],
+    "struct SetSessionModelResponse": [
+     1
+    ],
+    "struct CreateTerminalRequest": [
+     7
+    ],
+    "struct TerminalOutputRequest": [
+     3
+    ],
+    "struct SessionCloseCapabilities": [
+     1
+    ],
+    "struct SessionConfigSelectGroup": [
+     4
+    ],
+    "struct ReleaseTerminalRequest": [
+     3
+    ],
+    "struct BlobResourceContents": [
+     4
+    ],
+    "struct TextResourceContents": [
+     4
+    ],
+    "struct NesDocumentEventCapabilities": [
+     6
+    ],
+    "struct ToolCallLocation": [
+     3
+    ],
+    "struct SessionConfigSelectOption": [
+     4
+    ],
+    "struct SessionResumeCapabilities": [
+     1
+    ],
+    "struct AvailableCommandsUpdate": [
+     2
+    ],
+    "struct RequestPermissionRequest": [
+     4
+    ],
+    "struct UnstructuredCommandInput": [
+     2
+    ],
+    "struct NesDocumentDidOpenCapabilities": [
+     1
+    ],
+    "struct NesRelatedSnippetsCapabilities": [
+     1
+    ],
+    "struct NesDocumentDidCloseCapabilities": [
+     1
+    ],
+    "struct WaitForTerminalExitRequest": [
+     3
+    ],
+    "struct NesDocumentDidChangeCapabilities": [
+     2
+    ],
+    "struct SetSessionConfigOptionResponse": [
+     2
+    ],
+    "struct SessionAdditionalDirectoriesCapabilities": [
+     1
+    ],
+    "struct Error": [
+     3
+    ],
+    "struct Feed": [
+     1
+    ],
+    "struct Entry": [
+     5
+    ],
+    "struct Change": [
+     2
+    ],
+    "struct KasMcpStatus": [
+     2
+    ],
+    "struct Agent": [
+     15
+    ],
+    "struct Request": [
+     5
+    ],
+    "struct AuthProfile": [
+     3
+    ],
+    "struct McpStartupStatus": [
+     3
+    ],
+    "struct FeatureRollout": [
+     4
+    ],
+    "struct Response": [
+     5
+    ],
+    "struct KasMcpServerStatus": [
+     3
+    ],
+    "struct CredentialsJson": [
+     4
+    ],
+    "struct AgentNotFoundParams": [
+     4
+    ],
+    "struct RejectedAgentConfig": [
+     3
+    ],
+    "struct Argument": [
+     2
+    ],
+    "struct TurnMarker": [
+     8
+    ],
+    "struct Transport": [
+     1
+    ],
+    "struct HttpHeader": [
+     2,
+     3
+    ],
+    "struct SocialToken": [
+     6
+    ],
+    "struct Hook": [
+     6
+    ],
+    "struct TokenResponse": [
+     3,
+     4
+    ],
+    "struct PackageConfig": [
+     7
+    ],
+    "struct McsSession": [
+     2
+    ],
+    "struct CachedRegistry": [
+     3
+    ],
+    "struct ToolSpec": [
+     3,
+     4
+    ],
+    "struct SandboxFileConfig": [
+     3
+    ],
+    "struct EnvState": [
+     3
+    ],
+    "struct DevicePollResponse": [
+     6
+    ],
+    "struct RemoteServerConfig": [
+     3
+    ],
+    "struct EnvironmentVariable": [
+     2
+    ],
+    "struct McpRegistryResponse": [
+     1
+    ],
+    "struct McpServerDefinition": [
+     6
+    ],
+    "struct ImageBlock": [
+     2
+    ],
+    "struct BuilderIdToken": [
+     8
+    ],
+    "struct variant WireHookAction::Agent": [
+     1
+    ],
+    "struct McpRegistryServerEntry": [
+     1
+    ],
+    "struct UserMessage": [
+     5
+    ],
+    "struct ToolInputSchema": [
+     1
+    ],
+    "struct OidcDiscovery": [
+     3
+    ],
+    "struct ToolUseResult": [
+     3
+    ],
+    "struct RequestMetadata": [
+     20
+    ],
+    "struct RawIncomingMessage": [
+     5
+    ],
+    "struct DeviceRegistration": [
+     6
+    ],
+    "struct ContextManager": [
+     4
+    ],
+    "struct UserEnvContext": [
+     1
+    ],
+    "struct ToolSpecification": [
+     3
+    ],
+    "struct DeviceAuthorizationResponse": [
+     6
+    ],
+    "struct FileOperationFilter": [
+     2
+    ],
+    "struct RawValidationError": [
+     2
+    ],
+    "struct ExternalIdpToken": [
+     8
+    ],
+    "struct AssistantToolUse": [
+     5
+    ],
+    "struct variant TodoList::Add": [
+     4
+    ],
+    "struct variant TodoList::Create": [
+     2
+    ],
+    "struct variant TodoList::Load": [
+     1
+    ],
+    "struct variant TodoList::Complete": [
+     4
+    ],
+    "struct RefusalInfo": [
+     3
+    ],
+    "struct ArtifactEntry": [
+     10
+    ],
+    "struct FsLine": [
+     3
+    ],
+    "struct FsImage": [
+     1
+    ],
+    "struct Session": [
+     3
+    ],
+    "struct TodoListState": [
+     6
+    ],
+    "struct VersionManifest": [
+     2
+    ],
+    "struct HistoryEntry": [
+     3
+    ],
+    "struct FsSearch": [
+     3
+    ],
+    "struct SessionInfoEntry": [
+     7
+    ],
+    "struct variant FsWrite::Create": [
+     4
+    ],
+    "struct variant FsWrite::Insert": [
+     4
+    ],
+    "struct variant FsWrite::StrReplace": [
+     4
+    ],
+    "struct variant FsWrite::Append": [
+     3
+    ],
+    "struct GhIssue": [
+     4
+    ],
+    "struct ReasoningContentForHistory": [
+     5
+    ],
+    "struct LegacyHook": [
+     7
+    ],
+    "struct Delegate": [
+     3
+    ],
+    "struct Thinking": [
+     1
+    ],
+    "struct FileLineTracker": [
+     6
+    ],
+    "struct FsDirectory": [
+     5
+    ],
+    "struct SettingInfo": [
+     4
+    ],
+    "struct McpServerSse": [
+     4
+    ],
+    "struct UserTurnMetadata": [
+     3,
+     20
+    ],
+    "struct ProcessHealthPayload": [
+     20
+    ],
+    "struct McpServerHttp": [
+     4
+    ],
+    "struct PromptRequest": [
+     4
+    ],
+    "struct ConversationState": [
+     21
+    ],
+    "struct MeteringUsageInfo": [
+     3
+    ],
+    "struct McpServerStdio": [
+     5
+    ],
+    "struct ExecuteCommand": [
+     3
+    ],
+    "struct NesJumpCapabilities": [
+     1
+    ],
+    "struct SessionResponse": [
+     6
+    ],
+    "struct KnowledgeAdd": [
+     2
+    ],
+    "struct InitializeRequest": [
+     4
+    ],
+    "struct NewSessionRequest": [
+     4
+    ],
+    "struct ClientNesCapabilities": [
+     4
+    ],
+    "struct NesRenameCapabilities": [
+     1
+    ],
+    "struct UiModeChangedNotification": [
+     4
+    ],
+    "struct CancelNotification": [
+     2
+    ],
+    "struct LoadSessionRequest": [
+     5
+    ],
+    "struct AuthCapabilities": [
+     2
+    ],
+    "struct ConversationCheckpoint": [
+     5
+    ],
+    "struct KnowledgeClear": [
+     1
+    ],
+    "struct KnowledgeCancel": [
+     1
+    ],
+    "struct KnowledgeSearch": [
+     7
+    ],
+    "struct ClientCapabilities": [
+     7
+    ],
+    "struct SetSessionModeRequest": [
+     3
+    ],
+    "struct SetSessionModelRequest": [
+     3
+    ],
+    "struct UiModeSessionStartNotification": [
+     4
+    ],
+    "struct FileSystemCapabilities": [
+     3
+    ],
+    "struct CustomToolConfig": [
+     11
+    ],
+    "struct InvokeSubagent": [
+     5
+    ],
+    "struct UiModeDefaultChangedNotification": [
+     3
+    ],
+    "struct NesSearchAndReplaceCapabilities": [
+     1
+    ],
+    "struct EndpointOverride": [
+     2
+    ],
+    "struct ElicitationCapabilities": [
+     3
+    ],
+    "struct ElicitationUrlCapabilities": [
+     1
+    ],
+    "struct SwitchResponse": [
+     3
+    ],
+    "struct ElicitationFormCapabilities": [
+     1
+    ],
+    "struct Notification": [
+     3
+    ],
+    "struct variant AssistantMessage::Response": [
+     3
+    ],
+    "struct variant AssistantMessage::ToolUse": [
+     4
+    ],
+    "struct variant UserMessageContent::Prompt": [
+     1
+    ],
+    "struct variant UserMessageContent::ToolUseResults": [
+     1
+    ],
+    "struct SubagentExecutionSummary": [
+     3
+    ],
+    "struct AgentId": [
+     3
+    ],
+    "struct GoalDefinition": [
+     2
+    ],
+    "struct LastContextUsage": [
+     2
+    ],
+    "struct TrustOption": [
+     4
+    ],
+    "struct McpTool": [
+     4
+    ],
+    "struct ToolResult": [
+     2
+    ],
+    "struct CompactStrategy": [
+     4
+    ],
+    "struct ToolExecutionOutput": [
+     1
+    ],
+    "struct ConversationMetadata": [
+     4
+    ],
+    "struct AgentLoopId": [
+     2
+    ],
+    "struct InvalidToolUse": [
+     3
+    ],
+    "struct RtsStateSnapshot": [
+     4
+    ],
+    "struct SessionData": [
+     10
+    ],
+    "struct SessionLock": [
+     2
+    ],
+    "struct variant SessionTool::Interrupt": [
+     2
+    ],
+    "struct RuntimePermissions": [
+     4
+    ],
+    "struct SessionStateV1": [
+     5
+    ],
+    "struct Message": [
+     4
+    ],
+    "struct SessionDataView": [
+     8
+    ],
+    "struct FileSystemPermissions": [
+     4
+    ],
+    "struct variant TestCommand::PushSendMessageResponse": [
+     2
+    ],
+    "struct variant TestCommand::GetCapturedRequests": [
+     1
+    ],
+    "struct variant TestCommand::SetModelListFailure": [
+     1
+    ],
+    "struct StreamError": [
+     4
+    ],
+    "struct ToolUseBlock": [
+     3
+    ],
+    "struct ThinkingBlock": [
+     5
+    ],
+    "struct ToolResultBlock": [
+     3
+    ],
+    "struct GoalIterationResult": [
+     3
+    ],
+    "struct ChatArgs": [
+     1
+    ],
+    "struct PlanArgs": [
+     1
+    ],
+    "struct TestMessageCommand": [
+     3
+    ],
+    "struct AgentArgs": [
+     1
+    ],
+    "struct ModelArgs": [
+     1
+    ],
+    "struct ConverseStreamError": [
+     3
+    ],
+    "struct MessageSendRequest": [
+     2
+    ],
+    "struct SettingsSetRequest": [
+     2
+    ],
+    "struct CompactArgs": [
+     1
+    ],
+    "struct PromptsArgs": [
+     1
+    ],
+    "struct ListSessionsRequest": [
+     2
+    ],
+    "struct SessionSpawnRequest": [
+     5
+    ],
+    "struct SessionSteerRequest": [
+     2
+    ],
+    "struct FallbackArgs": [
+     2
+    ],
+    "struct FeedbackArgs": [
+     1
+    ],
+    "struct SendRequestArgs": [
+     4
+    ],
+    "struct KnowledgeArgs": [
+     1
+    ],
+    "struct ReasoningArgs": [
+     4
+    ],
+    "struct CommandExecuteRequest": [
+     2
+    ],
+    "struct CommandOptionsRequest": [
+     3
+    ],
+    "struct KiroV1": [
+     2
+    ],
+    "struct McpStartupStatusRequest": [
+     1
+    ],
+    "struct TerminateSessionRequest": [
+     1
+    ],
+    "struct DeleteSessionResponse": [
+     1
+    ],
+    "struct SessionSteerClearRequest": [
+     1
+    ],
+    "struct LegacyLs": [
+     3
+    ],
+    "struct LegacyTool": [
+     2
+    ],
+    "struct LegacyFsRead": [
+     1
+    ],
+    "struct AdditionalModelFields": [
+     2
+    ],
+    "struct LegacyImageRead": [
+     1
+    ],
+    "struct variant GoalState::Exhausted": [
+     1
+    ],
+    "struct variant CanonicalToolName::Mcp": [
+     2
+    ],
+    "struct variant CanonicalToolName::Agent": [
+     1
+    ],
+    "struct variant ConverseStreamErrorKind::Unknown": [
+     2
+    ],
+    "struct SwitchResult": [
+     2
+    ],
+    "struct Command": [
+     3
+    ],
+    "struct TextEdit": [
+     2
+    ],
+    "struct CreateFile": [
+     3
+    ],
+    "struct DeleteFile": [
+     2
+    ],
+    "struct RenameFile": [
+     4
+    ],
+    "struct LocationLink": [
+     4
+    ],
+    "struct MarkupContent": [
+     2
+    ],
+    "struct WorkspaceEdit": [
+     3
+    ],
+    "struct LanguageString": [
+     2
+    ],
+    "struct ChangeAnnotation": [
+     3
+    ],
+    "struct TextDocumentEdit": [
+     2
+    ],
+    "struct CreateFileOptions": [
+     2
+    ],
+    "struct DeleteFileOptions": [
+     3
+    ],
+    "struct RenameFileOptions": [
+     2
+    ],
+    "struct Hover": [
+     2
+    ],
+    "struct CodeAction": [
+     8
+    ],
+    "struct CompletionItem": [
+     18
+    ],
+    "struct CompletionList": [
+     2
+    ],
+    "struct OptionalVersionedTextDocumentIdentifier": [
+     2
+    ],
+    "struct InsertReplaceEdit": [
+     3
+    ],
+    "struct CodeActionDisabled": [
+     1
+    ],
+    "struct DocumentSymbol": [
+     8
+    ],
+    "struct SymbolInformation": [
+     6
+    ],
+    "struct WorkspaceSymbol": [
+     6
+    ],
+    "struct WorkspaceLocation": [
+     1
+    ],
+    "struct CallDef": [
+     1
+    ],
+    "struct ImportDef": [
+     1
+    ],
+    "struct LanguageDef": [
+     4
+    ],
+    "struct LanguageConfig": [
+     10
+    ],
+    "struct LanguagesConfig": [
+     1
+    ],
+    "struct FullDocumentDiagnosticReport": [
+     2
+    ],
+    "struct UnchangedDocumentDiagnosticReport": [
+     1
+    ],
+    "struct ReceiptData": [
+     10
+    ],
+    "struct NesDocumentDidSaveCapabilities": [
+     1
+    ],
+    "struct RequestPermissionResponse": [
+     2
+    ],
+    "struct SelectedPermissionOutcome": [
+     2
+    ],
+    "struct TensorInfo": [
+     3
+    ],
+    "struct PrecompiledDeserializer": [
+     1
+    ],
+    "struct Fuse": [
+     1
+    ],
+    "struct Strip": [
+     2
+    ],
+    "struct PaddingParams": [
+     6
+    ],
+    "struct Sequence": [
+     1
+    ],
+    "struct BertProcessing": [
+     2
+    ],
+    "struct Prepend": [
+     1
+    ],
+    "struct NFCHelper": [
+     1
+    ],
+    "struct NmtHelper": [
+     1
+    ],
+    "struct TruncationParams": [
+     4
+    ],
+    "struct LowercaseHelper": [
+     1
+    ],
+    "struct SpecialToken": [
+     3
+    ],
+    "struct StripAccentsHelper": [
+     1
+    ],
+    "struct ByteFallback": [
+     1
+    ],
+    "struct ByteLevelHelper": [
+     1
+    ],
+    "struct WhitespaceHelper": [
+     1
+    ],
+    "struct TemplateProcessingDeserializer": [
+     3
+    ],
+    "struct WhitespaceSplitHelper": [
+     1
+    ],
+    "struct variant Piece::Sequence": [
+     2
+    ],
+    "struct variant Piece::SpecialToken": [
+     2
+    ],
+    "struct UnicodeScriptsHelper": [
+     1
+    ],
+    "struct SplitHelper": [
+     4
+    ],
+    "struct MetaspaceHelper": [
+     6
+    ],
+    "struct ScopeStack": [
+     2
+    ],
+    "struct Theme": [
+     4
+    ],
+    "struct StyleModifier": [
+     3
+    ],
+    "struct ThemeSettings": [
+     30
+    ],
+    "struct ScopeSelector": [
+     2
+    ],
+    "struct Context": [
+     7
+    ],
+    "struct MatchPattern": [
+     6
+    ],
+    "struct variant ContextReference::ByScope": [
+     3
+    ],
+    "struct variant ContextReference::File": [
+     3
+    ]
+   },
+   "tagged": [
+    "adjacently tagged enum ChatResponseStreamstruct",
+    "adjacently tagged enum ContentBlockstruct",
+    "adjacently tagged enum ImageSourcestruct",
+    "adjacently tagged enum LogEntryV1struct",
+    "adjacently tagged enum MockStreamItemGetCredentialsForIdentityGetIdstruct",
+    "adjacently tagged enum StreamErrorKindstruct",
+    "adjacently tagged enum ToolResultContentBlockstruct",
+    "adjacently tagged enum TuiCommandstruct",
+    "adjacently tagged enum UseSubagentUseSubagentListAgentsInvokeSubagentsstruct",
+    "internally tagged enum CodeFile",
+    "internally tagged enum CodeGetHoverParamsInitializeWorkspaceinternally",
+    "internally tagged enum CodeSearchSymbolsParamsFindReferencesParamsGotoDefinitionParamsRenameSymbolParamsGetDocumentSymbolsParamsLookupSymbolsParamsGetDiagnosticsParamsGetHoverParamsGetCompletionsParamsGetCodeActionsParamsApplyCodeActionParamsInitializeWorkspacePatternSearchParamsPatternRewriteParamsGenerateCodebaseOverviewParamsSearchCodebaseMapParamsRenamedWould",
+    "internally tagged enum ComplexResourceSkillComplexweb",
+    "internally tagged enum ComplexResourceaskdetailattributeconvertedregex",
+    "internally tagged enum ComplexResourcecontextWindowrateMultiplierShow",
+    "internally tagged enum ContentBlockTextResourceContentsBlobResourceContentsdata",
+    "internally tagged enum ExportFormatevent",
+    "internally tagged enum FsReadOperationFileOpDirectoryOpImageOpFsReadFailed",
+    "internally tagged enum FsReadOperationfrom",
+    "internally tagged enum FsWriteFileCreateStatusAgentIdConversationMetadataCompactStrategyinternally",
+    "internally tagged enum FsWriteFileCreateStrReplaceInsertSuccessfully",
+    "internally tagged enum FsWriteevent",
+    "internally tagged enum GoalTool",
+    "internally tagged enum Knowledge",
+    "internally tagged enum McpServerpinned",
+    "internally tagged enum RequestPermissionOutcomeCancelledlastModifiedContentBlockImageAudioResourceLinkresource",
+    "internally tagged enum SessionStateevent",
+    "internally tagged enum SessionTool",
+    "internally tagged enum SessionToolResponse",
+    "internally tagged enum TaskToolTaskInputFsReadOperationinternally",
+    "internally tagged enum TaskToolTaskInputNo",
+    "internally tagged enum TestCommandTestCommandGetCapturedTelemetryEventsGetModelListCallCountPUSH",
+    "internally tagged enum TodoListTime",
+    "untagged enum AgentConfigGlobSettingsGrepSettingsToolsSettingsFsReadSettingsUseAwsSettingsinternally",
+    "untagged enum AgentConfigHookTriggerInputSchemaGlobSettingsGrepSettingsToolsSettingsFsReadSettingsUseAwsSettingsinternally",
+    "untagged enum AuthMethodinternally",
+    "untagged enum AvailableCommandInputCreateTerminalResponseFileSystemCapabilitiesTerminalOutputResponseexitStatusReleaseTerminalResponseRequestPermissionOutcomeoutcomeRequestPermissionResponseSelectedPermissionOutcomeAnnotationsTextContentAudioContentContentBlockAudioResourceLinkImageContentinternally",
+    "untagged enum AvailableCommandInputinternally",
+    "untagged enum CallHierarchyServerCapabilitydata",
+    "untagged enum CodeActionOrCommandcodeActionLiteralSupportisPreferredSupportdisabledSupportdataSupporthonorsChangeAnnotationsCodeActionKindLiteralSupportdata",
+    "untagged enum CodeActionProviderCapabilityCodeActionCapabilityResolveSupportdata",
+    "untagged enum ColorProviderCapabilitycontentFormatdata",
+    "untagged enum ColorProviderCapabilitydata",
+    "untagged enum CompletionResponsedata",
+    "untagged enum CompletionTextEdittabSizeinsertSpacestrimTrailingWhitespaceinsertFinalNewlinetrimFinalNewlinesdata",
+    "untagged enum DeclarationCapabilitydata",
+    "untagged enum DeclarationCapabilityregularExpressionsstaleRequestSupportMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DeclarationCapabilityregularExpressionsstaleRequestSupportpositionEncodingsMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DecoderHelperdata",
+    "untagged enum DecoderUntaggedinternal",
+    "untagged enum DiagnosticServerCapabilitiesdata",
+    "untagged enum DiagnosticServerCapabilitiesinternally",
+    "untagged enum DocumentChangeOperationregularExpressionsstaleRequestSupportpositionEncodingsMarkdownClientCapabilitiesparserallowedTagsdata",
+    "untagged enum DocumentChangesprocessIdinitializationOptionslocalelanguageIddata",
+    "untagged enum DocumentSymbolResponsehierarchicalDocumentSymbolSupportWorkspaceSymbolClientCapabilitiesWorkspaceSymbolResolveSupportCapabilityinternally",
+    "untagged enum DocumentationlinkSupportdata",
+    "untagged enum ElicitRequestParamsWireinternally",
+    "untagged enum EmbeddedResourceResourceProtocolVersionContentToolCallContentinternally",
+    "untagged enum EmbeddedResourceResourceinternally",
+    "untagged enum EnumSchemaTitledItemsNumberSchemaStringSchemaBooleanSchemaIntegerSchemaUntitledItemsTitledStringNumberIntegerBooleanTitledMultiSelectEnumSchemaTitledSingleSelectEnumSchemaUntitledMultiSelectEnumSchemadata",
+    "untagged enum EnumSchemaTitledItemsUntitledItemsElicitationSchemaUntitledMultiSelectEnumSchemaTitledMultiSelectEnumSchemadata",
+    "untagged enum EnumSchemaTitledItemsUntitledItemsUntitledMultiSelectEnumSchemaTitledMultiSelectEnumSchemadata",
+    "untagged enum FoldingRangeProviderCapabilitydata",
+    "untagged enum GotoDefinitionResponsedata",
+    "untagged enum HookConfigExecuteCmdSettingsLocalMcpServerConfigRemoteMcpServerConfiginternally",
+    "untagged enum HookConfigInputSchemadata",
+    "untagged enum HookConfigdata",
+    "untagged enum HoverContentscontentFormatdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviorMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiesShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviorMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiessupportShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum HoverProviderCapabilityprepareSupportprepareSupportDefaultBehaviornewNameMessageActionItemCapabilitiesadditionalPropertiesSupportShowDocumentClientCapabilitiessupportShowMessageRequestClientCapabilitiesmessageActionItemdata",
+    "untagged enum Iddata",
+    "untagged enum ImplementationProviderCapabilitydata",
+    "untagged enum InlayHintServerCapabilitiesrefreshSupportcodeActionLiteralSupportisPreferredSupportdisabledSupportdataSupporthonorsChangeAnnotationsCodeActionKindLiteralSupportdata",
+    "untagged enum InlayHintServerCapabilitiesrefreshSupportincludeDeclarationCommanddata",
+    "untagged enum InlineValueServerCapabilitiestooltipSupportFoldingRangeCapabilitycollapsedTextFoldingRangeKindCapabilityrangeLimitlineFoldingOnlydata",
+    "untagged enum InlineValueServerCapabilitiestooltipSupportFoldingRangeCapabilitycollapsedTextrangeLimitlineFoldingOnlydata",
+    "untagged enum InputRequestToolAnnotations",
+    "untagged enum InputRequestToolAnnotationsPromptMessagePromptArgumentContentBlockResourceLinkinternally",
+    "untagged enum InputRequestToolAnnotationsPromptMessagePromptArgumentdata",
+    "untagged enum JsonRpcMessageErrorCodeErrorDataModelHintref",
+    "untagged enum JsonRpcMessageSubscriptionsAcknowledgedNotificationParamsErrorDataReferenceref",
+    "untagged enum LinkedEditingRangeServerCapabilitiesParameterInformationSettingslabelOffsetSupportSignatureInformationSettingsparameterInformationactiveParameterSupportsignatureInformationdata",
+    "untagged enum MarkedStringdata",
+    "untagged enum McpServerConfigAgentCrewSettingsExecuteCmdSettingsfailed",
+    "untagged enum McpServerConfigAgentSpawnPreToolUsePostToolUse",
+    "untagged enum McpServerMcpServerHttpMcpServerSsemax",
+    "untagged enum MergeTypehttps",
+    "untagged enum MessageErrorIddata",
+    "untagged enum ModelHelperdata",
+    "untagged enum ModelUntaggedentering",
+    "untagged enum MonikerServerCapabilitiesFailed",
+    "untagged enum MonikerServerCapabilitiesLazy",
+    "untagged enum MonikerServerCapabilitiesworkDoneToken",
+    "untagged enum MultiSelectEnumSchemaTitledSingleSelectEnumSchemadata",
+    "untagged enum MultiSelectEnumSchemadata",
+    "untagged enum NormalizerHelperdata",
+    "untagged enum NormalizerUntaggedMissing",
+    "untagged enum NumberOrStringdata",
+    "untagged enum NumberOrStringprocessIdinitializationOptionslocaledata",
+    "untagged enum NumberOrStringprocessIdinitializationOptionslocalelanguageIddata",
+    "untagged enum OneOftextOnlyTransactionalTagSupportdata",
+    "untagged enum OneOftextOnlyTransactionalpartialResultTokenTagSupportdata",
+    "untagged enum ParamsInvalid",
+    "untagged enum Paramsmissing",
+    "untagged enum PostProcessorWrapperprocessorsABSpecialTokenididstokenssinglespecial",
+    "untagged enum PreTokenizerHelperdata",
+    "untagged enum PreTokenizerUntaggedadd",
+    "untagged enum PrimitiveSchemaDefinitionLoggingMessageNotificationParamJsonRpcResponseJsonRpcErrordata",
+    "untagged enum PrimitiveSchemaDefinitionLoggingMessageNotificationParamJsonRpcResponsedata",
+    "untagged enum PrimitiveSchemaDefinitionSingleMultiLegacyLoggingMessageNotificationParamSubscriptionsAcknowledgedNotificationParamsJsonRpcResponseJsonRpcErrordata",
+    "untagged enum Reprforce",
+    "untagged enum Reprthe",
+    "untagged enum RequestIdMcpServerMcpServerStdiodata",
+    "untagged enum ResourceContentselicitation",
+    "untagged enum ResourceContentsio",
+    "untagged enum ResourceContentssampling",
+    "untagged enum SamplingContentImageAudioToolUseToolResultinternally",
+    "untagged enum SamplingContentProgressNotificationParamReadResourceRequestParamsResourceTemplateReferenceSubscriptionsListenResultCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockAudioToolUseToolResultListResourceTemplatesResultinternally",
+    "untagged enum SamplingContentProgressNotificationParamReadResourceRequestParamsResourceTemplateReferenceSubscriptionsListenResultCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockToolResultListResourceTemplatesResultinternally",
+    "untagged enum SelectionRangeProviderCapabilitySemanticTokensFullOptionsdata",
+    "untagged enum SemanticTokensFullOptionsoverlappingTokenSupportmultilineTokenSupportserverCancelSupportaugmentsSyntaxTokensdata",
+    "untagged enum SemanticTokensServerCapabilitiesdata",
+    "untagged enum SemanticTokensServerCapabilitieshierarchicalDocumentSymbolSupportWorkspaceSymbolClientCapabilitiesWorkspaceSymbolResolveSupportCapabilityrelatedDocumentSupportdata",
+    "untagged enum ServerNotificationCancelledNotificationParamCreateMessageRequestParamsSamplingMessageContentBlockNotificationNoParamTaskStatusNotificationParamsdata",
+    "untagged enum ServerNotificationListResourcesResultCallToolRequestParamsCompleteRequestParamsrefDiscoverRequestParamsSetLevelRequestParamsGetPromptRequestParamsPaginatedRequestParamsSubscribeRequestParamsInitializeRequestParamsdata",
+    "untagged enum ServerNotificationstopReasonListResourcesResultCallToolRequestParamsCompleteRequestParamsrefDiscoverRequestParamsSetLevelRequestParamsGetPromptRequestParamsPaginatedRequestParamscursorSubscribeRequestParamsInitializeRequestParamsdata",
+    "untagged enum ServerRequestCompletionInfoListRootsResultPromptReferenceSamplingMessageGetPromptResultListToolsResultCompletionContextListPromptsResultSubscriptionFilterReadResourceResultdata",
+    "untagged enum ServerRequestImplementationCompletionInfoListRootsResultPromptReferenceSamplingMessageGetPromptResultListToolsResultCompletionContextListPromptsResultSubscriptionFilterReadResourceResultdata",
+    "untagged enum ServerRequestcursorRequestNoParamNotificationProgressNotificationParamdata",
+    "untagged enum ServerResultGetTaskParamsdata",
+    "untagged enum ServerResultRequestdata",
+    "untagged enum SessionConfigOptionCategorySessionAdditionalDirectoriesCapabilitiessession",
+    "untagged enum SessionConfigOptionCategoryUsageUpdateContentChunkSessionUpdateAgentMessageChunkAgentThoughtChunkToolCallUpdateAvailableCommandsUpdateCurrentModeUpdateConfigOptionUpdateSessionInfoUpdateinternally",
+    "untagged enum SessionConfigOptionCategorysessionUpdateinternally",
+    "untagged enum SessionConfigSelectOptionsdata",
+    "untagged enum SingleSelectEnumSchemaStringSchemaNumberSchemaIntegerSchemaBooleanSchemadata",
+    "untagged enum SingleSelectEnumSchemadata",
+    "untagged enum TextDocumentSyncCapabilityapplyEditdidChangeConfigurationdidChangeWatchedFilesexecuteCommandconfigurationinlineValuedata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationdefinitiontypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyWorkspaceEditClientCapabilitiesdocumentChangesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationdefinitiontypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyrangeLengthWorkspaceEditClientCapabilitiesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TextDocumentSyncSaveOptionsreferencesdocumentHighlightformattingrangeFormattingdeclarationtypeDefinitionimplementationpublishDiagnosticslinkedEditingRangecallHierarchymonikertypeHierarchyWorkspaceEditClientCapabilitiesdocumentChangesresourceOperationsnormalizesLineEndingschangeAnnotationSupportdata",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesengineStaleRequestSupportClientCapabilitiescancelretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabelResourceOpinternally",
+    "untagged enum TypeDefinitionProviderCapabilitydidSaveversionSupportcodeDescriptionSupportRegularExpressionsClientCapabilitiesengineStaleRequestSupportClientCapabilitiesretryOnContentModifiedDidChangeWatchedFilesClientCapabilitiesrelativePatternSupportChangeAnnotationWorkspaceEditClientCapabilitiesgroupsOnLabellinkSupportdata"
+   ]
+  }
+ },
+ "deltas": [
+  {
+   "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.28.0/extracted/kirocli/bin/kiro-cli-chat",
+   "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.29.0/extracted/kirocli/bin/kiro-cli-chat",
+   "added": {
+    "struct variant TestCommand::PushSendMessageResponse": [
+     2
+    ],
+    "struct variant TodoList::Add": [
+     4
+    ],
+    "struct variant UserMessageContent::ToolUseResults": [
+     1
+    ]
+   },
+   "removed": {
+    "struct variant UserMessageContent::CancelledToolUses": [
+     2
+    ]
+   },
+   "count_changed": {
+    "struct AuthProfile": [
+     [
+      2
+     ],
+     [
+      3
+     ]
+    ]
+   },
+   "tagged_added": [
+    "internally tagged enum ComplexResourceSkillComplexweb",
+    "untagged enum ResourceContentselicitation"
+   ],
+   "tagged_removed": [
+    "internally tagged enum ComplexResourceSkillComplexwebweb"
+   ]
+  },
+  {
+   "from": "/home/dwalleck/.local/share/kiro-research/binaries/2.29.0/extracted/kirocli/bin/kiro-cli-chat",
+   "to": "/home/dwalleck/.local/share/kiro-research/binaries/2.29.1/extracted/kirocli/bin/kiro-cli-chat",
+   "added": {
+    "struct Notification": [
+     3
+    ],
+    "struct variant ConverseStreamErrorKind::Unknown": [
+     2
+    ]
+   },
+   "removed": {
+    "struct variant ConverseStreamErrorKind::InvalidModelId": [
+     1
+    ],
+    "struct variant SessionTool::ReviveSession": [
+     2
+    ],
+    "struct variant SessionTool::WaitForGroup": [
+     1
+    ],
+    "struct variant TodoList::Remove": [
+     3
+    ]
+   },
+   "count_changed": {},
+   "tagged_added": [
+    "untagged enum AvailableCommandInputCreateTerminalResponseFileSystemCapabilitiesTerminalOutputResponseexitStatusReleaseTerminalResponseRequestPermissionOutcomeoutcomeRequestPermissionResponseSelectedPermissionOutcomeAnnotationsTextContentAudioContentContentBlockAudioResourceLinkImageContentinternally",
+    "untagged enum EmbeddedResourceResourceProtocolVersionContentToolCallContentinternally",
+    "untagged enum RequestIdMcpServerMcpServerStdiodata",
+    "untagged enum ResourceContentssampling",
+    "untagged enum SessionConfigOptionCategoryUsageUpdateContentChunkSessionUpdateAgentMessageChunkAgentThoughtChunkToolCallUpdateAvailableCommandsUpdateCurrentModeUpdateConfigOptionUpdateSessionInfoUpdateinternally"
+   ],
+   "tagged_removed": [
+    "internally tagged enum ContentBlockdata",
+    "untagged enum EmbeddedResourceResourceProtocolVersionoldTextnewTextContenttoolCallIdlocationsrawOutputexecutethinkfetchswitch",
+    "untagged enum RequestIdin",
+    "untagged enum ResourceContentsroots"
+   ]
+  }
+ ]
+}

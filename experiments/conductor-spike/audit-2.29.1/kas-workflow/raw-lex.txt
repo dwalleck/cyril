@@ -1,0 +1,32 @@
+
+[load] len OLD=384 NEW=384 tokens; renames=8; PROBLEMS=0
+   => pure consistent rename; all operators/numbers/strings/keywords/punct IDENTICAL
+
+[inspect] len OLD=109 NEW=109 tokens; renames=4; PROBLEMS=0
+   => pure consistent rename; all operators/numbers/strings/keywords/punct IDENTICAL
+
+[resume] len OLD=716 NEW=716 tokens; renames=20; PROBLEMS=0
+   => pure consistent rename; all operators/numbers/strings/keywords/punct IDENTICAL
+
+[new] len OLD=1073 NEW=1131 tokens; renames=92; PROBLEMS=15
+   ! insert: OLD[] NEW['if', '(', 'g1t', '(', 'c', '.', 'workflow', ')']
+   ! insert: OLD[] NEW['M', '=']
+   ! delete: OLD['=', 'M'] NEW[]
+   ! insert: OLD[] NEW['M', '=']
+   ! delete: OLD['=', 'M'] NEW[]
+   ! insert: OLD[] NEW[',', 'sxo', '(', 'e', '.', 'host', ',', 'p']
+   ! insert: OLD[] NEW['M', '=']
+   ! delete: OLD['=', 'M'] NEW[]
+   ! insert: OLD[] NEW['D', ',']
+   ! delete: OLD[',', 'D'] NEW[]
+   ! insert: OLD[] NEW[',', 'sxo', '(', 'e', '.', 'host', ',', 'p']
+   ! insert: OLD[] NEW['D', ',']
+
+[sendParentNote] len OLD=105 NEW=105 tokens; renames=6; PROBLEMS=0
+   => pure consistent rename; all operators/numbers/strings/keywords/punct IDENTICAL
+
+[reserveWakePrompt] len OLD=46 NEW=46 tokens; renames=0; PROBLEMS=0
+   => pure consistent rename; all operators/numbers/strings/keywords/punct IDENTICAL
+
+[startInfoWake] len OLD=162 NEW=162 tokens; renames=11; PROBLEMS=0
+   => pure consistent rename; all operators/numbers/strings/keywords/punct IDENTICAL

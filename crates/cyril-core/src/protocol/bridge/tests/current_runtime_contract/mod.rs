@@ -60,6 +60,10 @@ mod stall;
 // `kas`-specific dispatch arm, and release builds ship `--all-features`, so
 // the toggle's wire and ack contract must hold in `kas` builds too.
 mod thinking;
+// Same ungated discipline (cyril-vh69 C7): SetConfigOption is the standard
+// ACP configuration request on both engines — the default-features lane
+// keeps it honest too.
+mod config_options;
 
 fn command_name(command: &BridgeCommand) -> &'static str {
     match command {

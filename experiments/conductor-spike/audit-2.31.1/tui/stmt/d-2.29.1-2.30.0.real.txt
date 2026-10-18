@@ -1,0 +1,770 @@
+@@ 1029c1029
+- _ _,_,_=!0,_=!0,_="Default _ _ startup, fullscreen startup, animations, ASCII _, icons, thinking, _ scrollback";
++ _ _,_,_=!0,_=!0,_="Default _ _ startup, fullscreen startup, animations, ASCII _, icons, screen reader, thinking, _ scrollback";
+@@ 1032c1032
+- CHAT_GREETING_ENABLED:"_.greeting.enabled",CHAT_ENABLE_NOTIFICATIONS:"_.enableNotifications",CHAT_NOTIFICATION_METHOD:"_.notificationMethod",CHAT_AUTO_EXPAND_TOOL_OUTPUT:"_.autoExpandToolOutput",CHAT_DISABLE_WRAP:"_.disableWrap",CHAT_PRESERVE_SCROLLBACK:"_.preserveScrollback",CHAT_START_FULLSCREEN:"_.startFullscreen",CHAT_FULLSCREEN_WHEEL_ROWS:"_.fullscreenWheelRows",CHAT_FULLSCREEN_COPY_ON_SELECT
++ CHAT_GREETING_ENABLED:"_.greeting.enabled",CHAT_ENABLE_NOTIFICATIONS:"_.enableNotifications",CHAT_NOTIFICATION_METHOD:"_.notificationMethod",CHAT_AUTO_EXPAND_TOOL_OUTPUT:"_.autoExpandToolOutput",CHAT_DISABLE_WRAP:"_.disableWrap",CHAT_PRESERVE_SCROLLBACK:"_.preserveScrollback",CHAT_START_FULLSCREEN:"_.startFullscreen",CHAT_FULLSCREEN_WHEEL_ROWS:"_.fullscreenWheelRows",CHAT_FULLSCREEN_COPY_ON_SELECT
+@@ 1169c1169
+- dotFilled:"\u25CF",dotEmpty:"\u25CB",dotLoading:"\u25CC",checkmark:"\u2713",cross:"\u2717",warning:"\u26A0",chevron:"\u276F",prompt:"\u203A",arrowRight:"\u25B8",arrowDown:"\u2193",diamond:"\u25C7",_:"\u25C9",smallDot:"\_",bullet:"\u2022",clipboard:"\uD83D\uDCCB",sparkle:"\u2728",progress0:"\u25F7",progress25:"\u25D4",progress50:"\u25D1",progress75:"\u25D5",executing:"\u25D0",lineHorizontal:"\u2500
++ dotFilled:"\u25CF",dotEmpty:"\u25CB",dotLoading:"\u25CC",checkmark:"\u2713",cross:"\u2717",warning:"\u26A0",chevron:"\u276F",prompt:"\u203A",arrowRight:"\u25B8",arrowDown:"\u2193",diamond:"\u25C7",_:"\u25C9",smallDot:"\_",bullet:"\u2022",clipboard:"\u2338",sparkle:"\u2727",progress0:"\u25F7",progress25:"\u25D4",progress50:"\u25D1",progress75:"\u25D5",executing:"\u25D0",lineHorizontal:"\u2500",line
+@@ 9389a9390,9392
++ _(typeof _!=="string"||_.length>_)return _;
++ return _.test(_)?_:_}
++ function _(_){
+@@ 9392c9395
+- _ _,_;
++ _ _,_,_=1024,_;
+@@ 9395c9398,9403
+- _=_(),_=_()}
++ _=_(),_=_();
++ _=_ RegExp(`^[_-_-_-9._:-]{
++ 1,_{
++ _}
++ }
++ _`)}
+@@ 275972a275981,275992
++ function _(_){
++ _ _=[],_="",_=0,_=_.indexOf(_);
++ while(_!==-1){
++ _ _=_.findIndex((_)=>_.startsWith(_,_));
++ _(_===-1)_+=_.slice(_,_+_.length),_=_+_.length;
++ _ _+=_.slice(_,_),_.push({
++ _:_.length,_:_}
++ ),_=_+_[_].length;
++ _=_.indexOf(_,_)}
++ return{
++ _:_+_.slice(_),found:_}
++ }
+@@ 276034c276054
+- _ _="\x1B_k\_",_="\x1B_b",_="\x1B_o",_="\x1B_r",_="\_";
++ _ _="\x1B_k\_",_="\x1B_kt\_",_="\x1B_ki\_",_="\x1B_k",_,_,_,_="\x1B_b",_="\x1B_o",_="\x1B_r",_="\_";
+@@ 276036c276056,276057
+- _()}
++ _();
++ _=[_,_,_],_=_.indexOf(_),_=_.indexOf(_)}
+@@ 276929c276950
+- _ _=1,_;
++ _ _=1,_="\_[2K\_\_[1B\_[_\_",_;
+@@ 277796,277797c277817,277818
+- extractCursorPosition(_,_,_=0){
+- _ _=_.max(0,_.length-_);
++ extractCursorPosition(_,_,_,_=0){
++ _ _=_.max(0,_.length-_),_=_,_=!1;
+@@ 277801,277806c277822,277833
+- _ _=_[_],_=_.indexOf(_);
+- _(_!==-1){
+- _ _=_(_.slice(0,_)),_=_.slice(0,_)+_.slice(_+_.length);
+- _(_.showHardwareCursor)_=_(_,_);
+- return _[_]=_,{
+- _:_,_:_}
++ _(!_[_].includes(_))continue;
++ _{
++ _:_,found:_}
++ =_(_[_]);
++ _[_]=_;
++ _(_ _ _ _){
++ _(_.rank===_)_=!0;
++ _(_&&_.rank>=_.rank)continue;
++ _ _=_(_.slice(0,_.idx));
++ _(_.rank===_&&(_.showHardwareCursor||_>_))continue;
++ _={
++ _:_,_:_,...u}
+@@ 277808a277836,277837
++ _(_?.rank===_&&!_)_=_;
++ _(_&&_.showHardwareCursor)_[_.row]=_(_[_.row],_.idx);
+@@ 277812,277818c277841,277844
+- _--){
+- _ _=_[_].indexOf(_);
+- _(_!==-1){
+- _[_]=_[_].slice(0,_)+_[_].slice(_+_.length);
+- break}
+- }
+- return _}
++ _--)_(_[_].includes(_))_[_]=_(_[_]).line;
++ return _?{
++ _:_.row,_:_.col}
++ :_}
+@@ 277843,277844c277869,277870
+- _ _=_(_[_]).line,_=_.indexOf(_);
+- _[_]=_.applyResetToLine(_===-1?_:_.slice(0,_)+_.slice(_+_.length))}
++ _ _=_(_[_]).line;
++ _[_]=_.applyResetToLine(_.includes(_)?_(_).line:_)}
+@@ 277943c277969
+- _.terminal.write(_+"\_\_[_"),_.invalidateFrame(),_.hardwareCursorRow=0,_.cursorRow=0,_.maxLinesRendered=0,_.previousViewportTop=0,_.ownedTopRow=0}
++ _.terminal.write(_+"\_"+_),_.invalidateFrame(),_.hardwareCursorRow=0,_.cursorRow=0,_.maxLinesRendered=0,_.previousViewportTop=0,_.ownedTopRow=0}
+@@ 278189c278215
+- _ _=_.extractCursorPosition(_,_,_?0:_.max(_,_));
++ _ _=_.extractCursorPosition(_,_,_,_.max(_,_));
+@@ 278421c278447
+- _+="\_\_[_";
++ _+="\_"+_;
+@@ 278444c278470
+- _(_.altScreen||_?_:_?_:"\_[_","first");
++ _(_.altScreen||_?_:_?_:"\_"+_,"first");
+@@ 278613c278639
+- _+="\_[_",_=_.length-1;
++ _+=_,_=_.length-1;
+@@ 284240a284267,284271
++ _ _=_(_,_);
++ _(!_.props.streamTailCursor||_.length===0)return _;
++ _ _=_.slice();
++ return _[_.length-1]+=_,_}
++ function _(_,_){
+@@ 284273a284305
++ _();
+@@ 292515c292547
+- AppView:_,appStore:_,initialize:_,renderApp:_=_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_}
++ AppView:_,appStore:_,initialize:_,renderApp:_=_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_,screenReaderDetection:_}
+@@ 292518c292550
+- appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_}
++ appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_,screenReaderDetection:_}
+@@ 292530a292563,292665
++ execFileSync _ _}
++ _"child_process";
++ import{
++ readFileSync _ _}
++ _"_";
++ function _(){
++ _(process.platform!=="linux")return!1;
++ _{
++ _ _=_("/_/_/kernel/osrelease","_").toLowerCase();
++ return _.includes("microsoft")||_.includes("_")}
++ catch{
++ return!1}
++ }
++ function _(_,_,_=!1){
++ _(_==="darwin")return{
++ _:"_",_:[_]}
++ ;
++ _(_==="win32")return{
++ _:"rundll32",_:["_.dll,FileProtocolHandler",_]}
++ ;
++ _(_)return{
++ _:"wslview",_:[_]}
++ ;
++ return{
++ _:"_-_",_:[_]}
++ }
++ function _(_=process.env){
++ _ _=(_)=>_[_]!==_ 0;
++ return _("KIRO_FAKE_IS_REMOTE")||_("Q_FAKE_IS_REMOTE")||_("SSH_CLIENT")||_("SSH_CONNECTION")||_("SSH_TTY")}
++ function _(_){
++ _{
++ _{
++ _:_,_:_}
++ =_(process.platform,_,_());
++ return _(_,_,{
++ stdio:"ignore"}
++ ),!0}
++ catch{
++ return!1}
++ }
++ _ _=()=>{
++ }
++ ;
++ import{
++ execFile _ _}
++ _"child_process";
++ async function _({
++ platform:_=process.platform,_:_=process.env,listProcesses:_=_,timeoutMs:_=_}
++ ={
++ }
++ ){
++ _(_!=="darwin"||_(_))return!1;
++ _ _;
++ _{
++ _ _=await Promise.race([_(_),_ Promise((_,_)=>{
++ _=setTimeout(()=>_(Error("process listing timed _")),_)}
++ )]);
++ return _(_)}
++ catch{
++ return!1}
++ finally{
++ clearTimeout(_)}
++ }
++ function _(_){
++ _ _=!1,_=!1,_=!1,_=_ _,_=(_)=>{
++ _=_,_=!0;
++ _(_ _ _ _)_()}
++ ;
++ return{
++ isDetected:()=>_,isSettled:()=>_,subscribe:(_)=>(_.add(_),()=>_.delete(_)),start:()=>{
++ _(_)return;
++ _=!0,_().then((_)=>_(_===!0),()=>_(!1))}
++ }
++ }
++ function _(_,{
++ _:_=process.env,setting:_=_()}
++ ={
++ }
++ ){
++ _ _=_(_);
++ _(!_||_==="_"||_==="_")return _;
++ _ _=_(_);
++ _(_(_,_)==="_")_.start();
++ return _}
++ _ _,_="_",_="/VoiceOver.app/Contents/MacOS/VoiceOver",_=500,_=(_)=>_.find((_)=>_===_),_=(_=process.env)=>_(_.KIRO_SCREEN_READER),_=()=>_(_(_.CHAT_SCREEN_READER,_))??_,_=(_,_=process.env)=>_(_)??_,_=(_,_)=>_==="_"||_==="_"&&_,_=(_)=>_.split(`\n`).some((_)=>_.trim().endsWith(_)),_=(_)=>_ Promise((_,_)=>{
++ _("/_/_",["-_","_="],{
++ timeout:_,killSignal:"SIGKILL",maxBuffer:8388608}
++ ,(_,_)=>_?_(_):_(_))}
++ ),_;
++ _ _=_(()=>{
++ _();
++ _();
++ _();
++ _=["_","_","_"];
++ _={
++ isDetected:()=>!1,isSettled:()=>!0,subscribe:()=>()=>{
++ }
++ ,start:()=>{
++ }
++ }
++ }
++ );
++ import{
+@@ 292535c292670
+- AppView:_.AppView,renderApp:_.renderApp,initialize:_.initialize??_,resolveSession:_.resolveSession??_,startTelemetryBinding:_.startTelemetryBinding??_}
++ AppView:_.AppView,renderApp:_.renderApp,initialize:_.initialize??_,resolveSession:_.resolveSession??_,startTelemetryBinding:_.startTelemetryBinding??_,detectScreenReader:_.detectScreenReader}
+@@ 292554c292689
+- AppView:_,initialize:_,renderApp:_,resolveSession:_,startTelemetryBinding:_}
++ AppView:_,initialize:_,renderApp:_,resolveSession:_,startTelemetryBinding:_,detectScreenReader:_}
+@@ 292611c292746
+- ;
++ ,_=_(_);
+@@ 292614c292749
+- AppView:_,appStore:_,initialize:()=>_(_,_),renderApp:_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_}
++ AppView:_,appStore:_,initialize:()=>_(_,_),renderApp:_,renderOptions:_,uiMode:_,wrapDisabled:_,startedFullscreen:_,screenReaderDetection:_}
+@@ 292679a292815
++ _();
+@@ 293854a293991,294014
++ _ _,_,_=({
++ detection:_=_,children:_}
++ )=>{
++ _[_,_]=_(_),_=_((_)=>{
++ _(_==="_")_.start();
++ _(_)}
++ ,[_]),_=_(_.subscribe,_.isDetected,_.isDetected),_=_(_.subscribe,_.isSettled,_.isSettled),_=_(()=>({
++ setting:_,setSetting:_,envOverride:_(),voiceOverDetected:_,voiceOverChecked:_,checkVoiceOver:_.start,active:_(_(_),_)}
++ ),[_,_,_,_,_]);
++ return _(_.Provider,{
++ value:_}
++ ,_)}
++ ,_=()=>_(_);
++ _ _=_(()=>{
++ _();
++ _();
++ _={
++ setting:"_",setSetting:()=>{
++ }
++ ,envOverride:_ 0,voiceOverDetected:!1,voiceOverChecked:!0,checkVoiceOver:()=>{
++ }
++ ,active:!1}
++ ,_=_(_)}
++ );
+@@ 309862,309863d310021
+- return _===_||typeof _==="string"}
+- function _(_){
+@@ 310019c310177,310186
+- _(typeof _.from!=="string"||!_(_.to)||!_(_.cause,_)||_.promoted!==_ 0&&typeof _.promoted!=="boolean")return _;
++ _ _=_(_.from),_=_.to===_?_:_(_.to);
++ _(_===_||_===_&&_.to!==_)return _.warn("Dropping model_fallback update _ _ unreadable model _",{
++ _:_.from,_:_.to}
++ ),_;
++ _(!_(_.cause,_))return _.warn("Dropping model_fallback update _ _ unrecognized cause",{
++ cause:_.cause}
++ ),_;
++ _(_.promoted!==_ 0&&typeof _.promoted!=="boolean")return _.warn("Dropping model_fallback update _ _ malformed promoted",{
++ promoted:_.promoted}
++ ),_;
+@@ 310026c310193
+- sessionUpdate:"model_fallback",_:_.from,_:_.to,cause:_.cause,promoted:_.promoted===!0}
++ sessionUpdate:"model_fallback",_:_,_:_,cause:_.cause,promoted:_.promoted===!0}
+@@ 310115c310282,310284
+- _=["agent-subtask","system-notification","workflow-progress"],_=["pending","running","completed","failed"],_=["system-notification","workflow-progress"],_=["refused","unavailable"]}
++ _();
++ _();
++ _=["agent-subtask","system-notification","workflow-progress"],_=["pending","running","completed","failed"],_=["system-notification","workflow-progress"],_=["refused","unavailable","unknown"]}
+@@ 310444a310614,310674
++ return _?.kind==="model_fallback"||_?.kind==="model_fallback_promoted"}
++ function _(_){
++ _(_==="refusal")return"refused";
++ _(_==="availability")return"unavailable";
++ return _.warn("Unrecognized model_fallback trigger _ _",{
++ trigger:_}
++ ),"unknown"}
++ function _(_){
++ _(typeof _.agentSubtaskId==="string"&&_.agentSubtaskId)return _.info("Ignoring _-agent model fallback notice",{
++ _:_.kind,agentSubtaskId:_.agentSubtaskId}
++ ),!0;
++ _(_.agentSubtaskId!=_&&typeof _.agentSubtaskId!=="string")_.warn("Model fallback notice carries _ _-string agentSubtaskId",{
++ _:_.kind,agentSubtaskId:_.agentSubtaskId}
++ );
++ return!1}
++ function _(_){
++ _ _=_(_.from),_=_.to===_ 0?_:_(_.to);
++ _(_===_||_.to!==_ 0&&_===_)return _.warn("Dropping model fallback notice _ _ unreadable model _",{
++ _:_.kind,_:_.from,_:_.to}
++ ),_;
++ return{
++ _:_,_:_}
++ }
++ function _(_){
++ _(_(_))return[];
++ _ _=_(_);
++ _(_===_)return[];
++ return _.kind==="model_fallback_promoted"?_(_,_):_(_,_)}
++ function _(_,{
++ _:_,_:_}
++ ){
++ _ _={
++ _:"model_fallback",_:_,_:_,cause:_(_.trigger),promoted:!1}
++ ;
++ _(_===_)return[_];
++ _(_.scope==="session")return[_,{
++ ...r,promoted:!0}
++ ];
++ _(_.scope!=="_")_.warn("Unrecognized model_fallback scope _ _;
++  _ promoting",{
++ scope:_.scope}
++ );
++ return[_]}
++ function _(_,{
++ _:_,_:_}
++ ){
++ _(_===_)return _.warn("Dropping model_fallback_promoted notice without _ target",{
++ _:_}
++ ),[];
++ _(_.trigger!=="refusal")return _.warn("Dropping model_fallback_promoted notice _ _ _-refusal trigger",{
++ _:_,_:_,trigger:_.trigger}
++ ),[];
++ return[{
++ _:"model_fallback",_:_,_:_,cause:"refused",promoted:!0}
++ ]}
++ _ _=_(()=>{
++ _();
++ _();
++ _()}
++ );
++ function _(_){
+@@ 310789a311020,311022
++ _(_(_)){
++ _(_ _ _ _(_))_.emitSideEffect(_);
++ return _}
+@@ 310822a311056
++ _();
+@@ 315769,315812d316002
+- execFileSync _ _}
+- _"child_process";
+- import{
+- readFileSync _ _}
+- _"_";
+- function _(){
+- _(process.platform!=="linux")return!1;
+- _{
+- _ _=_("/_/_/kernel/osrelease","_").toLowerCase();
+- return _.includes("microsoft")||_.includes("_")}
+- catch{
+- return!1}
+- }
+- function _(_,_,_=!1){
+- _(_==="darwin")return{
+- _:"_",_:[_]}
+- ;
+- _(_==="win32")return{
+- _:"rundll32",_:["_.dll,FileProtocolHandler",_]}
+- ;
+- _(_)return{
+- _:"wslview",_:[_]}
+- ;
+- return{
+- _:"_-_",_:[_]}
+- }
+- function _(_=process.env){
+- _ _=(_)=>_[_]!==_ 0;
+- return _("KIRO_FAKE_IS_REMOTE")||_("Q_FAKE_IS_REMOTE")||_("SSH_CLIENT")||_("SSH_CONNECTION")||_("SSH_TTY")}
+- function _(_){
+- _{
+- _{
+- _:_,_:_}
+- =_(process.platform,_,_());
+- return _(_,_,{
+- stdio:"ignore"}
+- ),!0}
+- catch{
+- return!1}
+- }
+- _ _=()=>{
+- }
+- ;
+- import{
+@@ 320512c320702
+- classification:"_-_",label:"_",actionDescription:"Upgrade _ universal (_ + _) config"}
++ classification:"_-_",label:"_ _ earlier upgrade",actionDescription:"Upgrade _ refresh _ universal (_ + _) config"}
+@@ 327029a327220,327227
++ _(_.hops.length>0)_.answerRowIds.add(_)}
++ function _(_,_){
++ _(_.answerRowIds.size===0)return!1;
++ return _.some((_)=>_.role==="model"&&_.answerRowIds.has(_.id)&&_.content.trim().length>0)}
++ function _(_){
++ _ _=_(_),_=_().ellipsis;
++ return(_)=>_(_)??_(_,_)}
++ function _(_){
+@@ 327032,327033c327230,327231
+- =_();
+- return[...n,...r.availableModels].find((_)=>_.id===_)?.name??_}
++ =_(),_=[...t,...n.availableModels];
++ return(_)=>_.find((_)=>_.id===_)?.name}
+@@ 327035,327038c327233,327235
+- _ _=_(_,_);
+- _(_.cause==="unavailable")return`_{
+- _}
+-  _ unavailable`;
++ return _(_)(_)}
++ function _(_,_){
++ _(_.length<=_)return _;
+@@ 327039a327237,327238
++ _.slice(0,_-_.length)}
++ _{
+@@ 327041,327042c327240,327251
+-  refused`}
+- function _(_,_,_){
++ `}
++ function _(_){
++ _(_==="unavailable")return"_ unavailable";
++ _(_==="unknown")return"yielded";
++ return"refused"}
++ function _(_,_){
++ return`_{
++ _(_,_)}
++  _{
++ _(_.cause)}
++ `}
++ function _(_,_,_,_){
+@@ 327045c327254,327256
+- _ _=_(_,_),_=_(_,_);
++ _ _=_(_,_),_=_(_,_),_=_.promotedTo?` _{
++ _(_.promotedTo)}
++  _ _ _ conversation'_ model.`:"";
+@@ 327050c327261,327263
+-  cancelled.`,success:!1,reasons:_}
++  cancelled.${
++ _}
++ `,success:!1,reasons:_}
+@@ 327055c327268,327270
+- . _ model answered. _ _ different model _ /model.`,success:!1,reasons:_}
++ . _ model answered. _ _ different model _ /model.${
++ _}
++ `,success:!1,reasons:_}
+@@ 327057c327272,327286
+- _(_==="unanswered")return{
++ _(_==="faulted"&&!_)return{
++ content:_.hops.length>1?`_{
++ _}
++ ;
++  _{
++ _(_.to)}
++  produced _ answer.${
++ _}
++ `:`_{
++ _}
++ . _ model answered.${
++ _}
++ `,success:!1,reasons:_}
++ ;
++ _(_.promotedTo===_.to)return{
+@@ 327060d327288
+- . _ model answered.`,success:!1,reasons:_}
+@@ 327062c327290,327293
+- _ _=_.promotedTo?", _ _ conversation'_ model.":" _ _ _.";
++  answered _ _{
++ _(_.to)}
++ , _ _ conversation'_ model.`,success:!0,reasons:_}
++ ;
+@@ 327069c327300
+- _{
++  _ _ _.${
+@@ 327073a327305
++ _ _=[...t.hops].reverse().find((_)=>_.to!==_)?.to;
+@@ 327075c327307
+- _:_.modelId??_().currentModel?.id??_,explanation:_.explanation??_}
++ _:_.modelId??_??_().currentModel?.id??_,explanation:_.explanation??_}
+@@ 327080c327312,327323
+- =_;
++ =_,_=_(_);
++ _(_!==_&&_===_.from){
++ _(_.pendingRefusal=_,!_.promoted){
++ _ _=(_.from?_(_,_.from):_ 0)||"_ model",_=_().ellipsis;
++ _().setRetryStatus({
++ message:`_{
++ _}
++  couldn'_ complete _ response. Retrying${
++ _}
++ `}
++ )}
++ return}
+@@ 327084c327327
+- _:_,_:_(_,_)}
++ _:_,_:_(_)}
+@@ 327087,327089c327330
+- _(_.hops.push(_.cause==="refused"?{
+- _:_.from,_:_,cause:"refused",explanation:_.pendingRefusal?.explanation??_}
+- :{
++ _(_.hops.push(_.cause==="unavailable"?{
+@@ 327091c327332,327334
+- ),_.pendingRefusal=_,_===_)return;
++ :{
++ _:_.from,_:_,cause:_.cause,explanation:_.pendingRefusal?.explanation??_}
++ ),_.pendingRefusal=_,_.answerRowIds=_ _,_===_)return;
+@@ 327094c327337
+- _(_,(_)=>_(_,_))}
++ _(_,_)}
+@@ 327097c327340
+- _(_,_)}
++ _(_)}
+@@ 327104c327347
+- _ _=_(_,_,(_)=>_(_,_));
++ _ _=_(_,_,_(_),_(_,_().messages));
+@@ 327112,327114c327355,327357
+- _:[],pendingRefusal:_,promotedTo:_}
+- ),_=(_,_)=>_.from?_(_.from):"_ model",_=(_,_)=>_.hops.map((_)=>_(_,_)).join(";
+-  "),_=(_,_)=>_.hops.flatMap((_)=>_.cause==="refused"&&_.explanation?[{
++ _:[],pendingRefusal:_,promotedTo:_,answerRowIds:_ _}
++ ),_=64,_=(_,_)=>_.from?_(_.from):"_ model",_=(_,_)=>_.hops.map((_)=>_(_,_)).join(";
++  "),_=(_,_)=>_.hops.flatMap((_)=>_.cause!=="unavailable"&&_.explanation?[{
+@@ 327117a327361
++ _();
+@@ 327322a327567
++ _(_!=_)_(_,_);
+@@ 327348,327349c327593,327594
+- _=_,_=_!==_,_.push(_),_((_)=>({
+- messages:[...Ne.messages,{
++ _=_,_=_!==_,_.push(_),_(_,_),_((_)=>({
++ messages:[...Qe.messages,{
+@@ 327640c327885
+- _(_.open=!1,_.blocked=!1,_=[],_.clearWatchdog(),_(),_(),_.drain(),_(),_.removeEmptyOpener(),_(_.stopReason==="cancelled"?"cancelled":"answered"),_.stopReason==="cancelled")_((_)=>_(_));
++ _(_.open=!1,_.blocked=!1,_=[],_.clearWatchdog(),_(),_(),_.drain(),_(),_.removeEmptyOpener(),_(_.stopReason==="cancelled"?"cancelled":_.stopReason==="error"||_.stopReason==="content_filtered"?"faulted":"answered"),_.stopReason==="cancelled")_((_)=>_(_));
+@@ 327665c327910
+- _(_.type!=="retry_warning"&&_.type!=="stall_notice"&&_().retryStatus)_().setRetryStatus(_);
++ _(_.type!=="retry_warning"&&_.type!=="stall_notice"&&(_.type!=="model_fallback"||!_.promoted)&&_().retryStatus)_().setRetryStatus(_);
+@@ 327699c327944,327945
+- _"model_fallback":_(_,_,_);
++ _"model_fallback":_(!_.promoted&&_.to!==_.from)_(),_=[];
++ _(_,_,_);
+@@ 327795c328041
+- ),_(_().wasCancelled?"cancelled":"unanswered")}
++ ),_(_().wasCancelled?"cancelled":"faulted")}
+@@ 345770a346017,346021
++ _ _=_(()=>{
++ _();
++ _=_(!1)}
++ );
++ _ _;
+@@ 345779c346030,346031
+- await _([_(),_(),_(),_()]);
++ _();
++ await _([_(),_(),_(),_(),_()]);
+@@ 345783c346035
+- _ _=_?"overflow":"_",_=_(),{
++ _ _=_?"overflow":"_",_=_(_)&&_&&!_,_=_(),{
+@@ 345815c346067,346079
+- ),[_,_,_,_,_,_,_,_,_]);
++ ),[_,_,_,_,_,_,_,_,_]),_=_(()=>{
++ _(!_)return _;
++ _(_ _=_.length-1;
++ _>=0;
++ _--){
++ _ _=_[_].lines;
++ _(_ _=_.length-1;
++ _>=0;
++ _--)_(_(_[_])>0)return{
++ block:_,_:_}
++ }
++ return _}
++ ,[_,_]);
+@@ 345821c346085
+- _:_,children:_}
++ _:_,streamTailCursor:_?.block===_&&_.line===_,children:_}
+@@ 355250c355514
+- segments:_,cursor:_,voiceCursorChar:_,menuHasCursor:_,CursorBlock:_}
++ segments:_,cursor:_,voiceCursorChar:_,menuHasCursor:_}
+@@ 355257c355521
+- _ _(_.type==="_")_.push(_(_,_&&_===_,_,_,_,_(_,{
++ _ _(_.type==="_")_.push(_(_,_&&_===_,_,_,_(_,{
+@@ 355262c355526
+- _ _(_.type==="paste")_.push(_(_,_&&_===_,_,_,_,_(_,{
++ _ _(_.type==="paste")_.push(_(_,_&&_===_,_,_,_(_,{
+@@ 355267c355531
+- _ _(_.type==="image")_.push(_(_,_&&_===_,_,_,_,_(_,{
++ _ _(_.type==="image")_.push(_(_,_&&_===_,_,_,_(_,{
+@@ 355285c355549
+- commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_,CursorBlock:_}
++ commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_}
+@@ 355304c355568
+- function _(_,_,_,_,_,_,_){
++ function _(_,_,_,_,_,_){
+@@ 355341a355606,355616
++ _ _=({
++ _:_=" ",markerOwnedElsewhere:_=!1,marker:_=_}
++ )=>_(_,{
++ children:[!_&&_(_,{
++ children:_}
++ ),_(_,{
++ inverse:!0,children:_}
++ )]}
++ ),_=(_)=>_(_,{
++ ...e,marker:_}
++ );
+@@ 355346c355621
+- await _([_(),_(),_(),_()])}
++ await _([_(),_(),_(),_(),_()])}
+@@ 355364,355372c355639
+- _ _="Press _ _ expand",_=({
+- _:_=" ",markerOwnedElsewhere:_=!1}
+- )=>_(_,{
+- children:[!_&&_(_,{
+- children:_}
+- ),_(_,{
+- inverse:!0,children:_}
+- )]}
+- ),_=(_)=>_.map((_)=>{
++ _ _="Press _ _ expand",_=(_)=>_.map((_)=>{
+@@ 355430c355697
+- onSubmit:_,isProcessing:_,triggerRules:_=[],onTriggerDetected:_,placeholder:_,suppressArrows:_=!1,suppressPromptGlyph:_=!1,isInputOwnedExternally:_}
++ onSubmit:_,isProcessing:_,triggerRules:_=[],onTriggerDetected:_,placeholder:_,suppressArrows:_=!1,suppressPromptGlyph:_=!1,isInputOwnedExternally:_,yieldCursorWhenEmpty:_=!1}
+@@ 355898c356165
+- _(_(_)===0)return _(_,_,_,_.smallDot,_,_,_,_);
++ _(_(_)===0)return _(_,_,_,_.smallDot,_,_,_,_?_:_);
+@@ 355900c356167
+- segments:_,cursor:_,commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_,CursorBlock:_}
++ segments:_,cursor:_,commandShadowText:_,voiceCursorChar:_,menuHasCursor:_,styleInputText:_,placeholderColor:_,primaryColor:_}
+@@ 355940c356207
+- header:_,subHeader:_,children:_,onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,_:_,hideInput:_=!1,isInputOwnedExternally:_}
++ header:_,subHeader:_,children:_,onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,_:_,hideInput:_=!1,isInputOwnedExternally:_,yieldCursorWhenEmpty:_}
+@@ 355954c356221
+- onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,isInputOwnedExternally:_}
++ onSubmit:_,isProcessing:_,triggerRules:_,onTriggerDetected:_,placeholder:_,isInputOwnedExternally:_,yieldCursorWhenEmpty:_}
+@@ 362339a362607
++ _();
+@@ 362342c362610
+- content:_,_:_,status:_,isStreaming:_,barColor:_,onReadyToFlush:_,selectionSource:_}
++ content:_,_:_,status:_,isStreaming:_,barColor:_,onReadyToFlush:_,selectionSource:_,ownsStreamTail:_=!1}
+@@ 362347c362615,362616
+- return _(_,{
++ return _(_.Provider,{
++ value:_,children:_(_,{
+@@ 362352a362622
++ )}
+@@ 362631a362902
++ _();
+@@ 362640c362911,362913
+- =_(),_=_(),_=_(()=>{
++ =_(),_=_(),{
++ active:_}
++ =_(),_=_(()=>{
+@@ 362682c362955
+- content:_,_:"agent",isStreaming:_,barColor:_,onReadyToFlush:_,selectionSource:_?_ 0:_.id}
++ content:_,_:"agent",isStreaming:_,ownsStreamTail:_&&_,barColor:_,onReadyToFlush:_,selectionSource:_?_ 0:_.id}
+@@ 363493a363767,363768
++ ,"skill-_-restrictions":{
++ title:"_ restrictions _ skills",attribute:"toolsSettings deniedPaths",change:"_ doesn'_ apply _ restrictions _ skill loading _",mitigation:"Replace _ skill _ _ _ skill _ rules _ blocked skills, _ _ _ skill allow _ _ _ should _ without asking"}
+@@ 363928c364203
+- _(_.id==="display"&&!_.rolloutEnabled)return"Animations, ASCII _, icons, thinking, _ scrollback";
++ _(_.id==="display"&&!_.rolloutEnabled)return"Animations, ASCII _, icons, screen reader, thinking, _ scrollback";
+@@ 367478c367753,367755
+- _ _=2,_=({
++ _ _=2,_=(_,_)=>_.replace(/^(\*\*.+ _'_ _ _ .+)\*\*_/_,`_ (_{
++ _}
++ )**`),_=({
+@@ 367487c367764
+- =_(),_=_(),[_,_]=_(0);
++ =_(),[_,_]=_(0);
+@@ 367498,367502c367775
+- ),[_,_]),_=_(()=>_.map((_)=>_.content.replace(/^\*\*\u2728 _'_ _ _ (.*)\*\*_/_,`**_{
+- _.sparkle}
+-  _'_ _ _ _ (_{
+- _.date}
+- )**`)).join(`\n\n---\n\n`),[_,_.sparkle]),_=_.max(_.floor(_/2),8),_=_(()=>_.split(`\n`),[_]),[_,_]=_(0),_=_.slice(_,_+_).join(`\n`),_=_>0,_=_+_<_.length;
++ ),[_,_]),_=_(()=>_.map((_)=>_(_.content,_.date)).join(`\n\n---\n\n`),[_]),_=_.max(_.floor(_/2),8),_=_(()=>_.split(`\n`),[_]),[_,_]=_(0),_=_.slice(_,_+_).join(`\n`),_=_>0,_=_+_<_.length;
+@@ 368599c368872,368875
+- return[...n==="_"?_.filter((_)=>_.opensPanel!=="fullscreen"):_,_]}
++ return[...n==="_"?_.filter((_)=>_.opensPanel!=="fullscreen"&&_.key!==_.CHAT_SCREEN_READER):_,_]}
++ function _(_,_){
++ _(_==="_")return(_===_ 0?"_ (...)":_?"_ (_)":"_ (_)").padEnd(_);
++ return _==="_"?"_":"_"}
+@@ 368612a368889,368892
++ _ _(_.key===_.CHAT_SCREEN_READER){
++ _ _=_(_);
++ _(_===_ 0)return;
++ await _.onPersistSetting(_.key,_),_.setScreenReaderSetting(_)}
+@@ 368629c368909
+- _ _,_,_,_,_,_,_=({
++ _ _,_,_,_="_ input _ _",_=10,_,_,_,_=({
+@@ 368638c368918,368924
+- =_(),{
++ =_(),_=_(),_=_.setSetting,{
++ checkVoiceOver:_}
++ =_,_=_!=="_";
++ _(()=>{
++ _(_)_()}
++ ,[_,_]);
++ _ _=_("_"),_=_!=="_"?_(_,!1):_.voiceOverChecked?_.voiceOverDetected:_ 0,{
+@@ 368641,368644c368927,368930
+- ...j,description:_.description.split("\_").join(_.smallDot)}
+- )),[_,_,_]),[_,_]=_("display"),[_,_]=_(()=>Object.fromEntries([...M,...ITt].filter((_)=>!_.opensPanel).map((_)=>[_.key,_.cycle?_.key===_.CHAT_SHOW_THINKING?_:_.key===_.CHAT_UI_MODE?_()??String(_.defaultValue):_.key===_.CHAT_FULLSCREEN_WHEEL_ROWS?String(_):_(_.key,String(_.defaultValue)):_(_.key,_.defaultValue===!0)]))),_=_(()=>({
+- onPersistSetting:_,onUiModeChanged:_,setPreserveScrollback:_,setTerminalTitleEnabled:_,setFullscreenWheelRows:_,setFullscreenCopyOnSelect:_,setAllowAsciiArt:_,setAllowAnimations:_,setAllowIcons:_,setWordWrap:_,onFullscreenPreferenceChanged:_,setValues:_}
+- ),[_,_,_,_,_,_,_,_,_,_,_]),_=_(()=>_({
++ ...te,description:_.description.split("\_").join(_.smallDot)}
++ )),[_,_,_]),[_,_]=_("display"),[_,_]=_(()=>Object.fromEntries([...U,...lDt].filter((_)=>!_.opensPanel).map((_)=>[_.key,_.cycle?_.key===_.CHAT_SHOW_THINKING?_:_.key===_.CHAT_UI_MODE?_()??String(_.defaultValue):_.key===_.CHAT_FULLSCREEN_WHEEL_ROWS?String(_):_.key===_.CHAT_SCREEN_READER?_.setting:_(_.key,String(_.defaultValue)):_(_.key,_.defaultValue===!0)]))),_=_(()=>({
++ onPersistSetting:_,onUiModeChanged:_,setPreserveScrollback:_,setTerminalTitleEnabled:_,setFullscreenWheelRows:_,setFullscreenCopyOnSelect:_,setAllowAsciiArt:_,setAllowAnimations:_,setAllowIcons:_,setScreenReaderSetting:_,setWordWrap:_,onFullscreenPreferenceChanged:_,setValues:_}
++ ),[_,_,_,_,_,_,_,_,_,_,_,_]),_=_(()=>_({
+@@ 368653,368655c368939,368948
+- _(_.cycle)return{
+- _:"cycle",label:_.label,description:_.description,options:_.cycle.map((_)=>({
+- value:_,label:_}
++ _(_.cycle){
++ _ _=_.key===_.CHAT_SCREEN_READER;
++ return{
++ _:"cycle",label:_.label,description:_&&_.envOverride?`_{
++ _}
++ ;
++  KIRO_SCREEN_READER=_{
++ _.envOverride}
++ `:_.description,options:_.cycle.map((_)=>({
++ value:_,label:_?_(_,_):_}
+@@ 368659c368952
+- ;
++ }
+@@ 368669c368962
+- ,[_,_,_,_,_,_,_]);
++ ,[_,_,_,_,_,_,_,_.envOverride,_]);
+@@ 368689a368983,368984
++ _();
++ _();
+@@ 368701a368997,369001
++ _:_.CHAT_SCREEN_READER,label:"Screen reader",description:`_{
++ _}
++ ;
++  cursor follows replies _ screen readers`,defaultValue:"_",cycle:[...MW]}
++ ,{
+@@ 373090a373391
++ _();
+@@ 373104a373406,373407
++ =_(),{
++ active:_}
+@@ 373119c373422
+- ...t,isInputOwnedExternally:_}
++ ...t,isInputOwnedExternally:_,yieldCursorWhenEmpty:_}
+@@ 376651c376954
+- appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_=!1}
++ appStore:_,wrapDisabled:_,uiMode:_,startedFullscreen:_=!1,screenReaderDetection:_}
+@@ 376666a376970
++ detection:_,children:_(_,{
+@@ 376684a376989
++ )}
+@@ 376693a376999
++ _();
+@@ 378582c378888
+- AppView:_}
++ AppView:_,detectScreenReader:_}
+@@ 378584a378891
++ _();

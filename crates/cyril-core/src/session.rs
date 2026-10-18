@@ -53,6 +53,23 @@ pub struct SessionController {
     /// Extended-thinking state of the current model (cyril-k3lz), derived by
     /// `ThinkingState::apply_notification`; read by `/thinking`.
     thinking: ThinkingState,
+    /// The latest KAS session config catalog (cyril-vh69 C3), replaced
+    /// wholesale on every `ConfigOptionsUpdated`/`ConfigOptionSet` — the
+    /// catalog always arrives complete, so there is nothing to merge. `None`
+    /// before the first catalog lands (the wire sends it just after
+    /// `session/new`) and after `SessionCreated`/`BridgeDisconnected` reset
+    /// it. `Option`, not an empty snapshot: "not reported yet" and "reported
+    /// empty" are different facts (the powers precedent above).
+    config_options: Option<KasConfigSnapshot>,
+    /// The last config set the App dispatched from a picker and KAS has not
+    /// answered yet (cyril-vh69, review round 4 F14/F15) — the request side
+    /// of the read-back. Consumed by the `ConfigOptionSet` for the same
+    /// select; cleared by a failed set and at session boundaries.
+    pending_config_set: Option<KasConfigRequest>,
+    /// The effort picker a successful model set prepared from the REBUILT
+    /// catalog (review round 4, F9; cyril-838u). The App takes it right after
+    /// routing the ack; nothing is chained before the ack.
+    effort_chain: Option<ConfigPicker>,
 }
 
 impl SessionController {
@@ -76,6 +93,9 @@ impl SessionController {
             kas_hooks: Vec::new(),
             powers: None,
             thinking: ThinkingState::Unreported,
+            config_options: None,
+            pending_config_set: None,
+            effort_chain: None,
         }
     }
 
@@ -145,6 +165,65 @@ impl SessionController {
     /// Extended-thinking state of the current model (cyril-k3lz).
     pub fn thinking(&self) -> &ThinkingState {
         &self.thinking
+    }
+
+    /// The latest KAS session config catalog (cyril-vh69), or `None` before
+    /// the agent reports one and after a session boundary resets it. Read by
+    /// the KAS-only `/model` `/effort` `/mode` commands and the App's
+    /// picker-confirm revalidation.
+    pub fn config_options(&self) -> Option<&KasConfigSnapshot> {
+        self.config_options.as_ref()
+    }
+
+    /// Record a config set the App just dispatched (cyril-vh69). Called only
+    /// after a successful send, so a failed send leaves no stale request
+    /// (review round 1, F4). Nothing applies the requested value: what shows
+    /// is always the read-back.
+    pub fn note_config_set_requested(&mut self, request: KasConfigRequest) {
+        self.pending_config_set = Some(request);
+    }
+
+    /// The effort picker prepared by the latest successful model set, if
+    /// any — one-shot: the App opens it once (or drops it when another
+    /// overlay is up).
+    pub fn take_effort_chain(&mut self) -> Option<ConfigPicker> {
+        self.effort_chain.take()
+    }
+
+    /// Reconcile a `ConfigOptionSet` for `config_id` with the pending
+    /// request, after the snapshot has been replaced by its rebuilt catalog.
+    ///
+    /// The returned `currentValue` is the truth: a mismatch (KAS silently
+    /// ignored an invalid level, or coerced an unknown mode) is debug-logged
+    /// and never "corrected". A model set that actually took effect prepares
+    /// the effort step from the rebuilt catalog, so its levels and current
+    /// value are re-derived from the response, never carried over from the
+    /// previous model (cyril-838u).
+    fn complete_config_set(&mut self, config_id: &str) {
+        let Some(request) = self
+            .pending_config_set
+            .take_if(|request| request.id().as_str() == config_id)
+        else {
+            return;
+        };
+        let Some(snapshot) = self.config_options.as_ref() else {
+            return;
+        };
+        let returned = snapshot.current_value(request.id());
+        if returned != Some(request.value()) {
+            tracing::debug!(
+                config_id,
+                requested = request.value(),
+                returned,
+                "set_config_option returned a different value than requested — showing the returned value"
+            );
+            return;
+        }
+        if request.id() == KasConfigId::Model {
+            self.effort_chain = snapshot.picker(ConfigTarget::Effort {
+                model_id: request.value().to_owned(),
+            });
+        }
     }
 
     /// Resolve a user-typed hook reference to the composite id that
@@ -283,10 +362,34 @@ impl SessionController {
             }
             Notification::ConfigOptionsUpdated(options)
             | Notification::ConfigOptionSet { options, .. } => {
-                if let Some(model_opt) = options.iter().find(|o| o.key == "model") {
+                if let Some(model_opt) = options
+                    .iter()
+                    .find(|o| o.key == KasConfigId::Model.as_str())
+                {
                     self.cached_model = model_opt.value.clone();
                 }
+                // Wholesale replacement, never a merge (cyril-vh69 C3/C4):
+                // every config notification carries the complete rebuilt
+                // catalog, so the offered model list, the current value, and
+                // the per-model effort metadata swap atomically — a model
+                // switch can never leak stale effort across (cyril-838u).
+                self.config_options = Some(KasConfigSnapshot::new(options.clone()));
+                if let Notification::ConfigOptionSet { config_id, .. } = notification {
+                    self.complete_config_set(config_id);
+                }
                 true
+            }
+            // A failed set carries no config id, so it cannot be matched to a
+            // request: `/thinking`'s KAS lever and the mediator's stale-session
+            // replacement share this label (review round 5, F23). Clearing is
+            // the fail-safe choice — at worst a successful model set opens no
+            // effort step and the user runs `/effort`; a wrong-model effort
+            // set stays impossible (`accepts`). Not a displayed change.
+            Notification::BridgeError { operation, .. }
+                if operation == SET_CONFIG_OPTION_OPERATION =>
+            {
+                self.pending_config_set = None;
+                false
             }
             Notification::CommandsUpdated { commands, .. } => {
                 self.agent_commands = commands.clone();
@@ -359,6 +462,12 @@ impl SessionController {
                 self.pending_metering = None;
                 self.pending_refusal = false;
                 self.steering_unsupported = false;
+                // The new session reports its own config catalog just after
+                // creation (cyril-vh69); the old session's must not linger,
+                // nor its in-flight request or prepared chain.
+                self.config_options = None;
+                self.pending_config_set = None;
+                self.effort_chain = None;
                 self.status = SessionStatus::Active;
                 true
             }
@@ -412,6 +521,11 @@ impl SessionController {
                 // A dead connection has no live context — clear it so a consumer
                 // doesn't read a stale value as current (mirrors UiState).
                 self.context_usage = None;
+                // Same discipline for the config catalog (cyril-vh69): a
+                // disconnected agent's offers are not validatable.
+                self.config_options = None;
+                self.pending_config_set = None;
+                self.effort_chain = None;
                 self.status = SessionStatus::Disconnected;
                 true
             }
@@ -1499,5 +1613,238 @@ mod thinking_tests {
             ctrl.apply_notification(notification);
             assert_eq!(ctrl.thinking(), &want, "KAS step {step}");
         }
+    }
+}
+
+#[cfg(test)]
+mod config_options_tests {
+    use super::*;
+    use crate::types::ConfigOptionValue;
+
+    fn catalog(model_value: &str, extra_key: &str) -> Vec<ConfigOption> {
+        vec![
+            ConfigOption {
+                key: KasConfigId::Model.as_str().into(),
+                label: "Model".into(),
+                value: Some(model_value.into()),
+                options: vec![ConfigOptionValue::new(model_value, model_value)],
+            },
+            ConfigOption {
+                key: extra_key.into(),
+                label: extra_key.into(),
+                value: None,
+                options: vec![],
+            },
+        ]
+    }
+
+    fn session_created(id: &str) -> Notification {
+        Notification::SessionCreated {
+            session_id: SessionId::new(id),
+            current_mode: None,
+            current_model: None,
+            available_modes: Vec::new(),
+            available_models: Vec::new(),
+        }
+    }
+
+    /// cyril-vh69 C3: the snapshot replaces wholesale on every config
+    /// notification and resets on session boundaries; unrelated notifications
+    /// leave it alone.
+    #[test]
+    fn config_options_snapshot_lifecycle() {
+        let mut ctrl = SessionController::new();
+        assert!(
+            ctrl.config_options().is_none(),
+            "no snapshot before the first catalog"
+        );
+
+        // Replace on ConfigOptionsUpdated.
+        assert!(
+            ctrl.apply_notification(&Notification::ConfigOptionsUpdated(catalog("auto", "mode")))
+        );
+        let snapshot = ctrl.config_options().expect("catalog replaces in");
+        assert_eq!(snapshot.current_model(), Some("auto"));
+        assert!(snapshot.option(KasConfigId::Mode).is_some());
+        assert_eq!(
+            ctrl.current_model(),
+            Some("auto"),
+            "cached model still tracks the catalog"
+        );
+
+        // Replace on ConfigOptionSet — wholesale, not a merge: the second
+        // catalog's extra key is the ONLY extra key present.
+        assert!(ctrl.apply_notification(&Notification::ConfigOptionSet {
+            config_id: KasConfigId::Model.as_str().into(),
+            options: catalog("claude-sonnet-5.5", "effortLevel"),
+        }));
+        let snapshot = ctrl.config_options().expect("catalog replaces in");
+        assert_eq!(snapshot.current_model(), Some("claude-sonnet-5.5"));
+        assert!(
+            snapshot.option(KasConfigId::Mode).is_none(),
+            "wholesale replacement, never a merge"
+        );
+        assert!(snapshot.option(KasConfigId::Effort).is_some());
+
+        // Unrelated notifications leave the snapshot untouched.
+        ctrl.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("spec"),
+        });
+        assert_eq!(
+            ctrl.config_options()
+                .and_then(KasConfigSnapshot::current_model),
+            Some("claude-sonnet-5.5"),
+            "unrelated notifications do not touch the snapshot"
+        );
+
+        // Reset on SessionCreated: the new session reports its own catalog.
+        ctrl.apply_notification(&session_created("s2"));
+        assert!(
+            ctrl.config_options().is_none(),
+            "SessionCreated resets the snapshot"
+        );
+
+        // Reset on BridgeDisconnected.
+        ctrl.apply_notification(&Notification::ConfigOptionsUpdated(catalog("auto", "mode")));
+        assert!(ctrl.config_options().is_some());
+        ctrl.apply_notification(&Notification::BridgeDisconnected {
+            reason: "process exited".into(),
+        });
+        assert!(
+            ctrl.config_options().is_none(),
+            "BridgeDisconnected resets the snapshot"
+        );
+    }
+
+    /// `auto` (no effort) and `claude-sonnet-5.5` (five levels, default
+    /// high), with `current` as the model select's currentValue.
+    fn effort_catalog(current: &str) -> Vec<ConfigOption> {
+        vec![ConfigOption {
+            key: KasConfigId::Model.as_str().into(),
+            label: "Model".into(),
+            value: Some(current.into()),
+            options: vec![
+                ConfigOptionValue::new("auto", "Auto"),
+                ConfigOptionValue {
+                    value: "claude-sonnet-5.5".into(),
+                    name: "Claude Sonnet 5.5".into(),
+                    description: None,
+                    effort: EffortMetadata::new(
+                        vec!["low".into(), "high".into(), "max".into()],
+                        Some("high".into()),
+                    ),
+                },
+            ],
+        }]
+    }
+
+    fn model_set_ack(current: &str) -> Notification {
+        Notification::ConfigOptionSet {
+            config_id: KasConfigId::Model.as_str().into(),
+            options: effort_catalog(current),
+        }
+    }
+
+    fn request_sonnet(ctrl: &mut SessionController) {
+        ctrl.note_config_set_requested(KasConfigRequest::new(
+            KasConfigId::Model,
+            "claude-sonnet-5.5",
+        ));
+    }
+
+    /// F9 (review round 4): the effort step is prepared by the model set's
+    /// read-back, from the REBUILT catalog (cyril-838u), and is one-shot.
+    #[test]
+    fn model_set_ack_prepares_the_effort_chain_from_the_rebuilt_catalog() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::ConfigOptionsUpdated(effort_catalog("auto")));
+        request_sonnet(&mut ctrl);
+
+        // An unprompted catalog push is not the ack.
+        ctrl.apply_notification(&Notification::ConfigOptionsUpdated(effort_catalog("auto")));
+        assert!(ctrl.take_effort_chain().is_none(), "nothing before the ack");
+        // Another select's ack does not consume the model request.
+        ctrl.apply_notification(&Notification::ConfigOptionSet {
+            config_id: "thinking".into(),
+            options: effort_catalog("auto"),
+        });
+        assert!(ctrl.take_effort_chain().is_none());
+
+        ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
+        let chain = ctrl
+            .take_effort_chain()
+            .expect("the ack prepares the effort step");
+        assert_eq!(
+            chain.target(),
+            &ConfigTarget::Effort {
+                model_id: "claude-sonnet-5.5".into()
+            }
+        );
+        let levels: Vec<&str> = chain.options().iter().map(|o| o.value.as_str()).collect();
+        assert_eq!(levels, ["low", "high", "max"]);
+        assert!(ctrl.take_effort_chain().is_none(), "one-shot");
+
+        // The request was consumed: a repeated ack prepares nothing.
+        ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
+        assert!(ctrl.take_effort_chain().is_none());
+    }
+
+    /// F9: a model set that did not take effect — ignored (returned value
+    /// differs), failed, or orphaned by a session boundary — prepares no
+    /// effort step; neither does a model without effort metadata.
+    #[test]
+    fn model_set_that_did_not_take_effect_prepares_no_chain() {
+        let mut ctrl = SessionController::new();
+        ctrl.apply_notification(&Notification::ConfigOptionsUpdated(effort_catalog("auto")));
+
+        request_sonnet(&mut ctrl);
+        ctrl.apply_notification(&model_set_ack("auto"));
+        assert!(ctrl.take_effort_chain().is_none(), "KAS kept the old model");
+
+        request_sonnet(&mut ctrl);
+        assert!(!ctrl.apply_notification(&Notification::BridgeError {
+            operation: SET_CONFIG_OPTION_OPERATION.into(),
+            message: "model rejected".into(),
+        }));
+        ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
+        assert!(
+            ctrl.take_effort_chain().is_none(),
+            "a failed set clears its pending request"
+        );
+
+        // Another operation's failure leaves the request in place (F25).
+        request_sonnet(&mut ctrl);
+        ctrl.apply_notification(&Notification::BridgeError {
+            operation: "prompt".into(),
+            message: "unrelated".into(),
+        });
+        ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
+        assert!(
+            ctrl.take_effort_chain().is_some(),
+            "an unrelated failure does not clear the pending request"
+        );
+
+        for boundary in [
+            session_created("s2"),
+            Notification::BridgeDisconnected {
+                reason: "process exited".into(),
+            },
+        ] {
+            ctrl.apply_notification(&Notification::ConfigOptionsUpdated(effort_catalog("auto")));
+            request_sonnet(&mut ctrl);
+            ctrl.apply_notification(&boundary);
+            ctrl.apply_notification(&model_set_ack("claude-sonnet-5.5"));
+            assert!(
+                ctrl.take_effort_chain().is_none(),
+                "{boundary:?} clears the pending request"
+            );
+        }
+
+        ctrl.note_config_set_requested(KasConfigRequest::new(KasConfigId::Model, "auto"));
+        ctrl.apply_notification(&model_set_ack("auto"));
+        assert!(
+            ctrl.take_effort_chain().is_none(),
+            "auto carries no effort metadata"
+        );
     }
 }

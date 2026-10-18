@@ -1,0 +1,42 @@
+### counts
+  kiro-workflow-authoring               0->   0
+  validationError                      17->  18
+  workflow.include.resolved             0->   2
+  workflow.include.warnings             0->   3
+  workflow.include                      0->   6
+  "plan"                               11->  11
+  isPlan                                0->   0
+  includeCount                          0->   6
+  WorkflowIncludeExpansionError         0->   1
+  agent_note                           12->  15
+  run_workflow                         45->  45
+  listRecipes                          10->  11
+  "builtIn"                             0->   0
+  builtIn                              49->  44
+  "source"                             17->  18
+  "inputs"                              8->   9
+  not available in this session         0->   2
+
+### NEW doc: 'include' node documentation in skill text?
+  kiro-workflow-authoring at -1
+
+### agent_note contexts NEW
+  @2035921: onal(),images:k.array(i2n).optional(),_meta:xfe}),NYs=k.object({type:k.literal("system"),content:k.string()}),DYs=k.object({type:k.literal("agent_note"),content:k.string(),sectionChars:k.array(k.number()).optional(),noteUserRequests:k.array(k.string()).optional()}),OYs=k.object({type:k.lit
+  @7764636: paired",{summaryKind:e,missing:t})}function cCc(e){let t=e.find(r=>r.payload.type==="user"||r.payload.type==="assistant"||r.payload.type==="agent_note")?.payload;if(t?.type==="assistant"&&t.operationType==="Summary"&&qLr(t.summaryKind)){let{summaryUserRequests:r}=t;return r===void 0&&bKi(t
+  @7764844: ummary"&&qLr(t.summaryKind)){let{summaryUserRequests:r}=t;return r===void 0&&bKi(t.summaryKind,_Ki.summaryUserRequests),r??[]}if(t?.type==="agent_note"){let{noteUserRequests:r}=t;return r===void 0&&uCc(),r??[]}return[]}function uCc(){CZ.reportCountMetrics({CompactionCarryLegacyNote:1}),S.w
+  @8135835: tion!==void 0&&{notification:e.notification}}}}function bWc(e){return{id:kCt.randomUUID(),timestamp:new Date().toISOString(),payload:{type:"agent_note",content:e.text,noteUserRequests:[...e.userRequests]}}}function TWc(e){let t=new Date().toISOString();return{id:`tombstone_summarize_${kCt.
+  @10112155: mplete`,timestamp:w,payload:v})}return i}if(e.actionType===JUr){let m=e.output.text;return i.push({id:e.actionId,timestamp:o,payload:{type:"agent_note",content:m}}),i}if(e.actionType===aCt){let m=e.output?.seal;return typeof m=="string"&&m&&i.push({id:e.actionId,timestamp:o,payload:{type:"
+  @11062518: nd:"turn_end",stopReason:r.stopReason,...r.stopDetails&&{stopDetails:r.stopDetails},messageId:e.id})];case"session_start":case"system":case"agent_note":case"error":case"mode_change":case"session_event":case"sub_agent_progress":case"legacy_reasoning_replay":return[];case"model_route":return
+  @11068228: v.success,message:v.content,...v.images!==void 0&&v.images.length>0&&{imageBase64Urls:v.images.map(X6)}}),l.delete(v.toolCallId);break;case"agent_note":{let _=LLr(y.id,v.content,v.sectionChars);h()?d.push(_):(f(),s.push(_))}break;case"tool_revert":break;case"sub_agent_start":a||(a=qt.fromA
+  @11231703: (s,g,w),_=!1;try{if(await this.host.messageStore.appendMessages(t,a,[{id:g.note.messageId,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:Tme(l,r,i)}}]),g.abortController.signal.aborted)return;if(this.host.controller.hasRunningTurn(t)||s.promptSetupInFlightCount>0){fc
+  @12040653: -write",key:n}}case"tool_result":return{kind:"flush-tool-result",toolCallKey:`${t}:tool_call:${r.toolCallId}`};case"user":case"system":case"agent_note":case"tool_revert":case"error":case"mode_change":case"session_event":case"sub_agent_start":case"sub_agent_complete":case"sub_agent_progress
+  @12042173: ages];if(f.length>0&&e.onRestoreIntent){let y={id:`restore_intent_${crypto.randomUUID()}`,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:`A checkpoint restoration was started. Unless a later checkpoint revert commits it, restoration may be incomplete. Inspect the cur
+  @12043866: f(e.onRestoreIntent&&f.length>0&&!g){let w={id:`restore_cancelled_${crypto.randomUUID()}`,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:`Checkpoint restoration ${h.at(-1)?.id} was denied before any file mutation was attempted. Its incomplete-restoration warning no l
+  @12463075: void 0,messageId:ne?.messageId,textLength:ne?.text.length}),await le(ne?[{id:ne.messageId,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:ne.text,...ne.sectionChars&&{sectionChars:[...ne.sectionChars]}}}]:[]),this.steeringManager.clearCommandActivations(t.sessionId),!
+  @12554762: ion. `+JSON.stringify(u);await this.messageStore.appendMessages(r,s.workspacePaths,[{id:y,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:w}}]),s.previousMessages=[...s.previousMessages??[],qt.fromHuman(y).withText(w)];try{await c()}catch(v){let _=`Checkpoint restorat
+  @12555191: iles and did not truncate the conversation.`,T={id:`restore_cancelled_${lq.randomUUID()}`,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:_}};try{await this.messageStore.appendMessages(r,s.workspacePaths,[T]),s.previousMessages=[...s.previousMessages??[],qt.fromHuman(
+  @12556757: ert",toolCallId:o}}:void 0,h=l4r([u]),m={id:`revert_note_${o??l??"delete"}_${Date.now()}`,timestamp:new Date().toISOString(),payload:{type:"agent_note",content:h}};s.revertedFilePaths??=[],s.revertedFilePaths.includes(u)||s.revertedFilePaths.push(u);let g=f?[f,m]:[m];return await c(),await
+
+### listRecipes row build NEW
+  @11888923: e"_kiro/workflow/delete":case"_kiro/workflow/list":case"_kiro/workflow/inspect":case"_kiro/workflow/listRecipes":case"_kiro/workflow/listWatchHandlers":case"_kiro/workflow/resumeAll":case"_kiro/workflow/resume":case"_kiro/workflow/update":case"_kiro/workflow/retry":case"_kiro/sourceProviders/list":case"_kiro/sourceProviders/listR
+  validationError @ 3930727 "text",EMa="title",bMa="top_p",zhi="truncation",OFe="type",omi="url",TMa="userContext",xMa="userInputMessage",CMa="userInputMessageContext",kMa="uncachedInputTokens",RMa="unitPlural",AMa="useRelevantDocuments",IMa="unit",PMa="usage",MMa="value",NMa="validationError",Hhi="version",DMa="web",OMa="workspaceFolders",LMa="x-amzn-kiro-agent-mode",FMa="x-amzn-kiro-conversation-id",$Ma="x-amzn-kiro-origin",UMa="x-amzn-kiro-profile",Xvr="x-amzn-kiro-profile- …

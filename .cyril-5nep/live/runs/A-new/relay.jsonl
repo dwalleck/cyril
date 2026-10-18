@@ -1,0 +1,4 @@
+{"id": 5, "original": {"trigger": "promptSubmit", "sessionId": "sess_26a56dcd-48bf-4fac-b537-b568dfc4ea8c"}}
+{"id": 7, "original": {"trigger": "preToolUse", "sessionId": "sess_26a56dcd-48bf-4fac-b537-b568dfc4ea8c", "toolId": "execute_bash", "toolTags": ["shell", "@builtin"]}}
+{"id": 15, "original": {"trigger": "postToolUse", "sessionId": "sess_26a56dcd-48bf-4fac-b537-b568dfc4ea8c", "toolId": "execute_bash", "toolTags": ["shell", "@builtin"]}}
+{"id": 16, "original": {"trigger": "agentStop", "sessionId": "sess_26a56dcd-48bf-4fac-b537-b568dfc4ea8c"}}

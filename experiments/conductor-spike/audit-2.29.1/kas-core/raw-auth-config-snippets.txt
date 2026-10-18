@@ -1,0 +1,44 @@
+
+
+==== NEW auth select Ios() ====
+function Ios(e){if(e.apiKey)return S.info("Auth: KIRO_API_KEY env var (api_key)",{regionDiscovery:e.apiKeyRegionSource!==void 0}),new H6t({apiKey:e.apiKey,regionSource:e.apiKeyRegionSource});if(e.authMode==="acp-callback")return S.info("Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)"),new oCe;if(e.authMode==="machine"){let t=e.tokenPath??oTl,r=nTl(t)?t:iTl(t);return S.info(`Auth: --auth=machine token file at ${r}`),new jke({tokenPath:r,authMethod:"machine_token",homeDir:e.homeDir})}return e.tokenPath?(S.info(`Auth: --token-path=${e.tokenPath}`),new jke({tokenPath:e.tokenPath,homeDir:e.homeDir})):(S.info("Auth: default token file"),new jke({homeDir:e.homeDir})
+
+
+==== OLD auth select Y9o() ====
+function Y9o(e){if(e.apiKey)return v.info("Auth: KIRO_API_KEY env var (api_key)"),new t2t({apiKey:e.apiKey});if(e.authMode==="acp-callback")return v.info("Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)"),new UTe;if(e.authMode==="machine"){let t=e.tokenPath??fQu;return v.info(`Auth: --auth=machine token file at ${t}`),new mxe({tokenPath:t,authMethod:"machine_token",homeDir:e.homeDir})}return e.tokenPath?(v.info(`Auth: --token-path=${e.tokenPath}`),new mxe({tokenPath:e.tokenPath,homeDir:e.homeDir})):(v.info("Auth: default t
+
+
+==== NEW apiKeyRegionDiscoveryApplies+probe ====
+function Mos(e){return e.region?!1:!(e.endpoint&&e.controlPlaneEndpoint)}function Nos(e){return async(t,r)=>{let{endpoint:n}=hx({regionOverride:t});S.trace("cps.target.resolved",{op:"apiKeyRegionProbe",region:t,endpoint:n});let i=new Vke.KiroControlPlaneBearerClient({region:t,endpoint:n,token:{token:e.apiKey},maxAttempts:1,customUserAgent:e.customUserAgent,requestHandler:new Pos.NodeHttpHandler({requestTimeout:oon,connectionTimeout:oon,httpsAgent:ob(n)})});Lg(i,"api_key","api-key-region-probe");let o=AbortSignal.any([r,AbortSignal.timeout(oon)]);try{return await qe("apiKeyRegionProbe","network",()=>i.send(new Vke.GetProfileCommand({}),{abortSignal:o}),{attributes:{region:t},errorLevel:"debug"}),!0}catch(s){if(s instanceof Vke.AccessDeniedException&&s.$metadata.httpStatusCode===403)return!1;throw s}finally{i.destroy()}}}EP();he();var sTl=6e4,aTl=5e3,cBt=class{probe;regions;now;retryInterv
+
+
+==== NEW ApiKeyRegionDiscovery ====
+cBt=class{probe;regions;now;retryIntervalMs;discovered;inFlight;retryAfter;constructor(t){this.probe=t.probe,this.regions=t.regions??RGn,this.now=t.now??Date.now,this.retryIntervalMs=t.retryIntervalMs??sTl}get region(){return this.discovered}resolve(){return this.discovered!==void 0?Promise.resolve(this.discovered):this.inFlight?this.inFlight:this.regions.length===0||this.retryAfter!==void 0&&this.now()<this.retryAfter?Promise.resolve(void 0):(this.inFlight=this.probeAllOnce(),this.inFlight)}async probeAllOnce(){try{return await this.probeAll()}finally{this.inFlight=void 0}}probeAll(){return new Promise(t=>{let r=new AbortController,n=this.regions.length,i=!1,o=s=>{r.abort(),t(s)};for(let s of this.regions)(async()=>{let a=await this.probeOne(s,r.signal);if(!r.signal.aborted){if(a){this.discovered=s,S.info("auth.api_key_region.discovered",{region:s}),o(s);return}if(i||=a===void 0,n-=1,n===0){let c=i?Math.min(aTl,this.retryIntervalMs):this.retryIntervalMs;this.retryAfter=this.now()+c,S.debug("auth.api_key_region.not_found",{probed:this.regions,inconclusive:i,cooldownMs:c}),o(void 0)}}})()})}async probeOne(t,r){try{return await this.probe(t,r)}catch(n){S.debug("auth.api_key_region.probe_failed",{region:t,error:n instanceof Error?n.name:"UnknownError"});return}}};function cTl(e){ret
+
+
+==== NEW getState param parser T_l ====
+function T_l(e){let t=e;if(t?.observer==="connection")return{observer:"connection"};if(t?.observer==="session"&&typeof t.sessionId=="string"&&t.sessionId!=="")return{observer:"session",sessionId:t.sessionId};if(t?.observer==="workspace"&&Array.isArray(t.roots)&&t.roots.length>0)return{observer:"workspace",roots:rBr(t.roots,"roots")};throw new Rn('observer must be "connection", "session" with a sessionId, or "workspac
+
+
+==== NEW init result _meta.kiro caps ====
+{checkpoints:!0,sessionList:!0,policyNotifications:!0,extensionMethods:["_kiro/knowledge",...urr,"_kiro/codeIntelligence","_kiro/session/context","_kiro/session/compact","_kiro/session/export","_kiro/session/history","_kiro/config/template","_kiro/configuration/getState",...v9r,...this.providersConfigured?["_kiro/sourceProviders/list","_kiro/sourceProviders/listResources"]:[]],sessionSources:this.remoteConfigured?["local","remote"]:["local"],sessionListScopes:this.remoteConfigured?["workspace","user"]:["workspace"],executionTargets:this.relayConfigured?["local","cloud-sandbox"]:["local"],sourceProviders:this.providersConfigured,replayMarking:!0,modelFallbackReporting:!0,...this.loggingConfig&&{logging:this.loggingConfig}}
+
+
+==== OLD init result _meta.kiro caps ====
+{checkpoints:!0,sessionList:!0,policyNotifications:!0,extensionMethods:["_kiro/knowledge",...lYt,"_kiro/codeIntelligence","_kiro/session/context","_kiro/session/compact","_kiro/session/export","_kiro/session/history","_kiro/config/template",...v$r,...this.providersConfigured?["_kiro/sourceProviders/list","_kiro/sourceProviders/listResources"]:[]],sessionSources:this.remoteConfigured?["local","remote"]:["local"],sessionListScopes:this.remoteConfigured?["workspace","user"]:["workspace"],executionTargets:this.relayConfigured?["local","cloud-sandbox"]:["local"],sourceProviders:this.providersConfigured,replayMarking:!0,...this.loggingConfig&&{logging:this.loggingConfig}}
+
+
+==== NEW declaresInactiveItems+resourcesFor ====
+lientCapabilities?._meta?.kiro;return t!==null&&typeof t=="object"&&"configurationState"in t&&t.configurationState===!0}function SPu(e){let t=e.clientCapabilities?._meta?.kiro;return t!==null&&typeof t=="object"&&"inactiveItems"in t&&t.inactiveItems===!0}function y9e(e,t){return SPu(e)?t:t.map(r=>({...r,items:r.items.filter(n=>n.standing.kind==="active")}))}var eue=class{constructor(t,r){this.id=t;this.forgetEntries=r}id;forgetEntries;listeners=new Set;handshakes=new Map;disposed=!1;configurationStateFor(t,r){let n=this.handshakeOf(t)
+
+
+==== NEW session_info model_fallback converter arm ====
+ription:e.description,status:e.status}};case"model_fallback":case"model_routed":return{}}}ixt();import*as BEo from"path";he();var $Eo=new Set;function Ziu(e,t){!BEo.isAbsolute(e)&&!$Eo.has(e)&&($Eo.add(e),S.error(`[tool-call-emitter] Locati
+
+
+==== NEW VAt payload (model_fallback fields) ====
+function VAt(e){return{from:e.from,...e.to!==void 0&&{to:e.to},...e.scope!==void 0&&{scope:e.scope},trigger:e.trigger,...e.reason!==void 0&&{reason:e.reason},...e.agentSubtaskId!==void 0&&{agentSubtaskId:e.agentSubtaskId}}}function fa(e,t){return{sessionUpdate:"session_info_update",...t,_meta:{kiro:{...Xiu(e),...e}}}}function Xiu(e){switch(e.kind){case"turn_start":return{turnStart:!0};case"turn_end":return{turnEnd:{s
+
+
+==== NEW model_fallback emit ====
+tedOption&&{selectedOption:r.selectedOption},...r.consentRound!==void 0&&{consentRound:r.consentRound}})];case"session_metadata":return nou(r.key,r.value)}}function nou(e,t){switch(e){case"memoryExtractionWatermark":return[];case"contextUsage":return[fa({kind:"context_usage",usagePercentage:t.usagePercentage})];case"displayError":{let r=t;return[fa({kind:"display_error",message:r.message,errorType:r.errorType,...r.retryErrorType!==void 0&&{retryErrorType:r.retryErrorType}})]}case rEe:return[fa({kind:"model_fallback",...VAt(t)})];case"summarization":{let r=t;switch(r.status){case"running":return[fa({kind:"summariz

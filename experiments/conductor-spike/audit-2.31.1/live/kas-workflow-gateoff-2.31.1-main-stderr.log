@@ -1,0 +1,34 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.34"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] (node:2732476) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":7}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":0}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":11}
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=28
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=72
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=40
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=37
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=46
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=34
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=23
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=13
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=18
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=14
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7

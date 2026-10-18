@@ -1,0 +1,48 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.33"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] (node:3296836) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":11}
+[WARN] [ConfigFileWatcher] Sentinel watcher error: ENOSPC: System limit for number of file watchers reached, watch '/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-wf-off-2.29.1-home-w2z462e_'
+[WARN] [ConfigFileWatcher] Watcher error: ENOSPC: System limit for number of file watchers reached, watch '/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-wf-off-2.29.1-home-w2z462e_/.kiro/workflows'
+[WARN] [ConfigFileWatcher] Watcher error: ENOSPC: System limit for number of file watchers reached, watch '/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-wf-off-2.29.1-home-w2z462e_/.kiro/workflows/usertier.workflow.yaml'
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":0}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":17}
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=33
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=32
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=45
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=49
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=40
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=51
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=48
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=81
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=44
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=42
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=22
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=36
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=47
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=31
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=43
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=27
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=16
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=35
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=26
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=15
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=7
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=30
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=25

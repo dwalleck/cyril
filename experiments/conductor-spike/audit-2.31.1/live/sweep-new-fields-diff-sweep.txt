@@ -1,0 +1,8 @@
+live   kas-live-sweep-2.31.1.jsonl: 695 paths
+pinned kas-live-sweep-2.29.1.jsonl: 693 paths
+
+ONLY under live (2) — new-field candidates:
+   + params.update.rawInput.cwd
+   + result.recipes[].plan[].steps[].effortLevel
+
+ONLY under pinned (0) — usually just coverage:

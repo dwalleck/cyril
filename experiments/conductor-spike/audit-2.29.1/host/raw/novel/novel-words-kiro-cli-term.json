@@ -1,0 +1,1181 @@
+[
+ {
+  "from": "2.28.0",
+  "to": "2.29.0",
+  "added": {
+   "Accessmodification": [
+    "MonthlyRequestCountUnknownTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessmodification_percentageChatUserModificationEventcode_scan_remediations_event_typecomponentincludes_fixCodeScanRemediationsEventExter"
+   ],
+   "Attemptsstatus": [
+    "sequence in column nameMaybeTimeoutErrorMaybeTimeoutConfigsleep_impltimeouttimeout_kindRequesturimethodextensionsRequestAttemptsstatusSharedRetryStrategyOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorReadBeforeExecutionModif"
+   ],
+   "Autocompleteg": [
+    "eCodeSignIn|AuthorityMissingE|SsoTokenProviderrL|), ignoring DATA occurred after |TypeErasedError:OperationAborted|_showAutocompletegP|=Dut|light_blue_reverrm_mediumpurple4b|xterm_slateblue1rm_lightsalmon3axterm_greenyello_lightgoldenrod2|Grapheme_Clust"
+   ],
+   "Countsaving": [
+    "alidatorsRuntimeComponentsBuilderCancelledFailedSucceededUnknownDailyRequestCountInsufficientModelCapacityMonthlyRequestCountsaving request checkpoint...failed to save request checkpoint: request body could not be clonedsuccessfully saved request chec"
+   ],
+   "Detailsurl": [
+    "cientModelCapacityMonthlyRequestCountModelTemporarilyUnavailableCodescanIssueApplyFixCodescanIssueHoverCodescanIssueViewDetailsurl::form_urlencoded::Serializer double finishurl::form_urlencoded::Serializer finishedinterceptor_stateencountered orchest"
+   ],
+   "Emptyremote": [
+    "dshakerequestidsecretparent_idEnvironmentVariablekeyInterceptInsertTextSetBufferDiagnosticsInsertOnNewCmdRunProcessErrorEmptyremote.Clientbounddescriptor for message type `remote.Clientbound` not foundinvalid string value: data is not UTF-8 encodedinv"
+   ],
+   "Errormessagereasonsession": [
+    "f_added_charsnumber_of_added_linesnumber_of_added_filesnumber_of_navigationsfolder_levelDocV2AcceptanceEventAccessDeniedErrormessagereasonsession_idcustomization_arncompletion_typerecommendation_latency_millisecondstrigger_to_response_latency_millisecondssuggestion"
+   ],
+   "Errormsgc": [
+    ": entered unreachable code: invalid start of fixed length hexadecimal number called `Result::unwrap()` on an `Err` valueErrormsgc|compiled regex exceeded size limitexhausted state IDs, too many statescapture group slots exhausted|assertion failed: !"
+   ],
+   "Errornumber": [
+    "rategytime_sourcesleep_implconfig_validatorsRuntimeComponentsBuilderInvalidGrantExceptionThrottlingErrorreasonValidationErrornumber_of_generated_charsnumber_of_generated_linesnumber_of_generated_filesnumber_of_navigationsDocV2GenerationEventInternalSe"
+   ],
+   "Errorreasongroup": [
+    "iptionmessageMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpoint}NoMatchingAuthSchemeErrorValidationErrorreasongroup_namenumber_of_unit_test_cases_generatednumber_of_unit_test_cases_acceptedlines_of_code_generatedlines_of_code_acceptedc"
+   ],
+   "Eventcustomization": [
+    "suggestion_del_charsnum_suggestion_del_linescode_intentuser_decisionresponse_start_latencyresponse_end_latencyInlineChatEventcustomization_arnaccepted_character_counttotal_character_countunmodified_accepted_character_counttotal_new_code_character_counttotal_"
+   ],
+   "Eventtypecheckedencountered": [
+    "dInvalidConversationIdInvalidKmsGrantUnknownModelTemporarilyUnavailablean RFC3339-formatted `OffsetDateTime`AppTelemetryEventtypecheckedencountered orchestrator error; continuingit is failedguaranteed by `partition`request serializer must be in the config baginput se"
+   ],
+   "Exceptioncreating": [
+    "generated_charsnumber_of_generated_linesnumber_of_generated_filesnumber_of_navigationsDocV2GenerationEventInternalServerExceptioncreating a new thread ID () would exceed the maximum number of thread ID bits specified in  ()<unnamed>' attempted to panic at '"
+   ],
+   "Exceptionregion": [
+    "BEGIN IMMEDIATEBEGIN EXCLUSIVESELECT value FROM INSERT OR REPLACE INTO  (key, value) VALUES (?1, ?2)AuthorizationPendingExceptionregionInvalidRequestRegionExceptionFeatureDevCodeGenerationEventconversation_idlines_of_code_generatedcharacters_of_code_gener"
+   ],
+   "Exceptionsession": [
+    "tValueProgrammingLanguagelanguage_nameCodeScanFailedEventInvalidScopeExceptionerrorerror_descriptionmessageInvalidClientExceptionsession_idrequest_idmodification_percentageUserModificationEventInternalServerErrorreasonCodeScanSucceededEventnumber_of_findin"
+   ],
+   "Exezzzzzzzzzzzzzzzze": [
+    "tsEimplicitGlobalRe9|$wXV|InvalidAttributeNewSessionTicket3333333333333333|csharp_namespacesecs_since_epochcliSubcommandExezzzzzzzzzzzzzzzze.protobuf.Emptyerror decoding: |max size reached|\"light_green_blinlight_green_boldline|light_blue_italilight_purple_revl"
+   ],
+   "Failedsession": [
+    "CheckFaileddashboardPageViewedmenuBarActionedfigUserMigratedchatStartchatEndmigrateClientIdmcpServerInitprofileStateauthFailedsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionconversation_idutteranc"
+   ],
+   "Failedvariant": [
+    "uct variant EventType::FigUserMigratedstruct variant EventType::TranslationActionedstruct variant EventType::DoctorCheckFailedvariant identifierACCEPTDISCARDEMPTYREJECTa Display implementation returned an error unexpectedlyErrorSucceededFailedCancelledU"
+   ],
+   "Foundcreated": [
+    "rojectUnknownUnknownVariantValueProgrammingLanguagelanguage_nameKmsDisabledKeyKmsInvalidKeyUsageKmsInvalidStateKmsKeyNotFoundcreatedTimecredentialStartUrlaccess_tokenexpires_atrefresh_tokenregionstart_urloauth_flowscopesstruct BuilderIdToken with 7 ele"
+   ],
+   "Groupcapacity": [
+    "SpecialCharacterAndLineDrawing|InvalidBooleanValueRetryModeParseErrorCurrentPointcolumnUnknownFieldnumberUnknownFieldSetGroupcapacity overflowassertion failed: index <= leninvalid wire type value: Clearing line: Clearing tabs: Pushing '' onto title stac"
+   ],
+   "Idstruct": [
+    "t variant EventType::McpServerInitstruct variant EventType::CliSubcommandExecutedstruct variant EventType::MigrateClientIdstruct variant EventType::UserLoggedInstruct variant EventType::CompletionInsertedstruct variant EventType::ChatStartstruct va"
+   ],
+   "Nulget": [
+    "199event crates/figterm/src/ipc.rs:135stdin and stdout must both be tty handles span=<- tracing::span::active-> InteriorNulget_termios failedset_termios failedtcdrain failedfailed to ioctl(TIOCGWINSZ): AuthSchemeIdscheme_idpropertiesAuthSchemePre"
+   ],
+   "Optionsallow": [
+    " VarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_gen"
+   ],
+   "Optionspackedjstypectype": [
+    "eneric_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8FieldOptionspackedjstypectypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmap_entrymessage_set_wire_formatno_standard_descriptor_accessorS"
+   ],
+   "Optionstrailing": [
+    "urceCodeInfoUninterpretedOptionstring_valueaggregate_valuedouble_valuenegative_int_valuepositive_int_valueExtensionRangeOptionstrailing_commentsleading_detached_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )Varint"
+   ],
+   "Optionstring": [
+    "elMessageOptionsmap_entrymessage_set_wire_formatno_standard_descriptor_accessorServiceOptionsSourceCodeInfoUninterpretedOptionstring_valueaggregate_valuedouble_valuenegative_int_valuepositive_int_valueExtensionRangeOptionstrailing_commentsleading_detac"
+   ],
+   "Protoextension": [
+    "odEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFi"
+   ],
+   "Protoinput": [
+    "dDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80invalid wire type:  (ex"
+   ],
+   "Protomessage": [
+    "declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_value"
+   ],
+   "Protooneof": [
+    "orProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput"
+   ],
+   "Randomdefaultm": [
+    "orUserAgentInterceptorServiceClockSkewInterceptorGenerateRecommendationsEndpointParamsInterceptorset to Some aboveStaticRandomdefaultm|UnknownmessagereasonValidationErrorValidationError [ValidationException]: PreviousEditorStateMetadataexpected StartObje"
+   ],
+   "Rangec": [
+    "ired field was missing: ``invalid value for field: `MissingFieldInvalidValueResolveEndpointErrorDateTimeFormatErrorOutOfRangec|sourcemessageevent /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-sdk-sts-1.94.0/src/endpoint_li"
+   ],
+   "Rejectaws": [
+    "response_checksum_validationTokenTypeInterceptorauth_modeUserAgentOverrideInterceptorenvUnknownVariantValueAcceptDismissRejectaws_productaws_product_versionclient_idosos_architectureos_versionparent_productparent_product_versionmetric_dataOptOutInte"
+   ],
+   "Requestaliasupdate": [
+    "uestexecutebracketedNeverConnectedUnknownConnectedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestaliasupdate_environment_variablesupdate_aliasenvironment_variablesErrorResponseErrorInlineShellCompletionRequestinternal error: ent"
+   ],
+   "Requestimmediateoffsetinsertioninsert": [
+    "onfig_sectionsEnvConfigErrorproperty_sourceerrH0H1intercept_commandcursor_positionevent_blobSetExplicitlyUnsetInsertTextRequestimmediateoffsetinsertioninsert_during_commandTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: ImdsCredenti"
+   ],
+   "Requesttimeoutenvexecutableargumentsworking": [
+    "an::active-> ClientboundpacketReadFileRequestis_binary_filenanosHeadersOut of bounds accessOperationStatusCodeRunProcessRequesttimeoutenvexecutableargumentsworking_directoryResolveDnsErrorsourceExtensionsextensions_02xextensions_1x | 0xloading device registration from secret storeno"
+   ],
+   "Responseamazonq": [
+    "ntExcettttttttttttttttUNSIGNED-PAYLOAD|&clD|HalfClosedRemote7`|zcurrent_capacityx-amzn-requestidFailed to parse ReadFileResponseamazonq_profile_text_file_lengthdoctorCheckFailecode_scan_job_idm|Duration|otobuf.FieldMasknknown-linux-gnuFailed to openptPaym"
+   ],
+   "Unavailablean": [
+    "eComponentsSharedConfigValidatorContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownModelTemporarilyUnavailablean RFC3339-formatted `OffsetDateTime`AppTelemetryEventtypecheckedencountered orchestrator error; continuingit is failedgua",
+    "ownTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccess|ModelTemporarilyUnavailablean RFC3339-formatted `OffsetDateTime`expected '' fieldregex: thread ID allocation space exhausteda formatting trait implem"
+   ],
+   "Unavailableassertion": [
+    " ;tracing::span::active-> |ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownstateModelTemporarilyUnavailableassertion failed: edge.height == self.height - 1assertion failed: src.len() == dst.len()assertion failed: edge.height == self.nod"
+   ],
+   "Unhandleddescription": [
+    "e errorservice errorServiceErrorsourcerawThrottlingErrormessagereasonValidationErrorAccessDeniedErrorInternalServerErrorUnhandleddescription() is deprecated; use DisplayIntegerSqliteFailureSqliteSingleThreadedModeFromSqlConversionFailureIntegralValueOutOfRange"
+   ],
+   "Unknowncorrect": [
+    "ide_diagnosticsChatInteractWithMessageEventCodewhispererTerminalCompletionInsertedCodewhispererTerminalTranslationActionUnknowncorrect output typeCreateTokenaws-apiinternal error: entered unreachable codeencountered orchestrator error; continuingit is fa"
+   ],
+   "Variablestatusextensions": [
+    "fresh lockinvalid wire type value: MaybeTimeoutErrorSharedDnsResolverMaybeTimeoutConfigsleep_impltimeout_kindEnvironmentVariablestatusextensionsMaybeDone polled after value takenOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorinternal "
+   ],
+   "Variantuniona": [
+    "Errornewtype variantinner has gone awayDateTimeFormatErrorAssumeRoleProviderexternal_idtime_sourceCannotSerializeUnknownVariantuniona character literal was not validthe '' component could not be parsedunexpected trailing characters; the end of input was"
+   ],
+   "acceptedprogramming": [
+    "e were already unwinding due to a previous panic.|FeatureDevCodeAcceptanceEventlines_of_code_acceptedcharacters_of_code_acceptedprogramming_languageinternal error: entered unreachable codefatal runtime error: something here is badly broken!, aborting|RUST_MIN"
+   ],
+   "aliasdeprecateduninterpreted": [
+    "ourBitLengthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava"
+   ],
+   "aliasenvironment": [
+    "tedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestaliasupdate_environment_variablesupdate_aliasenvironment_variablesErrorResponseErrorInlineShellCompletionRequestinternal error: entered unreachable code: invalid Packet tag: |N"
+   ],
+   "boundsd": [
+    "ed: out_pos + 2 < out_slice.len()assertion failed: (source_pos + 2) & out_buf_size_mask < out_slice.len()dest is out of boundsdJ:|[BUG] umask returned invalid ModeUnknown errnoOperation not permittedNo such file or directoryNo such processInterrup"
+   ],
+   "bufevent": [
+    "m/src/term/unix.rs:313figterm::term::unixmessagecrates/figterm/src/term/unix.rsevent crates/figterm/src/term/unix.rs:301bufevent crates/figterm/src/term/unix.rs:319event crates/figterm/src/term/unix.rs:325event crates/figterm/src/term/unix.rs:320ev"
+   ],
+   "bufferk": [
+    "pv4AddressInvalidIpv6AddressInvalidDomainCharacterRelativeUrlWithoutBaseSetHostOnCannotBeABaseUrl|failed to write whole bufferk|stateSELECT value FROM  WHERE key = ?1Errora Display implementation returned an error unexpectedlydescription() is depr"
+   ],
+   "checkrouteconversation": [
+    "ispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmessage_idcontext_file_len"
+   ],
+   "classnamephp": [
+    "EnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namesp"
+   ],
+   "codesession": [
+    "izecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType::ChatStart with 1 elementstruct v"
+   ],
+   "coordinatormessagetimeout": [
+    "okenaccess_tokenexpires_atrefresh_tokenprofile_arnevent crates/fig_auth/src/refresh_coordinator.rs:116fig_auth::refresh_coordinatormessagetimeout_secscrates/fig_auth/src/refresh_coordinator.rsevent crates/fig_auth/src/refresh_coordinator.rs:75event crates/fig_auth/"
+   ],
+   "countmessage": [
+    "ondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmessage_idcontext_file_lengthutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizec"
+   ],
+   "dateq": [
+    "::split().next() returns Somedomain subvalue sub,  :-|resulting value is out of rangeoverflow subtracting duration from dateqP|[]description() is deprecated; use Display*IdnaErrorsErrorsIDNA errors: |\"{E5|nI73|) as|0xfalse00010203040506070809101"
+   ],
+   "declenum": [
+    "numberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomes"
+   ],
+   "dependencypackagedependency": [
+    "eserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescri"
+   ],
+   "dependencyserviceweak": [
+    "ionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneo"
+   ],
+   "descriptionmessageconversation": [
+    "actoryprovidersqueue not emptyLIFO slot not emptyLinuxMacWindowsUnknownMetadataEntrykeyvalueSlowDownExceptionerrorerror_descriptionmessageconversation_idnumber_of_add_charsnumber_of_add_linesnumber_of_add_filesuser_decisionuser_identitynumber_of_navigationfolder_levelDo"
+   ],
+   "errtimeoutinvalid": [
+    "d_message.rs:41fig_ipc::send_messagemessagecrates/fig_ipc/src/send_message.rsevent crates/fig_ipc/src/send_message.rs:33errtimeoutinvalid message typetimeout connecting to socketinvalid permissions on socket direvent crates/fig_ipc/src/unix_socket.rs:95fig_"
+   ],
+   "executableevent": [
+    "525event crates/figterm/src/message.rs:475event crates/figterm/src/message.rs:482event crates/figterm/src/message.rs:490executableevent crates/figterm/src/message.rs:497timeout_msevent crates/figterm/src/message.rs:512event crates/figterm/src/message.rs:3"
+   ],
+   "filespy": [
+    "ic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8Fie"
+   ],
+   "flowcommandlatencyold": [
+    "tool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct var"
+   ],
+   "generatedfailed": [
+    "egionInvalidRequestRegionExceptionFeatureDevCodeGenerationEventconversation_idlines_of_code_generatedcharacters_of_code_generatedfailed to spawn `tracing-appender` non-blocking worker threadsupportedstruct Index with 2 elementsarchitecturevarianttargetTri"
+   ],
+   "idauth": [
+    "sis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType"
+   ],
+   "idmessagecrates": [
+    "utf-8BuilderIdTokenTokioSleephttps://view.awsapps.com/startevent crates/fig_auth/src/builder_id.rs:467fig_auth::builder_idmessagecrates/fig_auth/src/builder_id.rsevent crates/fig_auth/src/builder_id.rs:512errevent crates/fig_auth/src/builder_id.rs:416even"
+   ],
+   "idreasonoauth": [
+    "_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_rec"
+   ],
+   "indexjson": [
+    "eFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinval"
+   ],
+   "inlineerrevent": [
+    "interceptor.rs:190Resetting key interceptorautocomplete.onlyShowOnTabevent crates/figterm/src/inline/mod.rs:360figterm::inlineerrevent crates/figterm/src/inline/mod.rs:241event crates/figterm/src/inline/mod.rs:267event crates/figterm/src/inline/mod.rs:21"
+   ],
+   "itemrequest": [
+    "iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_le"
+   ],
+   "keystrokesactionsintercept": [
+    "ble capacity overflow|`TaskLocalFuture` polled after completionSetFigjsVisiblevisibleSetFigjsInterceptsintercept_global_keystrokesactionsintercept_bound_keystrokesresulting value is out of rangeoverflow subtracting duration from datejob_idgroup_nametimestampide_cate"
+   ],
+   "latencymenu": [
+    "lengthutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensu"
+   ],
+   "latencyvariant": [
+    "ion_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencyvariant index 0 <= i < 19AcceptDiscardEmptyRejectvariant index 0 <= i < 4SucceededFailedCancelledvariant index 0 <= i < 3result"
+   ],
+   "lengthdoctor": [
+    "LOAD|&clD|HalfClosedRemote7`|zcurrent_capacityx-amzn-requestidFailed to parse ReadFileResponseamazonq_profile_text_file_lengthdoctorCheckFailecode_scan_job_idm|Duration|otobuf.FieldMasknknown-linux-gnuFailed to openptPayment Required=~|gjhost unreachab"
+   ],
+   "lengthutterance": [
+    "ion_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmessage_idcontext_file_lengthutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar"
+   ],
+   "leninline": [
+    "defaultsx-amz-checksum-mwww-authenticate|InconsistentKeys|about-with-newli|ExternalIdpTokeninput_token_sizegested_chars_leninlineShellComplToolUseSuggestedPostMetricsInput|ityD|sal-apple-darwinj&|light_blue_blinkc|yellow_underlinexterm_mediumturqen|"
+   ],
+   "mapsubcommandresume": [
+    "::span::active-> ConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionres"
+   ],
+   "messagemessagecrates": [
+    "lue out of rangefloat value out of rangeexpected integer value|event crates/fig_ipc/src/send_message.rs:41fig_ipc::send_messagemessagecrates/fig_ipc/src/send_message.rsevent crates/fig_ipc/src/send_message.rs:33errtimeoutinvalid message typetimeout connecting "
+   ],
+   "modeshellshell": [
+    "structionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionpr"
+   ],
+   "nameconversation": [
+    "yresponse_end_latencyprogramming_languageInlineChatEventEditReadmeGenerateReadmeUpdateReadmeProgrammingLanguagelanguage_nameconversation_idnumber_of_added_charsnumber_of_added_linesnumber_of_added_filesnumber_of_navigationsfolder_levelDocV2AcceptanceEventA"
+   ],
+   "namereserved": [
+    "valid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_depende"
+   ],
+   "optoutcode": [
+    "availableUnknown`request_mut` wasn't set in the underlying interceptor context. This is a bug.falsex-amzn-codewhisperer-optoutcodeWhisperer.shareCodeWhispererContentWithAWSsize overflows MAX_SIZEcalled `Result::unwrap()` on an `Err` value|!\"#$%&'|012"
+   ],
+   "packageobjc": [
+    "Indexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_na"
+   ],
+   "pluginsglobal": [
+    "ecksum_validationThrottlingErrormessagereasonValidationErrorAccessDeniedErrorOperationservice_nameoperation_nameruntime_pluginsglobal backend is not used{}page must have been allocated to insert!Thread count overflowed the configured max count. Thread i"
+   ],
+   "recommendationsstruct": [
+    "uth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType::ChatStart with 1 elementstruct variant EventType::ToolUseSuggested with 12 elementsstruct variant Ev"
+   ],
+   "recommendationstranslation": [
+    "uestExdClientExceptionlazy state wrong|sf3wh|nnnnnnnnnnnnnnnnrequest canceled|) when slicing `assertion `left pires_at|_recommendationstranslationActio|otobuf.BoolValue|content-length (|ht_green_reverserike|rm_springgreen3bxterm_mistyrose3|NFKC_Quick_Check|bDuplicat"
+   ],
+   "secscrates": [
+    "refresh_tokenprofile_arnevent crates/fig_auth/src/refresh_coordinator.rs:116fig_auth::refresh_coordinatormessagetimeout_secscrates/fig_auth/src/refresh_coordinator.rsevent crates/fig_auth/src/refresh_coordinator.rs:75event crates/fig_auth/src/refresh"
+   ],
+   "servicesswift": [
+    "sdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equal"
+   ],
+   "setassertion": [
+    "attempt #the retry strategy requested a delay before sending the retry request, but no 'async sleep' implementation was setassertion failed: self.replace(val).is_none()service confighttpBearerAuthderegistering event source from pollermio::pollregisteri"
+   ],
+   "sizegested": [
+    "orizedExcservice_defaultsx-amz-checksum-mwww-authenticate|InconsistentKeys|about-with-newli|ExternalIdpTokeninput_token_sizegested_chars_leninlineShellComplToolUseSuggestedPostMetricsInput|ityD|sal-apple-darwinj&|light_blue_blinkc|yellow_underlinexte"
+   ],
+   "succeededfailed": [
+    " branchAttempting handshake...error sending handshakeAwaiting handshake response...failed performing handshakeHandshake succeededfailed receiving handshake responseFailed to flush socketSending remote messageFailed to send messageoutgoing_task exitedRecei"
+   ],
+   "typeextensionfieldreserved": [
+    "lue: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyservic"
+   ],
+   "typelabeltype": [
+    "_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.len() > 10 || b"
+   ],
+   "typenested": [
+    "alid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesy"
+   ],
+   "typeoutput": [
+    "Protooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80invalid wire type:  (expected )can"
+   ],
+   "typesyntaxpublic": [
+    "nested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#"
+   ],
+   "unixmessagecrates": [
+    "ror_kindbytesfailed to restore original termios statePoisonErrorevent crates/figterm/src/term/unix.rs:313figterm::term::unixmessagecrates/figterm/src/term/unix.rsevent crates/figterm/src/term/unix.rs:301bufevent crates/figterm/src/term/unix.rs:319event crat"
+   ],
+   "uupdate": [
+    "icyDocumentContextAssertionx-xss-protection0*|enR~eD|Mxxxxxxxxxxxxxxxxinvalid app namedashboardPageVieotobuf.ListValue|*uupdateConditions|IntegerUnderflowinvalid new line|light_red_strikelight_yellow_revlight_purple_undlight_purple_itaht_purple_st"
+   ],
+   "versionconversation": [
+    "tprofileStateauthFailedsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionconversation_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_lat"
+   ],
+   "versiondoctor": [
+    "eTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmes"
+   ]
+  },
+  "removed": {
+   "Accesscreated": [
+    "InvalidStateKmsKeyNotFoundTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccesscreatedTimecredentialStartUrlaccess_tokenexpires_atrefresh_tokenregionstart_urloauth_flowscopesstruct BuilderIdToken with 7 ele"
+   ],
+   "Attemptsget": [
+    " and stdout must both be tty handles span=<- tracing::span::active-> InteriorNulMaxAttemptsMustNotBeZeroFailedToParseMaxAttemptsget_termios failedset_termios failedtcdrain failedfailed to ioctl(TIOCGWINSZ): AuthSchemeIdscheme_idpropertiesAuthSchemePre"
+   ],
+   "Canaryinternal": [
+    "esponseErrorServiceErrorCloud9ToolkitEclipseToolkitVscodeToolkitVisualStudioCodewhispererTerminalCodewhispererJupyterlabCanaryinternal error: entered unreachable code: invalid InterceptCommand tag: |abstract socket name must be shorter than SUN_LENCodeSc"
+   ],
+   "Cella": [
+    "as gone awayDateTimeFormatErrorAssumeRoleProviderexternal_idtime_sourceCannotSerializeUnknownVariantunionErrorTakingOnceCella character literal was not validthe '' component could not be parsedunexpected trailing characters; the end of input was"
+   ],
+   "Complgested": [
+    "e_defaultsx-amz-checksum-mwww-authenticate|InconsistentKeys|about-with-newli|ExternalIdpTokeninput_token_sizeinlineShellComplgested_chars_lenToolUseSuggestedPostMetricsInput|ityD|sal-apple-darwinj&|light_blue_blinkc|yellow_underlinexterm_mediumturqen|"
+   ],
+   "Csvvalueaws": [
+    "ationErrorresponse_checksum_validationTokenTypeInterceptorauth_modeUserAgentOverrideInterceptorenvInvalidAuthSchemeNamesCsvvalueaws_productaws_product_versionclient_idosos_architectureos_versionparent_productparent_product_versionmetric_dataTemporaril"
+   ],
+   "Csvvaluesession": [
+    "asonProgrammingLanguagelanguage_nameCodeScanFailedEventInvalidGrantExceptionerrorerror_descriptionInvalidAuthSchemeNamesCsvvaluesession_idrequest_idmodification_percentageUserModificationEventInternalServerExceptionCodeScanSucceededEventnumber_of_findings"
+   ],
+   "Databaseaws": [
+    "edTooBigConstraintViolationTypeMismatchApiMisuseNoLargeFileSupportAuthorizationForStatementDeniedParameterOutOfRangeNotADatabaseaws_config::sso::token::SsoTokenProviderErrorPhantomData<>(alloc::string::String, aws_config::imds::client::SensitiveString"
+   ],
+   "Detailsexpected": [
+    "lidKmsGrantKmsAccessDenied|an RFC3339-formatted `OffsetDateTime`CodescanIssueApplyFixCodescanIssueHoverCodescanIssueViewDetailsexpected '' fieldregex: thread ID allocation space exhausteda formatting trait implementation returned an error when the underly"
+   ],
+   "Detailssaving": [
+    "fig_validatorsRuntimeComponentsBuilderAcceptDismissRejectUnknownCodescanIssueApplyFixCodescanIssueHoverCodescanIssueViewDetailssaving request checkpoint...failed to save request checkpoint: request body could not be clonedsuccessfully saved request chec"
+   ],
+   "Enabledremote": [
+    "dateShellContextNotifySshSessionStartedInlineShellCompletionInlineShellCompletionAcceptTelemtetyInlineShellCompletionSetEnabledremote.Clientbounddescriptor for message type `remote.Clientbound` not foundinvalid string value: data is not UTF-8 encodedinv"
+   ],
+   "Entrykeyvalueconversation": [
+    "code: invalid Packet tag: |NamedProviderFactoryprovidersqueue not emptyLIFO slot not emptyLinuxMacWindowsUnknownMetadataEntrykeyvalueconversation_idnumber_of_add_charsnumber_of_add_linesnumber_of_add_filesuser_decisionuser_identitynumber_of_navigationfolder_levelDo"
+   ],
+   "Errorcreating": [
+    "r_of_generated_filesnumber_of_navigationsDocV2GenerationEventInvalidClientExceptionAccessDeniedErrorreasonInternalServerErrorcreating a new thread ID () would exceed the maximum number of thread ID bits specified in  ()<unnamed>' attempted to panic at '"
+   ],
+   "Errorgroup": [
+    "messageMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpoint}AgenticProjectUnknownNoMatchingAuthSchemeErrorgroup_namenumber_of_unit_test_cases_generatednumber_of_unit_test_cases_acceptedlines_of_code_generatedlines_of_code_acceptedc"
+   ],
+   "Errorsourcecapacity": [
+    "rAndLineDrawing|InvalidBooleanValueRetryModeParseErrorCurrentPointcolumnUnknownFieldnumberUnknownFieldSetGroupResolveDnsErrorsourcecapacity overflowassertion failed: index <= leninvalid wire type value: SharedDnsResolverClearing line: Clearing tabs: Pushing '"
+   ],
+   "Eventcorrect": [
+    "pet_has_referencehas_project_level_contextuser_intentadded_ide_diagnosticsremoved_ide_diagnosticsChatInteractWithMessageEventcorrect output typeCreateTokenaws-apiinternal error: entered unreachable codeencountered orchestrator error; continuingit is fa"
+   ],
+   "Exceptionnumber": [
+    "_sourcesleep_implconfig_validatorsRuntimeComponentsBuilderExpiredTokenExceptionerrorerror_descriptionmessageInvalidScopeExceptionnumber_of_generated_charsnumber_of_generated_linesnumber_of_generated_filesnumber_of_navigationsDocV2GenerationEventInvalidCli"
+   ],
+   "Failedconversation": [
+    "CheckFaileddashboardPageViewedmenuBarActionedfigUserMigratedchatStartchatEndmigrateClientIdmcpServerInitprofileStateauthFailedconversation_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_lat"
+   ],
+   "Generatorrngh": [
+    "iantunioncauseOutOfRange|!\"#$%&'|0123456789|abcdefghijklmnopqrstuvwxyz|^_`abcdefghijklmnopqrstuvwxyz|DefaultInvocationIdGeneratorrngh|SharedRequestSerializersourceUnhandledSharedResponseDeserializerAuthSchemeOptionResolverParamsSharedAuthSchemeOptionRes"
+   ],
+   "Idvariant": [
+    "ruct variant EventType::MenuBarActionedstruct variant EventType::ToolUseSuggestedstruct variant EventType::MigrateClientIdvariant identifierACCEPTDISCARDEMPTYREJECTa Display implementation returned an error unexpectedlyErrorSucceededFailedCancelledU"
+   ],
+   "Imaget": [
+    "eDirectoryNonAbsolutePathUnsupportedOsIoTimeFormatUtf8FromPathUtf8FromPathBufFromVecWithNulIntoStringQParentNotSetNotAppImaget.sockRequestAttemptsSharedRetryStrategy|ChatAddMessageEventChatInteractWithMessageEventChatUserModificationEventCodeCove"
+   ],
+   "Interceptsactionsintercept": [
+    "sInvalidOutputAccessHash table capacity overflow|`TaskLocalFuture` polled after completionSetFigjsVisiblevisibleSetFigjsInterceptsactionsintercept_global_keystrokesintercept_bound_keystrokesresulting value is out of rangeoverflow subtracting duration from datejob_id"
+   ],
+   "Lengthd": [
+    "mForPublicKeyinternal error: entered unreachable code|assertion failed: public_values_eq(cert.issuer, issuer_subject)BitLengthd|RsaParameterspadding_alg|called `Result::unwrap()` on an `Err` valueUtf8Errorvalid_up_toerror_lena Display implementati"
+   ],
+   "Optionpositive": [
+    "elMessageOptionsmap_entryno_standard_descriptor_accessormessage_set_wire_formatServiceOptionsSourceCodeInfoUninterpretedOptionpositive_int_valueaggregate_valuenegative_int_valuestring_valuedouble_valueExtensionRangeOptionsleading_detached_commentstrailin"
+   ],
+   "Optionsleading": [
+    "urceCodeInfoUninterpretedOptionpositive_int_valueaggregate_valuenegative_int_valuestring_valuedouble_valueExtensionRangeOptionsleading_detached_commentstrailing_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )Varin"
+   ],
+   "Optionspy": [
+    "oBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsuninterpreted_optiondeprecatedallow_aliasFileOptionspy_generic_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_check_utf8go_packageo"
+   ],
+   "Outcustomization": [
+    "l_charsnum_suggestion_del_linescode_intentuser_decisionresponse_start_latencyresponse_end_latencyInlineChatEventOptInOptOutcustomization_arnaccepted_character_counttotal_character_countunmodified_accepted_character_counttotal_new_code_character_counttotal_"
+   ],
+   "Projectconversation": [
+    "agelines_of_code_changedchars_of_code_changedlines_of_code_submittedTransformEventEntireWorkspaceSubFolderUnknownAgenticProjectconversation_idmessage_idcustomization_arnuser_intentactive_editor_total_characterstime_between_chunksfull_responselatencyrequest_le"
+   ],
+   "Protooutput": [
+    "dDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljson_nameoneof_indexOneofDescriptorProtoMethodDescriptorProtooutput_typeinput_typeinvalid varintassertion failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80invalid wire type:  (exp"
+   ],
+   "Protoreserved": [
+    "odEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoreserved_rangeoneof_declextensionnested_typefieldreserved_nameextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueF"
+   ],
+   "Protoservicedependencymessage": [
+    "eclextensionnested_typefieldreserved_nameextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtoservicedependencymessage_typeweak_dependencypackagesyntaxpublic_dependencyFieldDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljs"
+   ],
+   "Prototype": [
+    "orProtovalueFileDescriptorProtoservicedependencymessage_typeweak_dependencypackagesyntaxpublic_dependencyFieldDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljson_nameoneof_indexOneofDescriptorProtoMethodDescriptorProtooutput_typeinpu"
+   ],
+   "Requestexecutableworking": [
+    "an::active-> ClientboundpacketReadFileRequestis_binary_filenanosHeadersOut of bounds accessOperationStatusCodeRunProcessRequestexecutableworking_directoryargumentstimeoutenvExtensionsextensions_02xextensions_1x | 0xloading device registration from secret storeno r"
+   ],
+   "Requestoffsetimmediateinsert": [
+    "onfig_sectionsEnvConfigErrorproperty_sourceerrH0H1intercept_commandcursor_positionevent_blobSetExplicitlyUnsetInsertTextRequestoffsetimmediateinsert_during_commandinsertionTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: Imd"
+   ],
+   "Requesturimethodextensionsstatus": [
+    "olumn out of boundsInvalid UTF-8 sequence in column nameMaybeTimeoutErrorMaybeTimeoutConfigsleep_impltimeouttimeout_kindRequesturimethodextensionsstatusOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorReadBeforeExecutionModifyBeforeSerializatio"
+   ],
+   "Responsetext": [
+    "ntExcettttttttttttttttUNSIGNED-PAYLOAD|&clD|HalfClosedRemote7`|zcurrent_capacityx-amzn-requestidFailed to parse ReadFileResponsetext_file_lengthamazonq_profile_doctorCheckFailecode_scan_job_idm|Duration|otobuf.FieldMasknknown-linux-gnuFailed to openptP"
+   ],
+   "Unavailableterminal": [
+    "CapacityMonthlyRequestCountInvalidRedirectUriExceptionerrorerror_descriptionglobal backend is not used{}ModelTemporarilyUnavailableterminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completion_acceptedTerminalUserInteractionEventconver"
+   ],
+   "Unavailableurl": [
+    "oundTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessModelTemporarilyUnavailableurl::form_urlencoded::Serializer double finishurl::form_urlencoded::Serializer finishedinterceptor_stateencountered orchest"
+   ],
+   "Unknowncode": [
+    "n't set in the underlying interceptor context. This is a bug.falsex-amzn-codewhisperer-optoutModelTemporarilyUnavailableUnknowncodeWhisperer.shareCodeWhispererContentWithAWSsize overflows MAX_SIZEcalled `Result::unwrap()` on an `Err` value|!\"#$%&'|012",
+    "iantValuerule_iddetector_idfinding_idCodeFixAcceptanceEventDailyRequestCountInsufficientModelCapacityMonthlyRequestCountUnknowncode_scan_remediations_event_typecomponentresultincludes_fixCodeScanRemediationsEventInvalidRedirectUriExceptionFatal intern"
+   ],
+   "Unknownparams": [
+    " by the thread that owns it, this is a bug!CodewhispererTerminalCompletionInsertedCodewhispererTerminalTranslationActionUnknownparams of expected type was not presenttypecheckedinternal error: entered unreachable codeencountered orchestrator error; cont"
+   ],
+   "Unknownstateassertion": [
+    "|UnknownVariantValue span=<- ;tracing::span::active-> |ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownstateassertion failed: edge.height == self.height - 1assertion failed: src.len() == dst.len()assertion failed: edge.height == self.nod"
+   ],
+   "Validatoran": [
+    "_resolversinterceptorsretry_classifiersretry_strategytime_sourcesleep_implconfig_validatorsRuntimeComponentsSharedConfigValidatoran RFC3339-formatted `OffsetDateTime`typecheckedencountered orchestrator error; continuingit is failedguaranteed by `parti"
+   ],
+   "Valueevent": [
+    "onEventTestGenerationEventTransformEventUserModificationEventUserTriggerDecisionEventUnknownDowncastParamsUnknownVariantValueevent crates/fig_telemetry/src/endpoint.rs:14fig_telemetry::endpointmessagecrates/fig_telemetry/src/endpoint.rsResolving endp"
+   ],
+   "Valueresulting": [
+    "omVecWithNulIntoStringQParentNotSetNotAppImageComponentRangeis_conditionalAuthSchemeIdscheme_idproperties|UnknownVariantValueresulting value is out of rangeoverflow subtracting duration from date}struct BuilderIdTokenvariant identifierDeviceCodestruct De"
+   ],
+   "Valuesource": [
+    "g_languagetimestampcode_analysis_scopePolicyDescriptorTypearn[internal exception] blocking task ran twice.UnknownVariantValuesourceMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpointmissing field ``invalid length , expected duplica"
+   ],
+   "Variablevaluestatusextensions": [
+    ":tokenacquired refresh lockinvalid wire type value: MaybeTimeoutErrorMaybeTimeoutConfigsleep_impltimeout_kindEnvironmentVariablevaluestatusextensionsMaybeDone polled after value takenOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorCloud9Too"
+   ],
+   "acceptedfailed": [
+    "regionInvalidRequestRegionExceptionFeatureDevCodeAcceptanceEventconversation_idlines_of_code_acceptedcharacters_of_code_acceptedfailed to spawn `tracing-appender` non-blocking worker threadsupportedstruct Index with 2 elementsarchitecturevarianttargetTri"
+   ],
+   "accessormessage": [
+    "ashFieldOptionsctypepackedjstypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmap_entryno_standard_descriptor_accessormessage_set_wire_formatServiceOptionsSourceCodeInfoUninterpretedOptionpositive_int_valueaggregate_valuenegative_int_valuestring"
+   ],
+   "ccccccccccccccccgle": [
+    "Usn|AssumeRoleOutputEmptyTicketValuet DYy|MalformedHeaders|Queue::push_back|MissingExtensionY|[identifier_value_latency|ccccccccccccccccgle.protobuf.Anyinux-gnu|OSCUnlock check |Message too longNo route to hostlight_yellow_boldefault_underlinblue|xterm_cornfl"
+   ],
+   "checkold": [
+    "untsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionreasondoctor_checkold_client_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_c"
+   ],
+   "classnameruby": [
+    "c_servicesphp_metadata_namespacejava_string_check_utf8go_packageoptimize_forphp_namespacephp_generic_servicesjava_outer_classnameruby_packageswift_prefixjava_multiple_filesjava_generic_servicesjava_generate_equals_and_hashFieldOptionsctypepackedjstypeOn"
+   ],
+   "codesourceamazonq": [
+    " a single keystring or mapconversation_idmessage_idcontext_file_lengthmenu_bar_itemauth_methodoauth_flowerror_typeerror_codesourceamazonq_profile_regionresultsso_regionprofile_countsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendati"
+   ],
+   "commandinsertion": [
+    "_sourceerrH0H1intercept_commandcursor_positionevent_blobSetExplicitlyUnsetInsertTextRequestoffsetimmediateinsert_during_commandinsertionTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: ImdsCredentialsProviderclie"
+   ],
+   "commentstrailing": [
+    "dOptionpositive_int_valueaggregate_valuenegative_int_valuestring_valuedouble_valueExtensionRangeOptionsleading_detached_commentstrailing_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimit"
+   ],
+   "coordinatormessagecrates": [
+    "Tokenaccess_tokenexpires_atrefresh_tokenprofile_arnevent crates/fig_auth/src/refresh_coordinator.rs:75fig_auth::refresh_coordinatormessagecrates/fig_auth/src/refresh_coordinator.rsevent crates/fig_auth/src/refresh_coordinator.rs:116timeout_secsevent crates/fig_aut"
+   ],
+   "countsession": [
+    "xt_file_lengthmenu_bar_itemauth_methodoauth_flowerror_typeerror_codesourceamazonq_profile_regionresultsso_regionprofile_countsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionreasondoctor_checkold_c"
+   ],
+   "countw": [
+    "Err` valueEndOfInput|assertion failed: len > 0assertion failed: src.len() == dst.len()assertion failed: old_left_len >= countw|DnsName(\"\")DirectoryNameIpAddress()UniformResourceIdentifier(\"Unsupported(0x|.:::[invalid: ], |called `Result::unwrap()"
+   ],
+   "declextensionnested": [
+    "onumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoreserved_rangeoneof_declextensionnested_typefieldreserved_nameextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtoservicedepend"
+   ],
+   "dependencypackagesyntaxpublic": [
+    "meextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtoservicedependencymessage_typeweak_dependencypackagesyntaxpublic_dependencyFieldDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljson_nameoneof_indexOneofDescriptorProtoM"
+   ],
+   "directoryargumentstimeoutenv": [
+    "acketReadFileRequestis_binary_filenanosHeadersOut of bounds accessOperationStatusCodeRunProcessRequestexecutableworking_directoryargumentstimeoutenvExtensionsextensions_02xextensions_1x | 0xloading device registration from secret storeno refresh token was foundFailed "
+   ],
+   "enabledzshnuinsertion": [
+    "MPLETEevent crates/figterm/src/main.rs:330event crates/figterm/src/main.rs:332event crates/figterm/src/main.rs:343shell_enabledzshnuinsertion lock released because buffer looks like how we expectinsertion lock released because lock expiredcan_send_edit_buffer ("
+   ],
+   "entryno": [
+    "esjava_generate_equals_and_hashFieldOptionsctypepackedjstypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmap_entryno_standard_descriptor_accessormessage_set_wire_formatServiceOptionsSourceCodeInfoUninterpretedOptionpositive_int_valueagg"
+   ],
+   "executabletimeout": [
+    "528event crates/figterm/src/message.rs:516event crates/figterm/src/message.rs:525event crates/figterm/src/message.rs:497executabletimeout_msevent crates/figterm/src/message.rs:482event crates/figterm/src/message.rs:490event crates/figterm/src/message.rs:512"
+   ],
+   "forphp": [
+    "_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_check_utf8go_packageoptimize_forphp_namespacephp_generic_servicesjava_outer_classnameruby_packageswift_prefixjava_multiple_filesjava_generic_servicesjava_g"
+   ],
+   "generatedprogramming": [
+    " were already unwinding due to a previous panic.|FeatureDevCodeGenerationEventlines_of_code_generatedcharacters_of_code_generatedprogramming_languageinternal error: entered unreachable codefatal runtime error: something here is badly broken!, aborting|RUST_MIN"
+   ],
+   "iderrorerror": [
+    "of_code_submittedTransformEventfatal runtime error: thread local panicked on drop, aborting|FeatureDevEventconversation_iderrorerror_descriptionmessageMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpoint}AgenticProjectUnknownNoMatchi"
+   ],
+   "idmessageerrcrates": [
+    "utf-8BuilderIdTokenTokioSleephttps://view.awsapps.com/startevent crates/fig_auth/src/builder_id.rs:470fig_auth::builder_idmessageerrcrates/fig_auth/src/builder_id.rsevent crates/fig_auth/src/builder_id.rs:416event crates/fig_auth/src/builder_id.rs:429event c"
+   ],
+   "inlineevent": [
+    "interceptor.rs:190Resetting key interceptorautocomplete.onlyShowOnTabevent crates/figterm/src/inline/mod.rs:225figterm::inlineevent crates/figterm/src/inline/mod.rs:235errevent crates/figterm/src/inline/mod.rs:241event crates/figterm/src/inline/mod.rs"
+   ],
+   "itemauth": [
+    "FailureResponseErrorServiceError|map with a single keystring or mapconversation_idmessage_idcontext_file_lengthmenu_bar_itemauth_methodoauth_flowerror_typeerror_codesourceamazonq_profile_regionresultsso_regionprofile_countsession_idrequest_idedit_b"
+   ],
+   "latencyinit": [
+    "ent_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencyinit_failure_reasonnumber_of_toolscommandsubcommandresume_moderoutestruct variant EventType::ToolUseSuggested with 12 elemen"
+   ],
+   "latencysession": [
+    "ion_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencysession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionvariant index 0 <= i < "
+   ],
+   "lengthamazonq": [
+    "ttttUNSIGNED-PAYLOAD|&clD|HalfClosedRemote7`|zcurrent_capacityx-amzn-requestidFailed to parse ReadFileResponsetext_file_lengthamazonq_profile_doctorCheckFailecode_scan_job_idm|Duration|otobuf.FieldMasknknown-linux-gnuFailed to openptPayment Required=~|g"
+   ],
+   "lengthmenu": [
+    "utErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapconversation_idmessage_idcontext_file_lengthmenu_bar_itemauth_methodoauth_flowerror_typeerror_codesourceamazonq_profile_regionresultsso_regionprofile_countsession_idreq"
+   ],
+   "mapconversation": [
+    "::span::active-> ConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapconversation_idmessage_idcontext_file_lengthmenu_bar_itemauth_methodoauth_flowerror_typeerror_codesourceamazonq_profile_regionresult"
+   ],
+   "messagemessageerrcrates": [
+    "lue out of rangefloat value out of rangeexpected integer value|event crates/fig_ipc/src/send_message.rs:33fig_ipc::send_messagemessageerrcrates/fig_ipc/src/send_message.rsevent crates/fig_ipc/src/send_message.rs:41timeoutinvalid message typetimeout connecting to "
+   ],
+   "methodoauth": [
+    "sponseErrorServiceError|map with a single keystring or mapconversation_idmessage_idcontext_file_lengthmenu_bar_itemauth_methodoauth_flowerror_typeerror_codesourceamazonq_profile_regionresultsso_regionprofile_countsession_idrequest_idedit_buffer_lensug"
+   ],
+   "moderoutestruct": [
+    "successis_custom_tooloutput_token_sizecustom_tool_call_latencyinit_failure_reasonnumber_of_toolscommandsubcommandresume_moderoutestruct variant EventType::ToolUseSuggested with 12 elementsstruct variant EventType::MenuBarActioned with 1 elementstruct vari"
+   ],
+   "nameoneof": [
+    "peweak_dependencypackagesyntaxpublic_dependencyFieldDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljson_nameoneof_indexOneofDescriptorProtoMethodDescriptorProtooutput_typeinput_typeinvalid varintassertion failed: bytes.len() > 10 || "
+   ],
+   "newlrefresh": [
+    "HA256=|&0000000000000000|Cognito IdentityffffffffffffffffPendingExceptionInvalidReference|InvalidKeyUpdateE|author-with-newlrefreshCredentia|Inserting blank te|obuf.DoubleValue|MatchRuleInvalidkiro-cli-desktop|proxy-connection|ht_yellow_italiclight_ye"
+   ],
+   "optiondeprecatedallow": [
+    "ngthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsuninterpreted_optiondeprecatedallow_aliasFileOptionspy_generic_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_ch"
+   ],
+   "packagecc": [
+    "sionRangeoptionsEnumOptionsuninterpreted_optiondeprecatedallow_aliasFileOptionspy_generic_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_check_utf8go_packageoptimize_forphp_namespacephp_generic_servicesjava"
+   ],
+   "packageswift": [
+    "metadata_namespacejava_string_check_utf8go_packageoptimize_forphp_namespacephp_generic_servicesjava_outer_classnameruby_packageswift_prefixjava_multiple_filesjava_generic_servicesjava_generate_equals_and_hashFieldOptionsctypepackedjstypeOneofOptionsMet"
+   ],
+   "periodmodification": [
+    "_idlines_of_code_generatedchars_of_code_generatedCodeFixGenerationEventStalledStreamProtectionConfigupload_enabledgrace_periodmodification_percentageChatUserModificationEventterminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completio"
+   ],
+   "rangeenum": [
+    "d varintinvalid wire type value: DescriptorProtoreserved_rangeoneof_declextensionnested_typefieldreserved_nameextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtoservicedependencymessage_typeweak_dependencypackagesynt"
+   ],
+   "secsevent": [
+    "coordinatormessagecrates/fig_auth/src/refresh_coordinator.rsevent crates/fig_auth/src/refresh_coordinator.rs:116timeout_secsevent crates/fig_auth/src/refresh_coordinator.rs:109.refresh.lockevent crates/fig_auth/src/social.rs:177crates/fig_auth/src/s"
+   ],
+   "servicesobjc": [
+    "EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsuninterpreted_optiondeprecatedallow_aliasFileOptionspy_generic_servicesobjc_class_prefixjava_packagecc_generic_servicesphp_metadata_namespacejava_string_check_utf8go_packageoptimize_forphp_namesp"
+   ],
+   "setset": [
+    "was setthe retry strategy requested a delay before sending the initial request, but no 'async sleep' implementation was setset to Some abovederegistering event source from pollermio::polldescription() is deprecated; use Displaycalled `Result::unw"
+   ],
+   "sizeinline": [
+    "orizedExcservice_defaultsx-amz-checksum-mwww-authenticate|InconsistentKeys|about-with-newli|ExternalIdpTokeninput_token_sizeinlineShellComplgested_chars_lenToolUseSuggestedPostMetricsInput|ityD|sal-apple-darwinj&|light_blue_blinkc|yellow_underlinexte"
+   ],
+   "toolscommandsubcommandresume": [
+    "use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencyinit_failure_reasonnumber_of_toolscommandsubcommandresume_moderoutestruct variant EventType::ToolUseSuggested with 12 elementsstruct variant EventType::MenuBarActioned with 1 el"
+   ],
+   "typefieldreserved": [
+    "alue: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoreserved_rangeoneof_declextensionnested_typefieldreserved_nameextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtoservicedependencymessage_typewe"
+   ],
+   "typeinput": [
+    "rototype_namedefault_valueproto3_optionalr#typelabeljson_nameoneof_indexOneofDescriptorProtoMethodDescriptorProtooutput_typeinput_typeinvalid varintassertion failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80invalid wire type:  (expected )can"
+   ],
+   "typelabeljson": [
+    "encymessage_typeweak_dependencypackagesyntaxpublic_dependencyFieldDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljson_nameoneof_indexOneofDescriptorProtoMethodDescriptorProtooutput_typeinput_typeinvalid varintassertion failed: bytes.len("
+   ],
+   "typeweak": [
+    "served_nameextension_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtoservicedependencymessage_typeweak_dependencypackagesyntaxpublic_dependencyFieldDescriptorPrototype_namedefault_valueproto3_optionalr#typelabeljson_nameon"
+   ],
+   "unixmessagebufcrates": [
+    "ror_kindbytesfailed to restore original termios statePoisonErrorevent crates/figterm/src/term/unix.rs:319figterm::term::unixmessagebufcrates/figterm/src/term/unix.rsevent crates/figterm/src/term/unix.rs:301event crates/figterm/src/term/unix.rs:313event crates/"
+   ],
+   "valueax": [
+    " struct, sequence or map with unknown lengthserialize data model is invalid: error while writing multi-byte MessagePack valueax]|()called `Result::unwrap_err()` on an `Ok` valuecalled `Result::unwrap()` on an `Err` value: Bug: Somehow interrupt_lo"
+   ],
+   "variablesaliasupdate": [
+    "tedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestupdate_environment_variablesenvironment_variablesaliasupdate_aliasErrorResponseErrorInlineShellCompletionRequestinternal error: entered unreachable code: invalid Packet tag: |Named"
+   ],
+   "versionreasondoctor": [
+    "sso_regionprofile_countsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionreasondoctor_checkold_client_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecust"
+   ],
+   "versionvariant": [
+    "ustom_tool_call_latencysession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionvariant index 0 <= i < 19AcceptDiscardEmptyRejectvariant index 0 <= i < 4SucceededFailedCancelledvariant index 0 <= i < 3result"
+   ]
+  }
+ },
+ {
+  "from": "2.29.0",
+  "to": "2.29.1",
+  "added": {
+   "Accessregion": [
+    "ey, value) VALUES (?1, ?2)TemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessregionInvalidRequestRegionExceptionUnsupportedGrantTypeExceptionFeatureDevCodeGenerationEventconversation_idlines_of_code_gene"
+   ],
+   "Attemptsget": [
+    " and stdout must both be tty handles span=<- tracing::span::active-> InteriorNulMaxAttemptsMustNotBeZeroFailedToParseMaxAttemptsget_termios failedset_termios failedtcdrain failedfailed to ioctl(TIOCGWINSZ): AuthSchemeIdscheme_idpropertiesAuthSchemePre"
+   ],
+   "Cachet": [
+    "Inmessage was not specified but it is required when building ValidationErrorFrozenLayerSharedTokenProviderSharedIdentityCachetAa|UnknownBeforeSerializationSerializationBeforeTransmitBeforeDeserializationDeserializationAfterDeserializationLinuxMac"
+   ],
+   "Classifierglobal": [
+    "g-|RequestAttemptsErrorSharedRetryStrategyOutput|AuthSchemeOptionResolverParamsSharedAuthSchemeOptionResolverSharedRetryClassifierglobal backend is not used{}Errora Display implementation returned an error unexpectedlyoverflow when multiplying duration by "
+   ],
+   "Csvvaluesession": [
+    "gelanguage_nameCodeScanFailedEventExpiredTokenExceptionerrorerror_descriptionInvalidScopeExceptionInvalidAuthSchemeNamesCsvvaluesession_idrequest_idmodification_percentageUserModificationEventCodeScanSucceededEventnumber_of_findingsKmsAccessDenied[tracing"
+   ],
+   "Detailsinvalid": [
+    "nversationIdInvalidKmsGrantUnknownInvalidClientMetadataExceptionCodescanIssueApplyFixCodescanIssueHoverCodescanIssueViewDetailsinvalid type for packed field in DynamicMessagemismatch between DynamicMessage value  and type unexpected end group tagNewCmd c"
+   ],
+   "Entrykeyvalueconversation": [
+    "code: invalid Packet tag: |NamedProviderFactoryprovidersqueue not emptyLIFO slot not emptyLinuxMacWindowsUnknownMetadataEntrykeyvalueconversation_idnumber_of_add_charsnumber_of_add_linesnumber_of_add_filesuser_decisionuser_identitynumber_of_navigationfolder_levelDo"
+   ],
+   "Erraws": [
+    "failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80errorClicommandCOMMAND2.29.1cannot advance past `remaining`: OkErraws_config::sso::token::SsoTokenProviderErrorPhantomData<>(alloc::string::String, aws_config::imds::client::SensitiveString"
+   ],
+   "Errorcapacity": [
+    "move environment variable ``: failed to set environment variable `` to `description() is deprecated; use DisplayFromPathErrorcapacity overflowinvalid tag value: 0invalid key value: delimited length exceededrecursion limit reachedunexpected end group tag"
+   ],
+   "Errorj": [
+    "ertion failed: seq1.len().map_or(true, |x| x <= self.limit_total)a Display implementation returned an error unexpectedlyErrorj|internal error: entered unreachable code: expected expr or alt, got Unicode classinternal error: entered unreachable co"
+   ],
+   "Errormessagereasonconversation": [
+    "latencyprogramming_languageInlineChatEventEditReadmeGenerateReadmeUpdateReadmeProgrammingLanguagelanguage_nameValidationErrormessagereasonconversation_idnumber_of_added_charsnumber_of_added_linesnumber_of_added_filesnumber_of_navigationsfolder_levelDocV2AcceptanceEvents"
+   ],
+   "Errormessagereasonnumber": [
+    "lversinterceptorsretry_classifiersretry_strategytime_sourcesleep_implconfig_validatorsRuntimeComponentsBuilderThrottlingErrormessagereasonnumber_of_generated_charsnumber_of_generated_linesnumber_of_generated_filesnumber_of_navigationsDocV2GenerationEventInternalSe"
+   ],
+   "Errorremote": [
+    "utHandshakerequestidsecretparent_idEnvironmentVariablekeyRunProcessInterceptInsertTextSetBufferDiagnosticsInsertOnNewCmdErrorremote.Clientbounddescriptor for message type `remote.Clientbound` not foundinvalid string value: data is not UTF-8 encodedinv"
+   ],
+   "Errorsourceevent": [
+    "lidExtensionsInvalidHeaderNameInvalidHeaderValueInvalidStatusCodeInvalidUriInvalidUriPartsMissingSchemeNonUtf8HeaderHttpErrorsourceevent crates/fig_api_client/src/clients/client.rs:474fig_api_client::clients::clientmessageerrcrates/fig_api_client/src/clien"
+   ],
+   "Eventcorrect": [
+    "pet_has_referencehas_project_level_contextuser_intentadded_ide_diagnosticsremoved_ide_diagnosticsChatInteractWithMessageEventcorrect output typeCreateTokenaws-apiinternal error: entered unreachable codeencountered orchestrator error; continuingit is fa"
+   ],
+   "Failedconversation": [
+    "CheckFaileddashboardPageViewedmenuBarActionedfigUserMigratedchatStartchatEndmigrateClientIdmcpServerInitprofileStateauthFailedconversation_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_lat"
+   ],
+   "Grantaws": [
+    "TokenTypeInterceptorauth_modeUserAgentOverrideInterceptorenvContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantaws_productaws_product_versionclient_idosos_architectureos_versionparent_productparent_product_versionmetric_dataOptOutInte"
+   ],
+   "Imaget": [
+    "eDirectoryNonAbsolutePathUnsupportedOsIoTimeFormatUtf8FromPathUtf8FromPathBufFromVecWithNulIntoStringQParentNotSetNotAppImaget.sockRequestAttemptsSharedRetryStrategy|DowncastParamsUnknownVariantValueKmsAccessDeniedUnknownevent crates/fig_telemetr"
+   ],
+   "Optionscc": [
+    "oBitRgbrbgIndexed|EnumReservedRangestartendExtensionRangeoptionsEnumOptionsdeprecateduninterpreted_optionallow_aliasFileOptionscc_generic_servicesgo_packageoptimize_forruby_packagejava_generate_equals_and_hashjava_multiple_filesjava_generic_services"
+   ],
+   "Optionsdeprecateduninterpreted": [
+    " VarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangestartendExtensionRangeoptionsEnumOptionsdeprecateduninterpreted_optionallow_aliasFileOptionscc_generic_servicesgo_packageoptimize_forruby_packagejava_generate_equals_and_hashjava_mult"
+   ],
+   "Optionsleading": [
+    "urceCodeInfoUninterpretedOptionstring_valueaggregate_valuedouble_valuepositive_int_valuenegative_int_valueExtensionRangeOptionsleading_detached_commentstrailing_commentsis_extensionname_partReservedRange|invalid varintinvalid wire type:  (expected )Varin"
+   ],
+   "Optionsmessage": [
+    "acepy_generic_servicesphp_generic_servicesFieldOptionspackedctypejstypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmessage_set_wire_formatmap_entryno_standard_descriptor_accessorServiceOptionsSourceCodeInfoUninterpretedOptionstring_valueaggre"
+   ],
+   "Optionspackedctypejstype": [
+    "ng_check_utf8java_packageswift_prefixobjc_class_prefixphp_metadata_namespacepy_generic_servicesphp_generic_servicesFieldOptionspackedctypejstypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmessage_set_wire_formatmap_entryno_standard_descriptor_accessorS"
+   ],
+   "Paramsw": [
+    "_nameaccount_id*** Sensitive Data Redacted ***access_tokenSigningNameSigV4SignerPoisonErrorSigV4AuthSchemesignerDowncastParamsw5|InvalidRequestExceptionResourceNotFoundExceptionTooManyRequestsExceptionUnauthorizedExceptionUnhandledmessage_request_"
+   ],
+   "Payloadx": [
+    "ncodedApplicationDataHandshakeMessagePayloadtyppayloadcalled `Result::unwrap()` on an `Err` valueDnsNameChangeCipherSpecPayloadx|We got ServerHello |rustls::client::hs|Using ciphersuite SSLv2SSLv3TLSv1_0TLSv1_1TLSv1_2TLSv1_3UnknownMessageversionpay"
+   ],
+   "Projectcustomization": [
+    "escode_intentuser_decisionresponse_start_latencyresponse_end_latencyInlineChatEventUnknownVariantValueOptInOptOutAgenticProjectcustomization_arnaccepted_character_counttotal_character_countunmodified_accepted_character_counttotal_new_code_character_counttotal_"
+   ],
+   "Protomethodoptions": [
+    "ursorhistnoterminal_cursor_coordinatesInterceptedKeyHookkeyactionTerminalCursorCoordinatesxpixelypixel|ServiceDescriptorProtomethodoptionsEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorPr"
+   ],
+   "Protosyntaxpackagedependencyweak": [
+    "meextension_rangeextensionfieldnested_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_v"
+   ],
+   "Prototype": [
+    "orProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutpu"
+   ],
+   "Requestbracketedexecute": [
+    "ectionSerializationErrorDispatchFailureurimethodextensionsheadersoverride_value_innerFigtermRequestMessageInsertOnNewCmdRequestbracketedexecuteNeverConnectedUnknownConnectedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestupdate_enviro"
+   ],
+   "Requestbuffersuggestion": [
+    "on drop, aborting|time_sourcefssts_clientpolicypolicy_arnsWebIdentityTokenCredentialsProviderInlineShellCompletionAcceptRequestbuffersuggestionSharedCredentialsProvidererrorerror_descriptionmessageNotifyChildSessionStartedparent_idDowncastParamsInlineShellComplet"
+   ],
+   "Requestrequestnonceinvalid": [
+    "itlyUnsetInsertTextRequestinsertionoffsetimmediateinsert_during_commandTimeoutErrorExtensionsextensions_02xextensions_1xRequestrequestnonceinvalid wire type value: ImdsCredentialsProviderclientprofilelast_retrieved_credentialsConnectorErrorconnectionSerializationErr"
+   ],
+   "Requesturimethodextensionsstatus": [
+    "olumn out of boundsInvalid UTF-8 sequence in column nameMaybeTimeoutErrorMaybeTimeoutConfigsleep_impltimeouttimeout_kindRequesturimethodextensionsstatusOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorReadBeforeExecutionModifyBeforeSerializatio"
+   ],
+   "Setfieldsinternal": [
+    "FileSizeMinusReadOffsetIoErrorStreamingErrorResolveDnsErrorinvalid wire type value: SharedDnsResolverDynamicMessageFieldSetfieldsinternal error: entered unreachable code: invalid type for map keyunrecognized enum value 'HttpCredentialProvideroperation|ABCDE"
+   ],
+   "Suggestedvariant": [
+    "ruct variant EventType::CliSubcommandExecutedstruct variant EventType::DidSelectProfilestruct variant EventType::ToolUseSuggestedvariant identifierACCEPTDISCARDEMPTYREJECTa Display implementation returned an error unexpectedlyErrorSucceededFailedCancelledU"
+   ],
+   "Unavailablecreated": [
+    "eyUsageKmsInvalidStateKmsKeyNotFoundUnknownDailyRequestCountInsufficientModelCapacityMonthlyRequestCountModelTemporarilyUnavailablecreatedTimecredentialStartUrlaccess_tokenexpires_atrefresh_tokenregionstart_urloauth_flowscopesstruct BuilderIdToken with 7 ele"
+   ],
+   "Unavailableurl": [
+    "ientModelCapacityMonthlyRequestCountUnknownKmsDisabledKeyKmsInvalidKeyUsageKmsInvalidStateKmsKeyNotFoundModelTemporarilyUnavailableurl::form_urlencoded::Serializer double finishurl::form_urlencoded::Serializer finishedinterceptor_stateencountered orchest"
+   ],
+   "Unknownmissing": [
+    "eption] blocking task ran twice.sourceMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpointOptInOptOutUnknownmissing field ``invalid length , expected duplicate field `unknown variant ``, there are no variants`, expected internal error:"
+   ],
+   "Unknownmodification": [
+    "tAuthorizedExceptionTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknownmodification_percentageChatUserModificationEventcode_scan_remediations_event_typecomponentincludes_fixCodeScanRemediationsEventExter"
+   ],
+   "Unknownparams": [
+    " by the thread that owns it, this is a bug!CodewhispererTerminalCompletionInsertedCodewhispererTerminalTranslationActionUnknownparams of expected type was not presenttypecheckedinternal error: entered unreachable codeencountered orchestrator error; cont"
+   ],
+   "Unknownprovide": [
+    "er elements in arrayTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknownprovide_credentialsfig_api_client::credentialscrates/fig_api_client/src/credentials/mod.rsdefault_chainevent crates/fig_api_cli"
+   ],
+   "Unknownq": [
+    "spatchmessage/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/client/dispatch.rsKnownUnknownq|InvalidUriCharInvalidSchemeInvalidPortInvalidFormatSchemeMissingPathAndQueryMissingTooLongEmptySchemeTooLongInvalidUria"
+   ],
+   "Unknownterminal": [
+    "ackend is not used{}TemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknownterminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completion_acceptedTerminalUserInteractionEventconver"
+   ],
+   "Valueauth": [
+    "he_partitionHeaderValueinner has gone awaySharedRuntimePluginUnable to allocate another spanTracked_originUnknownVariantValueauth_scheme_option_resolverhttp_clientendpoint_resolverauth_schemesidentity_cacheidentity_resolversinterceptorsretry_classif"
+   ],
+   "Valuejob": [
+    "ound_keystrokesresulting value is out of rangeoverflow subtracting duration from dateAgenticProjectUnknownUnknownVariantValuejob_idgroup_nametimestampide_categoryprogramming_languagenumber_of_unit_test_cases_generatednumber_of_unit_test_cases_accep"
+   ],
+   "Valueresulting": [
+    "omVecWithNulIntoStringQParentNotSetNotAppImageComponentRangeis_conditionalAuthSchemeIdscheme_idproperties|UnknownVariantValueresulting value is out of rangeoverflow subtracting duration from date}struct BuilderIdTokenvariant identifierDeviceCodestruct De"
+   ],
+   "Variablevaluestatusextensions": [
+    "refresh lockinvalid wire type value: MaybeTimeoutErrorMaybeTimeoutConfigsleep_impltimeout_kindRequestAttemptsEnvironmentVariablevaluestatusextensionsApplyCommonBestPracticesCiteSourcesCodeGenerationExplainCodeSelectionExplainLineByLineGenerateCloudformationTemplateGene"
+   ],
+   "checkrouteinit": [
+    "ennumber_of_recommendationsold_client_idprofile_countmessage_idcontext_file_lengthauth_methoderror_typeerror_codedoctor_checkrouteinit_failure_reasonnumber_of_toolsstruct variant EventType::ChatEnd with 1 elementstruct variant EventType::AuthFailed with "
+   ],
+   "codedoctor": [
+    "ted_chars_lennumber_of_recommendationsold_client_idprofile_countmessage_idcontext_file_lengthauth_methoderror_typeerror_codedoctor_checkrouteinit_failure_reasonnumber_of_toolsstruct variant EventType::ChatEnd with 1 elementstruct variant EventType::A"
+   ],
+   "comc": [
+    "_id.rs:352event crates/fig_auth/src/builder_id.rs:376event crates/fig_auth/src/builder_id.rs:176https://oidc..amazonaws.comc|DELETE FROM  WHERE key = ?1auth_kvstateSELECT value FROM INSERT OR REPLACE INTO  (key, value) VALUES (?1, ?2)()descript"
+   ],
+   "commentsis": [
+    "ueaggregate_valuedouble_valuepositive_int_valuenegative_int_valueExtensionRangeOptionsleading_detached_commentstrailing_commentsis_extensionname_partReservedRange|invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimitedStartGrou"
+   ],
+   "commentstrailing": [
+    "dOptionstring_valueaggregate_valuedouble_valuepositive_int_valuenegative_int_valueExtensionRangeOptionsleading_detached_commentstrailing_commentsis_extensionname_partReservedRange|invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimit"
+   ],
+   "declreserved": [
+    "DescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtooneof_declreserved_nameextension_rangeextensionfieldnested_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescrip"
+   ],
+   "dependencymessage": [
+    "sted_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOne"
+   ],
+   "entryno": [
+    "servicesFieldOptionspackedctypejstypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmessage_set_wire_formatmap_entryno_standard_descriptor_accessorServiceOptionsSourceCodeInfoUninterpretedOptionstring_valueaggregate_valuedouble_valueposit"
+   ],
+   "failedw": [
+    "rror unexpectedlyErrorassertion failed: self.is_char_boundary(new_len)|Caused by:|Stack backtrace:|S: backtrace capture failedw|x|feature not supported: ''compression not supported: host attribute compatibility not supported: attempted to read a Z"
+   ],
+   "flowsession": [
+    "idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencyrequest_idreasonoauth_flowsession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsold_client_idprofile_countmessage_idcontext_file_lengthaut"
+   ],
+   "formatmap": [
+    "p_generic_servicesFieldOptionspackedctypejstypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmessage_set_wire_formatmap_entryno_standard_descriptor_accessorServiceOptionsSourceCodeInfoUninterpretedOptionstring_valueaggregate_valuedouble_va"
+   ],
+   "idmenu": [
+    "DispatchFailureResponseErrorServiceError|map with a single keystring or maplatencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_iduser_input_idtool_use_idtool_namei"
+   ],
+   "idpmessagestatuserror": [
+    "did not include enough information to construct the typeevent crates/fig_auth/src/external_idp.rs:208fig_auth::external_idpmessagestatuserror_textcrates/fig_auth/src/external_idp.rsevent crates/fig_auth/src/external_idp.rs:152event crates/fig_auth/src/external_"
+   ],
+   "idregioncontext": [
+    "NERDEADENOTRECOVERABLEERFKILLEHWPOISONUtf8Errorvalid_up_toerror_lenIncorrectSocketPermissionsTelemetryStagecognito_pool_idregioncontextVec is sized conservativelyinternal error: entered unreachable code: Overflow when calculating output buffer lengthIntoS"
+   ],
+   "idresulting": [
+    "meoutErrorDispatchFailureResponseErrorServiceError|`TaskLocalFuture` polled after completionFeatureDevEventconversation_idresulting value is out of rangeoverflow subtracting duration from dateUnknownVariantValueContentLengthExceedsThresholdInvalidConv"
+   ],
+   "issuesstateconversation": [
+    "InvalidRedirectUriExceptionFatal internal error. Please consider filing a bug report at https://github.com/clap-rs/clap/issuesstateconversation_idmessage_idcustomization_arninteraction_targetaccepted_character_countaccepted_line_countaccepted_snippet_has_referenc"
+   ],
+   "itemsourceamazonq": [
+    "lureResponseErrorServiceError|map with a single keystring or maplatencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis"
+   ],
+   "latencysession": [
+    "ion_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencysession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionvariant index 0 <= i < "
+   ],
+   "lengthauth": [
+    "owsession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsold_client_idprofile_countmessage_idcontext_file_lengthauth_methoderror_typeerror_codedoctor_checkrouteinit_failure_reasonnumber_of_toolsstruct variant EventType::ChatEnd with 1 e"
+   ],
+   "lenh": [
+    "_len >= 1invalid match spancalled `Result::unwrap()` on an `Err` valueFinderneedleTryFromIntErrorimpmemory_usageminimum_lenh|internal error: entered unreachable code743210/.-g|,+*)('&%$#\"!8 |iPb`aQ|mn|oRlv|u\\jSHc]AO|invalid match spanMemmemPack"
+   ],
+   "maplatencyshellshell": [
+    "::span::active-> ConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or maplatencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_id"
+   ],
+   "messagearncrates": [
+    "dentialscrates/fig_api_client/src/credentials/mod.rsdefault_chainevent crates/fig_api_client/src/profile_resolver.rs:132messagearncrates/fig_api_client/src/profile_resolver.rsevent crates/fig_api_client/src/profile_resolver.rs:128arn:aws:codewhisperer:us-e"
+   ],
+   "modeutterance": [
+    "atencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencyrequest_"
+   ],
+   "namelabelr": [
+    "ueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinval"
+   ],
+   "nameproto": [
+    "osyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion "
+   ],
+   "namespacepy": [
+    "ic_servicesjava_outer_classnamephp_namespacejava_string_check_utf8java_packageswift_prefixobjc_class_prefixphp_metadata_namespacepy_generic_servicesphp_generic_servicesFieldOptionspackedctypejstypeOneofOptionsMethodOptionsidempotency_levelMessageOptio"
+   ],
+   "optionaldefault": [
+    "agedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.len"
+   ],
+   "optionallow": [
+    "tedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangestartendExtensionRangeoptionsEnumOptionsdeprecateduninterpreted_optionallow_aliasFileOptionscc_generic_servicesgo_packageoptimize_forruby_packagejava_generate_equals_and_hashjava_multiple_filesja"
+   ],
+   "packageswift": [
+    "rate_equals_and_hashjava_multiple_filesjava_generic_servicesjava_outer_classnamephp_namespacejava_string_check_utf8java_packageswift_prefixobjc_class_prefixphp_metadata_namespacepy_generic_servicesphp_generic_servicesFieldOptionspackedctypejstypeOneofO"
+   ],
+   "pathrelative": [
+    "enregionstart_urloauth_flowscopesBuilderIdTokenVarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBit-|expand_tilde_in_pathrelative_to`len` greater than remainingFailed to connectSetting socket permissions to 0o600ConnectedSocket permissions are 0o600"
+   ],
+   "periodmodification": [
+    "ng_idlines_of_code_acceptedchars_of_code_acceptedCodeFixAcceptanceEventStalledStreamProtectionConfigupload_enabledgrace_periodmodification_percentageChatUserModificationEvent`Extensions` tracks values by typeterminal_user_interaction_event_typeshellshell_ver"
+   ],
+   "prefixobjc": [
+    "nd_hashjava_multiple_filesjava_generic_servicesjava_outer_classnamephp_namespacejava_string_check_utf8java_packageswift_prefixobjc_class_prefixphp_metadata_namespacepy_generic_servicesphp_generic_servicesFieldOptionspackedctypejstypeOneofOptionsMetho"
+   ],
+   "rangeenum": [
+    "d varintinvalid wire type value: DescriptorProtooneof_declreserved_nameextension_rangeextensionfieldnested_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservi"
+   ],
+   "rangeextensionfieldnested": [
+    "d tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtooneof_declreserved_nameextension_rangeextensionfieldnested_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_depe"
+   ],
+   "recommendationsold": [
+    "utput_token_sizecustom_tool_call_latencyrequest_idreasonoauth_flowsession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsold_client_idprofile_countmessage_idcontext_file_lengthauth_methoderror_typeerror_codedoctor_checkrouteinit_failure_reasonn"
+   ],
+   "regionsubcommandresume": [
+    "ingle keystring or maplatencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_l"
+   ],
+   "setset": [
+    "n was setthe retry strategy requested a delay before sending the retry request, but no 'async sleep' implementation was setset to Some abovederegistering event source from pollermio::polldescription() is deprecated; use Displaycalled `Result::unw"
+   ],
+   "spanxx": [
+    "classes: memory usage: )|(): |         matches: F :|, -LeftmostFirstLeftmostLongestStateIDError|   >* *>D invalid match spanxx_|assertion failed: !bytes.is_empty()assertion failed: self.by_id.len() <= u16::MAX as usizeassertion failed: patterns.l"
+   ],
+   "textcrates": [
+    " information to construct the typeevent crates/fig_auth/src/external_idp.rs:208fig_auth::external_idpmessagestatuserror_textcrates/fig_auth/src/external_idp.rsevent crates/fig_auth/src/external_idp.rs:152event crates/fig_auth/src/external_idp.rs:160e"
+   ],
+   "timestampj": [
+    " the server that was not recognized by the SDK. Consider upgrading to the latest version of the SDK.failed to serialize timestampjA|typecheckedoverflow occurred when adding duration to UNIX_EPOCHoverflow occurred when subtracting duration from UNIX_E"
+   ],
+   "toolsstruct": [
+    "dprofile_countmessage_idcontext_file_lengthauth_methoderror_typeerror_codedoctor_checkrouteinit_failure_reasonnumber_of_toolsstruct variant EventType::ChatEnd with 1 elementstruct variant EventType::AuthFailed with 4 elementsstruct variant EventType::"
+   ],
+   "typejson": [
+    "iptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varint"
+   ],
+   "typereserved": [
+    "value: invalid varintinvalid wire type value: DescriptorProtooneof_declreserved_nameextension_rangeextensionfieldnested_typereserved_rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage"
+   ],
+   "typeservicepublic": [
+    "rangeenum_typeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtosyntaxpackagedependencyweak_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoM"
+   ],
+   "typeterminal": [
+    "ProtectionConfigupload_enabledgrace_periodmodification_percentageChatUserModificationEvent`Extensions` tracks values by typeterminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completion_acceptedTerminalUserInteractionEventexpect"
+   ],
+   "valueoneof": [
+    "k_dependencymessage_typeservicepublic_dependencyFieldDescriptorPrototype_namelabelr#typejson_nameproto3_optionaldefault_valueoneof_indexOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.len() > 10 || "
+   ],
+   "variablesaliasupdate": [
+    "tedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestupdate_environment_variablesenvironment_variablesaliasupdate_aliasErrorResponseErrorInlineShellCompletionRequestinternal error: entered unreachable code: invalid Packet tag: |Named"
+   ],
+   "versioncommandconversation": [
+    "tructionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or maplatencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_iduser_input_idtool_use_idtoo"
+   ],
+   "versionvariant": [
+    "ustom_tool_call_latencysession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionvariant index 0 <= i < 19AcceptDiscardEmptyRejectvariant index 0 <= i < 4SucceededFailedCancelledvariant index 0 <= i < 3result"
+   ]
+  },
+  "removed": {
+   "Accessmodification": [
+    "MonthlyRequestCountUnknownTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessmodification_percentageChatUserModificationEventcode_scan_remediations_event_typecomponentincludes_fixCodeScanRemediationsEventExter"
+   ],
+   "Attemptsinternal": [
+    "LengthLargerThanFileSizeMinusReadOffsetIoErrorStreamingErrorinvalid wire type value: DynamicMessageFieldSetfieldsRequestAttemptsinternal error: entered unreachable code: invalid type for map keyunrecognized enum value 'SharedRetryStrategy|ABCDEFGHIJKLMNOPQ"
+   ],
+   "Attemptsstatus": [
+    "sequence in column nameMaybeTimeoutErrorMaybeTimeoutConfigsleep_impltimeouttimeout_kindRequesturimethodextensionsRequestAttemptsstatusSharedRetryStrategyOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorReadBeforeExecutionModif"
+   ],
+   "Autocompleteg": [
+    "eCodeSignIn|AuthorityMissingE|SsoTokenProviderrL|), ignoring DATA occurred after |TypeErasedError:OperationAborted|_showAutocompletegP|=Dut|light_blue_reverrm_mediumpurple4b|xterm_slateblue1rm_lightsalmon3axterm_greenyello_lightgoldenrod2|Grapheme_Clust"
+   ],
+   "Detailsurl": [
+    "cientModelCapacityMonthlyRequestCountModelTemporarilyUnavailableCodescanIssueApplyFixCodescanIssueHoverCodescanIssueViewDetailsurl::form_urlencoded::Serializer double finishurl::form_urlencoded::Serializer finishedinterceptor_stateencountered orchest"
+   ],
+   "Emptyremote": [
+    "dshakerequestidsecretparent_idEnvironmentVariablekeyInterceptInsertTextSetBufferDiagnosticsInsertOnNewCmdRunProcessErrorEmptyremote.Clientbounddescriptor for message type `remote.Clientbound` not foundinvalid string value: data is not UTF-8 encodedinv"
+   ],
+   "Errormessagereasonsession": [
+    "f_added_charsnumber_of_added_linesnumber_of_added_filesnumber_of_navigationsfolder_levelDocV2AcceptanceEventAccessDeniedErrormessagereasonsession_idcustomization_arncompletion_typerecommendation_latency_millisecondstrigger_to_response_latency_millisecondssuggestion"
+   ],
+   "Errormsgc": [
+    ": entered unreachable code: invalid start of fixed length hexadecimal number called `Result::unwrap()` on an `Err` valueErrormsgc|compiled regex exceeded size limitexhausted state IDs, too many statescapture group slots exhausted|assertion failed: !"
+   ],
+   "Errornumber": [
+    "rategytime_sourcesleep_implconfig_validatorsRuntimeComponentsBuilderInvalidGrantExceptionThrottlingErrorreasonValidationErrornumber_of_generated_charsnumber_of_generated_linesnumber_of_generated_filesnumber_of_navigationsDocV2GenerationEventInternalSe"
+   ],
+   "Eventcustomization": [
+    "suggestion_del_charsnum_suggestion_del_linescode_intentuser_decisionresponse_start_latencyresponse_end_latencyInlineChatEventcustomization_arnaccepted_character_counttotal_character_countunmodified_accepted_character_counttotal_new_code_character_counttotal_"
+   ],
+   "Eventterminal": [
+    "grace_periodContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantmodification_percentageChatUserModificationEventterminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completion_acceptedTerminalUserInteractionEventexpect"
+   ],
+   "Eventtypecheckedencountered": [
+    "dInvalidConversationIdInvalidKmsGrantUnknownModelTemporarilyUnavailablean RFC3339-formatted `OffsetDateTime`AppTelemetryEventtypecheckedencountered orchestrator error; continuingit is failedguaranteed by `partition`request serializer must be in the config baginput se"
+   ],
+   "Exceptionconversation": [
+    "filing a bug report at https://github.com/clap-rs/clap/issues`Extensions` tracks values by typestateUnsupportedGrantTypeExceptionconversation_idmessage_idcustomization_arninteraction_targetaccepted_character_countaccepted_line_countaccepted_snippet_has_referenc"
+   ],
+   "Exceptioninvalid": [
+    "cceededContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnauthorizedClientExceptionInvalidClientMetadataExceptioninvalid type for packed field in DynamicMessagemismatch between DynamicMessage value  and type unexpected end group tagNewCmd c"
+   ],
+   "Exceptionregion": [
+    "BEGIN IMMEDIATEBEGIN EXCLUSIVESELECT value FROM INSERT OR REPLACE INTO  (key, value) VALUES (?1, ?2)AuthorizationPendingExceptionregionInvalidRequestRegionExceptionFeatureDevCodeGenerationEventconversation_idlines_of_code_generatedcharacters_of_code_gener"
+   ],
+   "Exceptionsession": [
+    "tValueProgrammingLanguagelanguage_nameCodeScanFailedEventInvalidScopeExceptionerrorerror_descriptionmessageInvalidClientExceptionsession_idrequest_idmodification_percentageUserModificationEventInternalServerErrorreasonCodeScanSucceededEventnumber_of_findin"
+   ],
+   "Exezzzzzzzzzzzzzzzze": [
+    "tsEimplicitGlobalRe9|$wXV|InvalidAttributeNewSessionTicket3333333333333333|csharp_namespacesecs_since_epochcliSubcommandExezzzzzzzzzzzzzzzze.protobuf.Emptyerror decoding: |max size reached|\"light_green_blinlight_green_boldline|light_blue_italilight_purple_revl"
+   ],
+   "Failedsession": [
+    "CheckFaileddashboardPageViewedmenuBarActionedfigUserMigratedchatStartchatEndmigrateClientIdmcpServerInitprofileStateauthFailedsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionconversation_idutteranc"
+   ],
+   "Failedvariant": [
+    "uct variant EventType::FigUserMigratedstruct variant EventType::TranslationActionedstruct variant EventType::DoctorCheckFailedvariant identifierACCEPTDISCARDEMPTYREJECTa Display implementation returned an error unexpectedlyErrorSucceededFailedCancelledU"
+   ],
+   "Fdocapacity": [
+    "et environment variable `` to `description() is deprecated; use DisplayVariantNotFoundFromPathErrorAddressInvalidVersionFdocapacity overflowinvalid tag value: 0invalid key value: delimited length exceededrecursion limit reachedunexpected end group tag"
+   ],
+   "Foundcreated": [
+    "rojectUnknownUnknownVariantValueProgrammingLanguagelanguage_nameKmsDisabledKeyKmsInvalidKeyUsageKmsInvalidStateKmsKeyNotFoundcreatedTimecredentialStartUrlaccess_tokenexpires_atrefresh_tokenregionstart_urloauth_flowscopesstruct BuilderIdToken with 7 ele"
+   ],
+   "Grantmodification": [
+    "EventStalledStreamProtectionConfigupload_enabledgrace_periodContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantmodification_percentageChatUserModificationEventterminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completio"
+   ],
+   "Nulget": [
+    "199event crates/figterm/src/ipc.rs:135stdin and stdout must both be tty handles span=<- tracing::span::active-> InteriorNulget_termios failedset_termios failedtcdrain failedfailed to ioctl(TIOCGWINSZ): AuthSchemeIdscheme_idpropertiesAuthSchemePre"
+   ],
+   "Optionsallow": [
+    " VarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_gen"
+   ],
+   "Optionspackedjstypectype": [
+    "eneric_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8FieldOptionspackedjstypectypeOneofOptionsMethodOptionsidempotency_levelMessageOptionsmap_entrymessage_set_wire_formatno_standard_descriptor_accessorS"
+   ],
+   "Optionstrailing": [
+    "urceCodeInfoUninterpretedOptionstring_valueaggregate_valuedouble_valuenegative_int_valuepositive_int_valueExtensionRangeOptionstrailing_commentsleading_detached_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )Varint"
+   ],
+   "Permissionscontext": [
+    "YREVOKEDEKEYREJECTEDEOWNERDEADENOTRECOVERABLEERFKILLEHWPOISONSystemTimeErrorUtf8Errorvalid_up_toerror_lenIncorrectSocketPermissionscontextVec is sized conservativelyinternal error: entered unreachable code: Overflow when calculating output buffer lengthIntoS"
+   ],
+   "Protoextension": [
+    "odEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFi"
+   ],
+   "Protomessage": [
+    "declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_value"
+   ],
+   "Protooptionsmethod": [
+    "ursorhistnoterminal_cursor_coordinatesInterceptedKeyHookkeyactionTerminalCursorCoordinatesxpixelypixel|ServiceDescriptorProtooptionsmethodEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorPr"
+   ],
+   "Randomdefaultm": [
+    "orUserAgentInterceptorServiceClockSkewInterceptorGenerateRecommendationsEndpointParamsInterceptorset to Some aboveStaticRandomdefaultm|UnknownmessagereasonValidationErrorValidationError [ValidationException]: PreviousEditorStateMetadataexpected StartObje"
+   ],
+   "Rangec": [
+    "ired field was missing: ``invalid value for field: `MissingFieldInvalidValueResolveEndpointErrorDateTimeFormatErrorOutOfRangec|sourcemessageevent /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-sdk-sts-1.94.0/src/endpoint_li"
+   ],
+   "Rangeendstart": [
+    "cted )cannot advance past `remaining`: VarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generi"
+   ],
+   "Rejectaws": [
+    "response_checksum_validationTokenTypeInterceptorauth_modeUserAgentOverrideInterceptorenvUnknownVariantValueAcceptDismissRejectaws_productaws_product_versionclient_idosos_architectureos_versionparent_productparent_product_versionmetric_dataOptOutInte"
+   ],
+   "Requestaliasupdate": [
+    "uestexecutebracketedNeverConnectedUnknownConnectedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestaliasupdate_environment_variablesupdate_aliasenvironment_variablesErrorResponseErrorInlineShellCompletionRequestinternal error: ent"
+   ],
+   "Requestimmediateoffsetinsertioninsert": [
+    "onfig_sectionsEnvConfigErrorproperty_sourceerrH0H1intercept_commandcursor_positionevent_blobSetExplicitlyUnsetInsertTextRequestimmediateoffsetinsertioninsert_during_commandTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: ImdsCredenti"
+   ],
+   "Requestnoncerequestinvalid": [
+    "itlyUnsetInsertTextRequestimmediateoffsetinsertioninsert_during_commandTimeoutErrorExtensionsextensions_02xextensions_1xRequestnoncerequestinvalid wire type value: ImdsCredentialsProviderclientprofilelast_retrieved_credentialsConnectorErrorconnectionSerializationErr"
+   ],
+   "Requestsuggestionbuffer": [
+    "on drop, aborting|time_sourcefssts_clientpolicypolicy_arnsWebIdentityTokenCredentialsProviderInlineShellCompletionAcceptRequestsuggestionbufferSharedCredentialsProvidererrorerror_descriptionmessageNotifyChildSessionStartedparent_idDowncastParamsInlineShellComplet"
+   ],
+   "Requesttimeoutenvexecutableargumentsworking": [
+    "an::active-> ClientboundpacketReadFileRequestis_binary_filenanosHeadersOut of bounds accessOperationStatusCodeRunProcessRequesttimeoutenvexecutableargumentsworking_directoryResolveDnsErrorsourceExtensionsextensions_02xextensions_1x | 0xloading device registration from secret storeno"
+   ],
+   "Resolverglobal": [
+    "lingErrorServerErrorClientErrorObjectArrayNumberString-|ErrorOutput|AuthSchemeOptionResolverParamsSharedAuthSchemeOptionResolverglobal backend is not used{}Errora Display implementation returned an error unexpectedlyoverflow when multiplying duration by "
+   ],
+   "Suggestedstruct": [
+    " variant EventType::InlineShellCompletionActionedstruct variant EventType::ProfileStatestruct variant EventType::ToolUseSuggestedstruct variant EventType::DashboardPageViewedstruct variant EventType::FigUserMigratedstruct variant EventType::TranslationAct"
+   ],
+   "Unavailableassertion": [
+    " ;tracing::span::active-> |ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownstateModelTemporarilyUnavailableassertion failed: edge.height == self.height - 1assertion failed: src.len() == dst.len()assertion failed: edge.height == self.nod"
+   ],
+   "Unknowncorrect": [
+    "ide_diagnosticsChatInteractWithMessageEventCodewhispererTerminalCompletionInsertedCodewhispererTerminalTranslationActionUnknowncorrect output typeCreateTokenaws-apiinternal error: entered unreachable codeencountered orchestrator error; continuingit is fa"
+   ],
+   "Unknownstate": [
+    "|UnknownVariantValue span=<- ;tracing::span::active-> |ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownstateModelTemporarilyUnavailableassertion failed: edge.height == self.height - 1assertion failed: src.len() == dst.len()asser"
+   ],
+   "Valuerule": [
+    "ltChatAddMessageEventAccessDeniedExceptionExpiredTokenExceptionInvalidGrantExceptionInvalidClientExceptionUnknownVariantValuerule_iddetector_idfinding_idCodeFixAcceptanceEventCodeFixGenerationEventUnauthorizedClientExceptionInternalErrorExceptionLim"
+   ],
+   "Variablestatusextensions": [
+    "fresh lockinvalid wire type value: MaybeTimeoutErrorSharedDnsResolverMaybeTimeoutConfigsleep_impltimeout_kindEnvironmentVariablestatusextensionsMaybeDone polled after value takenOutputConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorinternal "
+   ],
+   "actionevent": [
+    "/main.rs:614event crates/figterm/src/main.rs:852event crates/figterm/src/main.rs:907event crates/figterm/src/main.rs:770actionevent crates/figterm/src/main.rs:833event crates/figterm/src/main.rs:628event crates/figterm/src/main.rs:622event crates/figt"
+   ],
+   "aliasdeprecateduninterpreted": [
+    "ourBitLengthDelimitedStartGroupThirtyTwoBitRgbrbgIndexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava"
+   ],
+   "aliasenvironment": [
+    "tedDateTimeFormatErrorTimeoutIoOtherConstructionFailureUpdateShellContextRequestaliasupdate_environment_variablesupdate_aliasenvironment_variablesErrorResponseErrorInlineShellCompletionRequestinternal error: entered unreachable code: invalid Packet tag: |N"
+   ],
+   "arnarn": [
+    "solver.rs:128messagecrates/fig_api_client/src/profile_resolver.rsevent crates/fig_api_client/src/profile_resolver.rs:132arnarn:aws:codewhisperer:us-east-1:638616132270:profile/AAAACCCCXXXXevent crates/fig_api_client/src/profile_resolver.rs:76even"
+   ],
+   "arrayprovide": [
+    "nt/src/clients/client.rs:476event crates/fig_api_client/src/clients/client.rs:408Arc counter overflow|fewer elements in arrayprovide_credentialsfig_api_client::credentialscrates/fig_api_client/src/credentials/mod.rsdefault_chainevent crates/fig_api_cli"
+   ],
+   "boundsd": [
+    "ed: out_pos + 2 < out_slice.len()assertion failed: (source_pos + 2) & out_buf_size_mask < out_slice.len()dest is out of boundsdJ:|[BUG] umask returned invalid ModeUnknown errnoOperation not permittedNo such file or directoryNo such processInterrup"
+   ],
+   "checkrouteconversation": [
+    "ispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmessage_idcontext_file_len"
+   ],
+   "codesession": [
+    "izecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType::ChatStart with 1 elementstruct v"
+   ],
+   "commentsname": [
+    "ueaggregate_valuedouble_valuenegative_int_valuepositive_int_valueExtensionRangeOptionstrailing_commentsleading_detached_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimitedStartGroupT"
+   ],
+   "datejob": [
+    "ept_global_keystrokesactionsintercept_bound_keystrokesresulting value is out of rangeoverflow subtracting duration from datejob_idgroup_nametimestampide_categoryprogramming_languagenumber_of_unit_test_cases_generatednumber_of_unit_test_cases_accep"
+   ],
+   "dateq": [
+    "::split().next() returns Somedomain subvalue sub,  :-|resulting value is out of rangeoverflow subtracting duration from dateqP|[]description() is deprecated; use Display*IdnaErrorsErrorsIDNA errors: |\"{E5|nI73|) as|0xfalse00010203040506070809101"
+   ],
+   "declenum": [
+    "numberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomes"
+   ],
+   "dependencypackagedependency": [
+    "eserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescri"
+   ],
+   "dependencyserviceweak": [
+    "ionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneo"
+   ],
+   "descriptionglobal": [
+    "dationErrorInvalidAuthSchemeNamesCsvvalueInternalServerErrorKmsAccessDeniedUnknownInvalidRedirectUriExceptionerrorerror_descriptionglobal backend is not used{}terminal_user_interaction_event_typeshellshell_versiontime_to_suggestionis_completion_acceptedTerm"
+   ],
+   "descriptionmessageconversation": [
+    "actoryprovidersqueue not emptyLIFO slot not emptyLinuxMacWindowsUnknownMetadataEntrykeyvalueSlowDownExceptionerrorerror_descriptionmessageconversation_idnumber_of_add_charsnumber_of_add_linesnumber_of_add_filesuser_decisionuser_identitynumber_of_navigationfolder_levelDo"
+   ],
+   "filespy": [
+    "ic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equals_and_hashjava_packageoptimize_forruby_packagejava_string_check_utf8Fie"
+   ],
+   "flowcommandlatencyold": [
+    "tool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct var"
+   ],
+   "idauth": [
+    "sis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType"
+   ],
+   "idpmessagecrates": [
+    "did not include enough information to construct the typeevent crates/fig_auth/src/external_idp.rs:152fig_auth::external_idpmessagecrates/fig_auth/src/external_idp.rsevent crates/fig_auth/src/external_idp.rs:208statuserror_textevent crates/fig_auth/src/exte"
+   ],
+   "indexjson": [
+    "eFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinval"
+   ],
+   "itemrequest": [
+    "iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_le"
+   ],
+   "latencymenu": [
+    "lengthutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar_itemrequest_idreasonoauth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensu"
+   ],
+   "latencyvariant": [
+    "ion_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencyvariant index 0 <= i < 19AcceptDiscardEmptyRejectvariant index 0 <= i < 4SucceededFailedCancelledvariant index 0 <= i < 3result"
+   ],
+   "lengthutterance": [
+    "ion_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmessage_idcontext_file_lengthutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_latencymenu_bar"
+   ],
+   "mapsubcommandresume": [
+    "::span::active-> ConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionres"
+   ],
+   "modeshellshell": [
+    "structionFailureTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionpr"
+   ],
+   "nameconversation": [
+    "yresponse_end_latencyprogramming_languageInlineChatEventEditReadmeGenerateReadmeUpdateReadmeProgrammingLanguagelanguage_nameconversation_idnumber_of_added_charsnumber_of_added_linesnumber_of_added_filesnumber_of_navigationsfolder_levelDocV2AcceptanceEventA"
+   ],
+   "namereserved": [
+    "valid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_depende"
+   ],
+   "optionalr": [
+    "ntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.l"
+   ],
+   "packageobjc": [
+    "Indexed|EnumReservedRangeendstartExtensionRangeoptionsEnumOptionsallow_aliasdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_na"
+   ],
+   "partis": [
+    "aluedouble_valuenegative_int_valuepositive_int_valueExtensionRangeOptionstrailing_commentsleading_detached_commentsname_partis_extensionReservedRange|invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimitedStartGroupThirtyTw"
+   ],
+   "pluginsglobal": [
+    "ecksum_validationThrottlingErrormessagereasonValidationErrorAccessDeniedErrorOperationservice_nameoperation_nameruntime_pluginsglobal backend is not used{}page must have been allocated to insert!Thread count overflowed the configured max count. Thread i"
+   ],
+   "prefixjava": [
+    "nterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equals_and_hashj"
+   ],
+   "rangeoneof": [
+    "riptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescripto"
+   ],
+   "recommendationsstruct": [
+    "uth_flowcommandlatencyold_client_idauth_methoderror_typeerror_codesession_idedit_buffer_lensuggested_chars_lennumber_of_recommendationsstruct variant EventType::ChatStart with 1 elementstruct variant EventType::ToolUseSuggested with 12 elementsstruct variant Ev"
+   ],
+   "servicesswift": [
+    "sdeprecateduninterpreted_optionFileOptionsgo_packageobjc_class_prefixcc_generic_servicesjava_outer_classnamephp_generic_servicesswift_prefixjava_generic_servicesphp_metadata_namespacejava_multiple_filespy_generic_servicesphp_namespacejava_generate_equal"
+   ],
+   "setassertion": [
+    "attempt #the retry strategy requested a delay before sending the retry request, but no 'async sleep' implementation was setassertion failed: self.replace(val).is_none()service confighttpBearerAuthderegistering event source from pollermio::pollregisteri"
+   ],
+   "succeededfailed": [
+    " branchAttempting handshake...error sending handshakeAwaiting handshake response...failed performing handshakeHandshake succeededfailed receiving handshake responseFailed to flush socketSending remote messageFailed to send messageoutgoing_task exitedRecei"
+   ],
+   "typeextensionfieldreserved": [
+    "lue: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyservic"
+   ],
+   "typelabeltype": [
+    "_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion failed: bytes.len() > 10 || b"
+   ],
+   "typenested": [
+    "alid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoextension_rangeoneof_declenum_typenested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesy"
+   ],
+   "typestate": [
+    "ernal error. Please consider filing a bug report at https://github.com/clap-rs/clap/issues`Extensions` tracks values by typestateUnsupportedGrantTypeExceptionconversation_idmessage_idcustomization_arninteraction_targetaccepted_character_countaccepte"
+   ],
+   "typesyntaxpublic": [
+    "nested_typeextensionfieldreserved_namereserved_rangeFileDescriptorSetEnumDescriptorProtovalueFileDescriptorProtomessage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#"
+   ],
+   "valueproto": [
+    "ssage_typesyntaxpublic_dependencyserviceweak_dependencypackagedependencyFieldDescriptorProtooneof_indexjson_namedefault_valueproto3_optionalr#typelabeltype_nameOneofDescriptorProtoMethodDescriptorProtoinput_typeoutput_typeinvalid varintassertion fail"
+   ],
+   "versionconversation": [
+    "tprofileStateauthFailedsession_idrequest_idedit_buffer_lensuggested_chars_lennumber_of_recommendationslatencyshellshell_versionconversation_idutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_custom_tooloutput_token_sizecustom_tool_call_lat"
+   ],
+   "versiondoctor": [
+    "eTimeoutErrorDispatchFailureResponseErrorServiceError|map with a single keystring or mapsubcommandresume_modeshellshell_versiondoctor_checkrouteconversation_idinit_failure_reasonnumber_of_toolssourceamazonq_profile_regionresultsso_regionprofile_countmes"
+   ]
+  }
+ }
+]

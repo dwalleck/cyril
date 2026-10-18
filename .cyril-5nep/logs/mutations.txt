@@ -1,0 +1,18 @@
+== M1 non-tool rule reverted to require tool id
+test protocol::kas::hooks::tests::respond_list_non_tool_trigger_matchers_follow_kas ... FAILED
+test result: FAILED. 49 passed; 1 failed; 0 ignored; 0 measured; 1098 filtered out; finished in 3.02s
+== M2 malformed tags refuse-equivalent (drop all tags on any bad member)
+error[E0277]: a value of type `std::option::Option<Vec<_>>` cannot be built from an iterator over elements of type `std::string::String`
+== M3 glob stops escaping
+warning: unused variable: `utf8`
+test protocol::kas::hooks::tests::respond_list_matches_kas_tool_selector_matrix ... FAILED
+test result: FAILED. 49 passed; 1 failed; 0 ignored; 0 measured; 1098 filtered out; finished in 3.01s
+error: test failed, to rerun pass `-p cyril-core --lib`
+== restored
+RESTORE-OK
+test result: ok. 50 passed; 0 failed; 0 ignored; 0 measured; 1098 filtered out; finished in 3.00s
+== M2b string members after a malformed one are lost
+test protocol::kas::hooks::tests::respond_list_degrades_malformed_tool_tags ... FAILED
+test result: FAILED. 49 passed; 1 failed; 0 ignored; 0 measured; 1098 filtered out; finished in 3.02s
+error: test failed, to rerun pass `-p cyril-core --lib`
+RESTORE-OK

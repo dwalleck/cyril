@@ -230,18 +230,24 @@ rules:
   against the tool ID only. For example, `fs_.*` still matches `fs_write`.
   Regex-only forms such as `^mcp_.*$` never match tags.
 
-A configured matcher requires a tool ID, even if tags are supplied. Missing
-or empty tags leave ID matching available; an omitted or empty matcher selects
-every hook invocation within its trigger. Invalid matchers are warned about
-and retained as nonmatching hooks. A malformed present `toolTags` value—anything
-other than an array containing only strings—is diagnosed and rejected as
-invalid params, not silently reduced to ID-only matching.
+On these two triggers a configured matcher requires a tool ID, even if tags
+are supplied. Missing or empty tags leave ID matching available. A malformed
+`toolTags` value is logged and its non-string members are dropped; the request
+is still answered, because KAS runs none of a tool's hooks when the list call
+fails.
+
+`SessionStart`, `UserPromptSubmit` and `Stop` have no tool to test, so, as in
+KAS, a valid matcher on them selects every invocation. On any trigger, an
+omitted or empty matcher selects every invocation, and an invalid matcher is
+warned about at load and never matches. Matchers compile as Rust regexes, so
+JavaScript-only syntax that KAS accepts, such as lookaround or backreferences,
+is invalid here.
 
 Tag matching does not change hook execution authority or approval behavior.
 A pre-tool command hook exiting with code 2 blocks the tool. Other triggers
-keep their existing behavior. `kas_hooks = "kas"` remains the separate KAS-owned
-registry/execution mode; this Host-mode repair does not change it.
-
+keep their existing execution behavior. `kas_hooks = "kas"` remains the
+separate KAS-owned registry/execution mode; this Host-mode repair does not
+change it.
 
 ### Reviewing a branch (KAS)
 
@@ -356,15 +362,18 @@ findings and the path to `report.md`.
 | `/usage` | Show billing and usage info |
 
 V2 retains its existing command execution and selection-option requests.
-Advertised commands cannot replace Cyril's builtins or an already-registered
-command.
+Each advertisement is the agent's complete command list: a command it no longer
+lists is withdrawn from autocomplete and dispatch, and a re-advertised command
+takes its new behaviour. Advertised commands never replace Cyril's builtins.
 
-**KAS agent commands:** when KAS advertises a `custom-agent` command, Cyril
-registers it for ordinary ACP prompt submission. For example, if advertised,
+**KAS agent commands:** when KAS advertises a custom agent, skill or saved
+prompt (`custom-agent`, `skill`, `prompt`), Cyril registers it for ordinary ACP
+prompt submission. For example, if advertised,
 `/general-task-execution "inspect foo"` starts a prompt turn rather than a V2
 command RPC. The invocation is sent as exactly one original text block,
 preserving the slash, quotes, and whitespace as typed, including commands with
-no arguments.
+no arguments. As in KAS, the command name ends at the first whitespace of any
+kind, so a tab or newline after the name still invokes the command.
 
 Recognized KAS command prompts receive **no automatic local lesson or
 `@file` expansion text**: those additions would change KAS's command arguments.

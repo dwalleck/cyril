@@ -1,0 +1,13 @@
+trailing old 116806488 new 117017036 delta 210548
+OLD ustar hits 2 gzip magics 5 zstd magics 11
+  first 64 bytes b'\xbb\xba\x02Aa\xc2B\xab\xebP\xa0\xa9\x1cY\xa3\xc1\xac\xbew\xe8\xbd\x82\xd7za\xc0h\x04\x9e\xed\x81(\x0c\xce\x19\xcbM%\xb0.\xa7\xcen\xa6\x13u<\x94\xa04\t\xad\xd9\x1c\t\xe4\xa0n\x1a\x82\xd9\xdal\xda'
+NEW ustar hits 2 gzip magics 5 zstd magics 12
+  first 64 bytes b'\xc7\xa7^D\xbb\xba\x02Aa\xc2B\xab\xebP\xa0\xa9\x1cY\xa3\xc1\xac\xbew\xe8\xbd\x82\xd7za\xc0h\x04\x9e\xed\x81(\x0c\xce\x19\xcbM%\xb0.\xa7\xcen\xa6\x13u<\x94\xa04\t\xad\xd9\x1c\t\xe4\xa0n\x1a\x82'
+block 4096: first differing block index 0 at offset 0 (28518 vs 28569 blocks)
+  total differing blocks 28479 of 28518 ; first 20 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19] ; last 5 [28513, 28514, 28515, 28516, 28517]
+  OLD@0: ...Aa.B..P...Y....w....za.h....(....M%....n..u<..4.......n....l.D...N./(....`....Ej..8.8..p....CDi..d.9....p.t2....V....
+  NEW@0: ..^D...Aa.B..P...Y....w....za.h....(....M%....n..u<..4.......n....l.D...N./(....`....Ej..8.8..p....CDi..d.9....p.t2....V
+  OLD@4096: ly one package configuration, found ' has invalid remote type '', must be 'streamable-http' or 'sse'' must have exactly 
+  NEW@4096: xactly one package configuration, found ' has invalid remote type '', must be 'streamable-http' or 'sse'' must have exac
+  OLD@8192: racted-kas-versionsevent crates/chat-cli/src/os/mod.rs:62chat_cli::oscrates/chat-cli/src/os/mod.rsevent crates/chat-cli/
+  NEW@8192: textracted-kas-versionsevent crates/chat-cli/src/os/mod.rs:62chat_cli::oscrates/chat-cli/src/os/mod.rsevent crates/chat-
