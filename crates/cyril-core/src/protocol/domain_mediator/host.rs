@@ -360,8 +360,8 @@ mod tests {
                 .block_task(),
         )
         .await
-        .expect("auth callbacks complete")
-        .expect("auth callbacks answered");
+        .unwrap_or_else(|_| panic!("auth callbacks did not complete in time"))
+        .unwrap_or_else(|e| panic!("auth callbacks failed: {e}"));
         runtime.shutdown().await;
         host.abort();
         assert!(host.await.unwrap_err().is_cancelled());
