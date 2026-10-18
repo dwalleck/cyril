@@ -23,6 +23,12 @@ pub enum SystemNotifyLevel {
     Unknown(String),
 }
 
+/// `BridgeError.operation` for a failed `session/set_config_option` — KAS
+/// model/mode/effort sets and the KAS thinking lever. The mediator emits it
+/// and consumers that reconcile a failed set (the session's pending config
+/// request, the review workbench) match it, so the label lives in one place.
+pub const SET_CONFIG_OPTION_OPERATION: &str = "set_config_option";
+
 /// Notifications emitted by the ACP bridge. All variants are Send + Sync + Clone.
 /// This is the primary channel for agent state updates crossing from the bridge thread into the App.
 #[derive(Debug, Clone)]
@@ -305,6 +311,8 @@ pub enum Notification {
         session_id: SessionId,
     },
     /// A bridge command failed. Surfaces to the UI as a system message.
+    /// `operation` is a stable label consumers may match on (e.g.
+    /// [`SET_CONFIG_OPTION_OPERATION`]).
     BridgeError {
         operation: String,
         message: String,

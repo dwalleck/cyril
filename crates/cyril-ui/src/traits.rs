@@ -579,15 +579,22 @@ impl ApprovalState {
 
 /// What confirming a picker does (cyril-qaq0).
 ///
-/// The two kinds share the viewport, filter, and scrollbar machinery but have
-/// opposite commit semantics: an agent picker sends the selection back over the
-/// wire, Cyril's palette picker applies it locally and never writes anything.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// The kinds share the viewport, filter, and scrollbar machinery but have
+/// different commit semantics: an agent picker sends the selection back over
+/// the wire, Cyril's palette picker applies it locally and never writes
+/// anything, and a config picker sets a KAS session config value.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PickerKind {
     /// Options owned by the agent: confirming dispatches a bridge command.
     Agent,
     /// Cyril's palette picker: confirming commits locally, never to the wire.
     Theme,
+    /// A KAS session config select (`/model` `/effort` `/mode`, cyril-vh69):
+    /// confirming revalidates the value against the session's latest config
+    /// snapshot and dispatches `SetConfigOption` for the target — never the
+    /// v2 Agent path's `ExecuteCommand`. The target names what is set, and an
+    /// effort target the model its levels came from.
+    Config(cyril_core::types::ConfigTarget),
 }
 
 /// The `/review` consent form: what the review will run and everything it
@@ -736,6 +743,20 @@ pub struct PickerState {
     pub filtered_indices: Vec<usize>,
     pub selected: usize,
     pub kind: PickerKind,
+}
+
+/// What confirming a picker selected (cyril-vh69).
+///
+/// `title` doubles as the agent command name for `PickerKind::Agent` — the
+/// v2 contract, where the picker opens on `CommandOptionsReceived.command`
+/// and confirm hands it back as the command to execute. A
+/// `PickerKind::Config` carries its own dispatch key (the target), so the
+/// App never overloads the display title with routing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PickerConfirmation {
+    pub kind: PickerKind,
+    pub title: String,
+    pub value: String,
 }
 
 /// Hooks panel overlay state (read-only table display for `/hooks` command).
