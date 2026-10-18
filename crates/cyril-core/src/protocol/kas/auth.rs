@@ -264,8 +264,6 @@ fn cap(text: &str) -> String {
 pub(crate) struct KasTokenSource {
     kiro_cli: AgentCommand,
     environment: SpawnEnvironment,
-    /// Process-wide serialization + missing-helper cache key ([`lock_key`]).
-    lock_key: String,
     deadline: Duration,
     /// The remediation a spawn failure names (see [`KasTokenError::Spawn`]).
     spawn_remedy: &'static str,
@@ -468,8 +466,9 @@ mod helper_gate {
 }
 
 /// Per-process memory of kiro-cli invocations that lack the helper (keyed by
-/// the rendered invocation prefix), with the version `--version` reported —
-/// so the helper is probed once per process, not on every request.
+/// [`lock_key`]: the resolved, canonicalized binary + args, computed per
+/// fetch), with the version `--version` reported — so the helper is probed
+/// once per process, not on every request.
 mod missing_helper {
     use std::collections::HashMap;
     use std::sync::{Mutex, OnceLock};
@@ -499,20 +498,9 @@ impl KasTokenSource {
     /// A source running `kiro_cli` (the invocation prefix, e.g. `kiro-cli` or
     /// `wsl -d Ubuntu kiro-cli`) under `environment`.
     pub(crate) fn new(kiro_cli: AgentCommand, environment: SpawnEnvironment) -> Self {
-        let path_var = environment.effective_var(std::ffi::OsStr::new("PATH"));
-        let lock_key = lock_key(&kiro_cli, path_var.as_deref(), is_executable_file, |p| {
-            match std::fs::canonicalize(p) {
-                Ok(real) => Some(real),
-                Err(e) => {
-                    tracing::debug!(path = %p.display(), error = %e, "kiro-cli path not canonicalized for its lock key");
-                    None
-                }
-            }
-        });
         Self {
             kiro_cli,
             environment,
-            lock_key,
             deadline: GET_KAS_TOKEN_DEADLINE,
             spawn_remedy: AGENT_COMMAND_REMEDY,
             store: StoreLocation::FromEnvironment,
@@ -564,6 +552,24 @@ impl KasTokenSource {
         AgentCommand::new(self.kiro_cli.program()).with_args(args)
     }
 
+    /// [`lock_key`] for this source, resolved now against its environment's
+    /// PATH and the filesystem.
+    fn current_lock_key(&self) -> String {
+        let path_var = self.environment.effective_var(std::ffi::OsStr::new("PATH"));
+        lock_key(
+            &self.kiro_cli,
+            path_var.as_deref(),
+            is_executable_file,
+            |p| match std::fs::canonicalize(p) {
+                Ok(real) => Some(real),
+                Err(e) => {
+                    tracing::debug!(path = %p.display(), error = %e, "kiro-cli path not canonicalized for its lock key");
+                    None
+                }
+            },
+        )
+    }
+
     /// The kiro-cli invocation prefix this source runs — also what bundle
     /// selection's version probe asks on the free path.
     pub(crate) fn kiro_cli(&self) -> &AgentCommand {
@@ -595,7 +601,10 @@ impl KasTokenSource {
     /// token — remembered per process, so the helper is not re-probed on
     /// every request. Every other failure is returned as-is.
     pub(crate) async fn fetch(&self, force_refresh: bool) -> Result<KasToken, KasTokenError> {
-        let key = self.lock_key.clone();
+        // Resolved per fetch, just before taking the lock: a versioned-symlink
+        // install retargeted mid-session (an upgrade) must still map every
+        // source onto the binary it now runs.
+        let key = self.current_lock_key();
         let gate = helper_gate::for_invocation(&key);
         let _serialized = gate.lock().await;
         if let Some(version) = missing_helper::lookup(&key) {
@@ -1264,7 +1273,7 @@ pub(crate) mod tests {
             let script = dir.join("fake-kiro-cli.sh");
             std::fs::write(
                 &script,
-                format!("printf '%s ' \"$@\" > \"$(dirname \"$0\")/argv.txt\"\n{posix_body}\n"),
+                format!("printf '%s ' \"$@\" > \"${{0%/*}}/argv.txt\"\n{posix_body}\n"),
             )
             .unwrap();
             AgentCommand::new("/bin/sh").with_args(vec![script.to_str().unwrap().to_string()])
@@ -1369,7 +1378,7 @@ pub(crate) mod tests {
     pub(crate) fn kiro_cli_without_helper(dir: &std::path::Path) -> AgentCommand {
         fake_kiro_cli(
             dir,
-            "d=\"$(dirname \"$0\")\"\nif [ \"$1\" = \"--version\" ]; then printf 'kiro-cli 2.5.1\\n'; exit 0; fi\necho call >> \"$d/calls.txt\"\nprintf \"error: unrecognized subcommand 'get-kas-token'\\n\\nUsage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>\\n\" >&2\nexit 2",
+            "d=\"${0%/*}\"\nif [ \"$1\" = \"--version\" ]; then printf 'kiro-cli 2.5.1\\n'; exit 0; fi\necho call >> \"$d/calls.txt\"\nprintf \"error: unrecognized subcommand 'get-kas-token'\\n\\nUsage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>\\n\" >&2\nexit 2",
             "if \"%1\"==\"--version\" (\n  echo kiro-cli 2.5.1\n  exit /b 0\n)\necho call >> \"%~dp0calls.txt\"\necho error: unrecognized subcommand 'get-kas-token' 1>&2\nexit /b 2",
         )
     }
@@ -1501,7 +1510,7 @@ pub(crate) mod tests {
             fake_kiro_cli(
                 dir.path(),
                 &format!(
-                    "d=\"$(dirname \"$0\")/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'"
+                    "d=\"${{0%/*}}/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'"
                 ),
                 &format!(
                     "mkdir \"%~dp0held\" || exit /b 9\nping -n 2 127.0.0.1 > NUL\nrmdir \"%~dp0held\"\necho {envelope}"
@@ -1522,7 +1531,7 @@ pub(crate) mod tests {
         fake_kiro_cli(
             dir,
             &format!(
-                "d=\"$(dirname \"$0\")/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'"
+                "d=\"${{0%/*}}/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'"
             ),
             &format!(
                 "mkdir \"%~dp0held\" || exit /b 9\nping -n 2 127.0.0.1 > NUL\nrmdir \"%~dp0held\"\necho {envelope}"
@@ -1712,13 +1721,58 @@ pub(crate) mod tests {
             SpawnEnvironment::Inherit,
         );
         let mut env = std::collections::BTreeMap::new();
-        env.insert(std::ffi::OsString::from("PATH"), sh_dir.into_os_string());
+        // The canonical shell's dir first (that is the spelling under test), then
+        // the standard utility dirs: the overlap script runs mkdir/sleep/rmdir,
+        // which live in /bin on macOS but /usr/bin on merged-usr Linux.
+        let path = std::env::join_paths([sh_dir, "/usr/bin".into(), "/bin".into()]).unwrap();
+        env.insert(std::ffi::OsString::from("PATH"), path);
         let bare = KasTokenSource::new(
             AgentCommand::new(sh.file_name().unwrap().to_str().unwrap())
                 .with_args(fake.args().to_vec()),
             SpawnEnvironment::Replace(env),
         );
         let (first, second) = tokio::join!(absolute.fetch(false), bare.fetch(false));
+        assert!(first.is_ok(), "{first:?}");
+        assert!(second.is_ok(), "{second:?}");
+    }
+
+    // Review 4 (C9d): a versioned-symlink install (Homebrew's
+    // `bin/kiro-cli -> ../Cellar/<ver>/bin/kiro-cli`) upgraded mid-session: a
+    // source built BEFORE the retarget and one built AFTER still serialize,
+    // because the key is resolved per fetch, not frozen at construction.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn fetch_serializes_across_a_symlink_retarget() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let envelope = r#"{"kind":"getKasToken","data":{"accessToken":"AT","expiresAt":"2099-01-01T00:00:00Z","profileArn":"arn:p"}}"#;
+        // `${0%/*}` is the invoked link's dir, shared by both versions.
+        let script = format!(
+            "#!/bin/sh\nd=\"${{0%/*}}/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'\n"
+        );
+        for version in ["v1", "v2"] {
+            let cellar = dir.path().join("Cellar").join(version);
+            std::fs::create_dir_all(&cellar).unwrap();
+            let bin = cellar.join("kiro-cli");
+            std::fs::write(&bin, &script).unwrap();
+            std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        }
+        let bin_dir = dir.path().join("bin");
+        std::fs::create_dir_all(&bin_dir).unwrap();
+        let link = bin_dir.join("kiro-cli");
+        std::os::unix::fs::symlink(dir.path().join("Cellar/v1/kiro-cli"), &link).unwrap();
+        let before = KasTokenSource::new(
+            AgentCommand::new(link.to_str().unwrap()),
+            SpawnEnvironment::Inherit,
+        );
+        // The upgrade: retarget the link to the new version.
+        std::fs::remove_file(&link).unwrap();
+        std::os::unix::fs::symlink(dir.path().join("Cellar/v2/kiro-cli"), &link).unwrap();
+        let after = KasTokenSource::new(
+            AgentCommand::new(link.to_str().unwrap()),
+            SpawnEnvironment::Inherit,
+        );
+        let (first, second) = tokio::join!(before.fetch(false), after.fetch(false));
         assert!(first.is_ok(), "{first:?}");
         assert!(second.is_ok(), "{second:?}");
     }

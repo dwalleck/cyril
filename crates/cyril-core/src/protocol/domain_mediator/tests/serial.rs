@@ -1154,7 +1154,10 @@ fn kas_token_source_moves_into_the_dispatch_context() {
         present_as: None,
         stall_threshold: Duration::from_secs(30),
         host_shell: None,
-        kas_token: Some(crate::protocol::kas::auth::KasTokenSource::on_path()),
+        kas_token: Some(crate::protocol::kas::auth::KasTokenSource::new(
+            crate::types::AgentCommand::new("kiro-cli"),
+            crate::types::SpawnEnvironment::Inherit,
+        )),
     };
     let (mediator, _channels) = DomainMediator::new(config, bridge)
         .unwrap_or_else(|error| panic!("token-source mediator: {error}"));

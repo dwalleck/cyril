@@ -1173,6 +1173,21 @@ mod tests {
         }
     }
 
+    /// Where discovery looks for the kiro data dir on THIS unix host given the
+    /// child's private HOME and XDG_DATA_HOME — derived from the production
+    /// resolvers themselves (Review 4): XDG/HOME on Linux and the other XDG
+    /// targets, `~/Library/Application Support/kiro-cli` on macOS/iOS (which
+    /// ignore XDG_DATA_HOME). Fixtures planted here are found on every unix CI
+    /// leg.
+    #[cfg(unix)]
+    fn unix_resolver_data_dir(home: &Path, xdg: &Path) -> PathBuf {
+        if cfg!(any(target_os = "macos", target_os = "ios")) {
+            apple_kiro_data_dir(Some(home)).expect("home resolves")
+        } else {
+            kiro_data_dir(Some(home), Some(xdg.as_os_str())).expect("absolute XDG resolves")
+        }
+    }
+
     // Review F1/F2 (PR #140): the env wrapper `resolve_kas_command` reads the
     // REAL environment, so the pure fences above cannot see a wrapper that
     // reads the wrong variable (R1: `XDG_DATA_DIR`). Re-enter this test binary
@@ -1243,14 +1258,22 @@ mod tests {
             Some(data_dir.join(STORE_FILE_NAME)),
             "default_store_path must follow the resolver on this host"
         );
-        let err = resolve_kas_command(&crate::protocol::kas::auth::KasTokenSource::on_path())
+        // An explicit, absent kiro-cli: `on_path()` would also probe the real
+        // TUI fallback dirs (/usr/local/bin, /opt/homebrew/bin) of the host
+        // running the tests, where a real kiro-cli may live.
+        let missing = home.join("no-such-kiro-cli");
+        let source = crate::protocol::kas::auth::KasTokenSource::new(
+            AgentCommand::new(missing.to_str().expect("utf-8 fixture path")),
+            crate::types::SpawnEnvironment::Inherit,
+        );
+        let err = resolve_kas_command(&source)
             .await
             .expect_err("no kiro-cli is runnable, so the login gate must refuse the spawn");
         let KasMissing::AuthUnavailable { why } = &err else {
             panic!("expected AuthUnavailable (bundle found, kiro-cli absent), got {err:?}");
         };
         assert!(
-            why.contains("kiro-cli chat _ get-kas-token") && why.contains("install kiro-cli"),
+            why.contains("no-such-kiro-cli chat _ get-kas-token"),
             "the gate must name the helper it could not run: {why}"
         );
         std::fs::write(completed, "wrappers checked").expect("completion marker");
@@ -1284,7 +1307,7 @@ mod tests {
             .expect("fake kiro-cli symlink");
             let node = root.path().join("node");
             std::fs::write(&node, "").expect("fake node file");
-            let server_dir = kas_root(&xdg.join(KIRO_DATA_DIR_NAME))
+            let server_dir = kas_root(&unix_resolver_data_dir(&home, &xdg))
                 .join(format!("2.24.0-{SHA_A}"))
                 .join("node_modules/@kiro/agent/dist/server");
             std::fs::create_dir_all(&server_dir).expect("fake extraction");
@@ -1320,7 +1343,9 @@ mod tests {
             );
             assert!(!journal.contains("--force-refresh"), "{journal:?}");
             assert!(
-                !xdg.join(KIRO_DATA_DIR_NAME).join("data.sqlite3").exists(),
+                !unix_resolver_data_dir(&home, &xdg)
+                    .join(STORE_FILE_NAME)
+                    .exists(),
                 "no credential store may be created or required"
             );
             return;
@@ -1362,7 +1387,7 @@ mod tests {
             let node = root.path().join("node");
             std::fs::write(&node, "").expect("fake node file");
             for version in ["2.24.0", "2.25.0"] {
-                let server_dir = kas_root(&xdg.join(KIRO_DATA_DIR_NAME))
+                let server_dir = kas_root(&unix_resolver_data_dir(&home, &xdg))
                     .join(format!("{version}-{SHA_A}"))
                     .join("node_modules/@kiro/agent/dist/server");
                 std::fs::create_dir_all(&server_dir).expect("fake extraction");

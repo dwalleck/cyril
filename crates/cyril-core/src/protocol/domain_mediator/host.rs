@@ -388,7 +388,7 @@ mod tests {
                 let fake = crate::protocol::kas::auth::tests::fake_kiro_cli(
                     dir.path(),
                     &format!(
-                        "printf '%s\\n' \"$*\" >> \"$(dirname \"$0\")/journal.txt\"\nprintf '%s\\n' '{envelope}'"
+                        "printf '%s\\n' \"$*\" >> \"${{0%/*}}/journal.txt\"\nprintf '%s\\n' '{envelope}'"
                     ),
                     &format!("echo %* >> \"%~dp0journal.txt\"\necho {envelope}"),
                 );

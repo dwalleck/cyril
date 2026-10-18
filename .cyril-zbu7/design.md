@@ -45,8 +45,8 @@ Requester decision relayed by the coordinator (quoted in `route.md` T4 item 1). 
 
 - Red-first (C1): `receipts/red-run.log` (base 85becf9f + test only: `StoreUnservable … data.sqlite3 is absent`) → `receipts/green-run.log`.
 - Mutations: C9 `receipts/mutation-c9-{red,restored}.log`; C10 `receipts/mutation-c10{,b}-red.log`, `mutation-c10-restored.log`; W `receipts/mutation-wiring-red.log`.
-- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (2de90dfe source; every lane `-OK`).
-- Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 232 kas/domain_mediator tests pass on MSVC at 2de90dfe, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
+- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (60155e5e source; every lane `-OK`).
+- Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 247 kas/domain_mediator tests pass on MSVC at 60155e5e, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
 - Live C6: `receipts/live/timeline.txt` — renewal served at 19:44:40Z (expiry 19:47:39 → 20:44:40, plain helper, no force), turns answered before, inside the buffer, and after the old expiry; no BridgeDisconnected.
 - Missing-helper shapes (C10 premise): `receipts/missing-subcommand-shapes.txt`, evidence P5.
 - Independent review: one read-only reviewer pass over `85becf9f..2cf8d853`; no blocking findings; should-fixes 1–4 and nits 6/11 fixed in the review-fix commit; nits 7–10/12 dispositioned under Non-goals.
@@ -99,3 +99,25 @@ Requester approved merging once ready; fixes relayed by the coordinator (2026-10
 | 3a (Nit) | `is_executable_file` tested any exec bit. | Fixed — `access(X_OK)` for the current user via nix (TUI `y1e` / Node `accessSync(X_OK)`); Windows: any file. `is_executable_file_follows_access_x_ok` (0o600 no, 0o700 yes, 0o601 only as root). |
 | 3b (Nit) | `under_cwd` case-sensitive on Windows. | Fixed — case-insensitive on Windows (TUI `YM` lowercases); `under_cwd_case_handling_follows_the_platform`. |
 | 3c (Nit) | Struct doc still said "the PATH `kiro-cli`". | Fixed — documents the free-path resolver, the shared probe, and the resolved-binary lock key. |
+
+## Review 4 — PR #173 delta review (reviewed 0b80df62): request changes (macOS CI red)
+
+Technical repairs under the approved design (relayed by the coordinator, 2026-10-18).
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (High) | macOS CI: `free_gate_asks_kiro_cli_get_kas_token_not_the_store` planted the bundle under `$XDG_DATA_HOME/kiro-cli`, but macOS discovery ignores XDG (`~/Library/Application Support/kiro-cli`) → `Server(...)`; `version_probe_and_token_source_share_the_fallback_kiro_cli` had the same shape. `fetch_serializes_across_spellings_of_one_binary` gave the bare source `PATH=<dir of canonical sh>` only, while the fixture called `dirname` (/usr/bin on macOS) → exit 9. | Fixed — both discovery child tests plant under `unix_resolver_data_dir(home, xdg)`, derived from the production resolvers (`apple_kiro_data_dir` on macOS/iOS, `kiro_data_dir` elsewhere). Every POSIX fixture in this PR uses `${0%/*}` instead of `dirname`; the spellings test's replacement PATH adds `/usr/bin:/bin` for mkdir/sleep/rmdir. Audit of every test this PR adds or changes for host traps: `env_wrappers_resolve_xdg_data_home_like_kiro_cli` now gates with an explicit absent kiro-cli instead of `on_path()` (which would probe the host's real /usr/local/bin, /opt/homebrew/bin); `serial::kas_token_source_moves_into_the_dispatch_context` no longer calls `on_path()`. |
+| 2 (Low) | `lock_key` computed once in `new()`: a versioned-symlink install upgraded mid-session keys a pre- and a post-upgrade source on different Cellar paths → two helpers could race the single-use refresh token. | Fixed — C9d: `KasTokenSource::current_lock_key()` resolves + canonicalizes per `fetch`, just before taking the lock (also keys the missing-helper cache). Red-first `fetch_serializes_across_a_symlink_retarget` (unix; `bin/kiro-cli -> Cellar/v1` retargeted to `Cellar/v2` between the two sources' construction): `receipts/r4-red-symlink-retarget.log` red (exit 9, lock dir held), green after. |
+| 3 (Nit) | `missing_helper` doc said "keyed by the rendered invocation prefix". | Fixed — keyed by `lock_key`, computed per fetch. |
+
+### macOS paths verified by reading code (no macOS machine available)
+
+- `discovery::kiro_data_dir_from_env` on `macos`/`ios` → `apple_kiro_data_dir(kiro_agent_config::home_dir())` = `$HOME/Library/Application Support/kiro-cli`; XDG_DATA_HOME and LOCALAPPDATA are not read. The two discovery child tests set HOME to their private dir, so `unix_resolver_data_dir` names exactly that path.
+- `kiro_agent_config::home_dir()` = `HOME`, then `USERPROFILE` — the fake `~/.local/bin` in the shared-kiro-cli test is under the child's HOME.
+- `resolve_free_kiro_cli` on macOS takes the unix branch (fallbacks `~/.local/bin`, `/usr/local/bin`, `/opt/homebrew/bin`). In both discovery child tests the fake is found BEFORE the real `/usr/local/bin` / `/opt/homebrew/bin` (PATH `bin` first in one, `~/.local/bin` first in the other), so the runner's own Homebrew can never be reached.
+- `/bin/sh`, `/bin/mkdir`, `/bin/sleep`, `/bin/rmdir` exist on macOS; `dirname` lives in `/usr/bin` there and is no longer used. `printf`, `[`, `echo` and `${0%/*}` are shell builtins or expansions.
+- macOS tempdirs live under `/var/folders` (a symlink to `/private/var`); only the lock-key tests canonicalize, and they compare canonicalized paths on both sides.
+
+### Gate scope
+
+The local gate covers Linux (all ten ci.yml lanes) plus the Windows VM (`resourcefs-win11`: kas/domain_mediator tests, MSVC). macOS has no local machine: its evidence is the `Test (macos-latest)` CI leg on the pushed head.

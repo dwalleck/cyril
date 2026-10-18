@@ -45,3 +45,7 @@ Items 1–4 applied in `kas/auth.rs` (+ `callbacks.rs` test): `resolve_free_kiro
 ## Repair 3 (PR #173 delta review — design "Review 3")
 
 One commit: discovery's version probe uses the token source's resolved kiro-cli; `lock_key` (resolved + canonical binary + args) for the process-wide gate and missing-helper cache; `access(X_OK)` executability; Windows case-insensitive cwd skip; struct doc. Red-first `receipts/r3-red-shared-kiro-cli.log`; mutation `receipts/r3-red-lock-key-spellings.log`. Full gate → `receipts/gate-summary.txt`; Windows VM → `receipts/windows-vm.txt`.
+
+## Repair 4 (PR #173 delta review — design "Review 4")
+
+One commit: macOS-portable discovery fixtures (resolver-derived data dir), `${0%/*}` in every POSIX fixture, explicit `/usr/bin:/bin` in the spellings test, no `on_path()` in host-independent tests, per-fetch lock key (red-first `receipts/r4-red-symlink-retarget.log`), `missing_helper` doc. Full gate → `receipts/gate-summary.txt`; Windows VM → `receipts/windows-vm.txt`; macOS → CI on the pushed head.
