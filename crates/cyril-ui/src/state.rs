@@ -1756,7 +1756,7 @@ impl UiState {
         if let PreviewBody::Malformed { raw_input_shape } = tool_call.preview_body() {
             tracing::warn!(
                 tool_call_id = %tool_call.id(),
-                raw_input_shape,
+                raw_input_shape = %raw_input_shape,
                 "approval preview raw_input has no string text/content field"
             );
         }
