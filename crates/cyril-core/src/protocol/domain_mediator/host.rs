@@ -79,7 +79,10 @@ fn dispatch_extension(
             }
             let (reply, response_rx) = tokio::sync::oneshot::channel();
             (
-                callbacks::HostCallback::GetAccessToken { reply },
+                callbacks::HostCallback::GetAccessToken {
+                    force_refresh: crate::protocol::kas::auth::force_refresh_requested(&params),
+                    reply,
+                },
                 response_rx,
             )
         } else if method == terminal_io::SHELL_TYPE_METHOD {
@@ -291,6 +294,163 @@ mod tests {
     use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
     use crate::protocol::source_observer::IngressTracker;
 
+    /// Drive wire `_kiro/auth/getAccessToken` requests (one per `params`)
+    /// from a fake agent through the real host-callback boundary — extension
+    /// dispatch, `forceRefresh` parsing, `DispatchCtx.kas_token`, the
+    /// responder and its notifications — and return each reply body plus
+    /// every `Routed` notification the dispatch enqueued, in order.
+    async fn auth_round_trip(
+        source: crate::protocol::kas::auth::KasTokenSource,
+        params: Vec<serde_json::Value>,
+    ) -> (Vec<serde_json::Value>, Vec<crate::types::Notification>) {
+        let (channels, mut domain_rx, host_rx) =
+            DomainChannels::new(IngressTracker::new()).unwrap();
+        let ws = tempfile::tempdir().unwrap();
+        let ctx = Rc::new(DispatchCtx {
+            notify_tx: channels.clone(),
+            terminals: Rc::new(TerminalRegistry::new(None)),
+            hooks: None,
+            hook_ops: HookOps::default(),
+            cwd: ws.path().to_path_buf(),
+            kas_token: Some(Rc::new(source)),
+        });
+        let engine: Rc<dyn Engine> = Rc::new(KasEngine::default());
+        let host = run(
+            host_rx,
+            engine,
+            Rc::new(RefCell::new(HostMediator::new())),
+            ctx,
+        );
+        let replies = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let sink = replies.clone();
+        let agent = Agent
+            .builder()
+            .name("auth-callback-test-agent")
+            .on_receive_request(
+                async move |request: acp::InitializeRequest,
+                            responder,
+                            connection: ConnectionTo<Client>| {
+                    let callback_connection = connection.clone();
+                    let sink = sink.clone();
+                    let params = params.clone();
+                    connection.spawn(async move {
+                        for p in params {
+                            let reply = callback_connection
+                                .send_request(UntypedMessage::new("_kiro/auth/getAccessToken", p)?)
+                                .block_task()
+                                .await?;
+                            sink.lock().unwrap().push(reply);
+                        }
+                        responder.respond(acp::InitializeResponse::new(request.protocol_version))
+                    })?;
+                    Ok(())
+                },
+                agent_client_protocol::on_receive_request!(),
+            );
+        let runtime = SdkRuntime::start_for_test(agent, channels, StageChain::default())
+            .await
+            .unwrap();
+        tokio::time::timeout(
+            std::time::Duration::from_secs(20),
+            runtime
+                .connection()
+                .send_request(acp::InitializeRequest::new(
+                    agent_client_protocol::schema::ProtocolVersion::V1,
+                ))
+                .block_task(),
+        )
+        .await
+        .unwrap_or_else(|_| panic!("auth callbacks did not complete in time"))
+        .unwrap_or_else(|e| panic!("auth callbacks failed: {e}"));
+        runtime.shutdown().await;
+        host.abort();
+        assert!(host.await.unwrap_err().is_cancelled());
+        let mut notifications = Vec::new();
+        while let Ok(work) = domain_rx.try_recv() {
+            if let crate::protocol::domain_mediator::DomainWork::Routed(routed) = work {
+                notifications.push(routed.notification);
+            }
+        }
+        let replies = replies.lock().unwrap().clone();
+        (replies, notifications)
+    }
+
+    // cyril-zbu7 C3/C4 at the host-callback boundary: a wire `forceRefresh:
+    // true` reaches kiro-cli as `--force-refresh`, `{}` does not, and the
+    // bound source's data is relayed — a dropped `forceRefresh` parse or a
+    // dropped `kas_token` (Unbound) fails here.
+    #[tokio::test(flavor = "current_thread")]
+    async fn get_access_token_round_trips_through_the_bound_kiro_cli() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let dir = tempfile::tempdir().unwrap();
+                let envelope = r#"{"kind":"getKasToken","data":{"accessToken":"AT-wire","expiresAt":"2099-01-01T00:00:00Z","profileArn":"arn:p"}}"#;
+                let fake = crate::protocol::kas::auth::tests::fake_kiro_cli(
+                    dir.path(),
+                    &format!(
+                        "printf '%s\\n' \"$*\" >> \"${{0%/*}}/journal.txt\"\nprintf '%s\\n' '{envelope}'"
+                    ),
+                    &format!("echo %* >> \"%~dp0journal.txt\"\necho {envelope}"),
+                );
+                let source = crate::protocol::kas::auth::KasTokenSource::new(
+                    fake,
+                    crate::types::SpawnEnvironment::Inherit,
+                );
+                let (replies, notifications) = auth_round_trip(
+                    source,
+                    vec![serde_json::json!({"forceRefresh": true}), serde_json::json!({})],
+                )
+                .await;
+                assert_eq!(replies.len(), 2);
+                for reply in &replies {
+                    assert_eq!(reply["accessToken"], "AT-wire");
+                    assert_eq!(reply["profileArn"], "arn:p");
+                }
+                let journal = std::fs::read_to_string(dir.path().join("journal.txt")).unwrap();
+                let calls: Vec<&str> = journal.lines().map(str::trim).collect();
+                assert_eq!(
+                    calls,
+                    ["chat _ get-kas-token --force-refresh", "chat _ get-kas-token"]
+                );
+                assert!(notifications.is_empty(), "{notifications:?}");
+            })
+            .await;
+    }
+
+    // cyril-zbu7 C10 at the host-callback boundary: the fallback's warning
+    // reaches the UI as ONE SystemNotify warning (not per request), and the
+    // stored token is relayed.
+    #[tokio::test(flavor = "current_thread")]
+    async fn fallback_warning_reaches_the_ui_once() {
+        tokio::task::LocalSet::new()
+            .run_until(async {
+                let dir = tempfile::tempdir().unwrap();
+                let store = crate::protocol::kas::auth::tests::store_with_token(
+                    dir.path(),
+                    "2099-01-01T00:00:00Z",
+                );
+                let source = crate::protocol::kas::auth::KasTokenSource::new(
+                    crate::protocol::kas::auth::tests::kiro_cli_without_helper(dir.path()),
+                    crate::types::SpawnEnvironment::Inherit,
+                )
+                .with_store(store);
+                let (replies, notifications) =
+                    auth_round_trip(source, vec![serde_json::json!({}), serde_json::json!({})])
+                        .await;
+                assert_eq!(replies.len(), 2);
+                assert_eq!(replies[0]["accessToken"], "AT-stored");
+                assert_eq!(notifications.len(), 1, "{notifications:?}");
+                match &notifications[0] {
+                    crate::types::Notification::SystemNotify { level, message } => {
+                        assert_eq!(*level, crate::types::event::SystemNotifyLevel::Warning);
+                        assert!(message.contains("get-kas-token"), "{message}");
+                    }
+                    other => panic!("expected a SystemNotify warning, got {other:?}"),
+                }
+            })
+            .await;
+    }
+
     #[tokio::test(flavor = "current_thread")]
     async fn hook_tags_cross_host_callback_boundary_and_malformed_tags_degrade() {
         tokio::task::LocalSet::new()
@@ -316,6 +476,7 @@ mod tests {
                     hooks: Some(Rc::new(HookRegistry::load(ws.path(), None))),
                     hook_ops: HookOps::default(),
                     cwd: ws.path().to_path_buf(),
+                    kas_token: None,
                 });
                 let engine: Rc<dyn Engine> = Rc::new(KasEngine {
                     hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,

@@ -30,12 +30,13 @@ const CHAT_COMFORT: u16 = 5;
 /// Vertical chrome for one frame, derived from state alone.
 ///
 /// One formula, two readers: [`draw_inner`] turns these heights into its
-/// constraint list, and [`powers_window`] asks where the input starts. A second
-/// copy of the budget arithmetic is how an overlay's geometry drifts from the
-/// frame it is drawn into.
+/// constraint list through [`frame_areas`], and [`input_top`] reads the same
+/// list to tell the overlay guards ([`powers_window`],
+/// [`crate::widgets::approval::confirm_on_screen`]) where the input starts. A second copy of
+/// the budget arithmetic is how an overlay's geometry drifts from the frame
+/// it is drawn into. Chat has no entry: it is `Min(CHAT_FLOOR)` and takes
+/// whatever the solver leaves.
 struct FrameRows {
-    /// Chat takes the remainder of the vertical budget — `Min(CHAT_FLOOR)`.
-    chat: u16,
     crew: u16,
     voice: u16,
     input: u16,
@@ -90,17 +91,7 @@ fn frame_rows(area: Rect, state: &dyn TuiState) -> FrameRows {
         suggestions_demand
     };
 
-    // Chat is `Min(CHAT_FLOOR)`: it takes exactly what the fixed rows leave,
-    // which the input budget above holds at or above its floor.
-    let chat = area
-        .height
-        .saturating_sub(2)
-        .saturating_sub(crew)
-        .saturating_sub(voice)
-        .saturating_sub(input)
-        .saturating_sub(suggestions);
     FrameRows {
-        chat,
         crew,
         voice,
         input,
@@ -116,12 +107,29 @@ fn frame_rows(area: Rect, state: &dyn TuiState) -> FrameRows {
 /// ([`crate::widgets::modal::place`]), so a caller outside the renderer can ask
 /// where a popup has room without restating the layout.
 pub(crate) fn input_top(area: Rect, state: &dyn TuiState) -> u16 {
-    let rows = frame_rows(area, state);
-    area.y
-        .saturating_add(1)
-        .saturating_add(rows.chat)
-        .saturating_add(rows.crew)
-        .saturating_add(rows.voice)
+    let [_, _, _, _, input_area, _, _] = frame_areas(area, &frame_rows(area, state));
+    input_area.y
+}
+
+/// The frame's rows as [`draw_inner`] lays them out: toolbar, chat, crew,
+/// voice, input, suggestions, status.
+///
+/// The one layout both [`draw_inner`] and [`input_top`] read. Summing
+/// [`FrameRows`] instead is not the same number on a frame too short for the
+/// chat floor: the solver keeps `Min(CHAT_FLOOR)` and squeezes the input, so
+/// the input starts lower than the sum says, and an overlay guard computed
+/// from the sum disagrees with the overlay drawn (cyril-vojx).
+fn frame_areas(area: Rect, rows: &FrameRows) -> [Rect; 7] {
+    Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Min(CHAT_FLOOR),
+        Constraint::Length(rows.crew),
+        Constraint::Length(rows.voice),
+        Constraint::Length(rows.input),
+        Constraint::Length(rows.suggestions),
+        Constraint::Length(1),
+    ])
+    .areas(area)
 }
 
 /// Powers the `/powers` popup shows at once in the frame the state reports.
@@ -168,16 +176,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
         input_area,
         suggestions_area,
         status_area,
-    ] = Layout::vertical([
-        Constraint::Length(1),
-        Constraint::Min(CHAT_FLOOR),
-        Constraint::Length(rows.crew),
-        Constraint::Length(rows.voice),
-        Constraint::Length(rows.input),
-        Constraint::Length(rows.suggestions),
-        Constraint::Length(1),
-    ])
-    .areas(area);
+    ] = frame_areas(area, &rows);
 
     crate::widgets::toolbar::render(frame, toolbar_area, state, &theme);
     crate::widgets::chat::render(frame, chat_area, state, &theme);
