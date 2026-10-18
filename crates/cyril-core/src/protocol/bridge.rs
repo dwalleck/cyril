@@ -331,11 +331,23 @@ fn resolve_host_shell(
     Ok(crate::protocol::client::ResolvedHostShell)
 }
 
+/// The resolved spawn command plus, on KAS, the kiro-cli the
+/// `getAccessToken` responder asks (cyril-zbu7): the PATH `kiro-cli` on the
+/// Free path (the same source its login gate just asked), the agent
+/// command's own kiro-cli — through the WSL launcher when it routes through
+/// one, under the spawn's environment — on the Wrapper path.
 #[cfg(feature = "kas")]
 async fn resolve_spawn_command(
     agent_command: &AgentCommand,
     config: &SpawnConfig,
-) -> Result<AgentCommand, String> {
+) -> Result<
+    (
+        AgentCommand,
+        Option<crate::protocol::kas::auth::KasTokenSource>,
+    ),
+    String,
+> {
+    use crate::protocol::kas::auth::KasTokenSource;
     if config.engine == AgentEngine::Kas
         && (config.kas_spawn == KasSpawn::Free || config.kas_hooks == KasHooksMode::Host)
         && matches!(
@@ -357,19 +369,29 @@ async fn resolve_spawn_command(
     }
     match config.engine {
         AgentEngine::Kas => match config.kas_spawn {
-            KasSpawn::Free => crate::protocol::kas::discovery::resolve_kas_command()
-                .await
-                .map_err(|m| m.reason()),
+            KasSpawn::Free => {
+                let token_source = KasTokenSource::on_path();
+                let command = crate::protocol::kas::discovery::resolve_kas_command(&token_source)
+                    .await
+                    .map_err(|m| m.reason())?;
+                Ok((command, Some(token_source)))
+            }
             KasSpawn::Wrapper => {
-                crate::protocol::kas::version::build_wrapper_command(
+                let command = crate::protocol::kas::version::build_wrapper_command(
                     agent_command,
                     &config.environment,
                     config.required_cli_version.as_deref(),
                 )
-                .await
+                .await?;
+                let kiro_cli = crate::protocol::kas::version::kiro_cli_invocation(
+                    agent_command,
+                    "locate kiro-cli for the KAS access token",
+                )?;
+                let token_source = KasTokenSource::new(kiro_cli, config.environment.clone());
+                Ok((command, Some(token_source)))
             }
         },
-        AgentEngine::V2 => Ok(agent_command.clone()),
+        AgentEngine::V2 => Ok((agent_command.clone(), None)),
     }
 }
 
@@ -395,9 +417,13 @@ async fn run_bridge(
 ) -> crate::Result<()> {
     let engine = engine_for(&config)
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
-    let command = resolve_spawn_command(agent_command, &config)
+    let resolved = resolve_spawn_command(agent_command, &config)
         .await
         .map_err(|detail| crate::Error::from_kind(crate::ErrorKind::InvalidConfig { detail }))?;
+    #[cfg(feature = "kas")]
+    let (command, kas_token) = resolved;
+    #[cfg(not(feature = "kas"))]
+    let command = resolved;
     crate::platform::path::bind_agent_location(command.program());
     let process =
         crate::protocol::transport::AgentProcess::spawn(&command, cwd, &config.environment).await?;
@@ -410,6 +436,8 @@ async fn run_bridge(
         stall_threshold: config.stall_threshold,
         #[cfg(feature = "kas")]
         host_shell,
+        #[cfg(feature = "kas")]
+        kas_token,
     };
     let (mediator, domain_channels) =
         crate::protocol::domain_mediator::DomainMediator::new(domain_config, channels)?;
@@ -461,6 +489,53 @@ mod tests {
         let info = client_info(PresentAs::Cyril);
         assert_eq!(info.name, "cyril");
         assert_eq!(info.title.as_deref(), Some("Cyril"));
+    }
+
+    // cyril-zbu7 C7: a KAS Wrapper spawn binds a token source that runs the
+    // AGENT COMMAND's kiro-cli (here a fake at a private path, symlinked to
+    // the committed fixture), and V2 binds none.
+    #[cfg(all(unix, feature = "kas"))]
+    #[tokio::test]
+    async fn wrapper_spawn_binds_the_agent_commands_kiro_cli_as_token_source() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cli = dir.path().join("kiro-cli");
+        std::os::unix::fs::symlink(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/fake-kiro-cli.sh"
+            ),
+            &cli,
+        )
+        .expect("fixture symlink");
+        let agent_command =
+            AgentCommand::new(cli.to_str().expect("utf-8 path")).with_args(vec!["acp".to_string()]);
+        let config = SpawnConfig {
+            engine: AgentEngine::Kas,
+            kas_spawn: KasSpawn::Wrapper,
+            ..SpawnConfig::default()
+        };
+        let (command, token_source) = resolve_spawn_command(&agent_command, &config)
+            .await
+            .expect("wrapper resolves");
+        assert_eq!(command.program(), cli.to_str().expect("utf-8 path"));
+        let token = token_source
+            .expect("KAS Wrapper binds a token source")
+            .fetch(false)
+            .await
+            .expect("the agent command's kiro-cli answers");
+        assert_eq!(token.expires_at(), "2099-01-01T00:00:00Z");
+        let journal =
+            std::fs::read_to_string(dir.path().join("kiro-cli-argv.txt")).expect("journal");
+        assert!(journal.ends_with("chat\n_\nget-kas-token\n"), "{journal:?}");
+
+        let v2 = SpawnConfig {
+            engine: AgentEngine::V2,
+            ..SpawnConfig::default()
+        };
+        let (_, none) = resolve_spawn_command(&agent_command, &v2)
+            .await
+            .expect("v2 resolves");
+        assert!(none.is_none(), "v2 binds no token source");
     }
 
     #[cfg(unix)]

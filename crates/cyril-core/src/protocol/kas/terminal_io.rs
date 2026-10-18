@@ -1252,9 +1252,15 @@ mod tests {
     }
 
     #[test]
-    fn shell_type_reply_uses_the_resolved_normalized_family() {
+    fn shell_type_reply_names_the_registry_shell_not_its_family() {
+        // KAS maps `posix` (its OUTPUT dialect name) to `unknown` and then
+        // asks for every command; it must receive the interpreter's name.
         let resp = test_registry().respond_shell_type().unwrap();
-        assert_eq!(resp.0.get(), r#"{"shellType":"posix"}"#);
+        assert_eq!(resp.0.get(), r#"{"shellType":"sh"}"#);
+        let resp = test_fish_registry_at("/usr/bin/fish")
+            .respond_shell_type()
+            .unwrap();
+        assert_eq!(resp.0.get(), r#"{"shellType":"fish"}"#);
     }
 
     #[test]

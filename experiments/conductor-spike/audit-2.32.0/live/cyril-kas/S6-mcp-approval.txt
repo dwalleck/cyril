@@ -1,0 +1,48 @@
+⠴ sess_33a012e5-ad90-4836-a81c-a060e9f5fac1 · vibe · auto · 66s
+Connecting to agent...
+
+Session created: sess_33a012e5-ad90-4836-a81c-a060e9f5fac1
+
+You:
+  Use the probesrv MCP server's probe_echo tool to echo the text HELLO-MCP, then reply with only the tool's output.
+
+Kiro:
+I'll load the probe_echo tool and call it.
+
+
+⏳  @probesrv/probe_echo
+
+⠴ Running... 66s
+
+
+
+                                                  ┌ Permission Required ─────────────────────────────────────┐
+                                                  │@probesrv/probe_echo                                      │
+                                                  │                                                          │
+                                                  │  Preview unavailable                                     │
+                                                  │                                                          │
+                                                  │▸ Allow                                                   │
+                                                  │  Always allow                                            │
+                                                  │  Deny                                                    │
+                                                  │  Always deny                                             │
+                                                  │                                                          │
+                                                  └──────────────────────────────────────────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                             │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%

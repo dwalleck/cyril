@@ -2,11 +2,12 @@
 //! completion THROUGH cyril's bridge — not the raw probe harness.
 //!
 //! Manual-gated (design caveat): needs `--features kas`, a prior `kiro-cli
-//! login` (populates the sqlite credential store), the self-extracted KAS
+//! login` (kiro-cli then answers `chat _ get-kas-token`), the self-extracted KAS
 //! bundle, and `node`. Oracle parity with prove-it-prototype (cyril-dcc6): the
 //! bridge spawns the identical `--auth=acp-callback` argv kiro-cli itself uses
 //! (unit-fenced by `discovery::argv_matches_kiro_cli_own_spawn`), and cyril's
-//! sqlite-backed `_kiro/auth/getAccessToken` responder authenticates the turn
+//! `_kiro/auth/getAccessToken` responder (kiro-cli `chat _ get-kas-token`,
+//! cyril-zbu7) authenticates the turn
 //! — the probe proved this end-to-end twice (C14b). This smoke asserts the
 //! user-observable end: a `TurnCompleted` with no `BridgeDisconnected`.
 //!

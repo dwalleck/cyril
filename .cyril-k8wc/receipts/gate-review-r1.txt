@@ -1,0 +1,17 @@
+# gate @ 932908493e56ea0bfd947439ae8413c70673dcc8 (dirty: 1 tracked changes) 2026-10-18T15:22:10-05:00
+# (the one tracked change is the host_shell.rs test edit committed with this receipt; HEAD 93290849 + that diff)
+fmt-OK
+clippy-all-features-OK
+nextest-all-features-OK
+    nextest-all-features:      Summary [   8.557s] 2381 tests run: 2381 passed, 13 skipped
+doctest-OK
+clippy-kas-OK
+nextest-kas-OK
+    nextest-kas:      Summary [   8.663s] 1492 tests run: 1492 passed, 10 skipped
+clippy-default-OK
+nextest-default-OK
+    nextest-default:      Summary [   6.710s] 2374 tests run: 2374 passed, 13 skipped
+clippy-core-nodefault-OK
+nextest-core-nodefault-OK
+    nextest-core-nodefault:      Summary [   5.194s] 875 tests run: 875 passed, 4 skipped
+# done 2026-10-18T15:23:33-05:00

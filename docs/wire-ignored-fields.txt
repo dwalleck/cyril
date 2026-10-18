@@ -41,3 +41,52 @@ result:_kiro/workflow/*.nodePlan                              # tracked: cyril-j
 result:_kiro/workflow/load.stepSessions                       # tracked: cyril-jxw3
 *._meta.kiro.consentRound                                     # tracked: cyril-w55l, cyril-gn07
 session/request_permission._meta.kiro.consent.*               # tracked: cyril-gn07
+
+# --- added 2026-10-18 by the 2.32.0 audit (KAS 0.66.43 captures: sweep, gate-off workflow, sub-agent, MCP, attention) ---
+# workflow run detail (0.66.43 attention[] is new; the rest pre-date it)
+*.attention                                   # workflow waiting-on-user markers on events/state/list (new 0.66.43); tracked: cyril-4u4a
+*.inputs.*                                    # recipe-defined input names (dynamic keys); WorkflowRun.inputs is opaque JSON (crates/cyril-core/src/workflow.rs:297)
+*.pause.iterationsRun                         # workflow run detail not rendered; tracked: cyril-4u4a
+*.extendedMaxIterations                       # workflow run detail not rendered; tracked: cyril-4u4a
+*.watchCursor.*                               # workflow run detail not rendered; tracked: cyril-4u4a
+*.stopInitiator                               # workflow run detail not rendered; tracked: cyril-4u4a
+*.parentModelId                               # workflow run detail not rendered; tracked: cyril-4u4a
+result:_kiro/workflow/retry.retriedNodeIds    # workflow run detail not rendered; tracked: cyril-4u4a
+session/update.update._meta.kiro.notification.*   # step-relay metadata on replayed messages (bufferOnly/callerSessionId new 0.66.43); tracked: cyril-fb1m
+# whole notifications cyril drops
+_kiro/progressive_context/items_changed       # tracked: cyril-58uv
+_kiro/steering/documents_changed              # tracked: cyril-58uv, cyril-2nz7
+_kiro/tools/didChange                         # tracked: cyril-58uv
+# session record metadata
+result:session/*executionTarget               # cloud vs local target; tracked: cyril-tikf
+result:session/new._meta.ftaEnabled           # spec/fta flags; tracked: cyril-ea67
+result:session/new._meta.spec*                # spec/fta flags; tracked: cyril-ea67
+result:session/new._meta.semanticReviewEnabled    # tracked: cyril-ea67
+result:session/new._meta.workflowsEnabled     # gate echo; cyril never enables workflows (ADR-0011)
+result:session/*._meta*.agentMode             # session record metadata; mode is read from config options
+result:session/*._meta.lastModifiedAt         # session record metadata, not displayed
+result:session/new._meta.schemaVersion        # session record metadata, not displayed
+result:session/load._meta.contextUsage.*Threshold     # compaction thresholds, not displayed
+result:session/load._meta.kiro.loadTiming     # load phase timings (diagnostics), not displayed
+result:session/list.sessions[]._meta.kiro.serverSession   # session record metadata, not displayed
+result:session/list.sessions[]._meta.kiro.settings.*      # per-session settings snapshot, not displayed
+# permission requests
+session/request_permission._meta.kiro.agentManagesTrust   # tracked: cyril-auxt
+session/request_permission._meta.kiro.mcpTool             # trusted MCP tool identity; tracked: cyril-2yn8
+session/request_permission._meta.kiro.workflowWatch       # watch-command approval context; rendered as an ordinary approval
+# session/update _meta.kiro
+session/update.update.availableCommands[]._meta.kiro.commandId   # tracked: cyril-oieu
+session/update.update._meta.kiro.pendingInteraction       # mirrors session/request_permission; tracked: cyril-58uv
+session/update.update._meta.kiro.interactionType          # mirrors session/request_permission; tracked: cyril-58uv
+session/update.update._meta.kiro.interactionResolved      # interaction_resolved kind dropped; tracked: cyril-58uv
+session/update.update._meta.kiro.selectedOption           # interaction_resolved kind dropped; tracked: cyril-58uv
+session/update.update._meta.kiro.displayError             # display_error kind dropped; tracked: cyril-58uv
+session/update.update._meta.kiro.errorType                # display_error kind dropped; tracked: cyril-58uv
+session/update.update._meta.kiro.retryErrorType           # display_error kind dropped; tracked: cyril-58uv
+session/update.update._meta.kiro.availability             # checkpoint_restore_availability; tracked: cyril-fb1m
+session/update.update._meta.kiro.agentMode                # mode mirror; cyril reads mode from config options
+session/update.update._meta.kiro.userMessageId            # user_message_id_assigned (rewind substrate); tracked: cyril-1aq0
+session/update.update._meta.kiro.userMessageTag           # message tag id, not rendered
+session/update.update._meta.kiro.toolOrigin               # tool origin (acp/mcp/builtin); tool identity tracked: cyril-2yn8
+session/update.update._meta.kiro.steeringClearedIds       # steering_cleared ids, not rendered
+session/update.update._meta.kiro.preview.*                # fs_write preview content; cyril renders the Diff content instead

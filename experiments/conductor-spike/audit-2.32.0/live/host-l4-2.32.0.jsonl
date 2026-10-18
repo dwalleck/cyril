@@ -1,0 +1,229 @@
+{"arm": "stdout_closed", "argv": ["chat", "--no-interactive", "--agent-engine", "v3", "reply with exactly ok"], "pipe": " | head -c 0", "rc": 0, "secs": 4.1, "stderr": "[INFO] kas.server.starting {\"product\":\"KAS (Kiro Agent Server)\",\"version\":\"0.66.43\"}\n[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)\n[INFO] acp.content_collection.resolved {\"enabled\":true}\n[INFO] acp.remote_sessions.enabled {\"endpoint\":\"https://app.kiro.dev\"}\n[INFO] [KiroAgent] MCP subsystem initialized\n[ERROR] (node:797239) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"user\",\"durationMs\":1}\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"cloud\",\"durationMs\":6}\n[INFO] fs.workflow.recipeCatalog.refreshShared.ok {\"system\":\"fs\",\"trigger\":\"startup\",\"durationMs\":8}\n[tool] Fetching your cloud config\n[tool] status: Completed\n[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=5\nPIPESTATUS=1 0\n", "stdout_lines": 0, "children": {"797106": {"exe": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli", "argv": ["/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli", "chat", "--no-interactive", "--agent-engine", "v3", "reply with exactly ok"]}, "797147": {"exe": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat", "argv": ["kiro-cli-chat", "chat", "--no-interactive", "--agent-engine", "v3", "reply with exactly ok"]}, "797239": {"exe": "/home/dwalleck/.local/share/kiro-cli/node", "argv": ["/home/dwalleck/.local/share/kiro-cli/node", "--experimental-wasm-modules", "/home/dwalleck/.local/share/kiro-cli/kas/2.32.0-f3c560628fc814c59257082d0d914826583f83aa202043fad5ae73f24a037721/node_modules/@kiro/agent/dist/server/acp-server.js", "--transport=stdio", "--auth=acp-callback"]}}, "kas_child_spawned": true, "stdout_head": ""}
+{"arm": "stdout_file", "argv": ["chat", "--no-interactive", "--agent-engine", "v3", "reply with exactly ok"], "pipe": " > out.txt", "rc": 0, "secs": 3.7, "stderr": "[INFO] kas.server.starting {\"product\":\"KAS (Kiro Agent Server)\",\"version\":\"0.66.43\"}\n[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)\n[INFO] acp.content_collection.resolved {\"enabled\":true}\n[INFO] acp.remote_sessions.enabled {\"endpoint\":\"https://app.kiro.dev\"}\n[INFO] [KiroAgent] MCP subsystem initialized\n[ERROR] (node:797499) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"user\",\"durationMs\":1}\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"cloud\",\"durationMs\":5}\n[INFO] fs.workflow.recipeCatalog.refreshShared.ok {\"system\":\"fs\",\"trigger\":\"startup\",\"durationMs\":8}\n[tool] Fetching your cloud config\n[tool] status: Completed\n[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=12\nPIPESTATUS=0\n", "stdout_lines": 0, "children": {"797368": {"exe": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli", "argv": ["/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli", "chat", "--no-interactive", "--agent-engine", "v3", "reply with exactly ok"]}, "797408": {"exe": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat", "argv": ["kiro-cli-chat", "chat", "--no-interactive", "--agent-engine", "v3", "reply with exactly ok"]}, "797499": {"exe": "/home/dwalleck/.local/share/kiro-cli/node", "argv": ["/home/dwalleck/.local/share/kiro-cli/node", "--experimental-wasm-modules", "/home/dwalleck/.local/share/kiro-cli/kas/2.32.0-f3c560628fc814c59257082d0d914826583f83aa202043fad5ae73f24a037721/node_modules/@kiro/agent/dist/server/acp-server.js", "--transport=stdio", "--auth=acp-callback"]}}, "kas_child_spawned": true, "stdout_head": ""}
+{"arm": "sigint", "event": "SIGINT", "at_s": 8.0}
+{"arm": "sigint", "argv": ["chat", "--no-interactive", "--agent-engine", "v3", "Count slowly from 1 to 200, one number per line, with a short sentence about each number."], "pipe": null, "rc": 0, "secs": 43.6, "stderr": "[INFO] kas.server.starting {\"product\":\"KAS (Kiro Agent Server)\",\"version\":\"0.66.43\"}\n[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)\n[INFO] acp.content_collection.resolved {\"enabled\":true}\n[INFO] acp.remote_sessions.enabled {\"endpoint\":\"https://app.kiro.dev\"}\n[INFO] [KiroAgent] MCP subsystem initialized\n[ERROR] (node:797775) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"user\",\"durationMs\":1}\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"cloud\",\"durationMs\":6}\n[INFO] fs.workflow.recipeCatalog.refreshShared.ok {\"system\":\"fs\",\"trigger\":\"startup\",\"durationMs\":8}\n[tool] Fetching your cloud config\n[tool] status: Completed\n[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8\n", "stdout_lines": 202, "children": {"797686": {"exe": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat", "argv": ["kiro-cli-chat", "chat", "--no-interactive", "--agent-engine", "v3", "Count slowly from 1 to 200, one number per line, with a short sentence about each number."]}, "797775": {"exe": "/home/dwalleck/.local/share/kiro-cli/node", "argv": ["/home/dwalleck/.local/share/kiro-cli/node", "--experimental-wasm-modules", "/home/dwalleck/.local/share/kiro-cli/kas/2.32.0-f3c560628fc814c59257082d0d914826583f83aa202043fad5ae73f24a037721/node_modules/@kiro/agent/dist/server/acp-server.js", "--transport=stdio", "--auth=acp-callback"]}}, "kas_child_spawned": true, "stdout_head": "1. One is the first counting number and the starting point for everything.\n2. Two is the only even prime number.\n3. Three is the smallest odd prime and forms a triangle's corners.\n4. Four is the first composite number and a perfect square.\n5. Five is the number of fingers on a typical hand.\n6. Six is the first perfect number, equal to the sum of its divisors.\n7. Seven is often called lucky and is the number of days in a week.\n8. Eight is a cube, since two times two times two equals it.\n9. Nine is three squared and the highest single digit.\n10. Ten is the base of our everyday number system.\n11. Eleven is the first two-digit prime number.\n12. Twelve is the number of months in a year.\n13. Thirteen is considered unlucky in many Western cultures.\n14. Fourteen is twice seven and the number of days in a fortnight.\n15. Fifteen is the sum of the first five counting numbers.\n16. Sixteen is two raised to the fourth power.\n17. Seventeen is a prime number often cited as people's random pick.\n18. Eighteen is the age of legal adulthood in many countries.\n19. Nineteen is the last of the teen numbers.\n20. Twenty is the number of fingers and toes combined.\n21. Twenty-one is the classic age for coming of age in the US.\n22. Twenty-two is a repdigit made of two twos.\n23. Twenty-three is a prime tied to a popular psychological phenomenon.\n24. Twenty-four is the number of hours in a day.\n25. Twenty-five is five squared and a quarter of a hundred.\n26. Twenty-six is the number of letters in the English alphabet.\n27. Twenty-seven is three cubed.\n28. Twenty-eight is the second perfect number.\n29. Twenty-nine is a prime and the days in February during a leap year.\n30. Thirty is the number of days in several months.\n31. Thirty-one is the longest month length in days.\n32. Thirty-two is the Fahrenheit temperature where water freezes.\n33. Thirty-three is a master number in numerology.\n34. Thirty-four is a Fibonacci number.\n35. Thirty-five is the minimum age to become US president.\n36. Thirty-six is six squared and divisible by many numbers.\n37. Thirty-seven is a prime often chosen as a favorite number.\n38. Thirty-eight is twice nineteen.\n39. Thirty-nine is three times thirteen.\n40. Forty is the only number whose letters are in alphabetical order.\n41. Forty-one is a prime number.\n42. Forty-two is the answer to life, the universe, and everything.\n43. Forty-three is another prime in sequence.\n44. Forty-four is a repdigit and a palindrome.\n45. Forty-five is the sum of the first nine counting numbers.\n46. Forty-six is the number of human chromosomes.\n47. Forty-seven is a prime that shows up often in pop culture.\n48. Forty-eight is highly divisible and close to fifty.\n49. Forty-nine is seven squared.\n50. Fifty is half of one hundred.\n51. Fifty-one is the famous Area in Nevada.\n52. Fifty-two is the number of cards in a standard deck.\n53. Fifty-three is a prime number.\n54. Fifty-four is the number of cards including two jokers.\n55. Fifty-five is a Fibonacci number and a triangular numb"}
+{"arm": "sigint", "frame": 0, "data": {"raw": "1. One is the first counting number and the starting point for everything."}}
+{"arm": "sigint", "frame": 1, "data": {"raw": "2. Two is the only even prime number."}}
+{"arm": "sigint", "frame": 2, "data": {"raw": "3. Three is the smallest odd prime and forms a triangle's corners."}}
+{"arm": "sigint", "frame": 3, "data": {"raw": "4. Four is the first composite number and a perfect square."}}
+{"arm": "sigint", "frame": 4, "data": {"raw": "5. Five is the number of fingers on a typical hand."}}
+{"arm": "sigint", "frame": 5, "data": {"raw": "6. Six is the first perfect number, equal to the sum of its divisors."}}
+{"arm": "sigint", "frame": 6, "data": {"raw": "7. Seven is often called lucky and is the number of days in a week."}}
+{"arm": "sigint", "frame": 7, "data": {"raw": "8. Eight is a cube, since two times two times two equals it."}}
+{"arm": "sigint", "frame": 8, "data": {"raw": "9. Nine is three squared and the highest single digit."}}
+{"arm": "sigint", "frame": 9, "data": {"raw": "10. Ten is the base of our everyday number system."}}
+{"arm": "sigint", "frame": 10, "data": {"raw": "11. Eleven is the first two-digit prime number."}}
+{"arm": "sigint", "frame": 11, "data": {"raw": "12. Twelve is the number of months in a year."}}
+{"arm": "sigint", "frame": 12, "data": {"raw": "13. Thirteen is considered unlucky in many Western cultures."}}
+{"arm": "sigint", "frame": 13, "data": {"raw": "14. Fourteen is twice seven and the number of days in a fortnight."}}
+{"arm": "sigint", "frame": 14, "data": {"raw": "15. Fifteen is the sum of the first five counting numbers."}}
+{"arm": "sigint", "frame": 15, "data": {"raw": "16. Sixteen is two raised to the fourth power."}}
+{"arm": "sigint", "frame": 16, "data": {"raw": "17. Seventeen is a prime number often cited as people's random pick."}}
+{"arm": "sigint", "frame": 17, "data": {"raw": "18. Eighteen is the age of legal adulthood in many countries."}}
+{"arm": "sigint", "frame": 18, "data": {"raw": "19. Nineteen is the last of the teen numbers."}}
+{"arm": "sigint", "frame": 19, "data": {"raw": "20. Twenty is the number of fingers and toes combined."}}
+{"arm": "sigint", "frame": 20, "data": {"raw": "21. Twenty-one is the classic age for coming of age in the US."}}
+{"arm": "sigint", "frame": 21, "data": {"raw": "22. Twenty-two is a repdigit made of two twos."}}
+{"arm": "sigint", "frame": 22, "data": {"raw": "23. Twenty-three is a prime tied to a popular psychological phenomenon."}}
+{"arm": "sigint", "frame": 23, "data": {"raw": "24. Twenty-four is the number of hours in a day."}}
+{"arm": "sigint", "frame": 24, "data": {"raw": "25. Twenty-five is five squared and a quarter of a hundred."}}
+{"arm": "sigint", "frame": 25, "data": {"raw": "26. Twenty-six is the number of letters in the English alphabet."}}
+{"arm": "sigint", "frame": 26, "data": {"raw": "27. Twenty-seven is three cubed."}}
+{"arm": "sigint", "frame": 27, "data": {"raw": "28. Twenty-eight is the second perfect number."}}
+{"arm": "sigint", "frame": 28, "data": {"raw": "29. Twenty-nine is a prime and the days in February during a leap year."}}
+{"arm": "sigint", "frame": 29, "data": {"raw": "30. Thirty is the number of days in several months."}}
+{"arm": "sigint", "frame": 30, "data": {"raw": "31. Thirty-one is the longest month length in days."}}
+{"arm": "sigint", "frame": 31, "data": {"raw": "32. Thirty-two is the Fahrenheit temperature where water freezes."}}
+{"arm": "sigint", "frame": 32, "data": {"raw": "33. Thirty-three is a master number in numerology."}}
+{"arm": "sigint", "frame": 33, "data": {"raw": "34. Thirty-four is a Fibonacci number."}}
+{"arm": "sigint", "frame": 34, "data": {"raw": "35. Thirty-five is the minimum age to become US president."}}
+{"arm": "sigint", "frame": 35, "data": {"raw": "36. Thirty-six is six squared and divisible by many numbers."}}
+{"arm": "sigint", "frame": 36, "data": {"raw": "37. Thirty-seven is a prime often chosen as a favorite number."}}
+{"arm": "sigint", "frame": 37, "data": {"raw": "38. Thirty-eight is twice nineteen."}}
+{"arm": "sigint", "frame": 38, "data": {"raw": "39. Thirty-nine is three times thirteen."}}
+{"arm": "sigint", "frame": 39, "data": {"raw": "40. Forty is the only number whose letters are in alphabetical order."}}
+{"arm": "sigint", "frame": 40, "data": {"raw": "41. Forty-one is a prime number."}}
+{"arm": "sigint", "frame": 41, "data": {"raw": "42. Forty-two is the answer to life, the universe, and everything."}}
+{"arm": "sigint", "frame": 42, "data": {"raw": "43. Forty-three is another prime in sequence."}}
+{"arm": "sigint", "frame": 43, "data": {"raw": "44. Forty-four is a repdigit and a palindrome."}}
+{"arm": "sigint", "frame": 44, "data": {"raw": "45. Forty-five is the sum of the first nine counting numbers."}}
+{"arm": "sigint", "frame": 45, "data": {"raw": "46. Forty-six is the number of human chromosomes."}}
+{"arm": "sigint", "frame": 46, "data": {"raw": "47. Forty-seven is a prime that shows up often in pop culture."}}
+{"arm": "sigint", "frame": 47, "data": {"raw": "48. Forty-eight is highly divisible and close to fifty."}}
+{"arm": "sigint", "frame": 48, "data": {"raw": "49. Forty-nine is seven squared."}}
+{"arm": "sigint", "frame": 49, "data": {"raw": "50. Fifty is half of one hundred."}}
+{"arm": "sigint", "frame": 50, "data": {"raw": "51. Fifty-one is the famous Area in Nevada."}}
+{"arm": "sigint", "frame": 51, "data": {"raw": "52. Fifty-two is the number of cards in a standard deck."}}
+{"arm": "sigint", "frame": 52, "data": {"raw": "53. Fifty-three is a prime number."}}
+{"arm": "sigint", "frame": 53, "data": {"raw": "54. Fifty-four is the number of cards including two jokers."}}
+{"arm": "sigint", "frame": 54, "data": {"raw": "55. Fifty-five is a Fibonacci number and a triangular number."}}
+{"arm": "sigint", "frame": 55, "data": {"raw": "56. Fifty-six is seven times eight."}}
+{"arm": "sigint", "frame": 56, "data": {"raw": "57. Fifty-seven appears on a well-known ketchup label."}}
+{"arm": "sigint", "frame": 57, "data": {"raw": "58. Fifty-eight is twice twenty-nine."}}
+{"arm": "sigint", "frame": 58, "data": {"raw": "59. Fifty-nine is the number of minutes before the next hour."}}
+{"arm": "sigint", "frame": 59, "data": {"raw": "60. Sixty is the number of seconds in a minute."}}
+{"arm": "sigint", "frame": 60, "data": {"raw": "61. Sixty-one is a prime number."}}
+{"arm": "sigint", "frame": 61, "data": {"raw": "62. Sixty-two is twice thirty-one."}}
+{"arm": "sigint", "frame": 62, "data": {"raw": "63. Sixty-three is one less than a power of two."}}
+{"arm": "sigint", "frame": 63, "data": {"raw": "64. Sixty-four is two to the sixth and the squares on a chessboard."}}
+{"arm": "sigint", "frame": 64, "data": {"raw": "65. Sixty-five is a common retirement age."}}
+{"arm": "sigint", "frame": 65, "data": {"raw": "66. Sixty-six is the number of a historic US highway."}}
+{"arm": "sigint", "frame": 66, "data": {"raw": "67. Sixty-seven is a prime number."}}
+{"arm": "sigint", "frame": 67, "data": {"raw": "68. Sixty-eight is often paired with its answer in a joke about sixty-nine."}}
+{"arm": "sigint", "frame": 68, "data": {"raw": "69. Sixty-nine looks the same when rotated 180 degrees."}}
+{"arm": "sigint", "frame": 69, "data": {"raw": "70. Seventy is a biblical lifespan of threescore and ten."}}
+{"arm": "sigint", "frame": 70, "data": {"raw": "71. Seventy-one is a prime number."}}
+{"arm": "sigint", "frame": 71, "data": {"raw": "72. Seventy-two is a highly divisible number used in the rule of interest."}}
+{"arm": "sigint", "frame": 72, "data": {"raw": "73. Seventy-three is called the best number by a famous TV character."}}
+{"arm": "sigint", "frame": 73, "data": {"raw": "74. Seventy-four is twice thirty-seven."}}
+{"arm": "sigint", "frame": 74, "data": {"raw": "75. Seventy-five is three quarters of a hundred."}}
+{"arm": "sigint", "frame": 75, "data": {"raw": "76. Seventy-six is the year of American independence."}}
+{"arm": "sigint", "frame": 76, "data": {"raw": "77. Seventy-seven is a repdigit made of two sevens."}}
+{"arm": "sigint", "frame": 77, "data": {"raw": "78. Seventy-eight is a triangular number."}}
+{"arm": "sigint", "frame": 78, "data": {"raw": "79. Seventy-nine is a prime number."}}
+{"arm": "sigint", "frame": 79, "data": {"raw": "80. Eighty is eight times ten."}}
+{"arm": "sigint", "frame": 80, "data": {"raw": "81. Eighty-one is nine squared."}}
+{"arm": "sigint", "frame": 81, "data": {"raw": "82. Eighty-two is twice forty-one."}}
+{"arm": "sigint", "frame": 82, "data": {"raw": "83. Eighty-three is a prime number."}}
+{"arm": "sigint", "frame": 83, "data": {"raw": "84. Eighty-four is a dozen times seven."}}
+{"arm": "sigint", "frame": 84, "data": {"raw": "85. Eighty-five is the product of five and seventeen."}}
+{"arm": "sigint", "frame": 85, "data": {"raw": "86. Eighty-six is slang for getting rid of something."}}
+{"arm": "sigint", "frame": 86, "data": {"raw": "87. Eighty-seven is three times twenty-nine."}}
+{"arm": "sigint", "frame": 87, "data": {"raw": "88. Eighty-eight is the number of keys on a piano."}}
+{"arm": "sigint", "frame": 88, "data": {"raw": "89. Eighty-nine is both prime and a Fibonacci number."}}
+{"arm": "sigint", "frame": 89, "data": {"raw": "90. Ninety is the degrees in a right angle."}}
+{"arm": "sigint", "frame": 90, "data": {"raw": "91. Ninety-one is seven times thirteen."}}
+{"arm": "sigint", "frame": 91, "data": {"raw": "92. Ninety-two is the atomic number of uranium."}}
+{"arm": "sigint", "frame": 92, "data": {"raw": "93. Ninety-three is three times thirty-one."}}
+{"arm": "sigint", "frame": 93, "data": {"raw": "94. Ninety-four is twice forty-seven."}}
+{"arm": "sigint", "frame": 94, "data": {"raw": "95. Ninety-five is the number of theses Luther reportedly posted."}}
+{"arm": "sigint", "frame": 95, "data": {"raw": "96. Ninety-six is highly divisible and close to a hundred."}}
+{"arm": "sigint", "frame": 96, "data": {"raw": "97. Ninety-seven is the largest two-digit prime."}}
+{"arm": "sigint", "frame": 97, "data": {"raw": "98. Ninety-eight is twice forty-nine."}}
+{"arm": "sigint", "frame": 98, "data": {"raw": "99. Ninety-nine is the highest two-digit number."}}
+{"arm": "sigint", "frame": 99, "data": {"raw": "100. One hundred is a perfect century and ten squared."}}
+{"arm": "sigint", "frame": 100, "data": {"raw": "101. One hundred one is a prime and a famous Dalmatian count."}}
+{"arm": "sigint", "frame": 101, "data": {"raw": "102. One hundred two is twice fifty-one."}}
+{"arm": "sigint", "frame": 102, "data": {"raw": "103. One hundred three is a prime number."}}
+{"arm": "sigint", "frame": 103, "data": {"raw": "104. One hundred four is the Fahrenheit mark of a high fever."}}
+{"arm": "sigint", "frame": 104, "data": {"raw": "105. One hundred five is the product of three, five, and seven."}}
+{"arm": "sigint", "frame": 105, "data": {"raw": "106. One hundred six is twice fifty-three."}}
+{"arm": "sigint", "frame": 106, "data": {"raw": "107. One hundred seven is a prime number."}}
+{"arm": "sigint", "frame": 107, "data": {"raw": "108. One hundred eight is a sacred number in several Eastern traditions."}}
+{"arm": "sigint", "frame": 108, "data": {"raw": "109. One hundred nine is a prime number."}}
+{"arm": "sigint", "frame": 109, "data": {"raw": "110. One hundred ten is often used to mean giving full effort."}}
+{"arm": "sigint", "frame": 110, "data": {"raw": "111. One hundred eleven is a repdigit of three ones."}}
+{"arm": "sigint", "frame": 111, "data": {"raw": "112. One hundred twelve is the emergency number in much of Europe."}}
+{"arm": "sigint", "frame": 112, "data": {"raw": "113. One hundred thirteen is a prime number."}}
+{"arm": "sigint", "frame": 113, "data": {"raw": "114. One hundred fourteen is six times nineteen."}}
+{"arm": "sigint", "frame": 114, "data": {"raw": "115. One hundred fifteen is five times twenty-three."}}
+{"arm": "sigint", "frame": 115, "data": {"raw": "116. One hundred sixteen is twice fifty-eight."}}
+{"arm": "sigint", "frame": 116, "data": {"raw": "117. One hundred seventeen is nine times thirteen."}}
+{"arm": "sigint", "frame": 117, "data": {"raw": "118. One hundred eighteen is the number of known chemical elements."}}
+{"arm": "sigint", "frame": 118, "data": {"raw": "119. One hundred nineteen is seven times seventeen."}}
+{"arm": "sigint", "frame": 119, "data": {"raw": "120. One hundred twenty is the factorial of five."}}
+{"arm": "sigint", "frame": 120, "data": {"raw": "121. One hundred twenty-one is eleven squared."}}
+{"arm": "sigint", "frame": 121, "data": {"raw": "122. One hundred twenty-two is twice sixty-one."}}
+{"arm": "sigint", "frame": 122, "data": {"raw": "123. One hundred twenty-three is a simple counting sequence."}}
+{"arm": "sigint", "frame": 123, "data": {"raw": "124. One hundred twenty-four is four times thirty-one."}}
+{"arm": "sigint", "frame": 124, "data": {"raw": "125. One hundred twenty-five is five cubed."}}
+{"arm": "sigint", "frame": 125, "data": {"raw": "126. One hundred twenty-six is a binomial coefficient."}}
+{"arm": "sigint", "frame": 126, "data": {"raw": "127. One hundred twenty-seven is a Mersenne prime."}}
+{"arm": "sigint", "frame": 127, "data": {"raw": "128. One hundred twenty-eight is two to the seventh power."}}
+{"arm": "sigint", "frame": 128, "data": {"raw": "129. One hundred twenty-nine is three times forty-three."}}
+{"arm": "sigint", "frame": 129, "data": {"raw": "130. One hundred thirty is ten times thirteen."}}
+{"arm": "sigint", "frame": 130, "data": {"raw": "131. One hundred thirty-one is a prime number."}}
+{"arm": "sigint", "frame": 131, "data": {"raw": "132. One hundred thirty-two is twice sixty-six."}}
+{"arm": "sigint", "frame": 132, "data": {"raw": "133. One hundred thirty-three is seven times nineteen."}}
+{"arm": "sigint", "frame": 133, "data": {"raw": "134. One hundred thirty-four is twice sixty-seven."}}
+{"arm": "sigint", "frame": 134, "data": {"raw": "135. One hundred thirty-five is five times twenty-seven."}}
+{"arm": "sigint", "frame": 135, "data": {"raw": "136. One hundred thirty-six is a triangular number."}}
+{"arm": "sigint", "frame": 136, "data": {"raw": "137. One hundred thirty-seven is a prime important in physics."}}
+{"arm": "sigint", "frame": 137, "data": {"raw": "138. One hundred thirty-eight is twice sixty-nine."}}
+{"arm": "sigint", "frame": 138, "data": {"raw": "139. One hundred thirty-nine is a prime number."}}
+{"arm": "sigint", "frame": 139, "data": {"raw": "140. One hundred forty is four times thirty-five."}}
+{"arm": "sigint", "frame": 140, "data": {"raw": "141. One hundred forty-one is three times forty-seven."}}
+{"arm": "sigint", "frame": 141, "data": {"raw": "142. One hundred forty-two is twice seventy-one."}}
+{"arm": "sigint", "frame": 142, "data": {"raw": "143. One hundred forty-three is eleven times thirteen."}}
+{"arm": "sigint", "frame": 143, "data": {"raw": "144. One hundred forty-four is twelve squared, a gross."}}
+{"arm": "sigint", "frame": 144, "data": {"raw": "145. One hundred forty-five is five times twenty-nine."}}
+{"arm": "sigint", "frame": 145, "data": {"raw": "146. One hundred forty-six is twice seventy-three."}}
+{"arm": "sigint", "frame": 146, "data": {"raw": "147. One hundred forty-seven is the maximum break in snooker."}}
+{"arm": "sigint", "frame": 147, "data": {"raw": "148. One hundred forty-eight is four times thirty-seven."}}
+{"arm": "sigint", "frame": 148, "data": {"raw": "149. One hundred forty-nine is a prime number."}}
+{"arm": "sigint", "frame": 149, "data": {"raw": "150. One hundred fifty is halfway to three hundred."}}
+{"arm": "sigint", "frame": 150, "data": {"raw": "151. One hundred fifty-one is a prime number."}}
+{"arm": "sigint", "frame": 151, "data": {"raw": "152. One hundred fifty-two is eight times nineteen."}}
+{"arm": "sigint", "frame": 152, "data": {"raw": "153. One hundred fifty-three is the sum of the cubes of its digits."}}
+{"arm": "sigint", "frame": 153, "data": {"raw": "154. One hundred fifty-four is twice seventy-seven."}}
+{"arm": "sigint", "frame": 154, "data": {"raw": "155. One hundred fifty-five is five times thirty-one."}}
+{"arm": "sigint", "frame": 155, "data": {"raw": "156. One hundred fifty-six is twelve times thirteen."}}
+{"arm": "sigint", "frame": 156, "data": {"raw": "157. One hundred fifty-seven is a prime number."}}
+{"arm": "sigint", "frame": 157, "data": {"raw": "158. One hundred fifty-eight is twice seventy-nine."}}
+{"arm": "sigint", "frame": 158, "data": {"raw": "159. One hundred fifty-nine is three times fifty-three."}}
+{"arm": "sigint", "frame": 159, "data": {"raw": "160. One hundred sixty is ten times sixteen."}}
+{"arm": "sigint", "frame": 160, "data": {"raw": "161. One hundred sixty-one is seven times twenty-three."}}
+{"arm": "sigint", "frame": 161, "data": {"raw": "162. One hundred sixty-two is twice eighty-one."}}
+{"arm": "sigint", "frame": 162, "data": {"raw": "163. One hundred sixty-three is a prime number."}}
+{"arm": "sigint", "frame": 163, "data": {"raw": "164. One hundred sixty-four is four times forty-one."}}
+{"arm": "sigint", "frame": 164, "data": {"raw": "165. One hundred sixty-five is the product of three, five, and eleven."}}
+{"arm": "sigint", "frame": 165, "data": {"raw": "166. One hundred sixty-six is twice eighty-three."}}
+{"arm": "sigint", "frame": 166, "data": {"raw": "167. One hundred sixty-seven is a prime number."}}
+{"arm": "sigint", "frame": 167, "data": {"raw": "168. One hundred sixty-eight is the number of hours in a week."}}
+{"arm": "sigint", "frame": 168, "data": {"raw": "169. One hundred sixty-nine is thirteen squared."}}
+{"arm": "sigint", "frame": 169, "data": {"raw": "170. One hundred seventy is ten times seventeen."}}
+{"arm": "sigint", "frame": 170, "data": {"raw": "171. One hundred seventy-one is a triangular number."}}
+{"arm": "sigint", "frame": 171, "data": {"raw": "172. One hundred seventy-two is four times forty-three."}}
+{"arm": "sigint", "frame": 172, "data": {"raw": "173. One hundred seventy-three is a prime number."}}
+{"arm": "sigint", "frame": 173, "data": {"raw": "174. One hundred seventy-four is twice eighty-seven."}}
+{"arm": "sigint", "frame": 174, "data": {"raw": "175. One hundred seventy-five is seven times twenty-five."}}
+{"arm": "sigint", "frame": 175, "data": {"raw": "176. One hundred seventy-six is sixteen times eleven."}}
+{"arm": "sigint", "frame": 176, "data": {"raw": "177. One hundred seventy-seven is three times fifty-nine."}}
+{"arm": "sigint", "frame": 177, "data": {"raw": "178. One hundred seventy-eight is twice eighty-nine."}}
+{"arm": "sigint", "frame": 178, "data": {"raw": "179. One hundred seventy-nine is a prime number."}}
+{"arm": "sigint", "frame": 179, "data": {"raw": "180. One hundred eighty is the degrees in a straight line."}}
+{"arm": "sigint", "frame": 180, "data": {"raw": "181. One hundred eighty-one is a prime number."}}
+{"arm": "sigint", "frame": 181, "data": {"raw": "182. One hundred eighty-two is twice ninety-one."}}
+{"arm": "sigint", "frame": 182, "data": {"raw": "183. One hundred eighty-three is three times sixty-one."}}
+{"arm": "sigint", "frame": 183, "data": {"raw": "184. One hundred eighty-four is eight times twenty-three."}}
+{"arm": "sigint", "frame": 184, "data": {"raw": "185. One hundred eighty-five is five times thirty-seven."}}
+{"arm": "sigint", "frame": 185, "data": {"raw": "186. One hundred eighty-six is roughly the speed of light in thousands of miles per second."}}
+{"arm": "sigint", "frame": 186, "data": {"raw": "187. One hundred eighty-seven is eleven times seventeen."}}
+{"arm": "sigint", "frame": 187, "data": {"raw": "188. One hundred eighty-eight is four times forty-seven."}}
+{"arm": "sigint", "frame": 188, "data": {"raw": "189. One hundred eighty-nine is twenty-seven times seven."}}
+{"arm": "sigint", "frame": 189, "data": {"raw": "190. One hundred ninety is a triangular number."}}
+{"arm": "sigint", "frame": 190, "data": {"raw": "191. One hundred ninety-one is a prime number."}}
+{"arm": "sigint", "frame": 191, "data": {"raw": "192. One hundred ninety-two is sixty-four times three."}}
+{"arm": "sigint", "frame": 192, "data": {"raw": "193. One hundred ninety-three is a prime number."}}
+{"arm": "sigint", "frame": 193, "data": {"raw": "194. One hundred ninety-four is twice ninety-seven."}}
+{"arm": "sigint", "frame": 194, "data": {"raw": "195. One hundred ninety-five is the product of three, five, and thirteen."}}
+{"arm": "sigint", "frame": 195, "data": {"raw": "196. One hundred ninety-six is fourteen squared."}}
+{"arm": "sigint", "frame": 196, "data": {"raw": "197. One hundred ninety-seven is a prime number."}}
+{"arm": "sigint", "frame": 197, "data": {"raw": "198. One hundred ninety-eight is twice ninety-nine."}}
+{"arm": "sigint", "frame": 198, "data": {"raw": "199. One hundred ninety-nine is the largest prime below two hundred."}}
+{"arm": "sigint", "frame": 199, "data": {"raw": "200. Two hundred is twice one hundred and a nice round finish."}}
+{"arm": "sigint", "frame": 200, "data": {"raw": ""}}
+{"arm": "sigint", "frame": 201, "data": {"raw": "That's the full count from 1 to 200, each with its own note."}}
+{"arm": "sigint", "event": "SIGINT", "at_s": 8.0}
+{"arm": "sigint", "argv": ["chat", "--no-interactive", "--agent-engine", "v3", "Count slowly from 1 to 200, one number per line, with a short sentence about each number."], "pipe": null, "rc": 130, "secs": 8.7, "stderr": "[INFO] kas.server.starting {\"product\":\"KAS (Kiro Agent Server)\",\"version\":\"0.66.43\"}\n[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)\n[INFO] acp.content_collection.resolved {\"enabled\":true}\n[INFO] acp.remote_sessions.enabled {\"endpoint\":\"https://app.kiro.dev\"}\n[INFO] [KiroAgent] MCP subsystem initialized\n[ERROR] (node:799313) ExperimentalWarning: SQLite is an experimental feature and might change at any time\n(Use `node --trace-warnings ...` to show where the warning was created)\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"user\",\"durationMs\":1}\n[INFO] fs.workflow.recipes.readDir.ok {\"system\":\"fs\",\"tier\":\"cloud\",\"durationMs\":6}\n[INFO] fs.workflow.recipeCatalog.refreshShared.ok {\"system\":\"fs\",\"trigger\":\"startup\",\"durationMs\":9}\n[tool] Fetching your cloud config\n[tool] status: Completed\n[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=10\n", "stdout_lines": 21, "children": {"799224": {"exe": "/home/dwalleck/.local/share/kiro-research/binaries/2.32.0/extracted/kirocli/bin/kiro-cli-chat", "argv": ["kiro-cli-chat", "chat", "--no-interactive", "--agent-engine", "v3", "Count slowly from 1 to 200, one number per line, with a short sentence about each number."]}, "799313": {"exe": "/home/dwalleck/.local/share/kiro-cli/node", "argv": ["/home/dwalleck/.local/share/kiro-cli/node", "--experimental-wasm-modules", "/home/dwalleck/.local/share/kiro-cli/kas/2.32.0-f3c560628fc814c59257082d0d914826583f83aa202043fad5ae73f24a037721/node_modules/@kiro/agent/dist/server/acp-server.js", "--transport=stdio", "--auth=acp-callback"]}}, "kas_child_spawned": true, "stdout_head": "1. The first number, the starting point of all counting.\n2. The only even prime number, standing alone in that category.\n3. A prime number and the count of sides on a triangle.\n4. The first perfect square after one, two times two.\n5. The number of fingers on a typical human hand.\n6. The first perfect number, equal to the sum of its divisors.\n7. Often called lucky, and the days in a week.\n8. A cube of two and the number of legs on a spider.\n9. Three squared, one short of a full ten.\n10. The base of our decimal system.\n11. A prime number and the first repunit after one.\n12. A dozen, divisible in many convenient ways.\n13. Considered unlucky in many Western cultures.\n14. Two weeks make a fortnight, this many days.\n15. The sum of the first five natural numbers.\n16. Two to the fourth power, a tidy binary milestone.\n17. A prime number favored in many puzzles.\n18. The age of adulthood in many countries.\n19. The last of the teens, and a prime.\n20. A score, as in four score and seven.\n21. The"}
+{"arm": "sigint", "frame": 0, "data": {"raw": "1. The first number, the starting point of all counting."}}
+{"arm": "sigint", "frame": 1, "data": {"raw": "2. The only even prime number, standing alone in that category."}}
+{"arm": "sigint", "frame": 2, "data": {"raw": "3. A prime number and the count of sides on a triangle."}}
+{"arm": "sigint", "frame": 3, "data": {"raw": "4. The first perfect square after one, two times two."}}
+{"arm": "sigint", "frame": 4, "data": {"raw": "5. The number of fingers on a typical human hand."}}
+{"arm": "sigint", "frame": 5, "data": {"raw": "6. The first perfect number, equal to the sum of its divisors."}}
+{"arm": "sigint", "frame": 6, "data": {"raw": "7. Often called lucky, and the days in a week."}}
+{"arm": "sigint", "frame": 7, "data": {"raw": "8. A cube of two and the number of legs on a spider."}}
+{"arm": "sigint", "frame": 8, "data": {"raw": "9. Three squared, one short of a full ten."}}
+{"arm": "sigint", "frame": 9, "data": {"raw": "10. The base of our decimal system."}}
+{"arm": "sigint", "frame": 10, "data": {"raw": "11. A prime number and the first repunit after one."}}
+{"arm": "sigint", "frame": 11, "data": {"raw": "12. A dozen, divisible in many convenient ways."}}
+{"arm": "sigint", "frame": 12, "data": {"raw": "13. Considered unlucky in many Western cultures."}}
+{"arm": "sigint", "frame": 13, "data": {"raw": "14. Two weeks make a fortnight, this many days."}}
+{"arm": "sigint", "frame": 14, "data": {"raw": "15. The sum of the first five natural numbers."}}
+{"arm": "sigint", "frame": 15, "data": {"raw": "16. Two to the fourth power, a tidy binary milestone."}}
+{"arm": "sigint", "frame": 16, "data": {"raw": "17. A prime number favored in many puzzles."}}
+{"arm": "sigint", "frame": 17, "data": {"raw": "18. The age of adulthood in many countries."}}
+{"arm": "sigint", "frame": 18, "data": {"raw": "19. The last of the teens, and a prime."}}
+{"arm": "sigint", "frame": 19, "data": {"raw": "20. A score, as in four score and seven."}}
+{"arm": "sigint", "frame": 20, "data": {"raw": "21. The"}}

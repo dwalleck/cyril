@@ -12,11 +12,18 @@ use ratatui::prelude::*;
 /// 4-cell margin clamp nor guarantees the floor-division rounding this
 /// crate's popups have always used (cyril-cc5e claim C8 pins parity).
 pub fn centered(area: Rect, desired_width: u16, desired_height: u16) -> Rect {
-    let width = desired_width.min(area.width.saturating_sub(4));
+    let width = popup_width(area, desired_width);
     let height = desired_height.min(area.height.saturating_sub(4));
     let x = area.x + area.width.saturating_sub(width) / 2;
     let y = area.y + area.height.saturating_sub(height) / 2;
     Rect::new(x, y, width, height)
+}
+
+/// The width [`centered`] and [`place`] give a popup in `area`, independent of
+/// its height — lets a popup lay out width-dependent content (a wrapped path,
+/// cyril-rcub) before it knows how tall it will be.
+pub fn popup_width(area: Rect, desired_width: u16) -> u16 {
+    desired_width.min(area.width.saturating_sub(4))
 }
 
 /// Compute the rect for a popup that must never cover the input area.

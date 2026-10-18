@@ -220,6 +220,10 @@ pub(crate) struct DomainConfig {
     pub(crate) stall_threshold: Duration,
     #[cfg(feature = "kas")]
     pub(crate) host_shell: crate::protocol::client::ResolvedHostShell,
+    /// The kiro-cli the KAS `getAccessToken` responder asks (cyril-zbu7);
+    /// `None` for engines that never serve auth.
+    #[cfg(feature = "kas")]
+    pub(crate) kas_token: Option<crate::protocol::kas::auth::KasTokenSource>,
 }
 
 pub(crate) struct DomainMediator {
@@ -251,8 +255,12 @@ impl DomainMediator {
         let ingress = IngressTracker::new();
         let (channels, work_rx, host_rx) = DomainChannels::new(ingress.clone())?;
         let source_observer = SourceObserver::new(bridge.source_tx.clone());
+        // The token source moves into the dispatch context, its only consumer.
+        #[cfg(feature = "kas")]
+        let mut config = config;
         #[cfg(feature = "kas")]
         let host_ctx = Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
+            kas_token: config.kas_token.take().map(Rc::new),
             notify_tx: channels.clone(),
             terminals: Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
                 config.host_shell.clone().map(Rc::new),
@@ -684,12 +692,28 @@ impl DomainMediator {
         let consent = crate::protocol::convert::kas::permission_consent(&args, &tool_call);
         #[cfg(not(feature = "kas"))]
         let consent = None;
+        // KAS persists "Always allow" only through the consent echo on the
+        // response (cyril-auxt), so V2 trust tiers — whose pick writes the
+        // agent JSON's `allowedCommands` — are a v2-only path.
+        let trust_options = match engine {
+            AgentEngine::Kas => {
+                let ignored = crate::protocol::convert::extract_trust_options(&args);
+                if !ignored.is_empty() {
+                    tracing::debug!(
+                        tiers = ignored.len(),
+                        "KAS permission request carries V2 trust tiers; not offered"
+                    );
+                }
+                Vec::new()
+            }
+            AgentEngine::V2 => crate::protocol::convert::extract_trust_options(&args),
+        };
         let request = PermissionRequest {
             session_id,
             tool_call,
             message: crate::protocol::convert::extract_permission_message(&args),
             options: crate::protocol::convert::to_permission_options(&args),
-            trust_options: crate::protocol::convert::extract_trust_options(&args),
+            trust_options,
             can_reject_with_reason,
             responder: response_tx,
             consent,

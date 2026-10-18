@@ -1,0 +1,24 @@
+⠇ sess_6b3cc9fc-162c-4525-aa9d-053edd3facf5 · vibe · auto · 2s
+Connecting to agent...
+Session created: sess_6b3cc9fc-162c-4525-aa9d-053edd3facf5
+You:
+  Run the shell command: echo AUXTV1 -- exactly once, then reply with the word FINISHED.
+⏳ Run(echo AUXTV1)
+⠇ Running... 2s
+                              ┌ Permission Required ─────────────────────────────────────┐
+                              │echo AUXTV1                                               │
+                              │                                                          │
+                              │  Preview unavailable                                     │
+                              │                                                          │
+                              │▸ Allow                                                   │
+                              │  Always allow                                            │
+                              │  Deny                                                    │
+                              │  Always deny                                             │
+                              │                                                          │
+                              └──────────────────────────────────────────────────────────┘
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                     │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%

@@ -1,0 +1,40 @@
+live   audit-2.32.0/live/kas-live-sweep-2.32.0.jsonl: 756 paths
+pinned audit-2.32.0/live/kas-live-sweep-2.31.1.jsonl: 788 paths
+
+ONLY under live (1) — new-field candidates:
+   + reload.config_options.model
+
+ONLY under pinned (33) — usually just coverage:
+   - callbacks.fs/write_text_file
+   - p4_permissions[].kinds
+   - p4_permissions[].meta_kiro
+   - p4_permissions[].meta_kiro.consent
+   - p4_permissions[].meta_kiro.consent.askType
+   - p4_permissions[].meta_kiro.consent.capability
+   - p4_permissions[].meta_kiro.consent.resource
+   - p4_permissions[].meta_kiro.consentRound
+   - p4_permissions[].meta_kiro.toolId
+   - p4_permissions[].picked
+   - p4_permissions[].sessionId
+   - p4_permissions[].tag
+   - p4_permissions[].title
+   - params.content
+   - params.update._meta.kiro.checkpoint
+   - params.update._meta.kiro.checkpoint.local
+   - params.update._meta.kiro.checkpoint.modified
+   - params.update._meta.kiro.checkpoint.original
+   - params.update._meta.kiro.preview
+   - params.update._meta.kiro.preview.file
+   - params.update._meta.kiro.preview.local
+   - params.update._meta.kiro.preview.modified
+   - params.update._meta.kiro.preview.modifiedContent
+   - params.update._meta.kiro.preview.original
+   - params.update._meta.kiro.preview.originalContent
+   - params.update._meta.kiro.resources
+   - params.update._meta.kiro.resources[].name
+   - params.update._meta.kiro.resources[].owner
+   - params.update._meta.kiro.resources[].provider
+   - params.update.content[].newText
+   - params.update.content[].oldText
+   - params.update.content[].path
+   - params.update.rawInput.text

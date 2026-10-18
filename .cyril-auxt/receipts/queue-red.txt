@@ -1,0 +1,17 @@
+Queue release (C11/C12) red-first: the release was disabled on the working tree (base 97ebebd4 + queue change), then
+restored by editing it back (no checkout), and the suites re-ran green.
+
+Core (C11) — mutation `if covered && false { queued.allow_once() }` in QueueRelease::covers:
+  env -u CARGO_TARGET_DIR cargo nextest run -p cyril-core --features kas -E 'test(/queued_requests_released_like_the_tui|wildcard_matches_like_the_tui/)'
+  Summary 29 tests run: 23 passed, 6 failed
+  The 6 failures are exactly the covered cases: main_whole_same_capability, main_whole_exec_folds_into_shell,
+  child_exact_same_command, child_pattern_matching, child_whole_same_capability, child_user_scope_same_operation.
+  Every not-covered case passed (nothing is released when release is disabled).
+
+UI (C12) — mutation `if false { self.release_queued_approvals(&release); }` in UiState::approval_send_grant:
+  env -u CARGO_TARGET_DIR cargo nextest run -p cyril-ui -E 'test(/always_allow_tests/)'
+  Summary 18 tests run: 16 passed, 2 failed
+  FAIL always_allow_tests::another_sessions_grant_settles_its_own_matching_requests
+  FAIL always_allow_tests::whole_tool_grant_settles_queued_requests_of_that_capability
+
+Restored: core 29/29 passed, UI 18/18 passed.

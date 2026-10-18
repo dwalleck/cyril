@@ -165,7 +165,7 @@ KAS (Kiro Agent Server) is Kiro's TypeScript/LangGraph engine, embedded and self
 
 The production `cyril` package now enables `kas` by default; `cyril-core` retains its opt-in feature. Missing engine configuration chooses KAS in a KAS-capable build and v2 otherwise. Explicit CLI selection still wins over `[agent]` configuration; explicit v2 remains supported. An isolated `cargo build -p cyril --no-default-features` is the V2-only, compile-time credential-reader opt-out. Runtime v2 selection is not that security guarantee, and workspace feature unification can enable KAS. See [amended ADR-0002](adr/0002-kas-cargo-feature-gate.md).
 
-Free spawn remains discovered Node.js plus the extracted bundle with callback auth. First-run errors instruct extraction with `kiro-cli acp --agent-engine v3` or an explicit `KIRO_KAS_SERVER_PATH`; there is no silent Wrapper/v2 fallback. Native Windows uses its AppData root, not WSL; macOS uses `~/Library/Application Support/kiro-cli` following integration of PR #167. **Overall default-switch acceptance remains pending; live-native qualification is not claimed.** This policy is not a claim of full KAS/v2 parity.
+Free spawn remains discovered Node.js plus the extracted bundle with callback auth; the token comes from `kiro-cli chat _ get-kas-token` on every callback (cyril-zbu7, [PR #173](https://github.com/dwalleck/cyril/pull/173)), with the never-renewed stored-token read only as a fallback for a kiro-cli lacking that subcommand. First-run errors instruct extraction with `kiro-cli acp --agent-engine v3` or an explicit `KIRO_KAS_SERVER_PATH`; there is no silent Wrapper/v2 fallback. Native Windows uses its AppData root, not WSL; macOS uses `~/Library/Application Support/kiro-cli` following integration of PR #167. **Overall default-switch acceptance remains pending; live-native qualification is not claimed.** This policy is not a claim of full KAS/v2 parity.
 
 Registered KAS `custom-agent` commands use the ordinary prompt/steering lifecycle as exactly one original raw-text block, not a v2 commands RPC. Command invocations receive no automatic local lessons or file expansion; first-prompt lessons stay pending for the next ordinary chat prompt. Builtin precedence and unregistered slash fallback remain unchanged.
 
@@ -176,6 +176,10 @@ Upstream native KAS memory defaults are preserved by explicit approval, acceptin
 | Native data paths | cyril-igrx / [PR #167](https://github.com/dwalleck/cyril/pull/167) | Prerequisite source integrated: macOS correction and previously landed Windows paths. Platform evidence review remains an acceptance gate; no live-native qualification is claimed. |
 | Host hook tag matching | cyril-5nep | Prerequisite resolved and integrated: tag/selector repair preserves Host authority and exit-2 blocking; local checks, live proof and independent review passed. |
 | Advertised KAS command dispatch | cyril-oieu | Prerequisite resolved and integrated: exact raw-prompt routing and command-to-ordinary-prompt lesson deferral; local checks, live proof and independent review passed. This remains distinct from steering-command discovery. |
+| KAS token renewal | cyril-zbu7 / [PR #173](https://github.com/dwalleck/cyril/pull/173) | Prerequisite resolved and integrated: cyril relays `kiro-cli chat _ get-kas-token` (kiro-cli owns refresh, single-flight), so sessions survive the hourly access-token expiry. |
+| KAS `shell_type` / host shell | cyril-k8wc / [PR #172](https://github.com/dwalleck/cyril/pull/172) | Prerequisite resolved and integrated: `shell_type` answers with the executed shell's name (bash/zsh/…, `pwsh`/`powershell`), so KAS applies V3 allow rules and offers "Always allow" instead of an unknown dialect. |
+| Always-allow consent echo | cyril-auxt / [PR #174](https://github.com/dwalleck/cyril/pull/174) | Prerequisite resolved and integrated: an "Always allow" choice sends KAS's `_meta.kiro.consent` echo, so KAS persists the grant (`permissions.yaml`, user or workspace scope) and a fresh session runs the command without asking. |
+| Approval overlay preview | cyril-q0kg / [PR #175](https://github.com/dwalleck/cyril/pull/175), cyril-rcub / [PR #176](https://github.com/dwalleck/cyril/pull/176) | Prerequisites resolved and integrated: malformed previews log once per request; write approvals never hide their target file. |
 | V2 model fallback | cyril-ci3j / cyril-lnxg | Known follow-up, not a flip blocker; honor the prior deferral as v2 retires. Explicit v2 selection does not imply fallback parity. |
 | KAS model fallback | cyril-aoby | Follow-up: notification/capability is not consumed; the served fallback chain was not provoked by the cited audit. |
 | Settings drift | cyril-53qx | Follow-up: todoList/subagentOrchestration are reported unknown by 0.66.33; correct version policy separately. Older orchestration smokes are not default-switch proof. |
@@ -432,18 +436,22 @@ routing, a run state machine, a queued-and-attributed approval path and run-life
 modelling are all reused if cyril ever drives its own DAGs. Filing them under a KAS
 milestone is how peer sessions got confused with subagents in the first place.
 
-Scoped by the 2026-08-08 grilling. Decisions: [ADR-0011](adr/0011-ungated-client-driven-workflow-control-plane.md)
-(ungated, client-owned control plane); vocabulary in `CONTEXT.md` § Workflows;
-wire reference [`docs/kiro-2.16.0-wire-audit.md`](kiro-2.16.0-wire-audit.md).
+Scoped by the 2026-08-08 grilling and re-decided in the 2026-10-18 grilling. Decisions:
+[ADR-0013](adr/0013-workflows-follow-the-users-kiro-setting.md) (the workflow gate follows the
+user's Kiro setting; cyril keeps its own control plane beside the model's launch path), which
+supersedes [ADR-0011](adr/0011-ungated-client-driven-workflow-control-plane.md) (gate off
+everywhere). Vocabulary in `CONTEXT.md` § Workflows; wire references
+[`docs/kiro-2.16.0-wire-audit.md`](kiro-2.16.0-wire-audit.md) and
+[`docs/kiro-2.32.0-wire-audit.md`](kiro-2.32.0-wire-audit.md).
 
 ### W1 — Drive Kiro's workflow engine
 
 **Depends on:** KAS-2a (shipped). **Not** blocked on KAS-3 — workflow steps are peer
 sessions and deliberately do not ride `SubagentTracker`.
 
-- **No gate.** Cyril never sets `workflows.enabled`; `_kiro/workflow/*` routes without it
-  (live-verified through `invoke`, ADR-0011). The five agent-facing workflow tools are
-  never registered, so the model cannot launch a run.
+- **No gate** (as shipped; superseded by ADR-0013 — see W4). Cyril never sets
+  `workflows.enabled`; `_kiro/workflow/*` routes without it (live-verified through `invoke`).
+  What survives: every cyril-launched run works whatever the gate.
 - **Event modelling** — the 9 lifecycle events as a pure `cyril-core` state machine, keyed
   on `(workflowId, nodePath)`. The six consumer hazards are the spec. Three live captures
   are committed, so this is offline, zero-credit TDD. **cyril-6beh**.
@@ -455,13 +463,14 @@ sessions and deliberately do not ride `SubagentTracker`.
   flush-on-subscribe buffer means a late attach still receives the run's opening. No startup
   probe in v1.
 - **Native control plane** — cyril's own `/workflow run|list|status|cancel|resume|attach`.
-  Kiro's four advertised commands are suppressed from autocomplete rather than proxied.
+  Kiro's four advertised commands are suppressed from autocomplete rather than proxied
+  (revisited under W4, cyril-sm36, once the gate can be on).
 - **Approvals queue + attribution** — parallel branches raise concurrent permission requests;
   today the single `approval` slot silently discards one and carries no session id. In scope,
   because `parallel` is one of only three node types the bundled recipes use.
 
-**Non-goals:** model-launched runs (that means flipping the gate — a separate, deliberate
-decision); proxying Kiro's four slash commands; cyril executing DAGs itself (that is W2).
+**Non-goals (as scoped):** model-launched runs — since decided by ADR-0013 and delivered by
+W4; proxying Kiro's four slash commands; cyril executing DAGs itself (that is W2).
 
 ### W3 — `/review`: scoped code review on Kiro's workflow engine
 
@@ -483,10 +492,38 @@ decision); proxying Kiro's four slash commands; cyril executing DAGs itself (tha
 **Non-goals:** a vendor-neutral review engine; an in-TUI findings view or follow-up actions;
 targets not checked out at HEAD. Still fog: PR mode, effort presets.
 
+### W4 — Workflows follow the user's Kiro setting (ADR-0013)
+
+**Depends on:** W1. **Epic:** cyril-xehm. Kiro made workflows generally available behind the
+user setting `chat.enableWorkflows` (default off), and with it on, KAS delegates complex work
+through `run_workflow` instead of `invoke_sub_agent`. cyril follows that setting rather than
+withholding the path.
+
+- **Plan rendering first** — KAS's plan approval (`session/request_permission` with
+  `_meta.kiro.workflowPlan`) is the human checkpoint for prompt-created workflows; today it
+  renders as "Preview unavailable". Prerequisite of the next two items. **cyril-8wh0**.
+- **Honour the setting** — marshal `settings.workflows` and `settings.goal` from
+  `chat.enableWorkflows` exactly as Kiro's TUI does; read at startup, no cyril toggle; replace
+  the ADR-0011 never-marshal test; live gate-on parity probe. **cyril-sm36**.
+- **`/workflow new <prompt>`** — always a client-launched creator (inline copy of Kiro's
+  `workflow-from-prompt`, plan `kind:"launch"`, reject-with-feedback), whatever the setting;
+  live plan-reject probe before shipping. **cyril-0asq**.
+- **Step questions** — shown with run and step, answered inline (`session/prompt` to the step
+  session); a parent model's answer to a step is rendered as such. **cyril-9104**.
+- **Cost visibility** — credits on every agent-initiated turn and a per-run total on the
+  completion line. **cyril-2lh8**. Wake labels for repeat-cap pauses: **cyril-6lql**.
+- **`/goal`** — over the bundled `goal` recipe, shown when workflows are on. **cyril-ct2q**.
+
+**Non-goals:** a cyril-side confirmation of model launches (a cyril-hosted PreToolUse hook can
+block `run_workflow`; recorded in ADR-0013 as the known route, not adopted); a separate gate-off
+parent session for cyril-launched runs; a cyril toggle for Kiro's setting.
+
 ### W2 — Cross-vendor orchestration (unscheduled)
 
-The surviving, non-subsumed half of ADR-0003's workflow justification: stage 1 on Kiro,
-stage 2 on Claude. Kiro's engine orchestrates only Kiro sessions, and `_message/send` does
+**Cross-vendor only** (restated 2026-10-18, ADR-0013 grilling): for Kiro-only runs cyril drives
+Kiro's engine, which now covers planning, plan approval, live edits, goal loops and Powers/MCP in
+steps. W2 exists for what that engine cannot do. The surviving, non-subsumed half of ADR-0003's
+workflow justification: stage 1 on Kiro, stage 2 on Claude. Kiro's engine orchestrates only Kiro sessions, and `_message/send` does
 not cross vendors, so cyril must own scheduling and relaying — the session-level engine
 described in `project_cyril_session_level_workflows` (`SpawnSession`/`PromptSession`/`AwaitAll`
 in pure Rust). Blocked on Phases 3/4; W1's substrate is the down payment.
@@ -535,7 +572,7 @@ Hold-to-talk (or toggle) speech-to-text that drops the transcript into the input
 4. **No standardized stage registry exists yet.** The runtime now uses the official Rust SDK2 `ConnectTo`/`Conductor` component ABI, so a future registry can select stage components without another transport rewrite.
 5. **Upstream SDK2 is young.** Cyril pins exact SDK/core/conductor versions and keeps stable wire v1 as the compatibility boundary; upgrades need the deterministic conductor and authenticated v2/KAS acceptance matrix.
 6. **Mission drift.** "Vendor-neutral platform" is more ambitious than "Kiro client." Need to keep shipping a strictly-better-than-status-quo Kiro experience while building the platform underneath.
-7. **KAS makes cyril a credential custodian** (added 2026-06-16; policy amended 2026-10-12). Cyril reads Kiro's bearer token from its auth store and supplies it through `_kiro/auth/getAccessToken`; v2 self-authenticates. Normal production builds now include this security surface under cyril-4c4d. The isolated selected-package no-default build remains the compile-time exclusion; runtime v2 selection does not. See [ADR-0002](adr/0002-kas-cargo-feature-gate.md). Custody remains vendor-specific, not a general auth solution (Open Tension #3).
+7. **KAS makes cyril a credential custodian** (added 2026-06-16; policy amended 2026-10-12; custody narrowed 2026-10-18). Driving KAS requires cyril to supply Kiro's bearer token through `_kiro/auth/getAccessToken`; v2 self-authenticates. **Update 2026-10-18 (cyril-zbu7):** the custodian role shrank — like Kiro's own TUI, cyril now asks kiro-cli (`kiro-cli chat _ get-kas-token`, `--force-refresh` iff KAS asks) on every callback, so kiro-cli keeps sole ownership of the refresh token and renews the access token itself (no refresh-on-expiry in cyril). cyril reads the on-disk store only as a fallback when the kiro-cli lacks that hidden subcommand — never renewed, with a one-time warning that sessions will expire hourly. Normal production builds include this surface under cyril-4c4d (KAS is the default engine); the isolated selected-package no-default build remains the compile-time exclusion, and runtime v2 selection does not exclude it. See [ADR-0002](adr/0002-kas-cargo-feature-gate.md). Custody remains vendor-specific, not a general auth solution (Open Tension #3).
 8. **Proxy stages remain deferred; the conductor runtime does not** (updated 2026-08-30; see [ADR-0003](adr/0003-defer-proxy-stack-for-host-callbacks.md)). Every connection already crosses the official zero-or-more-stage conductor. KAS host callbacks remain the near-term side-effect interception path; a non-empty `StageChain` waits for fan-out/observer or cross-vendor orchestration that host callbacks cannot provide.
 
 ## Reference / further reading

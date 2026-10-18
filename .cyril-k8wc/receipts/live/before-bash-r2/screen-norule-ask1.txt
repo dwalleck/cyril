@@ -1,0 +1,23 @@
+⠧ sess_6567ae61-2725-420d-bbed-63b080e55572 · vibe · auto · 5s
+Connecting to agent...
+Session created: sess_6567ae61-2725-420d-bbed-63b080e55572
+You:
+  Use your shell tool to run exactly this command and nothing else: echo AUDITY . After it finishes, reply with the word turnone_done in uppercase and
+nothing else.
+⏳ Run(echo AUDITY)
+⠧ Running... 5s
+                                             ┌ Permission Required ─────────────────────────────────────┐
+                                             │echo AUDITY                                               │
+                                             │                                                          │
+                                             │  Preview unavailable                                     │
+                                             │                                                          │
+                                             │▸ Allow                                                   │
+                                             │  Deny                                                    │
+                                             │                                                          │
+                                             └──────────────────────────────────────────────────────────┘
+┌ > ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                   │
+│                                                                                                                                                    │
+│                                                                                                                                                    │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%

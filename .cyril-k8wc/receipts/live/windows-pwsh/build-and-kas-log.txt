@@ -1,0 +1,10 @@
+# Windows live run — build provenance + KAS log excerpt (collected 2026-10-18 from the VM over ssh)
+# clone_head = commit the binary was built from; binary mtime precedes the KAS session (log dir 20261018T145606495)
+clone_head=ca400c75bee894b8a62509556f74f44f97e99b7e
+binary=C:\probe\cyril-k8wc-7ae63f66\target\debug\cyril.exe mtime=2026-10-18T14:53:22.3333988Z sha256=7d0ca00c90ec515be9823a9f62848990638b02c2ffa5771e1b45e66a37f82b7f
+kiro=kiro-cli-chat 2.32.0
+kas_logdir=20261018T145606495
+{"timestamp":"2026-10-18T14:56:07.236Z","level":"info","message":"shellType.probe {\"sessionId\":\"sess_7d0066dd-c16e-43b5-84ab-54a244b00656\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":0,\"timeoutMs\":2000}"}
+{"timestamp":"2026-10-18T14:56:07.257Z","level":"info","message":"acp-peer.shellType.ok {\"system\":\"acp-peer\",\"sessionId\":\"sess_7d0066dd-c16e-43b5-84ab-54a244b00656\",\"method\":\"_kiro/terminal/shell_type\",\"durationMs\":21}"}
+{"timestamp":"2026-10-18T14:56:07.257Z","level":"info","message":"shellType.resolved {\"sessionId\":\"sess_7d0066dd-c16e-43b5-84ab-54a244b00656\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":21}"}
+unknown_count=0

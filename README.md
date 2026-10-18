@@ -99,8 +99,11 @@ proof of exclusion: `cyril-workbench` enables core KAS through feature
 unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 
 The default KAS `free` spawn runs discovered Node.js plus the extracted
-`acp-server.js` directly, with callback authentication supplied by Cyril from
-Kiro's credential store. “Free” means no Kiro wrapper, not credential-free.
+`acp-server.js` directly, with callback authentication: on each KAS token
+callback Cyril runs `kiro-cli chat _ get-kas-token` (cyril-zbu7), so kiro-cli
+resolves and renews the token itself; Cyril reads Kiro's credential store only
+as a fallback for a kiro-cli that lacks that subcommand (never renewed, so such
+sessions expire hourly). “Free” means no Kiro wrapper, not credential-free.
 It ignores `--agent-command`; an override alone does not select a WSL agent.
 
 If the bundle is missing, the error reports the searched path and instructs
@@ -112,8 +115,8 @@ do not relocate credentials. There is no silent Wrapper or v2 fallback.
 
 ### KAS on native platforms
 
-Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and reads
-authentication from `<data dir>/data.sqlite3`. Both use the same platform root:
+Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and, only
+for the stored-token fallback above, reads `<data dir>/data.sqlite3`. Both use the same platform root:
 
 | Platform | Kiro data directory |
 | --- | --- |

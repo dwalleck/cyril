@@ -3,10 +3,43 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ShellKind {
-    Posix,
+    Posix(PosixShell),
     Fish,
     Pwsh,
     WindowsPowerShell,
+}
+
+/// The concrete POSIX shell a [`ShellKind::Posix`] host runs. Kept beside the
+/// family because KAS's `shell_type` dialect mapper accepts shell NAMES
+/// (`bash`, `zsh`, `sh`, …) and maps the family name `posix` — its own output
+/// dialect — to `unknown`, which makes KAS ask for every shell command
+/// (cyril-k8wc).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PosixShell {
+    Sh,
+    Bash,
+    Dash,
+    Zsh,
+    Ksh,
+}
+
+impl PosixShell {
+    const ALL: [Self; 5] = [Self::Sh, Self::Bash, Self::Dash, Self::Zsh, Self::Ksh];
+
+    /// The executable basename, which is also the `shell_type` wire token.
+    const fn name(self) -> &'static str {
+        match self {
+            Self::Sh => "sh",
+            Self::Bash => "bash",
+            Self::Dash => "dash",
+            Self::Zsh => "zsh",
+            Self::Ksh => "ksh",
+        }
+    }
+
+    fn from_name(name: &str) -> Option<Self> {
+        Self::ALL.into_iter().find(|shell| shell.name() == name)
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -119,12 +152,21 @@ impl HostShell {
 
     #[cfg(test)]
     pub(crate) fn test_posix() -> Self {
-        Self::new(ShellKind::Posix, PathBuf::from("/bin/sh"))
+        Self::new(ShellKind::Posix(PosixShell::Sh), PathBuf::from("/bin/sh"))
     }
 
+    /// POSIX fixture at `executable`, classified by its basename exactly as
+    /// `$SHELL` is, so the reported name always matches what runs.
     #[cfg(all(test, unix))]
     pub(crate) fn test_posix_at(executable: impl Into<PathBuf>) -> Self {
-        Self::new(ShellKind::Posix, executable.into())
+        let executable = executable.into();
+        match classify_unix(executable.as_os_str()) {
+            Some(kind @ ShellKind::Posix(_)) => Self::new(kind, executable),
+            other => panic!(
+                "{} is not a POSIX shell fixture: {other:?}",
+                executable.display()
+            ),
+        }
     }
 
     #[cfg(all(test, unix))]
@@ -156,18 +198,27 @@ impl HostShell {
     pub(crate) fn review_shell(&self) -> crate::review::ShellDialect {
         use crate::review::ShellDialect;
         match self.kind {
-            ShellKind::Posix => ShellDialect::Posix,
+            ShellKind::Posix(_) => ShellDialect::Posix,
             ShellKind::Fish => ShellDialect::Fish,
             ShellKind::Pwsh => ShellDialect::Pwsh,
             ShellKind::WindowsPowerShell => ShellDialect::WindowsPowerShell,
         }
     }
 
+    /// The `_kiro/terminal/shell_type` reply: the name of the interpreter
+    /// `command` runs, from KAS's accepted vocabulary — never the family name
+    /// `posix`, which KAS maps to dialect `unknown` (cyril-k8wc).
+    ///
+    /// PowerShell 7 answers `pwsh`, not `powershell`: both map to KAS's
+    /// `powershell` policy dialect, but KAS also writes the reply verbatim into
+    /// the model's system prompt (`Shell: …`), and `pwsh` tells the model it
+    /// may use PowerShell 7 syntax that Windows PowerShell 5.1 lacks.
     pub(crate) fn wire_name(&self) -> &'static str {
         match self.kind {
-            ShellKind::Posix => "posix",
+            ShellKind::Posix(shell) => shell.name(),
             ShellKind::Fish => "fish",
-            ShellKind::Pwsh | ShellKind::WindowsPowerShell => "powershell",
+            ShellKind::Pwsh => "pwsh",
+            ShellKind::WindowsPowerShell => "powershell",
         }
     }
 
@@ -187,7 +238,7 @@ impl HostShell {
             .chain(args.iter().map(String::as_str))
             .any(is_operator);
         let shell_args = match self.kind {
-            ShellKind::Posix | ShellKind::Fish => {
+            ShellKind::Posix(_) | ShellKind::Fish => {
                 let mut source = self.render_command(command, args);
                 if !compound {
                     // A shell that stays resident (dash, unlike bash's tail-call
@@ -231,7 +282,7 @@ impl HostShell {
     /// to correctness here (the tokenized path keeps its `exec` treatment).
     fn command_line(&self, source: &str) -> ShellCommand<'_> {
         let shell_args = match self.kind {
-            ShellKind::Posix | ShellKind::Fish => {
+            ShellKind::Posix(_) | ShellKind::Fish => {
                 vec!["-l".into(), "-c".into(), source.to_string()]
             }
             ShellKind::Pwsh | ShellKind::WindowsPowerShell => {
@@ -311,7 +362,7 @@ fn is_variable(kind: ShellKind, token: &str) -> bool {
         .strip_prefix("${")
         .and_then(|value| value.strip_suffix('}'));
     match kind {
-        ShellKind::Posix => plain.or(braced).is_some_and(valid_name),
+        ShellKind::Posix(_) => plain.or(braced).is_some_and(valid_name),
         ShellKind::Fish => plain.is_some_and(valid_name),
         ShellKind::Pwsh | ShellKind::WindowsPowerShell => token
             .strip_prefix("$env:")
@@ -330,7 +381,7 @@ fn valid_name(name: &str) -> bool {
 
 fn push_quoted(rendered: &mut String, kind: ShellKind, token: &str) {
     rendered.push('\'');
-    let replacement = if matches!(kind, ShellKind::Posix | ShellKind::Fish) {
+    let replacement = if matches!(kind, ShellKind::Posix(_) | ShellKind::Fish) {
         "'\\''"
     } else {
         "''"
@@ -371,7 +422,7 @@ fn resolve_unix(
                 return Ok(HostShell::new(kind, executable));
             }
             find_on_path(OsStr::new("bash"), host)
-                .map(|path| HostShell::new(ShellKind::Posix, path))
+                .map(|path| HostShell::new(ShellKind::Posix(PosixShell::Bash), path))
                 .ok_or(HostShellError::NotFound { platform: "Unix" })
         }
         "bash" | "fish" => find_on_path(OsStr::new(configured), host)
@@ -379,7 +430,7 @@ fn resolve_unix(
                 let kind = if configured == "fish" {
                     ShellKind::Fish
                 } else {
-                    ShellKind::Posix
+                    ShellKind::Posix(PosixShell::Bash)
                 };
                 HostShell::new(kind, path)
             })
@@ -458,8 +509,7 @@ fn resolve_windows(
 fn classify_unix(value: &OsStr) -> Option<ShellKind> {
     match Path::new(value).file_name()?.to_str()? {
         "fish" => Some(ShellKind::Fish),
-        "sh" | "bash" | "dash" | "zsh" | "ksh" => Some(ShellKind::Posix),
-        _ => None,
+        name => PosixShell::from_name(name).map(ShellKind::Posix),
     }
 }
 
@@ -490,7 +540,7 @@ fn find_on_path(name: &OsStr, host: &impl HostEnvironment) -> Option<PathBuf> {
 mod tests {
     #[cfg(unix)]
     use super::SystemHost;
-    use super::{HostEnvironment, HostPlatform, HostShell, ShellKind, resolve_for};
+    use super::{HostEnvironment, HostPlatform, HostShell, PosixShell, ShellKind, resolve_for};
     use std::cell::Cell;
     use std::collections::{HashMap, HashSet};
     use std::ffi::OsString;
@@ -569,25 +619,157 @@ mod tests {
     }
 
     #[test]
-    fn every_shell_kind_maps_to_the_exact_kas_wire_vocabulary() {
-        let cases = [
-            (ShellKind::Posix, "posix", "/bin/bash"),
-            (ShellKind::Fish, "fish", "/bin/fish"),
-            (ShellKind::Pwsh, "powershell", "pwsh"),
-            (ShellKind::WindowsPowerShell, "powershell", "powershell.exe"),
-        ];
+    fn every_shell_kind_reports_a_name_kas_recognises() {
+        let kinds = PosixShell::ALL.into_iter().map(ShellKind::Posix).chain([
+            ShellKind::Fish,
+            ShellKind::Pwsh,
+            ShellKind::WindowsPowerShell,
+        ]);
 
-        let actual: Vec<_> = cases
-            .into_iter()
-            .map(|(kind, _, executable)| {
-                HostShell::new(kind, PathBuf::from(executable)).wire_name()
-            })
+        let actual: Vec<_> = kinds
+            .map(|kind| HostShell::new(kind, PathBuf::from("/shell")).wire_name())
             .collect();
-        let expected: Vec<_> = cases.into_iter().map(|(_, token, _)| token).collect();
 
-        assert_eq!(actual, expected);
-        assert!(!actual.contains(&"bash"));
-        assert!(!actual.contains(&"cmd"));
+        assert_eq!(
+            actual,
+            [
+                "sh",
+                "bash",
+                "dash",
+                "zsh",
+                "ksh",
+                "fish",
+                "pwsh",
+                "powershell"
+            ]
+        );
+        for name in actual {
+            assert_kas_recognises(name);
+        }
+        // Each POSIX name round-trips through `$SHELL` classification, so the
+        // reported name and the classified executable come from one table.
+        for shell in PosixShell::ALL {
+            assert_eq!(
+                super::classify_unix(std::ffi::OsStr::new(shell.name())),
+                Some(ShellKind::Posix(shell))
+            );
+        }
+    }
+
+    /// Every `shellType` input KAS's dialect mapper recognises (`cb` in
+    /// 0.66.34, `jh` in 0.66.43 — `.cyril-k8wc/receipts/kas-shell-type-mapper.txt`).
+    /// Anything else, including the dialect NAME `posix`, maps to `unknown`,
+    /// and an unknown dialect makes KAS ask for every shell command.
+    const KAS_RECOGNISED_SHELL_TYPES: &[&str] = &[
+        "bash",
+        "logbash",
+        "gitbash",
+        "wsl",
+        "zsh",
+        "logzsh",
+        "sh",
+        "dash",
+        "ksh",
+        "ash",
+        "mksh",
+        "pdksh",
+        "oksh",
+        "loksh",
+        "yash",
+        "busybox",
+        "tcsh",
+        "csh",
+        "fish",
+        "powershell",
+        "pwsh",
+        "pwsh-preview",
+        "cmd",
+    ];
+
+    fn assert_kas_recognises(name: &str) {
+        assert!(
+            KAS_RECOGNISED_SHELL_TYPES.contains(&name),
+            "KAS maps `{name}` to dialect `unknown`"
+        );
+    }
+
+    /// The variant after `shell` in declaration order. The match is
+    /// exhaustive, so a new `PosixShell` variant fails to compile here until
+    /// it is chained in — and then `posix_shell_all_lists_every_variant`
+    /// fails until `PosixShell::ALL` lists it too.
+    fn next_posix_shell(shell: PosixShell) -> Option<PosixShell> {
+        match shell {
+            PosixShell::Sh => Some(PosixShell::Bash),
+            PosixShell::Bash => Some(PosixShell::Dash),
+            PosixShell::Dash => Some(PosixShell::Zsh),
+            PosixShell::Zsh => Some(PosixShell::Ksh),
+            PosixShell::Ksh => None,
+        }
+    }
+
+    #[test]
+    fn posix_shell_all_lists_every_variant() {
+        let every_variant: Vec<_> =
+            std::iter::successors(Some(PosixShell::Sh), |shell| next_posix_shell(*shell)).collect();
+
+        assert_eq!(every_variant, PosixShell::ALL);
+    }
+
+    #[rstest::rstest]
+    #[case::sh(HostPlatform::Unix, Some("/bin/sh"), None, "/bin/sh", "sh")]
+    #[case::bash(HostPlatform::Unix, Some("/bin/bash"), None, "/bin/bash", "bash")]
+    #[case::dash(HostPlatform::Unix, Some("/bin/dash"), None, "/bin/dash", "dash")]
+    #[case::zsh(HostPlatform::Unix, Some("/usr/bin/zsh"), None, "/usr/bin/zsh", "zsh")]
+    #[case::ksh(HostPlatform::Unix, Some("/bin/ksh"), None, "/bin/ksh", "ksh")]
+    #[case::bare_zsh_on_path(HostPlatform::Unix, Some("zsh"), None, "/shells/zsh", "zsh")]
+    #[case::absent_shell_falls_back_to_bash(HostPlatform::Unix, None, None, "/shells/bash", "bash")]
+    #[case::unsupported_shell_falls_back_to_bash(
+        HostPlatform::Unix,
+        Some("/bin/nu"),
+        None,
+        "/shells/bash",
+        "bash"
+    )]
+    #[case::configured_bash_overrides_shell(
+        HostPlatform::Unix,
+        Some("/usr/bin/zsh"),
+        Some("bash"),
+        "/shells/bash",
+        "bash"
+    )]
+    #[case::fish(
+        HostPlatform::Unix,
+        Some("/usr/bin/fish"),
+        None,
+        "/usr/bin/fish",
+        "fish"
+    )]
+    #[case::configured_fish(HostPlatform::Unix, None, Some("fish"), "/shells/fish", "fish")]
+    #[case::pwsh(HostPlatform::Windows, None, None, "/shells/pwsh.exe", "pwsh")]
+    #[case::configured_pwsh(HostPlatform::Windows, None, Some("pwsh"), "/shells/pwsh.exe", "pwsh")]
+    #[case::windows_powershell(
+        HostPlatform::Windows,
+        None,
+        Some("powershell"),
+        "/shells/powershell.exe",
+        "powershell"
+    )]
+    fn shell_type_reply_names_the_shell_cyril_executes(
+        #[case] platform: HostPlatform,
+        #[case] shell_env: Option<&str>,
+        #[case] configured: Option<&str>,
+        #[case] runnable: &str,
+        #[case] expected: &str,
+    ) {
+        let mut host = FakeHost::default().path(&["/shells"]).runnable(runnable);
+        if let Some(value) = shell_env {
+            host = host.var("SHELL", value);
+        }
+        let shell = require_shell(resolve_for(platform, configured, &host));
+
+        assert_eq!(shell.executable, PathBuf::from(runnable));
+        assert_eq!(shell.wire_name(), expected);
+        assert_kas_recognises(shell.wire_name());
     }
 
     #[test]
@@ -603,14 +785,18 @@ mod tests {
                 HostPlatform::Unix,
                 None,
                 &host,
-                ShellKind::Posix,
+                ShellKind::Posix(PosixShell::Bash),
                 "/fallback/bash",
             );
         }
 
         for (value, kind, path) in [
-            ("/bin/zsh", ShellKind::Posix, "/bin/zsh"),
-            ("/odd ü/zsh", ShellKind::Posix, "/odd ü/zsh"),
+            ("/bin/zsh", ShellKind::Posix(PosixShell::Zsh), "/bin/zsh"),
+            (
+                "/odd ü/zsh",
+                ShellKind::Posix(PosixShell::Zsh),
+                "/odd ü/zsh",
+            ),
             ("fish", ShellKind::Fish, "/shells/fish"),
         ] {
             let host = FakeHost::default()
@@ -629,7 +815,7 @@ mod tests {
                 HostPlatform::Unix,
                 Some("auto"),
                 &host,
-                ShellKind::Posix,
+                ShellKind::Posix(PosixShell::Bash),
                 "/fallback/bash",
             );
         }
@@ -641,7 +827,7 @@ mod tests {
             HostPlatform::Unix,
             Some("bash"),
             &bash,
-            ShellKind::Posix,
+            ShellKind::Posix(PosixShell::Bash),
             "/configured/bash",
         );
         let fish = FakeHost::default()
@@ -841,6 +1027,9 @@ mod tests {
         );
     }
 
+    /// Rendering is identical for every POSIX shell; `sh` stands in for all.
+    const SH: ShellKind = ShellKind::Posix(PosixShell::Sh);
+
     fn shell(kind: ShellKind) -> HostShell {
         HostShell::new(kind, PathBuf::from(format!("/test/{kind:?}")))
     }
@@ -869,7 +1058,7 @@ mod tests {
             "2>&1",
         ]);
         assert_eq!(
-            shell(ShellKind::Posix).render_command("echo", &common),
+            shell(SH).render_command("echo", &common),
             "'echo' 'two words' 'line\nbreak' 'a'\\''b' '雪' | > >> < && || ; & 2> 2>> 2>&1"
         );
         assert_eq!(
@@ -890,7 +1079,7 @@ mod tests {
             "$(whoami)",
         ]);
         assert_eq!(
-            shell(ShellKind::Posix).render_command("echo", &args),
+            shell(SH).render_command("echo", &args),
             "'echo' $NAME ${NAME} '$env:NAME' '${env:NAME}' 'prefix-$HOME' '*.rs' '$(whoami)'"
         );
         assert_eq!(
@@ -912,7 +1101,7 @@ mod tests {
     #[test]
     fn launch_plan_uses_one_profile_aware_shell_process() {
         let args = strings(&["done"]);
-        let posix_shell = shell(ShellKind::Posix);
+        let posix_shell = shell(SH);
         let posix = posix_shell.command("echo", &args);
         assert_eq!(posix.args, strings(&["-l", "-c", "exec 'echo' 'done'"]));
         let fish_shell = shell(ShellKind::Fish);
@@ -937,9 +1126,7 @@ mod tests {
         // it through verbatim.
         let no_args: Vec<String> = Vec::new();
         assert_eq!(
-            shell(ShellKind::Posix)
-                .command("sh -c 'exit 3'", &no_args)
-                .args,
+            shell(SH).command("sh -c 'exit 3'", &no_args).args,
             strings(&["-l", "-c", "sh -c 'exit 3'"])
         );
         assert_eq!(
@@ -971,7 +1158,7 @@ mod tests {
         // tail-call execs, so an inner SIGKILL surfaced as exitCode 137 instead
         // of the wait reply's `signal`. Simple commands must exec-replace the
         // shell; operator compounds must keep it resident.
-        for kind in [ShellKind::Posix, ShellKind::Fish] {
+        for kind in [SH, ShellKind::Fish] {
             let host_shell = shell(kind);
             let simple = host_shell.command("sh", &strings(&["-c", "kill -9 $$"]));
             assert_eq!(
@@ -1002,7 +1189,7 @@ mod tests {
         let token = "x".repeat(255);
         let args = vec![token; 256];
         let started = std::time::Instant::now();
-        let rendered = shell(ShellKind::Posix).render_command("echo", &args);
+        let rendered = shell(SH).render_command("echo", &args);
         let elapsed = started.elapsed();
         assert_eq!(rendered.matches(' ').count(), 256);
         assert!(
@@ -1020,7 +1207,7 @@ mod tests {
         };
         let args = strings(&["-c", "exit 42"]);
         for (kind, executable) in [
-            (ShellKind::Posix, "/bin/sh"),
+            (ShellKind::Posix(PosixShell::Sh), "/bin/sh"),
             (ShellKind::Fish, "/usr/bin/fish"),
             (ShellKind::Pwsh, "/usr/bin/pwsh"),
         ] {

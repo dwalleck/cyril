@@ -1,0 +1,69 @@
+" is no longer available.
+(zip archive)
+.zip
+/**
+1x to 2x
+2x to 4x
+4x and up
+:app=
+:kind=
+A tool failed and the turn stopped
+Allow a folder
+Allows writes in
+Anthropic
+Credit usage
+Failed to load workflow
+It runs on the V3 engine: relaunch with kiro-cli --v3 to use it.
+KIRO_NO_PROGRAM_STATUS
+Kiro remembers fixes, repo quirks, and your preferences across sessions.
+Memory is off. Turn it on in /memories
+No fallback: a refusal stays on this model instead of trying the vendor default.
+Other providers
+Prompt cancelled
+PromptFailedError
+Rate unknown
+Scope:  
+Spell out the folder instead of using ~.
+Step interrupted (agent shutdown or connection reset); resuming the run retries the step.
+The agent hit an internal error and the turn stopped
+The folder cannot start with "#".
+The folder cannot step up with "..".
+The folder contains unprintable characters.
+The folder must contain
+The model could not finish this turn
+The turn stopped at its execution limit
+The turn stopped at the context limit
+The turn stopped before finishing
+The turn timed out
+Type /memories to browse memories or change memory access.
+Type a folder inside the workspace, like src/MyPackage.
+Type a folder path.
+Type one folder, not a pattern; everything under it is included.
+Type the full path of the folder.
+Under 1x
+[acp-client] Ignored invalid KAS workflow includedFrom
+[model] failed to persist picker sort:
+[model] failed to record the pick of
+[program-status] write failed:
+[store] cancelMessage: cancel failed
+\x1B]7501;state=
+_kiro/mcp/oauthCompleted
+allow a folder
+and every folder under it,
+chat.modelPicker.lastUsed
+chat.modelPicker.sortBy
+claude-
+connection-status
+fallback-walk
+folder to allow
+for this session only
+for your user
+gpt-
+mcp-oauth:
+mcp_oauth_completed
+mcp_oauth_notice
+mock-session-id-
+prompt-settled
+to allow this folder
+to cycle scope
+to fold

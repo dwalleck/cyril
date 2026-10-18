@@ -1,0 +1,5 @@
+error: unrecognized subcommand 'export-session'
+
+Usage: kiro-cli-chat _ [OPTIONS] <COMMAND>
+
+For more information, try '--help'.

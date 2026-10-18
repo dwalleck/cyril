@@ -1,0 +1,24 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.43"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:766669) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":1}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":9}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":12}
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/steering)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/agents)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/workflows)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/she-workspace-home-i7sk67se/.kiro/workflows
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=10
