@@ -15,6 +15,7 @@
 use agent_client_protocol::schema::v1 as acp;
 
 use crate::protocol::host_mediator::{CallbackMeta, CancelKey, finish};
+use crate::protocol::kas::hooks::HooksListArgs;
 use crate::protocol::kas::kiro_fs;
 use crate::types::SessionId;
 
@@ -75,11 +76,10 @@ pub(crate) enum HostCallback {
         session_id: Option<String>,
         reply: Reply<acp::ExtResponse>,
     },
-    /// `_kiro/hooks/list {trigger, toolId?}`. A missing trigger is preserved
-    /// as `None` — the responder replies empty (not an error).
+    /// `_kiro/hooks/list {trigger, toolId?, toolTags?}`. A missing trigger is
+    /// preserved as `None` — the responder replies empty (not an error).
     HooksList {
-        trigger: Option<String>,
-        tool_id: Option<String>,
+        args: HooksListArgs,
         reply: Reply<acp::ExtResponse>,
     },
     /// `_kiro/hooks/executeHook`. Cancellation stays with the existing
@@ -413,22 +413,11 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             let r = ctx.terminals.respond_shell_type();
             resolve(ctx, kind, None, reply, r).await;
         }
-        HostCallback::HooksList {
-            trigger,
-            tool_id,
-            reply,
-        } => {
-            let mut params = serde_json::Map::new();
-            if let Some(t) = trigger {
-                params.insert("trigger".into(), t.into());
-            }
-            if let Some(t) = tool_id {
-                params.insert("toolId".into(), t.into());
-            }
+        HostCallback::HooksList { args, reply } => {
             // Presence checked at the client before sending; a None here would
             // be a caller bug, so refuse rather than silently serve nothing.
             let r = match &ctx.hooks {
-                Some(h) => h.respond_list(&serde_json::Value::Object(params)),
+                Some(h) => h.respond_list(&args),
                 None => Err(acp::Error::method_not_found()),
             };
             resolve(ctx, kind, None, reply, r).await;

@@ -1,0 +1,4 @@
+{"version":"v1","hooks":[
+ {"name":"pre_shell_block","trigger":"PreToolUse","matcher":"shell","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.gByie8/marks/pre_shell_block; echo CYRIL_5NEP_BLOCKED_BY_TAG_POLICY >&2; exit 2"}},
+ {"name":"pre_id","trigger":"PreToolUse","matcher":"execute_bash","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.gByie8/marks/pre_id"}}
+]}

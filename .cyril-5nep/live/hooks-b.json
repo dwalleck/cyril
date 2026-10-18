@@ -1,0 +1,4 @@
+{"version":"v1","hooks":[
+ {"name":"pre_shell_block","trigger":"PreToolUse","matcher":"shell","action":{"type":"command","command":"touch @MARKS@/pre_shell_block; echo CYRIL_5NEP_BLOCKED_BY_TAG_POLICY >&2; exit 2"}},
+ {"name":"pre_id","trigger":"PreToolUse","matcher":"execute_bash","action":{"type":"command","command":"touch @MARKS@/pre_id"}}
+]}

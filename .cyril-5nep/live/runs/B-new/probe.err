@@ -1,0 +1,8 @@
+2026-10-18T04:54:40.833796Z  WARN cyril_core::protocol::kas::discovery: no KAS extraction matches the installed kiro-cli; spawning the newest cli_version=2.32.0 selected="2.31.1-5763e7b9f0f038ebd7314183ebd9dbabba45b793728f1ec06b2e649341e49ddb"
+2026-10-18T04:54:40.834439Z  INFO cyril_core::platform::path: agent location bound program=/home/dwalleck/repos/cyril-wt-fix-cyril-5nep-hook-tags/.cyril-5nep/live/relay.py location=Native
+2026-10-18T04:54:40.835022Z  INFO cyril_core::protocol::kas::hooks: KAS hooks host: registry loaded count=2
+2026-10-18T04:54:40.835568Z  INFO cyril_core::protocol::domain_mediator: presenting as kiro-cli (default, ADR-0008): CLI persona, memoryEnabled remote-tools branch; title stays "Cyril", but Kiro telemetry will attribute this session to kiro-cli — set [agent] present_as = "cyril" to opt out
+2026-10-18T04:54:40.836126Z  INFO connection{name="cyril"}:connection{name="cyril"}: agent_client_protocol_conductor::conductor: spawn_proxies proxy_count=0
+2026-10-18T04:54:40.836154Z  INFO connection{name="cyril"}:connection{name="cyril"}: agent_client_protocol_conductor::conductor: Proxies spawned proxy_count=0
+2026-10-18T04:54:43.990517Z  WARN cyril_core::protocol::kas::hooks: hooks/list toolTags member is not a string; dropped index=1 member=42
+2026-10-18T04:54:44.004581Z  INFO cyril_core::protocol::domain_mediator::inbound: ToolCallUpdate notification id=toolu_bdrk_01VwxKHwkwxid2UkcikeZwUR title=Some("Run Command") kind=None status=Some(Failed) has_raw_input=true

@@ -1,0 +1,4 @@
+{"id": 5, "original": {"trigger": "promptSubmit", "sessionId": "sess_150c9923-b7a9-4d50-a57c-f98b73485497"}}
+{"id": 6, "original": {"trigger": "preToolUse", "sessionId": "sess_150c9923-b7a9-4d50-a57c-f98b73485497", "toolId": "execute_bash", "toolTags": ["shell", 42]}, "rewritten": {"trigger": "preToolUse", "sessionId": "sess_150c9923-b7a9-4d50-a57c-f98b73485497", "toolId": "execute_bash", "toolTags": ["shell", 42]}}
+{"id": 12, "original": {"trigger": "postToolUse", "sessionId": "sess_150c9923-b7a9-4d50-a57c-f98b73485497", "toolId": "execute_bash", "toolTags": ["shell", 42]}, "rewritten": {"trigger": "postToolUse", "sessionId": "sess_150c9923-b7a9-4d50-a57c-f98b73485497", "toolId": "execute_bash", "toolTags": ["shell", 42]}}
+{"id": 13, "original": {"trigger": "agentStop", "sessionId": "sess_150c9923-b7a9-4d50-a57c-f98b73485497"}}
