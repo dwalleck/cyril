@@ -169,7 +169,7 @@ impl HostShell {
         }
     }
 
-    #[cfg(all(test, unix))]
+    #[cfg(test)]
     pub(crate) fn test_fish_at(executable: impl Into<PathBuf>) -> Self {
         Self::new(ShellKind::Fish, executable.into())
     }

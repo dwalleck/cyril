@@ -738,7 +738,6 @@ mod tests {
         registry(HostShell::test_posix_at(executable))
     }
 
-    #[cfg(unix)]
     fn test_fish_registry_at(executable: impl Into<std::path::PathBuf>) -> TerminalRegistry {
         registry(HostShell::test_fish_at(executable))
     }
