@@ -208,11 +208,17 @@ impl HostShell {
     /// The `_kiro/terminal/shell_type` reply: the name of the interpreter
     /// `command` runs, from KAS's accepted vocabulary — never the family name
     /// `posix`, which KAS maps to dialect `unknown` (cyril-k8wc).
+    ///
+    /// PowerShell 7 answers `pwsh`, not `powershell`: both map to KAS's
+    /// `powershell` policy dialect, but KAS also writes the reply verbatim into
+    /// the model's system prompt (`Shell: …`), and `pwsh` tells the model it
+    /// may use PowerShell 7 syntax that Windows PowerShell 5.1 lacks.
     pub(crate) fn wire_name(&self) -> &'static str {
         match self.kind {
             ShellKind::Posix(shell) => shell.name(),
             ShellKind::Fish => "fish",
-            ShellKind::Pwsh | ShellKind::WindowsPowerShell => "powershell",
+            ShellKind::Pwsh => "pwsh",
+            ShellKind::WindowsPowerShell => "powershell",
         }
     }
 
@@ -633,7 +639,7 @@ mod tests {
                 "zsh",
                 "ksh",
                 "fish",
-                "powershell",
+                "pwsh",
                 "powershell"
             ]
         );
@@ -713,7 +719,8 @@ mod tests {
         "fish"
     )]
     #[case::configured_fish(HostPlatform::Unix, None, Some("fish"), "/shells/fish", "fish")]
-    #[case::pwsh(HostPlatform::Windows, None, None, "/shells/pwsh.exe", "powershell")]
+    #[case::pwsh(HostPlatform::Windows, None, None, "/shells/pwsh.exe", "pwsh")]
+    #[case::configured_pwsh(HostPlatform::Windows, None, Some("pwsh"), "/shells/pwsh.exe", "pwsh")]
     #[case::windows_powershell(
         HostPlatform::Windows,
         None,
