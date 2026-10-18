@@ -1,3 +1,4 @@
+pub mod always_allow;
 pub mod commands;
 pub mod error;
 pub mod kiro_agent_config;

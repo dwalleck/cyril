@@ -47,14 +47,84 @@ pub(crate) fn permission_consent(
                 .collect()
         })
         .unwrap_or_default();
-    Some(crate::review::consent::PermissionConsent::new(
-        text(consent, "capability").as_deref(),
-        text(consent, "resource"),
-        text(consent, "workspaceRoot").map(std::path::PathBuf::from),
-        text(kiro, "toolId"),
-        text(kiro, "command"),
-        raw_commands,
-    ))
+    Some(
+        crate::review::consent::PermissionConsent::new(
+            text(consent, "capability").as_deref(),
+            text(consent, "resource"),
+            text(consent, "workspaceRoot").map(std::path::PathBuf::from),
+            text(kiro, "toolId"),
+            text(kiro, "command"),
+            raw_commands,
+        )
+        .with_triggering_resource(text(consent, "triggeringResource"))
+        .with_explicit_ask(text(consent, "askType").as_deref() == Some("explicit")),
+    )
+}
+
+/// Echo an "Always allow" grant as `_meta.kiro.consent{capability, scope,
+/// resource, workspaceRoot}` on the response (cyril-auxt) — the only signal
+/// KAS persists an `allow_always` from: scope `user` lands in
+/// `~/.kiro/settings/permissions.yaml`, `workspace` in the workspace's
+/// `permissions.yaml`, `session` widens the grant for the session. KAS reads
+/// it from the response's top-level `_meta` (KAS 0.66.43 `S8e`).
+///
+/// Mirrors Kiro's TUI echo builder (`cw`, `kiro-tui-2.32.0.js`): `capability`
+/// and `workspaceRoot` are the request's own `consent` values, verbatim, and
+/// are omitted when the request has none. Only the KAS engine and an offered
+/// `allow_always` option get the echo.
+pub(crate) fn attach_consent_echo(
+    response: acp::RequestPermissionResponse,
+    args: &acp::RequestPermissionRequest,
+    engine: AgentEngine,
+    option_id: &PermissionOptionId,
+    grant: &crate::always_allow::AlwaysAllowGrant,
+) -> acp::RequestPermissionResponse {
+    if engine != AgentEngine::Kas {
+        return response;
+    }
+    if !args.options.iter().any(|option| {
+        option.option_id.0.as_ref() == option_id.as_str()
+            && option.kind == acp::PermissionOptionKind::AllowAlways
+    }) {
+        tracing::warn!(
+            %option_id,
+            "always-allow grant names no offered allow_always option; answered without the consent echo"
+        );
+        return response;
+    }
+    let requested = args
+        .meta
+        .as_ref()
+        .and_then(|meta| meta.get("kiro"))
+        .and_then(|kiro| kiro.get("consent"))
+        .and_then(serde_json::Value::as_object);
+    let verbatim = |key: &str| {
+        requested
+            .and_then(|consent| consent.get(key))
+            .and_then(serde_json::Value::as_str)
+            .filter(|value| !value.is_empty())
+            .map(|value| serde_json::Value::String(value.to_owned()))
+    };
+    let mut consent = serde_json::Map::new();
+    if let Some(capability) = verbatim("capability") {
+        consent.insert("capability".to_string(), capability);
+    }
+    consent.insert(
+        "scope".to_string(),
+        serde_json::Value::String(grant.scope().label().to_owned()),
+    );
+    consent.insert(
+        "resource".to_string(),
+        serde_json::Value::String(grant.resource().wire()),
+    );
+    if let Some(root) = verbatim("workspaceRoot") {
+        consent.insert("workspaceRoot".to_string(), root);
+    }
+    let mut kiro = serde_json::Map::new();
+    kiro.insert("consent".to_string(), serde_json::Value::Object(consent));
+    let mut meta = serde_json::Map::new();
+    meta.insert("kiro".to_string(), serde_json::Value::Object(kiro));
+    response.meta(meta)
 }
 
 /// Attach KAS rejection feedback to the response-level metadata bag.
@@ -2235,5 +2305,179 @@ mod tests {
                 .collect();
             assert_eq!(reasons, want, "{rel}: reasons");
         }
+    }
+
+    // --- cyril-auxt: the "Always allow" consent echo -------------------------
+
+    /// One request/reply pair from `permission-consent-echo-2.32.0.json`,
+    /// carved from the 2.32.0 audit's live KAS captures.
+    fn echo_pair(name: &str) -> (acp::RequestPermissionRequest, serde_json::Value) {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("tests/fixtures/kas_permission/permission-consent-echo-2.32.0.json");
+        let raw = std::fs::read_to_string(&path).expect("read fixture");
+        let fixture: serde_json::Value = serde_json::from_str(&raw).expect("fixture is JSON");
+        let pair = &fixture[name];
+        let request = serde_json::from_value(pair["request"].clone()).expect("request parses");
+        (request, pair["reply"].clone())
+    }
+
+    fn request_consent(
+        args: &acp::RequestPermissionRequest,
+    ) -> crate::review::consent::PermissionConsent {
+        let tool_call = crate::protocol::convert::to_tool_call_from_permission(args);
+        permission_consent(args, &tool_call).expect("KAS request carries _meta.kiro")
+    }
+
+    /// The scope page row the operator picks, resolved the way the overlay does.
+    fn pick(
+        args: &acp::RequestPermissionRequest,
+        scope: crate::always_allow::GrantScope,
+        row: impl Fn(&crate::always_allow::ScopeChoice) -> bool,
+        folder: Option<&str>,
+    ) -> crate::types::PermissionResponse {
+        use crate::always_allow::{AlwaysAllowGrant, GrantResource, ScopeChoice, scope_choices};
+        let consent = request_consent(args);
+        let choice = scope_choices(&consent, scope, true)
+            .into_iter()
+            .find(|choice| row(choice))
+            .expect("row offered");
+        let resource = match (&choice, folder) {
+            (ScopeChoice::Folder(offer), Some(typed)) => {
+                GrantResource::Folder(offer.validate(typed).expect("folder accepted"))
+            }
+            _ => choice.resource().expect("row grants directly"),
+        };
+        let options = crate::protocol::convert::to_permission_options(args);
+        crate::always_allow::resolve(
+            &consent,
+            true,
+            &options,
+            PermissionOptionId::new("always-accept"),
+            AlwaysAllowGrant::new(scope, resource),
+        )
+    }
+
+    fn sent(
+        response: crate::types::PermissionResponse,
+        args: &acp::RequestPermissionRequest,
+        engine: AgentEngine,
+    ) -> serde_json::Value {
+        let wire = crate::protocol::convert::from_permission_response(response, args, engine);
+        serde_json::to_value(&wire).expect("response serializes")
+    }
+
+    #[test]
+    fn always_allow_exact_shell_command_echoes_the_captured_reply() {
+        use crate::always_allow::{GrantScope, ScopeChoice};
+        for (name, scope) in [
+            ("shell_user", GrantScope::User),
+            ("shell_workspace", GrantScope::Workspace),
+        ] {
+            let (args, captured) = echo_pair(name);
+            let response = pick(
+                &args,
+                scope,
+                |row| matches!(row, ScopeChoice::Exact(_)),
+                None,
+            );
+            assert_eq!(sent(response, &args, AgentEngine::Kas), captured, "{name}");
+        }
+    }
+
+    #[test]
+    fn always_allow_folder_echoes_the_folder_glob() {
+        use crate::always_allow::{GrantScope, ScopeChoice};
+        let (args, captured) = echo_pair("write_workspace");
+        let response = pick(
+            &args,
+            GrantScope::Workspace,
+            |row| matches!(row, ScopeChoice::Folder(_)),
+            Some("src"),
+        );
+        let json = sent(response, &args, AgentEngine::Kas);
+        let root = &args.meta.as_ref().expect("meta")["kiro"]["consent"]["workspaceRoot"];
+        assert_eq!(json["outcome"], captured["outcome"]);
+        assert_eq!(
+            json["_meta"],
+            json!({"kiro": {"consent": {
+                "capability": "fs_write",
+                "scope": "workspace",
+                "resource": "src/**",
+                "workspaceRoot": root,
+            }}})
+        );
+    }
+
+    #[test]
+    fn always_allow_whole_tool_echoes_a_star_resource() {
+        use crate::always_allow::{GrantScope, ScopeChoice};
+        let (args, _) = echo_pair("shell_user");
+        let response = pick(
+            &args,
+            GrantScope::Session,
+            |row| matches!(row, ScopeChoice::WholeTool),
+            None,
+        );
+        let json = sent(response, &args, AgentEngine::Kas);
+        assert_eq!(json["_meta"]["kiro"]["consent"]["scope"], "session");
+        assert_eq!(json["_meta"]["kiro"]["consent"]["resource"], "*");
+        assert_eq!(json["_meta"]["kiro"]["consent"]["capability"], "shell");
+    }
+
+    #[test]
+    fn consent_echo_needs_kas_and_an_offered_allow_always() {
+        use crate::always_allow::{AlwaysAllowGrant, GrantResource, GrantScope};
+        let (args, _) = echo_pair("shell_user");
+        let grant = AlwaysAllowGrant::new(GrantScope::User, GrantResource::WholeTool);
+        for (label, engine, option) in [
+            ("v2 engine", AgentEngine::V2, "always-accept"),
+            ("allow_once id", AgentEngine::Kas, "accept"),
+            ("reject_always id", AgentEngine::Kas, "always-reject"),
+            ("foreign id", AgentEngine::Kas, "nope"),
+        ] {
+            let json = sent(
+                crate::types::PermissionResponse::AlwaysAllow {
+                    option_id: PermissionOptionId::new(option),
+                    grant: grant.clone(),
+                },
+                &args,
+                engine,
+            );
+            assert_eq!(json["outcome"]["optionId"], option, "{label}");
+            assert!(json.get("_meta").is_none(), "{label}: no echo");
+        }
+    }
+
+    #[test]
+    fn consent_echo_omits_what_the_request_did_not_name() {
+        use crate::always_allow::{AlwaysAllowGrant, GrantResource, GrantScope};
+        let (mut args, _) = echo_pair("shell_user");
+        args.meta = None;
+        let json = sent(
+            crate::types::PermissionResponse::AlwaysAllow {
+                option_id: PermissionOptionId::new("always-accept"),
+                grant: AlwaysAllowGrant::new(GrantScope::Session, GrantResource::WholeTool),
+            },
+            &args,
+            AgentEngine::Kas,
+        );
+        assert_eq!(
+            json["_meta"],
+            json!({"kiro": {"consent": {"scope": "session", "resource": "*"}}})
+        );
+    }
+
+    #[test]
+    fn permission_consent_reads_triggering_resource_and_ask_type() {
+        let (mut args, _) = echo_pair("shell_user");
+        let consent = request_consent(&args);
+        assert_eq!(consent.wire_capability(), Some("shell"));
+        assert_eq!(consent.triggering_resource(), Some("echo AUDITV1"));
+        assert!(!consent.is_explicit_ask());
+
+        if let Some(meta) = args.meta.as_mut() {
+            meta["kiro"]["consent"]["askType"] = json!("explicit");
+        }
+        assert!(request_consent(&args).is_explicit_ask());
     }
 }

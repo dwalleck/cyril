@@ -1,0 +1,28 @@
+        FAIL [   0.004s] ( 1/14) cyril-core protocol::convert::kas::tests::consent_echo_omits_what_the_request_did_not_name
+      left: Null
+     right: Object {"kiro": Object {"consent": Object {"scope": String("session"), "resource": String("*")}}}
+        FAIL [   0.004s] ( 2/14) cyril-core protocol::convert::kas::tests::always_allow_folder_echoes_the_folder_glob
+      left: Null
+     right: Object {"kiro": Object {"consent": Object {"capability": String("fs_write"), "scope": String("workspace"), "resource": String("src/**"), "workspaceRoot": String("/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-fold-workspace-hgwdms_a")}}}
+        PASS [   0.005s] ( 3/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_7_child_workspace_without_root
+        PASS [   0.005s] ( 4/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_5_child_fs_exact
+        PASS [   0.005s] ( 5/14) cyril-core protocol::convert::kas::tests::consent_echo_needs_kas_and_an_offered_allow_always
+        PASS [   0.005s] ( 6/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_8_child_no_allow_once
+        PASS [   0.005s] ( 7/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_6_child_triggering_differs
+        PASS [   0.005s] ( 8/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_1_main_session_fs_exact
+        PASS [   0.005s] ( 9/14) cyril-core protocol::convert::kas::tests::permission_consent_reads_triggering_resource_and_ask_type
+        PASS [   0.005s] (10/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_4_child_shell_pattern
+        PASS [   0.005s] (11/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_2_child_whole_tool
+        PASS [   0.005s] (12/14) cyril-core always_allow::tests::always_allow_resolves_like_the_tui::case_3_child_shell_exact
+        FAIL [   0.005s] (13/14) cyril-core protocol::convert::kas::tests::always_allow_exact_shell_command_echoes_the_captured_reply
+      left: Object {"outcome": Object {"outcome": String("selected"), "optionId": String("always-accept")}}
+     right: Object {"outcome": Object {"outcome": String("selected"), "optionId": String("always-accept")}, "_meta": Object {"kiro": Object {"consent": Object {"capability": String("shell"), "scope": String("user"), "resource": String("echo AUDITV1"), "workspaceRoot": String("/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-she-user-0gd54ivp")}}}}
+        FAIL [   0.005s] (14/14) cyril-core protocol::convert::kas::tests::always_allow_whole_tool_echoes_a_star_resource
+      left: Null
+     right: "session"
+     Summary [   0.007s] 14 tests run: 10 passed, 4 failed, 1263 skipped
+        FAIL [   0.004s] ( 1/14) cyril-core protocol::convert::kas::tests::consent_echo_omits_what_the_request_did_not_name
+        FAIL [   0.004s] ( 2/14) cyril-core protocol::convert::kas::tests::always_allow_folder_echoes_the_folder_glob
+        FAIL [   0.005s] (13/14) cyril-core protocol::convert::kas::tests::always_allow_exact_shell_command_echoes_the_captured_reply
+        FAIL [   0.005s] (14/14) cyril-core protocol::convert::kas::tests::always_allow_whole_tool_echoes_a_star_resource
+revision: 10e38e3c + uncommitted slice-1 tree with attach_consent_echo stubbed (returns the response unchanged)
