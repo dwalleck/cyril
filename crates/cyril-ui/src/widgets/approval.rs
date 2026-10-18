@@ -240,7 +240,7 @@ impl OptionLayout {
 /// A character with no display width (a control character) counts as zero
 /// columns, as ratatui draws nothing for it; that is its width, not a
 /// fallback for an error.
-fn wrap_columns(text: &str, width: usize) -> Vec<String> {
+pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
     let mut rows = Vec::new();
     let mut row = String::new();
     let mut used = 0usize;
@@ -400,6 +400,17 @@ fn push_bounded_text<'a, 's>(
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
 fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
+    // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
+    // tree in place of KAS's Text rendering of the same plan. A plan sent
+    // without its steps (`omitted: "steps"`) leaves the Text, which still
+    // lists them.
+    if let Some(plan) = state
+        .workflow_plan
+        .as_ref()
+        .filter(|plan| !plan.steps.is_empty())
+    {
+        return super::workflow_plan::plan_lines(plan, text_width, theme);
+    }
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
 
@@ -1063,6 +1074,7 @@ mod tests {
             phase,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         }
     }
 
@@ -1077,6 +1089,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         ui
     }
@@ -1675,6 +1688,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         assert!(ui.approval_begin_feedback(), "feedback phase must open");
         ui.approval_feedback_paste("not that file");
@@ -1744,6 +1758,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         assert!(ui.approval_begin_feedback(), "feedback phase must open");
         let terminal = render_ui(&ui, 80, 30, 30);
@@ -1880,6 +1895,7 @@ mod tests {
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         }
     }
 
@@ -2104,6 +2120,198 @@ mod tests {
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
     }
 
+    // ---------- cyril-8wh0: the typed workflow plan in the overlay ----------
+
+    fn node_id(text: &str) -> cyril_core::types::WorkflowNodeId {
+        cyril_core::types::WorkflowNodeId::try_from(text.to_owned()).expect("node id")
+    }
+
+    fn plan_step(
+        id: &str,
+        agent: &str,
+        effort: Option<(&str, cyril_core::types::WorkflowCascadeSource)>,
+        task: Option<(&str, bool)>,
+    ) -> cyril_core::types::WorkflowPlanNode {
+        cyril_core::types::WorkflowPlanNode {
+            node_id: node_id(id),
+            kind: cyril_core::types::WorkflowPlanNodeKind::Step(
+                cyril_core::types::WorkflowPlanStep {
+                    agent_name: agent.to_owned(),
+                    model_id: None,
+                    model_source: None,
+                    effort_level: effort.map(|(level, _)| level.to_owned()),
+                    effort_source: effort.map(|(_, source)| source),
+                    task: task.map(|(text, truncated)| cyril_core::types::WorkflowPlanTask {
+                        text: text.to_owned(),
+                        truncated,
+                    }),
+                    artifacts: Vec::new(),
+                    completion: None,
+                },
+            ),
+        }
+    }
+
+    /// The plan of the live 2.32.0 approval (`kas-lead-wfplan` frame 93), as
+    /// cyril-core's converter types it (pinned there by
+    /// `live_launch_plan_converts`).
+    fn live_plan() -> cyril_core::types::WorkflowPlan {
+        cyril_core::types::WorkflowPlan {
+            workflow_id: cyril_core::types::WorkflowId::try_from("wf_6b22f0c99f407f0e".to_owned())
+                .expect("workflow id"),
+            proposed_by: Some(node_id("create-workflow")),
+            kind: cyril_core::types::WorkflowPlanKind::Launch,
+            workflow_ref: "generated://gen_09d8668976ecd154".to_owned(),
+            kept_step_ids: vec![node_id("create-workflow")],
+            steps: vec![plan_step(
+                "write-hello",
+                "wf-coder",
+                Some(("low", cyril_core::types::WorkflowCascadeSource::Step)),
+                Some((
+                    "Create a file named hello.txt at the absolute path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con",
+                    true,
+                )),
+            )],
+            omitted: None,
+        }
+    }
+
+    fn plan_approval(plan: cyril_core::types::WorkflowPlan) -> ApprovalState {
+        let mut state = approval_for_tool_call(plan_text_tool_call(LIVE_PLAN_TEXT));
+        state.message = "Add 1 workflow step to wf_6b22f0c99f407f0e".into();
+        state.workflow_plan = Some(plan);
+        state
+    }
+
+    /// REGRESSION FENCE (cyril-8wh0): an `update_workflow` approval shows the
+    /// typed plan's step list — header, kept steps, each step with its agent,
+    /// model and effort, and its task — in place of KAS's text rendering.
+    #[test]
+    fn workflow_plan_renders_its_step_list() {
+        let terminal = render_at(&plan_approval(live_plan()), 80, 24, 24);
+        let screen = screen_rows(&terminal).join("\n");
+        for expected in [
+            "New workflow · 1 step after 'create-workflow'",
+            "Keeps: create-workflow",
+            "write-hello: wf-coder · model auto · effort low",
+            "Task: Create a file named hello.txt",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+        assert!(
+            !screen.contains("Steps to add after"),
+            "the typed plan replaces KAS's text rendering:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        insta::assert_snapshot!("8wh0_workflow_plan_80x24", screen);
+    }
+
+    /// A plan KAS had to send without its steps (`omitted: "steps"`) falls
+    /// back to the request's Text content, which still lists them.
+    #[test]
+    fn plan_without_steps_falls_back_to_the_text() {
+        let mut plan = live_plan();
+        plan.steps.clear();
+        plan.kept_step_ids.clear();
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Steps);
+        let terminal = render_at(&plan_approval(plan), 80, 24, 24);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            screen.contains("Steps to add after 'create-workflow':"),
+            "the text rendering must show:\n{screen}"
+        );
+        assert!(
+            !screen.contains("New workflow ·"),
+            "no empty plan header:\n{screen}"
+        );
+    }
+
+    /// The step tree: nested nodes are indented under their parent, inherited
+    /// settings name their source, repeats and parallels carry their rules,
+    /// and a plan longer than the cap ends in an omission marker.
+    #[test]
+    fn workflow_plan_renders_nested_nodes() {
+        use cyril_core::types::{
+            WorkflowCascadeSource, WorkflowJoinPolicy, WorkflowPlanNode, WorkflowPlanNodeKind,
+            WorkflowRepeatExhaustion, WorkflowRepeatStop,
+        };
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        plan.steps = vec![
+            plan_step(
+                "build",
+                "wf-coder",
+                Some(("high", WorkflowCascadeSource::Workflow)),
+                Some(("Implement the parser", false)),
+            ),
+            WorkflowPlanNode {
+                node_id: node_id("review-loop"),
+                kind: WorkflowPlanNodeKind::Repeat {
+                    steps: vec![plan_step("review", "wf-reviewer", None, None)],
+                    max_iterations: 3,
+                    on_max_iterations: WorkflowRepeatExhaustion::Pause,
+                    stop: Some(WorkflowRepeatStop::When("the review passes".to_owned())),
+                },
+            },
+            WorkflowPlanNode {
+                node_id: node_id("fanout"),
+                kind: WorkflowPlanNodeKind::Parallel {
+                    branches: vec![
+                        plan_step("docs", "wf-writer", None, None),
+                        WorkflowPlanNode {
+                            node_id: node_id("watch-ci"),
+                            kind: WorkflowPlanNodeKind::Watch {
+                                handler: "wf-ci-watcher".to_owned(),
+                                idle_timeout_sec: Some(90.0),
+                                config: None,
+                            },
+                        },
+                    ],
+                    join_policy: Some(WorkflowJoinPolicy::AllSettled),
+                },
+            },
+        ];
+        let terminal = render_at(&plan_approval(plan), 90, 40, 40);
+        let screen = screen_rows(&terminal).join("\n");
+        for expected in [
+            "Edited workflow · 3 steps after 'create-workflow'",
+            "build: wf-coder · model auto · effort high (workflow)",
+            "  Task: Implement the parser",
+            "review-loop: repeat · max 3 iterations, then pause ·",
+            "  stops when the review passes",
+            "  review: wf-reviewer · model auto · effort auto",
+            "fanout: parallel · join allSettled",
+            "  docs: wf-writer",
+            "  watch-ci: watch · handler wf-ci-watcher · ends after",
+            "    90s idle",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+        insta::assert_snapshot!("8wh0_workflow_plan_nested_90x40", screen);
+    }
+
+    /// A plan longer than the row cap shows the cap and how many rows it
+    /// left out, and the options stay on screen.
+    #[test]
+    fn workflow_plan_is_bounded() {
+        let mut plan = live_plan();
+        plan.steps = (1..=20)
+            .map(|n| plan_step(&format!("step-{n:02}"), "wf-coder", None, None))
+            .collect();
+        let terminal = render_at(&plan_approval(plan), 90, 50, 50);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(screen.contains("step-10:"), "rows up to the cap:\n{screen}");
+        assert!(!screen.contains("step-11:"), "rows past the cap:\n{screen}");
+        assert!(
+            screen.contains(&format!(
+                "...{} more lines",
+                22 - crate::widgets::workflow_plan::MAX_PLAN_ROWS
+            )),
+            "omission marker:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+    }
+
     // ---------- cyril-q0kg: malformed-preview warning is not per-frame ----------
 
     const MALFORMED_PREVIEW_WARNING: &str =
@@ -2143,6 +2351,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         ui
     }

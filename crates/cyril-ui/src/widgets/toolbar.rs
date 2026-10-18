@@ -864,6 +864,7 @@ mod tests {
             phase: crate::traits::ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         }
     }
 

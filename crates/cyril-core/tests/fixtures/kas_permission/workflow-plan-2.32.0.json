@@ -1,0 +1,254 @@
+{
+  "_provenance": {
+    "issue": "cyril-8wh0",
+    "engine": "KAS 0.66.43 (kiro-cli 2.32.0)",
+    "launch_live": "session/request_permission params, experiments/conductor-spike/kas-workflow-plan-2.32.0.jsonl frame 2 (= audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl frame 93), paths already scrubbed to <LIVE_TMP>",
+    "replace_live": "session/request_permission params, audit-2.32.0/live/kas-clientcreator-2.32.0.jsonl frame 67 (client-launched creator, kind replace), workspace path scrubbed to <LIVE_TMP>",
+    "full_shape_synthetic": "SYNTHETIC: every node type and optional field the 0.66.43 bundle can emit (P0o/M0o/Ydu/nxe/wHr in node_modules/@kiro/agent/dist/server/acp-server.js); the live captures only exercise single steps"
+  },
+  "launch_live": {
+    "sessionId": "sess_39b38845-0255-474a-83d7-d8723160f149",
+    "toolCall": {
+      "toolCallId": "toolu_bdrk_01QLZqv14pnXT2nFjjkTakjL",
+      "status": "pending",
+      "title": "Add 1 workflow step to wf_6b22f0c99f407f0e",
+      "content": [
+        {
+          "type": "content",
+          "content": {
+            "type": "text",
+            "text": "Steps to add after 'create-workflow':\n\nwrite-hello: step, agent wf-coder, model auto, effort low\n  Task: Create a file named hello.txt at the absolute path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con..."
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "optionId": "accept",
+        "name": "Allow",
+        "kind": "allow_once"
+      },
+      {
+        "optionId": "always-accept",
+        "name": "Always allow",
+        "kind": "allow_always"
+      },
+      {
+        "optionId": "reject",
+        "name": "Deny",
+        "kind": "reject_once"
+      },
+      {
+        "optionId": "always-reject",
+        "name": "Always deny",
+        "kind": "reject_always"
+      }
+    ],
+    "_meta": {
+      "kiro": {
+        "toolId": "update_workflow",
+        "workflowPlan": {
+          "workflowId": "wf_6b22f0c99f407f0e",
+          "nodeId": "create-workflow",
+          "kind": "launch",
+          "workflowRef": "generated://gen_09d8668976ecd154",
+          "keptStepIds": [
+            "create-workflow"
+          ],
+          "steps": [
+            {
+              "nodeId": "write-hello",
+              "type": "step",
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "effortSource": "step",
+              "task": {
+                "text": "Create a file named hello.txt at the absolute path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con",
+                "truncated": true
+              }
+            }
+          ]
+        },
+        "consent": {
+          "capability": "workflow",
+          "resource": "replace_remaining",
+          "askType": "implicit",
+          "workspaceRoot": "<LIVE_TMP>/ws-wfplan-nnzrhi04"
+        },
+        "consentRound": 1
+      }
+    }
+  },
+  "replace_live": {
+    "sessionId": "sess_bdb22b32-7137-42c1-b3ab-f5a90be1dd47",
+    "toolCall": {
+      "toolCallId": "toolu_bdrk_01EEDDmSgnxaMb7eS4Ab8DLG",
+      "status": "pending",
+      "title": "Add 1 workflow step to wf_15c06a1a1eefd71a",
+      "content": [
+        {
+          "type": "content",
+          "content": {
+            "type": "text",
+            "text": "Steps to add after 'run':\n\nwrite-hello: step, agent wf-coder, model auto, effort low\n  Task: Create the file <LIVE_TMP>/ws-ccA-7p3gbx86/hello..."
+          }
+        }
+      ]
+    },
+    "options": [
+      {
+        "optionId": "accept",
+        "name": "Allow",
+        "kind": "allow_once"
+      },
+      {
+        "optionId": "always-accept",
+        "name": "Always allow",
+        "kind": "allow_always"
+      },
+      {
+        "optionId": "reject",
+        "name": "Deny",
+        "kind": "reject_once"
+      },
+      {
+        "optionId": "always-reject",
+        "name": "Always deny",
+        "kind": "reject_always"
+      }
+    ],
+    "_meta": {
+      "kiro": {
+        "toolId": "update_workflow",
+        "workflowPlan": {
+          "workflowId": "wf_15c06a1a1eefd71a",
+          "nodeId": "run",
+          "kind": "replace",
+          "workflowRef": "generated://gen_1d86b6b5d625f74f",
+          "keptStepIds": [
+            "run"
+          ],
+          "steps": [
+            {
+              "nodeId": "write-hello",
+              "type": "step",
+              "agentName": "wf-coder",
+              "effortLevel": "low",
+              "effortSource": "step",
+              "task": {
+                "text": "Create the file <LIVE_TMP>/ws-ccA-7p3gbx86/hello",
+                "truncated": true
+              }
+            }
+          ]
+        },
+        "consent": {
+          "capability": "workflow",
+          "resource": "replace_remaining",
+          "askType": "implicit",
+          "workspaceRoot": "<LIVE_TMP>/ws-ccA-7p3gbx86"
+        },
+        "consentRound": 1
+      }
+    }
+  },
+  "full_shape_synthetic": {
+    "workflowId": "wf_synthetic",
+    "nodeId": "edit-workflow-r1",
+    "kind": "edit",
+    "workflowRef": "generated://gen_synthetic",
+    "keptStepIds": [
+      "plan",
+      "edit-workflow-r1"
+    ],
+    "steps": [
+      {
+        "nodeId": "build",
+        "type": "step",
+        "agentName": "wf-coder",
+        "modelId": "claude-sonnet-4.5",
+        "effortLevel": "high",
+        "modelSource": "workflow",
+        "effortSource": "parent",
+        "task": {
+          "text": "Implement the parser",
+          "truncated": false
+        },
+        "artifacts": {
+          "report": "out/report.md"
+        },
+        "completion": {
+          "completionSignal": "success"
+        }
+      },
+      {
+        "nodeId": "review-loop",
+        "type": "repeat",
+        "steps": [
+          {
+            "nodeId": "review",
+            "type": "step",
+            "agentName": "wf-reviewer",
+            "effortSource": "step",
+            "effortLevel": "low"
+          }
+        ],
+        "maxIterations": 3,
+        "onMaxIterations": "pause",
+        "stopCondition": {
+          "containsText": "LGTM",
+          "fileCheck": {
+            "path": "out/status.json",
+            "jsonPath": "$.ok",
+            "value": true
+          }
+        }
+      },
+      {
+        "nodeId": "fanout",
+        "type": "parallel",
+        "joinPolicy": "allSettled",
+        "branches": [
+          {
+            "nodeId": "docs",
+            "type": "sequence",
+            "includedFrom": {
+              "name": "docs-recipe",
+              "path": ".kiro/workflows/docs.workflow.json"
+            },
+            "steps": [
+              {
+                "nodeId": "write-docs",
+                "type": "step",
+                "agentName": "wf-writer"
+              }
+            ]
+          },
+          {
+            "nodeId": "watch-ci",
+            "type": "watch",
+            "agentName": "wf-ci-watcher",
+            "idleTimeoutSec": 90,
+            "config": {
+              "branch": "main"
+            }
+          }
+        ]
+      },
+      {
+        "nodeId": "polish",
+        "type": "repeat",
+        "steps": [
+          {
+            "nodeId": "tidy",
+            "type": "step",
+            "agentName": "wf-coder"
+          }
+        ],
+        "maxIterations": 1,
+        "onMaxIterations": "continue",
+        "stopWhen": "the code is tidy"
+      }
+    ]
+  }
+}

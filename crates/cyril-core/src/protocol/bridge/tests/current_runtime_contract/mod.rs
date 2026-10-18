@@ -59,6 +59,9 @@ mod review;
 mod routing;
 mod saturation;
 mod stall;
+// cyril-8wh0: a KAS workflow plan approval carries its typed plan to the App.
+#[cfg(feature = "kas")]
+mod workflow_plan;
 // Deliberately ungated (cyril-k3lz review finding 9): SetThinking has no
 // `kas`-specific dispatch arm, and release builds ship `--all-features`, so
 // the toggle's wire and ack contract must hold in `kas` builds too.

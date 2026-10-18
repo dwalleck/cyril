@@ -87,6 +87,7 @@ fn request(
         can_reject_with_reason: true,
         responder: tx,
         consent,
+        workflow_plan: None,
     };
     (request, rx)
 }

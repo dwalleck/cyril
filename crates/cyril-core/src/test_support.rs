@@ -391,6 +391,7 @@ pub fn kas_trace_replay(trace: &str, main: &str) -> Vec<ReplayFrame> {
                 can_reject_with_reason: true,
                 responder,
                 consent: None,
+                workflow_plan: None,
             }));
             continue;
         }

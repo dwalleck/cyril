@@ -1,0 +1,22 @@
+---
+source: crates/cyril-ui/src/widgets/approval.rs
+expression: screen
+---
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+          ┌ Permission Required ─────────────────────────────────────┐          
+          │Add 1 workflow step to wf_6b22f0c99f407f0e                │          
+          │                                                          │          
+          │    New workflow · 1 step after 'create-workflow'         │          
+          │    Keeps: create-workflow                                │          
+          │    write-hello: wf-coder · model auto · effort low       │          
+          │      Task: Create a file named hello.txt at the absolute │          
+          │        path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con… │          
+          │                                                          │          
+          │▸ Allow                                                   │          
+          │  Deny                                                    │          
+          │                                                          │          
+          └──────────────────────────────────────────────────────────┘

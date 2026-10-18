@@ -4532,6 +4532,7 @@ mod tests {
                 can_reject_with_reason: false,
                 responder,
                 consent: None,
+                workflow_plan: None,
             },
             receiver,
         )
@@ -4565,6 +4566,7 @@ mod tests {
                 can_reject_with_reason: true,
                 responder,
                 consent: None,
+                workflow_plan: None,
             },
             receiver,
         )
@@ -4821,6 +4823,7 @@ mod tests {
                     None,
                     Vec::new(),
                 )),
+                workflow_plan: None,
             },
             receiver,
         )

@@ -651,6 +651,9 @@ pub struct ApprovalState {
     /// The request's KAS consent (`_meta.kiro`), when the agent sent one.
     /// Its presence routes an AllowAlways pick to the scope page.
     pub consent: Option<cyril_core::review::consent::PermissionConsent>,
+    /// The workflow plan a KAS `update_workflow` request asks the user to
+    /// approve (cyril-8wh0); the overlay renders its step tree.
+    pub workflow_plan: Option<cyril_core::types::WorkflowPlan>,
 }
 
 impl ApprovalState {

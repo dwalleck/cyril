@@ -728,6 +728,7 @@ mod tests {
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         };
         let hooks = HooksPanelState {
             hooks: vec![cyril_core::types::HookInfo::v2("t", "c", Some("m".into()))],
@@ -822,6 +823,7 @@ mod tests {
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         };
         let mut state = MockTuiState {
             session_label: Some("humanized peer label".into()),
@@ -896,6 +898,7 @@ mod tests {
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         };
         let powers = PowersPanelState {
             powers: (0..5)
