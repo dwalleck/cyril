@@ -1,0 +1,5 @@
+rules:
+  - capability: shell
+    effect: allow
+    match:
+      - echo AUXTV1

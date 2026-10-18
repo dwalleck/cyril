@@ -42,6 +42,15 @@ impl RejectionFeedback {
         }
     }
 
+    /// An editor holding `text`, cursor at its end. The approval overlay's
+    /// "Always allow" folder editor starts from the offered folder this way
+    /// (cyril-auxt).
+    pub(crate) fn with_text(text: &str) -> Self {
+        let mut editor = Self::new();
+        editor.insert_text(text);
+        editor
+    }
+
     /// The exact untrimmed draft currently shown to the operator.
     pub fn text(&self) -> &str {
         &self.text

@@ -1,0 +1,26 @@
+⠧ sess_07304370-190e-421b-9e99-b858ec071eab · vibe · auto · 3s
+Connecting to agent...
+Session created: sess_07304370-190e-421b-9e99-b858ec071eab
+You:
+  Run the shell command: echo AUXTV1 -- exactly once, then reply with the word FINISHED.
+⏳ Run(echo AUXTV1)
+⠧ Running... 3s
+                        ┌ Always Allow — Choose Scope ─────────────────────────────────────────┐
+                        │shell → echo AUXTV1                                                   │
+                        │                                                                      │
+                        │Scope:  [session]   workspace    user                                 │
+                        │                                                                      │
+                        │▸ Trust "echo AUXTV1"                                                 │
+                        │    exact match · session                                             │
+                        │  Trust "echo *"                                                      │
+                        │    pattern · session                                                 │
+                        │  Trust entire tool (run_command)                                     │
+                        │    session                                                           │
+                        │↑↓ navigate · Enter select · s cycle scope · Esc back                 │
+                        └──────────────────────────────────────────────────────────────────────┘
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                     │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 2%  Responses 0%

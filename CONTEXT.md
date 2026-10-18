@@ -68,6 +68,10 @@ _Avoid_: workflow (unqualified), job, pipeline, execution attempt
 One execution attempt within a workflow run, from `run_start` through a `run_complete` whose status is terminal (`completed`/`failed`/`aborted`); a `run_complete` with status `paused` is non-terminal and the run stays resumable. Kiro retry starts a fresh incarnation under the existing workflow id; Cyril's canonical current state retains only the latest incarnation.
 _Avoid_: workflow run, retry run, attempt (unqualified)
 
+**Workflow gate**:
+The per-session switch that decides whether the agent itself may launch, change and answer workflow runs. It does not limit the client: a client can list, launch and control runs with the gate off. Under KAS it follows the user's Kiro setting (ADR-0013).
+_Avoid_: workflows flag, workflows enabled (that is the wire key, not the concept), workflow mode
+
 **Workflow step**:
 A node of a run that executes as a peer session rather than as delegated work under a parent.
 _Avoid_: subagent, stage, pipeline stage (that is the DAG-tool-call model)

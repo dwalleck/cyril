@@ -1,0 +1,30 @@
+Slice 2 red (C6/C7): pre-fix behaviour reproduced on the slice-2 working tree (base 17fb84de) by
+disabling the scope-page transition — guard `if approval.consent.is_some() && false` in
+UiState::approval_confirm — so "Always allow" answers immediately, as on main. The guard was
+restored by editing it back (no checkout), then the suite re-ran green (see gate.txt).
+
+Command: env -u CARGO_TARGET_DIR cargo nextest run -p cyril-ui -E 'test(/always_allow_tests/)' --no-fail-fast
+
+        FAIL ( 1/12) cyril-ui always_allow_tests::folder_row_edits_and_grants_a_folder_glob
+        FAIL ( 2/12) cyril-ui always_allow_tests::exact_row_at_user_scope_answers_with_the_grant
+        FAIL ( 3/12) cyril-ui always_allow_tests::scope_page_renders_the_tui_rows
+        PASS ( 4/12) cyril-ui always_allow_tests::without_kas_consent_always_allow_answers_directly
+        FAIL ( 5/12) cyril-ui always_allow_tests::scope_cycle_keeps_the_highlighted_row_and_wraps
+        FAIL ( 6/12) cyril-ui always_allow_tests::allow_always_on_a_kas_request_opens_the_scope_page
+        PASS ( 7/12) cyril-ui always_allow_tests::v2_trust_tiers_keep_their_own_page
+        FAIL ( 8/12) cyril-ui always_allow_tests::esc_on_the_scope_page_returns_to_the_options
+        PASS ( 9/12) cyril-ui always_allow_tests::tiny_viewport_does_not_panic
+        FAIL (10/12) cyril-ui always_allow_tests::folder_page_renders_the_live_validation
+        FAIL (11/12) cyril-ui always_allow_tests::another_sessions_file_grant_is_answered_once
+        FAIL (12/12) cyril-ui always_allow_tests::invalid_folder_keeps_the_editor_and_esc_returns_to_the_rows
+     Summary 12 tests run: 3 passed, 9 failed
+
+The three passes are the unchanged-behaviour controls (no KAS consent, V2 trust tiers, render robustness).
+
+C8 fence sensitivity: domain mediator mutated to forward V2 trustOptions on KAS (Kas arm returned the extracted tiers instead of Vec::new()); restored by edit afterwards. Base 17fb84de + slice-2 tree.
+        PASS [   0.006s] (1/2) cyril-core protocol::bridge::tests::current_runtime_contract::always_allow::v2_request_keeps_its_trust_tiers
+        FAIL [   0.007s] (2/2) cyril-core protocol::bridge::tests::current_runtime_contract::always_allow::kas_always_allow_leaves_as_the_consent_echo_without_v2_tiers
+    thread 'protocol::bridge::tests::current_runtime_contract::always_allow::kas_always_allow_leaves_as_the_consent_echo_without_v2_tiers' (1252416) panicked at crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/always_allow.rs:94:13:
+    KAS must not offer V2 trust tiers (agent-JSON write path)
+     Summary [   0.009s] 2 tests run: 1 passed, 1 failed, 1277 skipped
+        FAIL [   0.007s] (2/2) cyril-core protocol::bridge::tests::current_runtime_contract::always_allow::kas_always_allow_leaves_as_the_consent_echo_without_v2_tiers

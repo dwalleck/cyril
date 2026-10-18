@@ -1,0 +1,5 @@
+rules:
+  - capability: fs_write
+    effect: allow
+    match:
+      - src/**

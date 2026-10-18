@@ -1,3 +1,5 @@
+#[cfg(test)]
+mod always_allow_tests;
 pub mod cache;
 #[cfg(test)]
 mod chrome_theme_tests;

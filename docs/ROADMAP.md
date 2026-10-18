@@ -407,18 +407,22 @@ routing, a run state machine, a queued-and-attributed approval path and run-life
 modelling are all reused if cyril ever drives its own DAGs. Filing them under a KAS
 milestone is how peer sessions got confused with subagents in the first place.
 
-Scoped by the 2026-08-08 grilling. Decisions: [ADR-0011](adr/0011-ungated-client-driven-workflow-control-plane.md)
-(ungated, client-owned control plane); vocabulary in `CONTEXT.md` § Workflows;
-wire reference [`docs/kiro-2.16.0-wire-audit.md`](kiro-2.16.0-wire-audit.md).
+Scoped by the 2026-08-08 grilling and re-decided in the 2026-10-18 grilling. Decisions:
+[ADR-0013](adr/0013-workflows-follow-the-users-kiro-setting.md) (the workflow gate follows the
+user's Kiro setting; cyril keeps its own control plane beside the model's launch path), which
+supersedes [ADR-0011](adr/0011-ungated-client-driven-workflow-control-plane.md) (gate off
+everywhere). Vocabulary in `CONTEXT.md` § Workflows; wire references
+[`docs/kiro-2.16.0-wire-audit.md`](kiro-2.16.0-wire-audit.md) and
+[`docs/kiro-2.32.0-wire-audit.md`](kiro-2.32.0-wire-audit.md).
 
 ### W1 — Drive Kiro's workflow engine
 
 **Depends on:** KAS-2a (shipped). **Not** blocked on KAS-3 — workflow steps are peer
 sessions and deliberately do not ride `SubagentTracker`.
 
-- **No gate.** Cyril never sets `workflows.enabled`; `_kiro/workflow/*` routes without it
-  (live-verified through `invoke`, ADR-0011). The five agent-facing workflow tools are
-  never registered, so the model cannot launch a run.
+- **No gate** (as shipped; superseded by ADR-0013 — see W4). Cyril never sets
+  `workflows.enabled`; `_kiro/workflow/*` routes without it (live-verified through `invoke`).
+  What survives: every cyril-launched run works whatever the gate.
 - **Event modelling** — the 9 lifecycle events as a pure `cyril-core` state machine, keyed
   on `(workflowId, nodePath)`. The six consumer hazards are the spec. Three live captures
   are committed, so this is offline, zero-credit TDD. **cyril-6beh**.
@@ -430,13 +434,14 @@ sessions and deliberately do not ride `SubagentTracker`.
   flush-on-subscribe buffer means a late attach still receives the run's opening. No startup
   probe in v1.
 - **Native control plane** — cyril's own `/workflow run|list|status|cancel|resume|attach`.
-  Kiro's four advertised commands are suppressed from autocomplete rather than proxied.
+  Kiro's four advertised commands are suppressed from autocomplete rather than proxied
+  (revisited under W4, cyril-sm36, once the gate can be on).
 - **Approvals queue + attribution** — parallel branches raise concurrent permission requests;
   today the single `approval` slot silently discards one and carries no session id. In scope,
   because `parallel` is one of only three node types the bundled recipes use.
 
-**Non-goals:** model-launched runs (that means flipping the gate — a separate, deliberate
-decision); proxying Kiro's four slash commands; cyril executing DAGs itself (that is W2).
+**Non-goals (as scoped):** model-launched runs — since decided by ADR-0013 and delivered by
+W4; proxying Kiro's four slash commands; cyril executing DAGs itself (that is W2).
 
 ### W3 — `/review`: scoped code review on Kiro's workflow engine
 
@@ -458,10 +463,38 @@ decision); proxying Kiro's four slash commands; cyril executing DAGs itself (tha
 **Non-goals:** a vendor-neutral review engine; an in-TUI findings view or follow-up actions;
 targets not checked out at HEAD. Still fog: PR mode, effort presets.
 
+### W4 — Workflows follow the user's Kiro setting (ADR-0013)
+
+**Depends on:** W1. **Epic:** cyril-xehm. Kiro made workflows generally available behind the
+user setting `chat.enableWorkflows` (default off), and with it on, KAS delegates complex work
+through `run_workflow` instead of `invoke_sub_agent`. cyril follows that setting rather than
+withholding the path.
+
+- **Plan rendering first** — KAS's plan approval (`session/request_permission` with
+  `_meta.kiro.workflowPlan`) is the human checkpoint for prompt-created workflows; today it
+  renders as "Preview unavailable". Prerequisite of the next two items. **cyril-8wh0**.
+- **Honour the setting** — marshal `settings.workflows` and `settings.goal` from
+  `chat.enableWorkflows` exactly as Kiro's TUI does; read at startup, no cyril toggle; replace
+  the ADR-0011 never-marshal test; live gate-on parity probe. **cyril-sm36**.
+- **`/workflow new <prompt>`** — always a client-launched creator (inline copy of Kiro's
+  `workflow-from-prompt`, plan `kind:"launch"`, reject-with-feedback), whatever the setting;
+  live plan-reject probe before shipping. **cyril-0asq**.
+- **Step questions** — shown with run and step, answered inline (`session/prompt` to the step
+  session); a parent model's answer to a step is rendered as such. **cyril-9104**.
+- **Cost visibility** — credits on every agent-initiated turn and a per-run total on the
+  completion line. **cyril-2lh8**. Wake labels for repeat-cap pauses: **cyril-6lql**.
+- **`/goal`** — over the bundled `goal` recipe, shown when workflows are on. **cyril-ct2q**.
+
+**Non-goals:** a cyril-side confirmation of model launches (a cyril-hosted PreToolUse hook can
+block `run_workflow`; recorded in ADR-0013 as the known route, not adopted); a separate gate-off
+parent session for cyril-launched runs; a cyril toggle for Kiro's setting.
+
 ### W2 — Cross-vendor orchestration (unscheduled)
 
-The surviving, non-subsumed half of ADR-0003's workflow justification: stage 1 on Kiro,
-stage 2 on Claude. Kiro's engine orchestrates only Kiro sessions, and `_message/send` does
+**Cross-vendor only** (restated 2026-10-18, ADR-0013 grilling): for Kiro-only runs cyril drives
+Kiro's engine, which now covers planning, plan approval, live edits, goal loops and Powers/MCP in
+steps. W2 exists for what that engine cannot do. The surviving, non-subsumed half of ADR-0003's
+workflow justification: stage 1 on Kiro, stage 2 on Claude. Kiro's engine orchestrates only Kiro sessions, and `_message/send` does
 not cross vendors, so cyril must own scheduling and relaying — the session-level engine
 described in `project_cyril_session_level_workflows` (`SpawnSession`/`PromptSession`/`AwaitAll`
 in pure Rust). Blocked on Phases 3/4; W1's substrate is the down payment.
