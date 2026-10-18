@@ -1745,10 +1745,24 @@ impl UiState {
     }
 
     /// Queue an approval dialog from a permission request.
+    ///
+    /// A malformed preview payload is logged here, once per request, rather
+    /// than by the renderer — which redraws the overlay every frame and once
+    /// wrote ~14k identical warnings per approval (cyril-q0kg). The approval's
+    /// tool call is not mutated after install, so the classification cannot
+    /// change while the overlay is open.
     pub fn show_approval(&mut self, request: PermissionRequest) {
+        let tool_call = TrackedToolCall::new(request.tool_call);
+        if let PreviewBody::Malformed { raw_input_shape } = tool_call.preview_body() {
+            tracing::warn!(
+                tool_call_id = %tool_call.id(),
+                raw_input_shape,
+                "approval preview raw_input has no string text/content field"
+            );
+        }
         self.approvals.push_back(ApprovalState {
             session_id: request.session_id,
-            tool_call: TrackedToolCall::new(request.tool_call),
+            tool_call,
             message: request.message,
             options: request.options,
             trust_options: request.trust_options,
