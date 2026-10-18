@@ -1,5 +1,5 @@
-# Windows VM resourcefs-win11 (MSVC), source = git archive of 30ff7912, script zbu7-win-test.ps1
-믯⎿搠瑡㩥㈠㈰ⴶ〱ㄭ吸㐱㔺㨴㐲㐮㈸㈳㔹൚爊獵捴ㄠ㤮⸴‰㐨㑡晥㤴攳㈠㈰ⴶ㌰〭⤲਍cargo.exe :    Compiling proc-macro2 v1.0.106
+# Windows VM resourcefs-win11 (MSVC), source = git archive of 5f03e0f5, script zbu7-win-test.ps1
+믯⎿搠瑡㩥㈠㈰ⴶ〱ㄭ吸㔱㈺㨷㘵㐮㄰㐰㈲൚爊獵捴ㄠ㤮⸴‰㐨㑡晥㤴攳㈠㈰ⴶ㌰〭⤲਍cargo.exe :    Compiling proc-macro2 v1.0.106
 At C:\Users\resourcefs\zbu7-win-test.ps1:11 char:3
 +   & cargo @cargoArgs *>> $log
 # lane results:
@@ -9,7 +9,6 @@ win-clippy-core-no-default-FAIL (101)
 # note: the clippy FAILs are pre-existing Windows-only warnings in files this change does
 # not touch (host_shell.rs, host_io.rs, terminal_io.rs, sdk_runtime/*); CI runs clippy on ubuntu only.
 # error/warning locations:
-   --> crates\cyril-core\src\protocol\domain_mediator\host.rs:353:9
    --> crates\cyril-core\src\protocol\kas\host_io.rs:155:9
    --> crates\cyril-core\src\protocol\kas\host_shell.rs:126:19
    --> crates\cyril-core\src\protocol\kas\host_shell.rs:491:70
@@ -47,17 +46,24 @@ test protocol::kas::auth::tests::failure_shapes_map_to_typed_errors::case_13_num
 test protocol::kas::auth::tests::failure_shapes_map_to_typed_errors::case_14_object_provider ... ok
 test protocol::kas::auth::tests::failure_shapes_map_to_typed_errors::case_15_error_without_message ... ok
 test protocol::kas::auth::tests::fetch_reports_spawn_failure_and_unbound ... ok
+test protocol::kas::auth::tests::fetch_runs_the_helper_with_force_refresh_and_relays_data ... ok
 test protocol::kas::auth::tests::force_refresh_only_on_explicit_true::case_1_kas_066_empty_params ... ok
 test protocol::kas::auth::tests::force_refresh_only_on_explicit_true::case_2_explicit_true ... ok
 test protocol::kas::auth::tests::force_refresh_only_on_explicit_true::case_3_explicit_false ... ok
 test protocol::kas::auth::tests::force_refresh_only_on_explicit_true::case_4_null ... ok
 test protocol::kas::auth::tests::force_refresh_only_on_explicit_true::case_5_string_true ... ok
 test protocol::kas::auth::tests::force_refresh_only_on_explicit_true::case_6_params_null ... ok
+test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_1_home_local_bin ... ok
+test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_2_usr_local_bin ... ok
+test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_3_homebrew ... ok
+test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_4_nowhere ... ok
+test protocol::kas::auth::tests::free_kiro_cli_prefers_path_in_order_and_skips_relative_entries ... ok
+test protocol::kas::auth::tests::free_kiro_cli_skips_path_entries_inside_the_cwd ... ok
+test protocol::kas::auth::tests::free_kiro_cli_without_path_or_home_is_the_bare_name ... ok
 test protocol::kas::auth::tests::invocation_appends_force_refresh_iff_requested::case_1_plain ... ok
 test protocol::kas::auth::tests::invocation_appends_force_refresh_iff_requested::case_2_plain_forced ... ok
 test protocol::kas::auth::tests::invocation_appends_force_refresh_iff_requested::case_3_wsl_forced ... ok
 test protocol::kas::auth::tests::kas_token_debug_is_redacted ... ok
-test protocol::kas::auth::tests::fetch_runs_the_helper_with_force_refresh_and_relays_data ... ok
 test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1 ... ok
 test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1 ... ok
 test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr ... ok
@@ -68,6 +74,7 @@ test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_07_s
 test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_08_error_envelope_logged_out ... ok
 test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_09_legacy_2_6_envelope ... ok
 test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_10_malformed_json ... ok
+test protocol::kas::auth::tests::other_helper_failures_never_fall_back ... ok
 test protocol::kas::auth::tests::success_envelope_relays_the_data_fields::case_1_provider_only ... ok
 test protocol::kas::auth::tests::success_envelope_relays_the_data_fields::case_2_all_five ... ok
 test protocol::kas::auth::tests::success_envelope_relays_the_data_fields::case_3_required_only_with_null_optional ... ok
@@ -89,7 +96,7 @@ test protocol::kas::discovery::tests::kas_root_follows_xdg_data_home ... ok
 test protocol::kas::discovery::tests::kas_root_shares_kiro_data_dir ... ok
 test protocol::kas::discovery::tests::kiro_data_dir_defaults_to_home_local_share_without_xdg ... ok
 test protocol::kas::discovery::tests::kiro_data_dir_prefers_absolute_xdg_data_home ... ok
-test protocol::kas::discovery::tests::list_kas_entries_real_fs ... ok
+test protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error ... ok
 test protocol::kas::discovery::tests::malformed_dir_names_ignored ... ok
 test protocol::kas::discovery::tests::missing_reasons_are_actionable ... ok
 test protocol::kas::discovery::tests::no_cli_version_falls_back_newest ... ok
@@ -106,13 +113,12 @@ test protocol::kas::discovery::tests::resolve_no_home_no_override_errors ... ok
 test protocol::kas::discovery::tests::resolve_node_override_missing_errors ... ok
 test protocol::kas::discovery::tests::resolve_server_path_with_spaces_is_one_arg ... ok
 test protocol::kas::discovery::tests::versioned_beats_legacy ... ok
-test protocol::kas::discovery::tests::env_wrappers_resolve_xdg_data_home_like_kiro_cli ... ok
-test protocol::kas::auth::tests::other_helper_failures_never_fall_back ... ok
+test protocol::kas::discovery::tests::list_kas_entries_real_fs ... ok
 test protocol::kas::discovery::tests::windows_data_dir_falls_back_to_known_folder ... ok
 test protocol::kas::discovery::tests::windows_without_local_data_root_reports_missing_bundle ... ok
 test protocol::kas::discovery::tests::windows_appdata_server_selection_uses_appdata_root ... ok
 test protocol::kas::discovery::tests::env_wrappers_resolve_xdg_data_home_like_kiro_cli ... ok
-test protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error ... ok
+test protocol::kas::discovery::tests::env_wrappers_resolve_xdg_data_home_like_kiro_cli ... ok
 test protocol::kas::stored_token::tests::access_token_debug_is_redacted ... ok
 test protocol::kas::stored_token::tests::corrupt_store_file_is_not_a_fake_logout ... ok
 test protocol::kas::stored_token::tests::corrupt_token_row_errors_as_parse ... ok
@@ -120,21 +126,22 @@ test protocol::kas::stored_token::tests::freshest_token_row_wins_when_both_prese
 test protocol::kas::stored_token::tests::is_stale_boundary ... ok
 test protocol::kas::stored_token::tests::logged_out_row_absent_errors ... ok
 test protocol::kas::stored_token::tests::missing_profile_arn_errors ... ok
-test protocol::kas::stored_token::tests::readonly_never_creates_db ... ok
-test protocol::kas::stored_token::tests::read_stored_token_serves_fresh_and_refuses_stale ... ok
-test protocol::kas::stored_token::tests::rfc3339_epoch_reference ... ok
-test protocol::kas::stored_token::tests::schemaless_store_errors_as_query ... ok
-test protocol::kas::stored_token::tests::reply_from_sqlite_rows ... ok
-test protocol::kas::stored_token::tests::social_login_row_is_served ... ok
-test protocol::kas::stored_token::tests::social_inline_arn_is_the_fallback ... ok
-test protocol::kas::stored_token::tests::store_reread_per_callback ... ok
-test protocol::kas::stored_token::tests::token_row_field_guards ... ok
 test protocol::kas::auth::tests::credential_store_token_rows_only_in_the_fallback ... ok
 test protocol::kas::auth::tests::sso_token_path_never_resurrected ... ok
+test protocol::kas::stored_token::tests::readonly_never_creates_db ... ok
+test protocol::kas::stored_token::tests::rfc3339_epoch_reference ... ok
+test protocol::kas::stored_token::tests::schemaless_store_errors_as_query ... ok
+test protocol::kas::stored_token::tests::read_stored_token_serves_fresh_and_refuses_stale ... ok
+test protocol::kas::stored_token::tests::reply_from_sqlite_rows ... ok
+test protocol::kas::stored_token::tests::social_inline_arn_is_the_fallback ... ok
+test protocol::kas::stored_token::tests::social_login_row_is_served ... ok
+test protocol::kas::stored_token::tests::store_reread_per_callback ... ok
+test protocol::kas::stored_token::tests::token_row_field_guards ... ok
 test protocol::kas::auth::tests::fetch_serializes_concurrent_requests ... ok
+test protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation ... ok
 test protocol::kas::auth::tests::fetch_times_out_on_a_wedged_helper ... ok
-test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1178 filtered out; finished in 0.00s
-test result: ok. 221 passed; 0 failed; 0 ignored; 0 measured; 958 filtered out; finished in 30.59s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1186 filtered out; finished in 0.00s
+test result: ok. 229 passed; 0 failed; 0 ignored; 0 measured; 958 filtered out; finished in 31.08s
 test protocol::domain_mediator::tests::serial::kas_token_source_moves_into_the_dispatch_context ... ok
 test protocol::domain_mediator::host::tests::hook_tags_cross_host_callback_boundary_and_malformed_tags_degrade ... ok
 test protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli ... ok

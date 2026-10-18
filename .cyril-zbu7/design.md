@@ -45,8 +45,8 @@ Requester decision relayed by the coordinator (quoted in `route.md` T4 item 1). 
 
 - Red-first (C1): `receipts/red-run.log` (base 85becf9f + test only: `StoreUnservable … data.sqlite3 is absent`) → `receipts/green-run.log`.
 - Mutations: C9 `receipts/mutation-c9-{red,restored}.log`; C10 `receipts/mutation-c10{,b}-red.log`, `mutation-c10-restored.log`; W `receipts/mutation-wiring-red.log`.
-- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (791e2c75; every lane `-OK`).
-- Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 221 kas/domain_mediator tests pass on MSVC at 30ff7912, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
+- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (5f03e0f5; every lane `-OK`).
+- Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 229 kas/domain_mediator tests pass on MSVC at 5f03e0f5, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
 - Live C6: `receipts/live/timeline.txt` — renewal served at 19:44:40Z (expiry 19:47:39 → 20:44:40, plain helper, no force), turns answered before, inside the buffer, and after the old expiry; no BridgeDisconnected.
 - Missing-helper shapes (C10 premise): `receipts/missing-subcommand-shapes.txt`, evidence P5.
 - Independent review: one read-only reviewer pass over `85becf9f..2cf8d853`; no blocking findings; should-fixes 1–4 and nits 6/11 fixed in the review-fix commit; nits 7–10/12 dispositioned under Non-goals.
