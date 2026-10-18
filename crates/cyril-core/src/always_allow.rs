@@ -1128,6 +1128,23 @@ mod tests {
         }
     }
 
+    /// A request whose consent names no capability, only a tool id.
+    fn tool_only(session: &str, tool_call: &str, tool: &str) -> Pending {
+        Pending {
+            session: SessionId::new(session),
+            tool_call: ToolCallId::new(tool_call),
+            consent: Some(PermissionConsent::new(
+                None,
+                Some("x".into()),
+                Some("/ws".into()),
+                Some(tool.into()),
+                None,
+                Vec::new(),
+            )),
+            options: kas_options(),
+        }
+    }
+
     fn pending(session: &str, tool_call: &str, spec: Consent<'_>) -> Pending {
         Pending {
             session: SessionId::new(session),
@@ -1304,6 +1321,27 @@ mod tests {
         pending("main", "t1", shell("npm test")),
         sent(GrantScope::Session, GrantResource::WholeTool),
         no_allow_once(pending("main", "t2", shell("cargo build"))),
+        false
+    )]
+    // Review round 3: D4's queued-side `triggeringResource ≠ resource` exclusion.
+    #[case::child_queued_triggering_differs(pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        pending("step-1", "t2", Consent { triggering: Some("npm test"), ..shell("npm *") }), false)]
+    // A folder grant on the main session settles nothing (only whole-tool does).
+    #[case::main_folder_releases_nothing(pending("main", "t1", write("src/a/x.txt", Some("/ws"))),
+        sent(GrantScope::Workspace, GrantResource::Folder(AllowedFolder("src".into()))),
+        pending("main", "t2", write("src/b/y.txt", Some("/ws"))), false)]
+    // No consent capability: `Clt` keys by tool id (`CapabilityKey::Tool`).
+    #[case::tool_key_same_tool(
+        tool_only("main", "t1", "run_command"),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        tool_only("main", "t2", "run_command"),
+        true
+    )]
+    #[case::tool_key_other_tool(
+        tool_only("main", "t1", "run_command"),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        tool_only("main", "t2", "fs_write"),
         false
     )]
     fn queued_requests_released_like_the_tui(
