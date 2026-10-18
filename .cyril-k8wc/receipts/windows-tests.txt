@@ -1,0 +1,66 @@
+HEAD: 7ae63f66bdf724765283799fe29c494d322eaf41
+rustc: rustc 1.94.0 (4a4ef493e 2026-03-02)
+   Compiling serde_path_to_error v0.1.20
+   Compiling thiserror v2.0.18
+   Compiling thiserror-impl v2.0.18
+warning: unused import: `SystemHost`
+warning: unused import: `std::rc::Rc`
+warning: unused import: `std::time::Duration`
+warning: unused import: `agent_client_protocol::schema::v1 as acp`
+warning: unused imports: `SdkRuntime` and `StageChain`
+warning: unused import: `crate::protocol::bridge::create_channel_pair`
+warning: unused imports: `DomainChannels`, `DomainConfig`, and `DomainMediator`
+warning: unused import: `crate::protocol::engine::V2Engine`
+warning: unused import: `crate::protocol::source_observer::IngressTracker`
+warning: unused import: `crate::protocol::transport::AgentProcess`
+warning: unused imports: `AgentCommand`, `BridgeCommand`, and `Notification`
+test protocol::kas::host_shell::tests::every_shell_kind_reports_a_name_kas_recognises ... ok
+test protocol::kas::host_shell::tests::renderer_expands_only_pure_family_valid_variables ... ok
+test protocol::kas::host_shell::tests::powershell_operator_sequence_does_not_reuse_a_stale_native_exit_code ... ok
+test protocol::kas::host_shell::tests::relative_path_entry_is_retained_as_an_absolute_snapshot ... ok
+test protocol::kas::host_shell::tests::launch_plan_uses_one_profile_aware_shell_process ... ok
+test protocol::kas::host_shell::tests::full_command_line_with_empty_args_is_shell_source_not_one_quoted_token ... ok
+test protocol::kas::host_shell::tests::renderer_preserves_literals_and_only_the_closed_syntax_set ... ok
+test protocol::kas::host_shell::tests::renderer_handles_the_64_kib_token_ceiling_under_two_ms ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_01_sh ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_02_bash ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_03_dash ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_04_zsh ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_05_ksh ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_06_bare_zsh_on_path ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_07_absent_shell_falls_back_to_bash ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_08_unsupported_shell_falls_back_to_bash ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_09_configured_bash_overrides_shell ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_10_fish ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_11_configured_fish ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_12_pwsh ... ok
+test protocol::kas::host_shell::tests::shell_type_reply_names_the_shell_cyril_executes::case_13_windows_powershell ... ok
+test protocol::kas::host_shell::tests::simple_unix_commands_exec_replace_the_shell_for_signal_fidelity ... ok
+test protocol::kas::host_shell::tests::unix_path_search_is_bounded_to_256_runnable_probes ... ok
+test protocol::kas::host_shell::tests::unix_resolution_matches_the_signed_matrix ... ok
+test protocol::kas::host_shell::tests::windows_resolution_matches_the_signed_matrix_without_comspec ... ok
+test protocol::kas::terminal_io::tests::missing_shell_snapshot_refuses_terminal_creation ... ok
+test protocol::kas::terminal_io::tests::empty_command_is_invalid_without_consuming_an_id ... ok
+test protocol::kas::terminal_io::tests::create_relative_cwd_rejected_absolute_error ... ok
+test protocol::kas::terminal_io::tests::shell_type_refuses_without_a_resolved_shell ... ok
+test protocol::kas::terminal_io::tests::release_kill_unknown_id_errors ... ok
+test protocol::kas::terminal_io::tests::shell_type_reply_names_the_registry_shell_not_its_family ... ok
+test protocol::kas::terminal_io::tests::unknown_id_errors_not_panics ... ok
+test protocol::kas::terminal_io::tests::windows_powershell_lifecycle_smoke ... ok
+test result: ok. 33 passed; 0 failed; 0 ignored; 0 measured; 1113 filtered out; finished in 0.84s
+cargo exit: 0
+   |
+18 | const PROCESS_BATCH: &str = r#"[{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"process-fixture","update":{"sessio...
+   |       ^^^^^^^^^^^^^
+System.Management.Automation.RemoteException
+error: could not compile `cyril-core` (lib test) due to 17 previous errors
+clippy exit: 101
+
+# ---- Windows clippy comparison (not a CI lane: CI's windows-latest leg runs nextest only;
+# ---- `-D warnings` clippy runs on ubuntu). Same command on base and branch, VM resourcefs-win11,
+# ---- rustc 1.94.0 msvc: cargo +1.94.0 clippy -p cyril-core --features kas --all-targets -- -D warnings
+# base 85becf9f : exit 101, 18 errors (lib: host_io.rs:155 unused mut; lib test: sdk_runtime/tests/process.rs
+#                 unused imports/consts, host_shell.rs unused SystemHost + `test_posix_at and test_fish_at`
+#                 never used, terminal_io.rs `test_fish_registry_at` never used, sdk_runtime recording fns)
+# branch 7ae63f66: exit 101, 17 errors — the same set minus the fish-fixture pair (the new platform-neutral
+#                 terminal_io test now uses `test_fish_registry_at`/`test_fish_at`). No new warning.

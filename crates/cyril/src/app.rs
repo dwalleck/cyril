@@ -1778,6 +1778,10 @@ impl App {
                     if self.ui_state.approval_feedback_paste(&text) {
                         self.redraw_needed = true;
                     }
+                } else if self.ui_state.approval_folder_active() {
+                    if self.ui_state.approval_folder_paste(&text) {
+                        self.redraw_needed = true;
+                    }
                 } else if !self.ui_state.has_modal_overlay() {
                     self.ui_state.insert_text(&text);
                     self.redraw_needed = true;
@@ -1900,6 +1904,10 @@ impl App {
             self.ui_state.approval_feedback_key(key);
             return;
         }
+        if self.ui_state.approval_folder_active() {
+            self.ui_state.approval_folder_key(key);
+            return;
+        }
 
         match (key.modifiers, key.code) {
             (KeyModifiers::NONE, KeyCode::Up) => self.ui_state.approval_select_prev(),
@@ -1907,6 +1915,8 @@ impl App {
             (KeyModifiers::NONE, KeyCode::Char('r')) => {
                 self.ui_state.approval_begin_feedback();
             }
+            // KAS "Always allow" scope page: cycle session/workspace/user.
+            (KeyModifiers::NONE, KeyCode::Char('s')) => self.ui_state.approval_cycle_scope(),
             (KeyModifiers::NONE, KeyCode::Enter) => {
                 // A confirmed trust tier carries its approval origin. Only a
                 // valid main-session id may write the active agent's durable
@@ -1930,8 +1940,10 @@ impl App {
     }
 
     /// Persist a granted trust tier to the active agent's config file so it
-    /// survives across sessions. The session-scoped grant has already been sent;
-    /// this write is non-fatal. Built-in agents and agents with no on-disk config
+    /// survives across sessions. v2 only: KAS requests carry no trust tiers
+    /// (the mediator drops them) and persist "Always allow" through the
+    /// response's consent echo instead (cyril-auxt). The session-scoped grant
+    /// has already been sent; this write is non-fatal. Built-in agents and agents with no on-disk config
     /// are intentionally skipped (logged at debug); a genuine write/parse failure
     /// is surfaced to the user, since they explicitly asked to "always allow".
     fn persist_trust_grant(&mut self, trust: &cyril_core::types::TrustOption) {
@@ -4765,6 +4777,115 @@ mod tests {
         assert_eq!(
             persisted["toolsSettings"]["execute_bash"]["allowedCommands"],
             serde_json::json!(["echo safe"])
+        );
+    }
+
+    /// A KAS `fs_write` approval: `_meta.kiro.consent`, no V2 trust tiers.
+    fn kas_write_request(
+        session_id: &str,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        let (responder, receiver) = tokio::sync::oneshot::channel();
+        let option = |id: &str, kind| PermissionOption {
+            id: PermissionOptionId::new(id),
+            label: id.into(),
+            kind,
+            is_destructive: false,
+        };
+        (
+            PermissionRequest {
+                session_id: SessionId::new(session_id),
+                tool_call: ToolCall::new(
+                    ToolCallId::new("write-1"),
+                    "Write File".into(),
+                    ToolKind::Write,
+                    ToolCallStatus::Pending,
+                    None,
+                ),
+                message: "Write File".into(),
+                options: vec![
+                    option("accept", PermissionOptionKind::AllowOnce),
+                    option("always-accept", PermissionOptionKind::AllowAlways),
+                    option("reject", PermissionOptionKind::RejectOnce),
+                ],
+                trust_options: Vec::new(),
+                can_reject_with_reason: true,
+                responder,
+                consent: Some(cyril_core::review::consent::PermissionConsent::new(
+                    Some("fs_write"),
+                    Some("src/a/x.txt".into()),
+                    Some("/ws".into()),
+                    Some("fs_write".into()),
+                    None,
+                    Vec::new(),
+                )),
+            },
+            receiver,
+        )
+    }
+
+    /// cyril-auxt: the App routes `s` and the folder editor's keys, answers
+    /// with the consent grant, and writes no agent JSON on KAS.
+    #[test]
+    fn kas_always_allow_keys_grant_a_folder_and_write_no_agent_json() {
+        let tmp = tempfile::tempdir().unwrap();
+        let config_dir = tmp.path().join(".kiro").join("agents");
+        std::fs::create_dir_all(&config_dir).unwrap();
+        let config_path = config_dir.join("myagent.json");
+        std::fs::write(&config_path, b"{}").unwrap();
+        let mut app = App::new(
+            BridgeHandle::for_tests(),
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            tmp.path().to_path_buf(),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::None,
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::Kas,
+        );
+        app.session.apply_notification(&Notification::ModeChanged {
+            mode_id: ModeId::new("myagent"),
+        });
+        let (request, response) = kas_write_request("main-session");
+        app.ui_state.show_approval(request);
+
+        let press =
+            |app: &mut App, code| app.handle_approval_key(KeyEvent::new(code, KeyModifiers::NONE));
+        press(&mut app, KeyCode::Down); // Always allow
+        press(&mut app, KeyCode::Enter); // scope page
+        press(&mut app, KeyCode::Char('s')); // workspace
+        press(&mut app, KeyCode::Down); // folder row
+        press(&mut app, KeyCode::Enter); // folder editor: "src/a"
+        press(&mut app, KeyCode::Backspace);
+        press(&mut app, KeyCode::Char('s')); // typed into the editor, not a cycle
+        press(&mut app, KeyCode::Backspace);
+        press(&mut app, KeyCode::Backspace);
+        press(&mut app, KeyCode::Enter);
+
+        match response.blocking_recv() {
+            Ok(PermissionResponse::AlwaysAllow { option_id, grant }) => {
+                assert_eq!(option_id.as_str(), "always-accept");
+                assert_eq!(
+                    grant.scope(),
+                    cyril_core::always_allow::GrantScope::Workspace
+                );
+                assert_eq!(grant.resource().wire(), "src/**");
+            }
+            other => panic!("expected a folder grant, got {other:?}"),
+        }
+        assert!(!app.ui_state.has_approval());
+        assert_eq!(
+            std::fs::read(&config_path).unwrap(),
+            b"{}",
+            "no agent JSON write on KAS"
         );
     }
 

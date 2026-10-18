@@ -679,6 +679,15 @@ pub enum PermissionResponse {
         option_id: PermissionOptionId,
         reason: String,
     },
+    /// The user granted a KAS `allow_always` option at a chosen scope and
+    /// resource (cyril-auxt). The converter emits the same selected outcome
+    /// as [`Self::Selected`] and, when the option is an offered `allow_always`
+    /// on the KAS engine, echoes the grant as `_meta.kiro.consent` — the only
+    /// signal KAS persists an "Always allow" from.
+    AlwaysAllow {
+        option_id: PermissionOptionId,
+        grant: crate::always_allow::AlwaysAllowGrant,
+    },
     Cancel,
 }
 

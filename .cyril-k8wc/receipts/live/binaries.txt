@@ -1,0 +1,4 @@
+# binaries (cargo build -p cyril --features kas)
+7b47d8d96293ac7a8009d92b3df30effe1e1e1ffec2fd40c0aa7ab11bdde5f78  cyril-before-85becf9f
+90663e166914db7d6617c6ff862e421e267da006e00305a27c43465b3e0e8797  cyril-after-7ae63f66
+# KAS version from kiro.log user agent: KAS/0.66.43

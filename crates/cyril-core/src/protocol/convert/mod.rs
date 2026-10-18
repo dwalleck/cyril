@@ -369,26 +369,50 @@ fn parse_trust_option(v: &serde_json::Value) -> Option<TrustOption> {
     })
 }
 
+/// Response-level metadata only the KAS wire owner (`kas.rs`) may attach.
+enum KasResponseMeta {
+    Rejection(PermissionOptionId, String),
+    ConsentEcho(PermissionOptionId, crate::always_allow::AlwaysAllowGrant),
+}
+
 #[cfg(feature = "kas")]
-fn attach_rejection_metadata(
+fn attach_kas_metadata(
     response: acp::RequestPermissionResponse,
     args: &acp::RequestPermissionRequest,
     engine: AgentEngine,
-    rejection: Option<(PermissionOptionId, String)>,
+    extra: Option<KasResponseMeta>,
 ) -> acp::RequestPermissionResponse {
-    let Some((option_id, reason)) = rejection else {
-        return response;
-    };
-    kas::attach_rejection_metadata(response, args, engine, option_id, reason)
+    match extra {
+        None => response,
+        Some(KasResponseMeta::Rejection(option_id, reason)) => {
+            kas::attach_rejection_metadata(response, args, engine, option_id, reason)
+        }
+        Some(KasResponseMeta::ConsentEcho(option_id, grant)) => {
+            kas::attach_consent_echo(response, args, engine, &option_id, &grant)
+        }
+    }
 }
 
 #[cfg(not(feature = "kas"))]
-fn attach_rejection_metadata(
+fn attach_kas_metadata(
     response: acp::RequestPermissionResponse,
     _args: &acp::RequestPermissionRequest,
     _engine: AgentEngine,
-    _rejection: Option<(PermissionOptionId, String)>,
+    extra: Option<KasResponseMeta>,
 ) -> acp::RequestPermissionResponse {
+    match extra {
+        None => {}
+        Some(KasResponseMeta::Rejection(option_id, reason)) => tracing::debug!(
+            %option_id,
+            reason_chars = reason.chars().count(),
+            "rejection feedback needs the kas feature; answered without it"
+        ),
+        Some(KasResponseMeta::ConsentEcho(option_id, grant)) => tracing::debug!(
+            %option_id,
+            scope = grant.scope().label(),
+            "consent echo needs the kas feature; answered without it"
+        ),
+    }
     response
 }
 
@@ -400,7 +424,7 @@ pub(crate) fn from_permission_response(
     args: &acp::RequestPermissionRequest,
     engine: AgentEngine,
 ) -> acp::RequestPermissionResponse {
-    let (outcome, rejection) = match response {
+    let (outcome, extra) = match response {
         PermissionResponse::Cancel => (acp::RequestPermissionOutcome::Cancelled, None),
         PermissionResponse::Selected {
             option_id,
@@ -424,12 +448,22 @@ pub(crate) fn from_permission_response(
             ));
             (
                 acp::RequestPermissionOutcome::Selected(selected),
-                Some((option_id, reason)),
+                Some(KasResponseMeta::Rejection(option_id, reason)),
+            )
+        }
+        PermissionResponse::AlwaysAllow { option_id, grant } => {
+            warn_if_foreign_permission_option(args, &option_id);
+            let selected = acp::SelectedPermissionOutcome::new(acp::PermissionOptionId::new(
+                option_id.as_str(),
+            ));
+            (
+                acp::RequestPermissionOutcome::Selected(selected),
+                Some(KasResponseMeta::ConsentEcho(option_id, grant)),
             )
         }
     };
     let response = acp::RequestPermissionResponse::new(outcome);
-    attach_rejection_metadata(response, args, engine, rejection)
+    attach_kas_metadata(response, args, engine, extra)
 }
 
 fn warn_if_foreign_permission_option(

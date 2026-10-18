@@ -1,0 +1,16 @@
+# gate @ 7ae63f66bdf724765283799fe29c494d322eaf41 (dirty: 0 tracked changes) 2026-10-18T14:05:13-05:00
+fmt-OK
+clippy-all-features-OK
+nextest-all-features-OK
+    nextest-all-features:      Summary [   6.702s] 2379 tests run: 2379 passed, 13 skipped
+doctest-OK
+clippy-kas-OK
+nextest-kas-OK
+    nextest-kas:      Summary [   5.869s] 1490 tests run: 1490 passed, 10 skipped
+clippy-default-OK
+nextest-default-OK
+    nextest-default:      Summary [   6.701s] 2372 tests run: 2372 passed, 13 skipped
+clippy-core-nodefault-OK
+nextest-core-nodefault-OK
+    nextest-core-nodefault:      Summary [   5.342s] 875 tests run: 875 passed, 4 skipped
+# done 2026-10-18T14:08:36-05:00

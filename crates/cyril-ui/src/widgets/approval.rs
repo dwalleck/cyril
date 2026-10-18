@@ -27,6 +27,12 @@ pub fn render(
         ApprovalPhase::EnterReason { .. } => {
             render_reason_phase(frame, area, input_top, state, session_attribution, theme)
         }
+        ApprovalPhase::SelectScope { .. } => {
+            render_scope_phase(frame, area, input_top, state, session_attribution, theme)
+        }
+        ApprovalPhase::EnterFolder { .. } => {
+            render_folder_phase(frame, area, input_top, state, session_attribution, theme)
+        }
     }
 }
 
@@ -420,6 +426,259 @@ fn render_trust_phase(
     frame.render_widget(popup, popup_area);
 }
 
+/// Kiro's TUI label truncation (`UM`): more than 50 characters keep the first
+/// 47 and an ellipsis.
+fn truncate_label(text: &str) -> String {
+    if text.chars().count() > 50 {
+        format!("{}…", text.chars().take(47).collect::<String>())
+    } else {
+        text.to_owned()
+    }
+}
+
+/// The scope page's row text, as Kiro's TUI words it (`isr`, `m2t`).
+fn scope_row(
+    choice: &cyril_core::always_allow::ScopeChoice,
+    scope: cyril_core::always_allow::GrantScope,
+    tool: Option<&str>,
+) -> (String, String) {
+    use cyril_core::always_allow::ScopeChoice;
+    let scope_label = scope.label();
+    match choice {
+        ScopeChoice::Exact(resource) => (
+            format!("Trust \"{}\"", truncate_label(resource)),
+            format!("exact match · {scope_label}"),
+        ),
+        ScopeChoice::Pattern(pattern) => (
+            format!("Trust \"{pattern}\""),
+            format!("pattern · {scope_label}"),
+        ),
+        ScopeChoice::Folder(offer) => (
+            format!("Allow a folder {}…", scope.folder_phrase()),
+            format!("{} · {scope_label}", truncate_label(offer.prefill())),
+        ),
+        ScopeChoice::WholeTool => (
+            match tool {
+                Some(tool) => format!("Trust entire tool ({tool})"),
+                None => "Trust entire tool".to_owned(),
+            },
+            scope_label.to_owned(),
+        ),
+    }
+}
+
+/// KAS "Always allow" scope page (cyril-auxt): `capability → resource`, the
+/// scope line (`s` cycles), and one label + description pair per row.
+fn render_scope_phase(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
+    let ApprovalPhase::SelectScope { scope, .. } = &state.phase else {
+        return;
+    };
+    let choices = state.scope_choices();
+    let consent = state.consent.as_ref();
+    let capability = consent.and_then(|c| c.wire_capability());
+    let resource = consent
+        .and_then(|c| c.resource())
+        .filter(|resource| !resource.is_empty());
+    let target = match (capability, resource) {
+        (Some(capability), Some(resource)) => Some(format!("{capability} → {resource}")),
+        (Some(only), None) | (None, Some(only)) => Some(only.to_owned()),
+        (None, None) => None,
+    };
+    let tool = consent.and_then(|c| c.tool_id());
+
+    // Chrome: target + blank (when present), scope line + blank, hint.
+    let chrome = usize::from(target.is_some()) * 2 + 3;
+    let desired_height = u16::try_from(choices.len().saturating_mul(2).saturating_add(chrome + 2))
+        .unwrap_or(u16::MAX);
+    let Some(popup_area) = super::modal::place(area, input_top, 72, desired_height) else {
+        return;
+    };
+    frame.render_widget(Clear, popup_area);
+
+    // Rows win over chrome when clamped: the selected row's label is what
+    // keeps the page actionable.
+    let inner = usize::from(popup_area.height.saturating_sub(2));
+    let show_chrome = inner >= chrome + 2;
+    let row_lines = if show_chrome { inner - chrome } else { inner };
+    let visible = choices.len().min((row_lines / 2).max(1));
+    let start = window_start(state.selected, choices.len(), visible);
+
+    let mut lines: Vec<Line> = Vec::new();
+    if show_chrome {
+        if let Some(target) = target {
+            lines.push(Line::styled(
+                target,
+                Style::default().fg(theme.text_secondary),
+            ));
+            lines.push(Line::default());
+        }
+        let mut spans = vec![Span::styled(
+            "Scope:  ",
+            Style::default().fg(theme.text_secondary),
+        )];
+        for (index, option) in cyril_core::always_allow::GrantScope::ALL.iter().enumerate() {
+            if index > 0 {
+                spans.push(Span::raw("  "));
+            }
+            if option == scope {
+                spans.push(Span::styled(
+                    format!("[{}]", option.label()),
+                    Style::default()
+                        .fg(theme.accent_quinary)
+                        .add_modifier(Modifier::BOLD),
+                ));
+            } else {
+                spans.push(Span::styled(
+                    format!(" {} ", option.label()),
+                    Style::default().fg(theme.text_secondary),
+                ));
+            }
+        }
+        lines.push(Line::from(spans));
+        lines.push(Line::default());
+    }
+    for (index, choice) in choices.iter().enumerate().skip(start).take(visible) {
+        let (label, description) = scope_row(choice, *scope, tool);
+        let selected = index == state.selected;
+        let (label_style, description_style) = if selected {
+            (
+                Style::default()
+                    .bg(theme.selection)
+                    .fg(theme.text)
+                    .add_modifier(Modifier::BOLD),
+                Style::default().bg(theme.selection).fg(theme.subdued),
+            )
+        } else {
+            (
+                Style::default().fg(theme.text_secondary),
+                Style::default().fg(theme.subdued),
+            )
+        };
+        let prefix = if selected { "▸ " } else { "  " };
+        lines.push(Line::styled(format!("{prefix}{label}"), label_style));
+        lines.push(Line::styled(
+            format!("    {description}"),
+            description_style,
+        ));
+    }
+    if show_chrome {
+        lines.push(Line::styled(
+            "↑↓ navigate · Enter select · s cycle scope · Esc back",
+            Style::default().fg(theme.subdued),
+        ));
+    }
+
+    let title = attribution_title(
+        " Always Allow — Choose Scope ",
+        session_attribution,
+        theme.accent_quinary,
+    );
+    let popup = Paragraph::new(lines).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.accent_quinary)),
+    );
+    frame.render_widget(popup, popup_area);
+}
+
+/// KAS "Always allow" folder editor (cyril-auxt): Kiro's live validation line
+/// (`h2t` / `vde`) above a one-line editor.
+fn render_folder_phase(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
+    let ApprovalPhase::EnterFolder {
+        scope,
+        offer,
+        editor,
+        attempted,
+        ..
+    } = &state.phase
+    else {
+        return;
+    };
+    let status = match offer.validate(editor.text()) {
+        Ok(folder) => {
+            let reach = match scope {
+                cyril_core::always_allow::GrantScope::Session => "for this session only",
+                other => other.folder_phrase(),
+            };
+            Line::styled(
+                format!(
+                    "Allows writes in {} and every folder under it, {reach}.",
+                    folder.path()
+                ),
+                Style::default().fg(theme.text_secondary),
+            )
+        }
+        Err(reason) => Line::styled(
+            reason.to_string(),
+            Style::default().fg(if *attempted {
+                theme.danger
+            } else {
+                theme.text_secondary
+            }),
+        ),
+    };
+
+    let Some(popup_area) = super::modal::place(area, input_top, 84, 7) else {
+        return;
+    };
+    frame.render_widget(Clear, popup_area);
+    let inner = usize::from(popup_area.height.saturating_sub(2));
+    if inner == 0 {
+        return;
+    }
+    // The editor row survives any clamp; the status and hint join when the
+    // popup has room for them.
+    let show_status = inner >= 2;
+    let show_hint = inner >= 4;
+    let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
+    let mut lines: Vec<Line> = Vec::with_capacity(inner);
+    if show_status {
+        lines.push(status);
+    }
+    if show_hint {
+        lines.push(Line::default());
+    }
+    lines.extend(super::input::text_cursor_lines(
+        editor.text(),
+        editor.cursor(),
+        content_width,
+        1,
+        theme,
+    ));
+    if show_hint {
+        lines.push(Line::default());
+        lines.push(Line::styled(
+            "Enter to allow this folder · Esc back",
+            Style::default().fg(theme.subdued),
+        ));
+    }
+
+    let heading = format!(" Allow a folder {} ", scope.folder_phrase());
+    let title = attribution_title(&heading, session_attribution, theme.accent_quinary);
+    let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.accent_quinary)),
+    );
+    frame.render_widget(popup, popup_area);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -467,6 +726,7 @@ mod tests {
             can_reject_with_reason: false,
             phase,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         }
     }
 
@@ -824,6 +1084,7 @@ mod tests {
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         }
     }
 

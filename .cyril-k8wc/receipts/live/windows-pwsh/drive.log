@@ -1,0 +1,12 @@
+PASS session created on Windows
+PASS system-prompt-shell → [pwsh]
+  [overlay]                                              ┌ Permission Required ─────────────────────────────────────┐
+  [overlay] Get-Date -Format yyyy && Write-Output ("PWSH" + (6+1) + "O
+  [overlay] ⏳ Run(Get-Date -Format yyyy && Write-Output │
+  [overlay]   Preview unavailable
+  [overlay] ⠹ Running... 7s                              │
+  [overlay] ▸ Allow
+  [overlay]   Always allow
+  [overlay]   Deny
+  [overlay]   Always deny
+PASS pwsh7-command → PWSH7OK

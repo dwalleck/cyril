@@ -727,6 +727,7 @@ mod tests {
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         };
         let hooks = HooksPanelState {
             hooks: vec![cyril_core::types::HookInfo::v2("t", "c", Some("m".into()))],
@@ -820,6 +821,7 @@ mod tests {
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         };
         let mut state = MockTuiState {
             session_label: Some("humanized peer label".into()),
@@ -893,6 +895,7 @@ mod tests {
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         };
         let powers = PowersPanelState {
             powers: (0..5)
