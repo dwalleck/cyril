@@ -1,0 +1,9 @@
+cyril-k8wc pwsh delta (ca400c75) — red-first, Linux, previous reply (Pwsh => "powershell") with updated expectations
+cargo nextest run -p cyril-core --features kas -E 'test(shell_type_reply_names_the_shell_cyril_executes) | test(every_shell_kind_reports_a_name_kas_recognises)'
+FAIL case_12_pwsh                                   left: "powershell"  right: "pwsh"
+FAIL case_13_configured_pwsh                        left: "powershell"  right: "pwsh"
+FAIL every_shell_kind_reports_a_name_kas_recognises left: [... "fish", "powershell", "powershell"] right: [... "fish", "pwsh", "powershell"]
+PASS case_14_windows_powershell (control: Windows PowerShell 5.1 keeps "powershell")
+Summary: 15 tests run: 12 passed, 3 failed
+After the fix: host_shell + terminal_io 60/60 pass; full 10-lane gate OK (all-features 2380 passed, kas 1491 passed).
+Independent delta review reproduced the mutation: Pwsh => "powershell" → 57/60, exactly the 3 cases above fail, case_14 passes.
