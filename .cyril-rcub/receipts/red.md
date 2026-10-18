@@ -36,24 +36,28 @@ counted in the row budget. That pushes the only option row (here the selected
 Wide glyphs are clipped mid-name the same way. In
 `case_4_wide_chars_narrow_36` the visible text ends at `/home/用户/项目/文档/非常长`.
 
-## 2. Mutations against the final fences (head `d0a176d1` + fence commit)
+## 2. Mutations against the final fences (head `14f5dfec`)
 
-Each mutation was applied to the committed file, the fences were run, and the
-file was restored with `git checkout --` (the work was committed first).
+Each mutation was applied to the committed file, the fences were run
+(`-E 'test(/write_path|clamped_preview_keeps/)'`, 17 tests), and the file was
+restored from the commit. The work was committed before each mutation. The
+clamped fences run at `input_top=7` (inner 4), which is the base-revision red
+geometry from §1.
 
 - **M1, old single-line path layout.** `Preview` emits the path as one
-  unwrapped row (`std::iter::once(path)`, `path_rows = 1`). Result: 13 of 13
-  failed. This covered all four `long_write_path_is_fully_visible_when_rows_allow`
-  cases, all four `clamped_write_path_keeps_file_name` cases,
-  `reason_phase_shows_full_write_path`, and all four
-  `long_write_path_snapshots`.
-- **M2, unbudgeted separator.** The pre-fix
-  `preview.len().min(remaining.saturating_sub(1))` is restored, with
-  `separator = 0`. Result:
-  - `clamped_preview_keeps_selected_option_visible`: `inner_5` and `inner_6`
-    FAIL with "selected option clipped"; `inner_7` passes because that height
-    has a spare row.
-  - The four `clamped_write_path_keeps_file_name` cases and the two clamped
-    snapshots also FAIL.
+  unwrapped row. This was run on `d0a176d1`, before the inner-4 change.
+  13 of 13 rcub fences failed: all four roomy, all four clamped, the reason
+  page, and all four snapshots.
+- **M2, old separator budget.** `show_separator = preview_rows > 0` and the
+  separator is not counted in `option_rows`, which is the base revision's
+  budget. 9 of 17 failed: `clamped_preview_keeps_selected_option_visible`
+  `inner_4`, `inner_5` and `inner_6` ("selected option clipped"; `inner_7`
+  has a spare row), all four `clamped_write_path_keeps_file_name` cases, and
+  both clamped snapshots.
+- **M3, separator reserved ahead of the path.** This is the reviewer's
+  should-fix: `preview.len().min(remaining.saturating_sub(2))`, the
+  intermediate `d0a176d1` budget, which hid the path at inner 4. 7 of 17
+  failed: `clamped_preview_keeps_selected_option_visible::inner_4`, all four
+  `clamped_write_path_keeps_file_name` cases, and both clamped snapshots.
 
-After restoration, the whole cyril-ui suite passes (see `gate.md`).
+After restoration, the whole cyril-ui suite passes (721 tests).
