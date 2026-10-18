@@ -20,15 +20,17 @@ use crate::types::{
     WorkflowPlanTask, WorkflowRepeatExhaustion, WorkflowRepeatStop, WorkflowStopCondition,
 };
 
-/// Parse a `workflowPlan` value. `None` (after a warning) when it is
-/// malformed; unknown fields are logged at debug and ignored.
-pub(crate) fn parse(value: &Value) -> Option<WorkflowPlan> {
+/// Parse the `workflowPlan` of the request for `tool_call_id`. `None`
+/// (after a warning) when it is malformed; unknown fields are logged at
+/// debug and ignored.
+pub(crate) fn parse(value: &Value, tool_call_id: &str) -> Option<WorkflowPlan> {
     let mut unknown = Vec::new();
     match plan(value, &mut unknown) {
         Ok(plan) => {
             if !unknown.is_empty() {
                 tracing::debug!(
                     workflow_id = %plan.workflow_id,
+                    tool_call_id,
                     fields = ?unknown,
                     "workflowPlan carries fields cyril does not model; ignored"
                 );
@@ -38,6 +40,7 @@ pub(crate) fn parse(value: &Value) -> Option<WorkflowPlan> {
         Err(error) => {
             tracing::warn!(
                 %error,
+                tool_call_id,
                 "malformed _meta.kiro.workflowPlan; the approval shows the request's text only"
             );
             None
@@ -626,22 +629,32 @@ mod tests {
         );
     }
 
-    /// `omitted: "steps"` — KAS's last resort for an oversized plan — keeps
-    /// the header and an empty step list.
-    #[test]
-    fn omitted_steps_plan_converts() {
-        let plan = parse(&json!({
-            "workflowId": "wf_1",
-            "kind": "replace",
-            "workflowRef": "generated://g",
-            "keptStepIds": [],
-            "steps": [],
-            "omitted": "steps"
-        }))
-        .expect("plan converts");
-        assert_eq!(plan.omitted, Some(WorkflowPlanOmission::Steps));
-        assert_eq!(plan.proposed_by, None);
-        assert!(plan.steps.is_empty());
+    /// KAS's two fallbacks for an oversized plan (`P0o`): `details` keeps
+    /// the steps without task/writes/completion/config, `steps` keeps only
+    /// the header with empty lists.
+    #[rstest::rstest]
+    #[case::details(
+        json!({"workflowId": "wf_1", "nodeId": "create-workflow", "kind": "launch",
+               "workflowRef": "generated://g", "keptStepIds": ["create-workflow"],
+               "steps": [{"nodeId": "a", "type": "step", "agentName": "wf-coder"}],
+               "omitted": "details"}),
+        WorkflowPlanOmission::Details,
+        1
+    )]
+    #[case::steps(
+        json!({"workflowId": "wf_1", "kind": "replace", "workflowRef": "generated://g",
+               "keptStepIds": [], "steps": [], "omitted": "steps"}),
+        WorkflowPlanOmission::Steps,
+        0
+    )]
+    fn omitted_plans_convert(
+        #[case] value: Value,
+        #[case] omission: WorkflowPlanOmission,
+        #[case] steps: usize,
+    ) {
+        let plan = parse(&value, "tc_test").expect("plan converts");
+        assert_eq!(plan.omitted, Some(omission));
+        assert_eq!(plan.steps.len(), steps);
     }
 
     /// A field cyril does not model is ignored — the plan still converts —
@@ -652,7 +665,7 @@ mod tests {
         value["planRevision"] = json!(2);
         value["steps"][0]["capturePinned"] = json!(true);
         let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
-        let plan = tracing::dispatcher::with_default(&dispatch, || parse(&value));
+        let plan = tracing::dispatcher::with_default(&dispatch, || parse(&value, "tc_test"));
         assert!(plan.is_some(), "an unknown field must not drop the plan");
         let events = capture.captured();
         assert_eq!(events.len(), 1, "one debug event: {events:?}");
@@ -704,7 +717,7 @@ mod tests {
         assert_eq!(error.to_string(), message);
 
         let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
-        let parsed = tracing::dispatcher::with_default(&dispatch, || parse(&value));
+        let parsed = tracing::dispatcher::with_default(&dispatch, || parse(&value, "tc_test"));
         assert_eq!(parsed, None);
         let events = capture.captured();
         assert_eq!(events.len(), 1, "one warning: {events:?}");

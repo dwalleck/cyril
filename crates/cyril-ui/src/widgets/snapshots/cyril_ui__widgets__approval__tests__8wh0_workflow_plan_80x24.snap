@@ -14,7 +14,8 @@ expression: screen
           │    Keeps: create-workflow                                │          
           │    write-hello: wf-coder · model auto · effort low       │          
           │      Task: Create a file named hello.txt at the absolute │          
-          │        path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con… │          
+          │          path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt    │          
+          │          con…                                            │          
           │                                                          │          
           │▸ Allow                                                   │          
           │  Deny                                                    │          

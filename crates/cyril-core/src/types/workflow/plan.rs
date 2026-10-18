@@ -133,8 +133,10 @@ pub struct WorkflowPlanStep {
     /// The first line of the step's prompt. Absent when details are
     /// omitted.
     pub task: Option<WorkflowPlanTask>,
-    /// Files the step writes, as `(name, path)` sorted by name. Empty when
-    /// it writes none or details are omitted.
+    /// Files the step writes, as `(name, path)` pairs in the order the JSON
+    /// map yields them: wire order when serde_json's `preserve_order` is on
+    /// (another dependency enables it in workspace builds), else by name.
+    /// Empty when the step writes none or details are omitted.
     pub artifacts: Vec<(String, String)>,
     /// What the step waits for before it completes.
     pub completion: Option<WorkflowStopCondition>,

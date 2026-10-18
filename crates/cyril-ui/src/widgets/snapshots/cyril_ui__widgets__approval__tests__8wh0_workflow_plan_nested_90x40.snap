@@ -20,12 +20,12 @@ expression: screen
                │    build: wf-coder · model auto · effort high (workflow) │               
                │      Task: Implement the parser                          │               
                │    review-loop: repeat · max 3 iterations, then pause ·  │               
-               │      stops when the review passes                        │               
+               │        stops when the review passes                      │               
                │      review: wf-reviewer · model auto · effort auto      │               
                │    fanout: parallel · join allSettled                    │               
                │      docs: wf-writer · model auto · effort auto          │               
                │      watch-ci: watch · handler wf-ci-watcher · ends after│               
-               │        90s idle                                          │               
+               │          90s idle                                        │               
                │                                                          │               
                │▸ Allow                                                   │               
                │  Deny                                                    │               

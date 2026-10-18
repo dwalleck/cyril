@@ -437,7 +437,12 @@ impl TrackedToolCall {
         if has_diff {
             return PreviewBody::Diff;
         }
-        if !content.is_empty() {
+        // Blank Text explains nothing; it must not hide the raw-input
+        // fallback or the degraded marker (cyril-j1b3).
+        let has_text = content.iter().any(|c| {
+            matches!(c, cyril_core::types::ToolCallContent::Text(text) if !text.trim().is_empty())
+        });
+        if has_text {
             return PreviewBody::Content(content);
         }
         let Some(raw) = self.inner.raw_input() else {
@@ -1500,6 +1505,35 @@ mod tests {
     #[case::over_raw_input_text(Some(serde_json::json!({"text": "raw"})))]
     #[case::without_raw_input(None)]
     fn preview_body_prefers_text_content(#[case] raw_input: Option<serde_json::Value>) {
+        preview_body_prefers_text_content_case(raw_input);
+    }
+
+    /// cyril-8wh0 review: blank Text content explains nothing, so it falls
+    /// through to the raw-input text, or to absent — never to an empty
+    /// preview.
+    #[rstest::rstest]
+    #[case::raw_text(Some(serde_json::json!({"text": "raw"})), PreviewBody::Text("raw"))]
+    #[case::no_raw_input(None, PreviewBody::Absent)]
+    fn blank_text_content_falls_through(
+        #[case] raw_input: Option<serde_json::Value>,
+        #[case] expected: PreviewBody<'static>,
+    ) {
+        use cyril_core::types::*;
+        let call = ToolCall::new(
+            ToolCallId::new("tc_blank"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            raw_input,
+        )
+        .with_content(vec![
+            ToolCallContent::Text(String::new()),
+            ToolCallContent::Text(" \n\t".into()),
+        ]);
+        assert_eq!(TrackedToolCall::new(call).preview_body(), expected);
+    }
+
+    fn preview_body_prefers_text_content_case(raw_input: Option<serde_json::Value>) {
         use cyril_core::types::*;
         let content = vec![
             ToolCallContent::Text("Steps to add:".into()),

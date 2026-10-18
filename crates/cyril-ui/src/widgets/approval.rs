@@ -356,33 +356,73 @@ const MAX_PREVIEW_LINES: usize = 5;
 /// Indent before each text row of the preview body.
 const TEXT_INDENT: &str = "    ";
 
-/// Push at most [`MAX_PREVIEW_LINES`] rows of `text_lines`, each wrapped to
+/// Push at most `max_rows` rows of `text_lines`, each wrapped to
 /// `width` columns, indented and dimmed, then an omission marker naming how
 /// many rows were left out. Wrapping keeps a long line's tail on screen —
 /// the end of a KAS plan line carries the step's effort (cyril-8wh0) —
 /// instead of clipping it at the border.
+///
+/// Runs every frame, so rows past the cap are counted, not built: a large
+/// raw-input write is not re-wrapped into strings on every redraw.
 fn push_bounded_text<'a, 's>(
     lines: &mut Vec<Line<'a>>,
     text_lines: impl Iterator<Item = &'s str>,
     width: usize,
+    max_rows: usize,
     theme: &Theme,
 ) {
     let mut total = 0usize;
-    for row in text_lines.flat_map(|line| wrap_columns(line, width)) {
-        total += 1;
-        if total <= MAX_PREVIEW_LINES {
-            lines.push(Line::styled(
-                format!("{TEXT_INDENT}{row}"),
-                Style::default().fg(theme.subdued),
-            ));
+    for line in text_lines {
+        if total >= max_rows {
+            total = total.saturating_add(wrapped_row_count(line, width));
+            continue;
+        }
+        for row in wrap_columns(line, width) {
+            total += 1;
+            if total <= max_rows {
+                lines.push(Line::styled(
+                    format!("{TEXT_INDENT}{row}"),
+                    Style::default().fg(theme.subdued),
+                ));
+            }
         }
     }
-    if total > MAX_PREVIEW_LINES {
+    if total > max_rows {
         lines.push(Line::styled(
-            format!("{TEXT_INDENT}...{} more lines", total - MAX_PREVIEW_LINES),
+            format!("{TEXT_INDENT}...{} more lines", total - max_rows),
             Style::default().fg(theme.subdued),
         ));
     }
+}
+
+/// How many rows [`wrap_columns`] gives `text` at `width`, without building
+/// them.
+fn wrapped_row_count(text: &str, width: usize) -> usize {
+    let mut rows = 1usize;
+    let mut used = 0usize;
+    let mut row_empty = true;
+    for ch in text.chars() {
+        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        if used.saturating_add(ch_width) > width && !row_empty {
+            rows += 1;
+            used = 0;
+        }
+        row_empty = false;
+        used = used.saturating_add(ch_width);
+    }
+    rows
+}
+
+/// The line of KAS's plan text that summarises what an edit or a
+/// replacement removes, adds and changes (`Diu`: "Compared with the replaced
+/// steps: …"). `workflowPlan` does not carry it.
+fn plan_comparison(tc: &crate::traits::TrackedToolCall) -> Option<&str> {
+    tc.content().iter().find_map(|block| match block {
+        cyril_core::types::ToolCallContent::Text(text) => text
+            .lines()
+            .find(|line| line.starts_with("Compared with the replaced steps:")),
+        cyril_core::types::ToolCallContent::Diff { .. } => None,
+    })
 }
 
 /// Build the approval-preview body from the joined tool-call snapshot. The
@@ -400,18 +440,27 @@ fn push_bounded_text<'a, 's>(
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
 fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
+    let tc = &state.tool_call;
     // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
-    // tree in place of KAS's Text rendering of the same plan. A plan sent
-    // without its steps (`omitted: "steps"`) leaves the Text, which still
-    // lists them.
+    // tree in place of KAS's Text rendering of the same plan, plus the one
+    // line only the Text has: what an edit removes.
     if let Some(plan) = state
         .workflow_plan
         .as_ref()
         .filter(|plan| !plan.steps.is_empty())
     {
-        return super::workflow_plan::plan_lines(plan, text_width, theme);
+        return super::workflow_plan::plan_lines(plan, plan_comparison(tc), text_width, theme);
     }
-    let tc = &state.tool_call;
+    // A plan approval without a usable typed plan — sent without its steps
+    // (`omitted: "steps"`) or dropped as malformed — falls back to its Text,
+    // given the plan's row budget rather than the generic five rows.
+    let is_plan_approval = state.workflow_plan.is_some()
+        || state.consent.as_ref().and_then(|consent| consent.tool_id()) == Some("update_workflow");
+    let text_rows = if is_plan_approval {
+        super::workflow_plan::MAX_PLAN_ROWS
+    } else {
+        MAX_PREVIEW_LINES
+    };
     let mut lines: Vec<Line<'a>> = Vec::new();
 
     match tc.preview_body() {
@@ -425,9 +474,16 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) ->
                 cyril_core::types::ToolCallContent::Diff { .. } => "".lines(),
             }),
             text_width,
+            text_rows,
             theme,
         ),
-        PreviewBody::Text(text) => push_bounded_text(&mut lines, text.lines(), text_width, theme),
+        PreviewBody::Text(text) => push_bounded_text(
+            &mut lines,
+            text.lines(),
+            text_width,
+            MAX_PREVIEW_LINES,
+            theme,
+        ),
         // Never coerce a non-string payload (cyril-j1b3 spec).
         PreviewBody::Absent | PreviewBody::Malformed { .. } => lines.push(Line::styled(
             "  Preview unavailable",
@@ -2294,6 +2350,141 @@ mod tests {
     /// left out, and the options stay on screen.
     #[test]
     fn workflow_plan_is_bounded() {
+        workflow_plan_is_bounded_case();
+    }
+
+    /// cyril-8wh0 review: what an edit removes is only in KAS's Text
+    /// ("Compared with the replaced steps: …", not in `workflowPlan`), so it
+    /// is drawn under the typed plan.
+    #[test]
+    fn workflow_plan_shows_what_an_edit_removes() {
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(
+            "Steps to add after 'edit-workflow-r1':\n\nwrite-hello: step, agent wf-coder, model auto, effort low\n\nCompared with the replaced steps: removed 'old-step'; added 'write-hello'; changed none.",
+        ));
+        let terminal = render_at(&state, 90, 40, 40);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            screen.contains("Compared with the replaced steps: removed"),
+            "the comparison must show:\n{screen}"
+        );
+        assert!(screen.contains("'old-step'"), "the removed id:\n{screen}");
+        assert!(
+            screen.contains("Edited workflow · 1 step"),
+            "under the typed plan:\n{screen}"
+        );
+    }
+
+    /// cyril-8wh0 review: step details render as KAS words them — writes,
+    /// the completion condition (each part, joined with "or"), a watch's
+    /// config with non-string values as JSON — and an `omitted: "details"`
+    /// plan says so.
+    #[test]
+    fn workflow_plan_renders_step_details() {
+        use cyril_core::types::{
+            WorkflowCompletionSignal, WorkflowFileCheck, WorkflowPlanNode, WorkflowPlanNodeKind,
+            WorkflowPlanStep, WorkflowStopCondition,
+        };
+        let mut plan = live_plan();
+        plan.steps = vec![
+            WorkflowPlanNode {
+                node_id: node_id("build"),
+                kind: WorkflowPlanNodeKind::Step(WorkflowPlanStep {
+                    agent_name: "wf-coder".into(),
+                    model_id: Some("claude-sonnet-4.5".into()),
+                    model_source: Some(cyril_core::types::WorkflowCascadeSource::Parent),
+                    effort_level: None,
+                    effort_source: None,
+                    task: None,
+                    artifacts: vec![("report".into(), "out/report.md".into())],
+                    completion: Some(WorkflowStopCondition {
+                        contains_text: Some("DONE".into()),
+                        file_check: Some(WorkflowFileCheck {
+                            path: "out/s.json".into(),
+                            json_path: "$.ok".into(),
+                            value: serde_json::json!(true),
+                        }),
+                        completion_signal: Some(WorkflowCompletionSignal::Success),
+                    }),
+                }),
+            },
+            WorkflowPlanNode {
+                node_id: node_id("watch-ci"),
+                kind: WorkflowPlanNodeKind::Watch {
+                    handler: "wf-ci-watcher".into(),
+                    idle_timeout_sec: None,
+                    config: serde_json::json!({"branch": "main", "retries": 3})
+                        .as_object()
+                        .cloned(),
+                },
+            },
+        ];
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Details);
+        let terminal = render_at(&plan_approval(plan), 120, 50, 50);
+        let screen = screen_rows(&terminal).join("\n");
+        for expected in [
+            "build: wf-coder · model claude-sonnet-4.5 (parent) ·",
+            "effort auto",
+            "Writes: report = out/report.md",
+            "Waits for the user until out/s.json $.ok=true or",
+            "output contains \"DONE\" or it signals success",
+            "watch-ci: watch · handler wf-ci-watcher",
+            "Config: branch = main, retries = 3",
+            "(step details left out to fit the plan)",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+    }
+
+    /// cyril-8wh0 review: recipe strings are model output; a bidi override
+    /// or a control character in one never reaches the terminal.
+    #[test]
+    fn workflow_plan_strips_bidi_and_control_characters() {
+        let mut plan = live_plan();
+        plan.steps = vec![plan_step(
+            "evil\u{202E}txt.exe",
+            "wf\u{1b}[31mcoder",
+            None,
+            None,
+        )];
+        let terminal = render_at(&plan_approval(plan), 90, 40, 40);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            !screen.contains('\u{202E}') && !screen.contains('\u{1b}'),
+            "raw controls reached the screen:\n{screen}"
+        );
+        assert!(
+            screen.contains("evil txt.exe: wf [31mcoder"),
+            "cleaned as KAS cleans:\n{screen}"
+        );
+    }
+
+    /// cyril-8wh0 review: a plan approval without a usable typed plan falls
+    /// back to its Text with the plan's row budget, not the generic five.
+    #[test]
+    fn plan_text_fallback_gets_the_plan_budget() {
+        let ten = (1..=10)
+            .map(|n| format!("plan row {n}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut plan = live_plan();
+        plan.steps.clear();
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Steps);
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(&ten));
+        let screen = screen_rows(&render_at(&state, 90, 40, 40)).join("\n");
+        assert!(screen.contains("plan row 10"), "all ten rows:\n{screen}");
+
+        let mut ordinary = approval_for_tool_call(plan_text_tool_call(&ten));
+        ordinary.workflow_plan = None;
+        let screen = screen_rows(&render_at(&ordinary, 90, 40, 40)).join("\n");
+        assert!(screen.contains("plan row 5"), "five rows:\n{screen}");
+        assert!(!screen.contains("plan row 6"), "capped at five:\n{screen}");
+    }
+
+    fn workflow_plan_is_bounded_case() {
         let mut plan = live_plan();
         plan.steps = (1..=20)
             .map(|n| plan_step(&format!("step-{n:02}"), "wf-coder", None, None))

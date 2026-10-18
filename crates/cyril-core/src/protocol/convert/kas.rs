@@ -27,7 +27,7 @@ pub(crate) fn permission_workflow_plan(
     args: &acp::RequestPermissionRequest,
 ) -> Option<crate::types::WorkflowPlan> {
     let plan = args.meta.as_ref()?.get("kiro")?.get("workflowPlan")?;
-    workflow_plan::parse(plan)
+    workflow_plan::parse(plan, &args.tool_call.tool_call_id.to_string())
 }
 
 /// `_meta.kiro.{toolId, command, consent{capability, resource, workspaceRoot}}`
