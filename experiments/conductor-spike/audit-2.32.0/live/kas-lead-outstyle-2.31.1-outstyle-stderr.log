@@ -1,0 +1,23 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.34"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:770452) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":6}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":0}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":8}
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/steering)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/agents)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/workflows)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-outstyle-2.31.1-home-deepqw1z/.kiro/workflows
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8

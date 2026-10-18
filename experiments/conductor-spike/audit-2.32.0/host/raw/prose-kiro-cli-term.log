@@ -1,0 +1,8 @@
++2.32.0 @2799216 novel_tris=3: implementation was setset | setset to Some | was setset to
++2.32.0 @2867020 novel_tris=3: codefatal runtime error: | entered unreachable codefatal | unreachable codefatal runtime
++2.32.0 @2927420 novel_tris=6: boolexpected floatexpected enum | doubleexpected iexpected iexpected | iexpected boolexpected floatexpected | iexpected iexpected boolexpected | uexpected doubleexpected iexpected | uexpected uexpected doubleexpected
++2.32.0 @2940168 novel_tris=2: failedfilled must not | task failedfilled must
+## +2.32.0 total 8
+-2.31.1 @2548876 novel_tris=2: a character literal | err a character
+-2.31.1 @2927360 novel_tris=6: boolexpected iexpected doubleexpected | doubleexpected iexpected floatexpected | iexpected doubleexpected iexpected | iexpected floatexpected enum | uexpected boolexpected iexpected | uexpected uexpected boolexpected
+## -2.31.1 total 2

@@ -1,0 +1,23 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.43"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] configuration.cloudLayerAssertions.restated {"assertions":0}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/workflows
+[DEBUG] fs.workflow.recipeCatalog.refreshShared.start {"system":"fs","trigger":"startup"}
+[INFO] [KiroAgent] MCP subsystem initialized
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"user"}
+[ERROR] (node:802415) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"user","durationMs":1}
+[DEBUG] fs.workflow.recipes.readDir.start {"system":"fs","tier":"cloud"}
+[INFO] fs.workflow.recipes.readDir.ok {"system":"fs","tier":"cloud","durationMs":6}
+[INFO] fs.workflow.recipeCatalog.refreshShared.ok {"system":"fs","trigger":"startup","durationMs":9}
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/steering)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/agents)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Reseating sentinel: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m → /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro (target: /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/workflows)
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/kas-mcp-2.32.0-home-oxhq7p1m/.kiro/workflows
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=8

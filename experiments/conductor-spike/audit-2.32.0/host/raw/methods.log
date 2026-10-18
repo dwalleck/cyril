@@ -1,0 +1,35 @@
+2.31.1->2.32.0 kiro-cli-chat: 125 candidate tokens, 32 with differing counts
+  REM [1, 0] _kiro.dev/clear/statusFailed
+  REM [1, 0] _kiro.dev/compaction/statusFailed
+  CNT [5, 9] _kiro.dev/telemetry
+  REM [1, 0] _kiro.dev/telemetry/uiModeChangedProxyMessagePeerMessageToSinkSendTaskResultResponseSendTaskResultRequestresultNotificationrespondercancellation_paramSSE
+  ADD [0, 1] kiro.dev/agent/switchedExecuteCommand
+  REM [1, 0] kiro.dev/agent/switchedFailed
+  ADD [0, 1] kiro.dev/clear/statusResolving
+  ADD [0, 1] kiro.dev/commands/availableProgrammingLanguagelanguage_nameActiveDeprecatedNewTokenLimitsmax_output_tokensbuilder_nameRuntimeComponentsBuilder_kiro
+  REM [1, 0] kiro.dev/commands/availableProgrammingLanguagelanguage_nameActiveDeprecatedNewTokenLimitsmax_output_tokensbuilder_nameRuntimeComponentsBuildercreateCreatenumber_of_unit_test_cases_generatednumber_of_unit_test_cases_acceptedlines_of_code_generatedlines_of_code_acceptedchars_of_code_generatedchars_of_code_acceptedmessage_iduser_intentactive_editor_total_characterstime_between_chunksfull_responselatencyrequest_lengthresponse_lengthnumber_of_code_blockshas_project_level_contextAccessDeniedExceptionExpiredTokenExceptionInvalidGrantExceptionPoolingPowerProProMaxProPlusservice_nameoperation_nameruntime_pluginsan
+  ADD [0, 1] kiro.dev/compaction/statusReceived
+  REM [1, 0] kiro.dev/docs/cli/authentication/uiModeDefaultChanged
+  REM [1, 0] kiro.dev/docs/cli/mcpevent
+  REM [1, 0] kiro.dev/error/rate_limitFailed
+  ADD [0, 1] kiro.dev/error/rate_limit_kiro
+  REM [1, 0] kiro.dev/goal/statusFailed
+  ADD [0, 1] kiro.dev/goal/statusReplaying
+  CNT [3, 4] kiro.dev/settin
+  CNT [2, 3] kiro.dev/settings
+  ADD [0, 1] kiro.dev/settings/generalnew_sessionACP
+  REM [1, 0] kiro.dev/stable/feed
+  ADD [0, 1] kiro.dev/stablehttps
+  CNT [6, 10] kiro.dev/teleme
+  REM [1, 0] kiro.dev/telemerequest_metadataonversation_typese_ids_and_namesn
+  CNT [5, 9] kiro.dev/telemetry
+  REM [1, 0] kiro.dev/telemetry/processHealthFailed
+  ADD [0, 1] kiro.dev/telemetry/uiModeChangedProxyMessagePeerMessageToSinkSendTaskResultResponseSendTaskResultRequestresultNotificationrespondercancellation_paramunexpected
+  ADD [0, 1] kiro.dev/telemetry/uiModeChangedresulting
+  ADD [0, 1] kiro.dev/telemetry/uiModeDefaultChangedPoolingPowerProProMaxProPlusservice_nameoperation_nameruntime_pluginsan
+  CNT [1, 2] kiro/skH
+  REM [1, 0] kiro/skills/Refusing
+  ADD [0, 1] kiro/skills/config
+  ADD [0, 1] kiro/sourceProvutocompletionKeywledge
+2.31.1->2.32.0 kiro-cli: 1 candidate tokens, 0 with differing counts
+2.31.1->2.32.0 kiro-cli-term: 0 candidate tokens, 0 with differing counts

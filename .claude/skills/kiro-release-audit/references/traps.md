@@ -102,3 +102,23 @@ the positive form; the history says why it is a rule.
 28. **`largeToolOutputHandler` is not a positive control** (KAS logs it `unknown-key`); use
     `configurationState:true`, which makes KAS push `_kiro/configuration/state`. KAS debug lines go to
     `$HOME/.kiro/logs/<ts>/kiro.log`, not stderr.
+29. **Name the cyril entry point before rating a gap.** A new KAS flow reached only through a model tool
+    or a gate cyril deliberately withholds is opt-in (P3), not P2. The 2.32.0 creator-as-step plan
+    approval was filed P2, then corrected: ADR-0011 keeps `workflows.enabled` off, so the model never
+    gets `run_workflow`, and `_kiro/workflow/new` takes no `workflowPrompt`.
+30. **Spread-built objects hide from literal greps.** Kiro's TUI builds its consent echo as
+    `consent:{...o?{capability:o}:{},scope:r,…}`, so `consent:{capability` matches 0. The 2.31.1 audit
+    concluded "the TUI sends no consent echo" from that; it has sent one since 2.31.1. Grep the
+    container key (`kiro:{consent`) and read the object.
+31. **Build cyril at the HEAD the verdict is about, and re-check HEAD at fold time.** In 2.32.0 another
+    session merged the fix under test (#169) 19 minutes after the cyril-on-KAS build, so that scenario's
+    "blocker stands" verdict described superseded code. Record the build commit in every cyril-on-KAS row.
+32. **A cloud-entitled account turns `--cloud` probes into real remote sessions.** The 2.32.0 HOST-L1/L3
+    legs expected the gate to refuse and created three cloud sessions. Ask before any probe whose success
+    path creates remote state, and delete that state in the same leg.
+33. **Pair `session/load` legs at the same model-catalog warmth.** A warm catalog puts the full `model`
+    option in the load result on both engines; a cold one omits it (0.66.34) or pins one option
+    (0.66.43). An OLD/NEW pair at different warmth reads as a version change (trap 1 variant).
+34. **Probe drivers answer host callbacks their own way.** Every driver replies `shell_type: "bash"`, so
+    no driver capture can show a cyril-specific host-callback bug (cyril-k8wc). Give each host-callback
+    lead a cyril-shaped arm, and read cyril's real replies in the cyril-on-KAS leg.

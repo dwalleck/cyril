@@ -1,0 +1,12 @@
+Hidden helpers run by installers. Not for direct use
+
+Usage: kiro-cli-chat _ [OPTIONS] <COMMAND>
+
+Commands:
+  cleanup-autocomplete-artifacts  Remove artifacts left by the autocomplete bundled distribution
+  standalone-cohort               Print this user's standalone cohort as one JSON line
+  help                            Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

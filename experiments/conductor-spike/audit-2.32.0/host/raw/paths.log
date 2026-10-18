@@ -1,0 +1,21 @@
+2.31.1 kiro-cli {'source_paths': 161, 'module_tokens': 2, 'method_leads': 0, 'kiro_env': 21, 'upper_snake': 447}
+2.31.1 kiro-cli-chat {'source_paths': 398, 'module_tokens': 10, 'method_leads': 20, 'kiro_env': 38, 'upper_snake': 421}
+2.31.1 kiro-cli-term {'source_paths': 86, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 337}
+2.32.0 kiro-cli {'source_paths': 161, 'module_tokens': 2, 'method_leads': 0, 'kiro_env': 21, 'upper_snake': 448}
+2.32.0 kiro-cli-chat {'source_paths': 400, 'module_tokens': 10, 'method_leads': 13, 'kiro_env': 37, 'upper_snake': 401}
+2.32.0 kiro-cli-term {'source_paths': 86, 'module_tokens': 1, 'method_leads': 0, 'kiro_env': 0, 'upper_snake': 342}
+2.31.1->2.32.0 kiro-cli source_paths: +0 -0
+2.31.1->2.32.0 kiro-cli module_tokens: +0 -0
+2.31.1->2.32.0 kiro-cli method_leads: +0 -0
+2.31.1->2.32.0 kiro-cli kiro_env: +0 -0
+2.31.1->2.32.0 kiro-cli upper_snake: +5 -4
+2.31.1->2.32.0 kiro-cli-chat source_paths: +2 -0
+2.31.1->2.32.0 kiro-cli-chat module_tokens: +1 -1
+2.31.1->2.32.0 kiro-cli-chat method_leads: +2 -9
+2.31.1->2.32.0 kiro-cli-chat kiro_env: +8 -9
+2.31.1->2.32.0 kiro-cli-chat upper_snake: +41 -61
+2.31.1->2.32.0 kiro-cli-term source_paths: +0 -0
+2.31.1->2.32.0 kiro-cli-term module_tokens: +0 -0
+2.31.1->2.32.0 kiro-cli-term method_leads: +0 -0
+2.31.1->2.32.0 kiro-cli-term kiro_env: +0 -0
+2.31.1->2.32.0 kiro-cli-term upper_snake: +5 -0
