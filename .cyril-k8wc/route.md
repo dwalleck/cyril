@@ -36,7 +36,8 @@ Outcome contract (ticket AC + scope note):
 | POSIX via `$SHELL` basename `sh` / `bash` / `dash` / `zsh` / `ksh` | that basename (`{"shellType":"zsh"}` …), never `posix` | posix |
 | POSIX via the `bash`-on-PATH fallback or config `[agent] shell = "bash"` | `bash` | posix |
 | fish | `fish` (unchanged) | fish |
-| Windows pwsh / Windows PowerShell | `powershell` (unchanged) | powershell |
+| Windows PowerShell 7 (`pwsh`) | `pwsh` (was `powershell`; ca400c75, requester 2026-10-18) | powershell |
+| Windows PowerShell 5.1 | `powershell` (unchanged) | powershell |
 | no resolved shell | existing refusal (unchanged) | — |
 
 - The reply names the interpreter `terminal/create` actually runs (same `HostShell` snapshot), so KAS 0.66.43's approval-time `shellType` and run-time dialect agree (no `InterpreterChangedError`).
@@ -63,7 +64,7 @@ Requested reply behavior delivered; red-first test fails on base and passes afte
 
 ## Results
 
-Delivered at `7ae63f66` (fix commit on base `85becf9f`). `ShellKind::Posix` carries the `PosixShell` (`sh`/`bash`/`dash`/`zsh`/`ksh`) it was classified from — one table drives both `$SHELL` classification and the wire name — and `HostShell::wire_name()` reports it; fish → `fish`, pwsh/Windows PowerShell → `powershell` unchanged.
+Delivered at `7ae63f66` (fix commit on base `85becf9f`). `ShellKind::Posix` carries the `PosixShell` (`sh`/`bash`/`dash`/`zsh`/`ksh`) it was classified from — one table drives both `$SHELL` classification and the wire name — and `HostShell::wire_name()` reports it; fish → `fish`, pwsh/Windows PowerShell → `powershell` unchanged at that commit; `ca400c75` then makes PowerShell 7 reply `pwsh` (see the pwsh addendum below).
 
 | Check | Result | Receipt |
 |---|---|---|
@@ -77,5 +78,21 @@ Delivered at `7ae63f66` (fix commit on base `85becf9f`). `ShellKind::Posix` carr
 | Live after (`7ae63f66`, SHELL=/bin/bash) | overlay offers Allow / Always allow / Deny / Always deny; rule turn auto-runs with 0 prompts (`effect:"allow","capability":"shell"`); no `policy.shell.type.unknown` | [`receipts/live/after-bash/`](receipts/live/after-bash/) |
 | Live after (`7ae63f66`, SHELL=/usr/bin/zsh) | same as bash | [`receipts/live/after-zsh/`](receipts/live/after-zsh/) |
 | Independent review | DONE 2026-10-18 — approve-with-nits (cross-model, read-only): mapper re-extracted from installed 0.66.34/0.66.43 bundles, single-source dialect/interpreter traced, mutation `wire_name→"posix"` = 10/14 fail, nits = receipt hygiene only. Covers the PR up to 2f48ff85 — the later `pwsh` reply commit (PowerShell 7 answers `pwsh`; user request 2026-10-18) has its own delta review | PR #172 |
+| Delta review (`ca400c75`, pwsh) | DONE 2026-10-18 — approve-with-nits (cross-model, read-only): every behavioural KAS consumer goes through mapper `jh` (`pwsh`≡`powershell`: policy, `execute_pwsh` choice, terminal dialect, all three InterpreterChangedError sites); mutation `Pwsh=>"powershell"` → exactly the 3 new cases fail; nits = docs only (fixed below) | PR #172 |
 
 No `InterpreterChangedError` / `policy.shell.interpreter_mismatch` in any arm's kiro.log. Live binaries and driver: [`receipts/live/binaries.txt`](receipts/live/binaries.txt), `receipts/live/k8wc-*.sh`.
+
+## Addendum — PowerShell 7 replies `pwsh` (`ca400c75`)
+
+- Request: the requester asked that PowerShell 7 report `pwsh` (2026-10-18). cyril already resolves `pwsh` before
+  Windows PowerShell in `auto`; only the reported name changes. Windows PowerShell 5.1 keeps `powershell`.
+- Why it matters: both names map to KAS's `powershell` dialect (mapper `jh`), so policy, tool choice and the
+  0.66.43 InterpreterChangedError check are identical, but KAS writes the raw reply into the model's main system
+  prompt (`Shell: ${t.shellType}`, `Nfr`; also `with ${r.shellType} shell`). **Correction to the `ca400c75` commit
+  message:** the mustache template line `Shell: {{shellType}}` is rendered through `QB(shellType)`, which yields
+  "PowerShell" for both tokens — it is not verbatim. The code doc comment (main prompt) is accurate.
+- Evidence: red-first [`receipts/pwsh-red-first.txt`](receipts/pwsh-red-first.txt); Windows VM 34/34
+  [`receipts/pwsh-windows-tests.txt`](receipts/pwsh-windows-tests.txt); LIVE on native Windows (PowerShell 7,
+  KAS 0.66.43) [`receipts/live/windows-pwsh/`](receipts/live/windows-pwsh/README.md): the model reports `[pwsh]`,
+  the approval offers Always allow, and a `&&` command prints `PWSH7OK`.
+
