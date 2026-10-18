@@ -46,8 +46,11 @@ none — red fence first, minimal fix, fence stays as the regression fence.
 - Red: PASS as a red — `receipts/red.md` (6 warnings across 6 frames on the
   base revision).
 - Green: the fence and the whole cyril-ui suite pass on the fix head.
-- Gate: every ci.yml lane passes on `7962f526` — `receipts/gate.md` (one
-  known-flake hit, cyril-xy4x, rerun green in isolation).
+- Gate: every ci.yml lane passes on `80f0433b` (`receipts/gate.md`).
+- Merge with PR #174: `#174` gained a scope reset at the top of
+  `show_approval` (`43f3ad4a`). The warning now runs after `push_back`
+  (`80f0433b`), which leaves the top of the function and the struct literal
+  untouched. Behavior is unchanged, and the q0kg fences and the gate pass.
 - Independent review (rust-code-reviewer subagent, read-only, on `670e03a8`):
   no blocking or should-fix findings. Nits and dispositions:
   1. Shape field lost Display formatting → fixed in `7962f526`
