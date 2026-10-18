@@ -8934,13 +8934,13 @@ mod tests {
             [
                 // Its first step turn was aborted with `promptTurnSummaries:
                 // []` (capture line 92): the total is partial and says so.
-                "╰─ ⚙ workflow \"audit-linear\" completed · run ≥ 0.62 credits (1 turn unmetered) · follow-up 0.24 credits",
+                "╰─ ⚙ workflow \"audit-linear\" completed · run ≥ 0.62 credits (1 turn unmetered) · follow-up 0.23 credits",
                 "╰─ ⚙ agent follow-up · 0.22 credits",
-                "╰─ ⚙ workflow \"loop\" aborted · run 0.55 credits · follow-up 0.07 credits",
+                "╰─ ⚙ workflow \"loop\" aborted · run 0.55 credits · follow-up 0.06 credits",
                 "╰─ ⚙ workflow \"watch-audit\" completed · run 0.24 credits · follow-up 0.15 credits",
-                "╰─ ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · run 0.18 credits · follow-up 0.08 credits",
-                "╰─ ⚙ workflow \"park\" completed · run 0.21 credits · follow-up 0.08 credits",
-                "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.08 credits",
+                "╰─ ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · run 0.17 credits · follow-up 0.08 credits",
+                "╰─ ⚙ workflow \"park\" completed · run 0.20 credits · follow-up 0.07 credits",
+                "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.07 credits",
             ]
         );
         assert!(
@@ -9013,7 +9013,7 @@ mod tests {
             .join("\n");
         assert!(
             screen.contains(
-                "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.08 credits"
+                "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.07 credits"
             ),
             "completion line on screen:\n{screen}"
         );

@@ -124,8 +124,20 @@ pub(crate) fn footer_text(close: &AgentTurnClose) -> Option<String> {
     }
 }
 
+/// A turn's credits, floored to two decimals as Kiro's TUI shows a turn
+/// (`kiro-tui-2.32.0.js` `yae`: `(Math.floor(e*100)/100).toFixed(2)`).
 fn credits_text(credits: f64) -> String {
-    format!("{credits:.2} credits")
+    let floored = (credits * 100.0).floor() / 100.0;
+    format!("{floored:.2} credits")
+}
+
+/// A run's credits, floored as Kiro's TUI shows a workflow's total
+/// (`kiro-tui-2.32.0.js` `Gz`: `t=e*100; Math.floor(t+Number.EPSILON*
+/// Math.abs(t))/100`, then `toFixed(2)`).
+fn run_credits_text(credits: f64) -> String {
+    let hundredths = credits * 100.0;
+    let floored = (hundredths + f64::EPSILON * hundredths.abs()).floor() / 100.0;
+    format!("{floored:.2} credits")
 }
 
 /// `run <total> credits`, or — when some of the run's turns reported no
@@ -133,9 +145,9 @@ fn credits_text(credits: f64) -> String {
 /// unmetered)` (cyril-2lh8 review: an incomplete total is not a total).
 fn run_total_text(total: f64, unmetered_turns: u32) -> String {
     match unmetered_turns {
-        0 => format!("run {}", credits_text(total)),
-        1 => format!("run ≥ {} (1 turn unmetered)", credits_text(total)),
-        n => format!("run ≥ {} ({n} turns unmetered)", credits_text(total)),
+        0 => format!("run {}", run_credits_text(total)),
+        1 => format!("run ≥ {} (1 turn unmetered)", run_credits_text(total)),
+        n => format!("run ≥ {} ({n} turns unmetered)", run_credits_text(total)),
     }
 }
 
@@ -256,7 +268,7 @@ mod tests {
     )]
     #[case::run_completion(
         close(Some(0.2378933), Some(("audit-linear", WorkflowRunStatus::Completed, 0.6214264))),
-        Some("╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.24 credits")
+        Some("╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.23 credits")
     )]
     #[case::run_completion_unmetered_wake(
         close(None, Some(("loop", WorkflowRunStatus::Aborted, 0.38))),
@@ -273,6 +285,24 @@ mod tests {
     #[case::nothing_metered(close(None, None), None)]
     fn footer_strings(#[case] close: AgentTurnClose, #[case] want: Option<&str>) {
         assert_eq!(footer_text(&close).as_deref(), want);
+    }
+
+    /// cyril-2lh8 review: credits are floored to two decimals exactly as
+    /// Kiro's TUI shows them (`kiro-tui-2.32.0.js`). Turn credits use `yae`,
+    /// `Math.floor(e*100)/100`. Run totals use `Gz`, which adds
+    /// `Number.EPSILON*|e*100|` before flooring. Hence 0.29, whose `*100`
+    /// is 28.999999999999996, shows 0.28 as a turn figure and 0.29 as a
+    /// run total, as it does in Kiro.
+    #[rstest::rstest]
+    #[case::linear_follow_up(0.237_893_331_840_796_03, "0.23", "0.23")]
+    #[case::bgwatch_total(0.175_088_340_132_670_1, "0.17", "0.17")]
+    #[case::repeat_cap_wake(0.222_790_630_514_096_2, "0.22", "0.22")]
+    #[case::exact_hundredth(0.38, "0.38", "0.38")]
+    #[case::binary_edge(0.29, "0.28", "0.29")]
+    #[case::sub_hundredth(0.004, "0.00", "0.00")]
+    fn credits_floor_like_kiro(#[case] credits: f64, #[case] turn: &str, #[case] run: &str) {
+        assert_eq!(credits_text(credits), format!("{turn} credits"));
+        assert_eq!(run_total_text(credits, 0), format!("run {run} credits"));
     }
 
     /// B5 exact strings for both injection kinds, with the stress rows.
