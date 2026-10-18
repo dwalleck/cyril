@@ -350,7 +350,13 @@ const GATE_WORKFLOW_COMMANDS: [&str; 4] = [
     "workflow-resume",
 ];
 
-/// KAS custom-agent advertisements are slash prompts, not V2 extension RPCs.
+/// `_meta.kiro.type` values KAS runs from slash prompt text (2.31.1 audit B1):
+/// custom agents and skills (LIVE: `/probe-skill hello` → `Load skill`) and
+/// saved file/MCP prompts (bundle prompt `resolve` parses the same slash text
+/// and substitutes `$ARGUMENTS`).
+const PROMPT_COMMAND_TYPES: [&str; 3] = ["custom-agent", "skill", "prompt"];
+
+/// KAS command advertisements are slash prompts, not V2 extension RPCs.
 /// Unsupported/missing types stay out of the registry and autocomplete.
 pub(crate) fn commands_to_notification(update: &acp::AvailableCommandsUpdate) -> Notification {
     let commands = update
@@ -368,15 +374,33 @@ pub(crate) fn commands_to_notification(update: &acp::AvailableCommandsUpdate) ->
                 .meta
                 .as_ref()
                 .and_then(|meta| meta.get("kiro"))
-                .and_then(|kiro| kiro.get("type"))
-                .and_then(serde_json::Value::as_str);
-            if command_type != Some("custom-agent") {
-                tracing::debug!(
-                    command = command.name,
-                    command_type,
-                    "suppressing unsupported KAS command advertisement"
-                );
-                return None;
+                .and_then(|kiro| kiro.get("type"));
+            match command_type {
+                Some(serde_json::Value::String(kind))
+                    if PROMPT_COMMAND_TYPES.contains(&kind.as_str()) => {}
+                Some(serde_json::Value::String(kind)) => {
+                    tracing::debug!(
+                        command = command.name,
+                        command_type = kind,
+                        "suppressing unsupported KAS command type"
+                    );
+                    return None;
+                }
+                Some(malformed) => {
+                    tracing::warn!(
+                        command = command.name,
+                        command_type = %malformed,
+                        "suppressing KAS command with a non-string _meta.kiro.type"
+                    );
+                    return None;
+                }
+                None => {
+                    tracing::debug!(
+                        command = command.name,
+                        "suppressing KAS command advertised without _meta.kiro.type"
+                    );
+                    return None;
+                }
             }
             Some(crate::types::CommandInfo::new(
                 command.name.clone(),
@@ -395,28 +419,20 @@ pub(crate) fn commands_to_notification(update: &acp::AvailableCommandsUpdate) ->
     }
 }
 
-/// Suppress bridge-only advertisements from the shared extension converter.
-/// KAS command support is established only by its typed ACP conversion above.
-pub(crate) fn suppress_unsupported_commands(notification: Notification) -> Notification {
-    let Notification::CommandsUpdated {
-        mut commands,
-        prompts,
-    } = notification
-    else {
-        return notification;
-    };
-    commands.retain(|command| {
-        let suppress = command.route() != crate::types::AgentCommandRoute::Prompt
-            || GATE_WORKFLOW_COMMANDS.contains(&command.name());
-        if suppress {
-            tracing::debug!(
-                command = command.name(),
-                "suppressing unsupported KAS command advertisement"
-            );
-        }
-        !suppress
-    });
-    Notification::CommandsUpdated { commands, prompts }
+/// Drop a v2 `kiro.dev/commands/available` list from the shared extension
+/// converter. KAS advertises commands only via ACP `available_commands_update`
+/// (typed above); every entry here is bridge-only, and because each command
+/// list replaces the registry's agent commands, forwarding an emptied list
+/// would wipe the commands the ACP update registered.
+pub(crate) fn drop_v2_command_list(notification: Notification) -> Option<Notification> {
+    if let Notification::CommandsUpdated { commands, .. } = &notification {
+        tracing::debug!(
+            dropped = commands.len(),
+            "ignoring v2 kiro.dev/commands/available on KAS"
+        );
+        return None;
+    }
+    Some(notification)
 }
 
 /// Outcome of offering an extension method to the KAS workflow adapter.
@@ -1650,7 +1666,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn kas_custom_agent_advertisements_produce_prompt_intent_only() {
+    async fn kas_prompt_type_advertisements_produce_prompt_intent_only() {
         use crate::commands::{CommandContext, CommandRegistry, CommandResultKind};
         use crate::types::{BridgeCommand, SessionId};
 
@@ -1665,6 +1681,28 @@ mod tests {
                 "name": "no-input-agent",
                 "description": "Agent without input metadata",
                 "_meta": {"kiro": {"type": "custom-agent"}}
+            },
+            // Skill and saved-prompt shapes as captured live (2.31.1 audit,
+            // kas-v3c-v1-2.29.1.jsonl).
+            {
+                "name": "probe-skill",
+                "description": "Probe skill probe-skill. Use when asked to run the probe-skill probe.",
+                "input": {"hint": "optional context"},
+                "_meta": {"kiro": {
+                    "type": "skill",
+                    "resource": {"resourceType": "skill", "source": {"origin": "user"}},
+                    "originalName": "probe-skill"
+                }}
+            },
+            {
+                "name": "ws-prompt",
+                "description": "(file prompt)",
+                "input": {"hint": "[args]"},
+                "_meta": {"kiro": {
+                    "type": "prompt",
+                    "resource": {"resourceType": "prompt", "source": {"origin": "workspace"}},
+                    "arguments": [{"name": "args", "description": "All arguments", "required": false}]
+                }}
             },
             {
                 "name": "steering-document",
@@ -1699,10 +1737,15 @@ mod tests {
                 .iter()
                 .map(|command| command.name())
                 .collect::<Vec<_>>(),
-            ["general-task-execution", "no-input-agent"]
+            [
+                "general-task-execution",
+                "no-input-agent",
+                "probe-skill",
+                "ws-prompt"
+            ]
         );
         let mut registry = CommandRegistry::new();
-        registry.register_agent_commands(&commands);
+        registry.replace_agent_commands(&commands);
         let mut session = crate::session::SessionController::new();
         session.apply_notification(&Notification::SessionCreated {
             session_id: SessionId::new("sess_commands"),
@@ -1726,6 +1769,8 @@ mod tests {
             "/general-task-execution",
             "/general-task-execution \"inspect foo\"",
             "/no-input-agent",
+            "/probe-skill hello",
+            "/ws-prompt one \"two three\"",
         ] {
             let (command, args) = registry.parse(input).expect("supported advertisement");
             let result = command.execute(&ctx, args).await.expect("prompt intent");
@@ -1744,9 +1789,9 @@ mod tests {
         else {
             panic!("expected V2 command update");
         };
-        assert_eq!(commands.len(), 6);
+        assert_eq!(commands.len(), 8);
         let mut registry = CommandRegistry::new();
-        registry.register_agent_commands(&commands);
+        registry.replace_agent_commands(&commands);
         let (command, args) = registry
             .parse("/general-task-execution inspect foo")
             .expect("V2 command");
@@ -1800,9 +1845,9 @@ mod tests {
         let kas = KasEngine::default()
             .convert_ext_notification("kiro.dev/commands/available", &params)
             .expect("KAS extension");
-        assert!(
-            matches!(kas, Some(Notification::CommandsUpdated { commands, .. }) if commands.is_empty())
-        );
+        // Dropped outright: an emptied list would replace (wipe) the agent
+        // commands that KAS's ACP update registered.
+        assert!(kas.is_none(), "got {kas:?}");
         let v2 = crate::protocol::engine::V2Engine
             .convert_ext_notification("kiro.dev/commands/available", &params)
             .expect("V2 extension");

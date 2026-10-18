@@ -263,15 +263,18 @@ findings and the path to `report.md`.
 | `/usage` | Show billing and usage info |
 
 V2 retains its existing command execution and selection-option requests.
-Advertised commands cannot replace Cyril's builtins or an already-registered
-command.
+Each advertisement is the agent's complete command list: a command it no longer
+lists is withdrawn from autocomplete and dispatch, and a re-advertised command
+takes its new behaviour. Advertised commands never replace Cyril's builtins.
 
-**KAS agent commands:** when KAS advertises a `custom-agent` command, Cyril
-registers it for ordinary ACP prompt submission. For example, if advertised,
+**KAS agent commands:** when KAS advertises a custom agent, skill or saved
+prompt (`custom-agent`, `skill`, `prompt`), Cyril registers it for ordinary ACP
+prompt submission. For example, if advertised,
 `/general-task-execution "inspect foo"` starts a prompt turn rather than a V2
 command RPC. The invocation is sent as exactly one original text block,
 preserving the slash, quotes, and whitespace as typed, including commands with
-no arguments.
+no arguments. As in KAS, the command name ends at the first whitespace of any
+kind, so a tab or newline after the name still invokes the command.
 
 Recognized KAS command prompts receive **no automatic local lesson or
 `@file` expansion text**: those additions would change KAS's command arguments.

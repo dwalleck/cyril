@@ -364,9 +364,9 @@ impl Engine for KasEngine {
                     return Ok(Some(powers));
                 }
                 // Shared V2 conversion cannot classify supported KAS commands.
-                // Never register its bridge-only commands for this engine.
+                // Never let its bridge-only command list reach the registry.
                 Ok(convert::kiro::to_ext_notification(method, params)?
-                    .map(convert::kas::suppress_unsupported_commands))
+                    .and_then(convert::kas::drop_v2_command_list))
             }
         }
     }

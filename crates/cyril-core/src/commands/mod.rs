@@ -159,7 +159,7 @@ impl UsageAccountCommandSource {
 ///   commands, which arrive with `commands/available` and register as agent
 ///   commands. `session/set_config_option` is "Method not found" there, so a
 ///   builtin would be dead weight — and registering one would shadow the
-///   agent's command (`register_agent_commands` skips taken names).
+///   agent's command (`replace_agent_commands` skips taken names).
 /// - **KAS** advertises no TUI commands at all; model, effort, and mode are
 ///   select options of the session config catalog instead. Cyril supplies
 ///   the three commands, driven by the [`crate::types::KasConfigSnapshot`]
@@ -421,31 +421,41 @@ pub trait Command: Send + Sync {
 /// Registry of available slash commands.
 pub struct CommandRegistry {
     commands: HashMap<String, Arc<dyn Command>>,
+    /// Names whose entry came from the latest agent advertisement — the only
+    /// entries [`replace_agent_commands`](Self::replace_agent_commands) removes.
+    agent_names: HashSet<String>,
 }
 
 impl CommandRegistry {
     pub fn new() -> Self {
         Self {
             commands: HashMap::new(),
+            agent_names: HashSet::new(),
         }
     }
 
     pub fn register(&mut self, cmd: Arc<dyn Command>) {
+        // A builtin that takes an advertised name is no longer agent-owned,
+        // so the next advertisement must not remove it.
+        self.agent_names.remove(cmd.name());
         self.commands.insert(cmd.name().to_string(), cmd.clone());
         for alias in cmd.aliases() {
+            self.agent_names.remove(*alias);
             self.commands.insert((*alias).to_string(), cmd.clone());
         }
     }
 
     /// Parse a slash command. Returns None if input doesn't start with '/'.
+    ///
+    /// The name ends at the first whitespace character of any kind (tab,
+    /// newline, Unicode space), matching KAS's slash parser (`/\s/`), so a
+    /// command KAS would run is never mistaken for ordinary chat.
     pub fn parse<'a>(&'a self, input: &'a str) -> Option<(&'a dyn Command, &'a str)> {
         let trimmed = input.trim();
-        if !trimmed.starts_with('/') {
-            return None;
-        }
-        let (name, args) = match trimmed.find(' ') {
-            Some(pos) => (&trimmed[1..pos], trimmed[pos + 1..].trim()),
-            None => (&trimmed[1..], ""),
+        let invocation = trimmed.strip_prefix('/')?;
+        let (name, args) = match invocation.split_once(char::is_whitespace) {
+            Some((name, args)) => (name, args.trim()),
+            None => (invocation, ""),
         };
         self.commands.get(name).map(|cmd| (cmd.as_ref(), args))
     }
@@ -484,7 +494,7 @@ impl CommandRegistry {
             registry.register(Arc::new(builtin::KasHooksCommand::new(workspace_root)));
         }
         // KAS-only config builtins (cyril-vh69): on v2 nothing registers, so
-        // the agent-advertised `model` keeps its name (register_agent_commands
+        // the agent-advertised `model` keeps its name (replace_agent_commands
         // skips a name a builtin already took — a builtin here would shadow
         // it). Names are pushed BEFORE `HelpCommand` copies the list: the
         // snapshot is eager (the review-finding-2 trap `/powers` documents
@@ -506,7 +516,7 @@ impl CommandRegistry {
         // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
         // advertises 25 commands and `powers` is not among them, and KAS
         // advertises no TUI commands at all — so cyril always owns the name
-        // (and `register_agent_commands` skips a name already taken). On v2 the
+        // (and `replace_agent_commands` skips a name already taken). On v2 the
         // command can only ever answer "not reported yet" (cyril-v19o).
         //
         // Pushed BEFORE `HelpCommand` copies the list: the snapshot is eager,
@@ -532,22 +542,32 @@ impl CommandRegistry {
         registry
     }
 
-    /// Register commands advertised by the agent, retaining their typed route.
+    /// Replace the agent-advertised commands with `cmds`, retaining their
+    /// typed route.
+    ///
+    /// Each advertisement is the agent's complete list (ACP
+    /// `available_commands_update`, v2 `kiro.dev/commands/available`), so a
+    /// command it omits is removed and a re-advertised name takes its new
+    /// route. Builtins are never removed and still win a name collision.
     ///
     /// Skips commands that are local-only and not selection commands.
     /// Local selection commands (e.g., `/chat`) are kept because they
     /// still need picker UI on the client side.
-    pub fn register_agent_commands(&mut self, cmds: &[crate::types::CommandInfo]) {
+    pub fn replace_agent_commands(&mut self, cmds: &[crate::types::CommandInfo]) {
+        for name in self.agent_names.drain() {
+            self.commands.remove(&name);
+        }
         for cmd in cmds {
             // Kiro quirk: /chat is marked local but needs picker UI, so keep local+selection commands.
             if cmd.is_local() && !cmd.is_selection() {
                 continue;
             }
             let name = cmd.name().to_string();
-            // Skip if a builtin already covers this name
+            // Skip if a builtin (or an earlier entry in this list) already covers this name
             if self.commands.contains_key(&name) {
                 continue;
             }
+            self.agent_names.insert(name.clone());
             self.commands.insert(
                 name.clone(),
                 Arc::new(AgentCommand {
@@ -728,6 +748,40 @@ mod tests {
         registry.register(std::sync::Arc::new(EchoCommand));
         let (_, args) = registry.parse("/echo").unwrap();
         assert_eq!(args, "");
+    }
+
+    /// KAS's slash parser ends the name at `/\s/`; cyril must split the same
+    /// way, or a command KAS would run falls through to ordinary chat.
+    #[rstest::rstest]
+    #[case::space("/echo hello", "hello")]
+    #[case::tab("/echo\thello", "hello")]
+    #[case::newline("/echo\nhello", "hello")]
+    #[case::crlf("/echo\r\nhello", "hello")]
+    #[case::no_break_space("/echo\u{a0}hello", "hello")]
+    #[case::ideographic_space("/echo\u{3000}hello", "hello")]
+    #[case::mixed_run_keeps_inner_spacing("/echo \t hello  world \n", "hello  world")]
+    #[case::trailing_newline_only("/echo\n", "")]
+    fn command_name_ends_at_any_whitespace(#[case] input: &str, #[case] want: &str) {
+        let mut registry = CommandRegistry::new();
+        registry.register(std::sync::Arc::new(EchoCommand));
+        let (cmd, args) = registry.parse(input).expect("names /echo");
+        assert_eq!(cmd.name(), "echo");
+        assert_eq!(args, want);
+    }
+
+    #[test]
+    fn multibyte_command_names_parse_without_slicing_a_char() {
+        let mut registry = CommandRegistry::new();
+        registry.replace_agent_commands(&[advertised(
+            "wörkflöw",
+            crate::types::AgentCommandRoute::Prompt,
+        )]);
+        let (cmd, args) = registry
+            .parse("/wörkflöw\u{a0}ärg")
+            .expect("multibyte name");
+        assert_eq!(cmd.name(), "wörkflöw");
+        assert_eq!(args, "ärg");
+        assert!(registry.parse("/").is_none(), "a bare slash names nothing");
     }
 
     #[test]
@@ -1247,7 +1301,7 @@ mod tests {
     }
 
     #[test]
-    fn register_agent_commands_skips_local_non_selection() {
+    fn replace_agent_commands_skips_local_non_selection() {
         let mut registry = CommandRegistry::new();
         let cmds = vec![
             crate::types::CommandInfo::new(
@@ -1269,7 +1323,7 @@ mod tests {
                 crate::types::AgentCommandRoute::BridgeExecute,
             ), // not local → register
         ];
-        registry.register_agent_commands(&cmds);
+        registry.replace_agent_commands(&cmds);
         assert!(
             registry.parse("/compact").is_some(),
             "non-local command should register"
@@ -1281,7 +1335,7 @@ mod tests {
     }
 
     #[test]
-    fn register_agent_commands_keeps_local_selection() {
+    fn replace_agent_commands_keeps_local_selection() {
         let mut registry = CommandRegistry::new();
         let cmds = vec![
             crate::types::CommandInfo::new(
@@ -1294,7 +1348,7 @@ mod tests {
                 crate::types::AgentCommandRoute::BridgeExecute,
             ), // local AND selection → keep
         ];
-        registry.register_agent_commands(&cmds);
+        registry.replace_agent_commands(&cmds);
         assert!(
             registry.parse("/chat").is_some(),
             "local selection command should be kept for picker UI"
@@ -1302,7 +1356,7 @@ mod tests {
     }
 
     #[test]
-    fn register_agent_commands_skips_builtin_names() {
+    fn replace_agent_commands_skips_builtin_names() {
         let mut registry =
             CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
         let cmds = vec![crate::types::CommandInfo::new(
@@ -1314,13 +1368,92 @@ mod tests {
             false,
             crate::types::AgentCommandRoute::BridgeExecute,
         )];
-        registry.register_agent_commands(&cmds);
+        registry.replace_agent_commands(&cmds);
         // Should still be the builtin help, not agent help
         let (cmd, _) = registry.parse("/help").unwrap();
         assert!(
             cmd.is_local(),
             "builtin should not be overwritten by agent command"
         );
+    }
+
+    fn advertised(name: &str, route: crate::types::AgentCommandRoute) -> crate::types::CommandInfo {
+        crate::types::CommandInfo::new(name, name, None::<&str>, false, false, false, route)
+    }
+
+    /// Codex P2 on #169: each advertisement is the agent's complete list, so
+    /// a command a later one omits must leave the registry (KAS 2.11.0 trace:
+    /// the third update dropped `context-gatherer`).
+    #[test]
+    fn replace_agent_commands_drops_commands_a_later_advertisement_omits() {
+        let mut registry =
+            CommandRegistry::with_builtins(HooksCommandSource::Agent, WorkflowCommandSource::None);
+        let prompt = crate::types::AgentCommandRoute::Prompt;
+        registry.replace_agent_commands(&[
+            advertised("context-gatherer", prompt),
+            advertised("general-task-execution", prompt),
+        ]);
+        registry.replace_agent_commands(&[advertised("general-task-execution", prompt)]);
+
+        assert!(registry.parse("/context-gatherer").is_none());
+        assert!(registry.parse("/general-task-execution").is_some());
+
+        registry.replace_agent_commands(&[]);
+        assert!(registry.parse("/general-task-execution").is_none());
+        assert!(
+            registry.parse("/help").is_some(),
+            "an empty advertisement never removes builtins"
+        );
+    }
+
+    #[tokio::test]
+    async fn replace_agent_commands_takes_the_new_route_for_a_readvertised_name() {
+        let mut session = crate::session::SessionController::new();
+        session.set_session(
+            crate::types::SessionId::new("sess_test"),
+            crate::types::SessionStatus::Active,
+        );
+        let (tx, mut rx) = tokio::sync::mpsc::channel(4);
+        let sender = crate::protocol::bridge::BridgeSender::from_sender(tx);
+        let ctx = CommandContext {
+            workspace: std::path::Path::new("."),
+            session: &session,
+            bridge: &sender,
+            subagent_tracker: None,
+            workflow_tracker: None,
+            memory_status: None,
+        };
+        let mut registry = CommandRegistry::new();
+        registry.replace_agent_commands(&[advertised(
+            "probe",
+            crate::types::AgentCommandRoute::BridgeExecute,
+        )]);
+        registry.replace_agent_commands(&[advertised(
+            "probe",
+            crate::types::AgentCommandRoute::Prompt,
+        )]);
+
+        let (cmd, args) = registry.parse("/probe").expect("re-advertised command");
+        let result = cmd.execute(&ctx, args).await.expect("prompt intent");
+        assert!(matches!(result.kind, CommandResultKind::SubmitAgentPrompt));
+        assert!(
+            rx.try_recv().is_err(),
+            "the stale execute route must not survive"
+        );
+    }
+
+    #[test]
+    fn replace_agent_commands_keeps_a_builtin_registered_over_an_advertised_name() {
+        let mut registry = CommandRegistry::new();
+        registry.replace_agent_commands(&[advertised(
+            "clear",
+            crate::types::AgentCommandRoute::Prompt,
+        )]);
+        registry.register(Arc::new(builtin::ClearCommand));
+        registry.replace_agent_commands(&[]);
+
+        let (cmd, _) = registry.parse("/clear").expect("builtin survives");
+        assert!(cmd.is_local(), "the builtin, not the advertised command");
     }
 
     #[test]
@@ -2286,7 +2419,7 @@ mod config_command_tests {
 
     /// C1 + C12's registry assertion: on v2 the agent-advertised `model`
     /// still lands as an agent command; on KAS the builtin took the name and
-    /// `register_agent_commands` skips it.
+    /// `replace_agent_commands` skips it.
     #[test]
     fn v2_agent_commands_keep_the_names() {
         let advertised = [crate::types::CommandInfo::new(
@@ -2300,12 +2433,12 @@ mod config_command_tests {
         )];
 
         let mut v2 = v2_registry();
-        v2.register_agent_commands(&advertised);
+        v2.replace_agent_commands(&advertised);
         let (cmd, _) = v2.parse("/model").expect("agent model lands on v2");
         assert!(!cmd.is_local(), "v2 /model is the agent's command");
 
         let mut kas = kas_registry();
-        kas.register_agent_commands(&advertised);
+        kas.replace_agent_commands(&advertised);
         let (cmd, _) = kas.parse("/model").expect("KAS /model parses");
         assert!(cmd.is_local(), "the KAS builtin keeps the name");
     }
