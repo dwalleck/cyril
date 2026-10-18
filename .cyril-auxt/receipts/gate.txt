@@ -1,18 +1,18 @@
-gate @ 43f3ad4a (dirty: 0 paths) 2026-10-18T20:31:25Z
+gate @ 626f8c4c (dirty: 0 paths) 2026-10-18T20:49:20Z
 fmt-OK
 clippy-all-OK
 test-all-OK
-  [test-all]      Summary [   6.625s] 2481 tests run: 2481 passed, 13 skipped
+  [test-all]      Summary [   7.053s] 2485 tests run: 2485 passed, 13 skipped
 doc-all-OK
   [doc-all] test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
   [doc-all] test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 clippy-kas-OK
 test-kas-OK
-  [test-kas]      Summary [   6.082s] 1573 tests run: 1573 passed, 10 skipped
+  [test-kas]      Summary [   5.819s] 1577 tests run: 1577 passed, 10 skipped
 clippy-default-OK
 test-default-OK
-  [test-default]      Summary [   6.677s] 2474 tests run: 2474 passed, 13 skipped
+  [test-default]      Summary [   6.609s] 2478 tests run: 2478 passed, 13 skipped
 clippy-core-nodef-OK
 test-core-nodef-OK
-  [test-core-nodef]      Summary [   5.233s] 962 tests run: 962 passed, 4 skipped
+  [test-core-nodef]      Summary [   5.282s] 966 tests run: 966 passed, 4 skipped
 gate-done
