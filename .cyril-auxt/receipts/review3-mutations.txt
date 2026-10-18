@@ -1,0 +1,26 @@
+Review round 3: the new matrix cases fail when the code they test is disabled. Base: 4572fc58 plus the new tests.
+For each mutation I edited always_allow.rs, ran the matrix, then restored the file byte-for-byte from a saved copy
+(verified with cmp).
+
+Command: env -u CARGO_TARGET_DIR cargo nextest run -p cyril-core --features kas -E 'test(/queued_requests_released_like_the_tui/)' --no-fail-fast
+
+(a) D4's queued-side `triggeringResource != resource` exclusion disabled (`if false && triggering.is_some_and(...)`):
+    FAIL queued_requests_released_like_the_tui::case_24_child_queued_triggering_differs
+    Summary 27 tests run: 26 passed, 1 failed
+
+(b) Whole-tool-only guard in QueueRelease::for_answer disabled entirely. One guard covers exact, pattern and folder
+    grants on the main session, so the two existing cases fail with it:
+    FAIL ::case_06_main_exact_releases_nothing
+    FAIL ::case_07_main_pattern_releases_nothing
+    FAIL ::case_25_main_folder_releases_nothing
+    Summary 27 tests run: 24 passed, 3 failed
+
+(b2) The same guard narrowed so it exempts only Folder grants (shows the folder case on its own):
+    FAIL ::case_25_main_folder_releases_nothing
+    Summary 27 tests run: 26 passed, 1 failed
+
+(c) `CapabilityKey::Tool` fallback disabled (`.filter(|_| false)`):
+    FAIL ::case_26_tool_key_same_tool
+    Summary 27 tests run: 26 passed, 1 failed
+
+Restored: 27/27 passed.

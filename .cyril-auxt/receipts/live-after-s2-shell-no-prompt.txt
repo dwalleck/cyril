@@ -1,0 +1,14 @@
+sess_4aeae58e-2d78-405e-949b-b3d493d4c8ba · vibe · auto
+Connecting to agent...
+Session created: sess_4aeae58e-2d78-405e-949b-b3d493d4c8ba
+You:
+  Run the shell command: echo AUXTV1 -- exactly once, then reply with the word FINISHED.
+✓ Print a test string once
+Kiro:
+FINISHED
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                     │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 1%  Responses 1%

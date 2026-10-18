@@ -684,12 +684,28 @@ impl DomainMediator {
         let consent = crate::protocol::convert::kas::permission_consent(&args, &tool_call);
         #[cfg(not(feature = "kas"))]
         let consent = None;
+        // KAS persists "Always allow" only through the consent echo on the
+        // response (cyril-auxt), so V2 trust tiers — whose pick writes the
+        // agent JSON's `allowedCommands` — are a v2-only path.
+        let trust_options = match engine {
+            AgentEngine::Kas => {
+                let ignored = crate::protocol::convert::extract_trust_options(&args);
+                if !ignored.is_empty() {
+                    tracing::debug!(
+                        tiers = ignored.len(),
+                        "KAS permission request carries V2 trust tiers; not offered"
+                    );
+                }
+                Vec::new()
+            }
+            AgentEngine::V2 => crate::protocol::convert::extract_trust_options(&args),
+        };
         let request = PermissionRequest {
             session_id,
             tool_call,
             message: crate::protocol::convert::extract_permission_message(&args),
             options: crate::protocol::convert::to_permission_options(&args),
-            trust_options: crate::protocol::convert::extract_trust_options(&args),
+            trust_options,
             can_reject_with_reason,
             responder: response_tx,
             consent,

@@ -36,6 +36,9 @@ impl<T: std::fmt::Debug, E> ExpectErrContract<E> for Result<T, E> {
 }
 
 mod agent_initiated;
+// cyril-auxt: KAS "Always allow" consent echo and the v2-only trust tiers.
+#[cfg(feature = "kas")]
+mod always_allow;
 
 // C5 freezes the default-engine dispatch surface; `kas` builds route several
 // of these commands (hooks, workflow) through different `run_loop` arms with

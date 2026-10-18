@@ -1,0 +1,4 @@
+        FAIL [   0.004s] (2/2) cyril-ui always_allow_tests::scope_resets_to_session_once_the_queue_drains
+        PASS [   0.004s] (1/2) cyril-ui always_allow_tests::next_queued_scope_page_opens_at_the_last_scope
+     Summary [   0.006s] 2 tests run: 1 passed, 1 failed, 710 skipped
+Red: scope_resets_to_session_once_the_queue_drains on 1cea60dd + the new tests only (before the show_approval reset). After the repair: both pass.
