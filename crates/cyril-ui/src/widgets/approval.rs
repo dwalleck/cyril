@@ -98,11 +98,14 @@ impl<'a> Preview<'a> {
             .saturating_sub(2 + PATH_INDENT.width())
             .max(1);
         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+        let text_width = usize::from(super::modal::popup_width(area, desired_width))
+            .saturating_sub(2 + TEXT_INDENT.width())
+            .max(1);
         Self {
             path,
             path_width,
             path_rows,
-            body: preview_lines(state, theme),
+            body: preview_lines(state, theme, text_width),
         }
     }
 
@@ -350,39 +353,70 @@ fn trailing_columns(text: &str, width: usize) -> &str {
 /// cap, so a diff-heavy preview is truncated before this budget matters.
 const MAX_PREVIEW_LINES: usize = 5;
 
+/// Indent before each text row of the preview body.
+const TEXT_INDENT: &str = "    ";
+
+/// Push at most [`MAX_PREVIEW_LINES`] rows of `text_lines`, each wrapped to
+/// `width` columns, indented and dimmed, then an omission marker naming how
+/// many rows were left out. Wrapping keeps a long line's tail on screen —
+/// the end of a KAS plan line carries the step's effort (cyril-8wh0) —
+/// instead of clipping it at the border.
+fn push_bounded_text<'a, 's>(
+    lines: &mut Vec<Line<'a>>,
+    text_lines: impl Iterator<Item = &'s str>,
+    width: usize,
+    theme: &Theme,
+) {
+    let mut total = 0usize;
+    for row in text_lines.flat_map(|line| wrap_columns(line, width)) {
+        total += 1;
+        if total <= MAX_PREVIEW_LINES {
+            lines.push(Line::styled(
+                format!("{TEXT_INDENT}{row}"),
+                Style::default().fg(theme.subdued),
+            ));
+        }
+    }
+    if total > MAX_PREVIEW_LINES {
+        lines.push(Line::styled(
+            format!("{TEXT_INDENT}...{} more lines", total - MAX_PREVIEW_LINES),
+            Style::default().fg(theme.subdued),
+        ));
+    }
+}
+
 /// Build the approval-preview body from the joined tool-call snapshot. The
 /// path rows above it are laid out by [`Preview`] (cyril-rcub).
 ///
 /// Order: diff content
-/// (the existing diff projection, with its own line cap), else the raw-input
-/// `text`/`content` payload capped at [`MAX_PREVIEW_LINES`]. A snapshot with
-/// no displayable payload yields a single `Preview unavailable` line — the
+/// (the existing diff projection, with its own line cap), else the tool
+/// call's Text content blocks (cyril-8wh0), else the raw-input
+/// `text`/`content` payload; text of either kind is wrapped to `text_width`
+/// and capped at [`MAX_PREVIEW_LINES`] rows. A snapshot with no displayable
+/// payload yields a single `Preview unavailable` line — the
 /// degraded-but-actionable contract from cyril-j1b3's spec: the operator
 /// still sees the request's own title/message and every option.
 ///
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
-fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
+fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
 
     match tc.preview_body() {
         PreviewBody::Diff => super::chat::render_diff_lines(&mut lines, tc, theme),
-        PreviewBody::Text(text) => {
-            let total = text.lines().count();
-            for line in text.lines().take(MAX_PREVIEW_LINES) {
-                lines.push(Line::styled(
-                    format!("    {line}"),
-                    Style::default().fg(theme.subdued),
-                ));
-            }
-            if total > MAX_PREVIEW_LINES {
-                lines.push(Line::styled(
-                    format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
-                    Style::default().fg(theme.subdued),
-                ));
-            }
-        }
+        PreviewBody::Content(blocks) => push_bounded_text(
+            &mut lines,
+            blocks.iter().flat_map(|block| match block {
+                cyril_core::types::ToolCallContent::Text(text) => text.lines(),
+                // Classification guarantees Text only; a diff is never
+                // flattened into text.
+                cyril_core::types::ToolCallContent::Diff { .. } => "".lines(),
+            }),
+            text_width,
+            theme,
+        ),
+        PreviewBody::Text(text) => push_bounded_text(&mut lines, text.lines(), text_width, theme),
         // Never coerce a non-string payload (cyril-j1b3 spec).
         PreviewBody::Absent | PreviewBody::Malformed { .. } => lines.push(Line::styled(
             "  Preview unavailable",
@@ -1980,6 +2014,92 @@ mod tests {
         assert!(
             !text.contains("42"),
             "non-string text must not be coerced:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    // ---------- cyril-8wh0: Text content in the approval preview ----------
+
+    /// The plan text KAS 0.66.43 sent as the `toolCall.content` Text block of
+    /// a workflow plan approval (`kas-lead-wfplan-2.32.0.jsonl` frame 93,
+    /// workspace path scrubbed to `<LIVE_TMP>` as in
+    /// `experiments/conductor-spike/kas-workflow-plan-2.32.0.jsonl`).
+    const LIVE_PLAN_TEXT: &str = "Steps to add after 'create-workflow':\n\nwrite-hello: step, agent wf-coder, model auto, effort low\n  Task: Create a file named hello.txt at the absolute path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con...";
+
+    /// The update_workflow approval as cyril joins it: the tracked tool call
+    /// (title "Update Workflow", rawInput without a text field) merged with
+    /// the request's Text content.
+    fn plan_text_tool_call(text: &str) -> ToolCall {
+        ToolCall::new(
+            cyril_core::types::ToolCallId::new("toolu_bdrk_01QLZqv14pnXT2nFjjkTakjL"),
+            "Update Workflow".into(),
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({
+                "workflowId": "wf_6b22f0c99f407f0e",
+                "action": "replace_remaining",
+                "workflowRef": "generated://gen_09d8668976ecd154",
+                "remainingSteps": []
+            })),
+        )
+        .with_content(vec![ToolCallContent::Text(text.into())])
+    }
+
+    /// REGRESSION FENCE (cyril-8wh0): a permission request whose tool call
+    /// carries a Text content block shows that text in the overlay instead of
+    /// "Preview unavailable" — the live KAS workflow plan approval.
+    #[test]
+    fn text_content_renders_in_the_preview() {
+        let mut state = approval_for_tool_call(plan_text_tool_call(LIVE_PLAN_TEXT));
+        state.message = "Add 1 workflow step to wf_6b22f0c99f407f0e".into();
+        let terminal = render_at(&state, 80, 24, 24);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            !screen.contains("Preview unavailable"),
+            "the Text block must be shown:\n{screen}"
+        );
+        // Long plan lines wrap at the popup's text width rather than being
+        // clipped at the border, so the step's effort stays on screen.
+        for expected in [
+            "Steps to add after 'create-workflow':",
+            "write-hello: step, agent wf-coder, model auto,",
+            "low",
+            "Task: Create a file named hello.txt",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        insta::assert_snapshot!("8wh0_text_content_preview_80x24", screen);
+    }
+
+    /// cyril-8wh0: Text content is bounded like the raw-input text — five
+    /// lines across all blocks, then the omission marker.
+    #[test]
+    fn text_content_preview_is_bounded() {
+        let seven = (1..=7)
+            .map(|i| format!("plan line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let tc = plan_text_tool_call(&seven).with_content(vec![
+            ToolCallContent::Text("plan line 1\nplan line 2".into()),
+            ToolCallContent::Text(
+                (3..=7)
+                    .map(|i| format!("plan line {i}"))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            ),
+        ]);
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 90, 40, 40);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("plan line 5"), "fifth line missing:\n{text}");
+        assert!(
+            !text.contains("plan line 6"),
+            "sixth line must be capped:\n{text}"
+        );
+        assert!(
+            text.contains("...2 more lines"),
+            "omission marker missing:\n{text}"
         );
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
     }

@@ -327,6 +327,10 @@ impl ChatMessage {
 pub enum PreviewBody<'a> {
     /// Diff content, rendered by the diff projection.
     Diff,
+    /// The tool call's content blocks, every one of them Text (a diff would
+    /// have classified as [`PreviewBody::Diff`]): the request's own
+    /// explanation, such as a KAS workflow plan (cyril-8wh0).
+    Content(&'a [cyril_core::types::ToolCallContent]),
     /// The raw-input string `text` (or, failing that, `content`) payload.
     Text(&'a str),
     /// No raw input and no diff: nothing to show.
@@ -422,16 +426,19 @@ impl TrackedToolCall {
             .filter(|path| !path.is_empty())
     }
 
-    /// Classify the approval-preview body: diff content wins, then a string
-    /// raw-input `text`/`content` payload; otherwise absent or malformed.
+    /// Classify the approval-preview body: diff content wins, then Text
+    /// content blocks (cyril-8wh0), then a string raw-input `text`/`content`
+    /// payload; otherwise absent or malformed.
     pub fn preview_body(&self) -> PreviewBody<'_> {
-        let has_diff = self
-            .inner
-            .content()
+        let content = self.inner.content();
+        let has_diff = content
             .iter()
             .any(|c| matches!(c, cyril_core::types::ToolCallContent::Diff { .. }));
         if has_diff {
             return PreviewBody::Diff;
+        }
+        if !content.is_empty() {
+            return PreviewBody::Content(content);
         }
         let Some(raw) = self.inner.raw_input() else {
             return PreviewBody::Absent;
@@ -1477,6 +1484,47 @@ mod tests {
         #[case] expected: PreviewBody<'static>,
     ) {
         assert_eq!(read_call_with_raw_input(raw_input).preview_body(), expected);
+    }
+
+    /// cyril-8wh0: a Text content block is the request's own explanation
+    /// (KAS's workflow plan approval carries the plan there), so it wins over
+    /// the raw-input fallback — including a raw input with no text field,
+    /// which would otherwise classify as malformed. A diff still wins over it.
+    #[rstest::rstest]
+    #[case::over_malformed_raw_input(
+        Some(serde_json::json!({"action": "replace_remaining", "workflowRef": "generated://g"}))
+    )]
+    #[case::over_raw_input_text(Some(serde_json::json!({"text": "raw"})))]
+    #[case::without_raw_input(None)]
+    fn preview_body_prefers_text_content(#[case] raw_input: Option<serde_json::Value>) {
+        use cyril_core::types::*;
+        let content = vec![
+            ToolCallContent::Text("Steps to add:".into()),
+            ToolCallContent::Text("write-hello: step".into()),
+        ];
+        let call = ToolCall::new(
+            ToolCallId::new("tc_plan"),
+            "Add 1 workflow step to wf_1".into(),
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+            raw_input,
+        )
+        .with_content(content.clone());
+        assert_eq!(
+            TrackedToolCall::new(call.clone()).preview_body(),
+            PreviewBody::Content(&content)
+        );
+
+        let mut with_diff = content.clone();
+        with_diff.push(ToolCallContent::Diff {
+            path: "/tmp/a.md".into(),
+            old_text: None,
+            new_text: "x".into(),
+        });
+        assert_eq!(
+            TrackedToolCall::new(call.with_content(with_diff)).preview_body(),
+            PreviewBody::Diff
+        );
     }
 
     #[test]

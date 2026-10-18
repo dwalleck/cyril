@@ -41,7 +41,7 @@ pub struct ToolCallLocation {
 }
 
 /// Content produced by a tool call.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ToolCallContent {
     /// A file diff (edit operations).
     Diff {
