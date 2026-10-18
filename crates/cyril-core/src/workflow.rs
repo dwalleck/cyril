@@ -586,6 +586,31 @@ impl AgentTurnClose {
     }
 }
 
+/// A workflow completion KAS delivered into a busy turn instead of waking
+/// the parent (cyril-lki9 B5): the run, and its credits so far (cyril-2lh8).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompletionNotice {
+    label: WakeLabel,
+    run_total: Option<f64>,
+}
+
+impl CompletionNotice {
+    /// A notice for `label`'s run with its credit total, `None` when no turn
+    /// of the run reported credits.
+    pub fn new(label: WakeLabel, run_total: Option<f64>) -> Self {
+        Self { label, run_total }
+    }
+
+    pub fn label(&self) -> &WakeLabel {
+        &self.label
+    }
+
+    /// The run's credits so far; `None` — never 0 — when none were metered.
+    pub fn run_total(&self) -> Option<f64> {
+        self.run_total
+    }
+}
+
 /// An ended run's credit total, for its completion line (cyril-2lh8).
 #[derive(Debug, Clone, PartialEq)]
 pub struct RunCredits {
@@ -1135,6 +1160,16 @@ impl WorkflowTracker {
     /// consuming it. A pending repeat-cap pause is not a completion: it stays
     /// queued for the turn its wake starts.
     pub fn take_injection_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        self.take_injection(session).map(|notice| notice.label)
+    }
+
+    /// The `notify-wf` injection on `session` ([`Self::take_injection_label`])
+    /// with the run's credits so far (cyril-2lh8). KAS delivers a completion
+    /// into a busy parent instead of waking it, so this notice is the run's
+    /// completion line: the total is its step and creator turns plus any
+    /// earlier wake already attributed to it. `None` total (debug-logged)
+    /// when no turn of the run reported credits — never a stand-in 0.
+    pub fn take_injection(&mut self, session: &SessionId) -> Option<CompletionNotice> {
         let queue = self.wake_labels.get_mut(session)?;
         while let Some(index) = queue
             .iter()
@@ -1143,7 +1178,11 @@ impl WorkflowTracker {
             if let Some(WakeCause::Ended(workflow_id)) = queue.remove(index)
                 && let Some(label) = wake_label(&self.runs, &workflow_id)
             {
-                return Some(label);
+                let run_total = self.run_credits(&workflow_id);
+                if run_total.is_none() {
+                    tracing::debug!(workflow_id = %workflow_id, "busy-parent completion of a run without credit metering; no total shown");
+                }
+                return Some(CompletionNotice { label, run_total });
             }
         }
         None
@@ -4827,6 +4866,39 @@ mod tests {
         assert!(
             logs.contains("turn ended without credit metering"),
             "missing-metering debug log: {logs}"
+        );
+    }
+
+    /// cyril-2lh8 (user decision 2026-10-18): a completion KAS delivers into
+    /// a busy parent (`notify-wf`, no wake) is the run's completion line and
+    /// carries the run's credits so far; a run nothing metered carries no
+    /// figure — never 0 — and is debug-logged.
+    #[rstest::rstest]
+    #[case::metered_run(Some(0.25), Some(0.25))]
+    #[case::unmetered_run(None, None)]
+    fn busy_parent_notice_carries_the_run_total(
+        #[case] step_credits: Option<f64>,
+        #[case] want: Option<f64>,
+    ) {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        run_with_step(&mut tracker, &step);
+        run_turn(&mut tracker, &step, None, step_credits);
+        tracker.begin_turn(&s); // the parent's own turn is running
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+        ));
+        let (notice, logs) =
+            with_captured_logs(tracing::Level::DEBUG, || tracker.take_injection(&s));
+        let notice = notice.unwrap_or_else(|| panic!("the completion is noted mid-turn"));
+        assert_eq!(notice.label().name(), "recipe-W");
+        assert_eq!(notice.run_total(), want);
+        assert_eq!(
+            logs.contains("busy-parent completion of a run without credit metering"),
+            want.is_none(),
+            "{logs}"
         );
     }
 }

@@ -1389,17 +1389,18 @@ impl UiState {
     }
 
     /// Show a message the engine injected into a running turn (cyril-lki9
-    /// B5): a busy-session workflow completion, or a relayed step verdict.
+    /// B5): a busy-session workflow completion — named, with the run's
+    /// credits so far (cyril-2lh8) — or a relayed step verdict.
     pub fn show_engine_injection(
         &mut self,
         transcript: Transcript<'_>,
         content: Option<&str>,
         severity: Option<&str>,
         workflow_completion: bool,
-        label: Option<&cyril_core::workflow::WakeLabel>,
+        notice: Option<&cyril_core::workflow::CompletionNotice>,
     ) {
         let text = if workflow_completion {
-            crate::turn_labels::workflow_notice_text(label, content)
+            crate::turn_labels::workflow_notice_text(notice, content)
         } else {
             crate::turn_labels::step_notice_text(severity, content)
         };

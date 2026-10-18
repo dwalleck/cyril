@@ -8,7 +8,7 @@
 //! lives in this module (module-shape fence C21 R2).
 
 use cyril_core::types::{AgentInitiation, WorkflowRunStatus};
-use cyril_core::workflow::{AgentTurnClose, WakeLabel};
+use cyril_core::workflow::{AgentTurnClose, CompletionNotice, WakeLabel};
 
 /// The header line that opens an agent-initiated turn.
 ///
@@ -49,17 +49,29 @@ pub(crate) fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -
 }
 
 /// The notice for a workflow completion KAS injected into a busy turn (B5):
-/// `⚙ workflow "<name>" <status> (noted mid-turn):` — or `⚙ workflow ended
-/// (noted mid-turn):` when the run is unknown — followed by the engine's text
-/// verbatim on the next line(s), when it sent any.
+/// `⚙ workflow "<name>" <status> · run <total> credits (noted mid-turn):` —
+/// the run's credits so far, since no follow-up wake exists to close it
+/// (cyril-2lh8); the segment is left out when nothing was metered — or
+/// `⚙ workflow ended (noted mid-turn):` when the run is unknown — followed by
+/// the engine's text verbatim on the next line(s), when it sent any.
 #[must_use]
-pub(crate) fn workflow_notice_text(label: Option<&WakeLabel>, content: Option<&str>) -> String {
-    let head = match label {
-        Some(label) => format!(
-            "⚙ workflow \"{}\" {} (noted mid-turn):",
-            label.name(),
-            status_word(label.status())
-        ),
+pub(crate) fn workflow_notice_text(
+    notice: Option<&CompletionNotice>,
+    content: Option<&str>,
+) -> String {
+    let head = match notice {
+        Some(notice) => {
+            let mut head = format!(
+                "⚙ workflow \"{}\" {}",
+                notice.label().name(),
+                status_word(notice.label().status())
+            );
+            if let Some(total) = notice.run_total() {
+                head.push_str(&format!(" · run {}", credits_text(total)));
+            }
+            head.push_str(" (noted mid-turn):");
+            head
+        }
         None => "⚙ workflow ended (noted mid-turn):".to_owned(),
     };
     match content.filter(|c| !c.is_empty()) {
@@ -236,10 +248,27 @@ mod tests {
         let wake_text = "A workflow you launched (\"lki9-quick\") completed. Review its results and continue if you were waiting on it.";
         assert_eq!(
             workflow_notice_text(
-                Some(&label("lki9-quick", WorkflowRunStatus::Completed)),
+                Some(&CompletionNotice::new(
+                    label("lki9-quick", WorkflowRunStatus::Completed),
+                    None
+                )),
                 Some(wake_text)
             ),
-            format!("⚙ workflow \"lki9-quick\" completed (noted mid-turn):\n{wake_text}")
+            format!("⚙ workflow \"lki9-quick\" completed (noted mid-turn):\n{wake_text}"),
+            "an unmetered run shows no figure (cyril-2lh8)"
+        );
+        assert_eq!(
+            workflow_notice_text(
+                Some(&CompletionNotice::new(
+                    label("lki9-quick", WorkflowRunStatus::Completed),
+                    Some(0.0516190)
+                )),
+                Some(wake_text)
+            ),
+            format!(
+                "⚙ workflow \"lki9-quick\" completed · run 0.05 credits (noted mid-turn):\n{wake_text}"
+            ),
+            "the run's credits so far (cyril-2lh8)"
         );
         assert_eq!(
             workflow_notice_text(None, Some(wake_text)),
