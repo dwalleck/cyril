@@ -55,9 +55,12 @@ none — red fence first, minimal fix, fence stays as the regression fence.
   no blocking or should-fix findings. Nits and dispositions:
   1. Shape field lost Display formatting → fixed in `7962f526`
      (`raw_input_shape = %raw_input_shape`, log text unchanged from before).
-  2. "Tool call not mutated after install" holds by convention (pub field) →
-     not changed; a violation could only cost a log line, never a wrong
-     preview, because the renderer re-classifies every frame.
+  2. "Tool call not mutated after install" — corrected by the independent
+     cross-model review (2026-10-18): it holds BY CONSTRUCTION, not convention:
+     `UiState.approvals` and `TrackedToolCall.inner` are private and every
+     `front_mut` site touches only `selected`/`phase`. Even so, a violation could
+     only cost a log line, never a wrong preview (the renderer re-classifies
+     every frame).
   3. Count is once per permission request rather than per tool-call id →
      accepted: the issue's fix direction names "when the approval is
      installed in UiState" as the alternative, and a re-requested tool call
