@@ -8,6 +8,7 @@
 //! - [`kiro_fs`] — the `_kiro/fs/*` superset dialect (cyril-kf2g).
 //! - [`terminal_io`] — the `terminal/*` host-callback responders (KAS-5b, cyril-ufie).
 //! - [`settings`] — the `_meta.kiro.settings` (AgentSettings) handshake (cyril-nhzw).
+//! - `stored_token` — the stored-token fallback when kiro-cli lacks `get-kas-token` (cyril-zbu7).
 
 use agent_client_protocol::schema::v1 as acp;
 
@@ -21,6 +22,9 @@ pub(crate) mod host_io;
 pub(crate) mod host_shell;
 pub(crate) mod kiro_fs;
 pub(crate) mod settings;
+/// Stored-token fallback for a kiro-cli without `chat _ get-kas-token`
+/// (cyril-zbu7 amendment).
+mod stored_token;
 pub(crate) mod terminal_io;
 pub(crate) mod version;
 

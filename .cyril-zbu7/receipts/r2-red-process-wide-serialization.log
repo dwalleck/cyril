@@ -1,0 +1,33 @@
+# rev: 6203131167b0f6adcd72cb0f96d951e66faf86c4 (+ working tree changes: 2 paths)
+# cmd: cargo nextest run -p cyril-core --features kas -E test(fetch_serializes_across_sources_sharing_an_invocation)
+# date: 2026-10-18T20:20:00Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 30.65s
+────────────
+ Nextest run ID 37c0cb3a-5c30-4f45-b374-7563fcedbfc1 with nextest profile: default
+    Starting 1 test across 11 binaries (1261 tests skipped)
+        FAIL [   0.344s] (1/1) cyril-core protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1233 filtered out; finished in 0.33s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation' (1578407) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1296:9:
+    Err(NonZeroExit { command: "/bin/sh /home/dwalleck/.claude/tmp/.tmpvlV8jC/fake-kiro-cli.sh chat _ get-kas-token", status: "exit status: 9", stderr_tail: ": mkdir: cannot create directory ‘/home/dwalleck/.claude/tmp/.tmpvlV8jC/held’: File exists" })
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   0.351s] 1 test run: 0 passed, 1 failed, 1261 skipped
+        FAIL [   0.344s] (1/1) cyril-core protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation
+error: test run failed
+exit=100
