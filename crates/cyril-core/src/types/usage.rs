@@ -208,6 +208,17 @@ impl TurnMeteringUpdate {
         &self.charges
     }
 
+    /// The credits this report charges — the sum of its `credit` charges,
+    /// the same rule as `TurnMetering::credits` — or `None` when it carries
+    /// none (`promptTurnSummaries: []`), never a stand-in 0.
+    pub fn credits(&self) -> Option<f64> {
+        self.charges
+            .iter()
+            .filter(|charge| charge.unit() == "credit")
+            .map(MeteredAmount::amount)
+            .reduce(|total, amount| total + amount)
+    }
+
     pub fn duration_ms(&self) -> Option<u64> {
         self.duration_ms
     }
@@ -949,6 +960,35 @@ mod tests {
             Some(UsageTurnStatus::Other("future".to_owned()))
         );
         assert_eq!(UsageTurnStatus::from_wire(""), None);
+    }
+
+    fn charge(amount: f64, unit: &str, plural: &str) -> MeteredAmount {
+        MeteredAmount::try_new(amount, unit, plural)
+            .unwrap_or_else(|e| panic!("charge fixture: {e}"))
+    }
+
+    /// cyril-2lh8: a report's credits sum its `credit` charges (the
+    /// `TurnMetering::credits` rule); none, or only other units, is `None` —
+    /// never 0.
+    #[rstest::rstest]
+    #[case::none(Vec::new(), None)]
+    #[case::other_unit_only(vec![charge(3.0, "token", "tokens")], None)]
+    #[case::one(vec![charge(0.25, "credit", "credits")], Some(0.25))]
+    #[case::summed_past_other_units(
+        vec![charge(0.25, "credit", "credits"), charge(9.0, "token", "tokens"), charge(0.5, "credit", "credits")],
+        Some(0.75)
+    )]
+    fn turn_metering_update_credits(
+        #[case] charges: Vec<MeteredAmount>,
+        #[case] want: Option<f64>,
+    ) {
+        let update = TurnMeteringUpdate::new(charges.clone(), None, None, Vec::new(), None);
+        assert_eq!(update.credits(), want);
+        assert_eq!(
+            update.credits(),
+            crate::types::TurnMetering::from_charges(charges, None).credits(),
+            "the same rule as TurnMetering::credits"
+        );
     }
 
     #[test]

@@ -34,6 +34,20 @@ Local.
   - 2.32.0 live replay: the loop run's abort inside its busy repeat-cap wake now reads `… aborted · run 0.26 credits (noted mid-turn):`. That 0.26 is its two step turns; the interrupted wake has not been metered yet.
 - Green for (d): tracker `busy_parent_notice_carries_the_run_total` (metered and unmetered, with the debug log), and the `turn_labels::notice_strings` rows.
 
+## Review round 1 (cross-model review of `4affb3a0`, relayed 2026-10-18)
+
+- **R1 (Medium), fixed.** A partial total used to render as complete. The tracker now counts a run's unmetered turns:
+  - a workflow-owned turn whose `turn_completion` carries no credit charge
+  - an attributed wake that ended unmetered
+
+  Any nonzero count renders as `run ≥ <total> credits (<n> turn(s) unmetered)`. That applies to the completion footer and to the busy-parent notice. The capture fence is the linear run: its first step turn was aborted with `promptTurnSummaries: []` (capture line 92), so it now reads `run ≥ 0.62 credits (1 turn unmetered)`. Receipt: `receipts/red-partial-total.txt`. Tracker rstest: `partial_metering_marks_the_run_total_incomplete` (wake and busy cases).
+- **R5 (nit), fixed.** Added `TurnMeteringUpdate::credits()`, which follows the same rule as `TurnMetering::credits` (rstest `turn_metering_update_credits`). The tracker no longer clones the charges just to sum them.
+- **R3 (Low), documented rule, not changed: each turn's credits count toward exactly one run.**
+  - A wake counts toward the run it is the wake of. Any other turn counts toward the run whose step or creator owns its session.
+  - A nested run (launched from inside a step session) keeps its own total. That total is not added up the ownership chain into the outer run, and a wake on the step session that names the nested run is credited to the nested run only.
+  - Why not roll up: it would make outer totals include inner ones, so the per-run lines would double-count when summed. Kiro's TUI shows no nested roll-up either. The rule is unambiguous as it stands; a roll-up is a product choice for later.
+- **R4 (Low), noted, bounded.** A `turns` record survives when its `turn_end` never reaches the App, until that session's next `begin_turn`. That happens when the mediator drops a foreign terminal while the parent is idle (`DropUnowned`), or for an old main session after `/new` or a disconnect. `run_credits` and `run_unmetered` are never pruned either: one small entry per run, the same as `runs` itself. Both maps are bounded by the sessions and runs seen in one process, the same bounded growth as `claimed_wake_labels`. Pruning would need a session-end signal the tracker does not get today.
+
 ## Known limits
 
 - A step-session agent-initiated turn (a creator `send-message-wake`) gets its footer only if its `turn_end` reaches the App, which happens only while the parent is busy. Its credits still count toward the run.

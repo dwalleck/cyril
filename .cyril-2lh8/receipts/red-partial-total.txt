@@ -1,0 +1,61 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 29.95s
+     Running unittests src/lib.rs (target/debug/deps/cyril_core-43a246e4877a449e)
+
+running 2 tests
+test workflow::tests::partial_metering_marks_the_run_total_incomplete::case_2_busy_parent_notice ... FAILED
+test workflow::tests::partial_metering_marks_the_run_total_incomplete::case_1_completion_wake ... FAILED
+
+failures:
+
+---- workflow::tests::partial_metering_marks_the_run_total_incomplete::case_2_busy_parent_notice stdout ----
+
+thread 'workflow::tests::partial_metering_marks_the_run_total_incomplete::case_2_busy_parent_notice' (3254543) panicked at crates/cyril-core/src/workflow.rs:4975:9:
+assertion `left == right` failed
+  left: 0
+ right: 2
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- workflow::tests::partial_metering_marks_the_run_total_incomplete::case_1_completion_wake stdout ----
+
+thread 'workflow::tests::partial_metering_marks_the_run_total_incomplete::case_1_completion_wake' (3254542) panicked at crates/cyril-core/src/workflow.rs:4975:9:
+assertion `left == right` failed
+  left: 0
+ right: 2
+
+
+failures:
+    workflow::tests::partial_metering_marks_the_run_total_incomplete::case_1_completion_wake
+    workflow::tests::partial_metering_marks_the_run_total_incomplete::case_2_busy_parent_notice
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1319 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-core --lib`
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-memory)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 13.04s
+     Running unittests src/main.rs (target/debug/deps/cyril-87e493c4b738a252)
+
+running 1 test
+test app::tests::wake_credits_and_run_totals_in_live_capture ... FAILED
+
+failures:
+
+---- app::tests::wake_credits_and_run_totals_in_live_capture stdout ----
+
+thread 'app::tests::wake_credits_and_run_totals_in_live_capture' (3255868) panicked at crates/cyril/src/app.rs:8932:9:
+assertion `left == right` failed
+  left: ["╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.24 credits", "╰─ ⚙ agent follow-up · 0.22 credits", "╰─ ⚙ workflow \"loop\" aborted · run 0.55 credits · follow-up 0.07 credits", "╰─ ⚙ workflow \"watch-audit\" completed · run 0.24 credits · follow-up 0.15 credits", "╰─ ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · run 0.18 credits · follow-up 0.08 credits", "╰─ ⚙ workflow \"park\" completed · run 0.21 credits · follow-up 0.08 credits", "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.08 credits"]
+ right: ["╰─ ⚙ workflow \"audit-linear\" completed · run ≥ 0.62 credits (1 turn unmetered) · follow-up 0.24 credits", "╰─ ⚙ agent follow-up · 0.22 credits", "╰─ ⚙ workflow \"loop\" aborted · run 0.55 credits · follow-up 0.07 credits", "╰─ ⚙ workflow \"watch-audit\" completed · run 0.24 credits · follow-up 0.15 credits", "╰─ ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · run 0.18 credits · follow-up 0.08 credits", "╰─ ⚙ workflow \"park\" completed · run 0.21 credits · follow-up 0.08 credits", "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.08 credits"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    app::tests::wake_credits_and_run_totals_in_live_capture
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 237 filtered out; finished in 0.03s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`

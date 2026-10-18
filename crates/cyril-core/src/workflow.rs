@@ -6,7 +6,7 @@ use crate::types::workflow::{
     WorkflowSnapshotParts,
 };
 use crate::types::{
-    AgentInitiation, SessionId, TurnMetering, TurnMeteringUpdate, WorkflowCompletionSignal,
+    AgentInitiation, SessionId, TurnMeteringUpdate, WorkflowCompletionSignal,
     WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId, WorkflowLoopIteration,
     WorkflowNodeCompleted, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
     WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted,
@@ -475,6 +475,9 @@ pub struct WorkflowTracker {
     /// [`WorkflowRun`] on purpose: a retry's `run_start` replaces the run's
     /// state but continues the same run and its bill.
     run_credits: HashMap<WorkflowId, f64>,
+    /// cyril-2lh8 review: per run, how many attributed turns reported no
+    /// credits — a nonzero count makes the run's total a lower bound.
+    run_unmetered: HashMap<WorkflowId, u32>,
 }
 
 /// The tracker's view of one running agent-initiated turn (cyril-2lh8).
@@ -592,13 +595,31 @@ impl AgentTurnClose {
 pub struct CompletionNotice {
     label: WakeLabel,
     run_total: Option<f64>,
+    unmetered_turns: u32,
 }
 
 impl CompletionNotice {
     /// A notice for `label`'s run with its credit total, `None` when no turn
     /// of the run reported credits.
     pub fn new(label: WakeLabel, run_total: Option<f64>) -> Self {
-        Self { label, run_total }
+        Self {
+            label,
+            run_total,
+            unmetered_turns: 0,
+        }
+    }
+
+    /// Marks the total partial: `unmetered_turns` of the run's turns
+    /// reported no credits (cyril-2lh8 review).
+    pub fn with_unmetered_turns(mut self, unmetered_turns: u32) -> Self {
+        self.unmetered_turns = unmetered_turns;
+        self
+    }
+
+    /// How many of the run's turns reported no credits; nonzero means the
+    /// total is a lower bound.
+    pub fn unmetered_turns(&self) -> u32 {
+        self.unmetered_turns
     }
 
     pub fn label(&self) -> &WakeLabel {
@@ -616,12 +637,30 @@ impl CompletionNotice {
 pub struct RunCredits {
     label: WakeLabel,
     total: f64,
+    unmetered_turns: u32,
 }
 
 impl RunCredits {
     /// The run, named as its wake header names it, with its credit total.
     pub fn new(label: WakeLabel, total: f64) -> Self {
-        Self { label, total }
+        Self {
+            label,
+            total,
+            unmetered_turns: 0,
+        }
+    }
+
+    /// Marks the total partial: `unmetered_turns` of the run's turns
+    /// reported no credits (cyril-2lh8 review).
+    pub fn with_unmetered_turns(mut self, unmetered_turns: u32) -> Self {
+        self.unmetered_turns = unmetered_turns;
+        self
+    }
+
+    /// How many of the run's turns reported no credits; nonzero means
+    /// [`Self::total`] is a lower bound, never a complete figure.
+    pub fn unmetered_turns(&self) -> u32 {
+        self.unmetered_turns
     }
 
     pub fn label(&self) -> &WakeLabel {
@@ -1029,37 +1068,50 @@ impl WorkflowTracker {
     /// `turn_end` reaches the App only while the parent is busy (the
     /// mediator drops an idle foreign terminal), its `turn_completion`
     /// always does. KAS reports once per turn; reports are summed. A report
-    /// with no credit charge records nothing — never a stand-in 0.
+    /// with no credit charge (`promptTurnSummaries: []`) adds nothing — never
+    /// a stand-in 0 — and counts the turn as unmetered for its run, so the
+    /// run's total is shown as partial (cyril-2lh8 review). An
+    /// agent-initiated turn is counted once, when it ends.
     pub fn record_turn_metering(&mut self, session: &SessionId, update: &TurnMeteringUpdate) {
-        let Some(credits) = TurnMetering::from_charges(update.charges().to_vec(), None).credits()
+        let credits = update.credits();
+        if let Some(record) = self.turns.get_mut(session) {
+            let Some(credits) = credits else {
+                tracing::debug!(session = %session, "agent-initiated turn metering carried no credits");
+                return;
+            };
+            *record.credits.get_or_insert(0.0) += credits;
+            if let Some((workflow_id, _)) = &record.wake {
+                let run = workflow_id.clone();
+                *self.run_credits.entry(run).or_insert(0.0) += credits;
+            }
+            return;
+        }
+        let Some(run) = self
+            .session_owner(session)
+            .map(|(workflow_id, _)| workflow_id.clone())
         else {
-            tracing::debug!(session = %session, "turn metering carried no credits; no figure");
             return;
         };
-        let wake_run = self.turns.get_mut(session).and_then(|record| {
-            *record.credits.get_or_insert(0.0) += credits;
-            record
-                .wake
-                .as_ref()
-                .map(|(workflow_id, _)| workflow_id.clone())
-        });
-        let run = wake_run.or_else(|| {
-            self.session_owner(session)
-                .map(|(workflow_id, _)| workflow_id.clone())
-        });
-        if let Some(run) = run {
-            *self.run_credits.entry(run).or_insert(0.0) += credits;
+        match credits {
+            Some(credits) => *self.run_credits.entry(run).or_insert(0.0) += credits,
+            None => {
+                tracing::debug!(session = %session, workflow_id = %run, "workflow turn metering carried no credits; run total is partial");
+                *self.run_unmetered.entry(run).or_insert(0) += 1;
+            }
         }
     }
 
     /// The turn on `session` ended (cyril-2lh8). An agent-initiated turn
     /// closes with its credits and, when it is the wake that follows a run's
-    /// end, that run's total. `None` for every turn cyril or the user
-    /// started.
+    /// end, that run's total — marked partial when any of the run's turns
+    /// reported no credits. `None` for every turn cyril or the user started.
     pub fn finish_turn(&mut self, session: &SessionId) -> Option<AgentTurnClose> {
         let record = self.turns.remove(session)?;
         if record.credits.is_none() {
             tracing::debug!(session = %session, "agent-initiated turn ended without credit metering; no figure shown");
+            if let Some((workflow_id, _)) = &record.wake {
+                *self.run_unmetered.entry(workflow_id.clone()).or_insert(0) += 1;
+            }
         }
         let ended_run = record.wake.and_then(|(workflow_id, label)| {
             if label.repeat_cap().is_some() {
@@ -1069,7 +1121,10 @@ impl WorkflowTracker {
             if total.is_none() {
                 tracing::debug!(workflow_id = %workflow_id, "run ended without credit metering; no total shown");
             }
-            total.map(|total| RunCredits::new(label, total))
+            total.map(|total| {
+                RunCredits::new(label, total)
+                    .with_unmetered_turns(self.run_unmetered_turns(&workflow_id))
+            })
         });
         Some(AgentTurnClose::new(record.credits, ended_run))
     }
@@ -1079,6 +1134,12 @@ impl WorkflowTracker {
     /// until one of them reports credits — never a stand-in 0.
     pub fn run_credits(&self, workflow_id: &WorkflowId) -> Option<f64> {
         self.run_credits.get(workflow_id).copied()
+    }
+
+    /// How many of a run's attributed turns reported no credits
+    /// (cyril-2lh8 review): nonzero makes [`Self::run_credits`] partial.
+    pub fn run_unmetered_turns(&self, workflow_id: &WorkflowId) -> u32 {
+        self.run_unmetered.get(workflow_id).copied().unwrap_or(0)
     }
 
     /// The header label for the current turn on `session`: the NEWEST
@@ -1182,7 +1243,10 @@ impl WorkflowTracker {
                 if run_total.is_none() {
                     tracing::debug!(workflow_id = %workflow_id, "busy-parent completion of a run without credit metering; no total shown");
                 }
-                return Some(CompletionNotice { label, run_total });
+                return Some(
+                    CompletionNotice::new(label, run_total)
+                        .with_unmetered_turns(self.run_unmetered_turns(&workflow_id)),
+                );
             }
         }
         None
@@ -4900,5 +4964,64 @@ mod tests {
             want.is_none(),
             "{logs}"
         );
+    }
+
+    /// cyril-2lh8 review (Medium): a run total over turns some of which
+    /// reported no credits is a PARTIAL figure and must say so — an
+    /// unmetered turn is counted per run, never folded in as 0. Covers a
+    /// step turn reporting `promptTurnSummaries: []`, a wake that ended
+    /// unmetered, and the busy-parent notice.
+    #[rstest::rstest]
+    #[case::completion_wake(false)]
+    #[case::busy_parent_notice(true)]
+    fn partial_metering_marks_the_run_total_incomplete(#[case] parent_busy: bool) {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        run_turn(&mut tracker, &step, None, None); // aborted: `[]`
+        run_turn(&mut tracker, &step, None, Some(0.25));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("w", "W", Some("s"), "loop", 1)
+        ));
+        // The repeat-cap wake ends with no turn_completion at all.
+        tracker.begin_turn(&s);
+        tracker.take_turn_label(&s, &initiation(Some("send-message-wake"), false));
+        assert_eq!(
+            tracker.finish_turn(&s).map(|close| close.credits()),
+            Some(None)
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+        assert_eq!(tracker.run_unmetered_turns(&id), 2);
+
+        if parent_busy {
+            tracker.begin_turn(&s);
+            assert!(apply_ok(
+                &mut tracker,
+                parented_completion("w", WorkflowRunStatus::Aborted, "W", "s", None)
+            ));
+            let notice = tracker
+                .take_injection(&s)
+                .unwrap_or_else(|| panic!("the abort is noted mid-turn"));
+            assert_eq!(
+                (notice.run_total(), notice.unmetered_turns()),
+                (Some(0.25), 2)
+            );
+        } else {
+            assert!(apply_ok(
+                &mut tracker,
+                parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+            ));
+            let close = run_turn(
+                &mut tracker,
+                &s,
+                Some(&initiation(Some("workflow-complete-wake"), true)),
+                Some(0.5),
+            )
+            .unwrap_or_else(|| panic!("the wake closes"));
+            let run = close.run().unwrap_or_else(|| panic!("a completion line"));
+            assert_eq!((run.total(), run.unmetered_turns()), (0.75, 2));
+        }
     }
 }

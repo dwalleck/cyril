@@ -8932,7 +8932,9 @@ mod tests {
         assert_eq!(
             footers,
             [
-                "╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.24 credits",
+                // Its first step turn was aborted with `promptTurnSummaries:
+                // []` (capture line 92): the total is partial and says so.
+                "╰─ ⚙ workflow \"audit-linear\" completed · run ≥ 0.62 credits (1 turn unmetered) · follow-up 0.24 credits",
                 "╰─ ⚙ agent follow-up · 0.22 credits",
                 "╰─ ⚙ workflow \"loop\" aborted · run 0.55 credits · follow-up 0.07 credits",
                 "╰─ ⚙ workflow \"watch-audit\" completed · run 0.24 credits · follow-up 0.15 credits",
