@@ -1081,31 +1081,42 @@ impl WorkflowTracker {
     /// agent-initiated turn is counted once, when it ends.
     pub fn record_turn_metering(&mut self, session: &SessionId, update: &TurnMeteringUpdate) {
         let credits = update.credits();
-        if let Some(record) = self.turns.get_mut(session) {
-            let Some(credits) = credits else {
-                tracing::debug!(session = %session, "agent-initiated turn metering carried no credits");
-                return;
-            };
-            *record.credits.get_or_insert(0.0) += credits;
-            if let Some((workflow_id, _)) = &record.wake {
-                let run = workflow_id.clone();
-                *self.run_credits.entry(run).or_insert(0.0) += credits;
+        // `Some(wake run)` while an agent-initiated turn is open on the
+        // session (the run its header named, if any); `None` otherwise.
+        let announced = self.turns.get_mut(session).map(|record| {
+            if let Some(credits) = credits {
+                *record.credits.get_or_insert(0.0) += credits;
             }
-            return;
-        }
-        let Some(run) = self
-            .session_owner(session)
-            .map(|(workflow_id, _)| workflow_id.clone())
-        else {
+            record
+                .wake
+                .as_ref()
+                .map(|(workflow_id, _)| workflow_id.clone())
+        });
+        let Some(run) = self.attributed_run(session, announced.clone().flatten()) else {
             return;
         };
         match credits {
             Some(credits) => *self.run_credits.entry(run).or_insert(0.0) += credits,
+            // An agent-initiated turn is counted unmetered once, when it ends.
+            None if announced.is_some() => {}
             None => {
                 tracing::debug!(session = %session, workflow_id = %run, "workflow turn metering carried no credits; run total is partial");
                 *self.run_unmetered.entry(run).or_insert(0) += 1;
             }
         }
+    }
+
+    /// The run a turn on `session` counts toward: the run whose wake it is,
+    /// else the run whose step or creator owns the session (cyril-2lh8).
+    fn attributed_run(
+        &self,
+        session: &SessionId,
+        wake_run: Option<WorkflowId>,
+    ) -> Option<WorkflowId> {
+        wake_run.or_else(|| {
+            self.session_owner(session)
+                .map(|(workflow_id, _)| workflow_id.clone())
+        })
     }
 
     /// The turn on `session` ended (cyril-2lh8). Its pauses that never woke
@@ -1119,8 +1130,12 @@ impl WorkflowTracker {
         let record = self.turns.remove(session)?;
         if record.credits.is_none() {
             tracing::debug!(session = %session, "agent-initiated turn ended without credit metering; no figure shown");
-            if let Some((workflow_id, _)) = &record.wake {
-                *self.run_unmetered.entry(workflow_id.clone()).or_insert(0) += 1;
+            let wake_run = record
+                .wake
+                .as_ref()
+                .map(|(workflow_id, _)| workflow_id.clone());
+            if let Some(run) = self.attributed_run(session, wake_run) {
+                *self.run_unmetered.entry(run).or_insert(0) += 1;
             }
         }
         let ended_run = record.wake.and_then(|(workflow_id, label)| {
@@ -5169,5 +5184,31 @@ mod tests {
             Some(("recipe-A".to_owned(), WorkflowRunStatus::Completed, None)),
             "the terminal completion still names its wake"
         );
+    }
+
+    /// cyril-2lh8 delta review (Medium): an agent-initiated turn with no
+    /// run label of its own on a workflow-owned session (a step woken by a
+    /// message) counts toward the run that owns the session — its credits,
+    /// or, unmetered, its unmetered count.
+    #[rstest::rstest]
+    #[case::metered(Some(0.25), Some(0.25), 0)]
+    #[case::unmetered(None, None, 1)]
+    fn owned_session_wake_counts_toward_its_run(
+        #[case] credits: Option<f64>,
+        #[case] want_credits: Option<f64>,
+        #[case] want_unmetered: u32,
+    ) {
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        let close = run_turn(
+            &mut tracker,
+            &step,
+            Some(&initiation(Some("send-message-wake"), false)),
+            credits,
+        );
+        assert_eq!(close_view(close), Some((credits, None)));
+        assert_eq!(tracker.run_credits(&id), want_credits);
+        assert_eq!(tracker.run_unmetered_turns(&id), want_unmetered);
     }
 }

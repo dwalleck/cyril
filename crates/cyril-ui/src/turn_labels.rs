@@ -49,9 +49,10 @@ pub(crate) fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -
 }
 
 /// The notice for a workflow completion KAS injected into a busy turn (B5):
-/// `⚙ workflow "<name>" <status> · run <total> credits (noted mid-turn):` —
-/// the run's credits so far, since no follow-up wake exists to close it
-/// (cyril-2lh8); the segment is left out when nothing was metered — or
+/// `⚙ workflow "<name>" <status> · run so far <total> credits (noted
+/// mid-turn):` — a running total, since no follow-up wake exists yet to
+/// close it and the same run's later lines may show more (cyril-2lh8); the
+/// segment is left out when nothing was metered — or
 /// `⚙ workflow ended (noted mid-turn):` when the run is unknown — followed by
 /// the engine's text verbatim on the next line(s), when it sent any.
 #[must_use]
@@ -69,7 +70,7 @@ pub(crate) fn workflow_notice_text(
             if let Some(total) = notice.run_total() {
                 head.push_str(&format!(
                     " · {}",
-                    run_total_text(total, notice.unmetered_turns())
+                    run_total_text("run so far", total, notice.unmetered_turns())
                 ));
             }
             head.push_str(" (noted mid-turn):");
@@ -112,7 +113,7 @@ pub(crate) fn footer_text(close: &AgentTurnClose) -> Option<String> {
                 "╰─ ⚙ workflow \"{}\" {} · {}",
                 run.label().name(),
                 status_word(run.label().status()),
-                run_total_text(run.total(), run.unmetered_turns())
+                run_total_text("run", run.total(), run.unmetered_turns())
             );
             if let Some(follow_up) = follow_up {
                 text.push_str(&format!(" · follow-up {follow_up}"));
@@ -140,14 +141,17 @@ fn run_credits_text(credits: f64) -> String {
     format!("{floored:.2} credits")
 }
 
-/// `run <total> credits`, or — when some of the run's turns reported no
-/// credits — the unmistakably partial `run ≥ <total> credits (<n> turn(s)
-/// unmetered)` (cyril-2lh8 review: an incomplete total is not a total).
-fn run_total_text(total: f64, unmetered_turns: u32) -> String {
+/// `<lead> <total> credits`, or — when some of the run's turns reported no
+/// credits — the unmistakably partial `<lead> ≥ <total> credits (<n>
+/// turn(s) unmetered)` (cyril-2lh8 review: an incomplete total is not a
+/// total). `lead` is `run` for an ended run's completion line, `run so far`
+/// for a total the run may still add to.
+fn run_total_text(lead: &str, total: f64, unmetered_turns: u32) -> String {
+    let credits = run_credits_text(total);
     match unmetered_turns {
-        0 => format!("run {}", run_credits_text(total)),
-        1 => format!("run ≥ {} (1 turn unmetered)", run_credits_text(total)),
-        n => format!("run ≥ {} ({n} turns unmetered)", run_credits_text(total)),
+        0 => format!("{lead} {credits}"),
+        1 => format!("{lead} ≥ {credits} (1 turn unmetered)"),
+        n => format!("{lead} ≥ {credits} ({n} turns unmetered)"),
     }
 }
 
@@ -302,7 +306,10 @@ mod tests {
     #[case::sub_hundredth(0.004, "0.00", "0.00")]
     fn credits_floor_like_kiro(#[case] credits: f64, #[case] turn: &str, #[case] run: &str) {
         assert_eq!(credits_text(credits), format!("{turn} credits"));
-        assert_eq!(run_total_text(credits, 0), format!("run {run} credits"));
+        assert_eq!(
+            run_total_text("run", credits, 0),
+            format!("run {run} credits")
+        );
     }
 
     /// B5 exact strings for both injection kinds, with the stress rows.
@@ -329,7 +336,7 @@ mod tests {
                 Some(wake_text)
             ),
             format!(
-                "⚙ workflow \"lki9-quick\" completed · run 0.05 credits (noted mid-turn):\n{wake_text}"
+                "⚙ workflow \"lki9-quick\" completed · run so far 0.05 credits (noted mid-turn):\n{wake_text}"
             ),
             "the run's credits so far (cyril-2lh8)"
         );
@@ -344,7 +351,7 @@ mod tests {
                 ),
                 None
             ),
-            "⚙ workflow \"lki9-quick\" completed · run ≥ 0.05 credits (1 turn unmetered) (noted mid-turn):",
+            "⚙ workflow \"lki9-quick\" completed · run so far ≥ 0.05 credits (1 turn unmetered) (noted mid-turn):",
             "a partial total says so (cyril-2lh8 review)"
         );
         assert_eq!(

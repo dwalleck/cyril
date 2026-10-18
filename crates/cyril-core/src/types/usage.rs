@@ -208,13 +208,22 @@ impl TurnMeteringUpdate {
         &self.charges
     }
 
-    /// The credits this report charges — the sum of its `credit` charges,
-    /// the same rule as `TurnMetering::credits` — or `None` when it carries
-    /// none (`promptTurnSummaries: []`), never a stand-in 0.
+    /// The credits this report charges, by Kiro's own rule
+    /// (`kiro-tui-2.32.0.js` `Hut`: a charge whose `(unitPlural || unit)`,
+    /// trimmed and lowercased, is `credit` or `credits`) — or `None` when it
+    /// carries none (`promptTurnSummaries: []`), never a stand-in 0.
     pub fn credits(&self) -> Option<f64> {
         self.charges
             .iter()
-            .filter(|charge| charge.unit() == "credit")
+            .filter(|charge| {
+                let unit = if charge.unit_plural().is_empty() {
+                    charge.unit()
+                } else {
+                    charge.unit_plural()
+                };
+                let unit = unit.trim().to_lowercase();
+                unit == "credit" || unit == "credits"
+            })
             .map(MeteredAmount::amount)
             .reduce(|total, amount| total + amount)
     }
@@ -967,9 +976,10 @@ mod tests {
             .unwrap_or_else(|e| panic!("charge fixture: {e}"))
     }
 
-    /// cyril-2lh8: a report's credits sum its `credit` charges (the
-    /// `TurnMetering::credits` rule); none, or only other units, is `None` —
-    /// never 0.
+    /// cyril-2lh8: a report's credits sum its credit charges by Kiro's own
+    /// rule (`kiro-tui-2.32.0.js` `Hut`/`dRe`: `(unitPlural||unit).trim()
+    /// .toLowerCase()` is `credit` or `credits`); none, or only other
+    /// units, is `None` — never 0.
     #[rstest::rstest]
     #[case::none(Vec::new(), None)]
     #[case::other_unit_only(vec![charge(3.0, "token", "tokens")], None)]
@@ -978,17 +988,17 @@ mod tests {
         vec![charge(0.25, "credit", "credits"), charge(9.0, "token", "tokens"), charge(0.5, "credit", "credits")],
         Some(0.75)
     )]
+    #[case::any_case_and_padding(
+        vec![charge(0.25, "Credit", " CREDITS "), charge(0.5, "credit", "Credit")],
+        Some(0.75)
+    )]
+    #[case::plural_decides(vec![charge(0.25, "credit", "tokens")], None)]
     fn turn_metering_update_credits(
         #[case] charges: Vec<MeteredAmount>,
         #[case] want: Option<f64>,
     ) {
-        let update = TurnMeteringUpdate::new(charges.clone(), None, None, Vec::new(), None);
+        let update = TurnMeteringUpdate::new(charges, None, None, Vec::new(), None);
         assert_eq!(update.credits(), want);
-        assert_eq!(
-            update.credits(),
-            crate::types::TurnMetering::from_charges(charges, None).credits(),
-            "the same rule as TurnMetering::credits"
-        );
     }
 
     #[test]
