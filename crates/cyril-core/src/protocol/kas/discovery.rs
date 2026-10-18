@@ -1258,13 +1258,18 @@ mod tests {
             Some(data_dir.join(STORE_FILE_NAME)),
             "default_store_path must follow the resolver on this host"
         );
-        // An explicit, absent kiro-cli: `on_path()` would also probe the real
-        // TUI fallback dirs (/usr/local/bin, /opt/homebrew/bin) of the host
-        // running the tests, where a real kiro-cli may live.
-        let missing = home.join("no-such-kiro-cli");
-        let source = crate::protocol::kas::auth::KasTokenSource::new(
-            AgentCommand::new(missing.to_str().expect("utf-8 fixture path")),
-            crate::types::SpawnEnvironment::Inherit,
+        // The real free-path source over the child's private PATH and HOME,
+        // with an executable probe confined to the test's private root —
+        // `on_path()` would also probe the host's real TUI fallback dirs
+        // (/usr/local/bin, /opt/homebrew/bin), where a real kiro-cli may live.
+        // Nothing is found, so the bare `kiro-cli` spawn fails on PATH=root.
+        let root = home.parent().expect("private root").to_path_buf();
+        let path_var = std::env::var_os("PATH");
+        let source = crate::protocol::kas::auth::KasTokenSource::free_path(
+            path_var.as_deref(),
+            Some(&home),
+            None,
+            |p: &Path| p.starts_with(&root) && p.is_file(),
         );
         let err = resolve_kas_command(&source)
             .await
@@ -1273,8 +1278,9 @@ mod tests {
             panic!("expected AuthUnavailable (bundle found, kiro-cli absent), got {err:?}");
         };
         assert!(
-            why.contains("no-such-kiro-cli chat _ get-kas-token"),
-            "the gate must name the helper it could not run: {why}"
+            why.contains("kiro-cli chat _ get-kas-token")
+                && why.contains(crate::protocol::kas::auth::FREE_PATH_REMEDY),
+            "the gate must name the helper it could not run and where it looked: {why}"
         );
         std::fs::write(completed, "wrappers checked").expect("completion marker");
     }
@@ -1325,8 +1331,11 @@ mod tests {
             .env("HOME", &home)
             .env("XDG_DATA_HOME", &xdg)
             .env("KIRO_AGENT_PATH", &node)
-            // /bin for the fixture's `sh`; the fake is the only kiro-cli.
-            .env("PATH", format!("{}:/bin:/usr/bin", bin.display()))
+            // A PRIVATE PATH holding only the fake: no system dir, so no real
+            // kiro-cli can ever run against the developer's login. The
+            // fixture's `#!/bin/sh` is resolved by the kernel, its commands
+            // are shell builtins, and KIRO_AGENT_PATH makes node lookup moot.
+            .env("PATH", &bin)
             .env_remove("KIRO_KAS_SERVER_PATH")
             .status()
             .expect("re-run this test binary");
@@ -1376,6 +1385,8 @@ mod tests {
             let xdg = root.path().join("xdg");
             let local_bin = home.join(".local/bin");
             std::fs::create_dir_all(&local_bin).expect("~/.local/bin");
+            let empty_path = root.path().join("empty-path");
+            std::fs::create_dir_all(&empty_path).expect("private PATH dir");
             std::os::unix::fs::symlink(
                 concat!(
                     env!("CARGO_MANIFEST_DIR"),
@@ -1406,8 +1417,12 @@ mod tests {
             .env("HOME", &home)
             .env("XDG_DATA_HOME", &xdg)
             .env("KIRO_AGENT_PATH", &node)
-            // No kiro-cli on PATH (only /bin for the fixture's `sh`).
-            .env("PATH", "/bin:/usr/bin")
+            // A PRIVATE, EMPTY PATH dir: PATH is walked before the TUI
+            // fallbacks, so a system dir here (e.g. a distro /usr/bin/kiro-cli)
+            // would run the REAL kiro-cli against the developer's login. The
+            // fixture's `#!/bin/sh` is resolved by the kernel, its commands
+            // are shell builtins, and KIRO_AGENT_PATH makes node lookup moot.
+            .env("PATH", &empty_path)
             .env_remove("KIRO_KAS_SERVER_PATH")
             .status()
             .expect("re-run this test binary");

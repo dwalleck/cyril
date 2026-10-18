@@ -45,7 +45,7 @@ Requester decision relayed by the coordinator (quoted in `route.md` T4 item 1). 
 
 - Red-first (C1): `receipts/red-run.log` (base 85becf9f + test only: `StoreUnservable … data.sqlite3 is absent`) → `receipts/green-run.log`.
 - Mutations: C9 `receipts/mutation-c9-{red,restored}.log`; C10 `receipts/mutation-c10{,b}-red.log`, `mutation-c10-restored.log`; W `receipts/mutation-wiring-red.log`.
-- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (60155e5e source; every lane `-OK`).
+- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (25880f5a source; every lane `-OK`).
 - Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 247 kas/domain_mediator tests pass on MSVC at 60155e5e, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
 - Live C6: `receipts/live/timeline.txt` — renewal served at 19:44:40Z (expiry 19:47:39 → 20:44:40, plain helper, no force), turns answered before, inside the buffer, and after the old expiry; no BridgeDisconnected.
 - Missing-helper shapes (C10 premise): `receipts/missing-subcommand-shapes.txt`, evidence P5.
@@ -114,10 +114,19 @@ Technical repairs under the approved design (relayed by the coordinator, 2026-10
 
 - `discovery::kiro_data_dir_from_env` on `macos`/`ios` → `apple_kiro_data_dir(kiro_agent_config::home_dir())` = `$HOME/Library/Application Support/kiro-cli`; XDG_DATA_HOME and LOCALAPPDATA are not read. The two discovery child tests set HOME to their private dir, so `unix_resolver_data_dir` names exactly that path.
 - `kiro_agent_config::home_dir()` = `HOME`, then `USERPROFILE` — the fake `~/.local/bin` in the shared-kiro-cli test is under the child's HOME.
-- `resolve_free_kiro_cli` on macOS takes the unix branch (fallbacks `~/.local/bin`, `/usr/local/bin`, `/opt/homebrew/bin`). In both discovery child tests the fake is found BEFORE the real `/usr/local/bin` / `/opt/homebrew/bin` (PATH `bin` first in one, `~/.local/bin` first in the other), so the runner's own Homebrew can never be reached.
+- `resolve_free_kiro_cli` on macOS takes the unix branch (fallbacks `~/.local/bin`, `/usr/local/bin`, `/opt/homebrew/bin`). In both discovery child tests the fake is found BEFORE the real `/usr/local/bin` / `/opt/homebrew/bin` (Review 5: each child has a PRIVATE PATH — the fake-only `bin` in one, an empty dir in the other, where the PATH-first walk finds nothing and the `~/.local/bin` fallback is the first hit), so the runner's own Homebrew can never be reached.
 - `/bin/sh`, `/bin/mkdir`, `/bin/sleep`, `/bin/rmdir` exist on macOS; `dirname` lives in `/usr/bin` there and is no longer used. `printf`, `[`, `echo` and `${0%/*}` are shell builtins or expansions.
 - macOS tempdirs live under `/var/folders` (a symlink to `/private/var`); only the lock-key tests canonicalize, and they compare canonicalized paths on both sides.
 
 ### Gate scope
 
 The local gate covers Linux (all ten ci.yml lanes) plus the Windows VM (`resourcefs-win11`: kas/domain_mediator tests, MSVC). macOS has no local machine: its evidence is the `Test (macos-latest)` CI leg on the pushed head.
+
+## Review 5 — PR #173 delta review (reviewed c847d0fd): APPROVE, tests-only follow-up
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (Low, token safety) | `version_probe_and_token_source_share_the_fallback_kiro_cli` gave its child `PATH=/bin:/usr/bin`; PATH is walked before the `~/.local/bin` fallback, so a distro `/usr/bin/kiro-cli` would have run the REAL kiro-cli (`--version`, `chat _ get-kas-token`) against the developer's login. The "/bin for the fixture's sh" comments were a misconception: the fixture's `#!/bin/sh` is kernel-resolved, its commands are builtins, and `KIRO_AGENT_PATH` makes node lookup moot. | Fixed — that child gets a private empty PATH dir; `free_gate_asks_kiro_cli_get_kas_token_not_the_store` gets a PATH of only its fake's `bin`; comments corrected. Audit of every test in the PR with a child or replacement PATH: `env_wrappers…` (PATH = private root), `tests/spawn_isolation.rs` free-path launches (private fake dir first, so its fake is the first hit), `fetch_serializes_across_spellings_of_one_binary` (PATH resolves `sh`, never kiro-cli), the bridge Wrapper test and every `fake_kiro_cli` process test (absolute programs, no kiro-cli lookup). No other test lets a system dir precede a fixture kiro-cli. |
+| 2 | design.md said "`~/.local/bin` first" for the shared-kiro-cli test. | Fixed — the free path is PATH-first (requester decision, evidence P6); the macOS note now states each child's private PATH. |
+| 3a (Nit) | `env_wrappers…` dropped its `install kiro-cli` remedy assertion. | Fixed — the child now builds the real free-path source through `KasTokenSource::free_path` (new: the injected-host form of `on_path`, probe confined to the test's private root) and asserts the gate's diagnostic carries `FREE_PATH_REMEDY`. |
+| 3b (Nit, optional) | The symlink-retarget test execs freshly written scripts. | Kept and documented in the test: its two Cellar versions must be distinct real files (symlinks to one committed fixture would canonicalize to one key and blind the test); ETXTBSY-safe under nextest's process-per-test model. |

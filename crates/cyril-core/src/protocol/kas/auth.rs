@@ -291,10 +291,10 @@ fn kiro_cli_file_name() -> String {
 /// Spawn-failure remediation on the free path (where [`resolve_free_kiro_cli`]
 /// looks).
 #[cfg(not(windows))]
-const FREE_PATH_REMEDY: &str = "install kiro-cli on PATH (cyril also looks in ~/.local/bin, \
+pub(crate) const FREE_PATH_REMEDY: &str = "install kiro-cli on PATH (cyril also looks in ~/.local/bin, \
      /usr/local/bin and /opt/homebrew/bin)";
 #[cfg(windows)]
-const FREE_PATH_REMEDY: &str = "install kiro-cli so that kiro-cli.exe is on PATH";
+pub(crate) const FREE_PATH_REMEDY: &str = "install kiro-cli so that kiro-cli.exe is on PATH";
 /// Spawn-failure remediation when the kiro-cli comes from `--agent-command`.
 const AGENT_COMMAND_REMEDY: &str = "check the kiro-cli named by --agent-command";
 
@@ -521,15 +521,28 @@ impl KasTokenSource {
                 None
             }
         };
+        Self::free_path(
+            path_var.as_deref(),
+            home.as_deref(),
+            cwd.as_deref(),
+            is_executable_file,
+        )
+    }
+
+    /// The free-path source for an explicit host (PATH, home, cwd and the
+    /// executable probe injected) — [`Self::on_path`] with cyril's own
+    /// environment; tests pass a probe confined to their private dirs so the
+    /// real fallback locations are never consulted.
+    pub(crate) fn free_path(
+        path_var: Option<&std::ffi::OsStr>,
+        home: Option<&std::path::Path>,
+        cwd: Option<&std::path::Path>,
+        is_executable: impl Fn(&std::path::Path) -> bool,
+    ) -> Self {
         Self {
             spawn_remedy: FREE_PATH_REMEDY,
             ..Self::new(
-                resolve_free_kiro_cli(
-                    path_var.as_deref(),
-                    home.as_deref(),
-                    cwd.as_deref(),
-                    is_executable_file,
-                ),
+                resolve_free_kiro_cli(path_var, home, cwd, is_executable),
                 SpawnEnvironment::Inherit,
             )
         }
@@ -1740,6 +1753,12 @@ pub(crate) mod tests {
     // `bin/kiro-cli -> ../Cellar/<ver>/bin/kiro-cli`) upgraded mid-session: a
     // source built BEFORE the retarget and one built AFTER still serialize,
     // because the key is resolved per fetch, not frozen at construction.
+    // The two Cellar versions must be DISTINCT real files (symlinks to one
+    // committed fixture would canonicalize to the same key and blind the
+    // test), so they are written here and exec'd. That is ETXTBSY-safe under
+    // nextest (one process per test, both files closed before any spawn);
+    // under plain `cargo test` a concurrent fork in another test thread could
+    // briefly inherit the write fd.
     #[cfg(unix)]
     #[tokio::test]
     async fn fetch_serializes_across_a_symlink_retarget() {
