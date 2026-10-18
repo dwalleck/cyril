@@ -79,7 +79,10 @@ fn dispatch_extension(
             }
             let (reply, response_rx) = tokio::sync::oneshot::channel();
             (
-                callbacks::HostCallback::GetAccessToken { reply },
+                callbacks::HostCallback::GetAccessToken {
+                    force_refresh: crate::protocol::kas::auth::force_refresh_requested(&params),
+                    reply,
+                },
                 response_rx,
             )
         } else if method == terminal_io::SHELL_TYPE_METHOD {
@@ -316,6 +319,7 @@ mod tests {
                     hooks: Some(Rc::new(HookRegistry::load(ws.path(), None))),
                     hook_ops: HookOps::default(),
                     cwd: ws.path().to_path_buf(),
+                    kas_token: None,
                 });
                 let engine: Rc<dyn Engine> = Rc::new(KasEngine {
                     hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,

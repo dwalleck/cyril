@@ -29,8 +29,13 @@ pub(crate) type Reply<T> = tokio::sync::oneshot::Sender<acp::Result<T>>;
 /// land with their cutover slices (Host I/O, then Hooks).
 #[derive(Debug)]
 pub(crate) enum HostCallback {
-    /// `_kiro/auth/getAccessToken` (KAS-1).
-    GetAccessToken { reply: Reply<acp::ExtResponse> },
+    /// `_kiro/auth/getAccessToken` (KAS-1); `force_refresh` is the request's
+    /// `forceRefresh: true` (cyril-zbu7 — relayed to kiro-cli as
+    /// `--force-refresh`).
+    GetAccessToken {
+        force_refresh: bool,
+        reply: Reply<acp::ExtResponse>,
+    },
     /// Bare-ACP `fs/read_text_file` (KAS-5a) — already typed by the acp layer.
     ReadTextFile {
         req: acp::ReadTextFileRequest,
@@ -140,7 +145,7 @@ impl HostCallback {
             };
         }
         match self {
-            Self::GetAccessToken { reply }
+            Self::GetAccessToken { reply, .. }
             | Self::KiroFs { reply, .. }
             | Self::ShellType { reply, .. }
             | Self::HooksList { reply, .. }
@@ -267,7 +272,7 @@ impl HostCallback {
         }
         let kind = self.kind();
         match self {
-            Self::GetAccessToken { reply } => send(kind, reply, err),
+            Self::GetAccessToken { reply, .. } => send(kind, reply, err),
             Self::ReadTextFile { reply, .. } => send(kind, reply, err),
             Self::WriteTextFile { reply, .. } => send(kind, reply, err),
             Self::KiroFs { reply, .. } => send(kind, reply, err),
@@ -361,6 +366,9 @@ pub(crate) struct DispatchCtx {
     pub(crate) hook_ops: crate::protocol::kas::hooks::HookOps,
     /// Session workspace, the cwd for hook command execution.
     pub(crate) cwd: std::path::PathBuf,
+    /// The kiro-cli the `getAccessToken` responder asks (cyril-zbu7) — `Some`
+    /// on every KAS spawn, `None` for engines that never serve auth.
+    pub(crate) kas_token: Option<std::rc::Rc<crate::protocol::kas::auth::KasTokenSource>>,
 }
 
 /// Enqueue `notify` (if any) BEFORE sending the typed reply — the ADR-0004
@@ -461,9 +469,21 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             };
             resolve(ctx, kind, None, reply, r).await;
         }
-        HostCallback::GetAccessToken { reply } => {
-            let r = crate::protocol::kas::auth::respond_get_access_token().await;
-            let notify = r.as_ref().err().and_then(auth_failure_notification);
+        HostCallback::GetAccessToken {
+            force_refresh,
+            reply,
+        } => {
+            let outcome = crate::protocol::kas::auth::respond_get_access_token(
+                ctx.kas_token.as_deref(),
+                force_refresh,
+            )
+            .await;
+            let (notify, r) = match outcome {
+                Ok(response) => (None, Ok(response)),
+                Err((acp_error, reason)) => {
+                    (Some(auth_failure_notification(&reason)), Err(acp_error))
+                }
+            };
             resolve(ctx, kind, notify, reply, r).await;
         }
         // Control notifications — no reply channel.
@@ -493,23 +513,18 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
 
 /// The user-visible surface of a failed auth callback (cyril-l7tw C11, moved
 /// here from `KiroClient::notify_if_auth_failure` by the mediation cutover):
-/// the responder's message with the login hint appended exactly once.
-/// `MethodNotFound` is exempt — a refusal is not an auth failure (dn91 C13);
-/// with parse-time refusals it cannot reach dispatch, but the guard keeps the
-/// exemption local should a responder ever emit that code itself.
-fn auth_failure_notification(e: &acp::Error) -> Option<crate::types::Notification> {
-    if e.code == acp::ErrorCode::MethodNotFound {
-        return None;
-    }
-    let mut message = e.message.clone();
-    let hint = crate::protocol::kas::auth::LOGIN_HINT;
-    if !message.contains(hint) {
-        message.push_str(&format!(" — {hint} and retry"));
-    }
-    Some(crate::types::Notification::BridgeError {
+/// the typed reason's own actionable message (cyril-zbu7 — each
+/// [`KasTokenError`](crate::protocol::kas::auth::KasTokenError) variant
+/// carries its remediation, so a missing kiro-cli is not told to log in). A
+/// refusal (`MethodNotFound`, dn91 C13) never reaches here: refusals are
+/// parse-time, and the responder's error type cannot express one.
+fn auth_failure_notification(
+    reason: &crate::protocol::kas::auth::KasTokenError,
+) -> crate::types::Notification {
+    crate::types::Notification::BridgeError {
         operation: "auth".into(),
-        message,
-    })
+        message: reason.to_string(),
+    }
 }
 
 /// The full census of wire methods the callback seam will cover — 19,
@@ -561,12 +576,15 @@ mod tests {
     #[tokio::test]
     async fn envelope_reply_channel_round_trips() {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        let cb = HostCallback::GetAccessToken { reply: tx };
+        let cb = HostCallback::GetAccessToken {
+            force_refresh: false,
+            reply: tx,
+        };
         assert_eq!(cb.kind(), "auth/getAccessToken");
         assert!(WIRE_METHODS.contains(&cb.kind()));
         assert_eq!(cb.scope(), None);
         match cb {
-            HostCallback::GetAccessToken { reply } => {
+            HostCallback::GetAccessToken { reply, .. } => {
                 let body =
                     serde_json::value::RawValue::from_string("{\"ok\":true}".into()).unwrap();
                 reply
@@ -584,59 +602,61 @@ mod tests {
     #[tokio::test]
     async fn resolve_err_reaches_receiver_and_survives_drop() {
         let (tx, rx) = tokio::sync::oneshot::channel();
-        HostCallback::GetAccessToken { reply: tx }.resolve_err(acp::Error::new(-32603, "shutdown"));
+        HostCallback::GetAccessToken {
+            force_refresh: false,
+            reply: tx,
+        }
+        .resolve_err(acp::Error::new(-32603, "shutdown"));
         let err = rx.await.expect("delivered").expect_err("error reply");
         assert_eq!(err.message, "shutdown");
 
         let (tx, rx) = tokio::sync::oneshot::channel::<acp::Result<acp::ExtResponse>>();
         drop(rx);
-        HostCallback::GetAccessToken { reply: tx }.resolve_err(acp::Error::new(-32603, "shutdown"));
+        HostCallback::GetAccessToken {
+            force_refresh: false,
+            reply: tx,
+        }
+        .resolve_err(acp::Error::new(-32603, "shutdown"));
     }
 
-    // cyril-l7tw C11, migrated from KiroClient::notify_if_auth_failure by the
-    // mediation cutover (slice 3): a failed auth callback surfaces as
-    // BridgeError("auth") with the responder message + the login hint.
-    #[test]
-    fn auth_failure_notification_carries_message_and_hint() {
-        let n = auth_failure_notification(&acp::Error::new(-32603, "sqlite store locked"))
-            .expect("failure surfaces");
-        match n {
+    /// The `BridgeError("auth")` message a failed auth callback surfaces.
+    fn surfaced(reason: &crate::protocol::kas::auth::KasTokenError) -> String {
+        match auth_failure_notification(reason) {
             crate::types::Notification::BridgeError { operation, message } => {
                 assert_eq!(operation, "auth");
-                assert!(message.contains("sqlite store locked"), "got: {message}");
-                assert!(
-                    message.contains("kiro-cli login"),
-                    "hint present: {message}"
-                );
+                message
             }
             other => panic!("expected BridgeError, got {other:?}"),
         }
     }
 
-    // l7tw C11 stress: the responder's own messages already carry the hint —
-    // it must not double.
+    // cyril-l7tw C11 + cyril-zbu7 C2: a failed auth callback surfaces as
+    // BridgeError("auth") carrying the typed reason's OWN remediation — the
+    // login hint exactly once for kiro-cli's error envelope, and never for a
+    // failure re-login cannot fix (kiro-cli absent / wedged).
     #[test]
-    fn auth_failure_hint_not_doubled() {
-        for reason in [
-            "kiro token expired; run `kiro-cli login`".to_string(),
-            super::super::discovery::KasMissing::NoHomeForStore.reason(),
-        ] {
-            let n = auth_failure_notification(&acp::Error::new(-32603, reason))
-                .expect("failure surfaces");
-            match n {
-                crate::types::Notification::BridgeError { message, .. } => {
-                    assert_eq!(message.matches("kiro-cli login").count(), 1, "{message}");
-                }
-                other => panic!("expected BridgeError, got {other:?}"),
-            }
-        }
-    }
-
-    // dn91 C13 continuity: a method-not-found never surfaces as an auth
-    // failure (refusals are parse-time and cannot reach dispatch; the guard
-    // keeps the exemption if a responder ever emits the code).
-    #[test]
-    fn auth_refusal_code_is_exempt() {
-        assert!(auth_failure_notification(&acp::Error::method_not_found()).is_none());
+    fn auth_failure_notification_carries_the_typed_remediation() {
+        use crate::protocol::kas::auth::KasTokenError;
+        let spawn = surfaced(&KasTokenError::Spawn {
+            command: "kiro-cli chat _ get-kas-token".into(),
+            source: std::io::Error::from(std::io::ErrorKind::NotFound),
+        });
+        assert!(spawn.contains("install kiro-cli"), "{spawn}");
+        assert!(!spawn.contains("kiro-cli login"), "misdirects: {spawn}");
+        let timeout = surfaced(&KasTokenError::Timeout {
+            command: "kiro-cli chat _ get-kas-token".into(),
+            secs: 30,
+        });
+        assert!(timeout.contains("did not answer within 30 s"), "{timeout}");
+        assert!(!timeout.contains("kiro-cli login"), "misdirects: {timeout}");
+        let logged_out = surfaced(&KasTokenError::ErrorEnvelope {
+            message: "You are not logged in. Please log in with `kiro-cli login`.".into(),
+            hint: String::new(),
+        });
+        assert_eq!(
+            logged_out.matches("kiro-cli login").count(),
+            1,
+            "{logged_out}"
+        );
     }
 }

@@ -1,21 +1,27 @@
-//! KAS auth responder (KAS-1 Part B, cyril-evwh; sqlite source, cyril-dcc6).
+//! KAS auth responder (KAS-1 Part B, cyril-evwh; kiro-cli token source,
+//! cyril-zbu7).
 //!
 //! Answers the `_kiro/auth/getAccessToken` server→client request KAS sends
-//! under `--auth=acp-callback` — both spawn modes: the wrapper (kiro-cli
-//! forwards the callback to its ACP client) and the free path (the directly
-//! spawned server asks its host). The source is kiro-cli's **sqlite credential
-//! store** (`data.sqlite3`), the only store `kiro-cli login` refreshes; the
-//! SSO-cache token file is deliberately not consulted (it can hold a dead
-//! identity that self-refreshes — the cyril-dcc6 bug). cyril is a **custodian**
-//! of the credential: read-only, held for one reply, redacted in `Debug`,
-//! never logged, and the store's refresh token is never extracted or
-//! transmitted (the row containing it is read whole; only the access fields
-//! are taken from it).
+//! under `--auth=acp-callback` — both spawn modes: the free path (the directly
+//! spawned server asks its host) and the wrapper (kiro-cli forwards the
+//! callback to its ACP client under `--auth-method client`, the pre-2.29.0
+//! default). The token comes from kiro-cli itself, the way Kiro's own TUI gets
+//! it (tui.js handler `Rsr`, every release since 2.6.1): run the hidden host
+//! subcommand `kiro-cli chat _ get-kas-token`, appending `--force-refresh`
+//! iff the request asks, and pass the JSON envelope's `data` fields through.
+//! kiro-cli owns the OIDC refresh token and refreshes an expired access token
+//! under its own cross-process refresh lock, so renewal stays single-flight
+//! inside kiro-cli: cyril never does OIDC and never reads kiro-cli's
+//! credential store. cyril is a **custodian** of the access token it relays:
+//! held for one reply, redacted in `Debug`, never logged, never echoed into a
+//! diagnostic.
 
-use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use agent_client_protocol::schema::v1 as acp;
+
+use crate::protocol::kas::version::{CaptureFailure, Captured, render, run_captured};
+use crate::types::{AgentCommand, SpawnEnvironment};
 
 /// The method string cyril receives for the wire request `_kiro/auth/getAccessToken`.
 /// The ACP library strips the single leading `_` before dispatch (same as it
@@ -23,20 +29,28 @@ use agent_client_protocol::schema::v1 as acp;
 /// `kiro.dev/*`), so the `_kiro` namespace arrives as `kiro`.
 pub(crate) const GET_ACCESS_TOKEN_METHOD: &str = "kiro/auth/getAccessToken";
 
-/// The actionable remediation every logged-out/stale-credential diagnostic
-/// carries. Single owner of the wording: `KiroClient::notify_if_auth_failure`
-/// (cyril-l7tw C11) checks for this exact string to avoid doubling the hint,
-/// so reword it HERE and both sides stay in sync.
+/// The actionable remediation for a logged-out / unrenewable credential.
 pub(crate) const LOGIN_HINT: &str = "run `kiro-cli login`";
 
-/// KAS rejects a token within this pre-expiry window (it validates
-/// `expiresAt > now + ~3min`), so cyril treats such a token as stale.
-const EXPIRY_BUFFER_SECS: i64 = 180;
+/// The hidden kiro-cli host subcommand (after the kiro-cli invocation
+/// prefix) that resolves — and refreshes when expired — the KAS access token.
+const GET_KAS_TOKEN_ARGS: [&str; 3] = ["chat", "_", "get-kas-token"];
+/// Appended iff the KAS request carries `forceRefresh: true`.
+const FORCE_REFRESH_FLAG: &str = "--force-refresh";
+/// Bound on one helper run — the TUI's `Oc` default (30 s): kiro-cli may
+/// refresh over the network.
+const GET_KAS_TOKEN_DEADLINE: Duration = Duration::from_secs(30);
+/// stderr lines quoted in a non-zero-exit diagnostic (the TUI quotes 1).
+const STDERR_TAIL_LINES: usize = 2;
+/// Cap on the quoted stderr tail and on a relayed error-envelope message, so
+/// a runaway helper cannot flood the UI.
+const DIAGNOSTIC_CHAR_CAP: usize = 400;
 
-/// JSON-RPC error codes the responder replies with: internal (store, task, or
-/// serialize failures) and server-defined (stale token — the user must re-login).
+/// JSON-RPC error codes the responder replies with: server-defined for an
+/// auth state the user must act on (kiro-cli's own error envelope — logged
+/// out, refresh refused), internal for every helper/transport failure.
 const JSONRPC_INTERNAL_ERROR: i32 = -32603;
-const JSONRPC_STALE_TOKEN: i32 = -32000;
+const JSONRPC_AUTH_REQUIRED: i32 = -32000;
 
 /// A redacted access-token wrapper: its `Debug` never prints the secret, so a
 /// stray `{:?}` or a tracing of any struct containing it cannot leak the
@@ -49,276 +63,418 @@ impl std::fmt::Debug for AccessToken {
     }
 }
 
-/// The validated `getAccessToken` reply payload.
+/// The `data` of kiro-cli's `getKasToken` envelope — exactly the fields the
+/// TUI relays to KAS: `{accessToken, expiresAt, profileArn}` required,
+/// `authMethod` / `provider` optional (relayed only when present).
 #[derive(Debug)]
-struct AuthReply {
+pub(crate) struct KasToken {
     access_token: AccessToken,
     expires_at: String,
     profile_arn: String,
+    auth_method: Option<String>,
+    provider: Option<String>,
 }
 
-/// The credential-store rows kiro-cli maintains in `data.sqlite3`. The token
-/// row is PER LOGIN METHOD (cyril-y14u): Builder-ID/IdC logins write
-/// `kirocli:odic:token`, social logins (`accountType: SocialGitHub/…`) write
-/// `kirocli:social:token` — both snake_case `{access_token, expires_at, …}`,
-/// deleted on logout; the social row additionally carries an inline
-/// `profile_arn`. The active CodeWhisperer profile JSON (`{arn,
-/// profile_name}`) lives in the `state` table and is preferred for the arn
-/// (the odic token row stopped carrying `profile_arn`); the social row's
-/// inline arn is the fallback when no state profile row exists.
-const TOKEN_ROW_SQL: &str = "SELECT value FROM auth_kv WHERE key = 'kirocli:odic:token'";
-const SOCIAL_TOKEN_ROW_SQL: &str = "SELECT value FROM auth_kv WHERE key = 'kirocli:social:token'";
-const PROFILE_ROW_SQL: &str = "SELECT value FROM state WHERE key = 'api.codewhisperer.profile'";
-
-/// Read kiro-cli's sqlite credential store into a reply. Synchronous
-/// (rusqlite) — the live-callback path wraps it in `spawn_blocking`; the
-/// spawn-time gate ([`store_unservable_reason`]) calls it directly, which is
-/// safe only because that runs once at startup, before any session traffic.
-/// The store is opened READ_ONLY (never created, never written; kiro-cli
-/// writes it concurrently) with a short busy timeout. Every failure mode is
-/// distinguished: absent store / absent row (logged out — actionable), locked,
-/// and corrupt (parse errors name the row). The error is the diagnostic,
-/// never the token.
-fn read_sqlite_store(db: &Path) -> Result<AuthReply, String> {
-    if !db.is_file() {
-        return Err(format!(
-            "kiro credential store {} is absent; {LOGIN_HINT}",
-            db.display()
-        ));
+impl KasToken {
+    /// The token's expiry as kiro-cli reported it — not secret; logged so a
+    /// renewal is observable without exposing the credential.
+    pub(crate) fn expires_at(&self) -> &str {
+        &self.expires_at
     }
-    let conn =
-        rusqlite::Connection::open_with_flags(db, rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY)
-            .map_err(|e| format!("open kiro credential store: {e}"))?;
-    conn.busy_timeout(std::time::Duration::from_millis(250))
-        .map_err(|e| format!("set kiro credential store busy timeout: {e}"))?;
-    let opt_row = |sql: &str, what: &str| -> Result<Option<serde_json::Value>, String> {
-        use rusqlite::OptionalExtension;
-        conn.query_row(sql, [], |r| r.get::<_, String>(0))
-            .optional()
-            .map_err(|e| format!("query {what}: {e}"))?
-            .map(|raw| serde_json::from_str(&raw).map_err(|e| format!("parse {what} row: {e}")))
-            .transpose()
-    };
-    // Per-login-method token rows (cyril-y14u): read both; absent-both is the
-    // logged-out shape. Both present (a login-method switch leftover): the
-    // freshest expiry wins — a stale leftover must not shadow the live
-    // credential, and an unparseable expiry loses to a parseable one
-    // (None < Some, fail safe).
-    let odic = opt_row(TOKEN_ROW_SQL, "kiro token")?;
-    let social = opt_row(SOCIAL_TOKEN_ROW_SQL, "kiro social token")?;
-    let token = match (odic, social) {
-        (None, None) => {
-            return Err(format!(
-                "kiro token row absent (no builder-id or social login) — logged out; {LOGIN_HINT}"
-            ));
+}
+
+/// Why kiro-cli could not provide a KAS access token. Every variant is
+/// actionable on its own: its `Display` ends with the remediation, and it
+/// never carries the helper's stdout (which may hold a token).
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum KasTokenError {
+    /// No token source is bound for this connection (a non-KAS engine).
+    #[error(
+        "no kiro-cli token source is bound to this connection; restart cyril with the KAS engine"
+    )]
+    Unbound,
+    /// kiro-cli could not be started.
+    #[error(
+        "could not run `{command}` to get the KAS access token: {source}; install kiro-cli \
+         (on PATH, or as named by --agent-command) and retry"
+    )]
+    Spawn {
+        command: String,
+        #[source]
+        source: std::io::Error,
+    },
+    /// kiro-cli did not finish within the deadline (it was killed).
+    #[error(
+        "`{command}` did not answer within {secs} s; check the network connection to the \
+         Kiro auth service and retry"
+    )]
+    Timeout { command: String, secs: u64 },
+    /// Waiting for kiro-cli or reading its output failed.
+    #[error("could not read the answer of `{command}`: {detail}; retry")]
+    Io { command: String, detail: String },
+    /// kiro-cli exited non-zero without an error envelope (or with a success
+    /// envelope, which a failing exit makes untrustworthy).
+    #[error(
+        "`{command}` exited with {status}{stderr_tail}; {LOGIN_HINT} if you are logged out, \
+         then retry"
+    )]
+    NonZeroExit {
+        command: String,
+        status: String,
+        /// `""` or `": <last stderr lines>"`, capped.
+        stderr_tail: String,
+    },
+    /// kiro-cli answered with its `{kind:"error", data:{message}}` envelope.
+    #[error("kiro-cli could not provide a KAS access token: {message}{hint}")]
+    ErrorEnvelope {
+        message: String,
+        /// `""` when `message` already names `kiro-cli login`, else the hint.
+        hint: String,
+    },
+    /// kiro-cli's answer is not a recognizable envelope. `detail` names the
+    /// shape problem only — never the raw line.
+    #[error(
+        "`{command}` returned an unrecognized answer ({detail}); update kiro-cli or report \
+         this to cyril"
+    )]
+    Malformed { command: String, detail: String },
+    /// The relayed reply could not be serialized for KAS.
+    #[error("could not build the getAccessToken reply: {0}; report this to cyril")]
+    Reply(String),
+}
+
+impl KasTokenError {
+    /// The JSON-RPC error the responder returns to KAS.
+    fn to_acp(&self) -> acp::Error {
+        let code = match self {
+            Self::ErrorEnvelope { .. } => JSONRPC_AUTH_REQUIRED,
+            _ => JSONRPC_INTERNAL_ERROR,
+        };
+        acp::Error::new(code, self.to_string())
+    }
+
+    fn error_envelope(message: &str) -> Self {
+        let message = cap(message.trim());
+        let hint = if message.contains("kiro-cli login") {
+            String::new()
+        } else {
+            format!("; {LOGIN_HINT}")
+        };
+        Self::ErrorEnvelope { message, hint }
+    }
+}
+
+/// Truncate a diagnostic to [`DIAGNOSTIC_CHAR_CAP`] chars (char-boundary safe).
+fn cap(text: &str) -> String {
+    match text.char_indices().nth(DIAGNOSTIC_CHAR_CAP) {
+        Some((cut, _)) => format!("{}…", &text[..cut]),
+        None => text.to_string(),
+    }
+}
+
+/// How cyril asks kiro-cli for the KAS access token: the invocation prefix
+/// that runs the right kiro-cli (the PATH `kiro-cli` on the free path; the
+/// agent command's own kiro-cli — through the WSL launcher when it routes
+/// through one — on the wrapper path) and the environment it runs under.
+/// Calls through one source are serialized (a second request waits for the
+/// first helper to finish), so cyril never runs two token helpers at once.
+#[derive(Debug)]
+pub(crate) struct KasTokenSource {
+    kiro_cli: AgentCommand,
+    environment: SpawnEnvironment,
+    deadline: Duration,
+    in_flight: tokio::sync::Mutex<()>,
+}
+
+impl KasTokenSource {
+    /// A source running `kiro_cli` (the invocation prefix, e.g. `kiro-cli` or
+    /// `wsl -d Ubuntu kiro-cli`) under `environment`.
+    pub(crate) fn new(kiro_cli: AgentCommand, environment: SpawnEnvironment) -> Self {
+        Self {
+            kiro_cli,
+            environment,
+            deadline: GET_KAS_TOKEN_DEADLINE,
+            in_flight: tokio::sync::Mutex::new(()),
         }
-        (Some(t), None) | (None, Some(t)) => t,
-        (Some(o), Some(s)) => {
-            // Log-before-None: a PRESENT but unparseable expiry is corrupt,
-            // not missing — without the breadcrumb, a malformed live
-            // credential silently losing the tiebreak is undiagnosable.
-            let exp = |t: &serde_json::Value, which: &str| {
-                let stamp = t.get("expires_at").and_then(|x| x.as_str());
-                let parsed = stamp.and_then(rfc3339_to_epoch);
-                if stamp.is_some() && parsed.is_none() {
-                    tracing::debug!(
-                        row = which,
-                        "token-row tiebreak: expires_at present but unparseable; row loses"
-                    );
-                }
-                parsed
-            };
-            // Equal or both-unparseable expiries prefer builder-id — the
-            // pre-y14u behavior, kept deterministic rather than meaningful.
-            let (chosen, name) = if exp(&s, "social") > exp(&o, "builder-id") {
-                (s, "social")
-            } else {
-                (o, "builder-id")
-            };
-            tracing::debug!(
-                chosen = name,
-                "both kiro token rows present; serving the freshest expiry"
-            );
-            chosen
+    }
+
+    /// The free-path source: `kiro-cli` resolved on the inherited PATH (the
+    /// platform's executable lookup — `kiro-cli.exe` on Windows), the same
+    /// binary the free path's version probe asks.
+    pub(crate) fn on_path() -> Self {
+        Self::new(AgentCommand::new("kiro-cli"), SpawnEnvironment::Inherit)
+    }
+
+    #[cfg(test)]
+    fn with_deadline(mut self, deadline: Duration) -> Self {
+        self.deadline = deadline;
+        self
+    }
+
+    /// The full helper invocation: prefix + `chat _ get-kas-token`, plus
+    /// `--force-refresh` iff `force_refresh`.
+    fn invocation(&self, force_refresh: bool) -> AgentCommand {
+        let mut args = self.kiro_cli.args().to_vec();
+        args.extend(GET_KAS_TOKEN_ARGS.iter().map(|a| a.to_string()));
+        if force_refresh {
+            args.push(FORCE_REFRESH_FLAG.to_string());
+        }
+        AgentCommand::new(self.kiro_cli.program()).with_args(args)
+    }
+
+    /// Run the helper once and interpret its answer.
+    pub(crate) async fn fetch(&self, force_refresh: bool) -> Result<KasToken, KasTokenError> {
+        let _serialized = self.in_flight.lock().await;
+        let invocation = self.invocation(force_refresh);
+        let command = render(&invocation);
+        let captured = run_captured(&invocation, &self.environment, self.deadline)
+            .await
+            .map_err(|failure| match failure {
+                CaptureFailure::Spawn(source) => KasTokenError::Spawn {
+                    command: command.clone(),
+                    source,
+                },
+                CaptureFailure::DeadlineElapsed { .. } => KasTokenError::Timeout {
+                    command: command.clone(),
+                    secs: self.deadline.as_secs(),
+                },
+                CaptureFailure::StdioUnavailable(pipe) => KasTokenError::Io {
+                    command: command.clone(),
+                    detail: format!("{pipe} was not captured"),
+                },
+                CaptureFailure::Io { error, .. } => KasTokenError::Io {
+                    command: command.clone(),
+                    detail: error.to_string(),
+                },
+            })?;
+        interpret(&command, &captured)
+    }
+}
+
+/// One parsed kiro-cli envelope.
+#[derive(Debug)]
+enum Envelope {
+    Token(KasToken),
+    Error(String),
+}
+
+/// Interpret a finished helper run. Precedence (TUI `Oc`/`Rsr` parity where
+/// it is safe): an error envelope wins regardless of exit status; a success
+/// envelope is trusted only with a zero exit (a failing exit makes it
+/// untrustworthy — fail closed, where the TUI merely warns); no envelope is
+/// a non-zero-exit diagnostic when the exit failed, else malformed.
+fn interpret(command: &str, captured: &Captured) -> Result<KasToken, KasTokenError> {
+    let parsed = parse_envelope(&captured.stdout);
+    match (parsed, captured.status.success()) {
+        (Ok(Envelope::Error(message)), success) => {
+            if success {
+                tracing::debug!("kiro-cli error envelope arrived with a zero exit");
+            }
+            Err(KasTokenError::error_envelope(&message))
+        }
+        (Ok(Envelope::Token(token)), true) => Ok(token),
+        (Ok(Envelope::Token(_)), false) | (Err(_), false) => Err(KasTokenError::NonZeroExit {
+            command: command.to_string(),
+            status: captured.status.to_string(),
+            stderr_tail: stderr_tail(&captured.stderr),
+        }),
+        (Err(detail), true) => Err(KasTokenError::Malformed {
+            command: command.to_string(),
+            detail,
+        }),
+    }
+}
+
+/// `": <last lines>"` of stderr, capped, or `""` when stderr is empty.
+fn stderr_tail(stderr: &[u8]) -> String {
+    let text = String::from_utf8_lossy(stderr);
+    let lines: Vec<&str> = text
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
+    let start = lines.len().saturating_sub(STDERR_TAIL_LINES);
+    match lines.get(start..) {
+        Some(tail) if !tail.is_empty() => format!(": {}", cap(&tail.join(" | "))),
+        _ => String::new(),
+    }
+}
+
+/// The JSON type name of `value`, for shape diagnostics that never echo the
+/// value itself.
+fn type_name(value: &serde_json::Value) -> &'static str {
+    match value {
+        serde_json::Value::Null => "null",
+        serde_json::Value::Bool(_) => "boolean",
+        serde_json::Value::Number(_) => "number",
+        serde_json::Value::String(_) => "string",
+        serde_json::Value::Array(_) => "array",
+        serde_json::Value::Object(_) => "object",
+    }
+}
+
+/// Parse the helper's stdout: the LAST non-empty line is the envelope (the TUI
+/// `_1e` rule — earlier lines are tolerated noise). `Err` describes the shape
+/// problem without quoting the line (it may contain a token).
+fn parse_envelope(stdout: &[u8]) -> Result<Envelope, String> {
+    let text = std::str::from_utf8(stdout).map_err(|_| "output is not UTF-8".to_string())?;
+    let line = text
+        .lines()
+        .map(str::trim)
+        .rfind(|l| !l.is_empty())
+        .ok_or_else(|| "no output".to_string())?;
+    let value: serde_json::Value =
+        serde_json::from_str(line).map_err(|_| "the last output line is not JSON".to_string())?;
+    let serde_json::Value::Object(envelope) = value else {
+        return Err(format!(
+            "the envelope is a JSON {}, not an object",
+            type_name(&value)
+        ));
+    };
+    let kind = match envelope.get("kind") {
+        Some(serde_json::Value::String(kind)) => kind.as_str(),
+        Some(other) => return Err(format!("`kind` is a {}, not a string", type_name(other))),
+        None => return Err("`kind` is missing".to_string()),
+    };
+    let data = match envelope.get("data") {
+        Some(serde_json::Value::Object(data)) => data,
+        Some(other) => return Err(format!("`data` is a {}, not an object", type_name(other))),
+        None => return Err("`data` is missing".to_string()),
+    };
+    match kind {
+        "getKasToken" => token_from(data).map(Envelope::Token),
+        "error" => match data.get("message") {
+            Some(serde_json::Value::String(message)) => Ok(Envelope::Error(message.clone())),
+            Some(other) => Err(format!(
+                "error `message` is a {}, not a string",
+                type_name(other)
+            )),
+            None => Err("error envelope has no `message`".to_string()),
+        },
+        _ => Err("unexpected envelope kind".to_string()),
+    }
+}
+
+/// Build a [`KasToken`] from the `getKasToken` data object. Required fields
+/// must be non-empty strings (an empty `profileArn` 400s at the backend, an
+/// empty token or expiry is unusable); optional fields must be strings when
+/// present (`null` counts as absent). Unknown keys are ignored by name (the
+/// TUI relays only these five), with a debug breadcrumb.
+fn token_from(data: &serde_json::Map<String, serde_json::Value>) -> Result<KasToken, String> {
+    let required = |key: &str| -> Result<String, String> {
+        match data.get(key) {
+            Some(serde_json::Value::String(s)) if !s.is_empty() => Ok(s.clone()),
+            Some(serde_json::Value::String(_)) => Err(format!("`{key}` is empty")),
+            Some(other) => Err(format!("`{key}` is a {}, not a string", type_name(other))),
+            None => Err(format!("`{key}` is missing")),
         }
     };
-    let field = |k: &str| -> Result<String, String> {
-        match token.get(k).and_then(|x| x.as_str()) {
-            Some(s) if !s.is_empty() => Ok(s.to_string()),
-            _ => Err(format!("kiro token row missing `{k}`")),
+    let optional = |key: &str| -> Result<Option<String>, String> {
+        match data.get(key) {
+            None | Some(serde_json::Value::Null) => Ok(None),
+            Some(serde_json::Value::String(s)) if s.is_empty() => Ok(None),
+            Some(serde_json::Value::String(s)) => Ok(Some(s.clone())),
+            Some(other) => Err(format!("`{key}` is a {}, not a string", type_name(other))),
         }
     };
-    let access_token = AccessToken(field("access_token")?);
-    let expires_at = field("expires_at")?;
-    // Load-bearing: a reply with an absent/empty arn 400s at the backend
-    // ("profileArn is required"), so it is an error, not a default. The state
-    // row is kiro's ACTIVE profile and wins; the token row's inline
-    // `profile_arn` (social logins) is the fallback.
-    let state_arn = opt_row(PROFILE_ROW_SQL, "kiro profile")?
-        .and_then(|p| p.get("arn").and_then(|x| x.as_str()).map(str::to_string))
-        .filter(|s| !s.is_empty());
-    let inline_arn = token
-        .get("profile_arn")
-        .and_then(|x| x.as_str())
-        .map(str::to_string)
-        .filter(|s| !s.is_empty());
-    let profile_arn = state_arn.or(inline_arn).ok_or_else(|| {
-        "kiro profile row missing `arn` (and no token-inline profile_arn)".to_string()
-    })?;
-    Ok(AuthReply {
-        access_token,
-        expires_at,
-        profile_arn,
+    const KNOWN: [&str; 5] = [
+        "accessToken",
+        "expiresAt",
+        "profileArn",
+        "authMethod",
+        "provider",
+    ];
+    let unknown: Vec<&str> = data
+        .keys()
+        .map(String::as_str)
+        .filter(|k| !KNOWN.contains(k))
+        .collect();
+    if !unknown.is_empty() {
+        tracing::debug!(?unknown, "getKasToken data keys not relayed to KAS");
+    }
+    Ok(KasToken {
+        access_token: AccessToken(required("accessToken")?),
+        expires_at: required("expiresAt")?,
+        profile_arn: required("profileArn")?,
+        auth_method: optional("authMethod")?,
+        provider: optional("provider")?,
     })
 }
 
-/// Parse an RFC3339 **UTC** timestamp (`YYYY-MM-DDTHH:MM:SS[.fff]Z`) to unix
-/// epoch seconds; sub-second precision is ignored (second precision suffices for
-/// a 180s buffer). A trailing `Z` is **required** — a numeric offset (`+02:00`)
-/// would otherwise be silently read as UTC and mis-date the token, so a non-`Z`
-/// stamp returns `None` (which [`is_stale`] treats as stale, fail safe). Strict
-/// on layout. Uses the canonical days-from-civil algorithm (Howard Hinnant).
-fn rfc3339_to_epoch(s: &str) -> Option<i64> {
-    if !s.ends_with('Z') {
-        return None;
+/// Build the `{accessToken, expiresAt, profileArn, authMethod?, provider?}`
+/// ExtResponse KAS expects — the TUI's exact relay shape.
+fn build_response(token: &KasToken) -> Result<acp::ExtResponse, String> {
+    let mut body = serde_json::Map::new();
+    body.insert(
+        "accessToken".into(),
+        serde_json::Value::String(token.access_token.0.clone()),
+    );
+    body.insert(
+        "expiresAt".into(),
+        serde_json::Value::String(token.expires_at.clone()),
+    );
+    body.insert(
+        "profileArn".into(),
+        serde_json::Value::String(token.profile_arn.clone()),
+    );
+    if let Some(auth_method) = &token.auth_method {
+        body.insert(
+            "authMethod".into(),
+            serde_json::Value::String(auth_method.clone()),
+        );
     }
-    let b = s.as_bytes();
-    if b.len() < 19
-        || b.get(4) != Some(&b'-')
-        || b.get(7) != Some(&b'-')
-        || b.get(10) != Some(&b'T')
-    {
-        return None;
+    if let Some(provider) = &token.provider {
+        body.insert(
+            "provider".into(),
+            serde_json::Value::String(provider.clone()),
+        );
     }
-    let f = |r: std::ops::Range<usize>| -> Option<i64> { s.get(r)?.parse().ok() };
-    let (y, mo, d) = (f(0..4)?, f(5..7)?, f(8..10)?);
-    let (h, mi, se) = (f(11..13)?, f(14..16)?, f(17..19)?);
-    if !(1..=12).contains(&mo) || !(1..=31).contains(&d) || h > 23 || mi > 59 || se > 60 {
-        return None;
-    }
-    // days_from_civil: epoch days for a Gregorian (y, mo, d).
-    let yy = if mo <= 2 { y - 1 } else { y };
-    let era = (if yy >= 0 { yy } else { yy - 399 }) / 400;
-    let yoe = yy - era * 400;
-    let mp = if mo > 2 { mo - 3 } else { mo + 9 };
-    let doy = (153 * mp + 2) / 5 + d - 1;
-    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
-    let days = era * 146097 + doe - 719468;
-    Some(days * 86400 + h * 3600 + mi * 60 + se)
-}
-
-/// True when the token is expired or within the pre-expiry buffer (KAS would
-/// reject it), or when the expiry can't be parsed, or the clock is unreadable
-/// (all three fail safe → stale, so a token cyril cannot time-check is never
-/// forwarded). An unparseable expiry is warn-logged (dcc6 re-review N2): the
-/// caller-facing outcome says "expired; re-login", which for a kiro-cli
-/// serialization drift would be a permanent loop re-login can't fix — the log
-/// line is the only clue the stamp, not the token, is the problem.
-fn is_stale(expires_at: &str, now_epoch: Option<i64>) -> bool {
-    match (now_epoch, rfc3339_to_epoch(expires_at)) {
-        (Some(now), Some(exp)) => exp <= now + EXPIRY_BUFFER_SECS,
-        (_, None) => {
-            tracing::warn!(
-                expires_at,
-                "unparseable kiro token expiry; treating as stale"
-            );
-            true
-        }
-        (None, Some(_)) => true, // broken clock — now_epoch already warned
-    }
-}
-
-/// Current unix epoch seconds, or `None` if the system clock predates
-/// `UNIX_EPOCH` (a broken/backwards clock). `None` makes [`is_stale`] fail safe
-/// rather than masking the error as epoch 0 — which would make every real,
-/// future-dated token look *fresh* and forward a credential cyril never
-/// validated against the real time.
-pub(super) fn now_epoch() -> Option<i64> {
-    match SystemTime::now().duration_since(UNIX_EPOCH) {
-        Ok(d) => Some(d.as_secs() as i64),
-        Err(e) => {
-            tracing::warn!(error = %e, "system clock before UNIX_EPOCH; treating KAS token as stale");
-            None
-        }
-    }
-}
-
-/// Build the `{accessToken, expiresAt, profileArn}` ExtResponse KAS expects.
-fn build_response(reply: &AuthReply) -> Result<acp::ExtResponse, String> {
-    let body = serde_json::json!({
-        "accessToken": reply.access_token.0,
-        "expiresAt": reply.expires_at,
-        "profileArn": reply.profile_arn,
-    });
-    let raw = serde_json::value::RawValue::from_string(body.to_string())
+    let raw = serde_json::value::RawValue::from_string(serde_json::Value::Object(body).to_string())
         .map_err(|e| format!("serialize getAccessToken reply: {e}"))?;
     Ok(acp::ExtResponse::new(raw.into()))
 }
 
-/// Why the credential store cannot serve `getAccessToken` right now — absent/
-/// locked/corrupt store, the logged-out row shape, or a token already expired
-/// or expiring (dcc6 review F3/F4) — or `None` when a callback made now would
-/// succeed. The free-path spawn gate (C14a): with `--auth=acp-callback` the
-/// responder is load-bearing for every turn, so an unservable store must fail
-/// the spawn up front with the precise diagnostic instead of as a dead first
-/// turn. `now` is injected so gate tests never race the fixture's expiry.
-pub(crate) fn store_unservable_reason(db: &Path, now: Option<i64>) -> Option<String> {
-    match read_sqlite_store(db) {
-        Ok(reply) if is_stale(&reply.expires_at, now) => {
-            Some(format!("kiro token expired; {LOGIN_HINT}"))
+/// Whether a `getAccessToken` request asks for a forced refresh: its params
+/// carry `forceRefresh: true`. Absent/`null`/`false` (KAS 0.66.x always sends
+/// `{}`) is not forced; any other value is not forced either, with a warning —
+/// the flag spends kiro-cli's refresh token, so only an explicit `true` may.
+pub(crate) fn force_refresh_requested(params: &serde_json::Value) -> bool {
+    match params.get("forceRefresh") {
+        Some(serde_json::Value::Bool(forced)) => *forced,
+        None | Some(serde_json::Value::Null) => false,
+        Some(other) => {
+            tracing::warn!(
+                kind = type_name(other),
+                "getAccessToken forceRefresh is not a boolean; not forcing a refresh"
+            );
+            false
         }
-        Ok(_) => None,
-        Err(e) => Some(e),
     }
 }
 
-/// Answer `getAccessToken` from the store at `db` against clock `now`: the
-/// store is re-read on EVERY call, so a mid-session `kiro-cli login` is served
-/// on the next request without restarting cyril; a stale token gets an
-/// actionable error instead of a known-bad reply. Every failure is warn-logged
-/// locally before the JSON-RPC error travels to KAS — KAS surfaces a failed
-/// callback as a mute/opaque turn (cyril-l7tw), so the log line is the only
-/// cyril-side breadcrumb.
-fn get_access_token_from(db: &Path, now: Option<i64>) -> acp::Result<acp::ExtResponse> {
-    let reply = read_sqlite_store(db).map_err(|e| {
-        tracing::warn!(store = %db.display(), error = %e, "getAccessToken failed: store not servable");
-        acp::Error::new(JSONRPC_INTERNAL_ERROR, e)
-    })?;
-    if is_stale(&reply.expires_at, now) {
-        tracing::warn!(store = %db.display(), "getAccessToken refused: kiro token expired or expiring");
-        return Err(acp::Error::new(
-            JSONRPC_STALE_TOKEN,
-            "kiro token expired; run `kiro-cli login`",
-        ));
-    }
-    build_response(&reply).map_err(|e| {
-        tracing::warn!(error = %e, "getAccessToken reply serialization failed");
-        acp::Error::new(JSONRPC_INTERNAL_ERROR, e)
-    })
-}
-
-/// Answer `_kiro/auth/getAccessToken` from kiro-cli's sqlite credential store
-/// (cyril-dcc6). The stale-policy evolution (a re-login affordance in the UI)
-/// is **cyril-taba**; surfacing callback failures as App notifications rather
-/// than log lines is **cyril-l7tw**. cyril never extracts or transmits the
-/// store's refresh token.
-pub(crate) async fn respond_get_access_token() -> acp::Result<acp::ExtResponse> {
-    let db = crate::protocol::kas::discovery::default_store_path().ok_or_else(|| {
-        let reason = super::discovery::KasMissing::NoHomeForStore.reason();
-        tracing::warn!(%reason, "getAccessToken failed: credential store location unavailable");
-        acp::Error::new(JSONRPC_INTERNAL_ERROR, reason)
-    })?;
-    // spawn_blocking: rusqlite is synchronous, and the bridge is a
-    // single-threaded runtime whose executor must not stall on I/O.
-    tokio::task::spawn_blocking(move || get_access_token_from(&db, now_epoch()))
-        .await
-        .map_err(|e| {
-            tracing::warn!(error = %e, "getAccessToken store-read task failed");
-            acp::Error::new(
-                JSONRPC_INTERNAL_ERROR,
-                format!("credential store read task: {e}"),
-            )
-        })?
+/// Answer `_kiro/auth/getAccessToken`: run kiro-cli's token helper through
+/// `source` (re-run on EVERY request, so a renewal or a mid-session `kiro-cli
+/// login` is served on the next request) and relay its data. The `Err`
+/// carries both the JSON-RPC error for KAS and the typed reason for the UI;
+/// every failure is warn-logged — KAS surfaces a failed callback as a
+/// mute/opaque turn (cyril-l7tw), so the log line is the cyril-side
+/// breadcrumb.
+pub(crate) async fn respond_get_access_token(
+    source: Option<&KasTokenSource>,
+    force_refresh: bool,
+) -> Result<acp::ExtResponse, (acp::Error, KasTokenError)> {
+    let fail = |error: KasTokenError| {
+        tracing::warn!(error = %error, force_refresh, "getAccessToken failed");
+        (error.to_acp(), error)
+    };
+    let source = source.ok_or_else(|| fail(KasTokenError::Unbound))?;
+    let token = source.fetch(force_refresh).await.map_err(fail)?;
+    tracing::info!(
+        expires_at = token.expires_at(),
+        force_refresh,
+        "getAccessToken served from kiro-cli"
+    );
+    build_response(&token).map_err(|detail| fail(KasTokenError::Reply(detail)))
 }
 
 #[cfg(test)]
@@ -326,258 +482,406 @@ mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
+    use rstest::rstest;
 
-    /// Build a fixture credential store shaped like kiro-cli's `data.sqlite3`
-    /// — including EXTRA rows in both tables, so a first-row-instead-of-keyed-
-    /// row implementation fails the fences.
-    fn fixture_store(dir: &Path) -> std::path::PathBuf {
-        let db = dir.join("data.sqlite3");
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute_batch(
-            r#"
-            CREATE TABLE auth_kv (key TEXT PRIMARY KEY, value TEXT);
-            CREATE TABLE state (key TEXT PRIMARY KEY, value TEXT);
-            INSERT INTO auth_kv VALUES ('kirocli:odic:device-registration', '{"unrelated":true}');
-            INSERT INTO auth_kv VALUES ('kirocli:odic:token',
-              '{"access_token":"AT-sqlite","expires_at":"2026-07-04T03:35:26.917713429Z","refresh_token":"RT-never-read","region":"us-east-1"}');
-            INSERT INTO state VALUES ('aaa.first.row', '{"arn":"arn:aws:wrong"}');
-            INSERT INTO state VALUES ('api.codewhisperer.profile',
-              '{"arn":"arn:aws:codewhisperer:us-east-1:1:profile/X","profile_name":"p"}');
-            "#,
-        )
-        .unwrap();
-        db
+    /// A success envelope line as kiro-cli 2.32.0 prints it (live shape,
+    /// 2026-10-18: `{accessToken, expiresAt, profileArn, provider}`).
+    const OK_LINE: &str = r#"{"kind":"getKasToken","data":{"accessToken":"AT-secret","expiresAt":"2026-10-18T19:47:39.083490355Z","profileArn":"arn:aws:codewhisperer:us-east-1:1:profile/X","provider":"Enterprise"}}"#;
+
+    /// A finished run with the given exit code and output.
+    fn captured(code: i32, stdout: &str, stderr: &str) -> Captured {
+        Captured {
+            status: exit_status(code),
+            stdout: stdout.as_bytes().to_vec(),
+            stderr: stderr.as_bytes().to_vec(),
+        }
     }
 
-    // C9 fence: reply fields come from the KEYED sqlite rows — snake_case
-    // token fields (the retired file used camelCase), profile arn from the
-    // state row, 9-digit sub-second expiry parses via rfc3339_to_epoch.
+    #[cfg(unix)]
+    fn exit_status(code: i32) -> std::process::ExitStatus {
+        use std::os::unix::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(code << 8)
+    }
+
+    #[cfg(windows)]
+    fn exit_status(code: i32) -> std::process::ExitStatus {
+        use std::os::windows::process::ExitStatusExt;
+        std::process::ExitStatus::from_raw(code as u32)
+    }
+
+    fn body(resp: &acp::ExtResponse) -> serde_json::Value {
+        serde_json::from_str(resp.0.get()).unwrap()
+    }
+
+    // C3: a success envelope relays exactly the TUI's fields, unchanged —
+    // optional fields only when present.
+    #[rstest]
+    #[case::provider_only(OK_LINE, serde_json::json!({
+        "accessToken": "AT-secret",
+        "expiresAt": "2026-10-18T19:47:39.083490355Z",
+        "profileArn": "arn:aws:codewhisperer:us-east-1:1:profile/X",
+        "provider": "Enterprise",
+    }))]
+    #[case::all_five(
+        r#"{"kind":"getKasToken","data":{"accessToken":"AT","expiresAt":"2027-01-01T00:00:00Z","profileArn":"arn:p","authMethod":"social","provider":"Github","futureKey":1}}"#,
+        serde_json::json!({
+            "accessToken": "AT",
+            "expiresAt": "2027-01-01T00:00:00Z",
+            "profileArn": "arn:p",
+            "authMethod": "social",
+            "provider": "Github",
+        })
+    )]
+    #[case::required_only_with_null_optional(
+        r#"{"kind":"getKasToken","data":{"accessToken":"AT","expiresAt":"2027-01-01T00:00:00Z","profileArn":"arn:p","authMethod":null}}"#,
+        serde_json::json!({"accessToken": "AT", "expiresAt": "2027-01-01T00:00:00Z", "profileArn": "arn:p"})
+    )]
+    #[case::noise_lines_then_envelope_crlf(
+        "warming up\r\n\r\nstill here\r\n{\"kind\":\"getKasToken\",\"data\":{\"accessToken\":\"AT\",\"expiresAt\":\"E\",\"profileArn\":\"arn:p\"}}\r\n\r\n",
+        serde_json::json!({"accessToken": "AT", "expiresAt": "E", "profileArn": "arn:p"})
+    )]
+    fn success_envelope_relays_the_data_fields(
+        #[case] stdout: &str,
+        #[case] expected: serde_json::Value,
+    ) {
+        let token = interpret("kiro-cli chat _ get-kas-token", &captured(0, stdout, ""))
+            .expect("success envelope");
+        assert_eq!(body(&build_response(&token).unwrap()), expected);
+    }
+
+    /// The variant name of a [`KasTokenError`], for table assertions.
+    fn variant(e: &KasTokenError) -> &'static str {
+        match e {
+            KasTokenError::Unbound => "Unbound",
+            KasTokenError::Spawn { .. } => "Spawn",
+            KasTokenError::Timeout { .. } => "Timeout",
+            KasTokenError::Io { .. } => "Io",
+            KasTokenError::NonZeroExit { .. } => "NonZeroExit",
+            KasTokenError::ErrorEnvelope { .. } => "ErrorEnvelope",
+            KasTokenError::Malformed { .. } => "Malformed",
+            KasTokenError::Reply(_) => "Reply",
+        }
+    }
+
+    // C2: every failure shape maps to its own typed error — never a token,
+    // never a default — and no diagnostic echoes the secret.
+    #[rstest]
+    #[case::error_envelope_exit_1(1, r#"{"kind":"error","data":{"message":"You are not logged in. Please log in with `kiro-cli login`."}}"#, "", "ErrorEnvelope", "You are not logged in")]
+    #[case::error_envelope_exit_0(
+        0,
+        r#"{"kind":"error","data":{"message":"refresh refused"}}"#,
+        "",
+        "ErrorEnvelope",
+        "kiro-cli login"
+    )]
+    #[case::nonzero_without_envelope(3, "", "boom: network down\n", "NonZeroExit", "network down")]
+    #[case::nonzero_with_success_envelope(2, OK_LINE, "", "NonZeroExit", "exited with")]
+    #[case::not_json(0, "AT-secret is the token", "", "Malformed", "not JSON")]
+    #[case::empty_stdout(0, "\n\n", "", "Malformed", "no output")]
+    #[case::unknown_kind(
+        0,
+        r#"{"kind":"getTelemetryCredentials","data":{"accessToken":"AT-secret"}}"#,
+        "",
+        "Malformed",
+        "unexpected envelope kind"
+    )]
+    #[case::array_envelope(0, "[1,2]", "", "Malformed", "array")]
+    #[case::data_not_object(
+        0,
+        r#"{"kind":"getKasToken","data":"AT-secret"}"#,
+        "",
+        "Malformed",
+        "`data` is a string"
+    )]
+    #[case::missing_token(
+        0,
+        r#"{"kind":"getKasToken","data":{"expiresAt":"E","profileArn":"arn:p"}}"#,
+        "",
+        "Malformed",
+        "`accessToken` is missing"
+    )]
+    #[case::empty_token(
+        0,
+        r#"{"kind":"getKasToken","data":{"accessToken":"","expiresAt":"E","profileArn":"arn:p"}}"#,
+        "",
+        "Malformed",
+        "`accessToken` is empty"
+    )]
+    #[case::missing_arn(
+        0,
+        r#"{"kind":"getKasToken","data":{"accessToken":"AT-secret","expiresAt":"E"}}"#,
+        "",
+        "Malformed",
+        "`profileArn` is missing"
+    )]
+    #[case::numeric_expiry(0, r#"{"kind":"getKasToken","data":{"accessToken":"AT-secret","expiresAt":12,"profileArn":"arn:p"}}"#, "", "Malformed", "`expiresAt` is a number")]
+    #[case::object_provider(0, r#"{"kind":"getKasToken","data":{"accessToken":"AT-secret","expiresAt":"E","profileArn":"arn:p","provider":{"x":"AT-secret"}}}"#, "", "Malformed", "`provider` is a object")]
+    #[case::error_without_message(
+        1,
+        r#"{"kind":"error","data":{}}"#,
+        "",
+        "NonZeroExit",
+        "exited with"
+    )]
+    fn failure_shapes_map_to_typed_errors(
+        #[case] code: i32,
+        #[case] stdout: &str,
+        #[case] stderr: &str,
+        #[case] expected_variant: &str,
+        #[case] expected_text: &str,
+    ) {
+        let error = interpret(
+            "kiro-cli chat _ get-kas-token",
+            &captured(code, stdout, stderr),
+        )
+        .expect_err("must not yield a token");
+        assert_eq!(variant(&error), expected_variant, "{error}");
+        let shown = error.to_string();
+        assert!(shown.contains(expected_text), "{shown}");
+        assert!(!shown.contains("AT-secret"), "secret echoed: {shown}");
+        assert!(!format!("{error:?}").contains("AT-secret"), "{error:?}");
+    }
+
+    // C2: the error-envelope hint is never doubled, and appended when absent.
     #[test]
-    fn reply_from_sqlite_rows() {
-        let dir = tempfile::tempdir().unwrap();
-        let reply = read_sqlite_store(&fixture_store(dir.path())).expect("valid store");
-        assert_eq!(reply.access_token.0, "AT-sqlite");
-        assert_eq!(reply.expires_at, "2026-07-04T03:35:26.917713429Z");
+    fn error_envelope_hint_appears_exactly_once() {
+        for message in [
+            "You are not logged in. Please log in with `kiro-cli login`.",
+            "refresh token revoked",
+        ] {
+            let shown = KasTokenError::error_envelope(message).to_string();
+            assert_eq!(shown.matches("kiro-cli login").count(), 1, "{shown}");
+        }
+    }
+
+    // C2: the KAS-facing code separates an auth state the user must act on
+    // (error envelope) from helper/transport failures.
+    #[test]
+    fn acp_codes_separate_auth_state_from_helper_failure() {
         assert_eq!(
-            reply.profile_arn,
-            "arn:aws:codewhisperer:us-east-1:1:profile/X"
+            KasTokenError::error_envelope("logged out").to_acp().code,
+            acp::Error::new(JSONRPC_AUTH_REQUIRED, "").code
         );
-        assert!(
-            rfc3339_to_epoch(&reply.expires_at).is_some(),
-            "9-digit subsecond must parse"
-        );
-    }
-
-    // cyril-y14u fence: a SOCIAL login (kirocli:social:token, no odic row) is
-    // served — shape verified against a live SocialGitHub store 2026-08-02.
-    // Fails against the pre-y14u reader, which knew only the odic row and
-    // reported a logged-in user as logged out.
-    #[test]
-    fn social_login_row_is_served() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
-            .unwrap();
-        conn.execute(
-            "INSERT INTO auth_kv VALUES ('kirocli:social:token',
-              '{\"access_token\":\"AT-social\",\"expires_at\":\"2026-07-04T03:35:26.765158732Z\",\"refresh_token\":\"RT-never-read\",\"provider\":\"github\",\"profile_arn\":\"arn:aws:codewhisperer:us-east-1:1:profile/inline\"}')",
-            [],
-        )
-        .unwrap();
-        let reply = read_sqlite_store(&db).expect("social login is servable");
-        assert_eq!(reply.access_token.0, "AT-social");
-        // The state profile row is kiro's ACTIVE profile and wins over the
-        // token-inline arn when both exist.
+        let timeout = KasTokenError::Timeout {
+            command: "kiro-cli chat _ get-kas-token".into(),
+            secs: 30,
+        };
         assert_eq!(
-            reply.profile_arn,
-            "arn:aws:codewhisperer:us-east-1:1:profile/X"
+            timeout.to_acp().code,
+            acp::Error::new(JSONRPC_INTERNAL_ERROR, "").code
         );
+        assert!(timeout.to_acp().message.contains("30 s"));
     }
 
-    // cyril-y14u fence: the state profile row absent → the social row's
-    // INLINE profile_arn is the fallback (a social-only machine may have no
-    // state profile row). An empty inline arn on top of no state row is still
-    // an error — never an empty profileArn (400 at the backend).
-    #[test]
-    fn social_inline_arn_is_the_fallback() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
-            .unwrap();
-        conn.execute(
-            "DELETE FROM state WHERE key = 'api.codewhisperer.profile'",
-            [],
-        )
-        .unwrap();
-        conn.execute(
-            "INSERT INTO auth_kv VALUES ('kirocli:social:token',
-              '{\"access_token\":\"AT-social\",\"expires_at\":\"2026-07-04T03:35:26Z\",\"profile_arn\":\"arn:aws:codewhisperer:us-east-1:1:profile/inline\"}')",
-            [],
-        )
-        .unwrap();
-        let reply = read_sqlite_store(&db).expect("inline arn serves");
-        assert_eq!(
-            reply.profile_arn,
-            "arn:aws:codewhisperer:us-east-1:1:profile/inline"
+    // C4: `--force-refresh` is appended iff the request asks, after the
+    // invocation prefix — a plain kiro-cli and a WSL-launcher prefix alike.
+    #[rstest]
+    #[case::plain(&["kiro-cli"], false, &["chat", "_", "get-kas-token"])]
+    #[case::plain_forced(&["kiro-cli"], true, &["chat", "_", "get-kas-token", "--force-refresh"])]
+    #[case::wsl_forced(&["wsl", "-d", "Ubuntu", "kiro-cli"], true, &["-d", "Ubuntu", "kiro-cli", "chat", "_", "get-kas-token", "--force-refresh"])]
+    fn invocation_appends_force_refresh_iff_requested(
+        #[case] prefix: &[&str],
+        #[case] force: bool,
+        #[case] expected_args: &[&str],
+    ) {
+        let source = KasTokenSource::new(
+            AgentCommand::new(prefix[0])
+                .with_args(prefix[1..].iter().map(|a| a.to_string()).collect()),
+            SpawnEnvironment::Inherit,
         );
-
-        conn.execute(
-            "UPDATE auth_kv SET value = '{\"access_token\":\"AT\",\"expires_at\":\"2026-07-04T03:35:26Z\"}'
-             WHERE key = 'kirocli:social:token'",
-            [],
-        )
-        .unwrap();
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(err.contains("arn"), "empty-arn reply forbidden: {err}");
+        let invocation = source.invocation(force);
+        assert_eq!(invocation.program(), prefix[0]);
+        assert_eq!(invocation.args(), expected_args);
     }
 
-    // cyril-y14u fence: BOTH token rows present (login-method switch
-    // leftover) → the freshest expiry is served; a stale leftover must not
-    // shadow the live credential. Designed to fail under prefer-odic-always.
-    #[test]
-    fn freshest_token_row_wins_when_both_present() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path()); // odic expires 2026-07-04
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute(
-            "INSERT INTO auth_kv VALUES ('kirocli:social:token',
-              '{\"access_token\":\"AT-social-fresher\",\"expires_at\":\"2027-01-01T00:00:00Z\"}')",
-            [],
-        )
-        .unwrap();
-        let reply = read_sqlite_store(&db).expect("servable");
-        assert_eq!(reply.access_token.0, "AT-social-fresher");
-
-        conn.execute(
-            "UPDATE auth_kv SET value = '{\"access_token\":\"AT-social-stale\",\"expires_at\":\"2020-01-01T00:00:00Z\"}'
-             WHERE key = 'kirocli:social:token'",
-            [],
-        )
-        .unwrap();
-        let reply = read_sqlite_store(&db).expect("servable");
-        assert_eq!(
-            reply.access_token.0, "AT-sqlite",
-            "the stale social leftover must not shadow the live odic row"
-        );
+    // C4: only an explicit `forceRefresh: true` forces a refresh.
+    #[rstest]
+    #[case::kas_066_empty_params(serde_json::json!({}), false)]
+    #[case::explicit_true(serde_json::json!({"forceRefresh": true}), true)]
+    #[case::explicit_false(serde_json::json!({"forceRefresh": false}), false)]
+    #[case::null(serde_json::json!({"forceRefresh": null}), false)]
+    #[case::string_true(serde_json::json!({"forceRefresh": "true"}), false)]
+    #[case::params_null(serde_json::Value::Null, false)]
+    fn force_refresh_only_on_explicit_true(
+        #[case] params: serde_json::Value,
+        #[case] forced: bool,
+    ) {
+        assert_eq!(force_refresh_requested(&params), forced);
     }
 
-    // C10 fence: the LOGOUT shape — store present, token row deleted — is an
-    // actionable error, never an empty/partial reply.
+    // C11 custodian: Debug of the token (and of a response-bearing struct)
+    // never prints the secret.
     #[test]
-    fn logged_out_row_absent_errors() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        rusqlite::Connection::open(&db)
-            .unwrap()
-            .execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
-            .unwrap();
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(err.contains("kiro-cli login"), "not actionable: {err}");
+    fn kas_token_debug_is_redacted() {
+        let token = interpret("k", &captured(0, OK_LINE, "")).unwrap();
+        let dbg = format!("{token:?}");
+        assert!(!dbg.contains("AT-secret"), "token leaked in Debug: {dbg}");
+        assert!(dbg.contains("redacted"));
     }
 
-    // C11 fence: an absent profile row (or arn key) is an error — a null/empty
-    // profileArn reply would 400 at the backend.
-    #[test]
-    fn missing_profile_arn_errors() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute(
-            "UPDATE state SET value = '{\"profile_name\":\"p\"}' WHERE key = 'api.codewhisperer.profile'",
-            [],
-        )
-        .unwrap();
-        assert!(read_sqlite_store(&db).unwrap_err().contains("arn"));
-        conn.execute(
-            "DELETE FROM state WHERE key = 'api.codewhisperer.profile'",
-            [],
-        )
-        .unwrap();
-        assert!(read_sqlite_store(&db).unwrap_err().contains("profile"));
-    }
-
-    // C12 fence: a missing store errors actionably AND is never created (a
-    // default read-write open would create an empty db here).
-    #[test]
-    fn readonly_never_creates_db() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = dir.path().join("data.sqlite3");
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(err.contains("kiro-cli login"), "not actionable: {err}");
-        assert!(!db.exists(), "read path CREATED the credential store");
-    }
-
-    // C13 fence: the store is re-read per call — a mid-session re-login (row
-    // replaced) is served on the next read; a cache-at-startup impl fails.
-    #[test]
-    fn store_reread_per_callback() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        assert_eq!(read_sqlite_store(&db).unwrap().access_token.0, "AT-sqlite");
-        rusqlite::Connection::open(&db)
-            .unwrap()
-            .execute(
-                "UPDATE auth_kv SET value = '{\"access_token\":\"AT-relogin\",\"expires_at\":\"2027-01-01T00:00:00Z\"}' \
-                 WHERE key = 'kirocli:odic:token'",
-                [],
+    /// A fake kiro-cli runnable on this host without exec'ing a freshly
+    /// written binary: a POSIX `sh` script on unix, a `.cmd` batch file on
+    /// Windows (std runs batch files through cmd.exe). The script journals
+    /// its argv to `argv.txt` beside it. Deliberately NOT cfg-gated: the
+    /// platform-neutral process tests below use it on every host.
+    fn fake_kiro_cli(dir: &std::path::Path, posix_body: &str, cmd_body: &str) -> AgentCommand {
+        if cfg!(windows) {
+            let script = dir.join("fake-kiro-cli.cmd");
+            std::fs::write(
+                &script,
+                format!(
+                    "@echo off\r\necho %* > \"%~dp0argv.txt\"\r\n{}\r\n",
+                    cmd_body.replace('\n', "\r\n")
+                ),
             )
             .unwrap();
-        assert_eq!(read_sqlite_store(&db).unwrap().access_token.0, "AT-relogin");
+            AgentCommand::new(script.to_str().unwrap())
+        } else {
+            let script = dir.join("fake-kiro-cli.sh");
+            std::fs::write(
+                &script,
+                format!("printf '%s ' \"$@\" > \"$(dirname \"$0\")/argv.txt\"\n{posix_body}\n"),
+            )
+            .unwrap();
+            AgentCommand::new("/bin/sh").with_args(vec![script.to_str().unwrap().to_string()])
+        }
     }
 
-    // dcc6 review F17a: a store that is garbage BYTES (not a sqlite file at
-    // all) errors at the query layer and is never misreported as logged out.
-    #[test]
-    fn corrupt_store_file_is_not_a_fake_logout() {
+    // C4 + C3 at the process seam: the forced request reaches kiro-cli as
+    // `chat _ get-kas-token --force-refresh`, and the relayed reply carries
+    // the helper's data unchanged.
+    #[tokio::test]
+    async fn fetch_runs_the_helper_with_force_refresh_and_relays_data() {
         let dir = tempfile::tempdir().unwrap();
-        let db = dir.path().join("data.sqlite3");
-        std::fs::write(&db, b"definitely not sqlite").unwrap();
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(
-            !err.contains("logged out"),
-            "corrupt file misdiagnosed as logout: {err}"
+        let envelope = r#"{"kind":"getKasToken","data":{"accessToken":"AT-proc","expiresAt":"2099-01-01T00:00:00Z","profileArn":"arn:p","authMethod":"IdC"}}"#;
+        let source = KasTokenSource::new(
+            fake_kiro_cli(
+                dir.path(),
+                &format!("printf '%s\\n' '{envelope}'"),
+                &format!("echo {envelope}"),
+            ),
+            SpawnEnvironment::Inherit,
         );
-        assert!(err.contains("kiro token"), "names the failing step: {err}");
+        let reply = respond_get_access_token(Some(&source), true)
+            .await
+            .expect("helper answers");
+        assert_eq!(
+            body(&reply),
+            serde_json::json!({
+                "accessToken": "AT-proc",
+                "expiresAt": "2099-01-01T00:00:00Z",
+                "profileArn": "arn:p",
+                "authMethod": "IdC",
+            })
+        );
+        let argv = std::fs::read_to_string(dir.path().join("argv.txt")).unwrap();
+        assert_eq!(argv.trim(), "chat _ get-kas-token --force-refresh");
     }
 
-    // dcc6 review F17a: a valid but SCHEMALESS db (no auth_kv/state tables)
-    // errors at the query layer, distinct from the logged-out row shape.
-    #[test]
-    fn schemaless_store_errors_as_query() {
+    // C9: two concurrent requests through one source never overlap — the
+    // fake helper takes a lock dir (atomic mkdir), lingers, and fails if
+    // another instance already holds it, so an overlap surfaces as an error.
+    #[tokio::test]
+    async fn fetch_serializes_concurrent_requests() {
         let dir = tempfile::tempdir().unwrap();
-        let db = dir.path().join("data.sqlite3");
-        drop(rusqlite::Connection::open(&db).unwrap()); // create empty db
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(err.contains("query"), "wrong failure mode: {err}");
-        assert!(!err.contains("logged out"), "misdiagnosed: {err}");
+        let envelope = r#"{"kind":"getKasToken","data":{"accessToken":"AT","expiresAt":"2099-01-01T00:00:00Z","profileArn":"arn:p"}}"#;
+        let source = KasTokenSource::new(
+            fake_kiro_cli(
+                dir.path(),
+                &format!(
+                    "d=\"$(dirname \"$0\")/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'"
+                ),
+                &format!(
+                    "mkdir \"%~dp0held\" || exit /b 9\nping -n 2 127.0.0.1 > NUL\nrmdir \"%~dp0held\"\necho {envelope}"
+                ),
+            ),
+            SpawnEnvironment::Inherit,
+        );
+        let (first, second) = tokio::join!(source.fetch(false), source.fetch(false));
+        assert!(first.is_ok(), "{first:?}");
+        assert!(second.is_ok(), "{second:?}");
     }
 
-    // dcc6 review F17b: the token-row field guards — a row missing
-    // `access_token`, or holding an empty `expires_at`, errors naming the
-    // field (a partial write / schema drift shape).
-    #[test]
-    fn token_row_field_guards() {
+    // C2: a helper that never answers is killed at the deadline and reported
+    // as a timeout — the responder does not hang the bridge.
+    #[tokio::test]
+    async fn fetch_times_out_on_a_wedged_helper() {
         let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute(
-            "UPDATE auth_kv SET value = '{\"expires_at\":\"2027-01-01T00:00:00Z\"}' \
-             WHERE key = 'kirocli:odic:token'",
-            [],
+        let source = KasTokenSource::new(
+            fake_kiro_cli(dir.path(), "exec sleep 30", "ping -n 31 127.0.0.1 > NUL"),
+            SpawnEnvironment::Inherit,
         )
-        .unwrap();
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(err.contains("access_token"), "{err}");
-        conn.execute(
-            "UPDATE auth_kv SET value = '{\"access_token\":\"AT\",\"expires_at\":\"\"}' \
-             WHERE key = 'kirocli:odic:token'",
-            [],
-        )
-        .unwrap();
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(err.contains("expires_at"), "{err}");
+        .with_deadline(Duration::from_millis(500));
+        let started = std::time::Instant::now();
+        let (acp_error, error) = respond_get_access_token(Some(&source), false)
+            .await
+            .expect_err("a wedged helper must time out");
+        assert!(
+            started.elapsed() < Duration::from_secs(10),
+            "{:?}",
+            started.elapsed()
+        );
+        assert_eq!(variant(&error), "Timeout", "{error}");
+        assert_eq!(
+            acp_error.code,
+            acp::Error::new(JSONRPC_INTERNAL_ERROR, "").code
+        );
+    }
+
+    // C2: an absent kiro-cli is a spawn failure naming the command and how
+    // to fix it; no source at all is Unbound.
+    #[tokio::test]
+    async fn fetch_reports_spawn_failure_and_unbound() {
+        let dir = tempfile::tempdir().unwrap();
+        let missing = dir.path().join("no-such-kiro-cli");
+        let source = KasTokenSource::new(
+            AgentCommand::new(missing.to_str().unwrap()),
+            SpawnEnvironment::Inherit,
+        );
+        let (_, error) = respond_get_access_token(Some(&source), false)
+            .await
+            .expect_err("missing binary");
+        assert_eq!(variant(&error), "Spawn", "{error}");
+        let shown = error.to_string();
+        assert!(shown.contains("get-kas-token"), "{shown}");
+        assert!(shown.contains("install kiro-cli"), "{shown}");
+
+        let (_, error) = respond_get_access_token(None, false)
+            .await
+            .expect_err("no source");
+        assert_eq!(variant(&error), "Unbound");
+    }
+
+    // C1 fence (cyril-zbu7): kiro-cli's credential-store token rows must
+    // never be read again anywhere in the workspace's crates — cyril asks
+    // kiro-cli instead. The needles are assembled at compile time so this
+    // file's source never contains the joined forms.
+    #[test]
+    fn credential_store_token_rows_never_read() {
+        fn scan(dir: &std::path::Path, needles: &[&str], hits: &mut Vec<std::path::PathBuf>) {
+            for entry in std::fs::read_dir(dir).expect("readable dir") {
+                let path = entry.expect("dir entry").path();
+                if path.is_dir() {
+                    scan(&path, needles, hits);
+                } else if path.extension().is_some_and(|e| e == "rs")
+                    && std::fs::read_to_string(&path)
+                        .is_ok_and(|s| needles.iter().any(|n| s.contains(n)))
+                {
+                    hits.push(path);
+                }
+            }
+        }
+        let needles = [
+            concat!("kirocli:", "odic:token"),
+            concat!("kirocli:", "social:token"),
+            concat!("auth", "_kv"),
+        ];
+        let crates_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .expect("crates/ parent dir");
+        let mut hits = Vec::new();
+        scan(crates_root, &needles, &mut hits);
+        assert!(hits.is_empty(), "credential-store token read in: {hits:?}");
     }
 
     // Executable slice-7 fence (dcc6 review F7c): the retired SSO-cache token
@@ -586,7 +890,7 @@ mod tests {
     // contains the joined form.
     #[test]
     fn sso_token_path_never_resurrected() {
-        fn scan(dir: &Path, needle: &str, hits: &mut Vec<std::path::PathBuf>) {
+        fn scan(dir: &std::path::Path, needle: &str, hits: &mut Vec<std::path::PathBuf>) {
             for entry in std::fs::read_dir(dir).expect("readable dir") {
                 let path = entry.expect("dir entry").path();
                 if path.is_dir() {
@@ -599,178 +903,11 @@ mod tests {
             }
         }
         let needle = concat!("kiro-auth", "-token");
-        let crates_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+        let crates_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .expect("crates/ parent dir");
         let mut hits = Vec::new();
         scan(crates_root, needle, &mut hits);
         assert!(hits.is_empty(), "SSO token path resurrected in: {hits:?}");
-    }
-
-    // Corrupt (unparseable) token row is distinguished from absent — the
-    // error names the parse, not a fake logout.
-    #[test]
-    fn corrupt_token_row_errors_as_parse() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        rusqlite::Connection::open(&db)
-            .unwrap()
-            .execute(
-                "UPDATE auth_kv SET value = 'not json' WHERE key = 'kirocli:odic:token'",
-                [],
-            )
-            .unwrap();
-        let err = read_sqlite_store(&db).unwrap_err();
-        assert!(
-            err.contains("parse"),
-            "corrupt collapsed into another mode: {err}"
-        );
-    }
-
-    // C14a fence: the spawn gate keys on the sqlite store — servable rows
-    // pass; the logout shape, a corrupt row, a missing store, AND a stale
-    // token (dcc6 review F3) all decline, each with its own diagnostic (F4).
-    // No file input exists in this path (the SSO-file gate is structurally
-    // gone; the sso_token_path_never_resurrected fence forbids it).
-    #[test]
-    fn gate_is_sqlite_not_file() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let fresh = Some(fixture_expiry_epoch() - EXPIRY_BUFFER_SECS - 60);
-        assert_eq!(store_unservable_reason(&db, fresh), None);
-        // Review F3: an EXPIRED login passes row checks but must not pass the
-        // gate — it would die on the first callback instead of at spawn.
-        let why = store_unservable_reason(&db, Some(fixture_expiry_epoch() + 1))
-            .expect("stale token must not pass the gate");
-        assert!(why.contains("expired"), "wrong diagnostic: {why}");
-        let conn = rusqlite::Connection::open(&db).unwrap();
-        conn.execute(
-            "UPDATE auth_kv SET value = 'corrupt' WHERE key = 'kirocli:odic:token'",
-            [],
-        )
-        .unwrap();
-        // Review F4: corrupt is diagnosed as corrupt, not as a fake logout.
-        let why = store_unservable_reason(&db, fresh).expect("corrupt row must not pass the gate");
-        assert!(why.contains("parse"), "corrupt collapsed: {why}");
-        conn.execute("DELETE FROM auth_kv WHERE key = 'kirocli:odic:token'", [])
-            .unwrap();
-        let why = store_unservable_reason(&db, fresh).expect("logout shape must not pass");
-        assert!(why.contains("kiro-cli login"), "not actionable: {why}");
-        assert!(store_unservable_reason(&dir.path().join("absent.sqlite3"), fresh).is_some());
-    }
-
-    // C11 custodian: neither the AccessToken's nor the AuthReply's Debug leaks
-    // the secret, so logging a struct containing it cannot expose the token.
-    #[test]
-    fn access_token_debug_is_redacted() {
-        let reply = AuthReply {
-            access_token: AccessToken("SECRET-abc123".to_string()),
-            expires_at: "2026-06-22T03:13:22Z".to_string(),
-            profile_arn: "arn".to_string(),
-        };
-        let dbg = format!("{reply:?}");
-        assert!(
-            !dbg.contains("SECRET-abc123"),
-            "token leaked in Debug: {dbg}"
-        );
-        assert!(dbg.contains("redacted"));
-    }
-
-    // rfc3339_to_epoch matches a reference value (cross-checked: `date -u -d
-    // 2026-06-22T03:13:22Z +%s` == 1782098002).
-    #[test]
-    fn rfc3339_epoch_reference() {
-        assert_eq!(
-            rfc3339_to_epoch("2026-06-22T03:13:22.609Z"),
-            Some(1_782_098_002)
-        );
-        // The unix epoch itself.
-        assert_eq!(rfc3339_to_epoch("1970-01-01T00:00:00Z"), Some(0));
-        // Malformed layouts -> None.
-        assert_eq!(rfc3339_to_epoch("not-a-date"), None);
-        assert_eq!(rfc3339_to_epoch("2026/06/22 03:13:22"), None);
-        assert_eq!(rfc3339_to_epoch("2026-13-22T03:13:22Z"), None); // month 13
-        // A non-UTC offset is rejected (not silently read as UTC) -> fail safe.
-        assert_eq!(rfc3339_to_epoch("2026-06-22T03:13:22+02:00"), None);
-        assert_eq!(rfc3339_to_epoch("2026-06-22T03:13:22"), None); // no zone
-    }
-
-    // C9 (the deterministic part): the stale boundary is exactly now + buffer.
-    #[test]
-    fn is_stale_boundary() {
-        let exp = "2026-06-22T03:13:22Z"; // epoch 1_782_098_002
-        let base = 1_782_098_002;
-        // Expiring exactly at now+buffer is STALE (<=), one second later is fresh.
-        assert!(is_stale(exp, Some(base - EXPIRY_BUFFER_SECS)));
-        assert!(!is_stale(exp, Some(base - EXPIRY_BUFFER_SECS - 1)));
-        // Already past -> stale; far future -> fresh.
-        assert!(is_stale(exp, Some(base + 10)));
-        assert!(!is_stale(exp, Some(base - 100_000)));
-        // Unparseable expiry -> stale (fail safe).
-        assert!(is_stale("garbage", Some(base)));
-        // Unreadable clock -> stale (fail safe), never reported fresh.
-        assert!(is_stale(exp, None));
-    }
-
-    /// Epoch of the fixture store's `expires_at` — the responder tests pin
-    /// `now` relative to this so they never race the real clock.
-    fn fixture_expiry_epoch() -> i64 {
-        rfc3339_to_epoch("2026-07-04T03:35:26.917713429Z").expect("fixture expiry parses")
-    }
-
-    // dcc6 review F2: the COMPOSED responder path — a fresh store serves the
-    // 3-key reply (the pieces were fenced; the glue was not).
-    #[test]
-    fn responder_serves_fresh_store() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let now = fixture_expiry_epoch() - EXPIRY_BUFFER_SECS - 60;
-        let resp = get_access_token_from(&db, Some(now)).expect("fresh store serves");
-        let v: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
-        assert_eq!(v["accessToken"], "AT-sqlite");
-        assert_eq!(
-            v["profileArn"],
-            "arn:aws:codewhisperer:us-east-1:1:profile/X"
-        );
-    }
-
-    // dcc6 review F2: a stale token is REFUSED with the stale code and the
-    // actionable re-login hint — deleting/inverting the is_stale gate fails here.
-    #[test]
-    fn responder_refuses_stale_token() {
-        let dir = tempfile::tempdir().unwrap();
-        let db = fixture_store(dir.path());
-        let err = get_access_token_from(&db, Some(fixture_expiry_epoch() + 1)).unwrap_err();
-        assert_eq!(err.code, acp::Error::new(JSONRPC_STALE_TOKEN, "").code);
-        assert!(
-            err.message.contains("kiro-cli login"),
-            "not actionable: {}",
-            err.message
-        );
-    }
-
-    // dcc6 review F2: a store failure maps to the INTERNAL code — distinct
-    // from the stale code, so KAS-side triage can tell the modes apart.
-    #[test]
-    fn responder_store_error_is_internal() {
-        let dir = tempfile::tempdir().unwrap();
-        let err = get_access_token_from(&dir.path().join("absent.sqlite3"), Some(0)).unwrap_err();
-        assert_eq!(err.code, acp::Error::new(JSONRPC_INTERNAL_ERROR, "").code);
-        assert!(err.message.contains("kiro-cli login"), "{}", err.message);
-    }
-
-    // build_response emits exactly the three camelCase keys KAS validates.
-    #[test]
-    fn build_response_has_three_camel_case_keys() {
-        let reply = AuthReply {
-            access_token: AccessToken("AT".to_string()),
-            expires_at: "2026-06-22T03:13:22Z".to_string(),
-            profile_arn: "arn:aws:x".to_string(),
-        };
-        let resp = build_response(&reply).unwrap();
-        let v: serde_json::Value = serde_json::from_str(resp.0.get()).unwrap();
-        assert_eq!(v["accessToken"], "AT");
-        assert_eq!(v["expiresAt"], "2026-06-22T03:13:22Z");
-        assert_eq!(v["profileArn"], "arn:aws:x");
     }
 }

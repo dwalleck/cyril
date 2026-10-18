@@ -5,8 +5,9 @@
 //! over stdio with `--auth=acp-callback` — the non-path flags are byte-equal
 //! to kiro-cli's own spawn (probe-verified against /proc; the node binary is
 //! whatever cyril resolves). KAS then requests credentials via
-//! `_kiro/auth/getAccessToken`, answered by [`super::auth`] from kiro-cli's
-//! sqlite store; the SSO-cache token file plays no role on any path. Reuses
+//! `_kiro/auth/getAccessToken`, answered by [`super::auth`] through kiro-cli's
+//! `chat _ get-kas-token` helper (cyril-zbu7); cyril reads no credential
+//! store or token file on any path. Reuses
 //! [`AgentCommand`] as the spawn description so `AgentProcess::spawn` consumes
 //! it unchanged.
 
@@ -27,16 +28,11 @@ pub(crate) enum KasMissing {
     Server(PathBuf),
     /// No `node` runtime (`KIRO_AGENT_PATH` unset/missing and none on `PATH`).
     Node,
-    /// No kiro data dir (see [`KasMissing::NoHome`]) to locate the credential
-    /// store — a distinct variant because it is reachable with the bundle
-    /// already resolved via `KIRO_KAS_SERVER_PATH` (dcc6 review F6), where
-    /// "set the override" would be misleading advice.
-    NoHomeForStore,
-    /// The credential store cannot serve a login right now; `why` carries the
-    /// precise diagnostic (absent/locked/corrupt store, logged out, or expired
-    /// token — dcc6 review F4), so a locked store is never misreported as
-    /// "run `kiro-cli login`".
-    StoreUnservable { store: PathBuf, why: String },
+    /// kiro-cli cannot provide a KAS access token right now (cyril-zbu7):
+    /// `why` is the typed helper failure's actionable diagnostic — kiro-cli
+    /// absent, wedged, failing, logged out, or answering malformed — so a
+    /// missing binary is never misreported as "run `kiro-cli login`".
+    AuthUnavailable { why: String },
 }
 
 impl KasMissing {
@@ -59,17 +55,7 @@ impl KasMissing {
             KasMissing::Node => "node runtime not found. Install Node.js (on PATH) or set \
                  KIRO_AGENT_PATH to the node binary."
                 .to_string(),
-            KasMissing::NoHomeForStore => {
-                #[cfg(windows)]
-                let recovery = "Restore LOCALAPPDATA or the Windows local-app-data known folder, \
-                    then run `kiro-cli login`.";
-                #[cfg(not(windows))]
-                let recovery = "Restore the home directory, then run `kiro-cli login`.";
-                format!("cannot locate the kiro credential store: {MISSING_DATA_DIR}. {recovery}")
-            }
-            KasMissing::StoreUnservable { store, why } => {
-                format!("KAS auth not servable from {}: {why}", store.display())
-            }
+            KasMissing::AuthUnavailable { why } => format!("KAS auth unavailable: {why}"),
         }
     }
 }
@@ -79,16 +65,13 @@ impl KasMissing {
 #[cfg(any(not(any(windows, target_os = "macos", target_os = "ios")), test))]
 const XDG_DATA_HOME_DEFAULT_REL: &str = ".local/share";
 /// kiro-cli's data dir name under the XDG data home. The resolved data
-/// dir is the shared parent of the KAS extraction root and credential store.
+/// dir is the parent of the KAS extraction root.
 #[cfg(any(not(any(windows, target_os = "macos", target_os = "ios")), test))]
 const KIRO_DATA_DIR_NAME: &str = "kiro-cli";
 /// Data-dir-relative KAS self-extraction root. kiro ≥2.10.0 extracts into
 /// versioned `<semver>-<sha256>/` dirs under it; older releases extracted the
 /// bundle directly at the root (the legacy layout).
 const KAS_ROOT_REL: &str = "kas";
-/// Data-dir-relative credential store: the sqlite database `kiro-cli login`
-/// maintains (IdC token in `auth_kv`, active profile in `state`).
-const STORE_FILE_NAME: &str = "data.sqlite3";
 /// Path of the ACP server entry inside one extraction (versioned dir or the
 /// legacy root itself).
 const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-server.js";
@@ -162,7 +145,7 @@ fn windows_kiro_data_dir(
     Some(local.join("Kiro-Cli"))
 }
 
-/// One platform resolution shared by the KAS bundle and credential store.
+/// The one platform resolution of kiro-cli's data dir (the KAS bundle root).
 /// Windows uses local AppData, macOS/iOS use Library/Application Support,
 /// and other targets follow the XDG/HOME rules.
 fn kiro_data_dir_from_env() -> Option<PathBuf> {
@@ -190,11 +173,6 @@ fn kiro_data_dir_from_env() -> Option<PathBuf> {
 /// The KAS self-extraction root under `data_dir`.
 fn kas_root(data_dir: &Path) -> PathBuf {
     data_dir.join(KAS_ROOT_REL)
-}
-
-/// kiro-cli's credential store under `data_dir`.
-fn store_path(data_dir: &Path) -> PathBuf {
-    data_dir.join(STORE_FILE_NAME)
 }
 
 /// Strictly parse a versioned-extraction dir name — `<MAJOR.MINOR.PATCH>-<sha>`
@@ -420,10 +398,14 @@ async fn installed_cli_version() -> Option<(u32, u32, u32)> {
 
 /// Resolve the free-path KAS spawn from the real environment + filesystem.
 /// `KIRO_KAS_SERVER_PATH` / `KIRO_AGENT_PATH` override the defaults.
-pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
-    // Resolved ONCE per spawn: the root scan, `resolve`, and the store gate
-    // below all derive from this value (F19b), and an invalid directory
-    // environment value warns once rather than once per consumer.
+/// `token_source` is the kiro-cli the login gate asks — the same source the
+/// session's `getAccessToken` responder uses.
+pub(crate) async fn resolve_kas_command(
+    token_source: &super::auth::KasTokenSource,
+) -> Result<AgentCommand, KasMissing> {
+    // Resolved ONCE per spawn: the root scan and `resolve` both derive from
+    // this value (F19b), and an invalid directory environment value warns
+    // once rather than once per consumer.
     let data_dir = kiro_data_dir_from_env();
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
@@ -450,27 +432,16 @@ pub(crate) async fn resolve_kas_command() -> Result<AgentCommand, KasMissing> {
         cli_version,
         |p| p.is_file(),
     )?;
-    // Login gate (C14a): with `--auth=acp-callback` the responder is
-    // load-bearing for every turn, so an unservable credential store — absent,
-    // locked, corrupt, logged out, or holding an expired token — fails the
-    // spawn here with its precise diagnostic, instead of as a dead first turn.
-    let db = data_dir
-        .as_deref()
-        .map(store_path)
-        .ok_or(KasMissing::NoHomeForStore)?;
-    if let Some(why) = super::auth::store_unservable_reason(&db, super::auth::now_epoch()) {
-        return Err(KasMissing::StoreUnservable { store: db, why });
+    // Login gate (C14a, cyril-zbu7): with `--auth=acp-callback` the responder
+    // is load-bearing for every turn, so ask kiro-cli for the token exactly
+    // as the responder will (`chat _ get-kas-token`, which refreshes an
+    // expired token) — kiro-cli absent, wedged, failing, logged out, or
+    // answering malformed fails the spawn here with its precise diagnostic,
+    // instead of as a dead first turn. The token itself is dropped unused.
+    if let Err(e) = token_source.fetch(false).await {
+        return Err(KasMissing::AuthUnavailable { why: e.to_string() });
     }
     Ok(cmd)
-}
-
-/// kiro-cli's credential store — `<kiro data dir>/data.sqlite3`, under
-/// `%LOCALAPPDATA%\Kiro-Cli` on Windows, Library/Application Support on
-/// macOS/iOS, or the XDG/HOME root on other targets. The auth responder's
-/// source: unlike the SSO-cache token file, this is refreshed by every login
-/// and deleted-row on logout.
-pub(crate) fn default_store_path() -> Option<PathBuf> {
-    kiro_data_dir_from_env().map(|d| store_path(&d))
 }
 
 #[cfg(test)]
@@ -951,7 +922,7 @@ mod tests {
 
     // C2 fence: without XDG_DATA_HOME the default is today's
     // `<home>/.local/share/kiro-cli`, and no home means no data dir (so
-    // `NoHome` / `NoHomeForStore` still fire). Pins the exact spelling.
+    // `NoHome` still fires). Pins the exact spelling.
     #[test]
     fn kiro_data_dir_defaults_to_home_local_share_without_xdg() {
         assert_eq!(
@@ -1015,12 +986,12 @@ mod tests {
         );
     }
 
-    // C4+C5 fence: BOTH consumers follow the resolved data dir — the KAS
-    // extraction root that `resolve` scans and names, and the credential
-    // store — so an XDG user is never told "bundle not found at ~/.local/…"
-    // while kiro-cli itself runs from $XDG_DATA_HOME (cyril-brui).
+    // C4+C5 fence: the KAS extraction root that `resolve` scans and names
+    // follows the resolved data dir, so an XDG user is never told "bundle not
+    // found at ~/.local/…" while kiro-cli itself runs from $XDG_DATA_HOME
+    // (cyril-brui).
     #[test]
-    fn kas_root_and_store_follow_xdg_data_home() {
+    fn kas_root_follows_xdg_data_home() {
         let abs = abs_fixture("xdg");
         let data_dir = kiro_data_dir(Some(Path::new(HOME_U)), Some(abs.as_os_str()))
             .expect("absolute XDG resolves");
@@ -1028,20 +999,12 @@ mod tests {
             kas_root(&data_dir),
             abs.join(KIRO_DATA_DIR_NAME).join("kas")
         );
-        assert_eq!(
-            store_path(&data_dir),
-            abs.join(KIRO_DATA_DIR_NAME).join("data.sqlite3")
-        );
-        // Unset XDG: today's default for both.
+        // Unset XDG: today's default.
         let default_dir =
             kiro_data_dir(Some(Path::new(HOME_U)), None).expect("home fallback resolves");
         assert_eq!(
             kas_root(&default_dir),
             PathBuf::from("/home/u/.local/share/kiro-cli/kas")
-        );
-        assert_eq!(
-            store_path(&default_dir),
-            PathBuf::from("/home/u/.local/share/kiro-cli/data.sqlite3")
         );
         // The full resolver searches under the XDG root and NAMES it when
         // the bundle is absent — the exact wrong message the issue reports.
@@ -1055,7 +1018,7 @@ mod tests {
     }
 
     #[test]
-    fn apple_server_selection_and_store_share_native_root() {
+    fn apple_server_selection_uses_native_root() {
         let root = tempfile::tempdir().expect("tempdir");
         let home = root.path().join("Profile ü With Spaces");
         let data_dir = apple_kiro_data_dir(Some(&home)).expect("home resolves");
@@ -1092,11 +1055,6 @@ mod tests {
             panic!("the Apple server path, including spaces and Unicode, must remain one argument");
         };
         assert_eq!(Path::new(server), expected_server);
-        assert_eq!(
-            store_path(&data_dir),
-            expected_data.join("data.sqlite3"),
-            "auth and bundle discovery must use the same Apple installation"
-        );
     }
 
     #[test]
@@ -1110,7 +1068,7 @@ mod tests {
     }
 
     #[test]
-    fn windows_appdata_server_selection_and_store_share_root() {
+    fn windows_appdata_server_selection_uses_appdata_root() {
         let root = tempfile::tempdir().expect("tempdir");
         let local = root.path().join("Profile With Spaces/AppData/Local");
         let data_dir = windows_kiro_data_dir(Some(local.as_os_str()), || {
@@ -1152,11 +1110,6 @@ mod tests {
             panic!("the AppData server path, including spaces, must remain one argument");
         };
         assert_eq!(Path::new(server), expected_server);
-        assert_eq!(
-            store_path(&data_dir),
-            expected_data.join("data.sqlite3"),
-            "auth and bundle discovery must use the same Windows installation"
-        );
     }
 
     #[test]
@@ -1199,15 +1152,13 @@ mod tests {
         }
     }
 
-    // Review F1/F2 (PR #140): the env wrappers — `default_store_path` and
-    // `resolve_kas_command` — read the REAL environment, so the pure fences
-    // above cannot see a wrapper that reads the wrong variable (R1:
-    // `XDG_DATA_DIR`) or a store gate that re-derives from HOME (R2); both
-    // reviewer mutations survived all of them. Re-enter this test binary
+    // Review F1/F2 (PR #140): the env wrapper `resolve_kas_command` reads the
+    // REAL environment, so the pure fences above cannot see a wrapper that
+    // reads the wrong variable (R1: `XDG_DATA_DIR`). Re-enter this test binary
     // with private HOME + XDG_DATA_HOME + LOCALAPPDATA — never mutating the runner's
-    // environment (the `tests/spawn_isolation.rs` idiom) — and drive both
-    // wrappers. No auth is touched: PATH holds no kiro-cli, no store exists,
-    // and nothing is spawned beyond this binary (the fake node is never run).
+    // environment (the `tests/spawn_isolation.rs` idiom) — and drive the
+    // wrapper. No auth is touched: PATH holds no kiro-cli, and nothing is
+    // spawned beyond this binary (the fake node is never run).
     #[tokio::test]
     async fn env_wrappers_resolve_xdg_data_home_like_kiro_cli() {
         const CHILD: &str = "CYRIL_BRUI_XDG_WRAPPER_CHILD";
@@ -1259,30 +1210,110 @@ mod tests {
         let home = PathBuf::from(std::env::var_os("HOME").expect("HOME"));
         let xdg = PathBuf::from(std::env::var_os("XDG_DATA_HOME").expect("XDG_DATA_HOME"));
         let local = PathBuf::from(std::env::var_os("LOCALAPPDATA").expect("LOCALAPPDATA"));
-        let data_dir = expected_data_dir_on_host(&home, &xdg, &local);
-        assert_eq!(
-            default_store_path(),
-            Some(data_dir.join(STORE_FILE_NAME)),
-            "default_store_path must follow the resolver on this host"
+        // The bundle under this host's resolved data dir is found (a wrong-
+        // variable wrapper would report `Server`/`NoHome` instead), so the
+        // spawn reaches the login gate — which refuses it because no kiro-cli
+        // can be run (cyril-zbu7: the gate asks kiro-cli, never a store).
+        assert!(
+            kas_root(&expected_data_dir_on_host(&home, &xdg, &local)).is_dir(),
+            "fixture extraction present"
         );
-        let err = resolve_kas_command()
+        let err = resolve_kas_command(&crate::protocol::kas::auth::KasTokenSource::on_path())
             .await
-            .expect_err("no store exists, so the login gate must refuse the spawn");
-        let KasMissing::StoreUnservable { store, .. } = &err else {
-            panic!("expected StoreUnservable (bundle found, store absent), got {err:?}");
+            .expect_err("no kiro-cli is runnable, so the login gate must refuse the spawn");
+        let KasMissing::AuthUnavailable { why } = &err else {
+            panic!("expected AuthUnavailable (bundle found, kiro-cli absent), got {err:?}");
         };
-        assert_eq!(
-            store,
-            &data_dir.join(STORE_FILE_NAME),
-            "the spawn login gate must check the resolver's store, not a HOME-derived one"
+        assert!(
+            why.contains("kiro-cli chat _ get-kas-token") && why.contains("install kiro-cli"),
+            "the gate must name the helper it could not run: {why}"
         );
         std::fs::write(completed, "wrappers checked").expect("completion marker");
     }
 
+    // cyril-zbu7 C1 (red-first): the free-path login gate asks kiro-cli —
+    // `kiro-cli chat _ get-kas-token`, no `--force-refresh` — and never reads
+    // the sqlite store. Child env: a fake kiro-cli (committed fixture,
+    // symlinked so no freshly written executable is exec'd) is the only
+    // kiro-cli on PATH, the bundle is a fake extraction, and NO data.sqlite3
+    // exists anywhere — a store-reading gate refuses the spawn; the
+    // get-kas-token gate passes and journals exactly that argv.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn free_gate_asks_kiro_cli_get_kas_token_not_the_store() {
+        const CHILD: &str = "CYRIL_ZBU7_FREE_GATE_CHILD";
+        let Some(completed) = std::env::var_os(CHILD) else {
+            let root = tempfile::tempdir().expect("tempdir");
+            let home = root.path().join("home");
+            let xdg = root.path().join("xdg");
+            let bin = root.path().join("bin");
+            std::fs::create_dir_all(&home).expect("home dir");
+            std::fs::create_dir_all(&bin).expect("bin dir");
+            std::os::unix::fs::symlink(
+                concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/fixtures/fake-kiro-cli.sh"
+                ),
+                bin.join("kiro-cli"),
+            )
+            .expect("fake kiro-cli symlink");
+            let node = root.path().join("node");
+            std::fs::write(&node, "").expect("fake node file");
+            let server_dir = kas_root(&xdg.join(KIRO_DATA_DIR_NAME))
+                .join(format!("2.24.0-{SHA_A}"))
+                .join("node_modules/@kiro/agent/dist/server");
+            std::fs::create_dir_all(&server_dir).expect("fake extraction");
+            std::fs::write(server_dir.join("acp-server.js"), "//").expect("fake entry");
+            let completed = root.path().join("completed");
+            let status = std::process::Command::new(
+                std::env::current_exe().expect("current test binary"),
+            )
+            .args([
+                "--exact",
+                "protocol::kas::discovery::tests::free_gate_asks_kiro_cli_get_kas_token_not_the_store",
+                "--nocapture",
+            ])
+            .env(CHILD, &completed)
+            .env("HOME", &home)
+            .env("XDG_DATA_HOME", &xdg)
+            .env("KIRO_AGENT_PATH", &node)
+            // /bin for the fixture's `sh`; the fake is the only kiro-cli.
+            .env("PATH", format!("{}:/bin:/usr/bin", bin.display()))
+            .env_remove("KIRO_KAS_SERVER_PATH")
+            .status()
+            .expect("re-run this test binary");
+            assert!(status.success(), "child-side gate assertions failed");
+            assert_eq!(
+                std::fs::read_to_string(&completed).expect("completion marker"),
+                "gate checked"
+            );
+            let journal =
+                std::fs::read_to_string(bin.join("kiro-cli-argv.txt")).expect("fake journal");
+            assert!(
+                journal.ends_with("chat\n_\nget-kas-token\n"),
+                "the gate must run a plain `kiro-cli chat _ get-kas-token`: {journal:?}"
+            );
+            assert!(!journal.contains("--force-refresh"), "{journal:?}");
+            assert!(
+                !xdg.join(KIRO_DATA_DIR_NAME).join("data.sqlite3").exists(),
+                "no credential store may be created or required"
+            );
+            return;
+        };
+        let cmd = resolve_kas_command(&crate::protocol::kas::auth::KasTokenSource::on_path())
+            .await
+            .expect("kiro-cli answers get-kas-token, so the gate must pass without a store");
+        assert!(
+            cmd.args().iter().any(|a| a.ends_with("acp-server.js")),
+            "{cmd:?}"
+        );
+        std::fs::write(completed, "gate checked").expect("completion marker");
+    }
+
     // F19b drift fence, kept at the resolution level (cyril-brui): the
-    // extraction root and the credential store derive from ONE kiro data dir
-    // on every env branch — a change that re-homes either of them (a second
-    // resolution, a stray extra segment) fails here.
+    // extraction root derives from the ONE kiro data dir on every env branch
+    // — a change that re-homes it (a second resolution, a stray extra
+    // segment) fails here.
     #[test]
     fn kas_root_shares_kiro_data_dir() {
         let abs = abs_fixture("xdg");
@@ -1295,11 +1326,6 @@ mod tests {
             let data_dir = kiro_data_dir(home, xdg).expect("branch resolves");
             assert_eq!(
                 kas_root(&data_dir).parent(),
-                Some(data_dir.as_path()),
-                "home={home:?} xdg={xdg:?}"
-            );
-            assert_eq!(
-                store_path(&data_dir).parent(),
                 Some(data_dir.as_path()),
                 "home={home:?} xdg={xdg:?}"
             );
@@ -1316,20 +1342,13 @@ mod tests {
                 .contains("kiro-cli acp")
         );
         assert!(KasMissing::Node.reason().contains("KIRO_AGENT_PATH"));
-        // F6: the store-side no-home reason must NOT point at the bundle
-        // override (the user may already have set it) — it names the store.
-        let store_reason = KasMissing::NoHomeForStore.reason();
-        assert!(store_reason.contains("credential store"), "{store_reason}");
-        assert!(
-            !store_reason.contains("KIRO_KAS_SERVER_PATH"),
-            "misdirects to the bundle override: {store_reason}"
-        );
-        // F4: the gate's reason carries the underlying diagnostic verbatim.
-        let unservable = KasMissing::StoreUnservable {
-            store: PathBuf::from("/x"),
-            why: "kiro token row absent — logged out; run `kiro-cli login`".to_string(),
+        // F4: the gate's reason carries the helper's diagnostic verbatim.
+        let unavailable = KasMissing::AuthUnavailable {
+            why: "kiro-cli could not provide a KAS access token: You are not logged in. \
+                  Please log in with `kiro-cli login`."
+                .to_string(),
         };
-        assert!(unservable.reason().contains("kiro-cli login"));
-        assert!(unservable.reason().contains("/x"));
+        assert!(unavailable.reason().contains("kiro-cli login"));
+        assert!(unavailable.reason().contains("KAS auth unavailable"));
     }
 }
