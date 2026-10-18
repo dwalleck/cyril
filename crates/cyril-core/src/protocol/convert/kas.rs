@@ -10,8 +10,8 @@ use agent_client_protocol::schema::v1 as acp;
 
 use super::kiro::{steering_message_id, steering_message_ids, steering_text};
 use crate::types::{
-    AgentEngine, AgentInitiation, ContextBreakdown, ContextBucket, ContextUsage, MeteredAmount,
-    Notification, PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount,
+    AgentEngine, AgentInitiation, ContextBreakdown, ContextBucket, ContextUsage, EffortMetadata,
+    MeteredAmount, Notification, PermissionOptionId, StopReason, TurnMeteringUpdate, UsageAccount,
     UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
@@ -89,6 +89,83 @@ pub(crate) fn attach_rejection_metadata(
     let mut meta = serde_json::Map::new();
     meta.insert("kiro".to_string(), serde_json::Value::Object(kiro));
     response.meta(meta)
+}
+
+/// Parse a select-option value's `_meta.kiro` effort block (cyril-vh69).
+///
+/// KAS marks effort-capable models on the `model` select option's values with
+/// `{hasEffort, effortLevels[]?, defaultEffortLevel?}` (kiro-cli 2.31.1,
+/// capture frame 24 of `kas-live-sweep-2.31.1.jsonl`). `hasEffort: false`
+/// values carry NO effort fields at all (`auto`, `claude-sonnet-4`), so a
+/// missing block is the normal case and converts silently to `None`.
+///
+/// The flag itself is never trusted: `hasEffort: true` with missing, empty,
+/// or wrong-typed `effortLevels` (including non-string entries) warns and
+/// converts to `None` rather than minting a levels-less effort model, and a
+/// `defaultEffortLevel` outside the offered levels is dropped by
+/// [`EffortMetadata::new`] with its own warning. A malformed block degrades
+/// this ONE value to `effort: None` — it never fails the catalog around it.
+pub(crate) fn effort_metadata(
+    meta: Option<&serde_json::Map<String, serde_json::Value>>,
+) -> Option<EffortMetadata> {
+    let kiro = meta?.get("kiro")?;
+    let has_effort = kiro.get("hasEffort").and_then(serde_json::Value::as_bool);
+    let levels = match kiro.get("effortLevels") {
+        None => None,
+        Some(value) => match value.as_array() {
+            Some(entries) => {
+                let mut levels = Vec::with_capacity(entries.len());
+                for entry in entries {
+                    match entry.as_str().filter(|level| !level.is_empty()) {
+                        Some(level) => levels.push(level.to_owned()),
+                        None => {
+                            tracing::warn!(
+                                value = ?entry,
+                                "KAS _meta.kiro effortLevels entry is not a non-empty string; \
+                                 treating the model as effort-free"
+                            );
+                            return None;
+                        }
+                    }
+                }
+                Some(levels)
+            }
+            None => {
+                tracing::warn!(
+                    value = ?value,
+                    "KAS _meta.kiro effortLevels is not an array; treating the model as effort-free"
+                );
+                return None;
+            }
+        },
+    };
+    match levels {
+        Some(levels) if !levels.is_empty() => {
+            let default = match kiro.get("defaultEffortLevel") {
+                None | Some(serde_json::Value::Null) => None,
+                Some(value) => match value.as_str().filter(|level| !level.is_empty()) {
+                    Some(level) => Some(level.to_owned()),
+                    None => {
+                        tracing::warn!(
+                            value = ?value,
+                            "KAS _meta.kiro defaultEffortLevel is not a non-empty string; ignoring it"
+                        );
+                        None
+                    }
+                },
+            };
+            EffortMetadata::new(levels, default)
+        }
+        _ => {
+            if has_effort == Some(true) {
+                tracing::warn!(
+                    "KAS _meta.kiro hasEffort is true but effortLevels is missing or empty; \
+                     treating the model as effort-free"
+                );
+            }
+            None
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]

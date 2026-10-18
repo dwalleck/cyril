@@ -1,0 +1,31 @@
+live   kas-workflow-gateon-2.29.1.jsonl: 1305 paths
+pinned kas-workflow-gateon-2.28.0.jsonl: 1284 paths
+
+ONLY under live (23) — new-field candidates:
+   + params.resources[].assertions
+   + params.resources[].assertions[].compose
+   + params.resources[].assertions[].layer
+   + params.resources[].compose
+   + params.resources[].items
+   + params.resources[].items[].krn
+   + params.resources[].items[].layer
+   + params.resources[].items[].standing
+   + params.resources[].items[].standing.kind
+   + params.resources[].items[].value
+   + params.resources[].items[].value.description
+   + params.resources[].items[].value.id
+   + params.resources[].items[].value.inclusion
+   + params.resources[].items[].value.name
+   + params.resources[].items[].value.uri
+   + params.resources[].pureAssertions
+   + params.resources[].type
+   + params.update._meta.kiro.consentRound
+   + params.update.rawInput.depth
+   + permissions[].meta_kiro.workflowWatch
+   + permissions[].meta_kiro.workflowWatch.nodeId
+   + permissions[].meta_kiro.workflowWatch.workflowId
+   + result.agentCapabilities._meta.kiro.modelFallbackReporting
+
+ONLY under pinned (2) — usually just coverage:
+   - params.update.availableCommands[]._meta.kiro.contextQuery
+   - params.update.rawInput.query

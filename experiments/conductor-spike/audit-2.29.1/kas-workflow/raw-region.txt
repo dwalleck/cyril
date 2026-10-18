@@ -1,0 +1,56 @@
+OLD: _kiro/workflow/ count=189 off=[10813828..12156372] span=1342544 total=12295874
+    wf-workflow-creator        n=    2 off=[3336751..3383581]
+    wf-planner                 n=   14 off=[3255219..10065843]
+    _kiro/workflow/run_complete n=    3 off=[10814110..10969291]
+    recipe                     n=   93 off=[4196806..12156517]
+    WorkflowNode               n=    0 off=[None..None]
+    joinPolicy                 n=   13 off=[2018287..10682062]
+    onMaxIterations            n=   28 off=[2018193..11456172]
+    listWatchHandlers          n=    6 off=[10866724..12044117]
+NEW: _kiro/workflow/ count=186 off=[11071540..12525574] span=1454034 total=12669420
+    wf-workflow-creator        n=    2 off=[3345746..3395063]
+    wf-planner                 n=   14 off=[3264478..10322081]
+    _kiro/workflow/run_complete n=    3 off=[11071822..11250345]
+    recipe                     n=  160 off=[3357226..12525719]
+    WorkflowNode               n=    0 off=[None..None]
+    joinPolicy                 n=   14 off=[2021045..10936647]
+    onMaxIterations            n=   27 off=[2020951..11766144]
+    listWatchHandlers          n=    6 off=[11139572..12408422]
+
+### raw substring counts (OLD -> NEW)
+  consentRound                    1->  17
+  allow_always                    7->   7
+  allowAlways                     0->   0
+  extendRepeat                    7->   7
+  onMaxIterations                28->  27
+  joinPolicy                     13->  14
+  idleTimeoutSec                  8->   9
+  injectOriginalUserRequest       4->   8
+  planRevision                   31->  31
+  captureOutput                  11->  12
+  backgroundExecution            66->  66
+  memoryConfigSource             54->  54
+  workflowNotifications           0->   0
+  recipes_changed                 2->   2
+  watch_poll                      7->   7
+  agent_note                     12->  15
+  agent_notes                     0->   0
+  step.parent_note                2->   2
+  parent_note                     3->   3
+  workflow.step                  50->  50
+  sendParentNote                  3->   3
+  run_workflow                   45->  45
+  save_workflow_definition       10->  10
+  validate_workflow               0->   0
+  creator_override_refused        1->   1
+  runLabel                       26->  26
+  listRecipes                    10->  11
+  listWatchHandlers               6->   6
+  background-process              6->   6
+  github-pr                      16->  16
+  crux-cr                         0->   0
+  workflowPrompt                 33->  33
+  original_user_request           9->   9
+  workflowCreator                 0->   0
+  pause                         484-> 486
+  resumeAll                      15->  15

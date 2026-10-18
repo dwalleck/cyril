@@ -1,0 +1,344 @@
+  [replace] ... (m) => toRaw(scaledInside(photon.PhotonImage.new_from_byteslice(m.bytes), m  ‹-.maxWidth,›  ‹+ < outHeight;›   m.maxHeight)),\n  resize: (m) => toRaw(scaledInside(new...
+  [replace] ...=> toRaw(scaledInside(photon.PhotonImage.new_from_byteslice(m.bytes), m.maxWidth, m  ‹-.maxHeight›  ‹+++›  )),\n  resize: (m) => toRaw(scaledInside(new photon.PhotonImage...
+  [delete] ...toRaw(scaledInside(photon.PhotonImage.new_from_byteslice(m.bytes), m.maxWidth, m.maxHeight)  ‹-),\n  resize: (m) => toRaw(scaledInside(new photon.PhotonImage(m.data, m.width, m.height), m.maxWidth, m.maxHeight)),\n  encode: (m) =>›  ‹+›   {\n    const image = new photon.PhotonImage(m.data, m.width...
+  [insert] ...),\n  encode: (m) => {\n    const image =   ‹-›  ‹+spanStart(oy, height, outHeight);\n    const ›  new photon.PhotonImage(m.data, m.width, m.height);\n    try...
+  [replace] ...\n  encode: (m) => {\n    const image = new   ‹-photon›  ‹+= Math›  .PhotonImage(m.data, m.width, m.height);\n    try {\...
+  [replace] ...  encode: (m) => {\n    const image = new photon.  ‹-PhotonImage›  ‹+max›  (m.data, m.width, m.height);\n    try {\n      ...
+  [insert] ...: (m) => {\n    const image = new photon.PhotonImage(  ‹-›  ‹+y0 + 1, spanStart(oy + 1, height, outHeight));\n    ›  m.data, m.width, m.height);\n    try {\n      return...
+  [replace] ...m) => {\n    const image = new photon.PhotonImage(m.data  ‹-, m.width, m.height›  ‹+(0›  );\n    try {\n      return m.format === 'png' ? ...
+  [replace] ... photon.PhotonImage(m.data, m.width, m.height);\n    try   ‹-{\›  ‹+(›  n      return m.format === 'png' ? image.get_bytes() : image...
+  [delete] ...PhotonImage(m.data, m.width, m.height);\n    try {\n  ‹-      return›  ‹+›   m.format === 'png' ? image.get_bytes() : image.get_bytes_jpeg(...
+  [delete] ...data, m.width, m.height);\n    try {\n      return m  ‹-.format›  ‹+›   === 'png' ? image.get_bytes() : image.get_bytes_jpeg(m.quality)...
+  [delete] ....width, m.height);\n    try {\n      return m.format =  ‹-==›  ‹+›   'png' ? image.get_bytes() : image.get_bytes_jpeg(m.quality);\n    ...
+  [replace] ... m.height);\n    try {\n      return m.format ===   ‹-'png'›  ‹+y0;›   ? image.get_bytes() : image.get_bytes_jpeg(m.quality);\n    } ...
+  [replace] ....height);\n    try {\n      return m.format === 'png'   ‹-?›  ‹+y›   image.get_bytes() : image.get_bytes_jpeg(m.quality);\n    } finally ...
+  [replace] ...);\n    try {\n      return m.format === 'png' ?   ‹-image.get_bytes(›  ‹+< y1; y++›  ) : image.get_bytes_jpeg(m.quality);\n    } finally {\n      image...
+  [delete] ...try {\n      return m.format === 'png' ? image.get_bytes()  ‹- : image.get_bytes_jpeg(m.quality);\n    } finally›  ‹+›   {\n      image.free();\n    }\n  },\n};\...
+  [replace] ...() : image.get_bytes_jpeg(m.quality);\n    } finally {\n        ‹-image›  ‹+const row = y * width * 4;\n      for (let ox = 0; ox < outWidth; ox++) {\n        const x1 = Math›  .free();\n    }\n  },\n};\n\nparentPort.on(...
+  [insert] ... image.get_bytes_jpeg(m.quality);\n    } finally {\n      image.free(  ‹-›  ‹+xStart[ox] + 1, xStart[ox + 1]›  );\n    }\n  },\n};\n\nparentPort.on('message', ...
+  [replace] ...(m.quality);\n    } finally {\n      image.free();\n  ‹-    }\›  ‹+        ›  n  },\n};\n\nparentPort.on('message', (m) => ...
+  [replace] ...);\n    } finally {\n      image.free();\n    }\n  ‹-  }›  ‹+ r = 0›  ,\n};\n\nparentPort.on('message', (m) => {\n...
+  [replace] ...n    } finally {\n      image.free();\n    }\n  },  ‹-\›  ‹+ ›  n};\n\nparentPort.on('message', (m) => {\n  try...
+  [replace] ...} finally {\n      image.free();\n    }\n  },\n  ‹-}›  ‹+ = 0, b = 0, a = 0›  ;\n\nparentPort.on('message', (m) => {\n  try {...
+  [insert] ...{\n      image.free();\n    }\n  },\n};\n  ‹-›  ‹+        for (let x = xStart[ox]; x < x1; x++) {›  \nparentPort.on('message', (m) => {\n  try {\n    ...
+  [delete] ...\n      image.free();\n    }\n  },\n};\n\  ‹-nparentPort.›  ‹+›  on('message', (m) => {\n  try {\n    const result...
+  [replace] ...image.free();\n    }\n  },\n};\n\nparentPort.on  ‹-('message'›  ‹+          const i = row + x * 4;\n          // Colors are weighted by alpha, so a transparent pixel's color does not bleed into its neighbors.\n          const alpha = source[i + 3];\n          r += source[i] * alpha;\n          g += source[i + 1] * alpha;\n          b += source[i + 2] * alpha;\n          a += alpha;\n        }\n        const s = ox * 4;\n        sums[s] += r;\n        sums[s + 1] += g;\n        sums[s + 2] += b;\n        sums[s + 3] += a;\n      }\n    }\n    for (let ox = 0; ox < outWidth; ox++) {\n      const count = (Math.max(xStart[ox] + 1, xStart[ox + 1]) - xStart[ox]) * (y1 - y0);\n      const s = ox * 4;\n      const o = (oy * outWidth + ox) * 4;\n      const alpha = sums[s + 3];\n      if (alpha > 0) {\n        out[o] = Math.round(sums[s] / alpha);\n        out[o + 1] = Math.round(sums[s + 1] / alpha);\n        out[o + 2] = Math.round(sums[s + 2] / alpha);\n      }\n      out[o + 3] = Math.round(alpha / count);\n    }\n  }\n  return out;\n}\n\nfunction scaledInside(data, width, height, maxWidth, maxHeight) {\n  const scale = Math.min(maxWidth / width, maxHeight / height, 1);\n  if (scale === 1) return { data, width, height };\n  const outWidth = Math.max(1, Math.round(width * scale));\n  const outHeight = Math.max(1, Math.round(height * scale));\n  return { data: scaleDown(data, width, height, outWidth, outHeight), width: outWidth, height: outHeight };\n}\n\nfunction decoded(image) {\n  try {\n    return { data: image.get_raw_pixels(), width: image.get_width(), height: image.get_height() };\n  } finally {\n    image.free();\n  }\n}\n\nconst operations = {\n  decode: (m) => {\n    const { data, width, height } = decoded(photon.PhotonImage.new_from_byteslice(m.bytes));\n    return scaledInside(data, width, height, m.maxWidth, m.maxHeight);\n  },\n  resize: (m) => scaledInside(m.data, m.width, m.height, m.maxWidth, m.maxHeight),\n  encode: (m) => {\n    const image = new photon.PhotonImage(m.data, m.width, m.height);\n    try {\n      return m.format === 'png' ? image.get_bytes() : image.get_bytes_jpeg(m.quality);\n    } finally {\n      image.free();\n    }\n  },\n};\n\nparentPort.on('message'›  , (m) => {\n  try {\n    const result = ...
+@@ 215105,215107c215142,215168  old#215105 new#215142
+  [delete] ...let t  ‹-=oae(e)›  ‹+›  ,r,n=1,i=0; for(let o=12; o+8<...
+  [insert] ...let t=oae(e),r,n=1,i=0  ‹-›  ‹+,o=Math.min(e.length,8+U9(e).getUint32(4,!0)); for(let s of alo(e,12,o))if(s.type==="VP8X"){ if(s.data!==20)throw new xd("webp VP8X is not the first chunk"); if(s.data+10>e.length)throw new xd("webp VP8X cut short"); t={ width:JEe(e,s.data+4)+1,height:JEe(e,s.data+7)+1} } else if((s.type==="VP8 "||s.type==="VP8L")&&r===void 0)r=clo(e,s); else if(s.type==="ANMF")i+=1,L5c(e,s,t); else if(s.type==="EXIF"){ let a=pN(e,s.data,6)==="Exif\0\0"?s.data+6:s.data; n=lUr(e,a,s.end)} if(i>0){ if(t===void 0)throw new xd("webp animation has no canvas"); if(r!==void 0)throw new xd("webp has both frames and a top-level image"); return{ ...t,animated:i>1,orientation:n} } if(r===void 0)throw new xd("webp has no image chunk"); if(t!==void 0&&!ulo(t,r))throw new xd("webp canvas size does not match its image"); return{ ...r,animated:!1,orientation:n} } function*alo(e,t,r){ let n=U9(e)›  ; for(let o=12; o+8<=e.length;...
+  [replace] ... t=oae(e),r,n=1,i=0; for(let o=  ‹-12›  ‹+t›  ; o+8<=e.length;...
+  [delete] ...,n=1,i=0; for(let o=12; o+8<=e  ‹-.length›  ‹+›  ;...
+@@ 215109,215113c215170,215180  old#215109 new#215170
+  [delete] ...let   ‹-s=mN(e,o,4),›  ‹+›  a=t.getUint32(o+4,!0),c=o+8; if(s=...
+  [insert] ...,4),a=t.getUint32(o+4,!0),c=o+8;   ‹-›  ‹+yield{ type:›  if(s==="VP8X"&&c+10<=e.length)r={ width:Uuo...
+  [insert] ...),a=t.getUint32(o+4,!0),c=o+8; if(  ‹-›  ‹+e,i,4),data:s,end:Math.min(s+o,r)} ,i=s+o+o%2} } function clo(e,t){ let r=U9(e),{ data:n} =t; if(t.›  s==="VP8X"&&c+10<=e.length)r={ width:Uuo(e...
+  [replace] ...t.getUint32(o+4,!0),c=o+8; if(s===  ‹-"VP8X"&&›  ‹+"VP8 "){ if(›  c+10<=e.length)r={ width:Uuo(e,c+4)+1...
+  [replace] ...4,!0),c=o+8; if(s==="VP8X"&&c+10  ‹-<=›  ‹+>›  e.length)r={ width:Uuo(e,c+4)+1,height:Uuo(...
+  [replace] ...c=o+8; if(s==="VP8X"&&c+10<=e.length)  ‹-r={ width:Uuo(e,c+4)+1,height:Uuo(e,c+7)+1} ;›  ‹+throw›   else if(s==="VP8 "&&r===void 0&&c+10<...
+  [replace] ...4)+1,height:Uuo(e,c+7)+1} ; else if(  ‹-s==="VP8 "&&r===void 0&&c+10<=e.length›  ‹+"webp VP8 cut short"›  ){...
+  [replace] ...s==="VP8 "&&r===void 0&&c+10<=e.length)  ‹-{›  ‹+;›  ...
+@@ 215115c215182  old#215115 new#215182
+  - r={
+  + return{
+@@ 215118c215185  old#215118 new#215185
+  - else if(s==="VP8L"&&r===void 0&&c+5<=e.length){
+  + if(n+5>e.length)throw new xd("webp VP8L cut short");
+@@ 215121,215129d215187  old#215121 new#215187
+  - r={
+  - width:(u&16383)+1,height:(u>>>14&16383)+1}
+  - }
+  - else if(s==="ANMF")i+=1;
+  - else if(s==="EXIF"){
+  - let u=mN(e,c,6)==="Exif\0\0"?c+6:c;
+  - n=J3r(e,u,c+a)}
+  - o=c+a+a%2}
+  - if(r===void 0)throw new E0("webp has no image chunk");
+@@ 215131c215189  old#215131 new#215189
+  - ...r,animated:i>1,orientation:n}
+  + width:(i&16383)+1,height:(i>>>14&16383)+1}
+@@ 215132a215191,215206  old#215132 new#215191
+  + function L5c(e,t,r){
+  + if(r===void 0)throw new xd("webp animation has no canvas");
+  + let{
+  + data:n}
+  + =t;
+  + if(n+16>e.length)throw new xd("webp ANMF cut short");
+  + let i=JEe(e,n)*2,o=JEe(e,n+3)*2,s={
+  + width:JEe(e,n+6)+1,height:JEe(e,n+9)+1}
+  + ;
+  + if(i+s.width>r.width||o+s.height>r.height)throw new xd("webp frame outside its canvas");
+  + for(let a of alo(e,n+16,t.end))if(!(a.type!=="VP8 "&&a.type!=="VP8L")){
+  + if(!ulo(clo(e,a),s))throw new xd("webp frame size does not match its image");
+  + return}
+  + throw new xd("webp frame has no image chunk")}
+  + function ulo(e,t){
+  + return e.width===t.width&&e.height===t.height}
+@@ 215258c215332  old#215258 new#215332
+  - =e,r=new Uint8Array(t.length);
+  + =e;
+@@ 215262a215337  old#215262 new#215337
+  + if(n!==255){
+@@ 215267,215268c215342  old#215267 new#215342
+  - return{
+  - ...e,data:r}
+  + }
+@@ 215313c215387  old#215313 new#215387
+  [insert] ...*h)),targetHeight:Math.max(1,Math.round(c*h)),format:  ‹-›  ‹+!l&&(›  u==="jpeg"||u==="webp"?"jpeg":"png",maxBase64Bytes:r.maxBase64Bytes,outcome:...
+  [insert] ...,Math.round(c*h)),format:u==="jpeg"||u==="webp"  ‹-›  ‹+)›  ?"jpeg":"png",maxBase64Bytes:r.maxBase64Bytes,outcome:p>n?"resized":"reencoded",orientation:d}...
+@@ 215333c215407  old#215333 new#215407
+  [insert] ...let   ‹-›  ‹+n=!1,i=async(a,c,u)=>(c==="jpeg"&&!n&&(hlo(a),n=!0),await e.encode(a,c,u)),›  n=await o5c(e,t,r.format,juo[0]);...
+  [delete] ...let n=await o5c(  ‹-e,›  ‹+›  t,r.format,juo[0]);...
+@@ 215341d215414  old#215341 new#215414
+  - let o=rUr(i);
+@@ 215343c215416  old#215343 new#215416
+  - let c=await e.encode(o,"jpeg",a);
+  + let u=await i(s,"jpeg",c);
+@@ 215351,215352d215423  old#215351 new#215423
+  - async function o5c(e,t,r,n){
+  - return await e.encode(r==="jpeg"?rUr(t):t,r,n)}
+@@ 219725c219796  old#219725 new#219796
+  [delete] ...sh","execute_pwsh","web_fetch","disclose_context","invoke_sub_agent","run_workflow","send_message","subagent_response","report_progress","tool_load","tool_call"  ‹-,"tool_search"›  ‹+›  ]),mbe="builtin"}...
+@@ 230146a230218,230220  old#230146 new#230218
+  + function iRo(e){
+  + let t=typeof e=="string"?WT(e):e.userConfigDir;
+  + return Kxe.join(t,"tasks")}
+@@ 230153a230228  old#230153 new#230228
+  + Ld();
+@@ 230170c230245  old#230170 new#230245
+  - this.tasksDir=Gxe.join(r,".kiro","tasks",n)}
+  + this.tasksDir=Kxe.join(iRo(r),n)}
+@@ 230243c230318  old#230243 new#230318
+  - let r=Gxe.join(t,".kiro","tasks"),n;
+  + let r=iRo(t),n;
+@@ 230505,230506c230580,230583  old#230505 new#230580
+  [insert] ...async function X5r(  ‹-›  ‹+e,›  e,t,r){ let n=wE(e),i=ppu(t),o...
+  [insert] ...{ let n=wE(e),i=ppu(t),o=new OB(r  ‹-›  ‹+,{ userConfigDir:n} ›  ),s=await o.readMetadataFile(i),a=upu(t).toString(),{...
+@@ 230549c230626  old#230549 new#230626
+  - dag:await X5r(n.text,r.uri.fsPath,i),file:r}
+  + dag:await dWr(n.text,r.uri.fsPath,i,e.getUserConfigDir()),file:r}
+@@ 231116c231193  old#231116 new#231193
+  [replace] ... lfu,existsSync as vWr,mkdirSync as dfu,readdirSync as pfu,statSync as   ‹-ZPt›  ‹+OWr,lstatSync as Ehu›  }...
+@@ 254570c254647  old#254570 new#254647
+  [replace] ...urandom"))','(allow file-write-data (literal "/dev/tty"))','(allow file-write-data (literal "/dev/dtracehelper"))','(allow file-ioctl (literal "/dev/tty"))',"",  ‹-";; --- Read/write: ~/.kiro (agent config/cache) ---",'(allow file-write* (subpath (string-append (param "HOME_DIR") "/.kiro")))'›  ‹+";; --- Read/write: the agent config dir is granted per sandbox (it may be relocated off ~/.kiro) ---"›  ,"",";; --- Write: ~/.npm (package cache for npm install) ---",'(allow file-write* (subpath (string-append (param "HOME_DIR") "/.npm")))',"",";; --- Deny cross-...
+@@ 254632a254710  old#254632 new#254710
+  + networkMode;
+@@ 254643,254644c254721,254724  old#254643 new#254721
+  [insert] ...constructor(  ‹-›  ‹+t,›  t,r,n){ this.config=t,this.workspacePaths=r.map(i=>...
+  [insert] ....map(i=>cen(PHo(i))),this.home=n??oWu()  ‹-›  ‹+; let o=O$t(i??O$t(this.home,".kiro")); this.userConfigDir=L$t(process.platform==="darwin"?H5e(o):o)›  ,this.networkMode=t.networkMode??"default_blocked"}...
+@@ 254735c254815  old#254735 new#254815
+  [insert] ...return  ‹-›  ‹+[`(allow›   this.workspacePaths.map(t=>`(allow file-read* (subpath "${t}"))...
+  [insert] ...return   ‹-›  ‹+file-write* (subpath "${this.userConfigDir}"))`,...›  this.workspacePaths.map(t=>`(allow file-read* (subpath "${t}"))\...
+  [insert] ...* (subpath "${t}"))\n(allow process-exec (subpath "${t}"))`)  ‹-›  ‹+]›  .join(`\n`)}...
+@@ 254851a254932  old#254851 new#254932
+  + loaderFailureReason;
+@@ 254864c254945  old#254864 new#254945
+  - constructor(t,r,n){
+  + constructor(t,r,n,i){
+@@ 254876a254958,254962  old#254876 new#254958
+  + let s=i??$Ce(this.home,".kiro");
+  + try{
+  + this.userConfigDir=wue(s)}
+  + catch{
+  + this.userConfigDir=s}
+@@ 255015c255101  old#255015 new#255101
+  - o.push(...this.bindIfExists(OCe(this.home,".kiro")));
+  + o.push(...this.bindIfExists(this.userConfigDir));
+@@ 255574c255660  old#255574 new#255660
+  - constructor(t,r,n){
+  + constructor(t,r,n,i){
+@@ 255578c255664  old#255578 new#255664
+  - let o=bQ(this.home,".kiro"),s=bQ(o,"sandbox-state");
+  + let s=i??_Q(this.home,".kiro"),a=_Q(s,"sandbox-state");
+@@ 255897c255983  old#255897 new#255983
+  - return new i(t,r,n)}
+  + return new i(t,r,n.homeDir,n.userConfigDir)}
+@@ 255902c255988  old#255902 new#255988
+  - return new i(t,r,n)}
+  + return new i(t,r,n.homeDir,n.userConfigDir)}
+@@ 255907c255993  old#255907 new#255993
+  - return new i(t,r,n)}
+  + return new i(t,r,n.homeDir,n.userConfigDir)}
+@@ 258215c258301  old#258215 new#258301
+  - ),maxAttempts:e?.maxAttempts??to(bU,e),region:e?.region??to(of,{
+  + ),maxAttempts:e?.maxAttempts??io(EU,e),region:e?.region??io(cf,{
+@@ 258869c258955  old#258869 new#258955
+  - ],maxAttempts:e?.maxAttempts??to(bU,e),region:e?.region??to(of,{
+  + ],maxAttempts:e?.maxAttempts??io(EU,e),region:e?.region??io(cf,{
+@@ 259332c259418  old#259332 new#259418
+  - ),maxAttempts:e?.maxAttempts??to(bU,e),region:e?.region??to(of,{
+  + ),maxAttempts:e?.maxAttempts??io(EU,e),region:e?.region??io(cf,{
+@@ 263771,263772c263857  old#263771 new#263857
+  - this.homeDir=n}
+  - makeEngine;
+  + this.configDir=n}
+@@ 263777a263863  old#263777 new#263863
+  + configDir;
+@@ 263817c263903  old#263817 new#263903
+  - return Owl(this.homeDir,".kiro","knowledge_bases",t)}
+  + return j_l(this.configDir,"knowledge_bases",t)}
+@@ 263844c263930  old#263844 new#263930
+  - return process.env[Bwl]??Fwl(e,".kiro","models")}
+  + return process.env[Z_l]??K_l(e,"models")}
+@@ 264798a264885  old#264798 new#264885
+  + _i();
+@@ 264817a264905,264945  old#264817 new#264905
+  + ec();
+  + pe();
+  + var fVn=128;
+  + function Jfa(e){
+  + return typeof e=="string"&&e.length>0&&e.length<=fVn}
+  + function Qfa(e){
+  + let t=e.sessionId;
+  + if(!Jfa(t))throw new _n(`_kiro/environment/start_ssh_session requires sessionId as a string of 1-${fVn} characters`);
+  + return t}
+  + async function hVn(e,t){
+  + let r=Qfa(t),n=await e.startSshSession(r);
+  + switch(n.kind){
+  + case"ready":return S.info("environment.startSshSession.ready",{
+  + sessionId:r,ssmSessionId:n.ssmSessionId}
+  + ),{
+  + outcome:"ready",ssmSessionId:n.ssmSessionId,streamUrl:n.streamUrl,tokenValue:n.tokenValue}
+  + ;
+  + case"environmentNotReady":return S.info("environment.startSshSession.notReady",{
+  + sessionId:r}
+  + ),{
+  + outcome:"environmentNotReady",message:n.message}
+  + ;
+  + case"notFound":return S.info("environment.startSshSession.notFound",{
+  + sessionId:r}
+  + ),{
+  + outcome:"notFound",message:n.message}
+  + }
+  + }
+  + ec();
+  + var Mlr=class extends Fc{
+  + name="SshSessionUnavailableError";
+  + constructor(t){
+  + super(-32e3,t),this.data={
+  + errorType:this.name}
+  + }
+  + }
+  + ,xct=class{
+  + startSshSession(){
+  + return Promise.reject(new Mlr("Starting an SSH session is not available: this agent has no remote sessions endpoint configured, so there is no backend to mint credentials."))}
+  + }
+  + ;
+@@ 266256c266384  old#266256 new#266384
+  [replace] ...return`${Y8c}\n\nThis is a background memory-extraction task.   ‹-Follow›  ‹+Capture durable, cross-session memories per the bar below; follow›   the \`memory\` tool's capture and update guidance. Maintain memory; do not continue the user's original task. Only \`memory\`...
+  [replace] ... is a background memory-extraction task. Follow the \`memory\` tool  ‹-'s capture and update guidance. Maintain memory; do not continue the user'›  ‹+'s update and consolidation guidance for how to merge and avoid duplicates. Maintain memory; do not continue the user'›  s original task. Only \`memory\` can execute \u2014 other tool...
+  [replace] ... memories are not displayed. Run \`memory list\` with that scope  ‹-'›  ‹+'s \`filter\` to inspect them before adding. If you cannot finish that check within this run, do not add the memory. You can still correct a memory already shown in an index.\n\n## The bar (each memory must pass ALL of these \u2014 if it fails one, don'›  s \`filter\` to inspect them before adding. If you cannot ...
+  [insert] ...are not displayed. Run \`memory list\` with that scope's   ‹-›  ‹+write it)›  \`filter\` to inspect them before adding. If you cannot finish ...
+  [replace] ... not displayed. Run \`memory list\` with that scope's \  ‹-`filter\`›  ‹+n- DURABLE: would›   to inspect them before adding. If you cannot finish that check within...
+  [replace] ...\` with that scope's \`filter\` to inspect them before   ‹-adding.›  ‹+and worth retrieving well after this session ends, by someone who was NOT in it?›   If you cannot finish that check within this run, do not add...
+  [delete] ...`filter\` to inspect them before adding. If you cannot finish that  ‹- check within›  ‹+›   this run, do not add the memory. You can still correct ...
+  [insert] ...them before adding. If you cannot finish that check within this run,  ‹-›  ‹+ PR, branch, or process ends, it fails.\n- USEFUL LATER: prefer information with meaningful future value \u2014 an important shortcut, a failure shield, a hard-to-discover fact, or a standing expectation›   do not add the memory. You can still correct a memory already...
+  [replace] ...you cannot finish that check within this run, do not add the   ‹-memory›  ‹+wants things done›  . You can still correct a memory already shown in an index.`...
+  [insert] ...cannot finish that check within this run, do not add the memory.  ‹-›  ‹+\n-›   You can still correct a memory already shown in an index.`}...
+  [replace] ... finish that check within this run, do not add the memory.   ‹-You›  ‹+NON-OBVIOUS:›   can still correct a memory already shown in an index.`}...
+  [replace] ... check within this run, do not add the memory. You can   ‹-still›  ‹+trivially›   correct a memory already shown in an index.`}...
+  [replace] ... within this run, do not add the memory. You can still   ‹-correct›  ‹+re-derivable by glancing at the code or docs right now.\n- GROUNDED: the user expressed/corrected it, or you actually learned/verified it THIS session \u2014 not speculation.\n- ACTIONABLE (especially for a preference): store it ONLY if you can name what to DO and WHEN it applies, in the user's own terms. A vague disposition ("be concise", "keep it clean") has no checkable form \u2014 skip it rather than inventing specifics the user never stated.\n- STANDALONE: reads as a general fact, not a diary entry. Strip run-specific handles (branch names, commit SHAs, PR numbers, task/ticket ids, agent or session names) unless›   a memory already shown in an index.`}...
+  [replace] ...do not add the memory. You can still correct a memory already   ‹-shown›  ‹+ABOUT that durable entity. A›   in an index.`}...
+  [replace] ...the memory. You can still correct a memory already shown in an   ‹-index›  ‹+only makes sense as "what I was doing when I saved this" fails›  .`}...
+@@ 266303c266431  old#266303 new#266431
+  - let i=new Z3(Eje,e.getHomeDir()),o=await MPe(t),{
+  + let i=new X3(kje,e.getUserConfigDir()),o=await OPe(t),{
+@@ 268937c269065  old#268937 new#269065
+  - readPath:t,content:r,offset:n,requestedLineLimit:i,hasMoreLines:o}
+  + content:t,offset:r,requestedLineLimit:n,hasMoreLines:i}
+@@ 268941,268946c269069  old#268941 new#269069
+  [replace] ...==0)return`Note: This output hit the ${Xte}-character limit  ‹- within›  ‹+,›   the first returned line. Line-based offsets cannot continue inside that line...
+  [replace] ...: This output hit the ${Xte}-character limit within the first   ‹-returned›  ‹+cannot start partway through a›   line. Line-based offsets cannot continue inside that line; use grep_search ...
+  [replace] ... hit the ${Xte}-character limit within the first returned line.   ‹-Line-based offsets cannot continue inside that line; use grep_search or execute_bash for targeted inspection.`; let c=(n??0)+a; return`Note: This output›  ‹+To›   hit the ${Xte}-character limit after ${a} complete lines ...
+  [delete] ...=(n??0)+a; return`Note: This output hit the $  ‹-{Xte}-character limit after ${a} complete lines›  ‹+›   in the requested range. To continue without skipping content, call read_file ...
+  [replace] ... ${Xte}-character limit after ${a} complete lines in the   ‹-requested range. To continue without skipping content›  ‹+line›  , call read_file with ${JSON.stringify({ path:t,offset:c} ...
+  [replace] ... complete lines in the requested range. To continue without skipping content,   ‹-call read_file with ${JSON.stringify({ path:t,offset:c} )};›  ‹+search›   this may repeat the partially shown final line.`} if(o){...
+  [replace] ...stringify({ path:t,offset:c} )}; this may repeat the   ‹-partially›  ‹+a›   shown final line.`} if(o){...
+  [replace] ...{ path:t,offset:c} )}; this may repeat the partially   ‹-shown final line›  ‹+command›  .`} if(o){...
+  [replace] ...:c} )}; this may repeat the partially shown final line.`  ‹-} if(o){›  ‹+;›  ...
+@@ 268948,268951c269071,269072  old#268948 new#269071
+  [delete] ...return`Note: This read was   ‹-limited ›  ‹+›  to ${i} lines and may not include the end of the ...
+  [insert] ...return`Note: This read was limited to ${i}  ‹-›  ‹+-character›   lines and may not include the end of the file. To continue...
+  [replace] ...return`Note: This read was limited to ${i}   ‹-lines and may not include the end of the file›  ‹+limit›  . To continue, call read_file with ${JSON.stringify({ path:t,...
+  [replace] ... may not include the end of the file. To continue, call   ‹-read_file with›  ‹+offset›   ${JSON.stringify({ path:t,offset:s} )}.`} }...
+  [delete] ... the end of the file. To continue, call read_file with ${  ‹-JSON.stringify({ ›  ‹+›  path:t,offset:s} )}.`} }...
+  [delete] ...the file. To continue, call read_file with ${JSON.stringify({ path  ‹-:t,offset:s} )›  ‹+›  }.`} }...
+  [insert] ...with ${JSON.stringify({ path:t,offset:s} )}.`}   ‹-›  ‹+if(i)return`Note: To continue, use offset ${(r??0)+n›  }...
+  [insert] ... ${JSON.stringify({ path:t,offset:s} )}.`} }  ‹-›  ‹+.`}›  ...
+@@ 269071c269192  old#269071 new#269192
+  - readPath:v,content:T,offset:t.offset,requestedLineLimit:f,hasMoreLines:C}
+  + content:T,offset:t.offset,requestedLineLimit:f,hasMoreLines:C}
+@@ 269702a269824  old#269702 new#269824
+  + localClaimTurns=new Map;
+@@ 269765a269888,269942  old#269765 new#269888
+  + let n=xfo(t,r),i=await this.takeLocalClaimTurn(n,r),o;
+  + try{
+  + o=await this.claimMarker(t,r,n)}
+  + catch(a){
+  + throw i(),a}
+  + if(o===null)return i(),null;
+  + let s=o;
+  + return{
+  + verify:()=>s.verify(),release:async()=>{
+  + try{
+  + return await s.release()}
+  + finally{
+  + i()}
+  + }
+  + ,forgetRemovedMarker:i}
+  + }
+  + async takeLocalClaimTurn(t,r){
+  + let n=this.localClaimTurns.get(t),i=wfo(),o=wfo(),s={
+  + started:i.promise,finished:o.promise}
+  + ;
+  + if(this.localClaimTurns.set(t,s),n!==void 0){
+  + let c=this.deps.clock.monotonicMs();
+  + await this.waitForLocalClaimant(n,r),S.info("workflow.liveness.claim_queued_local",{
+  + workflowId:r,waitedMs:Math.round(this.deps.clock.monotonicMs()-c)}
+  + )}
+  + i.settle(this.deps.clock.monotonicMs());
+  + let a=!1;
+  + return()=>{
+  + a||(a=!0,o.settle(void 0),this.localClaimTurns.get(t)===s&&this.localClaimTurns.delete(t))}
+  + }
+  + async waitForLocalClaimant(t,r){
+  + let n=await t.started,i=this.timings.claimTtlMs-(this.deps.clock.monotonicMs()-n);
+  + if(i>0){
+  + let o=new AbortController,s=this.deps.shutdownSignal,a=()=>{
+  + o.abort()}
+  + ;
+  + s?.addEventListener("abort",a,{
+  + once:!0}
+  + );
+  + let c=(async()=>(await t.finished,"released"))(),u=(async()=>{
+  + try{
+  + return await this.deps.clock.sleep(i,s?.aborted===!0?AbortSignal.abort():o.signal),"expired"}
+  + catch{
+  + return"cancelled"}
+  + }
+  + )(),l;
+  + try{
+  + l=await Promise.race([c,u])}
+  + finally{
+  + o.abort(),s?.removeEventListener("abort",a)}
+  + if(l!=="expired")return}
+  + S.warn("workflow.liveness.claim_local_holder_overstayed",{
+  + workflowId:r}
+  + )}
+  + async claimMarker(t,r,n){
+@@ 269767c269944  old#269767 new#269944
+  - let n=efo(t,r),i=xkt.randomUUID(),o=JSON.stringify({
+  + let i=Nkt.randomUUID(),o=JSON.stringify({
+@@ 269900a270078,270086  old#269900 new#270078
+  + function wfo(){
+  + let e=()=>{
+  + }
+  + ;
+  + return{
+  + promise:new Promise(r=>{
+  + e=r}
+  + ),settle:e}
+  + }
+@@ 270240c270426  old#270240 new#270426
+  - let i=Dg.safeParse(n);
+  + let i=of.safeParse(n);
+@@ 272488c272674  old#272488 new#272674

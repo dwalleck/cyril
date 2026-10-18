@@ -1,0 +1,7 @@
+live   kas-workflow-gateon-2.31.1.jsonl: 1302 paths
+pinned kas-workflow-gateon-2.29.1.jsonl: 1303 paths
+
+ONLY under live (0) — new-field candidates:
+
+ONLY under pinned (1) — usually just coverage:
+   - params.update.rawInput.cwd

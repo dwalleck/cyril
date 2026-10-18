@@ -1,0 +1,1 @@
+"_kiro/workflow/inspect":async c=>{let u=e.registry.get(c.workflowId);if(u!==void 0)return Tco(u);let{state:l,baseDir:d}=await Fse(c.workflowId,e),p=await y$r(joe(d,c.workflowId),c.workflowId,e.host.stateFs,l);return{workflowId:c.workflowId,state:l,...p&&{nodePlan:p}}}

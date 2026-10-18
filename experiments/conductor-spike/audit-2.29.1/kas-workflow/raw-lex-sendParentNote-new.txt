@@ -1,0 +1,1 @@
+sendParentNote(t,r){let n=this.deps.notifyParent;if(n!==void 0){S.info("workflow.step.parent_note",{workflowId:t.workflowId,nodeId:t.nodeId,kind:r});try{n(t)}catch(i){S.warn("workflow.step.parent_note_failed",{workflowId:t.workflowId,nodeId:t.nodeId,kind:r,error:i instanceof Error?i.message:String(i)})}}}

@@ -1,0 +1,8 @@
+/home/dwalleck/.local/share/kiro-research/binaries/2.31.1/extracted/kirocli/bin/kiro-cli-chat: 216000680 bytes, 77 magic candidates
+@   6957565 csize=27808487 dsize= 183255040 tar
+  extracted KAS tar -> /home/dwalleck/.local/share/kiro-research/kas-carves/2.31.1
+@  34767626 csize=32031786 dsize= 124679552 elf
+@  66799989 csize=29887616 dsize=  79500640 elf
+@  96687669 csize=2124271 dsize=  13692707 tui
+  wrote TUI bundle -> /home/dwalleck/.local/share/kiro-research/tui-bundles/kiro-tui-2.31.1.js
+top-level frames: 4  nested: 62  -> experiments/conductor-spike/audit-2.31.1/frames-2.31.1.json

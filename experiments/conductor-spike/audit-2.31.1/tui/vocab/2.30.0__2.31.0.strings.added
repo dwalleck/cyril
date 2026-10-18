@@ -1,0 +1,18 @@
+); using
+.powers-migrate-
+.powers-migrated
+.secrets-migrated
+Autonomous mode is not available in this session
+[kiro-home] ignoring KIRO_HOME=
+[powers] copied legacy powers into KIRO_HOME
+[powers] could not inspect the relocated powers root
+[powers] could not migrate legacy powers
+[powers] could not record the powers migration
+[secret-storage] copied legacy secrets into KIRO_HOME
+[secret-storage] could not migrate legacy secrets
+[secret-storage] could not record the secrets migration
+code intelligence status query failed
+contains-home
+populated
+readSandboxStatus
+uninspectable

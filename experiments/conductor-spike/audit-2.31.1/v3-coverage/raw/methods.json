@@ -1,0 +1,1070 @@
+[
+ {
+  "method": "_kiro/account/getUsage",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs:262"
+  ]
+ },
+ {
+  "method": "_kiro/auth/getAccessToken",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/auth.rs:24"
+  ]
+ },
+ {
+  "method": "_kiro/c2s/view/changed",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/checkpoint/revert",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/checkpoint/revertMultiple",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/codeIntelligence",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 3,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/code_references",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/config/template",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/configuration/contribute",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/configuration/getState",
+  "dir": "C2A",
+  "kas": 6,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/configuration/state",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/customAgent/config_error",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/customAgent/not_found",
+  "dir": "A2C-N",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/environment/start_ssh_session",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/error/rate_limit",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kiro.rs:1074"
+  ]
+ },
+ {
+  "method": "_kiro/fs/delete",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:89",
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:100"
+  ]
+ },
+ {
+  "method": "_kiro/fs/read_directory",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:88",
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:99"
+  ]
+ },
+ {
+  "method": "_kiro/fs/read_file",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:85",
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:96"
+  ]
+ },
+ {
+  "method": "_kiro/fs/stat",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:87",
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:98"
+  ]
+ },
+ {
+  "method": "_kiro/fs/write_file",
+  "dir": "A2C-R",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:86",
+   "crates/cyril-core/src/protocol/kas/kiro_fs.rs:97"
+  ]
+ },
+ {
+  "method": "_kiro/governance/state",
+  "dir": "A2C-N",
+  "kas": 3,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/hooks/cancel",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/hooks.rs:35",
+   "crates/cyril-core/src/protocol/kas/callbacks.rs:336"
+  ]
+ },
+ {
+  "method": "_kiro/hooks/didChange",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/hooks.rs:39",
+   "crates/cyril-core/src/protocol/kas/callbacks.rs:337"
+  ]
+ },
+ {
+  "method": "_kiro/hooks/executeHook",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/hooks.rs:32",
+   "crates/cyril-core/src/protocol/kas/callbacks.rs:334"
+  ]
+ },
+ {
+  "method": "_kiro/hooks/list",
+  "dir": "C2A+A2C-R",
+  "kas": 6,
+  "tui": 1,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/hooks.rs:25",
+   "crates/cyril-core/src/protocol/kas/callbacks.rs:333"
+  ]
+ },
+ {
+  "method": "_kiro/hooks/sessionStart",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/hooks.rs:42",
+   "crates/cyril-core/src/protocol/kas/callbacks.rs:335"
+  ]
+ },
+ {
+  "method": "_kiro/hooks/setEnabled",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/hooks.rs:29"
+  ]
+ },
+ {
+  "method": "_kiro/hooks/triggerHook",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/knowledge",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/knowledge/indexingCompleted",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/knowledge/indexingStarted",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/elicitation",
+  "dir": "A2C-R",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/getPrompt",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/getResource",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/governance_disabled",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/resetServer",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/status",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/mcp/toggle",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/memory/create",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/memory/delete",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/memory/get",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/memory/list",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/memory/update",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/openExternalUrl",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/permission/respond",
+  "dir": "internal/prefix",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/permissions/explain",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/permissions/list",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/policy/changed",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/policy/check",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/policy/error",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/policy/ignore_files_changed",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/powers/items_changed",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/powers.rs:48"
+  ]
+ },
+ {
+  "method": "_kiro/powers/list",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/powers/refresh",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/progressive_context/items_changed",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/safety/getProperties",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/safety/propertiesChanged",
+  "dir": "A2C-N",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/safety/statusChanged",
+  "dir": "A2C-N",
+  "kas": 15,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/sandbox/applyConfig",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/sandbox/status",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/search/find_files",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/search/text_search",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/secret/delete",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/secret/get",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/secret/store",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/compact",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/context",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/delete",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/export",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/history",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/list",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/notify",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/session/rename",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/sessions/",
+  "dir": "internal/prefix",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/sessions/changed",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/sourceProviders/list",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/sourceProviders/listResources",
+  "dir": "C2A",
+  "kas": 4,
+  "tui": 2,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/spec/getTaskStatuses",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/spec/invoke",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/spec/phaseCheckpoint",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/spec/resolveSession",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/spec/taskStatusChanged",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/steering/documents_changed",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/system/",
+  "dir": "internal/prefix",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/system/notify",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 0,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kiro.rs:1085"
+  ]
+ },
+ {
+  "method": "_kiro/terminal/settings_changed",
+  "dir": "C2A",
+  "kas": 3,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/terminal/shell_type",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 3,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/kas/terminal_io.rs:612",
+   "crates/cyril-core/src/protocol/kas/callbacks.rs:332"
+  ]
+ },
+ {
+  "method": "_kiro/terminal/write",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/tool/get_diagnostics",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/tool/semantic_rename",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/tool/smart_relocate",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/tools/content_chunk",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/tools/didChange",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/userInput",
+  "dir": "A2C-R",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/userInput/respond",
+  "dir": "internal/prefix",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/",
+  "dir": "internal/prefix",
+  "kas": 2,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:452"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/cancel",
+  "dir": "C2A",
+  "kas": 8,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:326"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/delete",
+  "dir": "C2A",
+  "kas": 16,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/inspect",
+  "dir": "C2A",
+  "kas": 8,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:322"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/invoke",
+  "dir": "C2A",
+  "kas": 8,
+  "tui": 1,
+  "cyril_nontest": 2,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:346",
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:422"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/list",
+  "dir": "C2A",
+  "kas": 11,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:315"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/listRecipes",
+  "dir": "C2A",
+  "kas": 10,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:308"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/listWatchHandlers",
+  "dir": "C2A",
+  "kas": 6,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/load",
+  "dir": "C2A",
+  "kas": 8,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:338"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/loop_iteration",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:485"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/new",
+  "dir": "C2A",
+  "kas": 16,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:350"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/node_complete",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:483"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/node_failed",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/node_paused",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:484"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/node_start",
+  "dir": "A2C-N",
+  "kas": 2,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:482"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/pause",
+  "dir": "C2A",
+  "kas": 7,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/paused",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:487"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/recipes_changed",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/resume",
+  "dir": "C2A",
+  "kas": 10,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:330"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/resumeAll",
+  "dir": "C2A",
+  "kas": 7,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/retry",
+  "dir": "C2A",
+  "kas": 7,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs:334"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/run_complete",
+  "dir": "A2C-N",
+  "kas": 3,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:488"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/run_start",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:481"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/steps_queued",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:489"
+  ]
+ },
+ {
+  "method": "_kiro/workflow/update",
+  "dir": "C2A",
+  "kas": 7,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workflow/watch_poll",
+  "dir": "A2C-N",
+  "kas": 1,
+  "tui": 1,
+  "cyril_nontest": 1,
+  "cyril_first": [
+   "crates/cyril-core/src/protocol/convert/kas/workflow.rs:486"
+  ]
+ },
+ {
+  "method": "_kiro/workspace/active_file",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ },
+ {
+  "method": "_kiro/workspace/currently_open_files",
+  "dir": "A2C-R",
+  "kas": 1,
+  "tui": 0,
+  "cyril_nontest": 0,
+  "cyril_first": []
+ }
+]

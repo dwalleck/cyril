@@ -1,0 +1,18 @@
+cleanup-autocomplete-artifacts
+upgrade-agent
+refresh-feed
+get-kas-token
+get-telemetry-credentials
+test-seed-v1
+import-session
+export-session
+windows-sandbox
+windows-kas-stop
+serve
+acp-client
+set-default
+agent upgrade
+migrate
+api-key-lineage
+diagnostics
+print-system-prompt

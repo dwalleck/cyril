@@ -1,0 +1,19 @@
+Manage agents
+
+Usage: kiro-cli-chat agent [OPTIONS] [COMMAND]
+
+Commands:
+  list         List the available agents. Note that local agents are only discovered if the command
+               is invoked at a directory that contains them
+  create       Create an agent config. If path is not provided, Kiro CLI shall create this config in
+               the global agent directory
+  edit         Edit an existing agent config
+  validate     Validate a config with the given path
+  migrate      Migrate profiles to agent Note that doing this is potentially destructive to agents
+               that are already in the global agent directories
+  set-default  Define a default agent to use when kiro-cli chat launches
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose...  Increase logging verbosity
+  -h, --help        Print help

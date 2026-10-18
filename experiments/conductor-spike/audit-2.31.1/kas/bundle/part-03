@@ -1,0 +1,376 @@
+  [delete] ...try{ await mw(a.workflowBaseDir,a.state,this.workflowStateFs,d?{ preCommit:  ‹-()=>d.verify()} :void 0)} catch(w)›  ‹+›  { if(l.completionSignal=p,l.completionSignalSource=f,l.awaitingUserInput=h,w instanceof...
+  [replace] ...()=>d.verify()} :void 0)} catch(w){ if  ‹-(l.completionSignal=p›  ‹+:"write"›  ,l.completionSignalSource=f,l.awaitingUserInput=h,w instanceof mae)return S.warn(...
+  [replace] ...()} :void 0)} catch(w){ if(l.completionSignal=p,  ‹-l.completionSignalSource=f,l.awaitingUserInput=h,w instanceof mae)return S.warn("send_message.completion_signal_persist_fenced",{ workflowId:o} ),{ recorded:!1,warning:`Message delivered, but workflow ${o} was reclaimed by another process, so the completion signal (${r}) was NOT recorded here. The owning process will finalize the step from its own state.`} ; throw w} finally{ d!==void 0&&(g=await d.release())} return g?(S.info("send_message.wrote_completion_signal",{ signal›  ‹+nodeState›  :s,nodeId:l.nodeId} ),(s==="success"||s==="error"...
+  [replace] ...d.release())} return g?(S.info("send_message.wrote_completion_signal",{ signal:s,  ‹-nodeId:l.nodeId} ),(s==="success"||s==="error")&&m&&a.state.status==="paused"&&this.workflowRunner&&(S.info("send_message.re_driving_paused_workflow",{ workflowId:i.workflowId,nodeId:l.nodeId,signal:s} ),this.workflowRunner.invoke(i.workflowId).catch(w=>{ S.warn("send_message.resume_workflow_failed",{ workflowId:i.workflowId,error:String(w)} )} )),{ recorded›  ‹+overridesQueuedStatusUpdate›  :!0} ):(l.completionSignal=p,l.completionSignalSource=f,l.awaitingUserInput=h...
+  [delete] ...i.workflowId,error:String(w)} )} )),{ recorded:!0}  ‹- ):(l.completionSignal=p,l.completionSignalSource=f,l.awaitingUserInput=h,{ recorded:!1,warning:`Message delivered, but workflow ${o} was reclaimed by another process while the completion signal (${r}) was being recorded, so it was NOT certified here. The owning process will finalize the step from its own state.`} )} return{ recorded:!1,warning:`Message delivered, but no step of workflow ${o} matches this session, so the completion signal (${r}) was NOT recorded. Ask the user to inspect the workflow state.`}›  ‹+›  ...
+@@ 292127a292322,292323  old#292127 new#292322
+  + return{
+  + kind:"write",nodeState:c}
+@@ 292129d292324  old#292129 new#292324
+  - )}
+@@ 293721a293917,294003  old#293721 new#293917
+  + va();
+  + o_();
+  + import{
+  + join as auu}
+  + from"node:path";
+  + FA();
+  + var ZIt=class{
+  + constructor(t){
+  + this.options=t}
+  + options;
+  + resolved;
+  + evaluate(t){
+  + let{
+  + configDirs:r,sessionStore:n}
+  + =this.resolve(),i=new Set(t),o=[];
+  + for(let s of i){
+  + for(let{
+  + spellings:a,role:c}
+  + of r)for(let u of a){
+  + let l=E0o(s,u);
+  + if(l===void 0)continue;
+  + let d=this.restriction(Nvo(l,c),s);
+  + d&&o.push(d)}
+  + if(n&&[...n].some(a=>E0o(s,a)!==void 0)){
+  + let a=this.restriction(Z2.sessions.home,s);
+  + a&&o.push(a)}
+  + }
+  + return o.find(s=>s.effect==="deny")??o[0]}
+  + resolve(){
+  + let{
+  + userConfigDir:t,workspaceRoots:r,sessionStorePath:n}
+  + =this.options;
+  + return this.resolved??={
+  + configDirs:[{
+  + spellings:this.spellings(t),role:"home"}
+  + ,...r.flatMap(i=>[this.spellings(i,Mc),...this.enclosingConfigDirs(i)].map(o=>({
+  + spellings:o,role:"workspace"}
+  + )))],...n!==void 0&&{
+  + sessionStore:this.spellings(n)}
+  + }
+  + ,this.resolved}
+  + enclosingConfigDirs(t){
+  + return[...this.spellings(t)].flatMap(r=>{
+  + let n=r.split("/"),i=b0o(r),o=i(Mc);
+  + return n.flatMap((s,a)=>i(s)===o?[this.spellings(n.slice(0,a+1).join("/"))]:[])}
+  + )}
+  + spellings(t,r){
+  + let n=kbe(t,void 0,this.options.homeDir),i=o=>{
+  + let s=o.replace(/\/$/,"");
+  + return r===void 0?s||"/":`${s}/${r}`}
+  + ;
+  + return new Set([i(n),i(ST(n))])}
+  + restriction(t,r){
+  + let n=this.tierEffect(t);
+  + if(n!==void 0)return{
+  + effect:n,isExplicitAsk:n==="ask",matchedRule:{
+  + capability:"fs_write",effect:n,match:[r]}
+  + ,scope:"kiro",source:"kiro-scope",resource:r}
+  + }
+  + tierEffect(t){
+  + let{
+  + workspaceTrusted:r,userBlanketWrite:n,protectedWritesPreapproved:i}
+  + =this.options;
+  + switch(t){
+  + case"inherit":return;
+  + case"alwaysAsk":return i?void 0:"ask";
+  + case"deny":return"deny";
+  + case"untrustedAsk":return r||n?void 0:"ask";
+  + case"untrustedDeny":return r?void 0:"deny";
+  + default:return t}
+  + }
+  + }
+  + ;
+  + function E0o(e,t){
+  + let r=b0o(e),n=s=>s.split("/").map(r).join("/"),i=n(t),o=n(e);
+  + if(o===i)return"";
+  + if(o.startsWith(`${i}/`))return o.slice(i.length+1)}
+  + function b0o(e){
+  + let t=cuu(e),r=t||ub(e);
+  + return n=>{
+  + let i=t?n.replace(/[. ]+$/,""):n;
+  + return r?i.toLowerCase():i}
+  + }
+  + function cuu(e){
+  + return/^([A-Za-z]:\/|\/\/)/.test(e)}
+  + function T0o(e){
+  + return[...Object.entries(Z2).filter(([,r])=>r.home==="deny").map(([r])=>`${auu(e,r)}/`),...Wqe.map(r=>`${e}/${r}`)]}
+@@ 293739c294021  old#293739 new#294021
+  [insert] ....setAllowedReadPaths(hcu(t)),e.setDeniedReadPaths(gcu(t.authority)),e.setDeniedWritePaths(  ‹-›  ‹+[...›  mcu(t.authority))}...
+  [insert] ...)),e.setDeniedReadPaths(gcu(t.authority)),e.setDeniedWritePaths(mcu(t.authority)  ‹-›  ‹+,...T0o(t.userConfigDir)]›  )}...
+@@ 295316a295599,295612  old#295316 new#295599
+  + function V0o(e){
+  + return{
+  + getConnection:t=>e()?.getConnection(t),isToolDisabled:(t,r)=>e()?.isToolDisabled(t,r)??!1,getServerIdentity:t=>e()?.serverIdentity(t),sessionReset:Huu(e)}
+  + }
+  + function Huu(e){
+  + return{
+  + reset:async t=>{
+  + let r=e();
+  + if(!r)throw new Error(`Cannot reset MCP server "${t}": no MCP manager is attached to this connection`);
+  + await r.resetServer(t,{
+  + coalesce:!0,trigger:"session-loss"}
+  + )}
+  + ,pending:t=>e()?.pendingReset(t),torndown:()=>e()?.isDisposed()??!0,reconnecting:t=>e()?.isConnecting(t)??!1}
+  + }
+@@ 295755c296051  old#295755 new#296051
+  - userAgent:"KiroServer/1.0",maxContentSize:Hie,proxyUrl:t.proxyUrl}
+  + userAgent:t.userAgent,maxContentSize:Gie,proxyUrl:t.proxyUrl}
+@@ 296291c296587  old#296291 new#296587
+  - acpToolApproval:e,origin:_ce,proxyUrl:t,getSandboxInfo:r}
+  + acpToolApproval:e,userAgent:"KiroServer/1.0",origin:wce,proxyUrl:t,getSandboxInfo:r}
+@@ 296413a296710,296728  old#296413 new#296710
+  + async function Dxe(e,t){
+  + if(t<=0)return"expired";
+  + let r=(async()=>{
+  + try{
+  + await e}
+  + catch{
+  + }
+  + return"settled"}
+  + )(),n,i=new Promise(o=>{
+  + n=setTimeout(()=>o("expired"),t),n.unref()}
+  + );
+  + try{
+  + return await Promise.race([r,i])}
+  + finally{
+  + n&&clearTimeout(n)}
+  + }
+  + Ug();
+  + Ka();
+  + Flt();
+@@ 296426c296741,296767  old#296426 new#296741
+  [insert] ...  ‹-›  ‹+Qse(); Hge(); Hge(); ›  var TPt=class e extends nr{...
+  [replace] ...var   ‹-TPt›  ‹+Olu=[Ei.InvalidRequest.valueOf(),-32001],Llu=404,Flu=400,$Co=/session (?:not found|expired|has expired|is invalid|was terminated|has been terminated|was invalidated|terminated)|(?:unknown|invalid|expired|missing|no valid) session id|session id not found|mcp-session-id/i,$lu=/^Error POSTing to endpoint \(HTTP (\d{3})\)/,Ulu=/connection closed|socket hang up|ECONNRESET|EPIPE/i,rAf=hn.RequestTimeout,Blu=[hn.ConnectionClosed,hn.NotConnected,hn.SendFailed]; function UCo(e){ if(e instanceof _x)return e.status; if(e instanceof Error){ let t=$lu.exec(e.message); if(t?.[1])return Number(t[1])} } function s5r(e){ if(e instanceof ea)return Olu.includes(e.code)&&$Co.test(e.message)?"json-rpc":void 0; let t=UCo(e); return t===Llu?"session-status":t===Flu&&a5r(e)?"worded-status":void 0} function a5r(e){ return e instanceof Error&&$Co.test(e.message)} function BCo(e){ return e instanceof ea||e instanceof Jh||UCo(e)!==void 0?!1:e instanceof Ln?Blu.includes(e.code):e instanceof Error&&Ulu.test(e.message)} var zlu={ lazyAuth:!0,urlElicitation:!0,unattendedRetry:!1} ,c5r=Hne,qCo="MCPSessionShutdownError",NPt=class extends Error{ constructor(t){ super("MCP tool call canceled after it was dispatched",{ cause:t} ),this.name="DispatchedCallCancelledError"} } ,DPt›  =class e extends nr{...
+@@ 296442a296784,296788  old#296442 new#296784
+  + concludeHandledReport(t,r,n,i,o){
+  + let s=o.textResults.join(`\n`);
+  + return i.recordToolError(new Error(s)),this.concludeToolUse(t,r,this.result("HandledError",`MCP tool error: ${s}`,n).withOutput({
+  + response:s}
+  + ))}
+@@ 296446,296448c296792,296795  old#296446 new#296792
+  [delete] ...let o=kr.start("MCPWrapper",this.origin  ‹-),s=0,a=()=>++s,c=new Cl(r.execution.abortController.signal›  ‹+›  ),u=await this.requestApproval(t,r,n,i,o,a,c);...
+  [delete] ....execution.abortController.signal),u=await this.requestApproval(t,r,n,i,o  ‹-,a,c›  ‹+›  ); return u||this.executeTool(t,r,n,i,o,a,c...
+  [insert] ...u=await this.requestApproval(t,r,n,i,o,a,c); return  ‹-›  ‹+"conclusion"in›   u||this.executeTool(t,r,n,i,o,a,c)} async...
+  [replace] ...await this.requestApproval(t,r,n,i,o,a,c); return u  ‹-||›  ‹+?s.conclusion:›  this.executeTool(t,r,n,i,o,a,c)} async requestApproval(t...
+  [delete] ...t,r,n,i,o,a,c); return u||this.executeTool(  ‹-t,›  ‹+›  r,n,i,o,a,c)} async requestApproval(t,r,n,i...
+  [insert] ...n,i,o,a,c)} async requestApproval(t,r,n,i,o  ‹-›  ‹+){ let s=0›  ,s,a){...
+  [replace] ...i,o,a,c)} async requestApproval(t,r,n,i,o,s  ‹-,›  ‹+=()=>++›  a){...
+  [replace] ...o,a,c)} async requestApproval(t,r,n,i,o,s,a  ‹-){›  ‹+;›  ...
+@@ 296452c296799,296801  old#296452 new#296799
+  [insert] ...return o.recordToolAbort(),  ‹-›  ‹+{ conclusion:›  this.concludeToolUse(r,n,this.result("Canceled",`MCP tool cannot proceed: $...
+  [insert] ...: ${u instanceof Error?u.message:String(u)}`,t))}  ‹-›  ‹+ }›  ...
+@@ 296456c296805  old#296456 new#296805
+  - let c;
+  + let c=this.options.getServerIdentity(this.toolConfig.serverName),u;
+@@ 296469c296818,296819  old#296469 new#296818
+  - return bi(c)?(o.recordToolAbort(),this.concludeToolRejection(r,n,c,{
+  + return Ri(u)?(o.recordToolAbort(),{
+  + conclusion:this.concludeToolRejection(r,n,u,{
+@@ 296471c296821,296824  old#296471 new#296821
+  - )):(a.retain(c),null)}
+  + )}
+  + ):{
+  + approvedIdentity:c,nextConsentRound:a,answer:u}
+  + }
+@@ 296482c296835,296838  old#296482 new#296835
+  - async executeTool(t,r,n,i,o,s,a){
+  + async executeTool(t,r,n,i,o,s){
+  + let{
+  + approvedIdentity:a,nextConsentRound:c,answer:u}
+  + =s;
+@@ 296486c296842,296850  old#296486 new#296842
+  [replace] ...let c=this.  ‹-options›  ‹+execution›  .getConnection(this.toolConfig.serverName);...
+  [replace] ...let c=this.options.  ‹-getConnection›  ‹+abortController.signal,d=l.aborted,{ reset:p,connection:f} =await this.resolveConnection›  (this.toolConfig.serverName);...
+  [insert] ...let c=this.options.getConnection(  ‹-›  ‹+l),h=()=>{ let g=p==="none"?"MCP tool call canceled":`MCP tool call canceled while MCP server "${this.toolConfig.serverName}" reconnected`; return o.recordToolAbort(),this.concludeToolUse(r,n,this.result("Canceled",g,t).withOutput({ response:g} ))} ,m=g=>l.aborted?h():this.concludeHandledReport(r,n,t,o,this.reportRefusal(g,›  this.toolConfig.serverName);...
+  [replace] ...let c=this.options.getConnection(this.toolConfig.  ‹-serverName›  ‹+toolName)›  );...
+  [insert] ...let c=this.options.getConnection(this.toolConfig.serverName);  ‹-›  ‹+ if(l.aborted&&(!d||!f))return h();›  ...
+@@ 296489a296854,296855  old#296489 new#296854
+  + if(f.serverIdentity!==a)return m(a===void 0?"origin-unknown":"replaced");
+  + if(this.toolRevokedDuringPause())return m("revoked");
+@@ 296503,296506c296869,296872  old#296503 new#296869
+  [insert] ...  ‹-›  ‹+,w=new Cl(l)›  ; await a.requireCurrent(); let d=await this.callToolWithElicitation(c.mcpClient,...
+  [insert] ...;   ‹-›  ‹+w.retain(u),l.aborted||›  await a.requireCurrent(); let d=await this.callToolWithElicitation(c.mcpClient,this....
+  [insert] ...; await a.requireCurrent  ‹-›  ‹+(),l.throwIfAborted›  (); let d=await this.callToolWithElicitation(c.mcpClient,this.toolConfig.toolName,u...
+  [delete] ...; await a.requireCurrent(); let d=await this.callToolWithElicitation(c  ‹-.mcpClient›  ‹+›  ,this.toolConfig.toolName,u,{ emitEvent:l,actionId:i,beforeRetry:async()=...
+  [insert] ....callToolWithElicitation(c.mcpClient,this.toolConfig.toolName,u,{ emitEvent:l,actionId:i,  ‹-›  ‹+abortSignal:l,›  beforeRetry:async()=>{...
+@@ 296509c296875  old#296509 new#296875
+  - ,abortSignal:r.execution.abortController.signal}
+  + }
+@@ 296513,296515c296879  old#296513 new#296879
+  [replace] ...if(d.isError)return o.  ‹-recordToolError(new Error(h)),this.concludeToolUse›  ‹+concludeHandledReport›  (r,n,this.result("HandledError",`MCP tool error: ${h}`,...
+  [delete] ...isError)return o.recordToolError(new Error(h)),this.concludeToolUse(r,n,this  ‹-.result("HandledError"›  ‹+›  ,`MCP tool error: ${h}`,t).withOutput({ response:h...
+  [delete] ....recordToolError(new Error(h)),this.concludeToolUse(r,n,this.result("HandledError",  ‹-`MCP ›  ‹+›  tool error: ${h}`,t).withOutput({ response:h} ))...
+  [delete] ... Error(h)),this.concludeToolUse(r,n,this.result("HandledError",`MCP tool  ‹- error: ${h}`›  ‹+›  ,t).withOutput({ response:h} ));...
+  [delete] ...,n,this.result("HandledError",`MCP tool error: ${h}`,t)  ‹-.withOutput({ response:h} ))›  ‹+›  ;...
+@@ 296521a296886,296890  old#296521 new#296886
+  + if(g instanceof NPt)return ir.debug("mcp.toolCall.canceledAfterDispatch",{
+  + serverName:this.toolConfig.serverName,...Bn(g.cause)}
+  + ),o.recordToolAbort(),this.concludeToolUse(r,n,this.result("Canceled",NA,t).withOutput({
+  + response:NA}
+  + ));
+@@ 296527,296528c296896,296905  old#296527 new#296896
+  [replace] ...return jr.  ‹-error›  ‹+isCancellation(g,r.execution.abortController.signal)?(ir.debug("mcp.toolCall.canceled",{ serverName:this.toolConfig.serverName,...Bn(g)} ),o.recordToolAbort(),this.concludeToolUse(r,n,this.result("Canceled",`MCP tool call canceled: ${w}`,t).withOutput({ response:w} ))):e.isSessionShutdown(g)?(ir.debug("mcp.toolCall.sessionShutdown",{ serverName:this.toolConfig.serverName,...Bn(g)} ),o.recordToolAbort(),this.concludeToolUse(r,n,this.result("Error",`MCP tool call failed: ${w}`,t).withOutput({ response:w} ))):(ir.debug›  ("mcp.toolCall.failed",{ serverName:this.toolConfig.serverName,error:d}...
+  [replace] ...return jr.error("mcp.toolCall.failed",{ serverName:this.toolConfig.serverName,  ‹-error:›  ‹+...Bn(›  d}...
+  [insert] ...return jr.error("mcp.toolCall.failed",{ serverName:this.toolConfig.serverName,error:d  ‹-›  ‹+)›  }...
+@@ 296531c296908,296995  old#296531 new#296908
+  [insert] ...  ‹-›  ‹+)›  ))}...
+  [insert] ...))}  ‹-›  ‹+ } isCancellation(t,r){ return r.aborted?t instanceof Error&&(t.name==="AbortError"||t.name==="TimeoutError"):!1} async recoverAfterDispatch(t,r){ try{ return await t} catch(n){ throw this.isCancellation(n,r)?new NPt(n):n} } static sessionShutdownError(t){ let r=new Error(`MCP server "${t}" was disconnected because the MCP session is shutting down`); return r.name=qCo,r} static isSessionShutdown(t){ return t instanceof Error&&t.name===qCo} async resolveConnection(t){ let r=this.toolConfig.serverName,n=await this.awaitPendingReset(r,t); return n==="expired"?{ reset:n,connection:void 0} :{ reset:n,connection:this.options.getConnection(r)} } async awaitPendingReset(t,r,n=Date.now()+c5r){ let i=this.options.sessionReset.pending(t); if(!i)return"none"; for(ir.debug("mcp.toolCall.awaitingSessionReset",{ serverName:t} ); ; ){ if(await this.awaitReconnect(i,r,n)==="expired")return"expired"; if(r.aborted)return"settled"; let o=this.options.sessionReset.pending(t); if(!o||o===i)return"settled"; i=o} } async awaitReconnect(t,r,n=Date.now()+c5r){ if(r.aborted)return"settled"; let i=Date.now(),o=n-i; if(o<=0)return ir.warn("mcp.toolCall.sessionResetWaitExpired",{ serverName:this.toolConfig.serverName,extra:{ waitedMs:0} } ),"expired"; let s=new AbortController,a=()=>s.abort(); r.addEventListener("abort",a,{ once:!0} ); let c=e.settleQuietly(Ef(t,s.signal)),u; try{ u=await Dxe(c,o)} finally{ r.removeEventListener("abort",a),s.abort()} return u==="expired"&&ir.warn("mcp.toolCall.sessionResetWaitExpired",{ serverName:this.toolConfig.serverName,extra:{ waitedMs:Date.now()-i} } ),u} stillQueued(t){ return this.options.sessionReset.pending(t)!==void 0} classifyPostWaitState(t){ let r=this.toolConfig.serverName; if(this.options.sessionReset.torndown())return{ state:"disposed"} ; if(this.stillQueued(r))return{ state:"unresolved"} ; let n=this.options.getConnection(r); return n?n.serverIdentity!==t.serverIdentity?{ state:"replaced",current:n} :n.mcpClient!==t.mcpClient?{ state:"reconnected",current:n} :this.options.sessionReset.reconnecting(r)?{ state:"unresolved"} :{ state:"unchanged",current:n} :{ state:"gone"} } static async captureFailure(t){ try{ await t; return} catch(r){ return{ cause:r} }›  ...
+@@ 296532a296997,297002  old#296532 new#296997
+  + static async settleQuietly(t){
+  + try{
+  + await t}
+  + catch{
+  + }
+  + return"settled"}
+@@ 296536a297007,297095  old#296536 new#297007
+  + if(this.options.coerceStringifiedArgs)for(let s of Object.keys(o)){
+  + let a=o[s];
+  + if(typeof a=="string")try{
+  + o[s]=JSON.parse(a)}
+  + catch{
+  + }
+  + }
+  + return this.dispatchWithElicitation(e.dispatchTarget(t),r,o,i,{
+  + ...zlu}
+  + )}
+  + static dispatchTarget(t){
+  + return{
+  + connection:t,mcpClient:t.mcpClient,transport:t.transport,carriedSessionId:t.httpSessionId!==void 0,serverIdentity:t.serverIdentity}
+  + }
+  + async refreshedTarget(t,r){
+  + let n=this.toolConfig.serverName;
+  + await this.awaitPendingReset(n,r.abortSignal)!=="none"&&r.abortSignal.throwIfAborted();
+  + let o=this.classifyPostWaitState(t);
+  + switch(o.state){
+  + case"disposed":case"gone":return{
+  + kind:"gone"}
+  + ;
+  + case"replaced":return{
+  + kind:"replaced"}
+  + ;
+  + case"unresolved":return ir.debug("mcp.toolCall.retryTargetResetUnresolved",{
+  + serverName:n}
+  + ),{
+  + kind:"gone"}
+  + ;
+  + case"reconnected":case"unchanged":return{
+  + kind:"ok",target:e.dispatchTarget(o.current)}
+  + }
+  + }
+  + toolRevokedDuringPause(){
+  + return this.options.isToolDisabled(this.toolConfig.serverName,this.toolConfig.toolName)}
+  + async retryTarget(t,r,n){
+  + let i=await this.refreshedTarget(t,n);
+  + switch(i.kind){
+  + case"replaced":case"gone":return{
+  + report:this.reportRefusal(i.kind,r)}
+  + ;
+  + case"ok":return this.toolRevokedDuringPause()?{
+  + report:this.reportRefusal("revoked",r)}
+  + :{
+  + target:i.target}
+  + }
+  + }
+  + reportRefusal(t,r){
+  + switch(e.recordRefusal(t),t){
+  + case"replaced":return this.reportServerReplaced(r);
+  + case"gone":return this.reportServerGone(r);
+  + case"revoked":return this.reportToolRevoked(r);
+  + case"origin-unknown":return this.reportApprovalOriginUnknown(r)}
+  + }
+  + static recordRefusal(t){
+  + ze("kiro.io","mcp").reportCountMetrics({
+  + mcpToolCallRefused:1}
+  + ,{
+  + reason:t}
+  + )}
+  + static reportIfCanceled(t,r){
+  + t.aborted&&r("canceled"),t.throwIfAborted()}
+  + static recordRecoveryOutcome(t,r){
+  + ze("kiro.io","mcp").reportCountMetrics({
+  + mcpSessionRecovery:1}
+  + ,{
+  + outcome:t,shape:r}
+  + )}
+  + static errorReport(t){
+  + return{
+  + textResults:[t],images:[],isError:!0}
+  + }
+  + refuseUnattendedRetry(t,r){
+  + let n=this.classifyUnattendedRetry(t);
+  + if(n)return ir.debug("mcp.toolCall.retryBarrierRefused",{
+  + serverName:this.toolConfig.serverName,extra:{
+  + kind:n}
+  + }
+  + ),this.reportRefusal(n,r)}
+  + classifyUnattendedRetry(t){
+  + switch(this.classifyPostWaitState(t).state){
+  + case"disposed":case"gone":case"unresolved":return"gone";
+  + case"replaced":return"replaced";
+  + case"reconnected":return"gone";
+  + case"unchanged":return this.toolRevokedDuringPause()?"revoked":void 0}
+  + }
+  + async dispatchWithElicitation(t,r,n,i,o){
+  + let s=t.mcpClient;
+@@ 296538,296540c297097,297107  old#296538 new#297097
+  [insert] ...let   ‹-›  ‹+a,c=l=>{ if(a&&a.error===l)return a.kind; let d=this.isRecoverableSessionLoss(l,t)?"session-loss":this.isResetCollateral(l,t)?"collateral":"other"; return a={ error:l,kind:d} ,d} ,›  s=async()=>{ i.abortSignal.throwIfAborted(); let a=await t...
+  [insert] ...let s=async()=>{ i  ‹-›  ‹+(o›  .abortSignal.throwIfAborted(); let a=await t.callTool({...
+  [replace] ...let s=async()=>{ i.  ‹-abortSignal›  ‹+unattendedRetry){ let d=this›  .throwIfAborted(); let a=await t.callTool({...
+  [replace] ...let s=async()=>{ i.abortSignal.  ‹-throwIfAborted›  ‹+refuseUnattendedRetry›  (); let a=await t.callTool({...
+  [insert] ...let s=async()=>{ i.abortSignal.throwIfAborted(  ‹-›  ‹+t,r›  ); let a=await t.callTool({...
+  [insert] ...let s=async()=>{ i.abortSignal.throwIfAborted();  ‹-›  ‹+ if(d)return d}›   let a=await t.callTool({...
+  [insert] ... s=async()=>{ i.abortSignal.throwIfAborted(); let a=await   ‹-›  ‹+Pe("callTool","mcp",async()=>await ›  t.callTool({...
+@@ 296543a297111,297114  old#296543 new#297111
+  + ),{
+  + attributes:{
+  + serverName:this.toolConfig.serverName,toolName:r}
+  + ,logger:ir,expected:d=>c(d)!=="other"}
+@@ 296550,296564c297121,297126  old#296550 new#297121
+  [insert] ...if(  ‹-›  ‹+o.lazyAuth&&›  a instanceof Fm)return await this.handleLazyAuth(i,s); if(!(a...
+  [delete] ...if(a instanceof Fm)return await this.handleLazyAuth(i,s  ‹-); if(!(a instanceof rlt))throw a; jr.info(`Tool requires URL elicitation (${a.elicitations.length} URL(s))`,{ serverName:this.toolConfig.serverName} ); for(let c of a.elicitations){ let u=await this.handleUrlElicitation({ message:c.message›  ‹+›  ,url:c.url,elicitationId:c.elicitationId} ,i,t); if(u....
+  [delete] ...a.elicitations){ let u=await this.handleUrlElicitation({ message:c.message,url  ‹-:c.url,elicitationId:c.elicitationId} ›  ‹+›  ,i,t); if(u.action!=="accept")throw jr.info(`URL...
+  [insert] ...c.message,url:c.url,elicitationId:c.elicitationId} ,i,t); if  ‹-›  ‹+ d=c›  (u.action!=="accept")throw jr.info(`URL elicitation not accepted (...
+  [replace] ...message,url:c.url,elicitationId:c.elicitationId} ,i,t); if(u  ‹-.action!›  ‹+); if(d›  =="accept")throw jr.info(`URL elicitation not accepted (${u.action...
+  [replace] ....url,elicitationId:c.elicitationId} ,i,t); if(u.action!==  ‹-"accept"›  ‹+="session-loss"›  )throw jr.info(`URL elicitation not accepted (${u.action}),...
+  [delete] ...,elicitationId:c.elicitationId} ,i,t); if(u.action!=="accept")  ‹-throw jr.info(`URL elicitation not accepted (${u.action}), aborting retry`,{ serverName:this.toolConfig.serverName} ),a} ›  ‹+›  return jr.info("All URL elicitations accepted, retrying tool call",{ serverName:this.toolConfig.serverName} ),await this....
+  [delete] ..., aborting retry`,{ serverName:this.toolConfig.serverName} ),a} return   ‹-jr.info("All URL elicitations accepted, retrying tool call",{ serverName:this.toolConfig.serverName} ),›  ‹+›  await this.retryTool(i,s)}...
+  [replace] ...return jr.info("All URL elicitations accepted, retrying tool call",{ serverName:this.toolConfig.serverName} ),await this.  ‹-retryTool›  ‹+recoverAfterDispatch(this.handleSessionReset›  (i,s)}...
+  [insert] ...("All URL elicitations accepted, retrying tool call",{ serverName:this.toolConfig.serverName} ),await this.retryTool(i,s  ‹-›  ‹+,r,i›  )}...
+  [insert] ..."All URL elicitations accepted, retrying tool call",{ serverName:this.toolConfig.serverName} ),await this.retryTool(i,s)  ‹-›  ‹+,i.abortSignal); if(d==="collateral")return await this.recoverAfterDispatch(this.reportResetCollateral(l,t,r,i),i.abortSignal); if(o.urlElicitation&&l instanceof hlt)return await this.handleUrlElicitationRetry(l,t,r,n,i,o); throw l›  }...
+@@ 296570,296572c297132,297136  old#296570 new#297132
+  [insert] ...async handleLazyAuth(  ‹-›  ‹+t,r,n,›  t,r){ let n=this.toolConfig.serverName,i=this.options.getConnection(n...
+  [insert] ...async handleLazyAuth(t,r){ let n=this.toolConfig.serverName,i=this.  ‹-›  ‹+connection; await this.awaitPendingReset(s,i.abortSignal),i.abortSignal.throwIfAborted(); let c=this.›  options.getConnection(n); if(!i)throw new Fm(`MCP server "${n}"...
+  [insert] ... let n=this.toolConfig.serverName,i=this.options.getConnection(n); if(  ‹-›  ‹+c&&c.mcpClient›  !i)throw new Fm(`MCP server "${n}" is not connected`);...
+  [insert] ...let n=this.toolConfig.serverName,i=this.options.getConnection(n); if(!  ‹-›  ‹+==›  i)throw new Fm(`MCP server "${n}" is not connected`);...
+  [insert] ... n=this.toolConfig.serverName,i=this.options.getConnection(n); if(!i  ‹-›  ‹+.mcpClient›  )throw new Fm(`MCP server "${n}" is not connected`);...
+  [replace] ....toolConfig.serverName,i=this.options.getConnection(n); if(!i)throw new  ‹- Fm›  ‹+.recoveredOrReplaced›  (`MCP server "${n}" is not connected`);...
+  [delete] ...serverName,i=this.options.getConnection(n); if(!i)throw new Fm(  ‹-`MCP server "${n}" ›  ‹+›  is not connected`);...
+  [replace] ...getConnection(n); if(!i)throw new Fm(`MCP server "${n}" is  ‹- ›  ‹+,›  not connected`);...
+  [replace] ...n); if(!i)throw new Fm(`MCP server "${n}" is not  ‹- connected`›  ‹+,r,"connection-reset","reconnected"›  );...
+  [insert] ...if(!i)throw new Fm(`MCP server "${n}" is not connected`)  ‹-›  ‹+.output›  ;...
+@@ 296578a297143  old#296578 new#297143
+  + let l=a;
+@@ 296580c297145,297150  old#296580 new#297145
+  [replace] ...let s=await this.  ‹-retryTool›  ‹+retryTarget›  (t,r);...
+  [insert] ...let s=await this.retryTool(  ‹-›  ‹+t,›  t,r);...
+  [insert] ...let s=await this.retryTool(t,r);  ‹-›  ‹+ if("report"in d)return a.noteAuthSuccess(),d.report; d.target.connection!==a&&(a.noteAuthSuccess(),l=d.target.connection,l.adoptAuthRetryWindow()),i.abortSignal.throwIfAborted(),await i.beforeRetry(),i.abortSignal.throwIfAborted(); let p=await this.dispatchWithElicitation(d.target,r,n,i,{ ...o,lazyAuth:!1,unattendedRetry:!0} );›  ...
+@@ 296583c297153  old#296583 new#297153
+  - throw s instanceof Fm&&await i.noteRepeatedAuthFailure().catch(a=>{
+  + throw d instanceof Jh?await l.noteRepeatedAuthFailure().catch(p=>{
+@@ 296587c297157,297190  old#296587 new#297157
+  [insert] ...  ‹-›  ‹+):l.noteAuthSuccess(›  ),s}...
+  [insert] ...),s}  ‹-›  ‹+ } async handleUrlElicitationRetry(t,r,n,i,o,s){ ir.info("mcp.toolCall.urlElicitationRequired",{ serverName:this.toolConfig.serverName,extra:{ urlCount:t.elicitations.length} } ); for(let c of t.elicitations){ let u=await this.handleUrlElicitation({ message:c.message,url:c.url,elicitationId:c.elicitationId} ,o,r.mcpClient); if(u.action!=="accept")throw ir.info("mcp.toolCall.urlElicitationNotAccepted",{ serverName:this.toolConfig.serverName,extra:{ action:u.action} } ),o.abortSignal.throwIfAborted(),t} ir.info("mcp.toolCall.urlElicitationAccepted",{ serverName:this.toolConfig.serverName} ); let a=await this.retryTarget(r,n,o); return"report"in a?a.report:(o.abortSignal.throwIfAborted(),await o.beforeRetry(),o.abortSignal.throwIfAborted(),this.dispatchWithElicitation(a.target,n,i,o,{ ...s,urlElicitation:!1,unattendedRetry:!0} ))} isRecoverableSessionLoss(t,r){ let n=s5r(t); if(!n||r.transport!=="http")return!1; switch(n){ case"json-rpc":case"worded-status":return!0; case"session-status":return r.carriedSessionId||a5r(t); default:{ let i=n; return!1} }›  ...
+@@ 296588a297192,297343  old#296588 new#297192
+  + async handleSessionReset(t,r,n,i){
+  + let o=s5r(t)??"unknown",s;
+  + try{
+  + return await this.attemptSessionRecovery(t,r,n,i,a=>{
+  + s=a}
+  + )}
+  + finally{
+  + e.recordRecoveryOutcome(s??"unresolved",o)}
+  + }
+  + async attemptSessionRecovery(t,r,n,i,o){
+  + let s=this.toolConfig.serverName;

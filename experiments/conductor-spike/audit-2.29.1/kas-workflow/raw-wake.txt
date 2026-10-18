@@ -1,0 +1,36 @@
+### counts OLD->NEW
+  wakePolicy                          4->   4
+  pendingWakePrompts                  6->   6
+  sendParentNote                      3->   3
+  parent_note                         3->   3
+  runtime note                        0->   0
+  workflow-note                       0->   0
+  network-give-up                     1->   1
+  network-waiting                     1->   1
+  deliverRuntimeNoteToParent          2->   2
+  Tme(                                4->   5
+  noteUserRequests                    0->   5
+  workflowCompletionWake              0->   0
+  autoWake                            2->   2
+  wakeParent                          0->   0
+  run_complete                       17->  17
+  runCompleted                        0->   0
+  suppressWake                        0->   0
+
+##### 'sendParentNote'
+  @10432527: n,i){let o=t.state.parentSessionId;if(o!==void 0)return{workflowId:t.workflowId,parentSessionId:o,nodeId:n,...r.sessionId!==void 0&&{stepSessionId:r.sessionId},...r.agentName!==void 0&&{agentName:r.agentName},message:i}}sendParentNote(t,r){let n=this.deps.notifyParent;if(n!==void 0){S.info("workflow.step.parent_note",{workflowId:t.workflowId,nodeId:t.nodeId,kind:r});try{n(t)}catch(i){S.warn("workflow.step.parent_note_failed",{workflowId:t.workflowId,
+  @10433397: n!==void 0){S.debug("workflow.run.give_up_notes_dropped",{workflowId:t.workflowId,reason:n,status:t.state.status,count:r.length});return}let i=uB(t)||t.control.pauseRequested;for(let{note:o,userPausedMessage:s}of r)this.sendParentNote(i?{...o,message:s}:o,"network-give-up")}giveUpNoteDropReason(t){if(t.state.status!=="paused")return"not-paused";if(t.control.yieldRequested===!0)return"yielded";if(this.deps.shutdownSignal?.aborted===!0)return"shutdown"
+  @10435401: ter.emit({kind:"node_paused",payload:{workflowId:t.workflowId,nodeId:n,nodePath:i,reason:e.retryWaitReason(w,C,R,P),kind:"retry-wait"}}),N!==void 0&&!u.aborted){h=!0;let D=e.parentNoteAboutStep(t,r,n,N);D!==void 0&&this.sendParentNote(D,"network-waiting")}try{await this.deps.clock.sleep(Math.ceil(C*1e3),u)}catch{throw y}if(u.aborted||r.completionSignal!==void 0||t.control.pauseRequested)throw y;if("deadlineMs"in P&&Mho(Date.parse(this.deps.clock.now(
+   ...more
+
+##### 'wakePolicy'
+  @11180344: ror below. Review it and continue if you were waiting on it.`}}function Mxo(e){return{observer:e,generation:void 0,revision:Symbol(),lastBroadcast:void 0,recipients:new Set}}var jze=class{constructor(t){this.host=t;this.wakePolicy=t.wakePolicy??xxo,this.recipeCatalog=new iIt(t.configurationItems,{fs:tqe(),homeDir:t.homeDir,cloudRoots:()=>t.cloudRecipeRoots(),bundled:oJ,admission:r=>this.recipeSourcePolicy(r),includeResolver:(r,n)=>this.includeRes
+  @11180357: view it and continue if you were waiting on it.`}}function Mxo(e){return{observer:e,generation:void 0,revision:Symbol(),lastBroadcast:void 0,recipients:new Set}}var jze=class{constructor(t){this.host=t;this.wakePolicy=t.wakePolicy??xxo,this.recipeCatalog=new iIt(t.configurationItems,{fs:tqe(),homeDir:t.homeDir,cloudRoots:()=>t.cloudRecipeRoots(),bundled:oJ,admission:r=>this.recipeSourcePolicy(r),includeResolver:(r,n)=>this.includeResolverFor(r,n)
+  @11180595: is.recipeCatalog=new iIt(t.configurationItems,{fs:tqe(),homeDir:t.homeDir,cloudRoots:()=>t.cloudRecipeRoots(),bundled:oJ,admission:r=>this.recipeSourcePolicy(r),includeResolver:(r,n)=>this.includeResolverFor(r,n)})}host;wakePolicy;pendingWakePrompts=new Set;recipeCatalog;sessionActivitySeq=0;reserveSessionActivitySeqs(t){let r=this.sessionActivitySeq+1;return this.sessionActivitySeq+=t,r}async listNonTerminalRunsForSession(t,r){this.workflowState
+   ...more
+
+##### 'pendingWakePrompts'
+  @11180606: talog=new iIt(t.configurationItems,{fs:tqe(),homeDir:t.homeDir,cloudRoots:()=>t.cloudRecipeRoots(),bundled:oJ,admission:r=>this.recipeSourcePolicy(r),includeResolver:(r,n)=>this.includeResolverFor(r,n)})}host;wakePolicy;pendingWakePrompts=new Set;recipeCatalog;sessionActivitySeq=0;reserveSessionActivitySeqs(t){let r=this.sessionActivitySeq+1;return this.sessionActivitySeq+=t,r}async listNonTerminalRunsForSession(t,r){this.workflowStateFs||this.handlers()
+  @11200845: low.session_write_admission.deferred",{operation:t,sessionId:r,...n!==void 0&&{workflowId:n}}),We("kiro.workflow").reportCountMetrics({"workflow.sessionWriteAdmissionDeferred":1},{Operation:t})}reserveWakePrompt(t){this.pendingWakePrompts.add(t);let r=!1;return()=>{r||(r=!0,this.pendingWakePrompts.delete(t))}}startInfoWake(t,r,n,i){let{notification:o}=r,s=qjn({sessionId:t,prompt:[{type:"text",text:Pxo(Dxo,o.sender)}],_meta:{kiro:{agentInitiated:!0,agentI
+  @11200905: :r,...n!==void 0&&{workflowId:n}}),We("kiro.workflow").reportCountMetrics({"workflow.sessionWriteAdmissionDeferred":1},{Operation:t})}reserveWakePrompt(t){this.pendingWakePrompts.add(t);let r=!1;return()=>{r||(r=!0,this.pendingWakePrompts.delete(t))}}startInfoWake(t,r,n,i){let{notification:o}=r,s=qjn({sessionId:t,prompt:[{type:"text",text:Pxo(Dxo,o.sender)}],_meta:{kiro:{agentInitiated:!0,agentInitiatedReason:"send-message-wake",[Pbe]:o}}},r),a=this.host
+   ...more

@@ -1,0 +1,150 @@
+OLD 12295918 bytes  NEW 12669464 bytes
+
+== wf_methods: 25 -> 25 distinct  (+0 -0)
+
+== notify: 8 -> 8 distinct  (+0 -0)
+
+== wf_agents: 9 -> 9 distinct  (+0 -0)
+
+== snake_lits: 1285 -> 1379 distinct  (+98 -4)
+   + abstract_class_declaration                 0->2  wf=False
+   + array_pattern                              0->2  wf=False
+   + as_expression                              0->1  wf=False
+   + as_pattern_target                          0->2  wf=False
+   + assignment_pattern                         0->3  wf=False
+   + carry_unavailable                          0->2  wf=False
+   + cast_expression                            0->1  wf=False
+   + catch_formal_parameter                     0->1  wf=False
+   + compaction_required_for_model_handoff      0->1  wf=False
+   + context_length_exceeded                    0->1  wf=False
+   + context_overflow                           0->4  wf=False
+   + control_flow_graphs                        0->3  wf=False
+   + credit_balance_exhausted                   0->1  wf=False
+   + decoder_unavailable                        0->1  wf=False
+   + default_model                              0->1  wf=False
+   + empty_brief                                0->1  wf=False
+   + enum_body_declarations                     0->1  wf=False
+   + envelope_refused                           0->2  wf=False
+   + failed_deadline                            0->1  wf=False
+   + failed_envelope                            0->1  wf=False
+   + failed_hash                                0->1  wf=False
+   + failed_policy                              0->1  wf=False
+   + failed_transport                           0->1  wf=False
+   + fallback_model                             0->1  wf=False
+   + field_expression                           0->1  wf=False
+   + for_in_clause                              0->1  wf=False
+   + formal_parameters                          0->1  wf=False
+   + hash_mismatch                              0->2  wf=False
+   + hook_output                                0->5  wf=False
+   + http_400                                   0->1  wf=False
+   + http_401                                   0->1  wf=False
+   + http_403                                   0->1  wf=False
+   + http_404                                   0->1  wf=False
+   + http_408                                   0->1  wf=False
+   + http_409                                   0->1  wf=False
+   + http_413                                   0->1  wf=False
+   + http_429                                   0->1  wf=False
+   + http_500                                   0->1  wf=False
+   + http_502                                   0->1  wf=False
+   + http_503                                   0->1  wf=False
+   + http_504                                   0->1  wf=False
+   + http_none                                  0->1  wf=False
+   + http_other                                 0->1  wf=False
+   + inferred_parameters                        0->1  wf=False
+   + initializer_list                           0->1  wf=False
+   + keyword_argument                           0->1  wf=False
+   + lambda_capture_specifier                   0->1  wf=False
+   + lambda_parameters                          0->1  wf=False
+   + list_pattern                               0->1  wf=False
+   + mcp_registry_url                           0->1  wf=False
+   + method_reference                           0->1  wf=False
+   + mode_routing                               0->1  wf=False
+   + model_error                                0->4  wf=False
+   + model_fallback                             0->3  wf=False
+   + model_fallback_availability                0->1  wf=False
+   + model_fallback_refusal                     0->1  wf=False
+   + model_handoff                              0->8  wf=False
+   + model_not_found                            0->1  wf=False
+   + no_session                                 0->2  wf=False
+   + no_text                                    0->2  wf=False
+   + no_vision                                  0->2  wf=False
+   + not_eligible                               0->2  wf=False
+   + not_found                                  0->3  wf=False
+   + note_config                                0->2  wf=False
+   + nothing_effective                          0->1  wf=False
+   + object_assignment_pattern                  0->1  wf=False
+   + object_pattern                             0->2  wf=False
+   + over_pixel_cap                             0->1  wf=False
+   + pair_pattern                               0->1  wf=False
+   + parent_cancel                              0->1  wf=True
+   + pattern_list                               0->1  wf=False
+   + placeholder_no_vision                      0->1  wf=False
+   + placeholder_undecodable                    0->1  wf=False
+   + placeholder_unfittable                     0->1  wf=False
+   + pointer_expression                         0->1  wf=False
+   + policy_refused                             0->2  wf=False
+   + preproc_elif                               0->1  wf=False
+   + preproc_if                                 0->1  wf=False
+   + rate_limit_exceeded                        0->1  wf=False
+   + reference_tracker                          0->1  wf=False
+   + rest_pattern                               0->2  wf=False
+   + server_cascade                             0->3  wf=False
+   + server_cascade_config                      0->2  wf=False
+   + server_is_overloaded                       0->1  wf=False
+   + shorthand_property_identifier              0->2  wf=False
+   + shorthand_property_identifier_pattern      0->1  wf=False
+   + skill_name_qualifiers                      0->1  wf=False
+   + storage_class_specifier                    0->1  wf=False
+   + structured_binding_declarator              0->1  wf=False
+   + sub_agent                                  0->1  wf=False
+   + summary_keys                               0->1  wf=True
+   + translation_unit                           0->1  wf=False
+   + tuple_pattern                              0->1  wf=False
+   + under_50                                   0->1  wf=False
+   + under_threshold                            0->1  wf=False
+   + unsupported_format                         0->1  wf=False
+   + user_cancel                                0->2  wf=True
+   + user_requests                              0->1  wf=False
+   - content_filter                             1->0  wf=False
+   - inline_agent                               1->0  wf=False
+   - orchestrate_subagent                       10->0  wf=False
+   - stage_failure                              1->0  wf=False
+
+== zod_keys: 538 -> 564 distinct  (+29 -3)
+   + answer                                     0->1  wf=False
+   + composeBehavior                            0->1  wf=False
+   + configuration                              0->1  wf=False
+   + confirmedAt                                0->1  wf=False
+   + consentRound                               0->2  wf=False
+   + enterpriseManagementStatus                 0->1  wf=False
+   + envelope                                   0->1  wf=False
+   + fetchedAt                                  0->1  wf=False
+   + generatedAt                                0->1  wf=False
+   + hash                                       0->1  wf=False
+   + identityKind                               0->1  wf=False
+   + includedFrom                               0->3  wf=False
+   + ino                                        0->1  wf=False
+   + lastReadAt                                 0->2  wf=False
+   + manifest                                   0->1  wf=False
+   + mtimeMs                                    0->1  wf=False
+   + noteUserRequests                           0->1  wf=False
+   + policy                                     0->1  wf=True
+   + roots                                      0->1  wf=False
+   + stamp                                      0->1  wf=False
+   + steeringAfterPromptBody                    0->1  wf=False
+   + summaryKeys                                0->1  wf=False
+   + summaryKind                                0->1  wf=False
+   + summaryNoteTag                             0->1  wf=False
+   + summaryNoteTemplate                        0->1  wf=False
+   + summaryUserRequests                        0->1  wf=False
+   + sweep                                      0->1  wf=False
+   + versionId                                  0->1  wf=False
+   + vibeToDefaultV2Routing                     0->1  wf=True
+   - inlineAgents                               1->0  wf=True
+   - stages                                     1->0  wf=False
+   - subagentOrchestration                      1->0  wf=False
+
+== meta_keys: 14 -> 15 distinct  (+1 -0)
+   + replay                                     0->1  wf=True
+
+wrote raw-vocab-diff.json

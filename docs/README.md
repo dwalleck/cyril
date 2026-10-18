@@ -48,6 +48,13 @@ This index is the source of truth for "is doc X current?" — if a doc's status 
 | [`kiro-2.7.1-wire-audit.md`](kiro-2.7.1-wire-audit.md) | ✅ Current (KAS) | 2.7.1 (2026-06-16) | The big KAS **live-behavior + cyril-impact** companion (the KAS landing). Strategic narrative + host-callback map + spec workflow; defers to the covenant on exact shapes. The reference most ROADMAP KAS milestones cite. |
 | [`kiro-subagent-tool-schemas.md`](kiro-subagent-tool-schemas.md) | ✅ Current | v1/v2/kas (2026-06-19) | Full JSON schemas for Kiro's subagent tools across all three engines (`agent_crew` v2 vs `orchestrate_subagent`/`agent-subtask` KAS). Source for KAS-3 rendering. |
 
+### Platform behavior
+
+| Doc | Status | Last verified | Purpose |
+|---|---|---|---|
+| [`kiro-enterprise-mcp-governance.md`](kiro-enterprise-mcp-governance.md) | ✅ Current | 2.31.1 (2026-10-16) | Org/enterprise MCP governance end-to-end: Kiro-console profile controls, client-side enforcement in both engines (v2 governance fetch + registry filter; KAS control-plane reads, registry pool filter, Cedar), wire signals, `managed-settings.json`, and cyril's current handling/gaps. Evidence lanes: `experiments/conductor-spike/governance-2.31.1/`. |
+| [`kiro-mcp-remote-servers.md`](kiro-mcp-remote-servers.md) | ✅ Current | 2.31.1 (2026-10-16) | Remote (HTTP/SSE) MCP server data path for both engines: config intake + precedence, transport/era negotiation, OAuth (discovery/CIMD/DCR/PKCE/`secretStorage`), status + notification surface (`kiro.dev/mcp/*` vs `_kiro/mcp/*`), client obligations, TUI surface, cyril gaps. Evidence lanes: `experiments/conductor-spike/mcp-remote-2.31.1/`. |
+
 ### Per-release wire audits (historical, newest first)
 
 | Doc | Status | Release | Findings summary |

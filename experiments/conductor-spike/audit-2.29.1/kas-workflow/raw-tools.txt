@@ -1,0 +1,27 @@
+### counts
+  static id="save_workflow_definition"            1->   1
+  static id="run_workflow"                        1->   1
+  static id="inspect_workflow"                    1->   1
+  save_workflow_definition                       10->  10
+  run_workflow                                   45->  45
+  inspect_workflow                               16->  16
+  workflowPrompt                                 33->  33
+  workflowPath                                   39->  38
+  generated://                                   13->  17
+  bundled://                                     13->  17
+  recipeRef                                       0->   0
+  workflowRef                                    12->  12
+  "include"                                       3->   6
+  includedFrom                                    0->   8
+
+##### anchor='static id="save_workflow_definition"'
+  @10949101: ADVICE: - After a successful save, return the workflowRef to your caller so it can start the run via run_workflow with workflowPath set to the ref. Do not paste the workflow JSON anywhere else. `,nze=class e extends nr{static id="save_workflow_definition";static title="Save Workflow Definition";generatedDir;fs;workspaceRoots;agentLookup;getAvailableModels;includeResolver;generateId;dynamicDelegation;constructor(t){super({id:e.id,title:e.title,description:Ztu,schema:Xtu,t
+
+##### anchor='static id="save_workflow_definition"'
+  @10694516: ADVICE: - After a successful save, return the workflowRef to your caller so it can start the run via run_workflow with workflowPath set to the ref. Do not paste the workflow JSON anywhere else. `,i6e=class e extends er{static id="save_workflow_definition";static title="Save Workflow Definition";generatedDir;fs;workspaceRoots;agentLookup;getAvailableModels;generateId;dynamicDelegation;constructor(t){super({id:e.id,title:e.title,description:E4c,schema:_4c,tags:[Ze.BUILTIN]
+
+##### anchor='static id="run_workflow"'
+  @10921141: steps. - Nested workflow invocations are not supported: a workflow step cannot start its own workflow. - Use inspect_workflow to check status at any time. `,agentsIndex:i5("agents",i,Dtu(i))}}var Zqe=class e extends nr{static id="run_workflow";static title="Run Workflow";handlers;isWorkflowStepSession;creatorDeps;dynamicDelegation;descriptionIndex;constructor(t){let{description:r,agentsIndex:n}=Otu(t.recipes,t.creatorDeps?.registry,t.dynamicDelegation?.runWor
+
+##### anchor='static id="run_workflow"'
+  @10666556: steps. - Nested workflow invocations are not supported: a workflow step cannot start its own workflow. - Use inspect_workflow to check status at any time. `,agentsIndex:e5("agents",o,o4c(o))}}var JUe=class e extends er{static id="run_workflow";static title="Run Workflow";handlers;isWorkflowStepSession;creatorDeps;dynamicDelegation;descriptionIndex;constructor(t){let{description:r,agentsIndex:n}=s4c(t.recipes,t.creatorDeps?.registry,t.dynamicDelegation?.runWor

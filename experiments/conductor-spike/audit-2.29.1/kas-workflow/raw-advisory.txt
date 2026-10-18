@@ -1,0 +1,24 @@
+### OLD request_permission meta consentRound (baseline)
+  @11012323: ...mand&&{command:u.command},...u.agentManagesTrust&&{agentManagesTrust:!0},...u.disclosedContext&&{disclosedContext:u.disclosedContext},...u.workflowWatch&&{workflowWatch:u.workflowWatch},...d&&{consent:d},...p!==void 0&&{consentRound:p},...u.mcpTool&&{mcpTool:EKt(u.mcpTool)}}}}),w=W6e(o,r,n,{interactionType:"tool_approval",toolCallId:u.operationId,que...
+
+### gate: workflows setting read
+  [OLD] @3334585: remote_web_search # Workflow tools: conditional by construction \u2014 the pool only contains them # when settings.workflows.enabled is true (agent.ts gates the factories), so # these entries are inert for non-workflow sessions. - run_workflow -
+  [NEW] @3343579: remote_web_search # Workflow tools: conditional by construction \u2014 the pool only contains them # when settings.workflows.enabled is true (agent.ts gates the factories), so # these entries are inert for non-workflow sessions. - run_workflow -
+
+### counts gate
+  workflows?.enabled              0->   0
+  workflows.enabled               1->   1
+  "workflows"                     4->   4
+  _meta.workflowsEnabled          0->   0
+  workflowsEnabled               20->  18
+  workflowToolsEnabled            0->   0
+
+### extensionMethods listing of workflow methods
+  [OLD] first extensionMethods @12040950
+  [NEW] first extensionMethods @12405198
+
+### load vs inspect subscription
+  [OLD] _kiro/workflow/load @10866540: readPath.reconcile_failed",{workflowId:e.workflowId,error:i instanceof Error?i.message:String(i)})}return o}var vco="bundled://",v$r=["_kiro/workflow/new","_kiro/workflow/invoke","_kiro/workflow/load","_kiro/workflow/inspect","_kiro/workflow/list","_kiro/workflow/pause","_kiro/workflow/cancel","_kiro/workflow/delete","_kiro/workflow/listRecipes","_kiro/workflow/listWatchHandle
+  [OLD] _kiro/workflow/inspect @10866562: led",{workflowId:e.workflowId,error:i instanceof Error?i.message:String(i)})}return o}var vco="bundled://",v$r=["_kiro/workflow/new","_kiro/workflow/invoke","_kiro/workflow/load","_kiro/workflow/inspect","_kiro/workflow/list","_kiro/workflow/pause","_kiro/workflow/cancel","_kiro/workflow/delete","_kiro/workflow/listRecipes","_kiro/workflow/listWatchHandlers","_kiro/workflow/resum
+  [NEW] _kiro/workflow/load @11139388: nfiguration.`},wau="Invalid workflow shape: an inline workflow cannot contain include nodes; launch the recipe by workflowPath.",v9r=["_kiro/workflow/new","_kiro/workflow/invoke","_kiro/workflow/load","_kiro/workflow/inspect","_kiro/workflow/list","_kiro/workflow/pause","_kiro/workflow/cancel","_kiro/workflow/delete","_kiro/workflow/listRecipes","_kiro/workflow/listWatchHandle
+  [NEW] _kiro/workflow/inspect @11139410: valid workflow shape: an inline workflow cannot contain include nodes; launch the recipe by workflowPath.",v9r=["_kiro/workflow/new","_kiro/workflow/invoke","_kiro/workflow/load","_kiro/workflow/inspect","_kiro/workflow/list","_kiro/workflow/pause","_kiro/workflow/cancel","_kiro/workflow/delete","_kiro/workflow/listRecipes","_kiro/workflow/listWatchHandlers","_kiro/workflow/resum

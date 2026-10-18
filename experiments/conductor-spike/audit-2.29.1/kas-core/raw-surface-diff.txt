@@ -1,0 +1,154 @@
+0.66.26  sha=3bc21b1f684cd3cc bytes=12295918 method_literals=121 acp_methods=25 env_reads=71 env_literals=162 snake_kinds=42 kind_values=1040 zod_keys=538 log_ids=1993 meta_kiro_keys=14 settings_keys=10
+0.66.33  sha=ca0672e74c07a925 bytes=12669464 method_literals=122 acp_methods=25 env_reads=70 env_literals=166 snake_kinds=44 kind_values=1119 zod_keys=564 log_ids=2135 meta_kiro_keys=15 settings_keys=11
+
+=== 0.66.26 -> 0.66.33 ===
+  method_literals: 121 -> 122 (+1 -0)
+     + _kiro/configuration/getState
+  acp_methods: 25 -> 25 (+0 -0)
+  env_reads: 71 -> 70 (+0 -1)
+     - KIRO_DISABLE_RECAP
+  env_literals: 162 -> 166 (+4 -0)
+     + KIRO_DISABLE_RECAP
+     + KIRO_FEATURE_MODEL_FALLBACK_AVAILABILITY_ENABLED
+     + KIRO_FEATURE_MODEL_FALLBACK_REFUSAL_ENABLED
+     + KIRO_FEATURE_SKILL_NAME_QUALIFIERS_ENABLED
+  snake_kinds: 42 -> 44 (+2 -0)
+     + model_fallback
+     + model_fallback_availability
+  kind_values: 1040 -> 1119 (+88 -9)
+     + kind:apiKey
+     + kind:applied
+     + kind:ask-control-plane
+     + kind:blocked
+     + kind:bundled
+     + kind:canceled
+     + kind:damaged
+     + kind:declined
+     + kind:disabled
+     + kind:done
+     + kind:duplicateScope
+     + kind:emptyOwner
+     + kind:emptyVersion
+     + kind:encode
+     + kind:end
+     + kind:evict
+     + kind:fetchFailed
+     + kind:fileOutsideLayers
+     + kind:generated
+     + kind:hash-mismatch
+     + kind:held
+     + kind:home
+     + kind:image
+     + kind:inForce
+     + kind:invalidScope
+     + kind:lineage
+     + kind:model_fallback
+     + kind:model_handoff
+     + kind:noLayers
+     + kind:placeholder
+     + kind:policy-refused
+     + kind:profileArn
+     + kind:replica
+     + kind:replied
+     + kind:shared-within
+     + kind:skill
+     + kind:skipped
+     + kind:target
+     + kind:token
+     + kind:unchangedWithoutVersion
+     + kind:undecided
+     + kind:unknownAssertion
+     + kind:unknownComposeRule
+     + kind:unknownStatus
+     + kind:unknownSyncStatus
+     + kind:user-namespace-blocked
+     + kind:verified
+     + outcome:decoder_unavailable
+     + outcome:placeholder_no_vision
+     + outcome:placeholder_undecodable
+     + outcome:placeholder_unfittable
+     + outcome:resized
+     + outcome:unchanged
+     + reason:cancelled
+     + reason:chainExhausted
+     + reason:context-over-budget
+     + reason:empty_summary
+     + reason:explicitPick
+     + reason:explicitPickDuringWrite
+     + reason:fieldMissing
+     + reason:hashMismatch
+     + reason:invalidFrames
+     + reason:invalidRow
+     + reason:invalidShape
+     + reason:noChainConfigured
+     + reason:noLayer
+     + reason:noServedTarget
+     + reason:no_vision
+     + reason:notEnabled
+     + reason:notEnvelope
+     + reason:notJson
+     + reason:over_pixel_cap
+     + reason:sameLayer
+     + reason:schema
+     + reason:summary_keys
+     + reason:unsupported_format
+     + reason:winnerChanged
+     + source:defaults
+     + source:disk
+     + source:encoded
+     + source:header
+     + source:none
+     + source:refusalFallback
+     + source:server_cascade_config
+     + source:staleActivityStatus
+     + status:not-eligible
+     + status:unchanged
+     + type:AgentExecutionModelFallback
+     - kind:changed
+     - reason:invalidPath
+     - reason:missingChecksum
+     - reason:unknownType
+     - source:bundled-profile
+     - source:cloud-profile
+     - source:session
+     - source:user-profile
+     - source:workspace-profile
+  zod_keys: 538 -> 564 (+29 -3)
+     + answer
+     + composeBehavior
+     + configuration
+     + confirmedAt
+     + consentRound
+     + enterpriseManagementStatus
+     + envelope
+     + fetchedAt
+     + generatedAt
+     + hash
+     + identityKind
+     + includedFrom
+     + ino
+     + lastReadAt
+     + manifest
+     + mtimeMs
+     + noteUserRequests
+     + policy
+     + roots
+     + stamp
+     + steeringAfterPromptBody
+     + summaryKeys
+     + summaryKind
+     + summaryNoteTag
+     + summaryNoteTemplate
+     + summaryUserRequests
+     + sweep
+     + versionId
+     + vibeToDefaultV2Routing
+     - inlineAgents
+     - stages
+     - subagentOrchestration
+  log_ids: 1993 -> 2135 (+168 -26)
+  meta_kiro_keys: 14 -> 15 (+1 -0)
+     + replay
+  settings_keys: 10 -> 11 (+1 -0)
+     + filter
+  deps changed: {"@kiro/sandbox-proxy": {"old": "0.66.26", "new": "0.66.33"}, "@silvia-odwyer/photon-node": {"old": null, "new": "0.3.4"}}

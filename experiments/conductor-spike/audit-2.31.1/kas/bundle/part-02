@@ -1,0 +1,346 @@
+  - type:"step",id:"plan",agent:"wf-planner",prompt:'Repo: {{workdir}}. From the approved design at {{artifacts.design}}, write an ordered implementation plan to {{setup.output}}/04-plan.md. Break the work into small, independently verifiable items, each with a "done" checkbox, the files it touches, and how to verify it.\n\nYou may restructure the remaining workflow steps. If your exploration concludes this work decomposes into separable features, author the FEAT artifacts under {{setup.output}} and replace the remaining steps via `update_workflow`, per your restructuring instructions. If it does not decompose, just write the plan; the existing loop will implement it.',artifacts:{
+  + type:"step",id:"plan",agent:"wf-planner",effortLevel:"high",prompt:'Repo: {{workdir}}. From the approved design at {{artifacts.design}}, write an ordered implementation plan to {{setup.output}}/04-plan.md. Break the work into small, independently verifiable items, each with a "done" checkbox, the files it touches, and how to verify it.\n\nYou may restructure the remaining workflow steps. If your exploration concludes this work decomposes into separable features, author the FEAT artifacts under {{setup.output}} and replace the remaining steps via `update_workflow`, per your restructuring instructions. If it does not decompose, just write the plan; the existing loop will implement it.',artifacts:{
+@@ 272511c272697  old#272511 new#272697
+  - type:"step",id:"code-aggregate",agent:"wf-review-aggregator",prompt:'Read the two independent reviews at {{artifacts.review_fable}} and {{artifacts.review_gpt}}. Dedupe overlapping findings \u2014 both reviewers raising the same issue means higher confidence. Then check the plan at {{artifacts.plan}}. Write {{setup.output}}/code-review.json: verdict "APPROVED" only when there are no blocking findings AND every plan item is checked done; otherwise "CHANGES_REQUESTED" with the merged findings and the unchecked items.',artifacts:{
+  + type:"step",id:"code-aggregate",agent:"wf-review-aggregator",effortLevel:"high",prompt:'Read the two independent reviews at {{artifacts.review_fable}} and {{artifacts.review_gpt}}. Dedupe overlapping findings \u2014 both reviewers raising the same issue means higher confidence. Then check the plan at {{artifacts.plan}}. Write {{setup.output}}/code-review.json: verdict "APPROVED" only when there are no blocking findings AND every plan item is checked done; otherwise "CHANGES_REQUESTED" with the merged findings and the unchecked items.',artifacts:{
+@@ 272790c272976  old#272790 new#272976
+  - let c=Dg.safeParse(s.raw);
+  + let c=of.safeParse(s.raw);
+@@ 272911c273097  old#272911 new#273097
+  - return l1.join(e,...U6r)}
+  + return c1.join(e,OW)}
+@@ 273086c273272  old#273086 new#273272
+  - let c=Dg.safeParse(a.workflow);
+  + let c=of.safeParse(a.workflow);
+@@ 273648a273835  old#273648 new#273835
+  + loadsInProgress=new Map;
+@@ 273703,273705c273890  old#273703 new#273890
+  [delete] ...checkpointPredecessors.get(t.workflowId)??await kae(o,i.read),a=await   ‹-C0(t.workflowBaseDir,t.workflowId,this.deps.fs); if(!a)throw new Error("Workflow state missing before cleanup preparation."); let c=await ›  ‹+›  this.ensureRunOwnership(t.workflowId,t.workflowBaseDir);...
+@@ 273706a273892,273893  old#273706 new#273892
+  + let c=await gT(t.workflowBaseDir,t.workflowId,this.deps.fs);
+  + if(!c)throw new Error("Workflow state missing before cleanup preparation.");
+@@ 273727a273915,273923  old#273727 new#273915
+  + unrecordedStepSignals=new WeakMap;
+  + noteUnrecordedStepSignal(t,r,n){
+  + return t.runPromise===void 0||r.status!=="running"?!1:(this.unrecordedStepSignals.set(r,{
+  + signal:n}
+  + ),S.warn("workflow.step.signal_unrecorded",{
+  + workflowId:t.workflowId,nodeId:r.nodeId,signal:n}
+  + ),!0)}
+  + clearUnrecordedStepSignal(t){
+  + this.unrecordedStepSignals.delete(t)}
+@@ 273877c274073,274075  old#273877 new#274073
+  [insert] ...verify:()=>i.verify()  ‹-›  ‹+,forgetRemovedMarker:()=>{ i.forgetRemovedMarker()} ›  ,release:()=>(s??=(async()=>{...
+@@ 273897a274096,274105  old#273897 new#274096
+  + let o=this.loadsInProgress.get(t);
+  + if(o!==void 0)return o;
+  + let s=this.loadFromDiskUnshared(t,r,n,i);
+  + this.loadsInProgress.set(t,s);
+  + try{
+  + return await s}
+  + finally{
+  + this.loadsInProgress.delete(t)}
+  + }
+  + async loadFromDiskUnshared(t,r,n,i){
+@@ 273904a274113,274120  old#273904 new#274113
+  + let c=s;
+  + if(a){
+  + let l=this.deps.registry.get(t);
+  + if(l!==void 0)return l.state;
+  + let d=await gT(r,t,this.deps.fs);
+  + if(!d)throw new Error(`No persisted workflow state found for '${t}' at '${r}'.`);
+  + if(ri(d.status))throw new Error(`Workflow '${t}' became ${d.status} while this load waited for its ownership claim; it was not loaded.`);
+  + c=d}
+@@ 274564c274780,274781  old#274564 new#274780
+  [insert] ...  ‹-›  ‹+let o=this.unrecordedStepSignals.get(r); ›  return r.completionSignal=KKc(n),r.completionSignalSource=r.completionSignal===void 0?...
+  [insert] ...=i),n==="running"&&j4r(r),await this.persist(t),  ‹-›  ‹+this.unrecordedStepSignals.get(r)===o&&this.unrecordedStepSignals.delete(r),›  S.info("workflow.statusUpdate.queued",{...
+@@ 274668c274885  old#274668 new#274885
+  - ,a=Dg.safeParse(s);
+  + ,a=of.safeParse(s);
+@@ 275018c275235  old#275018 new#275235
+  - ),await this.persist(t)),HU(N,c);
+  + ),await this.persist(t)),zU(N,c),this.unrecordedStepSignals.delete(r);
+@@ 275065c275282  old#275065 new#275282
+  - );
+  + ),this.unrecordedStepSignals.delete(r);
+@@ 275082a275300,275303  old#275082 new#275300
+  + let s=this.unrecordedStepSignals.get(n)?.signal;
+  + if(s!==void 0){
+  + this.unrecordedStepSignals.delete(n),n.completionSignal=void 0,n.completionSignalSource=void 0,await this.parkAwaitingUser(t,r,n,i,VYc(r.id,s));
+  + return}
+@@ 275913a276135,276139  old#275913 new#276135
+  + var jYc={
+  + success:"success",need_input:"warning",error:"error"}
+  + ;
+  + function VYc(e,t){
+  + return`Step '${e}' sent a send_message ${jYc[t]} signal that could not be saved, so it is paused awaiting user input instead of finishing.`}
+@@ 275946c276172  old#275946 new#276172
+  [replace] ...>zae,ToolIndex:()=>kEe,ToolLoadTool:()=>q2,ToolResult:()=>  ‹-$t,ToolSearchTool:()=>yJ›  ‹+Ft›  ,ToolTags:()=>et,ToolUseConclusion:()=>h3r,USER_REJECTED_TOOL_CALL:()=>pEe,...
+@@ 279521c279747  old#279521 new#279747
+  - readPath:s,content:a,offset:t.offset,requestedLineLimit:n,hasMoreLines:c}
+  + content:a,offset:t.offset,requestedLineLimit:n,hasMoreLines:c}
+@@ 279741,279742c279967,279968  old#279741 new#279967
+  [delete] ...n  2. The searchPhrase parameter is only required when using "selective" mode.  ‹-\n  3. If a previous fetch returned only navigation elements, boilerplate, or empty/minimal content from a page you expected to have real content, retry with mode "rendered". This uses a full browser engine to execute JavaScript and extract the rendered page content. Only use "rendered" mode as a retry after a failed normal fetch \u2014 never as the first attempt.›  ‹+›  `,schema:ar({ url:nt().describe(`\n      The URL to...
+  [delete] ...to find relevant URLs).\n      `),mode:Xs(["full","truncated","selective"  ‹-,"rendered"›  ‹+›  ]).default("truncated").describe('Fetch mode: "full" fetches complete content (up to 10MB), "truncated" fetches only first 8KB for quick preview, "selective" fe...
+  [replace] ...`),mode:Xs(["full","truncated","selective","rendered"]).default("truncated").describe(  ‹-'Fetch mode: "full" fetches complete content (up to 10MB), "truncated" fetches only first 8KB for quick preview, "selective" fetches only sections containing the search phrase, "rendered" uses a full browser engine to render JavaScript-heavy pages (use only as a retry when a previous fetch returned insufficient content). Default is "truncated".'›  ‹+'Fetch mode: "full" fetches complete content (up to 10MB), "truncated" fetches only first 8KB for quick preview, "selective" fetches only sections containing the search phrase. Default is "truncated".'›  ),searchPhrase:nt().nullish().describe("Required only for Selective mode. The phrase to search for in the content. Only sections containing this phrase will be ...
+@@ 279753c279979  old#279753 new#279979
+  - userAgent:t.userAgent??"KiroIDE",maxContentSize:Hie,proxyUrl:t.proxyUrl}
+  + userAgent:t.userAgent,maxContentSize:Gie,proxyUrl:t.proxyUrl}
+@@ 279824,279826c280050  old#279824 new#280050
+  [delete] ...let o=Date.now()  ‹-; if(r==="rendered")return this.doFetchRendered(t›  ‹+›  ,o); let s=await this.webFetchClient.fetchHtml(t);...
+  [delete] ...o=Date.now(); if(r==="rendered")return this.doFetchRendered(t,  ‹-o); let ›  ‹+›  s=await this.webFetchClient.fetchHtml(t);...
+@@ 279845,279857d280068  old#279845 new#280068
+  - async doFetchRendered(t,r){
+  - if(!this.options.fetchRendered)throw new ASe("Rendered mode is not available in this environment.");
+  - S.info(`[WebFetch] Rendered mode: using browser engine for ${t}`);
+  - let n=await Promise.race([this.options.fetchRendered(t),new Promise((a,c)=>setTimeout(()=>c(new CSe(3e4)),3e4))]);
+  - if(!n)throw new ASe("Rendered mode returned no result. The desktop renderer command may not be available.");
+  - if(n.status==="error")throw new RSe(n.error,"ERR_RENDERER_FAILED");
+  - if(n.status==="redirect")throw new zie(n.redirectUrl);
+  - let i=n.content;
+  - if(!i)throw new ASe("Rendered mode returned no content. The page may require authentication or may have blocked the request.");
+  - let o=Buffer.byteLength(i,"utf8"),s=Date.now()-r;
+  - return{
+  - url:t,finalUrl:t,statusCode:200,contentType:"text/html",content:i,contentLengthInBytes:o,truncated:!1,matchCount:void 0,fetchTimeMs:s}
+  - }
+@@ 280595c280806  old#280595 new#280806
+  - return ovo(t,".kiro",NTe,r)}
+  + return Pvo(t,OTe,r)}
+@@ 280822a281034  old#280822 new#281034
+  + FA();
+@@ 280919a281132  old#280919 new#281132
+  + shellRuleCount;
+@@ 280930c281143  old#280930 new#281143
+  [insert] ...this.homeDir=s.path,this.homeDirExists=s.exists  ‹-›  ‹+,this.userConfigDir=o?.userConfigDir??WT(this.homeDir)›  ,this.multiWorkspace=(n??1)>1,this.workspaceCount=n,this.shellRuleCount=this...
+@@ 281047c281260  old#281047 new#281260
+  [replace] ...return this.kiroHomeRealPath??=ST(this.  ‹-homeDir›  ‹+userConfigDir›  .replace(/\\/g,"/").replace(/\/+$/,"")+"/.kiro"...
+  [delete] ....homeDir.replace(/\\/g,"/").replace(/\/+$/,"")  ‹-+"/.kiro"›  ‹+›  ),this.kiroHomeRealPath}...
+@@ 282056,282126d282268  old#282056 new#282268
+  - var wtu=parseFloat(process.env.KIRO_TOOL_SEARCH_THRESHOLD??"")||1.5,BTe={
+  - id:"tool_search",title:"Tool Search",description:`Find and load MCP tools. Before refusing any task, check if an MCP tool exists. Use tool_id for exact match or query for keyword search \u2014 both load matching tools in a single call. Returns tools that are immediately available for invocation.\n\nExample flow:\n1. Call tool_search with query="search documents" or tool_id="builder-mcp::InternalSearch"\n2. Response: {"tools":[{"tool_name":"InternalSearch","server_name":"builder-mcp",...}]}\n3. Invoke the tool using ONLY the tool_name value: InternalSearch (not builder-mcp::InternalSearch)`,tags:[et.READ,et.BUILTIN],schema:k.object({
+  - tool_id:k.string().optional().describe("Exact tool identifier to load (from available-deferred-tools list, format: server_name::tool_name). The tool is loaded and immediately available."),query:k.string().optional().describe("Keywords to search for tools. All matching tools are loaded and immediately available."),max_results:k.number().int().optional().describe("Maximum number of results to return (default: 5)")}
+  - )}
+  - ,yJ=class extends nr{
+  - static id=BTe.id;
+  - static title=BTe.title;
+  - options;
+  - constructor(t){
+  - super({
+  - ...BTe,origin:"default"}
+  - ),this.options=t;
+  - let r=this.options,n=-1,i=BTe.description;
+  - Object.defineProperty(this,"description",{
+  - get(){
+  - let o=r.getIndex();
+  - if(o.size===n)return i;
+  - n=o.size;
+  - let s=o.formatSearchCatalog();
+  - return s?i=`${BTe.description}\n\nThe following tool entries contain: tool_id (server_name::tool_name) and description. You SHOULD call tool_search with the tool_id to load a tool before using it, based on its description:\n\n${s}`:i=BTe.description,i}
+  - ,enumerable:!0,configurable:!0}
+  - )}
+  - handle({
+  - input:t,state:r,toolUse:n,actionId:i}
+  - ){
+  - let o=kr.start("ToolSearch",this.origin),s=(a,c)=>$t.of(a,c).withActionId(i).withRawInput(t).withTransformer(new Sy);
+  - this.emitProgress(r,{
+  - actionId:i,actionState:"Running",actionType:"tool_search",rawInput:t}
+  - );
+  - try{
+  - if(t.tool_id&&t.query)return this.fail(r,n,s,o,"Provide either tool_id or query, not both");
+  - if(!t.tool_id&&!t.query)return this.fail(r,n,s,o,"Provide either tool_id or query");
+  - let a=this.options.getIndex(),c=t.max_results??5;
+  - if(t.tool_id){
+  - let f=t.tool_id.trim();
+  - if(f.indexOf("::")<0)return this.fail(r,n,s,o,"tool_id must use server_name::tool_name format (e.g. myserver::mytool). See available-deferred-tools list.");
+  - let m=a.findById(f);
+  - if(!m)return this.fail(r,n,s,o,`Tool '${f}' not found. Check the available-deferred-tools list for valid server_name::tool_name entries.`);
+  - this.options.activateTools([m.toolId]);
+  - let g={
+  - tools:[{
+  - tool_name:m.toolName,server_name:m.serverName,description:m.description,score:Number.MAX_VALUE}
+  - ]}
+  - ;
+  - return this.succeed(r,n,s,o,g)}
+  - let u=this.options.matchingThreshold??wtu,l=a.search(t.query??"",c).filter(f=>f.score>=u),d=l.map(f=>`${f.serverName}::${f.toolName}`);
+  - d.length>0&&this.options.activateTools(d);
+  - let p={
+  - tools:l.map(f=>({
+  - tool_name:f.toolName,server_name:f.serverName,description:f.description,score:f.score}
+  - ))}
+  - ;
+  - return this.succeed(r,n,s,o,p)}
+  - catch(a){
+  - o.recordToolFault(a);
+  - let c=`Tool search failed: ${a instanceof Error?a.message:String(a)}`;
+  - return this.concludeToolUse(r,n,s("Error",c))}
+  - }
+  - fail(t,r,n,i,o){
+  - return i.recordToolError(new Error(o)),this.concludeToolUse(t,r,n("Error",o))}
+  - succeed(t,r,n,i,o){
+  - let s=this.concludeToolUse(t,r,n("Success",JSON.stringify(o,null,2)));
+  - return i.recordToolSuccess(),s}
+  - }
+  - ;
+  - UCt();
+  - Jn();
+  - hr();
+  - zn();
+  - Ye();
+  - Cn();
+@@ 282733c282875  old#282733 new#282875
+  [insert] ...label, e.g. "investigate-dock-title". Max ${String(Cz)} characters.`)  ‹-›  ‹+,modelId:of.shape.modelId.describe("Default model for steps that don't set their own. Omit to inherit this session's."),effortLevel:of.shape.effortLevel.describe("Default effort for steps that don't set their own. Omit to inherit this session's.")›  }...
+@@ 282766c282908  old#282766 new#282908
+  [replace] ...t above as a one-step workflow. Requires a non-empty 'prompt' input, used verbatim as the step's prompt; an optional 'report_path' input is recorded as the step  ‹-'s report artifact. Model and effort inherit from the parent session. Top-level sessions only \u2014 nested launches from workflow steps are refused.\n- An absolute filesystem path to a .workflow.json, .workflow.yaml, or .workflow.yml file in an admitted recipe root: an active workspace'›  ‹+'s report artifact. Top-level sessions only \u2014 nested launches from workflow steps are refused.\n- An absolute filesystem path to a .workflow.json, .workflow.yaml, or .workflow.yml file in an admitted recipe root: an active workspace'›  s .kiro/workflows/, the user-level ~/.kiro/workflows/, ~...
+@@ 282810c282952  old#282810 new#282952
+  - let u=iwo(n.workflowPath??"",n.inputs,i.execution.chatSessionId,n.runLabel),{
+  + let u=Iwo(n.workflowPath??"",n.inputs,i.execution.chatSessionId,n),{
+@@ 282896c283038  old#282896 new#283038
+  - let y=g.workflowRef,w=Ltu(y,g.inputs,g.summary);
+  + let y=g.workflowRef,w=kru(y,g.inputs,g.summary,i);
+@@ 282901c283043  old#282901 new#283043
+  - let v=iwo(y,g.inputs,o.execution.chatSessionId,i.runLabel),_;
+  + let v=Iwo(y,g.inputs,o.execution.chatSessionId,i),_;
+@@ 282944c283086  old#282944 new#283086
+  [insert] ...return n  ‹-›  ‹+.runLabel›  !==void 0&&(i.runLabel=n),i}...
+  [insert] ...return n!==void 0&&(i.runLabel=n  ‹-›  ‹+.runLabel),n.modelId!==void 0&&(i.modelId=n.modelId),n.effortLevel!==void 0&&(i.effortLevel=n.effortLevel›  ),i}...
+@@ 282951,282953c283093,283095  old#282951 new#283093
+  [insert] ...function Ltu(  ‹-›  ‹+e,›  e,t,r){ let n=JSON.stringify(t),i=r!==...
+  [insert] ...function Ltu(e,t,r){ let n=JSON.stringify(t  ‹-›  ‹+),o=(n.modelId!==void 0?`, modelId: ${JSON.stringify(n.modelId)}`:"")+(n.effortLevel!==void 0?`, effortLevel: ${JSON.stringify(n.effortLevel)}`:""›  ),i=r!==void 0?`\nCreator summary:\n${iAt(r)...
+  [insert] ... another creator dispatch: run_workflow({ workflowPath: '${e}', inputs: ${n}  ‹-›  ‹+${o}›   }). Correct the inputs in that call if they were the ...
+@@ 283234c283376  old#283234 new#283376
+  - let p=Dg.parse(c),f=this.generateId();
+  + let p=of.parse(c),f=this.generateId();
+@@ 283263c283405  old#283263 new#283405
+  - let n=Dg.safeParse(e);
+  + let n=of.safeParse(e);
+@@ 283268c283410  old#283268 new#283410
+  - let r=Dg.safeParse(e);
+  + let r=of.safeParse(e);
+@@ 287849c287991  old#287849 new#287991
+  - let s=Dg.safeParse(i);
+  + let s=of.safeParse(i);
+@@ 288248c288390  old#288248 new#288390
+  - if(i(nJ(this.sources.homeDir)))return{
+  + if(i(oJ(this.sources.userConfigDir)))return{
+@@ 288289c288431  old#288289 new#288431
+  - homeDir:r}
+  + userConfigDir:r}
+@@ 289612c289754  old#289612 new#289754
+  - workspaceRoots:t,homeDir:r,cloudConfigBases:n}
+  + workspaceRoots:t,userConfigDir:r,cloudConfigBases:n}
+@@ 289711a289854,289862  old#289711 new#289854
+  + function wxo(e,t){
+  + let r=B2(t.modelId),n=t.effortLevel===""?void 0:t.effortLevel;
+  + return r===void 0&&n===void 0?e:{
+  + ...e,...r!==void 0&&{
+  + modelId:r}
+  + ,...n!==void 0&&{
+  + effortLevel:n}
+  + }
+  + }
+@@ 289866c290017  old#289866 new#290017
+  [insert] ...registry.unregister(e),await r.host.stateFs.rm(nxo.join(t,e)  ‹-›  ‹+),n.forgetRemovedMarker?.(›  ),r.runLocations?.forget(e),i=!0,"removed"}...
+@@ 289951a290103,290113  old#289951 new#290103
+  + function Uxo(e){
+  + return new Error(`Invalid workflow shape: ${e.message}`)}
+  + var hcu=of.pick({
+  + modelId:!0,effortLevel:!0}
+  + );
+  + function mcu(e){
+  + let t=hcu.safeParse({
+  + modelId:e.modelId,effortLevel:e.effortLevel}
+  + );
+  + if(!t.success)throw Uxo(t.error);
+  + return t.data}
+@@ 289993c290155  old#289993 new#290155
+  - let a=Dg.safeParse(s.workflow);
+  + let a=of.safeParse(s.workflow);
+@@ 290002c290164  old#290002 new#290164
+  - let s=Dg.safeParse(o.workflow);
+  + let s=of.safeParse(o.workflow);
+@@ 290023c290185  old#290023 new#290185
+  [replace] ...let d=  ‹-Eau›  ‹+fcu(c),p=mcu›  (c),p=await g9r(e.host,"_kiro/workflow/new","parent session",u,"it cannot launch a workflow; use a session with a folder open"),f,...
+@@ 290026,290027c290188,290189  old#290026 new#290188
+  [replace] ...let D=Dg.safeParse(c.workflow); if(!D.success)throw   ‹-new Error›  ‹+Uxo›  (`Invalid workflow shape: ${D.error.message}`);...
+  [replace] ...D=Dg.safeParse(c.workflow); if(!D.success)throw new Error(  ‹-`Invalid workflow shape: ${D›  ‹+M›  .error.message}`);...
+  [delete] ...(!D.success)throw new Error(`Invalid workflow shape: ${D.error  ‹-.message}`›  ‹+›  );...
+@@ 290056a290219  old#290056 new#290219
+  + h=wxo(h,p);
+@@ 290061c290224,290228  old#290061 new#290224
+  [insert] ...m.additionalDirectories??[]],y=e.host.resolveWorkflowBaseDir(g),w=t()  ‹-›  ‹+; (p.modelId!==void 0||p.effortLevel!==void 0)&&S.debug("workflow.new.launch_defaults"›  ,{...
+  [insert] ...additionalDirectories??[]],y=e.host.resolveWorkflowBaseDir(g),w=t(),{  ‹-›  ‹+ workflowId:v,modelId:p.modelId,effortLevel:p.effortLevel} ); let{›  ...
+@@ 290106c290273  old#290106 new#290273
+  - await e.runner.acquireRunOwnership(c.workflowId,u.workflowBaseDir);
+  + await e.runner.acquireRunOwnership(c.workflowId,u.workflowBaseDir),_cu(c.workflowId,u.state.status);
+@@ 290294,290295c290461  old#290294 new#290461
+  [replace] ...if(l.  ‹-state.status==="running")throw new Error(`Workflow '${c.workflowId}' is currently running. Cannot retry while running.`); if(!oi(›  ‹+workflowId,›  l.state.status))throw new Error(`Workflow '${c.workflowId}' is in status '${l.state.status}'...
+  [delete] .... Cannot retry while running.`); if(!oi(l.state.status)  ‹-)throw new Error(`Workflow '${c.workflowId}' is in status '${l.state.status}'. retry is only valid for terminal workflows (failed/aborted/completed).`)›  ‹+›  ;...
+@@ 290298c290464  old#290298 new#290464
+  - await e.runner.acquireRunOwnership(c.workflowId,l.workflowBaseDir);
+  + await e.runner.acquireRunOwnership(c.workflowId,l.workflowBaseDir),Dxo(c.workflowId,l.state.status);
+@@ 290452a290619,290623  old#290452 new#290619
+  + function _cu(e,t){
+  + if(!ri(t))throw new Error(`Workflow '${e}' was restarted by another request while this one waited for its ownership claim; it is ${t} now.`)}
+  + function Dxo(e,t){
+  + if(t==="running")throw new Error(`Workflow '${e}' is currently running. Cannot retry while running.`);
+  + if(!ri(t))throw new Error(`Workflow '${e}' is in status '${t}'. retry is only valid for terminal workflows (failed/aborted/completed).`)}
+@@ 291097c291268  old#291097 new#291268
+  [replace] ...fs:tqe(),  ‹-homeDir›  ‹+userConfigDir›  :t.homeDir,cloudRoots:()=>t.cloudRecipeRoots(),bundled:oJ,admission:r=...
+  [replace] ...fs:tqe(),homeDir:t.  ‹-homeDir›  ‹+userConfigDir›  ,cloudRoots:()=>t.cloudRecipeRoots(),bundled:oJ,admission:r=>this.recipeSourcePolicy...
+@@ 291517c291688  old#291517 new#291688
+  [replace] ...!==void 0&&M0.isAbsolute(_)?smo(_,T,this.host.  ‹-homeDir›  ‹+userConfigDir›  ,this.host.cloudRecipeRoots().map(C=>C.base)):v1t(T),...
+@@ 291776c291947  old#291776 new#291947
+  [replace] ...  ‹-homeDir›  ‹+userConfigDir›  :this.host.homeDir,sessionsPath:this.host.sessionsPath,workspaceRoots:t,workspaceTrusted:this.host....
+  [replace] ...homeDir:this.host.  ‹-homeDir›  ‹+userConfigDir›  ,sessionsPath:this.host.sessionsPath,workspaceRoots:t,workspaceTrusted:this.host.readWorkspaceTrust(),cloudConfigBases:...
+@@ 292046c292217,292265  old#292046 new#292217
+  [replace] ...let c=i.workflowNodeId,u=  ‹-H4r›  ‹+this.completionSignalTarget(a,t,c,r,s); if(u.kind==="answered")return u.result; let l=u.nodeState,d=s,p=this.workflowRegistry,f=C=>{ let x=this.workflowRunner?.noteUnrecordedStepSignal(a,l,d)===!0; return{ recorded:!1,warning:`Message delivered, but ${C}, so the completion signal (${r}) was NOT recorded. `+(x?"This step will pause for the user when this turn ends instead of finishing.":"The owning process will finalize the step from its own state.")} } ,h; try{ h=await this.workflowRunner?.ensureRunOwnership(o,a.workflowBaseDir)} catch(C){ let x=C instanceof Error?C.message:String(C); return S.warn("send_message.completion_signal_ownership_refused",{ workflowId:o,reason:x} ),f(`workflow ${o} is now owned by another process`)} let m=this.completionSignalTarget(a,t,c,r,s); if(m.kind==="answered"||p.get(o)!==a)return await h?.release(),m.kind==="answered"?m.result:f(`workflow ${o} was stopped or reloaded while the signal waited to be saved`); l=m.nodeState,m.overridesQueuedStatusUpdate===!0&&S.info("send_message.error_signal_overrides_queued_status_update",{ workflowId:o,nodeId:l.nodeId,queuedSignal:l.completionSignal,signal:s} ); let g=l.completionSignal,y=l.completionSignalSource,w=l.awaitingUserInput,v=ABe(l)||l.awaitingUserInput===!1; l.completionSignal=s,s==="need_input"&&Pkt(l),l.completionSignalSource="send_message"; let _=!0; try{ await mw(a.workflowBaseDir,a.state,this.workflowStateFs,h?{ preCommit:()=>h.verify()} :void 0)} catch(C){ if(l.completionSignal=g,l.completionSignalSource=y,l.awaitingUserInput=w,C instanceof fae)return S.warn("send_message.completion_signal_persist_fenced",{ workflowId:o} ),f(`workflow ${o} was reclaimed by another process`); throw this.workflowRunner?.noteUnrecordedStepSignal(a,l,d),C} finally{ h!==void 0&&(_=await h.release())} return _?(this.workflowRunner?.clearUnrecordedStepSignal(l),S.info("send_message.wrote_completion_signal",{ signal:s,nodeId:l.nodeId} ),(s==="success"||s==="error")&&v&&a.state.status==="paused"&&this.workflowRunner&&(S.info("send_message.re_driving_paused_workflow",{ workflowId:i.workflowId,nodeId:l.nodeId,signal:s} ),this.workflowRunner.invoke(i.workflowId).catch(C=>{ S.warn("send_message.resume_workflow_failed",{ workflowId:i.workflowId,error:String(C)} )} )),{ recorded:!0} ):(l.completionSignal=g,l.completionSignalSource=y,l.awaitingUserInput=w,f(`workflow ${o} was reclaimed by another process while the signal was being saved`))} } )} completionSignalTarget(t,r,n,i,o){ let s=t.workflowId,a=e6r›  (a.state.root,o,t,c);...
+@@ 292049a292269  old#292049 new#292269
+  + kind:"answered",result:{
+@@ 292050a292271  old#292050 new#292271
+  + }
+@@ 292054a292276  old#292054 new#292276
+  + kind:"answered",result:{
+@@ 292055a292278  old#292055 new#292278
+  + }
+@@ 292057,292058c292280,292285  old#292057 new#292280
+  [insert] ...  ‹-›  ‹+if(a.kind!=="resolved")return{ kind:"answered",result:{ recorded:!1,warning:`Message delivered, but no step of workflow ${s} matches this session, so the completion signal (${i}) was NOT recorded. Ask the user to inspect the workflow state.`} } ; ›  let l=u.kind==="resolved"?u.node:null; if(l){...
+  [delete] ...let l=u.kind  ‹-==="resolved"?u.node:null›  ‹+›  ; if(l){...
+  [delete] ...let l=u.kind==="resolved"?u.node:null;  ‹- if(l){›  ‹+›  ...
+@@ 292061a292289  old#292061 new#292289
+  + kind:"answered",result:{
+@@ 292062a292291  old#292062 new#292291
+  + }
+@@ 292066a292296  old#292066 new#292296
+  + kind:"answered",result:{
+@@ 292067a292298  old#292067 new#292298
+  + }
+@@ 292071a292303  old#292071 new#292303
+  + kind:"answered",result:{
+@@ 292072a292305  old#292072 new#292305
+  + }
+@@ 292076c292309  old#292076 new#292309
+  - if(Jdo(l,s))return S.info("send_message.completion_signal_deferred_to_status_update",{
+  + return Epo(c,o)?(S.info("send_message.completion_signal_deferred_to_status_update",{
+@@ 292078a292312  old#292078 new#292312
+  + kind:"answered",result:{
+@@ 292079a292314  old#292079 new#292314
+  + }
+@@ 292080a292316  old#292080 new#292316
+  + kind:"answered",result:{
+@@ 292082,292094d292317  old#292082 new#292317
+  - ;
+  - S.info("send_message.error_signal_overrides_queued_status_update",{
+  - workflowId:o,nodeId:l.nodeId,queuedSignal:w,signal:s}
+  - )}
+  - let d;
+  - try{
+  - d=await this.workflowRunner?.ensureRunOwnership(o,a.workflowBaseDir)}
+  - catch(w){
+  - let v=w instanceof Error?w.message:String(w);
+  - return S.warn("send_message.completion_signal_ownership_refused",{
+  - workflowId:o,reason:v}
+  - ),{
+  - recorded:!1,warning:`Message delivered, but workflow ${o} is now owned by another process, so the completion signal (${r}) was NOT recorded here. The owning process will finalize the step from its own state.`}
+@@ 292096,292126c292319,292320  old#292096 new#292319
+  [delete] ...  ‹-let p=l.completionSignal,f=l.completionSignalSource,h=l.awaitingUserInput,m=CBe(l›  ‹+›  )||l.awaitingUserInput===!1; l.completionSignal=s,s==="need_input"&...
+  [delete] ... p=l.completionSignal,f=l.completionSignalSource,h=l.awaitingUserInput,m=CBe(l)  ‹-||l.awaitingUserInput===!1; l.completionSignal=s,s==="need_input"&&bkt(l),l.completionSignalSource="send_message"; let g=!0; try{ await mw(a.workflowBaseDir,a.state,this.workflowStateFs,d?{ preCommit›  ‹+›  :()=>d.verify()} :void 0)} catch(w){ ...

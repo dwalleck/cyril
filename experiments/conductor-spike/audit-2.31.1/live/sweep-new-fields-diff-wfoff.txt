@@ -1,0 +1,10 @@
+live   kas-workflow-gateoff-2.31.1.jsonl: 1115 paths
+pinned kas-workflow-gateoff-2.29.1.jsonl: 1117 paths
+
+ONLY under live (1) — new-field candidates:
+   + params.update.rawInput.cwd
+
+ONLY under pinned (3) — usually just coverage:
+   - permissions[].meta_kiro.workflowWatch
+   - permissions[].meta_kiro.workflowWatch.nodeId
+   - permissions[].meta_kiro.workflowWatch.workflowId

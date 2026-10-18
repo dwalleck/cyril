@@ -1,0 +1,49 @@
+
+=== load: OLD len=1021 NEW len=1021 sig_tokens 74 vs 74  IDENTICAL=True
+   first 24 sig tokens: ['"_kiro/workflow/load"', '.policyPreset', '"_kiro/workflow/load"', '.registry', '.get', '.workflowId', '.sessionTracker', '.list', '.workflowId', '.emitNotification', '.notificationBridgeUnsubscribe', '.notificationBridgeUnsubscribe', '.notificationBridgeUnsubscribe', 'record:', 'emit:', '.emitNotification', 'workflowId:', '.workflowId', 'state:', '.state', 'nodePlan:', '.workflow', '.steps', '.state']
+
+=== inspect: OLD len=269 NEW len=269 sig_tokens 16 vs 16  IDENTICAL=True
+   first 24 sig tokens: ['"_kiro/workflow/inspect"', '.registry', '.get', '.workflowId', 'state:', 'baseDir:', '.workflowId', '.workflowId', '.workflowId', '.host', '.stateFs', 'workflowId:', '.workflowId', 'state:', '.p', 'nodePlan:']
+
+=== resume: OLD len=2324 NEW len=2324 sig_tokens 122 vs 122  IDENTICAL=True
+   first 24 sig tokens: ['"_kiro/workflow/resume"', '"_kiro/workflow/resume"', '.policyPreset', '"_kiro/workflow/resume"', '.registry', '.get', '.workflowId', 'baseDir:', '.workflowId', '.runner', '.loadFromDisk', '.workflowId', '.registry', '.require', '.workflowId', '.emitNotification', '.notificationBridgeUnsubscribe', '.notificationBridgeUnsubscribe', 'record:', 'emit:', '.emitNotification', '.runPromise', '.runner', '.awaitRunLoopSettled']
+
+=== new: OLD len=4102 NEW len=4202 sig_tokens 162 vs 168  IDENTICAL=False
+--- 
++++ 
+@@ -11,2 +11,4 @@
+ .workflow
++.workflow
++.length
+ .safeParse
+@@ -38,2 +40,3 @@
+ .recipeFs
++.host
+ .startsWith
+@@ -56,2 +59,5 @@
+ .recipeFs
++.host
++.host
++.recipeInForce
+ .host
+@@ -142,5 +148,5 @@
+ parentEffortLevel:
+-.C
++.x
+ policyPresetIds:
+-.A
++.R
+ backgroundExecution:
+@@ -149,3 +155,3 @@
+ runLabel:
+-.R
++.I
+ .length
+
+=== maxRounds: OLD@2951789 NEW@2960316
+  [OLD] redResult MUST include at least one of the two)");return{resultType:"input_required",...e.inputRequests!==void 0&&{inputRequests:e.inputRequests},...e.requestState!==void 0&&{requestState:e.requestState}}}function AGn(e){return{autoFulfill:e?.autoFulfill??kra,maxRounds:e?.maxRounds??Ara}}function Ira(e,t,r){let n=t!==void 0&&Object.keys(t).length>0;return!n&&r===void 0?e:{...e,...n&&{inputResponses:t},...r!==void 0&&{requestState:r}}}function Pra(e,t){return`Multi-round-trip request '${e}' still required input after ${t} rounds (inputRequired.maxRounds)`}function Nra(e,t){return new Promise((r,n)=>{if(t?.aborted)
+  [NEW] redResult MUST include at least one of the two)");return{resultType:"input_required",...e.inputRequests!==void 0&&{inputRequests:e.inputRequests},...e.requestState!==void 0&&{requestState:e.requestState}}}function nni(e){return{autoFulfill:e?.autoFulfill??rwa,maxRounds:e?.maxRounds??nwa}}function owa(e,t,r){let n=t!==void 0&&Object.keys(t).length>0;return!n&&r===void 0?e:{...e,...n&&{inputResponses:t},...r!==void 0&&{requestState:r}}}function swa(e,t){return`Multi-round-trip request '${e}' still required input after ${t} rounds (inputRequired.maxRounds)`}function awa(e,t){return new Promise((r,n)=>{if(t?.aborted)
+
+=== allow_always: OLD@255102 NEW@255134
+  [OLD] ame:he(se().nullish(),()=>{}),content:he(Ea(HZr).nullish(),()=>{}),locations:he(Ea(WZr).nullish(),()=>{}),rawInput:he(ut().optional(),()=>{}),rawOutput:he(ut().optional(),()=>{}),_meta:he(pt(se(),ut()).nullish(),()=>{})}),jZr=se(),W7o=Zi([Kt("allow_once"),Kt("allow_always"),Kt("reject_once"),Kt("reject_always")]),G7o=ke({optionId:jZr,name:se(),kind:W7o,_meta:he(pt(se(),ut()).nullish(),()=>{})}),F4t=ke({sessionId:$c,toolCall:GZr,options:ju(G7o),_meta:he(pt(se(),ut()).nullish(),()=>{})}),VZr=ke({name:se(),value:se(),_meta:he(pt(se(),ut()).nullish(),()=>{})}),$4t=ke({sessionId:$c,command:se(),args:he(Ea(se()).option
+  [NEW] ame:me(ae().nullish(),()=>{}),content:me(Pa(wcn).nullish(),()=>{}),locations:me(Pa(_cn).nullish(),()=>{}),rawInput:me(dt().optional(),()=>{}),rawOutput:me(dt().optional(),()=>{}),_meta:me(ht(ae(),dt()).nullish(),()=>{})}),bcn=ae(),Ius=ao([Yt("allow_once"),Yt("allow_always"),Yt("reject_once"),Yt("reject_always")]),Pus=Ae({optionId:bcn,name:ae(),kind:Ius,_meta:me(ht(ae(),dt()).nullish(),()=>{})}),RHt=Ae({sessionId:Zc,toolCall:Ecn,options:ul(Pus),_meta:me(ht(ae(),dt()).nullish(),()=>{})}),Tcn=Ae({name:ae(),value:ae(),_meta:me(ht(ae(),dt()).nullish(),()=>{})}),AHt=Ae({sessionId:Zc,command:ae(),args:me(Pa(ae()).option

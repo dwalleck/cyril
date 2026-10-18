@@ -352,7 +352,7 @@ impl DomainMediator {
         config_id: String,
         value: String,
     ) -> crate::Result<()> {
-        let operation = "set_config_option";
+        let operation = crate::types::SET_CONFIG_OPTION_OPERATION;
         let Some(session_id) = self.active_session_id.as_ref() else {
             return self
                 .notify(

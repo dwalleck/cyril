@@ -1,0 +1,590 @@
+===== kiro-cli 2.29.0->2.29.1 sizes 43928608 -> 43929632 (+1024)
+  frames old: []
+  frames new: []
+  srcloc files 67 -> 67; +[]; -[]; changed 1
+    ~ crates/fig_request/src/reqwest_client.rs (3->3) old-only [44, 371] new-only [37, 441]
+  prose literals +152 -144 (added shown below)
+    +    description() is deprecated; use DisplayInstallErrorInstallThemeError/
+    +   - Change shell default to ZSH: ProgrammingLanguagelanguage_nameSetting ctx when starting handshakenot foundunimplementedhttps://cloudfrontsigner.ninjas.security.a2z.com/signpolicyCloudFront-PolicyCloudFront-Key-Pair-IdexpCloudFr
+    +   ]event crates/fig_install/src/common.rs:151fig_install::commonmessageevent crates/fig_install/src/common.rs:135event crates/fig_install/src/common.rs:68event crates/fig_install/src/common.rs:70errevent crates/fig_install/src/mig
+    +  Warning: this command contains an irreversible flag (), please make sure you know what you are doing before you run this... can be dangerous, please make sure you know what you are doing before you run this...
+    +  Warning: this command is a fork bomb background task failedautocomplete-- ;tracing::spanDomainEventcreated_timecredential_start_urltyCliverboseshow_legacy_warningtuiclassicv3v2cloudVERBOSEIncrease logging verbosityPrint help for 
+    +  into an integerBaseThreadInitThrange end index MissingParameter/oauth/callback/)
+    +  span=<- tracing::span::active-> OffsetLargerThanFileSizeLengthLargerThanFileSizeMinusReadOffsetStreamingErrorenv_config_sectionsTokenNotLoadedInvalidConfigurationProviderErrorPreferredRequestmessage_idsession_idExtensionsextensio
+    + "\"\xSensitiveInvalidHeaderValuefailed to parse header valuer
+    + "alInMillisecondsandyke.SecureCRTNo file at path 
+    + # UNIMPLEMENTED:A6
+    + # not working? Try running Are you sure want to continue uninstalling ?Uninstalling Unable to determine the current process executable.Managed uninstalls are not supported. Please use your package manager to uninstall Uninstall is
+    + # timestamp = event crates/q_cli/src/cli/internal/mod.rs:547q_cli::cli::internalcrates/q_cli/src/cli/internal/mod.rsevent crates/q_cli/src/cli/internal/mod.rs:543outputevent crates/q_cli/src/cli/internal/mod.rs:640event crates/q_c
+    + ()message_idnonceHostboundsubmessagevalueClientboundpacketnanosRequestsession_idShellContextpidprocess_namecurrent_working_directoryshell_pathwsl_distroenvironment_variablesqterm_versionpreexecaliasRunProcessRequestexecutableargum
+    + )CompiledTooBigCompiled regex exceeds size limit of  bytes.LayoutErrorT
+    + )sourceSlowDownExceptionerrorerror_descriptionmessageContextAttachedErrorcontextInvalidClientExceptionInternalServerException: InvalidRequestExceptionreasonunhandled errorunhandled error (UnauthorizedClientExceptionStartDeviceAuth
+    + -InfinityNaNinteger too largecannot convert u64 into a floating point type without precision lossi64 into a floating point type without precision losswill not attempt to convert f64 into a f32cannot convert floating point number  
+    + 08gnome shell exteautocomplete-winGetExtensionInfo
+    + : Server handshake initiated.CodeScanSucceededEventnumber_of_findingscompletion_typerecommendation_latency_millisecondstrigger_to_response_latency_millisecondssuggestion_reference_countgenerated_linenumber_of_recommendationspercei
+    + : event crates/q_cli/src/cli/inline.rs:94q_cli::cli::inlinecrates/q_cli/src/cli/inline.rsevent crates/q_cli/src/cli/inline.rs:101event crates/q_cli/src/cli/update.rs:113q_cli::cli::updatecrates/q_cli/src/cli/update.rsevent crates/
+    + :a non-empty list of numbers[]invalid length  for target of length assertion failed: self.is_char_boundary(n)assertion failed: self.is_char_boundary(start)assertion failed: self.is_char_boundary(end)mid > lenq-
+    + An object data was returned from a callback not creating any objectCallback creating object  did not provide any object data.Unknown object Protocol error: server sent object  for interface , but it has interface Received event  w
+    + AssumeRoleRequestSerializerunhandled errorunhandled error ()AssumeRoleResponseDeserializerAuthSchemeOptionResolverParamsSharedAuthSchemeOptionResolverContextAttachedErrorcontextsourceExpiredTokenExceptionmessageRegionDisabledExcep
+    + AuthSchemeOptionResolverParamsSharedAuthSchemeOptionResolverglobal backend is not used{}event crates/fig_auth/src/oauth_callback.rs:85fig_auth::oauth_callbackmessagereqcrates/fig_auth/src/oauth_callback.rsHandling OAuth callback/o
+    + BinaryCloseFrameTimeoutConfigconnect_timeoutread_timeoutoperation_timeoutoperation_attempt_timeoutUnifiedBearerResolverFrozenLayer/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-tungstenite-0.26.2/src/compa
+    + ChatAddMessageEventChatInteractWithMessageEventChatUserModificationEventCodeCoverageEventCodeFixAcceptanceEventCodeFixGenerationEventCodeScanEventCodeScanFailedEventCodeScanRemediationsEventCodeScanSucceededEventDocGenerationEvent
+    + ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownArc counter overflowPoisonError
+    + Could not find ibus-daemon. Is ibus installed?An unknown error occurred launching ibus-daemon: Unknown value set for XDG_SESSION_TYPE: . This must be set to x11 or wayland.Unknown error occurred when detecting the display server: 
+    + DailyRequestCountInsufficientModelCapacityMonthlyRequestCountUnknownevent crates/fig_api_client/src/clients/client.rs:476fig_api_client::clients::clientmessageerrcrates/fig_api_client/src/clients/client.rsevent crates/fig_api_clie
+    + DowncastParamsGetIdRequestSerializerGetIdResponseDeserializerunhandled errorunhandled error ()sigv4ContextAttachedErrorcontextsourceInternalErrorExceptionmessageLimitExceededExceptionNotAuthorizedExceptionExternalServiceExceptionT
+    + EmptyHostIdnaErrorInvalidPortInvalidIpv4AddressInvalidIpv6AddressInvalidDomainCharacterRelativeUrlWithoutBaseSetHostOnCannotBeABaseUrlSIGHUPSIGINTSIGQUITSIGILLSIGTRAPSIGABRTSIGBUSSIGFPESIGKILLSIGUSR1SIGSEGVSIGUSR2SIGPIPESIGALRMSIG
+    + EndpointResolverParamsinnerSharedEndpointResolverCodeScanEventprogramming_languagetimestampcode_analysis_scopeBlockUnknownjob_idide_categorylines_of_code_changedchars_of_code_changedlines_of_code_submittedTransformEventAcceptDisca
+    + Errora Display implementation returned an error unexpectedlyoverflow when multiplying duration by scalarM
+    + Failed to logout, max threads = et
+    + Failed to open dashboardlaunching q chat binaryYou are not logged in, please log in with no device registration found for tokenfailed to serialize the device registrationfailed to load device registrationmigration: sqlite has fres
+    + FixPosFixNegFixMapFixStrFalseBin16Bin32Ext16Ext32F32F64U8U16U32U64I8I16I32I64FixExt1FixExt2FixExt4FixExt8Str16Str32Array16Array32Map16Map32IO error while reading marker: IO error while reading data: wrong msgpack marker numeric ca
+    + FromVecWithNulErrorerror_kindbytesInteriorNulthe `Parsed` struct did not include enough information to construct the typeevent crates/fig_auth/src/external_idp.rs:208fig_auth::external_idpmessagestatuserror_textcrates/fig_auth/src
+    + HeaderValueCodeScanEventprogramming_languagetimestampcode_analysis_scope`TaskLocalFuture` polled after completionBlockUnknownjob_idide_categorylines_of_code_changedchars_of_code_changedlines_of_code_submittedTransformEventLinuxMac
+    + HeaderValueFeatureDevEventconversation_idTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknownPosting metrics2.29.1linuxx86_64Failed to post metricFailed to send telemetry even
+    + IdentityCachePartitionSharedIdentityResolverinnercache_partitionTracked_originvalueauth_scheme_option_resolverhttp_clientendpoint_resolverauth_schemesidentity_cacheidentity_resolversinterceptorsretry_classifiersretry_strategytime_
+    + Info-ZIP Unicode Comment Extra Field was incompleteInfo-ZIP Unicode Path Extra Field was incompleteFile is larger than 4 GiB 
+    + Invalid archive name: Invalid archive URL: event crates/fig_install/src/linux.rs:170fig_install::linuxmessagecrates/fig_install/src/linux.rsevent crates/fig_install/src/linux.rs:91unpacking tar to directory: event crates/fig_insta
+    + InvalidUrlValuevalueline_number span=ErrorInvalidBooleanValueComponentRangeis_conditionalBuildErrorOffsetLargerThanFileSizeLengthLargerThanFileSizeMinusReadOffsetIoErrorStreamingErrorInvalidFieldfielddetailsMissingFieldSerializati
+    + KIRO_ROUTER_VERSION=event crates/fig_integrations/src/router.rs:95fig_integrations::routermessagecrates/fig_integrations/src/router.rsevent crates/fig_integrations/src/router.rs:99event crates/fig_integrations/src/router.rs:43even
+    + ModelTemporarilyUnavailableUnknown`response` wasn't set in the underlying interceptor context. This is a bug.Failed to write to SessionIdInterceptor mutexapi.timeout
+    + Need help signing in?  sign-in is not permitted by your administrator. event crates/fig_auth/src/login_controls.rs:633lenmaxevent crates/fig_auth/src/login_controls.rs:642managed setting contains control characters, ignoring itman
+    + Need help signing in? RawRulecapabilityeffectmatchexcludeRawSettingsidc_start_urlidc_regionexternal_idp_domainexternal_idp_start_urlexternal_idp_regionsignin_help_urlevent crates/fig_auth/src/login_controls.rs:589event crates/fig_
+    + NotNeededRequestedLoadedInterceptorsourceOperationerrTimeoutConnectorOtherOrchestratorErrorclient_nameclient_typescopesredirect_urisgrant_typesissuer_urlentitled_application_arnRegisterClientInputtype-checkedencountered orchestrat
+    + NotNeededRequestedLoadedmetric_nameepoch_timestampvaluepassiveMetricDatumInterceptorsourceOperationerrTimeoutConnectorOther ()AcceptRejectUnknownrequest_idtimestampinput_lengthnum_selected_linesnum_suggestion_add_charsnum_suggesti
+    + PidLock::releaseClient auth for Cb
+    + Posting metrics2.29.1linuxFailed to post metricFailed to send telemetry eventarndescriptionsend_telemetry_eventtotal-coresmemoryq-detailssystem-infoenvironmentcwdshell-pathshell-versioninstall-methodin-cloudshellin-sshin-ciin-wsli
+    + ProfileFileCredentialsProviderconfiginner_providerEntireWorkspaceSubFolderUnknownNamedProviderFactoryproviderssourcetime_sourcefssts_clientpolicypolicy_arnsWebIdentityTokenCredentialsProviderBeforeSerializationSerializationBeforeT
+    + ProfileFileCredentialsProviderconfiginner_providerabstract socket name must be shorter than SUN_LENinner has gone awayUnhandledsourcePolicyDescriptorTypearnABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789DefaultCrede
+    + Q_TERM_DISABLEDINSIDE_EMACSQ_TERM="set -g  "export ";shell-integrations.enabled _ local-state -d  shell integration is disabled.\nRe-enable by running: \n'Q_SHELL_INTEGRATION_DISABLED sign-in is not permitted by your administrator
+    + RUST_MIN_STACKdescription() is deprecated; use Displaycalled `Result::unwrap()` on an `Err` value.local/share/gnome-shell/extensionsErrorIoErrorUnsupportedPlatformUnsupportedArchDirectoryNoParentProcessHwidNotFoundUnknownShellMiss
+    + RawPidFakePidpidparentexecmdline/proc//statusUtf8Errorvalid_up_toerror_lenPoisonErrorcalled `Result::unwrap()` on an `Err` valuedescription() is deprecated; use DisplayFromUtf8ErrorbyteserrorKIRO_LOG_LEVELQ_LOG_LEVELKIRO_LOG_STDOU
+    + Removed data dir-shell-extension
+    + RwLockTimeout while connectingthe key is not allowed to be `usize::MAX` span=diagnosticHook commandsDebug the appCustomize appearance & behaviorsettingSetup cli componentsinstallUninstallno_confirmNO_CONFIRMno-confirmUninstall Ama
+    + Security error: XDG_CURRENT_DESK
+    + ServiceDescriptorProtomethodoptionsEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtoreserved_nameextension_rangereserved_rangenested_typeextensiononeof_decl
+    + SetFigjsInterceptsintercept_bound_keystrokesintercept_global_keystrokesactionsNotifyChildSessionStartedparent_idInlineShellCompletionSetEnabledRequestenabledfigterm.FigtermResponseMessagedescriptor for message type `figterm.Figter
+    + SharedRuntimePluginMetadataEntrykeyvaluethis pair has already been serializedthis pair has not yet been serializedOperationservice_nameoperation_nameruntime_pluginshome directory expansion was requested (via `~` character) for the
+    + ShellContextenvironment_variablesaliascurrent_working_directorypidshell_pathprocess_nameqterm_versionsession_idpreexecwsl_distroDumpStateResponseintercept_commandcursor_positionInterceptedKeyHookactionkeyRunProcessRequesttimeoutar
+    + TARGET_TYPE_FILEInvalid responseWrote config at term-socket-path~
+    + TemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknown`request_mut` wasn't set in the underlying interceptor context. This is a bug.falsex-amzn-codewhisperer-optoutcodeWhisperer
+    + ThrottlingErrormessagereasonValidationErrorAccessDeniedErrorInternalServerErrorglobal backend is not used{}TemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknowndescription() is
+    + Tracked_originvalueauth_scheme_option_resolverhttp_clientendpoint_resolverauth_schemesidentity_cacheidentity_resolversinterceptorsretry_classifiersretry_strategytime_sourcesleep_implconfig_validatorsContextAttachedErrorcontextsour
+    + Tracked_originvalueauth_scheme_option_resolverhttp_clientendpoint_resolverauth_schemesidentity_cacheidentity_resolversinterceptorsretry_classifiersretry_strategytime_sourcesleep_implconfig_validatorsRuntimeComponentsthis pair has 
+    + UnexpectedErrorInconsistentComponentsInvalidEncodingUnspecifiedcalled `Result::unwrap()` on an `Err` valueLayoutErrorUnable to clone DigestContextEVP_MD_CTX_copy failedUnable to clone LcHmacCtxUnspecified}
+    + UnhandledsourcePolicyDescriptorTypearninternal error: entered unreachable codeUnknownVariantValueProgrammingLanguagelanguage_nameContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownClickBodyLinkClickFollowUpCli
+    + UnknownVariantValueInvalidGrantExceptionerrorerror_descriptionmessageInvalidScopeException: KmsAccessDeniedUnknownKMS_AccessDeniedExceptionAuthorizationPendingExceptionexpected object key or end object, found: expected start objec
+    + ValidationErrorAccessDeniedErrorThrottlingErrorInternalServerErrorUnhandledmessagereason_request_idmax_resultsnext_tokenreference_tracker_configurationStaticAuthSchemeOptionResolverParamsListCustomizationsInputListCustomizationsOu
+    + [31mIntegration files missing: The shell integration files are not installed. integrations install dotfilesTo install them run: If this is a fresh installation, run: setup  
+    + [35m  }"false[{,]InterfaceName--versionfailed getting fish versionfailed parsing fish version>=3.3.0your fish version is outdated (need at least 3.3.0, found )InvalidAuthSchemeNamesCsvvaluenot foundpoisoned lockunimplementedjob_id
+    + [35mbytes remaining on streamSharedConfigValidatorFailed to get bash versionsFailed to parse bash version>=5.0.0brew install bash && bashchsh -s /bin/zsh && zshUsing Bash  may cause issues, it is recommended to either update to ba
+    + [39m  }false{Bash is up to dateFish is up to dateAWS_PROFILEdefault2.29.1Unable to create HTTP client, the current executable is , the current executable is in Failed to get parent of current executable: Failed to get name of curr
+    + [39mcapacity overflowFatal internal error. Please consider filing a bug report at https://github.com/clap-rs/clap/issuesexpected i64expected u64expected boolexpected u32expected i32expected enum numberexpected floatexpected double
+    + [?25hLazy instance has previously been poisonedMKDIR dircpyBuilding copy operation: SRC  DST Dest not present: CP Source newer: CP Source differs: CP CP CP LNK not implemented: File  has unhandled type EXCL  for Could not strip pr
+    + [HRwLockminimalReconnectOnTransientErrorReuseAllConnectionsX86_64AArch64Universal`len` greater than remainingassertion failed: cnt <= self.limituniversal-apple-darwinx86_64-unknown-linux-gnux86_64-unknown-linux-muslaarch64-unknown
+    + [][[]] =,{}always at least one key.$"
+    + [tracing-subscriber] Unable to write an "event formatting error" to the Writer for this Subscriber! Error: OptOutInterceptorSessionIdInterceptorEventListener was not inserted into the linked list, make sure you're not polling Even
+    + `TaskLocalFuture` polled after completionresulting value is out of rangeoverflow subtracting duration from dateUnknownRequestChecksumCalculationErrorrequest_checksum_calculationUnknownResponseChecksumValidationErrorresponse_checks
+    + `` or `D-Bus string type must not contain interior null bytessgo0 or 1primaryfieldsstruct Header with 2 elementsendian_sigflagsserial_numstruct PrimaryHeader with 6 elements>= ?
+    + a Display implementation returned an error unexpectedlyErrorC8
+    + a Display implementation returned an error unexpectedlyoverflow when multiplying duration by scalarErrorV
+    + abstract socket name must be shorter than SUN_LENGetIdInputaccount_idloginsTokenTypeInterceptorauth_modeUserAgentOverrideInterceptorenvUnknownVariantValueDailyRequestCountInsufficientModelCapacityMonthlyRequestCountUnknownInvalidR
+    + access-control-allow-credentialsincoming body unexpectedly endedreceived settings ACK; applying Failed to read PID from lockfilefailed to create PatternID from " must be valid unicode, error: <arg name="property_name" type="g
+    + an unknown error occurredan i/o error occurredrequest timed outstreaming request body is not supportedfailed to convert to a proper responsefailed to create method namefailed to create http clientdescription() is deprecated; use D
+    + assertion failed: !self.fd_buf.is_empty()failed to write the buffered dataassertion failed: self.data_buf.is_empty()PoisonErrorpoisoned lock: another task failed insideq-
+    + assertion failed: public_values_eq(path.cert.issuer, issuer_subject)I
+    + assertion failed: queued.load(Relaxed)event crates/fig_remote_ipc/src/remote.rs:359fig_remote_ipc::remotemessageerrcrates/fig_remote_ipc/src/remote.rsevent crates/fig_remote_ipc/src/remote.rs:352event crates/fig_remote_ipc/src/rem
+    + assertion failed: seq1.len().map_or(true, |x| x <= self.limit_total)a Display implementation returned an error unexpectedlyErrorR
+    + called `Result::unwrap()` on an `Err` value/usr/lib/debug/.build-id/.debug/usr/lib/debug/.debug_abbrev.dwo.debug_info.dwo.debug_line.dwo.debug_loc.dwo.debug_loclists.dwo.debug_rnglists.dwo.debug_str.dwo.debug_str_offsets.dwoY
+    + called `Result::unwrap()` on an `Err` valueInvalidId\)
+    + called `Result::unwrap()` on an `Err` valueShellVersionEnableExtensionUninstallExtensionmetadata.jsonchecking: amazon-q-for-cli-legacy-gnome-integration@aws.amazon.comamazon-q-for-cli-gnome-integration@aws.amazon.comstatemissing e
+    + capacity overflowSharedRetryClassifierDELETE FROM  WHERE key = ?1auth_kvstateSELECT value FROM INSERT OR REPLACE INTO  (key, value) VALUES (?1, ?2)event crates/fig_auth/src/pkce.rs:405fig_auth::pkcemessagereqcrates/fig_auth/src/pk
+    + defined herefound herefirst defined heredefined again hereno entry found for keyunexpected end group taginvalid varintUnknownFieldnumbervalueUnknownFieldSetfieldsVarintSixtyFourBitLengthDelimitedGroupThirtyTwoBit`
+    + description() is deprecated; use Displaycalled `Result::unwrap()` on an `Err` valueinvalid varintassertion failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80invalid wire type:  (expected )Utf8Errorvalid_up_toerror_lencannot
+    + errorerror_descriptionmessageMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpoint}AgenticProjectNoMatchingAuthSchemeErrorValidationErrorAccessDeniedErrorInternalServerErrorThrottlingErrorAccessDeniedExceptionrea
+    + event crates/fig_ipc/src/send_message.rs:41fig_ipc::send_messagemessagecrates/fig_ipc/src/send_message.rsevent crates/fig_ipc/src/send_message.rs:33errtimeoutinvalid message typetimeout connecting to socketinvalid permissions on s
+    + event crates/q_cli/src/cli/internal/mod.rs:1033event crates/q_cli/src/cli/internal/mod.rs:950session_idevent crates/q_cli/src/cli/internal/mod.rs:943event crates/q_cli/src/cli/internal/mod.rs:955event crates/q_cli/src/cli/internal
+    + event crates/q_cli/src/cli/internal/multiplexer.rs:522q_cli::cli::internal::multiplexercrates/q_cli/src/cli/internal/multiplexer.rssending on senderevent crates/q_cli/src/cli/internal/multiplexer.rs:171event crates/q_cli/src/cli/i
+    + expected StartObjectexpected ValueString or ValueNullexpected object key or end object, found: expected start object or null{}found more JSON tokens after completing parsingdescription() is deprecated; use DisplayRngPosIntNegIntFl
+    + factoryprovider_configtoken_cacheMutexFrozenLayerFailed to connectSetting socket permissions to 0o600ConnectedSocket permissions are 0o600Failed to get socket metadata, checking parent folder permissionsSocket folder permissions a
+    + failed printing to stderr: unexpected argument '' found'--repo <REPO>' requires '--cloud''' cannot be used with the '' subcommand; it only applies to chat sessionsinvalid value for '--repo <REPO>': repository name must not be blan
+    + failed to construct requestrequest has timed outresponse errorservice errorInternalServerExceptionInvalidClientMetadataExceptionInvalidRedirectUriExceptionInvalidRequestExceptionInvalidScopeExceptionSlowDownExceptionUnsupportedGra
+    + failed to construct requestrequest has timed outresponse errorservice errorInternalServerExceptionInvalidClientMetadataExceptionInvalidRedirectUriExceptionInvalidRequestExceptionInvalidScopeExceptionSlowDownExceptionUnsupportedGra
+    + failed to construct requestrequest has timed outresponse errorservice errorServiceErrorsourcerawThrottlingErrormessagereasonValidationErrorAccessDeniedErrorInternalServerErrorUnhandledModelTemporarilyUnavailableUnknowndescription(
+    + fewer elements in arrayprovide_credentialsfig_api_client::credentialscrates/fig_api_client/src/credentials/mod.rsdefault_chainevent crates/fig_api_client/src/profile_resolver.rs:128messagecrates/fig_api_client/src/profile_resolver
+    + fewer elements in mapContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownapi.cps.serviceus-east-1https://management.us-east-1.kiro.deveu-central-1https://management.eu-central-1.kiro.devus-gov-east-1https://man
+    + float value out of rangeMapAccess::next_value called before next_keySharedIdentityCacheOutputCloud9ToolkitEclipseToolkitVscodeToolkitVisualStudioCodewhispererTerminalCodewhispererJupyterlabCanaryhttps://prod.us-east-1.shellspecs.j
+    + float value out of rangeexpected integer valueAgenticRequestcrossterm::terminal::LeaveAlternateScreen<>::write_ansi incorrectly erroredcrossterm::terminal::ScrollUpcrossterm::terminal::EnterAlternateScreencrossterm::cursor::Showcr
+    + global backend is not used{}assertion failed: dest.push(t).is_ok().local/share/applications//usr/share/applications/.config/autostart/failed to spawn `tracing-appender` non-blocking worker thread/home/runner/.cargo/registry/src/in
+    + http://localhost:Unified auth portal listening for callbackOAuth error:  - Auth portal timed outOAuth state mismatch: expected=, actual=Failed to receive callbackUnknown login_option: builderIdawsIdcMissing authorization code?logi
+    + https://desktop-release.q.us-east-1.amazonaws.comindex.jsonevent crates/fig_install/src/index.rs:62fig_install::indexmessageerrurlcrates/fig_install/src/index.rsinvalid release URL resolved, falling back to the default release URL
+    + installInstallsilentSILENTSuppress status messagesuninstallUninstallreinstallReinstallstatusStatusformatFORMATSetFigjsVisiblevisiblethe following required argument was not provided: silentthe following required argument was not pr
+    + interceptor_stateencountered orchestrator error; continuingencountered orchestrator error; haltingending orchestration early because the stop point is `BeforeTransmit`set during serializationtransmitting requesttimeout config must
+    + internal error: entered unreachable code: found impossible error in meta engine:   A  *A* >A>Q D must call 'start_pattern' firstinvalid capture indexa small enough slotcannot patch from a sparse NFA statevalid UTF-8 capture nameca
+    + internal error: entered unreachable codeC
+    + internal error: entered unreachable codeJn
+    + internal error: entered unreachable codeZ
+    + internal error: entered unreachable codecalled `Result::unwrap()` on an `Err` valueassertion failed: actual_state == EMPTY || actual_state == NOTIFIEDassertion failed: self.tail.is_none()inconsistent park_timeout state: inconsiste
+    + internal error: entered unreachable codecapacity must be positivecalled `Result::unwrap()` on an `Err` value 
+    + internal error: entered unreachable codeq
+    + invalid JSON Unicode escape: \uinvalid UTF-8 codepoint in JSON stringunexpected end of stringExpectedSurrogatePairInvalidEscapeCharacterInvalidSurrogatePairInvalidUnicodeEscapeInvalidUtf8UnexpectedEndOfString+6
+    + invalid tag value: 0invalid key value: delimited length exceededrecursion limit reachedunexpected end group taginvalid varintassertion failed: bytes.len() > 10 || bytes[bytes.len() - 1] < 0x80OS can't spawn worker thread: error-- 
+    + invalid varintinvalid wire type:  (expected )not yet implemented for windowsVarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitDiagnosticsInlineShellCompletion
+    + killallUnable to quit background task failed-- ;tracing::spanSystemTimeErrorFromUtf8ErrorbyteserrorAppNameI32I64U32U64F32F64StringBytesEnumNumberMessageMapHeaderParseIntErrorDeviceCodeIncompleteInvalidHeaderInvalidMessageTypeTryFr
+    + kiro_router: Version comparison - installed: , bundled: kiro_router: Version check result: needs_update=kiro_router: Missing version info - installed:  - assuming update neededkiro_router: Cannot read existing file at : background
+    + line_numberapplication/x-www-form-urlencodedcharsetutf-8 span=sEnvConfigParseErrormessageSetExplicitlyUnsetResolveDnsErrorsourceloading device registration from secret storeno refresh token was foundFailed to delete builder id tok
+    + metric_nameepoch_timestampvaluepassiveMetricDatumSharedRuntimePluginvalid bit representation}{ValidationErrormessagereasonSharedRetryClassifierOperationservice_nameoperation_nameruntime_pluginssupportedPackagearchitecturevariantta
+    + multiple fields provided for oneof ''unrecognized field name 'OptInOptOutUnknown@typevaluemessage '' not foundNULL_VALUEexpected nullullrueinternal error: entered unreachable code}unexpected value in mapUnknownVariantValueduration
+    + pluginsjetbrains-extensionPlugin not installed: Failed removing destination folder event crates/fig_integrations/src/intellij/linux.rs:44fig_integrations::intellij::linuxmessagecrates/fig_integrations/src/intellij/linux.rsstruct P
+    + profile `[default]` ignored because `[profile default]` was found which takes priorityevent /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-runtime-1.5.16/src/env_config/normalize.rs:121D
+    + qterm socket cheset-customizatioinline-shell-comzY
+    + queue not emptyLIFO slot not empty  fewer elements in arrayfewer elements in mapThrottlingErrormessagereasonValidationErrorAccessDeniedErrorhome directory expansion was requested (via `~` character) for the profile config file pat
+    + recursion limit reachedinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitEditBufferPromptPreExecInterceptedKeyInterceptInsertTextSetBufferDiagnosticsInsertOnNewCmdRunProcess
+    + request_type_urlfile_to_generate' is not definedo-command-routershould-figterm-lv
+    + requested capacity  too large: overflow while converting to raw capacityJ=
+    + resulting value is out of rangeoverflow subtracting duration from dateKIRO_API_KEYcorrect output typeCreateTokenaws-apia Display implementation returned an error unexpectedlycalled `Result::unwrap()` on an `Err` valueError-- ;trac
+    + resulting value is out of rangeoverflow subtracting duration from datestruct SocialTokenstruct TokenResponsestruct DevicePollResponsevariant identifierGooglegoogleGitHubGithubgithubstruct DeviceAuthorizationResponsefailed to write
+    + resulting value is out of rangeoverflow subtracting duration from date}struct BuilderIdTokenvariant identifierDeviceCodestruct DeviceRegistrationaccess_tokenexpires_atrefresh_tokenregionstart_urloauth_flowscopesa Display implement
+    + retrying requires cloned requestTLS_DHE_RSA_WITH_AES_128_CBC_RMDTLS_DHE_RSA_WITH_AES_256_CBC_RMDSUGGEST_ALTERNATE_IMPLEMENTATIONResumptionAttemptedWithVariedEmscannot convert negative integer ) is smaller than self pointer (2026-1
+    + size overflows MAX_SIZEmax_retries_per_request hitreqwest::retrycould retry!retryable but could not withdraw from budgetinternal error: entered unreachable code: Initiator::User should not error sending resetpoll_pending_open; str
+    + stateassertion failed: edge.height == self.height - 1assertion failed: src.len() == dst.len()assertion failed: edge.height == self.node.height - 1
+    + syu span=<- tracing::span::active-> socket closedrange start must not be greater than end:  > internal error: entered unreachable code: `Fds::Fds` is not possible hereinternal error: entered unreachable code: `Fds::Number` is not 
+    + unimplementedMacLinuxWindowsBug: no frame headerreceived frame tungstenite::protocol::frameno frame receivedwriting frame Bug: can't write to vectorConnection reset while sendingInternalServerErrorCancelledFailedSucceededUnknownAc
+    + unknown-rust-clientlinuxx86_642.29.1-Failed to set supported TLS versionsevent crates/fig_request/src/reqwest_client.rs:37fig_request::reqwest_clientmessageerrcrates/fig_request/src/reqwest_client.rsevent crates/fig_request/src/re
+    + updates.channelevent crates/fig_install/src/lib.rs:204fig_installmessagecrates/fig_install/src/lib.rsevent crates/fig_install/src/lib.rs:249errevent crates/fig_install/src/lib.rs:273event crates/fig_install/src/lib.rs:207event cra
+    + validhttp://event crates/fig_auth/src/oauth_callback.rs:185event crates/fig_auth/src/oauth_callback.rs:177event crates/fig_auth/src/oauth_callback.rs:48properties
+    + x86_64-pc-windowcannot_be_a_baseLet's make sure show-customizatill-for-all-users/n
+    + zkiro-cli.desktopFailed to updatevisited_capacityvalid pattern ID_ 
+    + ~/.aws/config~/.aws/credentialsAWS_CONFIG_FILEAWS_SHARED_CREDENTIALS_FILEhome directory expandedconfig file overridden via environment variable not foundconfig file not foundfailed to read config fileconfig file loadedinterceptor_
+===== kiro-cli-chat 2.29.0->2.29.1 sizes 215572200 -> 215787048 (+214848)
+  frames old: [(6933849, 27802249, 183224320), (34737666, 32031786, 124679552), (66770029, 29887616, 79500640), (96657709, 2110212, 13643233)]
+  frames new: [(6938349, 27802049, 183224320), (34741970, 32031786, 124679552), (66774333, 29887616, 79500640), (96662013, 2110212, 13643233)]
+  srcloc files 198 -> 198; +[]; -[]; changed 4
+    ~ crates/agent/src/agent/mcp/oauth_util.rs (47->46) old-only [1289, 1393, 1451, 1503, 1507] new-only [1291, 1395, 1513, 1517]
+    ~ crates/chat-cli/src/cli/chat/tool_manager.rs (21->21) old-only [2085, 23120] new-only [2312, 20850]
+    ~ crates/chat-cli/src/launch.rs (27->27) old-only [350, 369, 479, 499, 512, 517, 540, 993, 1056, 1122] new-only [352, 371, 481, 501, 514, 519, 542, 995, 1058, 1124]
+    ~ crates/chat-cli/src/mcp_client/oauth_util.rs (34->33) old-only [922, 1021, 1079, 1131, 1135] new-only [924, 1023, 1141, 1145]
+  prose literals +317 -306 (added shown below)
+    +                                         This occurs when the caller has timed out waiting for the response. If you see this occuring frequently, consider increasing the shutdown timeout.PeriodReaderThreadExitingShutdownRequestedPe
+    +             ID: Error deserializing todo list: Error getting todo list: event crates/chat-cli/src/cli/chat/mod.rs:3437event crates/chat-cli/src/cli/chat/mod.rs:3595event crates/chat-cli/src/cli/chat/mod.rs:3624event crates/chat-cl
+    +         event crates/agent/src/agent/mcp/oauth_util.rs:272## mcp: cached authorization server metadata failed to parse, re-running discovery: event crates/agent/src/agent/mcp/oauth_util.rs:1212event crates/agent/src/agent/mcp/oaut
+    +         event crates/chat-cli/src/mcp_client/oauth_util.rs:245## mcp: cached authorization server metadata failed to parse, re-running discovery: event crates/chat-cli/src/mcp_client/oauth_util.rs:861Listening on local host port  
+    +      <downloaded file>event crates/chat-cli/src/cli/update/staging.rs:188chat_cli::cli::update::stagingcrates/chat-cli/src/cli/update/staging.rsevent crates/chat-cli/src/cli/update/staging.rs:189Removed stale prepared binary Faile
+    +    Check Changes to  agent only apply to current session.
+    +   ! token_counttool_call_count server(s)  - auth required for . 
+    +   Description: not set  Current: event crates/chat-cli/src/auth/builder_id.rs:432chat_cli::auth::builder_idcrates/chat-cli/src/auth/builder_id.rsevent crates/chat-cli/src/auth/builder_id.rs:412event crates/chat-cli/src/auth/builde
+    +   ERROR: current_model_idncelled by user]dataModelVersionrn_start_requestrsation_metadataMESSAGE_RESPONSE
+    +   Edited agent Post edit validation failed. Error opening to runMigration was not performed. Nothing to migrate
+    +   Error reloading servers: Agent has no config file.
+    +   Using tool: KIRO_TEST_MODEFailed to persist resolved profile to database: xxxFailed to get auth profile: Failed to get auth profile for social user: profileArn missing, attempting lazy resolution via list_available_profilesprofi
+    +   Warning: Could not save to disk: Changes were saved to disk. Restart the session to apply them.
+    +   event crates/chat-cli/src/cli/chat/tools/use_subagent.rs:302chat_cli::cli::chat::tools::use_subagentcrates/chat-cli/src/cli/chat/tools/use_subagent.rsevent crates/chat-cli/src/cli/chat/tools/use_subagent.rs:413event crates/chat-
+    +  (forget  after this)Warning: Removing  messages. This cannot be undone.
+    +  (vFailed to display registry error:  mcp add --name <name> --command <command> mcp remove --name <name> mcp No MCP registry has been configured by your administrator.
+    +  --force Info: '. This will take effect the next time  chat is launched.
+    +  >  from mcp server  (trusted)
+    +  Bonus Credits: credits used, expires in  used)
+    +  Cancelled  active operationstimeoutMsstruct LocalMcpServerConfig with 6 elementsforceAuthstruct RemoteMcpServerConfig with 8 elementstoolSchemastruct RegistryMcpServerConfig with 6 elementsstruct EndpointOverridestruct EndpointOv
+    +  Cancelled operation: Operation not found:  (short: timeoutMsstruct LocalMcpServerConfig with 6 elementsforceAuthstruct RemoteMcpServerConfig with 8 elementstoolSchemastruct RegistryMcpServerConfig with 6 elementsadjacently tagged
+    +  Context changes are NOT preserved between chat sessions. To make these changes permanent, edit the agent config file.Subcommands for managing context rules and files in  chat sessionsevent crates/chat-cli/src/telemetry/legacy_sin
+    +  Context files % to replace the conversation history with its summary
+    +  Could not create automatic checkpoint: Original prompt is too large to send. Truncating...
+    +  Created  prompt named 'Valid names contain only letters, numbers, hyphens, and underscores (1-50 characters)
+    +  Created checkpoint Switching to the  agent./agent swap /quit
+    +  Custom prompt applied: Retrying original prompt...
+    +  Default agent set to 'Both --name and --path were provided. Used agent '' (ignored --path)
+    +  Deleted to-do list: Could not load current to-do list: No to-do lists to view!
+    +  Did you mean ' not found.? Run  to browse available models.
+    +  Diff tool failed: I'll insert content into file: I'll append content to file: event crates/chat-cli/src/cli/chat/tools/fs_write.rs:487event crates/chat-cli/src/cli/chat/tools/fs_write.rs:491required field `file_text` is missing, 
+    +  ETA FailedCancelledcancel'. Available: show, add, remove, update, clear, cancelUsage: /knowledge update <path>Usage: /knowledge remove <name|path>Usage: /knowledge add <name> <path>Knowledge base unavailable: Indexing '' startedF
+    +  Exported  logs to Failed to read log file: No LSP logs found. Run /code init first.
+    +  Failed to create log dump: Failed to get logs directory: Collecting logs...
+    +  Failed to save agent config: Failed to format JSON: Error prepopulating agent fields: Could not find global agent directory: 
+    +  Goal completeevent crates/agent/src/agent/tools/grep.rs:530agent::agent::tools::grepcrates/agent/src/agent/tools/grep.rsStripped trailing unmatched quote from grep patternNo matches found for pattern: ...[+ chars]Grep search was 
+    +  Goal iteration Goal: re-injecting iteration ) reachedexhaustedevent crates/chat-cli-v2/src/agent/acp/acp_agent.rs:1513event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:1507Goal re-injection attempt  failed: Goal re-injection fa
+    +  I'll do it laterAgent upgrade prompt failed, skipping: requested agent was not found; the engine's notification did not name itKIRO_CLASSIC_NUDGE_RELAUNCHED--agent-engineSwitch to 3.0 and upgrade my agent configs3.0 is saved as y
+    +  Imported chat session state from event crates/chat-cli/src/cli/chat/cli/persist.rs:941KAS sessions unavailable:  hours ago minutes ago seconds agoevent crates/chat-cli/src/cli/chat/cli/persist.rs:1010event crates/chat-cli/src/cli
+    +  Invalid edited configuration: Failed to mark agent execution as notified: event crates/chat-cli/src/cli/chat/mod.rs:6944Failed to send slash command telemetry: MCP server '' version changed () and will be restarted.
+    +  Invalid prompt name: Opening editor for  to create a local override.
+    +  Kiro responses /context show to erase the entire chat history
+    +  No workspace root found, using start directory: configjest.vite.rollup.tsup.babel.eslint.eslintrc.prettierrcevent crates/code-agent-sdk/src/sdk/workspace_manager.rs:677Retrieved  cached diagnostics for: event crates/code-agent-sd
+    +  OAuth token expired or invalid: No MCP servers installed
+    +  Removed event crates/chat-cli-v2/src/agent/acp/commands/mcp.rs:59chat_cli_v2::agent::acp::commands::mcpcrates/chat-cli-v2/src/agent/acp/commands/mcp.rs MCP server configuredNo MCP servers configured/mcp: failed to get server info
+    +  Retrying the request...[^
+    +  Scanning: Removed
+    +  Sending didChangeWatchedFiles for renamed file: event crates/code-agent-sdk/src/sdk/file_watcher.rs:378event crates/code-agent-sdk/src/sdk/file_watcher.rs:381event crates/code-agent-sdk/src/sdk/file_watcher.rs:385event crates/cod
+    +  Success: ' (ignored --path)
+    +  Tool Call Update: _kiro.dev/commands/execute_kiro.dev/commands/optionsStartSessionconnection_cxresp_senderSetModemode_idnext_agent_nameSetNextModelIdnext_model_idSetNextEffortnext_effortUpdateSettingkeyInitializeversionListSessio
+    +  Tools The /context hooks command is deprecated.
+    +  Total initialization time: Cannot convert to URILSP server '' initialized successfully' initialization failed: ' timed out during initializationInitialization timed outLSP process exited during initialization with code: Sending w
+    +  Total initialization time: Cannot convert to URILSP server '' initialized successfully' initialization failed: ' timed out during initializationInitialization timed outinitializeLSP process exited during initialization with code:
+    +  Total initialization time: event crates/code-agent-sdk/src/sdk/workspace_manager.rs:459event crates/code-agent-sdk/src/sdk/workspace_manager.rs:473event crates/code-agent-sdk/src/sdk/workspace_manager.rs:463event crates/code-agen
+    +  Warning: A Opening editor to create prompt content...
+    +  Warning: Error printing agent schema: 
+    +  Warning: This will permanently remove the  prompt '
+    +  already exists in ' already exists.
+    +  control-plane requests may failonly one of api.krs.service / api.cps.service is set; on the v3 engine the region override applies to both serviceskiroClientVersionisContentCollectionOptInevent crates/chat-cli/src/launch.rs:1460ev
+    +  disabling registry servers until next refreshFailed to watch config pathFailed to create agent config file watcherFailed to send agent config reload requestAgent config file change detected, reloadingevent crates/chat-cli-v2/src/
+    +  experiment editorreplycompactlogdumpexperimenttangentcheckpointtodospasteset_defaultShift+Tab to return to previous agent.
+    +  for more detail) | Plan: event crates/chat-cli/src/cli/chat/mod.rs:2193event crates/chat-cli/src/cli/chat/mod.rs:2158((\x9B|\x1B\[)[0-?]*[ -\/]*[@-~])|([^\x00-\x7F]+)state must always be Somectrlc receivedAn error occurred proces
+    +  ignoring overrideevent crates/chat-cli-v2/src/api_client/mod.rs:2418event crates/chat-cli-v2/src/api_client/mod.rs:2425event crates/chat-cli-v2/src/api_client/mod.rs:2430event crates/chat-cli-v2/src/api_client/mod.rs:2439mock reg
+    +  ignoring overrideevent crates/chat-cli/src/api_client/mod.rs:1375event crates/chat-cli/src/api_client/mod.rs:1380event crates/chat-cli/src/api_client/mod.rs:1368event crates/chat-cli/src/api_client/mod.rs:1389the service confirme
+    +  is ambiguous. Use one of the following Global prompt /prompts edit File:  not found.
+    +  is not a directoryunchanged
+    +  model stream completed with no content eventsevent crates/agent/src/agent/agent_loop/mod.rs:785tool_use_idevent crates/agent/src/agent/agent_loop/mod.rs:808evevent crates/agent/src/agent/agent_loop/mod.rs:877event crates/agent/sr
+    +  msgsNo saved chat sessions for 
+    +  must be set; refusing to seed the production databaseinsert conversation: read fixture: open database: parse fixture JSON: event crates/chat-cli/src/cli/chat/internal.rs:425chat_cli::cli::chat::internalcrates/chat-cli/src/cli/cha
+    +  no EndTurn event was receivedevent crates/chat-cli-v2/src/agent/acp/acp_agent.rs:2530event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:2540_kiro.dev/telemetry/identityChangedFailed to queue telemetry identity notificationFailed
+    +  only terminated sessions can be revivedevent crates/chat-cli-v2/src/agent/acp/session_manager.rs:1188event crates/chat-cli-v2/src/agent/acp/session_manager.rs:1253event crates/chat-cli-v2/src/agent/acp/session_manager.rs:1258even
+    +  override (): not a trusted BFF host or local loopbackapp/AmazonQ-For-CLI (code event crates/chat-cli/src/launch.rs:519event crates/chat-cli/src/launch.rs:514failed to emit daily-heartbeat telemetryfailed to emit CLI subcommand te
+    +  passing through to backend for validationfs_readshelluse_awsintrospectknowledgeweb_fetchissuer_urlmcpServersSkillComplexpatternindexTypeincludeexcludeautoUpdateknowledgeBase$schemaprompttoolAliasesallowedToolstoolsSettingswelcome
+    +  passing through to backendFailed to reload built-in tools: event crates/chat-cli/src/cli/chat/conversation.rs:574event crates/chat-cli/src/cli/chat/conversation.rs:565event crates/chat-cli/src/cli/chat/conversation.rs:550' not fo
+    +  served the authorization server metadata the path-inserted discovery URL could not## mcp: root fallback  is not authorization server metadata:  body could not be read: ## mcp: ignoring : response body is over the size limit retur
+    +  skipping mcp.json contributions from this fileevent crates/chat-cli-v2/src/mcp_registry.rs:311event crates/chat-cli-v2/src/mcp_registry.rs:332Fetching MCP registry from: Failed to fetch MCP registry: HTTP Fetched and validated  s
+    +  the file appears to be in use by another process; the update will be retried on the next launch: macosgnu-unknown-linux-event crates/chat-cli/src/cli/update/installer.rs:45crates/chat-cli/src/cli/update/installer.rsRunning instal
+    +  to change)Model: /model/usage
+    +  to log back in to Failed to load profile from the databaseThis command is only available for Pro usersevent crates/chat-cli/src/cli/user.rs:151event crates/chat-cli/src/cli/user.rs:180event crates/chat-cli/src/cli/user.rs:165even
+    +  total resource budget exceededComplete directory more) , ( .*)?Partial commandBase commandevent crates/agent/src/agent/shell_permission/mod.rs:50agent::agent::shell_permissioncrates/agent/src/agent/shell_permission/mod.rsevent cr
+    +  user-configured and registry MCP servers are suppressed for this sessionFailed to receive session manager requestall branches are disabled and there is no else branchevent crates/chat-cli-v2/src/agent/acp/session_manager.rs:458ev
+    +  verify before relying on it. stages finished.crew stage stalled: cancelling it; sibling stages keep runningcrew group stalled: no live stages and no completion within the deadline windowFailed to wait for group: Group wait channe
+    +  | resets on  pack
+    + !CFailed to parse (no description)payloadTruncated
+    + # Warning: Invalid exclude patterns ignored:  entries)Successfully read directory (showing  entries, offset: This tool only supports reading up to  bytes at a time. You tried to read  files). Try executing with fewer lines specifi
+    + #ResourceContentsParseGroupLengthLogEntryAppendedtool_permissions/knowledge clear - Completed in Continue editingAgent with name 99_fig_post.fishremote_changelogTextMessageChunk
+    + %m/%d %H:%M items
+    + &&&&&&&&&&&&&&&&' not registeredBN
+    + '. Create a new agent with ' agent create'failed to obtain value from agent provided. Aborting validationProfile migration successful. Migrated  agent(s)
+    + 'nInvalidUintValueInvalidRetryMode' as ImageFormatRequiresApprovalCustomToolConfigAsk me anything!&code_challenge=DelayTrackingIntContextUsageEvenMonthlyLimitReacSetNextAgentName
+    + 'y9'extracting asset/checkpoint init. Retrying with   (no arguments)/tools trust-allrunningWorkflowsmonthlyLimitReac
+    + ). Use No messages to remove.
+    + ).commentshould parseCannot convert to URIevent crates/code-agent-sdk/src/sdk/services/coding_service.rs:56code_agent_sdk::sdk::services::coding_servicecrates/code-agent-sdk/src/sdk/services/coding_service.rsevent crates/code-agen
+    + )CompiledTooBigCompiled regex exceeds size limit of  bytes.RegexLayoutErrorno group at index ''|,
+    + )packageArgumentsMON_DEPENDENCIESprev_fswrite_linonment_variablescompleted_indicealInMillisecondsacy-warning "$@"rization_pendingwindows-kas-stopdows-kas-processms
+    + , expires Additional credits
+    + -  (ID: 1 month ago months ago1 week ago weeks ago1 day ago days ago1 hour ago hours ago mins ago secs ago/*wslviewevent crates/chat-cli-v2/src/util/open.rs:88chat_cli_v2::util::openoutputcrates/chat-cli-v2/src/util/open.rsopen_ur
+    + --- USER MESSAGE END ---event crates/chat-cli-v2/src/agent/rts/mod.rs:1713event crates/chat-cli-v2/src/agent/rts/mod.rs:1723Reasoning defaults normalization failed: A network failure occurred during the response stream: An unexpec
+    + --diffKnowledgeRemoveKnowledgeClearKnowledgeSearchKnowledgeUpdateKnowledgeCanceloffset=sort= knowledge base entriesNo identifier provided using new Removing from knowledge base by path: Adding to knowledge base: Cancelling operati
+    + --output-format stream-json is not supported on the v1 engine. Pass --agent-engine v2 (or v3).event crates/chat-cli/src/cli/chat/mod.rs:7320event crates/chat-cli/src/cli/chat/mod.rs:7315Failed to fetch available models after  atte
+    + . To use MCP prompt, specify server: @<server>//prompts list
+    + ...truncated (showing lines ). Use offset:  to continue reading.failed to read ' is not a fileFailed to check file metadata for 'unsupported format: missing extensionimage at  has size  bytes, but the max supported size is  does n
+    + /context show [SYSTEM NOTE: This is an automated agent generation request, not from the user]
+    + /settings displayLite UI
+    + 0AmazonLinuxOther  Did you mean: HooksFieldSchemahttps://amzn.awsACK_READ_FAILUREClaude Haiku 4.5mcp_not_isolatedacpMethodInvokedToolCallLocation
+    + 2.29.1-KIRO_KAS_NODE_PATHKIRO_KAS_SERVER_PATHKAS bundle has unknown compression format (first bytes: 
+    + 256b00c17fdd301d9aed3a2b7885222d914a5499fd994dd00de58297afdcd7d6asset extraction completeevent crates/chat-cli/src/embedded_tui.rs:524event crates/chat-cli/src/embedded_tui.rs:529event crates/chat-cli/src/embedded_tui.rs:543event 
+    + 3. Connect to external tools with by using Jump into building with 
+    + >/recovery_secondsentire workspacechat_cli::launchcodeIntelligenceisInternalAmazonInclude MCP logsUpgradeAgentArgsTextMessageStartthlyLimitReachedAssistantResponsGET_MODEL_LIST_CDEL_LIST_FAILUREdoes not supporttool_specs_count
+    + ?/kagent loop startPendingStageSpecCreateTaskResultCapacityOverflowValidationFailedrequest_attemptsDISALLOWED_FILE_activeFunctionalcurrentUsageWithautonomousAgentsMODEL_TEMPORARILAWS_ENDPOINT_URLEXPLAIN_LINE_BY_((((((((((((((((Ins
+    + @WSteeringConsumedKIRO_DEBUG_SHELL--timeout=999999[Cancelled by usPUSH_SEND_MESSAGChatSpinnerVerbsQil
+    + @{MCPSERVERNAME}/--trust-tools arg for custom tool To learn more about MCP safety, see  needs to be prepended with failed to send agent config init telemetry--profile is deprecated, use Both .kiro and .amazonq folders found in wor
+    + ACTIVEOVERAGE_CAPABLEAGENTIC_REQUESTCREDITENABLED%b %d, %YTip: to see context window usage, run 
+    + Agent   : Env Vars: Scope   : 
+    + Agent  has been edited successfullyFailed to launch agent selector: No agent with name  foundTo make changes or create agents, please do so via create the corresponding config in , where you would also find an example config for y
+    + Allow this action? Use '' tool for the session. [
+    + Applied formatting to Symbol name cannot be emptyNew name cannot be emptyTab size must be >= 1 (got Symbols list cannot be emptyTitle cannot be emptyLanguage must be specifiedPattern cannot be emptyReplacement cannot be emptyFaile
+    + Applying migrationINSERT INTO migrations (version, migration_time) VALUES (?1, strftime('%s', 'now'));settings lock poisonedkiro-cli-non-interactiveevent crates/chat-cli-v2/src/telemetry/acp_method.rs:61chat_cli_v2::telemetry::acp
+    + Are you sure you want to remove this prompt? (y/n):  to remove the global version.
+    + Are you sure? This will erase the conversation history, context files, and hooks for the current session. USER_PROMPTassistant_response ... truncatedfailed to execute command: command timed out after  ms failed with exit code: , s
+    + Assume display task has completedevent crates/chat-cli/src/cli/chat/tool_manager.rs:1935event crates/chat-cli/src/cli/chat/tool_manager.rs:1896event crates/chat-cli/src/cli/chat/tool_manager.rs:1954Error sending prompts to chat he
+    + Bdata is not corrupt or out of sync with the codeContextIdsyntax_indexcontext_indexNamedByScopeInlineDirectregex string should be pre-tested__startno entry found for keyInvalid YAML file syntax: The file must contain at least one 
+    + Cannot trust '', set to per-request confirmation.
+    + Cannot untrust '~TokensWeb tools have been disabled by your administrator.
+    + Chat sessions for (empty conversation)event crates/chat-cli/src/cli/chat/cli/persist.rs:718event crates/chat-cli/src/cli/chat/cli/persist.rs:690event crates/chat-cli/src/cli/chat/cli/persist.rs:726Failed to enumerate classic sessi
+    + Clear operation cancelledFailed to read inputError accessing knowledge base directory: Failed to clear: Clearing all knowledge base entries...
+    + Clear the knowledge base? (y/N): Cancelling any pending operations...
+    + CodewhispererTerminalCompletionInsertedCodewhispererTerminalTranslationActionBuilderIdProTier4XxExceededActiveCustomizationsLimitExceededActiveJobLimitExceededProfilePerIdcInstanceLimitExceededResourceLimitFallbackChainTooLongFiel
+    + Command : Timeout : Disabled: \,Failed to parse arguments as JSON array. Expected format: '["arg1", "arg2", "arg,with,commas"]'Failed to parse environment variables, invalid environment variable ''. Expected 'name=value'
+    + Could not check if uncommitted changes exist:  (URL: refused the requestis temporarily unavailable.
+    + Could not create todos directory: No to-do lists to resume!
+    + Could not delete the selected to-do list: No finished to-do lists to clear!
+    + Could not display all checkpoints: Failed to clean: Deleting: 
+    + Could not get to-do lists: Could not delete to-do list: Select a to-do list to resume:Could not show to-do lists: Select a to-do list to view:Could not display the selected to-do listSelect a to-do list to delete:No to-do lists to
+    + Created a conversation checkpoint ( to restore the conversation later.
+    + DDDDDDDDDDDDDDDDusal_explanationGET_CAPTURED_REQreject_always_toallow_always_too## Results from Failed to write ChatDefaultAgentstored_fallbacksinternal_toolboxSiqi
+    + Document not found: event crates/agent/src/agent/tools/introspect.rs:353agent::agent::tools::introspectcrates/agent/src/agent/tools/introspect.rsevent crates/agent/src/agent/tools/introspect.rs:314event crates/agent/src/agent/tool
+    + Document not found: event crates/chat-cli/src/cli/chat/tools/introspect.rs:357chat_cli::cli::chat::tools::introspectcrates/chat-cli/src/cli/chat/tools/introspect.rsevent crates/chat-cli/src/cli/chat/tools/introspect.rs:390event cr
+    + EntityRefid_keysr#typeschema_urltime_unix_nanofiltered_attributesspan_idvalueArrayValuevaluesHistogramaggregation_temporalitydata_pointsdropped_attributes_countentity_refsattributespolled after completeKeyValueListfatal runtime er
+    + Error converting active agent  to value for validation. SkippingSkipping config validation because there is no active agentFailed to convert agent definition to schema: . Skipping validationUsing workspace version.: no agent with 
+    + Error deleting prompt:  is ambiguous. Use one of the following:To see MCP prompt, specify server: /prompts details <server>/' exist. Showing file-based prompt.
+    + Failed to access clipboard: No image in clipboardUnsupported image formatClipboard error: Failed to encode PNG: ' not found in registryNo MCP registry configuredFailed to get agent state: Failed to add servers: 
+    + Failed to build skim options: Failed to leave alternate screen: Failed to enter alternate screen: Select files: sh-c
+    + Failed to convert agent schema to string: Enter agent name: Post write validation failed for agent ''. Malformed config detected:  has been created successfullyNo agents availableNo editable agents found. Create a new agent with '
+    + Failed to execute command: Self exited with status: Thinking...event crates/chat-cli/src/cli/chat/mod.rs:3082backoff_msretrying transient send failure at the agent layerevent crates/chat-cli/src/cli/chat/mod.rs:6055event crates/ch
+    + Failed to expand path To restore this session later, use: /chat load-via-script <load-script>
+    + Failed to find definition: Completion Error:  symbols:
+    + Failed to get document symbols: Search failed:  lines
+    + Failed to get status: Failed to access knowledge base: event crates/chat-cli/src/cli/chat/tools/knowledge.rs:133chat_cli::cli::chat::tools::knowledgecrates/chat-cli/src/cli/chat/tools/knowledge.rs' does not exist, will try to remo
+    + Failed to launch model selector:  Using  (deprecated)Cleared the configured fallback for Fallback for This session's credentials cannot configure model fallbacks. Sign in to Kiro to configure one.Fallback configuration is not enab
+    + Failed to parse detector_config.json--=@Pevent crates/agent/src/agent/shell_permission/detector.rs:164agent::agent::shell_permission::detectorcrates/agent/src/agent/shell_permission/detector.rsevent crates/agent/src/agent/shell_pe
+    + Failed to restore checkpoint: --hardCheckpoints are not available. Git is required but not installed.Checkpoints are not available in this directory. Use '/checkpoint init' to enable checkpoints.event crates/chat-cli/src/cli/chat/
+    + Failed to serialize agent schema: Select MCP servers (use Space to toggle, Enter to confirm)Failed to get MCP server selection: '@<prompt name> [...args]' (overrides global)Usage:  (MCP):DescriptionLocal:Arguments (* = required)Gl
+    + Failed to set default model:  Set  as default model
+    + Hash table capacity overflowHash table capacity overflow@
+    + IMPORTANT CUSTOM INSTRUCTION: next user message should existevent crates/chat-cli/src/cli/chat/conversation.rs:527event crates/chat-cli/src/cli/chat/conversation.rs:509event crates/chat-cli/src/cli/chat/conversation.rs:497event cr
+    + ImageBlockImageSourcebytesevent crates/agent/src/agent/agent_loop/types.rs:450agent::agent::agent_loop::typescrates/agent/src/agent/agent_loop/types.rsfailed to serialize tool resultshould exist after pushevent crates/agent/src/ag
+    + Invalid languages.jsonnode_kindsymbol_typename_childextensionssymbolscallsimportsLanguage server 'event crates/code-agent-sdk/src/lsp/lsp_registry.rs:140code_agent_sdk::lsp::lsp_registrycrates/code-agent-sdk/src/lsp/lsp_registry.r
+    + KIRO_FORCE_INTERACTIVEevent crates/chat-cli/src/util/tool_permission_checker.rs:45chat_cli::util::tool_permission_checkercrates/chat-cli/src/util/tool_permission_checker.rsevent crates/chat-cli/src/util/tool_permission_checker.rs:
+    + KIRO_REMOTE_SESSIONS_ENDPOINTCLOUD_CONFIG_ENDPOINT/USERKIRO_PARENTQ_SET_PARENTKIRO_SET_PARENTQ_SET_PARENT_CHECKKIRO_SET_PARENT_CHECKQ_TERMKIRO_TERMQ_LOG_LEVELQ_ZDOTDIRKIRO_ZDOTDIRPROCESS_LAUNCHED_BY_QPROCESS_LAUNCHED_BY_KIROQ_SHEL
+    + KWireHookDocumentGroupNameInvalidAuthRefreshRetryUnevaluatedItemsRetryConfigErrorToolCallIdentityPreparing V3...
+    + Learn more at Use a code tool to initialize the client automatically
+    + Need help signing in?  sign-in is not permitted by your administrator. event crates/chat-cli/src/auth/../../../chat-cli-v2/src/auth/login_controls.rs:633maxevent crates/chat-cli/src/auth/../../../chat-cli-v2/src/auth/login_control
+    + Need help signing in? event crates/chat-cli/src/auth/../../../chat-cli-v2/src/auth/login_controls.rs:560event crates/chat-cli/src/auth/../../../chat-cli-v2/src/auth/login_controls.rs:582event crates/chat-cli/src/auth/../../../chat
+    + No active agentAll registry servers are already enabled.
+    + No agent configs found in Agent issues:
+    + No symbols found in  files
+    + No symbols foundHover Error:  (scoped to: 
+    + Not logged inApiKeyIamIdentityCenterLogged in with Authenticated with API keyLogged in with Builder IDLogged in with IAM Identity Center (Logged in with External IdP sign-in is not permitted by your administrator.event crates/chat
+    + Note: Cannot be used in tangent mode (to avoid mixing up conversation history)/checkpoint/checkpoint restore/checkpoint expand/checkpoint clean[BEING REPLACED] Being replaced by subagent tool (blocking), which enables complex mult
+    + O;OAuthMissingCode/checkpoint diff level or above
+    + Operation ID: Failed to start clear operation: No identifier provided. Specify name, context_id, or path.Removed context with path 'Removed context 'Found  results for ''
+    + OutOfBoundsEndEntityChainServerNotInitializedServerCurrentlyInitializingServerFailedServerAlreadyLaunchedChannelNotIdleAgentLoopErrorAgentLoopResponseMcpManagerEndTurnApprovalRequestSubagentSummaryGoalActionentrySessionToolRequest
+    + Poison error encountered: Failed to send auth codeMethod not found: event crates/agent/src/agent/mcp/service.rs:401mcpagent::agent::mcp::servicecrates/agent/src/agent/mcp/service.rsevent crates/agent/src/agent/mcp/service.rs:404ev
+    + Preparing the update binary failed: Preparing the update binary panicked: https://desktop-release.q.us-east-1.amazonaws.comevent crates/chat-cli/src/cli/update/mod.rs:268invalid update base URL, using defaultevent crates/chat-cli/
+    + Project Markers: If initialized by mistake, remove ~/.kiro/settings/lsp.json
+    + RUST_MIN_STACKlocalhostfile://Reader was not setZipFileReader was in an invalid stateAES encryption without AES extra data fieldArchive header is too largeOversized central directorySupport for multi-disk files is not implementedP
+    + Reader was not setZipFileReader was in an invalid stateAES encryption without AES extra data fieldArchive header is too largePassword required to decrypt fileInvalid local file headerInvalid EOCD64: inconsistent lengthInvalid EOCD
+    + Refer to the documentation for how to add hooks to your agent: https://kiro.dev/docs/cli/custom-agents/configuration-reference#hooks-fieldclaude-sonnet-4Select model (type to search): No models available
+    + Refer to the documentation for how to add tools to your agent: Servers loading (Some of these might need auth. See - 
+    + Refresh it now with mwinit? [y/N] mcscli#HttpOnly_event crates/chat-cli/src/cleanup.rs:56chat_cli::cleanupcrates/chat-cli/src/cleanup.rsCleaning up data older than  daysCleanup period too large: Cutoff time calculation underflowev
+    + Refusing cleanup as root with HOME owned by another user. Run cleanup without sudo.Cannot verify root's home directoryHOME is not a directorywslviewevent crates/chat-cli/src/util/open.rs:88chat_cli::util::openopen_url_async output
+    + Reminder: When your task is complete, you MUST call the summary tool (not just respond with text).event crates/chat-cli-v2/src/agent/acp/session_manager.rs:2543event crates/chat-cli-v2/src/agent/acp/session_manager.rs:2583event cr
+    + Restored conversation from checkpoint (Cannot forget 0 messages.
+    + Return only the JSON configuration, no additional text.code/readcode/writeevent crates/chat-cli/src/cli/chat/conversation.rs:859event crates/chat-cli/src/cli/chat/conversation.rs:863next_message should not existinput must not be e
+    + ScopeMetricsmetricsscopequeue not emptyPeriodicReaderNumberDataPointflagsexemplarsstart_time_unix_nanoResourceMetricsscope_metricsquantile_valuessumcountmissing field ``duplicate field `mid > lenKUTS HTTP client unavailable: Histo
+    + Script exited with non-zero statusevent crates/chat-cli/src/cli/chat/cli/persist.rs:156chat_cli::cli::chat::cli::persistcrates/chat-cli/src/cli/chat/cli/persist.rsevent crates/chat-cli/src/cli/chat/cli/persist.rs:149Failed to save
+    + See The conversation history has overflowed.
+    + Seems like you went on a tangent! Forgetting the last ). - Returned to main conversation.
+    + Service is busyService errorConnection dropped, retrying in No fallback model is configured for it.It has no other model to fall back to.Every fallback model has already been tried.This request has already changed models as often 
+    + Service name: Profile name: --profileevent crates/chat-cli/src/cli/chat/tools/use_aws.rs:289chat_cli::cli::chat::tools::use_awscrates/chat-cli/src/cli/chat/tools/use_aws.rsFailed to deserialize tool settings for use_aws: ' is alre
+    + Sibling session did not shut down within timeout during group failureevent crates/chat-cli-v2/src/agent/acp/session_manager.rs:1420Failed to convert MCP server, skippingFailed to start session: WorkspaceGlobalFailed to update sett
+    + Some context files are dropped due to size limit, please run to learn more.
+    + Spawning KAS serve:  --experimental-wasm-modules  --transport=ws --auth=acp-callback (port Kiro agent server running on port Connect with: kiro-cli --remote ws://<this-host>:--experimental-wasm-modules--transport=ws--auth=acp-call
+    + Summary:  operations processed,  successful, At least one operation must be providedevent crates/chat-cli/src/cli/chat/tools/fs_read.rs:314event crates/chat-cli/src/cli/chat/tools/fs_read.rs:309event crates/chat-cli/src/cli/chat/t
+    + Switch to 3.0 and upgrade my configsRemind me laterDon't ask againV3 ease-in prompt failed, skipping: event crates/chat-cli/src/launch/v3_ease_in.rs:121Failed to save V3 prompt snooze: event crates/chat-cli/src/launch/v3_ease_in.r
+    + Switched to agent: Failed to switch agent: Failed to receive initialize responseFailed to send initialize requestFailed to send session requestFailed to receive session responseFailed to send set_next_effort requestFailed to recei
+    + TLS_DHE_PSK_WITH_AES_256_CBC_SHATLS_RSA_WITH_ARIA_256_CBC_SHA384UnsupportedCrlSignatureAlgorithmchat.disableTrustAllConfirmationDo you want to continue? (y/n): Searching for symbols matching: unable to find agent with name: chat_c
+    + The context window has overflowed, summarizing the history...Monthly request limit reached/compact --help to compact your conversation. See  for compaction options
+    + This is a dummy tool. If you are seeing this that means the tool associated with this tool call is not in the list of available tools. This could be because a wrong tool name was supplied or the list of tools has changed since the
+    + Tip: You can edit this file directly: Error opening editor:  prompt:  not found, but global version exists.
+    + To learn how to configure MCP servers, visit event crates/chat-cli/src/cli/chat/cli/mcp.rs:477chat_cli::cli::chat::cli::mcpcrates/chat-cli/src/cli/chat/cli/mcp.rsFailed to save agent config: Failed to reload servers:  for server s
+    + To manage MCP servers manually, use:  or visit     Command: No MCP servers configured.
+    + To manage your plan or purchase add-on credits navigate to Estimated UsageAdd-on credits available for purchase
+    + Tool '' is ' are this toolthese tools ask for confirmation before running now trusted. I will 
+    + Tool post-processing failed:  [Saving anyways...
+    + Tool use was cancelled by the user<tool result redacted>event crates/chat-cli/src/cli/chat/message.rs:291chat_cli::cli::chat::messagecrates/chat-cli/src/cli/chat/message.rsfailed to serialize tool resultevent crates/chat-cli/src/c
+    + Tools: Task: Agent: Process spawned had already exited' launched successfully.
+    + Txblock_tailtail_positionsending on a closed channelSemaphoresemaphoreboundAlreadyShutdownTimeoutInternalFailureUnknownMetricmetricattributeUnexpectedAttributeDuplicateAttributeForbiddenMetricAttributeInvalidAttributeValueWrongMet
+    + Unable to verify subscription status: Authentication Error
+    + Use '/prompts details event crates/chat-cli/src/cli/chat/cli/tangent.rs:61chat_cli::cli::chat::cli::tangentcrates/chat-cli/src/cli/chat/cli/tangent.rsFailed to send tangent mode session telemetryevent crates/chat-cli/src/cli/chat/
+    + User interrupted mcp server loading in non-interactive mode. Ending.One or more mcp server did not load correctly. See $TMPDIR/kiro-log/kiro-chat.log for more details.Not all mcp servers loaded. Configure non-interactive timeout w
+    + WARNING: event crates/chat-cli/src/api_client/mod.rs:1509event crates/chat-cli/src/api_client/mod.rs:1502 has empty endpoint or region 
+    + WFromPathBufErrorconversations_v2aws_service_nameExclusiveMaximumSendMessageError credits across 
+    + Warning: Failed to cancel operations: Failed to cancel operation:  knowledge base entry with path 'Entry not found in  knowledge base:  knowledge base entry with name 'Failed to update: Failed to show knowledge base entries: Updat
+    + Warning: https://kiro.dev/docs/cli/code-intelligence/Code intelligence feature was enabled after chat started.
+    + Workspace: .kiro/settings/lsp.json
+    + Would rename  (showing  more available)
+    + You can close this page nowissstruct TitledMultiSelectEnumSchema with 7 elementsallowedPathsdeniedPathsallowReadOnlyelicitationnespositionEncodingsstruct ClientCapabilities with 7 elementsconfigOptionsstruct ConfigOptionUpdate wit
+    + You can close this page nowstateissstruct ExecuteCmdcommandworking_dirstruct ExecuteCmd with 2 elementsstruct McpServersstruct CommandHookstruct DirectoryOpdepthstruct DirectoryOp with 3 elementsstruct TitledMultiSelectEnumSchema 
+    + [0m !Shell commands via '!' are disabled when stdin is piped.
+    + [0m cohort as one JSON linethe following required argument was not provided: name_or_pathnotifications/prompts/list_changedexpect const string value "notifications/prompts/list_changed"expect const string value "number"expect cons
+    + [0m commandToolsArgsCommand-line arguments for managing tools in the chat sessionUsageArgsArguments for the usage command that displays credits and billing informationGhIssueContextfailed_request_idsDiagnosticArgsThe format of the
+    + [38;2;event crates/chat-cli/src/launch.rs:1124crates/chat-cli/src/launch.rsfailed to SIGTERM the TUI child; forcing shutdownevent crates/chat-cli/src/launch/v3_ease_in.rs:104chat_cli::launch::v3_ease_incrates/chat-cli/src/launch/v
+    + [JmPoisonErrorreasonSactivity_typepatchSendErrorStdoutStderr`Ready` polled after completionFailed to show the cursor: crossterm::style::SetColors<>::write_ansi incorrectly erroredcrossterm::style::SetUnderlineColorcrossterm::style
+    + ][ ] (NEXT) #event crates/agent/src/agent/tools/task/store.rs:221crates/agent/src/agent/tools/task/store.rsSkipping malformed task file Failed to read task dir: Failed to read dir entry: Failed to read task file: Failed to delete 
+    + _- attempt to join into collection with len > usize::MAX}uM
+    + ___aevent crates/chat-cli/src/cli/chat/tool_manager.rs:503event crates/chat-cli/src/cli/chat/tool_manager.rs:493event crates/chat-cli/src/cli/chat/tool_manager.rs:504ToolManager processed  MCP servers for runtime use (registry mod
+    + _proxy/successorIndexing files (S
+    + ```KIRO_AGENT_CONFIG_DIRevent crates/agent/src/agent/agent_config/load.rs:429event crates/agent/src/agent/agent_config/load.rs:449event crates/agent/src/agent/agent_config/load.rs:497event crates/agent/src/agent/agent_config/load.
+    + agent::agent::util::request_channelcrates/agent/src/agent/util/request_channel.rsevent crates/agent/src/agent/util/request_channel.rs:124event crates/agent/src/agent/util/request_channel.rs:130event crates/agent/src/agent/util/req
+    + allCommitCharactriggerCharactersstruct StatsArgs  Zip filename: 3
+    + assertion failed: dist_unchecked >= -0.00002V=
+    + assertion failed: output_position <= output.len()internal error: entered unreachable code: Impossible to allocate more than isize::MAX bytesN
+    + assertion failed: start <= endassertion failed: m.0 <= m.1assertion failed: self.after_context_left >= 1searcher core: will use slow line searchergrep_searcher::searcher::coresearcher core: will use fast line searcher is not <= as
+    + called `Result::unwrap()` on an `Err` value-ToolsCapabilityRootsCapabilitiesPromptsCapabilityClientCapabilitiesrootselicitationSamplingCapabilityServerCapabilitiesResourcesCapabilityElicitationCapabilityUrlElicitationCapabilityFor
+    + called `Result::unwrap_err()` on an `Ok` valuecalled `Result::unwrap()` on an `Err` valuemsgallowconnectioncookieuser-agent-overflow when multiplying duration by scalarmin_idle must be no larger than max_sizer2d2-worker-{}cannot s
+    + could not get current directoryfailed to read image header: failed to read image dimensions: failed to re-encode image: failed to decode image: image normalization task failed: image processing panicked[image removed: rejected by 
+    + credits< chars omitted>event crates/agent/src/agent/trust_shadow.rs:1418outcomeerror_kindclassifier shadow call failedevent crates/agent/src/agent/trust_shadow.rs:1376stagehas_usageclassifier shadow call metadata<unresolved path>w
+    + ctrl+cctrl+dctrl+lctrl+zctrl+sctrl+rctrl+tshift+tabDuplicate keyboard shortcut: , shortcuts disabled' uses reserved shortcut '', shortcut disabled' has invalid shortcut 'event crates/chat-cli/src/cli/powers.rs:56chat_cli::cli::pow
+    + deregistering event source from pollermio::poll_chunk size must be non-zeroassertion failed: n <= self.buf.init - self.buf.filleda formatting trait implementation returned an error when the underlying stream did notfailed to fill 
+    + description() is deprecated; use DisplayUtf8Errorvalid_up_toerror_lenbad error message from zstdzstd returned null pointer when creating new contextGiven position outside of the buffer bounds.`V
+    + documentSelectorrceSubscriptions error for URL: 
+    + esInMillisecondsarning chat "$@"uthorized_clientiew.mouseEnabledCodeIntelligencechat.enablePrompchat.allowAnimatapi.subagentTimemcp_server_versirrent-as-defaultthe subcommand 'tool_use_results
+    + event crates/agent/src/agent/agent_config/mod.rs:363agent::agent::agent_configcrates/agent/src/agent/agent_config/mod.rsevent crates/agent/src/agent/agent_config/mod.rs:372failed to load workspace mcp configsfailed to load global 
+    + event crates/agent/src/agent/mod.rs:4828event crates/agent/src/agent/mod.rs:4837ignoring stale hook completion from an older execution generationTool '' execution skipped because a sibling was blocked by a preToolUse hookno output
+    + event crates/agent/src/agent/tools/agent_crew.rs:901event crates/agent/src/agent/tools/agent_crew.rs:963event crates/agent/src/agent/tools/agent_crew.rs:912event crates/agent/src/agent/tools/agent_crew.rs:905unparseable group-acti
+    + event crates/agent/src/agent/tools/introspect.rs:116documentationquery_contextWebSearchSwitchToExecutionIntrospectToolSearchswitch_to_executionKIRO_CHAT_SHELLFailed to spawn command 'AMAZON_Q_CHAT_SHELLstdout should be pipedstderr
+    + event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:1562event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:1553Goal paused after dispatch_failure_exhaustedGoal: dispatch failure #, retrying after Failed to load log entries: activ
+    + event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:4580event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:4472event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:4617event crates/chat-cli-v2/src/agent/acp/acp_agent.rs:4520event 
+    + event crates/chat-cli-v2/src/agent/acp/commands/rewind.rs:132log_indexInvalid turn index: Rewound to earlier turn (new session rewind failedevent crates/chat-cli-v2/src/agent/acp/commands/rewind.rs:244newentries_copiedtotal_entrie
+    + event crates/chat-cli-v2/src/agent/acp/session_manager.rs:1284event crates/chat-cli-v2/src/agent/acp/session_manager.rs:1264Refreshing MCP registry data ( servers)Failed to queue registry refresh for session] [tool_call] [tool_res
+    + event crates/chat-cli-v2/src/agent/acp/session_manager.rs:1773chat_cli_v2::agent::acp::session_managerecrates/chat-cli-v2/src/agent/acp/session_manager.rsevent crates/chat-cli-v2/src/agent/acp/session_manager.rs:1523event crates/c
+    + event crates/chat-cli/src/agent/subagent.rs:1141event crates/chat-cli/src/agent/subagent.rs:1134event crates/chat-cli/src/agent/subagent.rs:1115event crates/chat-cli/src/agent/subagent.rs:1168event crates/chat-cli/src/agent/subage
+    + event crates/chat-cli/src/api_client/mod.rs:853event crates/chat-cli/src/api_client/mod.rs:858Returning cached model listCache miss, fetching models from list_available_models APIevent crates/chat-cli/src/api_client/mod.rs:698even
+    + event crates/chat-cli/src/auth/../../../chat-cli-v2/src/auth/portal.rs:643chat_cli::auth::portalcrates/chat-cli/src/auth/../../../chat-cli-v2/src/auth/portal.rsFailed to bind to port All callback ports are in use. Please close som
+    + event crates/chat-cli/src/cli/agent/mod.rs:1730chat_cli::cli::agentcrates/chat-cli/src/cli/agent/mod.rsevent crates/chat-cli/src/cli/agent/mod.rs:1765event crates/chat-cli/src/cli/agent/mod.rs:1749event crates/chat-cli/src/cli/age
+    + event crates/chat-cli/src/cli/chat/mod.rs:1820event crates/chat-cli/src/cli/chat/mod.rs:1899event crates/chat-cli/src/cli/chat/mod.rs:1872Warning: Failed to create code intelligence client: In a few words, summarize our conversati
+    + event crates/chat-cli/src/cli/chat/mod.rs:6667self.conversation.user_turn_metadataResetting the current user turnevent crates/chat-cli/src/cli/chat/mod.rs:4812event crates/chat-cli/src/cli/chat/mod.rs:5015event crates/chat-cli/src
+    + event crates/chat-cli/src/cli/chat/mod.rs:978Failed to fetch available models: Warning: Timed out checking MCP startup status, assuming failure
+    + event crates/chat-cli/src/cli/chat/tool_manager.rs:2409Tool manager orchestrator task exitedevent crates/chat-cli/src/cli/chat/tool_manager.rs:2222event crates/chat-cli/src/cli/chat/tool_manager.rs:2312event crates/chat-cli/src/cl
+    + event crates/chat-cli/src/cli/feed.rs:184https://prod.download.cli.kiro.dev/stable/feed.jsonhttps://download.gamma.cli.kiro.dev/stable/changelog/feed.jsonevent crates/chat-cli/src/cli/feed.rs:266event crates/chat-cli/src/cli/feed.
+    + event crates/chat-cli/src/embedded_tui.rs:137chat_cli::embedded_tuicrates/chat-cli/src/embedded_tui.rsevent crates/chat-cli/src/embedded_tui.rs:125.lockKAS bundle already extractedKAS extraction lock timed out; extracting without 
+    + event crates/chat-cli/src/mcp_registry.rs:749event crates/chat-cli/src/mcp_registry.rs:786event crates/chat-cli/src/mcp_registry.rs:778Before registry filtering - agent '' has  servers: Applied registry filtering to agent ' server
+    + external_idpmacoswindowsschemeGoogleGitHubcapability: event crates/chat-cli-v2/src/auth/refresh_coordinator.rs:104chat_cli_v2::auth::refresh_coordinatortimeout_secscrates/chat-cli-v2/src/auth/refresh_coordinator.rsrefresh lock tim
+    + ey!{Cmcp_init_timeoutDidSelectProfileContentMediaTypeExclusiveMinimum occurrences in +, total found: p/startup_statusession/terminaten_created_reasonmax_message_lengowed_write_pathsprompt_on_demand
+    + failed to copy url to clipboarderror sending input eventtool approval senttool rejection sentsubagent indicator failed to receive terminal eventTerminal too small to display summary. Please resize. 
+    + failed to obtain schema: . Aborting validationMigration did not happen for the following reason:  is malformed at Failed to set default agent: manual migrate is potentially destructive to existing agent configs with name collision
+    + files and serializing the CLI's hooks back to array form.chat_cli::cli::agent::hook::WireHookDocumentevent crates/chat-cli/src/cli/agent/mod.rs:735event crates/chat-cli/src/cli/agent/mod.rs:751event crates/chat-cli/src/cli/agent/m
+    + find this run with `kiro-cli --list-sessions`, then resume it with `kiro-cli --resume-id SESSION_ID`resume with `kiro-cli --resume-id SESSION_ID` using this error record's `sessionId`the KAS connection closed while workflows were 
+    + first agent loop request should never failevent crates/agent/src/agent/mod.rs:4122starting compactionAgent is not executing a turnevent crates/agent/src/agent/mod.rs:1702failed to end current turn after entering error state' is no
+    + https://kiro.dev/docs/cli/custom-agents/configuration-reference#tools-field for details)  TotalPlan: Your plan is managed by admin
+    + https://kiro.dev/docs/cli/mcp[loading]: Server is still initializing...
+    + inconsistent stateinternal error: entered unreachable code: struct PendingStageSpecloop_configstruct PendingStageSpec with 6 elementsstruct ChatArgsstruct CodeArgsstruct GoalArgsstruct HelpArgsstruct PlanArgsstruct QuitArgsenumNam
+    + inconsistent statestruct HistoryEntrystruct HistoryEntry with 3 elementsstruct GetHoverParamsstruct GetHoverParams with 3 elementsstruct FsSearchcontext_linesstruct FsSearch with 3 elementsstruct SessionInfoEntry with 7 elementsen
+    + internal error: entered unreachable code"
+    + internal error: entered unreachable code: please refrain from storing >64 petabytes of text in semver version.-+Z
+    + invalid_recordqueue_fullretry_exhaustedpermanent_rejectionauth_timeoutunknownreplayed export-drop mutex poisonedkiro-telemetryotel instrument cache mutex poisonedClientType/v1/metrics/service.versiondeployment.environmentos.typeli
+    + kLastContextUsageOAuthCustomErrorInvalidGroupNameServer at index Files modified:
+    + kiro-update-instchat.highPerformmIdleHardTimeouts.showWriteDiffspect.tangentModechat.tools.filtechat.delegateModt.statusLine.tui 
+    + lddevent crates/chat-cli/src/agent/rts/mod.rs:687chat_cli::agent::rtscrates/chat-cli/src/agent/rts/mod.rsevent crates/chat-cli/src/agent/rts/mod.rs:694rts response parser was cancelledrts response stream has endedevent crates/chat
+    + map with a single keystring or mapunk_tokenWordLevelcontinuing_subword_prefixmax_input_chars_per_wordWordPieceRAYON_NUM_THREADSRAYON_RS_NUM_CPUSinternal error: entered unreachable codeassertion failed: injected && !worker_thread.i
+    + mid > lenassertion failed: out_pos + 3 < out_slice.len()assertion failed: (source_pos + 3) & out_buf_size_mask < out_slice.len()assertion failed: out_pos + 1 < out_slice.len()assertion failed: (source_pos + 1) & out_buf_size_mask 
+    + mid > lenmid > lenMatching variant not found.
+    + mid > lenprohibited character ``prohibited bidirectional textstarts with combining characterempty strings
+    + mid > lensummaxreshapeflattentransposeunsqueezeweightembeddingsword_embeddingsposition_embeddingsLayerNormencoderlayer.hidden-actmodel.embeddingslayerattentiondenseintermediateoutputtoken_type_embeddingsquerykeyvalueoutinterWrong 
+    + missing field ``invalid length , expected duplicate field `internal error: entered unreachable codemid > lenvariant identifierunknownrun receipt exceeded its size limit.reaper.lockv1v2v3linuxmacoswindowstuikas_subprocess.jsonschem
+    + missing field ``unknown field ``, expected invalid length , expected duplicate field `overflow deserializing Durationnanosfewer elements in arrayfewer elements in mapfailed to disable raw modeNo event setfailed to enable raw modee
+    + ms)Failed to serialize: Failed to write file: 
+    + networkModeblock allcommon dependenciesallow allunconfirmedmcpSandboxed MCP isolation is unconfirmed. MCP servers are not isolated. Outbound network access is open. Network deny rules are not guaranteed.[sandbox] Sandbox is on. Cu
+    + not trustedtrust read-only operationstrust working directorytrusted (prerelease)trust read-only commandsevent crates/chat-cli/src/cli/agent/mod.rs:1280event crates/chat-cli/src/cli/agent/mod.rs:1194event crates/chat-cli/src/cli/ag
+    + notError converting tool schema to string: it does not exist.they do not exist.
+    + notifications/caCommitCharactersstruct AgentCrewc
+    + page must have been allocated to insert!Thread count overflowed the configured max count. Thread index = .a shard can only be inserted by the thread that owns it, this is a bug!DeprecationGeneralLegalModelFallbackTargetaws_product
+    + parent_session_itruncate_large_mPrevious agent 'context_recovery
+    + project_metadatalist_descriptionworkspaceDiagnoselicitation/creastruct UseAwsRaw response body: 
+    + sessionSourceremotetimed out writing to the v3 engine's stdin after the v3 engine's stdin is closedfailed to spawn ACP stdout writerfailed to register SIGINT handlerfailed to register SIGTERM handlerfailed to register SIGHUP handl
+    + struct Feedentriesstruct Feed with 1 elementdiagnosticsstruct PublishDiagnosticsParams with 3 elementsstruct Entryhiddenchangesstruct Entry with 5 elementsallServersthisServerstruct Changestruct Change with 2 elementsstruct KasMcp
+    + struct GuideArgstask_descriptionH
+    + struct ModelArgsstruct TaskInputie
+    + struct ReplyArgsnfc1>
+    + struct TransportstandaloneCohort>
+    + subagent has failed due to the following error: event crates/chat-cli/src/agent/subagent.rs:695state.conversation_idevent crates/chat-cli/src/agent/subagent.rs:678Failed to convert V1 MCP registry response to V2; subagent will run
+    + subcommands/voice - ' not found. Did you mean ? Run /agent to browse available agents.Unknown agent: . Run /agent to browse available agents.Agent config not found: Agent changed to Edited agent '' at Cannot edit built-in agent ''
+    + this conversation was compacted; messages from before the compaction are not availablenothing before this actionevent crates/agent/src/agent/trust_shadow.rs:1612classifier shadow skipped: input over budgetpayload_over_budgetpermis
+    + time_to_first_chunk_milliseconds2026-10-10T02:51:14.614776+00:00Column number must be >= 1 (got 
+    + to handle find errors, use 'try' or 'search' methodsregex: thread ID allocation space exhaustedinvalid span  for haystack of length invalid match spanstartendstruct Range with 2 elementsurirangestruct Location with 2 elementschara
+    + to handle find errors, use 'try' or 'search' methodsregex: thread ID allocation space exhaustedinvalid span  for haystack of length invalid match spanstruct Range with 2 elementsStaticEndpointResolveragent_client_protocol_schema::
+    + to saveYour administrator has configured an MCP registry, and you can only install servers from that registry. Use 'mcp add' to install registry servers. added
+    + would would remove: would keep (event crates/chat-cli/src/cli/update/legacy.rs:1249chat_cli::cli::update::legacycrates/chat-cli/src/cli/update/legacy.rsCaution: A Kiro CLI installation was detected but failed to be removed due to 
+    + zNamedBackrefOnlyQTERM_SESSION_IDContent Preview:kiro-cli-minimalprofile.Migrated........
+    + zTurn in progressuser interruptedMidwayExpiryArgssessionManagemensecs_since_epoch
+    + {msg} {spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})Failed to set progress bar template#>-Loading modelFailed to write chunk to fileFailed to read chunk from responseDownlo
+    + {msg} {spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})Failed to set progress bar template#>-Loading modelFailed to write chunk to fileFailed to read chunk from responseDownlo
+    + {msg} {spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})Failed to set progress bar template#>-Loading modelFailed to write chunk to fileFailed to read chunk from responseDownlo
+    + |UnsupportedErrorfile://README.mdhooks_to_execute modifications,  !"#$%&'()*+,-./CODE_COMPLETIONS
+    + }S{KAuthorizedClientNotNulTerminatedcompressed_bytesOutput is JSON: Prompt list for IDENTITY_CHANGEDkiro-cli.desktop
+===== kiro-cli-term 2.29.0->2.29.1 sizes 34056416 -> 34058976 (+2560)
+  frames old: []
+  frames new: []
+  srcloc files 37 -> 37; +[]; -[]; changed 0
+  prose literals +101 -102 (added shown below)
+    +                          This happened when ConfigLoader::load was called during Config construction. You can fix this by setting a sleep_impl on the ConfigLoader before calling load or by enabling the rt-tokio feature`ignore_conf
+    +                          This happened when ConfigLoader::load was called during Config construction. You can fix this by setting a sleep_impl on the ConfigLoader before calling load or by enabling the rt-tokio feature`ignore_conf
+    +    >* *>D invalid match spanxx_
+    +  ()resulting value is out of rangeoverflow subtracting duration from datemissing field ``invalid length , expected duplicate field `unknown variant ``, there are no variants`, expected }a sequencestruct TokenResponsestruct Externa
+    +  ignoring overridehttps://q.us-gov-east-1.amazonaws.comhttps://q.us-gov-west-1.amazonaws.comhttps://q.us-iso-east-1.c2s.ic.govhttps://q.us-isob-east-1.sc2s.sgov.govhttps://q.us-isof-south-1.csp.hci.ic.govhttps://q.eu-central-1.ama
+    +  this should not happen for this user type.Lazily resolved profileArn from list_available_profilesNo profiles available. Your administrator has not granted you access to Kiro. Please contact your organization's administrator to be
+    + ()nonceHostboundvalueClientboundpacketnanosRequestsession_idShellContextpidprocess_namecurrent_working_directoryshell_pathwsl_distroenvironment_variablesqterm_versionpreexecaliasRunProcessRequestexecutableargumentsworking_director
+    + -InfinityNaNinteger too largecannot convert u64 into a floating point type without precision lossi64 into a floating point type without precision losswill not attempt to convert f64 into a f32cannot convert floating point number  
+    + :internal error: entered unreachable code<unknown time>failed to fill whole buffera Display implementation returned an error unexpectedlydescription() is deprecated; use Displaycalled `Result::unwrap()` on an `Err` valueErrorIoErr
+    + AuthSchemeOptionResolverParamsSharedAuthSchemeOptionResolverSharedRetryClassifierglobal backend is not used{}Errora Display implementation returned an error unexpectedlyoverflow when multiplying duration by scalarSsooidcSdkRegiste
+    + AuthorizationPendingExceptionFeatureDevCodeAcceptanceEventlines_of_code_acceptedcharacters_of_code_acceptedprogramming_languageinternal error: entered unreachable codefatal runtime error: something here is badly broken!, aborting
+    + BlockUnknownAcceptDiscardEmptyMergeRejectrequest_idtimestampinput_lengthnum_selected_linesnum_suggestion_add_charsnum_suggestion_add_linesnum_suggestion_del_charsnum_suggestion_del_linescode_intentuser_decisionresponse_start_laten
+    + ChatAddMessageEventChatInteractWithMessageEventChatUserModificationEventCodeCoverageEventCodeFixAcceptanceEventCodeFixGenerationEventCodeScanEventCodeScanFailedEventCodeScanRemediationsEventCodeScanSucceededEventDocGenerationEvent
+    + ChatAddMessageEventChatInteractWithMessageEventChatUserModificationEventCodeCoverageEventCodeFixAcceptanceEventCodeFixGenerationEventCodeScanEventCodeScanFailedEventCodeScanRemediationsEventCodeScanSucceededEventDocGenerationEvent
+    + ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknown`response` wasn't set in the underlying interceptor context. This is a bug.Failed to write to SessionIdInterceptor mutexapi.timeout
+    + ContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnknownapi.selectedCustomizationCustomizationarndescriptionstruct Customization$6
+    + DailyRequestCountInsufficientModelCapacityMonthlyRequestCountUnknownDELETE FROM  WHERE key = ?1SELECT value FROM ()description() is deprecated; use Displaycalled `Result::unwrap_err()` on an `Ok` valueUtf8Errorvalid_up_toerror_len
+    + DefaultCredentialsChainprovider_chainLinuxMacWindowsUnknownSharedCredentialsProvidermid > lencreatedTimecredentialStartUrluserLoggedInrefreshCredentialscompletionInsertedinlineShellCompletionActionedtranslationActionedcliSubcomman
+    + DowncastParamsUnknownVariantValueKmsAccessDeniedUnknownevent crates/fig_telemetry/src/endpoint.rs:14fig_telemetry::endpointmessagecrates/fig_telemetry/src/endpoint.rsResolving endpointClickBodyLinkClickFollowUpClickLinkCopySnippet
+    + EndpointResolverParamsinnerSharedEndpointResolverCodeScanEventprogramming_languagetimestampcode_analysis_scopePolicyDescriptorTypearnBlockUnknownAcceptDiscardEmptyMergeRejectAuthSchemeOptionResolverParamsSharedAuthSchemeOptionReso
+    + Errora Display implementation returned an error unexpectedlyoverflow when multiplying duration by scalar]
+    + FeatureDevEventconversation_idSlowDownExceptionerrorerror_descriptionmessageNibbleVec index out of bounds: len is , index is attempted to split past vector end. len is multiple-keys with the same bit representation.InvalidGrantExc
+    + FixPosFixNegFixMapFixStrFalseBin16Bin32Ext16Ext32F32F64U8U16U32U64I8I16I32I64FixExt1FixExt2FixExt4FixExt8Str16Str32Array16Array32Map16Map32IO error while reading marker: IO error while reading data: wrong msgpack marker numeric ca
+    + HeaderValueThrottlingErrormessagereasonValidationErrorAccessDeniedErrorInternalServerErrorglobal backend is not used{}description() is deprecated; use DisplayHeadersheadersStatusCodeExtensionsextensions_02xextensions_1xstatusexten
+    + IdentityCachePartitionSharedIdentityResolverinnercache_partitionHeaderValueTracked_originvalueauth_scheme_option_resolverhttp_clientendpoint_resolverauth_schemesidentity_cacheidentity_resolversinterceptorsretry_classifiersretry_st
+    + Info-ZIP Unicode Comment Extra Field was incompleteInfo-ZIP Unicode Path Extra Field was incompleteFile is larger than 4 GiBP
+    + Interface not foundaddress error: I/O error: invalid message fieldexcess dataD-Bus handshake failed: Invalid D-Bus method replyno details: A required field is missing from message headersInvalid GUIDConnection support is lackingna
+    + InvalidExtensionsInvalidHeaderNameInvalidHeaderValueInvalidStatusCodeInvalidUriInvalidUriPartsMissingSchemeNonUtf8HeaderHttpErrorsourceevent crates/fig_api_client/src/clients/client.rs:474fig_api_client::clients::clientmessageerrc
+    + InvalidTypeOutOfRangeInvalidBlobSizeexpected_sizeblob_sizeline_numberProfileSsoSessionRetryModeParseErrorthe `Parsed` struct did not include enough information to construct the typeSectionInnerpropertiesBuildErrorEnvConfigErrorpro
+    + MapFsNamespacedFsreal_pathnamespaced_tofactoryprovider_configinnertoken_cacheFrozenLayerqterm.csi-u.enabledTokenProviderChainCloneableLayerPropertiesChainProviderchainPropertiesKeysection_keysection_nameproperty_namesub_property_n
+    + NamedProviderFactoryprovidersqueue not emptyLIFO slot not emptyLinuxMacWindowsUnknownMetadataEntrykeyvalueconversation_idnumber_of_add_charsnumber_of_add_linesnumber_of_add_filesuser_decisionuser_identitynumber_of_navigationfolder
+    + NotNeededRequestedLoadedEndpointResolverParamsinnerSharedEndpointResolverInterceptorsourceOperationerrTimeoutConnectorOtherBeforeSerializationSerializationBeforeTransmitBeforeDeserializationDeserializationAfterDeserializationAuthS
+    + NotNeededRequestedLoadedInterceptorsourceOperationerrTimeoutConnectorOther ()UnhandledOrchestratorErrormissing field ``unknown field ``, there are no fields`, expected invalid length , expected duplicate field `unknown variant ``,
+    + NotNeededRequestedLoadedInterceptorsourceOperationerrTimeoutConnectorOtherOrchestratorErroran RFC3339-formatted `OffsetDateTime`type-checkedencountered orchestrator error; continuingit is failedrequest serializer must be in the co
+    + O1;charsetutf-8 span=<- tracing::span::active-> ClientboundpacketReadFileRequestis_binary_filenanosHeadersOut of bounds accessOperationStatusCodeRunProcessRequestexecutableargumentsworking_directoryenvtimeoutExtensionsextensions_0
+    + Preferredfailed to ioctl(TIOCSWINSZ): Contents/Resources/usr/share/resourcest.sockQ_BUNDLE_METADATA_PATHbundle-metadatametadata.json]Fig nu hint color: Fig suggestion color: Fig zsh suggestion color: Fig fish suggestion color: Fig
+    + ProfileFileCredentialsProviderconfiginner_providerabstract socket name must be shorter than SUN_LENNamedProviderFactoryproviderssourcetime_sourcefssts_clientpolicypolicy_arnsWebIdentityTokenCredentialsProviderBeforeSerializationSe
+    + S: backtrace capture failedw|x
+    + Security error: i
+    + ServiceDescriptorProtomethodoptionsEnumValueDescriptorProtonumberinvalid tag value: 0invalid key value: invalid varintinvalid wire type value: DescriptorProtooneof_declreserved_nameextension_rangeextensionfieldnested_typereserved_
+    + SetFigjsInterceptsintercept_bound_keystrokesintercept_global_keystrokesactionsNotifyChildSessionStartedparent_idInlineShellCompletionSetEnabledRequestenabledfigterm.FigtermRequestMessagedescriptor for message type `figterm.Figterm
+    + SharedRuntimePluginMetadataEntrykeyvaluethis pair has already been serializedthis pair has not yet been serializedoverflow deserializing Durationoverflow deserializing SystemTime epoch offsetOperationservice_nameoperation_namerunt
+    + SlowDownExceptionerrorerror_descriptionmessageevent /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-config-1.8.11/src/provider_config.rs:295aws_config::provider_configerr/home/runner/.cargo/registry/src/index
+    + SsoSessionRetryModeParseErroris_conditionalthe `Parsed` struct did not include enough information to construct the typeSectionInnerpropertiesBuildErrorEnvConfigErrorproperty_sourceerrErrorMetadataextras. source: fielddetailsSerial
+    + StaticEcsCredentialsProviderinnerbuilderfactoryprovider_configtoken_cacheFrozenLayerUrias_stringparsed span=CloneableLayerChainProviderchainH0H1Extensionsextensions_02xextensions_1xProviderChainImdsCredentialsProviderclientprofile
+    + UnexpectedErrorInconsistentComponentsInvalidEncodingUnspecifiedcalled `Result::unwrap()` on an `Err` valueLayoutErrorUnable to clone DigestContextEVP_MD_CTX_copy failedUnable to clone LcHmacCtxUnspecified=
+    + Unhandledsourceinternal error: entered unreachable codeSharedRetryClassifierProgrammingLanguagelanguage_nameKmsDisabledKeyKmsInvalidKeyUsageKmsInvalidStateKmsKeyNotFoundUnknownDailyRequestCountInsufficientModelCapacityMonthlyReque
+    + UnknownVariantValueExpiredTokenExceptionerrorerror_descriptionmessageInvalidGrantException: KmsAccessDeniedUnknownKMS_AccessDeniedExceptionUnsupportedGrantTypeExceptionexpected object key or end object, found: expected start objec
+    + UnknownVariantValueresulting value is out of rangeoverflow subtracting duration from date}struct BuilderIdTokenvariant identifierDeviceCodestruct DeviceRegistrationaccess_tokenexpires_atrefresh_tokenregionstart_urloauth_flowscopes
+    + ValidationErrorAccessDeniedErrorInternalServerErrorThrottlingErrorUnhandledreasonmessagemax_resultsnext_token_request_idStaticAuthSchemeOptionResolverParamsSendTelemetryEventOutputListAvailableProfilesInputListAvailableProfilesOut
+    + We shall be set up alreadyassertion failed: old.is_null()Attempted to register forbidden signal assertion failed: slot.actions.insert(id, action).is_none()Platform broken, got NULL as siginfo to signal handler. Abortingtried to cr
+    + [tracing-subscriber] Unable to write an "event formatting error" to the Writer for this Subscriber! Error: DELETE FROM  WHERE key = ?1auth_kvstateBEGIN DEFERREDBEGIN IMMEDIATEBEGIN EXCLUSIVESELECT value FROM INSERT OR REPLACE INTO
+    + `TaskLocalFuture` polled after completionFeatureDevEventconversation_idresulting value is out of rangeoverflow subtracting duration from dateUnknownVariantValueContentLengthExceedsThresholdInvalidConversationIdInvalidKmsGrantUnkno
+    + `TaskLocalFuture` polled after completionSetFigjsVisiblevisibleSetFigjsInterceptsintercept_global_keystrokesactionsintercept_bound_keystrokesresulting value is out of rangeoverflow subtracting duration from dateAgenticProjectUnkno
+    + abstract socket name must be shorter than SUN_LENCodeScanEventprogramming_languagetimestampcode_analysis_scopePolicyDescriptorTypearn[internal exception] blocking task ran twice.sourceMissingEndpointConfigBadAuthSchemeEndpointConf
+    + an RFC3339-formatted `OffsetDateTime`expected '' fieldregex: thread ID allocation space exhausteda formatting trait implementation returned an error when the underlying stream did notfailed to write whole bufferfailed to remove en
+    + an unknown error occurredan i/o error occurredrequest timed outstreaming request body is not supportedfailed to create method namefailed to convert to a proper responsefailed to create http clientdescription() is deprecated; use D
+    + assertion failed: !bytes.is_empty()assertion failed: self.by_id.len() <= u16::MAX as usizeassertion failed: patterns.len() >= 1assertion failed: hash_len >= 1invalid match spancalled `Result::unwrap()` on an `Err` valueFinderneedl
+    + assertion failed: seq1.len().map_or(true, |x| x <= self.limit_total)a Display implementation returned an error unexpectedlyErrorj
+    + buffer chars: Sending: Spawning incoming receiverkiro-cli-termFailed to create  socket directoryNode has no children and no value!?Spawning history taskunhandled request unhandled packet Failed sending request responseQterm messag
+    + config ** arguments redacted **aws_config::imds::region/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/aws-config-1.8.11/src/imds/region.rssourcefailed to parse profileaws_config::default_provider::endpoint_urlme
+    + contentPreviousEditorStatepreviousEditorStateMetadataSupplementalContextMetadatafileContextmaxResultsnextTokenreferenceTrackerConfigurationsupplementalContextsRng-- ;tracing::spanRegionSigningRegionstartend span=t>t
+    + csharp_namespacesecs_since_epochcliSubcommandExee.protobuf.Emptyerror decoding: 
+    + default_auth_optionsMetricNameEpochTimestampBytesCountMillisecondsPercentValuePassivemetric_namevalueTracked_originauth_scheme_option_resolverhttp_clientendpoint_resolverauth_schemesidentity_cacheidentity_resolversinterceptorsretr
+    + dest is out of boundsHelloRequestClientHelloServerHelloHelloVerifyRequestEndOfEarlyDataHelloRetryRequestEncryptedExtensionsCertificateServerKeyExchangeCertificateRequestServerHelloDoneCertificateVerifyClientKeyExchangeCertificateU
+    + errorerror_descriptionmessageMissingEndpointConfigBadAuthSchemeEndpointConfigFailedToResolveEndpoint}NoMatchingAuthSchemeErrorThrottlingErrorreasongroup_namenumber_of_unit_test_cases_generatednumber_of_unit_test_cases_acceptedline
+    + event /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/h2-0.3.27/src/proto/streams/flow_control.rs:124message/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/h2-0.3.27/src/proto/streams/flow_contr
+    + event /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/client/dispatch.rs:284hyper::client::dispatchmessage/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/hyper-0.14.32/src/clie
+    + event crates/fig_ipc/src/send_message.rs:41fig_ipc::send_messagemessagecrates/fig_ipc/src/send_message.rsevent crates/fig_ipc/src/send_message.rs:33errtimeoutinvalid message typetimeout connecting to socketinvalid permissions on s
+    + event crates/figterm/src/history.rs:31crates/figterm/src/history.rsevent crates/figterm/src/history.rs:69event crates/figterm/src/history.rs:57event crates/figterm/src/history.rs:73event crates/figterm/src/history.rs:75LS_COLORSCL
+    + expand_tilde_in_pathrelative_to`len` greater than remainingFailed to connectSetting socket permissions to 0o600ConnectedSocket permissions are 0o600Failed to get socket metadata, checking parent folder permissionsSocket folder per
+    + failed to construct requestrequest has timed out (): response errormissing field ``invalid length , expected duplicate field `ThrottlingErrormessagereasonValidationErrorAccessDeniedErrorInternalServerErrorUnhandledUnknownVariantVa
+    + failed to construct requestrequest has timed outresponse errorservice errorInternalServerExceptionInvalidClientMetadataExceptionInvalidRedirectUriExceptionInvalidRequestExceptionInvalidScopeExceptionSlowDownExceptionUnsupportedGra
+    + failed to construct requestrequest has timed outresponse errorservice errorServiceErrorsourcerawUnknownVariantValueThrottlingErrormessagereasonValidationErrorAccessDeniedErrorInternalServerErrorUnhandleddescription() is deprecated
+    + failed to parse durationfailed to convert negative duration: failed to convert duration out of range is not representable as a `SystemTime` because it is out of rangefailed to parse RFC-3339 formatted timestampinvalid date or time
+    + fewer elements in arrayTemporarilySuspendedUnauthorizedCustomizationResourceAccessUnauthorizedWorkspaceContextFeatureAccessUnknownprovide_credentialsfig_api_client::credentialscrates/fig_api_client/src/credentials/mod.rsdefault_ch
+    + float value out of rangeConstructionFailureTimeoutErrorDispatchFailureResponseErrorServiceErrorCloud9ToolkitEclipseToolkitVscodeToolkitVisualStudioCodewhispererTerminalCodewhispererJupyterlabCanaryReadBeforeExecutionModifyBeforeSe
+    + https://desktop-release.q.us-east-1.amazonaws.comindex.jsonevent crates/fig_install/src/index.rs:62fig_install::indexmessageerrurlcrates/fig_install/src/index.rsinvalid release URL resolved, falling back to the default release URL
+    + internal error: entered unreachable codeUN8
+    + internal error: entered unreachable codecalled `Result::unwrap()` on an `Err` valueassertion failed: actual_state == EMPTY || actual_state == NOTIFIEDassertion failed: self.tail.is_none()inconsistent park_timeout state: inconsiste
+    + internal error: entered unreachable codeidentifierdescriptionavailabilitydefaultBindingsstruct KeyBindingDescription with 6 elementsa
+    + invalid JSON Unicode escape: \uinvalid UTF-8 codepoint in JSON stringunexpected end of stringExpectedSurrogatePairInvalidEscapeCharacterInvalidSurrogatePairInvalidUnicodeEscapeInvalidUtf8UnexpectedEndOfString[
+    + invalid match spanMemmemPackedRareBytesOnebyte1offsetRareBytesTwooffsetsbyte2StartBytesOneStartBytesTwoRareByteOffsetmaxRareBytesThreebyte3RareByteOffsetssetStartBytesThree()called `Result::unwrap()` on an `Err` valueUtf8Errorvali
+    + invalid match spaninternal error: entered unreachable code: suffix match plus reverse match implies there must be a matchreverse search must match if forward search doesforward and reverse search must match same patternassertion f
+    + invalid varintinvalid wire type:  (expected )VarintSixtyFourBitLengthDelimitedStartGroupThirtyTwoBitEmpty
+    + job_idtimestampide_categoryprogramming_languagelines_of_code_changedchars_of_code_changedlines_of_code_submittedTransformEventEntireWorkspaceSubFolderUnknownconversation_idmessage_idcustomization_arnuser_intentactive_editor_total_
+    + map with a single keystring or maplatencyshellshell_versioncommandconversation_idmenu_bar_itemsourceamazonq_profile_regionresultsso_regionsubcommandresume_modeutterance_iduser_input_idtool_use_idtool_nameis_acceptedis_successis_cu
+    + metric_nameepoch_timestampvaluepassiveMetricDatumIdentityCachePartitionSharedIdentityResolverinnercache_partitionHeaderValueinner has gone awaySharedRuntimePluginUnable to allocate another spanTracked_originUnknownVariantValueauth
+    + multiple fields provided for oneof ''unrecognized field name '@typevaluemessage '' not foundNULL_VALUEexpected nullthis pair has already been serializedthis pair has not yet been serializedinternal error: entered unreachable codeu
+    + pong received implies ping_sent_atbdp enabled implies byteskeep_alive expects last_read_atkeep-alive timed outassertion failed: (*tail).value.is_none()assertion failed: (*next).value.is_some()s
+    + pty name: Forking child shell processParent pid: Shell: Child pid: failed to spawn threadPid: Pty name: event crates/figterm/src/main.rs:945event crates/figterm/src/main.rs:888event crates/figterm/src/main.rs:951event crates/figte
+    + qterm is disabled. `qterm.enabled` == falseExitingError in async runtime: XXXevent crates/figterm/src/update.rs:85figterm::updatecrates/figterm/src/update.rsevent crates/figterm/src/update.rs:91app.disableAutoupdatesupdate.new-ver
+    + requested capacity  too large: overflow while converting to raw capacityZ
+    + resulting value is out of rangeoverflow subtracting duration from datestruct SocialTokenstruct TokenResponsevariant identifierGooglegoogleGitHubGithubgithubfailed to write whole bufferoffset_secondoffset_hourFromUtf8Errorbyteserro
+    + stateModelTemporarilyUnavailableUnknownassertion failed: edge.height == self.height - 1assertion failed: src.len() == dst.len()assertion failed: edge.height == self.node.height - 1PoisonError
+    + struct Eventstruct variant EventType::MenuBarActionedstruct variant EventType::AuthFailedstruct variant EventType::ChatEndstruct variant EventType::DoctorCheckFailedstruct variant EventType::FigUserMigratedstruct variant EventType
+    + time_sourcefssts_clientpolicypolicy_arnsWebIdentityTokenCredentialsProviderInlineShellCompletionAcceptRequestbuffersuggestionSharedCredentialsProvidererrorerror_descriptionmessageNotifyChildSessionStartedparent_idDowncastParamsInl
+    + unhandled errorunhandled error ()UnauthorizedExceptionmessageContextAttachedErrorcontextsourceInvalidRequestExceptionGetRoleCredentialsRequestSerializerTooManyRequestsExceptionInvalid Configuration: Dualstack and custom endpoint a
+    + unknown-rust-clientlinuxx86_642.29.1-Failed to set supported TLS versionsevent crates/fig_request/src/reqwest_client.rs:40fig_request::reqwest_clientmessageerrcrates/fig_request/src/reqwest_client.rsevent crates/fig_request/src/re
+    + youtput_token_siz, max threads = n
+    + ~/.aws/config~/.aws/credentialsAWS_CONFIG_FILEAWS_SHARED_CREDENTIALS_FILEhome directory expandedconfig file overridden via environment variable not foundconfig file not foundfailed to read config fileconfig file loadedinterceptor_

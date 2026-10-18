@@ -1,0 +1,13 @@
+[INFO] kas.server.starting {"product":"KAS (Kiro Agent Server)","version":"0.66.26"}
+[INFO] Auth: --auth=acp-callback (host-mediated refresh via _kiro/auth/getAccessToken)
+[INFO] acp.content_collection.resolved {"enabled":false}
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/.kiro/steering
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/AGENTS.md
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/.kiro/agents
+[DEBUG] [ConfigFileWatcher] Sentinel watching /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/.kiro for /home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx/.kiro/workflows
+[INFO] [KiroAgent] MCP subsystem initialized
+[ERROR] (node:3420519) ExperimentalWarning: SQLite is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+[WARN] [ConfigFileWatcher] Sentinel watcher error: ENOSPC: System limit for number of file watchers reached, watch '/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.29.1/live/tmp/kas-lead-fallback-home-pxvmk3yx'
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=5
+[INFO] [KRS] <-- GenerateAssistantResponseCommand done totalEvents=6

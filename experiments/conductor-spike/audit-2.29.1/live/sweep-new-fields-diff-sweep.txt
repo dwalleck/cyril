@@ -1,0 +1,69 @@
+live   kas-live-sweep-2.29.1.jsonl: 679 paths
+pinned kas-live-sweep-2.28.0.jsonl: 618 paths
+
+ONLY under live (62) — new-field candidates:
+   + params.resources[].assertions
+   + params.resources[].assertions[].compose
+   + params.resources[].assertions[].layer
+   + params.resources[].compose
+   + params.resources[].items
+   + params.resources[].items[].krn
+   + params.resources[].items[].layer
+   + params.resources[].items[].standing
+   + params.resources[].items[].standing.kind
+   + params.resources[].items[].value
+   + params.resources[].items[].value.description
+   + params.resources[].items[].value.id
+   + params.resources[].items[].value.inclusion
+   + params.resources[].items[].value.name
+   + params.resources[].items[].value.uri
+   + params.resources[].pureAssertions
+   + params.resources[].type
+   + params.update._meta.kiro.consentRound
+   + params.update._meta.kiro.resources
+   + params.update._meta.kiro.resources[].name
+   + params.update._meta.kiro.resources[].owner
+   + params.update._meta.kiro.resources[].provider
+   + params.update.rawInput.depth
+   + params.update.rawInput.explanation
+   + result.agentCapabilities._meta.kiro.modelFallbackReporting
+   + result.layers
+   + result.layers[].id
+   + result.layers[].name
+   + result.resources
+   + result.resources[].assertions
+   + result.resources[].assertions[].compose
+   + result.resources[].assertions[].layer
+   + result.resources[].compose
+   + result.resources[].items
+   + result.resources[].items[].krn
+   + result.resources[].items[].layer
+   + result.resources[].items[].standing
+   + result.resources[].items[].standing.kind
+   + result.resources[].items[].value
+   + result.resources[].items[].value.description
+   + result.resources[].items[].value.id
+   + result.resources[].items[].value.inclusion
+   + result.resources[].items[].value.name
+   + result.resources[].items[].value.uri
+   + result.resources[].pureAssertions
+   + result.resources[].type
+   + result.settings
+   + result.settings[].assertions
+   + result.settings[].assertions[].compose
+   + result.settings[].assertions[].layer
+   + result.settings[].compose
+   + result.settings[].contributions
+   + result.settings[].contributions[].layer
+   + result.settings[].contributions[].stated
+   + result.settings[].contributions[].stated.used
+   + result.settings[].contributions[].stated.value
+   + result.settings[].krn
+   + result.settings[].value
+   + result.view
+   + result.view.observer
+   + result.view.roots
+   + result.view.sessionId
+
+ONLY under pinned (1) — usually just coverage:
+   - params.update.availableCommands[]._meta.kiro.contextQuery

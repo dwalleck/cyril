@@ -1,0 +1,12 @@
+KIRO_CLI_IS_CHILD_PROCESS
+KIRO_PARENT
+--dry-run
+legacy bundled distribution
+legacy_shell
+notification_order
+issuer mismatch
+require an issuer
+TuiCommand
+Classic is being deprecated
+3.0 release
+agent upgrade

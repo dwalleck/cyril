@@ -1,0 +1,61 @@
+{
+ "$schema": "./feed-schema.json",
+ "entries": [
+  {
+   "type": "release",
+   "date": "2026-10-12",
+   "version": "2.30.0",
+   "title": "Version 2.30.0",
+   "changes": [
+    {
+     "type": "added",
+     "description": "[V3] Notices in the transcript when a model refuses or is unavailable and the turn moves to another model"
+    },
+    {
+     "type": "changed",
+     "description": "[V3] Agent upgrades refresh permissions after V2 setting changes until you edit them"
+    },
+    {
+     "type": "changed",
+     "description": "Kiro CLI may now offer to switch you to V3 when you start a chat"
+    },
+    {
+     "type": "fixed",
+     "description": "Screen readers now follow streaming replies in the full TUI via the Screen reader option in `/settings display`"
+    },
+    {
+     "type": "fixed",
+     "description": "[V3] Agent upgrades preserve V2 workspace read access and `fs_read` skill trust"
+    },
+    {
+     "type": "fixed",
+     "description": "Scrolling back in `tmux` no longer shows a screen of blank rows after long replies"
+    },
+    {
+     "type": "fixed",
+     "description": "Launching after output without a trailing newline no longer draws the UI at an offset"
+    },
+    {
+     "type": "fixed",
+     "description": "Knowledge search no longer silently drops a chunk from a small knowledge base"
+    },
+    {
+     "type": "fixed",
+     "description": "Garbled text and stray characters around icons in chat on some Linux terminals and remote desktops"
+    }
+   ]
+  },
+  {
+   "type": "release",
+   "date": "2026-10-10",
+   "version": "2.29.1",
+   "title": "Version 2.29.1",
+   "changes": [
+    {
+     "type": "fixed",
+     "description": "MCP OAuth sign-in in classic and Rust V2 now works with servers that require an issuer"
+    }
+   ]
+  }
+ ]
+}

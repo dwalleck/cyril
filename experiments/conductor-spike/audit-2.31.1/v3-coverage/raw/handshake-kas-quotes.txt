@@ -1,0 +1,40 @@
+[kas] 'r?.hooks?.enabled': 1
+   @12433551: 'is._infraSafetyMonitorSettingEnabled=void 0,this._infraSafetyEnabled=!1,this._infraSafetyEnforce=!1,r?.hooks?.enabled){let c=r.hooks,u=this.resolvedCapabilities.infrastructureSafety,l=Ev("infraSafetyEnforce");if(this.'
+[kas] 'r?.telemetryEnabled': 1
+   @12431487: 'Failed to open external URL"),u}},S.info("[KiroAgent] Client supports ACP openExternalUrl")),typeof r?.telemetryEnabled=="boolean"&&(this.clientTelemetryEnabled=r.telemetryEnabled,this.agentTelemetry?.setEnabled(r.telem'
+[kas] 'r?.userInput': 3
+   @369160: 'specPhaseCheckpoints:r?.specPhaseCheckpoints,requirementsAnalysis:r?.requirementsAnalysis,userInput:r?.userInput}}function Mle(e){return e.client==="kiro-web"||e.environment==="sandbox"}var v5t,Sms,Pje,_q,Or,ro,O'
+[kas] 'specPhaseCheckpoints:r?.specPhaseCheckpoints': 2
+   @369060: ';return{client:n,clientAttribution:vms(t),reportedClientName:i,environment:e,specLinks:r?.specLinks,specPhaseCheckpoints:r?.specPhaseCheckpoints,requirementsAnalysis:r?.requirementsAnalysis,userInput:r?.userInput}}function Mle(
+[kas] '"inactiveItems"in t': 1
+   @11811185: 'e===!0}function kMu(e){let t=e.clientCapabilities?._meta?.kiro;return t!==null&&typeof t=="object"&&"inactiveItems"in t&&t.inactiveItems===!0}function v9e(e,t){return kMu(e)?t:t.map(r=>({...r,items:r.items.filter(n=>n.s'
+[kas] 'n.streamingShellContent===!0': 1
+   @8626887: 'Views:n.c2sViews===!0,textSearch:n.textSearch===!0,findFiles:n.findFiles===!0,streamingShellContent:n.streamingShellContent===!0}}function e9r(){return{fsReadTextFile:!1,fsWriteTextFile:!1,kiroFsReadFile:!1,kiroFsWriteFile:!1,
+[kas] 'n.secretStorage===!0': 1
+   @8626648: 'adDirectory:r.readDirectory===!0,kiroFsDelete:r.delete===!0,terminal:e?.terminal===!0,secretStorage:n.secretStorage===!0,openExternalUrl:n.openExternalUrl===!0,knowledge:n.knowledge===!0,infrastructureSafety:n.infrastruc'
+[kas] 'n.knowledge===!0': 1
+   @8626718: '?.terminal===!0,secretStorage:n.secretStorage===!0,openExternalUrl:n.openExternalUrl===!0,knowledge:n.knowledge===!0,infrastructureSafety:n.infrastructureSafety===!0,c2sViews:n.c2sViews===!0,textSearch:n.textSearch=='
+[kas] 'r.readFile===!0': 1
+   @8626468: '?{};return{fsReadTextFile:t?.readTextFile===!0,fsWriteTextFile:t?.writeTextFile===!0,kiroFsReadFile:r.readFile===!0,kiroFsWriteFile:r.writeFile===!0,kiroFsStat:r.stat===!0,kiroFsReadDirectory:r.readDirectory===!0,ki'
+[kas] '_?.terminalInput===!0': 1
+   @11676473: 'erminalManager:x!==void 0,commandHost:Te});let rt=Te==="client"?new Xze(t,r,ne,()=>I,{terminalInput:_?.terminalInput===!0}):new cce(lce(),r,ne,()=>I),ue=new fTe(Te==="client"?"client-hosted":"agent-native",tn=>rt.getProce'
+[kas] 'r[i.metaKey]===!0': 1
+   @11364282: 's.concludeToolUse(n,i,a("Error",l))}}};function i5r(e,t,r){if(!r)return[];let n=[];for(let i of Irt)r[i.metaKey]===!0&&n.push(new n5r(i,e,t));return n}function LCo(e){if(!e)return new Set;let t=new Set;for(let r of Ir'
+[tui] 'knowledge:!0,hooks:{enabled:!0,v2:!0}': 1
+   @11090038: 'ugh as hte}from"stream";function $tt(e){let t=bB();return{telemetryEnabled:t,...t&&{telemetry:uy()},knowledge:!0,hooks:{enabled:!0,v2:!0},requirementsAnalysis:!0,specPhaseCheckpoints:!0,streamingShellContent:!0,...process.env
+[tui] 'key:"authCallback"': 1
+   @13633223: 't.data.expiresAt,profileArn:r.output.data.profileArn,...a,...o}}function gPt(e){return{type:"other",key:"authCallback",value:!0,method:Bar,handler:(t)=>Iar(t,e)}}var Bar="_kiro/auth/getAccessToken",Iue="Failed to verif'
+[tui] 'key:"userInput"': 1
+   @13636399: 'n",Nar=".secrets-migrated";var BPt=y(()=>{$l();Dt();sE();ji()});function IPt(e){return{type:"other",key:"userInput",value:!0,method:"_kiro/userInput",handler:async(t)=>({...await e(t)})}}var Nue;var TPt=y(()=>{fPt()'
+[tui] 'key:"openExternalUrl"': 1
+   @13634784: '{message:Qce({url:r,copied:a}),url:r}),{success:!0}}function _Pt(e=Hu,t=()=>{}){return{type:"other",key:"openExternalUrl",value:!0,method:Dar,handler:async(n)=>Rar(n,e,t)}}var Dar="_kiro/openExternalUrl";var wPt=y(()=>{b_'
+[tui] 'key:"secretStorage"': 3
+   @13635713: 'encoding:"utf8",mode:384})}function xPt(e){let t=e??vPt();if(e===void 0)Mar(t);return[{type:"other",key:"secretStorage",value:!0,method:"_kiro/secret/get",handler:async(n)=>{let r=n.key;return z.debug("[secret-storage] '
+[tui] 'largeToolOutputHandler:!0': 1
+   @11076070: 'ype=c;return n}function oT(){let e=za(),t={},n=Yf(),r={codeIntelligence:!0,knowledge:!0,thinking:!0,largeToolOutputHandler:!0};if(process.env.KIRO_INFRA_SAFETY_ROLLOUT_ENABLED==="1")r.infraSafetyMonitor=!0;let a=[["chat.enabl
+[tui] 't.workflowNotifications=': 2
+   @11076992: '[g,b]of Object.entries(r))if(!(g in t))t[g]={enabled:b};let o=e[Xe.CHAT_DEFAULT_INTERRUPT_BEHAVIOR];t.workflowNotifications={enabled:n.enabled,delivery:n9(typeof o==="string"?o:void 0)},NNn(t);let i=sc(),s=a8(e,i);t.memory=s'
+[tui] 't.memory=s': 1
+   @11077106: 'fications={enabled:n.enabled,delivery:n9(typeof o==="string"?o:void 0)},NNn(t);let i=sc(),s=a8(e,i);t.memory=s;let c=s.mode==="disabled";if(Bn("memory")&&i&&!c)t.memoryEnable={enabled:!0};if(!Bn("memory_control'
+[tui] 'clientInfo:{name:"kiro-cli"': 1
+   @11227204: 'e.stream??J9(o.proc),s=G9(i);this.kasSettings=e.stream?a:oT(),this.kiroClient=t.call(this,{stream:s,clientInfo:{name:"kiro-cli",version:this.version,_meta:Gtt},capabilities:[this.hostCapabilities.getAccessToken(),this.hostCap

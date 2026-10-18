@@ -1,0 +1,10 @@
+outside allowed
+Refusing to write
+auto-approv
+outside the workspace
+symlink target
+resolve_symlink
+canonicaliz
+write outside
+falls outside
+tool_tags

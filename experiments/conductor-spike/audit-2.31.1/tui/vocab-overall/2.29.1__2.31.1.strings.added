@@ -1,0 +1,145 @@
+(actor)
+); showing its source.
+); using
+-->>
+-axo
+.powers-migrate-
+.powers-migrated
+.secrets-migrated
+/VoiceOver.app/Contents/MacOS/VoiceOver
+/config \u2014 managed
+0..1
+0..n
+1..n
+; KIRO_SCREEN_READER=
+; cursor follows replies for screen readers
+Animations, ASCII art, icons, screen reader, thinking, and scrollback
+Auto (...)
+Auto (off)
+Auto (on)
+Autonomous mode is not available in this session
+Could not read your organization profile; disabled settings are conservative defaults.
+Default UI at startup, fullscreen startup, animations, ASCII art, icons, screen reader, thinking, and scrollback
+Diagram cannot be drawn here (
+Diagram is too large to draw here; showing its source.
+Diagram is wider than the space available here; showing its source.
+Drawing diagram
+Dropping model fallback notice with an unreadable model id
+Dropping model_fallback update with a malformed promoted
+Dropping model_fallback update with an unreadable model id
+Dropping model_fallback update with an unrecognized cause
+Dropping model_fallback_promoted notice with a non-refusal trigger
+Dropping model_fallback_promoted notice without a target
+IME input may move
+Ignoring sub-agent model fallback notice
+Managed by
+Managed by your organization. Contact your administrator to request changes.
+Model fallback notice carries a non-string agentSubtaskId
+No managed settings to show: none have been reported for this session
+No managed settings to show: this account is not managed by an organization
+No organization control plane is configured; disabled settings are conservative defaults.
+Read restrictions and skills
+Replace any skill ask rule with skill deny rules for blocked skills, and add a skill allow if the rest should load without asking
+Screen reader
+Simplified:
+This agent reported no governed settings.
+This agent reported no managed settings.
+Unrecognized model_fallback scope from KAS; not promoting
+Unrecognized model_fallback trigger from KAS
+Upgrade or refresh the universal (V2 + V3) config
+V2 or earlier upgrade
+V3 doesn't apply read restrictions to skill loading yet
+[*]end
+[*]start
+[herdr] failed to queue state report
+[kas] config/template failed:
+[kiro-home] ignoring KIRO_HOME=
+[powers] copied legacy powers into KIRO_HOME
+[powers] could not inspect the relocated powers root
+[powers] could not migrate legacy powers
+[powers] could not record the powers migration
+[secret-storage] copied legacy secrets into KIRO_HOME
+[secret-storage] could not migrate legacy secrets
+[secret-storage] could not record the secrets migration
+\` outside a block
+\u2504
+\u2506
+\u256A
+\u256B
+\u25BA
+\u25C4
+\u25C9 end
+\u25CF start
+\u2692
+\u2727
+\x1B[2K\x1B7\x1B[1B\x1B[J\x1B8
+\x1B_ki\x07
+\x1B_kt\x07
+^[A-Za-z0-9._:-]{1,
+`end` without a block
+a block is missing `end`
+admin_disabled
+autonomous agents
+autonomousAgents
+blocks nested over
+cannot read "
+canvas write out of bounds at
+chat.screenReader
+code intelligence status query failed
+code reference tracker
+codeReferenceTracker
+columns, has
+composite states
+contains-home
+content collection
+contentCollection
+content_filtered
+couldn't complete this response. Retrying
+diagrams are not drawn in the terminal yet; showing the source.
+edges over the
+empty diagram
+expected a node at "
+fan-out of
+governance_state_update
+hidden: your organization allows only servers from its MCP registry.
+is not closed
+is now this conversation's model.
+left of
+link label without a closing arrow
+managed_settings
+mcpEnabled
+message numbers are not shown
+model_fallback_promoted
+no participants
+node metadata `@{...}`
+notes are not shown
+outage
+participant boxes are not shown
+participant creation and removal are not shown
+participants
+populated
+process listing timed out
+produced no answer.
+prompt logging
+promptLogging
+readSandboxStatus
+release-local
+release-notes
+right of
+server is
+skill-read-restrictions
+source over
+stadium
+stateDiagram-v2
+statement over
+subgraphs
+the title is not shown
+tooWide
+toolsSettings deniedPaths
+unclosed node shape
+uninspectable
+unsupportedType
+unterminated note
+unterminated quoted label
+usage analytics
+usageAnalytics
