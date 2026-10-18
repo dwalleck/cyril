@@ -491,6 +491,53 @@ mod tests {
         assert_eq!(info.title.as_deref(), Some("Cyril"));
     }
 
+    // cyril-zbu7 C7: a KAS Wrapper spawn binds a token source that runs the
+    // AGENT COMMAND's kiro-cli (here a fake at a private path, symlinked to
+    // the committed fixture), and V2 binds none.
+    #[cfg(all(unix, feature = "kas"))]
+    #[tokio::test]
+    async fn wrapper_spawn_binds_the_agent_commands_kiro_cli_as_token_source() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cli = dir.path().join("kiro-cli");
+        std::os::unix::fs::symlink(
+            concat!(
+                env!("CARGO_MANIFEST_DIR"),
+                "/tests/fixtures/fake-kiro-cli.sh"
+            ),
+            &cli,
+        )
+        .expect("fixture symlink");
+        let agent_command =
+            AgentCommand::new(cli.to_str().expect("utf-8 path")).with_args(vec!["acp".to_string()]);
+        let config = SpawnConfig {
+            engine: AgentEngine::Kas,
+            kas_spawn: KasSpawn::Wrapper,
+            ..SpawnConfig::default()
+        };
+        let (command, token_source) = resolve_spawn_command(&agent_command, &config)
+            .await
+            .expect("wrapper resolves");
+        assert_eq!(command.program(), cli.to_str().expect("utf-8 path"));
+        let token = token_source
+            .expect("KAS Wrapper binds a token source")
+            .fetch(false)
+            .await
+            .expect("the agent command's kiro-cli answers");
+        assert_eq!(token.expires_at(), "2099-01-01T00:00:00Z");
+        let journal =
+            std::fs::read_to_string(dir.path().join("kiro-cli-argv.txt")).expect("journal");
+        assert!(journal.ends_with("chat\n_\nget-kas-token\n"), "{journal:?}");
+
+        let v2 = SpawnConfig {
+            engine: AgentEngine::V2,
+            ..SpawnConfig::default()
+        };
+        let (_, none) = resolve_spawn_command(&agent_command, &v2)
+            .await
+            .expect("v2 resolves");
+        assert!(none.is_none(), "v2 binds no token source");
+    }
+
     #[cfg(unix)]
     #[tokio::test]
     async fn initialization_failure_preserves_last_five_agent_stderr_lines() {

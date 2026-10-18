@@ -18,7 +18,7 @@
 //! [`helper_refused`]) does cyril fall back to reading the stored token
 //! ([`super::stored_token`], never renewed), remembering that per process and
 //! warning the user once per connection that sessions will expire hourly
-//! until kiro-cli is updated. Every other failure is a hard, typed error.
+//! until kiro-cli is updated and cyril restarted. Every other failure is a hard, typed error.
 //!
 //! cyril is a **custodian** of the access token it relays: held for one
 //! reply, redacted in `Debug`, never logged, never echoed into a diagnostic.
@@ -205,7 +205,7 @@ pub(crate) enum KasTokenError {
     /// kiro-cli can renew it.
     #[error(
         "kiro token expired and this kiro-cli{version} cannot renew it for cyril (it lacks \
-         `chat _ get-kas-token`); {LOGIN_HINT}, or update kiro-cli to stop hourly expiry"
+         `chat _ get-kas-token`); {LOGIN_HINT}, or update kiro-cli and restart cyril to stop hourly expiry"
     )]
     StoredStale {
         /// `""` or `" <version>"`.
@@ -348,7 +348,7 @@ impl KasTokenSource {
     }
 
     #[cfg(test)]
-    fn with_store(mut self, db: std::path::PathBuf) -> Self {
+    pub(crate) fn with_store(mut self, db: std::path::PathBuf) -> Self {
         self.store = StoreLocation::At(db);
         self
     }
@@ -721,13 +721,14 @@ pub(crate) async fn respond_get_access_token(
         origin = ?token.origin(),
         "getAccessToken served"
     );
+    // Build first: a failed build must not consume the one-time warning.
+    let response = build_response(&token).map_err(|detail| fail(KasTokenError::Reply(detail)))?;
     let warning = match token.origin() {
         TokenOrigin::Helper => None,
         TokenOrigin::StoredFallback { kiro_cli_version } => source
             .take_fallback_warning()
             .then(|| fallback_warning(kiro_cli_version.as_deref())),
     };
-    let response = build_response(&token).map_err(|detail| fail(KasTokenError::Reply(detail)))?;
     Ok((response, warning))
 }
 
@@ -740,12 +741,12 @@ fn fallback_warning(kiro_cli_version: Option<&str>) -> String {
     format!(
         "this kiro-cli{version} lacks `chat _ get-kas-token`, so cyril cannot renew the KAS \
          access token: it is serving the stored kiro token, and KAS sessions will expire with \
-         it (about hourly) until kiro-cli is updated"
+         it (about hourly) until kiro-cli is updated and cyril restarted"
     )
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     #![allow(clippy::unwrap_used, clippy::expect_used)]
 
     use super::*;
@@ -994,7 +995,11 @@ mod tests {
     /// Windows (std runs batch files through cmd.exe). The script journals
     /// its argv to `argv.txt` beside it. Deliberately NOT cfg-gated: the
     /// platform-neutral process tests below use it on every host.
-    fn fake_kiro_cli(dir: &std::path::Path, posix_body: &str, cmd_body: &str) -> AgentCommand {
+    pub(crate) fn fake_kiro_cli(
+        dir: &std::path::Path,
+        posix_body: &str,
+        cmd_body: &str,
+    ) -> AgentCommand {
         if cfg!(windows) {
             let script = dir.join("fake-kiro-cli.cmd");
             std::fs::write(
@@ -1112,7 +1117,7 @@ mod tests {
     /// `kiro-cli 2.5.1`, refuses everything else exactly like clap does
     /// (exit 2, stderr only), and appends one line to `calls.txt` per helper
     /// attempt.
-    fn kiro_cli_without_helper(dir: &std::path::Path) -> AgentCommand {
+    pub(crate) fn kiro_cli_without_helper(dir: &std::path::Path) -> AgentCommand {
         fake_kiro_cli(
             dir,
             "d=\"$(dirname \"$0\")\"\nif [ \"$1\" = \"--version\" ]; then printf 'kiro-cli 2.5.1\\n'; exit 0; fi\necho call >> \"$d/calls.txt\"\nprintf \"error: unrecognized subcommand 'get-kas-token'\\n\\nUsage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>\\n\" >&2\nexit 2",
@@ -1122,7 +1127,7 @@ mod tests {
 
     /// A fixture credential store holding one builder-id token expiring at
     /// `expires_at` and an active profile.
-    fn store_with_token(dir: &std::path::Path, expires_at: &str) -> std::path::PathBuf {
+    pub(crate) fn store_with_token(dir: &std::path::Path, expires_at: &str) -> std::path::PathBuf {
         let db = dir.join("data.sqlite3");
         let conn = rusqlite::Connection::open(&db).unwrap();
         // Table/row names are split so this file never holds the joined

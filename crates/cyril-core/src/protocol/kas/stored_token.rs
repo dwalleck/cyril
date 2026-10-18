@@ -68,9 +68,9 @@ const SOCIAL_TOKEN_ROW_SQL: &str = "SELECT value FROM auth_kv WHERE key = 'kiroc
 const PROFILE_ROW_SQL: &str = "SELECT value FROM state WHERE key = 'api.codewhisperer.profile'";
 
 /// Read kiro-cli's sqlite credential store into a reply. Synchronous
-/// (rusqlite) — the live-callback path wraps it in `spawn_blocking`; the
-/// spawn-time gate ([`store_unservable_reason`]) calls it directly, which is
-/// safe only because that runs once at startup, before any session traffic.
+/// (rusqlite) — reached only through [`read_stored_token`], which
+/// `KasTokenSource::stored_fallback` runs under `spawn_blocking` (for the
+/// callback and the spawn-time gate alike).
 /// The store is opened READ_ONLY (never created, never written; kiro-cli
 /// writes it concurrently) with a short busy timeout. Every failure mode is
 /// distinguished: absent store / absent row (logged out — actionable), locked,

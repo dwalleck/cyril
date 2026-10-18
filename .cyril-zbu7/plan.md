@@ -33,3 +33,7 @@ One atomic slice: the token-source swap changes `HostCallback::GetAccessToken`, 
 - C10 tests (design table) → PASS; mutations `receipts/mutation-c10-red.log` (widened), `mutation-c10b-red.log` (disabled) → red; `mutation-c10-restored.log` → green.
 - Slice-1 checks unchanged and re-run in the full gate.
 **Dependencies:** slice 1.
+
+## Repair (independent review, no blocking findings)
+
+Should-fixes 1–4 and nits 6/11 applied under the approved design (no behavior/scope change): wiring tests (design row W) + their mutation receipt, fallback warning built after the reply, "update kiro-cli and restart cyril" wording, stale `stored_token` doc, ROADMAP note made true for the fallback. Nits 7–10/12 dispositioned in design Non-goals. Final gate re-run on the repaired head → `receipts/gate-summary.txt`.

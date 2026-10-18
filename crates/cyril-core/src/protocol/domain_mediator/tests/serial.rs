@@ -1133,3 +1133,31 @@ async fn v2_bound_bridge_refuses_inbound_kiro_host_requests_end_to_end() {
         })
         .await;
 }
+
+// cyril-zbu7: the KAS token source bound in `DomainConfig` lands in the
+// dispatch context (its only consumer) — a dropped hand-off would answer
+// every KAS `getAccessToken` with `Unbound`.
+#[cfg(feature = "kas")]
+#[test]
+fn kas_token_source_moves_into_the_dispatch_context() {
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use super::super::{DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::KasEngine;
+
+    let (_handle, bridge) = create_channel_pair();
+    let config = DomainConfig {
+        engine: Rc::new(KasEngine::default()),
+        cwd: std::env::temp_dir(),
+        present_as: None,
+        stall_threshold: Duration::from_secs(30),
+        host_shell: None,
+        kas_token: Some(crate::protocol::kas::auth::KasTokenSource::on_path()),
+    };
+    let (mediator, _channels) = DomainMediator::new(config, bridge)
+        .unwrap_or_else(|error| panic!("token-source mediator: {error}"));
+    assert!(mediator.host_ctx.kas_token.is_some());
+    assert!(mediator.config.kas_token.is_none(), "moved, not copied");
+}

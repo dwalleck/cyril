@@ -31,7 +31,7 @@ Learned: cyril must relay, not judge freshness — an error reply in KAS's buffe
 - Earlier live note on the issue (2026-10-18 18:48): `--force-refresh` renewed immediately (+60.0 min).
 
 Validated → renewal stays inside kiro-cli under a cross-process lock; cyril never needs the refresh token.
-Open (non-design-changing): kiro-cli's own pre-expiry refresh window for the plain call — observed by the live run (design C6).
+Settled by the live run (design C6, `receipts/live/timeline.txt`): the plain call renewed the token at 19:44:40Z with ~3 min left — exactly when KAS entered its 180 s buffer — so KAS never saw an in-buffer token.
 
 ## P4 — Which kiro-cli to run
 
@@ -47,3 +47,7 @@ Receipt: `receipts/missing-subcommand-shapes.txt` (2026-10-18). No token touched
 - kiro-cli-chat 2.6.0 / 2.6.1: the helper EXISTS with a legacy envelope `{"success":false,"error":…}` (exit 1) — not a missing helper; cyril treats it as a hard error (no `kind`). 2.7.1+: the current `{kind,data}` envelope. (KAS itself needs ≥ 2.7.1.)
 
 Validated → "missing helper" = exit 2 ∧ empty stdout ∧ a stderr line exactly `error: unrecognized subcommand 'get-kas-token'` or `error: unexpected argument 'get-kas-token' found`.
+
+Windows (relayed by the coordinator from VM resourcefs-win11, kiro-cli 2.27.0 MSI — `kiro-cli.exe` is the chat binary itself, `kiro-cli --version` → `kiro-cli-chat 2.27.0`): `kiro-cli chat _ get-kas-token-does-not-exist` → exit 2, stderr `error: unrecognized subcommand 'get-kas-token-does-not-exist'`; `kiro-cli chat _ get-kas-token` while logged OUT → exit 1, stdout `{"kind":"error","data":{"message":…}}`. Same detection shape as Linux; logged-out stays the error envelope (hard error, no fallback).
+
+Evidence limit (review nit): the 2.4.1 / 2.5.1 refusal shapes were captured by running `kiro-cli-chat` directly, not through the `kiro-cli` launcher of those versions (2.32.0 was observed through the launcher). A launcher that reshaped exit code or stderr would fail closed (NonZeroExit, no fallback).
