@@ -7425,6 +7425,7 @@ mod tests {
     async fn approval_enter_acts_only_with_selection_and_path_on_screen(
         #[case] path: Option<&'static str>,
     ) {
+        let (mut acted, mut ignored) = (0, 0);
         for height in VOJX_HEIGHTS {
             let mut app = test_app();
             let (request, mut receiver) = vojx_request(path);
@@ -7444,6 +7445,7 @@ mod tests {
                     assert!(on_screen, "Enter answered a hidden approval: {context}");
                     assert_eq!(option_id.as_str(), "allow", "{context}");
                     assert!(!app.ui_state.has_approval(), "{context}");
+                    acted += 1;
                 }
                 Ok(other) => panic!("unexpected response {other:?}: {context}"),
                 Err(_) => {
@@ -7461,9 +7463,14 @@ mod tests {
                         matches!(receiver.try_recv(), Ok(PermissionResponse::Cancel)),
                         "Esc must answer Cancel: {context}"
                     );
+                    ignored += 1;
                 }
             }
         }
+        assert!(
+            acted > 0 && ignored > 0,
+            "the sweep must reach both outcomes: acted={acted} ignored={ignored}"
+        );
     }
 
     /// REGRESSION FENCE (cyril-vojx): the reject-with-reason page submits on
@@ -7477,6 +7484,7 @@ mod tests {
     async fn reason_enter_acts_only_with_editor_and_path_on_screen(
         #[case] path: Option<&'static str>,
     ) {
+        let (mut acted, mut ignored, mut editor_without_path) = (0, 0, 0);
         for height in VOJX_HEIGHTS {
             let mut app = test_app();
             let (request, mut receiver) = vojx_request(path);
@@ -7491,8 +7499,10 @@ mod tests {
                 .await
                 .expect("paste reason");
             let screen = vojx_draw(&mut app, height);
-            let on_screen = screen.iter().any(|row| row.contains("why█"))
+            let editor_drawn = screen.iter().any(|row| row.contains("why█"));
+            let on_screen = editor_drawn
                 && path.is_none_or(|path| screen.iter().any(|row| row.contains(path)));
+            editor_without_path += usize::from(editor_drawn && !on_screen);
             let context = format!(
                 "height={height} path={path:?} inner={:?}\n{}",
                 vojx_inner_rows(&screen, "Reject with reason"),
@@ -7505,6 +7515,7 @@ mod tests {
                     assert!(on_screen, "Enter submitted a hidden reason: {context}");
                     assert_eq!(option_id.as_str(), "reject", "{context}");
                     assert_eq!(reason, "why", "{context}");
+                    acted += 1;
                 }
                 Ok(other) => panic!("unexpected response {other:?}: {context}"),
                 Err(_) => {
@@ -7516,9 +7527,21 @@ mod tests {
                         app.ui_state.approval_feedback_active(),
                         "the draft must survive an ignored Enter: {context}"
                     );
+                    ignored += 1;
                 }
             }
         }
+        assert!(
+            acted > 0 && ignored > 0,
+            "the sweep must reach both outcomes: acted={acted} ignored={ignored}"
+        );
+        // With a path, some heights draw the editor but not the path: the
+        // case the guard exists for on this page.
+        assert_eq!(
+            editor_without_path > 0,
+            path.is_some(),
+            "editor-only heights: {editor_without_path}"
+        );
     }
 
     // --- dispatch_hooks_panel_key tests ---

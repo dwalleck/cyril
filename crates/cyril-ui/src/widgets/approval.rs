@@ -1,5 +1,5 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme::Theme;
@@ -333,6 +333,30 @@ fn leading_components(path: &str, width: usize) -> &str {
     &path[..cut]
 }
 
+/// The longest prefix of `text` at most `width` display columns wide.
+fn head_columns(text: &str, width: usize) -> &str {
+    let mut used = 0usize;
+    for (offset, ch) in text.char_indices() {
+        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        if used > width {
+            return &text[..offset];
+        }
+    }
+    text
+}
+
+/// `text` fitted to one row of `width` columns: whole when it fits,
+/// otherwise cut and ended with `…`, so a clipped row says it was clipped.
+fn clip_row(text: &str, width: usize) -> String {
+    if text.width() <= width {
+        return text.to_owned();
+    }
+    match width.checked_sub(ELLIPSIS.width()) {
+        Some(room) => format!("{}{ELLIPSIS}", head_columns(text, room)),
+        None => String::new(),
+    }
+}
+
 /// The longest suffix of `text` at most `width` display columns wide.
 fn trailing_columns(text: &str, width: usize) -> &str {
     let mut used = 0usize;
@@ -449,14 +473,14 @@ pub(crate) fn confirm_is_on_screen(
             })
         }
         ApprovalPhase::EnterFolder { .. } => {
-            folder_popup(area, input_top).is_some_and(has_inner_row)
+            FolderPage::new(area, input_top, state).is_some_and(|page| page.editor_shown())
         }
     }
 }
 
-/// A popup with at least one row inside its borders. The scope, trust and
-/// folder pages give that first row to the selection (or the folder editor),
-/// so it is the row that makes them actionable.
+/// A popup with at least one row inside its borders. The scope and trust
+/// pages give that first row to the selected row's label and never wrap a
+/// row, so it is the row that makes them actionable.
 fn has_inner_row(popup: Rect) -> bool {
     popup.height > 2
 }
@@ -633,6 +657,7 @@ fn render_option_phase(
     );
     frame.render_widget(popup, popup_area);
 }
+
 /// The reject-with-reason page's geometry: the placed popup and which rows
 /// fit inside it. One computation serves the renderer and the confirm guard
 /// ([`confirm_is_on_screen`]).
@@ -857,6 +882,7 @@ fn render_trust_phase(
     // item; tighter popups drop the header and window items directly (the
     // selected item's label renders first, so it survives any clamp).
     let inner = usize::from(popup_area.height.saturating_sub(2));
+    let content_width = usize::from(popup_area.width.saturating_sub(2));
     let (show_header, item_rows) = if inner >= 5 {
         (true, (inner - 2) / 3)
     } else {
@@ -890,7 +916,14 @@ fn render_trust_phase(
             Style::default().fg(theme.text_secondary)
         };
         let prefix = if i == state.selected { "▸ " } else { "  " };
-        lines.push(Line::styled(format!("{prefix}{}", trust.label), style));
+        // Each tier takes exactly the three rows the window reserves: a
+        // wrapped label or pattern list would push the selected tier out of
+        // the popup while Enter still picked it (cyril-vojx review), so a
+        // long row is cut and marked with `…` instead.
+        lines.push(Line::styled(
+            clip_row(&format!("{prefix}{}", trust.label), content_width),
+            style,
+        ));
         // Show the display string (pattern preview) dimmed below the label
         let display_style = if i == state.selected {
             Style::default().bg(theme.selection).fg(theme.subdued)
@@ -898,7 +931,7 @@ fn render_trust_phase(
             Style::default().fg(theme.subdued)
         };
         lines.push(Line::styled(
-            format!("    {}", trust.display),
+            clip_row(&format!("    {}", trust.display), content_width),
             display_style,
         ));
         // Blank separator between options — matches the 3-lines-per-option
@@ -911,7 +944,7 @@ fn render_trust_phase(
         session_attribution,
         theme.accent_quinary,
     );
-    let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+    let popup = Paragraph::new(lines).block(
         Block::default()
             .title(title)
             .borders(Borders::ALL)
@@ -1107,10 +1140,84 @@ fn render_scope_phase(
     frame.render_widget(popup, popup_area);
 }
 
-/// The folder editor's placed popup; `None` when no rows above the input
-/// can hold it. Shared by the renderer and [`confirm_is_on_screen`].
-fn folder_popup(area: Rect, input_top: u16) -> Option<Rect> {
-    super::modal::place(area, input_top, 84, 7)
+/// Desired width of the folder editor popup.
+const FOLDER_POPUP_WIDTH: u16 = 84;
+
+/// The folder editor's validation line (Kiro's `h2t` / `vde`) and whether it
+/// reports a refused folder. `None` outside the folder phase.
+fn folder_status(state: &ApprovalState) -> Option<(String, bool)> {
+    let ApprovalPhase::EnterFolder {
+        scope,
+        offer,
+        editor,
+        ..
+    } = &state.phase
+    else {
+        return None;
+    };
+    Some(match offer.validate(editor.text()) {
+        Ok(folder) => {
+            let reach = match scope {
+                cyril_core::always_allow::GrantScope::Session => "for this session only",
+                other => other.folder_phrase(),
+            };
+            (
+                format!(
+                    "Allows writes in {} and every folder under it, {reach}.",
+                    folder.path()
+                ),
+                false,
+            )
+        }
+        Err(reason) => (reason.to_string(), true),
+    })
+}
+
+/// The folder editor's geometry: the placed popup, the validation line
+/// wrapped to the popup's width, and which rows fit. One computation serves
+/// the renderer and [`confirm_is_on_screen`].
+///
+/// The editor row survives any clamp. The status joins only when all of its
+/// rows fit above the editor — a long folder wraps the status, and drawing
+/// it anyway would push the editor out of the popup while Enter still
+/// granted the folder (cyril-vojx review).
+struct FolderPage {
+    popup: Rect,
+    inner: usize,
+    status_rows: Vec<String>,
+    show_status: bool,
+    show_hint: bool,
+}
+
+impl FolderPage {
+    /// `None` outside the folder phase or when no rows above the input can
+    /// hold the popup.
+    fn new(area: Rect, input_top: u16, state: &ApprovalState) -> Option<Self> {
+        let (status, _) = folder_status(state)?;
+        let content_width = usize::from(super::modal::popup_width(area, FOLDER_POPUP_WIDTH))
+            .saturating_sub(2)
+            .max(1);
+        let status_rows = wrap_columns(&status, content_width);
+        // Borders, status, blank, editor, blank, hint: seven rows for a
+        // one-row status, one more per extra status row.
+        let desired_height = u16::try_from(status_rows.len().saturating_add(6)).unwrap_or(u16::MAX);
+        let popup = super::modal::place(area, input_top, FOLDER_POPUP_WIDTH, desired_height)?;
+        let inner = usize::from(popup.height.saturating_sub(2));
+        let show_status = inner > status_rows.len();
+        let show_hint = show_status && inner >= status_rows.len() + 3;
+        Some(Self {
+            popup,
+            inner,
+            status_rows,
+            show_status,
+            show_hint,
+        })
+    }
+
+    /// Whether the folder editor row is drawn.
+    fn editor_shown(&self) -> bool {
+        self.inner > 0
+    }
 }
 
 /// KAS "Always allow" folder editor (cyril-auxt): Kiro's live validation line
@@ -1125,7 +1232,6 @@ fn render_folder_phase(
 ) {
     let ApprovalPhase::EnterFolder {
         scope,
-        offer,
         editor,
         attempted,
         ..
@@ -1133,46 +1239,37 @@ fn render_folder_phase(
     else {
         return;
     };
-    let status = match offer.validate(editor.text()) {
-        Ok(folder) => {
-            let reach = match scope {
-                cyril_core::always_allow::GrantScope::Session => "for this session only",
-                other => other.folder_phrase(),
-            };
-            Line::styled(
-                format!(
-                    "Allows writes in {} and every folder under it, {reach}.",
-                    folder.path()
-                ),
-                Style::default().fg(theme.text_secondary),
-            )
-        }
-        Err(reason) => Line::styled(
-            reason.to_string(),
-            Style::default().fg(if *attempted {
-                theme.danger
-            } else {
-                theme.text_secondary
-            }),
-        ),
+    let Some((_, refused)) = folder_status(state) else {
+        return;
     };
+    let status_style = Style::default().fg(if refused && *attempted {
+        theme.danger
+    } else {
+        theme.text_secondary
+    });
 
-    let Some(popup_area) = folder_popup(area, input_top) else {
+    let Some(FolderPage {
+        popup: popup_area,
+        inner,
+        status_rows,
+        show_status,
+        show_hint,
+    }) = FolderPage::new(area, input_top, state)
+    else {
         return;
     };
     frame.render_widget(Clear, popup_area);
-    let inner = usize::from(popup_area.height.saturating_sub(2));
     if inner == 0 {
         return;
     }
-    // The editor row survives any clamp; the status and hint join when the
-    // popup has room for them.
-    let show_status = inner >= 2;
-    let show_hint = inner >= 4;
     let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
     let mut lines: Vec<Line> = Vec::with_capacity(inner);
     if show_status {
-        lines.push(status);
+        lines.extend(
+            status_rows
+                .into_iter()
+                .map(|row| Line::styled(row, status_style)),
+        );
     }
     if show_hint {
         lines.push(Line::default());
@@ -1194,7 +1291,7 @@ fn render_folder_phase(
 
     let heading = format!(" Allow a folder {} ", scope.folder_phrase());
     let title = attribution_title(&heading, session_attribution, theme.accent_quinary);
-    let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+    let popup = Paragraph::new(lines).block(
         Block::default()
             .title(title)
             .borders(Borders::ALL)

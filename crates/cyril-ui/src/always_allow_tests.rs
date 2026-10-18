@@ -587,9 +587,18 @@ enum LaterPage {
     Scope,
     /// KAS folder editor, prefilled with a valid folder.
     Folder,
+    /// KAS folder editor whose validation line wraps at 80 columns.
+    FolderLong,
     /// v2 trust tiers.
     Trust,
+    /// v2 trust tiers, the selected one below a tier whose pattern list is
+    /// wider than the popup.
+    TrustLong,
 }
+
+/// A folder whose "Allows writes in …" line is wider than the 80-column
+/// popup's 74 content columns.
+const LONG_FOLDER: &str = "crates/cyril-ui/src/widgets/a-rather-long-directory-name";
 
 /// A fresh request opened on `page` at the default 80x24 frame.
 fn open_later_page(page: LaterPage) -> (UiState, Receiver<PermissionResponse>) {
@@ -606,6 +615,49 @@ fn open_later_page(page: LaterPage) -> (UiState, Receiver<PermissionResponse>) {
             state.approval_select_next(); // session rows: exact, folder, whole
             state.approval_confirm();
             assert!(state.approval_folder_active(), "folder editor must open");
+            rx
+        }
+        LaterPage::FolderLong => {
+            let consent = PermissionConsent::new(
+                Some("fs_write"),
+                Some(format!("{LONG_FOLDER}/x.txt")),
+                Some("/ws".into()),
+                Some("fs_write".into()),
+                None,
+                Vec::new(),
+            );
+            let (request, rx) = request("main", Some(consent), Vec::new());
+            open_scope_page(&mut state, request);
+            state.approval_select_next(); // session rows: exact, folder, whole
+            state.approval_confirm();
+            match phase(&state) {
+                ApprovalPhase::EnterFolder { editor, .. } => {
+                    assert_eq!(editor.text(), LONG_FOLDER, "prefill")
+                }
+                other => panic!("expected the folder editor, got {other:?}"),
+            }
+            rx
+        }
+        LaterPage::TrustLong => {
+            let long = TrustOption {
+                label: "Every listed command".into(),
+                display: (0..20)
+                    .map(|n| format!("cargo test --package crate-{n}"))
+                    .collect::<Vec<_>>()
+                    .join(", "),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["cargo test *".into()],
+            };
+            let short = TrustOption {
+                label: "Full command".into(),
+                display: "echo AUXTV1 now".into(),
+                setting_key: "allowedCommands".into(),
+                patterns: vec!["echo AUXTV1 now".into()],
+            };
+            let (request, rx) = request("main", None, vec![long, short]);
+            open_scope_page(&mut state, request);
+            state.approval_select_next(); // the short tier, below the long one
+            assert!(matches!(phase(&state), ApprovalPhase::SelectTrust { .. }));
             rx
         }
         LaterPage::Trust => {
@@ -643,18 +695,26 @@ fn screen_at(state: &mut UiState, height: u16) -> anyhow::Result<String> {
 /// answer Enter only while their selection (or, on the folder page, the
 /// folder editor) is drawn — at every frame height, including a popup
 /// clamped to its borders (inner height 0) and no popup at all.
+///
+/// The long cases are the review's counterexamples: a folder long enough to
+/// wrap the validation line, and a trust tier whose pattern list is wider
+/// than the popup, above the selected tier. Either used to push the editor
+/// (or the selection) below the popup while Enter still answered.
 #[rstest::rstest]
 #[case::scope_page(LaterPage::Scope)]
 #[case::folder_editor(LaterPage::Folder)]
+#[case::folder_editor_long_folder(LaterPage::FolderLong)]
 #[case::trust_page(LaterPage::Trust)]
+#[case::trust_page_long_pattern_list(LaterPage::TrustLong)]
 fn later_pages_confirm_only_what_is_drawn(#[case] page: LaterPage) -> anyhow::Result<()> {
-    let mut inert = 0;
+    let (mut inert, mut answered_at) = (0, 0);
     for height in 4u16..=22 {
         let (mut state, mut rx) = open_later_page(page);
         let text = screen_at(&mut state, height)?;
         let drawn = match page {
             LaterPage::Folder => text.contains("src/a█"),
-            LaterPage::Scope | LaterPage::Trust => text.contains('▸'),
+            LaterPage::FolderLong => text.contains(&format!("{LONG_FOLDER}█")),
+            LaterPage::Scope | LaterPage::Trust | LaterPage::TrustLong => text.contains('▸'),
         };
         state.approval_confirm();
         let answered = rx.try_recv().is_ok();
@@ -663,10 +723,11 @@ fn later_pages_confirm_only_what_is_drawn(#[case] page: LaterPage) -> anyhow::Re
             "height={height} page={page:?}: Enter must act exactly when drawn\n{text}"
         );
         inert += usize::from(!drawn);
+        answered_at += usize::from(answered);
     }
     anyhow::ensure!(
-        inert > 0,
-        "the sweep never reached a height that hides the page"
+        inert > 0 && answered_at > 0,
+        "the sweep must reach both a hidden and a drawn page: inert={inert} answered={answered_at}"
     );
     Ok(())
 }
