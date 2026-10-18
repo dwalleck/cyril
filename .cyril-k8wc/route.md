@@ -34,7 +34,7 @@ Outcome contract (ticket AC + scope note):
 | Resolved host shell | `_kiro/terminal/shell_type` reply | KAS dialect |
 |---|---|---|
 | POSIX via `$SHELL` basename `sh` / `bash` / `dash` / `zsh` / `ksh` | that basename (`{"shellType":"zsh"}` …), never `posix` | posix |
-| POSIX via the `bash`-on-PATH fallback or `CYRIL_KAS_SHELL=bash` | `bash` | posix |
+| POSIX via the `bash`-on-PATH fallback or config `[agent] shell = "bash"` | `bash` | posix |
 | fish | `fish` (unchanged) | fish |
 | Windows pwsh / Windows PowerShell | `powershell` (unchanged) | powershell |
 | no resolved shell | existing refusal (unchanged) | — |
@@ -63,5 +63,19 @@ Requested reply behavior delivered; red-first test fails on base and passes afte
 
 ## Results
 
-<!-- filled in as the work completes -->
-PENDING — implementer, after red-first/fix/gate/live steps.
+Delivered at `7ae63f66` (fix commit on base `85becf9f`). `ShellKind::Posix` carries the `PosixShell` (`sh`/`bash`/`dash`/`zsh`/`ksh`) it was classified from — one table drives both `$SHELL` classification and the wire name — and `HostShell::wire_name()` reports it; fish → `fish`, pwsh/Windows PowerShell → `powershell` unchanged.
+
+| Check | Result | Receipt |
+|---|---|---|
+| KAS accepted-vocabulary premise (0.66.34 + 0.66.43) | PASS — mapper byte-identical; `posix` → `unknown` | [`receipts/kas-shell-type-mapper.txt`](receipts/kas-shell-type-mapper.txt) |
+| Red-first | PASS — on base, 10 POSIX cases + the registry pin FAIL (`left: "posix"`), 4 fish/powershell cases pass | [`receipts/red-first.txt`](receipts/red-first.txt) |
+| Green after fix | PASS — 14/14 | [`receipts/green-after-fix.txt`](receipts/green-after-fix.txt) |
+| Gate: all 10 ci.yml lanes at `7ae63f66` | PASS — every lane `-OK` | [`receipts/gate.txt`](receipts/gate.txt) |
+| Windows VM (rustc 1.94.0 msvc), host_shell + terminal_io incl. `windows_powershell_lifecycle_smoke` | PASS — 33/33 | [`receipts/windows-tests.txt`](receipts/windows-tests.txt) |
+| Windows clippy (not a CI lane) | no new warning: base 18 pre-existing errors, branch 17 (subset) | same file |
+| Live before (`85becf9f`, SHELL=/bin/bash, KAS 0.66.43) | bug reproduced: overlay offers only Allow/Deny; V3 rule `echo AUDITX*` still asks (`effect:"ask"`); kiro.log `policy.shell.type.unknown {"shellName":"posix"}` | [`receipts/live/before-bash-r2/`](receipts/live/before-bash-r2/) |
+| Live after (`7ae63f66`, SHELL=/bin/bash) | overlay offers Allow / Always allow / Deny / Always deny; rule turn auto-runs with 0 prompts (`effect:"allow","capability":"shell"`); no `policy.shell.type.unknown` | [`receipts/live/after-bash/`](receipts/live/after-bash/) |
+| Live after (`7ae63f66`, SHELL=/usr/bin/zsh) | same as bash | [`receipts/live/after-zsh/`](receipts/live/after-zsh/) |
+| Independent review | PENDING — PR reviewer | — |
+
+No `InterpreterChangedError` / `policy.shell.interpreter_mismatch` in any arm's kiro.log. Live binaries and driver: [`receipts/live/binaries.txt`](receipts/live/binaries.txt), `receipts/live/k8wc-*.sh`.

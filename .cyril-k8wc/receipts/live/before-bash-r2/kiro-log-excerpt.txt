@@ -1,0 +1,6 @@
+# before-bash-r2 — KAS kiro.log lines (shell type + policy decisions)
+{"timestamp":"2026-10-18T19:12:24.653Z","level":"info","message":"shellType.probe {\"sessionId\":\"sess_6567ae61-2725-420d-bbed-63b080e55572\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":0,\"timeoutMs\":2000}"}
+{"timestamp":"2026-10-18T19:12:24.657Z","level":"info","message":"shellType.resolved {\"sessionId\":\"sess_6567ae61-2725-420d-bbed-63b080e55572\",\"method\":\"_kiro/terminal/shell_type\",\"source\":\"client\",\"elapsedMs\":4}"}
+{"timestamp":"2026-10-18T19:12:24.658Z","level":"warn","message":"policy.shell.type.unknown {\"shellName\":\"posix\"}"}
+{"timestamp":"2026-10-18T19:12:30.727Z","level":"info","message":"acp.policy-eval.complete {\"toolId\":\"run_command\",\"effect\":\"ask\"}","conversationId":"sess_6567ae61-2725-420d-bbed-63b080e55572","rootConversationId":"sess_6567ae61-2725-420d-bbed-63b080e5
+{"timestamp":"2026-10-18T19:12:46.316Z","level":"info","message":"acp.policy-eval.complete {\"toolId\":\"run_command\",\"effect\":\"ask\"}","conversationId":"sess_6567ae61-2725-420d-bbed-63b080e55572","rootConversationId":"sess_6567ae61-2725-420d-bbed-63b080e5
