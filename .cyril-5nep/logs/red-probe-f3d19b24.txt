@@ -1,0 +1,228 @@
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.44
+   Compiling pin-project-lite v0.2.16
+   Compiling libc v0.2.186
+   Compiling cfg-if v1.0.4
+   Compiling futures-core v0.3.32
+   Compiling memchr v2.8.0
+   Compiling serde_core v1.0.228
+   Compiling itoa v1.0.17
+   Compiling futures-io v0.3.32
+   Compiling once_cell v1.21.3
+   Compiling smallvec v1.15.1
+   Compiling serde v1.0.228
+   Compiling crossbeam-utils v0.8.21
+   Compiling futures-sink v0.3.32
+   Compiling bytes v1.11.1
+   Compiling parking v2.2.1
+   Compiling slab v0.4.12
+   Compiling parking_lot_core v0.9.12
+   Compiling zmij v1.0.21
+   Compiling autocfg v1.5.0
+   Compiling hashbrown v0.16.1
+   Compiling equivalent v1.0.2
+   Compiling scopeguard v1.2.0
+   Compiling log v0.4.29
+   Compiling serde_json v1.0.149
+   Compiling fastrand v2.3.0
+   Compiling bitflags v2.11.0
+   Compiling rustix v1.1.4
+   Compiling futures-task v0.3.32
+   Compiling heck v0.5.0
+   Compiling atomic-waker v1.1.2
+   Compiling ident_case v1.0.1
+   Compiling strsim v0.11.1
+   Compiling linux-raw-sys v0.12.1
+   Compiling lock_api v0.4.14
+   Compiling ref-cast v1.0.25
+   Compiling version_check v0.9.5
+   Compiling httparse v1.10.1
+   Compiling typenum v1.19.0
+   Compiling utf8parse v0.2.2
+   Compiling getrandom v0.4.2
+   Compiling futures-channel v0.3.32
+   Compiling unicode-segmentation v1.12.0
+   Compiling tower-service v0.3.3
+   Compiling anyhow v1.0.101
+   Compiling regex-syntax v0.8.10
+   Compiling anstyle-query v1.1.5
+   Compiling winnow v1.0.0
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling semver v1.0.27
+   Compiling anstyle-parse v0.2.7
+   Compiling httpdate v1.0.3
+   Compiling find-msvc-tools v0.1.9
+   Compiling anstyle v1.0.14
+   Compiling futures-lite v2.6.1
+   Compiling tracing-core v0.1.36
+   Compiling async-io v2.6.0
+   Compiling unicode-xid v0.2.6
+   Compiling tower-layer v0.3.3
+   Compiling percent-encoding v2.3.2
+   Compiling generic-array v0.14.7
+   Compiling dyn-clone v1.0.20
+   Compiling colorchoice v1.0.5
+   Compiling sync_wrapper v1.0.2
+   Compiling concurrent-queue v2.5.0
+   Compiling shlex v2.0.1
+   Compiling num-traits v0.2.19
+   Compiling is-docker v0.2.0
+   Compiling pkg-config v0.3.33
+   Compiling toml_datetime v1.0.1+spec-1.1.0
+   Compiling clap_lex v1.1.0
+   Compiling async-task v4.7.1
+   Compiling ryu v1.0.23
+   Compiling mime v0.3.17
+   Compiling anstream v0.6.21
+   Compiling vcpkg v0.2.15
+   Compiling form_urlencoded v1.2.2
+   Compiling rustc_version v0.4.1
+   Compiling convert_case v0.10.0
+   Compiling event-listener v5.4.1
+   Compiling cc v1.2.65
+   Compiling is-wsl v0.4.0
+   Compiling indexmap v2.13.0
+   Compiling piper v0.2.5
+   Compiling lazy_static v1.5.0
+   Compiling http v1.5.0
+   Compiling powerfmt v0.2.0
+   Compiling thiserror v2.0.18
+   Compiling fixedbitset v0.5.7
+   Compiling cfg_aliases v0.2.1
+   Compiling matchit v0.8.4
+   Compiling rstest_macros v0.25.0
+   Compiling thread_local v1.1.9
+   Compiling event-listener-strategy v0.5.4
+   Compiling glob v0.3.3
+   Compiling relative-path v1.9.3
+   Compiling clap_builder v4.5.60
+   Compiling aho-corasick v1.1.4
+   Compiling nix v0.31.3
+   Compiling vte v0.14.1
+   Compiling tracing-log v0.2.0
+   Compiling sharded-slab v0.1.7
+   Compiling num-conv v0.2.0
+   Compiling async-channel v2.5.0
+   Compiling async-lock v3.4.2
+   Compiling deranged v0.5.8
+   Compiling nu-ansi-term v0.50.3
+   Compiling iana-time-zone v0.1.65
+   Compiling shell-words v1.1.1
+   Compiling syn v2.0.116
+   Compiling syn v3.0.4
+   Compiling time-core v0.1.8
+   Compiling rustc-hash v2.1.3
+   Compiling strip-ansi-escapes v0.2.1
+   Compiling fallible-iterator v0.3.0
+   Compiling toml_writer v1.0.7+spec-1.1.0
+   Compiling cpufeatures v0.2.17
+   Compiling fallible-streaming-iterator v0.1.9
+   Compiling blocking v1.7.0
+   Compiling futures-timer v3.0.3
+   Compiling toml_parser v1.0.10+spec-1.1.0
+   Compiling libsqlite3-sys v0.37.0
+   Compiling chrono v0.4.45
+   Compiling errno v0.3.14
+   Compiling mio v1.2.2
+   Compiling socket2 v0.6.5
+   Compiling open v5.4.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling http-body v1.1.0
+   Compiling digest v0.10.7
+   Compiling signal-hook-registry v1.4.8
+   Compiling http-body-util v0.1.5
+   Compiling uuid v1.22.0
+   Compiling toml_edit v0.25.5+spec-1.1.0
+   Compiling parking_lot v0.12.5
+   Compiling sha2 v0.10.9
+   Compiling rusqlite v0.39.0
+   Compiling serde_path_to_error v0.1.20
+   Compiling serde_spanned v1.0.4
+   Compiling time v0.3.47
+   Compiling regex-automata v0.4.14
+   Compiling proc-macro-crate v3.5.0
+   Compiling toml v1.0.7+spec-1.1.0
+   Compiling tokio-macros v2.7.2
+   Compiling agent-client-protocol-derive v2.0.0
+   Compiling tokio v1.53.1
+   Compiling darling_core v0.23.0
+   Compiling serde_derive_internals v0.29.1
+   Compiling serde_derive v1.0.228
+   Compiling tracing-attributes v0.1.31
+   Compiling futures-macro v0.3.32
+   Compiling ref-cast-impl v1.0.25
+   Compiling derive_more-impl v2.1.1
+   Compiling strum_macros v0.28.0
+   Compiling pin-project-internal v1.1.13
+   Compiling clap_derive v4.5.55
+   Compiling thiserror-impl v2.0.18
+   Compiling async-trait v0.1.89
+   Compiling regex v1.12.3
+   Compiling futures-util v0.3.32
+   Compiling pin-project v1.1.13
+   Compiling schemars_derive v1.2.1
+   Compiling tracing v0.1.44
+   Compiling futures-concurrency v7.7.1
+   Compiling axum-core v0.5.6
+   Compiling clap v4.5.60
+   Compiling strum v0.28.0
+   Compiling derive_more v2.1.1
+   Compiling polling v3.11.0
+   Compiling tempfile v3.27.0
+   Compiling darling_macro v0.23.0
+   Compiling darling v0.23.0
+   Compiling serde_with_macros v3.22.0
+   Compiling schemars v1.2.1
+   Compiling serde_urlencoded v0.7.1
+   Compiling tracing-serde v0.2.0
+   Compiling async-signal v0.2.14
+   Compiling async-process v2.5.0
+   Compiling futures-executor v0.3.32
+   Compiling rstest v0.25.0
+   Compiling matchers v0.2.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling futures v0.3.32
+   Compiling serde_with v3.22.0
+   Compiling hyper v1.11.1
+   Compiling tower v0.5.3
+   Compiling tokio-util v0.7.18
+   Compiling cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-5nep-hook-tags/crates/cyril-review)
+   Compiling agent-client-protocol-schema v1.5.0
+   Compiling hyper-util v0.1.20
+   Compiling axum v0.8.9
+   Compiling agent-client-protocol-trace-viewer v2.0.0
+   Compiling agent-client-protocol v2.0.0
+   Compiling agent-client-protocol-conductor v2.0.0
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-5nep-hook-tags/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 47.53s
+     Running unittests src/lib.rs (/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/pr168-fix-target/debug/deps/cyril_core-c7474150056cb81f)
+
+running 2 tests
+test protocol::kas::hooks::tests::red_probe_non_tool_trigger_regex_matcher_serves ... FAILED
+test protocol::kas::hooks::tests::red_probe_malformed_tags_keep_id_hooks ... FAILED
+
+failures:
+
+---- protocol::kas::hooks::tests::red_probe_non_tool_trigger_regex_matcher_serves stdout ----
+
+thread 'protocol::kas::hooks::tests::red_probe_non_tool_trigger_regex_matcher_serves' (303735) panicked at crates/cyril-core/src/protocol/kas/hooks.rs:1437:9:
+assertion `left == right` failed
+  left: 0
+ right: 1
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- protocol::kas::hooks::tests::red_probe_malformed_tags_keep_id_hooks stdout ----
+
+thread 'protocol::kas::hooks::tests::red_probe_malformed_tags_keep_id_hooks' (303734) panicked at crates/cyril-core/src/protocol/kas/hooks.rs:1425:131:
+called `Result::unwrap()` on an `Err` value: Error { code: -32602: Invalid params, message: "Invalid params", data: Some(String("parse hooks/list toolTags: member 1 must be a string")) }
+
+
+failures:
+    protocol::kas::hooks::tests::red_probe_malformed_tags_keep_id_hooks
+    protocol::kas::hooks::tests::red_probe_non_tool_trigger_regex_matcher_serves
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 1149 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-core --lib`

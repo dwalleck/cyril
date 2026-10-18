@@ -15,6 +15,7 @@
 use agent_client_protocol::schema::v1 as acp;
 
 use crate::protocol::host_mediator::{CallbackMeta, CancelKey, finish};
+use crate::protocol::kas::hooks::HooksListArgs;
 use crate::protocol::kas::kiro_fs;
 use crate::types::SessionId;
 
@@ -78,9 +79,7 @@ pub(crate) enum HostCallback {
     /// `_kiro/hooks/list {trigger, toolId?, toolTags?}`. A missing trigger is
     /// preserved as `None` — the responder replies empty (not an error).
     HooksList {
-        trigger: Option<String>,
-        tool_id: Option<String>,
-        tool_tags: Option<Vec<String>>,
+        args: HooksListArgs,
         reply: Reply<acp::ExtResponse>,
     },
     /// `_kiro/hooks/executeHook`. Cancellation stays with the existing
@@ -159,36 +158,6 @@ impl HostCallback {
             }
         }
     }
-}
-
-/// Preserve omitted versus explicitly empty tags and reject every malformed
-/// present value. Both wire parsing and the registry responder use this
-/// boundary, so neither path can silently drop a malformed tag member.
-pub(crate) fn parse_hook_tool_tags(
-    params: &serde_json::Value,
-) -> Result<Option<Vec<String>>, String> {
-    let Some(value) = params.get("toolTags") else {
-        return Ok(None);
-    };
-    let invalid = |detail: String| {
-        let error = format!("parse hooks/list toolTags: {detail}");
-        tracing::warn!(%error, "invalid hooks/list params");
-        error
-    };
-    let array = value
-        .as_array()
-        .ok_or_else(|| invalid("expected an array of strings".into()))?;
-    let tags = array
-        .iter()
-        .enumerate()
-        .map(|(index, value)| {
-            value
-                .as_str()
-                .map(str::to_owned)
-                .ok_or_else(|| invalid(format!("member {index} must be a string")))
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(Some(tags))
 }
 
 /// `executeHook` typed params. Semantic defaults (missing command → exit 127
@@ -444,26 +413,11 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             let r = ctx.terminals.respond_shell_type();
             resolve(ctx, kind, None, reply, r).await;
         }
-        HostCallback::HooksList {
-            trigger,
-            tool_id,
-            tool_tags,
-            reply,
-        } => {
-            let mut params = serde_json::Map::new();
-            if let Some(t) = trigger {
-                params.insert("trigger".into(), t.into());
-            }
-            if let Some(t) = tool_id {
-                params.insert("toolId".into(), t.into());
-            }
-            if let Some(tags) = tool_tags {
-                params.insert("toolTags".into(), tags.into());
-            }
+        HostCallback::HooksList { args, reply } => {
             // Presence checked at the client before sending; a None here would
             // be a caller bug, so refuse rather than silently serve nothing.
             let r = match &ctx.hooks {
-                Some(h) => h.respond_list(&serde_json::Value::Object(params)),
+                Some(h) => h.respond_list(&args),
                 None => Err(acp::Error::method_not_found()),
             };
             resolve(ctx, kind, None, reply, r).await;

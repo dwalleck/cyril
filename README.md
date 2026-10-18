@@ -184,18 +184,24 @@ rules:
   against the tool ID only. For example, `fs_.*` still matches `fs_write`.
   Regex-only forms such as `^mcp_.*$` never match tags.
 
-A configured matcher requires a tool ID, even if tags are supplied. Missing
-or empty tags leave ID matching available; an omitted or empty matcher selects
-every hook invocation within its trigger. Invalid matchers are warned about
-and retained as nonmatching hooks. A malformed present `toolTags` value—anything
-other than an array containing only strings—is diagnosed and rejected as
-invalid params, not silently reduced to ID-only matching.
+On these two triggers a configured matcher requires a tool ID, even if tags
+are supplied. Missing or empty tags leave ID matching available. A malformed
+`toolTags` value is logged and its non-string members are dropped; the request
+is still answered, because KAS runs none of a tool's hooks when the list call
+fails.
+
+`SessionStart`, `UserPromptSubmit` and `Stop` have no tool to test, so, as in
+KAS, a valid matcher on them selects every invocation. On any trigger, an
+omitted or empty matcher selects every invocation, and an invalid matcher is
+warned about at load and never matches. Matchers compile as Rust regexes, so
+JavaScript-only syntax that KAS accepts, such as lookaround or backreferences,
+is invalid here.
 
 Tag matching does not change hook execution authority or approval behavior.
 A pre-tool command hook exiting with code 2 blocks the tool. Other triggers
-keep their existing behavior. `kas_hooks = "kas"` remains the separate KAS-owned
-registry/execution mode; this Host-mode repair does not change it.
-
+keep their existing execution behavior. `kas_hooks = "kas"` remains the
+separate KAS-owned registry/execution mode; this Host-mode repair does not
+change it.
 
 ### Reviewing a branch (KAS)
 
