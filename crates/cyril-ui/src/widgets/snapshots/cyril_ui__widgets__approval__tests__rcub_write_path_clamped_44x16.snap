@@ -1,0 +1,12 @@
+---
+source: crates/cyril-ui/src/widgets/approval.rs
+expression: "screen_rows(&terminal).join(\"\\n\")"
+---
+                                            
+  ┌ Permission Required ─────────────────┐  
+  │Write File                            │  
+  │                                      │  
+  │  /hom…/S4b-write-outside-approval.txt│  
+  │                                      │  
+  │▸ Allow                               │  
+  └──────────────────────────────────────┘

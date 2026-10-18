@@ -1,5 +1,6 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState};
@@ -53,14 +54,188 @@ fn window_start(selected: usize, total: usize, visible: usize) -> usize {
     }
 }
 
+/// Desired widths of the option and reject-with-reason popups.
+const OPTION_POPUP_WIDTH: u16 = 60;
+const REASON_POPUP_WIDTH: u16 = 64;
+
+/// Indent before each path row of the preview.
+const PATH_INDENT: &str = "  ";
+const ELLIPSIS: &str = "…";
+const PATH_SEPARATORS: [char; 2] = ['/', '\\'];
+
+/// The approval preview: the target path above the body built by
+/// [`preview_lines`].
+///
+/// The path is the most important fact on a write approval, so it is laid
+/// out first and never clipped at the border (cyril-rcub). When the popup has
+/// rows to spare, the path wraps across as many rows as it needs and is
+/// readable in full. When the popup is clamped and gives the path fewer rows
+/// than that, the path is middle-elided into those rows, always keeping the
+/// file name and as much leading context as fits. Wrapping alone would not
+/// be enough, because clamping drops preview rows from the bottom, which is
+/// where a wrapped path's file name sits.
+struct Preview<'a> {
+    path: Option<&'a str>,
+    /// Columns available to a path row (popup inner width minus the indent).
+    path_width: usize,
+    /// Rows the whole path needs when wrapped.
+    path_rows: usize,
+    body: Vec<Line<'a>>,
+}
+
+impl<'a> Preview<'a> {
+    fn new(state: &'a ApprovalState, theme: &Theme, area: Rect, desired_width: u16) -> Self {
+        let path = state.tool_call.primary_path();
+        // Borders take two columns. A popup too narrow to show any path
+        // column still lays the path out one column per row; ratatui clips it.
+        let path_width = usize::from(super::modal::popup_width(area, desired_width))
+            .saturating_sub(2 + PATH_INDENT.len())
+            .max(1);
+        let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+        Self {
+            path,
+            path_width,
+            path_rows,
+            body: preview_lines(state, theme),
+        }
+    }
+
+    /// Rows the whole preview wants.
+    fn len(&self) -> usize {
+        self.path_rows.saturating_add(self.body.len())
+    }
+
+    /// The preview laid out in at most `rows` rows. The path takes rows
+    /// first and is fitted to its share; the body fills whatever is left.
+    fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
+        let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
+        if let Some(path) = self.path {
+            for row in fit_path(path, self.path_width, self.path_rows.min(rows)) {
+                lines.push(Line::styled(
+                    format!("{PATH_INDENT}{row}"),
+                    Style::default().fg(theme.text_secondary),
+                ));
+            }
+        }
+        let body_rows = rows.saturating_sub(lines.len());
+        lines.extend(self.body.into_iter().take(body_rows));
+        lines
+    }
+}
+
+/// Split `text` into rows of at most `width` display columns. A character
+/// never splits: a wide glyph that would straddle the edge starts the next
+/// row, matching how ratatui draws it (the glyph plus a blank continuation
+/// cell).
+fn wrap_columns(text: &str, width: usize) -> Vec<String> {
+    let mut rows = Vec::new();
+    let mut row = String::new();
+    let mut used = 0usize;
+    for ch in text.chars() {
+        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        if used.saturating_add(ch_width) > width && !row.is_empty() {
+            rows.push(std::mem::take(&mut row));
+            used = 0;
+        }
+        row.push(ch);
+        used = used.saturating_add(ch_width);
+    }
+    if !row.is_empty() || rows.is_empty() {
+        rows.push(row);
+    }
+    rows
+}
+
+/// Lay `path` out in at most `rows` rows of `width` columns. The path is
+/// wrapped whole when it fits; otherwise it is middle-elided
+/// ([`elide_middle`]) into the space available.
+fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
+    if rows == 0 {
+        return Vec::new();
+    }
+    let wrapped = wrap_columns(path, width);
+    if wrapped.len() <= rows {
+        return wrapped;
+    }
+    // A wide glyph that straddles a row edge wastes that row's last column,
+    // so shrink the column budget until the elided path wraps into `rows`.
+    // The loop ends: at a budget of zero the path elides to "", one row.
+    let mut budget = width.saturating_mul(rows);
+    loop {
+        let fitted = wrap_columns(&elide_middle(path, budget), width);
+        if fitted.len() <= rows || budget == 0 {
+            return fitted;
+        }
+        budget -= 1;
+    }
+}
+
+/// Shorten `path` to at most `budget` display columns by replacing its
+/// middle with `…`. The kept tail is the file name, plus its parent
+/// directory when that fits too. Every remaining column goes to the leading
+/// context. If the file name alone is wider than the budget, its end (the
+/// extension) is what stays.
+fn elide_middle(path: &str, budget: usize) -> String {
+    if path.width() <= budget {
+        return path.to_owned();
+    }
+    let Some(room) = budget.checked_sub(ELLIPSIS.width()) else {
+        return String::new();
+    };
+    // Separator offsets, ignoring a trailing separator so a directory path
+    // still keeps its last component. Separators are ASCII, so every offset
+    // is a char boundary.
+    let separators: Vec<usize> = path
+        .trim_end_matches(&PATH_SEPARATORS[..])
+        .match_indices(&PATH_SEPARATORS[..])
+        .map(|(offset, _)| offset)
+        .collect();
+    let name = separators.last().map_or(path, |&offset| &path[offset..]);
+    let parent = separators
+        .iter()
+        .rev()
+        .nth(1)
+        .map_or(name, |&offset| &path[offset..]);
+    let tail = if parent.width() <= room { parent } else { name };
+    match room.checked_sub(tail.width()) {
+        Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_columns(path, head_room)),
+        None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
+    }
+}
+
+/// The longest prefix of `text` at most `width` display columns wide.
+fn leading_columns(text: &str, width: usize) -> &str {
+    let mut used = 0usize;
+    for (offset, ch) in text.char_indices() {
+        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        if used > width {
+            return &text[..offset];
+        }
+    }
+    text
+}
+
+/// The longest suffix of `text` at most `width` display columns wide.
+fn trailing_columns(text: &str, width: usize) -> &str {
+    let mut used = 0usize;
+    for (offset, ch) in text.char_indices().rev() {
+        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        if used > width {
+            return &text[offset + ch.len_utf8()..];
+        }
+    }
+    text
+}
+
 /// Max body lines in the approval preview (cyril-j1b3). Five matches the
 /// chat widget's tool-output cap; the diff renderer applies its own 20-line
 /// cap, so a diff-heavy preview is truncated before this budget matters.
 const MAX_PREVIEW_LINES: usize = 5;
 
-/// Build the approval-preview block from the joined tool-call snapshot.
+/// Build the approval-preview body from the joined tool-call snapshot. The
+/// path rows above it are laid out by [`Preview`] (cyril-rcub).
 ///
-/// Order: path line (when the tracked call resolves one), then diff content
+/// Order: diff content
 /// (the existing diff projection, with its own line cap), else the raw-input
 /// `text`/`content` payload capped at [`MAX_PREVIEW_LINES`]. A snapshot with
 /// no displayable payload yields a single `Preview unavailable` line — the
@@ -70,13 +245,6 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
     let mut has_body = false;
-
-    if let Some(path) = tc.primary_path() {
-        lines.push(Line::styled(
-            format!("  {path}"),
-            Style::default().fg(theme.text_secondary),
-        ));
-    }
 
     let has_diff = tc
         .content()
@@ -154,9 +322,10 @@ fn render_option_phase(
 ) {
     // Preview block (cyril-j1b3): the joined tool-call snapshot is rendered
     // above the options so a KAS stub permission request still shows the
-    // file path and proposed content. Budget: 1 path line + up to
-    // MAX_PREVIEW_LINES of body + blanks; clamped below when space is tight.
-    let preview = preview_lines(state, theme);
+    // file path and proposed content. Budget: the path's wrapped rows + up
+    // to MAX_PREVIEW_LINES of body + blanks; clamped below when space is
+    // tight (the path is then middle-elided, cyril-rcub).
+    let preview = Preview::new(state, theme, area, OPTION_POPUP_WIDTH);
     let show_feedback_hint = state.can_reject_with_reason();
     // options.len() is a handful of user-facing choices; the sum stays far
     // below u16::MAX, so try_from is infallible and the saturation is
@@ -170,7 +339,8 @@ fn render_option_phase(
             .saturating_add(usize::from(show_feedback_hint)),
     )
     .unwrap_or(u16::MAX);
-    let Some(popup_area) = super::modal::place(area, input_top, 60, desired_height) else {
+    let Some(popup_area) = super::modal::place(area, input_top, OPTION_POPUP_WIDTH, desired_height)
+    else {
         return; // no rows above the input can hold the popup
     };
 
@@ -189,8 +359,17 @@ fn render_option_phase(
         3 => (true, true, 0, 1),
         n => {
             let remaining = n - 2; // message + blank accounted
-            let preview_rows = preview.len().min(remaining.saturating_sub(1));
-            (true, true, preview_rows, remaining - preview_rows)
+            // A shown preview is followed by a blank separator; both must
+            // leave the option row (cyril-rcub: the unbudgeted separator
+            // used to push the selection out of a clamped popup).
+            let preview_rows = preview.len().min(remaining.saturating_sub(2));
+            let separator = usize::from(preview_rows > 0);
+            (
+                true,
+                true,
+                preview_rows,
+                remaining - preview_rows - separator,
+            )
         }
     };
     let show_feedback_hint = show_feedback_hint && option_rows > 1;
@@ -208,7 +387,7 @@ fn render_option_phase(
     if show_blank {
         lines.push(Line::default());
     }
-    lines.extend(preview.into_iter().take(preview_rows));
+    lines.extend(preview.into_lines(preview_rows, theme));
     if preview_rows > 0 {
         lines.push(Line::default());
     }
@@ -258,7 +437,7 @@ fn render_reason_phase(
     else {
         return;
     };
-    let preview = preview_lines(state, theme);
+    let preview = Preview::new(state, theme, area, REASON_POPUP_WIDTH);
     let selected_label = state
         .options
         .iter()
@@ -271,7 +450,8 @@ fn render_reason_phase(
             .saturating_add(usize::from(editor.notice().is_some())),
     )
     .unwrap_or(u16::MAX);
-    let Some(popup_area) = super::modal::place(area, input_top, 64, desired_height) else {
+    let Some(popup_area) = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)
+    else {
         return;
     };
 
@@ -322,7 +502,7 @@ fn render_reason_phase(
     if show_blank {
         lines.push(Line::default());
     }
-    lines.extend(preview.into_iter().take(preview_rows));
+    lines.extend(preview.into_lines(preview_rows, theme));
     if show_selected {
         lines.push(Line::styled(
             format!("Rejecting: {selected_label}"),
@@ -845,6 +1025,258 @@ mod tests {
             !text.contains("Allow execution?"),
             "message should be dropped"
         );
+    }
+
+    // ---------- cyril-rcub: long write paths stay identifiable ----------
+
+    /// The live 2.32.0 path the overlay clipped to `…/conductor-spike/a`.
+    const LONG_WRITE_PATH: &str = "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/cyril-kas/S4b-write-outside-approval.txt";
+    const LONG_WRITE_NAME: &str = "S4b-write-outside-approval.txt";
+    /// Wide glyphs (2 columns each) in directories and the file name.
+    const WIDE_WRITE_PATH: &str =
+        "/home/用户/项目/文档/非常长的目录名称/另一个目录/设计说明书-最终版本.md";
+    const WIDE_WRITE_NAME: &str = "设计说明书-最终版本.md";
+
+    fn write_approval(path: &str) -> ApprovalState {
+        approval_for_tool_call(ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_rcub"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": path, "text": "body"})),
+        ))
+    }
+
+    /// Screen rows as a reader sees them: a wide glyph's blank continuation
+    /// cell is skipped rather than read as a space.
+    fn screen_rows(terminal: &Terminal<TestBackend>) -> Vec<String> {
+        let buffer = terminal.backend().buffer();
+        let area = *buffer.area();
+        (0..area.height)
+            .map(|y| {
+                let mut row = String::new();
+                let mut x = 0;
+                while x < area.width {
+                    let symbol = buffer[(x, y)].symbol();
+                    row.push_str(symbol);
+                    let advance = unicode_width::UnicodeWidthStr::width(symbol).max(1);
+                    x = x.saturating_add(u16::try_from(advance).unwrap_or(1));
+                }
+                row
+            })
+            .collect()
+    }
+
+    /// The text between a popup row's side borders with the preview's
+    /// two-column indent removed; `None` for rows outside the popup body.
+    fn popup_body(row: &str) -> Option<&str> {
+        let start = row.find('│')? + '│'.len_utf8();
+        let end = row.rfind('│')?;
+        let inner = row.get(start..end)?;
+        Some(inner.strip_prefix("  ").unwrap_or(inner).trim_end())
+    }
+
+    /// Popup body rows concatenated, so a path wrapped across rows reads back
+    /// as one string.
+    fn joined_body(terminal: &Terminal<TestBackend>) -> String {
+        screen_rows(terminal)
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .collect()
+    }
+
+    /// cyril-rcub fence (roomy): when the popup has rows to spare, the whole
+    /// path is on screen — wrapped across rows, never clipped at the border.
+    #[rstest::rstest]
+    #[case::ascii_80x24(LONG_WRITE_PATH, 80, 24)]
+    #[case::ascii_narrow_40x24(LONG_WRITE_PATH, 40, 24)]
+    #[case::wide_chars_80x24(WIDE_WRITE_PATH, 80, 24)]
+    #[case::wide_chars_narrow_30x24(WIDE_WRITE_PATH, 30, 24)]
+    fn long_write_path_is_fully_visible_when_rows_allow(
+        #[case] path: &str,
+        #[case] width: u16,
+        #[case] height: u16,
+    ) {
+        let terminal = render_at(&write_approval(path), width, height, height);
+        let joined = joined_body(&terminal);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            joined.contains(path),
+            "full path not readable on screen:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+    }
+
+    /// cyril-rcub fence (clamped): with a single preview row the path is
+    /// middle-elided, keeping the file name whole plus leading context, and
+    /// the options stay actionable.
+    #[rstest::rstest]
+    #[case::ascii_80(LONG_WRITE_PATH, LONG_WRITE_NAME, 80)]
+    #[case::ascii_narrow_44(LONG_WRITE_PATH, LONG_WRITE_NAME, 44)]
+    #[case::wide_chars_80(WIDE_WRITE_PATH, WIDE_WRITE_NAME, 80)]
+    #[case::wide_chars_narrow_36(WIDE_WRITE_PATH, WIDE_WRITE_NAME, 36)]
+    fn clamped_write_path_keeps_file_name(
+        #[case] path: &str,
+        #[case] name: &str,
+        #[case] width: u16,
+    ) {
+        // input_top=8 → region rows 1-7 → popup h=7, inner=5: message,
+        // blank, ONE preview row, separator, ONE option row.
+        let terminal = render_at(&write_approval(path), width, 16, 8);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        let path_row = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .find(|body| body.contains(name))
+            .unwrap_or_else(|| panic!("file name {name} not on screen:\n{screen}"));
+        assert!(
+            path_row.starts_with("/hom"),
+            "leading context dropped: {path_row:?}\n{screen}"
+        );
+        assert!(
+            path_row.ends_with(name),
+            "file name must end the row: {path_row:?}\n{screen}"
+        );
+        assert!(
+            path_row.contains('…'),
+            "elision must be marked: {path_row:?}\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        for row in rows.iter().skip(8) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+    }
+
+    /// cyril-rcub: the reject-with-reason page shares the preview layout, so
+    /// the path it is rejecting is readable there too.
+    #[test]
+    fn reason_phase_shows_full_write_path() {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: ToolCall::new(
+                cyril_core::types::ToolCallId::new("tooluse_rcub"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::Pending,
+                Some(serde_json::json!({"path": LONG_WRITE_PATH, "text": "body"})),
+            ),
+            message: "Write File".into(),
+            options: vec![option("reject", "Reject")],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+        });
+        assert!(ui.approval_begin_feedback(), "feedback phase must open");
+        let terminal = render_ui(&ui, 80, 30, 30);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            joined_body(&terminal).contains(LONG_WRITE_PATH),
+            "full path not readable on the reason page:\n{screen}"
+        );
+        assert!(
+            screen.contains("Reason ("),
+            "editor label missing:\n{screen}"
+        );
+    }
+
+    /// cyril-rcub snapshots: the roomy wrap at 80x24 and at a narrow width,
+    /// and the clamped middle-elision.
+    #[rstest::rstest]
+    #[case::roomy_80x24("rcub_write_path_roomy_80x24", 80, 24, 24)]
+    #[case::roomy_narrow_40x24("rcub_write_path_roomy_40x24", 40, 24, 24)]
+    #[case::clamped_80x16("rcub_write_path_clamped_80x16", 80, 16, 8)]
+    #[case::clamped_narrow_44x16("rcub_write_path_clamped_44x16", 44, 16, 8)]
+    fn long_write_path_snapshots(
+        #[case] name: &str,
+        #[case] width: u16,
+        #[case] height: u16,
+        #[case] input_top: u16,
+    ) {
+        let terminal = render_at(&write_approval(LONG_WRITE_PATH), width, height, input_top);
+        insta::assert_snapshot!(name, screen_rows(&terminal).join("\n"));
+    }
+
+    #[rstest::rstest]
+    #[case::fits("/tmp/a.md", 20, "/tmp/a.md")]
+    #[case::keeps_parent_and_name("/home/user/project/src/main.rs", 20, "/home/u…/src/main.rs")]
+    #[case::name_only_when_parent_too_wide(
+        "/a/very-long-parent-directory/file.txt",
+        16,
+        "/a/ver…/file.txt"
+    )]
+    #[case::name_wider_than_budget_keeps_its_end(
+        "/x/an-extremely-long-file-name.txt",
+        10,
+        "…-name.txt"
+    )]
+    #[case::wide_glyphs("/用户/项目/设计.md", 12, "/用…/设计.md")]
+    #[case::windows_separators(
+        r"C:\Users\dev\projects\cyril\notes.md",
+        20,
+        r"C:\U…\cyril\notes.md"
+    )]
+    #[case::trailing_separator("/home/user/projects/cyril/", 16, "/home/us…/cyril/")]
+    #[case::zero_budget("/a/b.md", 0, "")]
+    fn elide_middle_keeps_file_name_and_leading_context(
+        #[case] path: &str,
+        #[case] budget: usize,
+        #[case] expected: &str,
+    ) {
+        let elided = elide_middle(path, budget);
+        assert_eq!(elided, expected);
+        assert!(elided.width() <= budget, "over budget: {elided:?}");
+    }
+
+    #[rstest::rstest]
+    #[case::wraps_whole_when_rows_allow("/abc/defgh/ij.md", 5, 4, &["/abc/", "defgh", "/ij.m", "d"])]
+    #[case::elides_when_rows_short("/abc/defgh/ij.md", 5, 2, &["/ab…/", "ij.md"])]
+    #[case::wide_glyph_straddle_shrinks_budget("/x/a文件", 3, 2, &["…文", "件"])]
+    #[case::no_rows("/abc/defgh/ij.md", 5, 0, &[])]
+    fn fit_path_wraps_or_elides_into_rows(
+        #[case] path: &str,
+        #[case] width: usize,
+        #[case] rows: usize,
+        #[case] expected: &[&str],
+    ) {
+        assert_eq!(fit_path(path, width, rows), expected);
+    }
+
+    /// Invariant sweep over widths and row budgets: never more rows than
+    /// granted, no row wider than the width (a lone wide glyph in a
+    /// one-column row excepted), the whole path whenever it fits, and the
+    /// file name intact whenever the budget can hold it.
+    #[test]
+    fn fit_path_invariants_hold_across_widths_and_rows() {
+        let paths = [
+            (LONG_WRITE_PATH, LONG_WRITE_NAME),
+            (WIDE_WRITE_PATH, WIDE_WRITE_NAME),
+            (r"C:\Users\dev\projects\cyril\notes.md", "notes.md"),
+            ("/tmp/a.md", "a.md"),
+        ];
+        for (path, name) in paths {
+            for width in 1..=40usize {
+                for rows in 1..=5usize {
+                    let fitted = fit_path(path, width, rows);
+                    let joined = fitted.concat();
+                    let context = format!("path={path} width={width} rows={rows} -> {fitted:?}");
+                    assert!(fitted.len() <= rows, "too many rows: {context}");
+                    for row in &fitted {
+                        assert!(row.width() <= width.max(2), "row too wide: {context}");
+                    }
+                    if wrap_columns(path, width).len() <= rows {
+                        assert_eq!(joined, path, "fitting path altered: {context}");
+                    } else {
+                        assert!(joined.contains(ELLIPSIS), "unmarked elision: {context}");
+                    }
+                    if width >= 2 && name.width() + 1 + rows <= width * rows {
+                        assert!(joined.ends_with(name), "file name lost: {context}");
+                    }
+                }
+            }
+        }
     }
 
     // ---------- cyril-j1b3: joined approval preview ----------
