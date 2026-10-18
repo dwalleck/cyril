@@ -45,8 +45,8 @@ Requester decision relayed by the coordinator (quoted in `route.md` T4 item 1). 
 
 - Red-first (C1): `receipts/red-run.log` (base 85becf9f + test only: `StoreUnservable … data.sqlite3 is absent`) → `receipts/green-run.log`.
 - Mutations: C9 `receipts/mutation-c9-{red,restored}.log`; C10 `receipts/mutation-c10{,b}-red.log`, `mutation-c10-restored.log`; W `receipts/mutation-wiring-red.log`.
-- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (5f03e0f5; every lane `-OK`).
-- Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 229 kas/domain_mediator tests pass on MSVC at 5f03e0f5, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
+- Gate (all ten ci.yml lanes, Linux): `receipts/gate-summary.txt` (2de90dfe source; every lane `-OK`).
+- Windows VM (C2/C3/C4/C9/C10 process seam with the `.cmd` fixture): `receipts/windows-vm.txt` — 232 kas/domain_mediator tests pass on MSVC at 2de90dfe, incl. every `kas::auth` process test and the wire-level host tests. The `win-clippy*` FAILs there are pre-existing Windows-only warnings in files this change does not touch (CI runs clippy on ubuntu only).
 - Live C6: `receipts/live/timeline.txt` — renewal served at 19:44:40Z (expiry 19:47:39 → 20:44:40, plain helper, no force), turns answered before, inside the buffer, and after the old expiry; no BridgeDisconnected.
 - Missing-helper shapes (C10 premise): `receipts/missing-subcommand-shapes.txt`, evidence P5.
 - Independent review: one read-only reviewer pass over `85becf9f..2cf8d853`; no blocking findings; should-fixes 1–4 and nits 6/11 fixed in the review-fix commit; nits 7–10/12 dispositioned under Non-goals.
@@ -87,3 +87,15 @@ The requester chose to fix all four items before merge (relayed by the coordinat
 | 2 (Low) | Renewal serialization was per-connection only. | Fixed — C9b: process-wide lock per kiro-cli invocation; red-first receipt. |
 | 3 (Nit) | `Timeout` remedy named only the network. | Fixed — also names another kiro-cli holding its token-refresh lock (`refresh lock timed out (peer wedged?)`); asserted in `callbacks::…typed_remediation`. |
 | 4 (Nit) | A forced refresh is silently unhonoured on the fallback path. | Fixed — debug log `getAccessToken forceRefresh not honoured …` in `stored_fallback`. |
+
+## Review 3 — PR #173 delta review (reviewed 54f8762f): approve-with-one-fix
+
+Requester approved merging once ready; fixes relayed by the coordinator (2026-10-18). Technical repairs under the approved design.
+
+| # | Finding | Disposition |
+|---|---|---|
+| 1 (Medium) | PATH-first rationale ("same kiro-cli as the version probe") not held: bundle selection probed bare `kiro-cli` via OS lookup, so with kiro-cli only in a TUI fallback dir the probe failed (→ newest extraction) while auth used `~/.local/bin/kiro-cli`; OS lookup also honours the relative/cwd PATH entries cyril skips. | Fixed — `installed_cli_version(token_source)` runs `version::invocation_version` on `KasTokenSource::kiro_cli()` under its environment; `version::kiro_cli_version` (now unused) removed. Red-first `discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli` (unix child-process: kiro-cli only in `~/.local/bin`; one journal records `--version` then `chat _ get-kas-token`; the exact 2.24.0 extraction wins) — `receipts/r3-red-shared-kiro-cli.log` red, green after. |
+| 2 (Low) | Lock key = rendered spelling; Free `/usr/local/bin/kiro-cli` and Wrapper bare `kiro-cli` got separate locks. | Fixed — C9c: `lock_key` = resolved binary (absolute as-is, bare name looked up on the source's effective PATH, then canonicalized) + args; also keys the missing-helper cache. `lock_key_unifies_spellings_of_one_binary` (pure, faked host) and `fetch_serializes_across_spellings_of_one_binary` (unix, absolute vs bare `sh` on a replacement PATH). Mutation: key reverted to the spelling → the process test goes red (`receipts/r3-red-lock-key-spellings.log`), restored → green. |
+| 3a (Nit) | `is_executable_file` tested any exec bit. | Fixed — `access(X_OK)` for the current user via nix (TUI `y1e` / Node `accessSync(X_OK)`); Windows: any file. `is_executable_file_follows_access_x_ok` (0o600 no, 0o700 yes, 0o601 only as root). |
+| 3b (Nit) | `under_cwd` case-sensitive on Windows. | Fixed — case-insensitive on Windows (TUI `YM` lowercases); `under_cwd_case_handling_follows_the_platform`. |
+| 3c (Nit) | Struct doc still said "the PATH `kiro-cli`". | Fixed — documents the free-path resolver, the shared probe, and the resolved-binary lock key. |

@@ -41,3 +41,7 @@ Should-fixes 1–4 and nits 6/11 applied under the approved design (no behavior/
 ## Repair 2 (PR #173 cross-model review — design "Review 2")
 
 Items 1–4 applied in `kas/auth.rs` (+ `callbacks.rs` test): `resolve_free_kiro_cli` (pure; PATH → TUI locations; host injected) behind `KasTokenSource::on_path`, per-source spawn remedy, process-wide `helper_gate`, timeout wording, fallback force-refresh debug log. Red-first receipts `receipts/r1-red-kiro-cli-lookup.log`, `receipts/r2-red-process-wide-serialization.log`. Full gate re-run → `receipts/gate-summary.txt`; Windows VM re-run → `receipts/windows-vm.txt`.
+
+## Repair 3 (PR #173 delta review — design "Review 3")
+
+One commit: discovery's version probe uses the token source's resolved kiro-cli; `lock_key` (resolved + canonical binary + args) for the process-wide gate and missing-helper cache; `access(X_OK)` executability; Windows case-insensitive cwd skip; struct doc. Red-first `receipts/r3-red-shared-kiro-cli.log`; mutation `receipts/r3-red-lock-key-spellings.log`. Full gate → `receipts/gate-summary.txt`; Windows VM → `receipts/windows-vm.txt`.

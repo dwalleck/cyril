@@ -394,17 +394,20 @@ fn list_kas_entries(root: &Path) -> Vec<(String, bool)> {
         .collect()
 }
 
-/// The installed kiro-cli's semver tuple, from `kiro-cli --version` on PATH.
+/// The installed kiro-cli's semver tuple, from `<kiro-cli> --version` run on
+/// the SAME resolved kiro-cli the login gate and the `getAccessToken`
+/// responder ask (`token_source`, cyril-zbu7 Review 3) — so probe, gate and
+/// responder provably use one binary.
 /// `None` (binary absent, non-zero exit, unparseable output) is warn-logged —
 /// selection then prefers the newest extraction instead of an exact match,
 /// which is the best available guess when the CLI can't be asked.
-async fn installed_cli_version() -> Option<(u32, u32, u32)> {
-    let step = super::version::kiro_cli_version(
-        &AgentCommand::new("kiro-cli"),
-        &crate::types::SpawnEnvironment::Inherit,
-    )
-    .await
-    .and_then(|v| super::version::parse_semver(&v));
+async fn installed_cli_version(
+    token_source: &super::auth::KasTokenSource,
+) -> Option<(u32, u32, u32)> {
+    let step =
+        super::version::invocation_version(token_source.kiro_cli(), token_source.environment())
+            .await
+            .and_then(|v| super::version::parse_semver(&v));
     match step {
         Ok(v) => Some(v),
         Err(e) => {
@@ -438,7 +441,7 @@ pub(crate) async fn resolve_kas_command(
         (Some(_), _) | (None, None) => (Vec::new(), None),
         (None, Some(d)) => (
             list_kas_entries(&kas_root(d)),
-            installed_cli_version().await,
+            installed_cli_version(token_source).await,
         ),
     };
     let cmd = resolve(
@@ -1330,6 +1333,86 @@ mod tests {
             "{cmd:?}"
         );
         std::fs::write(completed, "gate checked").expect("completion marker");
+    }
+
+    // cyril-zbu7 Review 3 (red-first): with kiro-cli ONLY in a TUI fallback
+    // location (`~/.local/bin`, not on PATH), bundle selection's version probe
+    // asks the same binary the gate and responder ask — so the exact-version
+    // extraction (2.24.0, what the fake reports) wins over the newer 2.25.0
+    // that a failed probe would fall back to, and one journal records both
+    // the `--version` probe and the `get-kas-token` gate.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn version_probe_and_token_source_share_the_fallback_kiro_cli() {
+        const CHILD: &str = "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD";
+        let Some(completed) = std::env::var_os(CHILD) else {
+            let root = tempfile::tempdir().expect("tempdir");
+            let home = root.path().join("home");
+            let xdg = root.path().join("xdg");
+            let local_bin = home.join(".local/bin");
+            std::fs::create_dir_all(&local_bin).expect("~/.local/bin");
+            std::os::unix::fs::symlink(
+                concat!(
+                    env!("CARGO_MANIFEST_DIR"),
+                    "/tests/fixtures/fake-kiro-cli.sh"
+                ),
+                local_bin.join("kiro-cli"),
+            )
+            .expect("fake kiro-cli symlink");
+            let node = root.path().join("node");
+            std::fs::write(&node, "").expect("fake node file");
+            for version in ["2.24.0", "2.25.0"] {
+                let server_dir = kas_root(&xdg.join(KIRO_DATA_DIR_NAME))
+                    .join(format!("{version}-{SHA_A}"))
+                    .join("node_modules/@kiro/agent/dist/server");
+                std::fs::create_dir_all(&server_dir).expect("fake extraction");
+                std::fs::write(server_dir.join("acp-server.js"), "//").expect("fake entry");
+            }
+            let completed = root.path().join("completed");
+            let status = std::process::Command::new(
+                std::env::current_exe().expect("current test binary"),
+            )
+            .args([
+                "--exact",
+                "protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli",
+                "--nocapture",
+            ])
+            .env(CHILD, &completed)
+            .env("HOME", &home)
+            .env("XDG_DATA_HOME", &xdg)
+            .env("KIRO_AGENT_PATH", &node)
+            // No kiro-cli on PATH (only /bin for the fixture's `sh`).
+            .env("PATH", "/bin:/usr/bin")
+            .env_remove("KIRO_KAS_SERVER_PATH")
+            .status()
+            .expect("re-run this test binary");
+            assert!(status.success(), "child-side assertions failed");
+            assert_eq!(
+                std::fs::read_to_string(&completed).expect("completion marker"),
+                "shared checked"
+            );
+            let journal =
+                std::fs::read_to_string(local_bin.join("kiro-cli-argv.txt")).expect("journal");
+            assert_eq!(
+                journal, "--version\nchat\n_\nget-kas-token\n",
+                "probe and gate must both run the ~/.local/bin kiro-cli"
+            );
+            return;
+        };
+        let source = crate::protocol::kas::auth::KasTokenSource::on_path();
+        let cmd = resolve_kas_command(&source)
+            .await
+            .expect("the fallback kiro-cli answers both the probe and the gate");
+        let server = cmd
+            .args()
+            .iter()
+            .find(|a| a.ends_with("acp-server.js"))
+            .expect("server arg");
+        assert!(
+            server.contains(&format!("2.24.0-{SHA_A}")),
+            "the probe must ask the fallback kiro-cli (2.24.0), not fail into newest: {server}"
+        );
+        std::fs::write(completed, "shared checked").expect("completion marker");
     }
 
     // F19b drift fence, kept at the resolution level (cyril-brui): the

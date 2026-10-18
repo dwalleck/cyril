@@ -168,18 +168,10 @@ pub(crate) fn render(command: &AgentCommand) -> String {
         .join(" ")
 }
 
-/// Read the kiro-cli version the agent command would run: the probe from
-/// [`version_probe_command`], executed by [`run_version_probe`].
-pub(crate) async fn kiro_cli_version(
-    agent_command: &AgentCommand,
-    environment: &crate::types::SpawnEnvironment,
-) -> Result<String, String> {
-    let probe = version_probe_command(agent_command)?;
-    run_version_probe(&probe, environment).await
-}
-
 /// Read the version of the kiro-cli an already-resolved invocation prefix
-/// ([`kiro_cli_invocation`]) runs: `<prefix> --version`.
+/// runs: `<prefix> --version` — a [`kiro_cli_invocation`] prefix, or the free
+/// path's resolved kiro-cli (`KasTokenSource::kiro_cli`, so bundle
+/// selection asks the same binary as the auth gate and responder).
 pub(crate) async fn invocation_version(
     kiro_cli: &AgentCommand,
     environment: &crate::types::SpawnEnvironment,

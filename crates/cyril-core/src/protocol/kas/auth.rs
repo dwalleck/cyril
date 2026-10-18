@@ -249,18 +249,23 @@ fn cap(text: &str) -> String {
 }
 
 /// How cyril asks kiro-cli for the KAS access token: the invocation prefix
-/// that runs the right kiro-cli (the PATH `kiro-cli` on the free path; the
-/// agent command's own kiro-cli — through the WSL launcher when it routes
-/// through one — on the wrapper path) and the environment it runs under.
-/// Calls are serialized PROCESS-wide per kiro-cli invocation (a second
-/// request — from this connection or any other in the process, e.g. the
-/// workbench reviewer runtime — waits for the first helper to finish), so
-/// cyril never runs two token helpers for one kiro-cli at once: OIDC refresh
-/// tokens are single-use, and racing renewals can log the user out.
+/// that runs the right kiro-cli (on the free path the one
+/// [`resolve_free_kiro_cli`] finds — PATH, then the Kiro TUI's install
+/// locations — which bundle selection's version probe also asks; on the
+/// wrapper path the agent command's own kiro-cli, through the WSL launcher
+/// when it routes through one) and the environment it runs under.
+/// Calls are serialized PROCESS-wide per resolved kiro-cli binary + args
+/// ([`lock_key`]; a second request — from this connection or any other in
+/// the process, e.g. the workbench reviewer runtime — waits for the first
+/// helper to finish), so cyril never runs two token helpers for one kiro-cli
+/// at once: OIDC refresh tokens are single-use, and racing renewals can log
+/// the user out.
 #[derive(Debug)]
 pub(crate) struct KasTokenSource {
     kiro_cli: AgentCommand,
     environment: SpawnEnvironment,
+    /// Process-wide serialization + missing-helper cache key ([`lock_key`]).
+    lock_key: String,
     deadline: Duration,
     /// The remediation a spawn failure names (see [`KasTokenError::Spawn`]).
     spawn_remedy: &'static str,
@@ -353,36 +358,94 @@ fn resolve_free_kiro_cli(
 /// `true` when a PATH entry is the working directory or (unless the working
 /// directory is a filesystem root) inside it — the TUI's `YM` skips those so
 /// a binary planted in the workspace cannot shadow kiro-cli. Lexical
-/// (component-wise); the TUI additionally compares realpaths.
+/// (component-wise) and, on Windows, case-insensitive like `YM`'s lowercasing;
+/// the TUI additionally compares realpaths.
 fn under_cwd(dir: &std::path::Path, cwd: Option<&std::path::Path>) -> bool {
-    match cwd {
-        Some(cwd) => dir == cwd || (cwd.parent().is_some() && dir.starts_with(cwd)),
-        None => false,
-    }
-}
-
-/// A regular file the current user may execute (unix: any execute bit;
-/// Windows: any file, as the TUI's `y1e` does).
-fn is_executable_file(path: &std::path::Path) -> bool {
-    let Ok(meta) = std::fs::metadata(path) else {
+    let Some(cwd) = cwd else {
         return false;
     };
-    if !meta.is_file() {
-        return false;
-    }
+    let fold = |p: &std::path::Path| -> std::path::PathBuf {
+        if cfg!(windows) {
+            std::path::PathBuf::from(p.to_string_lossy().to_lowercase())
+        } else {
+            p.to_path_buf()
+        }
+    };
+    let (dir, cwd) = (fold(dir), fold(cwd));
+    dir == cwd || (cwd.parent().is_some() && dir.starts_with(&cwd))
+}
+
+/// A regular file the current user may execute — the TUI's `y1e`: on unix
+/// `access(path, X_OK)` for the current (real) user, as Node's
+/// `fs.accessSync(…, X_OK)` does; on Windows any file (`y1e` skips the
+/// execute check there).
+fn is_executable_file(path: &std::path::Path) -> bool {
+    let is_file = std::fs::metadata(path).is_ok_and(|meta| meta.is_file());
     #[cfg(unix)]
     {
-        use std::os::unix::fs::PermissionsExt;
-        meta.permissions().mode() & 0o111 != 0
+        is_file && nix::unistd::access(path, nix::unistd::AccessFlags::X_OK).is_ok()
     }
     #[cfg(not(unix))]
     {
-        true
+        is_file
     }
 }
 
+/// The process-wide lock key for a kiro-cli invocation: the RESOLVED binary
+/// (an absolute program as-is, a bare name looked up on `path_var` like
+/// [`resolve_free_kiro_cli`], then canonicalized through `canonical`) plus
+/// the invocation's args — so different spellings of one binary (Free's
+/// `/usr/local/bin/kiro-cli` vs a Wrapper's bare `kiro-cli`) share a lock,
+/// while a WSL launcher with different distro args does not. A program that
+/// cannot be resolved keys on its spelling (logged).
+fn lock_key(
+    kiro_cli: &AgentCommand,
+    path_var: Option<&std::ffi::OsStr>,
+    is_executable: impl Fn(&std::path::Path) -> bool,
+    canonical: impl Fn(&std::path::Path) -> Option<std::path::PathBuf>,
+) -> String {
+    let program = std::path::Path::new(kiro_cli.program());
+    let resolved = if program.is_absolute() {
+        Some(program.to_path_buf())
+    } else if program.components().count() == 1 {
+        let name = match program.extension() {
+            Some(_) => program.as_os_str().to_os_string(),
+            None => {
+                let mut name = program.as_os_str().to_os_string();
+                name.push(std::env::consts::EXE_SUFFIX);
+                name
+            }
+        };
+        path_var
+            .into_iter()
+            .flat_map(std::env::split_paths)
+            .filter(|dir| dir.is_absolute())
+            .map(|dir| dir.join(&name))
+            .find(|candidate| is_executable(candidate))
+    } else {
+        None
+    };
+    let shown = match resolved {
+        Some(path) => match canonical(&path) {
+            Some(real) => real.display().to_string(),
+            None => path.display().to_string(),
+        },
+        None => {
+            tracing::debug!(
+                program = kiro_cli.program(),
+                "kiro-cli lock key falls back to the program's spelling"
+            );
+            kiro_cli.program().to_string()
+        }
+    };
+    std::iter::once(shown.as_str())
+        .chain(kiro_cli.args().iter().map(String::as_str))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
 /// Process-wide serialization of token-helper runs, one async lock per
-/// kiro-cli invocation (keyed by the rendered prefix).
+/// kiro-cli invocation (keyed by [`lock_key`]: the resolved binary + args).
 mod helper_gate {
     use std::collections::HashMap;
     use std::sync::{Arc, Mutex, OnceLock};
@@ -436,9 +499,20 @@ impl KasTokenSource {
     /// A source running `kiro_cli` (the invocation prefix, e.g. `kiro-cli` or
     /// `wsl -d Ubuntu kiro-cli`) under `environment`.
     pub(crate) fn new(kiro_cli: AgentCommand, environment: SpawnEnvironment) -> Self {
+        let path_var = environment.effective_var(std::ffi::OsStr::new("PATH"));
+        let lock_key = lock_key(&kiro_cli, path_var.as_deref(), is_executable_file, |p| {
+            match std::fs::canonicalize(p) {
+                Ok(real) => Some(real),
+                Err(e) => {
+                    tracing::debug!(path = %p.display(), error = %e, "kiro-cli path not canonicalized for its lock key");
+                    None
+                }
+            }
+        });
         Self {
             kiro_cli,
             environment,
+            lock_key,
             deadline: GET_KAS_TOKEN_DEADLINE,
             spawn_remedy: AGENT_COMMAND_REMEDY,
             store: StoreLocation::FromEnvironment,
@@ -490,6 +564,17 @@ impl KasTokenSource {
         AgentCommand::new(self.kiro_cli.program()).with_args(args)
     }
 
+    /// The kiro-cli invocation prefix this source runs — also what bundle
+    /// selection's version probe asks on the free path.
+    pub(crate) fn kiro_cli(&self) -> &AgentCommand {
+        &self.kiro_cli
+    }
+
+    /// The environment the helper (and that probe) run under.
+    pub(crate) fn environment(&self) -> &SpawnEnvironment {
+        &self.environment
+    }
+
     /// `true` the first time this connection asks — the fallback warning is
     /// surfaced once per connection, not on every request.
     fn take_fallback_warning(&self) -> bool {
@@ -510,7 +595,7 @@ impl KasTokenSource {
     /// token — remembered per process, so the helper is not re-probed on
     /// every request. Every other failure is returned as-is.
     pub(crate) async fn fetch(&self, force_refresh: bool) -> Result<KasToken, KasTokenError> {
-        let key = render(&self.kiro_cli);
+        let key = self.lock_key.clone();
         let gate = helper_gate::for_invocation(&key);
         let _serialized = gate.lock().await;
         if let Some(version) = missing_helper::lookup(&key) {
@@ -1557,6 +1642,125 @@ pub(crate) mod tests {
             executables(vec![at_root.clone()]),
         );
         assert_eq!(found.program(), at_root.to_str().unwrap());
+    }
+
+    // Review 3 (C9c): the lock key is the RESOLVED binary + args — an
+    // absolute spelling and a bare name found on PATH share a key, as do two
+    // paths that canonicalize to one file; different args (another WSL
+    // distro) do not; an unresolvable relative spelling keys on itself.
+    #[test]
+    fn lock_key_unifies_spellings_of_one_binary() {
+        let name = kiro_cli_file_name();
+        let dir = abs("usr/local/bin");
+        let real = dir.join(&name);
+        let link = abs("home/u/.local/bin").join(&name);
+        let present = executables(vec![real.clone(), link.clone()]);
+        let canonical = |p: &std::path::Path| -> Option<std::path::PathBuf> {
+            Some(if p == link.as_path() {
+                real.clone()
+            } else {
+                p.to_path_buf()
+            })
+        };
+        let key = |cmd: AgentCommand, path: &[std::path::PathBuf]| {
+            lock_key(&cmd, Some(&path_var(path)), &present, canonical)
+        };
+        let absolute = key(AgentCommand::new(real.to_str().unwrap()), &[]);
+        assert_eq!(
+            key(AgentCommand::new("kiro-cli"), std::slice::from_ref(&dir)),
+            absolute
+        );
+        assert_eq!(
+            key(AgentCommand::new(link.to_str().unwrap()), &[]),
+            absolute
+        );
+        assert_eq!(
+            key(AgentCommand::new("kiro-cli"), &[abs("home/u/.local/bin")]),
+            absolute,
+            "a symlinked PATH hit canonicalizes to the same binary"
+        );
+
+        let wsl = |distro: &str| {
+            AgentCommand::new(real.to_str().unwrap()).with_args(vec![
+                "-d".to_string(),
+                distro.to_string(),
+                "kiro-cli".to_string(),
+            ])
+        };
+        assert_ne!(key(wsl("Ubuntu"), &[]), key(wsl("Debian"), &[]));
+        assert!(key(wsl("Ubuntu"), &[]).ends_with(" -d Ubuntu kiro-cli"));
+
+        assert_eq!(
+            key(AgentCommand::new("bin/kiro-cli"), &[dir]),
+            "bin/kiro-cli",
+            "an unresolvable relative spelling keys on itself"
+        );
+    }
+
+    // Review 3 (C9c) at the process seam: two sources naming ONE binary by
+    // different spellings (absolute vs bare name on the source's PATH) never
+    // run the helper concurrently.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn fetch_serializes_across_spellings_of_one_binary() {
+        let dir = tempfile::tempdir().unwrap();
+        let fake = overlap_detecting_kiro_cli(dir.path()); // `/bin/sh <script>`
+        let sh = std::fs::canonicalize(fake.program()).unwrap();
+        let sh_dir = sh.parent().unwrap().to_path_buf();
+        let absolute = KasTokenSource::new(
+            AgentCommand::new(sh.to_str().unwrap()).with_args(fake.args().to_vec()),
+            SpawnEnvironment::Inherit,
+        );
+        let mut env = std::collections::BTreeMap::new();
+        env.insert(std::ffi::OsString::from("PATH"), sh_dir.into_os_string());
+        let bare = KasTokenSource::new(
+            AgentCommand::new(sh.file_name().unwrap().to_str().unwrap())
+                .with_args(fake.args().to_vec()),
+            SpawnEnvironment::Replace(env),
+        );
+        let (first, second) = tokio::join!(absolute.fetch(false), bare.fetch(false));
+        assert!(first.is_ok(), "{first:?}");
+        assert!(second.is_ok(), "{second:?}");
+    }
+
+    // Review 3 (nit): on Windows the cwd comparison ignores case (TUI `YM`
+    // lowercases); on unix case matters.
+    #[test]
+    fn under_cwd_case_handling_follows_the_platform() {
+        let ws = abs("Work/WS");
+        let entry = abs("work/ws/bin");
+        assert_eq!(under_cwd(&entry, Some(&ws)), cfg!(windows));
+        assert!(under_cwd(&abs("Work/WS/bin"), Some(&ws)));
+        assert!(!under_cwd(&abs("Work/other"), Some(&ws)));
+    }
+
+    // Review 3 (nit): executability is the current user's `access(X_OK)` on
+    // unix — a file whose only execute bit belongs to nobody we are is not
+    // executable; any regular file counts on Windows (TUI `y1e`).
+    #[test]
+    fn is_executable_file_follows_access_x_ok() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("kiro-cli");
+        std::fs::write(&file, "").unwrap();
+        assert!(
+            !is_executable_file(dir.path()),
+            "a directory is never executable"
+        );
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o600)).unwrap();
+            assert!(!is_executable_file(&file));
+            std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o700)).unwrap();
+            assert!(is_executable_file(&file));
+            // Executable for "others" only: not for the owner running cyril
+            // (unless root, which access(2) treats as able to execute).
+            std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o601)).unwrap();
+            let root = nix::unistd::Uid::effective().is_root();
+            assert_eq!(is_executable_file(&file), root);
+        }
+        #[cfg(not(unix))]
+        assert!(is_executable_file(&file));
     }
 
     // C7b: no PATH and no home still resolve (to the bare name, whose spawn
