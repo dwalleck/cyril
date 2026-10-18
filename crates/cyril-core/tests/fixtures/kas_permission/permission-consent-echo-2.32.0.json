@@ -1,0 +1,187 @@
+{
+  "_provenance": "experiments/conductor-spike/audit-2.32.0/live: first request_permission/reply pair of kas-lead-shellecho-2.32.0.jsonl conn she_user and she_workspace, and kas-lead-folder-2.32.0.jsonl conn fold_workspace (KAS 0.66.43). Replies were sent by the audit's probe client in the TUI's echo shape.",
+  "shell_user": {
+    "request": {
+      "sessionId": "sess_eb792a04-afa5-43ab-991e-e4b40af8ecc7",
+      "toolCall": {
+        "toolCallId": "run_command_toolu_bdrk_01Ctteu4cdm1oADfYH48YRGL",
+        "status": "pending",
+        "title": "echo AUDITV1"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "run_command",
+          "command": "echo AUDITV1",
+          "consent": {
+            "capability": "shell",
+            "resource": "echo AUDITV1",
+            "askType": "implicit",
+            "triggeringResource": "echo AUDITV1",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-she-user-0gd54ivp"
+          },
+          "consentRound": 1
+        }
+      }
+    },
+    "reply": {
+      "outcome": {
+        "outcome": "selected",
+        "optionId": "always-accept"
+      },
+      "_meta": {
+        "kiro": {
+          "consent": {
+            "capability": "shell",
+            "scope": "user",
+            "resource": "echo AUDITV1",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-she-user-0gd54ivp"
+          }
+        }
+      }
+    }
+  },
+  "shell_workspace": {
+    "request": {
+      "sessionId": "sess_1f4e28e3-bdc3-4064-97c6-888fac19d22b",
+      "toolCall": {
+        "toolCallId": "run_command_toolu_bdrk_01JRTYTbRuh3f5Nce7p4dyum",
+        "status": "pending",
+        "title": "echo AUDITV1"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "run_command",
+          "command": "echo AUDITV1",
+          "consent": {
+            "capability": "shell",
+            "resource": "echo AUDITV1",
+            "askType": "implicit",
+            "triggeringResource": "echo AUDITV1",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-she-workspace-q4rzmpkp"
+          },
+          "consentRound": 1
+        }
+      }
+    },
+    "reply": {
+      "outcome": {
+        "outcome": "selected",
+        "optionId": "always-accept"
+      },
+      "_meta": {
+        "kiro": {
+          "consent": {
+            "capability": "shell",
+            "scope": "workspace",
+            "resource": "echo AUDITV1",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-she-workspace-q4rzmpkp"
+          }
+        }
+      }
+    }
+  },
+  "write_workspace": {
+    "request": {
+      "sessionId": "sess_3e97cf92-3a5c-4415-99b0-d3c9a0e631c5",
+      "toolCall": {
+        "toolCallId": "toolu_bdrk_01HoE5RqraNmxxYFZeKf2xC4",
+        "status": "pending",
+        "title": "Write File"
+      },
+      "options": [
+        {
+          "optionId": "accept",
+          "name": "Allow",
+          "kind": "allow_once"
+        },
+        {
+          "optionId": "always-accept",
+          "name": "Always allow",
+          "kind": "allow_always"
+        },
+        {
+          "optionId": "reject",
+          "name": "Deny",
+          "kind": "reject_once"
+        },
+        {
+          "optionId": "always-reject",
+          "name": "Always deny",
+          "kind": "reject_always"
+        }
+      ],
+      "_meta": {
+        "kiro": {
+          "toolId": "fs_write",
+          "consent": {
+            "capability": "fs_write",
+            "resource": "src/a/x.txt",
+            "askType": "implicit",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-fold-workspace-hgwdms_a"
+          },
+          "consentRound": 1
+        }
+      }
+    },
+    "reply": {
+      "outcome": {
+        "outcome": "selected",
+        "optionId": "always-accept"
+      },
+      "_meta": {
+        "kiro": {
+          "consent": {
+            "capability": "fs_write",
+            "scope": "workspace",
+            "resource": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-fold-workspace-hgwdms_a/src/**",
+            "workspaceRoot": "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/tmp/ws-fold-workspace-hgwdms_a"
+          }
+        }
+      }
+    }
+  }
+}

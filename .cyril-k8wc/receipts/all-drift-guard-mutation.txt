@@ -1,0 +1,11 @@
+# mutation: PosixShell::ALL without Ksh (HEAD 93290849 + uncommitted guard)
+27:    const ALL: [Self; 4] = [Self::Sh, Self::Bash, Self::Dash, Self::Zsh];
+        FAIL [   0.003s] (1/1) cyril-core protocol::kas::host_shell::tests::posix_shell_all_lists_every_variant
+      left: [Sh, Bash, Dash, Zsh, Ksh]
+     right: [Sh, Bash, Dash, Zsh]
+     Summary [   0.005s] 1 test run: 0 passed, 1 failed, 1227 skipped
+# mutated run exit: 100
+# restored: sha256 before=0bda603f7ab6e29902e9ab2995aa658f11a642b74a39c5211e1bc1705e00b934 after=0bda603f7ab6e29902e9ab2995aa658f11a642b74a39c5211e1bc1705e00b934 match=yes
+        PASS [   0.005s] (1/1) cyril-core protocol::kas::host_shell::tests::posix_shell_all_lists_every_variant
+     Summary [   0.006s] 1 test run: 1 passed, 1227 skipped
+# restored run exit: 0

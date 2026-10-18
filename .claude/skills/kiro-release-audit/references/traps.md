@@ -104,7 +104,7 @@ the positive form; the history says why it is a rule.
     `$HOME/.kiro/logs/<ts>/kiro.log`, not stderr.
 29. **Name the cyril entry point before rating a gap.** A new KAS flow reached only through a model tool
     or a gate cyril deliberately withholds is opt-in (P3), not P2. The 2.32.0 creator-as-step plan
-    approval was filed P2, then corrected: ADR-0011 keeps `workflows.enabled` off, so the model never
+    approval was filed P2, then corrected: ADR-0011 (since superseded by ADR-0013) kept `workflows.enabled` off, so the model never
     gets `run_workflow`, and `_kiro/workflow/new` takes no `workflowPrompt`.
 30. **Spread-built objects hide from literal greps.** Kiro's TUI builds its consent echo as
     `consent:{...o?{capability:o}:{},scope:r,…}`, so `consent:{capability` matches 0. The 2.31.1 audit

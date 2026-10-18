@@ -3,7 +3,7 @@ use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme::Theme;
-use crate::traits::{ApprovalPhase, ApprovalState};
+use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody};
 
 /// Render the permission approval overlay.
 ///
@@ -27,6 +27,12 @@ pub fn render(
         }
         ApprovalPhase::EnterReason { .. } => {
             render_reason_phase(frame, area, input_top, state, session_attribution, theme)
+        }
+        ApprovalPhase::SelectScope { .. } => {
+            render_scope_phase(frame, area, input_top, state, session_attribution, theme)
+        }
+        ApprovalPhase::EnterFolder { .. } => {
+            render_folder_phase(frame, area, input_top, state, session_attribution, theme)
         }
     }
 }
@@ -353,75 +359,37 @@ const MAX_PREVIEW_LINES: usize = 5;
 /// no displayable payload yields a single `Preview unavailable` line — the
 /// degraded-but-actionable contract from cyril-j1b3's spec: the operator
 /// still sees the request's own title/message and every option.
+///
+/// Runs every frame, so it never logs: a malformed payload's warning is
+/// emitted once when the approval is installed (cyril-q0kg).
 fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
-    let mut has_body = false;
 
-    let has_diff = tc
-        .content()
-        .iter()
-        .any(|c| matches!(c, cyril_core::types::ToolCallContent::Diff { .. }));
-    if has_diff {
-        super::chat::render_diff_lines(&mut lines, tc, theme);
-        return lines;
-    }
-
-    if let Some(raw) = tc.raw_input() {
-        match raw
-            .get("text")
-            .or_else(|| raw.get("content"))
-            .and_then(|v| v.as_str())
-        {
-            Some(text) => {
-                has_body = true;
-                let total = text.lines().count();
-                for line in text.lines().take(MAX_PREVIEW_LINES) {
-                    lines.push(Line::styled(
-                        format!("    {line}"),
-                        Style::default().fg(theme.subdued),
-                    ));
-                }
-                if total > MAX_PREVIEW_LINES {
-                    lines.push(Line::styled(
-                        format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
-                        Style::default().fg(theme.subdued),
-                    ));
-                }
+    match tc.preview_body() {
+        PreviewBody::Diff => super::chat::render_diff_lines(&mut lines, tc, theme),
+        PreviewBody::Text(text) => {
+            let total = text.lines().count();
+            for line in text.lines().take(MAX_PREVIEW_LINES) {
+                lines.push(Line::styled(
+                    format!("    {line}"),
+                    Style::default().fg(theme.subdued),
+                ));
             }
-            None => {
-                // raw_input present but text/content absent or non-string:
-                // do not coerce arbitrary values (cyril-j1b3 spec) — log the
-                // malformed shape and fall through to the degraded marker.
-                tracing::warn!(
-                    tool_call_id = %tc.id(),
-                    raw_input_shape = %shape_of(raw),
-                    "approval preview raw_input has no string text/content field"
-                );
+            if total > MAX_PREVIEW_LINES {
+                lines.push(Line::styled(
+                    format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
+                    Style::default().fg(theme.subdued),
+                ));
             }
         }
-    }
-
-    if !has_body {
-        lines.push(Line::styled(
+        // Never coerce a non-string payload (cyril-j1b3 spec).
+        PreviewBody::Absent | PreviewBody::Malformed { .. } => lines.push(Line::styled(
             "  Preview unavailable",
             Style::default().fg(theme.subdued),
-        ));
+        )),
     }
     lines
-}
-
-/// One-word JSON shape tag for the malformed-raw_input log (never the value
-/// itself, which can carry file contents).
-fn shape_of(v: &serde_json::Value) -> &'static str {
-    match v {
-        serde_json::Value::Object(_) => "object",
-        serde_json::Value::Array(_) => "array",
-        serde_json::Value::String(_) => "string",
-        serde_json::Value::Number(_) => "number",
-        serde_json::Value::Bool(_) => "bool",
-        serde_json::Value::Null => "null",
-    }
 }
 
 fn render_option_phase(
@@ -760,6 +728,259 @@ fn render_trust_phase(
     frame.render_widget(popup, popup_area);
 }
 
+/// Kiro's TUI label truncation (`UM`): more than 50 characters keep the first
+/// 47 and an ellipsis.
+fn truncate_label(text: &str) -> String {
+    if text.chars().count() > 50 {
+        format!("{}…", text.chars().take(47).collect::<String>())
+    } else {
+        text.to_owned()
+    }
+}
+
+/// The scope page's row text, as Kiro's TUI words it (`isr`, `m2t`).
+fn scope_row(
+    choice: &cyril_core::always_allow::ScopeChoice,
+    scope: cyril_core::always_allow::GrantScope,
+    tool: Option<&str>,
+) -> (String, String) {
+    use cyril_core::always_allow::ScopeChoice;
+    let scope_label = scope.label();
+    match choice {
+        ScopeChoice::Exact(resource) => (
+            format!("Trust \"{}\"", truncate_label(resource)),
+            format!("exact match · {scope_label}"),
+        ),
+        ScopeChoice::Pattern(pattern) => (
+            format!("Trust \"{pattern}\""),
+            format!("pattern · {scope_label}"),
+        ),
+        ScopeChoice::Folder(offer) => (
+            format!("Allow a folder {}…", scope.folder_phrase()),
+            format!("{} · {scope_label}", truncate_label(offer.prefill())),
+        ),
+        ScopeChoice::WholeTool => (
+            match tool {
+                Some(tool) => format!("Trust entire tool ({tool})"),
+                None => "Trust entire tool".to_owned(),
+            },
+            scope_label.to_owned(),
+        ),
+    }
+}
+
+/// KAS "Always allow" scope page (cyril-auxt): `capability → resource`, the
+/// scope line (`s` cycles), and one label + description pair per row.
+fn render_scope_phase(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
+    let ApprovalPhase::SelectScope { scope, .. } = &state.phase else {
+        return;
+    };
+    let choices = state.scope_choices();
+    let consent = state.consent.as_ref();
+    let capability = consent.and_then(|c| c.wire_capability());
+    let resource = consent
+        .and_then(|c| c.resource())
+        .filter(|resource| !resource.is_empty());
+    let target = match (capability, resource) {
+        (Some(capability), Some(resource)) => Some(format!("{capability} → {resource}")),
+        (Some(only), None) | (None, Some(only)) => Some(only.to_owned()),
+        (None, None) => None,
+    };
+    let tool = consent.and_then(|c| c.tool_id());
+
+    // Chrome: target + blank (when present), scope line + blank, hint.
+    let chrome = usize::from(target.is_some()) * 2 + 3;
+    let desired_height = u16::try_from(choices.len().saturating_mul(2).saturating_add(chrome + 2))
+        .unwrap_or(u16::MAX);
+    let Some(popup_area) = super::modal::place(area, input_top, 72, desired_height) else {
+        return;
+    };
+    frame.render_widget(Clear, popup_area);
+
+    // Rows win over chrome when clamped: the selected row's label is what
+    // keeps the page actionable.
+    let inner = usize::from(popup_area.height.saturating_sub(2));
+    let show_chrome = inner >= chrome + 2;
+    let row_lines = if show_chrome { inner - chrome } else { inner };
+    let visible = choices.len().min((row_lines / 2).max(1));
+    let start = window_start(state.selected, choices.len(), visible);
+
+    let mut lines: Vec<Line> = Vec::new();
+    if show_chrome {
+        if let Some(target) = target {
+            lines.push(Line::styled(
+                target,
+                Style::default().fg(theme.text_secondary),
+            ));
+            lines.push(Line::default());
+        }
+        let mut spans = vec![Span::styled(
+            "Scope:  ",
+            Style::default().fg(theme.text_secondary),
+        )];
+        for (index, option) in cyril_core::always_allow::GrantScope::ALL.iter().enumerate() {
+            if index > 0 {
+                spans.push(Span::raw("  "));
+            }
+            if option == scope {
+                spans.push(Span::styled(
+                    format!("[{}]", option.label()),
+                    Style::default()
+                        .fg(theme.accent_quinary)
+                        .add_modifier(Modifier::BOLD),
+                ));
+            } else {
+                spans.push(Span::styled(
+                    format!(" {} ", option.label()),
+                    Style::default().fg(theme.text_secondary),
+                ));
+            }
+        }
+        lines.push(Line::from(spans));
+        lines.push(Line::default());
+    }
+    for (index, choice) in choices.iter().enumerate().skip(start).take(visible) {
+        let (label, description) = scope_row(choice, *scope, tool);
+        let selected = index == state.selected;
+        let (label_style, description_style) = if selected {
+            (
+                Style::default()
+                    .bg(theme.selection)
+                    .fg(theme.text)
+                    .add_modifier(Modifier::BOLD),
+                Style::default().bg(theme.selection).fg(theme.subdued),
+            )
+        } else {
+            (
+                Style::default().fg(theme.text_secondary),
+                Style::default().fg(theme.subdued),
+            )
+        };
+        let prefix = if selected { "▸ " } else { "  " };
+        lines.push(Line::styled(format!("{prefix}{label}"), label_style));
+        lines.push(Line::styled(
+            format!("    {description}"),
+            description_style,
+        ));
+    }
+    if show_chrome {
+        lines.push(Line::styled(
+            "↑↓ navigate · Enter select · s cycle scope · Esc back",
+            Style::default().fg(theme.subdued),
+        ));
+    }
+
+    let title = attribution_title(
+        " Always Allow — Choose Scope ",
+        session_attribution,
+        theme.accent_quinary,
+    );
+    let popup = Paragraph::new(lines).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.accent_quinary)),
+    );
+    frame.render_widget(popup, popup_area);
+}
+
+/// KAS "Always allow" folder editor (cyril-auxt): Kiro's live validation line
+/// (`h2t` / `vde`) above a one-line editor.
+fn render_folder_phase(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
+    let ApprovalPhase::EnterFolder {
+        scope,
+        offer,
+        editor,
+        attempted,
+        ..
+    } = &state.phase
+    else {
+        return;
+    };
+    let status = match offer.validate(editor.text()) {
+        Ok(folder) => {
+            let reach = match scope {
+                cyril_core::always_allow::GrantScope::Session => "for this session only",
+                other => other.folder_phrase(),
+            };
+            Line::styled(
+                format!(
+                    "Allows writes in {} and every folder under it, {reach}.",
+                    folder.path()
+                ),
+                Style::default().fg(theme.text_secondary),
+            )
+        }
+        Err(reason) => Line::styled(
+            reason.to_string(),
+            Style::default().fg(if *attempted {
+                theme.danger
+            } else {
+                theme.text_secondary
+            }),
+        ),
+    };
+
+    let Some(popup_area) = super::modal::place(area, input_top, 84, 7) else {
+        return;
+    };
+    frame.render_widget(Clear, popup_area);
+    let inner = usize::from(popup_area.height.saturating_sub(2));
+    if inner == 0 {
+        return;
+    }
+    // The editor row survives any clamp; the status and hint join when the
+    // popup has room for them.
+    let show_status = inner >= 2;
+    let show_hint = inner >= 4;
+    let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
+    let mut lines: Vec<Line> = Vec::with_capacity(inner);
+    if show_status {
+        lines.push(status);
+    }
+    if show_hint {
+        lines.push(Line::default());
+    }
+    lines.extend(super::input::text_cursor_lines(
+        editor.text(),
+        editor.cursor(),
+        content_width,
+        1,
+        theme,
+    ));
+    if show_hint {
+        lines.push(Line::default());
+        lines.push(Line::styled(
+            "Enter to allow this folder · Esc back",
+            Style::default().fg(theme.subdued),
+        ));
+    }
+
+    let heading = format!(" Allow a folder {} ", scope.folder_phrase());
+    let title = attribution_title(&heading, session_attribution, theme.accent_quinary);
+    let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+        Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(theme.accent_quinary)),
+    );
+    frame.render_widget(popup, popup_area);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -807,6 +1028,7 @@ mod tests {
             can_reject_with_reason: false,
             phase,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         }
     }
 
@@ -1623,6 +1845,7 @@ mod tests {
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         }
     }
 
@@ -1759,5 +1982,121 @@ mod tests {
             "non-string text must not be coerced:\n{text}"
         );
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    // ---------- cyril-q0kg: malformed-preview warning is not per-frame ----------
+
+    const MALFORMED_PREVIEW_WARNING: &str =
+        "approval preview raw_input has no string text/content field";
+
+    /// A permission-request tool call with the given raw input, optionally
+    /// carrying diff content (which takes precedence over raw input).
+    fn preview_tool_call(raw_input: Option<serde_json::Value>, with_diff: bool) -> ToolCall {
+        let tc = ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_q0kg"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            raw_input,
+        );
+        if with_diff {
+            tc.with_content(vec![ToolCallContent::Diff {
+                path: "/tmp/q0kg.md".into(),
+                old_text: None,
+                new_text: "new body".into(),
+            }])
+        } else {
+            tc
+        }
+    }
+
+    /// Install `tc` as an approval through the production `show_approval`
+    /// path, with a reject option so the feedback phase can be entered too.
+    fn approval_ui_for(tc: ToolCall) -> UiState {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: tc,
+            message: "Write File".into(),
+            options: vec![option("reject", "Reject")],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+        });
+        ui
+    }
+
+    fn malformed_preview_warnings(events: &[serde_json::Value]) -> Vec<&serde_json::Value> {
+        events
+            .iter()
+            .filter(|event| event["fields"]["message"] == MALFORMED_PREVIEW_WARNING)
+            .collect()
+    }
+
+    /// cyril-q0kg fence: installing an approval and rendering it for many
+    /// frames — in both the option and the reject-with-reason phase — logs
+    /// the malformed-shape warning at most once for the tool call (the
+    /// cyril-j1b3 intent), never once per frame. Payloads that render a body
+    /// (string text, diff) or carry no raw input never warn.
+    #[rstest::rstest]
+    #[case::non_string_text(Some(serde_json::json!({"path": "/tmp/ok.md", "text": 42})), false, 1)]
+    #[case::shell_command_shape(Some(serde_json::json!({"command": "ls -la"})), false, 1)]
+    #[case::string_text(Some(serde_json::json!({"text": "hello"})), false, 0)]
+    #[case::string_content(Some(serde_json::json!({"content": "hello"})), false, 0)]
+    #[case::no_raw_input(None, false, 0)]
+    #[case::diff_takes_precedence(Some(serde_json::json!({"command": "ls"})), true, 0)]
+    fn malformed_preview_warning_is_not_repeated_per_frame(
+        #[case] raw_input: Option<serde_json::Value>,
+        #[case] with_diff: bool,
+        #[case] expected_warnings: usize,
+    ) {
+        let (_guard, capture, dispatch) = cyril_core::test_support::capture_json_subscriber();
+        tracing::dispatcher::with_default(&dispatch, || {
+            let mut ui = approval_ui_for(preview_tool_call(raw_input, with_diff));
+            for _ in 0..3 {
+                render_ui(&ui, 80, 24, 24);
+            }
+            assert!(ui.approval_begin_feedback(), "feedback phase must open");
+            for _ in 0..3 {
+                render_ui(&ui, 80, 24, 24);
+            }
+        });
+
+        let events = capture.captured();
+        let warnings = malformed_preview_warnings(&events);
+        assert_eq!(
+            warnings.len(),
+            expected_warnings,
+            "malformed-preview warnings across 6 frames: {events:?}"
+        );
+        for warning in warnings {
+            assert_eq!(warning["level"], "WARN", "at warn level: {warning:?}");
+            assert_eq!(
+                warning["fields"]["tool_call_id"], "tooluse_q0kg",
+                "names the tool call: {warning:?}"
+            );
+            assert_eq!(
+                warning["fields"]["raw_input_shape"], "object",
+                "names the shape, never the value: {warning:?}"
+            );
+        }
+    }
+
+    /// cyril-q0kg: the degraded marker still renders on every frame for a
+    /// payload that warned once at install time.
+    #[test]
+    fn malformed_preview_marker_survives_repeated_renders() {
+        let ui = approval_ui_for(preview_tool_call(
+            Some(serde_json::json!({"command": "ls -la"})),
+            false,
+        ));
+        for _ in 0..2 {
+            let text = buffer_text(&render_ui(&ui, 80, 24, 24));
+            assert!(
+                text.contains("Preview unavailable"),
+                "degraded marker missing:\n{text}"
+            );
+        }
     }
 }

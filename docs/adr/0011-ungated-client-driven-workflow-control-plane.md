@@ -1,6 +1,6 @@
 # Cyril drives `_kiro/workflow/*` with the workflow gate OFF, and owns the control plane natively
 
-Status: accepted (2026-08-08) — resolves the workflow half of [ADR-0003](0003-defer-proxy-stack-for-host-callbacks.md)
+Status: superseded by [ADR-0013](0013-workflows-follow-the-users-kiro-setting.md) (2026-10-18) — was accepted (2026-08-08); resolved the workflow half of [ADR-0003](0003-defer-proxy-stack-for-host-callbacks.md)
 
 ## Context
 

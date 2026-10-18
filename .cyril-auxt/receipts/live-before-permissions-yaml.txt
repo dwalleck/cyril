@@ -1,0 +1,1 @@
+find-exit=0 (empty output = no permissions.yaml under the private HOME)
