@@ -13,6 +13,7 @@
 use crate::review::consent::PermissionConsent;
 use crate::types::{
     PermissionOption, PermissionOptionId, PermissionOptionKind, PermissionResponse, SessionId,
+    ToolCallId,
 };
 
 /// How long and how widely a grant applies. KAS writes `User` grants to
@@ -235,6 +236,265 @@ fn child_grant_allowed(consent: &PermissionConsent, grant: &AlwaysAllowGrant) ->
     let triggering = non_empty(consent.triggering_resource());
     is_shell_capability(capability)
         && triggering.is_none_or(|triggering| Some(triggering) == resource)
+}
+
+/// A permission request as the approval queue sees it: who asked, for which
+/// tool call, and what it offers. Both the request just granted and each
+/// request still waiting are described this way.
+#[derive(Debug, Clone, Copy)]
+pub struct QueuedRequest<'a> {
+    pub session_id: &'a SessionId,
+    pub tool_call_id: &'a ToolCallId,
+    pub tool_title: &'a str,
+    pub consent: Option<&'a PermissionConsent>,
+    pub options: &'a [PermissionOption],
+}
+
+impl<'a> QueuedRequest<'a> {
+    fn allow_once(&self) -> Option<&'a PermissionOptionId> {
+        self.options
+            .iter()
+            .find(|option| option.kind == PermissionOptionKind::AllowOnce)
+            .map(|option| &option.id)
+    }
+
+    fn offers_allow_always(&self) -> bool {
+        self.options
+            .iter()
+            .any(|option| option.kind == PermissionOptionKind::AllowAlways)
+    }
+
+    fn wire_capability(&self) -> Option<&str> {
+        self.consent
+            .and_then(|consent| non_empty(consent.wire_capability()))
+    }
+
+    fn workspace_root(&self) -> Option<&str> {
+        self.consent
+            .and_then(|consent| consent.workspace_root())
+            .and_then(|root| root.to_str())
+            .filter(|root| !root.trim().is_empty())
+    }
+}
+
+/// Which waiting approvals an "Always allow" answer also settles (`k8n`).
+///
+/// Kiro's TUI releases queued approvals in exactly two cases, and answers each
+/// with its `allow_once` option:
+/// - a whole-tool grant releases every queued request with the same
+///   capability key — capability (shell names fold together), workspace root
+///   and session (`Clt`);
+/// - a grant recorded for another session (`_lt`) releases that session's
+///   queued requests it matches (`D4`).
+///
+/// Exact, pattern and folder grants on the main session release nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum QueueRelease {
+    Nothing,
+    SameCapability(CapabilityKey),
+    ChildGrant(ChildGrant),
+}
+
+/// `Clt`: the key a whole-tool grant releases by.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CapabilityKey {
+    /// A KAS request naming its capability.
+    Consent {
+        class: String,
+        workspace_root: Option<String>,
+        session: String,
+    },
+    /// No consent capability: the tool id, else the tool call's title.
+    Tool(String),
+}
+
+/// `_lt`'s grant record for a request from another session.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ChildGrant {
+    capability: String,
+    matcher: ChildMatch,
+    scope: GrantScope,
+    owner: SessionId,
+    /// The granted tool call, for a non-session scope: such a grant only
+    /// settles that same operation (`operationId`).
+    operation: Option<ToolCallId>,
+    workspace_root: Option<String>,
+}
+
+/// `h8n`: how a child grant matches a resource.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ChildMatch {
+    Whole,
+    Exact(String),
+    Pattern(String),
+}
+
+impl QueueRelease {
+    /// What `response` — the answer just sent for `granted` — releases.
+    pub fn for_answer(
+        granted: &QueuedRequest<'_>,
+        response: &PermissionResponse,
+        main: Option<&SessionId>,
+    ) -> Self {
+        let PermissionResponse::AlwaysAllow { grant, .. } = response else {
+            return Self::Nothing;
+        };
+        if !is_main_session_request(granted.session_id, main)
+            && let Some(child) = ChildGrant::record(granted, grant)
+        {
+            return Self::ChildGrant(child);
+        }
+        if grant.resource() != &GrantResource::WholeTool {
+            return Self::Nothing;
+        }
+        match capability_key(granted) {
+            Some(key) => Self::SameCapability(key),
+            None => Self::Nothing,
+        }
+    }
+
+    /// The `allow_once` option to answer `queued` with, when this release
+    /// covers it. A covered request that offers no `allow_once` stays queued.
+    pub fn covers<'q>(
+        &self,
+        queued: &QueuedRequest<'q>,
+        main: Option<&SessionId>,
+    ) -> Option<&'q PermissionOptionId> {
+        let covered = match self {
+            Self::Nothing => false,
+            Self::SameCapability(key) => capability_key(queued).as_ref() == Some(key),
+            Self::ChildGrant(child) => child.matches(queued, main),
+        };
+        if covered { queued.allow_once() } else { None }
+    }
+}
+
+/// `Clt` for the KAS engine.
+fn capability_key(request: &QueuedRequest<'_>) -> Option<CapabilityKey> {
+    match request.wire_capability() {
+        Some(capability) => Some(CapabilityKey::Consent {
+            class: if is_shell_capability(capability) {
+                "shell".to_owned()
+            } else {
+                capability.to_owned()
+            },
+            workspace_root: request.workspace_root().map(str::to_owned),
+            session: request.session_id.as_str().to_owned(),
+        }),
+        None => request
+            .consent
+            .and_then(|consent| non_empty(consent.tool_id()))
+            .or_else(|| non_empty(Some(request.tool_title)))
+            .map(|tool| CapabilityKey::Tool(tool.to_owned())),
+    }
+}
+
+impl ChildGrant {
+    /// `_lt` + `h8n`: the record Kiro's TUI keeps for a grant on another
+    /// session's request, or `None` when it would not record one.
+    fn record(granted: &QueuedRequest<'_>, grant: &AlwaysAllowGrant) -> Option<Self> {
+        let consent = granted.consent?;
+        if !child_grant_allowed(consent, grant) || granted.session_id.as_str().is_empty() {
+            return None;
+        }
+        let capability = granted.wire_capability()?.to_owned();
+        let matcher = match grant.resource() {
+            GrantResource::WholeTool => ChildMatch::Whole,
+            resource => {
+                let wire = resource.wire();
+                let gated = gated_resource(consent);
+                if base_command_pattern(consent).as_deref() == Some(wire.as_str())
+                    && Some(wire.as_str()) != gated
+                {
+                    ChildMatch::Pattern(wire)
+                } else {
+                    ChildMatch::Exact(wire)
+                }
+            }
+        };
+        Some(Self {
+            capability,
+            matcher,
+            scope: grant.scope(),
+            owner: granted.session_id.clone(),
+            operation: (grant.scope() != GrantScope::Session).then(|| granted.tool_call_id.clone()),
+            workspace_root: granted.workspace_root().map(str::to_owned),
+        })
+    }
+
+    /// `D4`: whether this grant settles `queued`.
+    fn matches(&self, queued: &QueuedRequest<'_>, main: Option<&SessionId>) -> bool {
+        if is_main_session_request(queued.session_id, main) {
+            return false;
+        }
+        let Some(consent) = queued.consent else {
+            return false;
+        };
+        let Some(capability) = queued.wire_capability() else {
+            return false;
+        };
+        if capability != self.capability
+            || queued.session_id != &self.owner
+            || consent.is_explicit_ask()
+            || !queued.offers_allow_always()
+            || self
+                .operation
+                .as_ref()
+                .is_some_and(|operation| operation != queued.tool_call_id)
+        {
+            return false;
+        }
+        let root = queued.workspace_root();
+        if self.workspace_root.is_some() && self.workspace_root.as_deref() != root {
+            return false;
+        }
+        if self.scope == GrantScope::Workspace
+            && (root.is_none() || self.workspace_root.as_deref() != root)
+        {
+            return false;
+        }
+        let resource = match &self.matcher {
+            ChildMatch::Whole => return true,
+            ChildMatch::Exact(resource) | ChildMatch::Pattern(resource) => resource,
+        };
+        if !is_shell_capability(capability) {
+            return false;
+        }
+        let requested = non_empty(consent.resource());
+        let triggering = non_empty(consent.triggering_resource());
+        if triggering.is_some_and(|triggering| Some(triggering) != requested) {
+            return false;
+        }
+        let Some(target) = triggering.or(requested) else {
+            return false;
+        };
+        match &self.matcher {
+            ChildMatch::Pattern(_) => wildcard_matches(resource, target),
+            _ => target == resource,
+        }
+    }
+}
+
+/// `y8n`: `*` matches any run of characters; everything else is literal.
+fn wildcard_matches(pattern: &str, text: &str) -> bool {
+    let parts: Vec<&str> = pattern.split('*').collect();
+    let [first, middle @ .., last] = parts.as_slice() else {
+        return pattern == text;
+    };
+    if !text.starts_with(first) {
+        return false;
+    }
+    let mut at = first.len();
+    for part in middle {
+        if part.is_empty() {
+            continue;
+        }
+        match text[at..].find(part) {
+            Some(found) => at += found + part.len(),
+            None => return false,
+        }
+    }
+    last.is_empty() || text[at..].ends_with(last)
 }
 
 /// The custom-folder offer for an `fs_write` request (`b2t`): the folder the
@@ -844,5 +1104,235 @@ mod tests {
             GrantScope::ALL.map(GrantScope::label),
             ["session", "workspace", "user"]
         );
+    }
+
+    // --- Queue release (`k8n` / `Clt` / `_lt` / `D4`) -----------------------
+
+    /// One permission request in the queue, owned so tests can borrow it.
+    struct Pending {
+        session: SessionId,
+        tool_call: ToolCallId,
+        consent: Option<PermissionConsent>,
+        options: Vec<PermissionOption>,
+    }
+
+    impl Pending {
+        fn view(&self) -> QueuedRequest<'_> {
+            QueuedRequest {
+                session_id: &self.session,
+                tool_call_id: &self.tool_call,
+                tool_title: "tool",
+                consent: self.consent.as_ref(),
+                options: &self.options,
+            }
+        }
+    }
+
+    fn pending(session: &str, tool_call: &str, spec: Consent<'_>) -> Pending {
+        Pending {
+            session: SessionId::new(session),
+            tool_call: ToolCallId::new(tool_call),
+            consent: Some(consent(&spec)),
+            options: kas_options(),
+        }
+    }
+
+    fn no_allow_always(mut request: Pending) -> Pending {
+        request
+            .options
+            .retain(|option| option.kind != PermissionOptionKind::AllowAlways);
+        request
+    }
+
+    fn no_allow_once(mut request: Pending) -> Pending {
+        request
+            .options
+            .retain(|option| option.kind != PermissionOptionKind::AllowOnce);
+        request
+    }
+
+    fn sent(scope: GrantScope, resource: GrantResource) -> PermissionResponse {
+        PermissionResponse::AlwaysAllow {
+            option_id: PermissionOptionId::new("always-accept"),
+            grant: grant(scope, resource),
+        }
+    }
+
+    fn exact_sent(scope: GrantScope, resource: &str) -> PermissionResponse {
+        sent(scope, GrantResource::Exact(resource.into()))
+    }
+
+    fn other_root(spec: Consent<'_>) -> Consent<'_> {
+        Consent {
+            root: Some("/other"),
+            ..spec
+        }
+    }
+
+    fn explicit(spec: Consent<'_>) -> Consent<'_> {
+        Consent {
+            explicit: true,
+            ..spec
+        }
+    }
+
+    // The coverage matrix: what an "Always allow" answer to `granted` settles
+    // among waiting requests. Main session is "main"; "step-1"/"step-2" are
+    // other sessions (workflow steps).
+    #[rstest]
+    // Main session: only a whole-tool grant releases, by capability key.
+    #[case::main_whole_same_capability(
+        pending("main", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("main", "t2", shell("cargo build")),
+        true
+    )]
+    #[case::main_whole_exec_folds_into_shell(pending("main", "t1", shell("npm test")),
+        sent(GrantScope::User, GrantResource::WholeTool),
+        pending("main", "t2", Consent { capability: "exec", ..shell("ls -la") }), true)]
+    #[case::main_whole_other_capability(
+        pending("main", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("main", "t2", write("src/x.txt", Some("/ws"))),
+        false
+    )]
+    #[case::main_whole_other_root(
+        pending("main", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("main", "t2", other_root(shell("npm test"))),
+        false
+    )]
+    #[case::main_whole_other_session(
+        pending("main", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("step-1", "t2", shell("npm test")),
+        false
+    )]
+    #[case::main_exact_releases_nothing(
+        pending("main", "t1", shell("npm test")),
+        exact_sent(GrantScope::User, "npm test"),
+        pending("main", "t2", shell("npm test")),
+        false
+    )]
+    #[case::main_pattern_releases_nothing(pending("main", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::Pattern("npm *".into())),
+        pending("main", "t2", shell("npm run x")), false)]
+    // Another session: the recorded child grant releases what it matches.
+    #[case::child_exact_same_command(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        pending("step-1", "t2", shell("npm test")),
+        true
+    )]
+    #[case::child_exact_other_command(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        pending("step-1", "t2", shell("npm run x")),
+        false
+    )]
+    #[case::child_pattern_matching(pending("step-1", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::Pattern("npm *".into())),
+        pending("step-1", "t2", shell("npm run build")), true)]
+    #[case::child_pattern_other_command(pending("step-1", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::Pattern("npm *".into())),
+        pending("step-1", "t2", shell("cargo build")), false)]
+    #[case::child_whole_same_capability(
+        pending("step-1", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("step-1", "t2", shell("cargo build")),
+        true
+    )]
+    #[case::child_whole_other_capability(
+        pending("step-1", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("step-1", "t2", write("src/x.txt", Some("/ws"))),
+        false
+    )]
+    #[case::child_user_scope_other_operation(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::User, "npm test"),
+        pending("step-1", "t2", shell("npm test")),
+        false
+    )]
+    #[case::child_user_scope_same_operation(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::User, "npm test"),
+        pending("step-1", "t1", shell("npm test")),
+        true
+    )]
+    #[case::child_other_child_session(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        pending("step-2", "t2", shell("npm test")),
+        false
+    )]
+    #[case::child_main_session_request(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        pending("main", "t2", shell("npm test")),
+        false
+    )]
+    #[case::child_explicit_ask(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        pending("step-1", "t2", explicit(shell("npm test"))),
+        false
+    )]
+    #[case::child_no_allow_always_offered(
+        pending("step-1", "t1", shell("npm test")),
+        exact_sent(GrantScope::Session, "npm test"),
+        no_allow_always(pending("step-1", "t2", shell("npm test"))),
+        false
+    )]
+    #[case::child_workspace_other_root(
+        pending("step-1", "t1", shell("npm test")),
+        sent(GrantScope::Workspace, GrantResource::WholeTool),
+        pending("step-1", "t1", other_root(shell("npm test"))),
+        false
+    )]
+    #[case::child_session_other_root(
+        pending("step-1", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        pending("step-1", "t2", other_root(shell("cargo build"))),
+        false
+    )]
+    // Answers that grant nothing release nothing.
+    #[case::allow_once_answer(pending("main", "t1", shell("npm test")),
+        PermissionResponse::Selected { option_id: PermissionOptionId::new("accept"), trust_option: None },
+        pending("main", "t2", shell("npm test")), false)]
+    #[case::covered_without_allow_once_stays(
+        pending("main", "t1", shell("npm test")),
+        sent(GrantScope::Session, GrantResource::WholeTool),
+        no_allow_once(pending("main", "t2", shell("cargo build"))),
+        false
+    )]
+    fn queued_requests_released_like_the_tui(
+        #[case] granted: Pending,
+        #[case] answer: PermissionResponse,
+        #[case] queued: Pending,
+        #[case] released: bool,
+    ) {
+        let main = SessionId::new("main");
+        let release = QueueRelease::for_answer(&granted.view(), &answer, Some(&main));
+        let answered = release.covers(&queued.view(), Some(&main));
+        assert_eq!(answered.is_some(), released, "release {release:?}");
+        if let Some(option) = answered {
+            assert_eq!(option.as_str(), "accept", "answered with allow_once");
+        }
+    }
+
+    #[rstest]
+    #[case::plain("npm test", "npm test", true)]
+    #[case::trailing_star("npm *", "npm run build", true)]
+    #[case::star_needs_prefix("npm *", "pnpm i", false)]
+    #[case::middle("git * --force", "git push origin --force", true)]
+    #[case::middle_missing("git * --force", "git push", false)]
+    #[case::no_star_differs("npm test", "npm test x", false)]
+    fn wildcard_matches_like_the_tui(
+        #[case] pattern: &str,
+        #[case] text: &str,
+        #[case] expected: bool,
+    ) {
+        assert_eq!(wildcard_matches(pattern, text), expected);
     }
 }

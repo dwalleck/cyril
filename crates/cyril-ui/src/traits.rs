@@ -588,6 +588,17 @@ pub struct ApprovalState {
 }
 
 impl ApprovalState {
+    /// This request as the "Always allow" queue release sees it (cyril-auxt).
+    pub fn queued_view(&self) -> cyril_core::always_allow::QueuedRequest<'_> {
+        cyril_core::always_allow::QueuedRequest {
+            session_id: &self.session_id,
+            tool_call_id: self.tool_call.id(),
+            tool_title: self.tool_call.title(),
+            consent: self.consent.as_ref(),
+            options: &self.options,
+        }
+    }
+
     /// The scope page's rows for the current phase; empty outside
     /// [`ApprovalPhase::SelectScope`].
     pub fn scope_choices(&self) -> Vec<cyril_core::always_allow::ScopeChoice> {

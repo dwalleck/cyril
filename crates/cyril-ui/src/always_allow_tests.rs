@@ -251,6 +251,105 @@ fn next_scope_page_opens_at_the_last_scope() {
     ));
 }
 
+/// A queued request for `session` with its own tool call id.
+fn queued(
+    session: &str,
+    tool_call: &str,
+    consent: PermissionConsent,
+) -> (PermissionRequest, Receiver<PermissionResponse>) {
+    let (mut request, rx) = request(session, Some(consent), Vec::new());
+    request.tool_call = ToolCall::new(
+        ToolCallId::new(tool_call),
+        "queued".into(),
+        ToolKind::Execute,
+        ToolCallStatus::Pending,
+        None,
+    );
+    (request, rx)
+}
+
+fn shell_command(command: &str) -> PermissionConsent {
+    PermissionConsent::new(
+        Some("shell"),
+        Some(command.into()),
+        Some("/ws".into()),
+        Some("run_command".into()),
+        Some(command.into()),
+        Vec::new(),
+    )
+    .with_triggering_resource(Some(command.into()))
+}
+
+fn answered_once(rx: &mut Receiver<PermissionResponse>) {
+    match rx.try_recv() {
+        Ok(PermissionResponse::Selected {
+            option_id,
+            trust_option: None,
+        }) => assert_eq!(option_id.as_str(), "accept"),
+        other => panic!("expected the queued request answered allow_once, got {other:?}"),
+    }
+}
+
+#[test]
+fn whole_tool_grant_settles_queued_requests_of_that_capability() {
+    let mut state = with_main("main");
+    let (granted, mut granted_rx) = request("main", Some(shell_consent()), Vec::new());
+    open_scope_page(&mut state, granted);
+    let (same, mut same_rx) = queued("main", "tc_2", shell_command("cargo build"));
+    let (write, mut write_rx) = queued("main", "tc_3", write_consent());
+    let (step, mut step_rx) = queued("step-1", "tc_4", shell_command("cargo build"));
+    state.show_approval(same);
+    state.show_approval(write);
+    state.show_approval(step);
+    for _ in 0..2 {
+        state.approval_select_next(); // whole tool
+    }
+    state.approval_confirm();
+
+    assert_eq!(
+        always_allow(granted_rx.try_recv().expect("granted")),
+        grant(GrantScope::Session, GrantResource::WholeTool)
+    );
+    answered_once(&mut same_rx);
+    assert_unanswered(&mut write_rx);
+    assert_unanswered(&mut step_rx);
+    let waiting = state
+        .approval()
+        .expect("the uncovered requests stay queued");
+    assert_eq!(waiting.tool_call.id().as_str(), "tc_3", "queue order kept");
+}
+
+#[test]
+fn exact_grant_on_the_main_session_settles_nothing() {
+    let mut state = with_main("main");
+    let (granted, _granted_rx) = request("main", Some(shell_consent()), Vec::new());
+    open_scope_page(&mut state, granted);
+    let (same, mut same_rx) = queued("main", "tc_2", shell_consent());
+    state.show_approval(same);
+    state.approval_confirm(); // exact row
+
+    assert_unanswered(&mut same_rx);
+    assert!(state.has_approval());
+}
+
+#[test]
+fn another_sessions_grant_settles_its_own_matching_requests() {
+    let mut state = with_main("main");
+    let (granted, _granted_rx) = request("step-1", Some(shell_consent()), Vec::new());
+    open_scope_page(&mut state, granted);
+    let (same, mut same_rx) = queued("step-1", "tc_2", shell_consent());
+    let (other_step, mut other_step_rx) = queued("step-2", "tc_3", shell_consent());
+    let (main, mut main_rx) = queued("main", "tc_4", shell_consent());
+    state.show_approval(same);
+    state.show_approval(other_step);
+    state.show_approval(main);
+    state.approval_confirm(); // exact row, session scope
+
+    answered_once(&mut same_rx);
+    assert_unanswered(&mut other_step_rx);
+    assert_unanswered(&mut main_rx);
+}
+
 #[test]
 fn esc_on_the_scope_page_returns_to_the_options() {
     let mut state = with_main("main");

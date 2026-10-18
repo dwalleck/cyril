@@ -2527,7 +2527,7 @@ impl UiState {
                         self.approvals.push_front(approval);
                     }
                     Some(choice) => match choice.resource() {
-                        Some(resource) => Self::approval_send_grant(
+                        Some(resource) => self.approval_send_grant(
                             approval,
                             chosen_option_id,
                             owned,
@@ -2557,7 +2557,7 @@ impl UiState {
                         let chosen_option_id = chosen_option_id.clone();
                         // Only a main-session request is offered a folder
                         // (`FolderOffer::for_consent`), so the grant is owned.
-                        Self::approval_send_grant(
+                        self.approval_send_grant(
                             approval,
                             chosen_option_id,
                             true,
@@ -2581,8 +2581,10 @@ impl UiState {
     }
 
     /// Answer `approval` with an "Always allow" grant, resolved the way Kiro's
-    /// TUI resolves it for the request's session.
+    /// TUI resolves it for the request's session, then settle the waiting
+    /// approvals that grant covers.
     fn approval_send_grant(
+        &mut self,
         approval: ApprovalState,
         chosen_option_id: PermissionOptionId,
         owned: bool,
@@ -2604,8 +2606,50 @@ impl UiState {
                 }
             }
         };
+        let release = cyril_core::always_allow::QueueRelease::for_answer(
+            &approval.queued_view(),
+            &response,
+            self.main_session_id.as_ref(),
+        );
         if approval.responder.send(response).is_err() {
             tracing::debug!("approval response dropped — agent receiver no longer listening");
+        }
+        self.release_queued_approvals(&release);
+    }
+
+    /// Answer every waiting approval `release` covers with its `allow_once`
+    /// option, as Kiro's TUI does after an "Always allow" (`k8n`); the rest
+    /// keep their place in the queue. No metadata rides these answers.
+    fn release_queued_approvals(&mut self, release: &cyril_core::always_allow::QueueRelease) {
+        if *release == cyril_core::always_allow::QueueRelease::Nothing {
+            return;
+        }
+        let main = self.main_session_id.clone();
+        let mut released = 0usize;
+        let mut waiting = VecDeque::with_capacity(self.approvals.len());
+        for queued in std::mem::take(&mut self.approvals) {
+            let once = release
+                .covers(&queued.queued_view(), main.as_ref())
+                .cloned();
+            match once {
+                Some(option_id) => {
+                    released += 1;
+                    let response = PermissionResponse::Selected {
+                        option_id,
+                        trust_option: None,
+                    };
+                    if queued.responder.send(response).is_err() {
+                        tracing::debug!(
+                            "released approval dropped — agent receiver no longer listening"
+                        );
+                    }
+                }
+                None => waiting.push_back(queued),
+            }
+        }
+        self.approvals = waiting;
+        if released > 0 {
+            tracing::info!(released, "always-allow grant settled waiting approvals");
         }
     }
 
