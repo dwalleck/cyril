@@ -685,7 +685,8 @@ impl DomainMediator {
         #[cfg(not(feature = "kas"))]
         let consent = None;
         #[cfg(feature = "kas")]
-        let workflow_plan = crate::protocol::convert::kas::permission_workflow_plan(&args);
+        let workflow_plan =
+            crate::protocol::convert::kas::permission_workflow_plan(&args).map(Box::new);
         #[cfg(not(feature = "kas"))]
         let workflow_plan = None;
         // KAS persists "Always allow" only through the consent echo on the

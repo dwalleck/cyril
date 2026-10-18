@@ -1769,7 +1769,7 @@ impl UiState {
             phase: ApprovalPhase::SelectOption,
             responder: request.responder,
             consent: request.consent,
-            workflow_plan: request.workflow_plan,
+            workflow_plan: request.workflow_plan.map(|plan| *plan),
         });
 
         // A malformed preview payload is logged here, once per request,
