@@ -644,10 +644,7 @@ mod tests {
             ]
         );
         for name in actual {
-            assert!(
-                KAS_RECOGNISED_SHELL_TYPES.contains(&name),
-                "KAS maps `{name}` to dialect `unknown`"
-            );
+            assert_kas_recognises(name);
         }
         // Each POSIX name round-trips through `$SHELL` classification, so the
         // reported name and the classified executable come from one table.
@@ -688,6 +685,35 @@ mod tests {
         "pwsh-preview",
         "cmd",
     ];
+
+    fn assert_kas_recognises(name: &str) {
+        assert!(
+            KAS_RECOGNISED_SHELL_TYPES.contains(&name),
+            "KAS maps `{name}` to dialect `unknown`"
+        );
+    }
+
+    /// The variant after `shell` in declaration order. The match is
+    /// exhaustive, so a new `PosixShell` variant fails to compile here until
+    /// it is chained in — and then `posix_shell_all_lists_every_variant`
+    /// fails until `PosixShell::ALL` lists it too.
+    fn next_posix_shell(shell: PosixShell) -> Option<PosixShell> {
+        match shell {
+            PosixShell::Sh => Some(PosixShell::Bash),
+            PosixShell::Bash => Some(PosixShell::Dash),
+            PosixShell::Dash => Some(PosixShell::Zsh),
+            PosixShell::Zsh => Some(PosixShell::Ksh),
+            PosixShell::Ksh => None,
+        }
+    }
+
+    #[test]
+    fn posix_shell_all_lists_every_variant() {
+        let every_variant: Vec<_> =
+            std::iter::successors(Some(PosixShell::Sh), |shell| next_posix_shell(*shell)).collect();
+
+        assert_eq!(every_variant, PosixShell::ALL);
+    }
 
     #[rstest::rstest]
     #[case::sh(HostPlatform::Unix, Some("/bin/sh"), None, "/bin/sh", "sh")]
@@ -743,11 +769,7 @@ mod tests {
 
         assert_eq!(shell.executable, PathBuf::from(runnable));
         assert_eq!(shell.wire_name(), expected);
-        assert!(
-            KAS_RECOGNISED_SHELL_TYPES.contains(&shell.wire_name()),
-            "KAS maps `{}` to dialect `unknown`",
-            shell.wire_name()
-        );
+        assert_kas_recognises(shell.wire_name());
     }
 
     #[test]
