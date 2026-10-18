@@ -1,0 +1,17 @@
+sess_53caeff1-7c0f-44b7-abbd-da5f65561eb6 · vibe · auto
+Connecting to agent...
+Session created: sess_53caeff1-7c0f-44b7-abbd-da5f65561eb6
+You:
+  In ONE response, issue three separate shell tool calls in parallel (do not combine them): echo QA1, echo QB2, echo
+QC3. Then reply with the word TRIPLE.
+✓ Print first test token
+✓ Print second test token
+✓ Print third test token
+Kiro:
+TRIPLE
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                     │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 1%  Responses 1%
