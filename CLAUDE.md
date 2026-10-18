@@ -517,7 +517,7 @@ These are project invariants maintained from inception, not aspirations. Maintai
 - **V2 / explicit Wrapper:** `--agent-command` defaults to `kiro-cli acp`, executed verbatim after engine resolution; native Windows resolves `kiro-cli.exe`, not WSL. To run V2 inside WSL, select both `--agent-engine v2` and `--agent-command wsl kiro-cli acp`, with Kiro installed/authenticated inside WSL. An agent-command override alone does not change KAS Free spawn.
 - Path translation applies only on Windows with a resolved WSL-located agent (`wsl`/`wsl.exe` or `CYRIL_AGENT_LOCATION=wsl`); native agents get identity passthrough. See **Path Translation** above.
 - Host callbacks execute on the host; an explicitly WSL-hosted agent executes on the WSL side.
-- Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
+- Logs go to `cyril.log` in cyril's config directory, not the working directory (append mode, JSON lines, so nothing writes to the TUI's stdout): `$HOME/.config/cyril/cyril.log` on Linux and macOS (`XDG_CONFIG_HOME` is not consulted); on Windows `%USERPROFILE%\.config\cyril\cyril.log` unless `HOME` is set, which wins; `.cyril/cyril.log` under the working directory only when neither variable is set (`config_dir()` / `setup_logging()` in `crates/cyril/src/main.rs`)
 
 ## Agent skills
 
