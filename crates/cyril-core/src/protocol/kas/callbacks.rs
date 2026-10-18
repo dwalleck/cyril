@@ -479,7 +479,13 @@ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
             )
             .await;
             let (notify, r) = match outcome {
-                Ok(response) => (None, Ok(response)),
+                Ok((response, warning)) => (
+                    warning.map(|message| crate::types::Notification::SystemNotify {
+                        level: crate::types::event::SystemNotifyLevel::Warning,
+                        message,
+                    }),
+                    Ok(response),
+                ),
                 Err((acp_error, reason)) => {
                     (Some(auth_failure_notification(&reason)), Err(acp_error))
                 }

@@ -6,8 +6,8 @@
 //! to kiro-cli's own spawn (probe-verified against /proc; the node binary is
 //! whatever cyril resolves). KAS then requests credentials via
 //! `_kiro/auth/getAccessToken`, answered by [`super::auth`] through kiro-cli's
-//! `chat _ get-kas-token` helper (cyril-zbu7); cyril reads no credential
-//! store or token file on any path. Reuses
+//! `chat _ get-kas-token` helper (cyril-zbu7); the credential store is read
+//! only when kiro-cli lacks that helper. Reuses
 //! [`AgentCommand`] as the spawn description so `AgentProcess::spawn` consumes
 //! it unchanged.
 
@@ -72,6 +72,9 @@ const KIRO_DATA_DIR_NAME: &str = "kiro-cli";
 /// versioned `<semver>-<sha256>/` dirs under it; older releases extracted the
 /// bundle directly at the root (the legacy layout).
 const KAS_ROOT_REL: &str = "kas";
+/// Data-dir-relative credential store: the sqlite database `kiro-cli login`
+/// maintains — consulted only by the stored-token fallback.
+const STORE_FILE_NAME: &str = "data.sqlite3";
 /// Path of the ACP server entry inside one extraction (versioned dir or the
 /// legacy root itself).
 const SERVER_IN_ROOT_REL: &str = "node_modules/@kiro/agent/dist/server/acp-server.js";
@@ -168,6 +171,21 @@ fn kiro_data_dir_from_env() -> Option<PathBuf> {
             xdg_data_home.as_deref(),
         )
     }
+}
+
+/// kiro-cli's credential store under `data_dir` — read ONLY by the
+/// stored-token fallback for a kiro-cli without `chat _ get-kas-token`
+/// (cyril-zbu7 amendment).
+fn store_path(data_dir: &Path) -> PathBuf {
+    data_dir.join(STORE_FILE_NAME)
+}
+
+/// kiro-cli's credential store — `<kiro data dir>/data.sqlite3`, under
+/// `%LOCALAPPDATA%\Kiro-Cli` on Windows, Library/Application Support on
+/// macOS/iOS, or the XDG/HOME root on other targets. Consulted only by the
+/// stored-token fallback ([`super::auth`]).
+pub(crate) fn default_store_path() -> Option<PathBuf> {
+    kiro_data_dir_from_env().map(|d| store_path(&d))
 }
 
 /// The KAS self-extraction root under `data_dir`.
@@ -1214,9 +1232,13 @@ mod tests {
         // variable wrapper would report `Server`/`NoHome` instead), so the
         // spawn reaches the login gate — which refuses it because no kiro-cli
         // can be run (cyril-zbu7: the gate asks kiro-cli, never a store).
-        assert!(
-            kas_root(&expected_data_dir_on_host(&home, &xdg, &local)).is_dir(),
-            "fixture extraction present"
+        let data_dir = expected_data_dir_on_host(&home, &xdg, &local);
+        assert!(kas_root(&data_dir).is_dir(), "fixture extraction present");
+        // The stored-token fallback's store follows the same resolver (R2).
+        assert_eq!(
+            default_store_path(),
+            Some(data_dir.join(STORE_FILE_NAME)),
+            "default_store_path must follow the resolver on this host"
         );
         let err = resolve_kas_command(&crate::protocol::kas::auth::KasTokenSource::on_path())
             .await
@@ -1326,6 +1348,11 @@ mod tests {
             let data_dir = kiro_data_dir(home, xdg).expect("branch resolves");
             assert_eq!(
                 kas_root(&data_dir).parent(),
+                Some(data_dir.as_path()),
+                "home={home:?} xdg={xdg:?}"
+            );
+            assert_eq!(
+                store_path(&data_dir).parent(),
                 Some(data_dir.as_path()),
                 "home={home:?} xdg={xdg:?}"
             );

@@ -24,3 +24,12 @@ One atomic slice: the token-source swap changes `HostCallback::GetAccessToken`, 
 - Windows: the platform-neutral process tests (`kas::auth`) + kas/no-default clippy and tests on the Windows VM (`ssh resourcefs-win11`) → PASS (`receipts/windows-vm.txt`).
 - Live C6: cyril KAS Free session across the 2026-10-18T19:47:39Z expiry → all turns answered, a new `expiresAt` served, no BridgeDisconnected (`receipts/live/`).
 - Independent review of the diff → no blocking finding.
+
+## Slice 2 (amendment): stored-token fallback when kiro-cli lacks the helper
+
+**Outcome:** design C10, C1 (amended fence).
+**Changes:** `kas/stored_token.rs` (new, the pre-zbu7 reader + tests moved verbatim, plus `read_stored_token`); `kas/auth.rs` (`HelperMissing` detection in `interpret`, `TokenOrigin`, per-process missing-helper cache, `stored_fallback`, `StoredUnservable` / `StoredStale`, one-time warning returned by `respond_get_access_token`); `kas/callbacks.rs` (warning → `SystemNotify{Warning}`); `kas/discovery.rs` (`default_store_path` / `store_path` restored for the fallback, R2 assertion restored); `kas/version.rs` (`invocation_version`); `kas/mod.rs`.
+**Verification:**
+- C10 tests (design table) → PASS; mutations `receipts/mutation-c10-red.log` (widened), `mutation-c10b-red.log` (disabled) → red; `mutation-c10-restored.log` → green.
+- Slice-1 checks unchanged and re-run in the full gate.
+**Dependencies:** slice 1.

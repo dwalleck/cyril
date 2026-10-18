@@ -178,6 +178,21 @@ pub(crate) async fn kiro_cli_version(
     run_version_probe(&probe, environment).await
 }
 
+/// Read the version of the kiro-cli an already-resolved invocation prefix
+/// ([`kiro_cli_invocation`]) runs: `<prefix> --version`.
+pub(crate) async fn invocation_version(
+    kiro_cli: &AgentCommand,
+    environment: &crate::types::SpawnEnvironment,
+) -> Result<String, String> {
+    let mut args = kiro_cli.args().to_vec();
+    args.push("--version".to_string());
+    run_version_probe(
+        &AgentCommand::new(kiro_cli.program()).with_args(args),
+        environment,
+    )
+    .await
+}
+
 /// What a bounded helper run produced: its exit status and the (capped)
 /// bytes it wrote to each pipe.
 #[derive(Debug)]

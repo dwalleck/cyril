@@ -33,7 +33,7 @@ One short-lived subprocess per `getAccessToken` request; KAS calls it about once
 
 Acceptance criteria 1–6 of cyril-zbu7 are the complete outcome contract:
 
-1. KAS (Free and Wrapper): responder and spawn-time gate get the token from `kiro-cli chat _ get-kas-token` (+ `--force-refresh` iff requested), never from data.sqlite3 / a token file.
+1. KAS (Free and Wrapper): responder and spawn-time gate get the token from `kiro-cli chat _ get-kas-token` (+ `--force-refresh` iff requested), never from data.sqlite3 / a token file — **amended 2026-10-18 (requester, relayed by the coordinator):** "ONLY when the subcommand itself is missing/unrecognised … fall back to today's stored-token read AND surface one clear, user-visible warning (not per-request spam) that this kiro-cli lacks get-kas-token, naming the kiro-cli version if cheaply available … Every OTHER failure … stays a hard, typed, actionable error — no fallback. Cache the 'subcommand missing' result per process". The missing-subcommand shape was observed before design (`receipts/missing-subcommand-shapes.txt`, evidence P5). The issue's acceptance text is updated by the coordinator on this branch.
 2. Error envelope, non-zero exit, timeout, spawn failure, malformed JSON → typed, actionable errors that reach the UI (no stale token, no defaults).
 3. accessToken, expiresAt, profileArn, authMethod, provider pass through unchanged.
 4. LIVE: a cyril KAS session keeps answering turns across an access-token renewal, no BridgeDisconnected.

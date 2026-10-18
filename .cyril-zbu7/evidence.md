@@ -36,3 +36,14 @@ Open (non-design-changing): kiro-cli's own pre-expiry refresh window for the pla
 ## P4 — Which kiro-cli to run
 
 Source: this repo. Free path: `discovery::installed_cli_version` probes `AgentCommand::new("kiro-cli")` on the inherited PATH (std's lookup resolves `kiro-cli.exe` on Windows). Wrapper path: `version::version_probe_command` derives the kiro-cli element from the agent command, through the WSL launcher when used (cyril-861q). The token source reuses exactly these two rules.
+
+## P5 — How a kiro-cli WITHOUT the helper answers (amendment premise)
+
+Receipt: `receipts/missing-subcommand-shapes.txt` (2026-10-18). No token touched: the 2.32.0 probe used a bogus sibling subcommand; the archived builds ran under `env -i` with private HOME/XDG dirs (no credentials reachable).
+
+- kiro-cli 2.32.0, `chat _ get-kas-token-does-not-exist`: exit 2, empty stdout, stderr `error: unrecognized subcommand 'get-kas-token-does-not-exist'` + clap usage.
+- kiro-cli-chat 2.5.1 (`chat _` exists, helper absent): exit 2, empty stdout, stderr `error: unrecognized subcommand 'get-kas-token'`.
+- kiro-cli-chat 2.4.1 (no `chat _` at all): exit 2, empty stdout, stderr `error: unexpected argument 'get-kas-token' found`.
+- kiro-cli-chat 2.6.0 / 2.6.1: the helper EXISTS with a legacy envelope `{"success":false,"error":…}` (exit 1) — not a missing helper; cyril treats it as a hard error (no `kind`). 2.7.1+: the current `{kind,data}` envelope. (KAS itself needs ≥ 2.7.1.)
+
+Validated → "missing helper" = exit 2 ∧ empty stdout ∧ a stderr line exactly `error: unrecognized subcommand 'get-kas-token'` or `error: unexpected argument 'get-kas-token' found`.

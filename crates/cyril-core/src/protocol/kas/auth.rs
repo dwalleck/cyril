@@ -11,10 +11,17 @@
 //! iff the request asks, and pass the JSON envelope's `data` fields through.
 //! kiro-cli owns the OIDC refresh token and refreshes an expired access token
 //! under its own cross-process refresh lock, so renewal stays single-flight
-//! inside kiro-cli: cyril never does OIDC and never reads kiro-cli's
-//! credential store. cyril is a **custodian** of the access token it relays:
-//! held for one reply, redacted in `Debug`, never logged, never echoed into a
-//! diagnostic.
+//! inside kiro-cli: cyril never does OIDC.
+//!
+//! The subcommand is hidden/internal, so a kiro-cli may lack it. ONLY when
+//! kiro-cli refuses it as an unknown subcommand (clap's exact refusal — see
+//! [`helper_refused`]) does cyril fall back to reading the stored token
+//! ([`super::stored_token`], never renewed), remembering that per process and
+//! warning the user once per connection that sessions will expire hourly
+//! until kiro-cli is updated. Every other failure is a hard, typed error.
+//!
+//! cyril is a **custodian** of the access token it relays: held for one
+//! reply, redacted in `Debug`, never logged, never echoed into a diagnostic.
 
 use std::time::Duration;
 
@@ -55,7 +62,7 @@ const JSONRPC_AUTH_REQUIRED: i32 = -32000;
 /// A redacted access-token wrapper: its `Debug` never prints the secret, so a
 /// stray `{:?}` or a tracing of any struct containing it cannot leak the
 /// credential (spec SC4 custodian).
-struct AccessToken(String);
+pub(super) struct AccessToken(pub(super) String);
 
 impl std::fmt::Debug for AccessToken {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -63,9 +70,20 @@ impl std::fmt::Debug for AccessToken {
     }
 }
 
+/// Where a served token came from.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum TokenOrigin {
+    /// kiro-cli's `chat _ get-kas-token` helper (the normal path).
+    Helper,
+    /// The stored-token fallback, because this kiro-cli lacks the helper
+    /// subcommand; `kiro_cli_version` when `--version` answered.
+    StoredFallback { kiro_cli_version: Option<String> },
+}
+
 /// The `data` of kiro-cli's `getKasToken` envelope — exactly the fields the
 /// TUI relays to KAS: `{accessToken, expiresAt, profileArn}` required,
-/// `authMethod` / `provider` optional (relayed only when present).
+/// `authMethod` / `provider` optional (relayed only when present) — plus
+/// where it came from (never relayed).
 #[derive(Debug)]
 pub(crate) struct KasToken {
     access_token: AccessToken,
@@ -73,6 +91,7 @@ pub(crate) struct KasToken {
     profile_arn: String,
     auth_method: Option<String>,
     provider: Option<String>,
+    origin: TokenOrigin,
 }
 
 impl KasToken {
@@ -80,6 +99,30 @@ impl KasToken {
     /// renewal is observable without exposing the credential.
     pub(crate) fn expires_at(&self) -> &str {
         &self.expires_at
+    }
+
+    /// Where this token came from.
+    pub(crate) fn origin(&self) -> &TokenOrigin {
+        &self.origin
+    }
+
+    /// A token read by the stored-token fallback (origin filled in by the
+    /// caller that knows the kiro-cli version).
+    pub(super) fn from_store(
+        access_token: AccessToken,
+        expires_at: String,
+        profile_arn: String,
+    ) -> Self {
+        Self {
+            access_token,
+            expires_at,
+            profile_arn,
+            auth_method: None,
+            provider: None,
+            origin: TokenOrigin::StoredFallback {
+                kiro_cli_version: None,
+            },
+        }
     }
 }
 
@@ -138,6 +181,36 @@ pub(crate) enum KasTokenError {
          this to cyril"
     )]
     Malformed { command: String, detail: String },
+    /// The kiro-cli refused the helper itself as an unknown subcommand (clap
+    /// exit 2, no stdout, `unrecognized subcommand 'get-kas-token'` or — before
+    /// `chat _` existed — `unexpected argument 'get-kas-token'`). Internal:
+    /// [`KasTokenSource::fetch`] turns it into the stored-token fallback.
+    #[error(
+        "`{command}` is not supported by this kiro-cli ({detail}); update kiro-cli so cyril \
+         can renew the KAS access token"
+    )]
+    HelperMissing { command: String, detail: String },
+    /// This kiro-cli lacks the helper and the stored-token fallback cannot
+    /// serve (store absent/locked/corrupt, logged out, missing field).
+    #[error(
+        "this kiro-cli{version} lacks `chat _ get-kas-token` and the stored kiro token is not \
+         usable: {detail}; update kiro-cli (or {LOGIN_HINT})"
+    )]
+    StoredUnservable {
+        /// `""` or `" <version>"`.
+        version: String,
+        detail: String,
+    },
+    /// This kiro-cli lacks the helper and the stored token is expired — only
+    /// kiro-cli can renew it.
+    #[error(
+        "kiro token expired and this kiro-cli{version} cannot renew it for cyril (it lacks \
+         `chat _ get-kas-token`); {LOGIN_HINT}, or update kiro-cli to stop hourly expiry"
+    )]
+    StoredStale {
+        /// `""` or `" <version>"`.
+        version: String,
+    },
     /// The relayed reply could not be serialized for KAS.
     #[error("could not build the getAccessToken reply: {0}; report this to cyril")]
     Reply(String),
@@ -147,7 +220,7 @@ impl KasTokenError {
     /// The JSON-RPC error the responder returns to KAS.
     fn to_acp(&self) -> acp::Error {
         let code = match self {
-            Self::ErrorEnvelope { .. } => JSONRPC_AUTH_REQUIRED,
+            Self::ErrorEnvelope { .. } | Self::StoredStale { .. } => JSONRPC_AUTH_REQUIRED,
             _ => JSONRPC_INTERNAL_ERROR,
         };
         acp::Error::new(code, self.to_string())
@@ -184,6 +257,48 @@ pub(crate) struct KasTokenSource {
     environment: SpawnEnvironment,
     deadline: Duration,
     in_flight: tokio::sync::Mutex<()>,
+    store: StoreLocation,
+    /// Set once the stored-token fallback warning has been surfaced for this
+    /// connection, so it is shown once, not on every request.
+    fallback_warned: std::sync::atomic::AtomicBool,
+}
+
+/// Where the stored-token fallback looks for kiro-cli's credential store.
+#[derive(Debug)]
+enum StoreLocation {
+    /// kiro-cli's data dir resolved from cyril's environment (production).
+    FromEnvironment,
+    /// A fixture store (tests never touch the real one).
+    #[cfg(test)]
+    At(std::path::PathBuf),
+}
+
+/// Per-process memory of kiro-cli invocations that lack the helper (keyed by
+/// the rendered invocation prefix), with the version `--version` reported —
+/// so the helper is probed once per process, not on every request.
+mod missing_helper {
+    use std::collections::HashMap;
+    use std::sync::{Mutex, OnceLock};
+
+    fn cache() -> &'static Mutex<HashMap<String, Option<String>>> {
+        static CACHE: OnceLock<Mutex<HashMap<String, Option<String>>>> = OnceLock::new();
+        CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
+    /// `Some(version)` when `key` is known to lack the helper.
+    pub(super) fn lookup(key: &str) -> Option<Option<String>> {
+        let map = cache()
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        map.get(key).cloned()
+    }
+
+    pub(super) fn remember(key: String, version: Option<String>) {
+        let mut map = cache()
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        map.insert(key, version);
+    }
 }
 
 impl KasTokenSource {
@@ -195,6 +310,8 @@ impl KasTokenSource {
             environment,
             deadline: GET_KAS_TOKEN_DEADLINE,
             in_flight: tokio::sync::Mutex::new(()),
+            store: StoreLocation::FromEnvironment,
+            fallback_warned: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
@@ -222,9 +339,104 @@ impl KasTokenSource {
         AgentCommand::new(self.kiro_cli.program()).with_args(args)
     }
 
-    /// Run the helper once and interpret its answer.
+    /// `true` the first time this connection asks — the fallback warning is
+    /// surfaced once per connection, not on every request.
+    fn take_fallback_warning(&self) -> bool {
+        !self
+            .fallback_warned
+            .swap(true, std::sync::atomic::Ordering::SeqCst)
+    }
+
+    #[cfg(test)]
+    fn with_store(mut self, db: std::path::PathBuf) -> Self {
+        self.store = StoreLocation::At(db);
+        self
+    }
+
+    /// Get the KAS token: run the helper once and interpret its answer. Only
+    /// when this kiro-cli refuses the helper as an unknown subcommand
+    /// ([`KasTokenError::HelperMissing`]) does it fall back to the stored
+    /// token — remembered per process, so the helper is not re-probed on
+    /// every request. Every other failure is returned as-is.
     pub(crate) async fn fetch(&self, force_refresh: bool) -> Result<KasToken, KasTokenError> {
         let _serialized = self.in_flight.lock().await;
+        let key = render(&self.kiro_cli);
+        if let Some(version) = missing_helper::lookup(&key) {
+            return self.stored_fallback(version).await;
+        }
+        match self.run_helper(force_refresh).await {
+            Err(KasTokenError::HelperMissing { command, detail }) => {
+                let version = match crate::protocol::kas::version::invocation_version(
+                    &self.kiro_cli,
+                    &self.environment,
+                )
+                .await
+                {
+                    Ok(version) => Some(version),
+                    Err(e) => {
+                        tracing::debug!(error = %e, "kiro-cli version unavailable for the fallback warning");
+                        None
+                    }
+                };
+                tracing::warn!(
+                    %command,
+                    %detail,
+                    version = version.as_deref(),
+                    "kiro-cli lacks get-kas-token; falling back to the stored kiro token"
+                );
+                missing_helper::remember(key, version.clone());
+                self.stored_fallback(version).await
+            }
+            other => other,
+        }
+    }
+
+    /// The stored-token fallback ([`super::stored_token`]), read off the
+    /// single-threaded bridge executor.
+    async fn stored_fallback(&self, version: Option<String>) -> Result<KasToken, KasTokenError> {
+        let shown = match &version {
+            Some(v) => format!(" {v}"),
+            None => String::new(),
+        };
+        let db = match &self.store {
+            StoreLocation::FromEnvironment => crate::protocol::kas::discovery::default_store_path(),
+            #[cfg(test)]
+            StoreLocation::At(db) => Some(db.clone()),
+        }
+        .ok_or_else(|| KasTokenError::StoredUnservable {
+            version: shown.clone(),
+            detail: "cannot locate kiro-cli's data directory (no home / local data directory)"
+                .to_string(),
+        })?;
+        let read = tokio::task::spawn_blocking(move || {
+            super::stored_token::read_stored_token(&db, super::stored_token::now_epoch())
+        })
+        .await
+        .map_err(|e| KasTokenError::StoredUnservable {
+            version: shown.clone(),
+            detail: format!("stored-token read task failed: {e}"),
+        })?;
+        match read {
+            Ok(mut token) => {
+                token.origin = TokenOrigin::StoredFallback {
+                    kiro_cli_version: version,
+                };
+                Ok(token)
+            }
+            Err(super::stored_token::StoredTokenError::Unservable(detail)) => {
+                Err(KasTokenError::StoredUnservable {
+                    version: shown,
+                    detail,
+                })
+            }
+            Err(super::stored_token::StoredTokenError::Stale) => {
+                Err(KasTokenError::StoredStale { version: shown })
+            }
+        }
+    }
+
+    /// Run the helper once and interpret its answer.
+    async fn run_helper(&self, force_refresh: bool) -> Result<KasToken, KasTokenError> {
         let invocation = self.invocation(force_refresh);
         let command = render(&invocation);
         let captured = run_captured(&invocation, &self.environment, self.deadline)
@@ -273,6 +485,12 @@ fn interpret(command: &str, captured: &Captured) -> Result<KasToken, KasTokenErr
             Err(KasTokenError::error_envelope(&message))
         }
         (Ok(Envelope::Token(token)), true) => Ok(token),
+        (Err(_), false) if helper_refused(captured) => Err(KasTokenError::HelperMissing {
+            command: command.to_string(),
+            detail: stderr_tail(&captured.stderr)
+                .trim_start_matches(": ")
+                .to_string(),
+        }),
         (Ok(Envelope::Token(_)), false) | (Err(_), false) => Err(KasTokenError::NonZeroExit {
             command: command.to_string(),
             status: captured.status.to_string(),
@@ -283,6 +501,31 @@ fn interpret(command: &str, captured: &Captured) -> Result<KasToken, KasTokenErr
             detail,
         }),
     }
+}
+
+/// clap's usage-error exit code.
+const CLAP_USAGE_EXIT: i32 = 2;
+
+/// `true` when kiro-cli refused the helper itself as unknown — the exact shape
+/// clap produces (observed 2026-10-18, `.cyril-zbu7/receipts/`): usage exit
+/// 2, no stdout, and a stderr line naming `get-kas-token` as an `unrecognized
+/// subcommand` (kiro-cli 2.5.1; 2.32.0 for any unknown `chat _` sibling) or an
+/// `unexpected argument` (2.4.1, before `chat _` existed). Anything else —
+/// other clap errors, any stdout at all, another exit code — is NOT a missing
+/// helper and stays a hard error.
+fn helper_refused(captured: &Captured) -> bool {
+    if captured.status.code() != Some(CLAP_USAGE_EXIT)
+        || !String::from_utf8_lossy(&captured.stdout).trim().is_empty()
+    {
+        return false;
+    }
+    String::from_utf8_lossy(&captured.stderr)
+        .lines()
+        .map(str::trim)
+        .any(|line| {
+            line == "error: unrecognized subcommand 'get-kas-token'"
+                || line == "error: unexpected argument 'get-kas-token' found"
+        })
 }
 
 /// `": <last lines>"` of stderr, capped, or `""` when stderr is empty.
@@ -398,6 +641,7 @@ fn token_from(data: &serde_json::Map<String, serde_json::Value>) -> Result<KasTo
         profile_arn: required("profileArn")?,
         auth_method: optional("authMethod")?,
         provider: optional("provider")?,
+        origin: TokenOrigin::Helper,
     })
 }
 
@@ -458,11 +702,13 @@ pub(crate) fn force_refresh_requested(params: &serde_json::Value) -> bool {
 /// carries both the JSON-RPC error for KAS and the typed reason for the UI;
 /// every failure is warn-logged — KAS surfaces a failed callback as a
 /// mute/opaque turn (cyril-l7tw), so the log line is the cyril-side
-/// breadcrumb.
+/// breadcrumb. `Ok` also carries the stored-token fallback warning the first
+/// time this connection serves from the fallback (`None` otherwise), for the
+/// caller to surface once.
 pub(crate) async fn respond_get_access_token(
     source: Option<&KasTokenSource>,
     force_refresh: bool,
-) -> Result<acp::ExtResponse, (acp::Error, KasTokenError)> {
+) -> Result<(acp::ExtResponse, Option<String>), (acp::Error, KasTokenError)> {
     let fail = |error: KasTokenError| {
         tracing::warn!(error = %error, force_refresh, "getAccessToken failed");
         (error.to_acp(), error)
@@ -472,9 +718,30 @@ pub(crate) async fn respond_get_access_token(
     tracing::info!(
         expires_at = token.expires_at(),
         force_refresh,
-        "getAccessToken served from kiro-cli"
+        origin = ?token.origin(),
+        "getAccessToken served"
     );
-    build_response(&token).map_err(|detail| fail(KasTokenError::Reply(detail)))
+    let warning = match token.origin() {
+        TokenOrigin::Helper => None,
+        TokenOrigin::StoredFallback { kiro_cli_version } => source
+            .take_fallback_warning()
+            .then(|| fallback_warning(kiro_cli_version.as_deref())),
+    };
+    let response = build_response(&token).map_err(|detail| fail(KasTokenError::Reply(detail)))?;
+    Ok((response, warning))
+}
+
+/// The one-time user-visible warning for the stored-token fallback.
+fn fallback_warning(kiro_cli_version: Option<&str>) -> String {
+    let version = match kiro_cli_version {
+        Some(v) => format!(" ({v})"),
+        None => String::new(),
+    };
+    format!(
+        "this kiro-cli{version} lacks `chat _ get-kas-token`, so cyril cannot renew the KAS \
+         access token: it is serving the stored kiro token, and KAS sessions will expire with \
+         it (about hourly) until kiro-cli is updated"
+    )
 }
 
 #[cfg(test)]
@@ -560,6 +827,9 @@ mod tests {
             KasTokenError::ErrorEnvelope { .. } => "ErrorEnvelope",
             KasTokenError::Malformed { .. } => "Malformed",
             KasTokenError::Reply(_) => "Reply",
+            KasTokenError::HelperMissing { .. } => "HelperMissing",
+            KasTokenError::StoredUnservable { .. } => "StoredUnservable",
+            KasTokenError::StoredStale { .. } => "StoredStale",
         }
     }
 
@@ -762,9 +1032,10 @@ mod tests {
             ),
             SpawnEnvironment::Inherit,
         );
-        let reply = respond_get_access_token(Some(&source), true)
+        let (reply, warning) = respond_get_access_token(Some(&source), true)
             .await
             .expect("helper answers");
+        assert_eq!(warning, None, "the helper path never warns");
         assert_eq!(
             body(&reply),
             serde_json::json!({
@@ -776,6 +1047,193 @@ mod tests {
         );
         let argv = std::fs::read_to_string(dir.path().join("argv.txt")).unwrap();
         assert_eq!(argv.trim(), "chat _ get-kas-token --force-refresh");
+    }
+
+    // C10 (amendment): only clap's refusal of the helper itself — usage exit
+    // 2, no stdout, a stderr line naming `get-kas-token` as an unrecognized
+    // subcommand (2.5.1) or unexpected argument (2.4.1) — is a missing helper.
+    // Every other failure stays a hard error (no fallback).
+    #[rstest]
+    #[case::unrecognized_subcommand_2_5_1(
+        2,
+        "",
+        "error: unrecognized subcommand 'get-kas-token'\n\nUsage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>\n\nFor more information, try '--help'.\n",
+        "HelperMissing"
+    )]
+    #[case::unexpected_argument_2_4_1(
+        2,
+        "",
+        "error: unexpected argument 'get-kas-token' found\n\nUsage: kiro-cli-chat chat [OPTIONS] [INPUT]\n",
+        "HelperMissing"
+    )]
+    #[case::crlf_stderr(
+        2,
+        "",
+        "error: unrecognized subcommand 'get-kas-token'\r\n",
+        "HelperMissing"
+    )]
+    #[case::force_flag_unknown(
+        2,
+        "",
+        "error: unexpected argument '--force-refresh' found\n",
+        "NonZeroExit"
+    )]
+    #[case::other_subcommand_unknown(2, "", "error: unrecognized subcommand '_'\n", "NonZeroExit")]
+    #[case::same_text_wrong_exit(
+        1,
+        "",
+        "error: unrecognized subcommand 'get-kas-token'\n",
+        "NonZeroExit"
+    )]
+    #[case::same_text_with_stdout(
+        2,
+        "partial",
+        "error: unrecognized subcommand 'get-kas-token'\n",
+        "NonZeroExit"
+    )]
+    #[case::error_envelope_logged_out(1, r#"{"kind":"error","data":{"message":"You are not logged in. Please log in with `kiro-cli login`."}}"#, "", "ErrorEnvelope")]
+    #[case::legacy_2_6_envelope(1, r#"{"success":false,"error":"You are not logged in. Please log in with `kiro-cli login`."}"#, "", "NonZeroExit")]
+    #[case::malformed_json(0, "not json", "", "Malformed")]
+    fn missing_helper_is_detected_precisely(
+        #[case] code: i32,
+        #[case] stdout: &str,
+        #[case] stderr: &str,
+        #[case] expected_variant: &str,
+    ) {
+        let error = interpret(
+            "kiro-cli chat _ get-kas-token",
+            &captured(code, stdout, stderr),
+        )
+        .expect_err("never a token");
+        assert_eq!(variant(&error), expected_variant, "{error}");
+    }
+
+    /// A fake kiro-cli WITHOUT the helper: answers `--version` with
+    /// `kiro-cli 2.5.1`, refuses everything else exactly like clap does
+    /// (exit 2, stderr only), and appends one line to `calls.txt` per helper
+    /// attempt.
+    fn kiro_cli_without_helper(dir: &std::path::Path) -> AgentCommand {
+        fake_kiro_cli(
+            dir,
+            "d=\"$(dirname \"$0\")\"\nif [ \"$1\" = \"--version\" ]; then printf 'kiro-cli 2.5.1\\n'; exit 0; fi\necho call >> \"$d/calls.txt\"\nprintf \"error: unrecognized subcommand 'get-kas-token'\\n\\nUsage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>\\n\" >&2\nexit 2",
+            "if \"%1\"==\"--version\" (\n  echo kiro-cli 2.5.1\n  exit /b 0\n)\necho call >> \"%~dp0calls.txt\"\necho error: unrecognized subcommand 'get-kas-token' 1>&2\nexit /b 2",
+        )
+    }
+
+    /// A fixture credential store holding one builder-id token expiring at
+    /// `expires_at` and an active profile.
+    fn store_with_token(dir: &std::path::Path, expires_at: &str) -> std::path::PathBuf {
+        let db = dir.join("data.sqlite3");
+        let conn = rusqlite::Connection::open(&db).unwrap();
+        // Table/row names are split so this file never holds the joined
+        // forms the `credential_store_token_rows_only_in_the_fallback` fence
+        // scans for.
+        conn.execute_batch(concat!(
+            "CREATE TABLE auth",
+            "_kv (key TEXT PRIMARY KEY, value TEXT);
+             CREATE TABLE state (key TEXT PRIMARY KEY, value TEXT);"
+        ))
+        .unwrap();
+        let row = serde_json::json!({"access_token": "AT-stored", "expires_at": expires_at});
+        conn.execute(
+            concat!("INSERT INTO auth", "_kv VALUES (?1, ?2)"),
+            [concat!("kirocli:", "odic:token"), &row.to_string()],
+        )
+        .unwrap();
+        conn.execute(
+            "INSERT INTO state VALUES ('api.codewhisperer.profile', ?1)",
+            [r#"{"arn":"arn:aws:codewhisperer:us-east-1:1:profile/S"}"#],
+        )
+        .unwrap();
+        db
+    }
+
+    // C10: a kiro-cli without the helper → the stored token is served, the
+    // user is warned ONCE (with the version), and the helper is probed once
+    // per process — the second request goes straight to the fallback.
+    #[tokio::test]
+    async fn missing_helper_falls_back_to_the_stored_token_and_warns_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = store_with_token(dir.path(), "2099-01-01T00:00:00Z");
+        let source = KasTokenSource::new(
+            kiro_cli_without_helper(dir.path()),
+            SpawnEnvironment::Inherit,
+        )
+        .with_store(store);
+
+        let (reply, warning) = respond_get_access_token(Some(&source), false)
+            .await
+            .expect("fallback serves the stored token");
+        assert_eq!(
+            body(&reply),
+            serde_json::json!({
+                "accessToken": "AT-stored",
+                "expiresAt": "2099-01-01T00:00:00Z",
+                "profileArn": "arn:aws:codewhisperer:us-east-1:1:profile/S",
+            })
+        );
+        let warning = warning.expect("first fallback warns");
+        assert!(
+            warning.contains("lacks `chat _ get-kas-token`"),
+            "{warning}"
+        );
+        assert!(warning.contains("2.5.1"), "names the version: {warning}");
+        assert!(warning.contains("hourly"), "{warning}");
+
+        let (_, again) = respond_get_access_token(Some(&source), true)
+            .await
+            .expect("still served");
+        assert_eq!(again, None, "the warning is not repeated per request");
+        let calls = std::fs::read_to_string(dir.path().join("calls.txt")).unwrap();
+        assert_eq!(calls.lines().count(), 1, "helper re-probed: {calls:?}");
+    }
+
+    // C10: on the fallback, an expired stored token is a hard, actionable
+    // auth error (only kiro-cli could renew it) — never a known-bad reply.
+    #[tokio::test]
+    async fn missing_helper_with_expired_store_is_a_hard_error() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = store_with_token(dir.path(), "2020-01-01T00:00:00Z");
+        let source = KasTokenSource::new(
+            kiro_cli_without_helper(dir.path()),
+            SpawnEnvironment::Inherit,
+        )
+        .with_store(store);
+        let (acp_error, error) = respond_get_access_token(Some(&source), false)
+            .await
+            .expect_err("expired stored token");
+        assert_eq!(variant(&error), "StoredStale", "{error}");
+        assert_eq!(
+            acp_error.code,
+            acp::Error::new(JSONRPC_AUTH_REQUIRED, "").code
+        );
+        let shown = error.to_string();
+        assert!(
+            shown.contains("kiro-cli login") && shown.contains("update kiro-cli"),
+            "{shown}"
+        );
+    }
+
+    // C10: any OTHER helper failure never falls back, even with a perfectly
+    // servable store next to it.
+    #[tokio::test]
+    async fn other_helper_failures_never_fall_back() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = store_with_token(dir.path(), "2099-01-01T00:00:00Z");
+        let logged_out = r#"{"kind":"error","data":{"message":"You are not logged in. Please log in with `kiro-cli login`."}}"#;
+        let source = KasTokenSource::new(
+            fake_kiro_cli(
+                dir.path(),
+                &format!("printf '%s\\n' '{logged_out}'\nexit 1"),
+                &format!("echo {logged_out}\nexit /b 1"),
+            ),
+            SpawnEnvironment::Inherit,
+        )
+        .with_store(store);
+        let (_, error) = respond_get_access_token(Some(&source), false)
+            .await
+            .expect_err("logged out is a hard error");
+        assert_eq!(variant(&error), "ErrorEnvelope", "{error}");
     }
 
     // C9: two concurrent requests through one source never overlap — the
@@ -852,12 +1310,12 @@ mod tests {
         assert_eq!(variant(&error), "Unbound");
     }
 
-    // C1 fence (cyril-zbu7): kiro-cli's credential-store token rows must
-    // never be read again anywhere in the workspace's crates — cyril asks
-    // kiro-cli instead. The needles are assembled at compile time so this
+    // C1 fence (cyril-zbu7 + amendment): kiro-cli's credential-store token
+    // rows are read ONLY by the stored-token fallback module — the normal
+    // path asks kiro-cli. The needles are assembled at compile time so this
     // file's source never contains the joined forms.
     #[test]
-    fn credential_store_token_rows_never_read() {
+    fn credential_store_token_rows_only_in_the_fallback() {
         fn scan(dir: &std::path::Path, needles: &[&str], hits: &mut Vec<std::path::PathBuf>) {
             for entry in std::fs::read_dir(dir).expect("readable dir") {
                 let path = entry.expect("dir entry").path();
@@ -881,7 +1339,13 @@ mod tests {
             .expect("crates/ parent dir");
         let mut hits = Vec::new();
         scan(crates_root, &needles, &mut hits);
-        assert!(hits.is_empty(), "credential-store token read in: {hits:?}");
+        let fallback = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("src/protocol/kas/stored_token.rs");
+        assert_eq!(
+            hits,
+            vec![fallback],
+            "credential-store token rows read outside the fallback module"
+        );
     }
 
     // Executable slice-7 fence (dcc6 review F7c): the retired SSO-cache token
