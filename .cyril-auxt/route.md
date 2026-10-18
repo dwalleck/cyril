@@ -57,3 +57,7 @@ No `spec.md`: behavior explicit (T4). No `evidence.md`/probe: T1 premises answer
 ## Terminal criterion
 
 Structural: design claims all PASS with receipts; every ci.yml lane green locally; live before/after on the real cyril TUI over KAS shows the permissions.yaml writes under a private `HOME` and a fresh session running without a prompt; independent review done; PR opened against `main` (not merged).
+
+## Completion record
+
+Delivered: consent echo + TUI-mirrored scope page/folder editor; V2 trust tiers off on KAS (commits 17fb84de, 50dcc3b3, 0a302b9d). Checks: design C1–C10 PASS (`design.md`), gate all lanes OK at 0a302b9d (`receipts/gate.txt`), live before/after (`receipts/live-summary.md`), independent review with no blocking findings (`independent-review.md`). Open: sub-agent attribution divergence (needs cyril-ebqu) and the non-mirrored invocation echo on allow_once/reject_* — both raised to the requester. PR opened, not merged.
