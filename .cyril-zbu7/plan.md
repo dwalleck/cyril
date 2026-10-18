@@ -37,3 +37,7 @@ One atomic slice: the token-source swap changes `HostCallback::GetAccessToken`, 
 ## Repair (independent review, no blocking findings)
 
 Should-fixes 1–4 and nits 6/11 applied under the approved design (no behavior/scope change): wiring tests (design row W) + their mutation receipt, fallback warning built after the reply, "update kiro-cli and restart cyril" wording, stale `stored_token` doc, ROADMAP note made true for the fallback. Nits 7–10/12 dispositioned in design Non-goals. Final gate re-run on the repaired head → `receipts/gate-summary.txt`.
+
+## Repair 2 (PR #173 cross-model review — design "Review 2")
+
+Items 1–4 applied in `kas/auth.rs` (+ `callbacks.rs` test): `resolve_free_kiro_cli` (pure; PATH → TUI locations; host injected) behind `KasTokenSource::on_path`, per-source spawn remedy, process-wide `helper_gate`, timeout wording, fallback force-refresh debug log. Red-first receipts `receipts/r1-red-kiro-cli-lookup.log`, `receipts/r2-red-process-wide-serialization.log`. Full gate re-run → `receipts/gate-summary.txt`; Windows VM re-run → `receipts/windows-vm.txt`.

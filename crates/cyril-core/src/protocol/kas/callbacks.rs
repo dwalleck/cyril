@@ -646,14 +646,22 @@ mod tests {
         let spawn = surfaced(&KasTokenError::Spawn {
             command: "kiro-cli chat _ get-kas-token".into(),
             source: std::io::Error::from(std::io::ErrorKind::NotFound),
+            remedy: "install kiro-cli on PATH",
         });
-        assert!(spawn.contains("install kiro-cli"), "{spawn}");
+        assert!(
+            spawn.contains("install kiro-cli on PATH, then retry"),
+            "{spawn}"
+        );
         assert!(!spawn.contains("kiro-cli login"), "misdirects: {spawn}");
         let timeout = surfaced(&KasTokenError::Timeout {
             command: "kiro-cli chat _ get-kas-token".into(),
             secs: 30,
         });
         assert!(timeout.contains("did not answer within 30 s"), "{timeout}");
+        assert!(
+            timeout.contains("refresh lock timed out"),
+            "names the peer-lock cause: {timeout}"
+        );
         assert!(!timeout.contains("kiro-cli login"), "misdirects: {timeout}");
         let logged_out = surfaced(&KasTokenError::ErrorEnvelope {
             message: "You are not logged in. Please log in with `kiro-cli login`.".into(),

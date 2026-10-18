@@ -51,3 +51,18 @@ Validated → "missing helper" = exit 2 ∧ empty stdout ∧ a stderr line exact
 Windows (relayed by the coordinator from VM resourcefs-win11, kiro-cli 2.27.0 MSI — `kiro-cli.exe` is the chat binary itself, `kiro-cli --version` → `kiro-cli-chat 2.27.0`): `kiro-cli chat _ get-kas-token-does-not-exist` → exit 2, stderr `error: unrecognized subcommand 'get-kas-token-does-not-exist'`; `kiro-cli chat _ get-kas-token` while logged OUT → exit 1, stdout `{"kind":"error","data":{"message":…}}`. Same detection shape as Linux; logged-out stays the error envelope (hard error, no fallback).
 
 Evidence limit (review nit): the 2.4.1 / 2.5.1 refusal shapes were captured by running `kiro-cli-chat` directly, not through the `kiro-cli` launcher of those versions (2.32.0 was observed through the launcher). A launcher that reshaped exit code or stderr would fail closed (NonZeroExit, no fallback).
+
+## P6 — The Kiro TUI's kiro-cli lookup (`ku`, tui.js 2.32.0) — PR #173 review repair
+
+Source: `~/.local/share/kiro-research/tui-bundles/kiro-tui-2.32.0.js`, `ku(e=Man)` with `YM` (PATH search), `y1e` (executable check), `Man.homeDir`.
+
+1. `KIRO_CHAT_CLI_BIN` (set by the Rust host that launched the TUI) — required; returned if executable (and its pinned identity matches `KIRO_CHAT_CLI_BIN_IDENTITY` when set).
+2. `KIRO_CHAT_CLI_FALLBACK_BIN` if executable; if the identity pin was set and failed → error.
+3. `~/.local/bin/<basename of KIRO_CHAT_CLI_BIN>`.
+4. PATH search for `[basename]` or `[basename, "kiro-cli"]`: absolute entries only, entries at/under the cwd skipped, `.exe` appended on win32, unix requires X_OK.
+5. `~/.local/bin/kiro-cli`, `/usr/local/bin/kiro-cli`, `/opt/homebrew/bin/kiro-cli` (literal; on win32 `y1e` is just "is a file").
+6. Otherwise `KIRO_CHAT_CLI_BIN` as-is.
+
+Home = `HOME || USERPROFILE || os.homedir()` (cyril's `kiro_agent_config::home_dir` = `HOME || USERPROFILE`).
+
+cyril has no host-provided binary (steps 1–3 and 6 have no equivalent), so its free path takes step 4 (with `kiro-cli` as the name; relative entries skipped) and then step 5. PATH first is deliberate (the TUI's step 3 only puts `~/.local/bin` first because the Rust host handed it that binary): the gate, the responder and the free path's `kiro-cli --version` probe keep asking the same kiro-cli. Step 5 is not applied on Windows — its literal paths name the extension-less unix binary, and the Kiro MSI puts `kiro-cli.exe` on PATH. The cwd-subtree skip in step 4 is replicated lexically (the TUI also compares realpaths).

@@ -138,18 +138,21 @@ pub(crate) enum KasTokenError {
     Unbound,
     /// kiro-cli could not be started.
     #[error(
-        "could not run `{command}` to get the KAS access token: {source}; install kiro-cli \
-         (on PATH, or as named by --agent-command) and retry"
+        "could not run `{command}` to get the KAS access token: {source}; {remedy}, then retry"
     )]
     Spawn {
         command: String,
         #[source]
         source: std::io::Error,
+        /// Where this source expects kiro-cli — PATH and the TUI locations
+        /// on the free path, the `--agent-command` kiro-cli on the wrapper.
+        remedy: &'static str,
     },
     /// kiro-cli did not finish within the deadline (it was killed).
     #[error(
         "`{command}` did not answer within {secs} s; check the network connection to the \
-         Kiro auth service and retry"
+         Kiro auth service, or another kiro-cli holding its token-refresh lock (kiro-cli logs \
+         `refresh lock timed out (peer wedged?)`), and retry"
     )]
     Timeout { command: String, secs: u64 },
     /// Waiting for kiro-cli or reading its output failed.
@@ -249,14 +252,18 @@ fn cap(text: &str) -> String {
 /// that runs the right kiro-cli (the PATH `kiro-cli` on the free path; the
 /// agent command's own kiro-cli — through the WSL launcher when it routes
 /// through one — on the wrapper path) and the environment it runs under.
-/// Calls through one source are serialized (a second request waits for the
-/// first helper to finish), so cyril never runs two token helpers at once.
+/// Calls are serialized PROCESS-wide per kiro-cli invocation (a second
+/// request — from this connection or any other in the process, e.g. the
+/// workbench reviewer runtime — waits for the first helper to finish), so
+/// cyril never runs two token helpers for one kiro-cli at once: OIDC refresh
+/// tokens are single-use, and racing renewals can log the user out.
 #[derive(Debug)]
 pub(crate) struct KasTokenSource {
     kiro_cli: AgentCommand,
     environment: SpawnEnvironment,
     deadline: Duration,
-    in_flight: tokio::sync::Mutex<()>,
+    /// The remediation a spawn failure names (see [`KasTokenError::Spawn`]).
+    spawn_remedy: &'static str,
     store: StoreLocation,
     /// Set once the stored-token fallback warning has been surfaced for this
     /// connection, so it is shown once, not on every request.
@@ -271,6 +278,130 @@ enum StoreLocation {
     /// A fixture store (tests never touch the real one).
     #[cfg(test)]
     At(std::path::PathBuf),
+}
+
+/// kiro-cli's file name on this platform (`kiro-cli.exe` on Windows).
+fn kiro_cli_file_name() -> String {
+    format!("kiro-cli{}", std::env::consts::EXE_SUFFIX)
+}
+
+/// Spawn-failure remediation on the free path (where [`resolve_free_kiro_cli`]
+/// looks).
+#[cfg(not(windows))]
+const FREE_PATH_REMEDY: &str = "install kiro-cli on PATH (cyril also looks in ~/.local/bin, \
+     /usr/local/bin and /opt/homebrew/bin)";
+#[cfg(windows)]
+const FREE_PATH_REMEDY: &str = "install kiro-cli so that kiro-cli.exe is on PATH";
+/// Spawn-failure remediation when the kiro-cli comes from `--agent-command`.
+const AGENT_COMMAND_REMEDY: &str = "check the kiro-cli named by --agent-command";
+
+/// The Kiro TUI's last-resort kiro-cli locations (tui.js 2.32.0 `ku`):
+/// `~/.local/bin/kiro-cli`, `/usr/local/bin/kiro-cli`,
+/// `/opt/homebrew/bin/kiro-cli`. None on Windows: those literal paths name
+/// the extension-less unix binary (the TUI probes them as-is), while the
+/// Windows MSI's `kiro-cli.exe` is reached through PATH.
+const TUI_FALLBACK_DIRS: [&str; 2] = ["/usr/local/bin", "/opt/homebrew/bin"];
+
+/// Locate the kiro-cli the free path asks for the KAS token. Pure: PATH,
+/// home and the executable probe are injected, so tests fake the host.
+///
+/// Order: the first executable `kiro-cli` in PATH order (absolute entries
+/// only — the TUI's `YM` skips relative ones), then — only when PATH has
+/// none — the TUI's install locations ([`TUI_FALLBACK_DIRS`], after
+/// `<home>/.local/bin`), else the bare name `kiro-cli` (its spawn failure is
+/// the actionable error). PATH comes first, unlike the TUI's `ku` (which
+/// tries `~/.local/bin/<its launcher's basename>` before PATH because the Rust
+/// host hands it that binary), so the gate and responder ask the same
+/// kiro-cli the free path's version probe asks.
+fn resolve_free_kiro_cli(
+    path_var: Option<&std::ffi::OsStr>,
+    home: Option<&std::path::Path>,
+    cwd: Option<&std::path::Path>,
+    is_executable: impl Fn(&std::path::Path) -> bool,
+) -> AgentCommand {
+    let name = kiro_cli_file_name();
+    let on_path = path_var
+        .into_iter()
+        .flat_map(std::env::split_paths)
+        .filter(|dir| dir.is_absolute() && !under_cwd(dir, cwd))
+        .map(|dir| dir.join(&name));
+    let fallbacks: Vec<std::path::PathBuf> = if cfg!(windows) {
+        Vec::new()
+    } else {
+        home.map(|h| h.join(".local/bin/kiro-cli"))
+            .into_iter()
+            .chain(
+                TUI_FALLBACK_DIRS
+                    .iter()
+                    .map(|dir| std::path::Path::new(dir).join("kiro-cli")),
+            )
+            .collect()
+    };
+    for candidate in on_path.chain(fallbacks) {
+        if is_executable(&candidate) {
+            match candidate.to_str() {
+                Some(found) => return AgentCommand::new(found),
+                None => {
+                    tracing::debug!(candidate = %candidate.display(), "non-UTF-8 kiro-cli path skipped")
+                }
+            }
+        }
+    }
+    AgentCommand::new("kiro-cli")
+}
+
+/// `true` when a PATH entry is the working directory or (unless the working
+/// directory is a filesystem root) inside it — the TUI's `YM` skips those so
+/// a binary planted in the workspace cannot shadow kiro-cli. Lexical
+/// (component-wise); the TUI additionally compares realpaths.
+fn under_cwd(dir: &std::path::Path, cwd: Option<&std::path::Path>) -> bool {
+    match cwd {
+        Some(cwd) => dir == cwd || (cwd.parent().is_some() && dir.starts_with(cwd)),
+        None => false,
+    }
+}
+
+/// A regular file the current user may execute (unix: any execute bit;
+/// Windows: any file, as the TUI's `y1e` does).
+fn is_executable_file(path: &std::path::Path) -> bool {
+    let Ok(meta) = std::fs::metadata(path) else {
+        return false;
+    };
+    if !meta.is_file() {
+        return false;
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        meta.permissions().mode() & 0o111 != 0
+    }
+    #[cfg(not(unix))]
+    {
+        true
+    }
+}
+
+/// Process-wide serialization of token-helper runs, one async lock per
+/// kiro-cli invocation (keyed by the rendered prefix).
+mod helper_gate {
+    use std::collections::HashMap;
+    use std::sync::{Arc, Mutex, OnceLock};
+
+    type Gates = Mutex<HashMap<String, Arc<tokio::sync::Mutex<()>>>>;
+
+    fn gates() -> &'static Gates {
+        static GATES: OnceLock<Gates> = OnceLock::new();
+        GATES.get_or_init(|| Mutex::new(HashMap::new()))
+    }
+
+    /// The lock every source for `key` shares (created on first use; the
+    /// sync map lock is never held across an await).
+    pub(super) fn for_invocation(key: &str) -> Arc<tokio::sync::Mutex<()>> {
+        let mut map = gates()
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        Arc::clone(map.entry(key.to_string()).or_default())
+    }
 }
 
 /// Per-process memory of kiro-cli invocations that lack the helper (keyed by
@@ -309,17 +440,37 @@ impl KasTokenSource {
             kiro_cli,
             environment,
             deadline: GET_KAS_TOKEN_DEADLINE,
-            in_flight: tokio::sync::Mutex::new(()),
+            spawn_remedy: AGENT_COMMAND_REMEDY,
             store: StoreLocation::FromEnvironment,
             fallback_warned: std::sync::atomic::AtomicBool::new(false),
         }
     }
 
-    /// The free-path source: `kiro-cli` resolved on the inherited PATH (the
-    /// platform's executable lookup — `kiro-cli.exe` on Windows), the same
-    /// binary the free path's version probe asks.
+    /// The free-path source: the kiro-cli [`resolve_free_kiro_cli`] finds in
+    /// cyril's own environment (PATH, then the Kiro TUI's install
+    /// locations), under the inherited environment.
     pub(crate) fn on_path() -> Self {
-        Self::new(AgentCommand::new("kiro-cli"), SpawnEnvironment::Inherit)
+        let path_var = std::env::var_os("PATH");
+        let home = crate::kiro_agent_config::home_dir();
+        let cwd = match std::env::current_dir() {
+            Ok(cwd) => Some(cwd),
+            Err(e) => {
+                tracing::debug!(error = %e, "no current dir; PATH entries are not checked against it");
+                None
+            }
+        };
+        Self {
+            spawn_remedy: FREE_PATH_REMEDY,
+            ..Self::new(
+                resolve_free_kiro_cli(
+                    path_var.as_deref(),
+                    home.as_deref(),
+                    cwd.as_deref(),
+                    is_executable_file,
+                ),
+                SpawnEnvironment::Inherit,
+            )
+        }
     }
 
     #[cfg(test)]
@@ -359,10 +510,11 @@ impl KasTokenSource {
     /// token — remembered per process, so the helper is not re-probed on
     /// every request. Every other failure is returned as-is.
     pub(crate) async fn fetch(&self, force_refresh: bool) -> Result<KasToken, KasTokenError> {
-        let _serialized = self.in_flight.lock().await;
         let key = render(&self.kiro_cli);
+        let gate = helper_gate::for_invocation(&key);
+        let _serialized = gate.lock().await;
         if let Some(version) = missing_helper::lookup(&key) {
-            return self.stored_fallback(version).await;
+            return self.stored_fallback(version, force_refresh).await;
         }
         match self.run_helper(force_refresh).await {
             Err(KasTokenError::HelperMissing { command, detail }) => {
@@ -385,7 +537,7 @@ impl KasTokenSource {
                     "kiro-cli lacks get-kas-token; falling back to the stored kiro token"
                 );
                 missing_helper::remember(key, version.clone());
-                self.stored_fallback(version).await
+                self.stored_fallback(version, force_refresh).await
             }
             other => other,
         }
@@ -393,7 +545,18 @@ impl KasTokenSource {
 
     /// The stored-token fallback ([`super::stored_token`]), read off the
     /// single-threaded bridge executor.
-    async fn stored_fallback(&self, version: Option<String>) -> Result<KasToken, KasTokenError> {
+    async fn stored_fallback(
+        &self,
+        version: Option<String>,
+        force_refresh: bool,
+    ) -> Result<KasToken, KasTokenError> {
+        if force_refresh {
+            // The stored token cannot be renewed by cyril: the forced refresh
+            // KAS asked for is not honoured on the fallback path.
+            tracing::debug!(
+                "getAccessToken forceRefresh not honoured: this kiro-cli lacks get-kas-token, serving the stored token"
+            );
+        }
         let shown = match &version {
             Some(v) => format!(" {v}"),
             None => String::new(),
@@ -445,6 +608,7 @@ impl KasTokenSource {
                 CaptureFailure::Spawn(source) => KasTokenError::Spawn {
                     command: command.clone(),
                     source,
+                    remedy: self.spawn_remedy,
                 },
                 CaptureFailure::DeadlineElapsed { .. } => KasTokenError::Timeout {
                     command: command.clone(),
@@ -1265,6 +1429,161 @@ pub(crate) mod tests {
         assert!(second.is_ok(), "{second:?}");
     }
 
+    /// A fake helper that takes a lock dir beside it (atomic mkdir), lingers,
+    /// and exits 9 if another instance already holds it — so any overlap of
+    /// two runs surfaces as an error.
+    fn overlap_detecting_kiro_cli(dir: &std::path::Path) -> AgentCommand {
+        let envelope = r#"{"kind":"getKasToken","data":{"accessToken":"AT","expiresAt":"2099-01-01T00:00:00Z","profileArn":"arn:p"}}"#;
+        fake_kiro_cli(
+            dir,
+            &format!(
+                "d=\"$(dirname \"$0\")/held\"\nmkdir \"$d\" || exit 9\nsleep 0.3\nrmdir \"$d\"\nprintf '%s\\n' '{envelope}'"
+            ),
+            &format!(
+                "mkdir \"%~dp0held\" || exit /b 9\nping -n 2 127.0.0.1 > NUL\nrmdir \"%~dp0held\"\necho {envelope}"
+            ),
+        )
+    }
+
+    /// An absolute fixture path on this platform (`/a/b` or `C:\a\b`). Fully
+    /// fake: nothing here reads the real environment or filesystem.
+    fn abs(rel: &str) -> std::path::PathBuf {
+        if cfg!(windows) {
+            std::path::PathBuf::from(format!("C:\\{}", rel.replace('/', "\\")))
+        } else {
+            std::path::PathBuf::from(format!("/{rel}"))
+        }
+    }
+
+    /// A fake executable probe true only for `present`.
+    fn executables(present: Vec<std::path::PathBuf>) -> impl Fn(&std::path::Path) -> bool {
+        move |p: &std::path::Path| present.iter().any(|x| x == p)
+    }
+
+    fn path_var(dirs: &[std::path::PathBuf]) -> std::ffi::OsString {
+        std::env::join_paths(dirs).unwrap()
+    }
+
+    // C7b (PR #173 review): a kiro-cli on PATH wins, in PATH order — even
+    // when a TUI fallback location also has one; relative PATH entries are
+    // skipped (TUI `YM` parity).
+    #[test]
+    fn free_kiro_cli_prefers_path_in_order_and_skips_relative_entries() {
+        let name = kiro_cli_file_name();
+        let first = abs("opt/first").join(&name);
+        let second = abs("opt/second").join(&name);
+        let home = abs("home/u");
+        let path = std::env::join_paths([
+            std::path::PathBuf::from("relative/bin"),
+            abs("opt/first"),
+            abs("opt/second"),
+        ])
+        .unwrap();
+        let found = resolve_free_kiro_cli(
+            Some(&path),
+            Some(&home),
+            None,
+            executables(vec![
+                std::path::PathBuf::from("relative/bin").join(&name),
+                second.clone(),
+                first.clone(),
+                home.join(".local/bin/kiro-cli"),
+            ]),
+        );
+        assert_eq!(found.program(), first.to_str().unwrap());
+        assert!(found.args().is_empty());
+    }
+
+    // C7b: with no kiro-cli on PATH, the Kiro TUI's install locations are
+    // tried in its order — `~/.local/bin`, `/usr/local/bin`,
+    // `/opt/homebrew/bin` (tui.js 2.32.0 `ku`). Windows has none (the TUI's
+    // literal paths name the extension-less unix binary; the MSI's
+    // kiro-cli.exe is found on PATH), so it keeps the bare name there.
+    #[rstest]
+    #[case::home_local_bin(&["HOME/.local/bin/kiro-cli", "/usr/local/bin/kiro-cli", "/opt/homebrew/bin/kiro-cli"], "HOME/.local/bin/kiro-cli")]
+    #[case::usr_local_bin(&["/usr/local/bin/kiro-cli", "/opt/homebrew/bin/kiro-cli"], "/usr/local/bin/kiro-cli")]
+    #[case::homebrew(&["/opt/homebrew/bin/kiro-cli"], "/opt/homebrew/bin/kiro-cli")]
+    #[case::nowhere(&[], "kiro-cli")]
+    fn free_kiro_cli_falls_back_to_the_tui_locations(
+        #[case] present: &[&str],
+        #[case] expected_unix: &str,
+    ) {
+        let home = abs("home/u");
+        let expand = |p: &str| match p.strip_prefix("HOME/") {
+            Some(rest) => home.join(rest),
+            None => std::path::PathBuf::from(p),
+        };
+        let found = resolve_free_kiro_cli(
+            Some(&path_var(&[abs("usr/bin")])),
+            Some(&home),
+            None,
+            executables(present.iter().map(|p| expand(p)).collect()),
+        );
+        let expected = if cfg!(windows) {
+            "kiro-cli".to_string()
+        } else {
+            expand(expected_unix).to_str().unwrap().to_string()
+        };
+        assert_eq!(found.program(), expected);
+    }
+
+    // C7b: PATH entries at or under the working directory are skipped (TUI
+    // `YM`), so a kiro-cli planted in the workspace cannot shadow the real
+    // one; a filesystem-root cwd only excludes itself.
+    #[test]
+    fn free_kiro_cli_skips_path_entries_inside_the_cwd() {
+        let name = kiro_cli_file_name();
+        let ws = abs("work/ws");
+        let real = abs("opt/kiro").join(&name);
+        let path = path_var(&[ws.join("bin"), ws.clone(), abs("opt/kiro")]);
+        let found = resolve_free_kiro_cli(
+            Some(&path),
+            None,
+            Some(&ws),
+            executables(vec![
+                ws.join("bin").join(&name),
+                ws.join(&name),
+                real.clone(),
+            ]),
+        );
+        assert_eq!(found.program(), real.to_str().unwrap());
+
+        let root = abs("");
+        let at_root = abs("usr/bin").join(&name);
+        let found = resolve_free_kiro_cli(
+            Some(&path_var(&[abs("usr/bin")])),
+            None,
+            Some(&root),
+            executables(vec![at_root.clone()]),
+        );
+        assert_eq!(found.program(), at_root.to_str().unwrap());
+    }
+
+    // C7b: no PATH and no home still resolve (to the bare name, whose spawn
+    // failure names where cyril looked).
+    #[test]
+    fn free_kiro_cli_without_path_or_home_is_the_bare_name() {
+        assert_eq!(
+            resolve_free_kiro_cli(None, None, None, executables(Vec::new())).program(),
+            "kiro-cli"
+        );
+    }
+
+    // C9b (PR #173 review): serialization is PROCESS-wide per kiro-cli
+    // invocation — two connections in one cyril process (e.g. the main
+    // bridge and the workbench reviewer runtime) asking the same kiro-cli
+    // never run its single-use-refresh-token helper concurrently.
+    #[tokio::test]
+    async fn fetch_serializes_across_sources_sharing_an_invocation() {
+        let dir = tempfile::tempdir().unwrap();
+        let invocation = overlap_detecting_kiro_cli(dir.path());
+        let a = KasTokenSource::new(invocation.clone(), SpawnEnvironment::Inherit);
+        let b = KasTokenSource::new(invocation, SpawnEnvironment::Inherit);
+        let (first, second) = tokio::join!(a.fetch(false), b.fetch(false));
+        assert!(first.is_ok(), "{first:?}");
+        assert!(second.is_ok(), "{second:?}");
+    }
+
     // C2: a helper that never answers is killed at the deadline and reported
     // as a timeout — the responder does not hang the bridge.
     #[tokio::test]
@@ -1307,7 +1626,10 @@ pub(crate) mod tests {
         assert_eq!(variant(&error), "Spawn", "{error}");
         let shown = error.to_string();
         assert!(shown.contains("get-kas-token"), "{shown}");
-        assert!(shown.contains("install kiro-cli"), "{shown}");
+        // A wrapper-style source names the --agent-command kiro-cli; only
+        // the free path (whose gate test checks it) names PATH.
+        assert!(shown.contains("--agent-command"), "{shown}");
+        assert!(!shown.contains("on PATH"), "{shown}");
 
         let (_, error) = respond_get_access_token(None, false)
             .await
