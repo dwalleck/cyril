@@ -6,11 +6,12 @@ use crate::types::workflow::{
     WorkflowSnapshotParts,
 };
 use crate::types::{
-    SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
-    WorkflowLoopIteration, WorkflowNodeCompleted, WorkflowNodeDescriptor, WorkflowNodeId,
-    WorkflowNodePath, WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot,
-    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
-    WorkflowQueueResolution, WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus,
+    AgentInitiation, SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
+    WorkflowEvent, WorkflowId, WorkflowLoopIteration, WorkflowNodeCompleted,
+    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
+    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted, WorkflowNodeStatus,
+    WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution, WorkflowRepeatCap,
+    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
     WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 
@@ -304,6 +305,9 @@ pub struct WorkflowRun {
     /// KAS `finalState.runLabel` (cyril-lki9): set by a completion snapshot of
     /// a run launched with a label; `None` otherwise.
     run_label: Option<String>,
+    /// KAS `finalState.pause` (cyril-6lql): the structured reason the latest
+    /// reconciled snapshot gives for a pause; `None` otherwise.
+    pause: Option<WorkflowRunPause>,
     opening_plan: Option<Vec<WorkflowNodeDescriptor>>,
     snapshot_plan: Option<WorkflowNodeDescriptor>,
     nodes: HashMap<WorkflowNodePath, WorkflowNodeState>,
@@ -450,41 +454,88 @@ impl WorkflowRun {
 #[derive(Debug, Default)]
 pub struct WorkflowTracker {
     runs: HashMap<WorkflowId, WorkflowRun>,
-    /// cyril-lki9 C13: runs that reached a terminal status through a
-    /// `run_complete` event, per parent session, in arrival order, not yet
-    /// claimed by a turn. A `notify-wf` injection (a completion delivered into
-    /// an already-running turn) names the newest of these.
-    wake_labels: HashMap<SessionId, std::collections::VecDeque<WorkflowId>>,
-    /// Completions claimed by the session's CURRENT turn at its start (KAS
-    /// wakes the parent right after the triggering `run_complete`, evidence
-    /// P8). The turn's header names the newest; the rest belonged to wakes that
-    /// never rendered a header and are discarded at the next claim.
-    claimed_wake_labels: HashMap<SessionId, Vec<WorkflowId>>,
+    /// cyril-lki9 C13 / cyril-6lql: the `run_complete` events KAS wakes a
+    /// parent session for, per parent, in arrival order, not yet claimed by a
+    /// turn — a run reaching a terminal status, or pausing at a repeat's
+    /// iteration cap. A `notify-wf` injection (a completion delivered into an
+    /// already-running turn) names the newest terminal one.
+    wake_labels: HashMap<SessionId, std::collections::VecDeque<WakeCause>>,
+    /// Causes claimed by the session's CURRENT turn at its start (KAS wakes
+    /// the parent right after the triggering `run_complete`, evidence P8). The
+    /// turn's header names the newest of the kind its announcement asks for;
+    /// the rest belonged to wakes that never rendered a header and are
+    /// discarded at the next claim.
+    claimed_wake_labels: HashMap<SessionId, Vec<WakeCause>>,
 }
 
-/// What an agent-initiated turn header names (cyril-lki9 C13): a completed
-/// run, by KAS's own precedence `runLabel → workflowName → workflowId`, and
-/// its terminal status.
+/// A `run_complete` KAS wakes the parent session for.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum WakeCause {
+    /// The run reached a terminal status (cyril-lki9): KAS announces the wake
+    /// as a workflow completion (`workflow-complete-wake`).
+    Ended(WorkflowId),
+    /// The run paused because a repeat reached its iteration cap
+    /// (cyril-6lql, KAS 0.66.43): KAS sends the parent a note and announces
+    /// the wake as a message wake (`send-message-wake`), not a completion.
+    RepeatCap(WorkflowId, WorkflowRepeatCap),
+}
+
+/// What an agent-initiated turn header names: a run, by KAS's own precedence
+/// `runLabel → workflowName → workflowId`, and why KAS woke the parent for it
+/// — its terminal status (cyril-lki9 C13) or the repeat whose iteration cap
+/// paused it (cyril-6lql).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WakeLabel {
     name: String,
-    status: WorkflowRunStatus,
+    cause: WakeLabelCause,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum WakeLabelCause {
+    Ended(WorkflowRunStatus),
+    RepeatCap(WorkflowRepeatCap),
 }
 
 impl WakeLabel {
-    /// A label for a completed run. The tracker builds these via
-    /// [`WorkflowTracker::take_wake_label`]; the constructor exists so
+    /// A label for a run that ended with `status`. The tracker builds these
+    /// via [`WorkflowTracker::take_turn_label`]; the constructors exist so
     /// presentation code can be exercised with a label directly.
     pub fn new(name: String, status: WorkflowRunStatus) -> Self {
-        Self { name, status }
+        Self {
+            name,
+            cause: WakeLabelCause::Ended(status),
+        }
+    }
+
+    /// A label for a run paused because `repeat_cap`'s repeat reached its
+    /// iteration cap (cyril-6lql).
+    pub fn paused_at_repeat_cap(name: String, repeat_cap: WorkflowRepeatCap) -> Self {
+        Self {
+            name,
+            cause: WakeLabelCause::RepeatCap(repeat_cap),
+        }
     }
 
     pub fn name(&self) -> &str {
         &self.name
     }
 
+    /// The run's status when KAS woke the parent for it: its terminal status,
+    /// or `Paused` for a repeat-cap wake.
     pub fn status(&self) -> WorkflowRunStatus {
-        self.status
+        match self.cause {
+            WakeLabelCause::Ended(status) => status,
+            WakeLabelCause::RepeatCap(_) => WorkflowRunStatus::Paused,
+        }
+    }
+
+    /// The repeat whose iteration cap paused the run, for a repeat-cap wake;
+    /// `None` for a run that ended.
+    pub fn repeat_cap(&self) -> Option<&WorkflowRepeatCap> {
+        match &self.cause {
+            WakeLabelCause::Ended(_) => None,
+            WakeLabelCause::RepeatCap(repeat_cap) => Some(repeat_cap),
+        }
     }
 }
 
@@ -834,26 +885,34 @@ impl WorkflowTracker {
         }
         let (snapshot_id, mut incoming) = canonicalize_snapshot(completion.into_final_state())?;
         self.preserve_event_only(&workflow_id, &mut incoming);
-        let wake_parent = incoming
-            .status
-            .filter(|status| is_terminal(Some(*status)))
-            .and(incoming.parent_session_id.clone());
-        let changed = self.replace_if_changed(snapshot_id.clone(), incoming)?;
+        let wake_cause = incoming.parent_session_id.clone().and_then(|parent| {
+            let cause = match (incoming.status, incoming.pause.as_ref()) {
+                (status @ Some(_), _) if is_terminal(status) => {
+                    WakeCause::Ended(snapshot_id.clone())
+                }
+                (
+                    Some(WorkflowRunStatus::Paused),
+                    Some(WorkflowRunPause::RepeatCap(repeat_cap)),
+                ) => WakeCause::RepeatCap(snapshot_id.clone(), repeat_cap.clone()),
+                _ => return None,
+            };
+            Some((parent, cause))
+        });
+        let changed = self.replace_if_changed(snapshot_id, incoming)?;
         // Only a first terminal transition is a completion KAS wakes for; the
-        // absorbing branch above has already returned for any repeat.
-        if changed && let Some(parent) = wake_parent {
-            self.wake_labels
-                .entry(parent)
-                .or_default()
-                .push_back(snapshot_id);
+        // absorbing branch above has already returned for any repeat. A
+        // repeat-cap pause wakes on each NEW pause (a resumed run can pause at
+        // its cap again); an exact duplicate snapshot changes nothing.
+        if changed && let Some((parent, cause)) = wake_cause {
+            self.wake_labels.entry(parent).or_default().push_back(cause);
         }
         Ok(changed)
     }
 
-    /// A turn began on `session` (cyril-lki9 C13): it claims every completion
-    /// queued for the session so far — the wake a completion triggers starts
-    /// right after it — discarding whatever an earlier turn claimed and never
-    /// named (a silent or pre-empted wake).
+    /// A turn began on `session` (cyril-lki9 C13): it claims every wake cause
+    /// queued for the session so far — the wake a `run_complete` triggers
+    /// starts right after it — discarding whatever an earlier turn claimed and
+    /// never named (a silent or pre-empted wake).
     pub fn claim_wake_labels(&mut self, session: &SessionId) {
         let queued = self.wake_labels.remove(session).unwrap_or_default();
         self.claimed_wake_labels
@@ -861,38 +920,83 @@ impl WorkflowTracker {
     }
 
     /// The header label for the current turn on `session`: the NEWEST
-    /// completion it claimed at its start (the run whose completion triggered
-    /// the wake), consuming the claim; `None` when it claimed none. Only
-    /// workflow-completion wakes ask, so `None` is spec B4's run-less wake and
-    /// is logged.
+    /// terminal completion it claimed at its start (the run whose completion
+    /// triggered the wake), consuming the claim; `None` when it claimed none.
+    /// Only workflow-completion wakes ask, so `None` is spec B4's run-less
+    /// wake and is logged.
     pub fn take_wake_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
         let label = self
             .claimed_wake_labels
             .remove(session)
-            .and_then(|claimed| claimed.iter().rev().find_map(|id| self.wake_label(id)));
+            .and_then(|claimed| {
+                claimed.iter().rev().find_map(|cause| match cause {
+                    WakeCause::Ended(workflow_id) => wake_label(&self.runs, workflow_id),
+                    WakeCause::RepeatCap(..) => None,
+                })
+            });
         if label.is_none() {
             tracing::debug!(session = %session, "workflow wake with no known run; header left nameless");
         }
         label
     }
 
+    /// The header label for the agent-initiated turn on `session`, announced
+    /// with `origin`. A workflow-completion wake names its terminal run
+    /// ([`Self::take_wake_label`], cyril-lki9); any other wake names the
+    /// newest repeat-cap pause the turn claimed (cyril-6lql: KAS 0.66.43
+    /// wakes the parent for one as a message wake), or nothing — a generic
+    /// wake.
+    pub fn take_turn_label(
+        &mut self,
+        session: &SessionId,
+        origin: &AgentInitiation,
+    ) -> Option<WakeLabel> {
+        if origin.is_workflow_completion() {
+            self.take_wake_label(session)
+        } else {
+            self.take_repeat_cap_label(session)
+        }
+    }
+
+    /// Consumes the repeat-cap pauses the current turn on `session` claimed
+    /// and names the newest; its terminal completions stay claimed for a
+    /// workflow-completion announcement.
+    fn take_repeat_cap_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        let claimed = self.claimed_wake_labels.get_mut(session)?;
+        let mut label = None;
+        claimed.retain(|cause| match cause {
+            WakeCause::Ended(_) => true,
+            WakeCause::RepeatCap(workflow_id, repeat_cap) => {
+                // Causes are in arrival order: the last resolvable one wins.
+                if let Some(run) = wake_label(&self.runs, workflow_id) {
+                    label = Some(WakeLabel::paused_at_repeat_cap(
+                        run.name,
+                        repeat_cap.clone(),
+                    ));
+                }
+                false
+            }
+        });
+        label
+    }
+
     /// The label for a `notify-wf` injection on `session`: the newest
-    /// completion that arrived after its current turn started, consuming it.
+    /// terminal completion that arrived after its current turn started,
+    /// consuming it. A pending repeat-cap pause is not a completion: it stays
+    /// queued for the turn its wake starts.
     pub fn take_injection_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
-        while let Some(workflow_id) = self.wake_labels.get_mut(session)?.pop_back() {
-            if let Some(label) = self.wake_label(&workflow_id) {
+        let queue = self.wake_labels.get_mut(session)?;
+        while let Some(index) = queue
+            .iter()
+            .rposition(|cause| matches!(cause, WakeCause::Ended(_)))
+        {
+            if let Some(WakeCause::Ended(workflow_id)) = queue.remove(index)
+                && let Some(label) = wake_label(&self.runs, &workflow_id)
+            {
                 return Some(label);
             }
         }
         None
-    }
-
-    fn wake_label(&self, workflow_id: &WorkflowId) -> Option<WakeLabel> {
-        let Some(run) = self.runs.get(workflow_id) else {
-            tracing::debug!(workflow_id = %workflow_id, "wake label for an untracked run skipped");
-            return None;
-        };
-        label_for_run(workflow_id, run)
     }
 
     fn preserve_event_only(&self, workflow_id: &WorkflowId, incoming: &mut WorkflowRun) {
@@ -1054,6 +1158,7 @@ fn canonicalize_snapshot(
         parent_session_id,
         workspace_path,
         run_label,
+        pause,
     } = snapshot.into_parts();
     let root_path = WorkflowNodePath::try_new(&workflow_id, vec![workflow_id.as_str().to_owned()])
         .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
@@ -1120,6 +1225,7 @@ fn canonicalize_snapshot(
             parent_session_id,
             workspace_path,
             run_label,
+            pause,
             opening_plan: None,
             snapshot_plan: Some(snapshot_plan),
             pending_steps: None,
@@ -1129,6 +1235,19 @@ fn canonicalize_snapshot(
             node_index,
         },
     ))
+}
+
+/// The label of a tracked run, by [`label_for_run`]; `None` (debug-logged)
+/// for a run the tracker no longer knows.
+fn wake_label(
+    runs: &HashMap<WorkflowId, WorkflowRun>,
+    workflow_id: &WorkflowId,
+) -> Option<WakeLabel> {
+    let Some(run) = runs.get(workflow_id) else {
+        tracing::debug!(workflow_id = %workflow_id, "wake label for an untracked run skipped");
+        return None;
+    };
+    label_for_run(workflow_id, run)
 }
 
 /// Names a completed run for an agent-initiated turn (cyril-lki9 C13) by
@@ -1165,6 +1284,7 @@ fn sparse_opening_run(
         parent_session_id,
         workspace_path: None,
         run_label: None,
+        pause: None,
         opening_plan: Some(opening_plan),
         snapshot_plan: None,
         nodes: HashMap::new(),
@@ -1274,13 +1394,13 @@ mod tests {
 
     use super::*;
     use crate::types::{
-        SessionId, WorkflowCompletionStatus, WorkflowLoopIteration, WorkflowNodeCompleted,
-        WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodePath,
-        WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails, WorkflowNodeStarted,
-        WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused, WorkflowQueueOutcome,
-        WorkflowRepeatExhaustion, WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus,
-        WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued,
-        WorkflowWatchPoll,
+        AgentInitiation, SessionId, WorkflowCompletionStatus, WorkflowLoopIteration,
+        WorkflowNodeCompleted, WorkflowNodeCompletionDetails, WorkflowNodeDescriptor,
+        WorkflowNodePath, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
+        WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
+        WorkflowQueueOutcome, WorkflowRepeatCap, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+        WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot,
+        WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchPoll,
     };
 
     fn workflow_id(value: &str) -> WorkflowId {
@@ -1416,6 +1536,7 @@ mod tests {
                 parent_session_id: None,
                 workspace_path: None,
                 run_label: None,
+                pause: None,
                 opening_plan: None,
                 snapshot_plan: None,
                 pending_steps: None,
@@ -4193,6 +4314,203 @@ mod tests {
         assert_eq!(
             named(tracker.take_wake_label(&other)),
             Some(("recipe-C".into(), WorkflowRunStatus::Completed))
+        );
+    }
+
+    /// A paused completion parented to `parent` that carries KAS's repeat-cap
+    /// pause (cyril-6lql): the snapshot of a 0.66.43 `run_complete` whose
+    /// repeat `repeat` hit `onMaxIterations: "pause"` after `max` iterations.
+    fn repeat_cap_completion(
+        id: &str,
+        marker: &str,
+        parent: Option<&str>,
+        repeat: &str,
+        max: u32,
+    ) -> WorkflowEvent {
+        let parts = snapshot_with_status(id, WorkflowRunStatus::Paused, marker).into_parts();
+        let mut metadata =
+            WorkflowSnapshotMetadata::new(format!("created-{marker}"), 1).with_pause(
+                WorkflowRunPause::RepeatCap(WorkflowRepeatCap::new(node_id(repeat), max, max)),
+            );
+        if let Some(parent) = parent {
+            metadata = metadata.with_parent_session_id(SessionId::new(parent));
+        }
+        completion(WorkflowSnapshot::new(
+            parts.workflow_id,
+            parts.workflow_name,
+            parts.status,
+            WorkflowSnapshotData::new(parts.inputs, parts.artifacts, parts.captured_outputs),
+            parts.root,
+            metadata,
+        ))
+    }
+
+    fn initiation(reason: Option<&str>, workflow_completion: bool) -> AgentInitiation {
+        AgentInitiation::new(reason.map(str::to_owned), workflow_completion)
+    }
+
+    /// (run name, status, repeat node and its iteration cap) — everything a
+    /// wake header can show.
+    type LabelView = (String, WorkflowRunStatus, Option<(String, u32)>);
+
+    fn label_view(label: Option<WakeLabel>) -> Option<LabelView> {
+        label.map(|l| {
+            (
+                l.name().to_owned(),
+                l.status(),
+                l.repeat_cap()
+                    .map(|cap| (cap.node_id().as_str().to_owned(), cap.max_iterations())),
+            )
+        })
+    }
+
+    fn paused_view(name: &str, repeat: &str, max: u32) -> Option<LabelView> {
+        Some((
+            name.to_owned(),
+            WorkflowRunStatus::Paused,
+            Some((repeat.to_owned(), max)),
+        ))
+    }
+
+    fn apply_ok(tracker: &mut WorkflowTracker, event: WorkflowEvent) -> bool {
+        tracker
+            .apply_event(event)
+            .unwrap_or_else(|err| panic!("fixture rejected: {err}"))
+    }
+
+    /// cyril-6lql: KAS 0.66.43 wakes the parent right after a repeat-cap
+    /// `paused` run_complete with a NON-completion wake (`send-message-wake`).
+    /// The turn that starts next claims the pause; any non-completion wake
+    /// names the run AND the repeat, a workflow-completion wake never does
+    /// (it names terminal runs only — cyril-lki9 unchanged).
+    #[rstest::rstest]
+    #[case::send_message_wake_names_run_and_repeat(
+        initiation(Some("send-message-wake"), false),
+        paused_view("recipe-L", "loop", 1)
+    )]
+    #[case::reasonless_wake_names_run_and_repeat(
+        initiation(None, false),
+        paused_view("recipe-L", "loop", 1)
+    )]
+    #[case::completion_wake_never_names_a_pause(
+        initiation(Some("workflow-complete-wake"), true),
+        None
+    )]
+    fn repeat_cap_pause_labels_the_next_wake(
+        #[case] origin: AgentInitiation,
+        #[case] want: Option<LabelView>,
+    ) {
+        let s = SessionId::new("s");
+        let mut tracker = WorkflowTracker::new();
+        seed(&mut tracker, "l", "seeded");
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 1)
+        ));
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &origin)),
+            None,
+            "nothing is named before a turn claims it"
+        );
+        tracker.claim_wake_labels(&s);
+        assert_eq!(label_view(tracker.take_turn_label(&s, &origin)), want);
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &origin)),
+            None,
+            "the claim is consumed"
+        );
+    }
+
+    /// cyril-6lql negative space: only a STRUCTURED repeat-cap pause queues a
+    /// label. A paused run without one (an operator pause, a step waiting on
+    /// the user, a network give-up — cyril-pd4b's lane), another parent's
+    /// pause and a parentless pause name nothing; an exact duplicate pause is
+    /// absorbed, so one pause names one wake.
+    #[test]
+    fn only_a_structured_repeat_cap_pause_queues_a_label() {
+        let s = SessionId::new("s");
+        let wake = initiation(Some("send-message-wake"), false);
+        let mut tracker = WorkflowTracker::new();
+        for id in ["p", "q", "r"] {
+            seed(&mut tracker, id, "seeded");
+        }
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("p", WorkflowRunStatus::Paused, "P", "s", None)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("q", "Q", Some("other"), "loop", 2)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("r", "R", None, "loop", 1)
+        ));
+        tracker.claim_wake_labels(&s);
+        assert_eq!(label_view(tracker.take_turn_label(&s, &wake)), None);
+
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("p", "P", Some("s"), "loop", 1)
+        ));
+        assert!(
+            !apply_ok(
+                &mut tracker,
+                repeat_cap_completion("p", "P", Some("s"), "loop", 1)
+            ),
+            "exact duplicate absorbed"
+        );
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &wake)),
+            paused_view("recipe-P", "loop", 1)
+        );
+        tracker.claim_wake_labels(&s);
+        assert_eq!(label_view(tracker.take_turn_label(&s, &wake)), None);
+    }
+
+    /// cyril-6lql: a repeat-cap cause and lki9's terminal completions share
+    /// the queue without stealing each other's turn. A `notify-wf` injection
+    /// names the terminal run past a newer pause and leaves the pause for the
+    /// next turn; a non-completion wake takes only the pause; a completion
+    /// wake in the same claim still names its terminal run.
+    #[test]
+    fn repeat_cap_and_completion_causes_do_not_cross() {
+        let s = SessionId::new("s");
+        let wake = initiation(Some("send-message-wake"), false);
+        let complete = initiation(Some("workflow-complete-wake"), true);
+        let mut tracker = WorkflowTracker::new();
+        for id in ["a", "b", "l"] {
+            seed(&mut tracker, id, "seeded");
+        }
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 3)
+        ));
+        assert_eq!(
+            label_view(tracker.take_injection_label(&s)),
+            Some(("recipe-A".to_owned(), WorkflowRunStatus::Completed, None)),
+            "the injection names the terminal run, past the newer pause"
+        );
+        assert_eq!(label_view(tracker.take_injection_label(&s)), None);
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("b", WorkflowRunStatus::Failed, "B", "s", None)
+        ));
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &wake)),
+            paused_view("recipe-L", "loop", 3),
+            "the pause survived the injection and names the wake"
+        );
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &complete)),
+            Some(("recipe-B".to_owned(), WorkflowRunStatus::Failed, None)),
+            "the same claim still names its terminal run for a completion wake"
         );
     }
 }

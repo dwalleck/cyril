@@ -1,0 +1,51 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.07s
+     Running unittests src/lib.rs (target/debug/deps/cyril_core-c7474150056cb81f)
+
+running 5 tests
+test workflow::tests::repeat_cap_pause_labels_the_next_wake::case_3_completion_wake_never_names_a_pause ... ok
+test workflow::tests::repeat_cap_and_completion_causes_do_not_cross ... FAILED
+test workflow::tests::only_a_structured_repeat_cap_pause_queues_a_label ... FAILED
+test workflow::tests::repeat_cap_pause_labels_the_next_wake::case_1_send_message_wake_names_run_and_repeat ... FAILED
+test workflow::tests::repeat_cap_pause_labels_the_next_wake::case_2_reasonless_wake_names_run_and_repeat ... FAILED
+
+failures:
+
+---- workflow::tests::repeat_cap_and_completion_causes_do_not_cross stdout ----
+
+thread 'workflow::tests::repeat_cap_and_completion_causes_do_not_cross' (2465751) panicked at crates/cyril-core/src/workflow.rs:4411:9:
+assertion `left == right` failed: the pause survived the injection and names the wake
+  left: None
+ right: Some(("recipe-L", Paused, Some(("loop", 3))))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- workflow::tests::only_a_structured_repeat_cap_pause_queues_a_label stdout ----
+
+thread 'workflow::tests::only_a_structured_repeat_cap_pause_queues_a_label' (2465750) panicked at crates/cyril-core/src/workflow.rs:4370:9:
+assertion `left == right` failed
+  left: None
+ right: Some(("recipe-P", Paused, Some(("loop", 1))))
+
+---- workflow::tests::repeat_cap_pause_labels_the_next_wake::case_1_send_message_wake_names_run_and_repeat stdout ----
+
+thread 'workflow::tests::repeat_cap_pause_labels_the_next_wake::case_1_send_message_wake_names_run_and_repeat' (2465752) panicked at crates/cyril-core/src/workflow.rs:4322:9:
+assertion `left == right` failed
+  left: None
+ right: Some(("recipe-L", Paused, Some(("loop", 1))))
+
+---- workflow::tests::repeat_cap_pause_labels_the_next_wake::case_2_reasonless_wake_names_run_and_repeat stdout ----
+
+thread 'workflow::tests::repeat_cap_pause_labels_the_next_wake::case_2_reasonless_wake_names_run_and_repeat' (2465753) panicked at crates/cyril-core/src/workflow.rs:4322:9:
+assertion `left == right` failed
+  left: None
+ right: Some(("recipe-L", Paused, Some(("loop", 1))))
+
+
+failures:
+    workflow::tests::only_a_structured_repeat_cap_pause_queues_a_label
+    workflow::tests::repeat_cap_and_completion_causes_do_not_cross
+    workflow::tests::repeat_cap_pause_labels_the_next_wake::case_1_send_message_wake_names_run_and_repeat
+    workflow::tests::repeat_cap_pause_labels_the_next_wake::case_2_reasonless_wake_names_run_and_repeat
+
+test result: FAILED. 1 passed; 4 failed; 0 ignored; 0 measured; 1299 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-core --lib`

@@ -94,9 +94,10 @@ pub use workflow::{
     WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
     WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
     WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
-    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
-    WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
-    WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatCap, WorkflowRepeatExhaustion,
+    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
+    WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued,
+    WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 pub use workflow_command::{
     WorkflowCommandOutcome, WorkflowFetchVerb, WorkflowInputError, WorkflowOp, WorkflowRecipe,

@@ -791,6 +791,51 @@ impl WorkflowSnapshotData {
     }
 }
 
+/// The engine's structured reason a run paused (KAS `finalState.pause`,
+/// 0.66.43+; cyril-6lql). Absent for pauses the engine explains only in prose
+/// (`pauseReason`): an operator pause, a step waiting on the user, a network
+/// give-up.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum WorkflowRunPause {
+    /// A repeat node reached its iteration cap with `onMaxIterations: "pause"`
+    /// (KAS `kind: "maxIterations"`). KAS wakes the parent session for it.
+    RepeatCap(WorkflowRepeatCap),
+}
+
+/// A repeat node that paused its run at its iteration cap (cyril-6lql).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowRepeatCap {
+    node_id: WorkflowNodeId,
+    max_iterations: u32,
+    iterations_run: u32,
+}
+
+impl WorkflowRepeatCap {
+    /// Constructs a repeat-cap pause.
+    pub fn new(node_id: WorkflowNodeId, max_iterations: u32, iterations_run: u32) -> Self {
+        Self {
+            node_id,
+            max_iterations,
+            iterations_run,
+        }
+    }
+
+    /// The repeat node that reached its cap.
+    pub fn node_id(&self) -> &WorkflowNodeId {
+        &self.node_id
+    }
+
+    /// The repeat's iteration budget when it paused.
+    pub fn max_iterations(&self) -> u32 {
+        self.max_iterations
+    }
+
+    /// How many iterations the repeat ran before pausing.
+    pub fn iterations_run(&self) -> u32 {
+        self.iterations_run
+    }
+}
+
 /// Persisted metadata carried by a full workflow snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowSnapshotMetadata {
@@ -799,6 +844,7 @@ pub struct WorkflowSnapshotMetadata {
     parent_session_id: Option<SessionId>,
     workspace_path: Option<String>,
     run_label: Option<String>,
+    pause: Option<WorkflowRunPause>,
 }
 
 impl WorkflowSnapshotMetadata {
@@ -810,7 +856,20 @@ impl WorkflowSnapshotMetadata {
             parent_session_id: None,
             workspace_path: None,
             run_label: None,
+            pause: None,
         }
+    }
+
+    /// Sets the run's structured pause reason (KAS `finalState.pause`,
+    /// cyril-6lql).
+    pub fn with_pause(mut self, pause: WorkflowRunPause) -> Self {
+        self.pause = Some(pause);
+        self
+    }
+
+    /// Returns the structured pause reason when supplied.
+    pub fn pause(&self) -> Option<&WorkflowRunPause> {
+        self.pause.as_ref()
     }
 
     /// Sets the run's label (KAS `finalState.runLabel`, cyril-lki9): the name
@@ -875,6 +934,7 @@ pub(crate) struct WorkflowSnapshotParts {
     pub(crate) parent_session_id: Option<SessionId>,
     pub(crate) workspace_path: Option<String>,
     pub(crate) run_label: Option<String>,
+    pub(crate) pause: Option<WorkflowRunPause>,
 }
 
 impl WorkflowSnapshot {
@@ -957,6 +1017,11 @@ impl WorkflowSnapshot {
         self.metadata.run_label()
     }
 
+    /// Returns the structured pause reason when supplied (cyril-6lql).
+    pub fn pause(&self) -> Option<&WorkflowRunPause> {
+        self.metadata.pause()
+    }
+
     /// Moves every field into the workflow state canonicalizer.
     pub(crate) fn into_parts(self) -> WorkflowSnapshotParts {
         WorkflowSnapshotParts {
@@ -972,6 +1037,7 @@ impl WorkflowSnapshot {
             parent_session_id: self.metadata.parent_session_id,
             workspace_path: self.metadata.workspace_path,
             run_label: self.metadata.run_label,
+            pause: self.metadata.pause,
         }
     }
 }
