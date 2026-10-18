@@ -29,3 +29,7 @@ No token-touching kiro-cli command was run.
 | s2 control: write `notes/n.txt` (outside the folder) | **asks** (denied) — the grant is not blanket | `live-after-s2-control-outside-folder-asks.txt` |
 
 KAS log for the after HOME: 3 `acp-peer.request_permission.ok` in total — s1 shell, s1 write, s2 control.
+
+Applicability: the live binary was 50dcc3b3. 0a302b9d (review repairs) changes only the scope page opening scope
+(last scope instead of always session) and trims whitespace-only consent strings; neither changes the grant or echo
+for the inputs above. Covered by the unit/contract tests in receipts/gate.txt.

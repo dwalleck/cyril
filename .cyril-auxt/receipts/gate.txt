@@ -1,0 +1,22 @@
+gate @ 0a302b9d (dirty: 0 paths) 2026-10-18T20:12:32Z
+fmt-OK
+clippy-all-OK
+test-all-OK
+  [test-all]      Summary [   6.478s] 2448 tests run: 2448 passed, 13 skipped
+doc-all-OK
+  [doc-all] test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  [doc-all] test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+clippy-kas-OK
+test-kas-OK
+  [test-kas]      Summary [   5.778s] 1544 tests run: 1544 passed, 10 skipped
+clippy-default-OK
+test-default-OK
+  [test-default]      Summary [   6.556s] 2441 tests run: 2441 passed, 13 skipped
+clippy-core-nodef-OK
+test-core-nodef-OK
+  [test-core-nodef]      Summary [   5.187s] 933 tests run: 933 passed, 4 skipped
+gate-done
+
+Earlier run on the slice-2 working tree (base 17fb84de): test-default hit the known flake cyril-peaq
+(cyril-workbench reviewer::runtime_drop_retains_evidence_until_core_completion); 3 isolated reruns passed and a
+full lane rerun passed 2438/2438. Not seen in this run.
