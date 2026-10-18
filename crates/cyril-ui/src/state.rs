@@ -1756,6 +1756,7 @@ impl UiState {
             can_reject_with_reason: request.can_reject_with_reason,
             phase: ApprovalPhase::SelectOption,
             responder: request.responder,
+            consent: request.consent,
         });
     }
 
@@ -2257,7 +2258,10 @@ impl UiState {
     pub fn approval_select_prev(&mut self) {
         if let Some(approval) = self.approvals.front_mut()
             && approval.selected > 0
-            && !matches!(approval.phase, ApprovalPhase::EnterReason { .. })
+            && !matches!(
+                approval.phase,
+                ApprovalPhase::EnterReason { .. } | ApprovalPhase::EnterFolder { .. }
+            )
         {
             approval.selected -= 1;
         }
@@ -2269,7 +2273,8 @@ impl UiState {
             let max = match approval.phase {
                 ApprovalPhase::SelectOption => approval.options.len(),
                 ApprovalPhase::SelectTrust { .. } => approval.trust_options.len(),
-                ApprovalPhase::EnterReason { .. } => return,
+                ApprovalPhase::SelectScope { .. } => approval.scope_choices().len(),
+                ApprovalPhase::EnterReason { .. } | ApprovalPhase::EnterFolder { .. } => return,
             };
             if approval.selected + 1 < max {
                 approval.selected += 1;
@@ -2428,6 +2433,24 @@ impl UiState {
                         approval.selected = 0;
                         self.approvals.push_front(approval);
                     }
+                    Some((PermissionOptionKind::AllowAlways, chosen_option_id))
+                        if approval.consent.is_some() =>
+                    {
+                        // KAS (cyril-auxt): Always allow persists only from
+                        // the consent echo, so the operator chooses its scope
+                        // and resource first, as in Kiro's TUI.
+                        let owned = cyril_core::always_allow::is_main_session_request(
+                            &approval.session_id,
+                            self.main_session_id.as_ref(),
+                        );
+                        approval.phase = ApprovalPhase::SelectScope {
+                            chosen_option_id,
+                            scope: cyril_core::always_allow::GrantScope::Session,
+                            owned,
+                        };
+                        approval.selected = 0;
+                        self.approvals.push_front(approval);
+                    }
                     Some((_, option_id)) => {
                         // The reply names the exact picked option — KAS
                         // user_input questions share one kind across all
@@ -2479,6 +2502,105 @@ impl UiState {
                 Self::approval_submit_feedback(approval.responder, chosen_option_id, editor);
                 None
             }
+            ApprovalPhase::SelectScope {
+                ref chosen_option_id,
+                scope,
+                owned,
+            } => {
+                let chosen_option_id = chosen_option_id.clone();
+                let choice = approval.scope_choices().into_iter().nth(approval.selected);
+                match choice {
+                    Some(cyril_core::always_allow::ScopeChoice::Folder(offer)) => {
+                        let editor = RejectionFeedback::with_text(offer.prefill());
+                        approval.phase = ApprovalPhase::EnterFolder {
+                            chosen_option_id,
+                            scope,
+                            offer,
+                            editor,
+                            attempted: false,
+                        };
+                        self.approvals.push_front(approval);
+                    }
+                    Some(choice) => match choice.resource() {
+                        Some(resource) => Self::approval_send_grant(
+                            approval,
+                            chosen_option_id,
+                            owned,
+                            cyril_core::always_allow::AlwaysAllowGrant::new(scope, resource),
+                        ),
+                        None => {
+                            tracing::warn!("scope row grants no resource; staying on the page");
+                            self.approvals.push_front(approval);
+                        }
+                    },
+                    None => {
+                        tracing::warn!("scope selection out of bounds; staying on the page");
+                        self.approvals.push_front(approval);
+                    }
+                }
+                None
+            }
+            ApprovalPhase::EnterFolder {
+                ref chosen_option_id,
+                scope,
+                ref offer,
+                ref editor,
+                ..
+            } => {
+                match offer.validate(editor.text()) {
+                    Ok(folder) => {
+                        let chosen_option_id = chosen_option_id.clone();
+                        // Only a main-session request is offered a folder
+                        // (`FolderOffer::for_consent`), so the grant is owned.
+                        Self::approval_send_grant(
+                            approval,
+                            chosen_option_id,
+                            true,
+                            cyril_core::always_allow::AlwaysAllowGrant::new(
+                                scope,
+                                cyril_core::always_allow::GrantResource::Folder(folder),
+                            ),
+                        );
+                    }
+                    Err(reason) => {
+                        tracing::debug!(%reason, "folder grant refused; editor stays open");
+                        if let ApprovalPhase::EnterFolder { attempted, .. } = &mut approval.phase {
+                            *attempted = true;
+                        }
+                        self.approvals.push_front(approval);
+                    }
+                }
+                None
+            }
+        }
+    }
+
+    /// Answer `approval` with an "Always allow" grant, resolved the way Kiro's
+    /// TUI resolves it for the request's session.
+    fn approval_send_grant(
+        approval: ApprovalState,
+        chosen_option_id: PermissionOptionId,
+        owned: bool,
+        grant: cyril_core::always_allow::AlwaysAllowGrant,
+    ) {
+        let response = match &approval.consent {
+            Some(consent) => cyril_core::always_allow::resolve(
+                consent,
+                owned,
+                &approval.options,
+                chosen_option_id,
+                grant,
+            ),
+            None => {
+                tracing::warn!("always-allow grant without KAS consent; sending the plain pick");
+                PermissionResponse::Selected {
+                    option_id: chosen_option_id,
+                    trust_option: None,
+                }
+            }
+        };
+        if approval.responder.send(response).is_err() {
+            tracing::debug!("approval response dropped — agent receiver no longer listening");
         }
     }
 
@@ -2504,6 +2626,44 @@ impl UiState {
             approval.selected = restored;
             return;
         }
+        if let Some(approval) = self.approvals.front_mut() {
+            match &approval.phase {
+                ApprovalPhase::SelectScope {
+                    chosen_option_id, ..
+                } => {
+                    // Back to the options, on the Always-allow pick.
+                    let restored = approval
+                        .options
+                        .iter()
+                        .position(|o| o.id == *chosen_option_id)
+                        .unwrap_or(0);
+                    approval.phase = ApprovalPhase::SelectOption;
+                    approval.selected = restored;
+                    return;
+                }
+                ApprovalPhase::EnterFolder {
+                    chosen_option_id,
+                    scope,
+                    ..
+                } => {
+                    // Back to the scope page, on the folder row.
+                    approval.phase = ApprovalPhase::SelectScope {
+                        chosen_option_id: chosen_option_id.clone(),
+                        scope: *scope,
+                        owned: true,
+                    };
+                    approval.selected = approval
+                        .scope_choices()
+                        .iter()
+                        .position(|choice| {
+                            matches!(choice, cyril_core::always_allow::ScopeChoice::Folder(_))
+                        })
+                        .unwrap_or(0);
+                    return;
+                }
+                _ => {}
+            }
+        }
         if let Some(approval) = self.approvals.pop_front() {
             // Same rationale as approval_confirm: a dropped receiver means the
             // request was already cancelled upstream; log at debug level.
@@ -2511,6 +2671,71 @@ impl UiState {
                 tracing::debug!("approval cancel dropped — agent receiver no longer listening");
             }
         }
+    }
+
+    /// `s` on the scope page: session → workspace → user → session. The
+    /// highlighted row stays highlighted when it is still offered; a folder
+    /// row's label names its scope, so it falls back to the first row, as in
+    /// Kiro's TUI.
+    pub fn approval_cycle_scope(&mut self) {
+        let Some(approval) = self.approvals.front_mut() else {
+            return;
+        };
+        let ApprovalPhase::SelectScope { scope, .. } = approval.phase else {
+            return;
+        };
+        let highlighted = approval.scope_choices().into_iter().nth(approval.selected);
+        if let ApprovalPhase::SelectScope { scope: current, .. } = &mut approval.phase {
+            *current = scope.next();
+        }
+        approval.selected = match highlighted {
+            Some(cyril_core::always_allow::ScopeChoice::Folder(_)) | None => 0,
+            Some(row) => approval
+                .scope_choices()
+                .iter()
+                .position(|choice| *choice == row)
+                .unwrap_or(0),
+        };
+    }
+
+    /// Whether the front approval's folder editor owns the keyboard.
+    pub fn approval_folder_active(&self) -> bool {
+        matches!(
+            self.approvals.front().map(|approval| &approval.phase),
+            Some(ApprovalPhase::EnterFolder { .. })
+        )
+    }
+
+    /// Forward one key to the folder editor: Enter grants the folder when it
+    /// is valid, Esc returns to the scope page, anything else edits.
+    pub fn approval_folder_key(&mut self, key: KeyEvent) -> bool {
+        let action = {
+            let Some(approval) = self.approvals.front_mut() else {
+                return false;
+            };
+            let ApprovalPhase::EnterFolder { editor, .. } = &mut approval.phase else {
+                return false;
+            };
+            editor.handle_key(key)
+        };
+        match action {
+            FeedbackAction::Consumed => {}
+            FeedbackAction::Submit => drop(self.approval_confirm()),
+            FeedbackAction::Cancel => self.approval_cancel(),
+        }
+        true
+    }
+
+    /// Insert a bracketed paste into the folder editor only.
+    pub fn approval_folder_paste(&mut self, text: &str) -> bool {
+        let Some(approval) = self.approvals.front_mut() else {
+            return false;
+        };
+        let ApprovalPhase::EnterFolder { editor, .. } = &mut approval.phase else {
+            return false;
+        };
+        editor.insert_text(text);
+        true
     }
 
     // --- Picker dialog methods ---

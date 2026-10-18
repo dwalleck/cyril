@@ -863,6 +863,7 @@ mod tests {
             can_reject_with_reason: false,
             phase: crate::traits::ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
+            consent: None,
         }
     }
 

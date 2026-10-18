@@ -516,6 +516,26 @@ pub enum ApprovalPhase {
         chosen_option_id: cyril_core::types::PermissionOptionId,
         editor: RejectionFeedback,
     },
+    /// KAS "Always allow" (cyril-auxt): choose the grant's scope and resource,
+    /// as Kiro's TUI does. Shown after an AllowAlways pick on a request that
+    /// carries KAS consent and no V2 trust tiers. `selected` indexes
+    /// [`ApprovalState::scope_choices`]; `owned` records whether the request
+    /// belonged to the main session when the page opened.
+    SelectScope {
+        chosen_option_id: cyril_core::types::PermissionOptionId,
+        scope: cyril_core::always_allow::GrantScope,
+        owned: bool,
+    },
+    /// KAS "Always allow" folder grant: type the folder. The editor starts
+    /// with the offer's prefill; `attempted` is set once Enter was pressed on
+    /// an invalid folder, so the reason renders as an error from then on.
+    EnterFolder {
+        chosen_option_id: cyril_core::types::PermissionOptionId,
+        scope: cyril_core::always_allow::GrantScope,
+        offer: cyril_core::always_allow::FolderOffer,
+        editor: RejectionFeedback,
+        attempted: bool,
+    },
 }
 /// User-facing label for an approval's exact wire-origin session id.
 ///
@@ -562,9 +582,23 @@ pub struct ApprovalState {
     pub can_reject_with_reason: bool,
     pub phase: ApprovalPhase,
     pub responder: tokio::sync::oneshot::Sender<cyril_core::types::PermissionResponse>,
+    /// The request's KAS consent (`_meta.kiro`), when the agent sent one.
+    /// Its presence routes an AllowAlways pick to the scope page.
+    pub consent: Option<cyril_core::review::consent::PermissionConsent>,
 }
 
 impl ApprovalState {
+    /// The scope page's rows for the current phase; empty outside
+    /// [`ApprovalPhase::SelectScope`].
+    pub fn scope_choices(&self) -> Vec<cyril_core::always_allow::ScopeChoice> {
+        match (&self.phase, &self.consent) {
+            (ApprovalPhase::SelectScope { scope, owned, .. }, Some(consent)) => {
+                cyril_core::always_allow::scope_choices(consent, *scope, *owned)
+            }
+            _ => Vec::new(),
+        }
+    }
+
     /// Shared eligibility predicate for the hint, key entry, and state
     /// transition. A feedback phase can only be entered for the selected
     /// reject_once option of a capable request.
