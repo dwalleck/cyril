@@ -89,7 +89,7 @@ impl<'a> Preview<'a> {
         // Borders take two columns. A popup too narrow to show any path
         // column still lays the path out one column per row; ratatui clips it.
         let path_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + PATH_INDENT.len())
+            .saturating_sub(2 + PATH_INDENT.width())
             .max(1);
         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
         Self {
@@ -127,6 +127,10 @@ impl<'a> Preview<'a> {
 /// never splits: a wide glyph that would straddle the edge starts the next
 /// row, matching how ratatui draws it (the glyph plus a blank continuation
 /// cell).
+///
+/// A character with no display width (a control character) counts as zero
+/// columns, as ratatui draws nothing for it; that is its width, not a
+/// fallback for an error.
 fn wrap_columns(text: &str, width: usize) -> Vec<String> {
     let mut rows = Vec::new();
     let mut row = String::new();
@@ -352,23 +356,25 @@ fn render_option_phase(
     // the selection). Preview rows are dropped first under clamping: the
     // dialog must stay actionable even when the preview cannot fit.
     let inner = usize::from(popup_area.height.saturating_sub(2));
-    let (show_message, show_blank, preview_rows, mut option_rows) = match inner {
-        0 => (false, false, 0, 0),
-        1 => (false, false, 0, 1),
-        2 => (true, false, 0, 1),
-        3 => (true, true, 0, 1),
+    let (show_message, show_blank, preview_rows, show_separator, mut option_rows) = match inner {
+        0 => (false, false, 0, false, 0),
+        1 => (false, false, 0, false, 1),
+        2 => (true, false, 0, false, 1),
+        3 => (true, true, 0, false, 1),
         n => {
             let remaining = n - 2; // message + blank accounted
-            // A shown preview is followed by a blank separator; both must
-            // leave the option row (cyril-rcub: the unbudgeted separator
-            // used to push the selection out of a clamped popup).
-            let preview_rows = preview.len().min(remaining.saturating_sub(2));
-            let separator = usize::from(preview_rows > 0);
+            // The preview leaves one option row. Its blank separator is
+            // cosmetic, so it is counted in the budget (cyril-rcub: left
+            // uncounted it pushed the selection out of a clamped popup) and
+            // shown only when a row is spare; it never costs a path row.
+            let preview_rows = preview.len().min(remaining - 1);
+            let show_separator = preview_rows > 0 && remaining - preview_rows >= 2;
             (
                 true,
                 true,
                 preview_rows,
-                remaining - preview_rows - separator,
+                show_separator,
+                remaining - preview_rows - usize::from(show_separator),
             )
         }
     };
@@ -388,7 +394,7 @@ fn render_option_phase(
         lines.push(Line::default());
     }
     lines.extend(preview.into_lines(preview_rows, theme));
-    if preview_rows > 0 {
+    if show_separator {
         lines.push(Line::default());
     }
 
@@ -1120,9 +1126,10 @@ mod tests {
         #[case] name: &str,
         #[case] width: u16,
     ) {
-        // input_top=8 → region rows 1-7 → popup h=7, inner=5: message,
-        // blank, ONE preview row, separator, ONE option row.
-        let terminal = render_at(&write_approval(path), width, 16, 8);
+        // input_top=7 → region rows 1-6 → popup h=6, inner=4: message,
+        // blank, ONE preview row, ONE option row (no spare row for the
+        // separator).
+        let terminal = render_at(&write_approval(path), width, 16, 7);
         let rows = screen_rows(&terminal);
         let screen = rows.join("\n");
         let path_row = rows
@@ -1143,15 +1150,17 @@ mod tests {
             "elision must be marked: {path_row:?}\n{screen}"
         );
         assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
-        for row in rows.iter().skip(8) {
+        for row in rows.iter().skip(7) {
             assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
         }
     }
 
     /// cyril-rcub (found by the clamped fence): the blank row after a shown
     /// preview is counted in the row budget, so the selected LAST option
-    /// stays inside a clamped popup at every clamp height.
+    /// stays inside a clamped popup at every clamp height — and the path is
+    /// not given up for the cosmetic separator (inner 4 has room for both).
     #[rstest::rstest]
+    #[case::inner_4(7)]
     #[case::inner_5(8)]
     #[case::inner_6(9)]
     #[case::inner_7(10)]
@@ -1210,8 +1219,8 @@ mod tests {
     #[rstest::rstest]
     #[case::roomy_80x24("rcub_write_path_roomy_80x24", 80, 24, 24)]
     #[case::roomy_narrow_40x24("rcub_write_path_roomy_40x24", 40, 24, 24)]
-    #[case::clamped_80x16("rcub_write_path_clamped_80x16", 80, 16, 8)]
-    #[case::clamped_narrow_44x16("rcub_write_path_clamped_44x16", 44, 16, 8)]
+    #[case::clamped_80x16("rcub_write_path_clamped_80x16", 80, 16, 7)]
+    #[case::clamped_narrow_44x16("rcub_write_path_clamped_44x16", 44, 16, 7)]
     fn long_write_path_snapshots(
         #[case] name: &str,
         #[case] width: u16,

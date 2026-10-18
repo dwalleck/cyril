@@ -7,6 +7,5 @@ expression: "screen_rows(&terminal).join(\"\\n\")"
   │Write File                            │  
   │                                      │  
   │  /hom…/S4b-write-outside-approval.txt│  
-  │                                      │  
   │▸ Allow                               │  
   └──────────────────────────────────────┘
