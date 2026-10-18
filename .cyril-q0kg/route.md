@@ -43,4 +43,20 @@ none — red fence first, minimal fix, fence stays as the regression fence.
 
 ## Results
 
-See `receipts/red.md` and `receipts/gate.md`.
+- Red: PASS as a red — `receipts/red.md` (6 warnings across 6 frames on the
+  base revision).
+- Green: the fence and the whole cyril-ui suite pass on the fix head.
+- Gate: every ci.yml lane passes on `7962f526` — `receipts/gate.md` (one
+  known-flake hit, cyril-xy4x, rerun green in isolation).
+- Independent review (rust-code-reviewer subagent, read-only, on `670e03a8`):
+  no blocking or should-fix findings. Nits and dispositions:
+  1. Shape field lost Display formatting → fixed in `7962f526`
+     (`raw_input_shape = %raw_input_shape`, log text unchanged from before).
+  2. "Tool call not mutated after install" holds by convention (pub field) →
+     not changed; a violation could only cost a log line, never a wrong
+     preview, because the renderer re-classifies every frame.
+  3. Count is once per permission request rather than per tool-call id →
+     accepted: the issue's fix direction names "when the approval is
+     installed in UiState" as the alternative, and a re-requested tool call
+     (the cyril-w55l loop) logs one line per request, bounded by requests,
+     not frames.
