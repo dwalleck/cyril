@@ -61,3 +61,40 @@ geometry from §1.
   `clamped_write_path_keeps_file_name` cases, and both clamped snapshots.
 
 After restoration, the whole cyril-ui suite passes (721 tests).
+
+## 3. Review round 2 (cross-model review of `c8571ada`)
+
+**Red.** The round-2 fences and updated cases were run against the unmodified
+`c8571ada` production code:
+`cargo nextest run -p cyril-ui --no-fail-fast -E 'test(/write_path|elide_middle|fit_path|cramped_heights|option_visible_implies|clamped_reason|clamped_preview/)'`.
+Result: 38 run, 22 passed, 16 failed.
+
+- `cramped_heights_show_path_beside_the_option`: `inner_1`, `inner_2` and
+  `inner_3` fail. At these heights the option is shown with no path.
+- `option_visible_implies_path_visible_at_every_height` fails.
+- The `elide_middle` cases that require a whole-component head fail:
+  `keeps_parent_and_name`, `name_only_when_parent_too_wide`,
+  `head_never_shows_a_partial_directory`,
+  `relative_path_with_no_whole_head_component`, `wide_glyphs`,
+  `windows_separators` and `trailing_separator`.
+- `fit_path…elides_when_rows_short` fails.
+- `clamped_write_path_keeps_file_name` fails for `ascii_80`, `ascii_narrow_44`
+  and `wide_chars_narrow_36` (partial-directory head).
+- `clamped_reason_phase_keeps_file_name_and_cursor` fails (partial-directory
+  head).
+
+**Green.** On the fix, the cyril-ui suite passes (730 tests).
+
+**Mutations against the round-2 fix.** Each was applied to a saved copy, and
+the file was restored byte-identical (`cmp`).
+
+- **R1, path priority disabled** (`OptionLayout::new(.., has_path = false)`).
+  4 of 730 failed: `cramped_heights_show_path_beside_the_option` (`inner_1`,
+  `inner_2`, `inner_3`) and `option_visible_implies_path_visible_at_every_height`.
+- **R2, head cut by column, not at a separator.** 14 of 730 failed:
+  - 7 `elide_middle` cases
+  - `fit_path…elides_when_rows_short`
+  - `clamped_write_path_keeps_file_name` for `ascii_80`, `ascii_narrow_44` and
+    `wide_chars_narrow_36`
+  - `clamped_reason_phase_keeps_file_name_and_cursor`
+  - both clamped option-page snapshots

@@ -105,6 +105,21 @@ impl<'a> Preview<'a> {
         self.path_rows.saturating_add(self.body.len())
     }
 
+    fn has_path(&self) -> bool {
+        self.path.is_some()
+    }
+
+    /// The path fitted into one run of `width` columns, for a row it shares
+    /// with an option label. `None` without a path or without a column to
+    /// show it in.
+    fn inline_path(&self, width: usize) -> Option<String> {
+        let path = self.path?;
+        if width == 0 {
+            return None;
+        }
+        Some(fit_path(path, width, 1).concat())
+    }
+
     /// The preview laid out in at most `rows` rows. The path takes rows
     /// first and is fitted to its share; the body fills whatever is left.
     fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
@@ -120,6 +135,91 @@ impl<'a> Preview<'a> {
         let body_rows = rows.saturating_sub(lines.len());
         lines.extend(self.body.into_iter().take(body_rows));
         lines
+    }
+}
+
+/// Gap between an option label and a path sharing its row.
+const INLINE_PATH_GAP: &str = "  ";
+
+/// The selection marker column of an option row.
+fn option_prefix(selected: bool) -> &'static str {
+    if selected { "▸ " } else { "  " }
+}
+
+/// Which rows the option page shows inside `inner` rows, by priority
+/// (cyril-rcub). The selection always gets a row. When the call has a path,
+/// any shown option is accompanied by the path, so nothing is approvable
+/// with its target hidden: from inner height 2 the path has its own row
+/// (ahead of the message at 2, and ahead of the cosmetic blanks at 3), and
+/// at height 1 it shares the lone option row. Calls without a path keep the
+/// message-first order. Above height 3 the message and blank return, the
+/// preview takes all but one row, and its blank separator appears only when
+/// a row is spare: the separator wins over a second option row, as the
+/// selection stays visible through `window_start`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OptionLayout {
+    message: bool,
+    blank: bool,
+    preview_rows: usize,
+    separator: bool,
+    option_rows: usize,
+    /// The path is appended to the lone option row (height 1).
+    inline_path: bool,
+}
+
+impl OptionLayout {
+    fn new(inner: usize, preview_len: usize, has_path: bool) -> Self {
+        let none = Self {
+            message: false,
+            blank: false,
+            preview_rows: 0,
+            separator: false,
+            option_rows: 0,
+            inline_path: false,
+        };
+        match inner {
+            0 => none,
+            1 => Self {
+                option_rows: 1,
+                inline_path: has_path,
+                ..none
+            },
+            2 if has_path => Self {
+                preview_rows: 1,
+                option_rows: 1,
+                ..none
+            },
+            2 => Self {
+                message: true,
+                option_rows: 1,
+                ..none
+            },
+            3 if has_path => Self {
+                message: true,
+                preview_rows: 1,
+                option_rows: 1,
+                ..none
+            },
+            3 => Self {
+                message: true,
+                blank: true,
+                option_rows: 1,
+                ..none
+            },
+            n => {
+                let remaining = n - 2; // message + blank
+                let preview_rows = preview_len.min(remaining - 1);
+                let separator = preview_rows > 0 && remaining - preview_rows >= 2;
+                Self {
+                    message: true,
+                    blank: true,
+                    preview_rows,
+                    separator,
+                    option_rows: remaining - preview_rows - usize::from(separator),
+                    inline_path: false,
+                }
+            }
+        }
     }
 }
 
@@ -202,21 +302,29 @@ fn elide_middle(path: &str, budget: usize) -> String {
         .map_or(name, |&offset| &path[offset..]);
     let tail = if parent.width() <= room { parent } else { name };
     match room.checked_sub(tail.width()) {
-        Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_columns(path, head_room)),
+        Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_components(path, head_room)),
         None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
     }
 }
 
-/// The longest prefix of `text` at most `width` display columns wide.
-fn leading_columns(text: &str, width: usize) -> &str {
+/// The longest prefix of `path` that ends just after a separator and is at
+/// most `width` display columns wide, so every directory it shows is whole:
+/// `/home/dwa…` could be `dwalleck` or `dwalleck-x`, `/home/…` cannot
+/// mislead (cyril-rcub review round 2). Empty when not even the first
+/// component fits.
+fn leading_components(path: &str, width: usize) -> &str {
     let mut used = 0usize;
-    for (offset, ch) in text.char_indices() {
+    let mut cut = 0usize;
+    for (offset, ch) in path.char_indices() {
         used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
         if used > width {
-            return &text[..offset];
+            break;
+        }
+        if PATH_SEPARATORS.contains(&ch) {
+            cut = offset + ch.len_utf8();
         }
     }
-    text
+    &path[..cut]
 }
 
 /// The longest suffix of `text` at most `width` display columns wide.
@@ -350,56 +458,50 @@ fn render_option_phase(
 
     frame.render_widget(Clear, popup_area);
 
-    // Inner rows inside the borders decide how much chrome fits: with 2+
-    // rows the message keeps its line, with 3+ the blank separator returns,
-    // then the preview, and options get the rest (always at least one row —
-    // the selection). Preview rows are dropped first under clamping: the
-    // dialog must stay actionable even when the preview cannot fit.
+    // Inner rows inside the borders decide what fits, by the priority in
+    // [`OptionLayout`]: the selection always, the path beside any option,
+    // then message, blanks, the rest of the preview and the other options.
     let inner = usize::from(popup_area.height.saturating_sub(2));
-    let (show_message, show_blank, preview_rows, show_separator, mut option_rows) = match inner {
-        0 => (false, false, 0, false, 0),
-        1 => (false, false, 0, false, 1),
-        2 => (true, false, 0, false, 1),
-        3 => (true, true, 0, false, 1),
-        n => {
-            let remaining = n - 2; // message + blank accounted
-            // The preview leaves one option row. Its blank separator is
-            // cosmetic, so it is counted in the budget (cyril-rcub: left
-            // uncounted it pushed the selection out of a clamped popup) and
-            // shown only when a row is spare; it never costs a path row.
-            let preview_rows = preview.len().min(remaining - 1);
-            let show_separator = preview_rows > 0 && remaining - preview_rows >= 2;
-            (
-                true,
-                true,
-                preview_rows,
-                show_separator,
-                remaining - preview_rows - usize::from(show_separator),
-            )
-        }
-    };
+    let layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+    let mut option_rows = layout.option_rows;
     let show_feedback_hint = show_feedback_hint && option_rows > 1;
     if show_feedback_hint {
         option_rows -= 1;
     }
 
+    let visible = state.options.len().min(option_rows);
+    let start = window_start(state.selected, state.options.len(), visible);
+    // Height 1 shows exactly one option row (the selection, via
+    // `window_start`); the path shares it after the label.
+    let inline_path = if layout.inline_path && visible == 1 {
+        state.options.get(start).and_then(|opt| {
+            let label_width = option_prefix(start == state.selected)
+                .width()
+                .saturating_add(opt.label.width())
+                .saturating_add(INLINE_PATH_GAP.width());
+            preview.inline_path(
+                usize::from(popup_area.width.saturating_sub(2)).saturating_sub(label_width),
+            )
+        })
+    } else {
+        None
+    };
+
     let mut lines: Vec<Line> = Vec::new();
-    if show_message {
+    if layout.message {
         lines.push(Line::styled(
             &state.message,
             Style::default().fg(theme.emphasis),
         ));
     }
-    if show_blank {
+    if layout.blank {
         lines.push(Line::default());
     }
-    lines.extend(preview.into_lines(preview_rows, theme));
-    if show_separator {
+    lines.extend(preview.into_lines(layout.preview_rows, theme));
+    if layout.separator {
         lines.push(Line::default());
     }
 
-    let visible = state.options.len().min(option_rows);
-    let start = window_start(state.selected, state.options.len(), visible);
     for (i, opt) in state.options.iter().enumerate().skip(start).take(visible) {
         let style = if i == state.selected {
             Style::default()
@@ -409,8 +511,22 @@ fn render_option_phase(
         } else {
             Style::default().fg(theme.text_secondary)
         };
-        let prefix = if i == state.selected { "▸ " } else { "  " };
-        lines.push(Line::styled(format!("{prefix}{}", opt.label), style));
+        let label = format!("{}{}", option_prefix(i == state.selected), opt.label);
+        match &inline_path {
+            Some(path) => lines.push(
+                Line::from(vec![
+                    Span::raw(label),
+                    Span::styled(
+                        format!("{INLINE_PATH_GAP}{path}"),
+                        Style::default()
+                            .fg(theme.text_secondary)
+                            .remove_modifier(Modifier::BOLD),
+                    ),
+                ])
+                .style(style),
+            ),
+            None => lines.push(Line::styled(label, style)),
+        }
     }
     if show_feedback_hint {
         lines.push(Line::styled(
@@ -1137,10 +1253,7 @@ mod tests {
             .filter_map(|row| popup_body(row))
             .find(|body| body.contains(name))
             .unwrap_or_else(|| panic!("file name {name} not on screen:\n{screen}"));
-        assert!(
-            path_row.starts_with("/hom"),
-            "leading context dropped: {path_row:?}\n{screen}"
-        );
+        assert_whole_component_head(path, path_row, &screen);
         assert!(
             path_row.ends_with(name),
             "file name must end the row: {path_row:?}\n{screen}"
@@ -1153,6 +1266,181 @@ mod tests {
         for row in rows.iter().skip(7) {
             assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
         }
+    }
+
+    /// The text before an elision is a whole-component prefix of `path`:
+    /// empty, or ending at a separator (review round 2).
+    fn assert_whole_component_head(path: &str, path_row: &str, screen: &str) {
+        let Some((head, _)) = path_row.split_once('…') else {
+            return; // nothing elided
+        };
+        assert!(
+            path.starts_with(head) && (head.is_empty() || head.ends_with(['/', '\\'])),
+            "head {head:?} is not a whole-component prefix of {path:?}\n{screen}"
+        );
+    }
+
+    /// Popup body rows that end with the last `columns` display columns of
+    /// `path` — evidence the path's end is on screen.
+    fn rows_ending_with_path_tail(rows: &[String], path: &str, columns: usize) -> usize {
+        let tail = trailing_columns(path, columns);
+        rows.iter()
+            .filter_map(|row| popup_body(row))
+            .filter(|body| body.ends_with(tail))
+            .count()
+    }
+
+    /// cyril-rcub review round 2 fence: at the cramped heights (inner 1-3)
+    /// an option is actionable, so the path must be on screen beside it.
+    /// Inner 3: message, path, option. Inner 2: path, option (the message is
+    /// the first chrome dropped). Inner 1: the lone option row carries the
+    /// elided path after its label.
+    #[rstest::rstest]
+    #[case::inner_1(4, false)]
+    #[case::inner_2(5, false)]
+    #[case::inner_3(6, true)]
+    fn cramped_heights_show_path_beside_the_option(
+        #[case] input_top: u16,
+        #[case] message_shown: bool,
+    ) {
+        let terminal = render_at(&write_approval(LONG_WRITE_PATH), 80, 16, input_top);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        assert!(screen.contains("▸ Allow"), "selection missing:\n{screen}");
+        assert_eq!(
+            rows_ending_with_path_tail(&rows, LONG_WRITE_PATH, LONG_WRITE_NAME.width()),
+            1,
+            "file name must end exactly one row:\n{screen}"
+        );
+        assert_eq!(
+            screen.contains("Write File"),
+            message_shown,
+            "message presence at this height:\n{screen}"
+        );
+        for row in rows.iter().skip(usize::from(input_top)) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+    }
+
+    /// cyril-rcub review round 2: the layout table at every height and
+    /// preview size. Rows never exceed `inner`; any non-empty popup shows
+    /// the selection; with a path, any shown option has the path beside it
+    /// (its own row, or inline at height 1).
+    #[test]
+    fn option_layout_never_shows_an_option_without_the_path() {
+        for inner in 0usize..=12 {
+            for preview_len in 0usize..=8 {
+                for has_path in [false, true] {
+                    if has_path && preview_len == 0 {
+                        continue; // a path always yields at least one row
+                    }
+                    let layout = OptionLayout::new(inner, preview_len, has_path);
+                    let context = format!("inner={inner} preview={preview_len} path={has_path}");
+                    let used = usize::from(layout.message)
+                        + usize::from(layout.blank)
+                        + layout.preview_rows
+                        + usize::from(layout.separator)
+                        + layout.option_rows;
+                    assert!(used <= inner, "over budget {layout:?}: {context}");
+                    assert_eq!(
+                        layout.option_rows >= 1,
+                        inner >= 1,
+                        "selection row: {context}"
+                    );
+                    assert!(
+                        layout.preview_rows <= preview_len,
+                        "invented rows: {context}"
+                    );
+                    if has_path && layout.option_rows >= 1 {
+                        assert!(
+                            layout.preview_rows >= 1 || layout.inline_path,
+                            "option without path {layout:?}: {context}"
+                        );
+                    }
+                    if !has_path {
+                        assert!(!layout.inline_path, "inline without a path: {context}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// cyril-rcub review round 2 sweep: across terminal widths and EVERY
+    /// popup height, whenever an option row is visible the path's end (at
+    /// least `…` plus the file name's last columns) is visible too; at 80
+    /// columns the whole file name is. Nothing renders at or below the input.
+    #[test]
+    fn option_visible_implies_path_visible_at_every_height() {
+        for (path, name) in [
+            (LONG_WRITE_PATH, LONG_WRITE_NAME),
+            (WIDE_WRITE_PATH, WIDE_WRITE_NAME),
+        ] {
+            for width in [24u16, 30, 36, 44, 60, 80] {
+                for input_top in 2u16..=20 {
+                    let terminal = render_at(&write_approval(path), width, 24, input_top);
+                    let rows = screen_rows(&terminal);
+                    let screen = rows.join("\n");
+                    let context = format!("path={path} width={width} input_top={input_top}");
+                    for row in rows.iter().skip(usize::from(input_top)) {
+                        assert_eq!(row.trim(), "", "bled below input: {context}\n{screen}");
+                    }
+                    if !screen.contains('▸') {
+                        continue; // no actionable row at this height
+                    }
+                    // Joined rows: a roomy popup wraps the name across rows.
+                    let tail_columns = if width >= 80 { name.width() } else { 4 };
+                    assert!(
+                        joined_body(&terminal).contains(trailing_columns(path, tail_columns)),
+                        "option visible without the path's end: {context}\n{screen}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// cyril-rcub review round 2: the clamped reject-with-reason page. At
+    /// inner 4 it holds the editor row, its label, the limit line and ONE
+    /// preview row, which carries the elided path ending in the file name.
+    #[test]
+    fn clamped_reason_phase_keeps_file_name_and_cursor() {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: ToolCall::new(
+                cyril_core::types::ToolCallId::new("tooluse_rcub"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::Pending,
+                Some(serde_json::json!({"path": LONG_WRITE_PATH, "text": "body"})),
+            ),
+            message: "Write File".into(),
+            options: vec![option("reject", "Reject")],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+        });
+        assert!(ui.approval_begin_feedback(), "feedback phase must open");
+        ui.approval_feedback_paste("not that file");
+        // input_top=7 → region rows 1-6 → popup h=6, inner=4.
+        let terminal = render_ui(&ui, 80, 16, 7);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        let path_row = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .find(|body| body.ends_with(LONG_WRITE_NAME))
+            .unwrap_or_else(|| panic!("file name not on the reason page:\n{screen}"));
+        assert!(path_row.contains('…'), "elision must be marked:\n{screen}");
+        assert_whole_component_head(LONG_WRITE_PATH, path_row, &screen);
+        assert!(
+            screen.contains("not that file█"),
+            "cursor clipped:\n{screen}"
+        );
+        for row in rows.iter().skip(7) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+        insta::assert_snapshot!("rcub_reason_phase_clamped_80x16", screen);
     }
 
     /// cyril-rcub (found by the clamped fence): the blank row after a shown
@@ -1233,24 +1521,33 @@ mod tests {
 
     #[rstest::rstest]
     #[case::fits("/tmp/a.md", 20, "/tmp/a.md")]
-    #[case::keeps_parent_and_name("/home/user/project/src/main.rs", 20, "/home/u…/src/main.rs")]
+    #[case::keeps_parent_and_name("/home/user/project/src/main.rs", 20, "/home/…/src/main.rs")]
     #[case::name_only_when_parent_too_wide(
         "/a/very-long-parent-directory/file.txt",
         16,
-        "/a/ver…/file.txt"
+        "/a/…/file.txt"
+    )]
+    // Review round 2: `/home/dwa…` could be `dwalleck` or `dwalleck-x`; the
+    // head stops at a separator so every directory shown is whole.
+    #[case::head_never_shows_a_partial_directory(
+        "/home/dwalleck-x/repos/cyril/notes.txt",
+        26,
+        "/home/…/cyril/notes.txt"
+    )]
+    #[case::relative_path_with_no_whole_head_component(
+        "notes/long-directory-name/file.txt",
+        14,
+        "…/file.txt"
     )]
     #[case::name_wider_than_budget_keeps_its_end(
         "/x/an-extremely-long-file-name.txt",
         10,
         "…-name.txt"
     )]
-    #[case::wide_glyphs("/用户/项目/设计.md", 12, "/用…/设计.md")]
-    #[case::windows_separators(
-        r"C:\Users\dev\projects\cyril\notes.md",
-        20,
-        r"C:\U…\cyril\notes.md"
-    )]
-    #[case::trailing_separator("/home/user/projects/cyril/", 16, "/home/us…/cyril/")]
+    #[case::wide_glyphs("/用户/项目/设计.md", 12, "/…/设计.md")]
+    #[case::wide_glyph_head_component("/用户/项目/文档/设计.md", 21, "/用户/…/文档/设计.md")]
+    #[case::windows_separators(r"C:\Users\dev\projects\cyril\notes.md", 20, r"C:\…\cyril\notes.md")]
+    #[case::trailing_separator("/home/user/projects/cyril/", 16, "/home/…/cyril/")]
     #[case::zero_budget("/a/b.md", 0, "")]
     fn elide_middle_keeps_file_name_and_leading_context(
         #[case] path: &str,
@@ -1264,7 +1561,7 @@ mod tests {
 
     #[rstest::rstest]
     #[case::wraps_whole_when_rows_allow("/abc/defgh/ij.md", 5, 4, &["/abc/", "defgh", "/ij.m", "d"])]
-    #[case::elides_when_rows_short("/abc/defgh/ij.md", 5, 2, &["/ab…/", "ij.md"])]
+    #[case::elides_when_rows_short("/abc/defgh/ij.md", 5, 2, &["/…/ij", ".md"])]
     #[case::wide_glyph_straddle_shrinks_budget("/x/a文件", 3, 2, &["…文", "件"])]
     #[case::no_rows("/abc/defgh/ij.md", 5, 0, &[])]
     fn fit_path_wraps_or_elides_into_rows(

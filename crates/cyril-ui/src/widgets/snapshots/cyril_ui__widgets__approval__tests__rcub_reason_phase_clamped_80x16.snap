@@ -1,0 +1,11 @@
+---
+source: crates/cyril-ui/src/widgets/approval.rs
+expression: screen
+---
+                                                                                
+        ┌ Reject with reason ──────────────────────────────────────────┐        
+        │  /home/dwalleck/…/cyril-kas/S4b-write-outside-approval.txt   │        
+        │Reason (Enter submits, Ctrl+J adds a line, Esc backs out):    │        
+        │not that file█                                                │        
+        │Limit: 4096 Unicode characters                                │        
+        └──────────────────────────────────────────────────────────────┘

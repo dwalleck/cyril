@@ -6,6 +6,6 @@ expression: "screen_rows(&terminal).join(\"\\n\")"
           ┌ Permission Required ─────────────────────────────────────┐          
           │Write File                                                │          
           │                                                          │          
-          │  /home/dwalleck…/cyril-kas/S4b-write-outside-approval.txt│          
+          │  /home/…/cyril-kas/S4b-write-outside-approval.txt        │          
           │▸ Allow                                                   │          
           └──────────────────────────────────────────────────────────┘

@@ -76,3 +76,55 @@ owner, there is one extracted modal helper, and no premise is open.
     negligible.
   - **nit, a suffix can start with an orphaned combining mark.** Kept as
     cosmetic.
+
+## Review round 2 (cross-model review of #176 at `c8571ada`)
+
+The verdict was approve, with one medium finding required before merge and
+two lows to do. Dispositions (red/green/mutation evidence in
+`receipts/red.md` §3):
+
+1. **Medium, fixed: no path at inner height 3 or below.**
+   - **Finding.** At inner 3 the budget kept the cosmetic blank under the
+     message and dropped the path, so `Write File / (blank) / ▸ Allow` was
+     approvable with no path shown.
+   - **Rule.** Row priority now lives in a pure `OptionLayout` table. When the
+     call has a path, any shown option has the path beside it:
+     - inner 3: message, path, option;
+     - inner 2: path, option (the message is the first chrome dropped);
+     - inner 1: the lone option row (the selection, via `window_start`)
+       carries the elided path after its label: `▸ Allow  /…/name.txt`.
+   - **Why the inline row at inner 1.** It is the honest choice. A
+     path-only row would still leave Enter able to approve an option that is
+     not on screen, and making the overlay non-actionable is a state/key
+     change outside this widget.
+   - **Calls without a path.** They keep the message-first order, so the
+     existing a14l fences are unchanged.
+   - **Fences:**
+     - `cramped_heights_show_path_beside_the_option` (inner 1/2/3);
+     - `option_layout_never_shows_an_option_without_the_path`, a pure table
+       sweep: inner 0–12 × preview size 0–8 × with and without a path;
+     - `option_visible_implies_path_visible_at_every_height`, a render sweep:
+       widths 24–80 × every popup height. Whenever `▸` is on screen, the
+       path's end (the full file name at 80 columns) is on screen, and
+       nothing bleeds below the input.
+2. **Low, done: partial directory before `…`.**
+   - **Finding.** `leading_columns` cut the head by column, so
+     `/home/dwalleck…` and `/home/dwalleck-x…` looked alike.
+   - **Fix.** The head is now `leading_components`: the longest prefix that
+     ends just after a `/` or `\`. Every directory shown is whole, for
+     example `/home/…/cyril-kas/S4b-write-outside-approval.txt`. The tail
+     rules are unchanged. The `elide_middle` and `fit_path` cases and the
+     clamped snapshots are updated, with new partial-directory, relative-path
+     and wide-glyph-head cases.
+3. **Low, done: clamped reason-page fence.** Added
+   `clamped_reason_phase_keeps_file_name_and_cursor` and the snapshot
+   `rcub_reason_phase_clamped_80x16` (inner 4). At this height the path row
+   is elided to a whole-component head and keeps the file name, and the
+   editor cursor stays visible.
+4. **Noted, unchanged: the separator wins over a second option row.** When
+   exactly one row is spare above height 3, it goes to the separator, not a
+   second option. This is defensible because `window_start` keeps the
+   selected option visible and the other options stay reachable with the
+   arrow keys.
+
+The gate on the round-2 commit is recorded in `receipts/gate.md`.
