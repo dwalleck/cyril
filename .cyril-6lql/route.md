@@ -30,6 +30,23 @@ Local. All four tests resolve within existing owners, and the behavior is fully 
 - Green: tracker `repeat_cap_*` / `only_a_structured_*` tests; converter `run_pause_parsed_from_final_state` / `unreadable_pause_is_skipped_not_fatal`; `turn_labels::repeat_cap_header_strings`; App `repeat_cap_wake_is_labelled_in_live_capture` (live 0.66.43 capture, all seven parent wakes labelled in wire order, abort notice inside the repeat-cap wake still named); mediator `repeat_cap_wake_is_announced_as_a_message_wake` (characterization). All lki9 replays and tracker tests pass unchanged.
 - Gate and CI: see the PR body.
 
+## Review round 1 (independent review of `69a724d8`: APPROVE, one Medium fixed before merge)
+
+- **Medium, fixed: a pending pause could go stale and mislabel a later wake.** Live sequence in the capture:
+  1. The loop run pauses at its cap again (line 580) while the parent's repeat-cap wake is still running.
+  2. KAS therefore injects the note mid-turn (583) and never wakes the parent for it.
+  3. The run aborts (584).
+
+  The `notify-wf` named the abort, but the pause stayed queued. It would have named the parent's next non-completion wake, for example a cyril-pd4b give-up or another step note on the same notify-parent → `send-message-wake` path, as `repeat "loop" … (2)`. Two guards now prevent that:
+  - (a) Queueing a run's `Ended` or newer `RepeatCap` cause evicts that run's pending `RepeatCap`.
+  - (b) `WorkflowTracker::end_turn`, called on the session's `TurnCompleted`, evicts the session's pending `RepeatCap` causes. This matches KAS: `rewakeWithInfo` returns while the parent has a running turn, so KAS wakes for a note at once or never. Terminal `Ended` causes stay queued, so cyril-lki9 is unchanged.
+
+  Receipt: `receipts/red-stale-pause.txt`. Tests:
+  - App `stale_repeat_cap_pause_never_labels_a_later_wake`: the live capture through line 653, then a synthetic `send-message-wake`, which must render generic.
+  - Tracker `terminal_completion_evicts_its_runs_pending_pause`, `newer_pause_replaces_the_runs_pending_pause`, and `turn_end_evicts_pauses_that_never_woke`.
+  - The 7-wake replay and every lki9 test pass unchanged.
+- **Residual limitation (the coordinator files it).** An idle parent plus a retry that parks at an already-exhausted cap sends no note. In the capture, retry at 657–659, then pause at 665 with `iterationsRun:2` and no notify; `holdRepeatCapNote` is not re-armed. If the parent then stays idle and the run is not superseded, the queued pause is cleared only at the parent's next turn start. That turn claims it, and if it is a non-completion wake it would be named after that pause. Telling the two apart needs `_kiro/session/notify` correlation (cyril-fb1m, then cyril-pd4b).
+
 ## Terminal criterion
 
 Local: the behavior above is delivered, every ci.yml lane passes, CI is green on all platforms, and the lki9 C21 oracle passes.

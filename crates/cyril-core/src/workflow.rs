@@ -898,13 +898,20 @@ impl WorkflowTracker {
             };
             Some((parent, cause))
         });
-        let changed = self.replace_if_changed(snapshot_id, incoming)?;
+        let changed = self.replace_if_changed(snapshot_id.clone(), incoming)?;
         // Only a first terminal transition is a completion KAS wakes for; the
         // absorbing branch above has already returned for any repeat. A
         // repeat-cap pause wakes on each NEW pause (a resumed run can pause at
         // its cap again); an exact duplicate snapshot changes nothing.
         if changed && let Some((parent, cause)) = wake_cause {
-            self.wake_labels.entry(parent).or_default().push_back(cause);
+            let queue = self.wake_labels.entry(parent).or_default();
+            // cyril-6lql review guard (a): a run's newer cause supersedes its
+            // pending pause — a pause the run has moved past (aborted, ended,
+            // or paused again) can never be what a later wake is about.
+            queue.retain(
+                |pending| !matches!(pending, WakeCause::RepeatCap(id, _) if id == &snapshot_id),
+            );
+            queue.push_back(cause);
         }
         Ok(changed)
     }
@@ -917,6 +924,19 @@ impl WorkflowTracker {
         let queued = self.wake_labels.remove(session).unwrap_or_default();
         self.claimed_wake_labels
             .insert(session.clone(), queued.into_iter().collect());
+    }
+
+    /// A turn on `session` ended (cyril-6lql review guard b): its pending
+    /// repeat-cap pauses are evicted. KAS wakes the parent for a pause's
+    /// note at once or never — `rewakeWithInfo` returns while the parent has
+    /// a running turn and the note is injected into it instead — so a pause
+    /// still queued when the turn ends will never be the reason for a wake.
+    /// Terminal completions stay queued (cyril-lki9: KAS wakes for those
+    /// after the turn).
+    pub fn end_turn(&mut self, session: &SessionId) {
+        if let Some(queue) = self.wake_labels.get_mut(session) {
+            queue.retain(|cause| matches!(cause, WakeCause::Ended(_)));
+        }
     }
 
     /// The header label for the current turn on `session`: the NEWEST
@@ -4511,6 +4531,129 @@ mod tests {
             label_view(tracker.take_turn_label(&s, &complete)),
             Some(("recipe-B".to_owned(), WorkflowRunStatus::Failed, None)),
             "the same claim still names its terminal run for a completion wake"
+        );
+    }
+
+    /// The repeat-cap causes still queued (unclaimed) for `session`, as
+    /// `(run, cap)`.
+    fn pending_pauses(tracker: &WorkflowTracker, session: &SessionId) -> Vec<(String, u32)> {
+        tracker
+            .wake_labels
+            .get(session)
+            .map(|queue| {
+                queue
+                    .iter()
+                    .filter_map(|cause| match cause {
+                        WakeCause::RepeatCap(id, cap) => {
+                            Some((id.as_str().to_owned(), cap.max_iterations()))
+                        }
+                        WakeCause::Ended(_) => None,
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// cyril-6lql review guard (a): a run's terminal completion evicts that
+    /// run's pending pause. Live shape (capture 580/583/584): the run pauses
+    /// at its cap while the parent is busy (KAS notes it mid-turn, no wake),
+    /// then aborts; the `notify-wf` names the abort, and the stale pause
+    /// must not label the parent's next, unrelated non-completion wake.
+    #[test]
+    fn terminal_completion_evicts_its_runs_pending_pause() {
+        let s = SessionId::new("s");
+        let mut tracker = WorkflowTracker::new();
+        seed(&mut tracker, "l", "seeded");
+        tracker.claim_wake_labels(&s); // the parent's wake turn is running
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 2)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("l", WorkflowRunStatus::Aborted, "L", "s", None)
+        ));
+        assert_eq!(pending_pauses(&tracker, &s), Vec::new());
+        assert_eq!(
+            label_view(tracker.take_injection_label(&s)),
+            Some(("recipe-L".to_owned(), WorkflowRunStatus::Aborted, None))
+        );
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &initiation(Some("send-message-wake"), false))),
+            None,
+            "an unrelated wake is generic"
+        );
+    }
+
+    /// cyril-6lql review guard (a): a run's newer pause replaces its pending
+    /// one — one run, at most one pending pause; another run's is kept.
+    #[test]
+    fn newer_pause_replaces_the_runs_pending_pause() {
+        let s = SessionId::new("s");
+        let mut tracker = WorkflowTracker::new();
+        for id in ["l", "m"] {
+            seed(&mut tracker, id, "seeded");
+        }
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("m", "M", Some("s"), "outer", 3)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 1)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 2)
+        ));
+        assert_eq!(
+            pending_pauses(&tracker, &s),
+            vec![("m".to_owned(), 3), ("l".to_owned(), 2)]
+        );
+    }
+
+    /// cyril-6lql review guard (b): KAS wakes the parent for a repeat-cap
+    /// note at once or never (`rewakeWithInfo` returns while the parent has
+    /// a running turn: the note is injected instead). So a pause queued
+    /// during a parent turn is evicted when that turn ends; a terminal
+    /// completion queued in the same turn is kept for the next completion
+    /// wake (cyril-lki9 unchanged), and another session's pause is kept.
+    #[test]
+    fn turn_end_evicts_pauses_that_never_woke() {
+        let s = SessionId::new("s");
+        let other = SessionId::new("other");
+        let mut tracker = WorkflowTracker::new();
+        for id in ["a", "l", "o"] {
+            seed(&mut tracker, id, "seeded");
+        }
+        tracker.claim_wake_labels(&s);
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 1)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("a", WorkflowRunStatus::Completed, "A", "s", None)
+        ));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("o", "O", Some("other"), "loop", 1)
+        ));
+        tracker.end_turn(&s);
+        assert_eq!(pending_pauses(&tracker, &s), Vec::new());
+        assert_eq!(pending_pauses(&tracker, &other), vec![("o".to_owned(), 1)]);
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &initiation(Some("send-message-wake"), false))),
+            None
+        );
+        assert_eq!(
+            label_view(
+                tracker.take_turn_label(&s, &initiation(Some("workflow-complete-wake"), true))
+            ),
+            Some(("recipe-A".to_owned(), WorkflowRunStatus::Completed, None)),
+            "the terminal completion still names its wake"
         );
     }
 }

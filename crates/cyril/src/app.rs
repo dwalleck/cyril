@@ -1223,6 +1223,7 @@ impl App {
     ) {
         match notification {
             Notification::TurnStarted => self.workflow_tracker.claim_wake_labels(session),
+            Notification::TurnCompleted { .. } => self.workflow_tracker.end_turn(session),
             Notification::AgentInitiatedTurn(origin) => {
                 let label = self.workflow_tracker.take_turn_label(session, origin);
                 self.ui_state
@@ -8501,12 +8502,22 @@ mod tests {
     /// replay is one App on one connection).
     #[cfg(feature = "kas")]
     fn lki9_replay_conn(rel: &str, conn: &str, main: &str) -> Lki9Replay {
+        lki9_replay_conn_through(rel, conn, main, usize::MAX)
+    }
+
+    /// [`lki9_replay_conn`] of the trace's file lines `1..=last_line` only.
+    #[cfg(feature = "kas")]
+    fn lki9_replay_conn_through(rel: &str, conn: &str, main: &str, last_line: usize) -> Lki9Replay {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../..")
             .join(rel);
         let trace = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
         let mut one_conn = String::new();
-        for line in trace.lines().filter(|line| !line.is_empty()) {
+        for line in trace
+            .lines()
+            .take(last_line)
+            .filter(|line| !line.is_empty())
+        {
             let row: serde_json::Value =
                 serde_json::from_str(line).unwrap_or_else(|e| panic!("{rel}: trace row: {e}"));
             if row.get("conn").and_then(serde_json::Value::as_str) == Some(conn) {
@@ -8882,6 +8893,44 @@ mod tests {
         assert_eq!(r.main_turns_started, 7, "seven captured parent wakes");
         assert_eq!(r.main_turns_completed, 7);
         r.assert_settled();
+    }
+
+    /// cyril-6lql review (Medium): a repeat-cap pause that never woke the
+    /// parent must not label a later, unrelated wake. In the live capture
+    /// the loop run pauses again at its cap (line 580) while the parent's
+    /// repeat-cap wake is still running, so KAS notes it mid-turn (583) and
+    /// never wakes for it, and the run then aborts (584). After that wake ends
+    /// (653), the next non-completion wake on the parent (here a synthetic
+    /// one, e.g. a cyril-pd4b give-up or a step's note) gets a generic header,
+    /// never `repeat "loop" … (2)`.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn stale_repeat_cap_pause_never_labels_a_later_wake() {
+        use cyril_core::types::AgentInitiation;
+        let main = "sess_259b943b-3d2a-49d4-8430-4b4975864275";
+        let mut r = lki9_replay_conn_through(
+            "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl",
+            "main",
+            main,
+            653,
+        );
+        r.assert_settled();
+        let main = SessionId::new(main);
+        r.app
+            .handle_notification(lki9_on(&main, Notification::TurnStarted));
+        r.app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("send-message-wake".into()),
+                false,
+            )),
+        ));
+        let lines = lki9_system_lines(r.app.ui_state.messages());
+        assert_eq!(
+            lines.last().map(String::as_str),
+            Some("─── ⚙ agent-initiated · send-message-wake ───"),
+            "a stale pause must not name an unrelated wake: {lines:?}"
+        );
     }
 
     /// cyril-0qe6 C4: an attach snapshot seeds the tracker exactly once and
