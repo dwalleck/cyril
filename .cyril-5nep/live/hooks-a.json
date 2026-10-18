@@ -1,0 +1,9 @@
+{"version":"v1","hooks":[
+ {"name":"ss_matcher","trigger":"SessionStart","matcher":"execute_bash","action":{"type":"command","command":"touch @MARKS@/ss_matcher; echo LIVE5NEP_SS_MATCHER"}},
+ {"name":"ss_invalid","trigger":"SessionStart","matcher":"*","action":{"type":"command","command":"touch @MARKS@/ss_invalid; echo LIVE5NEP_SS_INVALID"}},
+ {"name":"ups_matcher","trigger":"UserPromptSubmit","matcher":"fs_.*","action":{"type":"command","command":"touch @MARKS@/ups_matcher"}},
+ {"name":"stop_matcher","trigger":"Stop","matcher":"shell","action":{"type":"command","command":"touch @MARKS@/stop_matcher"}},
+ {"name":"stop_invalid","trigger":"Stop","matcher":"(","action":{"type":"command","command":"touch @MARKS@/stop_invalid"}},
+ {"name":"pre_shell","trigger":"PreToolUse","matcher":"shell","action":{"type":"command","command":"touch @MARKS@/pre_shell"}},
+ {"name":"pre_id","trigger":"PreToolUse","matcher":"execute_bash","action":{"type":"command","command":"touch @MARKS@/pre_id"}}
+]}

@@ -70,6 +70,39 @@ Blocking rows first: F1, F2.
     permanent non-goal.
   These follow-ups touch docs and tests only. The production change is
   derive removal; clippy, fmt and the hook tests reran green (50 passed).
-- **Unresolved failures:** none known.
-  - Native Windows/macOS CI: PENDING (runs on push).
-  - Live re-check of F1/F2 against real KAS: PENDING (not run this round).
+- **Live check (2026-10-18, PASS):**
+  - **Setup:** real KAS 0.66.34, kiro-cli 2.32.0 installed; cyril's free spawn
+    selected the 2.31.1 extraction, the same bundle the matcher was checked
+    against.
+    - Each run used a fresh git workspace and an isolated `HOME` with the real
+      `XDG_DATA_HOME`.
+    - KAS was spawned through `live/relay.py` (`KIRO_AGENT_PATH`), which logs
+      every `_kiro/hooks/list` frame and can rewrite `toolTags`.
+    - The probe driver is `live/hook_live_probe_5nep.rs.txt`; the run script is
+      `live/run.sh`.
+    - Every run used the same prompt, asking for a shell call that writes
+      `ran.txt`.
+    - Per-run output is in `live/runs/<label>/`: `probe.out`/`.err`,
+      `relay.jsonl`, `marks.txt`, `ran.txt`.
+  - **A-old** (`f3d19b24`, `hooks-a.json`, unmodified tags): the `shell`-tag and
+    `execute_bash`-ID pre-tool hooks ran. The matcher hooks on SessionStart,
+    UserPromptSubmit and Stop did **not** run. F2 red.
+  - **A-new** (`3c7e01fe`, same input): `ss_matcher`, `ups_matcher` and
+    `stop_matcher` ran, and `ss_invalid` (`*`) and `stop_invalid` (`(`) did not.
+    Both pre-tool hooks ran and `ran.txt` was written. F2 green; the tag path is
+    unchanged.
+    - The relay shows real KAS sends `toolTags: ["shell", "@builtin"]` on
+      pre- and post-tool calls, and only `{trigger, sessionId}` on promptSubmit
+      and agentStop.
+  - **B-old** (`f3d19b24`, `hooks-b.json`, tags rewritten to `["shell", 42]`):
+    cyril answered `-32602 Invalid params`. KAS ran **no** hooks, and the tool
+    ran despite the blocking `shell` policy hook (`ran.txt` present). F1
+    fail-open red.
+  - **B-new** (`3c7e01fe`, same input): cyril warned "toolTags member is not a
+    string; dropped index=1". `pre_shell_block` ran and exited 2, `pre_id` ran,
+    and the tool was **blocked** (`ran.txt` absent). F1 green.
+  - Relay quirk: the B-run `relay.jsonl` `original` fields show the rewritten
+    value, because the relay logged after an in-place edit (fixed in the
+    committed `relay.py`). The A runs carry the true originals.
+- **Unresolved failures:** none known. Native Windows/macOS CI: PENDING (runs
+  on push).

@@ -1,0 +1,86 @@
+//! cyril-5nep live probe: one KAS session in the current directory with Host
+//! hooks, one prompt, then a grace window so the Stop hook can run.
+//! Prints notifications as they arrive; auto-approves permission requests.
+//!
+//! Usage: cargo run --features kas --example hook_live_probe_5nep -- "<prompt>"
+
+#![allow(clippy::unwrap_used, clippy::expect_used)]
+
+use std::time::Duration;
+
+use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
+use cyril_core::types::*;
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .with_writer(std::io::stderr)
+        .with_ansi(false)
+        .init();
+    let prompt = std::env::args().nth(1).expect("prompt argument");
+    let cwd = std::env::current_dir()?;
+    let agent_command = AgentCommand::try_from_argv(vec!["kiro-cli".into(), "acp".into()])?;
+    let bridge = spawn_bridge(
+        agent_command,
+        SpawnConfig {
+            engine: AgentEngine::Kas,
+            ..Default::default()
+        },
+        cwd.clone(),
+    )?;
+    let (sender, mut notes, mut perms, _source_rx, _completion_rx) = bridge.split();
+    sender.send(BridgeCommand::NewSession { cwd }).await?;
+
+    let overall = tokio::time::Instant::now() + Duration::from_secs(240);
+    let mut session_id = None;
+    let mut grace_until: Option<tokio::time::Instant> = None;
+    loop {
+        let deadline = grace_until.unwrap_or(overall).min(overall);
+        tokio::select! {
+            biased;
+            Some(routed) = notes.recv() => {
+                let text = format!("{:?}", routed.notification);
+                let text: String = text.chars().take(400).collect();
+                println!("[note] {text}");
+                match routed.notification {
+                    Notification::SessionCreated { session_id: id, .. } if session_id.is_none() => {
+                        println!("[probe] session created; sending prompt");
+                        sender
+                            .send(BridgeCommand::SendPrompt {
+                                session_id: id.clone(),
+                                prompt: PromptEnvelope::original(vec![prompt.clone()]),
+                            })
+                            .await?;
+                        session_id = Some(id);
+                    }
+                    Notification::TurnCompleted { .. } if grace_until.is_none() => {
+                        println!("[probe] turn completed; 10s grace for Stop hooks");
+                        grace_until = Some(tokio::time::Instant::now() + Duration::from_secs(10));
+                    }
+                    _ => {}
+                }
+            }
+            Some(permission) = perms.recv() => {
+                println!("[perm] {}", permission.message);
+                let response = permission
+                    .options
+                    .iter()
+                    .find(|o| !o.is_destructive)
+                    .map(|o| PermissionResponse::Selected {
+                        option_id: o.id.clone(),
+                        trust_option: None,
+                    })
+                    .unwrap_or(PermissionResponse::Cancel);
+                if permission.responder.send(response).is_err() {
+                    eprintln!("[warn] permission response dropped");
+                }
+            }
+            _ = tokio::time::sleep_until(deadline) => {
+                println!("[probe] done (turn completed: {})", grace_until.is_some());
+                break;
+            }
+        }
+    }
+    Ok(())
+}

@@ -1,0 +1,9 @@
+{"version":"v1","hooks":[
+ {"name":"ss_matcher","trigger":"SessionStart","matcher":"execute_bash","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/ss_matcher; echo LIVE5NEP_SS_MATCHER"}},
+ {"name":"ss_invalid","trigger":"SessionStart","matcher":"*","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/ss_invalid; echo LIVE5NEP_SS_INVALID"}},
+ {"name":"ups_matcher","trigger":"UserPromptSubmit","matcher":"fs_.*","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/ups_matcher"}},
+ {"name":"stop_matcher","trigger":"Stop","matcher":"shell","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/stop_matcher"}},
+ {"name":"stop_invalid","trigger":"Stop","matcher":"(","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/stop_invalid"}},
+ {"name":"pre_shell","trigger":"PreToolUse","matcher":"shell","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/pre_shell"}},
+ {"name":"pre_id","trigger":"PreToolUse","matcher":"execute_bash","action":{"type":"command","command":"touch /home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/80396132-4916-43ae-b0e7-3d68cf66e711/scratchpad/cyril-5nep-live.URFSUZ/marks/pre_id"}}
+]}
