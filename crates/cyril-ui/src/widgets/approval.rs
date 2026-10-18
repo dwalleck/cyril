@@ -1148,6 +1148,29 @@ mod tests {
         }
     }
 
+    /// cyril-rcub (found by the clamped fence): the blank row after a shown
+    /// preview is counted in the row budget, so the selected LAST option
+    /// stays inside a clamped popup at every clamp height.
+    #[rstest::rstest]
+    #[case::inner_5(8)]
+    #[case::inner_6(9)]
+    #[case::inner_7(10)]
+    fn clamped_preview_keeps_selected_option_visible(#[case] input_top: u16) {
+        let mut state = write_approval("/tmp/a.md");
+        state.selected = 1;
+        let terminal = render_at(&state, 80, 16, input_top);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        assert!(screen.contains("/tmp/a.md"), "preview dropped:\n{screen}");
+        assert!(
+            screen.contains("▸ Deny"),
+            "selected option clipped:\n{screen}"
+        );
+        for row in rows.iter().skip(usize::from(input_top)) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+    }
+
     /// cyril-rcub: the reject-with-reason page shares the preview layout, so
     /// the path it is rejecting is readable there too.
     #[test]
