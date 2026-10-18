@@ -20,7 +20,7 @@ One atomic slice: the token-source swap changes `HostCallback::GetAccessToken`, 
 - Red-first: `free_gate_asks_kiro_cli_get_kas_token_not_the_store` on base `85becf9f` → FAIL (`StoreUnservable … data.sqlite3 is absent`), `receipts/red-run.log`; after the fix → PASS, `receipts/green-run.log`.
 - C9 sensitivity: lock removed → `fetch_serializes_concurrent_requests` FAIL (helper exit 9, "File exists"), restored → PASS (`receipts/mutation-c9-{red,restored}.log`).
 - Design C1–C5, C7–C9 tests (design table) → PASS.
-- Gate: all ten ci.yml lanes via `.cyril-zbu7/gate.sh` → every lane `-OK` (`receipts/gate/summary.txt`).
+- Gate: all ten ci.yml lanes via `.cyril-zbu7/gate.sh` → every lane `-OK` (`receipts/gate-summary.txt`).
 - Windows: the platform-neutral process tests (`kas::auth`) + kas/no-default clippy and tests on the Windows VM (`ssh resourcefs-win11`) → PASS (`receipts/windows-vm.txt`).
 - Live C6: cyril KAS Free session across the 2026-10-18T19:47:39Z expiry → all turns answered, a new `expiresAt` served, no BridgeDisconnected (`receipts/live/`).
 - Independent review of the diff → no blocking finding.

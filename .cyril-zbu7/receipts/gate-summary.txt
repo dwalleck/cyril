@@ -1,0 +1,13 @@
+# rev: 791e2c75f76dba4e7caa8a48d1d873e5f39444ad dirty-paths: 0
+# date: 2026-10-18T19:58:02Z mode: full
+fmt-OK
+clippy-all-features-OK
+clippy-kas-OK
+clippy-default-OK
+clippy-core-no-default-OK
+nextest-all-features-OK
+doctest-OK
+nextest-kas-OK
+nextest-default-OK
+nextest-core-no-default-OK
+# prior run on 30ff7912: nextest-default hit a timing-budget flake in an untouched crate (cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown, 124 ms > budget, under concurrent Windows-VM + gate load); 3/3 isolated reruns pass; first observed occurrence, not filed (agent may not touch .rivets).
