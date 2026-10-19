@@ -22,7 +22,8 @@ async fn request_session(sender: &BridgeSender, probe: &Rc<RefCell<Script>>) {
     );
 }
 
-/// The `_meta.kiro.settings` object of a received params object, if any.
+/// The value at `meta_path` in a received params object, if present.
+#[cfg(feature = "kas")]
 fn kiro_settings<'a>(
     params: &'a serde_json::Value,
     meta_path: &[&str],

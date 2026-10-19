@@ -114,6 +114,7 @@ impl Script {
         lock(&self.permission_responses)
     }
 
+    #[cfg(feature = "kas")]
     pub(super) fn initialize_params(&self) -> Option<serde_json::Value> {
         lock(&self.initialize_params).clone()
     }
