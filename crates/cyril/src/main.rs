@@ -118,7 +118,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             cwd.clone(),
         );
         // The native /workflow family exists exactly when the engine is KAS
-        // (cyril-0qe6, ADR-0011) — no mode axis, unlike hooks.
+        // (cyril-0qe6, ADR-0013) — no mode axis, unlike hooks.
         let workflow_source =
             cyril_core::commands::WorkflowCommandSource::resolve(agent_engine, cwd.clone());
         let mut app = app::App::new(

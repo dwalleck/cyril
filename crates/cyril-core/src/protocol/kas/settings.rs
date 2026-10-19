@@ -9,6 +9,10 @@
 //! than inventing cyril's own posture. Prove-it confirmed KAS reads this handshake
 //! (`experiments/conductor-spike/probe-kas-settings-subagent-orchestration-2.10.0.py`).
 //!
+//! One later row comes from Kiro's 2.32.0 TUI (`B1()` → `ZOn()`): the workflow
+//! gate `workflows` + `goal`, following `chat.enableWorkflows` (ADR-0013,
+//! cyril-sm36).
+//!
 //! KAS-only: v2 advertises no `_meta.kiro.settings` (`V2Engine` stays empty).
 
 use serde_json::{Map, Value};
@@ -97,6 +101,20 @@ const DEFAULTS_ON: &[&str] = &[
     "subagentOrchestration",
 ];
 
+/// The user's workflow opt-in, read like Kiro's `ea("chat.enableWorkflows", false)`:
+/// only a boolean value counts; absent or any other type is `false`.
+///
+/// Kiro's `available` half is its `workflows` rollout row, which cyril cannot
+/// evaluate (the Rust host sets `KIRO_ENABLED_FEATURES`; cyril spawns KAS
+/// directly). In 2.32.0 that row is `treatment_percent: 100`, `segment: "all"`
+/// ("generally available to all users on the KAS engine"), and this marshal
+/// runs only for the KAS engine — so available is always true here.
+/// `chat.enableWorkflows` is not in Kiro's workspace-overridable key set, so
+/// the global `cli.json` this module reads is the only source.
+fn workflows_enabled(e: &Map<String, Value>) -> bool {
+    matches!(e.get("chat.enableWorkflows"), Some(Value::Bool(true)))
+}
+
 /// A numeric-but-not-boolean value, cloned. `serde_json`'s `is_number()` is already
 /// false for `Value::Bool`, so a JSON `true` in a numeric slot is dropped (matching
 /// zme's `typeof === "number"`), not coerced to 1.
@@ -117,6 +135,13 @@ pub(crate) fn marshal_agent_settings(e: &Map<String, Value>) -> Value {
         n.entry((*k).to_string())
             .or_insert_with(|| serde_json::json!({ "enabled": true }));
     }
+    // The workflow gate (ADR-0013 decision 1, cyril-sm36): Kiro's TUI 2.32.0
+    // `ab()`/`ZOn()` — `enabled = available && ea("chat.enableWorkflows", false)`
+    // and, when available, `workflows` AND `goal` both set to it, stated
+    // explicitly even when off.
+    let workflows = serde_json::json!({ "enabled": workflows_enabled(e) });
+    n.insert("workflows".to_string(), workflows.clone());
+    n.insert("goal".to_string(), workflows);
     // `toolSearch` — gated on a boolean `toolSearch.enabled`; numeric extras only.
     if let Some(Value::Bool(enabled)) = e.get("toolSearch.enabled") {
         let mut ts = Map::new();
@@ -266,11 +291,13 @@ mod tests {
 
     #[test]
     fn defaults_only() {
-        // Claim 4: an empty settings map yields EXACTLY the four default-on keys,
-        // nothing else. Fails if a default is missing or a non-default key leaks.
+        // Claim 4: an empty settings map yields EXACTLY the four default-on keys
+        // plus Kiro's explicit-off workflow gate pair (`workflows`, `goal`;
+        // cyril-sm36), nothing else. Fails if a default is missing or a
+        // non-default key leaks.
         let got = marshal_agent_settings(&Map::new());
         let obj = got.as_object().unwrap();
-        assert_eq!(obj.len(), 4, "only the 4 defaults: {got}");
+        assert_eq!(obj.len(), 6, "the 4 defaults + the gate pair: {got}");
         for k in [
             "codeIntelligence",
             "knowledge",
@@ -458,31 +485,90 @@ mod tests {
             "knowledge": { "enabled": true },
             "codeIntelligence": { "enabled": true },
             "subagentOrchestration": { "enabled": true },
-            "toolSearch": { "enabled": true, "minPct": 0, "minTokens": 0 }
+            "toolSearch": { "enabled": true, "minPct": 0, "minTokens": 0 },
+            "workflows": { "enabled": false },
+            "goal": { "enabled": false }
         });
         assert_eq!(got, expected, "live fixture marshal mismatch");
     }
 
-    /// ADR-0011 / cyril-0qe6 C6: cyril NEVER sets `workflows.enabled` — the
-    /// gate would register `run_workflow` and put the model in the launch
-    /// path. The marshaller must not emit a `workflows` key even when the
-    /// user's cli.json contains one (the buggy implementation: a gate flip
-    /// left in during debugging, or a future mapping added by reflex).
-    #[test]
-    fn workflows_gate_never_marshaled() {
-        let mut entries = serde_json::Map::new();
-        entries.insert(
-            "workflows.enabled".to_owned(),
-            serde_json::Value::Bool(true),
+    /// The two keys Kiro's TUI derives from the workflow gate (`ZOn`).
+    fn gate_keys(got: &Value) -> (Option<&Value>, Option<&Value>) {
+        (got.get("workflows"), got.get("goal"))
+    }
+
+    /// ADR-0013 decision 1 (cyril-sm36): the workflow gate follows the user's
+    /// flat global `chat.enableWorkflows`, read like Kiro's `ea(key, false)` —
+    /// only a boolean counts, anything else is the default `false` — and both
+    /// `workflows` and `goal` carry that value, always stated explicitly. A
+    /// nested `chat` object and a lookalike `workflows.enabled` key are not
+    /// Kiro's setting and must not move the gate.
+    #[rstest::rstest]
+    #[case::enabled(&[("chat.enableWorkflows", Value::Bool(true))], true)]
+    #[case::disabled(&[("chat.enableWorkflows", Value::Bool(false))], false)]
+    #[case::absent(&[], false)]
+    #[case::string_true(&[("chat.enableWorkflows", Value::String("true".into()))], false)]
+    #[case::number_one(&[("chat.enableWorkflows", serde_json::json!(1))], false)]
+    #[case::nested_chat_object_ignored(
+        &[("chat", serde_json::json!({ "enableWorkflows": true }))],
+        false
+    )]
+    #[case::lookalike_key_ignored(&[("workflows.enabled", Value::Bool(true))], false)]
+    fn workflow_gate_follows_chat_enable_workflows(
+        #[case] source: &[(&str, Value)],
+        #[case] enabled: bool,
+    ) {
+        let got = marshal_agent_settings(&map(source));
+        let expected = serde_json::json!({ "enabled": enabled });
+        assert_eq!(
+            gate_keys(&got),
+            (Some(&expected), Some(&expected)),
+            "workflows and goal both {{enabled:{enabled}}}: {got}"
         );
-        entries.insert(
-            "chat.enableThinking".to_owned(),
-            serde_json::Value::Bool(true),
-        );
-        let got = marshal_agent_settings(&entries);
-        assert!(
-            got.get("workflows").is_none(),
-            "the workflow gate must never reach the handshake (ADR-0011): {got}"
+    }
+
+    /// End to end through the launch environment: a `cli.json` planted where
+    /// Kiro reads it (`$KIRO_HOME/settings/cli.json`, else
+    /// `<home>/.kiro/settings/cli.json`) reaches `initialize` as
+    /// `clientCapabilities._meta.kiro.settings.{workflows,goal}`. The fake
+    /// environment replaces every variable, so no real home is consulted.
+    #[rstest::rstest]
+    #[case::kiro_home("KIRO_HOME", "")]
+    #[case::home("HOME", ".kiro")]
+    #[case::userprofile("USERPROFILE", ".kiro")]
+    fn initialize_carries_workflow_gate_from_selected_cli_json(
+        #[case] variable: &str,
+        #[case] relative_home: &str,
+    ) {
+        use crate::protocol::engine::{KasEngine, client_capabilities};
+        use crate::types::SpawnEnvironment;
+        let root = tempfile::tempdir().unwrap();
+        let settings_dir = root.path().join(relative_home).join("settings");
+        std::fs::create_dir_all(&settings_dir).unwrap();
+        std::fs::write(
+            settings_dir.join("cli.json"),
+            r#"{"chat.enableWorkflows":true}"#,
+        )
+        .unwrap();
+        let environment = SpawnEnvironment::Replace(std::collections::BTreeMap::from([(
+            variable.into(),
+            root.path().as_os_str().to_owned(),
+        )]));
+        let engine = KasEngine {
+            settings: settings_extra_value(&environment),
+            ..Default::default()
+        };
+        let caps = client_capabilities(&engine);
+        let settings = caps
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.get("kiro"))
+            .and_then(|kiro| kiro.get("settings"))
+            .expect("_meta.kiro.settings");
+        assert_eq!(
+            gate_keys(settings),
+            (Some(&on()), Some(&on())),
+            "gate on from {variable}: {settings}"
         );
     }
 }

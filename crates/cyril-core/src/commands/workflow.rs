@@ -1,9 +1,10 @@
-//! Cyril's native `/workflow` command family (cyril-0qe6, ADR-0011).
+//! Cyril's native `/workflow` command family (cyril-0qe6, ADR-0013).
 //!
-//! The client-owned control plane over `_kiro/workflow/*`: the workflow gate
-//! is never set, the model never gains `run_workflow`, and every mutating
-//! act below is user-issued. Registered only when the bound engine is KAS —
-//! v2 has no workflow surface.
+//! The client-owned control plane over `_kiro/workflow/*`, kept beside the
+//! model's launch path: every act below is user-issued, and it works whatever
+//! the workflow gate (which follows the user's Kiro `chat.enableWorkflows`;
+//! when on, the model may also launch runs via `run_workflow`). Registered
+//! only when the bound engine is KAS — v2 has no workflow surface.
 
 use std::path::PathBuf;
 
