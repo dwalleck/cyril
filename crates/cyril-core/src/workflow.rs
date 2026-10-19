@@ -5660,8 +5660,10 @@ mod tests {
     // ---- cyril-9104: step questions --------------------------------------
 
     /// (run, step, step session, since, question text, selector).
+    #[cfg(feature = "kas")]
     type QuestionView = (String, String, String, String, Option<String>, String);
 
+    #[cfg(feature = "kas")]
     fn question_view(question: &StepQuestion) -> QuestionView {
         (
             question.run_name().to_owned(),
@@ -5722,12 +5724,17 @@ mod tests {
         (raised, answers)
     }
 
+    #[cfg(feature = "kas")]
     const GATEOFF: &str =
         "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl";
+    #[cfg(feature = "kas")]
     const WFPLAN: &str =
         "experiments/conductor-spike/audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl";
+    #[cfg(feature = "kas")]
     const PARK_STEP: &str = "sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b";
+    #[cfg(feature = "kas")]
     const WFPLAN_PARENT: &str = "sess_df3e2821-4f61-4189-809d-064794e17d41";
+    #[cfg(feature = "kas")]
     const WFPLAN_STEP: &str = "sess_39b38845-0255-474a-83d7-d8723160f149";
 
     /// cyril-9104 C3: the live gate-off `park` step parks on its own reply.
