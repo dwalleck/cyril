@@ -47,8 +47,30 @@ where
 
 /// The `session/new` request cyril sends for `cwd`. Fenced by
 /// `tests::new_session_request_always_carries_mcp_servers` (cyril-0dv4).
-fn new_session_request(cwd: &std::path::Path) -> acp::NewSessionRequest {
-    acp::NewSessionRequest::new(crate::platform::path::to_agent(cwd))
+///
+/// `settings` is the engine's `_meta.kiro.settings` extra — the same object
+/// `initialize` advertises — and goes out as this request's
+/// `_meta.kiro.settings` (cyril-sm36). KAS reads its session-scoped settings
+/// (`workflows`, `validation`, `fta`) from `session/new`, not `initialize`,
+/// and Kiro's TUI sends the object in both places. v2 has none, so its
+/// request stays bare. `session/load` carries none either: like the TUI, KAS
+/// then keeps the session's recorded values.
+fn new_session_request(
+    cwd: &std::path::Path,
+    settings: Option<serde_json::Value>,
+) -> acp::NewSessionRequest {
+    let request = acp::NewSessionRequest::new(crate::platform::path::to_agent(cwd));
+    match settings {
+        Some(settings) => {
+            let mut meta = acp::Meta::new();
+            meta.insert(
+                "kiro".to_string(),
+                serde_json::json!({ "settings": settings }),
+            );
+            request.meta(meta)
+        }
+        None => request,
+    }
 }
 
 /// The `session/load` request cyril sends to resume `session_id` in `cwd`.
@@ -112,7 +134,7 @@ impl DomainMediator {
         connection: &ConnectionTo<Agent>,
         cwd: std::path::PathBuf,
     ) -> crate::Result<()> {
-        let request = new_session_request(&cwd);
+        let request = new_session_request(&cwd, self.config.engine.settings_extra());
         let engine_kind = self.config.engine.kind();
         let channels = self.channels.clone();
         match send_standard(connection, "session/new", request) {
@@ -600,7 +622,7 @@ mod tests {
 
     #[test]
     fn new_session_request_always_carries_mcp_servers() {
-        let request = new_session_request(&std::env::temp_dir());
+        let request = new_session_request(&std::env::temp_dir(), None);
         let params = must_succeed(
             standard_params("session/new", request),
             "serialize session/new params",

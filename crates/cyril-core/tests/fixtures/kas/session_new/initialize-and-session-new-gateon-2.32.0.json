@@ -1,0 +1,30 @@
+{
+  "source": "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateon-2.32.0.jsonl: the first initialize clientCapabilities._meta and the first session/new params._meta, verbatim",
+  "initializeClientCapabilitiesMeta": {
+    "kiro": {
+      "configurationState": true,
+      "settings": {
+        "workflows": { "enabled": true },
+        "goal": { "enabled": true },
+        "workflowNotifications": { "enabled": true, "delivery": "steer" },
+        "codeIntelligence": { "enabled": true },
+        "knowledge": { "enabled": true },
+        "thinking": { "enabled": true },
+        "largeToolOutputHandler": { "enabled": true }
+      }
+    }
+  },
+  "sessionNewMeta": {
+    "kiro": {
+      "settings": {
+        "workflows": { "enabled": true },
+        "goal": { "enabled": true },
+        "workflowNotifications": { "enabled": true, "delivery": "steer" },
+        "codeIntelligence": { "enabled": true },
+        "knowledge": { "enabled": true },
+        "thinking": { "enabled": true },
+        "largeToolOutputHandler": { "enabled": true }
+      }
+    }
+  }
+}

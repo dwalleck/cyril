@@ -17,6 +17,23 @@ Requester (orchestrator): implement rivets issue cyril-sm36 on `feat/cyril-sm36-
 | T3: production-scale risk | No | One map lookup at startup. |
 | T4: explicit behaviour | Yes | Issue acceptance: flat global `chat.enableWorkflows: true` → `settings.workflows={enabled:true}` and `settings.goal={enabled:true}`; `false`, absent, or non-boolean (Kiro's `ea` default) → both `{enabled:false}`. "available" = engine is KAS (the marshal runs only for `KasEngine`, `bridge.rs::engine_for`). Old never-marshal test removed; every ADR-0011 citation in `crates/` updated to ADR-0013. Live gate-on probe on KAS 0.66.43. |
 
+## Correction (2026-10-19): the gate rides `session/new`, not only `initialize`
+
+The T1 row above assumed `initialize.clientCapabilities._meta.kiro.settings` was enough. It was not, and the
+coordinator's live gate-on probe of `cf88ab17` showed it (`receipts/live-gate-on.md`, attempt 2). KAS accepted
+both keys (no `unknown-key` for them), but the session ran with `workflowsEnabled: false`. In the 0.66.43 bundle,
+`workflows` (and `validation`, `fta`) are **session-scoped** settings-table rows:
+`{key:Xn.workflows, wire:AI("workflows"), messages:jR, record:nWe("workflowsEnabled")}` with
+`jR=["session/new","session/load"]`. KAS reads them from those messages' `_meta.kiro.settings`. The committed 2.32.0
+gate-on capture shows the TUI sending one settings object both on `initialize` and as `session/new`
+`_meta.kiro.settings`, and none on `session/load`, where KAS keeps the session's recorded value.
+
+Fix: `domain_mediator/commands/session.rs::new_session_request` takes the engine's `settings_extra()` (the same value
+`initialize` advertises) and sends it as `_meta.kiro.settings`; v2 (`None`) stays bare; `session/load` is unchanged.
+Fences: `bridge/tests/current_runtime_contract/session_settings.rs` (KAS carries the gate; the object equals
+`initialize`'s with `_meta.kiro` = `{settings}` like the capture fixture; v2 carries no `_meta`). Red receipt:
+`receipts/red-session-new-settings.txt`. The route stays Local (one builder in its existing owner).
+
 ## Selected route
 
 **Local.** Explicit behaviour within the existing settings-marshal owner; no unresolved external premise.

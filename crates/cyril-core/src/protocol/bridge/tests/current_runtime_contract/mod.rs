@@ -58,6 +58,8 @@ mod rejection_feedback;
 mod review;
 mod routing;
 mod saturation;
+// cyril-sm36: KAS session-scoped settings ride session/new; v2 stays bare.
+mod session_settings;
 mod stall;
 // cyril-8wh0: a KAS workflow plan approval carries its typed plan to the App.
 #[cfg(feature = "kas")]
