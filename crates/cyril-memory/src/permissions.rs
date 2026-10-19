@@ -153,7 +153,9 @@ pub(crate) fn tighten_directory(_path: &Path) -> io::Result<()> {
 
 #[cfg(test)]
 mod tests {
+    #[cfg(unix)]
     use super::tighten_directory;
+    #[cfg(unix)]
     use std::fs;
 
     #[cfg(unix)]

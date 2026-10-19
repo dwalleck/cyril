@@ -8,7 +8,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
-use cyril_core::types::{AgentCommand, Notification, SpawnEnvironment};
+use cyril_core::types::{AgentCommand, AgentEngine, Notification, SpawnEnvironment};
 #[cfg(feature = "kas")]
 use tokio::time::timeout;
 
@@ -88,7 +88,14 @@ async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
         return Ok(());
     };
     let inherited = tempfile::tempdir()?;
-    launch(inherited.path(), SpawnConfig::default()).await?;
+    launch(
+        inherited.path(),
+        SpawnConfig {
+            engine: AgentEngine::V2,
+            ..SpawnConfig::default()
+        },
+    )
+    .await?;
     assert!(
         std::fs::read_to_string(inherited.path().join("environment.txt"))?
             .lines()
@@ -103,6 +110,7 @@ async fn isolated_spawn_does_not_inherit_parent_authority() -> TestResult {
     launch(
         isolated.path(),
         SpawnConfig {
+            engine: AgentEngine::V2,
             environment: SpawnEnvironment::Replace(selected),
             ..SpawnConfig::default()
         },

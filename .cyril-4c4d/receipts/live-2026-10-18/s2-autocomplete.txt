@@ -1,0 +1,45 @@
+sess_308b6d10-d2ec-47ae-8012-8b8791a81e79 · vibe · auto                                                                                               
+Connecting to agent...                                                                                                                                
+                                                                                                                                                      
+Session created: sess_308b6d10-d2ec-47ae-8012-8b8791a81e79                                                                                            
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+                                                                                                                                                      
+┌ > ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│/pro█                                                                                                                                               │
+│                                                                                                                                                    │
+│                                                                                                                                                    │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+▸ /probe-prompt  (file prompt)                                                                                                                        
+  /probe-skill  Probe skill probe-skill. Use when asked to run the probe-skill probe.                                                                 
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%                                                                  

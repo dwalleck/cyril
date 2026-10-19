@@ -70,21 +70,50 @@ impl RunningRuntime {
     }
 
     async fn wait_ready(&mut self) -> Result<()> {
-        let deadline = Instant::now() + STARTUP_TIMEOUT;
+        let started = Instant::now();
+        let deadline = started + STARTUP_TIMEOUT;
+        let mut connect_failures = 0;
+        let mut health_failures = 0;
+        let mut last_observation = None;
         loop {
-            if Instant::now() >= deadline {
-                bail!("memory runtime did not become ready before deadline");
+            if let Some(status) = self.child.try_wait()? {
+                bail!(
+                    "memory runtime exited before readiness: {status}; last observation: {last_observation:?}"
+                );
             }
-            if let Ok(mut client) = AdminClient::connect(
+            if Instant::now() >= deadline {
+                bail!(
+                    "memory runtime did not become ready before deadline: elapsed={:?}, connect_failures={connect_failures}, health_failures={health_failures}, last_observation={last_observation:?}",
+                    started.elapsed()
+                );
+            }
+            match AdminClient::connect(
                 self.endpoint.clone(),
                 self.credential.clone(),
                 ATTEMPT_TIMEOUT,
             )
             .await
-                && let Ok(health) = client.health().await
-                && health.status() == RuntimeHealth::Ready
             {
-                return Ok(());
+                Ok(mut client) => match client.health().await {
+                    Ok(health) if health.status() == RuntimeHealth::Ready => return Ok(()),
+                    Ok(health) if health.status() == RuntimeHealth::Failed => {
+                        bail!(
+                            "memory runtime reported failed health: {:?}",
+                            health.error()
+                        );
+                    }
+                    Ok(health) => {
+                        last_observation = Some(format!("health status: {:?}", health.status()));
+                    }
+                    Err(error) => {
+                        health_failures += 1;
+                        last_observation = Some(format!("health request: {error}"));
+                    }
+                },
+                Err(error) => {
+                    connect_failures += 1;
+                    last_observation = Some(format!("connect: {error}"));
+                }
             }
             sleep(Duration::from_millis(20)).await;
         }
