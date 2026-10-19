@@ -39,13 +39,27 @@ Local. All four tests resolve within existing owners, and the behavior is fully 
 
   The `notify-wf` named the abort, but the pause stayed queued. It would have named the parent's next non-completion wake, for example a cyril-pd4b give-up or another step note on the same notify-parent → `send-message-wake` path, as `repeat "loop" … (2)`. Two guards now prevent that:
   - (a) Queueing a run's `Ended` or newer `RepeatCap` cause evicts that run's pending `RepeatCap`.
-  - (b) `WorkflowTracker::end_turn`, called on the session's `TurnCompleted`, evicts the session's pending `RepeatCap` causes. This matches KAS: `rewakeWithInfo` returns while the parent has a running turn, so KAS wakes for a note at once or never. Terminal `Ended` causes stay queued, so cyril-lki9 is unchanged.
+  - (b) `WorkflowTracker::end_turn` runs on the session's `TurnCompleted`. If the turn ends for any reason except a cancel, it evicts the session's pending `RepeatCap` causes. A Cancelled turn keeps them (see Review round 2). This matches KAS: a note gets a wake at once, never, or again after a cancel. `rewakeWithInfo` returns while the parent has a running turn and the note is buffered; only `cancel()` re-wakes the buffered notes. Terminal `Ended` causes stay queued, so cyril-lki9 is unchanged.
 
   Receipt: `receipts/red-stale-pause.txt`. Tests:
   - App `stale_repeat_cap_pause_never_labels_a_later_wake`: the live capture through line 653, then a synthetic `send-message-wake`, which must render generic.
   - Tracker `terminal_completion_evicts_its_runs_pending_pause`, `newer_pause_replaces_the_runs_pending_pause`, and `turn_end_evicts_pauses_that_never_woke`.
   - The 7-wake replay and every lki9 test pass unchanged.
 - **Residual limitation (the coordinator files it).** An idle parent plus a retry that parks at an already-exhausted cap sends no note. In the capture, retry at 657–659, then pause at 665 with `iterationsRun:2` and no notify; `holdRepeatCapNote` is not re-armed. If the parent then stays idle and the run is not superseded, the queued pause is cleared only at the parent's next turn start. That turn claims it, and if it is a non-completion wake it would be named after that pause. Telling the two apart needs `_kiro/session/notify` correlation (cyril-fb1m, then cyril-pd4b).
+
+## Review round 2 (delta review of `17a0b718`: APPROVE, one Medium fixed)
+
+- **Medium, fixed.** Guard (b) did not follow KAS's cancel path. In the 0.66.43 bundle, `cancel()` calls `cancelLocalTurn(sid, {rewakeNotifications: true})`. That collects the unread `notification` steering entries and calls `rewakeClearedNotifications`, which waits for the turn to complete and then calls `rewakeWithInfo`, starting a `send-message-wake`. A step or info note that reaches a busy parent goes through the steering buffer's rewake registry, so a repeat-cap note can be re-woken.
+
+  The failing sequence: a parent wake is running, the run pauses at its cap, the note is parked unread, and the user presses Esc. The turn ends Cancelled, KAS re-wakes the parent for the note, and that re-wake rendered a generic header.
+
+  `end_turn` now takes the stop reason and keeps pending pauses on `StopReason::Cancelled`. I did not add the optional refinement (evict when the note was already shown as an `EngineMessageInjected`). KAS re-wakes only notes still *unread* in its steering buffer (`steeringBuffer.getUnread`), and the wire does not show whether a `steering_injected` note has been read. So cyril keeps the pause and relies on the claim-at-turn-start residual. A pause whose note was read and so never re-woken stays queued until the next claim.
+- **Low, fixed.** Guard (b)'s App wiring is now pinned. `turn_end_wires_pause_eviction` (rstest) runs `TurnStarted` → paused repeat-cap `run_complete` → `TurnCompleted` → `TurnStarted` → `send-message-wake`:
+  - EndTurn gives a generic header.
+  - Cancelled gives the repeat-cap label.
+
+  Mutation receipt: with the `TurnCompleted` arm removed from `annotate_transcript`, the EndTurn case fails (`receipts/mutation-unwired-end-turn.txt`); restored, it passes.
+- Red-first receipt: `receipts/red-cancel-rewake.txt`, covering the tracker rstest `turn_end_evicts_pauses_unless_cancelled` and the App rstest.
 
 ## Terminal criterion
 
