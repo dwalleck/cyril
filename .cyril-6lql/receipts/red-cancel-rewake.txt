@@ -1,0 +1,55 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 18.04s
+     Running unittests src/lib.rs (target/debug/deps/cyril_core-ef9a7513f551e418)
+
+running 4 tests
+test workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_3_refusal ... ok
+test workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_1_end_turn ... ok
+test workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_2_max_tokens ... ok
+test workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_4_cancelled_rewakes ... FAILED
+
+failures:
+
+---- workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_4_cancelled_rewakes stdout ----
+
+thread 'workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_4_cancelled_rewakes' (750760) panicked at crates/cyril-core/src/workflow.rs:4617:9:
+assertion `left == right` failed
+  left: None
+ right: Some(("recipe-L", Paused, Some(("loop", 1))))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    workflow::tests::turn_end_evicts_pauses_unless_cancelled::case_4_cancelled_rewakes
+
+test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 961 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-core --lib`
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-memory)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 19.22s
+     Running unittests src/main.rs (target/debug/deps/cyril-9895c1a863416607)
+
+running 2 tests
+test app::tests::turn_end_wires_pause_eviction::case_1_ended_turn_evicts ... ok
+test app::tests::turn_end_wires_pause_eviction::case_2_cancelled_turn_rewakes ... FAILED
+
+failures:
+
+---- app::tests::turn_end_wires_pause_eviction::case_2_cancelled_turn_rewakes stdout ----
+
+thread 'app::tests::turn_end_wires_pause_eviction::case_2_cancelled_turn_rewakes' (752742) panicked at crates/cyril/src/app.rs:8341:9:
+assertion `left == right` failed: ["Session created: main", "─── ⚙ agent-initiated · send-message-wake ───"]
+  left: Some("─── ⚙ agent-initiated · send-message-wake ───")
+ right: Some("─── ⚙ workflow \"recipe-wf-l\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    app::tests::turn_end_wires_pause_eviction::case_2_cancelled_turn_rewakes
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 228 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`

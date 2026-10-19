@@ -1223,7 +1223,9 @@ impl App {
     ) {
         match notification {
             Notification::TurnStarted => self.workflow_tracker.claim_wake_labels(session),
-            Notification::TurnCompleted { .. } => self.workflow_tracker.end_turn(session),
+            Notification::TurnCompleted { stop_reason } => {
+                self.workflow_tracker.end_turn(session, *stop_reason);
+            }
             Notification::AgentInitiatedTurn(origin) => {
                 let label = self.workflow_tracker.take_turn_label(session, origin);
                 self.ui_state
@@ -8261,6 +8263,82 @@ mod tests {
             }
             Err(error) => panic!("valid completion fixture rejected: {error}"),
         }
+    }
+
+    /// A `paused` run_complete parented to `parent` whose repeat `repeat`
+    /// hit its iteration cap `max` (cyril-6lql; KAS 0.66.43 shape).
+    fn repeat_cap_pause_frame(
+        id: &str,
+        parent: &SessionId,
+        repeat: &str,
+        max: u32,
+    ) -> Notification {
+        let snapshot = WorkflowSnapshot::new(
+            workflow_id(id),
+            format!("recipe-{id}"),
+            WorkflowRunStatus::Paused,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(workflow_node_id("root"), Vec::new()),
+                WorkflowNodeStatus::Paused,
+                Vec::new(),
+            ),
+            WorkflowSnapshotMetadata::new("2026-10-18T00:00:00Z".to_owned(), 0)
+                .with_parent_session_id(parent.clone())
+                .with_pause(cyril_core::types::WorkflowRunPause::RepeatCap(
+                    cyril_core::types::WorkflowRepeatCap::new(workflow_node_id(repeat), max, max),
+                )),
+        );
+        match WorkflowRunCompleted::new(workflow_id(id), WorkflowCompletionStatus::Paused, snapshot)
+        {
+            Ok(completion) => {
+                Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
+            }
+            Err(error) => panic!("valid pause fixture rejected: {error}"),
+        }
+    }
+
+    /// cyril-6lql delta review: the App wires guard (b) to the session's
+    /// `TurnCompleted` with its stop reason. A repeat-cap pause that lands
+    /// during a parent turn is evicted when that turn ends normally (KAS
+    /// noted it in the turn and will not wake for it), but survives a
+    /// CANCELLED end — KAS re-wakes the parent with the unread note
+    /// (`cancelLocalTurn({rewakeNotifications:true})`), and that
+    /// `send-message-wake` is the pause's.
+    #[rstest::rstest]
+    #[case::ended_turn_evicts(StopReason::EndTurn, "─── ⚙ agent-initiated · send-message-wake ───")]
+    #[case::cancelled_turn_rewakes(
+        StopReason::Cancelled,
+        "─── ⚙ workflow \"recipe-wf-l\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───"
+    )]
+    fn turn_end_wires_pause_eviction(#[case] stop_reason: StopReason, #[case] want: &str) {
+        use cyril_core::types::AgentInitiation;
+        let mut app = test_app();
+        let main = SessionId::new("main");
+        app.handle_notification(session_created_frame(&main));
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-l",
+            WorkflowRunStatus::Running,
+        )));
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(RoutedNotification::global(repeat_cap_pause_frame(
+            "wf-l", &main, "loop", 1,
+        )));
+        app.handle_notification(lki9_on(&main, Notification::TurnCompleted { stop_reason }));
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("send-message-wake".into()),
+                false,
+            )),
+        ));
+        let lines = lki9_system_lines(app.ui_state.messages());
+        assert_eq!(lines.last().map(String::as_str), Some(want), "{lines:?}");
     }
 
     fn lki9_system_lines(messages: &[cyril_ui::traits::ChatMessage]) -> Vec<String> {

@@ -6,13 +6,14 @@ use crate::types::workflow::{
     WorkflowSnapshotParts,
 };
 use crate::types::{
-    AgentInitiation, SessionId, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
-    WorkflowEvent, WorkflowId, WorkflowLoopIteration, WorkflowNodeCompleted,
-    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
-    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted, WorkflowNodeStatus,
-    WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution, WorkflowRepeatCap,
-    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
-    WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+    AgentInitiation, SessionId, StopReason, WorkflowCompletionSignal,
+    WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId, WorkflowLoopIteration,
+    WorkflowNodeCompleted, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
+    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted,
+    WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution,
+    WorkflowRepeatCap, WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted,
+    WorkflowRunStatus, WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome,
+    WorkflowWatchPoll,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -926,14 +927,27 @@ impl WorkflowTracker {
             .insert(session.clone(), queued.into_iter().collect());
     }
 
-    /// A turn on `session` ended (cyril-6lql review guard b): its pending
-    /// repeat-cap pauses are evicted. KAS wakes the parent for a pause's
-    /// note at once or never — `rewakeWithInfo` returns while the parent has
-    /// a running turn and the note is injected into it instead — so a pause
-    /// still queued when the turn ends will never be the reason for a wake.
-    /// Terminal completions stay queued (cyril-lki9: KAS wakes for those
-    /// after the turn).
-    pub fn end_turn(&mut self, session: &SessionId) {
+    /// A turn on `session` ended with `stop_reason` (cyril-6lql review guard
+    /// b). KAS wakes the parent for a pause's note at once, never, or again
+    /// after a cancel (KAS 0.66.43 bundle):
+    /// - idle parent: `rewakeWithInfo` starts a `send-message-wake` at once;
+    /// - busy parent: `rewakeWithInfo` returns while the turn runs and the
+    ///   note joins its steering buffer (rewake-capable) — so when that turn
+    ///   simply ends, KAS never wakes for the pause, and it is evicted here;
+    /// - busy parent cancelled: `cancel()` → `cancelLocalTurn(...,
+    ///   {rewakeNotifications:true})` re-wakes the parent with every unread
+    ///   workflow note (`rewakeClearedNotifications` → `rewakeWithInfo`), so a
+    ///   Cancelled end keeps the pause for that re-wake. cyril cannot see from
+    ///   the wire whether KAS's buffer entry was read; a pause whose note was
+    ///   read is not re-woken and stays queued until the next claim (the
+    ///   claim-at-turn-start residual).
+    ///
+    /// Terminal completions always stay queued (cyril-lki9: KAS wakes for
+    /// those after the turn).
+    pub fn end_turn(&mut self, session: &SessionId, stop_reason: StopReason) {
+        if stop_reason == StopReason::Cancelled {
+            return;
+        }
         if let Some(queue) = self.wake_labels.get_mut(session) {
             queue.retain(|cause| matches!(cause, WakeCause::Ended(_)));
         }
@@ -4586,6 +4600,39 @@ mod tests {
         );
     }
 
+    /// cyril-6lql delta review (Medium): guard (b) follows KAS's cancel
+    /// path. A turn that ENDS (`end_turn`, any non-cancel reason) evicts its
+    /// session's pending pauses — KAS woke for the note then or never will.
+    /// A CANCELLED turn keeps them: KAS's `cancel()` →
+    /// `cancelLocalTurn({rewakeNotifications:true})` re-wakes the parent with
+    /// the unread workflow notes (`rewakeClearedNotifications` →
+    /// `rewakeWithInfo`, a `send-message-wake`), so the pause labels that
+    /// re-wake.
+    #[rstest::rstest]
+    #[case::end_turn(StopReason::EndTurn, None)]
+    #[case::max_tokens(StopReason::MaxTokens, None)]
+    #[case::refusal(StopReason::Refusal, None)]
+    #[case::cancelled_rewakes(StopReason::Cancelled, paused_view("recipe-L", "loop", 1))]
+    fn turn_end_evicts_pauses_unless_cancelled(
+        #[case] stop_reason: StopReason,
+        #[case] want: Option<LabelView>,
+    ) {
+        let s = SessionId::new("s");
+        let mut tracker = WorkflowTracker::new();
+        seed(&mut tracker, "l", "seeded");
+        tracker.claim_wake_labels(&s); // the parent's turn is running
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("l", "L", Some("s"), "loop", 1)
+        ));
+        tracker.end_turn(&s, stop_reason);
+        tracker.claim_wake_labels(&s);
+        assert_eq!(
+            label_view(tracker.take_turn_label(&s, &initiation(Some("send-message-wake"), false))),
+            want
+        );
+    }
+
     /// cyril-6lql review guard (a): a run's newer pause replaces its pending
     /// one — one run, at most one pending pause; another run's is kept.
     #[test]
@@ -4614,9 +4661,10 @@ mod tests {
     }
 
     /// cyril-6lql review guard (b): KAS wakes the parent for a repeat-cap
-    /// note at once or never (`rewakeWithInfo` returns while the parent has
-    /// a running turn: the note is injected instead). So a pause queued
-    /// during a parent turn is evicted when that turn ends; a terminal
+    /// note at once, never, or again after a cancel (`rewakeWithInfo`
+    /// returns while the parent has a running turn: the note is buffered
+    /// instead; only a cancel re-wakes it). So a pause queued during a parent
+    /// turn is evicted when that turn ends normally; a terminal
     /// completion queued in the same turn is kept for the next completion
     /// wake (cyril-lki9 unchanged), and another session's pause is kept.
     #[test]
@@ -4640,7 +4688,7 @@ mod tests {
             &mut tracker,
             repeat_cap_completion("o", "O", Some("other"), "loop", 1)
         ));
-        tracker.end_turn(&s);
+        tracker.end_turn(&s, StopReason::EndTurn);
         assert_eq!(pending_pauses(&tracker, &s), Vec::new());
         assert_eq!(pending_pauses(&tracker, &other), vec![("o".to_owned(), 1)]);
         tracker.claim_wake_labels(&s);
