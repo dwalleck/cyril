@@ -100,6 +100,12 @@ pub use workflow::{
     WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
     WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
+pub use workflow::{
+    WorkflowCascadeSource, WorkflowFileCheck, WorkflowJoinPolicy, WorkflowPlan,
+    WorkflowPlanInclude, WorkflowPlanKind, WorkflowPlanNode, WorkflowPlanNodeKind,
+    WorkflowPlanOmission, WorkflowPlanStep, WorkflowPlanTask, WorkflowRepeatStop,
+    WorkflowStopCondition,
+};
 pub use workflow_command::{
     WorkflowCommandOutcome, WorkflowFetchVerb, WorkflowInputError, WorkflowOp, WorkflowRecipe,
     WorkflowRunSummary, WorkflowRunTarget, parse_run_inputs, parse_run_target,

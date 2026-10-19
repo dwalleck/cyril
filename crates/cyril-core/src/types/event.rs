@@ -619,6 +619,10 @@ pub struct PermissionRequest {
     /// boundary; `None` when the agent sends no consent metadata. An armed
     /// `/review` decides its step sessions' requests from this alone.
     pub consent: Option<crate::review::consent::PermissionConsent>,
+    /// The workflow plan a KAS `update_workflow` request asks the user to
+    /// approve (`_meta.kiro.workflowPlan`, cyril-8wh0), typed at the
+    /// conversion boundary; `None` for every other request.
+    pub workflow_plan: Option<Box<super::WorkflowPlan>>,
 }
 
 /// The semantic kind of a permission option. Mirrors `acp::PermissionOptionKind`.

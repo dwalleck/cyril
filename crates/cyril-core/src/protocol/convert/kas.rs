@@ -18,6 +18,18 @@ use crate::types::{
 pub(crate) mod notify;
 pub(crate) mod powers;
 pub(crate) mod workflow;
+pub(crate) mod workflow_plan;
+
+/// `_meta.kiro.workflowPlan` of a KAS `session/request_permission`
+/// (cyril-8wh0): the plan an `update_workflow` approval asks the user to
+/// accept before any of its steps run. `None` when the request carries no
+/// plan, or (after a warning) a malformed one.
+pub(crate) fn permission_workflow_plan(
+    args: &acp::RequestPermissionRequest,
+) -> Option<crate::types::WorkflowPlan> {
+    let plan = args.meta.as_ref()?.get("kiro")?.get("workflowPlan")?;
+    workflow_plan::parse(plan, &args.tool_call.tool_call_id.to_string())
+}
 
 /// `_meta.kiro.{toolId, command, consent{capability, resource, workspaceRoot}}`
 /// of a KAS `session/request_permission`, with the commands the tool call's

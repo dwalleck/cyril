@@ -1398,10 +1398,16 @@ impl WorkflowTracker {
     /// - busy parent cancelled: `cancel()` → `cancelLocalTurn(...,
     ///   {rewakeNotifications:true})` re-wakes the parent with every unread
     ///   workflow note (`rewakeClearedNotifications` → `rewakeWithInfo`), so a
-    ///   Cancelled end keeps the pause for that re-wake. cyril cannot see from
-    ///   the wire whether KAS's buffer entry was read; a pause whose note was
-    ///   read is not re-woken and stays queued until the next claim (the
-    ///   claim-at-turn-start residual).
+    ///   Cancelled end keeps the pause for that re-wake. A note's read does
+    ///   show on the wire (its `steering_injected`), but cyril cannot match
+    ///   it to the run (no `notify-<uuid>` key, cyril-fb1m), and KAS re-wakes
+    ///   by the lowest read index across executions; so a pause whose note
+    ///   was read is not re-woken and stays queued until the next claim (the
+    ///   claim-at-turn-start residual, cyril-32sp).
+    ///
+    /// A plain (non-workflow) note still unread when the busy turn ends gets
+    /// KAS's `notification-rewake` instead; that wake claims the pause too
+    /// (the same cyril-32sp residual).
     ///
     /// Terminal completions always stay queued (cyril-lki9: KAS wakes for
     /// those after the turn).
@@ -5530,6 +5536,7 @@ mod tests {
     #[rstest::rstest]
     #[case::end_turn(StopReason::EndTurn, None)]
     #[case::max_tokens(StopReason::MaxTokens, None)]
+    #[case::max_turn_requests(StopReason::MaxTurnRequests, None)]
     #[case::refusal(StopReason::Refusal, None)]
     #[case::cancelled_rewakes(StopReason::Cancelled, paused_view("recipe-L", "loop", 1))]
     fn turn_end_evicts_pauses_unless_cancelled(
