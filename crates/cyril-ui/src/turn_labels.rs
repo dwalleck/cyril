@@ -8,7 +8,7 @@
 //! lives in this module (module-shape fence C21 R2).
 
 use cyril_core::types::{AgentInitiation, WorkflowRunStatus};
-use cyril_core::workflow::{AgentTurnClose, CompletionNotice, WakeLabel};
+use cyril_core::workflow::{AgentTurnClose, CompletionNotice, StepAnswer, StepQuestion, WakeLabel};
 
 /// The header line that opens an agent-initiated turn.
 ///
@@ -21,6 +21,14 @@ use cyril_core::workflow::{AgentTurnClose, CompletionNotice, WakeLabel};
 ///   when the engine gave none (B3)
 #[must_use]
 pub(crate) fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -> String {
+    if let Some(label) = label
+        && let Some(step) = label.asking_step()
+    {
+        return format!(
+            "─── ⚙ workflow \"{}\" · step \"{step}\" asked a question · agent follow-up ───",
+            label.name()
+        );
+    }
     if let Some(label) = label
         && let Some(repeat_cap) = label.repeat_cap()
     {
@@ -157,6 +165,48 @@ fn run_total_text(lead: &str, total: f64, unmetered_turns: u32) -> String {
 
 fn status_word(status: WorkflowRunStatus) -> &'static str {
     status.as_str()
+}
+
+/// The transcript line for a workflow step parked on a question
+/// (cyril-9104 D1):
+///
+/// ```text
+/// ⚙ workflow "<run>" · step "<node>" is waiting for your answer:
+/// <what it asked>
+/// ↳ /answer @<selector> <your answer>
+/// ```
+///
+/// What it asked is the question's own text (its `send_message`, or its
+/// captured output), else `fallback` — the step's latest reply from its
+/// stream. With neither, the first line ends in a period and no text line.
+#[must_use]
+pub(crate) fn step_question_text(question: &StepQuestion, fallback: Option<&str>) -> String {
+    let head = format!(
+        "⚙ workflow \"{}\" · step \"{}\" is waiting for your answer",
+        question.run_name(),
+        question.node_id()
+    );
+    let asked = question
+        .question()
+        .or(fallback)
+        .map(str::trim)
+        .filter(|text| !text.is_empty());
+    let hint = format!("↳ /answer @{} <your answer>", question.selector());
+    match asked {
+        Some(asked) => format!("{head}:\n{asked}\n{hint}"),
+        None => format!("{head}.\n{hint}"),
+    }
+}
+
+/// The line for the parent model answering a step itself (cyril-9104 D3):
+/// `⚙ answered "<node>" for you: <message>`, or `⚙ answered a workflow step
+/// for you: <message>` when the step is not known.
+#[must_use]
+pub(crate) fn parent_answer_text(answer: &StepAnswer) -> String {
+    match answer.step() {
+        Some(step) => format!("⚙ answered \"{step}\" for you: {}", answer.message()),
+        None => format!("⚙ answered a workflow step for you: {}", answer.message()),
+    }
 }
 
 #[cfg(test)]
@@ -377,5 +427,88 @@ mod tests {
             "absent severity defaults to info"
         );
         assert_eq!(step_notice_text(Some(""), None), "⚙ workflow step · info: ");
+    }
+
+    fn node(id: &str) -> WorkflowNodeId {
+        WorkflowNodeId::try_from(id.to_owned()).unwrap_or_else(|e| panic!("node id fixture: {e}"))
+    }
+
+    /// cyril-9104: the parent's wake for a step's question names the run and
+    /// the step that asked.
+    #[test]
+    fn step_question_header_string() {
+        let label =
+            WakeLabel::step_question("workflow-from-prompt".to_owned(), node("create-workflow"));
+        assert_eq!(
+            header_text(&origin(Some("send-message-wake"), false), Some(&label)),
+            "─── ⚙ workflow \"workflow-from-prompt\" · step \"create-workflow\" asked a question · agent follow-up ───"
+        );
+    }
+
+    fn question(node_id: &str, text: Option<&str>) -> StepQuestion {
+        use cyril_core::types::{
+            SessionId, WorkflowAttention, WorkflowAttentionKind, WorkflowId, WorkflowNodePath,
+        };
+        let run = WorkflowId::try_from("wf_1".to_owned()).unwrap_or_else(|e| panic!("{e}"));
+        let path = WorkflowNodePath::try_new(&run, vec!["wf_1".to_owned(), node_id.to_owned()])
+            .unwrap_or_else(|e| panic!("{e}"));
+        let attention = WorkflowAttention::new(
+            WorkflowAttentionKind::Question,
+            "t".to_owned(),
+            node(node_id),
+            path,
+            SessionId::new("sess_step"),
+        );
+        StepQuestion::new(run, "park".to_owned(), &attention, text.map(str::to_owned))
+    }
+
+    /// cyril-9104 D1: a parked question names its run and step, shows what
+    /// the step asked — the step's own reply when cyril has no other text —
+    /// and how to answer it.
+    #[rstest::rstest]
+    #[case::send_message_text(
+        Some("Which file should I edit?"),
+        Some("ignored stream text"),
+        "⚙ workflow \"park\" · step \"ask\" is waiting for your answer:\nWhich file should I edit?\n↳ /answer @ask <your answer>"
+    )]
+    #[case::stream_fallback(
+        None,
+        Some("WAITING"),
+        "⚙ workflow \"park\" · step \"ask\" is waiting for your answer:\nWAITING\n↳ /answer @ask <your answer>"
+    )]
+    #[case::no_text(
+        None,
+        None,
+        "⚙ workflow \"park\" · step \"ask\" is waiting for your answer.\n↳ /answer @ask <your answer>"
+    )]
+    #[case::blank_text_is_absent(
+        Some("  "),
+        Some(""),
+        "⚙ workflow \"park\" · step \"ask\" is waiting for your answer.\n↳ /answer @ask <your answer>"
+    )]
+    fn step_question_strings(
+        #[case] text: Option<&str>,
+        #[case] fallback: Option<&str>,
+        #[case] want: &str,
+    ) {
+        assert_eq!(step_question_text(&question("ask", text), fallback), want);
+    }
+
+    /// cyril-9104 D3: the parent's answer to a step reads as answered for
+    /// the user; an unknown step is still shown, without a name.
+    #[test]
+    fn parent_answer_strings() {
+        assert_eq!(
+            parent_answer_text(&StepAnswer::new(
+                None,
+                Some(node("create-workflow")),
+                "Please proceed with that plan.".to_owned()
+            )),
+            "⚙ answered \"create-workflow\" for you: Please proceed with that plan."
+        );
+        assert_eq!(
+            parent_answer_text(&StepAnswer::new(None, None, "Yes.".to_owned())),
+            "⚙ answered a workflow step for you: Yes."
+        );
     }
 }

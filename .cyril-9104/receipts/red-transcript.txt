@@ -1,0 +1,25 @@
+cyril-9104 slice 3 red-first receipt (transcript), 2026-10-18.
+
+A. turn_labels — state: tests added, `step_question_text` / `parent_answer_text` stubbed to
+   return "" and `header_text` without the step-question arm.
+   Command: cargo nextest run -p cyril-ui --no-fail-fast -E 'test(step_question) | test(parent_answer)'
+        FAIL  turn_labels::tests::parent_answer_strings
+        FAIL  turn_labels::tests::step_question_header_string
+        FAIL  turn_labels::tests::step_question_strings::case_1_send_message_text
+        FAIL  turn_labels::tests::step_question_strings::case_2_stream_fallback
+        FAIL  turn_labels::tests::step_question_strings::case_3_no_text
+        FAIL  turn_labels::tests::step_question_strings::case_4_blank_text_is_absent
+     Summary 6 tests run: 0 passed, 6 failed
+   After implementing the three strings: turn_labels 22 passed.
+
+B. App live replays — state: strings implemented, App not yet wired (no raised-question
+   rendering, `WorkflowMessage` not consumed).
+   Command: cargo nextest run -p cyril --all-features --no-fail-fast
+            -E 'test(parked_step_question_shows_in_live_capture) | test(parent_answer_renders_inside_its_labelled_wake)'
+        FAIL  app::tests::parent_answer_renders_inside_its_labelled_wake
+              "the step-question wake header: [... System(\"─── ⚙ agent-initiated · send-message-wake ───\"), ..."
+        FAIL  app::tests::parked_step_question_shows_in_live_capture
+              "one question line, raised once: ... left: []"
+     Summary 2 tests run: 0 passed, 2 failed
+   After wiring (`App::show_raised_step_questions` after each tracker apply; the
+   `WorkflowMessage` arm): 2 passed; workspace 2727 passed; C21 PASS.

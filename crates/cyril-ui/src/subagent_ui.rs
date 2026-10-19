@@ -30,6 +30,22 @@ impl SubagentStream {
         &self.streaming_text
     }
 
+    /// The stream's latest agent reply — still streaming, else the newest
+    /// committed one (cyril-9104: a parked workflow step's question is its
+    /// own last reply). `None` when it has said nothing.
+    pub fn latest_agent_text(&self) -> Option<&str> {
+        if !self.streaming_text.trim().is_empty() {
+            return Some(&self.streaming_text);
+        }
+        self.messages
+            .iter()
+            .rev()
+            .find_map(|message| match message.kind() {
+                ChatMessageKind::AgentText(text) => Some(text.as_str()),
+                _ => None,
+            })
+    }
+
     pub fn activity(&self) -> Activity {
         self.activity
     }

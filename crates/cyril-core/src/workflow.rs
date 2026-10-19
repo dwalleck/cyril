@@ -515,6 +515,28 @@ pub struct StepQuestion {
 }
 
 impl StepQuestion {
+    /// A parked step's question. The tracker builds these via
+    /// [`WorkflowTracker::step_questions`]; the constructor exists so
+    /// presentation code can be exercised with a question directly. The
+    /// selector starts as the node id.
+    pub fn new(
+        workflow_id: WorkflowId,
+        run_name: String,
+        attention: &WorkflowAttention,
+        question: Option<String>,
+    ) -> Self {
+        Self {
+            workflow_id,
+            run_name,
+            node_id: attention.node_id().clone(),
+            node_path: attention.node_path().clone(),
+            session_id: attention.session_id().clone(),
+            since: attention.since().to_owned(),
+            question,
+            selector: attention.node_id().as_str().to_owned(),
+        }
+    }
+
     pub fn workflow_id(&self) -> &WorkflowId {
         &self.workflow_id
     }
@@ -568,6 +590,20 @@ pub struct StepAnswer {
 }
 
 impl StepAnswer {
+    /// An answer to `step` (when known) by `answered_by`'s model. Built by
+    /// [`WorkflowTracker::record_message`]; public for presentation tests.
+    pub fn new(
+        answered_by: Option<SessionId>,
+        step: Option<WorkflowNodeId>,
+        message: String,
+    ) -> Self {
+        Self {
+            answered_by,
+            step,
+            message,
+        }
+    }
+
     /// The session whose model answered (KAS `callerSessionId`).
     pub fn answered_by(&self) -> Option<&SessionId> {
         self.answered_by.as_ref()

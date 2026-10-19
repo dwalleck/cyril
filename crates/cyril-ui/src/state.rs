@@ -1413,6 +1413,24 @@ impl UiState {
         self.push_transcript_system(transcript, text);
     }
 
+    /// Show a workflow step parked on a question in the main transcript
+    /// (cyril-9104), with the step's own latest reply when cyril has no
+    /// other text for it; text from [`crate::turn_labels::step_question_text`].
+    pub fn show_step_question(&mut self, question: &cyril_core::workflow::StepQuestion) {
+        let reply = self
+            .workflow_streams
+            .streams()
+            .get(question.session_id())
+            .and_then(crate::subagent_ui::SubagentStream::latest_agent_text);
+        let text = crate::turn_labels::step_question_text(question, reply);
+        self.add_system_message(text);
+    }
+
+    /// Show the parent model answering a workflow step itself (cyril-9104).
+    pub fn show_parent_answer(&mut self, answer: &cyril_core::workflow::StepAnswer) {
+        self.add_system_message(crate::turn_labels::parent_answer_text(answer));
+    }
+
     fn push_transcript_system(&mut self, transcript: Transcript<'_>, text: String) {
         match transcript {
             Transcript::Main => self.add_system_message(text),

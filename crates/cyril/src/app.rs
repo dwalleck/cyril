@@ -1034,6 +1034,15 @@ impl App {
         }
     }
 
+    /// cyril-9104: each workflow step question the tracker newly raised
+    /// shows once, in the main transcript.
+    fn show_raised_step_questions(&mut self) {
+        for question in self.workflow_tracker.take_raised_questions() {
+            self.ui_state.show_step_question(&question);
+            self.redraw_needed = true;
+        }
+    }
+
     /// Effective activity for the adaptive frame rate: subagent, workflow,
     /// and voice activity all hold the fast tick alongside the main session
     /// (cyril-jxfu C7 — a streaming workflow step must animate even when the
@@ -1391,6 +1400,22 @@ impl App {
             if let Some((workflow_id, status)) = completion {
                 self.review_run_completed(&workflow_id, status);
             }
+            self.show_raised_step_questions();
+            return Vec::new();
+        }
+
+        // cyril-9104: a workflow `send_message`, consumed once by the
+        // tracker. Only the main session's own answer to a step renders — no
+        // other session's transcript is shown.
+        if let Notification::WorkflowMessage(message) = notification {
+            if let Some(answer) = self.workflow_tracker.record_message(&message) {
+                if answer.answered_by().is_some() && answer.answered_by() == self.session.id() {
+                    self.ui_state.show_parent_answer(&answer);
+                    self.redraw_needed = true;
+                } else {
+                    tracing::debug!("a step answer from a session other than main; not shown");
+                }
+            }
             return Vec::new();
         }
 
@@ -1412,6 +1437,7 @@ impl App {
                         // (cyril-jxfu C5) — same sweep as lifecycle frames.
                         self.reparent_claimed_subagent_streams();
                         self.review_snapshot_status(&snapshot_run.0, snapshot_run.1);
+                        self.show_raised_step_questions();
                     }
                 }
                 Err(error) => {
@@ -9233,7 +9259,116 @@ mod tests {
         r.assert_settled();
     }
 
-    /// cyril-2lh8: the same live 0.66.43 capture closes every parent wake
+    #[cfg(feature = "kas")]
+    const Q9104_GATEOFF: &str =
+        "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl";
+    #[cfg(feature = "kas")]
+    const Q9104_GATEOFF_MAIN: &str = "sess_259b943b-3d2a-49d4-8430-4b4975864275";
+    #[cfg(feature = "kas")]
+    const Q9104_WFPLAN: &str =
+        "experiments/conductor-spike/audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl";
+
+    /// System lines starting with `prefix`, in transcript order.
+    #[cfg(feature = "kas")]
+    fn q9104_systems<'a>(
+        transcript: &[&'a ChatMessageKind],
+        prefix: &str,
+    ) -> Vec<(usize, &'a str)> {
+        transcript
+            .iter()
+            .enumerate()
+            .filter_map(|(index, kind)| match kind {
+                ChatMessageKind::System(text) if text.starts_with(prefix) => {
+                    Some((index, text.as_str()))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// cyril-9104 C5: the live gate-off `park` step parks on its own reply.
+    /// Its question shows once in the main transcript, naming the run and
+    /// the step, with the step's reply as the question and how to answer —
+    /// before the run's completion wake (after the client's answer).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn parked_step_question_shows_in_live_capture() {
+        let r = lki9_replay_conn(Q9104_GATEOFF, "main", Q9104_GATEOFF_MAIN);
+        let transcript = r.transcript();
+        let questions = q9104_systems(&transcript, "⚙ workflow \"park\" · step \"ask\"");
+        assert_eq!(
+            questions.iter().map(|(_, text)| *text).collect::<Vec<_>>(),
+            [
+                "⚙ workflow \"park\" · step \"ask\" is waiting for your answer:\nWAITING\n↳ /answer @ask <your answer>"
+            ],
+            "one question line, raised once: {transcript:?}"
+        );
+        let completion = lki9_position_system(
+            &transcript,
+            "─── ⚙ workflow \"park\" completed · agent follow-up ───",
+        )
+        .expect("the park run's completion wake");
+        assert!(questions[0].0 < completion);
+        assert!(
+            r.app.workflow_tracker.step_questions().is_empty(),
+            "the client's answer resumed the step"
+        );
+        r.assert_settled();
+    }
+
+    /// cyril-9104 C5: the live gate-on capture where the parent model answers
+    /// a step. The parent's wake names the run and the step that asked; the
+    /// step's question shows when it parks; the parent's `send_message`
+    /// answer shows as answered for the user — all inside that one labelled
+    /// wake, before its credits footer.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn parent_answer_renders_inside_its_labelled_wake() {
+        let r = lki9_replay_conn(
+            Q9104_WFPLAN,
+            "wfplan",
+            "sess_df3e2821-4f61-4189-809d-064794e17d41",
+        );
+        let transcript = r.transcript();
+        let header = lki9_position_system(
+            &transcript,
+            "─── ⚙ workflow \"workflow-from-prompt\" · step \"create-workflow\" asked a question · agent follow-up ───",
+        )
+        .unwrap_or_else(|| panic!("the step-question wake header: {transcript:?}"));
+        let question = q9104_systems(
+            &transcript,
+            "⚙ workflow \"workflow-from-prompt\" · step \"create-workflow\" is waiting for your answer:\n",
+        );
+        assert_eq!(question.len(), 1, "{transcript:?}");
+        assert!(
+            question[0]
+                .1
+                .contains("What would you like changed before I hand it off?\n↳ /answer @create-workflow <your answer>"),
+            "{}",
+            question[0].1
+        );
+        let answer = q9104_systems(
+            &transcript,
+            "⚙ answered \"create-workflow\" for you: The proposed plan is exactly right.",
+        );
+        assert_eq!(answer.len(), 1, "{transcript:?}");
+        let footer = transcript
+            .iter()
+            .enumerate()
+            .skip(header)
+            .find_map(|(index, kind)| {
+                matches!(kind, ChatMessageKind::System(text) if text.starts_with("╰─ ⚙"))
+                    .then_some(index)
+            })
+            .expect("the wake's footer");
+        assert!(
+            header < question[0].0 && question[0].0 < answer[0].0 && answer[0].0 < footer,
+            "header {header} < question {} < answer {} < footer {footer}: {transcript:?}",
+            question[0].0,
+            answer[0].0
+        );
+        r.assert_settled();
+    }
     /// with its credits after `turn_end`, and each wake that follows a run's
     /// end is that run's completion line with the run's total — its step
     /// turns plus every parent wake attributed to it (the loop run's total
