@@ -62,6 +62,7 @@ fn approval_state(option_count: usize) -> ApprovalState {
         phase: ApprovalPhase::SelectOption,
         responder: tokio::sync::oneshot::channel().0,
         consent: None,
+        workflow_plan: None,
     }
 }
 

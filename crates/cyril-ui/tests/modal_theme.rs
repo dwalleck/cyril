@@ -84,6 +84,7 @@ fn approval_state(trust_phase: bool) -> ApprovalState {
         },
         responder: tokio::sync::oneshot::channel().0,
         consent: None,
+        workflow_plan: None,
     }
 }
 

@@ -88,6 +88,12 @@ pub use usage::{
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
+    WorkflowCascadeSource, WorkflowFileCheck, WorkflowJoinPolicy, WorkflowPlan,
+    WorkflowPlanInclude, WorkflowPlanKind, WorkflowPlanNode, WorkflowPlanNodeKind,
+    WorkflowPlanOmission, WorkflowPlanStep, WorkflowPlanTask, WorkflowRepeatStop,
+    WorkflowStopCondition,
+};
+pub use workflow::{
     WorkflowCompletionMismatchError, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
     WorkflowCompletionStatus, WorkflowEnumParseError, WorkflowEvent, WorkflowId,
     WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
