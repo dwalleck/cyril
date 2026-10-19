@@ -1,0 +1,6 @@
+rules:
+  - capability: shell
+    effect: allow
+    match:
+      - echo alwaysprobe_k7
+      - tr a-z A-Z

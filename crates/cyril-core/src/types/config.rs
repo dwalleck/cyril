@@ -54,13 +54,15 @@ pub struct AgentConfig {
     pub agent_name: String,
     /// Extra args for agent subprocess.
     pub extra_args: Vec<String>,
-    /// Which Kiro engine to drive (KAS-0, ADR-0001). TOML `engine = "v2"` or
-    /// `"kas"` (`"v3"` is accepted as an alias for `"kas"`, cyril-6iek); the
-    /// `--agent-engine` flag overrides this. Defaults to v2.
+    /// Which Kiro engine to drive (ADR-0001). TOML `engine = "v2"` or
+    /// `"kas"` (`"v3"` is accepted as an alias for `"kas"`); the
+    /// `--agent-engine` flag overrides this. Defaults to KAS when the `kas`
+    /// feature is compiled in, V2 otherwise.
     pub engine: AgentEngine,
     /// For the KAS engine: which spawn shape (KAS-1, cyril-evwh). TOML `kas_spawn
-    /// = "free"` (default, zero-credential direct spawn) or `"wrapper"`
-    /// (`kiro-cli acp --agent-engine v3` + the auth responder). Ignored for v2.
+    /// = "free"` (default, direct spawn with callback authentication) or
+    /// `"wrapper"` (`kiro-cli acp --agent-engine v3` + the auth responder).
+    /// Ignored for v2.
     pub kas_spawn: KasSpawn,
     /// Host shell used for KAS terminal callbacks. `None` and `"auto"` both
     /// request host detection; the bridge validates supported string values at
@@ -202,6 +204,59 @@ color_mode = "ansi256"
         let config = AgentConfig::default();
         assert_eq!(config.agent_name, "kiro-cli");
         assert!(config.extra_args.is_empty());
+    }
+
+    #[test]
+    fn loaded_config_preserves_engine_selection_and_feature_default() {
+        let default_engine = if cfg!(feature = "kas") {
+            AgentEngine::Kas
+        } else {
+            AgentEngine::V2
+        };
+        for (name, source, expected) in [
+            ("missing", None, default_engine),
+            ("empty", Some(""), default_engine),
+            (
+                "no agent table",
+                Some("[ui]\nmax_messages = 1000\n"),
+                default_engine,
+            ),
+            ("empty agent table", Some("[agent]\n"), default_engine),
+            (
+                "partial agent table",
+                Some("[agent]\nshell = \"bash\"\n"),
+                default_engine,
+            ),
+            (
+                "explicit v2",
+                Some("[agent]\nengine = \"v2\"\n"),
+                AgentEngine::V2,
+            ),
+            (
+                "explicit kas",
+                Some("[agent]\nengine = \"kas\"\n"),
+                AgentEngine::Kas,
+            ),
+            (
+                "v3 alias",
+                Some("[agent]\nengine = \"v3\"\n"),
+                AgentEngine::Kas,
+            ),
+            (
+                "invalid selector",
+                Some("[agent]\nengine = \"unknown\"\n"),
+                default_engine,
+            ),
+        ] {
+            let dir = tempfile::tempdir().unwrap();
+            let path = dir.path().join("config.toml");
+            if let Some(source) = source {
+                std::fs::write(&path, source).unwrap();
+            }
+            let config = Config::load_from_path(&path);
+            assert_eq!(config.agent.engine, expected, "{name}");
+            assert_eq!(config.agent.kas_spawn, KasSpawn::Free, "{name}");
+        }
     }
 
     #[test]

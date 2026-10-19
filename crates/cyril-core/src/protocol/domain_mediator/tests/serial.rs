@@ -30,6 +30,8 @@ fn unhandled_extension_diagnostic_excludes_payload_and_preserves_dispatch() {
                 stall_threshold: Duration::from_secs(30),
                 #[cfg(feature = "kas")]
                 host_shell: None,
+                #[cfg(feature = "kas")]
+                kas_token: None,
             };
             let (mut mediator, _channels) =
                 must_succeed(DomainMediator::new(config, bridge), "diagnostic mediator");
@@ -154,6 +156,8 @@ async fn session_bound_answer_is_dropped_after_the_session_changes() {
         stall_threshold: Duration::from_secs(30),
         #[cfg(feature = "kas")]
         host_shell: None,
+        #[cfg(feature = "kas")]
+        kas_token: None,
     };
     let (mut mediator, _channels) = must_succeed(
         DomainMediator::new(config, bridge),
@@ -282,6 +286,8 @@ async fn initialization_failure_drains_queued_callback_error() {
                 stall_threshold: Duration::from_secs(30),
                 #[cfg(feature = "kas")]
                 host_shell: None,
+                #[cfg(feature = "kas")]
+                kas_token: None,
             };
             let (mediator, channels) = DomainMediator::new(config, bridge)
                 .unwrap_or_else(|error| panic!("initialization-failure mediator: {error}"));
@@ -388,6 +394,8 @@ async fn prompt_terminal_is_processed_after_queued_source_frames() {
                 stall_threshold: Duration::from_secs(30),
                 #[cfg(feature = "kas")]
                 host_shell: None,
+                #[cfg(feature = "kas")]
+                kas_token: None,
             };
             let (mediator, channels) = DomainMediator::new(config, bridge)
                 .unwrap_or_else(|error| panic!("source-order mediator: {error}"));
@@ -592,6 +600,7 @@ async fn kas_runtime_preserves_callbacks_commands_and_wire_terminal_order() {
                 present_as: None,
                 stall_threshold: Duration::from_secs(30),
                 host_shell: None,
+                kas_token: None,
             };
             let (mediator, channels) = DomainMediator::new(config, bridge)
                 .unwrap_or_else(|error| panic!("KAS callback mediator: {error}"));
@@ -893,6 +902,7 @@ async fn foreign_turn_end_does_not_finalize_main_source_capture() {
                 present_as: None,
                 stall_threshold: Duration::from_secs(30),
                 host_shell: None,
+                kas_token: None,
             };
             let (mediator, channels) = DomainMediator::new(config, bridge)
                 .unwrap_or_else(|error| panic!("foreign-terminal mediator: {error}"));
@@ -1079,6 +1089,7 @@ async fn v2_bound_bridge_refuses_inbound_kiro_host_requests_end_to_end() {
                 present_as: None,
                 stall_threshold: Duration::from_secs(30),
                 host_shell: None,
+                kas_token: None,
             };
             let (mediator, channels) = DomainMediator::new(config, bridge)
                 .unwrap_or_else(|error| panic!("dn91 wiring mediator: {error}"));
@@ -1121,4 +1132,35 @@ async fn v2_bound_bridge_refuses_inbound_kiro_host_requests_end_to_end() {
                 .unwrap_or_else(|error| panic!("dn91 wiring loop: {error}"));
         })
         .await;
+}
+
+// cyril-zbu7: the KAS token source bound in `DomainConfig` lands in the
+// dispatch context (its only consumer) — a dropped hand-off would answer
+// every KAS `getAccessToken` with `Unbound`.
+#[cfg(feature = "kas")]
+#[test]
+fn kas_token_source_moves_into_the_dispatch_context() {
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    use super::super::{DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::KasEngine;
+
+    let (_handle, bridge) = create_channel_pair();
+    let config = DomainConfig {
+        engine: Rc::new(KasEngine::default()),
+        cwd: std::env::temp_dir(),
+        present_as: None,
+        stall_threshold: Duration::from_secs(30),
+        host_shell: None,
+        kas_token: Some(crate::protocol::kas::auth::KasTokenSource::new(
+            crate::types::AgentCommand::new("kiro-cli"),
+            crate::types::SpawnEnvironment::Inherit,
+        )),
+    };
+    let (mediator, _channels) = DomainMediator::new(config, bridge)
+        .unwrap_or_else(|error| panic!("token-source mediator: {error}"));
+    assert!(mediator.host_ctx.kas_token.is_some());
+    assert!(mediator.config.kas_token.is_none(), "moved, not copied");
 }

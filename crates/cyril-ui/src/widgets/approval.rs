@@ -1,8 +1,9 @@
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph, Wrap};
+use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme::Theme;
-use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody};
+use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody, TuiState};
 
 /// Render the permission approval overlay.
 ///
@@ -59,14 +60,324 @@ fn window_start(selected: usize, total: usize, visible: usize) -> usize {
     }
 }
 
+/// Desired widths of the option and reject-with-reason popups.
+const OPTION_POPUP_WIDTH: u16 = 60;
+const REASON_POPUP_WIDTH: u16 = 64;
+
+/// Indent before each path row of the preview.
+const PATH_INDENT: &str = "  ";
+const ELLIPSIS: &str = "…";
+const PATH_SEPARATORS: [char; 2] = ['/', '\\'];
+
+/// The approval preview: the target path above the body built by
+/// [`preview_lines`].
+///
+/// The path is the most important fact on a write approval, so it is laid
+/// out first and never clipped at the border (cyril-rcub). When the popup has
+/// rows to spare, the path wraps across as many rows as it needs and is
+/// readable in full. When the popup is clamped and gives the path fewer rows
+/// than that, the path is middle-elided into those rows, always keeping the
+/// file name and as much leading context as fits. Wrapping alone would not
+/// be enough, because clamping drops preview rows from the bottom, which is
+/// where a wrapped path's file name sits.
+struct Preview<'a> {
+    path: Option<&'a str>,
+    /// Columns available to a path row (popup inner width minus the indent).
+    path_width: usize,
+    /// Rows the whole path needs when wrapped.
+    path_rows: usize,
+    body: Vec<Line<'a>>,
+}
+
+impl<'a> Preview<'a> {
+    fn new(state: &'a ApprovalState, theme: &Theme, area: Rect, desired_width: u16) -> Self {
+        let path = state.tool_call.primary_path();
+        // Borders take two columns. A popup too narrow to show any path
+        // column still lays the path out one column per row; ratatui clips it.
+        let path_width = usize::from(super::modal::popup_width(area, desired_width))
+            .saturating_sub(2 + PATH_INDENT.width())
+            .max(1);
+        let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+        Self {
+            path,
+            path_width,
+            path_rows,
+            body: preview_lines(state, theme),
+        }
+    }
+
+    /// Rows the whole preview wants.
+    fn len(&self) -> usize {
+        self.path_rows.saturating_add(self.body.len())
+    }
+
+    fn has_path(&self) -> bool {
+        self.path.is_some()
+    }
+
+    /// The path fitted into one run of `width` columns, for a row it shares
+    /// with an option label. `None` without a path or without a column to
+    /// show it in.
+    fn inline_path(&self, width: usize) -> Option<String> {
+        let path = self.path?;
+        if width == 0 {
+            return None;
+        }
+        Some(fit_path(path, width, 1).concat())
+    }
+
+    /// The preview laid out in at most `rows` rows. The path takes rows
+    /// first and is fitted to its share; the body fills whatever is left.
+    fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
+        let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
+        if let Some(path) = self.path {
+            for row in fit_path(path, self.path_width, self.path_rows.min(rows)) {
+                lines.push(Line::styled(
+                    format!("{PATH_INDENT}{row}"),
+                    Style::default().fg(theme.text_secondary),
+                ));
+            }
+        }
+        let body_rows = rows.saturating_sub(lines.len());
+        lines.extend(self.body.into_iter().take(body_rows));
+        lines
+    }
+}
+
+/// Gap between an option label and a path sharing its row.
+const INLINE_PATH_GAP: &str = "  ";
+
+/// The selection marker column of an option row.
+fn option_prefix(selected: bool) -> &'static str {
+    if selected { "▸ " } else { "  " }
+}
+
+/// Which rows the option page shows inside `inner` rows, by priority
+/// (cyril-rcub). The selection always gets a row. When the call has a path,
+/// any shown option is accompanied by the path, so nothing is approvable
+/// with its target hidden: from inner height 2 the path has its own row
+/// (ahead of the message at 2, and ahead of the cosmetic blanks at 3), and
+/// at height 1 it shares the lone option row. Calls without a path keep the
+/// message-first order. Above height 3 the message and blank return, the
+/// preview takes all but one row, and its blank separator appears only when
+/// a row is spare: the separator wins over a second option row, as the
+/// selection stays visible through `window_start`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct OptionLayout {
+    message: bool,
+    blank: bool,
+    preview_rows: usize,
+    separator: bool,
+    option_rows: usize,
+    /// The path is appended to the lone option row (height 1).
+    inline_path: bool,
+}
+
+impl OptionLayout {
+    fn new(inner: usize, preview_len: usize, has_path: bool) -> Self {
+        let none = Self {
+            message: false,
+            blank: false,
+            preview_rows: 0,
+            separator: false,
+            option_rows: 0,
+            inline_path: false,
+        };
+        match inner {
+            0 => none,
+            1 => Self {
+                option_rows: 1,
+                inline_path: has_path,
+                ..none
+            },
+            2 if has_path => Self {
+                preview_rows: 1,
+                option_rows: 1,
+                ..none
+            },
+            2 => Self {
+                message: true,
+                option_rows: 1,
+                ..none
+            },
+            3 if has_path => Self {
+                message: true,
+                preview_rows: 1,
+                option_rows: 1,
+                ..none
+            },
+            3 => Self {
+                message: true,
+                blank: true,
+                option_rows: 1,
+                ..none
+            },
+            n => {
+                let remaining = n - 2; // message + blank
+                let preview_rows = preview_len.min(remaining - 1);
+                let separator = preview_rows > 0 && remaining - preview_rows >= 2;
+                Self {
+                    message: true,
+                    blank: true,
+                    preview_rows,
+                    separator,
+                    option_rows: remaining - preview_rows - usize::from(separator),
+                    inline_path: false,
+                }
+            }
+        }
+    }
+}
+
+/// Split `text` into rows of at most `width` display columns. A character
+/// never splits: a wide glyph that would straddle the edge starts the next
+/// row, matching how ratatui draws it (the glyph plus a blank continuation
+/// cell).
+///
+/// A character with no display width (a control character) counts as zero
+/// columns, as ratatui draws nothing for it; that is its width, not a
+/// fallback for an error.
+fn wrap_columns(text: &str, width: usize) -> Vec<String> {
+    let mut rows = Vec::new();
+    let mut row = String::new();
+    let mut used = 0usize;
+    for ch in text.chars() {
+        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        if used.saturating_add(ch_width) > width && !row.is_empty() {
+            rows.push(std::mem::take(&mut row));
+            used = 0;
+        }
+        row.push(ch);
+        used = used.saturating_add(ch_width);
+    }
+    if !row.is_empty() || rows.is_empty() {
+        rows.push(row);
+    }
+    rows
+}
+
+/// Lay `path` out in at most `rows` rows of `width` columns. The path is
+/// wrapped whole when it fits; otherwise it is middle-elided
+/// ([`elide_middle`]) into the space available.
+fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
+    if rows == 0 {
+        return Vec::new();
+    }
+    let wrapped = wrap_columns(path, width);
+    if wrapped.len() <= rows {
+        return wrapped;
+    }
+    // A wide glyph that straddles a row edge wastes that row's last column,
+    // so shrink the column budget until the elided path wraps into `rows`.
+    // The loop ends: at a budget of zero the path elides to "", one row.
+    let mut budget = width.saturating_mul(rows);
+    loop {
+        let fitted = wrap_columns(&elide_middle(path, budget), width);
+        if fitted.len() <= rows || budget == 0 {
+            return fitted;
+        }
+        budget -= 1;
+    }
+}
+
+/// Shorten `path` to at most `budget` display columns by replacing its
+/// middle with `…`. The kept tail is the file name, plus its parent
+/// directory when that fits too. Every remaining column goes to the leading
+/// context. If the file name alone is wider than the budget, its end (the
+/// extension) is what stays.
+fn elide_middle(path: &str, budget: usize) -> String {
+    if path.width() <= budget {
+        return path.to_owned();
+    }
+    let Some(room) = budget.checked_sub(ELLIPSIS.width()) else {
+        return String::new();
+    };
+    // Separator offsets, ignoring a trailing separator so a directory path
+    // still keeps its last component. Separators are ASCII, so every offset
+    // is a char boundary.
+    let separators: Vec<usize> = path
+        .trim_end_matches(&PATH_SEPARATORS[..])
+        .match_indices(&PATH_SEPARATORS[..])
+        .map(|(offset, _)| offset)
+        .collect();
+    let name = separators.last().map_or(path, |&offset| &path[offset..]);
+    let parent = separators
+        .iter()
+        .rev()
+        .nth(1)
+        .map_or(name, |&offset| &path[offset..]);
+    let tail = if parent.width() <= room { parent } else { name };
+    match room.checked_sub(tail.width()) {
+        Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_components(path, head_room)),
+        None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
+    }
+}
+
+/// The longest prefix of `path` that ends just after a separator and is at
+/// most `width` display columns wide, so every directory it shows is whole:
+/// `/home/dwa…` could be `dwalleck` or `dwalleck-x`, `/home/…` cannot
+/// mislead (cyril-rcub review round 2). Empty when not even the first
+/// component fits.
+fn leading_components(path: &str, width: usize) -> &str {
+    let mut used = 0usize;
+    let mut cut = 0usize;
+    for (offset, ch) in path.char_indices() {
+        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        if used > width {
+            break;
+        }
+        if PATH_SEPARATORS.contains(&ch) {
+            cut = offset + ch.len_utf8();
+        }
+    }
+    &path[..cut]
+}
+
+/// The longest prefix of `text` at most `width` display columns wide.
+fn head_columns(text: &str, width: usize) -> &str {
+    let mut used = 0usize;
+    for (offset, ch) in text.char_indices() {
+        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        if used > width {
+            return &text[..offset];
+        }
+    }
+    text
+}
+
+/// `text` fitted to one row of `width` columns: whole when it fits,
+/// otherwise cut and ended with `…`, so a clipped row says it was clipped.
+fn clip_row(text: &str, width: usize) -> String {
+    if text.width() <= width {
+        return text.to_owned();
+    }
+    match width.checked_sub(ELLIPSIS.width()) {
+        Some(room) => format!("{}{ELLIPSIS}", head_columns(text, room)),
+        None => String::new(),
+    }
+}
+
+/// The longest suffix of `text` at most `width` display columns wide.
+fn trailing_columns(text: &str, width: usize) -> &str {
+    let mut used = 0usize;
+    for (offset, ch) in text.char_indices().rev() {
+        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        if used > width {
+            return &text[offset + ch.len_utf8()..];
+        }
+    }
+    text
+}
+
 /// Max body lines in the approval preview (cyril-j1b3). Five matches the
 /// chat widget's tool-output cap; the diff renderer applies its own 20-line
 /// cap, so a diff-heavy preview is truncated before this budget matters.
 const MAX_PREVIEW_LINES: usize = 5;
 
-/// Build the approval-preview block from the joined tool-call snapshot.
+/// Build the approval-preview body from the joined tool-call snapshot. The
+/// path rows above it are laid out by [`Preview`] (cyril-rcub).
 ///
-/// Order: path line (when the tracked call resolves one), then diff content
+/// Order: diff content
 /// (the existing diff projection, with its own line cap), else the raw-input
 /// `text`/`content` payload capped at [`MAX_PREVIEW_LINES`]. A snapshot with
 /// no displayable payload yields a single `Preview unavailable` line — the
@@ -78,13 +389,6 @@ const MAX_PREVIEW_LINES: usize = 5;
 fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     let mut lines: Vec<Line<'a>> = Vec::new();
-
-    if let Some(path) = tc.primary_path() {
-        lines.push(Line::styled(
-            format!("  {path}"),
-            Style::default().fg(theme.text_secondary),
-        ));
-    }
 
     match tc.preview_body() {
         PreviewBody::Diff => super::chat::render_diff_lines(&mut lines, tc, theme),
@@ -112,6 +416,167 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
     lines
 }
 
+/// Whether a confirm key may answer the front approval in the frame the
+/// state reports (cyril-vojx): [`confirm_is_on_screen`] for the recorded
+/// frame size. `false` without an approval.
+///
+/// Derived the way [`crate::render::powers_window`] is — from the frame size
+/// `UiState` records on every draw and resize, and the frame's own layout —
+/// so the key path recomputes the geometry the renderer draws from instead
+/// of caching what the last frame drew.
+pub(crate) fn confirm_on_screen(state: &dyn TuiState) -> bool {
+    let Some(approval) = state.approval() else {
+        return false;
+    };
+    let (width, height) = state.terminal_size();
+    let area = Rect::new(0, 0, width, height);
+    confirm_is_on_screen(
+        area,
+        crate::render::input_top(area, state),
+        approval,
+        &state.theme(),
+    )
+}
+
+/// Whether a confirm key may answer `state` in a frame of `area` whose input
+/// box starts at `input_top` (cyril-vojx).
+///
+/// A confirm answers the request, so it acts only on what the user can see:
+/// the selected option (or, on the reject-with-reason page, the reason
+/// editor) must be drawn, and when the call has a target path, the path must
+/// be drawn beside it. The answer comes from the same page geometry each
+/// phase's renderer draws from, so the guard and the frame cannot disagree.
+/// The "Always allow" scope, trust and folder pages never show the path —
+/// the operator saw it on the option page that led there — so for them the
+/// drawn selection (or folder editor) is enough.
+pub(crate) fn confirm_is_on_screen(
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    theme: &Theme,
+) -> bool {
+    match &state.phase {
+        ApprovalPhase::SelectOption => OptionPage::new(area, input_top, state, theme)
+            .is_some_and(|page| page.selection_shown_with_path(state.selected)),
+        ApprovalPhase::EnterReason { editor, .. } => {
+            ReasonPage::new(area, input_top, state, editor.notice().is_some(), theme)
+                .is_some_and(|page| page.editor_shown_with_path())
+        }
+        ApprovalPhase::SelectTrust { .. } => {
+            trust_popup(area, input_top, state).is_some_and(|popup| {
+                has_inner_row(popup) && state.selected < state.trust_options.len()
+            })
+        }
+        ApprovalPhase::SelectScope { .. } => {
+            scope_popup(area, input_top, state).is_some_and(|popup| {
+                has_inner_row(popup) && state.selected < state.scope_choices().len()
+            })
+        }
+        ApprovalPhase::EnterFolder { .. } => {
+            FolderPage::new(area, input_top, state).is_some_and(|page| page.editor_shown())
+        }
+    }
+}
+
+/// A popup with at least one row inside its borders. The scope and trust
+/// pages give that first row to the selected row's label and never wrap a
+/// row, so it is the row that makes them actionable.
+fn has_inner_row(popup: Rect) -> bool {
+    popup.height > 2
+}
+
+/// The option page's geometry: the placed popup, the rows [`OptionLayout`]
+/// gives each part and the window of options shown. One computation serves
+/// the renderer and the confirm guard ([`confirm_is_on_screen`]).
+struct OptionPage<'a> {
+    popup: Rect,
+    preview: Preview<'a>,
+    layout: OptionLayout,
+    show_feedback_hint: bool,
+    /// First option shown.
+    start: usize,
+    /// Options shown, from `start`.
+    visible: usize,
+    /// The path fitted after the lone option row's label (height 1).
+    inline_path: Option<String>,
+}
+
+impl<'a> OptionPage<'a> {
+    /// `None` when no rows above the input can hold the popup.
+    fn new(area: Rect, input_top: u16, state: &'a ApprovalState, theme: &Theme) -> Option<Self> {
+        // Preview block (cyril-j1b3): the joined tool-call snapshot is
+        // rendered above the options so a KAS stub permission request still
+        // shows the file path and proposed content. Budget: the path's
+        // wrapped rows + up to MAX_PREVIEW_LINES of body + blanks; clamped
+        // below when space is tight (the path is then middle-elided,
+        // cyril-rcub).
+        let preview = Preview::new(state, theme, area, OPTION_POPUP_WIDTH);
+        let show_feedback_hint = state.can_reject_with_reason();
+        // options.len() is a handful of user-facing choices; the sum stays
+        // far below u16::MAX, so try_from is infallible and the saturation is
+        // defensive, not an error default (same pattern as the picker).
+        let desired_height = u16::try_from(
+            state
+                .options
+                .len()
+                .saturating_add(preview.len())
+                .saturating_add(6)
+                .saturating_add(usize::from(show_feedback_hint)),
+        )
+        .unwrap_or(u16::MAX);
+        let popup = super::modal::place(area, input_top, OPTION_POPUP_WIDTH, desired_height)?;
+
+        // Inner rows inside the borders decide what fits, by the priority in
+        // [`OptionLayout`]: the selection always, the path beside any option,
+        // then message, blanks, the rest of the preview and the other options.
+        let inner = usize::from(popup.height.saturating_sub(2));
+        let layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+        let mut option_rows = layout.option_rows;
+        let show_feedback_hint = show_feedback_hint && option_rows > 1;
+        if show_feedback_hint {
+            option_rows -= 1;
+        }
+
+        let visible = state.options.len().min(option_rows);
+        let start = window_start(state.selected, state.options.len(), visible);
+        // Height 1 shows exactly one option row (the selection, via
+        // `window_start`); the path shares it after the label.
+        let inline_path = if layout.inline_path && visible == 1 {
+            state.options.get(start).and_then(|opt| {
+                let label_width = option_prefix(start == state.selected)
+                    .width()
+                    .saturating_add(opt.label.width())
+                    .saturating_add(INLINE_PATH_GAP.width());
+                preview.inline_path(
+                    usize::from(popup.width.saturating_sub(2)).saturating_sub(label_width),
+                )
+            })
+        } else {
+            None
+        };
+        Some(Self {
+            popup,
+            preview,
+            layout,
+            show_feedback_hint,
+            start,
+            visible,
+            inline_path,
+        })
+    }
+
+    /// Whether option `selected` has a row, with the path on screen beside
+    /// it when the call has one: on the preview's first rows (the path is
+    /// laid out ahead of the body) or appended to the lone option row.
+    fn selection_shown_with_path(&self, selected: usize) -> bool {
+        let selection_shown =
+            (self.start..self.start.saturating_add(self.visible)).contains(&selected);
+        let path_shown =
+            !self.preview.has_path() || self.layout.preview_rows > 0 || self.inline_path.is_some();
+        selection_shown && path_shown
+    }
+}
+
 fn render_option_phase(
     frame: &mut Frame,
     area: Rect,
@@ -120,69 +585,36 @@ fn render_option_phase(
     session_attribution: Option<&str>,
     theme: &Theme,
 ) {
-    // Preview block (cyril-j1b3): the joined tool-call snapshot is rendered
-    // above the options so a KAS stub permission request still shows the
-    // file path and proposed content. Budget: 1 path line + up to
-    // MAX_PREVIEW_LINES of body + blanks; clamped below when space is tight.
-    let preview = preview_lines(state, theme);
-    let show_feedback_hint = state.can_reject_with_reason();
-    // options.len() is a handful of user-facing choices; the sum stays far
-    // below u16::MAX, so try_from is infallible and the saturation is
-    // defensive, not an error default (same pattern as the picker).
-    let desired_height = u16::try_from(
-        state
-            .options
-            .len()
-            .saturating_add(preview.len())
-            .saturating_add(6)
-            .saturating_add(usize::from(show_feedback_hint)),
-    )
-    .unwrap_or(u16::MAX);
-    let Some(popup_area) = super::modal::place(area, input_top, 60, desired_height) else {
+    let Some(OptionPage {
+        popup: popup_area,
+        preview,
+        layout,
+        show_feedback_hint,
+        start,
+        visible,
+        inline_path,
+    }) = OptionPage::new(area, input_top, state, theme)
+    else {
         return; // no rows above the input can hold the popup
     };
 
     frame.render_widget(Clear, popup_area);
 
-    // Inner rows inside the borders decide how much chrome fits: with 2+
-    // rows the message keeps its line, with 3+ the blank separator returns,
-    // then the preview, and options get the rest (always at least one row —
-    // the selection). Preview rows are dropped first under clamping: the
-    // dialog must stay actionable even when the preview cannot fit.
-    let inner = usize::from(popup_area.height.saturating_sub(2));
-    let (show_message, show_blank, preview_rows, mut option_rows) = match inner {
-        0 => (false, false, 0, 0),
-        1 => (false, false, 0, 1),
-        2 => (true, false, 0, 1),
-        3 => (true, true, 0, 1),
-        n => {
-            let remaining = n - 2; // message + blank accounted
-            let preview_rows = preview.len().min(remaining.saturating_sub(1));
-            (true, true, preview_rows, remaining - preview_rows)
-        }
-    };
-    let show_feedback_hint = show_feedback_hint && option_rows > 1;
-    if show_feedback_hint {
-        option_rows -= 1;
-    }
-
     let mut lines: Vec<Line> = Vec::new();
-    if show_message {
+    if layout.message {
         lines.push(Line::styled(
             &state.message,
             Style::default().fg(theme.emphasis),
         ));
     }
-    if show_blank {
+    if layout.blank {
         lines.push(Line::default());
     }
-    lines.extend(preview.into_iter().take(preview_rows));
-    if preview_rows > 0 {
+    lines.extend(preview.into_lines(layout.preview_rows, theme));
+    if layout.separator {
         lines.push(Line::default());
     }
 
-    let visible = state.options.len().min(option_rows);
-    let start = window_start(state.selected, state.options.len(), visible);
     for (i, opt) in state.options.iter().enumerate().skip(start).take(visible) {
         let style = if i == state.selected {
             Style::default()
@@ -192,8 +624,22 @@ fn render_option_phase(
         } else {
             Style::default().fg(theme.text_secondary)
         };
-        let prefix = if i == state.selected { "▸ " } else { "  " };
-        lines.push(Line::styled(format!("{prefix}{}", opt.label), style));
+        let label = format!("{}{}", option_prefix(i == state.selected), opt.label);
+        match &inline_path {
+            Some(path) => lines.push(
+                Line::from(vec![
+                    Span::raw(label),
+                    Span::styled(
+                        format!("{INLINE_PATH_GAP}{path}"),
+                        Style::default()
+                            .fg(theme.text_secondary)
+                            .remove_modifier(Modifier::BOLD),
+                    ),
+                ])
+                .style(style),
+            ),
+            None => lines.push(Line::styled(label, style)),
+        }
     }
     if show_feedback_hint {
         lines.push(Line::styled(
@@ -211,6 +657,90 @@ fn render_option_phase(
     );
     frame.render_widget(popup, popup_area);
 }
+
+/// The reject-with-reason page's geometry: the placed popup and which rows
+/// fit inside it. One computation serves the renderer and the confirm guard
+/// ([`confirm_is_on_screen`]).
+struct ReasonPage<'a> {
+    popup: Rect,
+    inner: usize,
+    preview: Preview<'a>,
+    show_limit: bool,
+    show_notice: bool,
+    show_editor_label: bool,
+    show_tool_title: bool,
+    show_selected: bool,
+    show_message: bool,
+    show_blank: bool,
+    preview_rows: usize,
+    editor_rows: usize,
+}
+
+impl<'a> ReasonPage<'a> {
+    /// `None` when no rows above the input can hold the popup.
+    fn new(
+        area: Rect,
+        input_top: u16,
+        state: &'a ApprovalState,
+        has_notice: bool,
+        theme: &Theme,
+    ) -> Option<Self> {
+        let preview = Preview::new(state, theme, area, REASON_POPUP_WIDTH);
+        let desired_height = u16::try_from(
+            preview
+                .len()
+                .saturating_add(14)
+                .saturating_add(usize::from(has_notice)),
+        )
+        .unwrap_or(u16::MAX);
+        let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
+        let inner = usize::from(popup.height.saturating_sub(2));
+
+        // Reserve one row for the editor so even a cramped viewport keeps the
+        // cursor visible. Context and chrome are admitted only when they leave
+        // that row intact; preview rows are the first content to be dropped.
+        let show_limit = inner >= 2;
+        let show_notice = has_notice && inner >= 3;
+        let show_editor_label = inner >= 4;
+        let show_tool_title = inner >= 6;
+        let show_selected = inner >= 7;
+        let show_message = inner >= 8;
+        let show_blank = inner >= 9;
+        let fixed = 1usize
+            .saturating_add(usize::from(show_editor_label))
+            .saturating_add(usize::from(show_limit))
+            .saturating_add(usize::from(show_notice))
+            .saturating_add(usize::from(show_tool_title))
+            .saturating_add(usize::from(show_selected))
+            .saturating_add(usize::from(show_message))
+            .saturating_add(usize::from(show_blank));
+        let preview_rows = preview.len().min(inner.saturating_sub(fixed));
+        let editor_rows = inner
+            .saturating_sub(fixed.saturating_add(preview_rows))
+            .max(1);
+        Some(Self {
+            popup,
+            inner,
+            preview,
+            show_limit,
+            show_notice,
+            show_editor_label,
+            show_tool_title,
+            show_selected,
+            show_message,
+            show_blank,
+            preview_rows,
+            editor_rows,
+        })
+    }
+
+    /// Whether the editor row is drawn, with the path on screen when the
+    /// call has one (the path leads the preview rows).
+    fn editor_shown_with_path(&self) -> bool {
+        self.inner > 0 && (!self.preview.has_path() || self.preview_rows > 0)
+    }
+}
+
 fn render_reason_phase(
     frame: &mut Frame,
     area: Rect,
@@ -226,51 +756,35 @@ fn render_reason_phase(
     else {
         return;
     };
-    let preview = preview_lines(state, theme);
     let selected_label = state
         .options
         .iter()
         .find(|option| option.id == *chosen_option_id)
         .map_or("Reject", |option| option.label.as_str());
-    let desired_height = u16::try_from(
-        preview
-            .len()
-            .saturating_add(14)
-            .saturating_add(usize::from(editor.notice().is_some())),
-    )
-    .unwrap_or(u16::MAX);
-    let Some(popup_area) = super::modal::place(area, input_top, 64, desired_height) else {
+    let Some(page) = ReasonPage::new(area, input_top, state, editor.notice().is_some(), theme)
+    else {
         return;
     };
+    let popup_area = page.popup;
 
     frame.render_widget(Clear, popup_area);
-    let inner = usize::from(popup_area.height.saturating_sub(2));
+    let inner = page.inner;
     if inner == 0 {
         return;
     }
-
-    // Reserve one row for the editor so even a cramped viewport keeps the
-    // cursor visible. Context and chrome are admitted only when they leave
-    // that row intact; preview rows are the first content to be dropped.
-    let show_limit = inner >= 2;
-    let show_notice = editor.notice().is_some() && inner >= 3;
-    let show_editor_label = inner >= 4;
-    let show_tool_title = inner >= 6;
-    let show_selected = inner >= 7;
-    let show_message = inner >= 8;
-    let show_blank = inner >= 9;
-    let fixed = 1usize
-        .saturating_add(usize::from(show_editor_label))
-        .saturating_add(usize::from(show_limit))
-        .saturating_add(usize::from(show_notice))
-        .saturating_add(usize::from(show_tool_title))
-        .saturating_add(usize::from(show_selected))
-        .saturating_add(usize::from(show_message))
-        .saturating_add(usize::from(show_blank));
-    let preview_rows = preview.len().min(inner.saturating_sub(fixed));
-    let editor_rows = inner
-        .saturating_sub(fixed.saturating_add(preview_rows))
-        .max(1);
+    let ReasonPage {
+        preview,
+        show_limit,
+        show_notice,
+        show_editor_label,
+        show_tool_title,
+        show_selected,
+        show_message,
+        show_blank,
+        preview_rows,
+        editor_rows,
+        ..
+    } = page;
     let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
     let editor_lines = super::input::text_cursor_lines(
         editor.text(),
@@ -290,7 +804,7 @@ fn render_reason_phase(
     if show_blank {
         lines.push(Line::default());
     }
-    lines.extend(preview.into_iter().take(preview_rows));
+    lines.extend(preview.into_lines(preview_rows, theme));
     if show_selected {
         lines.push(Line::styled(
             format!("Rejecting: {selected_label}"),
@@ -333,14 +847,9 @@ fn render_reason_phase(
     frame.render_widget(popup, popup_area);
 }
 
-fn render_trust_phase(
-    frame: &mut Frame,
-    area: Rect,
-    input_top: u16,
-    state: &ApprovalState,
-    session_attribution: Option<&str>,
-    theme: &Theme,
-) {
+/// The trust page's placed popup; `None` when no rows above the input can
+/// hold it. Shared by the renderer and [`confirm_is_on_screen`].
+fn trust_popup(area: Rect, input_top: u16, state: &ApprovalState) -> Option<Rect> {
     // Each trust option: label line + display line + blank = 3 lines, plus
     // header. Trust tiers are a handful, so try_from is infallible; the
     // saturation is defensive, not an error default.
@@ -352,7 +861,18 @@ fn render_trust_phase(
             .saturating_add(4),
     )
     .unwrap_or(u16::MAX);
-    let Some(popup_area) = super::modal::place(area, input_top, 64, desired_height) else {
+    super::modal::place(area, input_top, 64, desired_height)
+}
+
+fn render_trust_phase(
+    frame: &mut Frame,
+    area: Rect,
+    input_top: u16,
+    state: &ApprovalState,
+    session_attribution: Option<&str>,
+    theme: &Theme,
+) {
+    let Some(popup_area) = trust_popup(area, input_top, state) else {
         return; // no rows above the input can hold the popup
     };
 
@@ -362,6 +882,7 @@ fn render_trust_phase(
     // item; tighter popups drop the header and window items directly (the
     // selected item's label renders first, so it survives any clamp).
     let inner = usize::from(popup_area.height.saturating_sub(2));
+    let content_width = usize::from(popup_area.width.saturating_sub(2));
     let (show_header, item_rows) = if inner >= 5 {
         (true, (inner - 2) / 3)
     } else {
@@ -395,7 +916,14 @@ fn render_trust_phase(
             Style::default().fg(theme.text_secondary)
         };
         let prefix = if i == state.selected { "▸ " } else { "  " };
-        lines.push(Line::styled(format!("{prefix}{}", trust.label), style));
+        // Each tier takes exactly the three rows the window reserves: a
+        // wrapped label or pattern list would push the selected tier out of
+        // the popup while Enter still picked it (cyril-vojx review), so a
+        // long row is cut and marked with `…` instead.
+        lines.push(Line::styled(
+            clip_row(&format!("{prefix}{}", trust.label), content_width),
+            style,
+        ));
         // Show the display string (pattern preview) dimmed below the label
         let display_style = if i == state.selected {
             Style::default().bg(theme.selection).fg(theme.subdued)
@@ -403,7 +931,7 @@ fn render_trust_phase(
             Style::default().fg(theme.subdued)
         };
         lines.push(Line::styled(
-            format!("    {}", trust.display),
+            clip_row(&format!("    {}", trust.display), content_width),
             display_style,
         ));
         // Blank separator between options — matches the 3-lines-per-option
@@ -416,7 +944,7 @@ fn render_trust_phase(
         session_attribution,
         theme.accent_quinary,
     );
-    let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+    let popup = Paragraph::new(lines).block(
         Block::default()
             .title(title)
             .borders(Borders::ALL)
@@ -467,6 +995,42 @@ fn scope_row(
     }
 }
 
+/// The scope page's `capability → resource` line, when the consent names
+/// either.
+fn scope_target(state: &ApprovalState) -> Option<String> {
+    let consent = state.consent.as_ref();
+    let capability = consent.and_then(|c| c.wire_capability());
+    let resource = consent
+        .and_then(|c| c.resource())
+        .filter(|resource| !resource.is_empty());
+    match (capability, resource) {
+        (Some(capability), Some(resource)) => Some(format!("{capability} → {resource}")),
+        (Some(only), None) | (None, Some(only)) => Some(only.to_owned()),
+        (None, None) => None,
+    }
+}
+
+/// The scope page's chrome rows: target + blank (when present), scope line +
+/// blank, hint.
+fn scope_chrome(has_target: bool) -> usize {
+    usize::from(has_target) * 2 + 3
+}
+
+/// The scope page's placed popup; `None` when no rows above the input can
+/// hold it. Shared by the renderer and [`confirm_is_on_screen`].
+fn scope_popup(area: Rect, input_top: u16, state: &ApprovalState) -> Option<Rect> {
+    let chrome = scope_chrome(scope_target(state).is_some());
+    let desired_height = u16::try_from(
+        state
+            .scope_choices()
+            .len()
+            .saturating_mul(2)
+            .saturating_add(chrome + 2),
+    )
+    .unwrap_or(u16::MAX);
+    super::modal::place(area, input_top, 72, desired_height)
+}
+
 /// KAS "Always allow" scope page (cyril-auxt): `capability → resource`, the
 /// scope line (`s` cycles), and one label + description pair per row.
 fn render_scope_phase(
@@ -481,23 +1045,10 @@ fn render_scope_phase(
         return;
     };
     let choices = state.scope_choices();
-    let consent = state.consent.as_ref();
-    let capability = consent.and_then(|c| c.wire_capability());
-    let resource = consent
-        .and_then(|c| c.resource())
-        .filter(|resource| !resource.is_empty());
-    let target = match (capability, resource) {
-        (Some(capability), Some(resource)) => Some(format!("{capability} → {resource}")),
-        (Some(only), None) | (None, Some(only)) => Some(only.to_owned()),
-        (None, None) => None,
-    };
-    let tool = consent.and_then(|c| c.tool_id());
-
-    // Chrome: target + blank (when present), scope line + blank, hint.
-    let chrome = usize::from(target.is_some()) * 2 + 3;
-    let desired_height = u16::try_from(choices.len().saturating_mul(2).saturating_add(chrome + 2))
-        .unwrap_or(u16::MAX);
-    let Some(popup_area) = super::modal::place(area, input_top, 72, desired_height) else {
+    let target = scope_target(state);
+    let tool = state.consent.as_ref().and_then(|c| c.tool_id());
+    let chrome = scope_chrome(target.is_some());
+    let Some(popup_area) = scope_popup(area, input_top, state) else {
         return;
     };
     frame.render_widget(Clear, popup_area);
@@ -589,6 +1140,86 @@ fn render_scope_phase(
     frame.render_widget(popup, popup_area);
 }
 
+/// Desired width of the folder editor popup.
+const FOLDER_POPUP_WIDTH: u16 = 84;
+
+/// The folder editor's validation line (Kiro's `h2t` / `vde`) and whether it
+/// reports a refused folder. `None` outside the folder phase.
+fn folder_status(state: &ApprovalState) -> Option<(String, bool)> {
+    let ApprovalPhase::EnterFolder {
+        scope,
+        offer,
+        editor,
+        ..
+    } = &state.phase
+    else {
+        return None;
+    };
+    Some(match offer.validate(editor.text()) {
+        Ok(folder) => {
+            let reach = match scope {
+                cyril_core::always_allow::GrantScope::Session => "for this session only",
+                other => other.folder_phrase(),
+            };
+            (
+                format!(
+                    "Allows writes in {} and every folder under it, {reach}.",
+                    folder.path()
+                ),
+                false,
+            )
+        }
+        Err(reason) => (reason.to_string(), true),
+    })
+}
+
+/// The folder editor's geometry: the placed popup, the validation line
+/// wrapped to the popup's width, and which rows fit. One computation serves
+/// the renderer and [`confirm_is_on_screen`].
+///
+/// The editor row survives any clamp. The status joins only when all of its
+/// rows fit above the editor — a long folder wraps the status, and drawing
+/// it anyway would push the editor out of the popup while Enter still
+/// granted the folder (cyril-vojx review).
+struct FolderPage {
+    popup: Rect,
+    inner: usize,
+    status_rows: Vec<String>,
+    show_status: bool,
+    show_hint: bool,
+}
+
+impl FolderPage {
+    /// `None` outside the folder phase or when no rows above the input can
+    /// hold the popup.
+    fn new(area: Rect, input_top: u16, state: &ApprovalState) -> Option<Self> {
+        let (status, _) = folder_status(state)?;
+        let content_width = usize::from(super::modal::popup_width(area, FOLDER_POPUP_WIDTH))
+            .saturating_sub(2)
+            .max(1);
+        let status_rows = wrap_columns(&status, content_width);
+        // Borders, status, blank, editor, blank, hint: seven rows for a
+        // one-row status, one more per extra status row.
+        let desired_height = u16::try_from(status_rows.len().saturating_add(6)).unwrap_or(u16::MAX);
+        let popup = super::modal::place(area, input_top, FOLDER_POPUP_WIDTH, desired_height)?;
+        let inner = usize::from(popup.height.saturating_sub(2));
+        let show_status = inner > status_rows.len();
+        let show_hint = show_status && inner >= status_rows.len() + 3;
+        Some(Self {
+            popup,
+            inner,
+            status_rows,
+            show_status,
+            show_hint,
+        })
+    }
+
+    /// Whether the folder editor row is drawn.
+    fn editor_shown(&self) -> bool {
+        self.inner > 0
+    }
+}
+
 /// KAS "Always allow" folder editor (cyril-auxt): Kiro's live validation line
 /// (`h2t` / `vde`) above a one-line editor.
 fn render_folder_phase(
@@ -601,7 +1232,6 @@ fn render_folder_phase(
 ) {
     let ApprovalPhase::EnterFolder {
         scope,
-        offer,
         editor,
         attempted,
         ..
@@ -609,46 +1239,37 @@ fn render_folder_phase(
     else {
         return;
     };
-    let status = match offer.validate(editor.text()) {
-        Ok(folder) => {
-            let reach = match scope {
-                cyril_core::always_allow::GrantScope::Session => "for this session only",
-                other => other.folder_phrase(),
-            };
-            Line::styled(
-                format!(
-                    "Allows writes in {} and every folder under it, {reach}.",
-                    folder.path()
-                ),
-                Style::default().fg(theme.text_secondary),
-            )
-        }
-        Err(reason) => Line::styled(
-            reason.to_string(),
-            Style::default().fg(if *attempted {
-                theme.danger
-            } else {
-                theme.text_secondary
-            }),
-        ),
+    let Some((_, refused)) = folder_status(state) else {
+        return;
     };
+    let status_style = Style::default().fg(if refused && *attempted {
+        theme.danger
+    } else {
+        theme.text_secondary
+    });
 
-    let Some(popup_area) = super::modal::place(area, input_top, 84, 7) else {
+    let Some(FolderPage {
+        popup: popup_area,
+        inner,
+        status_rows,
+        show_status,
+        show_hint,
+    }) = FolderPage::new(area, input_top, state)
+    else {
         return;
     };
     frame.render_widget(Clear, popup_area);
-    let inner = usize::from(popup_area.height.saturating_sub(2));
     if inner == 0 {
         return;
     }
-    // The editor row survives any clamp; the status and hint join when the
-    // popup has room for them.
-    let show_status = inner >= 2;
-    let show_hint = inner >= 4;
     let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
     let mut lines: Vec<Line> = Vec::with_capacity(inner);
     if show_status {
-        lines.push(status);
+        lines.extend(
+            status_rows
+                .into_iter()
+                .map(|row| Line::styled(row, status_style)),
+        );
     }
     if show_hint {
         lines.push(Line::default());
@@ -670,7 +1291,7 @@ fn render_folder_phase(
 
     let heading = format!(" Allow a folder {} ", scope.folder_phrase());
     let title = attribution_title(&heading, session_attribution, theme.accent_quinary);
-    let popup = Paragraph::new(lines).wrap(Wrap { trim: false }).block(
+    let popup = Paragraph::new(lines).block(
         Block::default()
             .title(title)
             .borders(Borders::ALL)
@@ -1067,6 +1688,510 @@ mod tests {
             !text.contains("Allow execution?"),
             "message should be dropped"
         );
+    }
+
+    /// cyril-vojx: a popup clamped to inner height 0 draws its borders and
+    /// nothing else — no option, no path — so the confirm guard reads it as
+    /// not on screen; one more row (inner 1) brings the selection and its
+    /// path back, and the guard with them.
+    #[rstest::rstest]
+    #[case::with_path(write_approval("/tmp/vojx/target.md"))]
+    #[case::without_path(approval_with(
+        vec![option("y", "Yes"), option("n", "No")],
+        vec![],
+        0,
+        ApprovalPhase::SelectOption,
+    ))]
+    fn inner_height_zero_draws_no_option_and_cannot_be_confirmed(#[case] state: ApprovalState) {
+        let area = Rect::new(0, 0, 80, 16);
+        // input_top=3 → region rows 1-2 → popup h=2, inner=0.
+        let terminal = render_at(&state, 80, 16, 3);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        assert!(
+            rows[1].contains("Permission Required"),
+            "top border expected on row 1:\n{screen}"
+        );
+        assert!(
+            rows[2].contains('└'),
+            "bottom border expected on row 2:\n{screen}"
+        );
+        assert!(!screen.contains('▸'), "no option may be drawn:\n{screen}");
+        assert!(!screen.contains("/tmp/vojx"), "no path is drawn:\n{screen}");
+        assert!(
+            !confirm_is_on_screen(area, 3, &state, &theme()),
+            "nothing on screen to confirm"
+        );
+
+        let roomier = render_at(&state, 80, 16, 4);
+        let screen = screen_rows(&roomier).join("\n");
+        assert!(
+            screen.contains('▸'),
+            "inner 1 draws the selection:\n{screen}"
+        );
+        assert!(
+            confirm_is_on_screen(area, 4, &state, &theme()),
+            "inner 1 shows the selection (and its path), so it confirms:\n{screen}"
+        );
+    }
+
+    // ---------- cyril-rcub: long write paths stay identifiable ----------
+
+    /// The live 2.32.0 path the overlay clipped to `…/conductor-spike/a`.
+    const LONG_WRITE_PATH: &str = "/home/dwalleck/repos/cyril/experiments/conductor-spike/audit-2.32.0/live/cyril-kas/S4b-write-outside-approval.txt";
+    const LONG_WRITE_NAME: &str = "S4b-write-outside-approval.txt";
+    /// Wide glyphs (2 columns each) in directories and the file name.
+    const WIDE_WRITE_PATH: &str =
+        "/home/用户/项目/文档/非常长的目录名称/另一个目录/设计说明书-最终版本.md";
+    const WIDE_WRITE_NAME: &str = "设计说明书-最终版本.md";
+
+    fn write_approval(path: &str) -> ApprovalState {
+        approval_for_tool_call(ToolCall::new(
+            cyril_core::types::ToolCallId::new("tooluse_rcub"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": path, "text": "body"})),
+        ))
+    }
+
+    /// Screen rows as a reader sees them: a wide glyph's blank continuation
+    /// cell is skipped rather than read as a space.
+    fn screen_rows(terminal: &Terminal<TestBackend>) -> Vec<String> {
+        let buffer = terminal.backend().buffer();
+        let area = *buffer.area();
+        (0..area.height)
+            .map(|y| {
+                let mut row = String::new();
+                let mut x = 0;
+                while x < area.width {
+                    let symbol = buffer[(x, y)].symbol();
+                    row.push_str(symbol);
+                    let advance = unicode_width::UnicodeWidthStr::width(symbol).max(1);
+                    x = x.saturating_add(u16::try_from(advance).unwrap_or(1));
+                }
+                row
+            })
+            .collect()
+    }
+
+    /// The text between a popup row's side borders with the preview's
+    /// two-column indent removed; `None` for rows outside the popup body.
+    fn popup_body(row: &str) -> Option<&str> {
+        let start = row.find('│')? + '│'.len_utf8();
+        let end = row.rfind('│')?;
+        let inner = row.get(start..end)?;
+        Some(inner.strip_prefix("  ").unwrap_or(inner).trim_end())
+    }
+
+    /// Popup body rows concatenated, so a path wrapped across rows reads back
+    /// as one string.
+    fn joined_body(terminal: &Terminal<TestBackend>) -> String {
+        screen_rows(terminal)
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .collect()
+    }
+
+    /// cyril-rcub fence (roomy): when the popup has rows to spare, the whole
+    /// path is on screen — wrapped across rows, never clipped at the border.
+    #[rstest::rstest]
+    #[case::ascii_80x24(LONG_WRITE_PATH, 80, 24)]
+    #[case::ascii_narrow_40x24(LONG_WRITE_PATH, 40, 24)]
+    #[case::wide_chars_80x24(WIDE_WRITE_PATH, 80, 24)]
+    #[case::wide_chars_narrow_30x24(WIDE_WRITE_PATH, 30, 24)]
+    fn long_write_path_is_fully_visible_when_rows_allow(
+        #[case] path: &str,
+        #[case] width: u16,
+        #[case] height: u16,
+    ) {
+        let terminal = render_at(&write_approval(path), width, height, height);
+        let joined = joined_body(&terminal);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            joined.contains(path),
+            "full path not readable on screen:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+    }
+
+    /// cyril-rcub fence (clamped): with a single preview row the path is
+    /// middle-elided, keeping the file name whole plus leading context, and
+    /// the options stay actionable.
+    #[rstest::rstest]
+    #[case::ascii_80(LONG_WRITE_PATH, LONG_WRITE_NAME, 80)]
+    #[case::ascii_narrow_44(LONG_WRITE_PATH, LONG_WRITE_NAME, 44)]
+    #[case::wide_chars_80(WIDE_WRITE_PATH, WIDE_WRITE_NAME, 80)]
+    #[case::wide_chars_narrow_36(WIDE_WRITE_PATH, WIDE_WRITE_NAME, 36)]
+    fn clamped_write_path_keeps_file_name(
+        #[case] path: &str,
+        #[case] name: &str,
+        #[case] width: u16,
+    ) {
+        // input_top=7 → region rows 1-6 → popup h=6, inner=4: message,
+        // blank, ONE preview row, ONE option row (no spare row for the
+        // separator).
+        let terminal = render_at(&write_approval(path), width, 16, 7);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        let path_row = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .find(|body| body.contains(name))
+            .unwrap_or_else(|| panic!("file name {name} not on screen:\n{screen}"));
+        assert_whole_component_head(path, path_row, &screen);
+        assert!(
+            path_row.ends_with(name),
+            "file name must end the row: {path_row:?}\n{screen}"
+        );
+        assert!(
+            path_row.contains('…'),
+            "elision must be marked: {path_row:?}\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        for row in rows.iter().skip(7) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+    }
+
+    /// The text before an elision is a whole-component prefix of `path`:
+    /// empty, or ending at a separator (review round 2).
+    fn assert_whole_component_head(path: &str, path_row: &str, screen: &str) {
+        let Some((head, _)) = path_row.split_once('…') else {
+            return; // nothing elided
+        };
+        assert!(
+            path.starts_with(head) && (head.is_empty() || head.ends_with(['/', '\\'])),
+            "head {head:?} is not a whole-component prefix of {path:?}\n{screen}"
+        );
+    }
+
+    /// Popup body rows that end with the last `columns` display columns of
+    /// `path` — evidence the path's end is on screen.
+    fn rows_ending_with_path_tail(rows: &[String], path: &str, columns: usize) -> usize {
+        let tail = trailing_columns(path, columns);
+        rows.iter()
+            .filter_map(|row| popup_body(row))
+            .filter(|body| body.ends_with(tail))
+            .count()
+    }
+
+    /// cyril-rcub review round 2 fence: at the cramped heights (inner 1-3)
+    /// an option is actionable, so the path must be on screen beside it.
+    /// Inner 3: message, path, option. Inner 2: path, option (the message is
+    /// the first chrome dropped). Inner 1: the lone option row carries the
+    /// elided path after its label.
+    #[rstest::rstest]
+    #[case::inner_1(4, false)]
+    #[case::inner_2(5, false)]
+    #[case::inner_3(6, true)]
+    fn cramped_heights_show_path_beside_the_option(
+        #[case] input_top: u16,
+        #[case] message_shown: bool,
+    ) {
+        let terminal = render_at(&write_approval(LONG_WRITE_PATH), 80, 16, input_top);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        assert!(screen.contains("▸ Allow"), "selection missing:\n{screen}");
+        assert_eq!(
+            rows_ending_with_path_tail(&rows, LONG_WRITE_PATH, LONG_WRITE_NAME.width()),
+            1,
+            "file name must end exactly one row:\n{screen}"
+        );
+        assert_eq!(
+            screen.contains("Write File"),
+            message_shown,
+            "message presence at this height:\n{screen}"
+        );
+        for row in rows.iter().skip(usize::from(input_top)) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+    }
+
+    /// cyril-rcub review round 2: the layout table at every height and
+    /// preview size. Rows never exceed `inner`; any non-empty popup shows
+    /// the selection; with a path, any shown option has the path beside it
+    /// (its own row, or inline at height 1).
+    #[test]
+    fn option_layout_never_shows_an_option_without_the_path() {
+        for inner in 0usize..=12 {
+            for preview_len in 0usize..=8 {
+                for has_path in [false, true] {
+                    if has_path && preview_len == 0 {
+                        continue; // a path always yields at least one row
+                    }
+                    let layout = OptionLayout::new(inner, preview_len, has_path);
+                    let context = format!("inner={inner} preview={preview_len} path={has_path}");
+                    let used = usize::from(layout.message)
+                        + usize::from(layout.blank)
+                        + layout.preview_rows
+                        + usize::from(layout.separator)
+                        + layout.option_rows;
+                    assert!(used <= inner, "over budget {layout:?}: {context}");
+                    assert_eq!(
+                        layout.option_rows >= 1,
+                        inner >= 1,
+                        "selection row: {context}"
+                    );
+                    assert!(
+                        layout.preview_rows <= preview_len,
+                        "invented rows: {context}"
+                    );
+                    if has_path && layout.option_rows >= 1 {
+                        assert!(
+                            layout.preview_rows >= 1 || layout.inline_path,
+                            "option without path {layout:?}: {context}"
+                        );
+                    }
+                    if !has_path {
+                        assert!(!layout.inline_path, "inline without a path: {context}");
+                    }
+                }
+            }
+        }
+    }
+
+    /// cyril-rcub review round 2 sweep: across terminal widths and EVERY
+    /// popup height, whenever an option row is visible the path's end (at
+    /// least `…` plus the file name's last columns) is visible too; at 80
+    /// columns the whole file name is. Nothing renders at or below the input.
+    #[test]
+    fn option_visible_implies_path_visible_at_every_height() {
+        for (path, name) in [
+            (LONG_WRITE_PATH, LONG_WRITE_NAME),
+            (WIDE_WRITE_PATH, WIDE_WRITE_NAME),
+        ] {
+            for width in [24u16, 30, 36, 44, 60, 80] {
+                for input_top in 2u16..=20 {
+                    let terminal = render_at(&write_approval(path), width, 24, input_top);
+                    let rows = screen_rows(&terminal);
+                    let screen = rows.join("\n");
+                    let context = format!("path={path} width={width} input_top={input_top}");
+                    for row in rows.iter().skip(usize::from(input_top)) {
+                        assert_eq!(row.trim(), "", "bled below input: {context}\n{screen}");
+                    }
+                    if !screen.contains('▸') {
+                        continue; // no actionable row at this height
+                    }
+                    // Joined rows: a roomy popup wraps the name across rows.
+                    let tail_columns = if width >= 80 { name.width() } else { 4 };
+                    assert!(
+                        joined_body(&terminal).contains(trailing_columns(path, tail_columns)),
+                        "option visible without the path's end: {context}\n{screen}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// cyril-rcub review round 2: the clamped reject-with-reason page. At
+    /// inner 4 it holds the editor row, its label, the limit line and ONE
+    /// preview row, which carries the elided path ending in the file name.
+    #[test]
+    fn clamped_reason_phase_keeps_file_name_and_cursor() {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: ToolCall::new(
+                cyril_core::types::ToolCallId::new("tooluse_rcub"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::Pending,
+                Some(serde_json::json!({"path": LONG_WRITE_PATH, "text": "body"})),
+            ),
+            message: "Write File".into(),
+            options: vec![option("reject", "Reject")],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+        });
+        assert!(ui.approval_begin_feedback(), "feedback phase must open");
+        ui.approval_feedback_paste("not that file");
+        // input_top=7 → region rows 1-6 → popup h=6, inner=4.
+        let terminal = render_ui(&ui, 80, 16, 7);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        let path_row = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .find(|body| body.ends_with(LONG_WRITE_NAME))
+            .unwrap_or_else(|| panic!("file name not on the reason page:\n{screen}"));
+        assert!(path_row.contains('…'), "elision must be marked:\n{screen}");
+        assert_whole_component_head(LONG_WRITE_PATH, path_row, &screen);
+        assert!(
+            screen.contains("not that file█"),
+            "cursor clipped:\n{screen}"
+        );
+        for row in rows.iter().skip(7) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+        insta::assert_snapshot!("rcub_reason_phase_clamped_80x16", screen);
+    }
+
+    /// cyril-rcub (found by the clamped fence): the blank row after a shown
+    /// preview is counted in the row budget, so the selected LAST option
+    /// stays inside a clamped popup at every clamp height — and the path is
+    /// not given up for the cosmetic separator (inner 4 has room for both).
+    #[rstest::rstest]
+    #[case::inner_4(7)]
+    #[case::inner_5(8)]
+    #[case::inner_6(9)]
+    #[case::inner_7(10)]
+    fn clamped_preview_keeps_selected_option_visible(#[case] input_top: u16) {
+        let mut state = write_approval("/tmp/a.md");
+        state.selected = 1;
+        let terminal = render_at(&state, 80, 16, input_top);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        assert!(screen.contains("/tmp/a.md"), "preview dropped:\n{screen}");
+        assert!(
+            screen.contains("▸ Deny"),
+            "selected option clipped:\n{screen}"
+        );
+        for row in rows.iter().skip(usize::from(input_top)) {
+            assert_eq!(row.trim(), "", "popup bled into input rows:\n{screen}");
+        }
+    }
+
+    /// cyril-rcub: the reject-with-reason page shares the preview layout, so
+    /// the path it is rejecting is readable there too.
+    #[test]
+    fn reason_phase_shows_full_write_path() {
+        let mut ui = UiState::new(500);
+        ui.show_approval(cyril_core::types::PermissionRequest {
+            session_id: cyril_core::types::SessionId::new("main"),
+            tool_call: ToolCall::new(
+                cyril_core::types::ToolCallId::new("tooluse_rcub"),
+                "Write File".into(),
+                ToolKind::Write,
+                ToolCallStatus::Pending,
+                Some(serde_json::json!({"path": LONG_WRITE_PATH, "text": "body"})),
+            ),
+            message: "Write File".into(),
+            options: vec![option("reject", "Reject")],
+            trust_options: vec![],
+            can_reject_with_reason: true,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+        });
+        assert!(ui.approval_begin_feedback(), "feedback phase must open");
+        let terminal = render_ui(&ui, 80, 30, 30);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            joined_body(&terminal).contains(LONG_WRITE_PATH),
+            "full path not readable on the reason page:\n{screen}"
+        );
+        assert!(
+            screen.contains("Reason ("),
+            "editor label missing:\n{screen}"
+        );
+    }
+
+    /// cyril-rcub snapshots: the roomy wrap at 80x24 and at a narrow width,
+    /// and the clamped middle-elision.
+    #[rstest::rstest]
+    #[case::roomy_80x24("rcub_write_path_roomy_80x24", 80, 24, 24)]
+    #[case::roomy_narrow_40x24("rcub_write_path_roomy_40x24", 40, 24, 24)]
+    #[case::clamped_80x16("rcub_write_path_clamped_80x16", 80, 16, 7)]
+    #[case::clamped_narrow_44x16("rcub_write_path_clamped_44x16", 44, 16, 7)]
+    fn long_write_path_snapshots(
+        #[case] name: &str,
+        #[case] width: u16,
+        #[case] height: u16,
+        #[case] input_top: u16,
+    ) {
+        let terminal = render_at(&write_approval(LONG_WRITE_PATH), width, height, input_top);
+        insta::assert_snapshot!(name, screen_rows(&terminal).join("\n"));
+    }
+
+    #[rstest::rstest]
+    #[case::fits("/tmp/a.md", 20, "/tmp/a.md")]
+    #[case::keeps_parent_and_name("/home/user/project/src/main.rs", 20, "/home/…/src/main.rs")]
+    #[case::name_only_when_parent_too_wide(
+        "/a/very-long-parent-directory/file.txt",
+        16,
+        "/a/…/file.txt"
+    )]
+    // Review round 2: `/home/dwa…` could be `dwalleck` or `dwalleck-x`; the
+    // head stops at a separator so every directory shown is whole.
+    #[case::head_never_shows_a_partial_directory(
+        "/home/dwalleck-x/repos/cyril/notes.txt",
+        26,
+        "/home/…/cyril/notes.txt"
+    )]
+    #[case::relative_path_with_no_whole_head_component(
+        "notes/long-directory-name/file.txt",
+        14,
+        "…/file.txt"
+    )]
+    #[case::name_wider_than_budget_keeps_its_end(
+        "/x/an-extremely-long-file-name.txt",
+        10,
+        "…-name.txt"
+    )]
+    #[case::wide_glyphs("/用户/项目/设计.md", 12, "/…/设计.md")]
+    #[case::wide_glyph_head_component("/用户/项目/文档/设计.md", 21, "/用户/…/文档/设计.md")]
+    #[case::windows_separators(r"C:\Users\dev\projects\cyril\notes.md", 20, r"C:\…\cyril\notes.md")]
+    #[case::trailing_separator("/home/user/projects/cyril/", 16, "/home/…/cyril/")]
+    #[case::zero_budget("/a/b.md", 0, "")]
+    fn elide_middle_keeps_file_name_and_leading_context(
+        #[case] path: &str,
+        #[case] budget: usize,
+        #[case] expected: &str,
+    ) {
+        let elided = elide_middle(path, budget);
+        assert_eq!(elided, expected);
+        assert!(elided.width() <= budget, "over budget: {elided:?}");
+    }
+
+    #[rstest::rstest]
+    #[case::wraps_whole_when_rows_allow("/abc/defgh/ij.md", 5, 4, &["/abc/", "defgh", "/ij.m", "d"])]
+    #[case::elides_when_rows_short("/abc/defgh/ij.md", 5, 2, &["/…/ij", ".md"])]
+    #[case::wide_glyph_straddle_shrinks_budget("/x/a文件", 3, 2, &["…文", "件"])]
+    #[case::no_rows("/abc/defgh/ij.md", 5, 0, &[])]
+    fn fit_path_wraps_or_elides_into_rows(
+        #[case] path: &str,
+        #[case] width: usize,
+        #[case] rows: usize,
+        #[case] expected: &[&str],
+    ) {
+        assert_eq!(fit_path(path, width, rows), expected);
+    }
+
+    /// Invariant sweep over widths and row budgets: never more rows than
+    /// granted, no row wider than the width (a lone wide glyph in a
+    /// one-column row excepted), the whole path whenever it fits, and the
+    /// file name intact whenever the budget can hold it.
+    #[test]
+    fn fit_path_invariants_hold_across_widths_and_rows() {
+        let paths = [
+            (LONG_WRITE_PATH, LONG_WRITE_NAME),
+            (WIDE_WRITE_PATH, WIDE_WRITE_NAME),
+            (r"C:\Users\dev\projects\cyril\notes.md", "notes.md"),
+            ("/tmp/a.md", "a.md"),
+        ];
+        for (path, name) in paths {
+            for width in 1..=40usize {
+                for rows in 1..=5usize {
+                    let fitted = fit_path(path, width, rows);
+                    let joined = fitted.concat();
+                    let context = format!("path={path} width={width} rows={rows} -> {fitted:?}");
+                    assert!(fitted.len() <= rows, "too many rows: {context}");
+                    for row in &fitted {
+                        assert!(row.width() <= width.max(2), "row too wide: {context}");
+                    }
+                    if wrap_columns(path, width).len() <= rows {
+                        assert_eq!(joined, path, "fitting path altered: {context}");
+                    } else {
+                        assert!(joined.contains(ELLIPSIS), "unmarked elision: {context}");
+                    }
+                    if width >= 2 && name.width() + 1 + rows <= width * rows {
+                        assert!(joined.ends_with(name), "file name lost: {context}");
+                    }
+                }
+            }
+        }
     }
 
     // ---------- cyril-j1b3: joined approval preview ----------

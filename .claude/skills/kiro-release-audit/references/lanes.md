@@ -154,7 +154,7 @@ Scenarios (one cyril process each; seed everything under the temp HOME or worksp
   S7 KIRO_HOME   absolute KIRO_HOME=<temp>/kh with a distinct agent there and another in
                  $HOME/.kiro/agents; record which agent cyril lists and which KAS loads (cyril-d7ve).
 For each scenario save capture_terminal_text after every step to <lane dir>/cyril-kas/<scenario>-<step>.txt
-and copy the workspace's cyril.log. S2, S4, S5 and S6 are billed (about six turns in total); S1, S3
+and copy cyril.log from $HOME/.config/cyril/ (the private HOME, not the workspace). S2, S4, S5 and S6 are billed (about six turns in total); S1, S3
 and S7 are zero-turn. Stop and remove every terminal session when the leg ends.
 
 FINDINGS row per scenario: issue | expected (from the static row) | observed on screen | evidence

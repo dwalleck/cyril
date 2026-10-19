@@ -25,10 +25,9 @@ use crate::types::{AgentEngine, AgentInitiation, Notification};
 /// never the protocol-default null — and [`client_capabilities`] derives the
 /// inbound advertisement from the same datum.
 ///
-/// The presence fields exist only under the `kas` cargo feature (the
-/// `InternalChannels` cfg-field precedent): a default build **cannot
-/// construct** presence, making ADR-0002's "default build links no KAS code"
-/// a type-system fact rather than a convention.
+/// The presence fields exist only under the `kas` Cargo feature (the
+/// `InternalChannels` cfg-field precedent). A build without that feature
+/// cannot construct presence; the production binary enables KAS by default.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Adapters {
     /// Inbound `_kiro/auth/getAccessToken`. Auth has no capability
@@ -57,9 +56,9 @@ impl Adapters {
     };
 }
 
-/// Marker: the engine answers `_kiro/auth/getAccessToken` from the host
-/// credential store. Unit today; the g9vt mediator may grow it into a real
-/// interface.
+/// Marker: the engine answers `_kiro/auth/getAccessToken` through kiro-cli's
+/// `chat _ get-kas-token` helper (cyril-zbu7). Unit today; the g9vt mediator may grow it
+/// into a real interface.
 #[cfg(feature = "kas")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct AuthAdapter;
@@ -212,9 +211,8 @@ pub(crate) trait Engine {
     ) -> crate::Result<Option<Notification>>;
 }
 
-/// The v2 (Rust, `kiro.dev/*`) engine — cyril's default. Delegates to the
-/// existing `convert::` functions verbatim, so behavior is byte-identical to
-/// pre-KAS-0 (the milestone's strict-parity acceptance criterion).
+/// The v2 (Rust, `kiro.dev/*`) compatibility engine. Delegates to the existing
+/// `convert::` functions verbatim, preserving the pre-KAS-0 behavior.
 pub(crate) struct V2Engine;
 
 impl Engine for V2Engine {
@@ -249,8 +247,8 @@ impl Engine for V2Engine {
 }
 
 /// The KAS engine (TypeScript/LangGraph, `_kiro/*` dialect), reached via the
-/// free-path direct spawn (KAS-1, cyril-evwh). Gated behind the `kas` cargo
-/// feature (ADR-0002) so a default build links no KAS code.
+/// free-path direct spawn (KAS-1, cyril-evwh). Gated behind the `kas` Cargo
+/// feature (ADR-0002), which the production binary enables by default.
 ///
 /// KAS-2a (cyril-j16p) renders the KAS dialect incrementally. Slice 1:
 /// `convert_session_update` maps the `session_info_update` → `turn_end`

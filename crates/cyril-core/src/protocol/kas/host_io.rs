@@ -152,7 +152,9 @@ pub(super) fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Re
             "canonical target has no parent directory",
         )
     })?;
-    let mut builder = tempfile::Builder::new();
+    let builder = tempfile::Builder::new();
+    #[cfg(unix)]
+    let mut builder = builder;
     #[cfg(unix)]
     if existing.is_none() {
         use std::os::unix::fs::PermissionsExt as _;

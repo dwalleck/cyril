@@ -323,9 +323,9 @@ the *resolved* spawn command (post engine resolution — a KAS-free spawn is
 `node`, native, even if `--agent-command` said `wsl`): program basename
 `wsl`/`wsl.exe` (any casing, bare or full path) ⇒ WSL, anything else ⇒
 native. `CYRIL_AGENT_LOCATION=native|wsl` overrides the detection (for
-wrapper scripts that invoke wsl internally). A native Windows agent — the
-default `kiro-cli acp` resolves to kiro-cli.exe — gets identity passthrough
-exactly like Linux, where translation is always a no-op.
+wrapper scripts that invoke wsl internally). Default KAS Free spawn is native
+Node.js; explicit native v2 uses `kiro-cli.exe`. Both get identity passthrough
+like non-Windows hosts, where translation is always a no-op.
 
 When active, two path families translate (cyril-8tq6):
 
@@ -344,7 +344,7 @@ When active, two path families translate (cyril-8tq6):
 
 For the comprehensive protocol reference with example requests/responses, see **[docs/kiro-acp-protocol.md](docs/kiro-acp-protocol.md)**.
 
-> **⚠️ Two engines as of kiro-cli 2.7.1.** The generic notes below hold for both engines; v2-only detail lives in [docs/kiro-acp-protocol.md §12](docs/kiro-acp-protocol.md#12-v1v2-engine-notes-moved-from-claudemd-2026-10-15), and the KAS section at the end is the one to design for. 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. KAS is reachable over ACP today and is the strategic direction. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Full KAS wire reference: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
+> **⚠️ Two engines as of kiro-cli 2.7.1; KAS is cyril's default (cyril-4c4d).** The generic notes below hold for both engines; v2-only detail lives in [docs/kiro-acp-protocol.md §12](docs/kiro-acp-protocol.md#12-v1v2-engine-notes-moved-from-claudemd-2026-10-15), and the KAS section at the end is the one to design for. 2.7.1 embeds a **second engine, KAS** (`acp --agent-engine kas` / hidden `chat --v3`), a TypeScript/LangGraph agent with its own **`_kiro/*` dialect** that differs on several points below. Explicit v2 selection remains supported. Current feature/security/first-run policy lives in the [README](README.md#engines-and-first-run) and [amended ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md); the [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d) records acceptance status and remaining limits. Several v2-only claims in this section are **not** true for KAS — they're flagged inline. **Original KAS integration evidence: [docs/kiro-2.7.1-wire-audit.md](docs/kiro-2.7.1-wire-audit.md)** (not current-release qualification — use the release-specific audits for runtime behavior) (auth contract, subagent/crew model, fs+terminal host callbacks, hooks, bundled agents, steering fileMatch, agent-config migration). **Authoritative `_kiro/*` type contract: [docs/kiro-kas-acp-covenant.md](docs/kiro-kas-acp-covenant.md)** — the curated `@kiro/acp-type-covenant` reference (full method catalog, `KiroClientMeta` handshake flags, `AgentSettings`, `session_info_update` union, host-callback signatures). **For any KAS `_kiro/*` question, read the covenant doc/package FIRST** — it is the wire contract; `@kiro/agent` is only the implementation, and reading it instead produced wrong conclusions. The KAS integration plan is **ROADMAP "KAS engine integration track" (KAS-1…6)**.
 
 - **Protocol**: JSON-RPC 2.0 over stdio (ACP v2025-01-01)
 - The `agent-client-protocol` crate (v2.0.0, pinned with `=`) from crates.io is the source of truth for ACP types. Note: `SessionUpdate` is a serde-tagged enum with no `#[serde(other)]` catch-all, so an unknown typed `session/update` variant hard-fails at deserialization before reaching `convert/`; the `_kiro.dev/*` / `_kiro/*` ext dialects ride the raw-JSON `ext_notification` path and are not subject to this.
@@ -383,8 +383,8 @@ A notification (fire-and-forget, no response expected). Cyril sends this on Esc 
 
 ### KAS (v3) — the engine to design for
 
-cyril's code default is still v2 until cyril-4c4d lands, but the v2 backend is retiring: design new
-work for KAS and treat v2 behaviour as legacy. v2-only notes (`kiro.dev/commands/*`, v2 `session/new`
+KAS is cyril's default engine (cyril-4c4d); v2 stays selectable (`--agent-engine v2`, `[agent] engine = "v2"`)
+but its backend is retiring: design new work for KAS and treat v2 behaviour as legacy. v2-only notes (`kiro.dev/commands/*`, v2 `session/new`
 fields, methods v2 lacks) moved to [docs/kiro-acp-protocol.md §12](docs/kiro-acp-protocol.md#12-v1v2-engine-notes-moved-from-claudemd-2026-10-15).
 Live-verified on KAS 0.66.34 ([2.31.1 audit](docs/kiro-2.31.1-wire-audit.md)):
 
@@ -393,6 +393,12 @@ Live-verified on KAS 0.66.34 ([2.31.1 audit](docs/kiro-2.31.1-wire-audit.md)):
 - **Permissions persist** in the agent file's V3 `permissions.rules`; KAS ignores V2 `toolsSettings.allowedCommands` (cyril-auxt).
 - **Tool-call updates can be orphans** (no prior `tool_call`): "Tool Load" for on-demand MCP tools and "Subagent Response" for a sub-agent's answer (cyril-1v25).
 - **`KIRO_HOME`** relocates agents, hooks, MCP config, sessions and memory; relative, `/` and home-containing values are ignored (cyril-d7ve).
+
+### KAS advertised commands and local context
+
+Registered KAS `custom-agent` commands use the existing App prompt/steering lifecycle, preserving exactly one original raw-text block rather than calling v2 `kiro.dev/commands/*`. Automatic local lessons and file expansion are excluded from these command turns; first-prompt lessons remain pending for the next ordinary chat prompt. Builtin precedence and unregistered slash fallback stay unchanged.
+
+Cyril's `/memory` manages Cyril local memory only. Upstream native KAS memory defaults remain unchanged by explicit approval, including accepted possible overlap and costs; native controls/status are separate work.
 
 ## Adding New Features
 
@@ -507,11 +513,11 @@ These are project invariants maintained from inception, not aspirations. Maintai
 
 ## Platform Constraints
 
-- **Every platform:** the default `--agent-command` is `kiro-cli acp` (`crates/cyril/src/main.rs`), and `AgentProcess::spawn` (`crates/cyril-core/src/protocol/transport.rs`) execs the *resolved* command verbatim with no platform-conditional wrapping — the only rewrite is engine resolution in a `--features kas` build, where KAS Free (the default `kas_spawn`) ignores `--agent-command` and spawns the discovered `node acp-server.js` natively, and KAS Wrapper appends `--agent-engine` to it (**Path Translation** above keys off this post-resolution command); requires kiro-cli installed, on PATH, and authenticated (`kiro-cli login`)
-- **Windows:** `kiro-cli` on PATH resolves to the native `kiro-cli.exe` from the Kiro MSI — no WSL involved. A WSL-hosted agent is opt-in only, via an explicit `--agent-command wsl kiro-cli acp`, and then requires kiro-cli installed and authenticated inside WSL (`wsl kiro-cli login`)
-- Path translation is active only with a WSL-located agent (a `wsl`/`wsl.exe` launcher spawn or `CYRIL_AGENT_LOCATION=wsl`); a native agent gets identity passthrough, and on Linux it is a no-op — the rules live in **Path Translation** above (cyril-jxmv / cyril-8tq6)
-- Terminal commands from the agent run natively on the host OS
-- Logs go to `cyril.log` in the working directory (append mode) to avoid TUI conflicts
+- **Default engine:** normal production builds run KAS Free: discovered native Node.js plus the extracted bundle, callback auth (token from `kiro-cli chat _ get-kas-token`, cyril-zbu7), no implicit Wrapper/v2 fallback. kiro-cli must be installed, authenticated (`kiro-cli login`) and resolvable — on PATH, or in `~/.local/bin`, `/usr/local/bin` or `/opt/homebrew/bin` (the Kiro TUI's lookup); a Free spawn fails with an actionable error if it isn't. Core `kas` remains opt-in; `cargo build -p cyril --no-default-features` is the isolated V2-only build. See the README for extraction, overrides and native data roots. PR #167 / cyril-igrx's macOS correction is integrated; live-native qualification is not claimed.
+- **V2 / explicit Wrapper:** `--agent-command` defaults to `kiro-cli acp`, executed verbatim after engine resolution; native Windows resolves `kiro-cli.exe`, not WSL. To run V2 inside WSL, select both `--agent-engine v2` and `--agent-command wsl kiro-cli acp`, with Kiro installed/authenticated inside WSL. An agent-command override alone does not change KAS Free spawn.
+- Path translation applies only on Windows with a resolved WSL-located agent (`wsl`/`wsl.exe` or `CYRIL_AGENT_LOCATION=wsl`); native agents get identity passthrough. See **Path Translation** above.
+- Host callbacks execute on the host; an explicitly WSL-hosted agent executes on the WSL side.
+- Logs go to `cyril.log` in cyril's config directory, not the working directory (append mode, JSON lines, so nothing writes to the TUI's stdout): `$HOME/.config/cyril/cyril.log` on Linux and macOS (`XDG_CONFIG_HOME` is not consulted); on Windows `%USERPROFILE%\.config\cyril\cyril.log` unless `HOME` is set, which wins; `.cyril/cyril.log` under the working directory only when neither variable is set (`config_dir()` / `setup_logging()` in `crates/cyril/src/main.rs`)
 
 ## Agent skills
 

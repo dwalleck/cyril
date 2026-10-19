@@ -1,0 +1,48 @@
+# rev: 54f8762f79b18cf1d8ecd9eaf3005c5f98363632 (+ working tree changes: 2 paths)
+# cmd: cargo nextest run -p cyril-core --features kas -E test(version_probe_and_token_source_share_the_fallback_kiro_cli)
+# date: 2026-10-18T20:42:58Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 6.76s
+────────────
+ Nextest run ID 5ed17090-5eb3-4f05-bbc4-d1feeb5ed2b3 with nextest profile: default
+    Starting 1 test across 11 binaries (1269 tests skipped)
+        FAIL [   0.006s] (1/1) cyril-core protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli
+  stdout ───
+
+    running 1 test
+
+    running 1 test
+    test protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1241 filtered out; finished in 0.00s
+
+    test protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1241 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli' (2006116) panicked at crates/cyril-core/src/protocol/kas/discovery.rs:1408:9:
+    the probe must ask the fallback kiro-cli (2.24.0), not fail into newest: /home/dwalleck/.claude/tmp/.tmp6xW11k/xdg/kiro-cli/kas/2.25.0-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/node_modules/@kiro/agent/dist/server/acp-server.js
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+    thread 'protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli' (2006114) panicked at crates/cyril-core/src/protocol/kas/discovery.rs:1386:13:
+    child-side assertions failed
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   0.008s] 1 test run: 0 passed, 1 failed, 1269 skipped
+        FAIL [   0.006s] (1/1) cyril-core protocol::kas::discovery::tests::version_probe_and_token_source_share_the_fallback_kiro_cli
+error: test run failed
+exit=100

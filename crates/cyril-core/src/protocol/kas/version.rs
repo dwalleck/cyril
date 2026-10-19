@@ -84,36 +84,52 @@ const WSL_VALUE_OPTIONS: [&str; 7] = [
 ];
 
 /// The argv that answers "which kiro-cli will this agent command run?": the
-/// agent command's prefix up to and including its kiro-cli element, plus
-/// `--version` (cyril-861q).
+/// agent command's [`kiro_cli_invocation`] prefix plus `--version`
+/// (cyril-861q).
 ///
-/// A plain command (`kiro-cli acp`) probes `kiro-cli --version`. When the
-/// program is the Windows WSL launcher (`wsl`/`wsl.exe`, any casing, bare or
-/// full path — [`is_wsl_launcher`]), kiro-cli lives inside the distro and a
-/// native probe would answer for the wrong binary (wsl.exe's own
-/// `--version`), so the probe runs THROUGH the launcher: the launcher's
+/// A plain command (`kiro-cli acp`) probes `kiro-cli --version`; through the
+/// WSL launcher, `wsl -d Ubuntu kiro-cli acp` probes `wsl -d Ubuntu kiro-cli
+/// --version`. `Err` (see [`kiro_cli_invocation`]) means nothing is spawned.
+pub(crate) fn version_probe_command(agent_command: &AgentCommand) -> Result<AgentCommand, String> {
+    let prefix = kiro_cli_invocation(agent_command, "determine the kiro-cli version")?;
+    let mut args = prefix.args().to_vec();
+    args.push("--version".to_string());
+    Ok(AgentCommand::new(prefix.program()).with_args(args))
+}
+
+/// The invocation prefix that runs the kiro-cli the agent command would run —
+/// shared by the version probe and the KAS token helper (`kiro-cli chat _
+/// get-kas-token`, cyril-zbu7), so both ask the same binary.
+///
+/// A plain command (`kiro-cli acp`) yields its program alone (`kiro-cli`).
+/// When the program is the Windows WSL launcher (`wsl`/`wsl.exe`, any casing,
+/// bare or full path — [`is_wsl_launcher`]), kiro-cli lives inside the distro
+/// and a native invocation would reach the wrong binary (wsl.exe's own
+/// `--version`), so the prefix runs THROUGH the launcher: the launcher's
 /// options, their values and its `~` shorthand stay in front of the command
 /// element — the first element after them — which must itself be kiro-cli
-/// ([`is_kiro_cli`]): `wsl -d Ubuntu kiro-cli acp` →
-/// `wsl -d Ubuntu kiro-cli --version`. `Err` names the command when no
-/// element follows the launcher's options, or when that element is something
-/// else (`wsl bash -lc "kiro-cli acp"` would otherwise probe `bash --version`
-/// and read bash's `5.2.21` as a kiro-cli version, silently selecting `v3`)
-/// — nothing is spawned for either.
-pub(crate) fn version_probe_command(agent_command: &AgentCommand) -> Result<AgentCommand, String> {
+/// ([`is_kiro_cli`]): `wsl -d Ubuntu kiro-cli acp` → `wsl -d Ubuntu
+/// kiro-cli`. `Err` names the command and `purpose` when no element follows
+/// the launcher's options, or when that element is something else (`wsl bash
+/// -lc "kiro-cli acp"` would otherwise probe `bash --version` and read bash's
+/// `5.2.21` as a kiro-cli version, silently selecting `v3`).
+pub(crate) fn kiro_cli_invocation(
+    agent_command: &AgentCommand,
+    purpose: &str,
+) -> Result<AgentCommand, String> {
     let program = agent_command.program();
-    let mut probe = Vec::new();
+    let mut prefix = Vec::new();
     if is_wsl_launcher(program) {
         let mut args = agent_command.args().iter();
         let command = loop {
             let Some(arg) = args.next() else {
                 return Err(format!(
-                    "cannot determine the kiro-cli version: `{}` routes through the WSL \
+                    "cannot {purpose}: `{}` routes through the WSL \
                      launcher but names no kiro-cli element after the launcher's options",
                     render(agent_command)
                 ));
             };
-            probe.push(arg.clone());
+            prefix.push(arg.clone());
             if arg == "~" {
                 continue;
             }
@@ -123,19 +139,18 @@ pub(crate) fn version_probe_command(agent_command: &AgentCommand) -> Result<Agen
             if WSL_VALUE_OPTIONS.contains(&arg.as_str())
                 && let Some(value) = args.next()
             {
-                probe.push(value.clone());
+                prefix.push(value.clone());
             }
         };
         if !is_kiro_cli(command) {
             return Err(format!(
-                "cannot determine the kiro-cli version: `{}` routes through the WSL launcher \
+                "cannot {purpose}: `{}` routes through the WSL launcher \
                  but the command after the launcher's options is `{command}`, not kiro-cli",
                 render(agent_command)
             ));
         }
     }
-    probe.push("--version".to_string());
-    Ok(AgentCommand::new(program).with_args(probe))
+    Ok(AgentCommand::new(program).with_args(prefix))
 }
 
 /// `true` when `element` names kiro-cli — basename `kiro-cli`, optionally
@@ -146,36 +161,74 @@ fn is_kiro_cli(element: &str) -> bool {
 }
 
 /// `program arg1 arg2 …` for diagnostics.
-fn render(command: &AgentCommand) -> String {
+pub(crate) fn render(command: &AgentCommand) -> String {
     std::iter::once(command.program())
         .chain(command.args().iter().map(String::as_str))
         .collect::<Vec<_>>()
         .join(" ")
 }
 
-/// Read the kiro-cli version the agent command would run: the probe from
-/// [`version_probe_command`], executed by [`run_version_probe`].
-pub(crate) async fn kiro_cli_version(
-    agent_command: &AgentCommand,
+/// Read the version of the kiro-cli an already-resolved invocation prefix
+/// runs: `<prefix> --version` — a [`kiro_cli_invocation`] prefix, or the free
+/// path's resolved kiro-cli (`KasTokenSource::kiro_cli`, so bundle
+/// selection asks the same binary as the auth gate and responder).
+pub(crate) async fn invocation_version(
+    kiro_cli: &AgentCommand,
     environment: &crate::types::SpawnEnvironment,
 ) -> Result<String, String> {
-    let probe = version_probe_command(agent_command)?;
-    run_version_probe(&probe, environment).await
+    let mut args = kiro_cli.args().to_vec();
+    args.push("--version".to_string());
+    run_version_probe(
+        &AgentCommand::new(kiro_cli.program()).with_args(args),
+        environment,
+    )
+    .await
 }
 
-/// Run a version probe through a bounded child lifecycle and parse the
-/// version it prints. One deadline covers process exit and both pipe EOFs.
-/// Cleanup gets a separate bounded reap; inherited descendant pipes cannot
-/// park the bridge indefinitely.
-async fn run_version_probe(
-    probe: &AgentCommand,
+/// What a bounded helper run produced: its exit status and the (capped)
+/// bytes it wrote to each pipe.
+#[derive(Debug)]
+pub(crate) struct Captured {
+    pub(crate) status: std::process::ExitStatus,
+    pub(crate) stdout: Vec<u8>,
+    pub(crate) stderr: Vec<u8>,
+}
+
+/// Why a bounded helper run produced no [`Captured`]. Each mode is distinct
+/// so callers can word an actionable diagnostic (a missing binary is not a
+/// hang). `stderr` carries whatever the child wrote before the failure.
+#[derive(Debug)]
+pub(crate) enum CaptureFailure {
+    /// The program could not be started (absent, not executable, …).
+    Spawn(std::io::Error),
+    /// A requested pipe was not attached to the child.
+    StdioUnavailable(&'static str),
+    /// Exit plus both pipe EOFs did not arrive within the deadline; the child
+    /// was killed.
+    DeadlineElapsed { stderr: Vec<u8> },
+    /// Waiting for the child or reading a pipe failed; the child was killed.
+    Io {
+        error: std::io::Error,
+        stderr: Vec<u8>,
+    },
+}
+
+/// Run a short-lived helper (`kiro-cli --version`, `kiro-cli chat _
+/// get-kas-token`) through a bounded child lifecycle: stdin closed, both
+/// pipes captured up to [`VERSION_PIPE_LIMIT`]. One `deadline` covers process
+/// exit and both pipe EOFs. Cleanup gets a separate bounded reap; inherited
+/// descendant pipes cannot park the bridge indefinitely (unix: the whole
+/// process group is killed).
+pub(crate) async fn run_captured(
+    invocation: &AgentCommand,
     environment: &crate::types::SpawnEnvironment,
-) -> Result<String, String> {
-    let rendered = render(probe);
-    let mut command = Command::new(probe.program());
+    deadline: Duration,
+) -> Result<Captured, CaptureFailure> {
+    let rendered = render(invocation);
+    let mut command = Command::new(invocation.program());
     environment.apply(command.as_std_mut());
     command
-        .args(probe.args())
+        .args(invocation.args())
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
@@ -184,64 +237,98 @@ async fn run_version_probe(
     {
         command.process_group(0);
     }
-    let mut child = command
-        .spawn()
-        .map_err(|e| format!("run `{rendered}`: {e}"))?;
+    let mut child = command.spawn().map_err(CaptureFailure::Spawn)?;
     #[cfg(unix)]
     let group = crate::protocol::transport::ProcessGroupGuard::new(child.id());
     let stdout = child
         .stdout
         .take()
-        .ok_or_else(|| format!("failed to capture stdout from `{rendered}`"))?;
+        .ok_or(CaptureFailure::StdioUnavailable("stdout"))?;
     let stderr = child
         .stderr
         .take()
-        .ok_or_else(|| format!("failed to capture stderr from `{rendered}`"))?;
+        .ok_or(CaptureFailure::StdioUnavailable("stderr"))?;
     // Keep captured bytes outside the cancellable reads so a deadline retains
     // diagnostics already received, without waiting again for pipe EOF.
     let mut stdout_bytes = Vec::new();
     let mut stderr_bytes = Vec::new();
-    let output = timeout(VERSION_PROBE_TIMEOUT, async {
+    let output = timeout(deadline, async {
         tokio::try_join!(
             child.wait(),
             read_limited(stdout, &mut stdout_bytes),
             read_limited(stderr, &mut stderr_bytes)
         )
     })
-    .await
-    .map_err(|_| {
-        format!(
-            "`{rendered}` exceeded the {} second startup probe deadline",
-            VERSION_PROBE_TIMEOUT.as_secs()
-        )
-    })
-    .and_then(|result| result.map_err(|error| format!("read or wait for `{rendered}`: {error}")));
+    .await;
     // Also kill descendants when the wrapper has already exited normally.
     #[cfg(unix)]
     drop(group);
-    let status = match output {
-        Ok((status, (), ())) => status,
-        Err(reason) => {
-            match timeout(VERSION_REAP_TIMEOUT, child.kill()).await {
-                Ok(Ok(())) => {}
-                Ok(Err(error)) => {
-                    tracing::debug!(probe = %rendered, %error, "failed to reap version probe")
-                }
-                Err(error) => {
-                    tracing::warn!(probe = %rendered, %error, "version probe reap deadline elapsed")
-                }
-            }
-            return Err(match String::from_utf8_lossy(&stderr_bytes).trim() {
-                "" => reason,
-                diagnostic => format!("{reason}: {diagnostic}"),
+    let failure = match output {
+        Ok(Ok((status, (), ()))) => {
+            return Ok(Captured {
+                status,
+                stdout: stdout_bytes,
+                stderr: stderr_bytes,
             });
         }
+        Ok(Err(error)) => CaptureFailure::Io {
+            error,
+            stderr: stderr_bytes,
+        },
+        Err(_) => CaptureFailure::DeadlineElapsed {
+            stderr: stderr_bytes,
+        },
     };
-    if !status.success() {
-        let stderr = String::from_utf8_lossy(&stderr_bytes);
-        return Err(format!("`{rendered}` exited {status}: {}", stderr.trim()));
+    match timeout(VERSION_REAP_TIMEOUT, child.kill()).await {
+        Ok(Ok(())) => {}
+        Ok(Err(error)) => {
+            tracing::debug!(helper = %rendered, %error, "failed to reap kiro-cli helper")
+        }
+        Err(error) => {
+            tracing::warn!(helper = %rendered, %error, "kiro-cli helper reap deadline elapsed")
+        }
     }
-    let text = String::from_utf8_lossy(&stdout_bytes);
+    Err(failure)
+}
+
+/// Run a version probe through [`run_captured`] and parse the version it
+/// prints.
+async fn run_version_probe(
+    probe: &AgentCommand,
+    environment: &crate::types::SpawnEnvironment,
+) -> Result<String, String> {
+    let rendered = render(probe);
+    let with_stderr = |reason: String, stderr: &[u8]| match String::from_utf8_lossy(stderr).trim() {
+        "" => reason,
+        diagnostic => format!("{reason}: {diagnostic}"),
+    };
+    let captured = run_captured(probe, environment, VERSION_PROBE_TIMEOUT)
+        .await
+        .map_err(|failure| match failure {
+            CaptureFailure::Spawn(e) => format!("run `{rendered}`: {e}"),
+            CaptureFailure::StdioUnavailable(pipe) => {
+                format!("failed to capture {pipe} from `{rendered}`")
+            }
+            CaptureFailure::DeadlineElapsed { stderr } => with_stderr(
+                format!(
+                    "`{rendered}` exceeded the {} second startup probe deadline",
+                    VERSION_PROBE_TIMEOUT.as_secs()
+                ),
+                &stderr,
+            ),
+            CaptureFailure::Io { error, stderr } => {
+                with_stderr(format!("read or wait for `{rendered}`: {error}"), &stderr)
+            }
+        })?;
+    if !captured.status.success() {
+        let stderr = String::from_utf8_lossy(&captured.stderr);
+        return Err(format!(
+            "`{rendered}` exited {}: {}",
+            captured.status,
+            stderr.trim()
+        ));
+    }
+    let text = String::from_utf8_lossy(&captured.stdout);
     text.split_whitespace()
         .find(|t| t.starts_with(|c: char| c.is_ascii_digit()))
         .map(|v| v.to_string())

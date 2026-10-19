@@ -103,8 +103,7 @@ fn mismatch_reason(bound: AgentEngine, evidence: &str, kas_available: bool) -> S
         ),
         AgentEngine::Kas => format!(
             "engine mismatch: cyril was started with the KAS engine but \
-             {evidence}; restart with `--agent-engine v2` (or drop the \
-             engine selection)"
+             {evidence}; restart with `--agent-engine v2`"
         ),
     }
 }
@@ -199,6 +198,10 @@ mod tests {
             reason.contains("--agent-engine v2"),
             "names the remedy: {reason}"
         );
+        assert!(
+            !reason.contains("drop the"),
+            "omitting the selector would choose KAS again in a KAS-default build: {reason}"
+        );
     }
 
     // C6: Kas-bound + KAS wire ⇒ proceed.
@@ -245,15 +248,15 @@ mod tests {
         assert_eq!(session_id_mismatch(AgentEngine::V2, "", false), None);
     }
 
-    // C9: the remedy is keyed to the build — a default build points at the
-    // rebuild, a kas build points at the flag, never both.
+    // C9: the remedy is keyed to compiled support — a V2-only build points at
+    // rebuilding, a KAS-capable build points at the flag, never both.
     #[test]
     fn mismatch_reason_names_remedy_per_build() {
         let without_feature = init_mismatch(AgentEngine::V2, &kas_shaped(), false)
             .expect("mismatch regardless of feature");
         assert!(
             without_feature.contains("--features kas"),
-            "default build names the rebuild: {without_feature}"
+            "V2-only build names the rebuild: {without_feature}"
         );
 
         let with_feature = init_mismatch(AgentEngine::V2, &kas_shaped(), true)
