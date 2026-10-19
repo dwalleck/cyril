@@ -1,0 +1,12 @@
+# rev: 25880f5a108bdd3406388caa9cba280a86c10eb5 dirty-paths: 0
+# date: 2026-10-18T21:50:57Z mode: full
+fmt-OK
+clippy-all-features-OK
+clippy-kas-OK
+clippy-default-OK
+clippy-core-no-default-OK
+nextest-all-features-OK
+doctest-OK
+nextest-kas-OK
+nextest-default-OK
+nextest-core-no-default-OK

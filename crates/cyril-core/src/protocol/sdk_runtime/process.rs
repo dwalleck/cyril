@@ -34,7 +34,7 @@ impl ProcessAdapter {
         }
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(super) fn new_recording(
         pipes: AgentProcessPipes,
         eof_line: String,

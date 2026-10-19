@@ -493,14 +493,17 @@ impl Command for PowersCommand {
             // `None` is "the agent has not pushed a catalog yet", which the
             // panel cannot express — an empty panel would claim the user has
             // nothing installed. No bridge call is made here: there is no
-            // powers request to send. The advice names the real precondition:
-            // only the KAS engine pushes powers, and it is `--features kas` +
-            // `--agent-engine kas` away — "start a KAS session" alone is
-            // unactionable in a default build (review finding 17).
+            // powers request to send. Only KAS sessions push powers; rebuild
+            // advice is appropriate only when KAS support is not compiled in.
             None => Ok(CommandResult::system_message(
-                "No powers reported yet — powers come from the KAS engine, so this build needs \
-                 --features kas and the session needs --agent-engine kas."
-                    .to_string(),
+                if cfg!(feature = "kas") {
+                    "No powers reported yet — only KAS sessions report powers. If using v2, \
+                     restart with --agent-engine kas."
+                } else {
+                    "No powers reported yet — this build has no KAS support. Powers require \
+                     KAS; rebuild with --features kas and restart with --agent-engine kas."
+                }
+                .to_string(),
             )),
         }
     }

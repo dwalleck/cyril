@@ -1,0 +1,25 @@
+C6 live acceptance receipt - cyril KAS (Free) across an access-token renewal
+Date 2026-10-18 UTC; kiro-cli 2.32.0 (KAS bundle 2.32.0-f3c5...), Linux.
+Launch: zbu7-run-cyril2.sh (HOME=private tmp, XDG_DATA_HOME=/home/dwalleck/.local/share,
+XDG_CONFIG_HOME=tmp/.config, cyril --agent-engine kas = Free spawn), driven by hex1b via zbu7-turn.sh.
+Binary: zbu7-cyril-bin-final built from 2cf8d853 (sha256 in binaries.sha256). Session 1 (session1-*)
+ran the slice-1 build 2e89ee43 for one turn and was quit before session 2 started, so two cyril
+processes never asked kiro-cli for a token concurrently.
+Pre-run (redacted harness, plain get-kas-token, 19:01:34Z): stored token expiresAt 19:47:39.083Z.
+
+19:35:23.92  session start; getAccessToken served, expires 19:47:39, origin Helper, no force   [session2-cyril-auth.log]
+19:35:28     turn BRAVOZBU answered                                                           [session2-screen.txt]
+19:44:40.46  KAS enters its 180 s pre-expiry buffer (19:47:39 - 179 s) and asks again (params {});
+             cyril runs plain `kiro-cli chat _ get-kas-token`; kiro-cli RENEWS: served expiry
+             20:44:40.08 (+60 min)                                                            [session2-cyril-auth.log]
+19:45:41     turn CHARLIEZBU answered (inside the old token's buffer)                         [session2-screen.txt]
+19:48:36     turn DELTAZBU answered, after the original token's 19:47:39 expiry               [session2-screen.txt]
+
+No BridgeDisconnected, no auth BridgeError, no WARN/ERROR from the auth path (the WARN lines in the
+log are unrelated: no git repo in the scratch workspace, memory runtime disabled, a usage-context
+ordering note, the post-quit capture drain). Session ended by Ctrl+Q.
+
+Finding: kiro-cli's plain get-kas-token refreshes a token with ~3 min left, so KAS's first in-buffer
+request already receives a fresh token; --force-refresh was never needed (KAS 0.66.x never sends
+forceRefresh). Settles evidence P3's open item.
+Token custody: receipts hold expiries only; a scan for access-token-shaped strings finds none.

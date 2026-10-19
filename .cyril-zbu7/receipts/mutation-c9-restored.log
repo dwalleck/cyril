@@ -1,0 +1,12 @@
+# rev: 85becf9f792e6aeaec607d8a31a3178141a06435 (+ working tree changes: 19 paths)
+# cmd: cargo nextest run -p cyril-core --features kas -E test(fetch_serializes_concurrent_requests)
+# date: 2026-10-18T19:22:04Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 28.75s
+────────────
+ Nextest run ID 19cf9e7b-98c4-4d25-9f6a-4be877027bd1 with nextest profile: default
+    Starting 1 test across 11 binaries (1227 tests skipped)
+        PASS [   0.617s] (1/1) cyril-core protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+────────────
+     Summary [   0.619s] 1 test run: 1 passed, 1227 skipped
+exit=0

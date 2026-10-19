@@ -1,20 +1,32 @@
+#[cfg(unix)]
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
+#[cfg(unix)]
 use std::time::Duration;
 
+#[cfg(unix)]
 use agent_client_protocol::schema::v1 as acp;
 
 use super::super::process::RecordingReader;
+#[cfg(unix)]
 use super::super::{SdkRuntime, StageChain};
+#[cfg(unix)]
 use crate::protocol::bridge::create_channel_pair;
+#[cfg(unix)]
 use crate::protocol::domain_mediator::{DomainChannels, DomainConfig, DomainMediator};
+#[cfg(unix)]
 use crate::protocol::engine::V2Engine;
+#[cfg(unix)]
 use crate::protocol::source_observer::IngressTracker;
+#[cfg(unix)]
 use crate::protocol::transport::AgentProcess;
+#[cfg(unix)]
 use crate::types::{AgentCommand, BridgeCommand, Notification};
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
+#[cfg(unix)]
 const FUTURE_FRAME: &str = r#" { "jsonrpc": "2.0", "method": "session/update", "params": {"sessionId":"process-fixture","update":{"sessionUpdate":"future_process_update","payload":{"kept":true}}} }"#;
+#[cfg(unix)]
 const PROCESS_BATCH: &str = r#"[{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"process-fixture","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"batch-0"}}}},{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"process-fixture","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"batch-1"}}}}]"#;
 
 #[tokio::test]
@@ -209,6 +221,8 @@ done | tee "$1"
             stall_threshold: Duration::from_secs(30),
             #[cfg(feature = "kas")]
             host_shell: None,
+            #[cfg(feature = "kas")]
+            kas_token: None,
         };
         let (mediator, channels) = DomainMediator::new(config, bridge)
             .unwrap_or_else(|error| panic!("process fixture domain channels: {error}"));

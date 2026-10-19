@@ -183,20 +183,20 @@ An agent provider selectable from the ACP registry — Kiro, Claude, Codex, Goos
 _Avoid_: provider, backend (when you mean the vendor), agent (reserve "agent" for the running process)
 
 **Agent**:
-The running agent process cyril drives over ACP — for Kiro, one `kiro-cli acp` subprocess. A vendor ships it; an engine is the implementation inside it.
+The running agent process cyril drives over ACP. A vendor ships it; an engine is the implementation inside it.
 _Avoid_: assistant, bot, model (the LLM an agent calls)
 
 **Engine**:
-A Kiro-internal agent implementation — **v2** (the Rust engine, `kiro.dev/*` / `_kiro.dev/*` wire dialect) or **KAS** (the TypeScript/LangGraph engine, `_kiro/*` dialect). Engine is an axis *within* the Kiro vendor: both engines share the `kiro-cli` binary, the `~/.kiro` auth store and session storage, and Kiro's slash-command/mode heritage, differing mainly in wire dialect and lifecycle. Cyril binds one engine at agent-subprocess spawn (startup): the bridge runs one `kiro-cli acp [--agent-engine kas]` process and holds one engine for its life, so every session on that process shares it. Switching engines means a new subprocess.
+A Kiro-internal agent implementation — **v2** (Rust, `kiro.dev/*` / `_kiro.dev/*` dialect) or **KAS** (TypeScript/LangGraph, `_kiro/*` dialect). Cyril binds one engine for the agent process's lifetime; KAS is the normal default, with v2 available by explicit selection or in a V2-only build.
 _Avoid_: mode (that's a session mode — vibe/spec), version (v2/v3 are engines, not release versions), variant
 
 **v2**:
-The Kiro engine cyril drives today (`kiro-cli acp`, default). Rust, `sacp`-based, `kiro.dev/*` dialect.
+The explicitly selectable Kiro Rust engine, also the default in a V2-only Cyril build. It uses the `kiro.dev/*` wire dialect.
 _Avoid_: rust engine, classic, legacy
 
 **KAS** (Kiro Agent Server):
-The Kiro TypeScript/LangGraph engine, embedded as of kiro-cli 2.7.1, reached over `kiro-cli acp --agent-engine kas`. `_kiro/*` dialect; host supplies auth; can call fs/terminal callbacks; uses the `agent-subtask` subagent model.
-_Avoid_: v3 (it's the user-facing TUI alias `--v3`, but the engine is KAS), TypeScript engine
+The Kiro TypeScript/LangGraph engine and Cyril's normal default, embedded in Kiro CLI since 2.7.1. It uses the `_kiro/*` dialect, host-supplied authentication and the `agent-subtask` subagent model.
+_Avoid_: v3 (the CLI alias; KAS is the engine name), TypeScript engine
 
 **Wire dialect**:
 The extension-method family an engine speaks — `kiro.dev/*` for v2, `_kiro/*` for KAS.

@@ -1,0 +1,6 @@
+PASS session created (engine chosen without --agent-engine)
+PASS autocomplete offers /probe-skill and /probe-prompt
+  (approving: Load skill: probe-skill)
+PASS skill → SKILLRAN OMEGA4
+PASS prompt → PROMPTRAN GAMMA DELTA
+PASS custom-agent → AGENTRAN_Q2

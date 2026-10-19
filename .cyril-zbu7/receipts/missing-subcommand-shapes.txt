@@ -1,0 +1,42 @@
+# cyril-zbu7 amendment: how kiro-cli answers `chat _ get-kas-token` when the helper is absent (2026-10-18)
+# 1) installed kiro-cli 2.32.0, bogus sibling (touches no token): kiro-cli chat _ get-kas-token-does-not-exist
+exit=2 stdout-bytes=0
+--stderr--
+error: unrecognized subcommand 'get-kas-token-does-not-exist'
+
+  tip: a similar subcommand exists: 'get-kas-token'
+
+Usage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>
+
+For more information, try '--help'.
+
+# 2) archived kiro-cli-chat builds, `chat _ get-kas-token`, NO credentials reachable
+#    (env -i, private HOME/XDG dirs, stdin closed; zbu7-old-shape.sh). Exits: 2.4.1=2 2.5.1=2 2.6.0=1 2.6.1=1 2.7.1=1
+== 2.4.1
+-- stdout:
+-- stderr:
+error: unexpected argument 'get-kas-token' found
+
+Usage: kiro-cli-chat chat [OPTIONS] [INPUT]
+
+For more information, try '--help'.
+== 2.5.1
+-- stdout:
+-- stderr:
+error: unrecognized subcommand 'get-kas-token'
+
+Usage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>
+
+For more information, try '--help'.
+== 2.6.0
+-- stdout:
+{"success":false,"error":"You are not logged in. Please log in with `kiro-cli login`."}
+-- stderr:
+== 2.6.1
+-- stdout:
+{"success":false,"error":"You are not logged in. Please log in with `kiro-cli login`."}
+-- stderr:
+== 2.7.1
+-- stdout:
+{"kind":"error","data":{"message":"You are not logged in. Please log in with `kiro-cli login`."}}
+-- stderr:

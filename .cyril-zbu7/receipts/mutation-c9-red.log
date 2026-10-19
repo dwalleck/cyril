@@ -1,0 +1,33 @@
+# rev: 85becf9f792e6aeaec607d8a31a3178141a06435 (+ working tree changes: 19 paths)
+# cmd: cargo nextest run -p cyril-core --features kas -E test(fetch_serializes_concurrent_requests)
+# date: 2026-10-18T19:21:25Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 28.99s
+────────────
+ Nextest run ID 4dca7317-06ac-4197-b9fb-f97a437395c8 with nextest profile: default
+    Starting 1 test across 11 binaries (1227 tests skipped)
+        FAIL [   0.310s] (1/1) cyril-core protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::fetch_serializes_concurrent_requests ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1199 filtered out; finished in 0.31s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::fetch_serializes_concurrent_requests' (973442) panicked at crates/cyril-core/src/protocol/kas/auth.rs:802:9:
+    Err(NonZeroExit { command: "/bin/sh /home/dwalleck/.claude/tmp/.tmpPiA9AU/fake-kiro-cli.sh chat _ get-kas-token", status: "exit status: 9", stderr_tail: ": mkdir: cannot create directory ‘/home/dwalleck/.claude/tmp/.tmpPiA9AU/held’: File exists" })
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 
+────────────
+     Summary [   0.312s] 1 test run: 0 passed, 1 failed, 1227 skipped
+        FAIL [   0.310s] (1/1) cyril-core protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+error: test run failed
+exit=100

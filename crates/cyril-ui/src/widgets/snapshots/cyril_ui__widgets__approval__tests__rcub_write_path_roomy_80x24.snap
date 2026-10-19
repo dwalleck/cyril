@@ -1,0 +1,22 @@
+---
+source: crates/cyril-ui/src/widgets/approval.rs
+expression: "screen_rows(&terminal).join(\"\\n\")"
+---
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+                                                                                
+          ┌ Permission Required ─────────────────────────────────────┐          
+          │Write File                                                │          
+          │                                                          │          
+          │  /home/dwalleck/repos/cyril/experiments/conductor-spike/a│          
+          │  udit-2.32.0/live/cyril-kas/S4b-write-outside-approval.tx│          
+          │  t                                                       │          
+          │    body                                                  │          
+          │                                                          │          
+          │▸ Allow                                                   │          
+          │  Deny                                                    │          
+          │                                                          │          
+          └──────────────────────────────────────────────────────────┘

@@ -1,0 +1,56 @@
+# rev: 2cf8d85385e60759d64d8310b29f87088c3b573d (+ working tree changes: 9 paths)
+# cmd: cargo nextest run -p cyril-core --features kas --no-fail-fast -E test(/get_access_token_round_trips|fallback_warning_reaches/)
+# date: 2026-10-18T19:51:21Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 34.41s
+────────────
+ Nextest run ID 4ec78e6c-4b69-42cb-9863-e10aaf193f75 with nextest profile: default
+    Starting 2 tests across 11 binaries (1257 tests skipped)
+        FAIL [   0.014s] (1/2) cyril-core protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli
+  stdout ───
+
+    running 1 test
+    test protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli ... FAILED
+
+    failures:
+
+    failures:
+        protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1230 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli' (1248014) panicked at crates/cyril-core/src/protocol/domain_mediator/host.rs:411:17:
+    assertion `left == right` failed
+      left: ["chat _ get-kas-token", "chat _ get-kas-token"]
+     right: ["chat _ get-kas-token --force-refresh", "chat _ get-kas-token"]
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.026s] (2/2) cyril-core protocol::domain_mediator::host::tests::fallback_warning_reaches_the_ui_once
+  stdout ───
+
+    running 1 test
+    test protocol::domain_mediator::host::tests::fallback_warning_reaches_the_ui_once ... FAILED
+
+    failures:
+
+    failures:
+        protocol::domain_mediator::host::tests::fallback_warning_reaches_the_ui_once
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1230 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'protocol::domain_mediator::host::tests::fallback_warning_reaches_the_ui_once' (1248013) panicked at crates/cyril-core/src/protocol/domain_mediator/host.rs:442:17:
+    assertion `left == right` failed: []
+      left: 0
+     right: 1
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.028s] 2 tests run: 0 passed, 2 failed, 1257 skipped
+        FAIL [   0.014s] (1/2) cyril-core protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli
+        FAIL [   0.026s] (2/2) cyril-core protocol::domain_mediator::host::tests::fallback_warning_reaches_the_ui_once
+error: test run failed
+exit=100

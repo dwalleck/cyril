@@ -696,6 +696,8 @@ pub(super) async fn with_engine_harness<F, Fut>(
                 stall_threshold: Duration::from_secs(30),
                 #[cfg(feature = "kas")]
                 host_shell: None,
+                #[cfg(feature = "kas")]
+                kas_token: None,
             };
             let (mediator, domain_channels) = DomainMediator::new(config, bridge_channels)
                 .unwrap_or_else(|error| panic!("SDK2 harness domain channels: {error}"));

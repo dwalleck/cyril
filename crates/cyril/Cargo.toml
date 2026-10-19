@@ -15,12 +15,12 @@ name = "cyril"
 path = "src/main.rs"
 
 [features]
-default = []
+default = ["kas"]
 # Speech-to-text voice input (ROADMAP CN2). Off by default — pulls in the
 # cyril-voice engine and (later) its audio/ML deps. Build with `--features voice`.
 voice = ["dep:cyril-voice"]
-# KAS engine support (ADR-0002). Default-off; forwards to cyril-core's `kas`
-# gate (empty in KAS-0). Build with `--features kas`.
+# KAS engine support (ADR-0002). Enabled by default for the binary; forwards
+# to cyril-core's opt-in gate. Build V2-only with `--no-default-features`.
 kas = ["cyril-core/kas"]
 
 [dependencies]

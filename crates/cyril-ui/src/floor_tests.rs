@@ -207,6 +207,36 @@ fn input_content(buffer: &Buffer) -> Option<(Vec<String>, CursorCells)> {
     Some((rows, cursors))
 }
 
+/// cyril-vojx fence: `render::input_top` — the row every overlay guard
+/// measures against — is the row the input box is actually drawn at, on
+/// every frame height. Summing the row budget instead put it one or two rows
+/// high on frames shorter than the chat floor plus the input floor, where the
+/// layout solver keeps the chat floor and squeezes the input; an approval
+/// guard reading that number disagreed with the popup drawn.
+#[test]
+fn input_top_is_the_drawn_input_row_at_every_height() -> anyhow::Result<()> {
+    let state = MockTuiState::default();
+    let mut compared = 0;
+    for height in 0u16..=30 {
+        let buffer = render_frame(&state, 80, height)?;
+        let Some(drawn) = input_top_row(&buffer) else {
+            continue; // the input box has no titled top border at this height
+        };
+        let area = ratatui::layout::Rect::new(0, 0, 80, height);
+        assert_eq!(
+            crate::render::input_top(area, &state),
+            drawn,
+            "height={height}: input_top disagrees with the drawn input box"
+        );
+        compared += 1;
+    }
+    anyhow::ensure!(
+        compared >= 25,
+        "too few heights drew an input box: {compared}"
+    );
+    Ok(())
+}
+
 /// cyril-a14l C2 fence (slice 6): a 10-line draft with the cursor at the
 /// end keeps exactly one cursor block visible inside the input content
 /// rect at 60×16, at the position the char-wrap oracle + follow-window

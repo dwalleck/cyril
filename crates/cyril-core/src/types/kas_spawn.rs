@@ -12,8 +12,8 @@
 #[serde(rename_all = "lowercase")]
 pub enum KasSpawn {
     /// Direct `node acp-server.js --transport=stdio --auth=acp-callback`
-    /// (cyril-dcc6); cyril answers `_kiro/auth/getAccessToken` from kiro-cli's
-    /// sqlite credential store, same as wrapper mode.
+    /// (cyril-dcc6); cyril answers `_kiro/auth/getAccessToken` by asking kiro-cli
+    /// (`chat _ get-kas-token`, cyril-zbu7), same as wrapper mode.
     #[default]
     Free,
     /// `kiro-cli acp --agent-engine <flag>` (injects `--auth=acp-callback`);
