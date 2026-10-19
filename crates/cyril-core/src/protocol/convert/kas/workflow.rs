@@ -1095,6 +1095,10 @@ impl WireSnapshot {
             metadata = metadata.with_pause(pause);
         }
         let workflow_id = workflow_id(self.workflow_id, "finalState.workflowId")?;
+        // Run state OMITS `attention` when the list is empty (KAS 0.66.43 `Sce`:
+        // `t.length>0 ? e.attention=t : delete e.attention`), so an absent list
+        // on state means "nothing waiting", unlike the lifecycle events, which
+        // always carry one (review M2).
         if let Some(attention) = run_attention(self.attention, &workflow_id) {
             metadata = metadata.with_attention(attention);
         }

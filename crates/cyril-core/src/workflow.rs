@@ -497,6 +497,11 @@ pub struct WorkflowTracker {
     /// session, `since`) — a question shows once although KAS repeats it on
     /// every later event. Pruned to the currently parked set at each raise.
     raised_questions: std::collections::HashSet<(SessionId, String)>,
+    /// cyril-9104 review M1: park episodes already answered — by the user's
+    /// `/answer` or the parent's own `send_message` — but not yet resumed by
+    /// KAS. They leave [`WorkflowTracker::step_questions`] at once, so a
+    /// second prompt cannot pre-empt the turn the first answer started.
+    answered_questions: std::collections::HashSet<(SessionId, String)>,
 }
 
 /// A workflow step parked until the user's next message (cyril-9104): its
@@ -872,15 +877,26 @@ impl WorkflowTracker {
         // list. A completion's list rides its `finalState` too and is applied
         // with the snapshot, so only the other events apply theirs here.
         let attention = match &event {
-            WorkflowEvent::RunCompleted(_) => None,
+            WorkflowEvent::RunCompleted(completion) => {
+                if completion.attention() != completion.final_state().attention() {
+                    tracing::warn!(
+                        workflow_id = %workflow_id,
+                        "run_complete attention differs from its finalState; finalState applied"
+                    );
+                }
+                None
+            }
             other => other.attention().map(<[WorkflowAttention]>::to_vec),
         };
-        // A step's question note lasts until the step runs or ends again.
+        // A step's question note lasts until the step runs or ends again. A
+        // resume `node_start` may omit `sessionId`, so the node's own session
+        // (after the event merges) is consulted too.
         let restarted = match &event {
             WorkflowEvent::NodeStarted(started) => started.details().session_id().cloned(),
             _ => None,
         };
-        let finished = match &event {
+        let touched = match &event {
+            WorkflowEvent::NodeStarted(started) => Some(started.node_path().clone()),
             WorkflowEvent::NodeCompleted(completed) => Some(completed.node_path().clone()),
             _ => None,
         };
@@ -901,7 +917,7 @@ impl WorkflowTracker {
         let Some(run) = self.runs.get_mut(&workflow_id) else {
             return Ok(changed);
         };
-        if let Some(session) = finished
+        if let Some(session) = touched
             .and_then(|path| run.nodes.get(&path))
             .and_then(WorkflowNodeState::session_id)
         {
@@ -1639,6 +1655,7 @@ impl WorkflowTracker {
                 if step.is_none() {
                     tracing::debug!(session = %message.recipient(), "parent message to a session no tracked step owns");
                 }
+                self.mark_answered(message.recipient());
                 Some(StepAnswer {
                     answered_by: message.caller().cloned(),
                     step,
@@ -1689,6 +1706,37 @@ impl WorkflowTracker {
     /// the step's `send_message` question, else its captured output.
     pub fn step_questions(&self) -> Vec<StepQuestion> {
         let mut questions: Vec<StepQuestion> = self
+            .parked_episodes()
+            .into_iter()
+            .filter(|question| {
+                !self
+                    .answered_questions
+                    .contains(&(question.session_id.clone(), question.since.clone()))
+            })
+            .collect();
+        assign_selectors(&mut questions);
+        questions
+    }
+
+    /// The step session's current park episode is answered (cyril-9104
+    /// review M1): it stops being listed until KAS parks the step again.
+    pub fn mark_answered(&mut self, session: &SessionId) {
+        let episodes: Vec<(SessionId, String)> = self
+            .parked_episodes()
+            .into_iter()
+            .filter(|question| &question.session_id == session)
+            .map(|question| (question.session_id, question.since))
+            .collect();
+        if episodes.is_empty() {
+            tracing::debug!(session = %session, "answer for a step that is not parked; nothing marked");
+        }
+        self.answered_questions.extend(episodes);
+    }
+
+    /// Every parked question in the runs' current attention lists, answered
+    /// or not, ordered by when it parked.
+    fn parked_episodes(&self) -> Vec<StepQuestion> {
+        let mut questions: Vec<StepQuestion> = self
             .runs
             .iter()
             .filter(|(_, run)| !is_terminal(run.status))
@@ -1727,15 +1775,6 @@ impl WorkflowTracker {
                 &b.node_path,
             ))
         });
-        let mut node_counts: HashMap<WorkflowNodeId, usize> = HashMap::new();
-        for question in &questions {
-            *node_counts.entry(question.node_id.clone()).or_default() += 1;
-        }
-        for question in &mut questions {
-            if node_counts.get(&question.node_id).copied().unwrap_or(0) > 1 {
-                question.selector = format!("{}/{}", question.workflow_id, question.node_id);
-            }
-        }
         questions
     }
 
@@ -1743,11 +1782,14 @@ impl WorkflowTracker {
     /// once per park episode — KAS repeats a parked step's entry on every
     /// later event of the run.
     pub fn take_raised_questions(&mut self) -> Vec<StepQuestion> {
-        let parked = self.step_questions();
-        let current: std::collections::HashSet<(SessionId, String)> = parked
-            .iter()
-            .map(|question| (question.session_id.clone(), question.since.clone()))
+        let current: std::collections::HashSet<(SessionId, String)> = self
+            .parked_episodes()
+            .into_iter()
+            .map(|question| (question.session_id, question.since))
             .collect();
+        self.answered_questions
+            .retain(|episode| current.contains(episode));
+        let parked = self.step_questions();
         let raised: Vec<StepQuestion> = parked
             .into_iter()
             .filter(|question| {
@@ -1758,6 +1800,35 @@ impl WorkflowTracker {
             .collect();
         self.raised_questions = current;
         raised
+    }
+}
+
+/// Gives each parked question the shortest `/answer` selector that names it
+/// alone: its node id, else `<workflow-id>/<node-id>`, else its full node path
+/// (cyril-9104 review L1: one node id parked on two paths of one run).
+fn assign_selectors(questions: &mut [StepQuestion]) {
+    fn counts(keys: impl Iterator<Item = String>) -> HashMap<String, usize> {
+        let mut counts = HashMap::new();
+        for key in keys {
+            *counts.entry(key).or_insert(0) += 1;
+        }
+        counts
+    }
+    let by_node = counts(questions.iter().map(|q| q.node_id.as_str().to_owned()));
+    let by_run = counts(
+        questions
+            .iter()
+            .map(|q| format!("{}/{}", q.workflow_id, q.node_id)),
+    );
+    for question in questions.iter_mut() {
+        let qualified = format!("{}/{}", question.workflow_id, question.node_id);
+        question.selector = if by_node.get(question.node_id.as_str()) == Some(&1) {
+            question.node_id.as_str().to_owned()
+        } else if by_run.get(&qualified) == Some(&1) {
+            qualified
+        } else {
+            question.node_path.segments().join("/")
+        };
     }
 }
 
@@ -5833,6 +5904,10 @@ mod tests {
                 .message()
                 .starts_with("The proposed plan is exactly right.")
         );
+        assert!(
+            tracker.step_questions().is_empty(),
+            "review M1: the parent's answer closes the episode before KAS resumes the step"
+        );
         let (raised, _) = replay_lines(&mut tracker, WFPLAN, "wfplan", 167, 175);
         assert!(raised.is_empty());
         assert!(tracker.step_questions().is_empty(), "the step resumed");
@@ -6021,6 +6096,89 @@ mod tests {
                 ("s-r".to_owned(), "review".to_owned()),
             ]
         );
+    }
+
+    /// cyril-9104 review M1: an answered park episode leaves the list at
+    /// once and is not raised again; KAS parking the step anew (a new
+    /// `since`) lists and raises it again.
+    #[test]
+    fn answered_episode_leaves_the_list_until_the_step_parks_again() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_m"));
+        park(
+            &mut tracker,
+            "wf_m",
+            vec![attention(Question, "wf_m", "ask", "s-m", "t0")],
+        );
+        assert_eq!(tracker.take_raised_questions().len(), 1);
+        tracker.mark_answered(&SessionId::new("s-m"));
+        assert!(tracker.step_questions().is_empty(), "answered");
+        park(
+            &mut tracker,
+            "wf_m",
+            vec![attention(Question, "wf_m", "ask", "s-m", "t0")],
+        );
+        assert!(
+            tracker.take_raised_questions().is_empty(),
+            "the same episode repeated is still answered"
+        );
+        park(
+            &mut tracker,
+            "wf_m",
+            vec![attention(Question, "wf_m", "ask", "s-m", "t1")],
+        );
+        assert_eq!(
+            tracker.take_raised_questions().len(),
+            1,
+            "a new park episode"
+        );
+        assert_eq!(tracker.step_questions().len(), 1);
+    }
+
+    /// cyril-9104 review L3: a resume `node_start` without `sessionId` still
+    /// clears the step's old question note (resolved through the node).
+    #[test]
+    fn sessionless_restart_clears_the_question_note() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        let id = workflow_id("wf_n");
+        opened(&mut tracker, &id);
+        apply_ok(
+            &mut tracker,
+            started(
+                &id,
+                "ask",
+                &["wf_n", "ask"],
+                WorkflowNodeStartDetails::new().with_session_id(SessionId::new("s-n")),
+            ),
+        );
+        tracker.record_message(
+            &WorkflowMessage::new(
+                SessionId::new("parent"),
+                "Old question?".to_owned(),
+                crate::types::WorkflowMessageSeverity::Warning,
+                WorkflowMessageSender::Step,
+            )
+            .with_caller(SessionId::new("s-n")),
+        );
+        apply_ok(
+            &mut tracker,
+            started(
+                &id,
+                "ask",
+                &["wf_n", "ask"],
+                WorkflowNodeStartDetails::new(),
+            ),
+        );
+        park(
+            &mut tracker,
+            "wf_n",
+            vec![attention(Question, "wf_n", "ask", "s-n", "t1")],
+        );
+        let parked = tracker.step_questions();
+        assert_eq!(parked.len(), 1);
+        assert_eq!(parked[0].question(), None, "the stale note is gone");
     }
 
     /// cyril-9104 C3: a terminal run has no parked steps — even if its last

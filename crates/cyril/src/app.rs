@@ -2309,6 +2309,15 @@ impl App {
             CommandResultKind::NotACommand(_text) => {
                 // Should not happen since we already checked parse()
             }
+            // cyril-9104: the step's park episode is answered — no second
+            // `/answer` may pre-empt the turn this one starts.
+            CommandResultKind::StepAnswered {
+                session_id,
+                message,
+            } => {
+                self.workflow_tracker.mark_answered(&session_id);
+                self.ui_state.add_system_message(message);
+            }
             CommandResultKind::SubmitAgentPrompt => {
                 tracing::error!("SubmitAgentPrompt reached synchronous result routing");
             }
@@ -9457,6 +9466,14 @@ mod tests {
             ChatMessageKind::System(text)
                 if text == "Sent your answer to step \"ask\" of workflow \"park\"."
         )));
+        // Review M1: the episode is answered at once — a second `/answer`
+        // before KAS resumes the step must not pre-empt the turn just started.
+        app.ui_state.insert_text("/answer again");
+        app.submit_input().await.expect("submit second /answer");
+        assert!(
+            commands.try_recv().is_err(),
+            "the answered step is not prompted again"
+        );
 
         q9104_feed(
             &mut app,

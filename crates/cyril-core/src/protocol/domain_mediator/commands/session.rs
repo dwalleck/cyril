@@ -578,7 +578,7 @@ impl DomainMediator {
         // dispatched around it; only the response await is spawned.
         let sent = connection.send_request(request);
         let channels = self.channels.clone();
-        tokio::task::spawn_local(async move {
+        let task = tokio::task::spawn_local(async move {
             match sent.block_task().await {
                 Ok(response) => tracing::debug!(
                     session = %session_id,
@@ -602,6 +602,9 @@ impl DomainMediator {
                 }
             }
         });
+        // Tracked like the other spawned command awaits: aborted on shutdown.
+        self.command_tasks.retain(|task| !task.is_finished());
+        self.command_tasks.push(task);
     }
 }
 

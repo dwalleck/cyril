@@ -6,7 +6,7 @@
 //! how KAS resumes a parked step. A step that is not parked is refused: a
 //! prompt to a running step would pre-empt its turn.
 
-use super::{Command, CommandContext, CommandResult};
+use super::{Command, CommandContext, CommandResult, CommandResultKind};
 use crate::types::BridgeCommand;
 use crate::workflow::{StepQuestion, WorkflowTracker};
 
@@ -52,17 +52,19 @@ impl Command for AnswerCommand {
             Some(selector) => {
                 let matching: Vec<&StepQuestion> = parked
                     .iter()
-                    .filter(|question| {
-                        question.selector() == selector
-                            || format!("{}/{}", question.workflow_id(), question.node_id())
-                                == selector
-                    })
+                    .filter(|question| names_step(selector, question))
                     .collect();
                 match matching.as_slice() {
                     [one] => *one,
-                    _ => {
+                    [] => {
                         return Ok(CommandResult::system_message(not_waiting(
-                            tracker, selector, &parked,
+                            tracker, selector,
+                        )));
+                    }
+                    _ => {
+                        return Ok(CommandResult::system_message(format!(
+                            "Several waiting steps match \"{selector}\" — use the selector listed for one.\n{}",
+                            listing(&parked)
                         )));
                     }
                 }
@@ -84,12 +86,26 @@ impl Command for AnswerCommand {
                 answer: answer.to_owned(),
             })
             .await?;
-        Ok(CommandResult::system_message(format!(
-            "Sent your answer to step \"{}\" of workflow \"{}\".",
-            target.node_id(),
-            target.run_name()
-        )))
+        Ok(CommandResult {
+            kind: CommandResultKind::StepAnswered {
+                session_id: target.session_id().clone(),
+                message: format!(
+                    "Sent your answer to step \"{}\" of workflow \"{}\".",
+                    target.node_id(),
+                    target.run_name()
+                ),
+            },
+        })
     }
+}
+
+/// `selector` names `question`: its listed selector, its node id, its
+/// `<workflow-id>/<node-id>`, or its full node path.
+fn names_step(selector: &str, question: &StepQuestion) -> bool {
+    question.selector() == selector
+        || question.node_id().as_str() == selector
+        || format!("{}/{}", question.workflow_id(), question.node_id()) == selector
+        || question.node_path().segments().join("/") == selector
 }
 
 /// The parked steps, one line each with its selector, run and question.
@@ -112,25 +128,33 @@ fn listing(parked: &[StepQuestion]) -> String {
     text
 }
 
-/// Why `selector` names no parked step: a step it names that is not parked
-/// (with its state when the tracker knows it), or one ambiguous between runs.
-fn not_waiting(tracker: &WorkflowTracker, selector: &str, parked: &[StepQuestion]) -> String {
-    if parked
-        .iter()
-        .filter(|question| question.node_id().as_str() == selector)
-        .count()
-        > 1
-    {
-        return format!(
-            "Several waiting steps are named \"{selector}\" — use its run-qualified name.\n{}",
-            listing(parked)
-        );
+/// Why `selector` names no parked step, with the named step's state when the
+/// tracker knows it — from a run still active when there is one, so an older
+/// finished run never speaks for it.
+fn not_waiting(tracker: &WorkflowTracker, selector: &str) -> String {
+    let mut matches = Vec::new();
+    for (workflow_id, run) in tracker.iter() {
+        for (path, node) in run.nodes() {
+            if node.node_id().as_str() == selector
+                || format!("{workflow_id}/{}", node.node_id()) == selector
+                || path.segments().join("/") == selector
+            {
+                matches.push((run.status(), node.status()));
+            }
+        }
     }
-    let state = tracker
-        .iter()
-        .flat_map(|(_, run)| run.nodes())
-        .find(|(_, node)| node.node_id().as_str() == selector)
-        .and_then(|(_, node)| node.status());
+    let terminal = |status: Option<crate::types::WorkflowRunStatus>| {
+        matches!(
+            status,
+            Some(
+                crate::types::WorkflowRunStatus::Completed
+                    | crate::types::WorkflowRunStatus::Failed
+                    | crate::types::WorkflowRunStatus::Aborted
+            )
+        )
+    };
+    matches.sort_by_key(|(run_status, _)| terminal(*run_status));
+    let state = matches.first().and_then(|(_, node_status)| *node_status);
     match state {
         Some(status) => {
             format!("No workflow step \"{selector}\" is waiting for an answer (it is {status}).")
@@ -248,11 +272,87 @@ mod tests {
         }
     }
 
+    /// The text the user sees: a system message, or a sent answer's note.
     fn text(result: &CommandResult) -> &str {
         match &result.kind {
             CommandResultKind::SystemMessage(text) => text,
+            CommandResultKind::StepAnswered { message, .. } => message,
             other => panic!("expected a system message, got {other:?}"),
         }
+    }
+
+    /// A sent answer names the step session the App marks answered.
+    fn answered_session(result: &CommandResult) -> Option<&str> {
+        match &result.kind {
+            CommandResultKind::StepAnswered { session_id, .. } => Some(session_id.as_str()),
+            _ => None,
+        }
+    }
+
+    /// cyril-9104 review M1: a sent answer reports the step session so the
+    /// App can mark its park episode answered; a refusal reports none.
+    #[tokio::test]
+    async fn a_sent_answer_reports_its_step_session() {
+        let mut harness = harness();
+        park(&mut harness, "wf_1", "park", &[("ask", "sess_step", "t0")]);
+        let sent_result = run(&mut harness, "yes").await;
+        assert_eq!(answered_session(&sent_result), Some("sess_step"));
+        let refused = run(&mut harness, "@nope yes").await;
+        assert_eq!(answered_session(&refused), None);
+    }
+
+    /// cyril-9104 review L1: one node id parked on two paths of one run
+    /// stays answerable through its full path.
+    #[tokio::test]
+    async fn same_node_on_two_paths_is_answerable_by_path() {
+        let mut harness = harness();
+        let workflow = id("wf_1");
+        if let Err(error) =
+            harness
+                .tracker
+                .apply_event(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+                    workflow.clone(),
+                    "fan".to_owned(),
+                    serde_json::json!({}),
+                    Vec::new(),
+                    None,
+                )))
+        {
+            panic!("{error}");
+        }
+        let marker = |branch: &str, session: &str| {
+            let path = WorkflowNodePath::try_new(
+                &workflow,
+                vec!["wf_1".to_owned(), branch.to_owned(), "ask".to_owned()],
+            )
+            .unwrap_or_else(|e| panic!("{e}"));
+            WorkflowAttention::new(
+                WorkflowAttentionKind::Question,
+                "t".to_owned(),
+                node("ask"),
+                path,
+                SessionId::new(session),
+            )
+        };
+        if let Err(error) = harness.tracker.apply_event(WorkflowEvent::Paused(
+            WorkflowPaused::new(workflow.clone(), "waiting".to_owned())
+                .with_attention(vec![marker("left", "sess_l"), marker("right", "sess_r")]),
+        )) {
+            panic!("{error}");
+        }
+        let ambiguous = run(&mut harness, "@wf_1/ask yes").await;
+        assert!(
+            text(&ambiguous).starts_with("Several waiting steps match"),
+            "{}",
+            text(&ambiguous)
+        );
+        assert_eq!(sent(&mut harness), None);
+        let result = run(&mut harness, "@wf_1/right/ask yes").await;
+        assert_eq!(answered_session(&result), Some("sess_r"));
+        assert_eq!(
+            sent(&mut harness),
+            Some(("sess_r".to_owned(), "yes".to_owned()))
+        );
     }
 
     fn sent(harness: &mut Harness) -> Option<(String, String)> {

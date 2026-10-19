@@ -231,6 +231,14 @@ pub enum CommandResultKind {
     ShowThemePicker,
     /// Command dispatched to bridge (already sent).
     Dispatched,
+    /// `/answer` sent the user's answer to a parked workflow step
+    /// (cyril-9104): the App marks that step's park episode answered in its
+    /// `WorkflowTracker` (the command layer reads the tracker only) and shows
+    /// `message`.
+    StepAnswered {
+        session_id: crate::types::SessionId,
+        message: String,
+    },
     /// Queue-steer the user's message (ROADMAP K1b, cyril-bm1j). The App routes
     /// this through its async `dispatch_steer` (optimistic echo + `SteerSession`),
     /// because the command layer has no UI access and must not touch the bridge

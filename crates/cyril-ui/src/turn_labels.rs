@@ -186,11 +186,10 @@ pub(crate) fn step_question_text(question: &StepQuestion, fallback: Option<&str>
         question.run_name(),
         question.node_id()
     );
-    let asked = question
-        .question()
-        .or(fallback)
-        .map(str::trim)
-        .filter(|text| !text.is_empty());
+    fn nonblank(text: Option<&str>) -> Option<&str> {
+        text.map(str::trim).filter(|text| !text.is_empty())
+    }
+    let asked = nonblank(question.question()).or_else(|| nonblank(fallback));
     let hint = format!("↳ /answer @{} <your answer>", question.selector());
     match asked {
         Some(asked) => format!("{head}:\n{asked}\n{hint}"),
@@ -480,6 +479,11 @@ mod tests {
         None,
         None,
         "⚙ workflow \"park\" · step \"ask\" is waiting for your answer.\n↳ /answer @ask <your answer>"
+    )]
+    #[case::blank_note_falls_back_to_the_reply(
+        Some("  "),
+        Some("WAITING"),
+        "⚙ workflow \"park\" · step \"ask\" is waiting for your answer:\nWAITING\n↳ /answer @ask <your answer>"
     )]
     #[case::blank_text_is_absent(
         Some("  "),
