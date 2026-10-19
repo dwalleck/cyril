@@ -1769,6 +1769,7 @@ impl UiState {
             phase: ApprovalPhase::SelectOption,
             responder: request.responder,
             consent: request.consent,
+            workflow_plan: request.workflow_plan.map(|plan| *plan),
         });
 
         // A malformed preview payload is logged here, once per request,
@@ -8323,6 +8324,7 @@ mod tests {
             can_reject_with_reason: false,
             responder: tx,
             consent: None,
+            workflow_plan: None,
         };
         (req, rx)
     }
@@ -8816,6 +8818,7 @@ mod tests {
                 can_reject_with_reason: false,
                 responder: tx,
                 consent: None,
+                workflow_plan: None,
             };
             (req, rx)
         }
@@ -8905,6 +8908,7 @@ mod tests {
                 can_reject_with_reason: false,
                 responder,
                 consent: None,
+                workflow_plan: None,
             });
             if matches!(index, 10 | 20) {
                 drop(receiver);
@@ -9042,6 +9046,7 @@ mod tests {
             can_reject_with_reason: false,
             responder: tx,
             consent: None,
+            workflow_plan: None,
         };
         let mut state = UiState::new(500);
         state.show_approval(req);
@@ -9230,6 +9235,7 @@ mod tests {
             can_reject_with_reason: false,
             responder: tx,
             consent: None,
+            workflow_plan: None,
         };
         (req, rx)
     }

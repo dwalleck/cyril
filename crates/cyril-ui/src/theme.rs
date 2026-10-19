@@ -1830,6 +1830,7 @@ mod tests {
             include_str!("widgets/toolbar.rs"),
             include_str!("widgets/usage_panel.rs"),
             include_str!("widgets/voice.rs"),
+            include_str!("widgets/workflow_plan.rs"),
         ];
         let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
         let on_disk = std::fs::read_dir(&manifest_dir)
@@ -1851,7 +1852,7 @@ mod tests {
         );
         let production_sources = widget_sources.map(production_source);
         let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
-        assert!(production_sources.len() <= 16);
+        assert!(production_sources.len() <= 17);
         assert!(scanned_bytes <= 300_000);
         for source in production_sources {
             let source_without_allowed_seams = source

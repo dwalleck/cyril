@@ -13,10 +13,24 @@ use cyril_core::workflow::WakeLabel;
 ///
 /// - workflow completion, run known → `─── ⚙ workflow "<name>" <status> · agent follow-up ───` (B1)
 /// - workflow completion, run unknown → `─── ⚙ workflow ended · agent follow-up ───` (B4)
+/// - a run paused at a repeat's iteration cap (KAS announces it as a message
+///   wake, cyril-6lql) → `─── ⚙ workflow "<name>" paused · repeat "<node>"
+///   reached its iteration limit (<max>) · agent follow-up ───`
 /// - any other reason → `─── ⚙ agent-initiated · <reason> ───`, `unspecified`
 ///   when the engine gave none (B3)
 #[must_use]
 pub(crate) fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -> String {
+    if let Some(label) = label
+        && let Some(repeat_cap) = label.repeat_cap()
+    {
+        return format!(
+            "─── ⚙ workflow \"{}\" {} · repeat \"{}\" reached its iteration limit ({}) · agent follow-up ───",
+            label.name(),
+            status_word(label.status()),
+            repeat_cap.node_id(),
+            repeat_cap.max_iterations()
+        );
+    }
     if !origin.is_workflow_completion() {
         return format!(
             "─── ⚙ agent-initiated · {} ───",
@@ -70,6 +84,7 @@ fn status_word(status: WorkflowRunStatus) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use cyril_core::types::{WorkflowNodeId, WorkflowRepeatCap};
 
     fn origin(reason: Option<&str>, workflow_completion: bool) -> AgentInitiation {
         AgentInitiation::new(reason.map(str::to_owned), workflow_completion)
@@ -121,6 +136,33 @@ mod tests {
             "─── ⚙ agent-initiated · send-message-wake ───",
             "a label never renames a non-workflow wake"
         );
+    }
+
+    fn repeat_cap(name: &str, repeat: &str, max: u32) -> WakeLabel {
+        let node = WorkflowNodeId::try_from(repeat.to_owned())
+            .unwrap_or_else(|e| panic!("node id fixture: {e}"));
+        WakeLabel::paused_at_repeat_cap(name.to_owned(), WorkflowRepeatCap::new(node, max, max))
+    }
+
+    /// cyril-6lql: a repeat-cap wake (KAS 0.66.43 announces it as a message
+    /// wake) names the run and the repeat that hit its iteration limit.
+    #[rstest::rstest]
+    #[case::send_message_wake(
+        origin(Some("send-message-wake"), false),
+        repeat_cap("loop", "loop", 1),
+        "─── ⚙ workflow \"loop\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───"
+    )]
+    #[case::reasonless_wake(
+        origin(None, false),
+        repeat_cap("feature-pipeline", "review-loop", 2),
+        "─── ⚙ workflow \"feature-pipeline\" paused · repeat \"review-loop\" reached its iteration limit (2) · agent follow-up ───"
+    )]
+    fn repeat_cap_header_strings(
+        #[case] origin: AgentInitiation,
+        #[case] label: WakeLabel,
+        #[case] want: &str,
+    ) {
+        assert_eq!(header_text(&origin, Some(&label)), want);
     }
 
     /// B5 exact strings for both injection kinds, with the stress rows.

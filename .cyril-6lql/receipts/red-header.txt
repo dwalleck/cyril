@@ -1,0 +1,120 @@
+   Compiling foldhash v0.2.0
+   Compiling allocator-api2 v0.2.21
+   Compiling rustix v1.1.4
+   Compiling regex-syntax v0.8.10
+   Compiling rustversion v1.0.22
+   Compiling num_threads v0.1.7
+   Compiling unicode-segmentation v1.12.0
+   Compiling either v1.15.0
+   Compiling static_assertions v1.1.0
+   Compiling mio v1.2.2
+   Compiling signal-hook v0.3.18
+   Compiling indoc v2.0.7
+   Compiling unicode-width v0.2.2
+   Compiling instability v0.3.12
+   Compiling derive_more-impl v2.1.1
+   Compiling strum_macros v0.27.2
+   Compiling litrs v1.0.0
+   Compiling crc32fast v1.5.0
+   Compiling line-clipping v0.3.5
+   Compiling bit-vec v0.8.0
+   Compiling simd-adler32 v0.3.8
+   Compiling adler2 v2.0.1
+   Compiling quick-xml v0.38.4
+   Compiling time v0.3.47
+   Compiling base64 v0.22.1
+   Compiling same-file v1.0.6
+   Compiling linked-hash-map v0.5.6
+   Compiling pulldown-cmark v0.13.2
+   Compiling itertools v0.14.0
+   Compiling bincode v1.3.3
+   Compiling console v0.15.11
+   Compiling fnv v1.0.7
+   Compiling unicase v2.9.0
+   Compiling similar v2.7.0
+   Compiling hashbrown v0.16.1
+   Compiling nucleo-matcher v0.3.1
+   Compiling bit-set v0.8.0
+   Compiling miniz_oxide v0.8.9
+   Compiling tokio v1.53.1
+   Compiling document-features v0.2.12
+   Compiling walkdir v2.5.0
+   Compiling yaml-rust v0.4.5
+   Compiling signal-hook-mio v0.2.5
+   Compiling indexmap v2.13.0
+   Compiling lru v0.16.3
+   Compiling kasuari v0.4.12
+   Compiling regex-automata v0.4.14
+   Compiling flate2 v1.1.9
+   Compiling unicode-truncate v2.0.1
+   Compiling serde_json v1.0.149
+   Compiling plist v1.8.0
+   Compiling castaway v0.2.4
+   Compiling matchers v0.2.0
+   Compiling regex v1.12.3
+   Compiling fancy-regex v0.16.2
+   Compiling compact_str v0.9.0
+   Compiling hyper v1.11.1
+   Compiling tower v0.5.3
+   Compiling tokio-util v0.7.18
+   Compiling polling v3.11.0
+   Compiling tempfile v3.27.0
+   Compiling hyper-util v0.1.20
+   Compiling async-io v2.6.0
+   Compiling insta v1.46.3
+   Compiling async-signal v0.2.14
+   Compiling async-process v2.5.0
+   Compiling strum v0.27.2
+   Compiling derive_more v2.1.1
+   Compiling crossterm v0.29.0
+   Compiling ratatui-core v0.1.0
+   Compiling schemars v1.2.1
+   Compiling axum v0.8.9
+   Compiling tracing-subscriber v0.3.23
+   Compiling cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-review)
+   Compiling syntect v5.3.0
+   Compiling ratatui-widgets v0.3.0
+   Compiling ratatui-crossterm v0.1.0
+   Compiling serde_with v3.22.0
+   Compiling ratatui-macros v0.7.0
+   Compiling ratatui v0.30.0
+   Compiling agent-client-protocol-schema v1.5.0
+   Compiling agent-client-protocol-trace-viewer v2.0.0
+   Compiling agent-client-protocol v2.0.0
+   Compiling agent-client-protocol-conductor v2.0.0
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 41.76s
+     Running unittests src/lib.rs (target/debug/deps/cyril_ui-e2af3c1da0e3aa98)
+
+running 4 tests
+test turn_labels::tests::notice_strings ... ok
+test turn_labels::tests::header_strings ... ok
+test turn_labels::tests::repeat_cap_header_strings::case_2_reasonless_wake ... FAILED
+test turn_labels::tests::repeat_cap_header_strings::case_1_send_message_wake ... FAILED
+
+failures:
+
+---- turn_labels::tests::repeat_cap_header_strings::case_2_reasonless_wake stdout ----
+
+thread 'turn_labels::tests::repeat_cap_header_strings::case_2_reasonless_wake' (2491869) panicked at crates/cyril-ui/src/turn_labels.rs:151:9:
+assertion `left == right` failed
+  left: "─── ⚙ agent-initiated · unspecified ───"
+ right: "─── ⚙ workflow \"feature-pipeline\" paused · repeat \"review-loop\" reached its iteration limit (2) · agent follow-up ───"
+
+---- turn_labels::tests::repeat_cap_header_strings::case_1_send_message_wake stdout ----
+
+thread 'turn_labels::tests::repeat_cap_header_strings::case_1_send_message_wake' (2491868) panicked at crates/cyril-ui/src/turn_labels.rs:151:9:
+assertion `left == right` failed
+  left: "─── ⚙ agent-initiated · send-message-wake ───"
+ right: "─── ⚙ workflow \"loop\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    turn_labels::tests::repeat_cap_header_strings::case_1_send_message_wake
+    turn_labels::tests::repeat_cap_header_strings::case_2_reasonless_wake
+
+test result: FAILED. 2 passed; 2 failed; 0 ignored; 0 measured; 685 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-ui --lib`

@@ -1,0 +1,49 @@
+   Compiling tokio v1.53.1
+   Compiling nix v0.31.3
+   Compiling constant_time_eq v0.4.2
+   Compiling hex v0.4.3
+   Compiling similar v2.7.0
+   Compiling hyper v1.11.1
+   Compiling tower v0.5.3
+   Compiling tokio-util v0.7.18
+   Compiling cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-review)
+   Compiling process-wrap v9.1.0
+   Compiling hyper-util v0.1.20
+   Compiling axum v0.8.9
+   Compiling agent-client-protocol-trace-viewer v2.0.0
+   Compiling agent-client-protocol-conductor v2.0.0
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-memory)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 38.86s
+     Running unittests src/main.rs (target/debug/deps/cyril-87e493c4b738a252)
+
+running 9 tests
+test app::tests::lki9_silent_wake_label_never_names_next_wake ... ok
+test app::tests::lki9_step_wake_leaves_main_label ... ok
+test app::tests::lki9_wake_header_and_injection_routing ... ok
+test app::tests::lki9_replay_silent_wake_is_busy_without_header ... ok
+test app::tests::lki9_replay_step_verdict_notice ... ok
+test app::tests::lki9_replay_tail_wake_header_and_busy_span ... ok
+test app::tests::lki9_replay_busy_parent_notice ... ok
+test app::tests::lki9_replay_gate_on_label_permission_and_step_header ... ok
+test app::tests::repeat_cap_wake_is_labelled_in_live_capture ... FAILED
+
+failures:
+
+---- app::tests::repeat_cap_wake_is_labelled_in_live_capture stdout ----
+
+thread 'app::tests::repeat_cap_wake_is_labelled_in_live_capture' (2499456) panicked at crates/cyril/src/app.rs:8855:9:
+assertion `left == right` failed: one labelled header per main wake, in wire order
+  left: ["─── ⚙ workflow \"audit-linear\" completed · agent follow-up ───", "─── ⚙ agent-initiated · send-message-wake ───", "─── ⚙ workflow \"loop\" aborted · agent follow-up ───", "─── ⚙ workflow \"watch-audit\" completed · agent follow-up ───", "─── ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · agent follow-up ───", "─── ⚙ workflow \"park\" completed · agent follow-up ───", "─── ⚙ workflow \"agent-wf-coder\" completed · agent follow-up ───"]
+ right: ["─── ⚙ workflow \"audit-linear\" completed · agent follow-up ───", "─── ⚙ workflow \"loop\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───", "─── ⚙ workflow \"loop\" aborted · agent follow-up ───", "─── ⚙ workflow \"watch-audit\" completed · agent follow-up ───", "─── ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · agent follow-up ───", "─── ⚙ workflow \"park\" completed · agent follow-up ───", "─── ⚙ workflow \"agent-wf-coder\" completed · agent follow-up ───"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    app::tests::repeat_cap_wake_is_labelled_in_live_capture
+
+test result: FAILED. 8 passed; 1 failed; 0 ignored; 0 measured; 227 filtered out; finished in 0.08s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`

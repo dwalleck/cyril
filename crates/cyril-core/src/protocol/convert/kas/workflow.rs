@@ -14,10 +14,10 @@ use crate::types::{
     WorkflowNodeCompleted, WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId,
     WorkflowNodePath, WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot,
     WorkflowNodeStartDetails, WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType,
-    WorkflowPaused, WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion,
-    WorkflowRunCompleted, WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot,
-    WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome,
-    WorkflowWatchPoll,
+    WorkflowPaused, WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatCap,
+    WorkflowRepeatExhaustion, WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted,
+    WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
+    WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 use crate::types::{WorkflowRecipe, WorkflowRunSummary};
 
@@ -391,6 +391,11 @@ struct WireSnapshot {
     /// cyril-lki9: KAS `finalState.runLabel` — only on runs launched with one.
     #[serde(default)]
     run_label: OptionalField<String>,
+    /// cyril-6lql: KAS `finalState.pause` (0.66.43+), a `kind`-tagged union.
+    /// Read leniently by [`run_pause`]: an unknown or malformed pause must not
+    /// drop the whole snapshot it rides on.
+    #[serde(default)]
+    pause: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -1016,6 +1021,9 @@ impl WireSnapshot {
         if let Some(run_label) = self.run_label.into_option().filter(|l| !l.is_empty()) {
             metadata = metadata.with_run_label(run_label);
         }
+        if let Some(pause) = self.pause.into_option().and_then(run_pause) {
+            metadata = metadata.with_pause(pause);
+        }
         Ok(WorkflowSnapshot::new(
             workflow_id(self.workflow_id, "finalState.workflowId")?,
             self.workflow_name,
@@ -1024,6 +1032,51 @@ impl WireSnapshot {
             self.root.try_into_domain()?,
             metadata,
         ))
+    }
+}
+
+/// The structured pause of a snapshot (KAS `finalState.pause`, cyril-6lql).
+/// KAS's schema is a union discriminated by `kind`; only `maxIterations`
+/// exists in 0.66.43. A later kind is debug-logged and skipped (it explains
+/// itself through `pauseReason`); a malformed `maxIterations` is warned and
+/// skipped — never a reason to drop the snapshot it rides on.
+fn run_pause(value: serde_json::Value) -> Option<WorkflowRunPause> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct WireRepeatCap {
+        node_id: String,
+        max_iterations: u32,
+        iterations_run: u32,
+    }
+
+    match value.get("kind").and_then(serde_json::Value::as_str) {
+        Some("maxIterations") => {}
+        Some(kind) => {
+            tracing::debug!(kind, "unknown workflow run pause kind; not modelled");
+            return None;
+        }
+        None => {
+            tracing::warn!(value = ?value, "malformed workflow run pause: no `kind`; ignored");
+            return None;
+        }
+    }
+    let wire = match serde_json::from_value::<WireRepeatCap>(value) {
+        Ok(wire) => wire,
+        Err(error) => {
+            tracing::warn!(%error, "malformed workflow run pause `maxIterations`; ignored");
+            return None;
+        }
+    };
+    match WorkflowNodeId::try_from(wire.node_id) {
+        Ok(node_id) => Some(WorkflowRunPause::RepeatCap(WorkflowRepeatCap::new(
+            node_id,
+            wire.max_iterations,
+            wire.iterations_run,
+        ))),
+        Err(error) => {
+            tracing::warn!(%error, "malformed workflow run pause `maxIterations`; ignored");
+            None
+        }
     }
 }
 
@@ -5320,6 +5373,19 @@ mod tests {
         }
     }
 
+    fn with_captured_debug_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
+        let _capture_lock = crate::test_support::tracing_capture_lock();
+        let capture = crate::test_support::CaptureWriter::default();
+        let subscriber = tracing_subscriber::fmt()
+            .with_max_level(tracing::Level::DEBUG)
+            .with_ansi(false)
+            .with_writer(capture.clone())
+            .finish();
+        let result = tracing::subscriber::with_default(subscriber, f);
+        let logs = must_succeed(String::from_utf8(capture.captured()), "UTF-8 logs");
+        (result, logs)
+    }
+
     fn completed_snapshot(workflow_id: &str, status: &str) -> serde_json::Value {
         serde_json::json!({
             "workflowId": workflow_id,
@@ -5743,6 +5809,104 @@ mod tests {
                 "experiments/conductor-spike/kas-workflow-channels-06615-restate-gateoff-tail-2.26.0.jsonl"
             ),
             None
+        );
+    }
+
+    /// `(status, Option<(repeat node, maxIterations, iterationsRun)>)`.
+    type FinalPause = (WorkflowRunStatus, Option<(String, u32, u32)>);
+
+    /// The `finalState.pause` of every `run_complete` in a committed trace's
+    /// `main` connection, in order.
+    fn final_pauses(rel: &str) -> Vec<FinalPause> {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+        let mut pauses = Vec::new();
+        for line in trace.lines().filter(|l| !l.is_empty()) {
+            let row: serde_json::Value = serde_json::from_str(line).expect("trace row");
+            if row["conn"] != "main" || row["msg"]["method"] != "_kiro/workflow/run_complete" {
+                continue;
+            }
+            let WorkflowFrameOutcome::Converted(event) =
+                to_notification("kiro/workflow/run_complete", &row["msg"]["params"])
+            else {
+                panic!("{rel}: run_complete did not convert");
+            };
+            let WorkflowEvent::RunCompleted(completion) = *event else {
+                panic!("{rel}: not a completion");
+            };
+            let pause = completion
+                .final_state()
+                .pause()
+                .map(|WorkflowRunPause::RepeatCap(cap)| {
+                    (
+                        cap.node_id().as_str().to_owned(),
+                        cap.max_iterations(),
+                        cap.iterations_run(),
+                    )
+                });
+            pauses.push((completion.final_state().status(), pause));
+        }
+        pauses
+    }
+
+    /// cyril-6lql: `finalState.pause` is parsed from the live 0.66.43 gate-off
+    /// capture — the repeat-cap pauses carry their repeat node and budget, an
+    /// operator pause and every terminal completion carry none.
+    #[test]
+    fn run_pause_parsed_from_final_state() {
+        let paused = WorkflowRunStatus::Paused;
+        let cap = |max, run| Some(("loop".to_owned(), max, run));
+        assert_eq!(
+            final_pauses(
+                "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl"
+            )
+            .into_iter()
+            .take(7)
+            .collect::<Vec<_>>(),
+            vec![
+                (paused, None),
+                (WorkflowRunStatus::Completed, None),
+                (paused, cap(1, 1)),
+                (paused, cap(2, 2)),
+                (WorkflowRunStatus::Aborted, None),
+                (paused, cap(2, 2)),
+                (WorkflowRunStatus::Aborted, None),
+            ]
+        );
+    }
+
+    /// cyril-6lql: KAS's `pause` is a `kind`-tagged union. An unknown kind or
+    /// a malformed `maxIterations` pause is skipped (logged) and the
+    /// completion it rides on still converts.
+    #[rstest::rstest]
+    #[case::unknown_kind(serde_json::json!({"kind": "budget", "nodeId": "loop"}), "unknown")]
+    #[case::missing_node(serde_json::json!({"kind": "maxIterations", "maxIterations": 1, "iterationsRun": 1}), "malformed")]
+    #[case::empty_node(serde_json::json!({"kind": "maxIterations", "nodeId": "", "maxIterations": 1, "iterationsRun": 1}), "malformed")]
+    #[case::negative_budget(serde_json::json!({"kind": "maxIterations", "nodeId": "loop", "maxIterations": -1, "iterationsRun": 1}), "malformed")]
+    #[case::not_an_object(serde_json::json!("maxIterations"), "malformed")]
+    #[case::null(serde_json::Value::Null, "malformed")]
+    fn unreadable_pause_is_skipped_not_fatal(
+        #[case] pause: serde_json::Value,
+        #[case] logged: &str,
+    ) {
+        let mut params = serde_json::json!({
+            "workflowId": "wf-p",
+            "status": "paused",
+            "finalState": completed_snapshot("wf-p", "paused"),
+        });
+        params["finalState"]["pause"] = pause;
+        let (outcome, logs) =
+            with_captured_debug_logs(|| to_notification("kiro/workflow/run_complete", &params));
+        let WorkflowFrameOutcome::Converted(event) = outcome else {
+            panic!("an unreadable pause must not drop the completion");
+        };
+        let WorkflowEvent::RunCompleted(completion) = *event else {
+            panic!("not a completion");
+        };
+        assert_eq!(completion.final_state().pause(), None);
+        assert!(
+            logs.contains(&format!("{logged} workflow run pause")),
+            "missing `{logged}` log: {logs}"
         );
     }
 }

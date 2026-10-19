@@ -88,15 +88,22 @@ pub use usage::{
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
+    WorkflowCascadeSource, WorkflowFileCheck, WorkflowJoinPolicy, WorkflowPlan,
+    WorkflowPlanInclude, WorkflowPlanKind, WorkflowPlanNode, WorkflowPlanNodeKind,
+    WorkflowPlanOmission, WorkflowPlanStep, WorkflowPlanTask, WorkflowRepeatStop,
+    WorkflowStopCondition,
+};
+pub use workflow::{
     WorkflowCompletionMismatchError, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
     WorkflowCompletionStatus, WorkflowEnumParseError, WorkflowEvent, WorkflowId,
     WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
     WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
     WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
     WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
-    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatExhaustion, WorkflowRunCompleted,
-    WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData,
-    WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatCap, WorkflowRepeatExhaustion,
+    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
+    WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued,
+    WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 pub use workflow_command::{
     WorkflowCommandOutcome, WorkflowFetchVerb, WorkflowInputError, WorkflowOp, WorkflowRecipe,

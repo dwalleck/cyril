@@ -692,6 +692,11 @@ impl DomainMediator {
         let consent = crate::protocol::convert::kas::permission_consent(&args, &tool_call);
         #[cfg(not(feature = "kas"))]
         let consent = None;
+        #[cfg(feature = "kas")]
+        let workflow_plan =
+            crate::protocol::convert::kas::permission_workflow_plan(&args).map(Box::new);
+        #[cfg(not(feature = "kas"))]
+        let workflow_plan = None;
         // KAS persists "Always allow" only through the consent echo on the
         // response (cyril-auxt), so V2 trust tiers — whose pick writes the
         // agent JSON's `allowedCommands` — are a v2-only path.
@@ -717,6 +722,7 @@ impl DomainMediator {
             can_reject_with_reason,
             responder: response_tx,
             consent,
+            workflow_plan,
         };
         let permission_tx = self.bridge.permission_tx.clone();
         let task = tokio::task::spawn_local(async move {

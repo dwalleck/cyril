@@ -13,3 +13,4 @@ pub mod suggestions;
 pub mod toolbar;
 pub mod usage_panel;
 pub mod voice;
+pub(crate) mod workflow_plan;

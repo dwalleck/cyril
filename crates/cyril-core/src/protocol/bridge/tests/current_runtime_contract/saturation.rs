@@ -98,6 +98,7 @@ fn permission(index: usize) -> PermissionRequest {
         can_reject_with_reason: false,
         responder,
         consent: None,
+        workflow_plan: None,
     }
 }
 
