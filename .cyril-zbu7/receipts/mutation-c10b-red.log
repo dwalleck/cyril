@@ -1,0 +1,128 @@
+# rev: 2e89ee43845c22438dd59054b4258ccbb7abf2c6 (+ working tree changes: 8 paths)
+# cmd: cargo nextest run -p cyril-core --features kas --no-fail-fast -E test(/missing_helper|other_helper_failures/)
+# date: 2026-10-18T19:32:28Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 14.63s
+────────────
+ Nextest run ID 2431d27c-64f4-444c-a19f-3441e0db3d69 with nextest profile: default
+    Starting 13 tests across 11 binaries (1244 tests skipped)
+        PASS [   0.003s] ( 1/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_05_other_subcommand_unknown
+        PASS [   0.004s] ( 2/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_07_same_text_with_stdout
+        FAIL [   0.004s] ( 3/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1 ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1228 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1' (1065714) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1101:9:
+    assertion `left == right` failed: `kiro-cli chat _ get-kas-token` exited with exit status: 2: Usage: kiro-cli-chat chat _ [OPTIONS] <COMMAND> | For more information, try '--help'.; run `kiro-cli login` if you are logged out, then retry
+      left: "NonZeroExit"
+     right: "HelperMissing"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.004s] ( 4/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_10_malformed_json
+        PASS [   0.004s] ( 5/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_06_same_text_wrong_exit
+        FAIL [   0.005s] ( 6/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1 ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1228 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1' (1065720) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1101:9:
+    assertion `left == right` failed: `kiro-cli chat _ get-kas-token` exited with exit status: 2: error: unexpected argument 'get-kas-token' found | Usage: kiro-cli-chat chat [OPTIONS] [INPUT]; run `kiro-cli login` if you are logged out, then retry
+      left: "NonZeroExit"
+     right: "HelperMissing"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.005s] ( 7/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_08_error_envelope_logged_out
+        PASS [   0.005s] ( 8/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_04_force_flag_unknown
+        FAIL [   0.005s] ( 9/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1228 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr' (1065725) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1101:9:
+    assertion `left == right` failed: `kiro-cli chat _ get-kas-token` exited with exit status: 2: error: unrecognized subcommand 'get-kas-token'; run `kiro-cli login` if you are logged out, then retry
+      left: "NonZeroExit"
+     right: "HelperMissing"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.005s] (10/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_09_legacy_2_6_envelope
+        PASS [   0.021s] (11/13) cyril-core protocol::kas::auth::tests::other_helper_failures_never_fall_back
+        FAIL [   0.022s] (12/13) cyril-core protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1228 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error' (1065721) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1198:9:
+    assertion `left == right` failed: `/bin/sh /home/dwalleck/.claude/tmp/.tmp2g0PAg/fake-kiro-cli.sh chat _ get-kas-token` exited with exit status: 2: error: unrecognized subcommand 'get-kas-token' | Usage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>; run `kiro-cli login` if you are logged out, then retry
+      left: "NonZeroExit"
+     right: "StoredStale"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.022s] (13/13) cyril-core protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1228 filtered out; finished in 0.02s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once' (1065719) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1159:14:
+    fallback serves the stored token: (Error { code: -32603: Internal error, message: "`/bin/sh /home/dwalleck/.claude/tmp/.tmppYqD75/fake-kiro-cli.sh chat _ get-kas-token` exited with exit status: 2: error: unrecognized subcommand 'get-kas-token' | Usage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>; run `kiro-cli login` if you are logged out, then retry", data: None }, NonZeroExit { command: "/bin/sh /home/dwalleck/.claude/tmp/.tmppYqD75/fake-kiro-cli.sh chat _ get-kas-token", status: "exit status: 2", stderr_tail: ": error: unrecognized subcommand 'get-kas-token' | Usage: kiro-cli-chat chat _ [OPTIONS] <COMMAND>" })
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.023s] 13 tests run: 8 passed, 5 failed, 1244 skipped
+        FAIL [   0.004s] ( 3/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1
+        FAIL [   0.005s] ( 6/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1
+        FAIL [   0.005s] ( 9/13) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr
+        FAIL [   0.022s] (12/13) cyril-core protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error
+        FAIL [   0.022s] (13/13) cyril-core protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once
+error: test run failed
+exit=100

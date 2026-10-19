@@ -1,0 +1,34 @@
+# rev: 54f8762f79b18cf1d8ecd9eaf3005c5f98363632 (+ working tree changes: 5 paths)
+# cmd: cargo nextest run -p cyril-core --features kas --no-fail-fast -E test(/fetch_serializes/)
+# date: 2026-10-18T20:46:25Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 30.20s
+────────────
+ Nextest run ID 304b5805-c1dd-418c-bc4e-01239e71f27a with nextest profile: default
+    Starting 3 tests across 11 binaries (1271 tests skipped)
+        FAIL [   0.334s] (1/3) cyril-core protocol::kas::auth::tests::fetch_serializes_across_spellings_of_one_binary
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::fetch_serializes_across_spellings_of_one_binary ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::fetch_serializes_across_spellings_of_one_binary
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1245 filtered out; finished in 0.32s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::fetch_serializes_across_spellings_of_one_binary' (2070024) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1722:9:
+    Err(NonZeroExit { command: "/usr/bin/bash /home/dwalleck/.claude/tmp/.tmp90YSJX/fake-kiro-cli.sh chat _ get-kas-token", status: "exit status: 9", stderr_tail: ": mkdir: cannot create directory ‘/home/dwalleck/.claude/tmp/.tmp90YSJX/held’: File exists" })
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.673s] (2/3) cyril-core protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation
+        PASS [   0.673s] (3/3) cyril-core protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+────────────
+     Summary [   0.680s] 3 tests run: 2 passed, 1 failed, 1271 skipped
+        FAIL [   0.334s] (1/3) cyril-core protocol::kas::auth::tests::fetch_serializes_across_spellings_of_one_binary
+error: test run failed
+exit=100

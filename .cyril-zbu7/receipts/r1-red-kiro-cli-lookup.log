@@ -1,0 +1,83 @@
+# rev: 6203131167b0f6adcd72cb0f96d951e66faf86c4 (+ working tree changes: 3 paths)
+# cmd: cargo nextest run -p cyril-core --features kas --no-fail-fast -E test(/free_kiro_cli|fetch_serializes/)
+# date: 2026-10-18T20:21:49Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 39.02s
+────────────
+ Nextest run ID b8fd0c46-0260-4b72-bb4f-f73d5da108ff with nextest profile: default
+    Starting 8 tests across 11 binaries (1260 tests skipped)
+        PASS [   0.005s] (1/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_without_path_or_home_is_the_bare_name
+        PASS [   0.005s] (2/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_4_nowhere
+        PASS [   0.004s] (3/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_prefers_path_in_order_and_skips_relative_entries
+        FAIL [   0.005s] (4/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_2_usr_local_bin
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_2_usr_local_bin ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_2_usr_local_bin
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1239 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_2_usr_local_bin' (1613990) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1455:9:
+    assertion `left == right` failed
+      left: "kiro-cli"
+     right: "/usr/local/bin/kiro-cli"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.005s] (5/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_3_homebrew
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_3_homebrew ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_3_homebrew
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1239 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_3_homebrew' (1613992) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1455:9:
+    assertion `left == right` failed
+      left: "kiro-cli"
+     right: "/opt/homebrew/bin/kiro-cli"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.005s] (6/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_1_home_local_bin
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_1_home_local_bin ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_1_home_local_bin
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1239 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_1_home_local_bin' (1613995) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1455:9:
+    assertion `left == right` failed
+      left: "kiro-cli"
+     right: "/home/u/.local/bin/kiro-cli"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.615s] (7/8) cyril-core protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation
+        PASS [   0.615s] (8/8) cyril-core protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+────────────
+     Summary [   0.617s] 8 tests run: 5 passed, 3 failed, 1260 skipped
+        FAIL [   0.005s] (4/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_2_usr_local_bin
+        FAIL [   0.005s] (5/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_3_homebrew
+        FAIL [   0.005s] (6/8) cyril-core protocol::kas::auth::tests::free_kiro_cli_falls_back_to_the_tui_locations::case_1_home_local_bin
+error: test run failed
+exit=100

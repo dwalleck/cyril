@@ -7296,6 +7296,255 @@ mod tests {
         );
     }
 
+    // --- cyril-vojx: approval confirm keys act only on what is on screen ---
+
+    /// The target path of the vojx write approvals; short enough to render
+    /// whole at 80 columns, so "on screen" is a plain substring check.
+    const VOJX_PATH: &str = "/tmp/vojx/target.md";
+
+    /// A write approval offering `Allow` (selected) and `Reject` (reject with
+    /// reason enabled), targeting `path` when one is given.
+    fn vojx_request(
+        path: Option<&str>,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        let (responder, receiver) = tokio::sync::oneshot::channel();
+        let raw_input = match path {
+            Some(path) => serde_json::json!({"path": path, "text": "body"}),
+            None => serde_json::json!({"text": "body"}),
+        };
+        (
+            PermissionRequest {
+                session_id: SessionId::new("main"),
+                tool_call: ToolCall::new(
+                    ToolCallId::new("tool-vojx"),
+                    "Write File".into(),
+                    ToolKind::Write,
+                    ToolCallStatus::Pending,
+                    Some(raw_input),
+                ),
+                message: "Allow write?".into(),
+                options: vec![
+                    PermissionOption {
+                        id: PermissionOptionId::new("allow"),
+                        label: "Allow".into(),
+                        kind: PermissionOptionKind::AllowOnce,
+                        is_destructive: false,
+                    },
+                    PermissionOption {
+                        id: PermissionOptionId::new("reject"),
+                        label: "Reject".into(),
+                        kind: PermissionOptionKind::RejectOnce,
+                        is_destructive: true,
+                    },
+                ],
+                trust_options: vec![],
+                can_reject_with_reason: true,
+                responder,
+                consent: None,
+            },
+            receiver,
+        )
+    }
+
+    /// Draw the app into an 80-column frame of `height` rows, through the real
+    /// draw path (which also records the frame size in `UiState`), and return
+    /// the screen as one string per row.
+    fn vojx_draw(app: &mut App, height: u16) -> Vec<String> {
+        let mut terminal =
+            Terminal::new(ratatui::backend::TestBackend::new(80, height)).expect("test terminal");
+        app.draw_frame(&mut terminal, "vojx draw").expect("draw");
+        let buffer = terminal.backend().buffer();
+        (0..buffer.area.height)
+            .map(|y| {
+                (0..buffer.area.width)
+                    .map(|x| buffer[(x, y)].symbol())
+                    .collect::<String>()
+            })
+            .collect()
+    }
+
+    /// Inner rows of the popup whose top border carries `title`: the rows
+    /// strictly between that border and the popup's bottom border. `None`
+    /// when no such popup is drawn. A popup clamped to one row has no bottom
+    /// border and no inner rows.
+    fn vojx_inner_rows(screen: &[String], title: &str) -> Option<usize> {
+        let top = screen.iter().position(|row| row.contains(title))?;
+        let column = screen[top].chars().position(|ch| ch == '┌')?;
+        let inner = screen[top + 1..]
+            .iter()
+            .take_while(|row| row.chars().nth(column) == Some('│'))
+            .count();
+        Some(inner)
+    }
+
+    /// Terminal heights for the sweep: 4-5 leave no room above the input
+    /// (nothing drawn), 6-7 clamp the popup to inner height 0 (border only),
+    /// and 8 upward walk the inner height up from 1 past the roomy layout.
+    const VOJX_HEIGHTS: std::ops::RangeInclusive<u16> = 4..=22;
+
+    /// The sweep really reaches the cramped heights the confirm guard is
+    /// about — no popup, a border-only popup (inner 0) and every inner height
+    /// from 1 up — so a layout change that moved them out of `VOJX_HEIGHTS`
+    /// cannot silently hollow the cyril-vojx fences below.
+    #[test]
+    fn vojx_sweep_covers_every_cramped_popup_height() {
+        let mut observed = BTreeSet::new();
+        let mut undrawn = false;
+        for height in VOJX_HEIGHTS {
+            let mut app = test_app();
+            let (request, _receiver) = vojx_request(Some(VOJX_PATH));
+            app.ui_state.show_approval(request);
+            let screen = vojx_draw(&mut app, height);
+            match vojx_inner_rows(&screen, "Permission Required") {
+                Some(inner) => {
+                    observed.insert(inner);
+                }
+                None => undrawn = true,
+            }
+        }
+        assert!(undrawn, "the sweep must include a frame with no popup");
+        for inner in 0..=8 {
+            assert!(
+                observed.contains(&inner),
+                "the sweep never draws inner height {inner}: {observed:?}"
+            );
+        }
+    }
+
+    /// REGRESSION FENCE (cyril-vojx): on the option page, Enter answers the
+    /// request only when the selected option AND the target path are on the
+    /// screen the user is looking at — at every frame height, with and without
+    /// a path, through the real key path. Esc still closes the request at
+    /// every height. The oracle is the drawn buffer, not the layout code.
+    #[rstest::rstest]
+    #[case::with_path(Some(VOJX_PATH))]
+    #[case::without_path(None)]
+    #[tokio::test]
+    async fn approval_enter_acts_only_with_selection_and_path_on_screen(
+        #[case] path: Option<&'static str>,
+    ) {
+        let (mut acted, mut ignored) = (0, 0);
+        for height in VOJX_HEIGHTS {
+            let mut app = test_app();
+            let (request, mut receiver) = vojx_request(path);
+            app.ui_state.show_approval(request);
+            let screen = vojx_draw(&mut app, height);
+            let on_screen = screen.iter().any(|row| row.contains("▸ Allow"))
+                && path.is_none_or(|path| screen.iter().any(|row| row.contains(path)));
+            let context = format!(
+                "height={height} path={path:?} inner={:?}\n{}",
+                vojx_inner_rows(&screen, "Permission Required"),
+                screen.join("\n")
+            );
+
+            app.handle_key(key(KeyCode::Enter)).await.expect("enter");
+            match receiver.try_recv() {
+                Ok(PermissionResponse::Selected { option_id, .. }) => {
+                    assert!(on_screen, "Enter answered a hidden approval: {context}");
+                    assert_eq!(option_id.as_str(), "allow", "{context}");
+                    assert!(!app.ui_state.has_approval(), "{context}");
+                    acted += 1;
+                }
+                Ok(other) => panic!("unexpected response {other:?}: {context}"),
+                Err(_) => {
+                    assert!(
+                        !on_screen,
+                        "Enter ignored an approval shown with its path: {context}"
+                    );
+                    assert!(app.ui_state.has_approval(), "{context}");
+                    app.handle_key(key(KeyCode::Esc)).await.expect("esc");
+                    assert!(
+                        !app.ui_state.has_approval(),
+                        "Esc must still close: {context}"
+                    );
+                    assert!(
+                        matches!(receiver.try_recv(), Ok(PermissionResponse::Cancel)),
+                        "Esc must answer Cancel: {context}"
+                    );
+                    ignored += 1;
+                }
+            }
+        }
+        assert!(
+            acted > 0 && ignored > 0,
+            "the sweep must reach both outcomes: acted={acted} ignored={ignored}"
+        );
+    }
+
+    /// REGRESSION FENCE (cyril-vojx): the reject-with-reason page submits on
+    /// Enter only when its editor row AND the target path are on screen; at a
+    /// height that shows neither, or only the editor while the call has a
+    /// path, Enter does nothing and the draft survives.
+    #[rstest::rstest]
+    #[case::with_path(Some(VOJX_PATH))]
+    #[case::without_path(None)]
+    #[tokio::test]
+    async fn reason_enter_acts_only_with_editor_and_path_on_screen(
+        #[case] path: Option<&'static str>,
+    ) {
+        let (mut acted, mut ignored, mut editor_without_path) = (0, 0, 0);
+        for height in VOJX_HEIGHTS {
+            let mut app = test_app();
+            let (request, mut receiver) = vojx_request(path);
+            app.ui_state.show_approval(request);
+            // Select Reject and open its reason editor at a roomy height, as a
+            // user would, then shrink to the height under test.
+            vojx_draw(&mut app, 40);
+            app.handle_key(key(KeyCode::Down)).await.expect("down");
+            app.handle_key(key(KeyCode::Char('r'))).await.expect("r");
+            assert!(app.ui_state.approval_feedback_active(), "height={height}");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("paste reason");
+            let screen = vojx_draw(&mut app, height);
+            let editor_drawn = screen.iter().any(|row| row.contains("why█"));
+            let on_screen =
+                editor_drawn && path.is_none_or(|path| screen.iter().any(|row| row.contains(path)));
+            editor_without_path += usize::from(editor_drawn && !on_screen);
+            let context = format!(
+                "height={height} path={path:?} inner={:?}\n{}",
+                vojx_inner_rows(&screen, "Reject with reason"),
+                screen.join("\n")
+            );
+
+            app.handle_key(key(KeyCode::Enter)).await.expect("enter");
+            match receiver.try_recv() {
+                Ok(PermissionResponse::RejectWithReason { option_id, reason }) => {
+                    assert!(on_screen, "Enter submitted a hidden reason: {context}");
+                    assert_eq!(option_id.as_str(), "reject", "{context}");
+                    assert_eq!(reason, "why", "{context}");
+                    acted += 1;
+                }
+                Ok(other) => panic!("unexpected response {other:?}: {context}"),
+                Err(_) => {
+                    assert!(
+                        !on_screen,
+                        "Enter ignored a reason shown with its path: {context}"
+                    );
+                    assert!(
+                        app.ui_state.approval_feedback_active(),
+                        "the draft must survive an ignored Enter: {context}"
+                    );
+                    ignored += 1;
+                }
+            }
+        }
+        assert!(
+            acted > 0 && ignored > 0,
+            "the sweep must reach both outcomes: acted={acted} ignored={ignored}"
+        );
+        // With a path, some heights draw the editor but not the path: the
+        // case the guard exists for on this page.
+        assert_eq!(
+            editor_without_path > 0,
+            path.is_some(),
+            "editor-only heights: {editor_without_path}"
+        );
+    }
+
     // --- dispatch_hooks_panel_key tests ---
 
     fn key(code: KeyCode) -> KeyEvent {

@@ -35,8 +35,9 @@ struct Cli {
     )]
     agent_command: Vec<String>,
 
-    /// Which Kiro engine to drive: `v2` (default) or `kas` (`v3` is accepted
-    /// as an alias for `kas`). Overrides `[agent] engine` in config.
+    /// Which Kiro engine to drive: `v2` or `kas` (`v3` aliases `kas`).
+    /// Overrides `[agent] engine` in config. Defaults to KAS when compiled
+    /// with KAS support, V2 otherwise.
     #[arg(long = "agent-engine")]
     agent_engine: Option<AgentEngine>,
 }
@@ -60,8 +61,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Spawn bridge
     let agent_command = cyril_core::types::AgentCommand::try_from_argv(cli.agent_command)?;
-    // The `--agent-engine` flag overrides `[agent] engine` in config; config
-    // defaults to v2 (KAS-0, ADR-0002).
+    // The `--agent-engine` flag overrides `[agent] engine` in config; the
+    // config default follows compiled KAS support (ADR-0002).
     let agent_engine = cli.agent_engine.unwrap_or(config.agent.engine);
     // KAS spawn shape (KAS-1): `[agent] kas_spawn` (free | wrapper); free default.
     let bridge = cyril_core::protocol::bridge::spawn_bridge(
@@ -315,17 +316,23 @@ mod tests {
 
     use super::*;
 
-    // Slice 5 (D7 parse table): no flag -> None (config supplies the default);
-    // `--agent-engine kas` -> Some(Kas); an unknown value is REJECTED at parse
-    // time, never silently defaulted.
+    // Absence must stay distinguishable from explicit V2 even in a KAS-default
+    // build: config supplies the former, while the latter overrides config.
     #[test]
     fn cli_agent_engine_flag() {
         let none = Cli::try_parse_from(["cyril"]).expect("parses with no engine flag");
         assert_eq!(none.agent_engine, None);
 
-        let kas = Cli::try_parse_from(["cyril", "--agent-engine", "kas"])
-            .expect("parses --agent-engine kas");
-        assert_eq!(kas.agent_engine, Some(AgentEngine::Kas));
+        for (selector, expected) in [
+            ("v2", AgentEngine::V2),
+            ("kas", AgentEngine::Kas),
+            ("v3", AgentEngine::Kas),
+            (" V3 ", AgentEngine::Kas),
+        ] {
+            let cli = Cli::try_parse_from(["cyril", "--agent-engine", selector])
+                .expect("parses an explicit engine selector");
+            assert_eq!(cli.agent_engine, Some(expected), "{selector}");
+        }
 
         assert!(
             Cli::try_parse_from(["cyril", "--agent-engine", "bogus"]).is_err(),

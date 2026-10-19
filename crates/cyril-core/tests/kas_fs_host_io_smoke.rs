@@ -4,10 +4,9 @@
 //! plus the C9 permission check.
 //!
 //! Manual-gated: needs `--features kas`, a **fresh** `kiro-cli login`, the
-//! self-extracted KAS bundle, and `node`. cyril's auth responder reads the
-//! sqlite credential store `kiro-cli login` maintains (cyril-dcc6) — no SSO
-//! file freshness dance; if this test disconnects with "token expired", run
-//! `kiro-cli login` (re-login affordance: cyril-taba).
+//! self-extracted KAS bundle, and `node`. cyril's auth responder asks kiro-cli
+//! (`chat _ get-kas-token`, cyril-zbu7), which refreshes an expired token; if
+//! this test disconnects with "not logged in", run `kiro-cli login`.
 //!
 //! Oracle / assertions:
 //! - READ resolver fired: the file's content surfaces in the agent's text.
@@ -27,7 +26,7 @@ use cyril_core::types::*;
 use tokio::sync::mpsc::Receiver;
 
 #[tokio::test]
-#[ignore = "live: needs --features kas, a fresh kiro-cli login (sqlite credential store), the KAS bundle, and node"]
+#[ignore = "live: needs --features kas, a kiro-cli login, the KAS bundle, and node"]
 async fn fs_read_write_served_by_cyril() {
     let dir = tempfile::tempdir().unwrap();
     // The read token (7777) is deliberately DIFFERENT from the write token

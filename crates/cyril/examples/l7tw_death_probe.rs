@@ -23,8 +23,8 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let cwd = std::env::current_dir()?;
-    // Default: real kiro-cli. Override (e.g. the 2.11.0-trace replay agent when
-    // kiro-cli is not logged in): L7TW_AGENT_CMD="python3 .cyril-l7tw/kiro-replay-agent.py"
+    // V2 probe: real kiro-cli by default. Override (e.g. the 2.11.0-trace
+    // replay agent): L7TW_AGENT_CMD="python3 .cyril-l7tw/kiro-replay-agent.py"
     let argv: Vec<String> = std::env::var("L7TW_AGENT_CMD")
         .unwrap_or_else(|_| "kiro-cli acp".into())
         .split_whitespace()
@@ -34,7 +34,10 @@ async fn main() -> anyhow::Result<()> {
     let agent_command = AgentCommand::try_from_argv(argv)?;
     let bridge = spawn_bridge(
         agent_command,
-        cyril_core::protocol::bridge::SpawnConfig::default(),
+        cyril_core::protocol::bridge::SpawnConfig {
+            engine: AgentEngine::V2,
+            ..Default::default()
+        },
         cwd.clone(),
     )?;
     let (sender, mut notification_rx, mut permission_rx, _source_rx, _completion_rx) =

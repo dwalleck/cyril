@@ -1,0 +1,50 @@
+# rev: 5323be7894dc5f19ae9862b786df7a8de8b88ea9 (+ working tree changes: 3 paths)
+# cmd: cargo nextest run -p cyril-core --features kas --no-fail-fast -E test(/fetch_serializes|missing_helper|fetch_runs|get_access_token_round|fallback_warning/)
+# date: 2026-10-18T21:08:50Z
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-adb552638943beb27/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 38.50s
+────────────
+ Nextest run ID 3dacdddc-f085-4a51-a218-388305c8f888 with nextest profile: default
+    Starting 19 tests across 11 binaries (1271 tests skipped)
+        PASS [   0.005s] ( 1/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_01_unrecognized_subcommand_2_5_1
+        PASS [   0.005s] ( 2/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_04_force_flag_unknown
+        PASS [   0.005s] ( 3/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_03_crlf_stderr
+        PASS [   0.005s] ( 4/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_08_error_envelope_logged_out
+        PASS [   0.005s] ( 5/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_05_other_subcommand_unknown
+        PASS [   0.005s] ( 6/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_07_same_text_with_stdout
+        PASS [   0.005s] ( 7/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_02_unexpected_argument_2_4_1
+        PASS [   0.005s] ( 8/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_09_legacy_2_6_envelope
+        PASS [   0.005s] ( 9/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_10_malformed_json
+        PASS [   0.005s] (10/19) cyril-core protocol::kas::auth::tests::missing_helper_is_detected_precisely::case_06_same_text_wrong_exit
+        PASS [   0.006s] (11/19) cyril-core protocol::kas::auth::tests::fetch_runs_the_helper_with_force_refresh_and_relays_data
+        PASS [   0.008s] (12/19) cyril-core protocol::domain_mediator::host::tests::get_access_token_round_trips_through_the_bound_kiro_cli
+        PASS [   0.025s] (13/19) cyril-core protocol::kas::auth::tests::missing_helper_falls_back_to_the_stored_token_and_warns_once
+        PASS [   0.025s] (14/19) cyril-core protocol::domain_mediator::host::tests::fallback_warning_reaches_the_ui_once
+        PASS [   0.025s] (15/19) cyril-core protocol::kas::auth::tests::missing_helper_with_expired_store_is_a_hard_error
+        FAIL [   0.309s] (16/19) cyril-core protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget
+  stdout ───
+
+    running 1 test
+    test protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget ... FAILED
+
+    failures:
+
+    failures:
+        protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1261 filtered out; finished in 0.30s
+
+  stderr ───
+
+    thread 'protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget' (2325448) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1767:9:
+    Err(NonZeroExit { command: "/home/dwalleck/.claude/tmp/.tmpnK0iOn/bin/kiro-cli chat _ get-kas-token", status: "exit status: 9", stderr_tail: ": mkdir: cannot create directory ‘/home/dwalleck/.claude/tmp/.tmpnK0iOn/bin/held’: File exists" })
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.612s] (17/19) cyril-core protocol::kas::auth::tests::fetch_serializes_across_spellings_of_one_binary
+        PASS [   0.612s] (18/19) cyril-core protocol::kas::auth::tests::fetch_serializes_across_sources_sharing_an_invocation
+        PASS [   0.612s] (19/19) cyril-core protocol::kas::auth::tests::fetch_serializes_concurrent_requests
+────────────
+     Summary [   0.614s] 19 tests run: 18 passed, 1 failed, 1271 skipped
+        FAIL [   0.309s] (16/19) cyril-core protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget
+error: test run failed
+exit=100
