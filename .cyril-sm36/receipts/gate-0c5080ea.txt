@@ -1,0 +1,21 @@
+HEAD 0c5080eaf4f0a5d2e3822745a7f928056154524e dirty=0
+fmt-OK
+clippy-all-OK
+test-all-OK
+doctest-OK
+review-prefix-OK
+build-release-OK
+kas-build-OK
+kas-clippy-OK
+kas-test-OK
+bin-default-build-OK
+bin-default-test-OK
+default-clippy-OK
+default-test-OK
+nokas-bin-build-OK
+nokas-bin-clippy-OK
+nokas-bin-test-OK
+nokas-core-clippy-OK
+nokas-core-test-OK
+worktree-tooling-OK
+GATE-DONE
