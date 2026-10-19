@@ -22,7 +22,7 @@ use cyril_core::platform::path::{
     AgentLocation, agent_location, bind_agent_location, set_agent_location, to_agent, to_native,
 };
 use cyril_core::protocol::bridge::{SpawnConfig, spawn_bridge};
-use cyril_core::types::{AgentCommand, Notification};
+use cyril_core::types::{AgentCommand, AgentEngine, Notification};
 
 /// Re-run `test_name` in a child process with `envs` set and the location
 /// env vars scrubbed (the fences control their own state). Values are
@@ -213,8 +213,15 @@ async fn bridge_spawn_binds_agent_location_before_exec() {
         "kiro-cli".to_string(),
     ])
     .expect("argv");
-    let handle = spawn_bridge(cmd, SpawnConfig::default(), std::env::temp_dir())
-        .expect("bridge thread spawns");
+    let handle = spawn_bridge(
+        cmd,
+        SpawnConfig {
+            engine: AgentEngine::V2,
+            ..SpawnConfig::default()
+        },
+        std::env::temp_dir(),
+    )
+    .expect("bridge thread spawns");
     let (_sender, mut rx, _perm, _source_rx, _completion_rx) = handle.split();
     let routed = tokio::time::timeout(std::time::Duration::from_secs(10), rx.recv())
         .await

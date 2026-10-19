@@ -140,7 +140,7 @@ impl SdkRuntime {
         Self::start_connector(agent, domain_channels, stages, None).await
     }
 
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(super) async fn start_recording_process_for_test(
         process: AgentProcess,
         domain_channels: DomainChannels,

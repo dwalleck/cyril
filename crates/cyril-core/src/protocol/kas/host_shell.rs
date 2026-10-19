@@ -157,7 +157,7 @@ impl HostShell {
 
     /// POSIX fixture at `executable`, classified by its basename exactly as
     /// `$SHELL` is, so the reported name always matches what runs.
-    #[cfg(test)]
+    #[cfg(all(test, unix))]
     pub(crate) fn test_posix_at(executable: impl Into<PathBuf>) -> Self {
         let executable = executable.into();
         match classify_unix(executable.as_os_str()) {
@@ -538,9 +538,9 @@ fn find_on_path(name: &OsStr, host: &impl HostEnvironment) -> Option<PathBuf> {
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        HostEnvironment, HostPlatform, HostShell, PosixShell, ShellKind, SystemHost, resolve_for,
-    };
+    #[cfg(unix)]
+    use super::SystemHost;
+    use super::{HostEnvironment, HostPlatform, HostShell, PosixShell, ShellKind, resolve_for};
     use std::cell::Cell;
     use std::collections::{HashMap, HashSet};
     use std::ffi::OsString;
