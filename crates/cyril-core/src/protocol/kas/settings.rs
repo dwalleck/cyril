@@ -38,7 +38,10 @@ fn read_settings_at(path: &std::path::Path) -> Map<String, Value> {
                 Map::new()
             }
         },
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Map::new(),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            tracing::debug!(path = %path.display(), "no kiro cli.json; using KAS defaults");
+            Map::new()
+        }
         Err(e) => {
             tracing::warn!(path = %path.display(), error = %e, "kiro cli.json read failed; using KAS defaults");
             Map::new()
@@ -112,7 +115,14 @@ const DEFAULTS_ON: &[&str] = &[
 /// `chat.enableWorkflows` is not in Kiro's workspace-overridable key set, so
 /// the global `cli.json` this module reads is the only source.
 fn workflows_enabled(e: &Map<String, Value>) -> bool {
-    matches!(e.get("chat.enableWorkflows"), Some(Value::Bool(true)))
+    match e.get("chat.enableWorkflows") {
+        Some(Value::Bool(enabled)) => *enabled,
+        Some(other) => {
+            tracing::warn!(value = %other, "kiro cli.json chat.enableWorkflows is not a boolean; workflows stay off");
+            false
+        }
+        None => false,
+    }
 }
 
 /// A numeric-but-not-boolean value, cloned. `serde_json`'s `is_number()` is already
