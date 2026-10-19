@@ -21,7 +21,7 @@ use cyril_core::types::{
     WorkflowPlanOmission, WorkflowPlanStep, WorkflowRepeatStop, WorkflowStopCondition,
 };
 
-/// Rows of plan the preview shows before the omission marker. Larger than
+/// Rows of plan the preview shows, omission markers included. Larger than
 /// the five-row text cap: a plan is what the user is approving, so every
 /// step of an ordinary plan should be on screen.
 pub(crate) const MAX_PLAN_ROWS: usize = 12;
@@ -36,7 +36,7 @@ const VALUE_CHARS: usize = 160;
 const LIST_CHARS: usize = 600;
 
 /// The plan as preview rows of at most `width` columns (after the indent),
-/// capped at [`MAX_PLAN_ROWS`] plus an omission marker.
+/// capped at [`MAX_PLAN_ROWS`] rows including any omission markers.
 ///
 /// `comparison` is KAS's "Compared with the replaced steps: …" summary of an
 /// edit or a replacement. It is not part of `workflowPlan` — KAS puts it only
@@ -96,7 +96,8 @@ const MAX_COMPARISON_ROWS: usize = 4;
 /// `rows` cut to at most `max` rows: the first `max` as they are, or, when
 /// there are more, the first `max - 1` and a marker naming how many rows
 /// were left out (so the marker takes a row of the budget; with a budget of
-/// one, only the marker).
+/// one, only the marker). A budget of zero still yields the marker row; no
+/// caller passes zero (the tree's budget is at least eight rows).
 fn cap_rows(mut rows: Vec<String>, max: usize) -> Vec<String> {
     if rows.len() <= max {
         return rows;
