@@ -225,6 +225,15 @@ workflow_enum! {
     }
 }
 
+// Declared after `workflow_enum!` so the plan module can use the macro.
+mod plan;
+pub use plan::{
+    WorkflowCascadeSource, WorkflowFileCheck, WorkflowJoinPolicy, WorkflowPlan,
+    WorkflowPlanInclude, WorkflowPlanKind, WorkflowPlanNode, WorkflowPlanNodeKind,
+    WorkflowPlanOmission, WorkflowPlanStep, WorkflowPlanTask, WorkflowRepeatStop,
+    WorkflowStopCondition,
+};
+
 /// Recursive, wire-neutral description of one node in a workflow recipe.
 #[derive(Debug, Clone, PartialEq)]
 pub struct WorkflowNodeDescriptor {

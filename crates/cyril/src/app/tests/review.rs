@@ -203,6 +203,7 @@ fn step_request(
             can_reject_with_reason: false,
             responder,
             consent: Some(consent),
+            workflow_plan: None,
         },
         receiver,
     )

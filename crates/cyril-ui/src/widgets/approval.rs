@@ -98,11 +98,14 @@ impl<'a> Preview<'a> {
             .saturating_sub(2 + PATH_INDENT.width())
             .max(1);
         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+        let text_width = usize::from(super::modal::popup_width(area, desired_width))
+            .saturating_sub(2 + TEXT_INDENT.width())
+            .max(1);
         Self {
             path,
             path_width,
             path_rows,
-            body: preview_lines(state, theme),
+            body: preview_lines(state, theme, text_width),
         }
     }
 
@@ -237,7 +240,7 @@ impl OptionLayout {
 /// A character with no display width (a control character) counts as zero
 /// columns, as ratatui draws nothing for it; that is its width, not a
 /// fallback for an error.
-fn wrap_columns(text: &str, width: usize) -> Vec<String> {
+pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
     let mut rows = Vec::new();
     let mut row = String::new();
     let mut used = 0usize;
@@ -374,39 +377,137 @@ fn trailing_columns(text: &str, width: usize) -> &str {
 /// cap, so a diff-heavy preview is truncated before this budget matters.
 const MAX_PREVIEW_LINES: usize = 5;
 
+/// Indent before each text row of the preview body.
+const TEXT_INDENT: &str = "    ";
+
+/// Push at most `max_rows` rows of `text_lines`, each wrapped to
+/// `width` columns, indented and dimmed, then an omission marker naming how
+/// many rows were left out. Wrapping keeps a long line's tail on screen —
+/// the end of a KAS plan line carries the step's effort (cyril-8wh0) —
+/// instead of clipping it at the border.
+///
+/// Runs every frame, so rows past the cap are counted, not built: a large
+/// raw-input write is not re-wrapped into strings on every redraw.
+fn push_bounded_text<'a, 's>(
+    lines: &mut Vec<Line<'a>>,
+    text_lines: impl Iterator<Item = &'s str>,
+    width: usize,
+    max_rows: usize,
+    theme: &Theme,
+) {
+    let mut total = 0usize;
+    for line in text_lines {
+        if total >= max_rows {
+            total = total.saturating_add(wrapped_row_count(line, width));
+            continue;
+        }
+        for row in wrap_columns(line, width) {
+            total += 1;
+            if total <= max_rows {
+                lines.push(Line::styled(
+                    format!("{TEXT_INDENT}{row}"),
+                    Style::default().fg(theme.subdued),
+                ));
+            }
+        }
+    }
+    if total > max_rows {
+        lines.push(Line::styled(
+            format!("{TEXT_INDENT}...{} more lines", total - max_rows),
+            Style::default().fg(theme.subdued),
+        ));
+    }
+}
+
+/// How many rows [`wrap_columns`] gives `text` at `width`, without building
+/// them.
+fn wrapped_row_count(text: &str, width: usize) -> usize {
+    let mut rows = 1usize;
+    let mut used = 0usize;
+    let mut row_empty = true;
+    for ch in text.chars() {
+        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        if used.saturating_add(ch_width) > width && !row_empty {
+            rows += 1;
+            used = 0;
+        }
+        row_empty = false;
+        used = used.saturating_add(ch_width);
+    }
+    rows
+}
+
+/// The line of KAS's plan text that summarises what an edit or a
+/// replacement removes, adds and changes (`Diu`: "Compared with the replaced
+/// steps: …"). `workflowPlan` does not carry it.
+fn plan_comparison(tc: &crate::traits::TrackedToolCall) -> Option<&str> {
+    tc.content().iter().find_map(|block| match block {
+        cyril_core::types::ToolCallContent::Text(text) => text
+            .lines()
+            .find(|line| line.starts_with("Compared with the replaced steps:")),
+        cyril_core::types::ToolCallContent::Diff { .. } => None,
+    })
+}
+
 /// Build the approval-preview body from the joined tool-call snapshot. The
 /// path rows above it are laid out by [`Preview`] (cyril-rcub).
 ///
 /// Order: diff content
-/// (the existing diff projection, with its own line cap), else the raw-input
-/// `text`/`content` payload capped at [`MAX_PREVIEW_LINES`]. A snapshot with
-/// no displayable payload yields a single `Preview unavailable` line — the
+/// (the existing diff projection, with its own line cap), else the tool
+/// call's Text content blocks (cyril-8wh0), else the raw-input
+/// `text`/`content` payload; text of either kind is wrapped to `text_width`
+/// and capped at [`MAX_PREVIEW_LINES`] rows. A snapshot with no displayable
+/// payload yields a single `Preview unavailable` line — the
 /// degraded-but-actionable contract from cyril-j1b3's spec: the operator
 /// still sees the request's own title/message and every option.
 ///
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
-fn preview_lines<'a>(state: &ApprovalState, theme: &Theme) -> Vec<Line<'a>> {
+fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
+    // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
+    // tree in place of KAS's Text rendering of the same plan, plus the one
+    // line only the Text has: what an edit removes.
+    if let Some(plan) = state
+        .workflow_plan
+        .as_ref()
+        .filter(|plan| !plan.steps.is_empty())
+    {
+        return super::workflow_plan::plan_lines(plan, plan_comparison(tc), text_width, theme);
+    }
+    // A plan approval without a usable typed plan — sent without its steps
+    // (`omitted: "steps"`) or dropped as malformed — falls back to its Text,
+    // given the plan's row budget rather than the generic five rows.
+    let is_plan_approval = state.workflow_plan.is_some()
+        || state.consent.as_ref().and_then(|consent| consent.tool_id()) == Some("update_workflow");
+    let text_rows = if is_plan_approval {
+        super::workflow_plan::MAX_PLAN_ROWS
+    } else {
+        MAX_PREVIEW_LINES
+    };
     let mut lines: Vec<Line<'a>> = Vec::new();
 
     match tc.preview_body() {
         PreviewBody::Diff => super::chat::render_diff_lines(&mut lines, tc, theme),
-        PreviewBody::Text(text) => {
-            let total = text.lines().count();
-            for line in text.lines().take(MAX_PREVIEW_LINES) {
-                lines.push(Line::styled(
-                    format!("    {line}"),
-                    Style::default().fg(theme.subdued),
-                ));
-            }
-            if total > MAX_PREVIEW_LINES {
-                lines.push(Line::styled(
-                    format!("    ...{} more lines", total - MAX_PREVIEW_LINES),
-                    Style::default().fg(theme.subdued),
-                ));
-            }
-        }
+        PreviewBody::Content(blocks) => push_bounded_text(
+            &mut lines,
+            blocks.iter().flat_map(|block| match block {
+                cyril_core::types::ToolCallContent::Text(text) => text.lines(),
+                // Classification guarantees Text only; a diff is never
+                // flattened into text.
+                cyril_core::types::ToolCallContent::Diff { .. } => "".lines(),
+            }),
+            text_width,
+            text_rows,
+            theme,
+        ),
+        PreviewBody::Text(text) => push_bounded_text(
+            &mut lines,
+            text.lines(),
+            text_width,
+            MAX_PREVIEW_LINES,
+            theme,
+        ),
         // Never coerce a non-string payload (cyril-j1b3 spec).
         PreviewBody::Absent | PreviewBody::Malformed { .. } => lines.push(Line::styled(
             "  Preview unavailable",
@@ -1348,6 +1449,7 @@ mod tests {
             phase,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         }
     }
 
@@ -1362,6 +1464,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         ui
     }
@@ -2005,6 +2108,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         assert!(ui.approval_begin_feedback(), "feedback phase must open");
         ui.approval_feedback_paste("not that file");
@@ -2074,6 +2178,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         assert!(ui.approval_begin_feedback(), "feedback phase must open");
         let terminal = render_ui(&ui, 80, 30, 30);
@@ -2210,6 +2315,7 @@ mod tests {
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         }
     }
 
@@ -2348,6 +2454,482 @@ mod tests {
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
     }
 
+    // ---------- cyril-8wh0: Text content in the approval preview ----------
+
+    /// The plan text KAS 0.66.43 sent as the `toolCall.content` Text block of
+    /// a workflow plan approval (`kas-lead-wfplan-2.32.0.jsonl` frame 93,
+    /// workspace path scrubbed to `<LIVE_TMP>` as in
+    /// `experiments/conductor-spike/kas-workflow-plan-2.32.0.jsonl`).
+    const LIVE_PLAN_TEXT: &str = "Steps to add after 'create-workflow':\n\nwrite-hello: step, agent wf-coder, model auto, effort low\n  Task: Create a file named hello.txt at the absolute path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con...";
+
+    /// The update_workflow approval as cyril joins it: the tracked tool call
+    /// (title "Update Workflow", rawInput without a text field) merged with
+    /// the request's Text content.
+    fn plan_text_tool_call(text: &str) -> ToolCall {
+        ToolCall::new(
+            cyril_core::types::ToolCallId::new("toolu_bdrk_01QLZqv14pnXT2nFjjkTakjL"),
+            "Update Workflow".into(),
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({
+                "workflowId": "wf_6b22f0c99f407f0e",
+                "action": "replace_remaining",
+                "workflowRef": "generated://gen_09d8668976ecd154",
+                "remainingSteps": []
+            })),
+        )
+        .with_content(vec![ToolCallContent::Text(text.into())])
+    }
+
+    /// REGRESSION FENCE (cyril-8wh0): a permission request whose tool call
+    /// carries a Text content block shows that text in the overlay instead of
+    /// "Preview unavailable" — the live KAS workflow plan approval.
+    #[test]
+    fn text_content_renders_in_the_preview() {
+        let mut state = approval_for_tool_call(plan_text_tool_call(LIVE_PLAN_TEXT));
+        state.message = "Add 1 workflow step to wf_6b22f0c99f407f0e".into();
+        let terminal = render_at(&state, 80, 24, 24);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            !screen.contains("Preview unavailable"),
+            "the Text block must be shown:\n{screen}"
+        );
+        // Long plan lines wrap at the popup's text width rather than being
+        // clipped at the border, so the step's effort stays on screen.
+        for expected in [
+            "Steps to add after 'create-workflow':",
+            "write-hello: step, agent wf-coder, model auto,",
+            "low",
+            "Task: Create a file named hello.txt",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        insta::assert_snapshot!("8wh0_text_content_preview_80x24", screen);
+    }
+
+    /// cyril-8wh0: Text content is bounded like the raw-input text — five
+    /// lines across all blocks, then the omission marker.
+    #[test]
+    fn text_content_preview_is_bounded() {
+        let seven = (1..=7)
+            .map(|i| format!("plan line {i}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let tc = plan_text_tool_call(&seven).with_content(vec![
+            ToolCallContent::Text("plan line 1\nplan line 2".into()),
+            ToolCallContent::Text(
+                (3..=7)
+                    .map(|i| format!("plan line {i}"))
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+            ),
+        ]);
+        let state = approval_for_tool_call(tc);
+        let terminal = render_at(&state, 90, 40, 40);
+        let text = buffer_text(&terminal);
+        assert!(text.contains("plan line 5"), "fifth line missing:\n{text}");
+        assert!(
+            !text.contains("plan line 6"),
+            "sixth line must be capped:\n{text}"
+        );
+        assert!(
+            text.contains("...2 more lines"),
+            "omission marker missing:\n{text}"
+        );
+        assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    // ---------- cyril-8wh0: the typed workflow plan in the overlay ----------
+
+    fn node_id(text: &str) -> cyril_core::types::WorkflowNodeId {
+        cyril_core::types::WorkflowNodeId::try_from(text.to_owned()).expect("node id")
+    }
+
+    fn plan_step(
+        id: &str,
+        agent: &str,
+        effort: Option<(&str, cyril_core::types::WorkflowCascadeSource)>,
+        task: Option<(&str, bool)>,
+    ) -> cyril_core::types::WorkflowPlanNode {
+        cyril_core::types::WorkflowPlanNode {
+            node_id: node_id(id),
+            kind: cyril_core::types::WorkflowPlanNodeKind::Step(
+                cyril_core::types::WorkflowPlanStep {
+                    agent_name: agent.to_owned(),
+                    model_id: None,
+                    model_source: None,
+                    effort_level: effort.map(|(level, _)| level.to_owned()),
+                    effort_source: effort.map(|(_, source)| source),
+                    task: task.map(|(text, truncated)| cyril_core::types::WorkflowPlanTask {
+                        text: text.to_owned(),
+                        truncated,
+                    }),
+                    artifacts: Vec::new(),
+                    completion: None,
+                },
+            ),
+        }
+    }
+
+    /// The plan of the live 2.32.0 approval (`kas-lead-wfplan` frame 93), as
+    /// cyril-core's converter types it (pinned there by
+    /// `live_launch_plan_converts`).
+    fn live_plan() -> cyril_core::types::WorkflowPlan {
+        cyril_core::types::WorkflowPlan {
+            workflow_id: cyril_core::types::WorkflowId::try_from("wf_6b22f0c99f407f0e".to_owned())
+                .expect("workflow id"),
+            proposed_by: Some(node_id("create-workflow")),
+            kind: cyril_core::types::WorkflowPlanKind::Launch,
+            workflow_ref: "generated://gen_09d8668976ecd154".to_owned(),
+            kept_step_ids: vec![node_id("create-workflow")],
+            steps: vec![plan_step(
+                "write-hello",
+                "wf-coder",
+                Some(("low", cyril_core::types::WorkflowCascadeSource::Step)),
+                Some((
+                    "Create a file named hello.txt at the absolute path <LIVE_TMP>/ws-wfplan-nnzrhi04/hello.txt con",
+                    true,
+                )),
+            )],
+            omitted: None,
+        }
+    }
+
+    fn plan_approval(plan: cyril_core::types::WorkflowPlan) -> ApprovalState {
+        let mut state = approval_for_tool_call(plan_text_tool_call(LIVE_PLAN_TEXT));
+        state.message = "Add 1 workflow step to wf_6b22f0c99f407f0e".into();
+        state.workflow_plan = Some(plan);
+        state
+    }
+
+    /// REGRESSION FENCE (cyril-8wh0): an `update_workflow` approval shows the
+    /// typed plan's step list — header, kept steps, each step with its agent,
+    /// model and effort, and its task — in place of KAS's text rendering.
+    #[test]
+    fn workflow_plan_renders_its_step_list() {
+        let terminal = render_at(&plan_approval(live_plan()), 80, 24, 24);
+        let screen = screen_rows(&terminal).join("\n");
+        for expected in [
+            "New workflow · 1 step after 'create-workflow'",
+            "Keeps: create-workflow",
+            "write-hello: wf-coder · model auto · effort low",
+            "Task: Create a file named hello.txt",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+        assert!(
+            !screen.contains("Steps to add after"),
+            "the typed plan replaces KAS's text rendering:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        insta::assert_snapshot!("8wh0_workflow_plan_80x24", screen);
+    }
+
+    /// A plan KAS had to send without its steps (`omitted: "steps"`) falls
+    /// back to the request's Text content, which still lists them.
+    #[test]
+    fn plan_without_steps_falls_back_to_the_text() {
+        let mut plan = live_plan();
+        plan.steps.clear();
+        plan.kept_step_ids.clear();
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Steps);
+        let terminal = render_at(&plan_approval(plan), 80, 24, 24);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            screen.contains("Steps to add after 'create-workflow':"),
+            "the text rendering must show:\n{screen}"
+        );
+        assert!(
+            !screen.contains("New workflow ·"),
+            "no empty plan header:\n{screen}"
+        );
+    }
+
+    /// The step tree: nested nodes are indented under their parent, inherited
+    /// settings name their source, repeats and parallels carry their rules,
+    /// and a plan longer than the cap ends in an omission marker.
+    #[test]
+    fn workflow_plan_renders_nested_nodes() {
+        use cyril_core::types::{
+            WorkflowCascadeSource, WorkflowJoinPolicy, WorkflowPlanNode, WorkflowPlanNodeKind,
+            WorkflowRepeatExhaustion, WorkflowRepeatStop,
+        };
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        plan.steps = vec![
+            plan_step(
+                "build",
+                "wf-coder",
+                Some(("high", WorkflowCascadeSource::Workflow)),
+                Some(("Implement the parser", false)),
+            ),
+            WorkflowPlanNode {
+                node_id: node_id("review-loop"),
+                kind: WorkflowPlanNodeKind::Repeat {
+                    steps: vec![plan_step("review", "wf-reviewer", None, None)],
+                    max_iterations: 3,
+                    on_max_iterations: WorkflowRepeatExhaustion::Pause,
+                    stop: Some(WorkflowRepeatStop::When("the review passes".to_owned())),
+                },
+            },
+            WorkflowPlanNode {
+                node_id: node_id("fanout"),
+                kind: WorkflowPlanNodeKind::Parallel {
+                    branches: vec![
+                        plan_step("docs", "wf-writer", None, None),
+                        WorkflowPlanNode {
+                            node_id: node_id("watch-ci"),
+                            kind: WorkflowPlanNodeKind::Watch {
+                                handler: "wf-ci-watcher".to_owned(),
+                                idle_timeout_sec: Some(90.0),
+                                config: None,
+                            },
+                        },
+                    ],
+                    join_policy: Some(WorkflowJoinPolicy::AllSettled),
+                },
+            },
+        ];
+        let terminal = render_at(&plan_approval(plan), 90, 40, 40);
+        let screen = screen_rows(&terminal).join("\n");
+        for expected in [
+            "Edited workflow · 3 steps after 'create-workflow'",
+            "build: wf-coder · model auto · effort high (workflow)",
+            "  Task: Implement the parser",
+            "review-loop: repeat · max 3 iterations, then pause ·",
+            "  stops when the review passes",
+            "  review: wf-reviewer · model auto · effort auto",
+            "fanout: parallel · join allSettled",
+            "  docs: wf-writer",
+            "  watch-ci: watch · handler wf-ci-watcher · ends after",
+            "    90s idle",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+        insta::assert_snapshot!("8wh0_workflow_plan_nested_90x40", screen);
+    }
+
+    /// A plan longer than the row cap shows the cap and how many rows it
+    /// left out, and the options stay on screen.
+    #[test]
+    fn workflow_plan_is_bounded() {
+        workflow_plan_is_bounded_case();
+    }
+
+    /// cyril-8wh0 review: what an edit removes is only in KAS's Text
+    /// ("Compared with the replaced steps: …", not in `workflowPlan`), so it
+    /// is drawn under the typed plan.
+    #[test]
+    fn workflow_plan_shows_what_an_edit_removes() {
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(
+            "Steps to add after 'edit-workflow-r1':\n\nwrite-hello: step, agent wf-coder, model auto, effort low\n\nCompared with the replaced steps: removed 'old-step'; added 'write-hello'; changed none.",
+        ));
+        let terminal = render_at(&state, 90, 40, 40);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            screen.contains("Compared with the replaced steps: removed"),
+            "the comparison must show:\n{screen}"
+        );
+        assert!(screen.contains("'old-step'"), "the removed id:\n{screen}");
+        assert!(
+            screen.contains("Edited workflow · 1 step"),
+            "under the typed plan:\n{screen}"
+        );
+    }
+
+    /// cyril-8wh0 review: step details render as KAS words them — writes,
+    /// the completion condition (each part, joined with "or"), a watch's
+    /// config with non-string values as JSON — and an `omitted: "details"`
+    /// plan says so.
+    #[test]
+    fn workflow_plan_renders_step_details() {
+        use cyril_core::types::{
+            WorkflowCompletionSignal, WorkflowFileCheck, WorkflowPlanNode, WorkflowPlanNodeKind,
+            WorkflowPlanStep, WorkflowStopCondition,
+        };
+        let mut plan = live_plan();
+        plan.steps = vec![
+            WorkflowPlanNode {
+                node_id: node_id("build"),
+                kind: WorkflowPlanNodeKind::Step(WorkflowPlanStep {
+                    agent_name: "wf-coder".into(),
+                    model_id: Some("claude-sonnet-4.5".into()),
+                    model_source: Some(cyril_core::types::WorkflowCascadeSource::Parent),
+                    effort_level: None,
+                    effort_source: None,
+                    task: None,
+                    artifacts: vec![("report".into(), "out/report.md".into())],
+                    completion: Some(WorkflowStopCondition {
+                        contains_text: Some("DONE".into()),
+                        file_check: Some(WorkflowFileCheck {
+                            path: "out/s.json".into(),
+                            json_path: "$.ok".into(),
+                            value: serde_json::json!(true),
+                        }),
+                        completion_signal: Some(WorkflowCompletionSignal::Success),
+                    }),
+                }),
+            },
+            WorkflowPlanNode {
+                node_id: node_id("watch-ci"),
+                kind: WorkflowPlanNodeKind::Watch {
+                    handler: "wf-ci-watcher".into(),
+                    idle_timeout_sec: None,
+                    config: serde_json::json!({"branch": "main", "retries": 3})
+                        .as_object()
+                        .cloned(),
+                },
+            },
+        ];
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Details);
+        let terminal = render_at(&plan_approval(plan), 120, 50, 50);
+        let screen = screen_rows(&terminal).join("\n");
+        for expected in [
+            "build: wf-coder · model claude-sonnet-4.5 (parent) ·",
+            "effort auto",
+            "Writes: report = out/report.md",
+            "Waits for the user until out/s.json $.ok=true or",
+            "output contains \"DONE\" or it signals success",
+            "watch-ci: watch · handler wf-ci-watcher",
+            "Config: branch = main, retries = 3",
+            "(step details left out to fit the plan)",
+        ] {
+            assert!(screen.contains(expected), "missing {expected:?}:\n{screen}");
+        }
+    }
+
+    /// cyril-8wh0 review: recipe strings are model output; a bidi override
+    /// or a control character in one never reaches the terminal.
+    #[test]
+    fn workflow_plan_strips_bidi_and_control_characters() {
+        let mut plan = live_plan();
+        plan.steps = vec![plan_step(
+            "evil\u{202E}txt.exe",
+            "wf\u{1b}[31mcoder",
+            None,
+            None,
+        )];
+        // Checked on the rows the widget hands ratatui, before ratatui's own
+        // grapheme filtering could hide a leak (review round 1).
+        let rows: Vec<String> =
+            crate::widgets::workflow_plan::plan_lines(&plan, None, 80, &theme())
+                .iter()
+                .map(|line| {
+                    line.spans
+                        .iter()
+                        .map(|span| span.content.as_ref())
+                        .collect()
+                })
+                .collect();
+        assert!(
+            rows.iter()
+                .all(|row| !row.contains('\u{202E}') && !row.contains('\u{1b}')),
+            "raw controls left the widget: {rows:?}"
+        );
+        assert!(
+            rows.iter()
+                .any(|row| row.contains("evil txt.exe: wf [31mcoder")),
+            "cleaned as KAS cleans (each control becomes a space): {rows:?}"
+        );
+        let terminal = render_at(&plan_approval(plan), 90, 40, 40);
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(
+            screen.contains("evil txt.exe: wf [31mcoder"),
+            "the cleaned row is what the screen shows:\n{screen}"
+        );
+    }
+
+    /// Review round 1 (Medium): the comparison line is the only place an
+    /// edit names the steps it removes, so a plan whose step tree overflows
+    /// the row cap truncates the tree, never the comparison — as KAS's own
+    /// text reserves room for it (`R_o`).
+    #[test]
+    fn overflowing_edit_plan_keeps_the_comparison_line() {
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        plan.steps = (1..=15)
+            .map(|n| plan_step(&format!("step-{n:02}"), "wf-coder", None, None))
+            .collect();
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(
+            "Steps to add after 'edit-workflow-r1':\n\n(steps)\n\nCompared with the replaced steps: removed 'old-step'; added 'step-01'; changed none.",
+        ));
+        let terminal = render_at(&state, 90, 50, 50);
+        let rows = screen_rows(&terminal);
+        let screen = rows.join("\n");
+        let marker = rows
+            .iter()
+            .position(|row| row.contains("more lines"))
+            .unwrap_or_else(|| panic!("the tree must be marked as cut:\n{screen}"));
+        let comparison = rows
+            .iter()
+            .position(|row| row.contains("Compared with the replaced steps: removed"))
+            .unwrap_or_else(|| panic!("the comparison line was cut:\n{screen}"));
+        assert!(
+            screen.contains("'old-step'"),
+            "the removed id must show:\n{screen}"
+        );
+        assert!(
+            marker < comparison,
+            "the tree is cut, then the comparison follows:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+        insta::assert_snapshot!("8wh0_workflow_plan_overflow_keeps_comparison_90x50", screen);
+    }
+
+    /// cyril-8wh0 review: a plan approval without a usable typed plan falls
+    /// back to its Text with the plan's row budget, not the generic five.
+    #[test]
+    fn plan_text_fallback_gets_the_plan_budget() {
+        let ten = (1..=10)
+            .map(|n| format!("plan row {n}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut plan = live_plan();
+        plan.steps.clear();
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Steps);
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(&ten));
+        let screen = screen_rows(&render_at(&state, 90, 40, 40)).join("\n");
+        assert!(screen.contains("plan row 10"), "all ten rows:\n{screen}");
+
+        let mut ordinary = approval_for_tool_call(plan_text_tool_call(&ten));
+        ordinary.workflow_plan = None;
+        let screen = screen_rows(&render_at(&ordinary, 90, 40, 40)).join("\n");
+        assert!(screen.contains("plan row 5"), "five rows:\n{screen}");
+        assert!(!screen.contains("plan row 6"), "capped at five:\n{screen}");
+    }
+
+    fn workflow_plan_is_bounded_case() {
+        let mut plan = live_plan();
+        plan.steps = (1..=20)
+            .map(|n| plan_step(&format!("step-{n:02}"), "wf-coder", None, None))
+            .collect();
+        let terminal = render_at(&plan_approval(plan), 90, 50, 50);
+        let screen = screen_rows(&terminal).join("\n");
+        // 22 rows (header, keeps, 20 steps) into a 12-row budget whose last
+        // row is the marker: header, keeps and steps 1-9, then the marker.
+        let max = crate::widgets::workflow_plan::MAX_PLAN_ROWS;
+        let last_shown = max - 3;
+        assert!(
+            screen.contains(&format!("step-{last_shown:02}:")),
+            "rows up to the cap:\n{screen}"
+        );
+        assert!(
+            !screen.contains(&format!("step-{:02}:", last_shown + 1)),
+            "rows past the cap:\n{screen}"
+        );
+        assert!(
+            screen.contains(&format!("...{} more lines", 22 - (max - 1))),
+            "omission marker:\n{screen}"
+        );
+        assert!(screen.contains("▸ Allow"), "options must stay:\n{screen}");
+    }
+
     // ---------- cyril-q0kg: malformed-preview warning is not per-frame ----------
 
     const MALFORMED_PREVIEW_WARNING: &str =
@@ -2387,6 +2969,7 @@ mod tests {
             can_reject_with_reason: true,
             responder: tokio::sync::oneshot::channel().0,
             consent: None,
+            workflow_plan: None,
         });
         ui
     }

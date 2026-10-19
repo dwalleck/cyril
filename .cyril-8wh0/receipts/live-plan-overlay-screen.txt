@@ -1,0 +1,35 @@
+sess_8f78847c-75cf-456d-bc6c-052eee1359fe · vibe · auto
+Connecting to agent...
+Session created: sess_8f78847c-75cf-456d-bc6c-052eee1359fe
+Workflow recipes (8):
+  workflow-from-prompt — —
+      from
+/home/dwalleck/.claude/tmp/claude-1000/-home-dwalleck-repos-cyril/0473cb2a-6b72-4739-a03f-aec2a7f97d90/scratch
+pad/cyril-vojx-8wh0/8wh0-live/ws/.kiro/workflows/workflow-from-prompt.workflow.json
+  autoresearch — Repeatedly proposes and applies one experiment at a time, runs the benchmark, and keeps
+changes only when they be┌ Permission Required — sess_7a8dd8b0-3079-4fe8-add4-db8d57┐
+  feature-pipeline — Full│Add 1 workflow step to wf_34c4a79b2566ee24                │ed design loop, plan,
+implement-and-review loop│                                                          │for hard multi-file
+tasks.                   │    New workflow · 1 step after 'create-workflow'         │
+  goal — Iterative agent │    Keeps: create-workflow                                │plete or the iteration
+budget is exhausted; no e│    write-hello: wf-coder · model auto · effort low       │rom the repo.
+  investigate — Single-st│      Task: Create the file at the absolute path          │-contained brief; a
+planner agent investigate│        /home/dwalleck/.claude/tmp/claude-1000/-home-dwall│
+  publish-pr — Opens a PR│        eck-repos-cyril/0473cb2a-6b72-4739-a03f-aec2a7f97d│d responds to feedback
+until a terminal state. r│        90/scratchpad/cyril-voj…                          │ (optional).
+  ralph — Loops one codin│                                                          │n, until every item is
+done; progress is durable│▸ Allow                                                   │ome, use goal.
+  semantic-review-multi-m│  Always allow                                            │ers in parallel on
+different models, then ag│  Deny                                                    │/reviews/. Reviewers
+never see each other.    │  Always deny                                             │
+(/workflow run <name> lau│                                                          │
+                         └──────────────────────────────────────────────────────────┘
+/workflow run failed (-32603): _kiro/workflow/new: no bundled recipe named 'workflow-from-prompt'.
+Launched workflow-from-prompt — run wf_34c4a79b2566ee24. Lifecycle events stream as it executes; /workflow
+status shows what is known.
+┌ > ─────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                           │
+│                                                                                                            │
+│                                                                                                            │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%
