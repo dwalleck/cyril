@@ -1239,6 +1239,12 @@ impl UiState {
                 tracing::warn!("WorkflowSnapshot reached UiState; it is tracker-owned");
                 false
             }
+            // cyril-9104: the App hands a workflow message to the tracker and
+            // renders what it resolves; reaching UiState is a routing bug.
+            Notification::WorkflowMessage(_) => {
+                tracing::warn!("WorkflowMessage reached UiState; it is tracker-owned");
+                false
+            }
             // One system message per command outcome, built by the pure
             // formatter (cyril-0qe6). Run *progress* rendering is cyril-zd8u.
             Notification::WorkflowCommand(outcome) => {

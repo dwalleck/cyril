@@ -88,16 +88,17 @@ pub use usage::{
 };
 pub use voice::{VoiceCommand, VoiceError, VoiceEvent, VoiceStatus};
 pub use workflow::{
-    WorkflowCompletionMismatchError, WorkflowCompletionSignal, WorkflowCompletionSignalSource,
-    WorkflowCompletionStatus, WorkflowEnumParseError, WorkflowEvent, WorkflowId,
-    WorkflowIdentifierError, WorkflowLoopIteration, WorkflowNodeCompleted,
-    WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
-    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails,
-    WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused,
-    WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatCap, WorkflowRepeatExhaustion,
-    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
-    WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued,
-    WorkflowWatchOutcome, WorkflowWatchPoll,
+    WorkflowAttention, WorkflowAttentionKind, WorkflowCompletionMismatchError,
+    WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowCompletionStatus,
+    WorkflowEnumParseError, WorkflowEvent, WorkflowId, WorkflowIdentifierError,
+    WorkflowLoopIteration, WorkflowMessage, WorkflowMessageSender, WorkflowMessageSeverity,
+    WorkflowNodeCompleted, WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId,
+    WorkflowNodePath, WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot,
+    WorkflowNodeStartDetails, WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType,
+    WorkflowPaused, WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatCap,
+    WorkflowRepeatExhaustion, WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted,
+    WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
+    WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 pub use workflow_command::{
     WorkflowCommandOutcome, WorkflowFetchVerb, WorkflowInputError, WorkflowOp, WorkflowRecipe,

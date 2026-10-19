@@ -8,16 +8,17 @@ use serde::de::DeserializeOwned;
 
 use super::WorkflowFrameOutcome;
 use crate::types::{
-    SessionId, WorkflowCompletionMismatchError, WorkflowCompletionSignal,
-    WorkflowCompletionSignalSource, WorkflowCompletionStatus, WorkflowEnumParseError,
-    WorkflowEvent, WorkflowId, WorkflowIdentifierError, WorkflowLoopIteration,
-    WorkflowNodeCompleted, WorkflowNodeCompletionDetails, WorkflowNodeDescriptor, WorkflowNodeId,
-    WorkflowNodePath, WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot,
-    WorkflowNodeStartDetails, WorkflowNodeStarted, WorkflowNodeStatus, WorkflowNodeType,
-    WorkflowPaused, WorkflowQueueOutcome, WorkflowQueueResolution, WorkflowRepeatCap,
-    WorkflowRepeatExhaustion, WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted,
-    WorkflowRunStatus, WorkflowSnapshot, WorkflowSnapshotData, WorkflowSnapshotMetadata,
-    WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
+    SessionId, WorkflowAttention, WorkflowAttentionKind, WorkflowCompletionMismatchError,
+    WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowCompletionStatus,
+    WorkflowEnumParseError, WorkflowEvent, WorkflowId, WorkflowIdentifierError,
+    WorkflowLoopIteration, WorkflowNodeCompleted, WorkflowNodeCompletionDetails,
+    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
+    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStartDetails, WorkflowNodeStarted,
+    WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused, WorkflowQueueOutcome,
+    WorkflowQueueResolution, WorkflowRepeatCap, WorkflowRepeatExhaustion, WorkflowRunCompleted,
+    WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus, WorkflowSnapshot,
+    WorkflowSnapshotData, WorkflowSnapshotMetadata, WorkflowStepsQueued, WorkflowWatchOutcome,
+    WorkflowWatchPoll,
 };
 use crate::types::{WorkflowRecipe, WorkflowRunSummary};
 
@@ -195,6 +196,10 @@ struct WireRunStarted {
     node_tree: Vec<WireNodeDescriptor>,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -205,6 +210,10 @@ struct WireRunCompleted {
     final_state: WireSnapshot,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 /// Reply of `_kiro/workflow/inspect` (field `state`) or `_kiro/workflow/new`
@@ -239,6 +248,10 @@ struct WireNodeStarted {
     branch_id: OptionalField<String>,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -260,6 +273,10 @@ struct WireNodeCompleted {
     completion_signal_source: OptionalField<WireEnum<WorkflowCompletionSignalSource>>,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -271,6 +288,10 @@ struct WireNodePaused {
     reason: String,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -282,6 +303,10 @@ struct WireLoopIteration {
     stop_condition_met: bool,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -294,6 +319,10 @@ struct WireWatchPoll {
     at: String,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -303,6 +332,10 @@ struct WirePaused {
     pause_reason: String,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -314,6 +347,10 @@ struct WireStepsQueued {
     resolution: OptionalField<WireQueueResolution>,
     #[serde(default)]
     parent_session_id: OptionalField<String>,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -396,6 +433,10 @@ struct WireSnapshot {
     /// drop the whole snapshot it rides on.
     #[serde(default)]
     pause: OptionalValue,
+    /// cyril-9104: the run's `attention[]` (KAS 0.66.43), read leniently by
+    /// [`run_attention`] so an unreadable list never drops the frame.
+    #[serde(default)]
+    attention: OptionalValue,
 }
 
 #[derive(Deserialize)]
@@ -722,13 +763,18 @@ fn parse_run_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workfl
         .into_iter()
         .map(WireNodeDescriptor::try_into_domain)
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(WorkflowEvent::RunStarted(WorkflowRunStarted::new(
+    let attention = run_attention(wire.attention, &workflow_id);
+    let mut event = WorkflowRunStarted::new(
         workflow_id,
         wire.workflow_name,
         wire.inputs,
         node_tree,
         wire.parent_session_id.into_option().map(SessionId::new),
-    )))
+    );
+    if let Some(attention) = attention {
+        event = event.with_attention(attention);
+    }
+    Ok(WorkflowEvent::RunStarted(event))
 }
 
 fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAdapterError> {
@@ -760,6 +806,9 @@ fn parse_node_started(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
     );
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
+    }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
     }
     Ok(WorkflowEvent::NodeStarted(event))
 }
@@ -794,6 +843,9 @@ fn parse_node_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Wor
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
     }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
+    }
     Ok(WorkflowEvent::NodeCompleted(event))
 }
 
@@ -805,6 +857,9 @@ fn parse_node_paused(params: &serde_json::Value) -> Result<WorkflowEvent, Workfl
         WorkflowNodePaused::new(workflow_id, node_id(wire.node_id)?, node_path, wire.reason);
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
+    }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
     }
     Ok(WorkflowEvent::NodePaused(event))
 }
@@ -819,6 +874,9 @@ fn parse_loop_iteration(params: &serde_json::Value) -> Result<WorkflowEvent, Wor
     );
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
+    }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
     }
     Ok(WorkflowEvent::LoopIteration(event))
 }
@@ -837,6 +895,9 @@ fn parse_watch_poll(params: &serde_json::Value) -> Result<WorkflowEvent, Workflo
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
     }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
+    }
     Ok(WorkflowEvent::WatchPoll(event))
 }
 
@@ -848,6 +909,9 @@ fn parse_paused(params: &serde_json::Value) -> Result<WorkflowEvent, WorkflowAda
     );
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
+    }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
     }
     Ok(WorkflowEvent::Paused(event))
 }
@@ -870,6 +934,9 @@ fn parse_steps_queued(params: &serde_json::Value) -> Result<WorkflowEvent, Workf
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
     }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
+    }
     Ok(WorkflowEvent::StepsQueued(event))
 }
 
@@ -887,6 +954,9 @@ fn parse_run_completed(params: &serde_json::Value) -> Result<WorkflowEvent, Work
     let mut event = WorkflowRunCompleted::new(workflow_id, status, final_state)?;
     if let Some(parent_session_id) = wire.parent_session_id.into_option().map(SessionId::new) {
         event = event.with_parent_session_id(parent_session_id);
+    }
+    if let Some(attention) = run_attention(wire.attention, event.workflow_id()) {
+        event = event.with_attention(attention);
     }
     Ok(WorkflowEvent::RunCompleted(event))
 }
@@ -1024,8 +1094,12 @@ impl WireSnapshot {
         if let Some(pause) = self.pause.into_option().and_then(run_pause) {
             metadata = metadata.with_pause(pause);
         }
+        let workflow_id = workflow_id(self.workflow_id, "finalState.workflowId")?;
+        if let Some(attention) = run_attention(self.attention, &workflow_id) {
+            metadata = metadata.with_attention(attention);
+        }
         Ok(WorkflowSnapshot::new(
-            workflow_id(self.workflow_id, "finalState.workflowId")?,
+            workflow_id,
             self.workflow_name,
             self.status.0,
             WorkflowSnapshotData::new(self.inputs, self.artifacts, self.captured_outputs),
@@ -1078,6 +1152,92 @@ fn run_pause(value: serde_json::Value) -> Option<WorkflowRunPause> {
             None
         }
     }
+}
+
+/// The run-level `attention[]` (KAS 0.66.43, cyril-9104): every
+/// "waiting on the user" marker of the run, each naming its step. KAS sends
+/// the whole current list on every lifecycle event and run state. Read
+/// leniently: an unreadable list or entry is warned and skipped, an unknown
+/// kind is debug-logged and skipped — never a reason to drop the frame it
+/// rides on. `None` when the frame carries no list.
+fn run_attention(value: OptionalValue, workflow_id: &WorkflowId) -> Option<Vec<WorkflowAttention>> {
+    let value = value.into_option()?;
+    let Some(entries) = value.as_array() else {
+        tracing::warn!(value = ?value, "malformed workflow attention: not an array; ignored");
+        return None;
+    };
+    Some(
+        entries
+            .iter()
+            .filter_map(|entry| attention_entry(entry, workflow_id))
+            .collect(),
+    )
+}
+
+fn attention_entry(
+    value: &serde_json::Value,
+    workflow_id: &WorkflowId,
+) -> Option<WorkflowAttention> {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct WireAttention {
+        kind: String,
+        since: String,
+        #[serde(default)]
+        tool_call_id: OptionalField<String>,
+        #[serde(default)]
+        consent_round: OptionalField<u32>,
+        node_id: String,
+        node_path: Vec<String>,
+        session_id: String,
+    }
+
+    let wire = match WireAttention::deserialize(value) {
+        Ok(wire) => wire,
+        Err(error) => {
+            tracing::warn!(%error, "malformed workflow attention entry; skipped");
+            return None;
+        }
+    };
+    let kind = match WorkflowAttentionKind::try_from(wire.kind.as_str()) {
+        Ok(kind) => kind,
+        Err(error) => {
+            tracing::debug!(%error, "unknown workflow attention kind; skipped");
+            return None;
+        }
+    };
+    if wire.session_id.is_empty() {
+        tracing::warn!("malformed workflow attention entry: empty sessionId; skipped");
+        return None;
+    }
+    let node_id = match WorkflowNodeId::try_from(wire.node_id) {
+        Ok(node_id) => node_id,
+        Err(error) => {
+            tracing::warn!(%error, "malformed workflow attention entry; skipped");
+            return None;
+        }
+    };
+    let node_path = match WorkflowNodePath::try_new(workflow_id, wire.node_path) {
+        Ok(node_path) => node_path,
+        Err(error) => {
+            tracing::warn!(%error, "malformed workflow attention entry; skipped");
+            return None;
+        }
+    };
+    let mut attention = WorkflowAttention::new(
+        kind,
+        wire.since,
+        node_id,
+        node_path,
+        SessionId::new(wire.session_id),
+    );
+    if let Some(tool_call_id) = wire.tool_call_id.into_option() {
+        attention = attention.with_tool_call_id(crate::types::ToolCallId::new(tool_call_id));
+    }
+    if let Some(consent_round) = wire.consent_round.into_option() {
+        attention = attention.with_consent_round(consent_round);
+    }
+    Some(attention)
 }
 
 impl WireNodeSnapshot {
@@ -5908,5 +6068,246 @@ mod tests {
             logs.contains(&format!("{logged} workflow run pause")),
             "missing `{logged}` log: {logs}"
         );
+    }
+
+    /// The run-level `attention[]` of a raw frame, read with plain serde — an
+    /// independent reading of the same capture bytes.
+    fn wire_attention(value: &serde_json::Value) -> Option<Vec<String>> {
+        let entries = value.get("attention")?.as_array()?;
+        Some(
+            entries
+                .iter()
+                .map(|entry| {
+                    format!(
+                        "{}|{}|{}|{}|{}|{}|{}",
+                        entry["kind"].as_str().unwrap_or("?"),
+                        entry["since"].as_str().unwrap_or("?"),
+                        entry["toolCallId"].as_str().unwrap_or("-"),
+                        entry["consentRound"]
+                            .as_u64()
+                            .map_or_else(|| "-".to_owned(), |round| round.to_string()),
+                        entry["nodeId"].as_str().unwrap_or("?"),
+                        entry["nodePath"]
+                            .as_array()
+                            .map(|path| {
+                                path.iter()
+                                    .filter_map(serde_json::Value::as_str)
+                                    .collect::<Vec<_>>()
+                                    .join("/")
+                            })
+                            .unwrap_or_default(),
+                        entry["sessionId"].as_str().unwrap_or("?"),
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    fn domain_attention(
+        attention: Option<&[crate::types::WorkflowAttention]>,
+    ) -> Option<Vec<String>> {
+        attention.map(|entries| {
+            entries
+                .iter()
+                .map(|entry| {
+                    format!(
+                        "{}|{}|{}|{}|{}|{}|{}",
+                        entry.kind(),
+                        entry.since(),
+                        entry.tool_call_id().map_or("-", |id| id.as_str()),
+                        entry
+                            .consent_round()
+                            .map_or_else(|| "-".to_owned(), |round| round.to_string()),
+                        entry.node_id(),
+                        entry.node_path().segments().join("/"),
+                        entry.session_id().as_str(),
+                    )
+                })
+                .collect()
+        })
+    }
+
+    fn read_trace(rel: &str) -> Vec<serde_json::Value> {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+        trace
+            .lines()
+            .filter(|l| !l.is_empty())
+            .map(|l| serde_json::from_str(l).expect("trace row"))
+            .collect()
+    }
+
+    /// cyril-9104 C1: KAS 0.66.43 puts the run's whole `attention[]` on
+    /// every lifecycle event and on run state. Every event of three live
+    /// captures — a parked question (gate off), a `send_message` question
+    /// (gate on) and permission waits with `toolCallId`/`consentRound` —
+    /// converts with its list intact, and every `run_complete` snapshot
+    /// carries its `finalState.attention`.
+    #[rstest::rstest]
+    #[case::gateoff_park(
+        "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl",
+        "main",
+        true
+    )]
+    #[case::gateon_send_message(
+        "experiments/conductor-spike/audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl",
+        "wfplan",
+        true
+    )]
+    #[case::permission_waits(
+        "experiments/conductor-spike/audit-2.32.0/live/kas-lead-attention-2.32.0.jsonl",
+        "attn",
+        false
+    )]
+    fn attention_read_on_every_event_of_live_captures(
+        #[case] rel: &str,
+        #[case] conn: &str,
+        #[case] has_question: bool,
+    ) {
+        let (mut events, mut entries, mut questions) = (0, 0, 0);
+        for row in read_trace(rel) {
+            if row["conn"] != conn || row["dir"] != "agent->client" {
+                continue;
+            }
+            // `_kiro/workflow/inspect` replies: the run's `state.attention`.
+            if row["msg"]["result"]["state"].is_object() {
+                let result = &row["msg"]["result"];
+                let snapshot = parse_state_reply(result).expect("inspect reply parses");
+                assert_eq!(
+                    domain_attention(snapshot.attention()),
+                    wire_attention(&result["state"]),
+                    "{rel}: inspect state.attention"
+                );
+                let list = snapshot.attention().unwrap_or_default();
+                entries += list.len();
+                questions += list.iter().filter(|a| a.is_parked_question()).count();
+                continue;
+            }
+            let Some(method) = row["msg"]["method"].as_str() else {
+                continue;
+            };
+            let Some(kind) = method.strip_prefix("_kiro/workflow/") else {
+                continue;
+            };
+            let params = &row["msg"]["params"];
+            let WorkflowFrameOutcome::Converted(event) =
+                to_notification(&format!("kiro/workflow/{kind}"), params)
+            else {
+                panic!("{rel}: {method} did not convert");
+            };
+            events += 1;
+            let wire = wire_attention(params);
+            assert!(
+                wire.is_some(),
+                "{rel}: every 0.66.43 {method} carries attention"
+            );
+            assert_eq!(domain_attention(event.attention()), wire, "{rel}: {method}");
+            if let WorkflowEvent::RunCompleted(completion) = &*event {
+                assert_eq!(
+                    domain_attention(completion.final_state().attention()),
+                    wire_attention(&params["finalState"]),
+                    "{rel}: finalState.attention"
+                );
+            }
+            let list = event.attention().unwrap_or_default();
+            entries += list.len();
+            questions += list.iter().filter(|a| a.is_parked_question()).count();
+        }
+        assert!(
+            events > 0 && entries > 0,
+            "{rel}: the capture exercises attention"
+        );
+        assert_eq!(questions > 0, has_question, "{rel}: parked questions");
+    }
+
+    /// cyril-9104 C1: an inspect reply's `state.attention` reaches the
+    /// snapshot (the `/workflow attach|status` path).
+    #[test]
+    fn state_reply_carries_attention() {
+        let reply = read_trace(
+            "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl",
+        )
+        .into_iter()
+        .find(|row| row["tag"] == "park:inspect" && row["dir"] == "agent->client")
+        .expect("parked inspect reply");
+        let snapshot = parse_state_reply(&reply["msg"]["result"]).expect("inspect reply parses");
+        let attention = snapshot.attention().expect("state.attention");
+        assert_eq!(attention.len(), 1);
+        assert!(attention[0].is_parked_question());
+        assert_eq!(attention[0].node_id().as_str(), "ask");
+        assert_eq!(
+            attention[0].session_id().as_str(),
+            "sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b"
+        );
+    }
+
+    /// cyril-9104 C1: `attention` is read leniently. An unreadable list or
+    /// entry is skipped (warned), an unknown kind is skipped (debug), and the
+    /// event it rides on still converts; the readable entries survive.
+    #[rstest::rstest]
+    #[case::not_an_array(serde_json::json!("question"), 0, "malformed workflow attention")]
+    #[case::null(serde_json::Value::Null, 0, "malformed workflow attention")]
+    #[case::entry_missing_session(
+        serde_json::json!([{"kind": "question", "since": "t", "nodeId": "ask", "nodePath": ["wf-a", "ask"]}]),
+        0,
+        "malformed workflow attention entry"
+    )]
+    #[case::unknown_kind(
+        serde_json::json!([{"kind": "budget", "since": "t", "nodeId": "ask", "nodePath": ["wf-a", "ask"], "sessionId": "s"}]),
+        0,
+        "unknown workflow attention kind"
+    )]
+    #[case::foreign_path(
+        serde_json::json!([{"kind": "question", "since": "t", "nodeId": "ask", "nodePath": ["wf-other", "ask"], "sessionId": "s"}]),
+        0,
+        "malformed workflow attention entry"
+    )]
+    #[case::one_bad_one_good(
+        serde_json::json!([{"kind": "question"}, {"kind": "question", "since": "t", "nodeId": "ask", "nodePath": ["wf-a", "ask"], "sessionId": "s"}]),
+        1,
+        "malformed workflow attention entry"
+    )]
+    fn unreadable_attention_is_skipped_not_fatal(
+        #[case] attention: serde_json::Value,
+        #[case] kept: usize,
+        #[case] logged: &str,
+    ) {
+        let params = serde_json::json!({
+            "workflowId": "wf-a",
+            "nodeId": "ask",
+            "nodePath": ["wf-a", "ask"],
+            "reason": "Awaiting next user message on step session.",
+            "attention": attention,
+        });
+        let (outcome, logs) =
+            with_captured_debug_logs(|| to_notification("kiro/workflow/node_paused", &params));
+        let WorkflowFrameOutcome::Converted(event) = outcome else {
+            panic!("unreadable attention must not drop the event");
+        };
+        assert_eq!(event.attention().map_or(0, <[_]>::len), kept);
+        assert!(logs.contains(logged), "missing `{logged}` log: {logs}");
+    }
+
+    /// cyril-9104 C1: absent is not empty — an engine that sends no
+    /// `attention` (pre-0.66.43) leaves it `None`; `[]` is an empty list.
+    #[test]
+    fn absent_attention_is_none_and_empty_is_empty() {
+        let mut params = serde_json::json!({
+            "workflowId": "wf-a",
+            "pauseReason": "Paused by the user.",
+        });
+        let WorkflowFrameOutcome::Converted(absent) =
+            to_notification("kiro/workflow/paused", &params)
+        else {
+            panic!("paused converts");
+        };
+        assert_eq!(absent.attention(), None);
+        params["attention"] = serde_json::json!([]);
+        let WorkflowFrameOutcome::Converted(empty) =
+            to_notification("kiro/workflow/paused", &params)
+        else {
+            panic!("paused converts");
+        };
+        assert_eq!(empty.attention(), Some(&[][..]));
     }
 }

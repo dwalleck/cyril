@@ -394,6 +394,15 @@ fn print_notification(n: &Notification) {
         Notification::WorkflowCommand(outcome) => {
             println!("  [WorkflowCommand] {outcome:?}");
         }
+        Notification::WorkflowMessage(message) => {
+            println!(
+                "  [WorkflowMessage] {} {} → {}: {}",
+                message.sender(),
+                message.severity(),
+                message.recipient(),
+                message.message()
+            );
+        }
         Notification::BridgeDisconnected { reason } => {
             println!("  [BridgeDisconnected] {reason}");
         }

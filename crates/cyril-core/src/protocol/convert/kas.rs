@@ -15,6 +15,7 @@ use crate::types::{
     UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
+pub(crate) mod notify;
 pub(crate) mod powers;
 pub(crate) mod workflow;
 

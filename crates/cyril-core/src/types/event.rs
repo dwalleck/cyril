@@ -397,6 +397,13 @@ pub enum Notification {
     /// rides inside `Fetched`'s own `Box<WorkflowSnapshot>`), so a box here
     /// would be indirection without a size win — see the fence below.
     WorkflowCommand(WorkflowCommandOutcome),
+
+    /// A workflow `send_message` between a step and its run's parent, relayed
+    /// by KAS `_kiro/session/notify` (cyril-9104). Global: the App hands it to
+    /// the `WorkflowTracker` once (a step's question, the parent's answer) and
+    /// never forwards it to `SessionController` or `UiState`. Boxed like
+    /// [`Notification::Workflow`].
+    WorkflowMessage(Box<crate::types::WorkflowMessage>),
     UsageAccountUpdated {
         account: UsageAccount,
         fetched_at_ms: Option<u64>,
