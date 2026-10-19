@@ -9369,6 +9369,111 @@ mod tests {
         );
         r.assert_settled();
     }
+
+    /// Feeds the `conn` rows of a committed trace, file lines `first..=last`,
+    /// through the bridge's mediated replay into an existing App.
+    #[cfg(feature = "kas")]
+    fn q9104_feed(app: &mut App, rel: &str, conn: &str, main: &str, first: usize, last: usize) {
+        use cyril_core::test_support::{ReplayFrame, kas_trace_replay};
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(rel);
+        let trace = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        let mut rows = String::new();
+        for (index, line) in trace.lines().enumerate() {
+            if !(first..=last).contains(&(index + 1)) || line.is_empty() {
+                continue;
+            }
+            let row: serde_json::Value =
+                serde_json::from_str(line).unwrap_or_else(|e| panic!("{rel}: trace row: {e}"));
+            if row.get("conn").and_then(serde_json::Value::as_str) == Some(conn) {
+                rows.push_str(line);
+                rows.push('\n');
+            }
+        }
+        for frame in kas_trace_replay(&rows, main) {
+            match frame {
+                ReplayFrame::Notification(routed) => {
+                    app.handle_notification(routed);
+                }
+                ReplayFrame::Permission(request) => app.handle_permission_request(request),
+            }
+        }
+    }
+
+    /// cyril-9104 C8: end to end on the live gate-off capture. With the
+    /// `park` step parked (through line 993), `/answer FINISHED` sends the
+    /// answer as a prompt to the STEP session; the step's resumed frames
+    /// (994–1019, the probe's own answer) clear the question and complete
+    /// the run.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn answer_command_prompts_the_parked_step_and_the_run_resumes() {
+        let (handle, mut commands) = BridgeHandle::for_tests_with_command_rx();
+        let mut app = App::new(
+            handle,
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::resolve(
+                AgentEngine::Kas,
+                PathBuf::from("/tmp"),
+            ),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::Kas,
+        );
+        let main = SessionId::new(Q9104_GATEOFF_MAIN);
+        app.handle_notification(session_created_frame(&main));
+        q9104_feed(&mut app, Q9104_GATEOFF, "main", Q9104_GATEOFF_MAIN, 1, 993);
+        while commands.try_recv().is_ok() {}
+        assert_eq!(app.workflow_tracker.step_questions().len(), 1, "parked");
+
+        app.ui_state.insert_text("/answer FINISHED");
+        app.submit_input().await.expect("submit /answer");
+        match commands.try_recv().expect("one outbound command") {
+            BridgeCommand::AnswerWorkflowStep { session_id, answer } => {
+                assert_eq!(
+                    session_id.as_str(),
+                    "sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b"
+                );
+                assert_eq!(answer, "FINISHED");
+            }
+            other => panic!("the answer must prompt the step session, got {other:?}"),
+        }
+        assert!(commands.try_recv().is_err(), "nothing else is sent");
+        assert!(app.ui_state.messages().iter().any(|message| matches!(
+            message.kind(),
+            ChatMessageKind::System(text)
+                if text == "Sent your answer to step \"ask\" of workflow \"park\"."
+        )));
+
+        q9104_feed(
+            &mut app,
+            Q9104_GATEOFF,
+            "main",
+            Q9104_GATEOFF_MAIN,
+            994,
+            1019,
+        );
+        assert!(
+            app.workflow_tracker.step_questions().is_empty(),
+            "the step resumed"
+        );
+        let run = WorkflowId::try_from("wf_33675f9136bfc71d".to_owned()).expect("run id");
+        assert_eq!(
+            app.workflow_tracker.get(&run).and_then(|run| run.status()),
+            Some(WorkflowRunStatus::Completed)
+        );
+    }
+
+    /// cyril-2lh8: the same live 0.66.43 capture closes every parent wake
     /// with its credits after `turn_end`, and each wake that follows a run's
     /// end is that run's completion line with the run's total — its step
     /// turns plus every parent wake attributed to it (the loop run's total

@@ -59,6 +59,8 @@ mod review;
 mod routing;
 mod saturation;
 mod stall;
+// cyril-9104: no `kas`-specific arm — the step answer is a standard prompt.
+mod step_answer;
 // Deliberately ungated (cyril-k3lz review finding 9): SetThinking has no
 // `kas`-specific dispatch arm, and release builds ship `--all-features`, so
 // the toggle's wire and ack contract must hold in `kas` builds too.
@@ -91,6 +93,7 @@ fn command_name(command: &BridgeCommand) -> &'static str {
         BridgeCommand::ListKasHooks { .. } => "ListKasHooks",
         BridgeCommand::Workflow { .. } => "Workflow",
         BridgeCommand::SetKasHookEnabled { .. } => "SetKasHookEnabled",
+        BridgeCommand::AnswerWorkflowStep { .. } => "AnswerWorkflowStep",
         BridgeCommand::Shutdown => "Shutdown",
     }
 }

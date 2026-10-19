@@ -45,6 +45,9 @@ pub(super) struct Script {
     /// (cyril-lki9 C12). Kept apart from `received` so the exact call-order
     /// ledgers other fences assert are unchanged.
     pub(super) cancelled_sessions: Arc<Mutex<Vec<String>>>,
+    /// `(sessionId, first text block)` of every `session/prompt` the agent
+    /// received, in order (cyril-9104: a step answer targets the step session).
+    pub(super) prompted: Arc<Mutex<Vec<(String, String)>>>,
     pub(super) inbound: Option<InboundProbe>,
     pub(super) emit_unknown_update: bool,
     pub(super) request_extension_during_initialize: bool,
@@ -98,6 +101,11 @@ impl Script {
         lock(&self.received)
     }
 
+    /// `(sessionId, text)` of every prompt the agent received (cyril-9104).
+    pub(super) fn prompted(&self) -> MutexGuard<'_, Vec<(String, String)>> {
+        lock(&self.prompted)
+    }
+
     /// The exact extension-call ledger, read by the C5 command oracle and the
     /// thinking-toggle contract tests.
     pub(super) fn ext_calls(&self) -> MutexGuard<'_, Vec<(String, serde_json::Value)>> {
@@ -145,6 +153,7 @@ fn fake_agent(
     let received_prompt = Arc::clone(&script.borrow().received);
     let received_cancel = Arc::clone(&script.borrow().received);
     let cancelled_sessions = Arc::clone(&script.borrow().cancelled_sessions);
+    let prompted = Arc::clone(&script.borrow().prompted);
     let received_load = Arc::clone(&script.borrow().received);
     let received_ext = Arc::clone(&script.borrow().received);
     let ext_calls = Arc::clone(&script.borrow().ext_calls);
@@ -374,6 +383,17 @@ fn fake_agent(
                     })?;
                 }
                 record(&received_prompt, "prompt");
+                lock(&prompted).push((
+                    request.session_id.to_string(),
+                    request
+                        .prompt
+                        .iter()
+                        .find_map(|block| match block {
+                            acp::ContentBlock::Text(text) => Some(text.text.clone()),
+                            _ => None,
+                        })
+                        .unwrap_or_default(),
+                ));
                 if emit_unknown_update {
                     let notification = UntypedMessage::new(
                         "session/update",

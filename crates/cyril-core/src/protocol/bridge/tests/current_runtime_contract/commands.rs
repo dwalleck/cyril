@@ -196,6 +196,18 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             )
             .await;
 
+            // cyril-9104: a step answer is a quiet cell — a prompt to the step
+            // session whose success reports nothing.
+            send_command(
+                &sender,
+                &mut ledger,
+                BridgeCommand::AnswerWorkflowStep {
+                    session_id: crate::types::SessionId::new("step-1"),
+                    answer: "an answer".to_owned(),
+                },
+            )
+            .await;
+
             send_command(&sender, &mut ledger, BridgeCommand::QueryUsageAccount).await;
             let usage = next_notification("QueryUsageAccount", &mut rx).await;
             assert!(
@@ -336,6 +348,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                     "SpawnSession",
                     "TerminateSession",
                     "SendMessage",
+                    "AnswerWorkflowStep",
                     "QueryUsageAccount",
                     "ListSettings",
                     "SteerSession",
@@ -424,6 +437,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             "ext:session/spawn",
             "ext:kiro.dev/session/terminate",
             "ext:message/send",
+            "prompt",
             "ext:kiro.dev/settings/list",
             "ext:session/steer",
             "ext:session/steer/clear",

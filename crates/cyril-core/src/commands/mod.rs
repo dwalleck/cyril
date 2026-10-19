@@ -1,3 +1,4 @@
+pub mod answer;
 pub mod builtin;
 pub mod subagent;
 pub mod workflow;
@@ -512,6 +513,10 @@ impl CommandRegistry {
             names.push("review");
             registry.register(Arc::new(workflow::WorkflowCommand::new(workspace_root)));
             registry.register(Arc::new(workflow::ReviewCommand));
+            // cyril-9104: answering a parked workflow step needs the same
+            // KAS workflow surface.
+            names.push("answer");
+            registry.register(Arc::new(answer::AnswerCommand));
         }
         // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
         // advertises 25 commands and `powers` is not among them, and KAS

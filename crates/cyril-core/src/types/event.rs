@@ -822,6 +822,16 @@ pub enum BridgeCommand {
         /// Workspace roots for the follow-up listing that reports the result.
         workspace_paths: Vec<std::path::PathBuf>,
     },
+    /// Answer a workflow step parked on a question (cyril-9104): the user's
+    /// text as `session/prompt` to the step session, which resumes the step
+    /// and its run. Deliberately outside cyril's own turn mediation — the
+    /// step's turn is not the main session's, so the main session stays free
+    /// and its busy guard untouched. A failed prompt answers `BridgeError`;
+    /// success is the run's own lifecycle frames.
+    AnswerWorkflowStep {
+        session_id: SessionId,
+        answer: String,
+    },
     Shutdown,
 }
 
