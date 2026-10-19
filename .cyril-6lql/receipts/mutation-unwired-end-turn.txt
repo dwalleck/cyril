@@ -1,0 +1,26 @@
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 6.98s
+     Running unittests src/main.rs (target/debug/deps/cyril-87e493c4b738a252)
+
+running 3 tests
+test app::tests::turn_end_wires_pause_eviction::case_2_cancelled_turn_rewakes ... ok
+test app::tests::turn_end_wires_pause_eviction::case_1_ended_turn_evicts ... FAILED
+test app::tests::stale_repeat_cap_pause_never_labels_a_later_wake ... ok
+
+failures:
+
+---- app::tests::turn_end_wires_pause_eviction::case_1_ended_turn_evicts stdout ----
+
+thread 'app::tests::turn_end_wires_pause_eviction::case_1_ended_turn_evicts' (766173) panicked at crates/cyril/src/app.rs:8339:9:
+assertion `left == right` failed: ["Session created: main", "─── ⚙ workflow \"recipe-wf-l\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───"]
+  left: Some("─── ⚙ workflow \"recipe-wf-l\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───")
+ right: Some("─── ⚙ agent-initiated · send-message-wake ───")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    app::tests::turn_end_wires_pause_eviction::case_1_ended_turn_evicts
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 236 filtered out; finished in 0.02s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`

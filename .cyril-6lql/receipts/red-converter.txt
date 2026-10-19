@@ -1,0 +1,66 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 22.46s
+     Running unittests src/lib.rs (target/debug/deps/cyril_core-c7474150056cb81f)
+
+running 7 tests
+test protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_1_unknown_kind ... FAILED
+test protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_2_missing_node ... FAILED
+test protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_3_empty_node ... FAILED
+test protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_4_negative_budget ... FAILED
+test protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_6_null ... FAILED
+test protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_5_not_an_object ... FAILED
+test protocol::convert::kas::workflow::tests::run_pause_parsed_from_final_state ... FAILED
+
+failures:
+
+---- protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_1_unknown_kind stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_1_unknown_kind' (2476453) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5869:9:
+missing `unknown` log: 
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_2_missing_node stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_2_missing_node' (2476454) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5869:9:
+missing `malformed` log: 
+
+---- protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_3_empty_node stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_3_empty_node' (2476455) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5869:9:
+missing `malformed` log: 
+
+---- protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_4_negative_budget stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_4_negative_budget' (2476456) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5869:9:
+missing `malformed` log: 
+
+---- protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_6_null stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_6_null' (2476458) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5869:9:
+missing `malformed` log: 
+
+---- protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_5_not_an_object stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_5_not_an_object' (2476457) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5869:9:
+missing `malformed` log: 
+
+---- protocol::convert::kas::workflow::tests::run_pause_parsed_from_final_state stdout ----
+
+thread 'protocol::convert::kas::workflow::tests::run_pause_parsed_from_final_state' (2476452) panicked at crates/cyril-core/src/protocol/convert/kas/workflow.rs:5821:9:
+assertion `left == right` failed
+  left: [(Paused, None), (Completed, None), (Paused, None), (Paused, None), (Aborted, None), (Paused, None), (Aborted, None)]
+ right: [(Paused, None), (Completed, None), (Paused, Some(("loop", 1, 1))), (Paused, Some(("loop", 2, 2))), (Aborted, None), (Paused, Some(("loop", 2, 2))), (Aborted, None)]
+
+
+failures:
+    protocol::convert::kas::workflow::tests::run_pause_parsed_from_final_state
+    protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_1_unknown_kind
+    protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_2_missing_node
+    protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_3_empty_node
+    protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_4_negative_budget
+    protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_5_not_an_object
+    protocol::convert::kas::workflow::tests::unreadable_pause_is_skipped_not_fatal::case_6_null
+
+test result: FAILED. 0 passed; 7 failed; 0 ignored; 0 measured; 1304 filtered out; finished in 0.01s
+
+error: test failed, to rerun pass `-p cyril-core --lib`

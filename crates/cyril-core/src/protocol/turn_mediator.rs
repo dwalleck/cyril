@@ -1327,30 +1327,77 @@ mod tests {
         ];
         for (rel, main, want) in census {
             let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
-            let main = sid(main);
-            let mut m = TurnMediator::new();
-            let mut got: Vec<(String, String)> = Vec::new();
-            // Through `mediate` — the bridge's own per-frame sequence — so the
-            // census sees exactly the announcements the App would receive.
-            for routed in crate::test_support::kas_trace_routed(&trace) {
-                for frame in m.mediate(routed, Some(&main)).forward {
-                    if let Notification::AgentInitiatedTurn(origin) = &frame.notification {
-                        let session = frame
-                            .session_id
-                            .as_ref()
-                            .map(ToString::to_string)
-                            .unwrap_or_default();
-                        let reason = origin.reason().unwrap_or("<none>").to_owned();
-                        got.push((session, reason));
-                    }
+            assert_eq!(
+                announcements(&trace, main),
+                want.iter()
+                    .map(|(s, r)| ((*s).to_owned(), (*r).to_owned()))
+                    .collect::<Vec<_>>(),
+                "{rel}: announcements (session, reason) in order"
+            );
+        }
+    }
+
+    /// Every agent-initiated announcement `mediate` forwards for `trace`, as
+    /// `(session, reason)` in order — exactly what the App receives.
+    #[cfg(feature = "kas")]
+    fn announcements(trace: &str, main: &str) -> Vec<(String, String)> {
+        let main = sid(main);
+        let mut m = TurnMediator::new();
+        let mut got = Vec::new();
+        for routed in crate::test_support::kas_trace_routed(trace) {
+            for frame in m.mediate(routed, Some(&main)).forward {
+                if let Notification::AgentInitiatedTurn(origin) = &frame.notification {
+                    let session = frame
+                        .session_id
+                        .as_ref()
+                        .map(ToString::to_string)
+                        .unwrap_or_default();
+                    got.push((session, origin.reason().unwrap_or("<none>").to_owned()));
                 }
             }
-
-            let want: Vec<(String, String)> = want
-                .iter()
-                .map(|(s, r)| ((*s).to_owned(), (*r).to_owned()))
-                .collect();
-            assert_eq!(got, want, "{rel}: announcements (session, reason) in order");
         }
+        got
+    }
+
+    /// cyril-6lql (KAS 0.66.43, live gate-off capture, `main` connection):
+    /// the repeat-cap pause's parent wake reaches the App as exactly one
+    /// announcement, a NON-completion `send-message-wake` on the main session
+    /// — the shape the workflow tracker's repeat-cap label answers — between
+    /// the terminal-run `workflow-complete-wake`s cyril-lki9 labels.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn repeat_cap_wake_is_announced_as_a_message_wake() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let rel = "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl";
+        let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+        let main_conn: String = trace
+            .lines()
+            .filter(|line| {
+                serde_json::from_str::<serde_json::Value>(line)
+                    .map(|row| row["conn"] == "main")
+                    .unwrap_or_else(|e| panic!("{rel}: trace row: {e}"))
+            })
+            .flat_map(|line| [line, "\n"])
+            .collect();
+        let main = "sess_259b943b-3d2a-49d4-8430-4b4975864275";
+        let reasons: Vec<String> = announcements(&main_conn, main)
+            .into_iter()
+            .map(|(session, reason)| {
+                assert_eq!(session, main, "every wake in this capture is the parent's");
+                reason
+            })
+            .collect();
+        assert_eq!(
+            reasons,
+            [
+                "workflow-complete-wake",
+                "send-message-wake",
+                "workflow-complete-wake",
+                "workflow-complete-wake",
+                "workflow-complete-wake",
+                "workflow-complete-wake",
+                "workflow-complete-wake",
+            ]
+        );
     }
 }

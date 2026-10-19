@@ -1208,9 +1208,10 @@ impl App {
     }
 
     /// cyril-lki9 C13/C14: the transcript side of agent-initiated turns. A
-    /// turn start claims the session's queued workflow completions; an
-    /// announcement opens the turn's header, named — for a workflow completion
-    /// only — by the newest completion that turn claimed; an engine-injected
+    /// turn start claims the session's queued workflow wake causes; an
+    /// announcement opens the turn's header, named by the newest cause of its
+    /// kind that turn claimed (a terminal run for a workflow completion, a
+    /// repeat-cap pause for any other wake — cyril-6lql); an engine-injected
     /// message shows as an inline notice, a `notify-wf` one named by the newest
     /// completion since the turn started. The tracker owns the queue, the UI
     /// builds all text.
@@ -1222,11 +1223,11 @@ impl App {
     ) {
         match notification {
             Notification::TurnStarted => self.workflow_tracker.claim_wake_labels(session),
+            Notification::TurnCompleted { stop_reason } => {
+                self.workflow_tracker.end_turn(session, *stop_reason);
+            }
             Notification::AgentInitiatedTurn(origin) => {
-                let label = origin
-                    .is_workflow_completion()
-                    .then(|| self.workflow_tracker.take_wake_label(session))
-                    .flatten();
+                let label = self.workflow_tracker.take_turn_label(session, origin);
                 self.ui_state
                     .begin_agent_initiated_turn(transcript, origin, label.as_ref());
                 self.redraw_needed = true;
@@ -8517,6 +8518,82 @@ mod tests {
         }
     }
 
+    /// A `paused` run_complete parented to `parent` whose repeat `repeat`
+    /// hit its iteration cap `max` (cyril-6lql; KAS 0.66.43 shape).
+    fn repeat_cap_pause_frame(
+        id: &str,
+        parent: &SessionId,
+        repeat: &str,
+        max: u32,
+    ) -> Notification {
+        let snapshot = WorkflowSnapshot::new(
+            workflow_id(id),
+            format!("recipe-{id}"),
+            WorkflowRunStatus::Paused,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(workflow_node_id("root"), Vec::new()),
+                WorkflowNodeStatus::Paused,
+                Vec::new(),
+            ),
+            WorkflowSnapshotMetadata::new("2026-10-18T00:00:00Z".to_owned(), 0)
+                .with_parent_session_id(parent.clone())
+                .with_pause(cyril_core::types::WorkflowRunPause::RepeatCap(
+                    cyril_core::types::WorkflowRepeatCap::new(workflow_node_id(repeat), max, max),
+                )),
+        );
+        match WorkflowRunCompleted::new(workflow_id(id), WorkflowCompletionStatus::Paused, snapshot)
+        {
+            Ok(completion) => {
+                Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
+            }
+            Err(error) => panic!("valid pause fixture rejected: {error}"),
+        }
+    }
+
+    /// cyril-6lql delta review: the App wires guard (b) to the session's
+    /// `TurnCompleted` with its stop reason. A repeat-cap pause that lands
+    /// during a parent turn is evicted when that turn ends normally (KAS
+    /// noted it in the turn and will not wake for it), but survives a
+    /// CANCELLED end — KAS re-wakes the parent with the unread note
+    /// (`cancelLocalTurn({rewakeNotifications:true})`), and that
+    /// `send-message-wake` is the pause's.
+    #[rstest::rstest]
+    #[case::ended_turn_evicts(StopReason::EndTurn, "─── ⚙ agent-initiated · send-message-wake ───")]
+    #[case::cancelled_turn_rewakes(
+        StopReason::Cancelled,
+        "─── ⚙ workflow \"recipe-wf-l\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───"
+    )]
+    fn turn_end_wires_pause_eviction(#[case] stop_reason: StopReason, #[case] want: &str) {
+        use cyril_core::types::AgentInitiation;
+        let mut app = test_app();
+        let main = SessionId::new("main");
+        app.handle_notification(session_created_frame(&main));
+        app.handle_notification(RoutedNotification::global(workflow_snapshot_frame(
+            "wf-l",
+            WorkflowRunStatus::Running,
+        )));
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(RoutedNotification::global(repeat_cap_pause_frame(
+            "wf-l", &main, "loop", 1,
+        )));
+        app.handle_notification(lki9_on(&main, Notification::TurnCompleted { stop_reason }));
+        app.handle_notification(lki9_on(&main, Notification::TurnStarted));
+        app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("send-message-wake".into()),
+                false,
+            )),
+        ));
+        let lines = lki9_system_lines(app.ui_state.messages());
+        assert_eq!(lines.last().map(String::as_str), Some(want), "{lines:?}");
+    }
+
     fn lki9_system_lines(messages: &[cyril_ui::traits::ChatMessage]) -> Vec<String> {
         messages
             .iter()
@@ -8744,12 +8821,49 @@ mod tests {
 
     #[cfg(feature = "kas")]
     fn lki9_replay(rel: &str, main: &str) -> Lki9Replay {
-        use cyril_core::test_support::{ReplayFrame, kas_trace_replay};
-
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../..")
             .join(rel);
         let trace = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        lki9_replay_trace(rel, &trace, main)
+    }
+
+    /// [`lki9_replay`] of one connection of a multi-connection probe trace
+    /// (2.32.0 audit captures record a `main` and a `reload` connection; a
+    /// replay is one App on one connection).
+    #[cfg(feature = "kas")]
+    fn lki9_replay_conn(rel: &str, conn: &str, main: &str) -> Lki9Replay {
+        lki9_replay_conn_through(rel, conn, main, usize::MAX)
+    }
+
+    /// [`lki9_replay_conn`] of the trace's file lines `1..=last_line` only.
+    #[cfg(feature = "kas")]
+    fn lki9_replay_conn_through(rel: &str, conn: &str, main: &str, last_line: usize) -> Lki9Replay {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(rel);
+        let trace = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        let mut one_conn = String::new();
+        for line in trace
+            .lines()
+            .take(last_line)
+            .filter(|line| !line.is_empty())
+        {
+            let row: serde_json::Value =
+                serde_json::from_str(line).unwrap_or_else(|e| panic!("{rel}: trace row: {e}"));
+            if row.get("conn").and_then(serde_json::Value::as_str) == Some(conn) {
+                one_conn.push_str(line);
+                one_conn.push('\n');
+            }
+        }
+        assert!(!one_conn.is_empty(), "{rel}: no `{conn}` rows");
+        lki9_replay_trace(rel, &one_conn, main)
+    }
+
+    #[cfg(feature = "kas")]
+    fn lki9_replay_trace(rel: &str, trace: &str, main: &str) -> Lki9Replay {
+        use cyril_core::test_support::{ReplayFrame, kas_trace_replay};
+
         let (mut app, _rx) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
         let main = SessionId::new(main);
         app.handle_notification(session_created_frame(&main));
@@ -8758,7 +8872,7 @@ mod tests {
         let mut completed = 0;
         let mut violations = Vec::new();
         let mut permissions = Vec::new();
-        for (index, frame) in kas_trace_replay(&trace, main.as_str())
+        for (index, frame) in kas_trace_replay(trace, main.as_str())
             .into_iter()
             .enumerate()
         {
@@ -9052,6 +9166,102 @@ mod tests {
             "the cancelled wake and the prompt's turn"
         );
         r.assert_settled();
+    }
+
+    /// cyril-6lql: the live 0.66.43 gate-off capture through production
+    /// conversion, `TurnMediator::mediate` and the App. The repeat-cap pause's
+    /// unsolicited parent wake (a `send-message-wake`, billed) is labelled
+    /// with its run and repeat; every terminal wake keeps its cyril-lki9
+    /// header; the run's later abort, delivered into that busy wake, keeps
+    /// its named mid-turn notice; no wake is generic.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn repeat_cap_wake_is_labelled_in_live_capture() {
+        let r = lki9_replay_conn(
+            "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl",
+            "main",
+            "sess_259b943b-3d2a-49d4-8430-4b4975864275",
+        );
+        let transcript = r.transcript();
+        let headers: Vec<&str> = transcript
+            .iter()
+            .filter_map(|kind| match kind {
+                ChatMessageKind::System(text) if text.starts_with("─── ⚙") => {
+                    Some(text.as_str())
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            headers,
+            [
+                "─── ⚙ workflow \"audit-linear\" completed · agent follow-up ───",
+                "─── ⚙ workflow \"loop\" paused · repeat \"loop\" reached its iteration limit (1) · agent follow-up ───",
+                "─── ⚙ workflow \"loop\" aborted · agent follow-up ───",
+                "─── ⚙ workflow \"watch-audit\" completed · agent follow-up ───",
+                "─── ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · agent follow-up ───",
+                "─── ⚙ workflow \"park\" completed · agent follow-up ───",
+                "─── ⚙ workflow \"agent-wf-coder\" completed · agent follow-up ───",
+            ],
+            "one labelled header per main wake, in wire order"
+        );
+        let repeat_header =
+            lki9_position_system(&transcript, headers[1]).expect("repeat-cap header exists");
+        let abort_notice = transcript
+            .iter()
+            .position(|kind| {
+                matches!(kind, ChatMessageKind::System(text)
+                    if text.starts_with("⚙ workflow \"loop\" aborted (noted mid-turn):"))
+            })
+            .expect("the abort inside the repeat-cap wake is a named notice");
+        assert!(
+            repeat_header < abort_notice
+                && transcript[repeat_header + 1..abort_notice]
+                    .iter()
+                    .any(|kind| lki9_is_agent_text(kind)),
+            "the repeat-cap header opens the wake whose text precedes the abort notice: {transcript:?}"
+        );
+        assert_eq!(r.main_turns_started, 7, "seven captured parent wakes");
+        assert_eq!(r.main_turns_completed, 7);
+        r.assert_settled();
+    }
+
+    /// cyril-6lql review (Medium): a repeat-cap pause that never woke the
+    /// parent must not label a later, unrelated wake. In the live capture
+    /// the loop run pauses again at its cap (line 580) while the parent's
+    /// repeat-cap wake is still running, so KAS notes it mid-turn (583) and
+    /// never wakes for it, and the run then aborts (584). After that wake ends
+    /// (653), the next non-completion wake on the parent (here a synthetic
+    /// one, e.g. a cyril-pd4b give-up or a step's note) gets a generic header,
+    /// never `repeat "loop" … (2)`.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn stale_repeat_cap_pause_never_labels_a_later_wake() {
+        use cyril_core::types::AgentInitiation;
+        let main = "sess_259b943b-3d2a-49d4-8430-4b4975864275";
+        let mut r = lki9_replay_conn_through(
+            "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl",
+            "main",
+            main,
+            653,
+        );
+        r.assert_settled();
+        let main = SessionId::new(main);
+        r.app
+            .handle_notification(lki9_on(&main, Notification::TurnStarted));
+        r.app.handle_notification(lki9_on(
+            &main,
+            Notification::AgentInitiatedTurn(AgentInitiation::new(
+                Some("send-message-wake".into()),
+                false,
+            )),
+        ));
+        let lines = lki9_system_lines(r.app.ui_state.messages());
+        assert_eq!(
+            lines.last().map(String::as_str),
+            Some("─── ⚙ agent-initiated · send-message-wake ───"),
+            "a stale pause must not name an unrelated wake: {lines:?}"
+        );
     }
 
     /// cyril-0qe6 C4: an attach snapshot seeds the tracker exactly once and
