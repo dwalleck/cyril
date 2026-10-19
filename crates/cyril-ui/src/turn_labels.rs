@@ -1,5 +1,6 @@
-//! Header and notice text for agent-initiated turns and engine-injected
-//! messages (cyril-lki9 spec B1/B3/B4/B5).
+//! Header, footer and notice text for agent-initiated turns and
+//! engine-injected messages (cyril-lki9 spec B1/B3/B4/B5; repeat-cap wakes
+//! cyril-6lql; credit footers cyril-2lh8).
 //!
 //! One pure function per concern, like `workflow_format`: `UiState` and the
 //! subagent streams turn each announcement or injection into exactly one
@@ -7,7 +8,7 @@
 //! lives in this module (module-shape fence C21 R2).
 
 use cyril_core::types::{AgentInitiation, WorkflowRunStatus};
-use cyril_core::workflow::WakeLabel;
+use cyril_core::workflow::{AgentTurnClose, CompletionNotice, WakeLabel};
 
 /// The header line that opens an agent-initiated turn.
 ///
@@ -48,17 +49,33 @@ pub(crate) fn header_text(origin: &AgentInitiation, label: Option<&WakeLabel>) -
 }
 
 /// The notice for a workflow completion KAS injected into a busy turn (B5):
-/// `⚙ workflow "<name>" <status> (noted mid-turn):` — or `⚙ workflow ended
-/// (noted mid-turn):` when the run is unknown — followed by the engine's text
-/// verbatim on the next line(s), when it sent any.
+/// `⚙ workflow "<name>" <status> · run so far <total> credits (noted
+/// mid-turn):` — a running total, since no follow-up wake exists yet to
+/// close it and the same run's later lines may show more (cyril-2lh8); the
+/// segment is left out when nothing was metered — or
+/// `⚙ workflow ended (noted mid-turn):` when the run is unknown — followed by
+/// the engine's text verbatim on the next line(s), when it sent any.
 #[must_use]
-pub(crate) fn workflow_notice_text(label: Option<&WakeLabel>, content: Option<&str>) -> String {
-    let head = match label {
-        Some(label) => format!(
-            "⚙ workflow \"{}\" {} (noted mid-turn):",
-            label.name(),
-            status_word(label.status())
-        ),
+pub(crate) fn workflow_notice_text(
+    notice: Option<&CompletionNotice>,
+    content: Option<&str>,
+) -> String {
+    let head = match notice {
+        Some(notice) => {
+            let mut head = format!(
+                "⚙ workflow \"{}\" {}",
+                notice.label().name(),
+                status_word(notice.label().status())
+            );
+            if let Some(total) = notice.run_total() {
+                head.push_str(&format!(
+                    " · {}",
+                    run_total_text("run so far", total, notice.unmetered_turns())
+                ));
+            }
+            head.push_str(" (noted mid-turn):");
+            head
+        }
         None => "⚙ workflow ended (noted mid-turn):".to_owned(),
     };
     match content.filter(|c| !c.is_empty()) {
@@ -77,6 +94,67 @@ pub(crate) fn step_notice_text(severity: Option<&str>, content: Option<&str>) ->
     format!("⚙ workflow step · {severity}: {}", content.unwrap_or(""))
 }
 
+/// The line that closes an agent-initiated turn (cyril-2lh8), shown after
+/// its `turn_end`:
+///
+/// - the wake that follows a run's end — the run's completion line →
+///   `╰─ ⚙ workflow "<name>" <status> · run <total> credits · follow-up <turn> credits`
+///   (`run ≥ <total> credits (<n> turns unmetered)` when the total is partial)
+/// - any other agent-initiated turn → `╰─ ⚙ agent follow-up · <turn> credits`
+///
+/// A figure the engine never metered is left out — never shown as 0 — and a
+/// close with no figure at all is `None`: no line.
+#[must_use]
+pub(crate) fn footer_text(close: &AgentTurnClose) -> Option<String> {
+    let follow_up = close.credits().map(credits_text);
+    match (close.run(), follow_up) {
+        (Some(run), follow_up) => {
+            let mut text = format!(
+                "╰─ ⚙ workflow \"{}\" {} · {}",
+                run.label().name(),
+                status_word(run.label().status()),
+                run_total_text("run", run.total(), run.unmetered_turns())
+            );
+            if let Some(follow_up) = follow_up {
+                text.push_str(&format!(" · follow-up {follow_up}"));
+            }
+            Some(text)
+        }
+        (None, Some(follow_up)) => Some(format!("╰─ ⚙ agent follow-up · {follow_up}")),
+        (None, None) => None,
+    }
+}
+
+/// A turn's credits, floored to two decimals as Kiro's TUI shows a turn
+/// (`kiro-tui-2.32.0.js` `yae`: `(Math.floor(e*100)/100).toFixed(2)`).
+fn credits_text(credits: f64) -> String {
+    let floored = (credits * 100.0).floor() / 100.0;
+    format!("{floored:.2} credits")
+}
+
+/// A run's credits, floored as Kiro's TUI shows a workflow's total
+/// (`kiro-tui-2.32.0.js` `Gz`: `t=e*100; Math.floor(t+Number.EPSILON*
+/// Math.abs(t))/100`, then `toFixed(2)`).
+fn run_credits_text(credits: f64) -> String {
+    let hundredths = credits * 100.0;
+    let floored = (hundredths + f64::EPSILON * hundredths.abs()).floor() / 100.0;
+    format!("{floored:.2} credits")
+}
+
+/// `<lead> <total> credits`, or — when some of the run's turns reported no
+/// credits — the unmistakably partial `<lead> ≥ <total> credits (<n>
+/// turn(s) unmetered)` (cyril-2lh8 review: an incomplete total is not a
+/// total). `lead` is `run` for an ended run's completion line, `run so far`
+/// for a total the run may still add to.
+fn run_total_text(lead: &str, total: f64, unmetered_turns: u32) -> String {
+    let credits = run_credits_text(total);
+    match unmetered_turns {
+        0 => format!("{lead} {credits}"),
+        1 => format!("{lead} ≥ {credits} (1 turn unmetered)"),
+        n => format!("{lead} ≥ {credits} ({n} turns unmetered)"),
+    }
+}
+
 fn status_word(status: WorkflowRunStatus) -> &'static str {
     status.as_str()
 }
@@ -85,6 +163,7 @@ fn status_word(status: WorkflowRunStatus) -> &'static str {
 mod tests {
     use super::*;
     use cyril_core::types::{WorkflowNodeId, WorkflowRepeatCap};
+    use cyril_core::workflow::RunCredits;
 
     fn origin(reason: Option<&str>, workflow_completion: bool) -> AgentInitiation {
         AgentInitiation::new(reason.map(str::to_owned), workflow_completion)
@@ -165,16 +244,115 @@ mod tests {
         assert_eq!(header_text(&origin, Some(&label)), want);
     }
 
+    fn close(credits: Option<f64>, run: Option<(&str, WorkflowRunStatus, f64)>) -> AgentTurnClose {
+        partial_close(credits, run, 0)
+    }
+
+    fn partial_close(
+        credits: Option<f64>,
+        run: Option<(&str, WorkflowRunStatus, f64)>,
+        unmetered_turns: u32,
+    ) -> AgentTurnClose {
+        AgentTurnClose::new(
+            credits,
+            run.map(|(name, status, total)| {
+                RunCredits::new(label(name, status), total).with_unmetered_turns(unmetered_turns)
+            }),
+        )
+    }
+
+    /// cyril-2lh8: the line that closes an agent-initiated turn shows what it
+    /// cost; the wake that follows a run's end is the run's completion line
+    /// and shows the run's total. Missing metering shows no figure — never 0
+    /// — and a close with no figure at all renders no line.
+    #[rstest::rstest]
+    #[case::generic_wake(
+        close(Some(0.2227906), None),
+        Some("╰─ ⚙ agent follow-up · 0.22 credits")
+    )]
+    #[case::run_completion(
+        close(Some(0.2378933), Some(("audit-linear", WorkflowRunStatus::Completed, 0.6214264))),
+        Some("╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.23 credits")
+    )]
+    #[case::run_completion_unmetered_wake(
+        close(None, Some(("loop", WorkflowRunStatus::Aborted, 0.38))),
+        Some("╰─ ⚙ workflow \"loop\" aborted · run 0.38 credits")
+    )]
+    #[case::partial_total_one_turn(
+        partial_close(Some(0.25), Some(("audit-linear", WorkflowRunStatus::Completed, 0.62)), 1),
+        Some("╰─ ⚙ workflow \"audit-linear\" completed · run ≥ 0.62 credits (1 turn unmetered) · follow-up 0.25 credits")
+    )]
+    #[case::partial_total_two_turns(
+        partial_close(None, Some(("loop", WorkflowRunStatus::Failed, 0.5)), 2),
+        Some("╰─ ⚙ workflow \"loop\" failed · run ≥ 0.50 credits (2 turns unmetered)")
+    )]
+    #[case::nothing_metered(close(None, None), None)]
+    fn footer_strings(#[case] close: AgentTurnClose, #[case] want: Option<&str>) {
+        assert_eq!(footer_text(&close).as_deref(), want);
+    }
+
+    /// cyril-2lh8 review: credits are floored to two decimals exactly as
+    /// Kiro's TUI shows them (`kiro-tui-2.32.0.js`). Turn credits use `yae`,
+    /// `Math.floor(e*100)/100`. Run totals use `Gz`, which adds
+    /// `Number.EPSILON*|e*100|` before flooring. Hence 0.29, whose `*100`
+    /// is 28.999999999999996, shows 0.28 as a turn figure and 0.29 as a
+    /// run total, as it does in Kiro.
+    #[rstest::rstest]
+    #[case::linear_follow_up(0.237_893_331_840_796_03, "0.23", "0.23")]
+    #[case::bgwatch_total(0.175_088_340_132_670_1, "0.17", "0.17")]
+    #[case::repeat_cap_wake(0.222_790_630_514_096_2, "0.22", "0.22")]
+    #[case::exact_hundredth(0.38, "0.38", "0.38")]
+    #[case::binary_edge(0.29, "0.28", "0.29")]
+    #[case::sub_hundredth(0.004, "0.00", "0.00")]
+    fn credits_floor_like_kiro(#[case] credits: f64, #[case] turn: &str, #[case] run: &str) {
+        assert_eq!(credits_text(credits), format!("{turn} credits"));
+        assert_eq!(
+            run_total_text("run", credits, 0),
+            format!("run {run} credits")
+        );
+    }
+
     /// B5 exact strings for both injection kinds, with the stress rows.
     #[test]
     fn notice_strings() {
         let wake_text = "A workflow you launched (\"lki9-quick\") completed. Review its results and continue if you were waiting on it.";
         assert_eq!(
             workflow_notice_text(
-                Some(&label("lki9-quick", WorkflowRunStatus::Completed)),
+                Some(&CompletionNotice::new(
+                    label("lki9-quick", WorkflowRunStatus::Completed),
+                    None
+                )),
                 Some(wake_text)
             ),
-            format!("⚙ workflow \"lki9-quick\" completed (noted mid-turn):\n{wake_text}")
+            format!("⚙ workflow \"lki9-quick\" completed (noted mid-turn):\n{wake_text}"),
+            "an unmetered run shows no figure (cyril-2lh8)"
+        );
+        assert_eq!(
+            workflow_notice_text(
+                Some(&CompletionNotice::new(
+                    label("lki9-quick", WorkflowRunStatus::Completed),
+                    Some(0.0516190)
+                )),
+                Some(wake_text)
+            ),
+            format!(
+                "⚙ workflow \"lki9-quick\" completed · run so far 0.05 credits (noted mid-turn):\n{wake_text}"
+            ),
+            "the run's credits so far (cyril-2lh8)"
+        );
+        assert_eq!(
+            workflow_notice_text(
+                Some(
+                    &CompletionNotice::new(
+                        label("lki9-quick", WorkflowRunStatus::Completed),
+                        Some(0.0516190)
+                    )
+                    .with_unmetered_turns(1)
+                ),
+                None
+            ),
+            "⚙ workflow \"lki9-quick\" completed · run so far ≥ 0.05 credits (1 turn unmetered) (noted mid-turn):",
+            "a partial total says so (cyril-2lh8 review)"
         );
         assert_eq!(
             workflow_notice_text(None, Some(wake_text)),

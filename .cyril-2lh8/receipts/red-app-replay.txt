@@ -1,0 +1,77 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-core)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-memory)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril-ui)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril/.claude/worktrees/agent-a270a437afe863568/crates/cyril)
+    Finished `test` profile [optimized + debuginfo] target(s) in 27.30s
+     Running unittests src/main.rs (target/debug/deps/cyril-87e493c4b738a252)
+
+running 2 tests
+test app::tests::wake_credits_and_run_totals_in_live_capture ... FAILED
+test app::tests::run_completion_line_renders ... FAILED
+
+failures:
+
+---- app::tests::wake_credits_and_run_totals_in_live_capture stdout ----
+
+thread 'app::tests::wake_credits_and_run_totals_in_live_capture' (2834336) panicked at crates/cyril/src/app.rs:8918:9:
+assertion `left == right` failed
+  left: []
+ right: ["╰─ ⚙ workflow \"audit-linear\" completed · run 0.62 credits · follow-up 0.24 credits", "╰─ ⚙ agent follow-up · 0.22 credits", "╰─ ⚙ workflow \"loop\" aborted · run 0.55 credits · follow-up 0.07 credits", "╰─ ⚙ workflow \"watch-audit\" completed · run 0.24 credits · follow-up 0.15 credits", "╰─ ⚙ workflow \"bgwatch-term_1792344545154_c11rdwe8wqh\" completed · run 0.18 credits · follow-up 0.08 credits", "╰─ ⚙ workflow \"park\" completed · run 0.21 credits · follow-up 0.08 credits", "╰─ ⚙ workflow \"agent-wf-coder\" completed · run 0.17 credits · follow-up 0.08 credits"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- app::tests::run_completion_line_renders stdout ----
+
+thread 'app::tests::run_completion_line_renders' (2834335) panicked at crates/cyril/src/app.rs:8981:9:
+completion line on screen:
+sess_259b943b-3d2a-49d4-8430-4b4975864275 · vibe · auto                                                                                                         
+                                                                                                                                                               ▲
+⚙ workflow step · success: FINISHED                                                                                                                            ║
+                                                                                                                                                               ║
+─── ⚙ workflow "park" completed · agent follow-up ───                                                                                                          ║
+                                                                                                                                                               ║
+Kiro:                                                                                                                                                          ║
+The "park" workflow completed. Its "ask" step reported `FINISHED`, so the workflow ran to completion on its own and I wasn't blocked waiting on it.            ║
+                                                                                                                                                               ║
+The output directory is unchanged:                                                                                                                             ║
+                                                                                                                                                               ║
+• `out/s1.txt` → `ALPHA`                                                                                                                                       ║
+• `out/s2.txt` → `ALPHA-TWO`                                                                                                                                   ║
+• `out/loop.txt` → three "tick" lines                                                                                                                          ║
+                                                  ┌ Permission Required — sess_c769c425-99a1-49fb-b18b-5c3d94┐                                                 ║
+Nothing further to continue here. Let me know if y│Write File                                                │omething new.                                    ║
+                                                  │                                                          │                                                 ║
+                                                  │  Preview unavailable                                     │                                                 ║
+⚙ workflow step · success: AGENTRUN               │                                                          │                                                 ║
+                                                  │▸ Allow                                                   │                                                 ║
+─── ⚙ workflow "agent-wf-coder" completed · agent │  Always allow                                            │                                                 ║
+                                                  │  Deny                                                    │                                                 ║
+Kiro:                                             │  Always deny                                             │                                                 ║
+The "agent-wf-coder" workflow completed. Its "run"│                                                          │wn and I wasn't blocked waiting on it.           █
+                                                  └──────────────────────────────────────────────────────────┘                                                 █
+The output directory remains unchanged:                                                                                                                        █
+                                                                                                                                                               █
+• `out/s1.txt` → `ALPHA`                                                                                                                                       █
+• `out/s2.txt` → `ALPHA-TWO`                                                                                                                                   ║
+• `out/loop.txt` → three "tick" lines                                                                                                                          ║
+                                                                                                                                                               ║
+Nothing further to continue. Let me know if you'd like me to act on any of these results or start something new.                                               ║
+                                                                                                                                                               ║
+                                                                                                                                                               ▼
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                             │
+│                                                                                                                                                              │
+│                                                                                                                                                              │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 3% · Context Files 0%  Session Files 0%  Tools 0%  Prompts 0%  Responses 2%                                                                            
+
+
+failures:
+    app::tests::run_completion_line_renders
+    app::tests::wake_credits_and_run_totals_in_live_capture
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 236 filtered out; finished in 0.05s
+
+error: test failed, to rerun pass `-p cyril --bin cyril`
