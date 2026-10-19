@@ -80,7 +80,7 @@ run, one line per parked question naming the step and the `/answer` selector.
 | C8 | End to end on fixtures: gateoff replay to the park (≤ 993), `/answer` → `AnswerWorkflowStep{session_id: sess_e7ec…}`; replaying 995–1019 clears the parked question and completes the run. | App test; fails if the command targets another session or the question survives the resume. | `app.rs` tests | PASS — receipts/red-answer.txt |
 | C9 | `/workflow status` and fetched views name the parked step (D5). | Command/format unit tests. | `commands/workflow.rs`, `workflow_format.rs` tests | PASS — receipts/red-answer.txt |
 | C10 | Ownership fences: `Notification::Workflow`/`WorkflowSnapshot` still consumed once by the tracker; no KAS literal outside `convert/kas*`; all `⚙` text in `turn_labels.rs`; protected-parent deltas within caps; no ACP type in cyril-ui. | `.cyril-lki9/oracles/shape.py` (C21) + review. | C21 oracle | PASS — C21 oracle in gate c3a02be6 (app.rs +43, state.rs +38); independent review (review-decisions.md) |
-| C11 | Live: real cyril (KAS 0.66.43) runs a recipe whose step parks; the question line shows with run and step; `/answer` resumes the step and the run completes. | hex1b-driven TUI run, screen captures in `receipts/`. | — | PENDING — blocked by KAS auth (receipts/live.md); owner: coordinator, rerun when auth is healthy |
+| C11 | Live: real cyril (KAS 0.66.43) runs a recipe whose step parks; the question line shows with run and step; `/answer` resumes the step and the run completes. | hex1b-driven TUI run, screen captures in `receipts/`. | — | PASS 2026-10-19 (receipts/live.md, rerun section; head 51d06456) |
 
 ## Placement
 
