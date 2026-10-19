@@ -563,7 +563,7 @@ impl DomainMediator {
     /// mediator is not consulted (the main session may be mid-turn, and the
     /// step's own `turn_start`/`turn_end` frames route like any KAS-started
     /// step turn), and the response — which arrives only when the step's turn
-    /// ends — reports nothing on success. A failure answers `BridgeError`.
+    /// ends — reports nothing on success. A failure answers `WorkflowStepAnswerFailed` (step session named).
     pub(crate) fn answer_workflow_step(
         &mut self,
         connection: &ConnectionTo<Agent>,
@@ -589,8 +589,8 @@ impl DomainMediator {
                     tracing::warn!(session = %session_id, %error, "workflow step answer failed");
                     if let Err(send_error) = channels
                         .enqueue(super::super::DomainWork::Routed(
-                            Notification::BridgeError {
-                                operation: "answer workflow step".into(),
+                            Notification::WorkflowStepAnswerFailed {
+                                session_id: session_id.clone(),
                                 message: error.to_string(),
                             }
                             .into(),

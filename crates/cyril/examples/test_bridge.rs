@@ -394,6 +394,12 @@ fn print_notification(n: &Notification) {
         Notification::WorkflowCommand(outcome) => {
             println!("  [WorkflowCommand] {outcome:?}");
         }
+        Notification::WorkflowStepAnswerFailed {
+            session_id,
+            message,
+        } => {
+            println!("  [WorkflowStepAnswerFailed] {session_id}: {message}");
+        }
         Notification::WorkflowMessage(message) => {
             println!(
                 "  [WorkflowMessage] {} {} → {}: {}",

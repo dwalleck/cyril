@@ -878,7 +878,11 @@ impl WorkflowTracker {
         // with the snapshot, so only the other events apply theirs here.
         let attention = match &event {
             WorkflowEvent::RunCompleted(completion) => {
-                if completion.attention() != completion.final_state().attention() {
+                // KAS sends `attention: []` on the event but omits an empty
+                // `finalState.attention`: absent and empty are the same here.
+                if completion.attention().unwrap_or_default()
+                    != completion.final_state().attention().unwrap_or_default()
+                {
                     tracing::warn!(
                         workflow_id = %workflow_id,
                         "run_complete attention differs from its finalState; finalState applied"
@@ -1731,6 +1735,18 @@ impl WorkflowTracker {
             tracing::debug!(session = %session, "answer for a step that is not parked; nothing marked");
         }
         self.answered_questions.extend(episodes);
+    }
+
+    /// The answer to `session` never reached the step (its prompt failed):
+    /// the park episode `mark_answered` closed on dispatch reopens, since KAS
+    /// still has the step waiting (cyril-9104 review).
+    pub fn reopen_answered(&mut self, session: &SessionId) {
+        let before = self.answered_questions.len();
+        self.answered_questions
+            .retain(|(answered, _)| answered != session);
+        if self.answered_questions.len() == before {
+            tracing::debug!(session = %session, "failed answer for a step with no answered episode; nothing reopened");
+        }
     }
 
     /// Every parked question in the runs' current attention lists, answered
@@ -6134,6 +6150,126 @@ mod tests {
             "a new park episode"
         );
         assert_eq!(tracker.step_questions().len(), 1);
+    }
+
+    /// cyril-9104 review (1): an answer whose prompt failed never reached
+    /// the step, so the episode `/answer` closed on dispatch reopens — the
+    /// step is listed (and answerable) again without being re-raised.
+    #[test]
+    fn failed_answer_reopens_the_episode() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_f"));
+        park(
+            &mut tracker,
+            "wf_f",
+            vec![
+                attention(Question, "wf_f", "ask", "s-f", "t0"),
+                attention(Question, "wf_f", "other", "s-o", "t0"),
+            ],
+        );
+        assert_eq!(tracker.take_raised_questions().len(), 2);
+        tracker.mark_answered(&SessionId::new("s-f"));
+        tracker.mark_answered(&SessionId::new("s-o"));
+        assert!(tracker.step_questions().is_empty());
+        tracker.reopen_answered(&SessionId::new("s-f"));
+        let parked: Vec<String> = tracker
+            .step_questions()
+            .iter()
+            .map(|q| q.session_id().as_str().to_owned())
+            .collect();
+        assert_eq!(parked, ["s-f"], "only the failed answer's step reopens");
+        assert!(
+            tracker.take_raised_questions().is_empty(),
+            "already shown once"
+        );
+    }
+
+    /// cyril-9104 review (3): a node id shared by parked steps of two runs —
+    /// nested, so its full path differs from `<wf>/<node>` — is selected by
+    /// `<wf>/<node>`, the middle tier; a node id shared within one run falls
+    /// through to the full path.
+    #[test]
+    fn nested_shared_node_ids_get_the_run_qualified_tier() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let nested = |run: &str, branch: &str, session: &str| {
+            let id = workflow_id(run);
+            WorkflowAttention::new(
+                Question,
+                "t0".to_owned(),
+                node_id("ask"),
+                node_path(&id, &[run, branch, "ask"]),
+                SessionId::new(session),
+            )
+        };
+        let mut tracker = WorkflowTracker::new();
+        for run in ["wf_a", "wf_b", "wf_c"] {
+            opened(&mut tracker, &workflow_id(run));
+        }
+        park(&mut tracker, "wf_a", vec![nested("wf_a", "seq", "s-a")]);
+        park(&mut tracker, "wf_b", vec![nested("wf_b", "seq", "s-b")]);
+        park(
+            &mut tracker,
+            "wf_c",
+            vec![
+                nested("wf_c", "left", "s-l"),
+                nested("wf_c", "right", "s-r"),
+            ],
+        );
+        let mut selectors: Vec<(String, String)> = tracker
+            .step_questions()
+            .iter()
+            .map(|q| (q.session_id().as_str().to_owned(), q.selector().to_owned()))
+            .collect();
+        selectors.sort();
+        assert_eq!(
+            selectors,
+            [
+                ("s-a".to_owned(), "wf_a/ask".to_owned()),
+                ("s-b".to_owned(), "wf_b/ask".to_owned()),
+                ("s-l".to_owned(), "wf_c/left/ask".to_owned()),
+                ("s-r".to_owned(), "wf_c/right/ask".to_owned()),
+            ]
+        );
+    }
+
+    /// cyril-9104 review (2): KAS always sends top-level `attention: []` on
+    /// `run_complete` but OMITS `finalState.attention` when empty — no warn
+    /// for that; a real disagreement still warns.
+    #[rstest::rstest]
+    #[case::empty_vs_omitted(Some(Vec::new()), false)]
+    #[case::both_omitted(None, false)]
+    #[case::disagreement(Some(vec!["ask"]), true)]
+    fn completion_attention_disagreement_warns_only_for_real(
+        #[case] top_level: Option<Vec<&str>>,
+        #[case] warns: bool,
+    ) {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_w"));
+        let WorkflowEvent::RunCompleted(completion) =
+            parented_completion("wf_w", WorkflowRunStatus::Completed, "w", "parent", None)
+        else {
+            panic!("a completion");
+        };
+        let completion = match top_level {
+            Some(nodes) => completion.with_attention(
+                nodes
+                    .into_iter()
+                    .map(|node| attention(Question, "wf_w", node, "s-w", "t0"))
+                    .collect(),
+            ),
+            None => completion,
+        };
+        let (result, logs) = with_captured_logs(tracing::Level::WARN, || {
+            tracker.apply_event(WorkflowEvent::RunCompleted(completion))
+        });
+        assert!(result.is_ok());
+        assert_eq!(
+            logs.contains("run_complete attention differs from its finalState"),
+            warns,
+            "{logs}"
+        );
     }
 
     /// cyril-9104 review L3: a resume `node_start` without `sessionId` still

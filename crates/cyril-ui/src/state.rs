@@ -1211,6 +1211,12 @@ impl UiState {
                 self.add_system_message(format!("{operation} failed: {message}"));
                 true
             }
+            // cyril-9104: the App reopens the step's question first; the line
+            // reads like the bridge error it replaces.
+            Notification::WorkflowStepAnswerFailed { message, .. } => {
+                self.add_system_message(format!("answer workflow step failed: {message}"));
+                true
+            }
             // cyril-gk17: a KAS-executed hook finished. Under `kas_hooks = "kas"`
             // the agent runs these commands on this host with no permission
             // prompt, so the transcript line IS the audit trail — it is the only

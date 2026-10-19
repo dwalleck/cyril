@@ -404,6 +404,14 @@ pub enum Notification {
     /// never forwards it to `SessionController` or `UiState`. Boxed like
     /// [`Notification::Workflow`].
     WorkflowMessage(Box<crate::types::WorkflowMessage>),
+    /// cyril-9104 review: the `session/prompt` carrying the user's answer to
+    /// a parked workflow step failed. Names the step session so the App can
+    /// reopen the park episode `/answer` closed on dispatch (the step is
+    /// still waiting), then renders like a `BridgeError`.
+    WorkflowStepAnswerFailed {
+        session_id: SessionId,
+        message: String,
+    },
     UsageAccountUpdated {
         account: UsageAccount,
         fetched_at_ms: Option<u64>,
@@ -830,7 +838,8 @@ pub enum BridgeCommand {
     /// text as `session/prompt` to the step session, which resumes the step
     /// and its run. Deliberately outside cyril's own turn mediation — the
     /// step's turn is not the main session's, so the main session stays free
-    /// and its busy guard untouched. A failed prompt answers `BridgeError`;
+    /// and its busy guard untouched. A failed prompt answers
+    /// `Notification::WorkflowStepAnswerFailed` naming the step session;
     /// success is the run's own lifecycle frames.
     AnswerWorkflowStep {
         session_id: SessionId,

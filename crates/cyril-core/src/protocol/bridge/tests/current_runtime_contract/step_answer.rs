@@ -61,9 +61,10 @@ async fn step_answer_prompts_the_step_session_outside_the_main_turn() {
     .await;
 }
 
-/// A step answer the agent refuses surfaces as a visible bridge error.
+/// A step answer the agent refuses surfaces as a visible failure naming the
+/// step session, so the App can reopen its question (cyril-9104 review).
 #[tokio::test]
-async fn failed_step_answer_is_a_bridge_error() {
+async fn failed_step_answer_names_its_step_session() {
     let script = Rc::new(RefCell::new(Script {
         prompt_err: true,
         ..Script::default()
@@ -83,7 +84,7 @@ async fn failed_step_answer_is_a_bridge_error() {
                 .await
                 .expect_contract("the failure is reported");
             assert!(
-                matches!(&error, Notification::BridgeError { operation, .. } if operation == "answer workflow step"),
+                matches!(&error, Notification::WorkflowStepAnswerFailed { session_id, .. } if session_id.as_str() == "sess_step"),
                 "got {error:?}"
             );
         },

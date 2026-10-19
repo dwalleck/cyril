@@ -1,0 +1,24 @@
+cyril-9104 review round 2 red-first receipt, 2026-10-18/19.
+
+State: tests written; `WorkflowTracker::reopen_answered` a no-op stub, the App calling it on
+`Notification::WorkflowStepAnswerFailed`, the bridge still answering a failed step prompt with a
+bare `BridgeError`, and the L6 comparison not yet treating absent as empty.
+
+Command: cargo nextest run --workspace --all-features --no-fail-fast
+         -E 'test(failed_answer_reopens) | test(nested_shared_node_ids) | test(completion_attention_disagreement) | test(/step_answer/)'
+    FAIL  cyril-core workflow::tests::failed_answer_reopens_the_episode
+    FAIL  cyril-core workflow::tests::completion_attention_disagreement_warns_only_for_real::case_1_empty_vs_omitted
+    FAIL  cyril-core step_answer::failed_step_answer_names_its_step_session
+    FAIL  cyril app::tests::failed_answer_reopens_the_parked_step
+    PASS  completion_attention_disagreement_warns_only_for_real::{case_2_both_omitted, case_3_disagreement}
+    PASS  nested_shared_node_ids_get_the_run_qualified_tier   (coverage for existing code; see mutation)
+    PASS  step_answer_prompts_the_step_session_outside_the_main_turn
+ Summary 8 tests run: 4 passed, 4 failed
+After the fixes, same command: 8 passed.
+
+Selector-tier mutation (R2-3): `assign_selectors` with the `<wf>/<node>` tier disabled
+(`by_run.get(&qualified) == Some(&0)`):
+    FAIL  workflow::tests::nested_shared_node_ids_get_the_run_qualified_tier
+      left:  [("s-a", "wf_a/seq/ask"), ("s-b", "wf_b/seq/ask"), …]
+      right: [("s-a", "wf_a/ask"), ("s-b", "wf_b/ask"), …]
+Restored: 1 passed.

@@ -1404,6 +1404,12 @@ impl App {
             return Vec::new();
         }
 
+        // cyril-9104 review: a failed answer reopens the step's question; the
+        // failure itself renders through the normal pipeline below.
+        if let Notification::WorkflowStepAnswerFailed { session_id, .. } = &notification {
+            self.workflow_tracker.reopen_answered(session_id);
+        }
+
         // cyril-9104: a workflow `send_message`, consumed once by the
         // tracker. Only the main session's own answer to a step renders — no
         // other session's transcript is shown.
@@ -9492,6 +9498,76 @@ mod tests {
             app.workflow_tracker.get(&run).and_then(|run| run.status()),
             Some(WorkflowRunStatus::Completed)
         );
+    }
+
+    /// cyril-9104 review (1): when the prompt carrying an answer fails, KAS
+    /// still has the step parked — the failure reopens the question, so it
+    /// is listed again and the next `/answer` is sent.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn failed_answer_reopens_the_parked_step() {
+        let (handle, mut commands) = BridgeHandle::for_tests_with_command_rx();
+        let mut app = App::new(
+            handle,
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::resolve(
+                AgentEngine::Kas,
+                PathBuf::from("/tmp"),
+            ),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::Kas,
+        );
+        let main = SessionId::new(Q9104_GATEOFF_MAIN);
+        let step = SessionId::new("sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b");
+        app.handle_notification(session_created_frame(&main));
+        q9104_feed(&mut app, Q9104_GATEOFF, "main", Q9104_GATEOFF_MAIN, 1, 993);
+        while commands.try_recv().is_ok() {}
+
+        app.ui_state.insert_text("/answer FINISHED");
+        app.submit_input().await.expect("submit /answer");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::AnswerWorkflowStep { .. })
+        ));
+        assert!(
+            app.workflow_tracker.step_questions().is_empty(),
+            "closed on dispatch"
+        );
+
+        app.handle_notification(RoutedNotification::global(
+            Notification::WorkflowStepAnswerFailed {
+                session_id: step.clone(),
+                message: "Internal error: session not found".to_owned(),
+            },
+        ));
+        assert_eq!(
+            app.workflow_tracker.step_questions().len(),
+            1,
+            "the failed answer reopens the question"
+        );
+        assert!(app.ui_state.messages().iter().any(|message| matches!(
+            message.kind(),
+            ChatMessageKind::System(text)
+                if text == "answer workflow step failed: Internal error: session not found"
+        )));
+
+        app.ui_state.insert_text("/answer FINISHED");
+        app.submit_input().await.expect("submit /answer again");
+        match commands.try_recv() {
+            Ok(BridgeCommand::AnswerWorkflowStep { session_id, .. }) => {
+                assert_eq!(session_id, step);
+            }
+            other => panic!("the reopened step is answerable again, got {other:?}"),
+        }
     }
 
     /// cyril-2lh8: the same live 0.66.43 capture closes every parent wake
