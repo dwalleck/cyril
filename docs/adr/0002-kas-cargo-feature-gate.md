@@ -22,7 +22,7 @@ KAS impls — especially the credential-reading `AuthResponder` — live behind 
 
 ## Amended decision (2026-10-12)
 
-The approved cyril-4c4d policy makes KAS the normal engine while retaining explicit v2 selection until upstream removes it. The production `cyril` package enables `kas` by default; `cyril-core` keeps the feature opt-in. Normal production binaries therefore contain the credential-reading code and use the existing custodian when running KAS. The original custody concern remains valid; the original **default-build exclusion** claim no longer applies.
+The approved cyril-4c4d policy makes KAS the normal engine while retaining explicit v2 selection until upstream removes it. The production `cyril` package enables `kas` by default; `cyril-core` keeps the feature opt-in. Normal production binaries therefore contain the credential-reading code and use the existing custodian when running KAS (superseded for token sourcing by the 2026-10-18 update below: tokens now come from `kiro-cli chat _ get-kas-token`). The original custody concern remains valid; the original **default-build exclusion** claim no longer applies.
 
 An isolated `cargo build -p cyril --no-default-features` produces a V2-only binary without the KAS credential reader. Runtime `--agent-engine v2` changes engine selection, not compiled capability. A workspace build is not evidence of exclusion: `cyril-workbench` enables core KAS through Cargo feature unification. CI must cover the selected production package with and without defaults.
 

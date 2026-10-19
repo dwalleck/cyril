@@ -24,7 +24,7 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 
 ## Prerequisites
 
-- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`) — Kiro ships native Linux, macOS and Windows binaries; see the platform qualification note below
+- [Kiro CLI](https://kiro.dev/docs/cli/) installed and authenticated (`kiro-cli login`), and resolvable on PATH (cyril also checks `~/.local/bin`, `/usr/local/bin` and `/opt/homebrew/bin`; KAS sessions get their token from it) — Kiro ships native Linux, macOS and Windows binaries; see the platform qualification note below
 - [Node.js](https://nodejs.org/) on `PATH` for the default KAS launch
 - [Rust toolchain](https://rustup.rs/) (for building from source)
 
