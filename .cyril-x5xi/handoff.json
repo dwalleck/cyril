@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "issue": "cyril-x5xi",
+  "status": "COMPLETE — documentation/evidence handoff; frozen for Main publication",
+  "canonical_handoff": ".cyril-x5xi/handoff.json",
+  "verification_index": ".cyril-x5xi/verification.md",
+  "publication_manifest": ".cyril-x5xi/publication-manifest.json",
+  "publication_manifest_sha256": "951ef2e3d998363349e726057b4f25581eb786ef01db30f80ac707b490d63155",
+  "publication_file_count": 14,
+  "publication_owner": "Main",
+  "source_base": "7eefe275fbec97f610677b2ee6433af996806599",
+  "base_public_pr": "https://github.com/dwalleck/cyril/pull/184",
+  "production_files_sha256": {
+    "crates/cyril-ui/src/theme.rs": "fefab546a9d63cf300d70c986f48ed485ddf99c1cf7f240b13e649cb58215eaf",
+    "crates/cyril-ui/src/highlight.rs": "f4142b29e3561b392a08e65eb5ca5827735e671577510f4d46a41a041f29fdc9",
+    "crates/cyril-ui/src/widgets/markdown.rs": "37719f3bf96799c5240660db27607ab43582ffce098bc21c5242bc4794b2ff2a"
+  },
+  "smoke_executable_sha256": "0d20a4b1384c489cfee65517d7d861acd945e13b4fe03a245b2eae70f7ef8644",
+  "executable_included": false,
+  "archive": {
+    "path": ".cyril-x5xi/verification-evidence.tar.gz",
+    "sha256": "afde35dcf77edf4fbb8d3d2a78417692be9380cd842700ba95db28e9180b155f",
+    "bytes": 1335366,
+    "members": 162,
+    "index": "index.json"
+  },
+  "observed_results": {
+    "workspace": "2836 PASS; 0 FAIL; 13 existing ignored, not exercised",
+    "clippy_workspace_all_targets": "PASS; -D warnings",
+    "executable_build": "PASS",
+    "formatting": "PASS",
+    "f1_actual_cargo_ab": "approved identical widget BEFORE 1 executed FAIL / AFTER 1 executed PASS; forbidden ThemeId widget BOTH 1 executed FAIL",
+    "review": "ReviewThemeIdentity final correct, confidence0.99, no new findings; source-only independent review",
+    "owned_actual_app_smoke": "PASS: truecolor03, none01, truecolor-return01; 14 checkpoints and11 wire frames each"
+  },
+  "retained_historical_sensitivity": {
+    "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "x5xi_patch_sha256": "9ac057ccb15ee7e809330f41bb3abf39259018ea61a8066950635eb02bd93585",
+    "receipt": "sensitivity/receipt.md",
+    "boundary": "Earlier original-base independent probe evidence, not byte-identical current assembled-source execution. x5xi cache eviction and syntax/fallback output controls distinguished from zj0m observations."
+  },
+  "sensitivity_applicability": "Main confirmed current source is published fiv1 plus ONLY pinned x5xi 9ac three-file patch, applied without conflict, followed only by rustfmt. fiv1/1v25 prerequisites do not touch those three paths. Measured cache mechanism unchanged; original six-case sensitivity retained as historical mechanism proof, not literal instrumented byte identity/current-tree execution. Fresh workspace555 and actual-App smoke independently qualify assembled delivery.",
+  "qualification_limits": [
+    "Actual hash-pinned Cyril CLI process/PTY/pyte proof, not live Kiro/model or native graphical font/glyph qualification",
+    "Three separate startup modes, not same-process mode transitions",
+    "Configured max1000, not native50000; no timing/work-counter/benchmark claim",
+    "No later zj0m/c6la acceptance on x5xi binary",
+    "Inherited requester-accepted cyril-u62f Windows readiness exception; cancelled coverage not green; new failures remain blocking",
+    "Two initial smoke failures were orchestration defects; first F1 A/B had NO TEST VERDICT due omitted fixture dependencies; neither is product RED"
+  ],
+  "worker_actions": "Only README and .cyril-x5xi workflow/evidence/publication records changed. No production/Cargo edits, checks/formatters/smokes, commits, pushes or tracker writes by this worker.",
+  "remaining_parent_actions": [
+    "Publish exactly the manifest file set as the x5xi issue PR on published fiv1 base",
+    "Adjudicate issue PR CI with only the already requester-approved Windows baseline exception",
+    "Update/close the issue tracker under Main publication authorization"
+  ]
+}
