@@ -1,6 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody, TuiState};
@@ -67,7 +68,20 @@ const REASON_POPUP_WIDTH: u16 = 64;
 /// Indent before each path row of the preview.
 const PATH_INDENT: &str = "  ";
 const ELLIPSIS: &str = "…";
-const PATH_SEPARATORS: [char; 2] = ['/', '\\'];
+const PATH_SEPARATORS: [&str; 2] = ["/", "\\"];
+
+/// Fitted rows retain their visibility decision in the compact inline layout,
+/// too. Literal filename text is never used as omission metadata.
+struct FittedPath {
+    rows: Vec<String>,
+    target_shown: bool,
+}
+
+struct ElidedPath {
+    text: String,
+    elided: bool,
+    tail_graphemes: usize,
+}
 
 /// The approval preview: the target path above the body built by
 /// [`preview_lines`].
@@ -92,12 +106,11 @@ struct Preview<'a> {
 impl<'a> Preview<'a> {
     fn new(state: &'a ApprovalState, theme: &Theme, area: Rect, desired_width: u16) -> Self {
         let path = state.tool_call.primary_path();
-        // Borders take two columns. A popup too narrow to show any path
-        // column still lays the path out one column per row; ratatui clips it.
+        // Keep the actual width for the confirm guard. Layout still needs
+        // at least one column, even when the border/indent clips every glyph.
         let path_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + PATH_INDENT.width())
-            .max(1);
-        let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
+            .saturating_sub(2 + PATH_INDENT.width());
+        let path_rows = path.map_or(0, |path| wrap_columns(path, path_width.max(1)).len());
         let text_width = usize::from(super::modal::popup_width(area, desired_width))
             .saturating_sub(2 + TEXT_INDENT.width())
             .max(1);
@@ -118,15 +131,27 @@ impl<'a> Preview<'a> {
         self.path.is_some()
     }
 
+    /// A wholly drawn one-grapheme target is valid; an actually elided
+    /// target still needs two retained tail graphemes.
+    fn path_shown(&self, rows: usize) -> bool {
+        let Some(path) = self.path else {
+            return true;
+        };
+        if self.path_width == 0 {
+            return false;
+        }
+        fit_path(path, self.path_width, self.path_rows.min(rows)).target_shown
+    }
+
     /// The path fitted into one run of `width` columns, for a row it shares
     /// with an option label. `None` without a path or without a column to
     /// show it in.
-    fn inline_path(&self, width: usize) -> Option<String> {
+    fn inline_path(&self, width: usize) -> Option<FittedPath> {
         let path = self.path?;
         if width == 0 {
             return None;
         }
-        Some(fit_path(path, width, 1).concat())
+        Some(fit_path(path, width, 1))
     }
 
     /// The preview laid out in at most `rows` rows. The path takes rows
@@ -134,7 +159,7 @@ impl<'a> Preview<'a> {
     fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
         let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
         if let Some(path) = self.path {
-            for row in fit_path(path, self.path_width, self.path_rows.min(rows)) {
+            for row in fit_path(path, self.path_width.max(1), self.path_rows.min(rows)).rows {
                 lines.push(Line::styled(
                     format!("{PATH_INDENT}{row}"),
                     Style::default().fg(theme.text_secondary),
@@ -232,26 +257,24 @@ impl OptionLayout {
     }
 }
 
-/// Split `text` into rows of at most `width` display columns. A character
-/// never splits: a wide glyph that would straddle the edge starts the next
-/// row, matching how ratatui draws it (the glyph plus a blank continuation
-/// cell).
+/// Split `text` into rows of at most `width` display columns. A grapheme
+/// never splits: one that would straddle the edge starts the next row,
+/// matching ratatui's rendering, including emoji presentation selectors.
 ///
-/// A character with no display width (a control character) counts as zero
-/// columns, as ratatui draws nothing for it; that is its width, not a
-/// fallback for an error.
+/// Zero-width graphemes retain their original bytes without occupying a
+/// display column.
 pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
     let mut rows = Vec::new();
     let mut row = String::new();
     let mut used = 0usize;
-    for ch in text.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
-        if used.saturating_add(ch_width) > width && !row.is_empty() {
+    for grapheme in text.graphemes(true) {
+        let grapheme_width = grapheme.width();
+        if used.saturating_add(grapheme_width) > width && !row.is_empty() {
             rows.push(std::mem::take(&mut row));
             used = 0;
         }
-        row.push(ch);
-        used = used.saturating_add(ch_width);
+        row.push_str(grapheme);
+        used = used.saturating_add(grapheme_width);
     }
     if !row.is_empty() || rows.is_empty() {
         rows.push(row);
@@ -262,22 +285,36 @@ pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
 /// Lay `path` out in at most `rows` rows of `width` columns. The path is
 /// wrapped whole when it fits; otherwise it is middle-elided
 /// ([`elide_middle`]) into the space available.
-fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
+fn fit_path(path: &str, width: usize, rows: usize) -> FittedPath {
     if rows == 0 {
-        return Vec::new();
+        return FittedPath {
+            rows: Vec::new(),
+            target_shown: false,
+        };
     }
     let wrapped = wrap_columns(path, width);
     if wrapped.len() <= rows {
-        return wrapped;
+        let target_shown =
+            path_grapheme_count(path) > 0 && wrapped.iter().all(|row| row.width() <= width);
+        return FittedPath {
+            rows: wrapped,
+            target_shown,
+        };
     }
     // A wide glyph that straddles a row edge wastes that row's last column,
     // so shrink the column budget until the elided path wraps into `rows`.
     // The loop ends: at a budget of zero the path elides to "", one row.
     let mut budget = width.saturating_mul(rows);
     loop {
-        let fitted = wrap_columns(&elide_middle(path, budget), width);
+        let elision = elide_middle(path, budget);
+        let fitted = wrap_columns(&elision.text, width);
         if fitted.len() <= rows || budget == 0 {
-            return fitted;
+            let target_shown = elision.tail_graphemes > usize::from(elision.elided)
+                && fitted.iter().all(|row| row.width() <= width);
+            return FittedPath {
+                rows: fitted,
+                target_shown,
+            };
         }
         budget -= 1;
     }
@@ -288,32 +325,48 @@ fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
 /// directory when that fits too. Every remaining column goes to the leading
 /// context. If the file name alone is wider than the budget, its end (the
 /// extension) is what stays.
-fn elide_middle(path: &str, budget: usize) -> String {
+fn elide_middle(path: &str, budget: usize) -> ElidedPath {
     if path.width() <= budget {
-        return path.to_owned();
+        return ElidedPath {
+            text: path.to_owned(),
+            elided: false,
+            tail_graphemes: path_grapheme_count(path),
+        };
     }
     let Some(room) = budget.checked_sub(ELLIPSIS.width()) else {
-        return String::new();
+        return ElidedPath {
+            text: String::new(),
+            elided: true,
+            tail_graphemes: 0,
+        };
     };
-    // Separator offsets, ignoring a trailing separator so a directory path
-    // still keeps its last component. Separators are ASCII, so every offset
-    // is a char boundary.
-    let separators: Vec<usize> = path
-        .trim_end_matches(&PATH_SEPARATORS[..])
-        .match_indices(&PATH_SEPARATORS[..])
-        .map(|(offset, _)| offset)
-        .collect();
-    let name = separators.last().map_or(path, |&offset| &path[offset..]);
-    let parent = separators
-        .iter()
+    // Ignore trailing separators when selecting the last two components.
+    // Keep only whole-grapheme boundaries and borrow their byte offsets.
+    let mut separators = path
+        .grapheme_indices(true)
         .rev()
-        .nth(1)
-        .map_or(name, |&offset| &path[offset..]);
+        .skip_while(|(_, grapheme)| PATH_SEPARATORS.contains(grapheme))
+        .filter_map(|(offset, grapheme)| PATH_SEPARATORS.contains(&grapheme).then_some(offset));
+    let name = separators.next().map_or(path, |offset| &path[offset..]);
+    let parent = separators.next().map_or(name, |offset| &path[offset..]);
     let tail = if parent.width() <= room { parent } else { name };
-    match room.checked_sub(tail.width()) {
-        Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_components(path, head_room)),
-        None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
+    let (head, tail) = match room.checked_sub(tail.width()) {
+        Some(head_room) => (leading_components(path, head_room), tail),
+        None => ("", trailing_columns(tail, room)),
+    };
+    ElidedPath {
+        text: format!("{head}{ELLIPSIS}{tail}"),
+        elided: true,
+        tail_graphemes: path_grapheme_count(tail),
     }
+}
+
+fn path_grapheme_count(text: &str) -> usize {
+    let span = Span::raw(text);
+    span.styled_graphemes(Style::default())
+        .filter(|grapheme| grapheme.symbol.width() > 0)
+        .take(2)
+        .count()
 }
 
 /// The longest prefix of `path` that ends just after a separator and is at
@@ -324,13 +377,13 @@ fn elide_middle(path: &str, budget: usize) -> String {
 fn leading_components(path: &str, width: usize) -> &str {
     let mut used = 0usize;
     let mut cut = 0usize;
-    for (offset, ch) in path.char_indices() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+    for (offset, grapheme) in path.grapheme_indices(true) {
+        used = used.saturating_add(grapheme.width());
         if used > width {
             break;
         }
-        if PATH_SEPARATORS.contains(&ch) {
-            cut = offset + ch.len_utf8();
+        if PATH_SEPARATORS.contains(&grapheme) {
+            cut = offset + grapheme.len();
         }
     }
     &path[..cut]
@@ -339,8 +392,8 @@ fn leading_components(path: &str, width: usize) -> &str {
 /// The longest prefix of `text` at most `width` display columns wide.
 fn head_columns(text: &str, width: usize) -> &str {
     let mut used = 0usize;
-    for (offset, ch) in text.char_indices() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+    for (offset, grapheme) in text.grapheme_indices(true) {
+        used = used.saturating_add(grapheme.width());
         if used > width {
             return &text[..offset];
         }
@@ -363,10 +416,10 @@ fn clip_row(text: &str, width: usize) -> String {
 /// The longest suffix of `text` at most `width` display columns wide.
 fn trailing_columns(text: &str, width: usize) -> &str {
     let mut used = 0usize;
-    for (offset, ch) in text.char_indices().rev() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+    for (offset, grapheme) in text.grapheme_indices(true).rev() {
+        used = used.saturating_add(grapheme.width());
         if used > width {
-            return &text[offset + ch.len_utf8()..];
+            return &text[offset + grapheme.len()..];
         }
     }
     text
@@ -425,14 +478,14 @@ fn wrapped_row_count(text: &str, width: usize) -> usize {
     let mut rows = 1usize;
     let mut used = 0usize;
     let mut row_empty = true;
-    for ch in text.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
-        if used.saturating_add(ch_width) > width && !row_empty {
+    for grapheme in text.graphemes(true) {
+        let grapheme_width = grapheme.width();
+        if used.saturating_add(grapheme_width) > width && !row_empty {
             rows += 1;
             used = 0;
         }
         row_empty = false;
-        used = used.saturating_add(ch_width);
+        used = used.saturating_add(grapheme_width);
     }
     rows
 }
@@ -579,11 +632,11 @@ pub(crate) fn confirm_is_on_screen(
     }
 }
 
-/// A popup with at least one row inside its borders. The scope and trust
-/// pages give that first row to the selected row's label and never wrap a
-/// row, so it is the row that makes them actionable.
+/// A popup with at least one row and column inside its borders. The scope
+/// and trust pages give that first row to the selected label and never wrap
+/// it, so a nonempty inner area is what makes them actionable.
 fn has_inner_row(popup: Rect) -> bool {
-    popup.height > 2
+    popup.height > 2 && popup.width > 2
 }
 
 /// The option page's geometry: the placed popup, the rows [`OptionLayout`]
@@ -599,7 +652,7 @@ struct OptionPage<'a> {
     /// Options shown, from `start`.
     visible: usize,
     /// The path fitted after the lone option row's label (height 1).
-    inline_path: Option<String>,
+    inline_path: Option<FittedPath>,
 }
 
 impl<'a> OptionPage<'a> {
@@ -670,10 +723,14 @@ impl<'a> OptionPage<'a> {
     /// it when the call has one: on the preview's first rows (the path is
     /// laid out ahead of the body) or appended to the lone option row.
     fn selection_shown_with_path(&self, selected: usize) -> bool {
-        let selection_shown =
-            (self.start..self.start.saturating_add(self.visible)).contains(&selected);
-        let path_shown =
-            !self.preview.has_path() || self.layout.preview_rows > 0 || self.inline_path.is_some();
+        let selection_shown = has_inner_row(self.popup)
+            && (self.start..self.start.saturating_add(self.visible)).contains(&selected);
+        let path_shown = !self.preview.has_path()
+            || self.preview.path_shown(self.layout.preview_rows)
+            || self
+                .inline_path
+                .as_ref()
+                .is_some_and(|path| path.target_shown);
         selection_shown && path_shown
     }
 }
@@ -726,7 +783,7 @@ fn render_option_phase(
             Style::default().fg(theme.text_secondary)
         };
         let label = format!("{}{}", option_prefix(i == state.selected), opt.label);
-        match &inline_path {
+        match inline_path.as_ref().and_then(|path| path.rows.first()) {
             Some(path) => lines.push(
                 Line::from(vec![
                     Span::raw(label),
@@ -797,11 +854,10 @@ impl<'a> ReasonPage<'a> {
         let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
         let inner = usize::from(popup.height.saturating_sub(2));
 
-        // Reserve one row for the editor so even a cramped viewport keeps the
-        // cursor visible. Context and chrome are admitted only when they leave
-        // that row intact; preview rows are the first content to be dropped.
-        let show_limit = inner >= 2;
-        let show_notice = has_notice && inner >= 3;
+        // Keep the editor and target context ahead of chrome.
+        let reserved = usize::from(preview.has_path()).min(inner.saturating_sub(1));
+        let show_limit = inner >= 2 + reserved;
+        let show_notice = has_notice && inner >= 3 + 2 * reserved;
         let show_editor_label = inner >= 4;
         let show_tool_title = inner >= 6;
         let show_selected = inner >= 7;
@@ -838,7 +894,7 @@ impl<'a> ReasonPage<'a> {
     /// Whether the editor row is drawn, with the path on screen when the
     /// call has one (the path leads the preview rows).
     fn editor_shown_with_path(&self) -> bool {
-        self.inner > 0 && (!self.preview.has_path() || self.preview_rows > 0)
+        has_inner_row(self.popup) && self.preview.path_shown(self.preview_rows)
     }
 }
 
@@ -1317,7 +1373,7 @@ impl FolderPage {
 
     /// Whether the folder editor row is drawn.
     fn editor_shown(&self) -> bool {
-        self.inner > 0
+        has_inner_row(self.popup)
     }
 }
 
@@ -2133,6 +2189,122 @@ mod tests {
         insta::assert_snapshot!("rcub_reason_phase_clamped_80x16", screen);
     }
 
+    fn un4p_review_target_ui(target: &str, reason: bool) -> UiState {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("un4p-review"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": target, "text": "body"})),
+        );
+        let mut ui = approval_ui_for(tool);
+        if reason {
+            assert!(ui.approval_begin_feedback());
+            ui.approval_feedback_paste("why");
+        }
+        ui
+    }
+
+    /// A literal filename glyph is not an inserted omission marker. Whole
+    /// one-character targets are valid context when actually drawn in full.
+    #[rstest::rstest]
+    #[case::literal_ellipsis("/tmp/report…")]
+    #[case::single_character("a")]
+    fn un4p_review_literal_target_is_confirmable_when_fully_drawn(
+        #[case] target: &str,
+        #[values(false, true)] reason: bool,
+    ) {
+        let ui = un4p_review_target_ui(target, reason);
+        let rows = screen_rows(&render_ui(&ui, 80, 24, 24));
+        assert!(
+            rows.iter()
+                .filter_map(|row| popup_body(row))
+                .any(|body| body == target),
+            "fixture target must actually be fully drawn: {rows:?}"
+        );
+        assert!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 80, 24),
+                24,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            "fully drawn literal target must be confirmable: {rows:?}"
+        );
+    }
+
+    /// At popup width6, the path has two actual cells after its indent:
+    /// one #+VS16 grapheme, not the scalar-counted two. A second path row
+    /// must reveal the second grapheme before confirmation can succeed.
+    #[rstest::rstest]
+    #[case::clipped_last_target_grapheme(5, false)]
+    #[case::both_target_graphemes_drawn(8, true)]
+    fn un4p_review_grapheme_path_guard_matches_actual_rendered_tail(
+        #[case] input_top: u16,
+        #[case] fully_drawn: bool,
+    ) {
+        let target = "#\u{fe0f}#\u{fe0f}";
+        let ui = un4p_review_target_ui(target, true);
+        let rows = screen_rows(&render_ui(&ui, 10, 16, input_top));
+        let drawn: String = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .flat_map(|body| body.chars().filter(|ch| matches!(*ch, '#' | '\u{fe0f}')))
+            .collect();
+        assert_eq!(
+            drawn == target,
+            fully_drawn,
+            "actual target cells: {rows:?}"
+        );
+        assert_eq!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 10, 16),
+                input_top,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            fully_drawn,
+            "confirmation must track the actual last target grapheme: {rows:?}"
+        );
+    }
+
+    /// cyril-un4p: even an overflow notice cannot displace the path at
+    /// inner height two. The editor keeps its cursor and Esc remains usable.
+    #[rstest::rstest]
+    fn reason_path_precedes_limit_and_notice(#[values(false, true)] notice: bool) {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("un4p"),
+            "Write File".into(),
+            ToolKind::Write,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": "/tmp/target.md", "text": "body"})),
+        );
+        let mut ui = approval_ui_for(tool);
+        assert!(ui.approval_begin_feedback());
+        ui.approval_feedback_paste("why");
+        if notice {
+            ui.approval_feedback_paste(&"x".repeat(4_096));
+            assert!(
+                ui.approval()
+                    .and_then(|approval| match &approval.phase {
+                        ApprovalPhase::EnterReason { editor, .. } => editor.notice(),
+                        _ => None,
+                    })
+                    .is_some()
+            );
+        }
+        let terminal = render_ui(&ui, 80, 16, 5);
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body, ["/tmp/target.md", "why█"]);
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 80, 16),
+            5,
+            ui.approval().expect("approval"),
+            &theme()
+        ));
+    }
+
     /// cyril-rcub (found by the clamped fence): the blank row after a shown
     /// preview is counted in the row budget, so the selected LAST option
     /// stays inside a clamped popup at every clamp height — and the path is
@@ -2245,7 +2417,7 @@ mod tests {
         #[case] budget: usize,
         #[case] expected: &str,
     ) {
-        let elided = elide_middle(path, budget);
+        let elided = elide_middle(path, budget).text;
         assert_eq!(elided, expected);
         assert!(elided.width() <= budget, "over budget: {elided:?}");
     }
@@ -2261,7 +2433,7 @@ mod tests {
         #[case] rows: usize,
         #[case] expected: &[&str],
     ) {
-        assert_eq!(fit_path(path, width, rows), expected);
+        assert_eq!(fit_path(path, width, rows).rows, expected);
     }
 
     /// Invariant sweep over widths and row budgets: never more rows than
@@ -2279,7 +2451,7 @@ mod tests {
         for (path, name) in paths {
             for width in 1..=40usize {
                 for rows in 1..=5usize {
-                    let fitted = fit_path(path, width, rows);
+                    let fitted = fit_path(path, width, rows).rows;
                     let joined = fitted.concat();
                     let context = format!("path={path} width={width} rows={rows} -> {fitted:?}");
                     assert!(fitted.len() <= rows, "too many rows: {context}");
