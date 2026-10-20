@@ -1,0 +1,19 @@
+**Findings: none.**
+
+### Reviewed source pins
+- **fiv1:** `5e523ebf10978cc990746934732e4256596244ff`, bounded to the delta from `7eefe275fbec97f610677b2ee6433af996806599`.
+- **x5xi:** `aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77`, bounded to the delta from `194ec404a325843a1b002940784dda7296ef355c`.
+
+### Source evidence
+- **Approved alias precedence:** `crates/cyril-ui/src/traits.rs:488-531` adds string-valued `output` after `text`, `content`, and `result`, preserving all earlier extraction strategies. Non-string `output` values are ignored; successful output does not fall back to formatted `message`.
+- **Failed-error behavior preserved:** `traits.rs:544-571` remains Failed-only. Raw strings and explicit `error`/`message` fields precede `output_text()`, followed by nonblank text-content fallback. The inherited content-only v2 validation path remains reachable.
+- **Captured completion reaches its consumer:** `protocol/convert/mod.rs:233-264,523-525` preserves raw input/output and emits `ToolCallUpdated`; omitted `kind` becomes `Other`, not fabricated `Execute`. `state.rs:547-552,1274-1304` retains the row, and `widgets/chat.rs:493-565` renders its output through the ordinary Completed/Other branch.
+- **Self-contained regression:** `tests/missing_tool_updates.rs:110-180` includes the committed sanitized fixture and checks absent kind, terminal-reference wire content, exact raw fields, and the output-body line. Original-capture paths are provenance/payload strings, not runtime dependencies.
+- **Auth prerequisite is test-only:** the modified symlink-retarget test remains inside `#[cfg(test)]`; it uses immutable targets, executes the existing shell with the overlap script as data, and retains key-change/current-key assertions. No production auth code changed.
+- **x5xi owners unchanged:** the old-to-refreshed diff is empty for `highlight.rs`, `theme.rs`, and `widgets/markdown.rs`. The relevant extraction, regression, auth, and replay-support source files are identical between the two refreshed heads.
+
+**Overall correctness: correct.**
+
+**Explanation:** No provable semantic conflict was introduced by either automatic parent merge in the reviewed delta. The approved alias coexists with fiv1’s error precedence and content fallback, while x5xi’s cache-identity owners remain unchanged. This is a source/README/tracker-intent review only—not qualification; no builds, tests, or live replays were run, and private artifacts were not used as evidence.
+
+**Confidence: 0.97.**

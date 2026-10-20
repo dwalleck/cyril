@@ -1,0 +1,715 @@
+{
+  "result": "PASS",
+  "issue": "cyril-fiv1",
+  "pr": 184,
+  "binary_sha256": "e3f072bcd89cc8e1bf935fb52912035ffb273ac913cd1c31f40c225405534db1",
+  "source_pin_from_main": {
+    "head": "5e523ebf",
+    "tree": "7ba80340f2e37516df31d964454126c12a22df36",
+    "provenance": "Main supplied exact source provenance and GO; worker independently checked private binary SHA, did not rebuild."
+  },
+  "qualification_path": "/tmp/cyril-fiv1-refreshed-consumer-20261020/qualification.json",
+  "qualification_sha256": "11ac0710a8989e93a142553fc73818633f52e7307f63826cbb2e588746c66dad",
+  "portable_archive": "/tmp/cyril-fiv1-refreshed-consumer-20261020.tar.gz",
+  "portable_archive_sha256": "e2d554c5910bb54af53bf2f57d34d4f08224d070500b27a73b07ad04a727e07d",
+  "portable_archive_bytes": 21266,
+  "portable_archive_contents": "Full six-run result/screen/wire/ANSI/log evidence, byte-identical frozen harness and executable fake CLI, all three exact captured fixtures plus original approved KAS JSON, three owned synthetic control inputs, runnable per-case argv and qualification.json. Private binary is external and identified by exact hash.",
+  "publication_scope": "New refreshed-head proof only; no source edits, Cargo, real-account/model use, payload execution, or permission grants. Earlier receipts remain historical and unchanged.",
+  "qualification": {
+    "result": "PASS",
+    "issue": "cyril-fiv1",
+    "pr": 184,
+    "binary": "/tmp/cyril-fiv1-refreshed-20261020",
+    "binary_sha256": "e3f072bcd89cc8e1bf935fb52912035ffb273ac913cd1c31f40c225405534db1",
+    "source_pin_from_main": {
+      "head": "5e523ebf",
+      "tree": "7ba80340f2e37516df31d964454126c12a22df36",
+      "provenance": "Main supplied exact source provenance and GO; worker independently checked private binary SHA, did not rebuild."
+    },
+    "harness_sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+    "actual_smoke_processes": 6,
+    "captured_cases": 3,
+    "synthetic_control_cases": 11,
+    "retries": 0,
+    "kas_completed_replays": 1,
+    "run_proof": "Actual pinned Cyril binary under PTY with controlled ACP peer; pyte text only, not native-terminal glyph qualification.",
+    "source_edits": false,
+    "cargo_invocations": 0,
+    "real_account_or_model_use": false,
+    "payload_execution": false,
+    "permission_grants": 0,
+    "captures_policy": "Only named existing sanitized KAS0d613 and repository v2 fixture allowlist used. All original msg objects and session/new identities preserved. Recorder envelope metadata is not transmitted. Each tool_call_update intentionally repeated exactly once; visible rows remain unique. Synthetic controls use owned UUID/IDs, never MCP private IDs.",
+    "case_results": [
+      {
+        "name": "kas-completed",
+        "result": "PASS",
+        "command_exit_code": 0,
+        "engine": "kas",
+        "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/.cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+        "capture_sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+        "synthetic_control": false,
+        "output": "/tmp/cyril-fiv1-refreshed-consumer-20261020/kas-completed",
+        "frame_copy_counts": [
+          {
+            "input_row": 1,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          }
+        ],
+        "source_session_ids": [
+          "sess_973df141-0181-47bf-977a-2f58ca21220f"
+        ],
+        "advertised_session_ids": [
+          "sess_973df141-0181-47bf-977a-2f58ca21220f"
+        ],
+        "positive_counts": {
+          "✓ Run the exact sed/tr pipeline requested": 1,
+          "| XAVT_BEGIN XAVT_END": 1
+        },
+        "negative_counts": {},
+        "strict_chronology": true,
+        "visible_tool_header_count": 1,
+        "expected_tool_header_count": 1,
+        "peer_wire_safety": {
+          "request_count": 0,
+          "permission_requests": 0,
+          "terminal_requests": 0
+        },
+        "artifact_sha256": {
+          "result.json": "7b82df365ddf208f6332c0673bd5b67866562df14090a34dc297a17d681b806d",
+          "screen.txt": "2df1b4cd0a4b7f03190919477cd789c48f18b28d1ca7312835a92e74fae1b582",
+          "agent-wire.jsonl": "7d9ce215314e737723c21832dec18b665eabf8fe482eb35089f8d6f2a66968a5",
+          "terminal.ansi": "4de0412cb2734976aaf9de984c3ec0d355eafeb579a63b21fe24e0329c2522b8",
+          "cyril.log": "f01ae180925c9dd97f8d6e748350e8c39c3207df97cc5dd8b77a9dac797f1baa",
+          "kiro-cli-argv.txt": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e"
+        },
+        "portable_capture_path": "captures/kas_completed_trace.jsonl",
+        "replay_argv_from_packet_root": [
+          "uv",
+          "run",
+          "--script",
+          ".cyril-1v25/smoke.py",
+          "--binary",
+          "/tmp/cyril-fiv1-refreshed-20261020",
+          "--engine",
+          "kas",
+          "--capture",
+          "captures/kas_completed_trace.jsonl",
+          "--preserve-session-id",
+          "--expect",
+          "✓ Run the exact sed/tr pipeline requested",
+          "--expect",
+          "| XAVT_BEGIN XAVT_END",
+          "--output",
+          "/tmp/cyril-fiv1-reproduce-kas-completed-FRESH"
+        ]
+      },
+      {
+        "name": "v2-2-4-1",
+        "result": "PASS",
+        "command_exit_code": 0,
+        "engine": "v2",
+        "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-ui/tests/fixtures/v2_failed_validation_2_4_1.jsonl",
+        "capture_sha256": "a297eca10a7537cf544a6204fc11e40a56fff70e7853cb1abeeb781c106d3d00",
+        "synthetic_control": false,
+        "output": "/tmp/cyril-fiv1-refreshed-consumer-20261020/v2-2-4-1",
+        "frame_copy_counts": [
+          {
+            "input_row": 1,
+            "method": "_kiro.dev/session/update",
+            "session_update": "tool_call_chunk",
+            "expected": 1,
+            "observed": 1
+          },
+          {
+            "input_row": 2,
+            "method": "_kiro.dev/session/update",
+            "session_update": "tool_call_chunk",
+            "expected": 1,
+            "observed": 1
+          },
+          {
+            "input_row": 3,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          }
+        ],
+        "source_session_ids": [
+          "a4927587-2957-4f42-b388-412e3bda7888"
+        ],
+        "advertised_session_ids": [
+          "a4927587-2957-4f42-b388-412e3bda7888"
+        ],
+        "positive_counts": {
+          "✗ Read(/home/dwalleck/repos/cyril/Cargo.toml)": 1,
+          "Error: The tool arguments failed validation: '/home/dwalleck/repos/cyril/crates/cyril-core/src/protocol/convert' is not a file": 1
+        },
+        "negative_counts": {},
+        "strict_chronology": true,
+        "visible_tool_header_count": 1,
+        "expected_tool_header_count": 1,
+        "peer_wire_safety": {
+          "request_count": 0,
+          "permission_requests": 0,
+          "terminal_requests": 0
+        },
+        "artifact_sha256": {
+          "result.json": "48c6e0f04811283ebf98286d43a6c5dec6f778db29bb431813f86cdf84675011",
+          "screen.txt": "e2bf2d698f9f82b93b935fb403e142dd96ba0aad770f50f07947bc8fd507cce3",
+          "agent-wire.jsonl": "4598a0a45d4f6f0f36acef59397020951c81a3d1ede29ad4ccbf1f977fa8263f",
+          "terminal.ansi": "a0b931aa6bcb02721f0842b9126be0e4b83ba5d151d2d9a0074efe036359d807",
+          "cyril.log": "aeebd59f54d6c9c825075e2c30433f7754be08fdeedcbeab652df97286d1902f"
+        },
+        "portable_capture_path": "captures/v2_failed_validation_2_4_1.jsonl",
+        "replay_argv_from_packet_root": [
+          "uv",
+          "run",
+          "--script",
+          ".cyril-1v25/smoke.py",
+          "--binary",
+          "/tmp/cyril-fiv1-refreshed-20261020",
+          "--engine",
+          "v2",
+          "--capture",
+          "captures/v2_failed_validation_2_4_1.jsonl",
+          "--preserve-session-id",
+          "--expect",
+          "✗ Read(/home/dwalleck/repos/cyril/Cargo.toml)",
+          "--expect",
+          "Error: The tool arguments failed validation: '/home/dwalleck/repos/cyril/crates/cyril-core/src/protocol/convert' is not a file",
+          "--output",
+          "/tmp/cyril-fiv1-reproduce-v2-2-4-1-FRESH"
+        ]
+      },
+      {
+        "name": "v2-2-11-0",
+        "result": "PASS",
+        "command_exit_code": 0,
+        "engine": "v2",
+        "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-ui/tests/fixtures/v2_failed_validation_2_11_0.jsonl",
+        "capture_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "synthetic_control": false,
+        "output": "/tmp/cyril-fiv1-refreshed-consumer-20261020/v2-2-11-0",
+        "frame_copy_counts": [
+          {
+            "input_row": 1,
+            "method": "session/update",
+            "session_update": "agent_message_chunk",
+            "expected": 1,
+            "observed": 1
+          },
+          {
+            "input_row": 2,
+            "method": "_kiro.dev/session/update",
+            "session_update": "tool_call_chunk",
+            "expected": 1,
+            "observed": 1
+          },
+          {
+            "input_row": 3,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 4,
+            "method": "session/update",
+            "session_update": "agent_message_chunk",
+            "expected": 1,
+            "observed": 1
+          },
+          {
+            "input_row": 5,
+            "method": "session/update",
+            "session_update": "agent_message_chunk",
+            "expected": 1,
+            "observed": 1
+          },
+          {
+            "input_row": 6,
+            "method": "session/update",
+            "session_update": "agent_message_chunk",
+            "expected": 1,
+            "observed": 1
+          }
+        ],
+        "source_session_ids": [
+          "786acc7e-e731-4bd1-84c9-fca7cd6b2bfc"
+        ],
+        "advertised_session_ids": [
+          "786acc7e-e731-4bd1-84c9-fca7cd6b2bfc"
+        ],
+        "positive_counts": {
+          "✗ Read(/home/dwalleck/repos/rivets/CONTEXT.md)": 1,
+          "Error: The tool arguments failed validation: '/home/dwalleck/repos/rivets/CONTEXT.md' does not exist": 1,
+          "there's an existing CONTEXT.md or domain glossary in this repo.": 1,
+          "No existing domain model. Good — we'll build it as we go. Let me also check how notes are used in practice (CLI commands, MCP tools).": 1
+        },
+        "negative_counts": {},
+        "strict_chronology": true,
+        "visible_tool_header_count": 1,
+        "expected_tool_header_count": 1,
+        "peer_wire_safety": {
+          "request_count": 0,
+          "permission_requests": 0,
+          "terminal_requests": 0
+        },
+        "artifact_sha256": {
+          "result.json": "8e1d84208bb04cb8ad49f916065926a7eac097c88fbffc2d173a70d0600bc274",
+          "screen.txt": "5dd01a4d6c97c6c2abb0496869d9830b176d973946496eaf852ce95e58c7f3c6",
+          "agent-wire.jsonl": "d7a328bc5e4afc491fcf29257edfce201f0106f9a4d4fa9d3ea7f2c6934338be",
+          "terminal.ansi": "a6a763d651f631f210bc5ebffb4a8acb1b2c6f74dae4bff5009b4365847104e9",
+          "cyril.log": "65cfb32f96fe1fd58d3c14af814d8befa021fbfc8414755ae767f690881396d2"
+        },
+        "portable_capture_path": "captures/v2_failed_validation_2_11_0.jsonl",
+        "replay_argv_from_packet_root": [
+          "uv",
+          "run",
+          "--script",
+          ".cyril-1v25/smoke.py",
+          "--binary",
+          "/tmp/cyril-fiv1-refreshed-20261020",
+          "--engine",
+          "v2",
+          "--capture",
+          "captures/v2_failed_validation_2_11_0.jsonl",
+          "--preserve-session-id",
+          "--expect",
+          "✗ Read(/home/dwalleck/repos/rivets/CONTEXT.md)",
+          "--expect",
+          "Error: The tool arguments failed validation: '/home/dwalleck/repos/rivets/CONTEXT.md' does not exist",
+          "--expect",
+          "there's an existing CONTEXT.md or domain glossary in this repo.",
+          "--expect",
+          "No existing domain model. Good — we'll build it as we go. Let me also check how notes are used in practice (CLI commands, MCP tools).",
+          "--output",
+          "/tmp/cyril-fiv1-reproduce-v2-2-11-0-FRESH"
+        ]
+      },
+      {
+        "name": "v2-content-controls",
+        "result": "PASS",
+        "command_exit_code": 0,
+        "engine": "v2",
+        "capture": "/tmp/cyril-fiv1-refreshed-consumer-20261020/controls-content.jsonl",
+        "capture_sha256": "50ca8b07feb7411ebe88bc0375a0c06ac13361326e03731b144e6a47c955ae08",
+        "synthetic_control": true,
+        "output": "/tmp/cyril-fiv1-refreshed-consumer-20261020/v2-content-controls",
+        "frame_copy_counts": [
+          {
+            "input_row": 1,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 2,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          }
+        ],
+        "source_session_ids": [
+          "00000000-0000-4000-8000-00000000f184"
+        ],
+        "advertised_session_ids": [
+          "00000000-0000-4000-8000-00000000f184"
+        ],
+        "positive_counts": {
+          "✗ FIV1 content selection": 1,
+          "Error: FIV1_CONTENT_FIRST": 1,
+          "✗ FIV1 unknown raw object": 1,
+          "Error: FIV1_UNKNOWN_CONTENT_FIRST": 1
+        },
+        "negative_counts": {
+          "FIV1_CONTENT_SECOND": 0,
+          "FIV1_UNKNOWN_CONTENT_SECOND": 0,
+          "FIV1_UNKNOWN_RAW_MUST_NOT_RENDER": 0
+        },
+        "strict_chronology": true,
+        "visible_tool_header_count": 2,
+        "expected_tool_header_count": 2,
+        "peer_wire_safety": {
+          "request_count": 0,
+          "permission_requests": 0,
+          "terminal_requests": 0
+        },
+        "artifact_sha256": {
+          "result.json": "439e04ac6228db57f0fb2bf6fd7b167b86e5adc4f7f90f2628501672e9e96d17",
+          "screen.txt": "60fee0dc00daf52d2ff4bb8de8de1df718dbe8796b7c5cd8bde47f212b3b8391",
+          "agent-wire.jsonl": "12b93d9a36b36416b939407d91e707e5b82a4c058ae63e562fde36143034dc13",
+          "terminal.ansi": "0f93551cceb43e0827c71315999adcb7aaeecf1d0667ff307927958e16e3ff60",
+          "cyril.log": "7ec359ad77a01d614e05e7f6bc16fe131c4c74452146d06fb6c4e0785ef22114"
+        },
+        "portable_capture_path": "controls-content.jsonl",
+        "replay_argv_from_packet_root": [
+          "uv",
+          "run",
+          "--script",
+          ".cyril-1v25/smoke.py",
+          "--binary",
+          "/tmp/cyril-fiv1-refreshed-20261020",
+          "--engine",
+          "v2",
+          "--capture",
+          "controls-content.jsonl",
+          "--preserve-session-id",
+          "--expect",
+          "✗ FIV1 content selection",
+          "--expect",
+          "Error: FIV1_CONTENT_FIRST",
+          "--expect",
+          "✗ FIV1 unknown raw object",
+          "--expect",
+          "Error: FIV1_UNKNOWN_CONTENT_FIRST",
+          "--output",
+          "/tmp/cyril-fiv1-reproduce-v2-content-controls-FRESH"
+        ]
+      },
+      {
+        "name": "v2-raw-precedence-controls",
+        "result": "PASS",
+        "command_exit_code": 0,
+        "engine": "v2",
+        "capture": "/tmp/cyril-fiv1-refreshed-consumer-20261020/controls-raw-precedence.jsonl",
+        "capture_sha256": "f036fd22fee922c8cc1a3fd74f3a2e5ca74ac3a009f4d21d1ed93bfc384868a7",
+        "synthetic_control": true,
+        "output": "/tmp/cyril-fiv1-refreshed-consumer-20261020/v2-raw-precedence-controls",
+        "frame_copy_counts": [
+          {
+            "input_row": 1,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 2,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 3,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 4,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 5,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          }
+        ],
+        "source_session_ids": [
+          "00000000-0000-4000-8000-00000000f184"
+        ],
+        "advertised_session_ids": [
+          "00000000-0000-4000-8000-00000000f184"
+        ],
+        "positive_counts": {
+          "✗ FIV1 raw string": 1,
+          "Error: FIV1_RAW_STRING": 1,
+          "✗ FIV1 raw error priority": 1,
+          "Error: FIV1_RAW_ERROR": 1,
+          "✗ FIV1 raw message priority": 1,
+          "Error: FIV1_RAW_MESSAGE": 1,
+          "✗ FIV1 stderr fallback": 1,
+          "Error: FIV1_RAW_STDERR": 1,
+          "✗ FIV1 output fallback": 1,
+          "Error: FIV1_DIRECT_OUTPUT": 1
+        },
+        "negative_counts": {
+          "FIV1_CONTENT_MUST_NOT_OVERRIDE_RAW": 0,
+          "FIV1_MESSAGE_MUST_NOT_OVERRIDE_ERROR": 0,
+          "FIV1_STDOUT_MUST_NOT_OVERRIDE_ERROR": 0,
+          "FIV1_STDERR_MUST_NOT_OVERRIDE_MESSAGE": 0
+        },
+        "strict_chronology": true,
+        "visible_tool_header_count": 5,
+        "expected_tool_header_count": 5,
+        "peer_wire_safety": {
+          "request_count": 0,
+          "permission_requests": 0,
+          "terminal_requests": 0
+        },
+        "artifact_sha256": {
+          "result.json": "56a43226fa58f915b039ac61317b32e768d124b5fe48ae909e28974b0dedd63b",
+          "screen.txt": "fa3de005c215691b906d41f3ff5831f27f0635837dc0d08c17d2b65fe5352e8e",
+          "agent-wire.jsonl": "716feffa1eb1956f58d2a4bc54b6c364361bd75835a04ea2ad4109bc9205c897",
+          "terminal.ansi": "5bac4aa409f396edd0ce742a3ef1074e58e5a1c55360678008748d1695c1fe4d",
+          "cyril.log": "b37aea8f7662bdfd26acd6604401a5be272d0781378b962266a167492ee599b2"
+        },
+        "portable_capture_path": "controls-raw-precedence.jsonl",
+        "replay_argv_from_packet_root": [
+          "uv",
+          "run",
+          "--script",
+          ".cyril-1v25/smoke.py",
+          "--binary",
+          "/tmp/cyril-fiv1-refreshed-20261020",
+          "--engine",
+          "v2",
+          "--capture",
+          "controls-raw-precedence.jsonl",
+          "--preserve-session-id",
+          "--expect",
+          "✗ FIV1 raw string",
+          "--expect",
+          "Error: FIV1_RAW_STRING",
+          "--expect",
+          "✗ FIV1 raw error priority",
+          "--expect",
+          "Error: FIV1_RAW_ERROR",
+          "--expect",
+          "✗ FIV1 raw message priority",
+          "--expect",
+          "Error: FIV1_RAW_MESSAGE",
+          "--expect",
+          "✗ FIV1 stderr fallback",
+          "--expect",
+          "Error: FIV1_RAW_STDERR",
+          "--expect",
+          "✗ FIV1 output fallback",
+          "--expect",
+          "Error: FIV1_DIRECT_OUTPUT",
+          "--output",
+          "/tmp/cyril-fiv1-reproduce-v2-raw-precedence-controls-FRESH"
+        ]
+      },
+      {
+        "name": "v2-status-controls",
+        "result": "PASS",
+        "command_exit_code": 0,
+        "engine": "v2",
+        "capture": "/tmp/cyril-fiv1-refreshed-consumer-20261020/controls-status.jsonl",
+        "capture_sha256": "798e253f0442b8e215833bab5e9a9bb9570e095e39c9f7bb282cbd21492bbc91",
+        "synthetic_control": true,
+        "output": "/tmp/cyril-fiv1-refreshed-consumer-20261020/v2-status-controls",
+        "frame_copy_counts": [
+          {
+            "input_row": 1,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 2,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 3,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          },
+          {
+            "input_row": 4,
+            "method": "session/update",
+            "session_update": "tool_call_update",
+            "expected": 2,
+            "observed": 2
+          }
+        ],
+        "source_session_ids": [
+          "00000000-0000-4000-8000-00000000f184"
+        ],
+        "advertised_session_ids": [
+          "00000000-0000-4000-8000-00000000f184"
+        ],
+        "positive_counts": {
+          "✓ FIV1 completed content only": 1,
+          "✓ Read(/owned-fixture/fiv1-completed.txt)": 1,
+          "6 chars": 1,
+          "⏳ FIV1 pending raw and content": 1,
+          "⟳ FIV1 in-progress raw and content": 1
+        },
+        "negative_counts": {
+          "Error:": 0,
+          "RAW_OK": 0,
+          "FIV1_COMPLETED_CONTENT_MUST_NOT_RENDER": 0,
+          "FIV1_COMPLETED_RAW_ERROR_MUST_NOT_RENDER": 0,
+          "FIV1_COMPLETED_RAW_CONTENT_MUST_NOT_RENDER": 0,
+          "FIV1_PENDING_RAW_ERROR_MUST_NOT_RENDER": 0,
+          "FIV1_PENDING_OUTPUT_MUST_NOT_RENDER": 0,
+          "FIV1_PENDING_CONTENT_MUST_NOT_RENDER": 0,
+          "FIV1_IN_PROGRESS_RAW_ERROR_MUST_NOT_RENDER": 0,
+          "FIV1_IN_PROGRESS_OUTPUT_MUST_NOT_RENDER": 0,
+          "FIV1_IN_PROGRESS_CONTENT_MUST_NOT_RENDER": 0
+        },
+        "strict_chronology": true,
+        "visible_tool_header_count": 4,
+        "expected_tool_header_count": 4,
+        "peer_wire_safety": {
+          "request_count": 0,
+          "permission_requests": 0,
+          "terminal_requests": 0
+        },
+        "artifact_sha256": {
+          "result.json": "cb85d661969d41a8c44e9d86f522450e242ae1c4ebb310675435f2d7f4dcccdb",
+          "screen.txt": "6d604e08add95c0a5a398b5e787359c4502ba9d729965f1340bc0407a47d00ae",
+          "agent-wire.jsonl": "d6853d7c3056f66fad87898e10a76f920c247401f3a9bd7964a2edad048980d1",
+          "terminal.ansi": "b6a4a458d497c035084d193e0b0d2c67fc7487137a79a6b437a7f1e378730245",
+          "cyril.log": "ed6f4b6e6db6b43439135a6c92b7c61be09fd43661c746a9c0c149cbdda62e7e"
+        },
+        "portable_capture_path": "controls-status.jsonl",
+        "replay_argv_from_packet_root": [
+          "uv",
+          "run",
+          "--script",
+          ".cyril-1v25/smoke.py",
+          "--binary",
+          "/tmp/cyril-fiv1-refreshed-20261020",
+          "--engine",
+          "v2",
+          "--capture",
+          "controls-status.jsonl",
+          "--preserve-session-id",
+          "--expect",
+          "✓ FIV1 completed content only",
+          "--expect",
+          "✓ Read(/owned-fixture/fiv1-completed.txt)",
+          "--expect",
+          "6 chars",
+          "--expect",
+          "⏳ FIV1 pending raw and content",
+          "--expect",
+          "⟳ FIV1 in-progress raw and content",
+          "--output",
+          "/tmp/cyril-fiv1-reproduce-v2-status-controls-FRESH"
+        ]
+      }
+    ],
+    "synthetic_control_coverage": [
+      "First nonblank Text after empty and whitespace-only entries, without falling through to second nonblank Text",
+      "Unrecognized raw object allows content fallback",
+      "Raw string beats content",
+      "rawOutput.error beats message/stdout/content",
+      "rawOutput.message beats stderr/content",
+      "Nonblank stderr after blank stdout beats content",
+      "String rawOutput.output precedes content",
+      "Completed content is not error output",
+      "Completed Read with raw error plus output renders six-character summary, not error/content/raw text",
+      "Pending raw error/output/content are suppressed",
+      "InProgress raw error/output/content are suppressed"
+    ],
+    "negative_screen_predicates_checked": 18,
+    "cleanup": {
+      "harness_finally_completed_for_all_six": true,
+      "post_run_exact_private_binary_or_peer_agent_matches": 0,
+      "post_run_pgrep_exit_code": 1,
+      "individual_cyril_exit_codes": "Not separately recorded by frozen harness; all six wrapper commands exited zero."
+    },
+    "portable_packet": {
+      "root": "/tmp/cyril-fiv1-refreshed-consumer-20261020",
+      "frozen_copies": {
+        ".cyril-1v25/smoke.py": {
+          "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/.cyril-1v25/smoke.py",
+          "sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+          "byte_identical_to_source": true
+        },
+        "crates/cyril-core/tests/fixtures/fake-kiro-cli.sh": {
+          "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh",
+          "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+          "byte_identical_to_source": true
+        },
+        "captures/kas_completed_raw_output.json": {
+          "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+          "sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+          "byte_identical_to_source": true
+        },
+        "captures/kas_completed_trace.jsonl": {
+          "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/.cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+          "sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+          "byte_identical_to_source": true
+        },
+        "captures/v2_failed_validation_2_4_1.jsonl": {
+          "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-ui/tests/fixtures/v2_failed_validation_2_4_1.jsonl",
+          "sha256": "a297eca10a7537cf544a6204fc11e40a56fff70e7853cb1abeeb781c106d3d00",
+          "byte_identical_to_source": true
+        },
+        "captures/v2_failed_validation_2_11_0.jsonl": {
+          "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-ui/tests/fixtures/v2_failed_validation_2_11_0.jsonl",
+          "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+          "byte_identical_to_source": true
+        }
+      },
+      "control_fixture_pins": {
+        "controls-content": {
+          "sha256": "50ca8b07feb7411ebe88bc0375a0c06ac13361326e03731b144e6a47c955ae08",
+          "updates": 2,
+          "session_ids": [
+            "00000000-0000-4000-8000-00000000f184"
+          ],
+          "unique_tool_ids": true,
+          "notification_only": true,
+          "raw_command_fields": 0,
+          "case_titles": [
+            "FIV1 content selection",
+            "FIV1 unknown raw object"
+          ]
+        },
+        "controls-raw-precedence": {
+          "sha256": "f036fd22fee922c8cc1a3fd74f3a2e5ca74ac3a009f4d21d1ed93bfc384868a7",
+          "updates": 5,
+          "session_ids": [
+            "00000000-0000-4000-8000-00000000f184"
+          ],
+          "unique_tool_ids": true,
+          "notification_only": true,
+          "raw_command_fields": 0,
+          "case_titles": [
+            "FIV1 raw string",
+            "FIV1 raw error priority",
+            "FIV1 raw message priority",
+            "FIV1 stderr fallback",
+            "FIV1 output fallback"
+          ]
+        },
+        "controls-status": {
+          "sha256": "798e253f0442b8e215833bab5e9a9bb9570e095e39c9f7bb282cbd21492bbc91",
+          "updates": 4,
+          "session_ids": [
+            "00000000-0000-4000-8000-00000000f184"
+          ],
+          "unique_tool_ids": true,
+          "notification_only": true,
+          "raw_command_fields": 0,
+          "case_titles": [
+            "FIV1 completed content only",
+            "FIV1 completed raw and content",
+            "FIV1 pending raw and content",
+            "FIV1 in-progress raw and content"
+          ]
+        }
+      },
+      "copied_harness_has_not_been_separately_launched": "Observed runs used byte-identical original pinned harness. Packet reproduces its expected repository-relative fake CLI layout.",
+      "external_binary_required": "Use pinned private binary at recorded path, or explicitly substitute the intended rebuilt binary; never treat a different binary as this receipt.",
+      "replay_output_directories": "Each replay argv ends with a proposed fresh path; ensure it does not already exist before reproducing."
+    },
+    "historical_receipts": "Original PR184 and earlier output-extension receipts remain historical and unmodified; this is a distinct refreshed-head qualification."
+  }
+}
