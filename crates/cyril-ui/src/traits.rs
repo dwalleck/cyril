@@ -1,3 +1,4 @@
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 use cyril_core::types::{
@@ -6,6 +7,7 @@ use cyril_core::types::{
 
 pub use crate::feedback_editor::RejectionFeedback;
 use crate::theme::Theme;
+use crate::tool_diff::{DiffPreview, DiffSource};
 
 /// Which transcript a line belongs in (cyril-lki9): the main conversation, or
 /// the stream of a workflow step / subagent session. The App decides which —
@@ -359,11 +361,15 @@ fn json_shape(v: &serde_json::Value) -> &'static str {
 #[derive(Debug, Clone)]
 pub struct TrackedToolCall {
     inner: cyril_core::types::ToolCall,
+    diff_preview: OnceLock<Arc<DiffPreview>>,
 }
 
 impl TrackedToolCall {
     pub fn new(tc: cyril_core::types::ToolCall) -> Self {
-        Self { inner: tc }
+        Self {
+            inner: tc,
+            diff_preview: OnceLock::new(),
+        }
     }
 
     /// Merge update fields into the existing tool call.
@@ -371,6 +377,9 @@ impl TrackedToolCall {
     /// content and locations from the initial ToolCall if the update
     /// doesn't carry them.
     pub fn update(&mut self, tc: &cyril_core::types::ToolCall) {
+        if !tc.content().is_empty() && self.diff_source() != Self::selected_diff(tc.content()) {
+            self.diff_preview = OnceLock::new();
+        }
         self.inner.merge_update(tc);
     }
 
@@ -397,6 +406,29 @@ impl TrackedToolCall {
 
     pub fn content(&self) -> &[cyril_core::types::ToolCallContent] {
         self.inner.content()
+    }
+
+    /// One immutable derivation per effective first-Diff source. Cloned
+    /// initialized wrappers share it; changing one wrapper detaches its slot.
+    pub(crate) fn diff_preview(&self) -> &DiffPreview {
+        self.diff_preview
+            .get_or_init(|| Arc::new(DiffPreview::new(self.diff_source())))
+    }
+
+    pub(crate) fn diff_source(&self) -> Option<DiffSource<'_>> {
+        Self::selected_diff(self.content())
+    }
+
+    fn selected_diff(content: &[cyril_core::types::ToolCallContent]) -> Option<DiffSource<'_>> {
+        content.iter().find_map(|block| match block {
+            cyril_core::types::ToolCallContent::Diff {
+                old_text, new_text, ..
+            } => Some(DiffSource {
+                old: old_text.as_deref().unwrap_or(""),
+                new: new_text,
+            }),
+            cyril_core::types::ToolCallContent::Text(_) => None,
+        })
     }
 
     pub fn locations(&self) -> &[cyril_core::types::ToolCallLocation] {
@@ -1475,6 +1507,199 @@ mod tests {
         );
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(tracked.title(), "Reading file");
+    }
+
+    fn diff_cache_call(old: Option<&str>, new: &str) -> cyril_core::types::ToolCall {
+        use cyril_core::types::*;
+        ToolCall::new(
+            ToolCallId::new("diff-cache"),
+            "Edit".into(),
+            ToolKind::Write,
+            ToolCallStatus::Completed,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "first.rs".into(),
+            old_text: old.map(str::to_owned),
+            new_text: new.into(),
+        }])
+    }
+
+    #[test]
+    fn tracked_diff_cache_is_lazy_and_caches_absence_and_no_change() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::*;
+
+        let before = text_diff_constructions();
+        let mut no_diff = TrackedToolCall::new(
+            diff_cache_call(None, "").with_content(vec![ToolCallContent::Text("output".into())]),
+        );
+        assert!(no_diff.diff_preview.get().is_none());
+        assert!(no_diff.clone().diff_preview.get().is_none());
+        assert_eq!(text_diff_constructions(), before);
+        assert_eq!(no_diff.diff_preview().summary(), None);
+        let absent = no_diff.diff_preview.get().unwrap().clone();
+        no_diff.update(
+            &diff_cache_call(None, "")
+                .with_content(vec![ToolCallContent::Text("different output".into())]),
+        );
+        assert!(Arc::ptr_eq(&absent, no_diff.diff_preview.get().unwrap()));
+        assert_eq!(text_diff_constructions(), before);
+
+        let unchanged = TrackedToolCall::new(diff_cache_call(Some("same\n"), "same\n"));
+        let empty_clone = unchanged.clone();
+        assert!(empty_clone.diff_preview.get().is_none());
+        assert_eq!(unchanged.diff_preview().summary(), None);
+        assert!(unchanged.diff_preview().rows().is_empty());
+        assert_eq!(text_diff_constructions() - before, 1);
+        assert!(empty_clone.diff_preview.get().is_none());
+        let initialized_clone = unchanged.clone();
+        assert!(Arc::ptr_eq(
+            unchanged.diff_preview.get().unwrap(),
+            initialized_clone.diff_preview.get().unwrap()
+        ));
+        assert_eq!(initialized_clone.diff_preview().summary(), None);
+        assert_eq!(text_diff_constructions() - before, 1);
+    }
+
+    #[test]
+    fn tracked_diff_cache_retains_effective_input_across_metadata_and_equivalent_updates() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::*;
+
+        let mut tracked = TrackedToolCall::new(diff_cache_call(None, "new\n"));
+        let before = text_diff_constructions();
+        assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
+        let retained = tracked.diff_preview.get().unwrap().clone();
+        for status in [
+            ToolCallStatus::Pending,
+            ToolCallStatus::InProgress,
+            ToolCallStatus::Failed,
+        ] {
+            let update = ToolCall::new(
+                tracked.id().clone(),
+                "metadata changed".into(),
+                ToolKind::Other,
+                status,
+                Some(serde_json::json!({"path": "elsewhere.rs"})),
+            )
+            .with_locations(vec![ToolCallLocation {
+                path: "elsewhere.rs".into(),
+                line: Some(99),
+            }])
+            .with_raw_output(Some(serde_json::json!({"stdout": "metadata"})));
+            tracked.update(&update);
+            assert_eq!(tracked.status(), status);
+            assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
+            assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
+            assert_eq!(tracked.diff_source().unwrap().new, "new\n");
+        }
+        // Replacing owned source strings is safe: descriptors contain only
+        // ranges, and None/empty old input are the same effective diff.
+        tracked.update(&diff_cache_call(Some(""), "new\n").with_content(vec![
+            ToolCallContent::Text("unrelated".into()),
+            ToolCallContent::Diff {
+                path: "renamed.rs".into(),
+                old_text: Some(String::new()),
+                new_text: "new\n".into(),
+            },
+            ToolCallContent::Diff {
+                path: "later.rs".into(),
+                old_text: None,
+                new_text: "not selected\n".into(),
+            },
+        ]));
+        assert_eq!(tracked.primary_path(), Some("elsewhere.rs"));
+        assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
+        assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
+        let source = tracked.diff_source().unwrap();
+        assert_eq!(tracked.diff_preview().rows()[0].text(source), "new");
+        assert_eq!(
+            tracked.diff_preview().rows()[0].text(source).as_ptr(),
+            source.new.as_ptr()
+        );
+        assert_eq!(text_diff_constructions() - before, 1);
+    }
+
+    #[test]
+    fn tracked_diff_cache_source_changes_detach_initialized_clones() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::ToolCallContent;
+
+        let mut tracked = TrackedToolCall::new(diff_cache_call(Some("old\n"), "new\n"));
+        let before = text_diff_constructions();
+        assert_eq!(tracked.diff_preview().summary(), Some((1, 1)));
+        let snapshot = tracked.clone();
+        assert!(Arc::ptr_eq(
+            tracked.diff_preview.get().unwrap(),
+            snapshot.diff_preview.get().unwrap()
+        ));
+        tracked.update(&diff_cache_call(Some("old\n"), "new\nextra\n"));
+        assert!(tracked.diff_preview.get().is_none());
+        assert_eq!(text_diff_constructions() - before, 1);
+        assert_eq!(tracked.diff_preview().summary(), Some((2, 1)));
+        assert_eq!(snapshot.diff_preview().summary(), Some((1, 1)));
+        assert!(!Arc::ptr_eq(
+            tracked.diff_preview.get().unwrap(),
+            snapshot.diff_preview.get().unwrap()
+        ));
+        assert_eq!(snapshot.diff_source().unwrap().new, "new\n");
+        assert_eq!(
+            tracked.diff_preview().rows()[2].text(tracked.diff_source().unwrap()),
+            "extra"
+        );
+        assert_eq!(text_diff_constructions() - before, 2);
+
+        tracked.update(&diff_cache_call(Some("older\nremoved\n"), "new\nextra\n"));
+        assert!(tracked.diff_preview.get().is_none());
+        assert_eq!(tracked.diff_preview().summary(), Some((2, 2)));
+        assert_eq!(text_diff_constructions() - before, 3);
+
+        tracked.update(
+            &diff_cache_call(None, "")
+                .with_content(vec![ToolCallContent::Text("diff removed".into())]),
+        );
+        assert!(tracked.diff_preview.get().is_none());
+        assert_eq!(tracked.diff_preview().summary(), None);
+        assert!(tracked.diff_preview().rows().is_empty());
+        assert_eq!(text_diff_constructions() - before, 3);
+        tracked.update(&diff_cache_call(None, "added\n"));
+        assert!(tracked.diff_preview.get().is_none());
+        assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
+        assert_eq!(text_diff_constructions() - before, 4);
+        assert_eq!(snapshot.diff_preview().summary(), Some((1, 1)));
+    }
+
+    #[test]
+    fn tracked_diff_cache_tracks_first_diff_selection_not_later_blocks() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::ToolCallContent;
+
+        let first = ToolCallContent::Diff {
+            path: "first.rs".into(),
+            old_text: Some("same\n".into()),
+            new_text: "same\n".into(),
+        };
+        let later = ToolCallContent::Diff {
+            path: "later.rs".into(),
+            old_text: Some("old\n".into()),
+            new_text: "new\nextra\n".into(),
+        };
+        let mut tracked = TrackedToolCall::new(
+            diff_cache_call(None, "").with_content(vec![first.clone(), later.clone()]),
+        );
+        let before = text_diff_constructions();
+        assert_eq!(tracked.diff_preview().summary(), None);
+        let retained = tracked.diff_preview.get().unwrap().clone();
+        tracked.update(&diff_cache_call(None, "").with_content(vec![
+            first,
+            ToolCallContent::Text("later diff removed".into()),
+        ]));
+        assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
+        tracked.update(&diff_cache_call(None, "").with_content(vec![later]));
+        assert!(tracked.diff_preview.get().is_none());
+        assert_eq!(tracked.diff_preview().summary(), Some((2, 1)));
+        assert_eq!(text_diff_constructions() - before, 2);
     }
 
     /// A `read` tool call carrying only `rawInput` — no `locations`, no content.

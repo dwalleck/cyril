@@ -1,0 +1,1530 @@
+diff --git a/crates/cyril-ui/Cargo.toml b/crates/cyril-ui/Cargo.toml
+index eec1ae48..891af832 100644
+--- a/crates/cyril-ui/Cargo.toml
++++ b/crates/cyril-ui/Cargo.toml
+@@ -31,3 +31,7 @@ rstest = { workspace = true }
+ insta = { workspace = true }
+ tempfile = { workspace = true }
+ tokio = { workspace = true, features = ["macros", "rt"] }
++
++[[bench]]
++name = "conversation_render"
++harness = false
+diff --git a/crates/cyril-ui/src/lib.rs b/crates/cyril-ui/src/lib.rs
+index 47f0f62d..525eaf98 100644
+--- a/crates/cyril-ui/src/lib.rs
++++ b/crates/cyril-ui/src/lib.rs
+@@ -16,6 +16,7 @@ pub mod state;
+ pub mod subagent_ui;
+ pub mod text;
+ pub mod theme;
++mod tool_diff;
+ pub mod traits;
+ pub(crate) mod turn_labels;
+ pub mod widgets;
+diff --git a/crates/cyril-ui/src/traits.rs b/crates/cyril-ui/src/traits.rs
+index f56e9939..1d205c44 100644
+--- a/crates/cyril-ui/src/traits.rs
++++ b/crates/cyril-ui/src/traits.rs
+@@ -1,3 +1,4 @@
++use std::sync::{Arc, OnceLock};
+ use std::time::Duration;
+ 
+ use cyril_core::types::{
+@@ -6,6 +7,7 @@ use cyril_core::types::{
+ 
+ pub use crate::feedback_editor::RejectionFeedback;
+ use crate::theme::Theme;
++use crate::tool_diff::{DiffPreview, DiffSource};
+ 
+ /// Which transcript a line belongs in (cyril-lki9): the main conversation, or
+ /// the stream of a workflow step / subagent session. The App decides which —
+@@ -357,11 +359,15 @@ fn json_shape(v: &serde_json::Value) -> &'static str {
+ #[derive(Debug, Clone)]
+ pub struct TrackedToolCall {
+     inner: cyril_core::types::ToolCall,
++    diff_preview: OnceLock<Arc<DiffPreview>>,
+ }
+ 
+ impl TrackedToolCall {
+     pub fn new(tc: cyril_core::types::ToolCall) -> Self {
+-        Self { inner: tc }
++        Self {
++            inner: tc,
++            diff_preview: OnceLock::new(),
++        }
+     }
+ 
+     /// Merge update fields into the existing tool call.
+@@ -369,6 +375,9 @@ impl TrackedToolCall {
+     /// content and locations from the initial ToolCall if the update
+     /// doesn't carry them.
+     pub fn update(&mut self, tc: &cyril_core::types::ToolCall) {
++        if !tc.content().is_empty() && self.diff_source() != Self::selected_diff(tc.content()) {
++            self.diff_preview = OnceLock::new();
++        }
+         self.inner.merge_update(tc);
+     }
+ 
+@@ -397,6 +406,29 @@ impl TrackedToolCall {
+         self.inner.content()
+     }
+ 
++    /// One immutable derivation per effective first-Diff source. Cloned
++    /// initialized wrappers share it; changing one wrapper detaches its slot.
++    pub(crate) fn diff_preview(&self) -> &DiffPreview {
++        self.diff_preview
++            .get_or_init(|| Arc::new(DiffPreview::new(self.diff_source())))
++    }
++
++    pub(crate) fn diff_source(&self) -> Option<DiffSource<'_>> {
++        Self::selected_diff(self.content())
++    }
++
++    fn selected_diff(content: &[cyril_core::types::ToolCallContent]) -> Option<DiffSource<'_>> {
++        content.iter().find_map(|block| match block {
++            cyril_core::types::ToolCallContent::Diff {
++                old_text, new_text, ..
++            } => Some(DiffSource {
++                old: old_text.as_deref().unwrap_or(""),
++                new: new_text,
++            }),
++            cyril_core::types::ToolCallContent::Text(_) => None,
++        })
++    }
++
+     pub fn locations(&self) -> &[cyril_core::types::ToolCallLocation] {
+         self.inner.locations()
+     }
+@@ -1458,6 +1490,187 @@ mod tests {
+         assert_eq!(tracked.title(), "Reading file");
+     }
+ 
++    fn diff_cache_call(old: Option<&str>, new: &str) -> cyril_core::types::ToolCall {
++        use cyril_core::types::*;
++        ToolCall::new(
++            ToolCallId::new("diff-cache"),
++            "Edit".into(),
++            ToolKind::Write,
++            ToolCallStatus::Completed,
++            None,
++        )
++        .with_content(vec![ToolCallContent::Diff {
++            path: "first.rs".into(),
++            old_text: old.map(str::to_owned),
++            new_text: new.into(),
++        }])
++    }
++
++    #[test]
++    fn tracked_diff_cache_is_lazy_and_caches_absence_and_no_change() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::*;
++
++        let before = text_diff_constructions();
++        let mut no_diff = TrackedToolCall::new(
++            diff_cache_call(None, "").with_content(vec![ToolCallContent::Text("output".into())]),
++        );
++        assert!(no_diff.diff_preview.get().is_none());
++        assert!(no_diff.clone().diff_preview.get().is_none());
++        assert_eq!(text_diff_constructions(), before);
++        assert_eq!(no_diff.diff_preview().summary(), None);
++        let absent = no_diff.diff_preview.get().unwrap().clone();
++        no_diff.update(&diff_cache_call(None, "").with_content(vec![
++            ToolCallContent::Text("different output".into()),
++        ]));
++        assert!(Arc::ptr_eq(&absent, no_diff.diff_preview.get().unwrap()));
++        assert_eq!(text_diff_constructions(), before);
++
++        let unchanged = TrackedToolCall::new(diff_cache_call(Some("same\n"), "same\n"));
++        let empty_clone = unchanged.clone();
++        assert!(empty_clone.diff_preview.get().is_none());
++        assert_eq!(unchanged.diff_preview().summary(), None);
++        assert!(unchanged.diff_preview().rows().is_empty());
++        assert_eq!(text_diff_constructions() - before, 1);
++        assert!(empty_clone.diff_preview.get().is_none());
++        let initialized_clone = unchanged.clone();
++        assert!(Arc::ptr_eq(
++            unchanged.diff_preview.get().unwrap(),
++            initialized_clone.diff_preview.get().unwrap()
++        ));
++        assert_eq!(initialized_clone.diff_preview().summary(), None);
++        assert_eq!(text_diff_constructions() - before, 1);
++    }
++
++    #[test]
++    fn tracked_diff_cache_retains_effective_input_across_metadata_and_equivalent_updates() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::*;
++
++        let mut tracked = TrackedToolCall::new(diff_cache_call(None, "new\n"));
++        let before = text_diff_constructions();
++        assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
++        let retained = tracked.diff_preview.get().unwrap().clone();
++        for status in [ToolCallStatus::Pending, ToolCallStatus::InProgress, ToolCallStatus::Failed] {
++            let update = ToolCall::new(
++                tracked.id().clone(),
++                "metadata changed".into(),
++                ToolKind::Other,
++                status,
++                Some(serde_json::json!({"path": "elsewhere.rs"})),
++            )
++            .with_locations(vec![ToolCallLocation { path: "elsewhere.rs".into(), line: Some(99) }])
++            .with_raw_output(Some(serde_json::json!({"stdout": "metadata"})));
++            tracked.update(&update);
++            assert_eq!(tracked.status(), status);
++            assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
++            assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
++            assert_eq!(tracked.diff_source().unwrap().new, "new\n");
++        }
++        // Replacing owned source strings is safe: descriptors contain only
++        // ranges, and None/empty old input are the same effective diff.
++        tracked.update(&diff_cache_call(Some(""), "new\n").with_content(vec![
++            ToolCallContent::Text("unrelated".into()),
++            ToolCallContent::Diff {
++                path: "renamed.rs".into(),
++                old_text: Some(String::new()),
++                new_text: "new\n".into(),
++            },
++            ToolCallContent::Diff {
++                path: "later.rs".into(),
++                old_text: None,
++                new_text: "not selected\n".into(),
++            },
++        ]));
++        assert_eq!(tracked.primary_path(), Some("elsewhere.rs"));
++        assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
++        assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
++        let source = tracked.diff_source().unwrap();
++        assert_eq!(tracked.diff_preview().rows()[0].text(source), "new");
++        assert_eq!(
++            tracked.diff_preview().rows()[0].text(source).as_ptr(),
++            source.new.as_ptr()
++        );
++        assert_eq!(text_diff_constructions() - before, 1);
++    }
++
++    #[test]
++    fn tracked_diff_cache_source_changes_detach_initialized_clones() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::ToolCallContent;
++
++        let mut tracked = TrackedToolCall::new(diff_cache_call(Some("old\n"), "new\n"));
++        let before = text_diff_constructions();
++        assert_eq!(tracked.diff_preview().summary(), Some((1, 1)));
++        let snapshot = tracked.clone();
++        assert!(Arc::ptr_eq(
++            tracked.diff_preview.get().unwrap(),
++            snapshot.diff_preview.get().unwrap()
++        ));
++        tracked.update(&diff_cache_call(Some("old\n"), "new\nextra\n"));
++        assert!(tracked.diff_preview.get().is_none());
++        assert_eq!(text_diff_constructions() - before, 1);
++        assert_eq!(tracked.diff_preview().summary(), Some((2, 1)));
++        assert_eq!(snapshot.diff_preview().summary(), Some((1, 1)));
++        assert!(!Arc::ptr_eq(
++            tracked.diff_preview.get().unwrap(),
++            snapshot.diff_preview.get().unwrap()
++        ));
++        assert_eq!(snapshot.diff_source().unwrap().new, "new\n");
++        assert_eq!(tracked.diff_preview().rows()[2].text(tracked.diff_source().unwrap()), "extra");
++        assert_eq!(text_diff_constructions() - before, 2);
++
++        tracked.update(&diff_cache_call(Some("older\nremoved\n"), "new\nextra\n"));
++        assert!(tracked.diff_preview.get().is_none());
++        assert_eq!(tracked.diff_preview().summary(), Some((2, 2)));
++        assert_eq!(text_diff_constructions() - before, 3);
++
++        tracked.update(&diff_cache_call(None, "").with_content(vec![
++            ToolCallContent::Text("diff removed".into()),
++        ]));
++        assert!(tracked.diff_preview.get().is_none());
++        assert_eq!(tracked.diff_preview().summary(), None);
++        assert!(tracked.diff_preview().rows().is_empty());
++        assert_eq!(text_diff_constructions() - before, 3);
++        tracked.update(&diff_cache_call(None, "added\n"));
++        assert!(tracked.diff_preview.get().is_none());
++        assert_eq!(tracked.diff_preview().summary(), Some((1, 0)));
++        assert_eq!(text_diff_constructions() - before, 4);
++        assert_eq!(snapshot.diff_preview().summary(), Some((1, 1)));
++    }
++
++    #[test]
++    fn tracked_diff_cache_tracks_first_diff_selection_not_later_blocks() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::ToolCallContent;
++
++        let first = ToolCallContent::Diff {
++            path: "first.rs".into(),
++            old_text: Some("same\n".into()),
++            new_text: "same\n".into(),
++        };
++        let later = ToolCallContent::Diff {
++            path: "later.rs".into(),
++            old_text: Some("old\n".into()),
++            new_text: "new\nextra\n".into(),
++        };
++        let mut tracked = TrackedToolCall::new(
++            diff_cache_call(None, "").with_content(vec![first.clone(), later.clone()]),
++        );
++        let before = text_diff_constructions();
++        assert_eq!(tracked.diff_preview().summary(), None);
++        let retained = tracked.diff_preview.get().unwrap().clone();
++        tracked.update(&diff_cache_call(None, "").with_content(vec![
++            first,
++            ToolCallContent::Text("later diff removed".into()),
++        ]));
++        assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
++        tracked.update(&diff_cache_call(None, "").with_content(vec![later]));
++        assert!(tracked.diff_preview.get().is_none());
++        assert_eq!(tracked.diff_preview().summary(), Some((2, 1)));
++        assert_eq!(text_diff_constructions() - before, 2);
++    }
++
+     /// A `read` tool call carrying only `rawInput` — no `locations`, no content.
+     fn read_call_with_raw_input(raw_input: serde_json::Value) -> TrackedToolCall {
+         use cyril_core::types::*;
+diff --git a/crates/cyril-ui/src/widgets/approval.rs b/crates/cyril-ui/src/widgets/approval.rs
+index 573b5524..9627510b 100644
+--- a/crates/cyril-ui/src/widgets/approval.rs
++++ b/crates/cyril-ui/src/widgets/approval.rs
+@@ -463,7 +463,7 @@ fn plan_comparison(tc: &crate::traits::TrackedToolCall) -> Option<&str> {
+ ///
+ /// Runs every frame, so it never logs: a malformed payload's warning is
+ /// emitted once when the approval is installed (cyril-q0kg).
+-fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
++fn preview_lines<'a>(state: &'a ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
+     let tc = &state.tool_call;
+     // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
+     // tree in place of KAS's Text rendering of the same plan, plus the one
+diff --git a/crates/cyril-ui/src/widgets/chat.rs b/crates/cyril-ui/src/widgets/chat.rs
+index ad203b3a..1ae6664a 100644
+--- a/crates/cyril-ui/src/widgets/chat.rs
++++ b/crates/cyril-ui/src/widgets/chat.rs
+@@ -174,7 +174,12 @@ fn push_thought_lines(lines: &mut Vec<Line>, text: &str, theme: &Theme) {
+     }
+ }
+ 
+-fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme: &Theme) {
++fn render_message<'a>(
++    lines: &mut Vec<Line<'a>>,
++    msg: &'a ChatMessage,
++    width: usize,
++    theme: &Theme,
++) {
+     match msg.kind() {
+         ChatMessageKind::UserText(text) => {
+             lines.push(Line::styled(
+@@ -308,7 +313,7 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme:
+     ]));
+ }
+ 
+-fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
++fn render_tool_call<'a>(lines: &mut Vec<Line<'a>>, tc: &'a TrackedToolCall, theme: &Theme) {
+     use cyril_core::types::{ToolCallStatus, ToolKind};
+ 
+     let status_icon = match tc.status() {
+@@ -374,7 +379,7 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme)
+         Span::styled(label, Style::default().fg(kind_color)),
+     ];
+ 
+-    if let Some((added, removed)) = compute_diff_summary(tc) {
++    if let Some((added, removed)) = tc.diff_preview().summary() {
+         header_spans.push(Span::styled(
+             format!("  +{added} -{removed}"),
+             Style::default().fg(theme.subdued),
+@@ -390,98 +395,39 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme)
+     render_tool_output(lines, tc, theme);
+ }
+ 
+-/// Compute (added, removed) line counts from diff content using `similar`.
+-fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
+-    use similar::{ChangeTag, TextDiff};
+-
+-    for content in tc.content() {
+-        if let cyril_core::types::ToolCallContent::Diff {
+-            old_text, new_text, ..
+-        } = content
+-        {
+-            let old = old_text.as_deref().unwrap_or("");
+-            let diff = TextDiff::from_lines(old, new_text);
+-            let mut added = 0usize;
+-            let mut removed = 0usize;
+-            for change in diff.iter_all_changes() {
+-                match change.tag() {
+-                    ChangeTag::Insert => added += 1,
+-                    ChangeTag::Delete => removed += 1,
+-                    ChangeTag::Equal => {}
+-                }
+-            }
+-            if added > 0 || removed > 0 {
+-                return Some((added, removed));
+-            }
+-        }
+-    }
+-    None
+-}
+-
+-/// Render actual diff lines with line numbers for edit operations.
+-/// Uses the `similar` crate for proper diff computation with context lines.
+-pub(crate) fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
+-    use similar::{ChangeTag, TextDiff};
+-
+-    const MAX_DIFF_LINES: usize = 20;
+-
+-    for content in tc.content() {
+-        if let cyril_core::types::ToolCallContent::Diff {
+-            old_text, new_text, ..
+-        } = content
+-        {
+-            let old = old_text.as_deref().unwrap_or("");
+-            let diff = TextDiff::from_lines(old, new_text);
+-            let mut count = 0;
+-
+-            for group in diff.grouped_ops(1) {
+-                for op in &group {
+-                    for change in diff.iter_changes(op) {
+-                        if count >= MAX_DIFF_LINES {
+-                            lines.push(Line::styled(
+-                                "      ...".to_string(),
+-                                Style::default().fg(theme.subdued),
+-                            ));
+-                            return;
+-                        }
+-
+-                        let line_text = change.value().trim_end_matches('\n');
+-
+-                        let (prefix, color) = match change.tag() {
+-                            ChangeTag::Delete => {
+-                                let line_no = change.old_index().map(|i| i + 1).unwrap_or(0);
+-                                (format!("    {line_no:>4} │- "), theme.subdued_negative)
+-                            }
+-                            ChangeTag::Insert => {
+-                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
+-                                (format!("    {line_no:>4} │+ "), theme.subdued_positive)
+-                            }
+-                            ChangeTag::Equal => {
+-                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
+-                                (format!("    {line_no:>4} │  "), theme.subdued)
+-                            }
+-                        };
+-
+-                        lines.push(Line::from(vec![
+-                            Span::styled(prefix, Style::default().fg(color)),
+-                            Span::styled(
+-                                line_text.to_string(),
+-                                if change.tag() == ChangeTag::Equal {
+-                                    Style::default().fg(theme.subdued)
+-                                } else {
+-                                    Style::default().fg(color)
+-                                },
+-                            ),
+-                        ]));
+-
+-                        count += 1;
+-                    }
+-                }
+-            }
++/// Style retained diff rows with the current palette, borrowing source text.
++/// Approval previews deliberately use this without a completion/kind gate.
++pub(crate) fn render_diff_lines<'a>(
++    lines: &mut Vec<Line<'a>>,
++    tc: &'a TrackedToolCall,
++    theme: &Theme,
++) {
++    use similar::ChangeTag;
+ 
+-            // Only render first diff block
+-            return;
+-        }
++    let preview = tc.diff_preview();
++    let Some(source) = tc.diff_source() else {
++        return;
++    };
++    for row in preview.rows() {
++        let (marker, color) = match row.tag {
++            ChangeTag::Delete => ("- ", theme.subdued_negative),
++            ChangeTag::Insert => ("+ ", theme.subdued_positive),
++            ChangeTag::Equal => ("  ", theme.subdued),
++        };
++        let line_no = row.line_number;
++        lines.push(Line::from(vec![
++            Span::styled(
++                format!("    {line_no:>4} │{marker}"),
++                Style::default().fg(color),
++            ),
++            Span::styled(row.text(source), Style::default().fg(color)),
++        ]));
++    }
++    if preview.truncated() {
++        lines.push(Line::styled(
++            "      ...",
++            Style::default().fg(theme.subdued),
++        ));
+     }
+ }
+ 
+@@ -654,7 +600,7 @@ mod tests {
+             .join("\n")
+     }
+ 
+-    fn rendered_tool_lines(tool: &TrackedToolCall, theme: &Theme) -> Vec<Line<'static>> {
++    fn rendered_tool_lines<'a>(tool: &'a TrackedToolCall, theme: &Theme) -> Vec<Line<'a>> {
+         let mut lines = Vec::new();
+         render_tool_call(&mut lines, tool, theme);
+         lines
+@@ -755,10 +701,8 @@ mod tests {
+             (ToolKind::SwitchMode, "shape", "tool-kind/switch-mode"),
+             (ToolKind::Other, "shape", "tool-kind/other"),
+         ] {
+-            let lines = rendered_tool_lines(
+-                &matrix_tool("kind", "shape", kind, ToolCallStatus::Pending),
+-                &theme,
+-            );
++            let tool = matrix_tool("kind", "shape", kind, ToolCallStatus::Pending);
++            let lines = rendered_tool_lines(&tool, &theme);
+             let label_text = lines[0].spans[1].content.as_ref();
+             anyhow::ensure!(
+                 label_text == expected,
+@@ -773,10 +717,8 @@ mod tests {
+             (ToolCallStatus::Completed, "✓ ", "tool-status/completed"),
+             (ToolCallStatus::Failed, "✗ ", "tool-status/failed"),
+         ] {
+-            let lines = rendered_tool_lines(
+-                &matrix_tool("status", "status", ToolKind::Other, status),
+-                &theme,
+-            );
++            let tool = matrix_tool("status", "status", ToolKind::Other, status);
++            let lines = rendered_tool_lines(&tool, &theme);
+             let actual = lines[0].spans[0].content.as_ref();
+             anyhow::ensure!(
+                 actual == icon,
+@@ -1723,10 +1665,284 @@ mod tests {
+             &crate::traits::test_support::marker_theme(),
+         );
+ 
+-        // Header should show +2 -1 (one changed + one added = 2 inserts, 1 delete)
+-        let header = lines[0].to_string();
+-        assert!(header.contains('+'), "should show additions: {header}");
+-        assert!(header.contains('-'), "should show removals: {header}");
++        assert_eq!(lines[0].to_string(), "✓ Edit(file.rs)  +2 -1");
++        assert_eq!(
++            lines[1..].iter().map(Line::to_string).collect::<Vec<_>>(),
++            [
++                "       1 │  line1",
++                "       2 │- line2",
++                "       2 │+ changed",
++                "       3 │  line3",
++                "       4 │+ new_line",
++            ]
++        );
++    }
++
++    fn cached_diff_test_call(
++        status: cyril_core::types::ToolCallStatus,
++    ) -> cyril_core::types::ToolCall {
++        use cyril_core::types::*;
++        ToolCall::new(
++            ToolCallId::new("cached-diff"),
++            "Edit".into(),
++            ToolKind::Write,
++            status,
++            None,
++        )
++        .with_content(vec![ToolCallContent::Diff {
++            path: "file.rs".into(),
++            old_text: Some("before\nold\nafter\n".into()),
++            new_text: "before\nnew\nextra\nafter\n".into(),
++        }])
++    }
++
++    fn diff_screen_text(terminal: &Terminal<TestBackend>) -> String {
++        let buffer = terminal.backend().buffer();
++        let area = buffer.area();
++        (0..area.height)
++            .map(|y| {
++                (0..area.width)
++                    .map(|x| buffer[(x, y)].symbol())
++                    .collect::<String>()
++            })
++            .collect::<Vec<_>>()
++            .join("\n")
++    }
++
++    #[test]
++    fn render_tool_call_unchanged_first_diff_hides_later_changes() {
++        use cyril_core::types::*;
++
++        let tc = TrackedToolCall::new(
++            cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
++                ToolCallContent::Text("not a diff".into()),
++                ToolCallContent::Diff {
++                    path: "first.rs".into(),
++                    old_text: Some("same\n".into()),
++                    new_text: "same\n".into(),
++                },
++                ToolCallContent::Diff {
++                    path: "later.rs".into(),
++                    old_text: Some("old\n".into()),
++                    new_text: "changed\nextra\n".into(),
++                },
++            ]),
++        );
++        let theme = crate::traits::test_support::marker_theme();
++        let lines = rendered_tool_lines(&tc, &theme);
++        assert_eq!(
++            lines.iter().map(Line::to_string).collect::<Vec<_>>(),
++            ["✓ Edit(first.rs)"]
++        );
++    }
++
++    #[test]
++    fn render_tool_call_first_diff_supplies_both_counts_and_body() {
++        use cyril_core::types::*;
++
++        let mut content = cached_diff_test_call(ToolCallStatus::Completed).content().to_vec();
++        content.push(ToolCallContent::Diff {
++            path: "later.rs".into(),
++            old_text: None,
++            new_text: "invisible\n".repeat(30),
++        });
++        let tc = TrackedToolCall::new(
++            cached_diff_test_call(ToolCallStatus::Completed).with_content(content),
++        );
++        let theme = crate::traits::test_support::marker_theme();
++        let lines = rendered_tool_lines(&tc, &theme);
++        assert_eq!(
++            lines.iter().map(Line::to_string).collect::<Vec<_>>(),
++            [
++                "✓ Edit(file.rs)  +2 -1",
++                "       1 │  before",
++                "       2 │- old",
++                "       2 │+ new",
++                "       3 │+ extra",
++                "       4 │  after",
++            ]
++        );
++    }
++
++    #[test]
++    fn render_tool_call_reuses_one_derivation_and_borrows_source_across_palettes() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::ToolCallStatus;
++
++        let tc = TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Completed));
++        let mut theme = crate::traits::test_support::marker_theme();
++        let before = text_diff_constructions();
++        let initial = rendered_tool_lines(&tc, &theme);
++        assert_eq!(initial[0].to_string(), "✓ Edit(file.rs)  +2 -1");
++        assert_eq!(text_diff_constructions() - before, 1);
++        let expected: Vec<_> = initial.iter().map(Line::to_string).collect();
++        for _ in 0..10 {
++            assert_eq!(
++                rendered_tool_lines(&tc, &theme).iter().map(Line::to_string).collect::<Vec<_>>(),
++                expected
++            );
++        }
++        theme.subdued_positive = Color::Rgb(10, 20, 30);
++        theme.subdued_negative = Color::Rgb(40, 50, 60);
++        theme.subdued = Color::Rgb(70, 80, 90);
++        let restyled = rendered_tool_lines(&tc, &theme);
++        assert_eq!(restyled.iter().map(Line::to_string).collect::<Vec<_>>(), expected);
++        for (line, color) in [
++            (&restyled[1], theme.subdued),
++            (&restyled[2], theme.subdued_negative),
++            (&restyled[3], theme.subdued_positive),
++        ] {
++            assert!(line.spans.iter().all(|span| span.style.fg == Some(color)));
++            assert!(matches!(&line.spans[1].content, std::borrow::Cow::Borrowed(_)));
++        }
++        let source = tc.diff_source().unwrap();
++        assert_eq!(restyled[2].spans[1].content.as_ptr(), source.old[7..10].as_ptr());
++        assert_eq!(restyled[3].spans[1].content.as_ptr(), source.new[7..10].as_ptr());
++        assert_eq!(text_diff_constructions() - before, 1);
++    }
++
++    #[test]
++    fn render_tool_call_changed_update_detaches_clone_without_stale_rows() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::*;
++
++        let mut tc = TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Completed));
++        let theme = crate::traits::test_support::marker_theme();
++        let before = text_diff_constructions();
++        let original = rendered_tool_lines(&tc, &theme)
++            .iter().map(Line::to_string).collect::<Vec<_>>();
++        let snapshot = tc.clone();
++        tc.update(&cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
++            ToolCallContent::Diff {
++                path: "replacement.rs".into(),
++                old_text: None,
++                new_text: "replacement\n".into(),
++            },
++        ]));
++        let updated = rendered_tool_lines(&tc, &theme);
++        assert_eq!(
++            updated.iter().map(Line::to_string).collect::<Vec<_>>(),
++            ["✓ Edit(replacement.rs)  +1 -0", "       1 │+ replacement"]
++        );
++        assert_eq!(
++            rendered_tool_lines(&snapshot, &theme).iter().map(Line::to_string).collect::<Vec<_>>(),
++            original
++        );
++        assert_eq!(text_diff_constructions() - before, 2);
++    }
++
++    #[test]
++    fn completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change() {
++        use crate::state::UiState;
++        use crate::theme::{ColorMode, ThemeId};
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::*;
++
++        let mut state = UiState::new(100);
++        let started = cached_diff_test_call(ToolCallStatus::InProgress);
++        assert!(state.apply_notification(&Notification::ToolCallStarted(started.clone())));
++        assert!(state.apply_notification(&Notification::ToolCallUpdated(ToolCall::new(
++            started.id().clone(),
++            String::new(),
++            ToolKind::Write,
++            ToolCallStatus::Completed,
++            None,
++        ))));
++        let mut terminal = Terminal::new(TestBackend::new(160, 48)).unwrap();
++        let before = text_diff_constructions();
++        terminal.draw(|frame| crate::render::draw(frame, &state)).unwrap();
++        let screen = diff_screen_text(&terminal);
++        assert!(screen.contains("✓ Edit(file.rs)  +2 -1"), "{screen}");
++        assert!(screen.contains("2 │- old"), "{screen}");
++        assert!(screen.contains("3 │+ extra"), "{screen}");
++        assert_eq!(text_diff_constructions() - before, 1);
++        for _ in 0..10 {
++            terminal.draw(|frame| crate::render::draw(frame, &state)).unwrap();
++        }
++        assert_eq!(text_diff_constructions() - before, 1);
++        for (width, palette) in [(120, ThemeId::GruvboxDark), (80, ThemeId::CyrilDark)] {
++            terminal.backend_mut().resize(width, 48);
++            state.set_appearance(palette, ColorMode::TrueColor);
++            terminal.draw(|frame| crate::render::draw(frame, &state)).unwrap();
++            let screen = diff_screen_text(&terminal);
++            assert!(screen.contains("✓ Edit(file.rs)  +2 -1"), "{screen}");
++            assert!(screen.contains("3 │+ extra"), "{screen}");
++        }
++        assert_eq!(text_diff_constructions() - before, 1);
++        assert!(state.apply_notification(&Notification::ToolCallUpdated(
++            cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
++                ToolCallContent::Diff {
++                    path: "file.rs".into(),
++                    old_text: None,
++                    new_text: "replacement\n".into(),
++                },
++            ]),
++        )));
++        terminal.draw(|frame| crate::render::draw(frame, &state)).unwrap();
++        let screen = diff_screen_text(&terminal);
++        assert!(screen.contains("✓ Edit(file.rs)  +1 -0"), "{screen}");
++        assert!(screen.contains("1 │+ replacement"), "{screen}");
++        assert!(!screen.contains("│- old"), "{screen}");
++        assert_eq!(text_diff_constructions() - before, 2);
++    }
++
++    #[test]
++    fn pending_approval_diff_preview_reuses_derivation_and_current_colors() {
++        use crate::tool_diff::text_diff_constructions;
++        use crate::traits::{ApprovalPhase, ApprovalState};
++        use cyril_core::types::*;
++
++        let approval = ApprovalState {
++            session_id: SessionId::new("main"),
++            tool_call: TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Pending)),
++            message: "Allow edit?".into(),
++            options: vec![PermissionOption {
++                id: PermissionOptionId::new("allow"),
++                label: "Allow".into(),
++                kind: PermissionOptionKind::AllowOnce,
++                is_destructive: false,
++            }],
++            trust_options: vec![],
++            selected: 0,
++            can_reject_with_reason: false,
++            phase: ApprovalPhase::SelectOption,
++            responder: tokio::sync::oneshot::channel().0,
++            consent: None,
++            workflow_plan: None,
++        };
++        let mut theme = crate::traits::test_support::marker_theme();
++        let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
++        let before = text_diff_constructions();
++        for (width, positive, negative) in [
++            (100, theme.subdued_positive, theme.subdued_negative),
++            (80, Color::Rgb(10, 20, 30), Color::Rgb(40, 50, 60)),
++        ] {
++            theme.subdued_positive = positive;
++            theme.subdued_negative = negative;
++            terminal.backend_mut().resize(width, 40);
++            terminal.draw(|frame| {
++                let area = frame.area();
++                super::super::approval::render(frame, area, 40, &approval, None, &theme);
++            }).unwrap();
++            let screen = diff_screen_text(&terminal);
++            assert!(screen.contains("2 │- old"), "{screen}");
++            assert!(screen.contains("3 │+ extra"), "{screen}");
++            assert!(screen.contains("▸ Allow"), "{screen}");
++            let buffer = terminal.backend().buffer();
++            for (marker, expected) in [("old", negative), ("extra", positive)] {
++                let mut found = false;
++                for y in 0..40 {
++                    let row: String = (0..width).map(|x| buffer[(x, y)].symbol()).collect();
++                    if let Some(byte) = row.find(marker) {
++                        let column = row[..byte].chars().count() as u16;
++                        assert_eq!(buffer[(column, y)].fg, expected);
++                        found = true;
++                    }
++                }
++                assert!(found, "missing {marker}: {screen}");
++            }
++        }
++        assert_eq!(text_diff_constructions() - before, 1);
+     }
+ 
+     #[test]
+@@ -1783,18 +1999,11 @@ mod tests {
+         let mut lines: Vec<Line> = Vec::new();
+         render_tool_call(&mut lines, &tc, &theme);
+ 
+-        // Should have header + at most 20 diff lines + "..." overflow
+-        let last_line = lines.last().map(|l| l.to_string()).unwrap_or_default();
+-        assert!(
+-            last_line.contains("..."),
+-            "large diff should show overflow indicator: {last_line}"
+-        );
+-        // Total lines should be capped (header + <=21 diff lines including overflow)
+-        assert!(
+-            lines.len() <= 23,
+-            "should be capped, got {} lines",
+-            lines.len()
+-        );
++        assert_eq!(lines.len(), 22, "header + 20 body rows + ellipsis");
++        assert_eq!(lines[0].to_string(), "✓ Edit(big.rs)  +30 -30");
++        assert_eq!(lines[1].to_string(), "       1 │- old line 0");
++        assert_eq!(lines[20].to_string(), "      20 │- old line 19");
++        assert_eq!(lines[21].to_string(), "      ...");
+         assert_eq!(
+             lines.last().and_then(|line| line.style.fg),
+             Some(theme.subdued)
+diff --git a/crates/cyril-ui/src/tool_diff.rs b/crates/cyril-ui/src/tool_diff.rs
+new file mode 100644
+index 00000000..b36b158c
+--- /dev/null
++++ b/crates/cyril-ui/src/tool_diff.rs
+@@ -0,0 +1,277 @@
++//! Theme-independent, bounded diff rows borrowing the tracked tool's source.
++
++use std::ops::Range;
++
++use similar::{ChangeTag, DiffTag, TextDiff};
++
++const MAX_DIFF_ROWS: usize = 20;
++
++#[derive(Debug, Clone, Copy, PartialEq, Eq)]
++pub(crate) struct DiffSource<'a> {
++    pub old: &'a str,
++    pub new: &'a str,
++}
++
++#[derive(Debug)]
++pub(crate) struct DiffRow {
++    pub tag: ChangeTag,
++    pub line_number: usize,
++    range: Range<usize>,
++}
++
++impl DiffRow {
++    pub fn text<'a>(&self, source: DiffSource<'a>) -> &'a str {
++        let text = match self.tag {
++            ChangeTag::Delete => source.old,
++            ChangeTag::Insert | ChangeTag::Equal => source.new,
++        };
++        &text[self.range.clone()]
++    }
++}
++
++#[derive(Debug, Default)]
++pub(crate) struct DiffPreview {
++    summary: Option<(usize, usize)>,
++    rows: Vec<DiffRow>,
++    truncated: bool,
++}
++
++impl DiffPreview {
++    pub fn new(source: Option<DiffSource<'_>>) -> Self {
++        let Some(source) = source else {
++            return Self::default();
++        };
++
++        #[cfg(test)]
++        TEXT_DIFF_CONSTRUCTIONS.set(TEXT_DIFF_CONSTRUCTIONS.get() + 1);
++        let diff = TextDiff::from_lines(source.old, source.new);
++        let (mut added, mut removed) = (0, 0);
++        for op in diff.ops() {
++            match op.tag() {
++                DiffTag::Insert => added += op.new_range().len(),
++                DiffTag::Delete => removed += op.old_range().len(),
++                DiffTag::Replace => {
++                    added += op.new_range().len();
++                    removed += op.old_range().len();
++                }
++                DiffTag::Equal => {}
++            }
++        }
++        if added == 0 && removed == 0 {
++            return Self::default();
++        }
++
++        let mut preview = Self {
++            summary: Some((added, removed)),
++            rows: Vec::with_capacity(
++                MAX_DIFF_ROWS.min(diff.old_slices().len() + diff.new_slices().len()),
++            ),
++            truncated: false,
++        };
++        // similar 2.7's line tokens partition each original source, retaining
++        // LF, CRLF and bare CR. Walk their lengths monotonically to obtain
++        // source byte ranges without copied text or retained per-line indexes.
++        let (mut old_cursor, mut new_cursor) = ((0, 0), (0, 0));
++        for group in diff.grouped_ops(1) {
++            for op in group {
++                for change in diff.iter_changes(&op) {
++                    if preview.rows.len() == MAX_DIFF_ROWS {
++                        preview.truncated = true;
++                        return preview;
++                    }
++                    let (slices, cursor, index) =
++                        match (change.tag(), change.old_index(), change.new_index()) {
++                            (ChangeTag::Delete, Some(index), _) => {
++                                (diff.old_slices(), &mut old_cursor, index)
++                            }
++                            (ChangeTag::Insert | ChangeTag::Equal, _, Some(index)) => {
++                                (diff.new_slices(), &mut new_cursor, index)
++                            }
++                            _ => {
++                                unreachable!("line changes carry their corresponding source index")
++                            }
++                        };
++                    cursor.1 += slices[cursor.0..index]
++                        .iter()
++                        .map(|line| line.len())
++                        .sum::<usize>();
++                    let start = cursor.1;
++                    // Preserve the existing presentation: remove LF, not CR.
++                    let end = start + change.value().trim_end_matches('\n').len();
++                    preview.rows.push(DiffRow {
++                        tag: change.tag(),
++                        line_number: index + 1,
++                        range: start..end,
++                    });
++                    *cursor = (index + 1, start + slices[index].len());
++                }
++            }
++        }
++        preview
++    }
++
++    pub fn summary(&self) -> Option<(usize, usize)> {
++        self.summary
++    }
++
++    pub fn rows(&self) -> &[DiffRow] {
++        &self.rows
++    }
++
++    pub fn truncated(&self) -> bool {
++        self.truncated
++    }
++}
++
++#[cfg(test)]
++thread_local! {
++    static TEXT_DIFF_CONSTRUCTIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
++}
++
++#[cfg(test)]
++pub(crate) fn text_diff_constructions() -> usize {
++    TEXT_DIFF_CONSTRUCTIONS.get()
++}
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[test]
++    fn diff_preview_has_exact_counts_context_and_source_ranges() {
++        let source = DiffSource {
++            old: "before\nsame\nold\nafter\ntail\n",
++            new: "before\nsame\nnew\nextra\nafter\ntail\n",
++        };
++        let before = text_diff_constructions();
++        let preview = DiffPreview::new(Some(source));
++        assert_eq!(text_diff_constructions() - before, 1);
++        assert_eq!(preview.summary(), Some((2, 1)));
++        let rows: Vec<_> = preview
++            .rows()
++            .iter()
++            .map(|row| (row.tag, row.line_number, row.text(source)))
++            .collect();
++        assert_eq!(
++            rows,
++            vec![
++                (ChangeTag::Equal, 2, "same"),
++                (ChangeTag::Delete, 3, "old"),
++                (ChangeTag::Insert, 3, "new"),
++                (ChangeTag::Insert, 4, "extra"),
++                (ChangeTag::Equal, 5, "after"),
++            ]
++        );
++        for row in preview.rows() {
++            let text = match row.tag {
++                ChangeTag::Delete => source.old,
++                ChangeTag::Insert | ChangeTag::Equal => source.new,
++            };
++            assert_eq!(row.text(source).as_ptr(), text[row.range.clone()].as_ptr());
++        }
++        assert!(!preview.truncated());
++    }
++
++    #[test]
++    fn diff_preview_handles_absence_unchanged_insertions_and_deletions() {
++        for source in [
++            None,
++            Some(DiffSource { old: "", new: "" }),
++            Some(DiffSource {
++                old: "unchanged\n",
++                new: "unchanged\n",
++            }),
++        ] {
++            let preview = DiffPreview::new(source);
++            assert_eq!(preview.summary(), None);
++            assert!(preview.rows().is_empty());
++            assert!(!preview.truncated());
++        }
++        for (source, summary, tag) in [
++            (
++                DiffSource {
++                    old: "",
++                    new: "a\nb",
++                },
++                (2, 0),
++                ChangeTag::Insert,
++            ),
++            (
++                DiffSource {
++                    old: "a\nb",
++                    new: "",
++                },
++                (0, 2),
++                ChangeTag::Delete,
++            ),
++        ] {
++            let preview = DiffPreview::new(Some(source));
++            assert_eq!(preview.summary(), Some(summary));
++            assert_eq!(preview.rows().len(), 2);
++            assert_eq!(preview.rows()[0].tag, tag);
++            assert_eq!(preview.rows()[1].line_number, 2);
++            assert_eq!(preview.rows()[1].text(source), "b");
++        }
++    }
++
++    #[test]
++    fn diff_preview_ranges_preserve_unicode_crlf_bare_cr_and_final_line() {
++        let source = DiffSource {
++            old: "héllo\r\nold\r終わり",
++            new: "héllo\r\nnew\r終わり",
++        };
++        let preview = DiffPreview::new(Some(source));
++        assert_eq!(preview.summary(), Some((1, 1)));
++        assert_eq!(
++            preview
++                .rows()
++                .iter()
++                .map(|row| row.text(source))
++                .collect::<Vec<_>>(),
++            ["héllo\r", "old\r", "new\r", "終わり"]
++        );
++    }
++
++    #[test]
++    fn diff_preview_ranges_skip_disjoint_context_gaps() {
++        let source = DiffSource {
++            old: "0\n1\nold-a\n3\n4\n5\n6\n7\nold-b\n9\n10\n",
++            new: "0\n1\nnew-a\n3\n4\n5\n6\n7\nnew-b\n9\n10\n",
++        };
++        let preview = DiffPreview::new(Some(source));
++        assert_eq!(preview.summary(), Some((2, 2)));
++        assert_eq!(
++            preview
++                .rows()
++                .iter()
++                .map(|row| (row.line_number, row.text(source)))
++                .collect::<Vec<_>>(),
++            [
++                (2, "1"),
++                (3, "old-a"),
++                (3, "new-a"),
++                (4, "3"),
++                (8, "7"),
++                (9, "old-b"),
++                (9, "new-b"),
++                (10, "9")
++            ]
++        );
++    }
++
++    #[test]
++    fn diff_preview_truncates_only_after_twenty_rows_with_full_summary() {
++        for count in [19, 20, 21, 200] {
++            let new: String = (1..=count).map(|line| format!("line {line}\n")).collect();
++            let source = DiffSource { old: "", new: &new };
++            let preview = DiffPreview::new(Some(source));
++            assert_eq!(preview.summary(), Some((count, 0)));
++            assert_eq!(preview.rows().len(), count.min(20));
++            assert_eq!(preview.truncated(), count > 20);
++            assert_eq!(
++                preview.rows().last().map(|row| row.line_number),
++                Some(count.min(20))
++            );
++        }
++    }
++}
+diff --git a/crates/cyril-ui/benches/conversation_render.rs b/crates/cyril-ui/benches/conversation_render.rs
+new file mode 100644
+index 00000000..c23b9785
+--- /dev/null
++++ b/crates/cyril-ui/benches/conversation_render.rs
+@@ -0,0 +1,427 @@
++//! Full-root rendering measurements; no wall-clock acceptance threshold.
++//!
++//! Run: `cargo bench -p cyril-ui --bench conversation_render -- completed-write`.
++//! Record the checked revision, CPU, `rustc -Vv`, and exact Cargo invocation with
++//! the output. Optional `CYRIL_BENCH_*` labels attach those facts to the receipt.
++
++use std::ffi::OsString;
++use std::fmt::Write as _;
++use std::hint::black_box;
++use std::time::{Duration, Instant};
++
++use anyhow::{bail, ensure, Result};
++use cyril_core::types::{
++    AgentMessage, Notification, PermissionOption, PermissionOptionId, PermissionOptionKind,
++    PermissionRequest, SessionId, StopReason, ToolCall, ToolCallContent, ToolCallId,
++    ToolCallStatus, ToolKind,
++};
++use cyril_ui::render;
++use cyril_ui::state::UiState;
++use cyril_ui::theme::{ColorMode, ThemeId};
++use cyril_ui::traits::{ChatMessageKind, TuiState};
++use ratatui::backend::TestBackend;
++use ratatui::Terminal;
++
++const WIDTH: u16 = 160;
++const HEIGHT: u16 = 48;
++const WARMUP_DRAWS: usize = 100;
++const SAMPLES: usize = 30;
++const DRAWS_PER_SAMPLE: usize = 100;
++const RETAINED_MESSAGES: usize = 2;
++const USAGE: &str = "Usage: conversation_render completed-write [--bench]\n\
++    Runs sparse 2,000-line and dense 20,000-line completed Writes, then a pending preview control.\n\
++    --bench is accepted for Cargo's benchmark invocation; unknown modes/arguments are errors.";
++const CODE_CONTROL: &str =
++    "Write rendering fixture:\n```rust\nfn benchmark_control() -> bool { true }\n```\n";
++
++#[derive(Clone, Copy)]
++enum Mode {
++    CompletedWrite,
++    Help,
++}
++
++fn parse_mode(arguments: impl IntoIterator<Item = OsString>) -> Result<Mode> {
++    let mut mode = None;
++    let mut cargo_bench = false;
++    for argument in arguments {
++        match argument.to_str() {
++            Some("completed-write") if mode.is_none() => mode = Some(Mode::CompletedWrite),
++            Some("--help" | "-h") if mode.is_none() => mode = Some(Mode::Help),
++            Some("--bench") if !cargo_bench => cargo_bench = true,
++            _ => bail!("unknown or duplicate mode/argument {argument:?}\n{USAGE}"),
++        }
++    }
++    mode.ok_or_else(|| anyhow::anyhow!("a benchmark mode is required\n{USAGE}"))
++}
++
++fn main() -> Result<()> {
++    match parse_mode(std::env::args_os().skip(1))? {
++        Mode::Help => println!("{USAGE}"),
++        Mode::CompletedWrite => {
++            report_environment();
++            for workload in [WriteWorkload::Sparse, WriteWorkload::Dense] {
++                run_completed_write(workload)?;
++            }
++            run_pending_preview()?;
++        }
++    }
++    Ok(())
++}
++
++fn report_environment() {
++    println!(
++        "benchmark=conversation_render mode=completed-write package_version={} os={} arch={} family={} debug_assertions={}",
++        env!("CARGO_PKG_VERSION"),
++        std::env::consts::OS,
++        std::env::consts::ARCH,
++        std::env::consts::FAMILY,
++        cfg!(debug_assertions),
++    );
++    println!(
++        "backend=ratatui::backend::TestBackend viewport={WIDTH}x{HEIGHT} theme=CyrilDark color_mode=TrueColor process=single sequential_cases=true"
++    );
++    println!(
++        "recommended_profile=bench declared_ui_features=none declared_core_dev_features=kas,test-support toolchain_msrv={}",
++        env!("CARGO_PKG_RUST_VERSION"),
++    );
++    println!(
++        "timing=Instant cold_scope=first_draw_per_fresh_state_and_terminal process_caches=shared_between_cases construction_and_validation=excluded warmup_draws={WARMUP_DRAWS} samples={SAMPLES} draws_per_sample={DRAWS_PER_SAMPLE}"
++    );
++    println!(
++        "statistics=median_and_nearest_rank_p95_of_sample_mean_ns_per_frame timing_threshold=none"
++    );
++    println!(
++        "receipt_requires=checked_revision,CPU,rustc_-Vv,exact_profile,target,features,Cargo_invocation"
++    );
++    for key in [
++        "CYRIL_BENCH_REVISION",
++        "CYRIL_BENCH_CPU",
++        "CYRIL_BENCH_RUSTC",
++        "CYRIL_BENCH_PROFILE",
++        "CYRIL_BENCH_TARGET",
++        "CYRIL_BENCH_FEATURES",
++        "CARGO_TARGET_DIR",
++        "CARGO_BUILD_TARGET",
++        "CARGO_PROFILE_BENCH_OPT_LEVEL",
++        "CARGO_PROFILE_BENCH_LTO",
++        "CARGO_PROFILE_BENCH_CODEGEN_UNITS",
++        "RUSTFLAGS",
++        "CARGO_ENCODED_RUSTFLAGS",
++        "TERM",
++        "COLORTERM",
++        "NO_COLOR",
++        "CLICOLOR",
++        "CLICOLOR_FORCE",
++    ] {
++        match std::env::var_os(key) {
++            Some(value) => println!("environment {key}={value:?}"),
++            None => println!("environment {key}=<unset>"),
++        }
++    }
++}
++
++#[derive(Clone, Copy)]
++enum WriteWorkload {
++    Sparse,
++    Dense,
++}
++
++impl WriteWorkload {
++    fn name(self) -> &'static str {
++        match self {
++            Self::Sparse => "completed-write-sparse-2k",
++            Self::Dense => "completed-write-dense-20k",
++        }
++    }
++
++    fn path(self) -> &'static str {
++        match self {
++            Self::Sparse => "benchmark_sparse.rs",
++            Self::Dense => "benchmark_dense.rs",
++        }
++    }
++
++    fn line_count(self) -> usize {
++        match self {
++            Self::Sparse => 2_000,
++            Self::Dense => 20_000,
++        }
++    }
++
++    fn changed(self, line: usize) -> bool {
++        match self {
++            Self::Sparse => {
++                (16..18).contains(&line)
++                    || (996..998).contains(&line)
++                    || (1_990..1_992).contains(&line)
++            }
++            // Three changed lines followed by an unchanged anchor: dense
++            // replacement groups, without an artificial all-unrelated file.
++            Self::Dense => line % 4 != 0,
++        }
++    }
++
++    fn visible_controls(self) -> &'static [&'static str] {
++        match self {
++            Self::Sparse => &[
++                "✓ Edit(benchmark_sparse.rs)  +6 -6",
++                "│- const OLD_00016",
++                "│+ const NEW_00016",
++                "benchmark_control",
++            ],
++            Self::Dense => &[
++                "✓ Edit(benchmark_dense.rs)  +15000 -15000",
++                "│- const OLD_00001",
++                "│+ const NEW_00001",
++                "      ...",
++                "benchmark_control",
++            ],
++        }
++    }
++}
++
++fn write_fixture(workload: WriteWorkload) -> Result<(String, String)> {
++    let capacity = workload.line_count() * 40;
++    let mut old = String::with_capacity(capacity);
++    let mut new = String::with_capacity(capacity);
++    for line in 0..workload.line_count() {
++        if workload.changed(line) {
++            writeln!(old, "const OLD_{line:05}: u64 = {line};")?;
++            writeln!(new, "const NEW_{line:05}: u64 = {line};")?;
++        } else {
++            writeln!(old, "const KEEP_{line:05}: u64 = {line};")?;
++            writeln!(new, "const KEEP_{line:05}: u64 = {line};")?;
++        }
++    }
++    Ok((old, new))
++}
++
++fn new_state() -> UiState {
++    let mut state = UiState::new(32);
++    state.set_terminal_size(WIDTH, HEIGHT);
++    state.set_appearance(ThemeId::CyrilDark, ColorMode::TrueColor);
++    state
++}
++
++fn run_completed_write(workload: WriteWorkload) -> Result<()> {
++    let (old_text, new_text) = write_fixture(workload)?;
++    ensure!(old_text.lines().count() == workload.line_count());
++    ensure!(new_text.lines().count() == workload.line_count());
++    let old_bytes = old_text.len();
++    let new_bytes = new_text.len();
++    let mut state = new_state();
++    ensure!(
++        state.apply_notification(&Notification::AgentMessage(AgentMessage {
++            text: CODE_CONTROL.into(),
++            is_streaming: true,
++        }))
++    );
++    let id = ToolCallId::new(workload.name());
++    ensure!(
++        state.apply_notification(&Notification::ToolCallStarted(ToolCall::new(
++            id.clone(),
++            format!("Editing {}", workload.path()),
++            ToolKind::Write,
++            ToolCallStatus::InProgress,
++            None,
++        )))
++    );
++    ensure!(state.apply_notification(&Notification::ToolCallUpdated(
++        ToolCall::new(
++            id.clone(),
++            String::new(),
++            ToolKind::Write,
++            ToolCallStatus::InProgress,
++            None,
++        )
++        .with_content(vec![ToolCallContent::Diff {
++            path: workload.path().into(),
++            old_text: Some(old_text),
++            new_text,
++        }]),
++    )));
++    // Completion is deliberately content-free: exercise the real merge seam
++    // retaining the earlier diff, then render the historical snapshot alone.
++    ensure!(
++        state.apply_notification(&Notification::ToolCallUpdated(ToolCall::new(
++            id.clone(),
++            String::new(),
++            ToolKind::Write,
++            ToolCallStatus::Completed,
++            None,
++        )))
++    );
++    ensure!(state.apply_notification(&Notification::TurnCompleted {
++        stop_reason: StopReason::EndTurn,
++    }));
++    ensure!(
++        state.messages().len() == RETAINED_MESSAGES,
++        "fixture was evicted"
++    );
++    ensure!(
++        state.active_tool_calls().is_empty(),
++        "fixture is not historical"
++    );
++    let retained_writes = state
++        .messages()
++        .iter()
++        .filter(|message| {
++            matches!(message.kind(), ChatMessageKind::ToolCall(call)
++            if call.id() == &id
++                && call.kind() == ToolKind::Write
++                && call.status() == ToolCallStatus::Completed
++                && call.primary_path() == Some(workload.path())
++                && matches!(call.content(), [ToolCallContent::Diff { .. }]))
++        })
++        .count();
++    ensure!(
++        retained_writes == 1,
++        "expected one retained completed Write"
++    );
++    println!(
++        "workload={} old_lines={} new_lines={} old_bytes={old_bytes} new_bytes={new_bytes} retained_messages={} retained_completed_writes={retained_writes} active_tool_calls=0",
++        workload.name(),
++        workload.line_count(),
++        workload.line_count(),
++        state.messages().len(),
++    );
++    measure(workload.name(), &state, workload.visible_controls())
++}
++
++fn run_pending_preview() -> Result<()> {
++    let mut state = new_state();
++    state.add_system_message("Pending preview control".into());
++    let tool_call = ToolCall::new(
++        ToolCallId::new("pending-preview"),
++        "Editing benchmark_preview.rs".into(),
++        ToolKind::Write,
++        ToolCallStatus::Pending,
++        None,
++    )
++    .with_content(vec![ToolCallContent::Diff {
++        path: "benchmark_preview.rs".into(),
++        old_text: Some("const PREVIEW_OLD: u64 = 1;\n".into()),
++        new_text: "const PREVIEW_NEW: u64 = 2;\n".into(),
++    }]);
++    let (responder, receiver) = tokio::sync::oneshot::channel();
++    state.show_approval(PermissionRequest {
++        session_id: SessionId::new("benchmark-main"),
++        tool_call,
++        message: "Allow benchmark edit?".into(),
++        options: vec![PermissionOption {
++            id: PermissionOptionId::new("allow-once"),
++            label: "Allow Once".into(),
++            kind: PermissionOptionKind::AllowOnce,
++            is_destructive: false,
++        }],
++        trust_options: Vec::new(),
++        can_reject_with_reason: false,
++        responder,
++        consent: None,
++        workflow_plan: None,
++    });
++    ensure!(
++        state.messages().len() == 1,
++        "pending control history was lost"
++    );
++    ensure!(
++        state
++            .approval()
++            .is_some_and(|approval| { approval.tool_call.status() == ToolCallStatus::Pending }),
++        "pending preview must not depend on Completed status"
++    );
++    println!(
++        "workload=pending-preview-control old_lines=1 new_lines=1 retained_messages={} pending_approvals=1 activity=Idle",
++        state.messages().len(),
++    );
++    let result = measure(
++        "pending-preview-control",
++        &state,
++        &[
++            "Permission Required",
++            "benchmark_preview.rs",
++            "│- const PREVIEW_OLD",
++            "│+ const PREVIEW_NEW",
++            "Allow Once",
++        ],
++    );
++    // Keep the real permission response endpoint open for every measured draw;
++    // no async runtime or agent connection is required to display a request.
++    drop(black_box(receiver));
++    result
++}
++
++fn draw(terminal: &mut Terminal<TestBackend>, state: &UiState) -> Result<()> {
++    terminal.draw(|frame| render::draw(frame, black_box(state)))?;
++    black_box(terminal.backend().buffer());
++    Ok(())
++}
++
++fn verify_visible(
++    terminal: &Terminal<TestBackend>,
++    workload: &str,
++    controls: &[&str],
++) -> Result<()> {
++    let buffer = terminal.backend().buffer();
++    let mut visible = String::with_capacity(usize::from(WIDTH) * usize::from(HEIGHT));
++    for row in buffer.content.chunks(usize::from(WIDTH)) {
++        for cell in row {
++            visible.push_str(cell.symbol());
++        }
++        visible.push('\n');
++    }
++    for control in controls {
++        ensure!(
++            visible.contains(control),
++            "{workload}: visible positive control {control:?} is missing; refusing an empty/fallback measurement\n{visible}"
++        );
++    }
++    Ok(())
++}
++
++fn measure(workload: &str, state: &UiState, controls: &[&str]) -> Result<()> {
++    let mut terminal = Terminal::new(TestBackend::new(WIDTH, HEIGHT))?;
++    let start = Instant::now();
++    draw(&mut terminal, state)?;
++    let cold = start.elapsed();
++    verify_visible(&terminal, workload, controls)?;
++    println!(
++        "cold workload={workload} draws=1 total_ns={}",
++        cold.as_nanos()
++    );
++
++    // The cold root draw initializes the real diff, markdown and syntax paths;
++    // fixture construction, first-use caches and these draws are not samples.
++    for _ in 0..WARMUP_DRAWS {
++        draw(&mut terminal, state)?;
++    }
++    verify_visible(&terminal, workload, controls)?;
++    let mut samples = [Duration::ZERO; SAMPLES];
++    for elapsed in &mut samples {
++        let start = Instant::now();
++        for _ in 0..DRAWS_PER_SAMPLE {
++            draw(&mut terminal, state)?;
++        }
++        *elapsed = start.elapsed();
++    }
++    verify_visible(&terminal, workload, controls)?;
++    for (index, elapsed) in samples.iter().enumerate() {
++        println!(
++            "sample workload={workload} index={} draws={DRAWS_PER_SAMPLE} total_ns={} ns_per_frame={:.3}",
++            index + 1,
++            elapsed.as_nanos(),
++            elapsed.as_nanos() as f64 / DRAWS_PER_SAMPLE as f64,
++        );
++    }
++    samples.sort_unstable();
++    let median = (samples[SAMPLES / 2 - 1].as_nanos() as f64
++        + samples[SAMPLES / 2].as_nanos() as f64)
++        / (2 * DRAWS_PER_SAMPLE) as f64;
++    let p95_index = (95 * SAMPLES).div_ceil(100) - 1;
++    let p95 = samples[p95_index].as_nanos() as f64 / DRAWS_PER_SAMPLE as f64;
++    println!(
++        "summary workload={workload} median_ns_per_frame={median:.3} p95_ns_per_frame={p95:.3} samples={SAMPLES} draws_per_sample={DRAWS_PER_SAMPLE} visible_controls=passed retained_messages={}",
++        state.messages().len(),
++    );
++    Ok(())
++}

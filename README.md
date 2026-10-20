@@ -239,6 +239,17 @@ the completed row, including completions that omit `kind`. Existing output
 formats keep precedence; non-string `output` values and the formatted `message`
 field are not used as substitutes.
 
+Completed Write calls use the **first diff** for both the `+added -removed`
+summary and the inline body. An unchanged first diff shows no change counts,
+even if a later diff in the same call changed. The body keeps one context line
+and at most 20 rows, followed by an ellipsis when truncated.
+
+The tracked call retains one theme-independent derivation for unchanged diff
+text. Redraws, resizes and palette changes reuse it while applying the current
+colors; replacing the selected source refreshes the summary and body together.
+Pending approval comparisons use the same diff renderer without requiring the
+tool to be completed.
+
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
