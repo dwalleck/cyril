@@ -6,9 +6,9 @@
   "branch": "ci/qualify-five-batches-final-20261020",
   "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
   "issue_count": 9,
-  "source_revision_scope": "Nine-issue source merge before the current handoff refresh; source_commit and source_tree include the prior eight-issue handoff, not this updated record or later integration additions.",
-  "source_commit": "bfa21cb63930b72e684b1d566945f3de364e865d",
-  "source_tree": "834e288172c6081b7621a195d25c8ffb65d4fca1",
+  "source_revision_scope": "Nine-issue source assembly after refreshed Zj ancestry merge and before the current handoff refresh; source_commit and source_tree include the prior handoff, not this updated record or later integration additions.",
+  "source_commit": "af5717252f8485e7201085799b71ae547299622d",
+  "source_tree": "eac8a57389e8232d7a41d2ba950cc5c873434cd6",
   "previous_assembly": {
     "source_commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
     "source_tree": "34f54951e9784b124a995b29b64787f9d9fc17bc",
@@ -68,7 +68,25 @@
       ],
       "manual_integration_edits": ["README.md additive policy union"],
       "new_merge_specific_algorithm": false,
-      "ancestry_refresh": "Main will provide the separately refreshed Zj head; normally merge it later for ancestry, without treating the old individual qualification as current assembled evidence."
+      "ancestry_refresh": "Fulfilled by merge af5717252f8485e7201085799b71ae547299622d of refreshed source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3; refreshed-parent and assembled qualification remain Main-owned."
+    },
+    {
+      "commit": "af5717252f8485e7201085799b71ae547299622d",
+      "parents": ["5fd07383767b94d8a0db04233b9b5280320a19ab", "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3"],
+      "source_pr": 192,
+      "issues_added": [],
+      "purpose": "Include refreshed Zj/x5 ancestry without changing the nine-issue source behavior.",
+      "refreshed_source_parents": ["7a19fc742f109411c421af296addc5fe4db4d42b", "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77"],
+      "textual_conflicts": [
+        {
+          "path": "README.md",
+          "blocks": 2,
+          "choice": "Same successful-output paragraph appears before versus after the same first-Diff/cache paragraphs. Keep the existing alias-first order with every paragraph exactly once; resolved README is byte-identical to the first parent."
+        }
+      ],
+      "manual_integration_edits": [],
+      "net_tree_delta": ["Added .cyril-zj0m/parent-refresh-20261020.json only; no production, fixture, Cargo or README delta"],
+      "qualification": "Source-only ancestry refresh; no new qualification or publication."
     }
   ],
   "retained_semantics": [
@@ -91,8 +109,24 @@
     "language_server_limit": "PreviewBody references returned no results despite known local uses; linked-worktree resolution failure reported, then source/callsite fallback used.",
     "scope": "Read-only source comparisons and callsite inspection only; not an assembled code review or runtime qualification."
   },
+  "approval_resolution_mechanism": {
+    "path": "crates/cyril-ui/src/widgets/approval.rs",
+    "retained_blob": "51c7484f28b76f65d5e247b0f4293232e3bde6b7",
+    "retained_blob_sources": ["bc6f48a21016320cc6491356f880f37463cf8c6e", "63851b09232fa32fb89f20d815ea86f0636ebf59", "5fd07383767b94d8a0db04233b9b5280320a19ab"],
+    "published_zj_approval_blob": "9627510b356ee5e8a766a43f22be4ddc35ac4181",
+    "conflict_scope": "One preview_lines signature hunk only, not a whole-file side selection. Zj's sole approval delta from old x5 was state: &ApprovalState -> &'a ApprovalState on the older Vec<Line<'a>> return signature. The prefix already had that same borrowed-state lifetime plus the typed PreviewContent<'a> return.",
+    "resolved_signature": "fn preview_lines<'a>(state: &'a ApprovalState, theme: &Theme, text_width: usize) -> PreviewContent<'a>",
+    "shell_selection": "traits.rs:466-475 classifies typed Shell before Diff. approval.rs:896-900 returns PreviewContent::Shell(ShellBody::new(...)) for Shell; only ordinary Diff calls the shared diff renderer.",
+    "shell_paging": "approval.rs:119-139 marks Shell and nonempty typed workflow plans scrollable and bounds desired body rows; 263-283 caps the visible scroll window at MAX_PLAN_ROWS including status; 337-359 materializes only command/cwd rows in the current window.",
+    "current_viewport_guard": "approval.rs:179-187 uses the same body_window as drawing; 363-380 counts meaningful command glyphs in that current window, rejecting empty/cwd-only tails. Option confirmation at 1118-1127 and reason confirmation at 1294-1297 require this command check alongside visible selection/editor and path. confirm_on_screen at 974-985 recomputes current geometry; UiState::approval_confirm calls it at state.rs:2543 before answering.",
+    "ej_workflow_contract": "approval.rs:872-883 returns typed workflow tree/comparison before ordinary preview classification; 887-920 retains the 12-row workflow Text fallback versus ordinary five-row Text behavior. workflow_plan.rs:27,36,70-85,116-139 retains 12 visible rows, 600-code-point sanitized comparison including its prefix, tree omission marker and the complete retained comparison for paging.",
+    "zj_cached_ordinary_diff": "approval.rs:900 still calls chat::render_diff_lines with the borrowed tracked call. chat.rs:400-429 borrows the retained preview/source and applies current styles without a Completed restriction. traits.rs:379-383 invalidates on changed effective Diff source; 411-433 owns lazy first-Diff access/selection, and tool_diff.rs owns the derivation. Shell/workflow paths do not enter this ordinary Diff arm.",
+    "unchanged_zj_chat_blob": "1e82b2a4bd74956bdc5112711856b6a47d06797d",
+    "unchanged_zj_tool_diff_blob": "b36b158cb7c86669c99670c3bcbb93fc7a7808a5",
+    "mechanism_boundary": "Zj cache/renderer changes arrive via auto-merged traits.rs and unchanged Zj chat.rs/tool_diff.rs, not by reverting the X/EJ approval body. No new integration algorithm or checks."
+  },
   "future_integration_constraints": [
-    "Published PR192 source is included. Later refreshed Zj head must be normally merged for ancestry when supplied. C6/Tqr/NK/Caar remain excluded until Main supplies actual issue heads.",
+    "Published PR192 and refreshed Zj source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3 are included. Refreshed-parent qualification remains pending with Main. C6/Tqr/NK/Caar remain excluded until Main supplies actual issue heads.",
     "Retain shared profile-root resolution and independent credential locations when adding MCP consumers.",
     "Preserve ledger merge -> KAS shell normalization -> consent/request construction, original permission response conversion, and display-only preview text.",
     "Later C6 consumers must preserve TrackedToolCall preview_body/output_text/error_message, first-Diff cache invalidation and ToolCall merge-presence behavior; no imported source-fence expansion.",
@@ -103,7 +137,7 @@
     "build_test_lint_format_gate_smoke_runs_by_integrator": [],
     "required": "Fresh final assembled qualification, applicable consumer/platform proof, and final assembled review before publication.",
     "refreshed_fiv1_x5xi": "Local source-ready sources only; this assembly does not newly qualify or publish their refreshes.",
-    "zj_qualification_boundary": "Published source 7a19fc742f109411c421af296addc5fe4db4d42b is individually qualified on old x5/common-fixture base only; current nine-issue union and any later refreshed Zj ancestry require Main-owned qualification assessment.",
+    "zj_qualification_boundary": "Published source 7a19fc742f109411c421af296addc5fe4db4d42b is individually qualified on old x5/common-fixture base only. Refreshed source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3 is now merged for ancestry, not newly qualified; final nine-issue union and refreshed-parent qualification remain Main-owned.",
     "no_push": true,
     "no_force": true,
     "no_github_merges": true,
