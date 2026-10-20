@@ -49,3 +49,22 @@ The stored refresh token was rejected, so kiro-cli was logged out. No kiro-cli a
 - The model's tool list includes `run_workflow` / `inspect_workflow` / `update_workflow` / `send_message`, and
   `invoke_sub_agent` is absent; a gate-off control (`cli.json` = `{}`) shows the reverse.
 - cyril's own `/workflow run .kiro/workflows/sm36-echo.workflow.json` still launches and completes with the gate on.
+
+## Attempt 3 — 2026-10-20 ~00:3xZ: PASS (coordinator), head 47ab0224
+
+Debug `cyril` built from `47ab0224` (session/new now carries `_meta.kiro.settings`); kiro-cli 2.32.0 / KAS 0.66.43;
+same private HOMEs as attempt 2.
+
+| Check | Gate-on (`{"chat.enableWorkflows":true}`) | Gate-off control (`{}`) |
+|---|---|---|
+| session `session.json` `workflowsEnabled` | **true** (`sess_3013c67d-8138-4ba1-8f2b-a8e1a0ad15d5`) | false (`sess_66da6727-7227-47cf-9ded-b5db775d8441`) |
+| kiro.log `configuration.intake.unknown-key` | only `setting/subagentOrchestration`, `setting/thinking` | same |
+| kiro.log `slash-commands.list` commandCount | 7 (adds the `workflow-*` commands) | 2 |
+| model's tool list (asked in-session) | includes `run_workflow`, `inspect_workflow`, `update_workflow`, `send_message`; **no `invoke_sub_agent`** | not asked (gate-off tool set is the 2.32.0 capture baseline) |
+| cyril `/workflow run .kiro/workflows/sm36-echo.workflow.json` | launched `wf_59e4c2440ae58f2e`, rendered `─── ⚙ workflow "sm36-echo" completed · agent follow-up ───` | — |
+
+No `workflow-*`/`goal` command leaked into cyril's command list (type filter). Screen: `live-attempt3-gate-on-screen.txt`.
+Acceptance criterion 2 (live gate-on parity) is met.
+
+Observation, not sm36: after SIGTERM to cyril the KAS `node acp-server.js` child outlived it in the gate-on run
+(stopped by exact PID); it exited by itself in the gate-off run.
