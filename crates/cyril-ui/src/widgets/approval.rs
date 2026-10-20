@@ -101,6 +101,8 @@ struct Preview<'a> {
     /// Rows the whole path needs when wrapped.
     path_rows: usize,
     body: Vec<Line<'a>>,
+    scrollable: bool,
+    scroll_offset: usize,
 }
 
 impl<'a> Preview<'a> {
@@ -119,12 +121,22 @@ impl<'a> Preview<'a> {
             path_width,
             path_rows,
             body: preview_lines(state, theme, text_width),
+            scrollable: state
+                .workflow_plan
+                .as_ref()
+                .is_some_and(|plan| !plan.steps.is_empty()),
+            scroll_offset: state.preview_scroll_offset,
         }
     }
 
-    /// Rows the whole preview wants.
+    /// Bounded layout demand, independent of the scrollable body's length.
     fn len(&self) -> usize {
-        self.path_rows.saturating_add(self.body.len())
+        let body_rows = if self.scrollable {
+            self.body.len().min(super::workflow_plan::MAX_PLAN_ROWS)
+        } else {
+            self.body.len()
+        };
+        self.path_rows.saturating_add(body_rows)
     }
 
     fn has_path(&self) -> bool {
@@ -154,9 +166,24 @@ impl<'a> Preview<'a> {
         Some(fit_path(path, width, 1))
     }
 
+    fn body_window(&self, rows: usize) -> BodyWindow {
+        let path_rows = self.path.map_or(0, |path| {
+            fit_path(path, self.path_width.max(1), self.path_rows.min(rows))
+                .rows
+                .len()
+        });
+        BodyWindow::new(
+            self.body.len(),
+            rows.saturating_sub(path_rows),
+            self.scroll_offset,
+            self.scrollable,
+        )
+    }
+
     /// The preview laid out in at most `rows` rows. The path takes rows
     /// first and is fitted to its share; the body fills whatever is left.
     fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
+        let window = self.body_window(rows);
         let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
         if let Some(path) = self.path {
             for row in fit_path(path, self.path_width.max(1), self.path_rows.min(rows)).rows {
@@ -166,9 +193,58 @@ impl<'a> Preview<'a> {
                 ));
             }
         }
-        let body_rows = rows.saturating_sub(lines.len());
-        lines.extend(self.body.into_iter().take(body_rows));
+        lines.extend(
+            self.body
+                .into_iter()
+                .skip(window.start)
+                .take(window.visible),
+        );
+        if window.status {
+            lines.push(Line::styled(
+                format!(
+                    "{TEXT_INDENT}↑ {}–{}/{} ↓ PgUp/PgDn",
+                    window.start + 1,
+                    window.start + window.visible,
+                    window.total
+                ),
+                Style::default().fg(theme.subdued),
+            ));
+        }
         lines
+    }
+}
+
+/// One bounded body viewport; the path, choices and editor never scroll.
+struct BodyWindow {
+    start: usize,
+    visible: usize,
+    total: usize,
+    status: bool,
+    border_hint: bool,
+}
+
+impl BodyWindow {
+    fn new(total: usize, available: usize, offset: usize, scrollable: bool) -> Self {
+        let available = if scrollable {
+            available.min(super::workflow_plan::MAX_PLAN_ROWS)
+        } else {
+            available
+        };
+        let overflow = scrollable && total > available;
+        let status = overflow && available >= 2;
+        let visible = total.min(available.saturating_sub(usize::from(status)));
+        let max_offset = total.saturating_sub(visible);
+        Self {
+            start: if scrollable && visible > 0 {
+                offset.min(max_offset)
+            } else {
+                0
+            },
+            visible,
+            total,
+            status,
+            border_hint: overflow && available == 1,
+        }
     }
 }
 
@@ -433,11 +509,10 @@ const MAX_PREVIEW_LINES: usize = 5;
 /// Indent before each text row of the preview body.
 const TEXT_INDENT: &str = "    ";
 
-/// Push at most `max_rows` rows of `text_lines`, each wrapped to
-/// `width` columns, indented and dimmed, then an omission marker naming how
-/// many rows were left out. Wrapping keeps a long line's tail on screen —
-/// the end of a KAS plan line carries the step's effort (cyril-8wh0) —
-/// instead of clipping it at the border.
+/// Push at most `max_rows` content rows of wrapped, indented text and an
+/// omission marker. Plan fallbacks count the marker inside that same budget;
+/// ordinary text keeps its established five content rows plus marker.
+/// Wrapping preserves information at the end of a long source line.
 ///
 /// Runs every frame, so rows past the cap are counted, not built: a large
 /// raw-input write is not re-wrapped into strings on every redraw.
@@ -446,6 +521,7 @@ fn push_bounded_text<'a, 's>(
     text_lines: impl Iterator<Item = &'s str>,
     width: usize,
     max_rows: usize,
+    marker_in_budget: bool,
     theme: &Theme,
 ) {
     let mut total = 0usize;
@@ -465,8 +541,13 @@ fn push_bounded_text<'a, 's>(
         }
     }
     if total > max_rows {
+        let displaced = usize::from(marker_in_budget && max_rows > 0);
+        lines.truncate(lines.len().saturating_sub(displaced));
         lines.push(Line::styled(
-            format!("{TEXT_INDENT}...{} more lines", total - max_rows),
+            format!(
+                "{TEXT_INDENT}...{} more lines",
+                total - max_rows + displaced
+            ),
             Style::default().fg(theme.subdued),
         ));
     }
@@ -552,13 +633,15 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) ->
             }),
             text_width,
             text_rows,
+            is_plan_approval,
             theme,
         ),
         PreviewBody::Text(text) => push_bounded_text(
             &mut lines,
             text.lines(),
             text_width,
-            MAX_PREVIEW_LINES,
+            text_rows,
+            is_plan_approval,
             theme,
         ),
         // Never coerce a non-string payload (cyril-j1b3 spec).
@@ -568,6 +651,41 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) ->
         )),
     }
     lines
+}
+
+pub(crate) struct PreviewWindow {
+    pub max_offset: usize,
+    pub visible_rows: usize,
+}
+
+/// Current body navigation bounds from the same page/window the renderer
+/// uses. Paths, choices and editors never contribute to the scroll range.
+pub(crate) fn preview_window(state: &dyn TuiState) -> Option<PreviewWindow> {
+    let approval = state.approval()?;
+    let (width, height) = state.terminal_size();
+    let area = Rect::new(0, 0, width, height);
+    let input_top = crate::render::input_top(area, state);
+    let theme = state.theme();
+    let (popup, preview, rows) = match &approval.phase {
+        ApprovalPhase::SelectOption => {
+            let page = OptionPage::new(area, input_top, approval, &theme)?;
+            (page.popup, page.preview, page.layout.preview_rows)
+        }
+        ApprovalPhase::EnterReason { editor, .. } => {
+            let page =
+                ReasonPage::new(area, input_top, approval, editor.notice().is_some(), &theme)?;
+            (page.popup, page.preview, page.preview_rows)
+        }
+        _ => return None,
+    };
+    if !preview.scrollable || usize::from(popup.width.saturating_sub(2)) <= TEXT_INDENT.width() {
+        return None;
+    }
+    let window = preview.body_window(rows);
+    (window.visible > 0).then_some(PreviewWindow {
+        max_offset: window.total.saturating_sub(window.visible),
+        visible_rows: window.visible,
+    })
 }
 
 /// Whether a confirm key may answer the front approval in the frame the
@@ -757,6 +875,7 @@ fn render_option_phase(
     };
 
     frame.render_widget(Clear, popup_area);
+    let border_hint = preview.body_window(layout.preview_rows).border_hint;
 
     let mut lines: Vec<Line> = Vec::new();
     if layout.message {
@@ -807,12 +926,14 @@ fn render_option_phase(
     }
 
     let title = attribution_title(" Permission Required ", session_attribution, theme.emphasis);
-    let popup = Paragraph::new(lines).block(
-        Block::default()
-            .title(title)
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.emphasis)),
-    );
+    let mut block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.emphasis));
+    if border_hint {
+        block = block.title_bottom(" PgUp/PgDn preview ");
+    }
+    let popup = Paragraph::new(lines).block(block);
     frame.render_widget(popup, popup_area);
 }
 
@@ -942,6 +1063,7 @@ fn render_reason_phase(
         editor_rows,
         ..
     } = page;
+    let border_hint = preview.body_window(preview_rows).border_hint;
     let content_width = usize::from(popup_area.width.saturating_sub(2)).max(1);
     let editor_lines = super::input::text_cursor_lines(
         editor.text(),
@@ -995,12 +1117,14 @@ fn render_reason_phase(
     }
 
     let title = attribution_title(" Reject with reason ", session_attribution, theme.emphasis);
-    let popup = Paragraph::new(lines).block(
-        Block::default()
-            .title(title)
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(theme.emphasis)),
-    );
+    let mut block = Block::default()
+        .title(title)
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(theme.emphasis));
+    if border_hint {
+        block = block.title_bottom(" PgUp/PgDn preview ");
+    }
+    let popup = Paragraph::new(lines).block(block);
     frame.render_widget(popup, popup_area);
 }
 
@@ -1501,6 +1625,7 @@ mod tests {
             options,
             trust_options,
             selected,
+            preview_scroll_offset: 0,
             can_reject_with_reason: false,
             phase,
             responder: tokio::sync::oneshot::channel().0,
@@ -2483,6 +2608,7 @@ mod tests {
             options: vec![option("accept", "Allow"), option("reject", "Deny")],
             trust_options: vec![],
             selected: 0,
+            preview_scroll_offset: 0,
             can_reject_with_reason: false,
             phase: ApprovalPhase::SelectOption,
             responder: tokio::sync::oneshot::channel().0,
@@ -3053,6 +3179,143 @@ mod tests {
         insta::assert_snapshot!("8wh0_workflow_plan_overflow_keeps_comparison_90x50", screen);
     }
 
+    /// Comparison continuations must remain actual drawn text at the first
+    /// usable widths. Two cells are required to display a wide glyph at all.
+    #[rstest::rstest]
+    #[case::ascii_one_cell(11, 'x')]
+    #[case::ascii_two_cells(12, 'x')]
+    #[case::ascii_three_cells(13, 'x')]
+    #[case::ascii_four_cells(14, 'x')]
+    #[case::ascii_five_cells(15, 'x')]
+    #[case::ascii_six_cells(16, 'x')]
+    #[case::wide_two_cells(12, '界')]
+    #[case::wide_three_cells(13, '界')]
+    #[case::wide_four_cells(14, '界')]
+    #[case::wide_five_cells(15, '界')]
+    #[case::wide_six_cells(16, '界')]
+    fn narrow_comparison_tail_is_drawn_without_clipped_continuation_indent(
+        #[case] width: u16,
+        #[case] fill: char,
+    ) {
+        let comparison = format!(
+            "Compared with the replaced steps: removed 'old'; added {}TAIL_ID",
+            fill.to_string().repeat(200),
+        );
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(&comparison));
+        state.preview_scroll_offset = usize::MAX;
+        let rows = screen_rows(&render_at(&state, width, 50, 50));
+        let body: Vec<&str> = rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .filter_map(|body| body.strip_prefix("  "))
+            .collect();
+        let drawn: String = body
+            .iter()
+            .flat_map(|row| row.chars().filter(|ch| !ch.is_whitespace()))
+            .collect();
+        assert!(
+            drawn.contains("TAIL_ID"),
+            "comparison tail clipped: {rows:?}"
+        );
+        assert!(
+            drawn.contains(fill),
+            "retained comparison glyph clipped: {rows:?}"
+        );
+        assert!(body.len() <= 12, "body budget exceeded: {rows:?}");
+    }
+
+    /// cyril-ej7y: a literal rendered comparison golden retains references
+    /// beyond four rows without needing a second wrapping implementation.
+    #[test]
+    fn long_comparison_snapshot_keeps_references_beyond_four_rows() {
+        let references = (1..=24)
+            .map(|id| format!("reference{id:03}"))
+            .collect::<Vec<_>>()
+            .join(" ");
+        let comparison =
+            format!("Compared with the replaced steps: removed 'old'; added {references}");
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(&comparison));
+        let terminal = render_at(&state, 80, 50, 50);
+        let body: Vec<String> = screen_rows(&terminal)
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .filter_map(|body| body.strip_prefix("  "))
+            .map(str::to_owned)
+            .collect();
+        let first = body
+            .iter()
+            .position(|row| row.starts_with("Compared with the replaced steps:"))
+            .expect("rendered comparison prefix");
+        insta::assert_snapshot!(
+            body[first..].join("\n"),
+            @"Compared with the replaced steps: removed 'old'; added\n    reference001 reference002 reference003\n    reference004 reference005 reference006\n    reference007 reference008 reference009\n    reference010 reference011 reference012\n    reference013 reference014 reference015\n    reference016 reference017 reference018\n    reference019 reference020 reference021\n    reference022 reference023 reference024"
+        );
+    }
+
+    /// cyril-ej7y: KAS caps characters, not rows or bytes. The retained end
+    /// of a long comparison must survive even when it needs far over four
+    /// rows, and every rendered viewport includes at most twelve body rows.
+    #[rstest::rstest]
+    #[case::below(599, "TAIL_ID")]
+    #[case::exact(600, "TAIL_ID")]
+    #[case::over(601, "TAIL_I...")]
+    fn comparison_character_bound_survives_bounded_viewports(
+        #[case] chars: usize,
+        #[case] expected_tail: &str,
+        #[values(24, 40, 60, 80)] width: u16,
+        #[values('x', '界')] fill: char,
+    ) {
+        let prefix = "Compared with the replaced steps: removed 'old'; added ";
+        let padding = chars - prefix.chars().count() - "TAIL_ID".chars().count();
+        let comparison = format!("{prefix}{}TAIL_ID", fill.to_string().repeat(padding));
+        let mut plan = live_plan();
+        plan.kind = cyril_core::types::WorkflowPlanKind::Edit;
+        let mut state = plan_approval(plan);
+        state.tool_call = crate::traits::TrackedToolCall::new(plan_text_tool_call(&comparison));
+        let initial = screen_rows(&render_at(&state, width, 50, 50));
+        state.preview_scroll_offset = usize::MAX;
+        let final_rows = screen_rows(&render_at(&state, width, 50, 50));
+        let final_body: String = final_rows
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .flat_map(|body| body.chars().filter(|ch| !ch.is_whitespace()))
+            .collect();
+        assert!(
+            final_body.contains(expected_tail),
+            "missing {expected_tail}: {final_rows:?}"
+        );
+        if chars > 600 {
+            assert!(
+                !final_body.contains("TAIL_ID"),
+                "beyond KAS cap: {final_rows:?}"
+            );
+        }
+        let first_body = initial
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .find_map(|body| body.strip_prefix("  "))
+            .expect("initial projected tree row");
+        assert!(
+            first_body.starts_with("..."),
+            "the first body row must retain the tree omission marker, independently of the comparison ellipsis: {initial:?}"
+        );
+        for rows in [&initial, &final_rows] {
+            let body_rows = rows
+                .iter()
+                .filter_map(|row| popup_body(row))
+                .filter(|body| body.starts_with("  "))
+                .count();
+            assert!(body_rows <= 12, "body budget exceeded: {rows:?}");
+            assert!(rows.iter().any(|row| row.contains("▸ Allow")), "{rows:?}");
+        }
+    }
+
     /// cyril-8wh0 review: a plan approval without a usable typed plan falls
     /// back to its Text with the plan's row budget, not the generic five.
     #[test]
@@ -3074,6 +3337,60 @@ mod tests {
         let screen = screen_rows(&render_at(&ordinary, 90, 40, 40)).join("\n");
         assert!(screen.contains("plan row 5"), "five rows:\n{screen}");
         assert!(!screen.contains("plan row 6"), "capped at five:\n{screen}");
+    }
+
+    /// cyril-ej7y: a fallback's marker occupies its last budgeted row.
+    /// Exactly twelve rows fit intact; overflowing text counts the displaced
+    /// twelfth row among the omitted rows. Both Text sources use that budget.
+    #[rstest::rstest]
+    #[case::below(11, 11, None)]
+    #[case::exact(12, 12, None)]
+    #[case::one_over(13, 11, Some(2))]
+    #[case::well_over(25, 11, Some(14))]
+    fn plan_text_fallback_marker_is_inside_twelve_rows(
+        #[case] count: usize,
+        #[case] kept: usize,
+        #[case] omitted: Option<usize>,
+        #[values(false, true)] raw_text: bool,
+        #[values(24, 40, 80)] width: u16,
+    ) {
+        let text = (1..=count)
+            .map(|n| format!("fallback {n:02}"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut plan = live_plan();
+        plan.steps.clear();
+        plan.omitted = Some(cyril_core::types::WorkflowPlanOmission::Steps);
+        let mut state = plan_approval(plan);
+        let tool = if raw_text {
+            ToolCall::new(
+                cyril_core::types::ToolCallId::new("fallback"),
+                "Workflow plan".into(),
+                ToolKind::Other,
+                ToolCallStatus::Pending,
+                Some(serde_json::json!({"text": text})),
+            )
+        } else {
+            plan_text_tool_call(&text)
+        };
+        state.tool_call = crate::traits::TrackedToolCall::new(tool);
+        let rows = screen_rows(&render_at(&state, width, 40, 40));
+        let screen = rows.join("\n");
+        let content_rows = rows.iter().filter(|row| row.contains("fallback ")).count();
+        let marker_rows = rows.iter().filter(|row| row.contains("...")).count();
+        assert_eq!(content_rows, kept, "{screen}");
+        assert_eq!(marker_rows, usize::from(omitted.is_some()), "{screen}");
+        assert!(content_rows + marker_rows <= 12, "{screen}");
+        if let Some(omitted) = omitted {
+            assert!(screen.contains(&format!("...{omitted}")), "{screen}");
+            if width >= 40 {
+                assert!(
+                    screen.contains(&format!("...{omitted} more lines")),
+                    "{screen}"
+                );
+            }
+        }
+        assert!(screen.contains("▸ Allow"), "{screen}");
     }
 
     fn workflow_plan_is_bounded_case() {

@@ -1,0 +1,141 @@
+{
+  "issue": "cyril-ej7y",
+  "frozen_at_utc": "2026-10-20T07:42:27.738540+00:00",
+  "delivery_worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-ej7y",
+  "branch": "fix/cyril-ej7y",
+  "base_commit": "2fd94879db1b4281dc85cf7dcf528649c1da3087",
+  "base_pr": 188,
+  "base_identity_note": "Published D parent, not an EJ commit. EJ is the reviewed uncommitted nine-file source delta above it.",
+  "canonical_verification": ".cyril-ej7y/verification.md",
+  "publication_membership": "Exactly the sixteen files below plus this manifest itself (seventeen total); no tracker/core/Cargo/Shell/X/private-home/binary payload. Parent owns publication and source-state checks.",
+  "files": [
+    {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "f798ded9a232ccf6daa1059649ec164c2ea1bfd6dba113b5dbce605ed69e24c8",
+      "bytes": 489309,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "654122534c63095e7427de5d3978de6edbd2435cc955db2abb229068471bb58a",
+      "bytes": 72879,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "sha256": "bcd3946570629742ffdb77ceb08902a42caf66f1cad48fae52a4bed28e7dd52e",
+      "bytes": 411967,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "sha256": "c57a105bc9544e4ce4cabae49a8cb86000a59fb31e7cad46b583848d70db62b3",
+      "bytes": 35366,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/render.rs",
+      "sha256": "43005b77b22e784566db6077f2e2c3e6fad15e84e0850a145eec40b98fa9d66b",
+      "bytes": 66340,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "sha256": "dd01da0a8bc8ae1ce307c31dcea13f343b37fbda6ad0ca8fed81ef986bf0faf5",
+      "bytes": 137553,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "sha256": "630c5e6db1f3fc759cb66283d60631c6e2256d4d972aa6b46794d186e8c0486f",
+      "bytes": 16892,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/toolbar.rs",
+      "sha256": "ee23b7fb8168b4974f450908660c58b9396b6db115370faa94b2234e96506fed",
+      "bytes": 36319,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "crates/cyril-ui/tests/modal_theme.rs",
+      "sha256": "32cefaaefc5ed793213388bbad6ecd02472f5ed58ebf039ee16c55ff668e49a0",
+      "bytes": 22293,
+      "role": "frozen EJ source/test delta; unchanged by documentation finalization",
+      "identity_time": "documentation freeze, not contemporaneous gate-time hash"
+    },
+    {
+      "path": "README.md",
+      "sha256": "23e0d0184d10d87cbe0342a18821a2e687a9f74562bdf2e0e4353670b3df67a0",
+      "bytes": 23957,
+      "role": "documentation/verification record"
+    },
+    {
+      "path": ".cyril-ej7y/route.md",
+      "sha256": "6e9c2246875f91a6be0d575ceb4fc753913a2b8f78ff4173bbf963ca302c4976",
+      "bytes": 5053,
+      "role": "documentation/verification record"
+    },
+    {
+      "path": ".cyril-ej7y/design.md",
+      "sha256": "07f98aa9bdb0e3f2b8d98521cae15503dfb41323503475e7744076eb6476ca72",
+      "bytes": 10591,
+      "role": "documentation/verification record"
+    },
+    {
+      "path": ".cyril-ej7y/plan.md",
+      "sha256": "26e1db751fa0af0e2d386d207efdbffee2c4e3c1a70c0cb675c2d4af4d009716",
+      "bytes": 5957,
+      "role": "documentation/verification record"
+    },
+    {
+      "path": ".cyril-ej7y/review-decisions.md",
+      "sha256": "a8ddd6a8838279bf19687c18d144d9db04f0b5e7139f388edc89d1013c550c48",
+      "bytes": 5206,
+      "role": "documentation/verification record"
+    },
+    {
+      "path": ".cyril-ej7y/verification.md",
+      "sha256": "46e9db3e1f5a5bc46962bbbb50332893077a3a689c018adb46d7254278fc43a9",
+      "bytes": 14640,
+      "role": "documentation/verification record"
+    },
+    {
+      "path": ".cyril-ej7y/evidence-20261020.tar.gz",
+      "sha256": "11b1e929a6d7a9a28508518d177b66e2e8917e9832d0d6e544834f2c423b5cbf",
+      "bytes": 215138,
+      "role": "portable actual qualification/review/smoke/sensitivity evidence",
+      "regular_files": 283
+    }
+  ],
+  "manifest_self": {
+    "path": ".cyril-ej7y/publication-manifest.json",
+    "sha256": "Excluded from its own contents to avoid recursive hashing; exact SHA256 returned with worker handoff."
+  },
+  "finalization_owned_paths": [
+    "README.md",
+    ".cyril-ej7y/route.md",
+    ".cyril-ej7y/design.md",
+    ".cyril-ej7y/plan.md",
+    ".cyril-ej7y/review-decisions.md",
+    ".cyril-ej7y/verification.md",
+    ".cyril-ej7y/evidence-20261020.tar.gz",
+    ".cyril-ej7y/publication-manifest.json"
+  ],
+  "finalization_executed_product_checks": [],
+  "retained_evidence": {
+    "G1": "Actual bg_101/artifact647 workspace tests3008PASS/13ignored, clippy all-targets -Dwarnings, default build and fmt check",
+    "S1": "First actual owned-process smoke attempt:24/24manualRejectOnce, exit0",
+    "S2": "Same actual fixture/input/keys/32x24 viewport: old late-content BEHAVIORAL_RED/probeexit1 versus new PASS/probeexit0; both cleanup0",
+    "R2": "Fresh exact nine-file reconstructed-source review, no findings/correct0.94; full-index artifact711 and clean consuming subreview"
+  },
+  "freeze": "No further worker writes after this manifest. No commits, PRs or tracker changes performed."
+}

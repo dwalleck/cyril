@@ -647,6 +647,9 @@ pub struct ApprovalState {
     pub options: Vec<cyril_core::types::PermissionOption>,
     pub trust_options: Vec<cyril_core::types::TrustOption>,
     pub selected: usize,
+    /// Request-local body row offset; the approval widget clamps it to the
+    /// current frame while keeping target paths and choices pinned.
+    pub preview_scroll_offset: usize,
     /// Immutable request capability derived from the configured engine and
     /// feature availability. It is intentionally separate from option data:
     /// option kind and request capability must both gate feedback entry.

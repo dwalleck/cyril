@@ -208,6 +208,47 @@ limit and overflow notice. A fully visible target containing a literal `…`
 (such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
 remains actionable; a genuinely shortened path must retain an identifiable tail.
 
+### Reviewing workflow comparisons (KAS)
+
+Workflow approvals keep the complete **retained workflow comparison**, not a
+full file diff. Before wrapping, Cyril replaces control and bidi-formatting
+characters with spaces, collapses whitespace, trims the ends, and retains at
+most **600 Unicode code points**, including the comparison prefix. If more
+text existed, it appends `...`; scrolling cannot recover text beyond that cap.
+
+The preview body uses at most **12 visible rows, including its navigation
+status**. A long comparison is paged rather than cut after four rows. The step
+tree may be shortened to make room, with an explicit `...N more lines` marker;
+paging does not expand omitted tree details. The target path, approval choice
+or reason editor, and chat input stay outside the scrolling body.
+
+While choosing an approval or editing a rejection reason:
+
+| Key | Preview action |
+| --- | --- |
+| `PageUp` / `PageDown` (no modifiers) | Move by the current visible content page |
+| `Shift+Up` / `Shift+Down` (Shift only) | Move by one row |
+| `Shift+Home` / `Shift+End` (Shift only) | Jump to the first / last window |
+
+Other modifier combinations are not preview shortcuts. Ordinary `Up`/`Down`
+still select an approval or move in the reason editor; ordinary `Home`/`End`
+retain their editor behavior. Preview navigation does not answer the request.
+Entering or leaving the reason editor preserves the preview position without
+altering the reason or chat draft; the next queued request starts at the top
+with its own fresh reason editor.
+
+Resizing rewraps the retained text and clamps the current window. The next
+navigation key uses the new visible capacity. When only one content row fits,
+the navigation hint moves to the popup border rather than taking that row.
+With no usable body-text cells there is no scrolling target: enlarge the
+window. The visible-context confirmation checks described above still apply.
+
+These limits are distinct: a **workflow-plan Text/raw-text fallback** has
+12 total rows including any omission marker; an **ordinary Text/raw-text
+preview** keeps five content rows plus its marker; an **ordinary Diff preview**
+keeps 20 diff lines plus its marker. Workflow comparison pagination does not
+expand ordinary diffs or their cached content.
+
 ### Host hooks (KAS)
 
 KAS is the default engine in normal production builds. In the default KAS hooks

@@ -1941,6 +1941,9 @@ impl App {
     }
 
     fn handle_approval_key(&mut self, key: KeyEvent) {
+        if self.ui_state.approval_preview_key(key) {
+            return;
+        }
         if self.ui_state.approval_feedback_active() {
             self.ui_state.approval_feedback_key(key);
             return;
@@ -7907,6 +7910,682 @@ mod tests {
             matches!(receiver.try_recv(), Ok(PermissionResponse::Cancel)),
             "{context}"
         );
+    }
+
+    // --- cyril-ej7y: bounded workflow preview through the real App key path ---
+
+    fn ej7y_comparison() -> String {
+        let ids = |prefix: &str, count| {
+            (0..count)
+                .map(|index| format!("{prefix}{index:02}"))
+                .collect::<Vec<_>>()
+                .join(", ")
+        };
+        let comparison = format!(
+            "Compared with the replaced steps: Removed: {}; Added: {}; Changed: {}",
+            ids("rm", 48),
+            ids("add", 24),
+            ids("chg", 20)
+        );
+        // These are fixture premises, not expectations derived from the renderer:
+        // chg11 is complete immediately before KAS's 600-character boundary.
+        assert!(comparison.len() > 600);
+        assert!((550..600).contains(&comparison.find("chg11").expect("retained id")));
+        assert!(comparison.find("chg11").expect("retained id") + "chg11".len() <= 600);
+        assert!(comparison.find("chg13").expect("discarded id") > 600);
+        comparison
+    }
+
+    fn ej7y_request(
+        id: &str,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        use cyril_core::types::{
+            ToolCallContent, WorkflowId, WorkflowNodeId, WorkflowPlan, WorkflowPlanKind,
+            WorkflowPlanNode, WorkflowPlanNodeKind, WorkflowPlanStep, WorkflowPlanTask,
+        };
+
+        let (mut request, receiver) = vojx_request(Some(VOJX_PATH));
+        request.tool_call = ToolCall::new(
+            ToolCallId::new(id),
+            "Replace workflow steps".into(),
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"path": VOJX_PATH})),
+        )
+        .with_content(vec![ToolCallContent::Text(ej7y_comparison())]);
+        request.message = "Approve replacement plan?".into();
+        request.workflow_plan = Some(Box::new(WorkflowPlan {
+            workflow_id: WorkflowId::try_from("review-workflow".to_owned()).expect("workflow id"),
+            proposed_by: Some(
+                WorkflowNodeId::try_from("plan-editor".to_owned()).expect("creator id"),
+            ),
+            kind: WorkflowPlanKind::Replace,
+            workflow_ref: "generated://review-workflow".into(),
+            kept_step_ids: vec![
+                WorkflowNodeId::try_from("plan-editor".to_owned()).expect("kept id"),
+            ],
+            steps: [("add", 24), ("chg", 20)]
+                .into_iter()
+                .flat_map(|(prefix, count)| {
+                    (0..count).map(move |index| WorkflowPlanNode {
+                        node_id: WorkflowNodeId::try_from(format!("{prefix}{index:02}"))
+                            .expect("step id"),
+                        kind: WorkflowPlanNodeKind::Step(WorkflowPlanStep {
+                            agent_name: "reviewer".into(),
+                            model_id: None,
+                            model_source: None,
+                            effort_level: None,
+                            effort_source: None,
+                            task: Some(WorkflowPlanTask {
+                                text: format!("Review replacement {prefix}{index:02}"),
+                                truncated: false,
+                            }),
+                            artifacts: vec![],
+                            completion: None,
+                        }),
+                    })
+                })
+                .collect(),
+            omitted: None,
+        }));
+        (request, receiver)
+    }
+
+    fn ej7y_offset(app: &App) -> usize {
+        app.ui_state
+            .approval()
+            .expect("active request")
+            .preview_scroll_offset
+    }
+
+    /// Read only preview rows between the pinned path and action/editor chrome.
+    /// This deliberately does not query the widget's geometry or window helper.
+    fn ej7y_drawn_body(screen: &[String]) -> Vec<&str> {
+        let path = screen
+            .iter()
+            .position(|row| row.contains(VOJX_PATH))
+            .expect("the short target path stays pinned");
+        screen[path + 1..]
+            .iter()
+            .map(|row| row.trim().trim_matches('│').trim())
+            .take_while(|row| {
+                !row.starts_with('▸')
+                    && *row != "Allow"
+                    && *row != "Reject"
+                    && !row.starts_with("Rejecting:")
+                    && !row.starts_with("Reason (")
+                    && !row.contains('█')
+            })
+            .filter(|row| !row.is_empty())
+            .collect()
+    }
+
+    fn ej7y_assert_pinned_context(screen: &[String], reason_phase: bool) {
+        let path = screen
+            .iter()
+            .position(|row| row.contains(VOJX_PATH))
+            .expect("path");
+        let action = screen
+            .iter()
+            .position(|row| row.contains(if reason_phase { "why█" } else { "▸ Allow" }))
+            .expect("selected option or reason editor stays visible");
+        let input = screen
+            .iter()
+            .position(|row| row.contains("CHAT_DRAFT"))
+            .expect("the chat input is not overlaid");
+        assert!(path < action && action < input, "{}", screen.join("\n"));
+        assert!(
+            ej7y_drawn_body(screen).len() <= 12,
+            "the 12-row body budget includes its status:\n{}",
+            screen.join("\n")
+        );
+    }
+
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn ej7y_app_pages_full_comparison_with_pinned_context(
+        #[values(32, 48, 80)] width: u16,
+        #[values(18, 24, 40)] height: u16,
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        let mut app = test_app();
+        app.ui_state.insert_text("CHAT_DRAFT");
+        let (request, mut receiver) = ej7y_request("scroll-plan");
+        app.ui_state.show_approval(request);
+        assert_eq!(ej7y_offset(&app), 0);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down))
+                .await
+                .expect("select Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+        }
+
+        let mut seen = String::new();
+        let mut pages = 0;
+        loop {
+            let screen = approval_draw_at(&mut app, width, height);
+            ej7y_assert_pinned_context(&screen, reason_phase);
+            let body = ej7y_drawn_body(&screen);
+            if pages == 0 {
+                assert!(
+                    body.iter().any(|row| row.contains("more lines")),
+                    "the nonempty tree needs an explicit omission marker:\n{}",
+                    screen.join("\n")
+                );
+            }
+            seen.extend(
+                body.iter()
+                    .flat_map(|row| row.chars())
+                    .filter(|ch| !ch.is_whitespace()),
+            );
+            let before = ej7y_offset(&app);
+            app.handle_key(key(KeyCode::PageDown))
+                .await
+                .expect("page preview");
+            let after = ej7y_offset(&app);
+            if after == before {
+                break;
+            }
+            let content_rows = body.iter().filter(|row| !row.starts_with('↑')).count();
+            assert!(after > before && after - before <= content_rows);
+            pages += 1;
+            assert!(pages < 200, "paging must reach its endpoint");
+        }
+        assert!(pages > 0, "the fixture must exceed the actual viewport");
+        let retained: String = ej7y_comparison().chars().take(600).collect();
+        for token in retained.split_ascii_whitespace() {
+            assert!(
+                seen.contains(token),
+                "missing retained {token:?} at {width}x{height}"
+            );
+        }
+        assert!(
+            seen.contains("chg11"),
+            "the retained comparison tail must be reachable"
+        );
+        assert!(
+            !seen.contains("chg13"),
+            "text beyond the reference cap must stay absent"
+        );
+        assert!(receiver.try_recv().is_err(), "navigation must never answer");
+
+        let last = ej7y_offset(&app);
+        app.handle_key(KeyEvent::new(KeyCode::Home, KeyModifiers::SHIFT))
+            .await
+            .expect("preview start");
+        assert_eq!(ej7y_offset(&app), 0);
+        approval_draw_at(&mut app, width, height);
+        app.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT))
+            .await
+            .expect("preview end");
+        assert_eq!(ej7y_offset(&app), last);
+        let screen = approval_draw_at(&mut app, width, height);
+        ej7y_assert_pinned_context(&screen, reason_phase);
+        assert!(ej7y_drawn_body(&screen).concat().contains("chg11"));
+        assert_eq!(app.ui_state.input_text(), "CHAT_DRAFT");
+    }
+
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn ej7y_app_preview_navigation_requires_actual_text_cells(
+        #[values(4, 5, 6, 7, 8, 9, 10, 11)] width: u16,
+        #[values(18, 40)] height: u16,
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        let mut app = test_app();
+        let (mut request, mut receiver) = ej7y_request("no-text-plan");
+        // Keep the overflowing typed plan, but remove the optional path so
+        // the width-11 positive control has body rows even at height 18.
+        request.tool_call = ToolCall::new(
+            ToolCallId::new("no-text-plan"),
+            "Replace workflow steps".into(),
+            ToolKind::Other,
+            ToolCallStatus::Pending,
+            None,
+        )
+        .with_content(vec![cyril_core::types::ToolCallContent::Text(
+            ej7y_comparison(),
+        )]);
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+        }
+        let phase = app.ui_state.approval().expect("request").phase.clone();
+        let selected = app.ui_state.approval().expect("request").selected;
+        assert_eq!(
+            ej7y_offset(&app),
+            0,
+            "fresh request starts at the first row"
+        );
+        // Actual popup width is terminal width minus four margin cells.
+        // Widths 4–10 therefore leave at most four inner cells, entirely
+        // consumed by the body indent. Width 11 exposes the first text cell.
+        let text_cells_exist = width == 11;
+        for navigation in [
+            key(KeyCode::PageDown),
+            KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT),
+        ] {
+            let screen = approval_draw_at(&mut app, width, height);
+            app.handle_key(navigation)
+                .await
+                .expect("preview navigation");
+            let context = format!(
+                "{width}x{height} reason={reason_phase} key={navigation:?}\n{}",
+                screen.join("\n")
+            );
+            if text_cells_exist {
+                assert!(
+                    ej7y_offset(&app) > 0,
+                    "usable boundary must scroll: {context}"
+                );
+            } else {
+                assert_eq!(
+                    ej7y_offset(&app),
+                    0,
+                    "no text cells means no scroll target: {context}"
+                );
+            }
+            let approval = app
+                .ui_state
+                .approval()
+                .expect("navigation cannot close request");
+            assert_eq!(approval.phase, phase, "{context}");
+            assert_eq!(approval.selected, selected, "{context}");
+            assert!(matches!(
+                receiver.try_recv(),
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+            ));
+        }
+        approval_draw_at(&mut app, width, height);
+        app.handle_key(key(KeyCode::Esc)).await.expect("Escape");
+        if reason_phase {
+            assert!(
+                app.ui_state.has_approval(),
+                "Escape first returns to the options"
+            );
+            app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+        }
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(PermissionResponse::Cancel)
+        ));
+        assert!(!app.ui_state.has_approval());
+    }
+
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn ej7y_app_preview_keys_preserve_selection_and_reason_cursor(
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        use cyril_ui::traits::ApprovalPhase;
+
+        let mut app = test_app();
+        let (request, _receiver) = ej7y_request("key-plan");
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 40, 40);
+        app.handle_key(key(KeyCode::Down))
+            .await
+            .expect("plain Down selects");
+        assert_eq!(app.ui_state.approval().expect("request").selected, 1);
+        assert_eq!(ej7y_offset(&app), 0);
+        app.handle_key(key(KeyCode::Up))
+            .await
+            .expect("plain Up selects");
+        assert_eq!(app.ui_state.approval().expect("request").selected, 0);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("first\nsecond".into()))
+                .await
+                .expect("multiline draft");
+            for (code, cursor) in [
+                (KeyCode::Home, 6),
+                (KeyCode::End, 12),
+                (KeyCode::Up, 5),
+                (KeyCode::Down, 11),
+                (KeyCode::End, 12),
+            ] {
+                approval_draw_at(&mut app, 40, 40);
+                app.handle_key(key(code))
+                    .await
+                    .expect("plain editor movement");
+                let ApprovalPhase::EnterReason { editor, .. } =
+                    &app.ui_state.approval().expect("request").phase
+                else {
+                    panic!("editor must remain active");
+                };
+                assert_eq!(editor.cursor(), cursor);
+                assert_eq!(ej7y_offset(&app), 0);
+            }
+        } else {
+            for code in [KeyCode::Home, KeyCode::End] {
+                approval_draw_at(&mut app, 40, 40);
+                app.handle_key(key(code)).await.expect("plain option key");
+                assert_eq!(app.ui_state.approval().expect("request").selected, 0);
+                assert_eq!(ej7y_offset(&app), 0);
+            }
+        }
+        let selected = app.ui_state.approval().expect("request").selected;
+        for (code, modifiers, expected) in [
+            (KeyCode::Down, KeyModifiers::SHIFT, 1),
+            (KeyCode::Up, KeyModifiers::SHIFT, 0),
+        ] {
+            approval_draw_at(&mut app, 40, 40);
+            app.handle_key(KeyEvent::new(code, modifiers))
+                .await
+                .expect("one row");
+            assert_eq!(ej7y_offset(&app), expected);
+        }
+        let screen = approval_draw_at(&mut app, 40, 40);
+        let page = ej7y_drawn_body(&screen)
+            .iter()
+            .filter(|row| !row.starts_with('↑'))
+            .count();
+        app.handle_key(key(KeyCode::PageDown))
+            .await
+            .expect("page down");
+        assert_eq!(ej7y_offset(&app), page);
+        approval_draw_at(&mut app, 40, 40);
+        app.handle_key(key(KeyCode::PageUp)).await.expect("page up");
+        assert_eq!(ej7y_offset(&app), 0);
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::SHIFT))
+            .await
+            .expect("nonzero offset");
+        for modifiers in [
+            KeyModifiers::NONE,
+            KeyModifiers::SHIFT,
+            KeyModifiers::CONTROL,
+            KeyModifiers::ALT,
+            KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+            KeyModifiers::ALT | KeyModifiers::SHIFT,
+            KeyModifiers::CONTROL | KeyModifiers::ALT,
+            KeyModifiers::CONTROL | KeyModifiers::ALT | KeyModifiers::SHIFT,
+        ] {
+            for code in [
+                KeyCode::PageUp,
+                KeyCode::PageDown,
+                KeyCode::Up,
+                KeyCode::Down,
+                KeyCode::Home,
+                KeyCode::End,
+            ] {
+                let dedicated = (modifiers == KeyModifiers::NONE
+                    && matches!(code, KeyCode::PageUp | KeyCode::PageDown))
+                    || (modifiers == KeyModifiers::SHIFT
+                        && matches!(
+                            code,
+                            KeyCode::Up | KeyCode::Down | KeyCode::Home | KeyCode::End
+                        ));
+                if dedicated || modifiers == KeyModifiers::NONE {
+                    continue;
+                }
+                approval_draw_at(&mut app, 40, 40);
+                app.handle_key(KeyEvent::new(code, modifiers))
+                    .await
+                    .expect("ineligible modifiers");
+                assert_eq!(ej7y_offset(&app), 1, "{code:?} {modifiers:?}");
+                assert_eq!(app.ui_state.approval().expect("request").selected, selected);
+            }
+        }
+        if let ApprovalPhase::EnterReason { editor, .. } =
+            &app.ui_state.approval().expect("request").phase
+        {
+            assert_eq!(editor.text(), "first\nsecond");
+            assert_eq!(
+                editor.cursor(),
+                12,
+                "dedicated keys must precede editor routing"
+            );
+        }
+    }
+
+    #[rstest::rstest]
+    #[case::one_row(KeyEvent::new(KeyCode::Up, KeyModifiers::SHIFT), false)]
+    #[case::one_page(key(KeyCode::PageUp), true)]
+    #[tokio::test]
+    async fn ej7y_app_resize_normalizes_before_the_first_navigation(
+        #[case] movement: KeyEvent,
+        #[case] page: bool,
+    ) {
+        let mut app = test_app();
+        let (request, _receiver) = ej7y_request("resize-plan");
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 32, 18);
+        app.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT))
+            .await
+            .expect("narrow endpoint");
+        let narrow_end = ej7y_offset(&app);
+
+        // A separate real App gives the new endpoint without reading private
+        // window arithmetic or repairing the stale offset under test.
+        let mut control = test_app();
+        let (request, _receiver) = ej7y_request("resize-control");
+        control.ui_state.show_approval(request);
+        approval_draw_at(&mut control, 80, 40);
+        control
+            .handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT))
+            .await
+            .expect("wide endpoint");
+        let wide_end = ej7y_offset(&control);
+        assert!(narrow_end > wide_end);
+
+        let screen = approval_draw_at(&mut app, 80, 40);
+        let body = ej7y_drawn_body(&screen);
+        assert!(
+            body.concat().contains("chg11"),
+            "rendering clamps the stale offset"
+        );
+        let step = if page {
+            body.iter().filter(|row| !row.starts_with('↑')).count()
+        } else {
+            1
+        };
+        app.handle_key(movement)
+            .await
+            .expect("first key after resize");
+        assert_eq!(ej7y_offset(&app), wide_end.saturating_sub(step));
+        assert!(
+            ej7y_offset(&app) < wide_end,
+            "the first key must not be a dead scroll"
+        );
+    }
+
+    #[tokio::test]
+    async fn ej7y_app_preview_offset_survives_reason_but_not_queue_promotion() {
+        use cyril_ui::traits::ApprovalPhase;
+
+        let mut app = test_app();
+        let (first, mut first_receiver) = ej7y_request("first-plan");
+        let (second, mut second_receiver) = ej7y_request("second-plan");
+        app.ui_state.show_approval(first);
+        app.ui_state.show_approval(second);
+        for _ in 0..3 {
+            approval_draw_at(&mut app, 32, 40);
+            app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::SHIFT))
+                .await
+                .expect("first preview");
+        }
+        assert_eq!(ej7y_offset(&app), 3);
+        app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+        app.handle_key(key(KeyCode::Char('r')))
+            .await
+            .expect("reason");
+        assert_eq!(
+            ej7y_offset(&app),
+            3,
+            "entering reason preserves request-local position"
+        );
+        app.handle_terminal_event(Event::Paste("private draft".into()))
+            .await
+            .expect("first draft");
+        approval_draw_at(&mut app, 32, 40);
+        app.handle_key(KeyEvent::new(KeyCode::Down, KeyModifiers::SHIFT))
+            .await
+            .expect("reason preview");
+        assert_eq!(ej7y_offset(&app), 4);
+        app.handle_key(key(KeyCode::Esc))
+            .await
+            .expect("back to options");
+        assert_eq!(ej7y_offset(&app), 4);
+        assert_eq!(app.ui_state.approval().expect("first request").selected, 1);
+        assert!(first_receiver.try_recv().is_err());
+        approval_draw_at(&mut app, 32, 40);
+        app.handle_key(key(KeyCode::Esc))
+            .await
+            .expect("cancel first");
+        assert!(matches!(
+            first_receiver.try_recv(),
+            Ok(PermissionResponse::Cancel)
+        ));
+        let second = app.ui_state.approval().expect("second promoted");
+        assert_eq!(second.tool_call.id().as_str(), "second-plan");
+        assert_eq!(second.preview_scroll_offset, 0);
+        assert_eq!(second.selected, 0);
+        assert!(matches!(second.phase, ApprovalPhase::SelectOption));
+        approval_draw_at(&mut app, 32, 40);
+        app.handle_key(key(KeyCode::Down))
+            .await
+            .expect("second Reject");
+        app.handle_key(key(KeyCode::Char('r')))
+            .await
+            .expect("second reason");
+        let ApprovalPhase::EnterReason { editor, .. } =
+            &app.ui_state.approval().expect("second request").phase
+        else {
+            panic!("second editor");
+        };
+        assert_eq!(
+            editor.text(),
+            "",
+            "draft and position both belong to the request"
+        );
+        assert_eq!(ej7y_offset(&app), 0);
+        assert!(second_receiver.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn ej7y_app_preview_keys_leave_later_approval_pages_unchanged() {
+        use cyril_ui::traits::ApprovalPhase;
+
+        let navigation = [
+            key(KeyCode::PageUp),
+            key(KeyCode::PageDown),
+            KeyEvent::new(KeyCode::Up, KeyModifiers::SHIFT),
+            KeyEvent::new(KeyCode::Down, KeyModifiers::SHIFT),
+            KeyEvent::new(KeyCode::Home, KeyModifiers::SHIFT),
+            KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT),
+        ];
+        let mut app = test_app();
+        let (request, mut receiver) = trust_request("main");
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        app.handle_key(key(KeyCode::Enter))
+            .await
+            .expect("trust page");
+        assert!(matches!(
+            app.ui_state.approval().expect("trust").phase,
+            ApprovalPhase::SelectTrust { .. }
+        ));
+        let phase = app.ui_state.approval().expect("trust").phase.clone();
+        for event in navigation {
+            approval_draw_at(&mut app, 80, 40);
+            app.handle_key(event).await.expect("trust navigation");
+            let approval = app.ui_state.approval().expect("trust stays open");
+            assert_eq!(approval.phase, phase);
+            assert_eq!(approval.selected, 0);
+            assert_eq!(approval.preview_scroll_offset, 0);
+        }
+        assert!(receiver.try_recv().is_err());
+        app.handle_key(key(KeyCode::Esc)).await.expect("back");
+        app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(PermissionResponse::Cancel)
+        ));
+
+        app.ui_state
+            .apply_notification(&Notification::SessionCreated {
+                session_id: SessionId::new("main"),
+                current_mode: None,
+                current_model: None,
+                available_modes: vec![],
+                available_models: vec![],
+            });
+        let (request, mut receiver) = kas_write_request("main");
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        app.handle_key(key(KeyCode::Down))
+            .await
+            .expect("Always allow");
+        app.handle_key(key(KeyCode::Enter))
+            .await
+            .expect("scope page");
+        for folder in [false, true] {
+            let phase = app.ui_state.approval().expect("later page").phase.clone();
+            let selected = app.ui_state.approval().expect("later page").selected;
+            assert!(matches!(
+                phase,
+                ApprovalPhase::SelectScope { .. } | ApprovalPhase::EnterFolder { .. }
+            ));
+            for event in navigation {
+                approval_draw_at(&mut app, 80, 40);
+                app.handle_key(event).await.expect("later page navigation");
+                let approval = app.ui_state.approval().expect("later page stays open");
+                assert_eq!(approval.phase, phase);
+                assert_eq!(approval.selected, selected);
+                assert_eq!(approval.preview_scroll_offset, 0);
+            }
+            if !folder {
+                app.handle_key(key(KeyCode::Char('s')))
+                    .await
+                    .expect("workspace scope");
+                app.handle_key(key(KeyCode::Down))
+                    .await
+                    .expect("folder row");
+                app.handle_key(key(KeyCode::Enter))
+                    .await
+                    .expect("folder editor");
+            }
+        }
+        app.handle_key(key(KeyCode::Home))
+            .await
+            .expect("folder Home");
+        if let ApprovalPhase::EnterFolder { editor, .. } =
+            &app.ui_state.approval().expect("folder").phase
+        {
+            assert_eq!(editor.cursor(), 0);
+        } else {
+            panic!("folder editor remains active");
+        }
+        app.handle_key(key(KeyCode::End)).await.expect("folder End");
+        app.handle_key(key(KeyCode::Char('s')))
+            .await
+            .expect("literal folder s");
+        if let ApprovalPhase::EnterFolder { editor, .. } =
+            &app.ui_state.approval().expect("folder").phase
+        {
+            assert_eq!(editor.text(), "src/as");
+            assert_eq!(editor.cursor(), "src/as".len());
+        }
+        assert!(receiver.try_recv().is_err());
     }
 
     // --- dispatch_hooks_panel_key tests ---
