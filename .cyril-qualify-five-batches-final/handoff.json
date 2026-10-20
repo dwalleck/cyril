@@ -130,6 +130,8 @@
     "Retain shared profile-root resolution and independent credential locations when adding MCP consumers.",
     "Preserve ledger merge -> KAS shell normalization -> consent/request construction, original permission response conversion, and display-only preview text.",
     "Later C6 consumers must preserve TrackedToolCall preview_body/output_text/error_message, first-Diff cache invalidation and ToolCall merge-presence behavior; no imported source-fence expansion.",
+    "Main's upcoming Tqr/C6 gutter contract: outer width > 1 reserves exactly one stable right column; width 0 or 1 keeps full content width with no indicator. When C6 is supplied, retained::render must be the sole subtraction owner and thin chat::render must forward the ORIGINAL outer rectangle. Do not transplant old Tqr chat.rs subtraction into that wrapper or create a double gutter. Preserve/migrate all four Tqr behavior regressions; their source proof is pending. No C6/Tqr head GO has been supplied.",
+    "Later MCP mock/root-draw API seams remain under Main's original integration map; do not import unsupplied heads or broaden those contracts.",
     "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
   ],
   "qualification_and_publication": {
