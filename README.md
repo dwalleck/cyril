@@ -180,6 +180,15 @@ duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
 because Crossterm reports those characters only on release. Paste the character
 instead; Unicode paste remains supported.
 
+### Tool call history
+
+Tool rows stay at their first observed position in the conversation. An update
+without a preceding start creates a row from the fields it supplies, including
+KAS **Tool Load** and **Subagent Response** updates. Later frames for the same
+call within a session merge into that row rather than adding duplicates,
+preserving the text before and after it. A new session can reuse a tool ID
+without changing the previous session's history.
+
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with

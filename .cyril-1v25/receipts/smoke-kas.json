@@ -1,0 +1,11 @@
+{
+  "result": "PASS",
+  "binary": "/home/dwalleck/repos/cyril/target/debug/cyril",
+  "engine": "kas",
+  "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25-missing-tool-results/crates/cyril-ui/tests/fixtures/kas_missing_start_2_31_1.jsonl",
+  "expected": [
+    "Tool Load",
+    "Subagent Response"
+  ],
+  "proof": "real Cyril binary, controlled ACP peer, PTY-decoded TUI"
+}
