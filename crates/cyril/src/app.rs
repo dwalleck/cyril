@@ -8588,6 +8588,447 @@ mod tests {
         assert!(receiver.try_recv().is_err());
     }
 
+    // --- cyril-xavt: typed shell context must actually be drawn before Enter ---
+
+    fn xavt_pipeline() -> String {
+        (0..48)
+            .map(|index| format!("printf 'PIPE_{index:02}'"))
+            .collect::<Vec<_>>()
+            .join(" | ")
+    }
+
+    fn xavt_request(
+        path: Option<&str>,
+        command: String,
+        cwd: String,
+    ) -> (
+        PermissionRequest,
+        tokio::sync::oneshot::Receiver<PermissionResponse>,
+    ) {
+        let (mut request, receiver) = vojx_request(path);
+        let mut raw = serde_json::json!({"command": command, "cwd": cwd});
+        if let Some(path) = path {
+            raw["path"] = path.into();
+        }
+        request.tool_call = ToolCall::new(
+            ToolCallId::new("shell-preview"),
+            "Run shell tool".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(raw),
+        )
+        .with_shell_command(cyril_core::types::ShellCommand::new(command, Some(cwd)));
+        request.message = "Allow shell operation?".into();
+        (request, receiver)
+    }
+
+    /// Shell body rows carry four-space indentation. Message, title, target
+    /// path, option/editor and input do not; read the actual cells, never the
+    /// typed payload or widget confirmation helper.
+    fn xavt_drawn_body(screen: &[String]) -> Vec<&str> {
+        screen
+            .iter()
+            .filter_map(|row| {
+                let start = row.find("│    ")? + "│    ".len();
+                let end = row.rfind('│')?;
+                row.get(start..end).map(str::trim_end)
+            })
+            .filter(|row| !row.is_empty())
+            .collect()
+    }
+
+    fn xavt_command_drawn(screen: &[String]) -> bool {
+        // The supplied cwd contains only / and Z; none of these command
+        // characters can come from cwd, its Cwd: label or a navigation hint.
+        xavt_drawn_body(screen)
+            .iter()
+            .filter(|row| !row.trim_start().starts_with('↑') && !row.contains("PgUp/PgDn"))
+            .flat_map(|row| row.chars())
+            .filter(|ch| "printf'|PIPE_0123456789".contains(*ch))
+            .take(2)
+            .count()
+            > 1
+    }
+
+    /// cyril-xavt F1: one whole command glyph is real command context, not
+    /// the label-only or clipped context rejected by the size sweeps.
+    #[rstest::rstest]
+    #[case::pathless(None)]
+    #[case::with_path(Some(VOJX_PATH))]
+    #[tokio::test]
+    async fn xavt_app_whole_one_character_shell_command_can_allow(
+        #[case] path: Option<&'static str>,
+        #[values(":", "w")] command: &str,
+    ) {
+        let mut app = test_app();
+        app.ui_state.insert_text("CHAT_DRAFT");
+        let (request, mut receiver) = xavt_request(path, command.into(), "/ZZZZ".into());
+        app.ui_state.show_approval(request);
+        let screen = approval_draw_at(&mut app, 80, 40);
+        let context = screen.join("\n");
+        assert_eq!(
+            xavt_drawn_body(&screen),
+            [command, "Cwd: /ZZZZ"],
+            "{context}"
+        );
+        assert!(
+            screen.iter().any(|row| row.contains("▸ Allow")),
+            "{context}"
+        );
+        if let Some(path) = path {
+            assert!(screen.iter().any(|row| row.contains(path)), "{context}");
+        }
+        assert_eq!(app.ui_state.approval().expect("request").selected, 0);
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+
+        app.handle_key(key(KeyCode::Enter)).await.expect("Allow");
+        assert!(
+            matches!(receiver.try_recv(), Ok(PermissionResponse::Selected { option_id, .. })
+                if option_id.as_str() == "allow"),
+            "a whole visible {command:?} must send Allow:\n{context}"
+        );
+        assert!(
+            !app.ui_state.has_approval(),
+            "the answered request must release ownership"
+        );
+        assert_eq!(app.ui_state.input_text(), "CHAT_DRAFT");
+    }
+
+    /// cyril-xavt F1: the actual reason editor must submit the selected
+    /// request's reason even when its complete shell command is one glyph.
+    #[rstest::rstest]
+    #[case::pathless(None)]
+    #[case::with_path(Some(VOJX_PATH))]
+    #[tokio::test]
+    async fn xavt_app_whole_one_character_shell_command_can_submit_rejection_reason(
+        #[case] path: Option<&'static str>,
+        #[values(":", "w")] command: &str,
+    ) {
+        use cyril_ui::traits::ApprovalPhase;
+
+        let mut app = test_app();
+        app.ui_state.insert_text("CHAT_DRAFT");
+        let (request, mut receiver) = xavt_request(path, command.into(), "/ZZZZ".into());
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        app.handle_key(key(KeyCode::Down))
+            .await
+            .expect("select Reject");
+        let selected = approval_draw_at(&mut app, 80, 40);
+        assert!(
+            selected.iter().any(|row| row.contains("▸ Reject")),
+            "{}",
+            selected.join("\n")
+        );
+        app.handle_key(key(KeyCode::Char('r')))
+            .await
+            .expect("open reason editor");
+        app.handle_terminal_event(Event::Paste("why".into()))
+            .await
+            .expect("reason draft");
+        let screen = approval_draw_at(&mut app, 80, 40);
+        let context = screen.join("\n");
+        assert_eq!(
+            xavt_drawn_body(&screen),
+            [command, "Cwd: /ZZZZ"],
+            "{context}"
+        );
+        assert!(screen.iter().any(|row| row.contains("why█")), "{context}");
+        if let Some(path) = path {
+            assert!(screen.iter().any(|row| row.contains(path)), "{context}");
+        }
+        assert!(matches!(
+            &app.ui_state.approval().expect("request").phase,
+            ApprovalPhase::EnterReason { chosen_option_id, editor }
+                if chosen_option_id.as_str() == "reject" && editor.text() == "why"
+        ));
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert_eq!(app.ui_state.input_text(), "CHAT_DRAFT");
+
+        app.handle_key(key(KeyCode::Enter))
+            .await
+            .expect("submit rejection reason");
+        assert!(
+            matches!(receiver.try_recv(),
+                Ok(PermissionResponse::RejectWithReason { option_id, reason })
+                if option_id.as_str() == "reject" && reason == "why"),
+            "a whole visible {command:?} must send its rejection reason:\n{context}"
+        );
+        assert!(
+            !app.ui_state.has_approval(),
+            "the answered request must release ownership"
+        );
+        assert_eq!(app.ui_state.input_text(), "CHAT_DRAFT");
+    }
+
+    #[rstest::rstest]
+    #[case::pathless(None)]
+    #[case::with_path(Some(VOJX_PATH))]
+    #[tokio::test]
+    async fn xavt_app_shell_confirm_requires_drawn_command_at_every_size(
+        #[case] path: Option<&'static str>,
+        #[values(false, true)] reason_phase: bool,
+        #[values(false, true)] at_end: bool,
+        #[values(1, 6, 8, 10, 11, 12, 16, 32, 80)] width: u16,
+    ) {
+        let (mut answered, mut ignored) = (0, 0);
+        for height in 4..=28 {
+            let mut app = test_app();
+            let (request, mut receiver) = xavt_request(path, xavt_pipeline(), "/ZZZZ".into());
+            app.ui_state.show_approval(request);
+            approval_draw_at(&mut app, 80, 40);
+            if reason_phase {
+                app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+                app.handle_key(key(KeyCode::Char('r')))
+                    .await
+                    .expect("reason");
+                app.handle_terminal_event(Event::Paste("why".into()))
+                    .await
+                    .expect("draft");
+            }
+            let mut screen = approval_draw_at(&mut app, width, height);
+            if at_end {
+                app.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT))
+                    .await
+                    .expect("last shell window");
+                screen = approval_draw_at(&mut app, width, height);
+            }
+            let command_drawn = xavt_command_drawn(&screen);
+            let action_drawn = screen.iter().any(|row| {
+                if reason_phase {
+                    row.contains('█')
+                } else {
+                    row.contains('▸')
+                }
+            });
+            let drawn_path: String = screen
+                .iter()
+                .filter_map(|row| {
+                    let start = row.find("│  ")? + "│  ".len();
+                    let end = row.rfind('│')?;
+                    row.get(start..end).map(str::trim_end)
+                })
+                .collect();
+            let path_drawn = path.is_none()
+                || drawn_path.contains("md")
+                || screen.iter().any(|row| row.contains("md"));
+            let should_answer = command_drawn && action_drawn && path_drawn;
+            let context = format!(
+                "{width}x{height} reason={reason_phase} end={at_end} path={path:?}\n{}",
+                screen.join("\n")
+            );
+            assert!(
+                xavt_drawn_body(&screen).len() <= 12,
+                "shell body and navigation status exceed the bound: {context}"
+            );
+            app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+            match receiver.try_recv() {
+                Ok(response) => {
+                    assert!(
+                        should_answer,
+                        "answered without drawn command context: {context}"
+                    );
+                    if reason_phase {
+                        assert!(
+                            matches!(response, PermissionResponse::RejectWithReason { option_id, reason }
+                                if option_id.as_str() == "reject" && reason == "why"),
+                            "wrong reason response: {context}"
+                        );
+                    } else {
+                        assert!(
+                            matches!(response, PermissionResponse::Selected { option_id, .. }
+                                if option_id.as_str() == "allow"),
+                            "wrong selected response: {context}"
+                        );
+                    }
+                    answered += 1;
+                }
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty) => {
+                    assert!(
+                        !should_answer,
+                        "ignored drawn command and action: {context}"
+                    );
+                    assert!(app.ui_state.has_approval(), "request lost: {context}");
+                    app.handle_key(key(KeyCode::Esc)).await.expect("Escape");
+                    if reason_phase {
+                        assert!(
+                            app.ui_state.has_approval(),
+                            "Escape first returns to options"
+                        );
+                        app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+                    }
+                    assert!(
+                        matches!(receiver.try_recv(), Ok(PermissionResponse::Cancel)),
+                        "Escape must remain usable at every size: {context}"
+                    );
+                    ignored += 1;
+                }
+                Err(error) => panic!("approval responder dropped: {error:?}: {context}"),
+            }
+        }
+        assert!(ignored > 0, "the sweep must include hidden command context");
+        if width >= 16 {
+            assert!(
+                answered > 0,
+                "the sweep must also include visible command context"
+            );
+        }
+    }
+
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn xavt_app_pages_every_pipeline_segment_with_pinned_context(
+        #[values(32, 80)] width: u16,
+        #[values(18, 40)] height: u16,
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        let mut app = test_app();
+        app.ui_state.insert_text("CHAT_DRAFT");
+        let (request, mut receiver) =
+            xavt_request(Some(VOJX_PATH), xavt_pipeline(), "/ZZZZ".into());
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+        }
+        let mut seen = String::new();
+        let mut pages = 0;
+        loop {
+            let screen = approval_draw_at(&mut app, width, height);
+            let body = xavt_drawn_body(&screen);
+            assert!(body.len() <= 12, "{}", screen.join("\n"));
+            assert!(
+                screen.iter().any(|row| row.contains(VOJX_PATH)),
+                "path must stay pinned"
+            );
+            let action = screen
+                .iter()
+                .position(|row| row.contains(if reason_phase { "why█" } else { "▸ Allow" }))
+                .expect("visible action");
+            let input = screen
+                .iter()
+                .position(|row| row.contains("CHAT_DRAFT"))
+                .expect("uncovered input");
+            assert!(action < input, "{}", screen.join("\n"));
+            seen.extend(
+                body.iter()
+                    .filter(|row| !row.trim_start().starts_with('↑'))
+                    .flat_map(|row| row.chars())
+                    .filter(|ch| !ch.is_whitespace()),
+            );
+            let before = app
+                .ui_state
+                .approval()
+                .expect("request")
+                .preview_scroll_offset;
+            app.handle_key(key(KeyCode::PageDown))
+                .await
+                .expect("shell page");
+            let after = app
+                .ui_state
+                .approval()
+                .expect("request")
+                .preview_scroll_offset;
+            if before == after {
+                break;
+            }
+            pages += 1;
+            assert!(pages < 200, "shell paging must terminate");
+        }
+        assert!(pages > 0, "the long pipeline must overflow the viewport");
+        for index in 0..48 {
+            assert!(
+                seen.contains(&format!("PIPE_{index:02}")),
+                "missing pipeline stage {index}"
+            );
+        }
+        assert!(
+            seen.contains("Cwd:/ZZZZ"),
+            "the supplied cwd must remain reachable"
+        );
+        assert!(
+            receiver.try_recv().is_err(),
+            "scrolling cannot answer the request"
+        );
+        assert_eq!(app.ui_state.input_text(), "CHAT_DRAFT");
+    }
+
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn xavt_app_cwd_only_scroll_window_cannot_confirm(
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        let mut app = test_app();
+        let (request, mut receiver) =
+            xavt_request(None, xavt_pipeline(), format!("/{}", "Z".repeat(900)));
+        app.ui_state.show_approval(request);
+        let initial = approval_draw_at(&mut app, 80, 40);
+        assert!(
+            xavt_command_drawn(&initial),
+            "positive drawn-command control"
+        );
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+            approval_draw_at(&mut app, 80, 40);
+        }
+        app.handle_key(KeyEvent::new(KeyCode::End, KeyModifiers::SHIFT))
+            .await
+            .expect("cwd-only endpoint");
+        let screen = approval_draw_at(&mut app, 80, 40);
+        assert!(
+            xavt_drawn_body(&screen)
+                .iter()
+                .any(|row| row.contains("ZZZZ")),
+            "the viewport must actually show cwd, not merely an empty preview"
+        );
+        assert!(
+            screen.iter().any(|row| row.contains(if reason_phase {
+                "why█"
+            } else {
+                "▸ Allow"
+            })),
+            "a visible action alone is insufficient"
+        );
+        assert!(
+            !xavt_command_drawn(&screen),
+            "the endpoint must contain no command text"
+        );
+        app.handle_key(key(KeyCode::Enter))
+            .await
+            .expect("inert Enter");
+        assert!(matches!(
+            receiver.try_recv(),
+            Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+        ));
+        assert!(app.ui_state.has_approval());
+        app.handle_key(key(KeyCode::Esc)).await.expect("Escape");
+        if reason_phase {
+            app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+        }
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(PermissionResponse::Cancel)
+        ));
+    }
+
     // --- dispatch_hooks_panel_key tests ---
 
     fn key(code: KeyCode) -> KeyEvent {

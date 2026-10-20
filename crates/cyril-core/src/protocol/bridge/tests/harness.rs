@@ -66,6 +66,9 @@ pub(super) struct Script {
     pub(super) permission_meta: Option<serde_json::Map<String, serde_json::Value>>,
     /// `rawInput` of the scripted permission request's tool call.
     pub(super) permission_raw_input: Option<serde_json::Value>,
+    /// Raw `session/update` tool payloads sent in order before the permission
+    /// stub, with the prompt's session ID (cyril-xavt ledger-join coverage).
+    pub(super) permission_tool_updates: Vec<serde_json::Value>,
     pub(super) fail_extensions: Vec<String>,
     pub(super) fail_new_session: bool,
     /// Park the prompt response until the harness gate is notified.
@@ -200,6 +203,7 @@ fn fake_agent(
     let permission_options = script.borrow().permission_options.clone();
     let permission_meta = script.borrow().permission_meta.clone();
     let permission_raw_input = script.borrow().permission_raw_input.clone();
+    let permission_tool_updates = script.borrow().permission_tool_updates.clone();
     let fail_extensions = script.borrow().fail_extensions.clone();
     let fail_new_session = script.borrow().fail_new_session;
     let new_session_config_options = script.borrow().new_session_config_options.clone();
@@ -375,6 +379,15 @@ fn fake_agent(
                         responder,
                         connection: ConnectionTo<Client>| {
                 if request_permission_on_prompt {
+                    for update in &permission_tool_updates {
+                        connection.send_notification(UntypedMessage::new(
+                            "session/update",
+                            serde_json::json!({
+                                "sessionId": request.session_id.to_string(),
+                                "update": update,
+                            }),
+                        )?)?;
+                    }
                     let options = permission_options
                         .as_ref()
                         .map(|raw| {

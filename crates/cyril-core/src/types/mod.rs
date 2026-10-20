@@ -74,7 +74,7 @@ pub use thinking::{
     ThinkingRefusal, ThinkingState,
 };
 pub use tool_call::{
-    ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
+    ShellCommand, ToolCall, ToolCallContent, ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind,
 };
 pub use turn::{TurnAllocator, TurnId};
 pub use usage::{

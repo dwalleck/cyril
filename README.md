@@ -208,6 +208,34 @@ limit and overflow notice. A fully visible target containing a literal `…`
 (such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
 remains actionable; a genuinely shortened path must retain an identifiable tail.
 
+### Reviewing shell commands (KAS)
+
+Shell approvals show the actual joined `rawInput.command`, not just the tool
+title. Cyril also shows `Cwd:` when KAS supplied a string `rawInput.cwd`; it
+does not infer a working directory from the workspace or consent metadata.
+Missing or malformed command data keeps the existing unavailable preview.
+
+The command is not subject to the workflow comparison's 600-code-point cap.
+Long commands wrap into a bounded, scrollable body of at most **12 rows,
+including navigation status**. Use the preview keys in the table below to
+inspect every pipeline stage and the supplied cwd before answering. Paging
+preserves the selected option, rejection draft, and chat draft.
+
+This is a display-only projection: terminal controls and bidi-formatting
+characters become spaces, while meaningful spaces, newlines, and safe
+grapheme clusters are preserved. The raw command and permission semantics
+are unchanged. The preview is not a shell parser or an execution sandbox.
+
+Confirmation additionally requires actual command text in the current drawn
+viewport, alongside the selected option or feedback editor and any required
+target path. A cwd-only tail, label-only body, or tiny window cannot answer
+with `Enter`. A fully drawn meaningful one-grapheme command remains actionable.
+Scroll back to command text or enlarge the window; no approval is sent by
+preview navigation or resizing.
+
+Qualification and its real-KAS versus controlled-peer boundaries are recorded
+in [the cyril-xavt verification receipt](.cyril-xavt/verification.md).
+
 ### Reviewing workflow comparisons (KAS)
 
 Workflow approvals keep the complete **retained workflow comparison**, not a

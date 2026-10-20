@@ -141,7 +141,7 @@ fn clean(text: &str, max_chars: usize) -> String {
 
 /// The bidi formatting characters KAS strips (`Riu`): the Arabic letter
 /// mark, LRM/RLM, the embeddings and overrides, and the isolates.
-fn is_bidi_format(ch: char) -> bool {
+pub(super) fn is_bidi_format(ch: char) -> bool {
     matches!(
         ch,
         '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'

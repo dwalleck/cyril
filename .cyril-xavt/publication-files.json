@@ -1,0 +1,167 @@
+{
+  "format": 1,
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
+  "branch": "fix/cyril-xavt",
+  "published_ej_base": "9400e7c8ddd53776f6fd8b4d28d4c7fc69e45ab4",
+  "common_test_only_auth_prerequisite": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+  "publication_file_count": 21,
+  "publication_paths": [
+    ".cyril-xavt/cyril-xavt-delivery-nonsecret.zip",
+    ".cyril-xavt/delivery-handoff.md",
+    ".cyril-xavt/design.md",
+    ".cyril-xavt/evidence-index.json",
+    ".cyril-xavt/plan.md",
+    ".cyril-xavt/publication-files.json",
+    ".cyril-xavt/review-decisions.md",
+    ".cyril-xavt/route.md",
+    ".cyril-xavt/verification.md",
+    "README.md",
+    "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/always_allow.rs",
+    "crates/cyril-core/src/protocol/bridge/tests/harness.rs",
+    "crates/cyril-core/src/protocol/convert/kas.rs",
+    "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+    "crates/cyril-core/src/types/mod.rs",
+    "crates/cyril-core/src/types/tool_call.rs",
+    "crates/cyril-core/tests/fixtures/kas_permission/shell-preview-2.32.0.json",
+    "crates/cyril-ui/src/traits.rs",
+    "crates/cyril-ui/src/widgets/approval.rs",
+    "crates/cyril-ui/src/widgets/workflow_plan.rs",
+    "crates/cyril/src/app.rs"
+  ],
+  "postgate_frozen_source_manifest_sha256": "65db1421f0740cc68938bbfa2efda51afde2d2ceb0919f1ba21bd3f0f4ef9a1f",
+  "gate_time_tree_hash_recorded": false,
+  "manifest_self_path": ".cyril-xavt/publication-files.json",
+  "self_hash_contract": "The files list hashes every other selected publication file. This manifest is itself explicitly selected by publication_paths; its size/hash is supplied in the complete external handoff manifest, avoiding a recursive self-hash.",
+  "files": [
+    {
+      "path": ".cyril-xavt/cyril-xavt-delivery-nonsecret.zip",
+      "bytes": 1845417,
+      "sha256": "3886ee35c06274160ae6b736671ecfa3e90467e034140564e42eaf7233d34c48",
+      "scope": "explicit nonsecret portable evidence archive"
+    },
+    {
+      "path": ".cyril-xavt/delivery-handoff.md",
+      "bytes": 8881,
+      "sha256": "e1623912ef4f6d6e09d495cc5312071d43ae5f8be2c82043af1c778b6bf58d74",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": ".cyril-xavt/design.md",
+      "bytes": 13672,
+      "sha256": "fd3811440159f929b7e698bf53408a7c5d13de6c3377e53806d077208d7598e0",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": ".cyril-xavt/evidence-index.json",
+      "bytes": 8572,
+      "sha256": "519f763463047cd328fb6d4231b6dafe62d8e06860ac6234b9e6f0474d369894",
+      "scope": "portable payload manifest/index"
+    },
+    {
+      "path": ".cyril-xavt/plan.md",
+      "bytes": 9280,
+      "sha256": "f443e633f99dec6b8071792da9b3ab14fb1670a50c4447e20277728ccdf92d74",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": ".cyril-xavt/review-decisions.md",
+      "bytes": 18580,
+      "sha256": "e85632ec29a1c66acee33875a0cb45eba5906aad7d745f6469d5cdc578bf2871",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": ".cyril-xavt/route.md",
+      "bytes": 4597,
+      "sha256": "dd1522e234ac07b8f772a0ddb0f37e288269ce3dffe153348e6da0c9782d793e",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": ".cyril-xavt/verification.md",
+      "bytes": 15007,
+      "sha256": "513aee8d3a82d183bfd35ce28e2877daed031f432669d2ab9881c7ed7203f2ab",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": "README.md",
+      "bytes": 25517,
+      "sha256": "7568b1ac3e37099f75ff805133809e7ff8cc66060c27cc07181a72b6bec34852",
+      "scope": "README or X workflow documentation"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/always_allow.rs",
+      "bytes": 14807,
+      "sha256": "4ddefb5006ae3af60b67fc54e0e6abba8fd61c39ef3d3f605c7cdcf4168ee865",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/harness.rs",
+      "bytes": 36083,
+      "sha256": "43638a819e0aef1efb4a2a78fef5fb7dae3a54c2c30b1c27266e7c0f0f3f1644",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "bytes": 115967,
+      "sha256": "fa03cec810c04914e04256eeca725724b73db5ecd5ebe0493200d1599e44d935",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+      "bytes": 33125,
+      "sha256": "ff0efe842af37d5964ad76a9c2071746adb66b3ad9f8da15865c79d6b49799e3",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-core/src/types/mod.rs",
+      "bytes": 5042,
+      "sha256": "85cb757f0ed84189ff7eab03716cb668038d1b5607e44ae27fbe58099cda2f59",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-core/src/types/tool_call.rs",
+      "bytes": 21919,
+      "sha256": "8c10073c6eedd28a0eb390d4d29e7bab57a928c5250802591536753e15ea17b6",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas_permission/shell-preview-2.32.0.json",
+      "bytes": 4506,
+      "sha256": "d1c7269f08e9a8ef2ebb1e39ac488b57854d0185283c9f97f096d942df70954a",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "bytes": 73988,
+      "sha256": "b415e01ba9b6c1b77d721bd6ad7522d2475b890c3969652b94a2764dcd1505b4",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "bytes": 155205,
+      "sha256": "946ec9e2b951ff0a248446e006772f9896f2f02b62b78792fd81e2a43f368a63",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "bytes": 16903,
+      "sha256": "d38fe62a05dd135dd6287d5e4618307ae03da330365ad2a898a346a222022784",
+      "scope": "frozen X source/test/fixture"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "bytes": 506498,
+      "sha256": "6dedb23635c9fe9fd6ae82f186098eeb4995defce44aa16222032c31cdbcd6f6",
+      "scope": "frozen X source/test/fixture"
+    }
+  ],
+  "exclusions": [
+    "tracker records",
+    "compiled/private binaries",
+    "private HOME/KIRO_HOME/Cyril logs",
+    "kas-private.jsonl",
+    "credential stores or unknown toolspills",
+    "separate output-alias fix",
+    "common prerequisite files already committed outside X feature scope"
+  ],
+  "publication_actions_performed_by_finalizer": []
+}

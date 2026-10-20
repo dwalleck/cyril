@@ -1,7 +1,7 @@
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
 use unicode_segmentation::UnicodeSegmentation;
-use unicode_width::UnicodeWidthStr;
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody, TuiState};
@@ -100,7 +100,8 @@ struct Preview<'a> {
     path_width: usize,
     /// Rows the whole path needs when wrapped.
     path_rows: usize,
-    body: Vec<Line<'a>>,
+    body: PreviewContent<'a>,
+    body_width: usize,
     scrollable: bool,
     scroll_offset: usize,
 }
@@ -114,17 +115,20 @@ impl<'a> Preview<'a> {
             .saturating_sub(2 + PATH_INDENT.width());
         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width.max(1)).len());
         let text_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + TEXT_INDENT.width())
-            .max(1);
+            .saturating_sub(2 + TEXT_INDENT.width());
+        let body = preview_lines(state, theme, text_width.max(1));
+        let scrollable = matches!(body, PreviewContent::Shell(_))
+            || state
+                .workflow_plan
+                .as_ref()
+                .is_some_and(|plan| !plan.steps.is_empty());
         Self {
             path,
             path_width,
             path_rows,
-            body: preview_lines(state, theme, text_width),
-            scrollable: state
-                .workflow_plan
-                .as_ref()
-                .is_some_and(|plan| !plan.steps.is_empty()),
+            body,
+            body_width: text_width,
+            scrollable,
             scroll_offset: state.preview_scroll_offset,
         }
     }
@@ -143,6 +147,18 @@ impl<'a> Preview<'a> {
         self.path.is_some()
     }
 
+    fn has_command(&self) -> bool {
+        matches!(self.body, PreviewContent::Shell(_))
+    }
+
+    fn has_context(&self) -> bool {
+        self.has_path() || self.has_command()
+    }
+
+    fn path_budget(&self, rows: usize) -> usize {
+        rows.saturating_sub(usize::from(self.has_command()))
+    }
+
     /// A wholly drawn one-grapheme target is valid; an actually elided
     /// target still needs two retained tail graphemes.
     fn path_shown(&self, rows: usize) -> bool {
@@ -152,7 +168,23 @@ impl<'a> Preview<'a> {
         if self.path_width == 0 {
             return false;
         }
-        fit_path(path, self.path_width, self.path_rows.min(rows)).target_shown
+        fit_path(
+            path,
+            self.path_width,
+            self.path_rows.min(self.path_budget(rows)),
+        )
+        .target_shown
+    }
+
+    fn command_shown(&self, rows: usize) -> bool {
+        let PreviewContent::Shell(shell) = &self.body else {
+            return true;
+        };
+        if self.body_width == 0 {
+            return false;
+        }
+        let window = self.body_window(rows);
+        shell.command_shown(&window)
     }
 
     /// The path fitted into one run of `width` columns, for a row it shares
@@ -168,9 +200,13 @@ impl<'a> Preview<'a> {
 
     fn body_window(&self, rows: usize) -> BodyWindow {
         let path_rows = self.path.map_or(0, |path| {
-            fit_path(path, self.path_width.max(1), self.path_rows.min(rows))
-                .rows
-                .len()
+            fit_path(
+                path,
+                self.path_width.max(1),
+                self.path_rows.min(self.path_budget(rows)),
+            )
+            .rows
+            .len()
         });
         BodyWindow::new(
             self.body.len(),
@@ -186,19 +222,20 @@ impl<'a> Preview<'a> {
         let window = self.body_window(rows);
         let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
         if let Some(path) = self.path {
-            for row in fit_path(path, self.path_width.max(1), self.path_rows.min(rows)).rows {
+            for row in fit_path(
+                path,
+                self.path_width.max(1),
+                self.path_rows.min(self.path_budget(rows)),
+            )
+            .rows
+            {
                 lines.push(Line::styled(
                     format!("{PATH_INDENT}{row}"),
                     Style::default().fg(theme.text_secondary),
                 ));
             }
         }
-        lines.extend(
-            self.body
-                .into_iter()
-                .skip(window.start)
-                .take(window.visible),
-        );
+        self.body.extend_lines(&mut lines, &window, theme);
         if window.status {
             lines.push(Line::styled(
                 format!(
@@ -245,6 +282,236 @@ impl BodyWindow {
             status,
             border_hint: overflow && available == 1,
         }
+    }
+}
+
+enum PreviewContent<'a> {
+    Lines(Vec<Line<'a>>),
+    Shell(ShellBody<'a>),
+}
+
+impl<'a> PreviewContent<'a> {
+    fn len(&self) -> usize {
+        match self {
+            Self::Lines(lines) => lines.len(),
+            Self::Shell(shell) => shell.total_rows,
+        }
+    }
+
+    fn extend_lines(self, lines: &mut Vec<Line<'a>>, window: &BodyWindow, theme: &Theme) {
+        match self {
+            Self::Lines(body) => {
+                lines.extend(body.into_iter().skip(window.start).take(window.visible));
+            }
+            Self::Shell(shell) => shell.extend_lines(lines, window, theme),
+        }
+    }
+}
+
+/// Count the complete command without allocating hidden rows; only the
+/// current viewport is materialized. Raw command/cwd remain untouched.
+struct ShellBody<'a> {
+    shell: &'a cyril_core::types::ShellCommand,
+    width: usize,
+    command_rows: usize,
+    /// Total meaningful command graphemes, capped at two by the count pass.
+    command_glyphs: usize,
+    total_rows: usize,
+}
+
+impl<'a> ShellBody<'a> {
+    fn new(shell: &'a cyril_core::types::ShellCommand, width: usize) -> Self {
+        let command = shell_rows(shell.command(), "", width, None, false, |_, _| {});
+        let cwd_rows = shell.cwd().map_or(0, |cwd| {
+            shell_rows(cwd, "Cwd: ", width, None, false, |_, _| {}).rows
+        });
+        Self {
+            shell,
+            width,
+            command_rows: command.rows,
+            command_glyphs: command.meaningful_graphemes,
+            total_rows: command.rows.saturating_add(cwd_rows),
+        }
+    }
+
+    fn extend_lines(self, lines: &mut Vec<Line<'a>>, window: &BodyWindow, theme: &Theme) {
+        let end = window.start.saturating_add(window.visible);
+        if window.start < self.command_rows {
+            shell_rows(
+                self.shell.command(),
+                "",
+                self.width,
+                Some(window.start..end.min(self.command_rows)),
+                true,
+                |row, _| lines.push(Line::styled(row, Style::default().fg(theme.text_secondary))),
+            );
+        }
+        if end > self.command_rows
+            && let Some(cwd) = self.shell.cwd()
+        {
+            shell_rows(
+                cwd,
+                "Cwd: ",
+                self.width,
+                Some(window.start.saturating_sub(self.command_rows)..end - self.command_rows),
+                true,
+                |row, _| lines.push(Line::styled(row, Style::default().fg(theme.subdued))),
+            );
+        }
+    }
+
+    fn command_shown(&self, window: &BodyWindow) -> bool {
+        let end = window
+            .start
+            .saturating_add(window.visible)
+            .min(self.command_rows);
+        if window.start >= end || self.command_glyphs == 0 {
+            return false;
+        }
+        let mut visible = 0usize;
+        shell_rows(
+            self.shell.command(),
+            "",
+            self.width,
+            Some(window.start..end),
+            false,
+            |_, glyphs| visible = (visible + glyphs).min(2),
+        );
+        visible >= self.command_glyphs
+    }
+}
+
+struct ShellRows {
+    rows: usize,
+    /// Meaningful graphemes visited by a count pass, capped at two.
+    meaningful_graphemes: usize,
+}
+
+/// Borrow safe graphemes intact, replacing only controls and bidi marks.
+/// Splitting unsafe chunks also preserves CRLF as a space followed by LF,
+/// rather than replacing the whole raw CRLF grapheme with one space.
+fn shell_graphemes(text: &str) -> impl Iterator<Item = &str> {
+    text.graphemes(true).flat_map(|grapheme| {
+        grapheme
+            .split_inclusive(|ch: char| ch.is_control() || super::workflow_plan::is_bidi_format(ch))
+            .flat_map(|chunk| {
+                let (safe, replacement) = match chunk.chars().next_back() {
+                    Some('\n') => (&chunk[..chunk.len() - 1], Some("\n")),
+                    Some(ch) if ch.is_control() || super::workflow_plan::is_bidi_format(ch) => {
+                        (&chunk[..chunk.len() - ch.len_utf8()], Some(" "))
+                    }
+                    _ => (chunk, None),
+                };
+                [(!safe.is_empty()).then_some(safe), replacement]
+                    .into_iter()
+                    .flatten()
+            })
+    })
+}
+
+/// Sanitize while wrapping, retaining spaces and logical newlines. `None`
+/// counts all rows; a range visits only its rows and stops at its end.
+/// Materialize strings only for rendering, never for the visibility guard.
+/// Nonmaterialized counts exclude whitespace and zero-width graphemes; the
+/// viewport callback also excludes clipped graphemes. Totals are capped at two.
+fn shell_rows(
+    text: &str,
+    prefix: &str,
+    width: usize,
+    range: Option<std::ops::Range<usize>>,
+    materialize: bool,
+    mut emit: impl FnMut(String, usize),
+) -> ShellRows {
+    if range.as_ref().is_some_and(std::ops::Range::is_empty) {
+        return ShellRows {
+            rows: 0,
+            meaningful_graphemes: 0,
+        };
+    }
+    let mut row_index = 0usize;
+    let mut used = 0usize;
+    let mut occupied = false;
+    let mut row = String::new();
+    let mut glyphs = 0usize;
+    let mut meaningful_graphemes = 0usize;
+    for grapheme in shell_graphemes(prefix).chain(shell_graphemes(text)) {
+        let newline = grapheme == "\n";
+        let columns = grapheme.width();
+        if newline || (occupied && used.saturating_add(columns) > width) {
+            emit_shell_row(
+                &mut row,
+                glyphs,
+                row_index,
+                range.as_ref(),
+                materialize,
+                &mut emit,
+            );
+            row_index += 1;
+            used = 0;
+            occupied = false;
+            glyphs = 0;
+            if range.as_ref().is_some_and(|range| row_index >= range.end) {
+                return ShellRows {
+                    rows: row_index,
+                    meaningful_graphemes,
+                };
+            }
+            if newline {
+                continue;
+            }
+        }
+        let in_range = range
+            .as_ref()
+            .is_some_and(|range| range.contains(&row_index));
+        let needs_glyph_count =
+            !materialize && (meaningful_graphemes < 2 || (in_range && glyphs < 2));
+        if needs_glyph_count
+            && columns > 0
+            && grapheme.chars().any(|ch| {
+                !ch.is_whitespace() && UnicodeWidthChar::width(ch).is_some_and(|width| width > 0)
+            })
+        {
+            meaningful_graphemes = (meaningful_graphemes + 1).min(2);
+            if in_range && used.saturating_add(columns) <= width {
+                glyphs = (glyphs + 1).min(2);
+            }
+        }
+        if in_range && materialize {
+            if row.is_empty() {
+                row.push_str(TEXT_INDENT);
+            }
+            row.push_str(grapheme);
+        }
+        used = used.saturating_add(columns);
+        occupied = true;
+    }
+    emit_shell_row(
+        &mut row,
+        glyphs,
+        row_index,
+        range.as_ref(),
+        materialize,
+        &mut emit,
+    );
+    ShellRows {
+        rows: row_index + 1,
+        meaningful_graphemes,
+    }
+}
+
+fn emit_shell_row(
+    row: &mut String,
+    glyphs: usize,
+    index: usize,
+    range: Option<&std::ops::Range<usize>>,
+    materialize: bool,
+    emit: &mut impl FnMut(String, usize),
+) {
+    if range.is_some_and(|range| range.contains(&index)) {
+        if materialize && row.is_empty() {
+            row.push_str(TEXT_INDENT);
+        }
+        emit(std::mem::take(row), glyphs);
     }
 }
 
@@ -586,18 +853,18 @@ fn plan_comparison(tc: &crate::traits::TrackedToolCall) -> Option<&str> {
 /// Build the approval-preview body from the joined tool-call snapshot. The
 /// path rows above it are laid out by [`Preview`] (cyril-rcub).
 ///
-/// Order: diff content
-/// (the existing diff projection, with its own line cap), else the tool
-/// call's Text content blocks (cyril-8wh0), else the raw-input
-/// `text`/`content` payload; text of either kind is wrapped to `text_width`
-/// and capped at [`MAX_PREVIEW_LINES`] rows. A snapshot with no displayable
-/// payload yields a single `Preview unavailable` line — the
-/// degraded-but-actionable contract from cyril-j1b3's spec: the operator
-/// still sees the request's own title/message and every option.
+/// A typed workflow plan uses its tree/comparison projection; typed shell
+/// input uses a safe, navigable command/cwd body. Otherwise preserve diff →
+/// Text content → raw-input text/content precedence and the existing bounds.
+/// Missing payloads retain `Preview unavailable`; a title is not payload.
 ///
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
-fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
+fn preview_lines<'a>(
+    state: &'a ApprovalState,
+    theme: &Theme,
+    text_width: usize,
+) -> PreviewContent<'a> {
     let tc = &state.tool_call;
     // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
     // tree in place of KAS's Text rendering of the same plan, plus the one
@@ -607,7 +874,12 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) ->
         .as_ref()
         .filter(|plan| !plan.steps.is_empty())
     {
-        return super::workflow_plan::plan_lines(plan, plan_comparison(tc), text_width, theme);
+        return PreviewContent::Lines(super::workflow_plan::plan_lines(
+            plan,
+            plan_comparison(tc),
+            text_width,
+            theme,
+        ));
     }
     // A plan approval without a usable typed plan — sent without its steps
     // (`omitted: "steps"`) or dropped as malformed — falls back to its Text,
@@ -622,6 +894,9 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) ->
     let mut lines: Vec<Line<'a>> = Vec::new();
 
     match tc.preview_body() {
+        PreviewBody::Shell(shell) => {
+            return PreviewContent::Shell(ShellBody::new(shell, text_width));
+        }
         PreviewBody::Diff => super::chat::render_diff_lines(&mut lines, tc, theme),
         PreviewBody::Content(blocks) => push_bounded_text(
             &mut lines,
@@ -650,7 +925,7 @@ fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) ->
             Style::default().fg(theme.subdued),
         )),
     }
-    lines
+    PreviewContent::Lines(lines)
 }
 
 pub(crate) struct PreviewWindow {
@@ -750,9 +1025,9 @@ pub(crate) fn confirm_is_on_screen(
     }
 }
 
-/// A popup with at least one row and column inside its borders. The scope
-/// and trust pages give that first row to the selected label and never wrap
-/// it, so a nonempty inner area is what makes them actionable.
+/// A popup with at least one cell inside its borders. The scope and trust
+/// pages give that first row to the selected row's label and never wrap a
+/// row, so a nonempty inner area is what makes them actionable.
 fn has_inner_row(popup: Rect) -> bool {
     popup.height > 2 && popup.width > 2
 }
@@ -802,7 +1077,7 @@ impl<'a> OptionPage<'a> {
         // [`OptionLayout`]: the selection always, the path beside any option,
         // then message, blanks, the rest of the preview and the other options.
         let inner = usize::from(popup.height.saturating_sub(2));
-        let layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+        let layout = OptionLayout::new(inner, preview.len(), preview.has_context());
         let mut option_rows = layout.option_rows;
         let show_feedback_hint = show_feedback_hint && option_rows > 1;
         if show_feedback_hint {
@@ -849,7 +1124,7 @@ impl<'a> OptionPage<'a> {
                 .inline_path
                 .as_ref()
                 .is_some_and(|path| path.target_shown);
-        selection_shown && path_shown
+        selection_shown && path_shown && self.preview.command_shown(self.layout.preview_rows)
     }
 }
 
@@ -975,15 +1250,17 @@ impl<'a> ReasonPage<'a> {
         let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
         let inner = usize::from(popup.height.saturating_sub(2));
 
-        // Keep the editor and target context ahead of chrome.
-        let reserved = usize::from(preview.has_path()).min(inner.saturating_sub(1));
+        // Keep the editor and target/command context ahead of chrome.
+        let context_rows = usize::from(preview.has_path()) + usize::from(preview.has_command());
+        let reserved = context_rows.min(inner.saturating_sub(1));
+        let extra = reserved.saturating_sub(1);
         let show_limit = inner >= 2 + reserved;
         let show_notice = has_notice && inner >= 3 + 2 * reserved;
-        let show_editor_label = inner >= 4;
-        let show_tool_title = inner >= 6;
-        let show_selected = inner >= 7;
-        let show_message = inner >= 8;
-        let show_blank = inner >= 9;
+        let show_editor_label = inner >= 4 + extra;
+        let show_tool_title = inner >= 6 + extra;
+        let show_selected = inner >= 7 + extra;
+        let show_message = inner >= 8 + extra;
+        let show_blank = inner >= 9 + extra;
         let fixed = 1usize
             .saturating_add(usize::from(show_editor_label))
             .saturating_add(usize::from(show_limit))
@@ -1015,7 +1292,9 @@ impl<'a> ReasonPage<'a> {
     /// Whether the editor row is drawn, with the path on screen when the
     /// call has one (the path leads the preview rows).
     fn editor_shown_with_path(&self) -> bool {
-        has_inner_row(self.popup) && self.preview.path_shown(self.preview_rows)
+        has_inner_row(self.popup)
+            && self.preview.path_shown(self.preview_rows)
+            && self.preview.command_shown(self.preview_rows)
     }
 }
 
@@ -2644,6 +2923,221 @@ mod tests {
             "last text line missing:\n{text}"
         );
         assert!(text.contains("▸ Allow"), "options must stay:\n{text}");
+    }
+
+    fn shell_approval(command: &str, cwd: Option<&str>) -> ApprovalState {
+        let tool = ToolCall::new(
+            cyril_core::types::ToolCallId::new("xavt"),
+            "Run Command".into(),
+            ToolKind::Execute,
+            ToolCallStatus::Pending,
+            Some(serde_json::json!({"command": command, "cwd": cwd})),
+        )
+        .with_content(vec![ToolCallContent::Text(
+            "generic output must not hide the command".into(),
+        )])
+        .with_shell_command(cyril_core::types::ShellCommand::new(
+            command.to_owned(),
+            cwd.map(str::to_owned),
+        ));
+        let mut state = approval_for_tool_call(tool);
+        state.message = "Allow this command?".into();
+        state
+    }
+
+    fn shell_body_rows(terminal: &Terminal<TestBackend>) -> Vec<String> {
+        screen_rows(terminal)
+            .iter()
+            .filter_map(|row| popup_body(row))
+            .filter_map(|body| body.strip_prefix("  "))
+            .map(str::to_owned)
+            .collect()
+    }
+
+    /// cyril-xavt: the complete pipeline lives in the body, not a clipped
+    /// title, and supplied cwd follows it. Expected wrapping is a literal
+    /// ASCII fixture, independent of the production wrapper.
+    #[test]
+    fn shell_pipeline_and_cwd_render_in_the_approval_body() {
+        let command = format!(
+            "printf '%s' 'XAVT_BEGIN' | {}printf XAVT_END",
+            "cat | ".repeat(12)
+        );
+        let state = shell_approval(&command, Some("/owned/workspace"));
+        let terminal = render_at(&state, 80, 30, 30);
+        let body = shell_body_rows(&terminal);
+        assert_eq!(
+            body.len(),
+            4,
+            "complete command plus cwd must be drawn: {body:?}"
+        );
+        assert_eq!(body[..3].concat(), command);
+        assert_eq!(
+            body.last().map(String::as_str),
+            Some("Cwd: /owned/workspace")
+        );
+        let screen = screen_rows(&terminal).join("\n");
+        assert!(!screen.contains("Preview unavailable"), "{screen}");
+        assert!(!screen.contains("generic output"), "{screen}");
+        assert!(screen.contains("▸ Allow"), "{screen}");
+        insta::assert_snapshot!(
+            body.join("\n"),
+            @"printf '%s' 'XAVT_BEGIN' | cat | cat | cat | cat | cat\n | cat | cat | cat | cat | cat | cat | cat | printf XA\nVT_END\nCwd: /owned/workspace"
+        );
+    }
+
+    /// Shell display preserves meaningful spaces/newlines, unlike a plan
+    /// description's whitespace collapse. Unsafe controls/bidi become spaces.
+    #[rstest::rstest]
+    fn shell_display_cleans_controls_without_flattening_scripts(#[values(false, true)] cwd: bool) {
+        let state = shell_approval(
+            "printf  'a'\n  echo\tb\u{202E};c\u{1b}[31m",
+            cwd.then_some("/tmp/\u{2066}project"),
+        );
+        let terminal = render_at(&state, 80, 30, 30);
+        let body = shell_body_rows(&terminal);
+        let mut expected = vec!["printf  'a'", "  echo b ;c [31m"];
+        if cwd {
+            expected.push("Cwd: /tmp/ project");
+        }
+        assert_eq!(body, expected);
+        for ch in body.iter().flat_map(|row| row.chars()) {
+            assert!(!ch.is_control() && !super::super::workflow_plan::is_bidi_format(ch));
+        }
+    }
+
+    /// A supplied cwd can itself overflow. Reaching that tail must not make
+    /// the choice confirmable with no command characters in the viewport.
+    #[test]
+    fn shell_confirmation_requires_command_not_only_cwd() {
+        let cwd = format!("{}cwd_end", "/long".repeat(200));
+        let mut state = shell_approval("echo COMMAND_TOKEN", Some(&cwd));
+        let area = Rect::new(0, 0, 80, 30);
+        assert!(confirm_is_on_screen(area, 30, &state, &theme()));
+        state.preview_scroll_offset = usize::MAX;
+        let terminal = render_at(&state, 80, 30, 30);
+        let body = shell_body_rows(&terminal).concat();
+        assert!(body.contains("cwd_end"), "{body}");
+        assert!(!body.contains("COMMAND_TOKEN"), "{body}");
+        assert!(!confirm_is_on_screen(area, 30, &state, &theme()));
+        assert!(
+            screen_rows(&terminal)
+                .iter()
+                .any(|row| row.contains("▸ Allow"))
+        );
+    }
+
+    /// cyril-xavt F2: the emoji-presentation grapheme occupies two actual
+    /// cells, so the closing quote must have its own reachable body row.
+    #[rstest::rstest]
+    #[case::next_row(1)]
+    #[case::end(usize::MAX)]
+    fn xavt_shell_fe0f_command_closing_quote_is_scroll_reachable(#[case] offset: usize) {
+        let command = format!("printf '{}#\u{fe0f}'", "x".repeat(44));
+        let mut state = shell_approval(&command, None);
+
+        // 80 columns give a 60-column popup: borders + four-space indent
+        // leave 54 body cells. input_top=5 clamps it to rows 1..5, with
+        // exactly one body row at y=2 and the selected option at y=3.
+        let initial = render_at(&state, 80, 24, 5);
+        let buffer = initial.backend().buffer();
+        assert_eq!(buffer[(10, 1)].symbol(), "┌");
+        assert_eq!(buffer[(69, 4)].symbol(), "┘");
+        assert_eq!(buffer[(11, 3)].symbol(), "▸");
+        assert_eq!(
+            shell_body_rows(&initial),
+            [format!("printf '{}#\u{fe0f}", "x".repeat(44))]
+        );
+        assert_eq!(buffer[(67, 2)].symbol(), "#\u{fe0f}");
+        assert_eq!(
+            buffer[(68, 2)].symbol(),
+            " ",
+            "wide-grapheme continuation cell"
+        );
+        assert_eq!(
+            buffer[(69, 2)].symbol(),
+            "│",
+            "the quote cannot overwrite the border"
+        );
+
+        state.preview_scroll_offset = offset;
+        let scrolled = render_at(&state, 80, 24, 5);
+        assert_eq!(
+            scrolled.backend().buffer()[(15, 2)].symbol(),
+            "'",
+            "offset {offset} must expose the closing quote in actual cells:\n{}",
+            screen_rows(&scrolled).join("\n")
+        );
+        assert_eq!(shell_body_rows(&scrolled), ["'"]);
+        assert!(
+            screen_rows(&scrolled)
+                .iter()
+                .any(|row| row.contains("▸ Allow")),
+            "scrolling must leave the selected action visible"
+        );
+    }
+
+    /// cyril-xavt F2: the supplied cwd uses the same body-cell budget as the
+    /// command; its closing quote must survive without granting cwd authority.
+    #[rstest::rstest]
+    #[case::next_row(2)]
+    #[case::end(usize::MAX)]
+    fn xavt_shell_fe0f_cwd_closing_quote_is_scroll_reachable(#[case] offset: usize) {
+        let command = "echo COMMAND_TOKEN";
+        let cwd = format!("/{}#\u{fe0f}'", "x".repeat(46));
+        let mut state = shell_approval(command, Some(&cwd));
+        let area = Rect::new(0, 0, 80, 24);
+        let initial = render_at(&state, 80, 24, 5);
+        assert_eq!(shell_body_rows(&initial), [command]);
+        assert!(confirm_is_on_screen(area, 5, &state, &theme()));
+
+        // The command occupies the initial body row. Offset 1 reaches the
+        // cwd; its five-cell "Cwd: " prefix leaves the same FE0F boundary.
+        state.preview_scroll_offset = 1;
+        let cwd_start = render_at(&state, 80, 24, 5);
+        let buffer = cwd_start.backend().buffer();
+        assert_eq!(buffer[(10, 1)].symbol(), "┌");
+        assert_eq!(buffer[(69, 4)].symbol(), "┘");
+        assert_eq!(buffer[(11, 3)].symbol(), "▸");
+        assert_eq!(
+            shell_body_rows(&cwd_start),
+            [format!("Cwd: /{}#\u{fe0f}", "x".repeat(46))]
+        );
+        assert_eq!(buffer[(67, 2)].symbol(), "#\u{fe0f}");
+        assert_eq!(
+            buffer[(68, 2)].symbol(),
+            " ",
+            "wide-grapheme continuation cell"
+        );
+        assert_eq!(
+            buffer[(69, 2)].symbol(),
+            "│",
+            "the quote cannot overwrite the border"
+        );
+        assert!(
+            !confirm_is_on_screen(area, 5, &state, &theme()),
+            "a cwd-only viewport cannot authorize the command"
+        );
+
+        state.preview_scroll_offset = offset;
+        let scrolled = render_at(&state, 80, 24, 5);
+        assert_eq!(
+            scrolled.backend().buffer()[(15, 2)].symbol(),
+            "'",
+            "offset {offset} must expose the cwd's closing quote in actual cells:\n{}",
+            screen_rows(&scrolled).join("\n")
+        );
+        assert_eq!(shell_body_rows(&scrolled), ["'"]);
+        assert!(
+            screen_rows(&scrolled)
+                .iter()
+                .any(|row| row.contains("▸ Allow")),
+            "scrolling must leave the selected action visible"
+        );
+        assert!(
+            !confirm_is_on_screen(area, 5, &state, &theme()),
+            "the reachable cwd tail is still not command context"
+        );
     }
 
     /// C3 bounds fence: 6-line raw-input text shows exactly 5 lines plus the
