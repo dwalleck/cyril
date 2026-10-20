@@ -3,6 +3,10 @@
 //! Fixture rows preserve the original JSON-RPC messages from these KAS captures:
 //! audit-2.31.1/live/kas-lead-mcp-2.31.1.jsonl:43 and
 //! audit-2.31.1/live/kas-v3c-v2-2.31.1.jsonl:46. The latter is KAS despite its name.
+//!
+//! The successful-output fixture is the byte-preserved sanitized completion from
+//! /tmp/cyril-xavt-live.ZiHasL/evidence/completed-tool-call-nonsecret.json.
+//! SHA-256: 0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc.
 
 use cyril_core::test_support::must_succeed;
 use cyril_core::types::{
@@ -100,6 +104,75 @@ fn kas_missing_start_updates_render_tool_load_and_subagent_response_once() {
     assert!(
         state.active_tool_calls().is_empty(),
         "late updates remain history"
+    );
+}
+
+#[test]
+fn kas_completed_output_capture_renders_exact_body_without_kind() {
+    let captured: serde_json::Value = must_succeed(
+        serde_json::from_str(include_str!("fixtures/kas_completed_raw_output.json")),
+        "sanitized completed capture",
+    );
+    let frame = &captured["parsed"];
+    let update = &frame["params"]["update"];
+    assert!(
+        update.get("kind").is_none(),
+        "the real completion omits kind"
+    );
+    assert_eq!(
+        update["content"],
+        serde_json::json!([{"terminalId": "term-1", "type": "terminal"}]),
+        "do not replace the terminal reference with synthetic text",
+    );
+    assert_eq!(
+        update["rawOutput"],
+        serde_json::json!({
+            "exitCode": 0,
+            "message": "Output:\nXAVT_BEGIN XAVT_END\n\n\nExit Code: 0",
+            "output": "XAVT_BEGIN XAVT_END\n",
+        }),
+    );
+    let notifications = cyril_core::test_support::kas_capture_to_routed(&must_succeed(
+        serde_json::to_string(frame),
+        "unchanged captured JSON-RPC frame",
+    ));
+    assert_eq!(notifications.len(), 1, "the completed frame converts");
+    let (scope, notification) = &notifications[0];
+    assert_eq!(
+        scope.as_ref().map(SessionId::as_str),
+        Some("sess_973df141-0181-47bf-977a-2f58ca21220f"),
+    );
+    assert!(matches!(notification, Notification::ToolCallUpdated(_)));
+    let mut state = UiState::new(500);
+    state.apply_notification(notification);
+    state.commit_streaming();
+    assert_eq!(calls(&state).len(), 1, "one completed row is retained");
+    let retained = calls(&state)[0];
+    assert_eq!(retained.status(), ToolCallStatus::Completed);
+    assert_eq!(retained.kind(), ToolKind::Other);
+    assert_eq!(retained.raw_input(), Some(&update["rawInput"]));
+    assert_eq!(retained.raw_output(), Some(&update["rawOutput"]));
+    let text = render_text(&state);
+    assert_eq!(
+        text.lines()
+            .filter(|line| line.trim() == "✓ Run the exact sed/tr pipeline requested")
+            .count(),
+        1,
+        "the completed header renders once\n{text}",
+    );
+    assert_eq!(
+        (
+            retained.output_text(),
+            text.lines()
+                .filter(|line| line.trim() == "| XAVT_BEGIN XAVT_END")
+                .count(),
+        ),
+        (Some("XAVT_BEGIN XAVT_END\n".to_string()), 1),
+        "stdout must be an exact body line, not a header/command match\n{text}",
+    );
+    assert!(
+        !text.contains("| Output:") && !text.contains("| Exit Code:"),
+        "the formatted message is not the stdout projection\n{text}",
     );
 }
 

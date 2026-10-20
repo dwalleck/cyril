@@ -1,0 +1,10 @@
+**No blocking findings in the approved successful-output extension.**
+
+- **Minimal projection:** `traits.rs:524` adds `output` last in the existing string-field lookup. Existing stdout/stderr, item-envelope, and text/content/result precedence remains intact; no kind guard, formatted-message fallback, object serialization, or abstraction was introduced.
+- **Capture fidelity:** The reviewed fixture matches the canonical sanitized capture, retaining absent `kind`, terminal-reference content, session identity, raw input, and all raw-output fields. The integration test passes the unchanged `parsed` frame through production conversion, UiState, and the actual renderer.
+- **Regression quality:** The oracle independently checks retained data, completed header, exact projected stdout—including its newline—and exactly one output-body line. Precedence and non-string controls distinguish the authorized fix from broader fallbacks.
+- **Existing behavior and fiv1:** No state/index changes accompany this extension. Explicit failed-call `error`/`message` extraction still precedes output projection; fiv1’s content-only fallback remains available when no raw output is displayable. The controlled-peer replay preserves and checks the captured frame without executing its command.
+
+**Overall correctness:** correct  
+**Explanation:** The source implements the authorized narrow projection without an identified regression in existing extraction or failure precedence. Parent-reported ActualRED822 establishes sensitivity; fresh GREEN and actual-binary qualification remain parent-owned and are not claimed by this source-only review.  
+**Confidence:** 0.98
