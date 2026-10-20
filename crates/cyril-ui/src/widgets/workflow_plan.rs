@@ -35,8 +35,8 @@ const VALUE_CHARS: usize = 160;
 /// KAS's cap on a `Writes:` or `Config:` line (`yHr`).
 const LIST_CHARS: usize = 600;
 
-/// The plan as preview rows of at most `width` columns (after the indent),
-/// capped at [`MAX_PLAN_ROWS`] rows including any omission markers.
+/// The plan's bounded tree and complete comparison as wrapped preview rows.
+/// The approval viewport shows at most [`MAX_PLAN_ROWS`] of them at a time.
 ///
 /// `comparison` is KAS's "Compared with the replaced steps: …" summary of an
 /// edit or a replacement. It is not part of `workflowPlan` — KAS puts it only
@@ -63,18 +63,23 @@ pub(crate) fn plan_lines(
     if plan.omitted == Some(WorkflowPlanOmission::Details) {
         rows.push("(step details left out to fit the plan)".to_owned());
     }
-    let tree: Vec<String> = rows.iter().flat_map(|row| wrap_words(row, width)).collect();
-    // The comparison is the only line naming the steps an edit removes, so
-    // its rows are reserved before the tree is cut — as KAS reserves room
-    // for it in its own text (`R_o`: the plan is cut to `Tiu` minus the
-    // comparison's length, then the comparison is appended). Its rows are
-    // capped too, so it can never crowd out the header.
+    let tree: Vec<String> = rows
+        .iter()
+        .flat_map(|row| wrap_words(row, width, 4))
+        .collect();
+    // Reserve the comparison before cutting the tree, as KAS does. Its
+    // complete 600-character value stays reachable through the approval
+    // viewport; a long comparison must not be cut again by a row limit.
+    // Keep a tree omission marker even when the comparison needs all rows.
     let tail: Vec<String> = match comparison {
-        Some(comparison) => wrap_words(&clean(comparison, LIST_CHARS), width),
+        Some(comparison) => wrap_words(
+            &clean(comparison, LIST_CHARS),
+            width,
+            4.min(width.saturating_sub(2)),
+        ),
         None => Vec::new(),
     };
-    let tail = cap_rows(tail, MAX_COMPARISON_ROWS);
-    let tree = cap_rows(tree, MAX_PLAN_ROWS.saturating_sub(tail.len()));
+    let tree = cap_rows(tree, MAX_PLAN_ROWS.saturating_sub(tail.len()).max(1));
 
     tree.into_iter()
         .chain(tail)
@@ -90,15 +95,14 @@ pub(crate) fn plan_lines(
         .collect()
 }
 
-/// Rows the comparison line may take before it is itself cut.
-const MAX_COMPARISON_ROWS: usize = 4;
-
 /// `rows` cut to at most `max` rows: the first `max` as they are, or, when
 /// there are more, the first `max - 1` and a marker naming how many rows
 /// were left out (so the marker takes a row of the budget; with a budget of
-/// one, only the marker). A budget of zero still yields the marker row; no
-/// caller passes zero (the tree's budget is at least eight rows).
+/// one, only the marker). A zero budget yields no rows.
 fn cap_rows(mut rows: Vec<String>, max: usize) -> Vec<String> {
+    if max == 0 {
+        return Vec::new();
+    }
     if rows.len() <= max {
         return rows;
     }
@@ -137,7 +141,7 @@ fn clean(text: &str, max_chars: usize) -> String {
 
 /// The bidi formatting characters KAS strips (`Riu`): the Arabic letter
 /// mark, LRM/RLM, the embeddings and overrides, and the isolates.
-fn is_bidi_format(ch: char) -> bool {
+pub(super) fn is_bidi_format(ch: char) -> bool {
     matches!(
         ch,
         '\u{061C}' | '\u{200E}' | '\u{200F}' | '\u{202A}'..='\u{202E}' | '\u{2066}'..='\u{2069}'
@@ -145,15 +149,15 @@ fn is_bidi_format(ch: char) -> bool {
 }
 
 /// Wrap one plan row at word boundaries into rows of at most `width`
-/// columns. Continuation rows keep the row's indent plus four columns —
-/// deeper than a child or a detail row (two) — so a wrapped node reads as
-/// one row; a word wider than a row is split by column
-/// ([`super::approval::wrap_columns`]). Only an indent at least as wide as
-/// `width` can push a row past it, and ratatui clips that at the border.
-fn wrap_words(row: &str, width: usize) -> Vec<String> {
+/// columns. Continuations keep the row's indent plus `continuation_indent`:
+/// four for the existing tree; comparisons shrink it to leave two usable
+/// columns when possible, so narrow continuation text remains reachable.
+/// A word wider than a row is split by column ([`super::approval::wrap_columns`]).
+/// An existing tree indent can still exceed the available width and be clipped.
+fn wrap_words(row: &str, width: usize, continuation_indent: usize) -> Vec<String> {
     let body = row.trim_start_matches(' ');
     let pad = &row[..row.len() - body.len()];
-    let continuation = format!("{pad}    ");
+    let continuation = format!("{pad}{:width$}", "", width = continuation_indent);
     let mut rows = Vec::new();
     let mut current = pad.to_owned();
     let mut has_word = false;
@@ -405,7 +409,7 @@ mod tests {
         #[case] width: usize,
         #[case] expected: &[&str],
     ) {
-        let rows = wrap_words(row, width);
+        let rows = wrap_words(row, width, 4);
         assert_eq!(rows, expected);
         for row in &rows {
             assert!(row.width() <= width, "{row:?} wider than {width}");
@@ -419,6 +423,7 @@ mod tests {
     #[case::cut(5, 3, &["r1", "r2", "...3 more lines"])]
     #[case::marker_only(5, 1, &["...5 more lines"])]
     #[case::no_rows(0, 0, &[])]
+    #[case::zero_budget(5, 0, &[])]
     fn cap_rows_marks_what_it_cuts(
         #[case] count: usize,
         #[case] max: usize,

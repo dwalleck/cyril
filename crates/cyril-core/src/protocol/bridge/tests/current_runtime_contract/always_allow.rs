@@ -159,3 +159,212 @@ async fn v2_request_keeps_its_trust_tiers() {
     )
     .await;
 }
+
+fn shell_script(kas: bool, case: &str) -> Rc<RefCell<Script>> {
+    let fixture: serde_json::Value = serde_json::from_str(include_str!(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/tests/fixtures/kas_permission/shell-preview-2.32.0.json"
+    )))
+    .expect_contract("retained shell preview fixture");
+    let pair = &fixture[case];
+    let mut updates = pair["updates"]
+        .as_array()
+        .expect_contract("shell tool updates")
+        .clone();
+    for update in &mut updates {
+        // The harness gives its permission stub this stable tool ID.
+        update["toolCallId"] = serde_json::json!("permission-tool");
+    }
+    Rc::new(RefCell::new(Script {
+        request_permission_on_prompt: true,
+        permission_options: Some(pair["permission"]["options"].clone()),
+        permission_meta: Some(
+            serde_json::from_value(pair["permission"]["_meta"].clone())
+                .expect_contract("captured permission metadata"),
+        ),
+        permission_tool_updates: updates,
+        wire_kas: kas.then_some(true),
+        sess_ids: kas.then_some(true),
+        ..Script::default()
+    }))
+}
+
+#[tokio::test]
+async fn kas_shell_preview_reaches_permission_after_ledger_join() {
+    for (case, with_tool_id, command) in [
+        ("with_cwd", true, "wc -c hello.txt && xxd hello.txt"),
+        ("without_cwd", true, "sleep 45 && echo SLEPT"),
+        ("with_cwd", false, "wc -c hello.txt && xxd hello.txt"),
+    ] {
+        let script = shell_script(true, case);
+        if !with_tool_id {
+            script.borrow_mut().permission_meta = None;
+        }
+        let observed = Rc::clone(&script);
+        let expected_raw = script.borrow().permission_tool_updates[0]["rawInput"].clone();
+        with_engine_harness(
+            Rc::new(KasEngine::default()),
+            script,
+            move |sender, mut rx, mut permission_rx, _gate, loop_handle, _kill| async move {
+                prompt(&sender, &mut rx).await;
+                let request = tokio::time::timeout(Duration::from_secs(5), permission_rx.recv())
+                    .await
+                    .expect_contract("joined shell permission timeout")
+                    .expect_contract("joined shell permission channel");
+                let shell = request
+                    .tool_call
+                    .shell_command()
+                    .expect_contract("KAS post-join shell projection");
+                assert_eq!(shell.command(), command);
+                assert_eq!(shell.cwd(), expected_raw["cwd"].as_str());
+                assert_eq!(request.tool_call.raw_input(), Some(&expected_raw));
+                assert_eq!(request.tool_call.kind(), crate::types::ToolKind::Execute);
+                assert_eq!(
+                    request.tool_call.status(),
+                    crate::types::ToolCallStatus::InProgress,
+                    "kind-omitting update was joined before permission delivery",
+                );
+                assert_eq!(
+                    request.options.len(),
+                    4,
+                    "offered authorization choices retained"
+                );
+                assert!(request.trust_options.is_empty());
+                assert!(request.can_reject_with_reason);
+                if with_tool_id {
+                    assert_eq!(
+                        request
+                            .consent
+                            .as_ref()
+                            .expect_contract("KAS consent retained")
+                            .wire_capability(),
+                        Some("shell"),
+                    );
+                }
+                request
+                    .responder
+                    .send(PermissionResponse::Selected {
+                        option_id: PermissionOptionId::new("accept"),
+                        trust_option: None,
+                    })
+                    .expect_contract("shell approval answer");
+                let response = tokio::time::timeout(Duration::from_secs(5), async {
+                    loop {
+                        if let Some(response) =
+                            observed.borrow().permission_responses().first().cloned()
+                        {
+                            break response;
+                        }
+                        tokio::task::yield_now().await;
+                    }
+                })
+                .await
+                .expect_contract("shell approval wire answer");
+                assert_eq!(response["outcome"]["optionId"], "accept");
+                shut_down(&sender, loop_handle).await;
+            },
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn kas_shell_preview_uses_final_raw_input_without_stub_or_consent_fallbacks() {
+    for (replacement, expected_command) in [
+        (
+            Some(serde_json::json!({"command": "  printf final |\n    cat  "})),
+            Some("  printf final |\n    cat  "),
+        ),
+        (Some(serde_json::json!({"command": null})), None),
+        (
+            Some(serde_json::json!({"description": "not a command"})),
+            None,
+        ),
+        (None, Some("wc -c hello.txt && xxd hello.txt")),
+    ] {
+        let script = shell_script(true, "with_cwd");
+        let mut expected_raw = script.borrow().permission_tool_updates[0]["rawInput"].clone();
+        {
+            let mut script = script.borrow_mut();
+            let update = script
+                .permission_tool_updates
+                .last_mut()
+                .expect_contract("kind-omitting update");
+            if let Some(raw) = replacement {
+                update["rawInput"] = raw.clone();
+                expected_raw = raw;
+            } else {
+                assert!(
+                    update
+                        .as_object_mut()
+                        .expect_contract("update object")
+                        .remove("rawInput")
+                        .is_some(),
+                );
+            }
+            script.permission_raw_input =
+                Some(serde_json::json!({"command": "stub must not override joined raw"}));
+        }
+        with_engine_harness(
+            Rc::new(KasEngine::default()),
+            script,
+            move |sender, mut rx, mut permission_rx, _gate, loop_handle, _kill| async move {
+                prompt(&sender, &mut rx).await;
+                let request = tokio::time::timeout(Duration::from_secs(5), permission_rx.recv())
+                    .await
+                    .expect_contract("updated shell permission timeout")
+                    .expect_contract("updated shell permission channel");
+                assert_eq!(
+                    request
+                        .tool_call
+                        .shell_command()
+                        .map(crate::types::ShellCommand::command),
+                    expected_command,
+                );
+                assert_eq!(
+                    request
+                        .tool_call
+                        .shell_command()
+                        .and_then(crate::types::ShellCommand::cwd),
+                    expected_command.and(expected_raw["cwd"].as_str()),
+                    "missing cwd is not replaced with consent workspaceRoot",
+                );
+                assert_eq!(request.tool_call.raw_input(), Some(&expected_raw));
+                request
+                    .responder
+                    .send(PermissionResponse::Cancel)
+                    .expect_contract("updated shell permission cancellation");
+                shut_down(&sender, loop_handle).await;
+            },
+        )
+        .await;
+    }
+}
+
+#[tokio::test]
+async fn v2_shell_shaped_permission_never_gets_kas_projection() {
+    let script = shell_script(false, "with_cwd");
+    let expected_raw = script.borrow().permission_tool_updates[0]["rawInput"].clone();
+    with_harness(
+        script,
+        move |sender, mut rx, mut permission_rx, _gate, loop_handle| async move {
+            prompt(&sender, &mut rx).await;
+            let request = tokio::time::timeout(Duration::from_secs(5), permission_rx.recv())
+                .await
+                .expect_contract("v2 shell-shaped permission timeout")
+                .expect_contract("v2 shell-shaped permission channel");
+            assert_eq!(request.tool_call.kind(), crate::types::ToolKind::Execute);
+            assert_eq!(request.tool_call.raw_input(), Some(&expected_raw));
+            assert!(
+                request.tool_call.shell_command().is_none(),
+                "KAS metadata and execute-shaped raw input do not classify other engines",
+            );
+            request
+                .responder
+                .send(PermissionResponse::Cancel)
+                .expect_contract("v2 shell-shaped permission cancellation");
+            shut_down(&sender, loop_handle).await;
+        },
+    )
+    .await;
+}

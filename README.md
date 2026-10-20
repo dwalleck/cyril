@@ -207,8 +207,8 @@ instead; Unicode paste remains supported.
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
-reason**. Pressing `Enter` on the option itself still rejects immediately
-without feedback.
+reason**. `Enter` on the option rejects without feedback, subject to the
+visible-context checks below.
 
 The feedback editor accepts multiline paste. `Ctrl+J` inserts a newline,
 `Enter` submits, and `Esc` discards the draft and returns to the same approval
@@ -217,10 +217,89 @@ newline, but many terminals send it as plain Enter; use `Ctrl+J` reliably.
 Empty or whitespace-only feedback sends a plain rejection.
 
 Reasons are limited to 4,096 Unicode characters. An insertion that would exceed
-the limit is refused in full with a visible notice; it is never silently
-truncated. The editor does not alter the chat draft or a queued approval.
+the limit is refused in full, never silently truncated. An overflow notice is
+shown when space permits; cramped prompts reserve the target path and editor
+ahead of that notice. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
+
+Before an approval can answer, its selected choice or feedback editor must be
+visible, together with an identifiable target path when one is present. If a
+small window hides that context, `Enter` leaves the request pending: enlarge
+the window and continue without losing the feedback draft or chat draft.
+In cramped reason prompts, the target path takes priority over the character
+limit and overflow notice. A fully visible target containing a literal `…`
+(such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
+remains actionable; a genuinely shortened path must retain an identifiable tail.
+
+### Reviewing shell commands (KAS)
+
+Shell approvals show the actual joined `rawInput.command`, not just the tool
+title. Cyril also shows `Cwd:` when KAS supplied a string `rawInput.cwd`; it
+does not infer a working directory from the workspace or consent metadata.
+Missing or malformed command data keeps the existing unavailable preview.
+
+The command is not subject to the workflow comparison's 600-code-point cap.
+Long commands wrap into a bounded, scrollable body of at most **12 rows,
+including navigation status**. Use the preview keys in the table below to
+inspect every pipeline stage and the supplied cwd before answering. Paging
+preserves the selected option, rejection draft, and chat draft.
+
+This is a display-only projection: terminal controls and bidi-formatting
+characters become spaces, while meaningful spaces, newlines, and safe
+grapheme clusters are preserved. The raw command and permission semantics
+are unchanged. The preview is not a shell parser or an execution sandbox.
+
+Confirmation additionally requires actual command text in the current drawn
+viewport, alongside the selected option or feedback editor and any required
+target path. A cwd-only tail, label-only body, or tiny window cannot answer
+with `Enter`. A fully drawn meaningful one-grapheme command remains actionable.
+Scroll back to command text or enlarge the window; no approval is sent by
+preview navigation or resizing.
+
+Qualification and its real-KAS versus controlled-peer boundaries are recorded
+in [the cyril-xavt verification receipt](.cyril-xavt/verification.md).
+
+### Reviewing workflow comparisons (KAS)
+
+Workflow approvals keep the complete **retained workflow comparison**, not a
+full file diff. Before wrapping, Cyril replaces control and bidi-formatting
+characters with spaces, collapses whitespace, trims the ends, and retains at
+most **600 Unicode code points**, including the comparison prefix. If more
+text existed, it appends `...`; scrolling cannot recover text beyond that cap.
+
+The preview body uses at most **12 visible rows, including its navigation
+status**. A long comparison is paged rather than cut after four rows. The step
+tree may be shortened to make room, with an explicit `...N more lines` marker;
+paging does not expand omitted tree details. The target path, approval choice
+or reason editor, and chat input stay outside the scrolling body.
+
+While choosing an approval or editing a rejection reason:
+
+| Key | Preview action |
+| --- | --- |
+| `PageUp` / `PageDown` (no modifiers) | Move by the current visible content page |
+| `Shift+Up` / `Shift+Down` (Shift only) | Move by one row |
+| `Shift+Home` / `Shift+End` (Shift only) | Jump to the first / last window |
+
+Other modifier combinations are not preview shortcuts. Ordinary `Up`/`Down`
+still select an approval or move in the reason editor; ordinary `Home`/`End`
+retain their editor behavior. Preview navigation does not answer the request.
+Entering or leaving the reason editor preserves the preview position without
+altering the reason or chat draft; the next queued request starts at the top
+with its own fresh reason editor.
+
+Resizing rewraps the retained text and clamps the current window. The next
+navigation key uses the new visible capacity. When only one content row fits,
+the navigation hint moves to the popup border rather than taking that row.
+With no usable body-text cells there is no scrolling target: enlarge the
+window. The visible-context confirmation checks described above still apply.
+
+These limits are distinct: a **workflow-plan Text/raw-text fallback** has
+12 total rows including any omission marker; an **ordinary Text/raw-text
+preview** keeps five content rows plus its marker; an **ordinary Diff preview**
+keeps 20 diff lines plus its marker. Workflow comparison pagination does not
+expand ordinary diffs or their cached content.
 
 ### Host hooks (KAS)
 
