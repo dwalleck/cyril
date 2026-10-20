@@ -189,6 +189,11 @@ call within a session merge into that row rather than adding duplicates,
 preserving the text before and after it. A new session can reuse a tool ID
 without changing the previous session's history.
 
+For successful KAS commands, string-valued `rawOutput.output` is shown beneath
+the completed row, including completions that omit `kind`. Existing output
+formats keep precedence; non-string `output` values and the formatted `message`
+field are not used as substitutes.
+
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
