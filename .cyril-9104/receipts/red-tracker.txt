@@ -1,0 +1,24 @@
+cyril-9104 slice 2 red receipt (tracker), 2026-10-18.
+
+The tracker tests were written after a first implementation draft, so this is a sensitivity run
+standing in for the pre-implementation red: the same tests against the implementation with
+`step_questions()` stubbed to return `[]` and `record_message()` stubbed to return `None` before
+recording anything.
+
+Command: cargo nextest run -p cyril-core --features kas --no-fail-fast -E 'test(question)'
+    FAIL  workflow::tests::terminal_runs_have_no_parked_questions
+    FAIL  workflow::tests::parked_questions_exclude_interactions_and_disambiguate_selectors
+    FAIL  workflow::tests::step_question_wake_label::case_1_idle_parent_wake
+    FAIL  workflow::tests::step_question_wake_label::case_3_kept_through_cancel
+    FAIL  workflow::tests::send_message_question_labels_the_wake_and_resolves_the_answer
+    FAIL  workflow::tests::park_question_raised_once_and_cleared_on_resume
+    PASS  workflow::tests::step_question_wake_label::case_2_evicted_by_turn_end   (expects no label)
+    PASS  workflow::tests::step_question_wake_label::case_4_completion_wake_never_names_it (expects no label)
+    PASS  workflow::tests::newer_cause_replaces_the_runs_pending_question (repeat-cap label, pre-existing path)
+ Summary 10 tests run: 4 passed, 6 failed
+
+Also observed red during implementation (not stubbed): with the first draft, the step-question
+label used `wake_label()`, which needs a run status a merely-opened run lacks; cases 1 and 3 and
+the wfplan replay failed until the label took the run's name alone.
+
+Restored implementation, same command: 10 passed.

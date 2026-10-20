@@ -59,6 +59,9 @@ impl DomainMediator {
                 self.start_prompt(connection.clone(), session_id, prompt)
                     .await?;
             }
+            BridgeCommand::AnswerWorkflowStep { session_id, answer } => {
+                self.answer_workflow_step(connection, session_id, answer);
+            }
             BridgeCommand::CancelRequest => self.cancel_active(connection).await,
             BridgeCommand::SetMode { mode_id } => self.set_mode(connection, mode_id).await?,
             BridgeCommand::SetModel { model_id } => {

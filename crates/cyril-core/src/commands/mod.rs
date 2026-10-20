@@ -1,3 +1,4 @@
+pub mod answer;
 pub mod builtin;
 pub mod subagent;
 pub mod workflow;
@@ -230,6 +231,14 @@ pub enum CommandResultKind {
     ShowThemePicker,
     /// Command dispatched to bridge (already sent).
     Dispatched,
+    /// `/answer` sent the user's answer to a parked workflow step
+    /// (cyril-9104): the App marks that step's park episode answered in its
+    /// `WorkflowTracker` (the command layer reads the tracker only) and shows
+    /// `message`.
+    StepAnswered {
+        session_id: crate::types::SessionId,
+        message: String,
+    },
     /// Queue-steer the user's message (ROADMAP K1b, cyril-bm1j). The App routes
     /// this through its async `dispatch_steer` (optimistic echo + `SteerSession`),
     /// because the command layer has no UI access and must not touch the bridge
@@ -512,6 +521,10 @@ impl CommandRegistry {
             names.push("review");
             registry.register(Arc::new(workflow::WorkflowCommand::new(workspace_root)));
             registry.register(Arc::new(workflow::ReviewCommand));
+            // cyril-9104: answering a parked workflow step needs the same
+            // KAS workflow surface.
+            names.push("answer");
+            registry.register(Arc::new(answer::AnswerCommand));
         }
         // Unconditional, unlike `/hooks`: measured on 2.21.2 the v2 engine
         // advertises 25 commands and `powers` is not among them, and KAS

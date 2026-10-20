@@ -1211,6 +1211,12 @@ impl UiState {
                 self.add_system_message(format!("{operation} failed: {message}"));
                 true
             }
+            // cyril-9104: the App reopens the step's question first; the line
+            // reads like the bridge error it replaces.
+            Notification::WorkflowStepAnswerFailed { message, .. } => {
+                self.add_system_message(format!("answer workflow step failed: {message}"));
+                true
+            }
             // cyril-gk17: a KAS-executed hook finished. Under `kas_hooks = "kas"`
             // the agent runs these commands on this host with no permission
             // prompt, so the transcript line IS the audit trail — it is the only
@@ -1237,6 +1243,12 @@ impl UiState {
             // routing bug worth hearing about, not worth panicking over.
             Notification::WorkflowSnapshot(_) => {
                 tracing::warn!("WorkflowSnapshot reached UiState; it is tracker-owned");
+                false
+            }
+            // cyril-9104: the App hands a workflow message to the tracker and
+            // renders what it resolves; reaching UiState is a routing bug.
+            Notification::WorkflowMessage(_) => {
+                tracing::warn!("WorkflowMessage reached UiState; it is tracker-owned");
                 false
             }
             // One system message per command outcome, built by the pure
@@ -1405,6 +1417,24 @@ impl UiState {
             crate::turn_labels::step_notice_text(severity, content)
         };
         self.push_transcript_system(transcript, text);
+    }
+
+    /// Show a workflow step parked on a question in the main transcript
+    /// (cyril-9104), with the step's own latest reply when cyril has no
+    /// other text for it; text from [`crate::turn_labels::step_question_text`].
+    pub fn show_step_question(&mut self, question: &cyril_core::workflow::StepQuestion) {
+        let reply = self
+            .workflow_streams
+            .streams()
+            .get(question.session_id())
+            .and_then(crate::subagent_ui::SubagentStream::latest_agent_text);
+        let text = crate::turn_labels::step_question_text(question, reply);
+        self.add_system_message(text);
+    }
+
+    /// Show the parent model answering a workflow step itself (cyril-9104).
+    pub fn show_parent_answer(&mut self, answer: &cyril_core::workflow::StepAnswer) {
+        self.add_system_message(crate::turn_labels::parent_answer_text(answer));
     }
 
     fn push_transcript_system(&mut self, transcript: Transcript<'_>, text: String) {

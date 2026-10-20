@@ -845,6 +845,217 @@ impl WorkflowRepeatCap {
     }
 }
 
+workflow_enum! {
+    /// What a workflow step is waiting on the user for (KAS 0.66.43
+    /// `attention[].kind`, cyril-9104).
+    pub enum WorkflowAttentionKind as "workflow attention kind" {
+        Permission => "permission",
+        Question => "question",
+    }
+}
+
+/// One run-level "waiting on the user" marker (KAS 0.66.43 `attention[]`,
+/// cyril-9104). KAS sends the run's complete current list on every lifecycle
+/// event and run state, so the newest list replaces the previous one.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowAttention {
+    kind: WorkflowAttentionKind,
+    since: String,
+    tool_call_id: Option<super::tool_call::ToolCallId>,
+    consent_round: Option<u32>,
+    node_id: WorkflowNodeId,
+    node_path: WorkflowNodePath,
+    session_id: SessionId,
+}
+
+impl WorkflowAttention {
+    /// Constructs a marker for the step `node_id` at `node_path`, running in
+    /// `session_id`, waiting since `since` (opaque timestamp).
+    pub fn new(
+        kind: WorkflowAttentionKind,
+        since: String,
+        node_id: WorkflowNodeId,
+        node_path: WorkflowNodePath,
+        session_id: SessionId,
+    ) -> Self {
+        Self {
+            kind,
+            since,
+            tool_call_id: None,
+            consent_round: None,
+            node_id,
+            node_path,
+            session_id,
+        }
+    }
+
+    /// Sets the pending interaction's tool call (a permission or user_input
+    /// request the step is waiting on).
+    pub fn with_tool_call_id(mut self, tool_call_id: super::tool_call::ToolCallId) -> Self {
+        self.tool_call_id = Some(tool_call_id);
+        self
+    }
+
+    /// Sets the consent round of a pending permission (cyril-w55l).
+    pub fn with_consent_round(mut self, consent_round: u32) -> Self {
+        self.consent_round = Some(consent_round);
+        self
+    }
+
+    pub fn kind(&self) -> WorkflowAttentionKind {
+        self.kind
+    }
+
+    /// When the step started waiting, exactly as received.
+    pub fn since(&self) -> &str {
+        &self.since
+    }
+
+    pub fn tool_call_id(&self) -> Option<&super::tool_call::ToolCallId> {
+        self.tool_call_id.as_ref()
+    }
+
+    pub fn consent_round(&self) -> Option<u32> {
+        self.consent_round
+    }
+
+    pub fn node_id(&self) -> &WorkflowNodeId {
+        &self.node_id
+    }
+
+    pub fn node_path(&self) -> &WorkflowNodePath {
+        &self.node_path
+    }
+
+    /// The waiting step's session.
+    pub fn session_id(&self) -> &SessionId {
+        &self.session_id
+    }
+
+    /// The step is parked until the user's next message (KAS
+    /// `parkAwaitingUser`): a question with no pending interaction. A
+    /// question WITH a tool call is a user_input request, answered through
+    /// `session/request_permission` instead.
+    pub fn is_parked_question(&self) -> bool {
+        self.kind == WorkflowAttentionKind::Question && self.tool_call_id.is_none()
+    }
+}
+
+workflow_enum! {
+    /// Who sent a workflow `send_message` (KAS `_kiro/session/notify.sender`).
+    pub enum WorkflowMessageSender as "workflow message sender" {
+        Parent => "parent",
+        Step => "step",
+    }
+}
+
+workflow_enum! {
+    /// Severity of a workflow `send_message`. A step's `warning` is a
+    /// question: KAS records it as `need_input` and parks the step.
+    pub enum WorkflowMessageSeverity as "workflow message severity" {
+        Info => "info",
+        Success => "success",
+        Warning => "warning",
+        Error => "error",
+    }
+}
+
+/// A message one workflow session sent another with `send_message`, relayed
+/// to the client by KAS `_kiro/session/notify` (cyril-9104, cyril-fb1m): a
+/// step to its run's parent, or the parent to a step.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorkflowMessage {
+    recipient: SessionId,
+    caller: Option<SessionId>,
+    message: String,
+    severity: WorkflowMessageSeverity,
+    sender: WorkflowMessageSender,
+    workflow_id: Option<WorkflowId>,
+    node_id: Option<WorkflowNodeId>,
+    agent_name: Option<String>,
+}
+
+impl WorkflowMessage {
+    /// Constructs a message to `recipient` (KAS `sessionId`).
+    pub fn new(
+        recipient: SessionId,
+        message: String,
+        severity: WorkflowMessageSeverity,
+        sender: WorkflowMessageSender,
+    ) -> Self {
+        Self {
+            recipient,
+            caller: None,
+            message,
+            severity,
+            sender,
+            workflow_id: None,
+            node_id: None,
+            agent_name: None,
+        }
+    }
+
+    /// Sets the sending session (KAS `callerSessionId`).
+    pub fn with_caller(mut self, caller: SessionId) -> Self {
+        self.caller = Some(caller);
+        self
+    }
+
+    /// Sets the sending step's run, node and agent (step senders only).
+    pub fn with_step(
+        mut self,
+        workflow_id: Option<WorkflowId>,
+        node_id: Option<WorkflowNodeId>,
+        agent_name: Option<String>,
+    ) -> Self {
+        self.workflow_id = workflow_id;
+        self.node_id = node_id;
+        self.agent_name = agent_name;
+        self
+    }
+
+    /// The receiving session.
+    pub fn recipient(&self) -> &SessionId {
+        &self.recipient
+    }
+
+    /// The sending session, when KAS named it.
+    pub fn caller(&self) -> Option<&SessionId> {
+        self.caller.as_ref()
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+
+    pub fn severity(&self) -> WorkflowMessageSeverity {
+        self.severity
+    }
+
+    pub fn sender(&self) -> WorkflowMessageSender {
+        self.sender
+    }
+
+    pub fn workflow_id(&self) -> Option<&WorkflowId> {
+        self.workflow_id.as_ref()
+    }
+
+    pub fn node_id(&self) -> Option<&WorkflowNodeId> {
+        self.node_id.as_ref()
+    }
+
+    pub fn agent_name(&self) -> Option<&str> {
+        self.agent_name.as_deref()
+    }
+
+    /// A step asking its parent a question (`warning`), which KAS parks the
+    /// step on and wakes an idle parent for.
+    pub fn is_step_question(&self) -> bool {
+        self.sender == WorkflowMessageSender::Step
+            && self.severity == WorkflowMessageSeverity::Warning
+    }
+}
+
 /// Persisted metadata carried by a full workflow snapshot.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorkflowSnapshotMetadata {
@@ -854,6 +1065,7 @@ pub struct WorkflowSnapshotMetadata {
     workspace_path: Option<String>,
     run_label: Option<String>,
     pause: Option<WorkflowRunPause>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowSnapshotMetadata {
@@ -866,7 +1078,22 @@ impl WorkflowSnapshotMetadata {
             workspace_path: None,
             run_label: None,
             pause: None,
+            attention: None,
         }
+    }
+
+    /// Sets the run's waiting-on-the-user markers (KAS `state.attention`,
+    /// cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// Returns the run's waiting-on-the-user markers when supplied; `None`
+    /// for an engine that sends none (pre-0.66.43), never a stand-in empty
+    /// list.
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
     }
 
     /// Sets the run's structured pause reason (KAS `finalState.pause`,
@@ -944,6 +1171,7 @@ pub(crate) struct WorkflowSnapshotParts {
     pub(crate) workspace_path: Option<String>,
     pub(crate) run_label: Option<String>,
     pub(crate) pause: Option<WorkflowRunPause>,
+    pub(crate) attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowSnapshot {
@@ -1031,6 +1259,12 @@ impl WorkflowSnapshot {
         self.metadata.pause()
     }
 
+    /// Returns the run's waiting-on-the-user markers when supplied
+    /// (cyril-9104).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.metadata.attention()
+    }
+
     /// Moves every field into the workflow state canonicalizer.
     pub(crate) fn into_parts(self) -> WorkflowSnapshotParts {
         WorkflowSnapshotParts {
@@ -1047,6 +1281,7 @@ impl WorkflowSnapshot {
             workspace_path: self.metadata.workspace_path,
             run_label: self.metadata.run_label,
             pause: self.metadata.pause,
+            attention: self.metadata.attention,
         }
     }
 }
@@ -1315,6 +1550,7 @@ pub struct WorkflowRunStarted {
     inputs: serde_json::Value,
     node_tree: Vec<WorkflowNodeDescriptor>,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 /// Owned `run_start` fields consumed by the workflow state module.
@@ -1341,6 +1577,7 @@ impl WorkflowRunStarted {
             inputs,
             node_tree,
             parent_session_id,
+            attention: None,
         }
     }
 
@@ -1369,6 +1606,19 @@ impl WorkflowRunStarted {
         self.parent_session_id.as_ref()
     }
 
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Moves every opening field into the workflow state machine.
     pub(crate) fn into_parts(self) -> WorkflowRunStartedParts {
         WorkflowRunStartedParts {
@@ -1390,6 +1640,7 @@ pub struct WorkflowNodeStarted {
     node_type: WorkflowNodeType,
     details: WorkflowNodeStartDetails,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 /// Owned `node_start` fields consumed by the workflow state module.
@@ -1421,6 +1672,7 @@ impl WorkflowNodeStarted {
             node_type,
             details,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -1460,6 +1712,19 @@ impl WorkflowNodeStarted {
         self.parent_session_id.as_ref()
     }
 
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Moves the state-consumed node-opening fields into the workflow state machine.
     pub(crate) fn into_parts(self) -> WorkflowNodeStartedParts {
         WorkflowNodeStartedParts {
@@ -1481,6 +1746,7 @@ pub struct WorkflowNodeCompleted {
     status: WorkflowNodeStatus,
     details: WorkflowNodeCompletionDetails,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 /// Owned `node_complete` fields consumed by the workflow state module.
@@ -1513,6 +1779,7 @@ impl WorkflowNodeCompleted {
             status,
             details,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -1552,6 +1819,19 @@ impl WorkflowNodeCompleted {
         self.parent_session_id.as_ref()
     }
 
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Moves the state-consumed node-completion fields into the workflow state machine.
     pub(crate) fn into_parts(self) -> WorkflowNodeCompletedParts {
         WorkflowNodeCompletedParts {
@@ -1571,6 +1851,7 @@ pub struct WorkflowNodePaused {
     node_path: WorkflowNodePath,
     reason: String,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowNodePaused {
@@ -1588,6 +1869,7 @@ impl WorkflowNodePaused {
             node_path,
             reason,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -1622,6 +1904,19 @@ impl WorkflowNodePaused {
         self.parent_session_id.as_ref()
     }
 
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Moves the state-consumed node-pause fields into the workflow state
     /// machine; the optional parent session is routing metadata and is not
     /// transferred.
@@ -1638,6 +1933,7 @@ pub struct WorkflowLoopIteration {
     iteration: u32,
     stop_condition_met: bool,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowLoopIteration {
@@ -1654,6 +1950,7 @@ impl WorkflowLoopIteration {
             iteration,
             stop_condition_met,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -1688,6 +1985,19 @@ impl WorkflowLoopIteration {
         self.parent_session_id.as_ref()
     }
 
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Moves the state-consumed loop-progress fields into the workflow state
     /// machine; the optional parent session is routing metadata and is not
     /// transferred.
@@ -1710,6 +2020,7 @@ pub struct WorkflowWatchPoll {
     outcome: WorkflowWatchOutcome,
     at: String,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowWatchPoll {
@@ -1729,6 +2040,7 @@ impl WorkflowWatchPoll {
             outcome,
             at,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -1768,6 +2080,19 @@ impl WorkflowWatchPoll {
         self.parent_session_id.as_ref()
     }
 
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Moves the state-consumed watch-progress fields into the workflow state
     /// machine; the optional parent session is routing metadata and is not
     /// transferred.
@@ -1796,6 +2121,7 @@ pub struct WorkflowPaused {
     workflow_id: WorkflowId,
     pause_reason: String,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowPaused {
@@ -1805,6 +2131,7 @@ impl WorkflowPaused {
             workflow_id,
             pause_reason,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -1827,6 +2154,19 @@ impl WorkflowPaused {
     /// Returns the parent session when supplied.
     pub fn parent_session_id(&self) -> Option<&SessionId> {
         self.parent_session_id.as_ref()
+    }
+
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
     }
 
     /// Moves the state-consumed run-pause fields into the workflow state
@@ -1866,6 +2206,7 @@ pub struct WorkflowRunCompleted {
     status: WorkflowCompletionStatus,
     final_state: Box<WorkflowSnapshot>,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowRunCompleted {
@@ -1906,6 +2247,7 @@ impl WorkflowRunCompleted {
             status,
             final_state: Box::new(final_state),
             parent_session_id: None,
+            attention: None,
         })
     }
 
@@ -1918,6 +2260,19 @@ impl WorkflowRunCompleted {
     /// Returns the parent session when supplied.
     pub fn parent_session_id(&self) -> Option<&SessionId> {
         self.parent_session_id.as_ref()
+    }
+
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
     }
 
     /// Returns the persisted workflow identifier.
@@ -1972,6 +2327,7 @@ pub struct WorkflowStepsQueued {
     pending_steps: Vec<WorkflowNodeDescriptor>,
     resolution: Option<WorkflowQueueResolution>,
     parent_session_id: Option<SessionId>,
+    attention: Option<Vec<WorkflowAttention>>,
 }
 
 impl WorkflowStepsQueued {
@@ -1986,6 +2342,7 @@ impl WorkflowStepsQueued {
             pending_steps,
             resolution,
             parent_session_id: None,
+            attention: None,
         }
     }
 
@@ -2003,6 +2360,19 @@ impl WorkflowStepsQueued {
     /// Returns the parent session when supplied.
     pub fn parent_session_id(&self) -> Option<&SessionId> {
         self.parent_session_id.as_ref()
+    }
+
+    /// Sets the run's waiting-on-the-user markers this event carries (KAS
+    /// 0.66.43 `attention`, cyril-9104).
+    pub fn with_attention(mut self, attention: Vec<WorkflowAttention>) -> Self {
+        self.attention = Some(attention);
+        self
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event; `None`
+    /// when the engine sent none (pre-0.66.43).
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
     }
 
     /// Returns the queued recipe descriptors.
@@ -2055,6 +2425,22 @@ impl WorkflowEvent {
             Self::Paused(_) => "paused",
             Self::RunCompleted(_) => "run_complete",
             Self::StepsQueued(_) => "steps_queued",
+        }
+    }
+
+    /// The run's complete waiting-on-the-user list as of this event
+    /// (cyril-9104); `None` when the engine sent none.
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        match self {
+            Self::RunStarted(event) => event.attention(),
+            Self::NodeStarted(event) => event.attention(),
+            Self::NodeCompleted(event) => event.attention(),
+            Self::NodePaused(event) => event.attention(),
+            Self::LoopIteration(event) => event.attention(),
+            Self::WatchPoll(event) => event.attention(),
+            Self::Paused(event) => event.attention(),
+            Self::RunCompleted(event) => event.attention(),
+            Self::StepsQueued(event) => event.attention(),
         }
     }
 

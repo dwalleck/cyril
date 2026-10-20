@@ -22,7 +22,6 @@ session/update.update._meta.kiro.agentSubtaskId               # tracked: cyril-e
 session/update.update._meta.kiro.activity*                    # focus_update activity; tracked: cyril-0o7e
 _kiro/governance/state                                        # tracked: cyril-0o7e
 _kiro/mcp/status                                              # tracked: cyril-nk4o
-_kiro/session/notify                                          # tracked: cyril-fb1m
 _kiro/sessions/changed                                        # tracked: cyril-as1l
 result:initialize.agentCapabilities._meta.kiro.executionTargets   # tracked: cyril-tikf
 result:initialize.agentCapabilities._meta.kiro.sessionSources     # tracked: cyril-tikf
@@ -44,7 +43,8 @@ session/request_permission._meta.kiro.consent.*               # tracked: cyril-g
 
 # --- added 2026-10-18 by the 2.32.0 audit (KAS 0.66.43 captures: sweep, gate-off workflow, sub-agent, MCP, attention) ---
 # workflow run detail (0.66.43 attention[] is new; the rest pre-date it)
-*.attention                                   # workflow waiting-on-user markers on events/state/list (new 0.66.43); tracked: cyril-4u4a
+*children[].attention                         # node-level waiting markers inside snapshot trees (run-level attention is read, cyril-9104); tracked: cyril-4u4a
+result:_kiro/workflow/list.*attention         # run-list rows' waiting markers; tracked: cyril-4u4a
 *.inputs.*                                    # recipe-defined input names (dynamic keys); WorkflowRun.inputs is opaque JSON (crates/cyril-core/src/workflow.rs:297)
 *.pause.iterationsRun                         # workflow run detail not rendered; tracked: cyril-4u4a
 *.extendedMaxIterations                       # workflow run detail not rendered; tracked: cyril-4u4a

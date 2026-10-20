@@ -49,13 +49,23 @@ impl WorkflowCommand {
                     .into(),
             );
         }
+        // cyril-9104: each run's parked step questions ride under it.
+        let questions = tracker.step_questions();
         let mut lines: Vec<String> = tracker
             .iter()
             .map(|(id, run)| {
                 let status = run
                     .status()
                     .map_or_else(|| "unknown".to_owned(), |status| status.to_string());
-                format!("  {id}  {status}  {}", run.workflow_name())
+                let mut block = format!("  {id}  {status}  {}", run.workflow_name());
+                for question in questions.iter().filter(|q| q.workflow_id() == id) {
+                    block.push_str(&format!(
+                        "\n      waiting for your answer: step \"{}\" — /answer @{} <your answer>",
+                        question.node_id(),
+                        question.selector()
+                    ));
+                }
+                block
             })
             .collect();
         lines.sort();
@@ -342,6 +352,64 @@ mod tests {
         let text = message_text(&result);
         assert!(text.contains("wf_seeded"), "seeded run listed: {text}");
         assert!(text.contains("recipe-x"));
+        assert_nothing_sent(&mut harness);
+    }
+
+    /// cyril-9104 C9: the tracker view names a parked step under its run,
+    /// with the `/answer` selector that replies to it.
+    #[tokio::test]
+    async fn status_no_arg_names_parked_step_questions() {
+        let mut harness = harness(true);
+        let id = |raw: &str| match WorkflowId::try_from(raw.to_owned()) {
+            Ok(id) => id,
+            Err(error) => panic!("fixture id: {error}"),
+        };
+        let apply = |tracker: &mut WorkflowTracker, event| {
+            if let Err(error) = tracker.apply_event(event) {
+                panic!("seed must apply: {error}");
+            }
+        };
+        for (run, name) in [("wf_a", "park"), ("wf_b", "other")] {
+            apply(
+                &mut harness.tracker,
+                crate::types::WorkflowEvent::RunStarted(crate::types::WorkflowRunStarted::new(
+                    id(run),
+                    name.to_owned(),
+                    serde_json::json!({}),
+                    Vec::new(),
+                    None,
+                )),
+            );
+        }
+        let path = match crate::types::WorkflowNodePath::try_new(
+            &id("wf_a"),
+            vec!["wf_a".to_owned(), "ask".to_owned()],
+        ) {
+            Ok(path) => path,
+            Err(error) => panic!("fixture path: {error}"),
+        };
+        let attention = crate::types::WorkflowAttention::new(
+            crate::types::WorkflowAttentionKind::Question,
+            "t0".to_owned(),
+            match crate::types::WorkflowNodeId::try_from("ask".to_owned()) {
+                Ok(node) => node,
+                Err(error) => panic!("fixture node: {error}"),
+            },
+            path,
+            crate::types::SessionId::new("sess_step"),
+        );
+        apply(
+            &mut harness.tracker,
+            crate::types::WorkflowEvent::Paused(
+                crate::types::WorkflowPaused::new(id("wf_a"), "waiting".to_owned())
+                    .with_attention(vec![attention]),
+            ),
+        );
+        let result = run(&mut harness, "status").await;
+        assert_eq!(
+            message_text(&result),
+            "Known workflow runs (2):\n  wf_a  paused  park\n      waiting for your answer: step \"ask\" — /answer @ask <your answer>\n  wf_b  unknown  other\n(/workflow status <id> refreshes one from the agent)"
+        );
         assert_nothing_sent(&mut harness);
     }
 

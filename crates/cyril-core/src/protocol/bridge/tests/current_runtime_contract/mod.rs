@@ -59,6 +59,8 @@ mod review;
 mod routing;
 mod saturation;
 mod stall;
+// cyril-9104: no `kas`-specific arm — the step answer is a standard prompt.
+mod step_answer;
 // cyril-8wh0: a KAS workflow plan approval carries its typed plan to the App.
 #[cfg(feature = "kas")]
 mod workflow_plan;
@@ -94,6 +96,7 @@ fn command_name(command: &BridgeCommand) -> &'static str {
         BridgeCommand::ListKasHooks { .. } => "ListKasHooks",
         BridgeCommand::Workflow { .. } => "Workflow",
         BridgeCommand::SetKasHookEnabled { .. } => "SetKasHookEnabled",
+        BridgeCommand::AnswerWorkflowStep { .. } => "AnswerWorkflowStep",
         BridgeCommand::Shutdown => "Shutdown",
     }
 }

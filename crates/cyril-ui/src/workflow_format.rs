@@ -145,8 +145,16 @@ fn format_fetched(verb: WorkflowFetchVerb, snapshot: &WorkflowSnapshot) -> Strin
             snapshot.status()
         ),
     };
+    // cyril-9104: the steps parked on a question (run-level attention).
+    let parked: Vec<&str> = snapshot
+        .attention()
+        .unwrap_or_default()
+        .iter()
+        .filter(|attention| attention.is_parked_question())
+        .map(|attention| attention.node_id().as_str())
+        .collect();
     for child in snapshot.root().children() {
-        push_node_lines(child, 1, &mut text);
+        push_node_lines(child, 1, &parked, &mut text);
     }
     if matches!(verb, WorkflowFetchVerb::Attach) {
         text.push_str("\n(/workflow status shows this run from now on)");
@@ -154,20 +162,22 @@ fn format_fetched(verb: WorkflowFetchVerb, snapshot: &WorkflowSnapshot) -> Strin
     text
 }
 
-fn push_node_lines(node: &WorkflowNodeSnapshot, depth: usize, text: &mut String) {
+fn push_node_lines(node: &WorkflowNodeSnapshot, depth: usize, parked: &[&str], text: &mut String) {
     let indent = "  ".repeat(depth);
-    text.push_str(&format!(
-        "\n{indent}• {} {}",
-        node.descriptor().node_id(),
-        node.status()
-    ));
+    let node_id = node.descriptor().node_id();
+    text.push_str(&format!("\n{indent}• {node_id} {}", node.status()));
     // The failure reason is the actionable part (a stale-token step failure
     // names the token, a validation failure names the field) — verbatim.
     if let Some(reason) = node.failure_reason() {
         text.push_str(&format!(" — {reason}"));
     }
+    if parked.contains(&node_id.as_str()) {
+        text.push_str(&format!(
+            " — waiting for your answer (/answer @{node_id} <your answer>)"
+        ));
+    }
     for child in node.children() {
-        push_node_lines(child, depth + 1, text);
+        push_node_lines(child, depth + 1, parked, text);
     }
 }
 
@@ -331,6 +341,71 @@ mod tests {
         });
         assert!(text.contains("Run wf_f — cyril-reattach-r1 (failed)."));
         assert!(text.contains("• only failed — Authentication token is invalid"));
+    }
+
+    /// cyril-9104 C9: `/workflow status <id>` / `attach` mark the parked
+    /// step's node line; a step waiting on a permission is not marked.
+    #[test]
+    fn fetched_marks_the_parked_step() {
+        use cyril_core::types::{SessionId, WorkflowAttention, WorkflowAttentionKind};
+        let step = |id: &str| {
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::step(node_id(id), "wf-coder".to_owned(), None, None),
+                WorkflowNodeStatus::Paused,
+                Vec::new(),
+            )
+        };
+        let marker = |kind, node: &str| {
+            let path = match cyril_core::types::WorkflowNodePath::try_new(
+                &wid("wf_p"),
+                vec!["wf_p".to_owned(), node.to_owned()],
+            ) {
+                Ok(path) => path,
+                Err(error) => panic!("fixture path: {error}"),
+            };
+            WorkflowAttention::new(
+                kind,
+                "t".to_owned(),
+                node_id(node),
+                path,
+                SessionId::new("s"),
+            )
+        };
+        let snapshot = WorkflowSnapshot::new(
+            wid("wf_p"),
+            "park".to_owned(),
+            WorkflowRunStatus::Paused,
+            WorkflowSnapshotData::new(
+                serde_json::json!({}),
+                serde_json::json!({}),
+                serde_json::json!({}),
+            ),
+            WorkflowNodeSnapshot::new(
+                WorkflowNodeDescriptor::sequence(node_id("wf_p"), Vec::new()),
+                WorkflowNodeStatus::Paused,
+                vec![step("ask"), step("write")],
+            ),
+            WorkflowSnapshotMetadata::new("2026-10-18T17:29:16.038Z".to_owned(), 0).with_attention(
+                vec![
+                    marker(WorkflowAttentionKind::Question, "ask"),
+                    marker(WorkflowAttentionKind::Permission, "write"),
+                ],
+            ),
+        );
+        let text = format_workflow_outcome(&WorkflowCommandOutcome::Fetched {
+            verb: WorkflowFetchVerb::Status,
+            snapshot: Box::new(snapshot),
+        });
+        assert!(
+            text.contains(
+                "\n  • ask paused — waiting for your answer (/answer @ask <your answer>)"
+            ),
+            "{text}"
+        );
+        assert!(
+            text.contains("\n  • write paused\n") || text.ends_with("\n  • write paused"),
+            "{text}"
+        );
     }
 
     #[test]

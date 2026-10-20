@@ -1034,6 +1034,15 @@ impl App {
         }
     }
 
+    /// cyril-9104: each workflow step question the tracker newly raised
+    /// shows once, in the main transcript.
+    fn show_raised_step_questions(&mut self) {
+        for question in self.workflow_tracker.take_raised_questions() {
+            self.ui_state.show_step_question(&question);
+            self.redraw_needed = true;
+        }
+    }
+
     /// Effective activity for the adaptive frame rate: subagent, workflow,
     /// and voice activity all hold the fast tick alongside the main session
     /// (cyril-jxfu C7 — a streaming workflow step must animate even when the
@@ -1391,6 +1400,28 @@ impl App {
             if let Some((workflow_id, status)) = completion {
                 self.review_run_completed(&workflow_id, status);
             }
+            self.show_raised_step_questions();
+            return Vec::new();
+        }
+
+        // cyril-9104 review: a failed answer reopens the step's question; the
+        // failure itself renders through the normal pipeline below.
+        if let Notification::WorkflowStepAnswerFailed { session_id, .. } = &notification {
+            self.workflow_tracker.reopen_answered(session_id);
+        }
+
+        // cyril-9104: a workflow `send_message`, consumed once by the
+        // tracker. Only the main session's own answer to a step renders — no
+        // other session's transcript is shown.
+        if let Notification::WorkflowMessage(message) = notification {
+            if let Some(answer) = self.workflow_tracker.record_message(&message) {
+                if answer.answered_by().is_some() && answer.answered_by() == self.session.id() {
+                    self.ui_state.show_parent_answer(&answer);
+                    self.redraw_needed = true;
+                } else {
+                    tracing::debug!("a step answer from a session other than main; not shown");
+                }
+            }
             return Vec::new();
         }
 
@@ -1412,6 +1443,7 @@ impl App {
                         // (cyril-jxfu C5) — same sweep as lifecycle frames.
                         self.reparent_claimed_subagent_streams();
                         self.review_snapshot_status(&snapshot_run.0, snapshot_run.1);
+                        self.show_raised_step_questions();
                     }
                 }
                 Err(error) => {
@@ -2282,6 +2314,15 @@ impl App {
             }
             CommandResultKind::NotACommand(_text) => {
                 // Should not happen since we already checked parse()
+            }
+            // cyril-9104: the step's park episode is answered — no second
+            // `/answer` may pre-empt the turn this one starts.
+            CommandResultKind::StepAnswered {
+                session_id,
+                message,
+            } => {
+                self.workflow_tracker.mark_answered(&session_id);
+                self.ui_state.add_system_message(message);
             }
             CommandResultKind::SubmitAgentPrompt => {
                 tracing::error!("SubmitAgentPrompt reached synchronous result routing");
@@ -9235,6 +9276,298 @@ mod tests {
         assert_eq!(r.main_turns_started, 7, "seven captured parent wakes");
         assert_eq!(r.main_turns_completed, 7);
         r.assert_settled();
+    }
+
+    #[cfg(feature = "kas")]
+    const Q9104_GATEOFF: &str =
+        "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl";
+    #[cfg(feature = "kas")]
+    const Q9104_GATEOFF_MAIN: &str = "sess_259b943b-3d2a-49d4-8430-4b4975864275";
+    #[cfg(feature = "kas")]
+    const Q9104_WFPLAN: &str =
+        "experiments/conductor-spike/audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl";
+
+    /// System lines starting with `prefix`, in transcript order.
+    #[cfg(feature = "kas")]
+    fn q9104_systems<'a>(
+        transcript: &[&'a ChatMessageKind],
+        prefix: &str,
+    ) -> Vec<(usize, &'a str)> {
+        transcript
+            .iter()
+            .enumerate()
+            .filter_map(|(index, kind)| match kind {
+                ChatMessageKind::System(text) if text.starts_with(prefix) => {
+                    Some((index, text.as_str()))
+                }
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// cyril-9104 C5: the live gate-off `park` step parks on its own reply.
+    /// Its question shows once in the main transcript, naming the run and
+    /// the step, with the step's reply as the question and how to answer —
+    /// before the run's completion wake (after the client's answer).
+    #[cfg(feature = "kas")]
+    #[test]
+    fn parked_step_question_shows_in_live_capture() {
+        let r = lki9_replay_conn(Q9104_GATEOFF, "main", Q9104_GATEOFF_MAIN);
+        let transcript = r.transcript();
+        let questions = q9104_systems(&transcript, "⚙ workflow \"park\" · step \"ask\"");
+        assert_eq!(
+            questions.iter().map(|(_, text)| *text).collect::<Vec<_>>(),
+            [
+                "⚙ workflow \"park\" · step \"ask\" is waiting for your answer:\nWAITING\n↳ /answer @ask <your answer>"
+            ],
+            "one question line, raised once: {transcript:?}"
+        );
+        let completion = lki9_position_system(
+            &transcript,
+            "─── ⚙ workflow \"park\" completed · agent follow-up ───",
+        )
+        .expect("the park run's completion wake");
+        assert!(questions[0].0 < completion);
+        assert!(
+            r.app.workflow_tracker.step_questions().is_empty(),
+            "the client's answer resumed the step"
+        );
+        r.assert_settled();
+    }
+
+    /// cyril-9104 C5: the live gate-on capture where the parent model answers
+    /// a step. The parent's wake names the run and the step that asked; the
+    /// step's question shows when it parks; the parent's `send_message`
+    /// answer shows as answered for the user — all inside that one labelled
+    /// wake, before its credits footer.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn parent_answer_renders_inside_its_labelled_wake() {
+        let r = lki9_replay_conn(
+            Q9104_WFPLAN,
+            "wfplan",
+            "sess_df3e2821-4f61-4189-809d-064794e17d41",
+        );
+        let transcript = r.transcript();
+        let header = lki9_position_system(
+            &transcript,
+            "─── ⚙ workflow \"workflow-from-prompt\" · step \"create-workflow\" asked a question · agent follow-up ───",
+        )
+        .unwrap_or_else(|| panic!("the step-question wake header: {transcript:?}"));
+        let question = q9104_systems(
+            &transcript,
+            "⚙ workflow \"workflow-from-prompt\" · step \"create-workflow\" is waiting for your answer:\n",
+        );
+        assert_eq!(question.len(), 1, "{transcript:?}");
+        assert!(
+            question[0]
+                .1
+                .contains("What would you like changed before I hand it off?\n↳ /answer @create-workflow <your answer>"),
+            "{}",
+            question[0].1
+        );
+        let answer = q9104_systems(
+            &transcript,
+            "⚙ answered \"create-workflow\" for you: The proposed plan is exactly right.",
+        );
+        assert_eq!(answer.len(), 1, "{transcript:?}");
+        let footer = transcript
+            .iter()
+            .enumerate()
+            .skip(header)
+            .find_map(|(index, kind)| {
+                matches!(kind, ChatMessageKind::System(text) if text.starts_with("╰─ ⚙"))
+                    .then_some(index)
+            })
+            .expect("the wake's footer");
+        assert!(
+            header < question[0].0 && question[0].0 < answer[0].0 && answer[0].0 < footer,
+            "header {header} < question {} < answer {} < footer {footer}: {transcript:?}",
+            question[0].0,
+            answer[0].0
+        );
+        r.assert_settled();
+    }
+
+    /// Feeds the `conn` rows of a committed trace, file lines `first..=last`,
+    /// through the bridge's mediated replay into an existing App.
+    #[cfg(feature = "kas")]
+    fn q9104_feed(app: &mut App, rel: &str, conn: &str, main: &str, first: usize, last: usize) {
+        use cyril_core::test_support::{ReplayFrame, kas_trace_replay};
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(rel);
+        let trace = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {rel}: {e}"));
+        let mut rows = String::new();
+        for (index, line) in trace.lines().enumerate() {
+            if !(first..=last).contains(&(index + 1)) || line.is_empty() {
+                continue;
+            }
+            let row: serde_json::Value =
+                serde_json::from_str(line).unwrap_or_else(|e| panic!("{rel}: trace row: {e}"));
+            if row.get("conn").and_then(serde_json::Value::as_str) == Some(conn) {
+                rows.push_str(line);
+                rows.push('\n');
+            }
+        }
+        for frame in kas_trace_replay(&rows, main) {
+            match frame {
+                ReplayFrame::Notification(routed) => {
+                    app.handle_notification(routed);
+                }
+                ReplayFrame::Permission(request) => app.handle_permission_request(request),
+            }
+        }
+    }
+
+    /// cyril-9104 C8: end to end on the live gate-off capture. With the
+    /// `park` step parked (through line 993), `/answer FINISHED` sends the
+    /// answer as a prompt to the STEP session; the step's resumed frames
+    /// (994–1019, the probe's own answer) clear the question and complete
+    /// the run.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn answer_command_prompts_the_parked_step_and_the_run_resumes() {
+        let (handle, mut commands) = BridgeHandle::for_tests_with_command_rx();
+        let mut app = App::new(
+            handle,
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::resolve(
+                AgentEngine::Kas,
+                PathBuf::from("/tmp"),
+            ),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::Kas,
+        );
+        let main = SessionId::new(Q9104_GATEOFF_MAIN);
+        app.handle_notification(session_created_frame(&main));
+        q9104_feed(&mut app, Q9104_GATEOFF, "main", Q9104_GATEOFF_MAIN, 1, 993);
+        while commands.try_recv().is_ok() {}
+        assert_eq!(app.workflow_tracker.step_questions().len(), 1, "parked");
+
+        app.ui_state.insert_text("/answer FINISHED");
+        app.submit_input().await.expect("submit /answer");
+        match commands.try_recv().expect("one outbound command") {
+            BridgeCommand::AnswerWorkflowStep { session_id, answer } => {
+                assert_eq!(
+                    session_id.as_str(),
+                    "sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b"
+                );
+                assert_eq!(answer, "FINISHED");
+            }
+            other => panic!("the answer must prompt the step session, got {other:?}"),
+        }
+        assert!(commands.try_recv().is_err(), "nothing else is sent");
+        assert!(app.ui_state.messages().iter().any(|message| matches!(
+            message.kind(),
+            ChatMessageKind::System(text)
+                if text == "Sent your answer to step \"ask\" of workflow \"park\"."
+        )));
+        // Review M1: the episode is answered at once — a second `/answer`
+        // before KAS resumes the step must not pre-empt the turn just started.
+        app.ui_state.insert_text("/answer again");
+        app.submit_input().await.expect("submit second /answer");
+        assert!(
+            commands.try_recv().is_err(),
+            "the answered step is not prompted again"
+        );
+
+        q9104_feed(
+            &mut app,
+            Q9104_GATEOFF,
+            "main",
+            Q9104_GATEOFF_MAIN,
+            994,
+            1019,
+        );
+        assert!(
+            app.workflow_tracker.step_questions().is_empty(),
+            "the step resumed"
+        );
+        let run = WorkflowId::try_from("wf_33675f9136bfc71d".to_owned()).expect("run id");
+        assert_eq!(
+            app.workflow_tracker.get(&run).and_then(|run| run.status()),
+            Some(WorkflowRunStatus::Completed)
+        );
+    }
+
+    /// cyril-9104 review (1): when the prompt carrying an answer fails, KAS
+    /// still has the step parked — the failure reopens the question, so it
+    /// is listed again and the next `/answer` is sent.
+    #[cfg(feature = "kas")]
+    #[tokio::test]
+    async fn failed_answer_reopens_the_parked_step() {
+        let (handle, mut commands) = BridgeHandle::for_tests_with_command_rx();
+        let mut app = App::new(
+            handle,
+            StartupInputs {
+                ui: &config::UiConfig::default(),
+                environment: &cyril_ui::theme::ColorEnvironment::default(),
+            },
+            PathBuf::from("/tmp"),
+            cyril_core::commands::HooksCommandSource::Agent,
+            cyril_core::commands::WorkflowCommandSource::resolve(
+                AgentEngine::Kas,
+                PathBuf::from("/tmp"),
+            ),
+            UsageWiring {
+                log: test_usage_log(),
+                snapshot: live_snapshot_handle(),
+                snapshot_rx: idle_snapshot_rx(),
+            },
+            AgentEngine::Kas,
+        );
+        let main = SessionId::new(Q9104_GATEOFF_MAIN);
+        let step = SessionId::new("sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b");
+        app.handle_notification(session_created_frame(&main));
+        q9104_feed(&mut app, Q9104_GATEOFF, "main", Q9104_GATEOFF_MAIN, 1, 993);
+        while commands.try_recv().is_ok() {}
+
+        app.ui_state.insert_text("/answer FINISHED");
+        app.submit_input().await.expect("submit /answer");
+        assert!(matches!(
+            commands.try_recv(),
+            Ok(BridgeCommand::AnswerWorkflowStep { .. })
+        ));
+        assert!(
+            app.workflow_tracker.step_questions().is_empty(),
+            "closed on dispatch"
+        );
+
+        app.handle_notification(RoutedNotification::global(
+            Notification::WorkflowStepAnswerFailed {
+                session_id: step.clone(),
+                message: "Internal error: session not found".to_owned(),
+            },
+        ));
+        assert_eq!(
+            app.workflow_tracker.step_questions().len(),
+            1,
+            "the failed answer reopens the question"
+        );
+        assert!(app.ui_state.messages().iter().any(|message| matches!(
+            message.kind(),
+            ChatMessageKind::System(text)
+                if text == "answer workflow step failed: Internal error: session not found"
+        )));
+
+        app.ui_state.insert_text("/answer FINISHED");
+        app.submit_input().await.expect("submit /answer again");
+        match commands.try_recv() {
+            Ok(BridgeCommand::AnswerWorkflowStep { session_id, .. }) => {
+                assert_eq!(session_id, step);
+            }
+            other => panic!("the reopened step is answerable again, got {other:?}"),
+        }
     }
 
     /// cyril-2lh8: the same live 0.66.43 capture closes every parent wake

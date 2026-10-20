@@ -557,6 +557,55 @@ impl DomainMediator {
         self.prompt_tasks.push(task);
         Ok(())
     }
+
+    /// cyril-9104: the user's answer to a parked workflow step, as
+    /// `session/prompt` to the step session. Not a cyril turn: the turn
+    /// mediator is not consulted (the main session may be mid-turn, and the
+    /// step's own `turn_start`/`turn_end` frames route like any KAS-started
+    /// step turn), and the response — which arrives only when the step's turn
+    /// ends — reports nothing on success. A failure answers `WorkflowStepAnswerFailed` (step session named).
+    pub(crate) fn answer_workflow_step(
+        &mut self,
+        connection: &ConnectionTo<Agent>,
+        session_id: SessionId,
+        answer: String,
+    ) {
+        let request = acp::PromptRequest::new(
+            acp::SessionId::new(session_id.as_str()),
+            vec![acp::ContentBlock::from(answer)],
+        );
+        // Sent synchronously so the answer keeps wire order with commands
+        // dispatched around it; only the response await is spawned.
+        let sent = connection.send_request(request);
+        let channels = self.channels.clone();
+        let task = tokio::task::spawn_local(async move {
+            match sent.block_task().await {
+                Ok(response) => tracing::debug!(
+                    session = %session_id,
+                    stop_reason = ?response.stop_reason,
+                    "workflow step answer turn ended"
+                ),
+                Err(error) => {
+                    tracing::warn!(session = %session_id, %error, "workflow step answer failed");
+                    if let Err(send_error) = channels
+                        .enqueue(super::super::DomainWork::Routed(
+                            Notification::WorkflowStepAnswerFailed {
+                                session_id: session_id.clone(),
+                                message: error.to_string(),
+                            }
+                            .into(),
+                        ))
+                        .await
+                    {
+                        tracing::warn!(%send_error, "step answer error notification dropped");
+                    }
+                }
+            }
+        });
+        // Tracked like the other spawned command awaits: aborted on shutdown.
+        self.command_tasks.retain(|task| !task.is_finished());
+        self.command_tasks.push(task);
+    }
 }
 
 #[cfg(test)]
