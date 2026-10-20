@@ -64,7 +64,7 @@ Checked checkpoint state: base `8e5c325e` plus the uncommitted shared state repa
 
 Both TUI smokes used the actual built binary and controlled ACP peer with session scopes normalized to its advertised v2 main session. Main supplied `SHELL=/bin/bash` after diagnosing the harness-only private-PATH startup failure. These are fixture-backed UI/wiring receipts, not new live-upstream or Windows/macOS claims.
 
-## Current verification state
+## Historical isolated-stack verification
 
 COMPLETE — The prerequisite is reviewed commit `a5d2c4b5` / PR #183, including the cross-session identity repair and passing independent re-review. This issue's error fallback, v2 replay helper, fixtures and assertions are unchanged from the independently reviewed slice: ReviewMissingV2 found no blocking findings.
 
@@ -73,3 +73,30 @@ Main verified the isolated stacked `fix/cyril-fiv1` tree. Artifact 368 records s
 Both actual-process v2 smokes then passed on that freshly built binary, using the commands above with output directories `/tmp/cyril-fiv1-final-241-20261020` and `/tmp/cyril-fiv1-final-2110-20261020`. Each capture rendered its exact failed-validation message once, between the chronology markers. Portable evidence: [2.4.1 result](receipts/final-v2-2-4-1.json), [2.4.1 terminal](receipts/final-v2-2-4-1-screen.txt), [2.11.0 result](receipts/final-v2-2-11-0.json), [2.11.0 terminal](receipts/final-v2-2-11-0-screen.txt).
 
 The original residual RED remains valid: the same tests observed missing error text with the shared insertion fix but original error extractor (artifact 87). The README's v2 validation-error paragraph describes this separately mergeable residual fix. No live-upstream or native Windows/macOS qualification is claimed; no blocking local check or review finding remains.
+
+## Refreshed published-stack verification — 2026-10-20
+
+**COMPLETE for refreshed source HEAD `5e523ebf10978cc990746934732e4256596244ff`, tree `7ba80340f2e37516df31d964454126c12a22df36`.** This refresh inherits the approved successful-output alias from PR #183; it does not duplicate that production repair or change this issue's Failed-only content fallback. These are the qualified source pins before the documentation-only evidence packaging below. Earlier REDs and verification files remain historical and are not relabeled as refreshed-head proof.
+
+The separate [refresh verification record](refresh-verification.json) binds the source, binary, full gates, independent review, and controlled-peer consumers. The private binary SHA256 is `e3f072bcd89cc8e1bf935fb52912035ffb273ac913cd1c31f40c225405534db1`; no binary or private HOME/config/data directory is published.
+
+| Refreshed obligation | Evidence and result |
+| --- | --- |
+| Full repository gates | [Qualifier receipt](receipts/refresh-20261020/full-gates.json) and its five adjacent command logs: initial `cargo fmt --all`, workspace/all-targets clippy with `-D warnings`, workspace tests, `cargo build -p cyril`, and final fmt check all exited 0. Workspace totals are **2826 passed, 0 failed, 13 ignored**, excluding nested child summaries from double counting. |
+| Approved KAS completion consumer | Exactly one actual-process replay of the approved sanitized `0d613a49…` capture: completed header and `| XAVT_BEGIN XAVT_END` body each rendered once, in order between the markers. |
+| Both v2 validation captures | Original selected 2.4.1 and 2.11.0 messages rendered one exact failed Read/error each. The unrelated 2.4.1 chunk did not create another row; 2.11.0 retained its surrounding streamed-text chronology. |
+| Raw-error/content/status controls | Eleven explicitly synthetic owned cases in three runs covered first-nonblank content, unknown raw-object fallback, raw string/error/message precedence, stderr and direct-output fallback, and Completed/Pending/InProgress exclusions. Completed Read retained its six-character summary rather than exposing error/content/raw text. All **18 negative screen predicates** held. |
+| Consumer identity and deduplication | [Six-run receipt](receipts/refresh-20261020/consumer.json): all six first-attempt runs passed. Full original parsed messages and captured session/new identities were preserved. Each tool update was deliberately replayed twice, other original messages once; visible rows remained unique. Synthetic controls used owned IDs, never private MCP IDs. |
+| Independent code review | [Verbatim original review](receipts/refresh-20261020/review.txt): no findings, correctness **correct**, confidence **0.97**. Its joint fiv1/x5xi pins are retained; this issue relies on the fiv1 delta from `7eefe275fbec97f610677b2ee6433af996806599` to the refreshed HEAD above, not the later separate Zj verdict. The reviewer did not independently verify the tree hash or run qualification. |
+
+Full-gate source-tree provenance comes from the qualifier, separately from the static review. The qualifier's historical “Main GO required” fields predate Main's subsequent bounded controlled-peer GO and completed consumer runs. Qualification is default-feature Linux only: no all-features, benchmark, live-upstream account/model, native-terminal glyph, Windows, or macOS claim is made.
+
+The consumer proof used the actual pinned Cyril process under PTY with owned ACP peers and pyte-decoded text. Captured raw commands remained inert JSON; no permission or terminal requests, payload execution, or grants occurred. Owned-process cleanup completed. Packaging reran no source checks or smokes and changed no application code.
+
+### Portable refresh evidence
+
+The [consumer archive](receipts/refresh-20261020/consumer-evidence.tar.gz) has SHA256 `e2d554c5910bb54af53bf2f57d34d4f08224d070500b27a73b07ad04a727e07d`. It contains all six result/screen/wire/ANSI/log sets, exact allowed capture copies, owned synthetic inputs, a byte-identical frozen harness/fake-CLI layout, and `qualification.json` with per-case replay argv, input hashes, positive counts, and negative predicates.
+
+Extract it into a fresh owned directory and enter the included `cyril-fiv1-refreshed-consumer-20261020` directory. Each `case_results[].replay_argv_from_packet_root` uses packet-relative input/harness paths, an external binary, and a fresh output directory. The recorded binary/output paths identify the qualification host; substitute them explicitly when reproducing elsewhere. The copied harness was not separately launched: the recorded runs used its byte-identical pinned original. Negative predicates must also be inspected in the resulting screen; the harness itself checks positive expectations and frame preservation.
+
+Only issue-scoped documentation/evidence under `.cyril-fiv1/` is packaged. The exact publication allowlist and SHA256 hashes are supplied separately in `local://fiv1-refresh-publication-handoff.json`; earlier receipt files and tracker records are unchanged.
