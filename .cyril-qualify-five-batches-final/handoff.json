@@ -66,7 +66,7 @@
           "choice": "Keep prefix preview_lines signature state: &'a ApprovalState -> PreviewContent<'a>; this incorporates Zj's same borrowed-state lifetime while retaining typed Shell/workflow handling. File remains identical to prefix."
         }
       ],
-      "manual_integration_edits": ["README.md additive policy union; approval.rs signature conflict resolved to the stronger existing prefix form"],
+      "manual_integration_edits": ["README.md additive policy union"],
       "new_merge_specific_algorithm": false,
       "ancestry_refresh": "Main will provide the separately refreshed Zj head; normally merge it later for ancestry, without treating the old individual qualification as current assembled evidence."
     }
