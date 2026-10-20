@@ -434,8 +434,11 @@ fn required_percentage(
     required_nonnegative(value, field).map(|percentage| percentage.min(100.0))
 }
 
-/// Exact workflow command exclusions: Cyril owns this control plane (ADR-0011).
-/// Prefix matching would also suppress supported agents such as workflow-creator.
+/// Exact workflow command exclusions: with the workflow gate on, KAS 0.66.43
+/// advertises these four (`_meta.kiro.type:"workflow"`); cyril's own
+/// `/workflow` family stays the user's control plane (ADR-0013 decision 4), so
+/// they never become duplicate entries. Prefix matching would also suppress
+/// supported agents such as workflow-creator.
 const GATE_WORKFLOW_COMMANDS: [&str; 4] = [
     "workflow-run",
     "workflow-status",
@@ -459,7 +462,7 @@ pub(crate) fn commands_to_notification(update: &acp::AvailableCommandsUpdate) ->
             if GATE_WORKFLOW_COMMANDS.contains(&command.name.as_str()) {
                 tracing::debug!(
                     command = command.name,
-                    "suppressing gate-advertised workflow command (ADR-0011)"
+                    "suppressing gate-advertised workflow command (ADR-0013)"
                 );
                 return None;
             }

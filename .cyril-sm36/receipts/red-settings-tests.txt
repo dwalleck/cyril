@@ -1,0 +1,25 @@
+test protocol::kas::settings::tests::all_bool_keys_map ... ok
+test protocol::kas::settings::tests::compaction_shapes ... ok
+test protocol::kas::settings::tests::defaults_only ... FAILED
+test protocol::kas::settings::tests::false_preserved ... ok
+test protocol::kas::settings::tests::absent_file_defaults ... ok
+test protocol::kas::settings::tests::knowledge_extended ... ok
+test protocol::kas::settings::tests::nonbool_ignored ... ok
+test protocol::kas::settings::tests::marshal_live_fixture ... FAILED
+test protocol::kas::settings::tests::toolsearch_needs_enabled ... ok
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_2_disabled ... FAILED
+test protocol::kas::settings::tests::toolsearch_shapes ... ok
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_3_absent ... FAILED
+test protocol::kas::settings::tests::malformed_file_defaults ... ok
+test protocol::kas::settings::tests::initialize_carries_workflow_gate_from_selected_cli_json::case_3_userprofile ... FAILED
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_6_nested_chat_object_ignored ... FAILED
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_1_enabled ... FAILED
+test protocol::kas::settings::tests::initialize_carries_workflow_gate_from_selected_cli_json::case_1_kiro_home ... FAILED
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_5_number_one ... FAILED
+test protocol::kas::settings::tests::initialize_carries_workflow_gate_from_selected_cli_json::case_2_home ... FAILED
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_4_string_true ... FAILED
+test protocol::kas::settings::tests::selected_home_fallback_and_snapshot_ignore_later_file_changes ... ok
+test protocol::kas::settings::tests::workflow_gate_follows_chat_enable_workflows::case_7_lookalike_key_ignored ... FAILED
+test result: FAILED. 10 passed; 12 failed; 0 ignored; 0 measured; 1348 filtered out; finished in 0.00s
+59f9db1a347cbfa9a5713c9f59fe596aede7440b
+(working tree: tests only, production marshal unchanged)

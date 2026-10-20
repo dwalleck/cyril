@@ -58,6 +58,8 @@ mod rejection_feedback;
 mod review;
 mod routing;
 mod saturation;
+// cyril-sm36: KAS session-scoped settings ride session/new; v2 stays bare.
+mod session_settings;
 mod stall;
 // cyril-9104: no `kas`-specific arm — the step answer is a standard prompt.
 mod step_answer;

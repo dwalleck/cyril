@@ -1,9 +1,10 @@
 //! Command-plane types for cyril's native `/workflow` family.
 //!
-//! ADR-0011: cyril drives `_kiro/workflow/*` directly with the workflow gate
-//! OFF and owns the control plane natively — the model never gains
-//! `run_workflow`. These types carry one user-issued operation from the
-//! `/workflow` command through the bridge and its outcome back to the UI.
+//! ADR-0013: cyril drives `_kiro/workflow/*` directly and keeps its own
+//! control plane beside the model's launch path — the workflow gate follows
+//! the user's Kiro `chat.enableWorkflows`, and these methods work either way.
+//! These types carry one user-issued operation from the `/workflow` command
+//! through the bridge and its outcome back to the UI.
 //!
 //! Wire facts (live-verified 2.16.2 and 2.18.0, see `.cyril-0qe6/findings.md`):
 //! `cancel` replies `{ok, previousStatus}` while `invoke`/`resume` reply

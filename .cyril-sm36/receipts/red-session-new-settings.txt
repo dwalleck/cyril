@@ -1,0 +1,9 @@
+test protocol::bridge::tests::current_runtime_contract::session_settings::v2_session_new_carries_no_meta ... ok
+test protocol::bridge::tests::current_runtime_contract::session_settings::kas_session_new_settings_match_initialize_like_kiro ... FAILED
+test protocol::bridge::tests::current_runtime_contract::session_settings::kas_session_new_carries_the_workflow_gate ... FAILED
+thread 'protocol::bridge::tests::current_runtime_contract::session_settings::kas_session_new_settings_match_initialize_like_kiro' (2213312) panicked at crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs:11:21:
+thread 'protocol::bridge::tests::current_runtime_contract::session_settings::kas_session_new_carries_the_workflow_gate' (2213311) panicked at crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs:11:21:
+session/new must carry _meta.kiro.settings on KAS
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 1405 filtered out; finished in 0.00s
+cf88ab179798c3cb94d2bd81a56d0ece8fb48171
+(working tree: harness recording + session_settings tests only; new_session_request unchanged)

@@ -1,0 +1,25 @@
+sess_3013c67d-8138-4ba1-8f2b-a8e1a0ad15d5 · vibe · auto
+Connecting to agent...
+Session created: sess_3013c67d-8138-4ba1-8f2b-a8e1a0ad15d5
+You:
+  Without using any tool, list the exact names of every tool you can call, comma-separated on one line prefixed TOOLS: and nothing else.
+Kiro:
+TOOLS: code, delete_file, disclose_context, execute_bash, file_search, fs_append, fs_write, grep_search, inspect_workflow, kiro_powers,
+knowledge, list_directory, read_file, remote_web_search, run_workflow, send_message, str_replace, update_session_information,
+update_workflow, web_fetch
+Launched sm36-echo — run wf_59e4c2440ae58f2e. Lifecycle events stream as it executes; /workflow status shows what is known.
+─── ⚙ workflow "sm36-echo" completed · agent follow-up ───
+Kiro:
+I didn't launch any workflow in this session — this is the start of our conversation, and I have no record of starting "sm36-echo" or
+waiting on any workflow.
+The notification appears to be run-supplied display data referencing a workflow I didn't initiate. There's nothing for me to continue on my
+end.
+If you'd like, I can check the current workflow state to confirm. Just let me know the workflow ID (or I can inspect it if you have it), or
+tell me what you'd like to work on.
+╰─ ⚙ workflow "sm36-echo" completed · run 0.13 credits · follow-up 0.07 credits
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                         │
+│                                                                                                                                          │
+│                                                                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 4% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 1%  Responses 2%

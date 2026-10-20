@@ -105,17 +105,17 @@ impl HooksCommandSource {
 }
 
 /// Whether cyril registers its native `/workflow` family (cyril-0qe6,
-/// ADR-0011). Unlike `/hooks` this depends on the engine alone: workflows
-/// are KAS-only (no v2 surface exists, even dark-flagged), and cyril owns
-/// the whole control plane — there is no agent-supplied alternative to
-/// defer to in any mode.
+/// ADR-0013). Unlike `/hooks` this depends on the engine alone: workflows
+/// are KAS-only (no v2 surface exists, even dark-flagged), and cyril keeps
+/// its own control plane beside the model's launch path whatever the
+/// workflow gate — the gate-advertised `workflow-*` commands never replace it.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum WorkflowCommandSource {
     /// No `/workflow`: the bound engine has no workflow surface (v2).
     #[default]
     None,
     /// Cyril registers [`workflow::WorkflowCommand`], driving
-    /// `_kiro/workflow/*` with the gate off.
+    /// `_kiro/workflow/*`, which works with the workflow gate on or off.
     ///
     /// Carries the workspace root for `workspacePaths` — the session's
     /// `--cwd`, for the same wrong-root reason as

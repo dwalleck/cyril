@@ -36,6 +36,11 @@ pub(super) struct Script {
     pub(super) permission_responses: Arc<Mutex<Vec<serde_json::Value>>>,
     pub(super) negotiated_protocol:
         Arc<Mutex<Option<agent_client_protocol::schema::ProtocolVersion>>>,
+    /// The `initialize` params the agent received, as JSON (cyril-sm36).
+    pub(super) initialize_params: Arc<Mutex<Option<serde_json::Value>>>,
+    /// Every `session/new` params object the agent received, as JSON, in
+    /// order (cyril-sm36).
+    pub(super) new_session_params: Arc<Mutex<Vec<serde_json::Value>>>,
     pub(super) emit_chunks: usize,
     /// `_meta` attached to every emitted `agent_message_chunk` (cyril-lki9 C3):
     /// `Some({"kiro": {"agentInitiated": true, …}})` reproduces an
@@ -117,6 +122,15 @@ impl Script {
         lock(&self.permission_responses)
     }
 
+    #[cfg(feature = "kas")]
+    pub(super) fn initialize_params(&self) -> Option<serde_json::Value> {
+        lock(&self.initialize_params).clone()
+    }
+
+    pub(super) fn new_session_params(&self) -> Vec<serde_json::Value> {
+        lock(&self.new_session_params).clone()
+    }
+
     pub(super) fn negotiated_protocol(
         &self,
     ) -> Option<agent_client_protocol::schema::ProtocolVersion> {
@@ -132,6 +146,17 @@ fn lock<T>(value: &Mutex<T>) -> MutexGuard<'_, T> {
 
 fn record(ledger: &Arc<Mutex<Vec<String>>>, value: impl Into<String>) {
     lock(ledger).push(value.into());
+}
+
+/// A received request's params re-serialized as the JSON the client sent.
+fn params_json(
+    method: &str,
+    request: &impl serde::Serialize,
+) -> agent_client_protocol::Result<serde_json::Value> {
+    serde_json::to_value(request).map_err(|error| {
+        agent_client_protocol::Error::internal_error()
+            .data(format!("re-serialize {method} params: {error}"))
+    })
 }
 
 pub(super) struct AgentKill {
@@ -160,6 +185,8 @@ fn fake_agent(
     let permission_responses = Arc::clone(&script.borrow().permission_responses);
     let ext_responses = Arc::clone(&script.borrow().ext_responses);
     let negotiated_protocol = Arc::clone(&script.borrow().negotiated_protocol);
+    let initialize_params = Arc::clone(&script.borrow().initialize_params);
+    let new_session_params = Arc::clone(&script.borrow().new_session_params);
     let emit_chunks = script.borrow().emit_chunks;
     let chunk_meta = script.borrow().chunk_meta.clone();
     let emit_unknown_update = script.borrow().emit_unknown_update;
@@ -198,6 +225,7 @@ fn fake_agent(
                         responder,
                         connection: ConnectionTo<Client>| {
                 *lock(&negotiated_protocol) = Some(request.protocol_version);
+                *lock(&initialize_params) = Some(params_json("initialize", &request)?);
                 if request_extension_during_initialize
                     || request_malformed_standard_during_initialize
                     || request_unknown_standard_during_initialize
@@ -298,10 +326,11 @@ fn fake_agent(
             agent_client_protocol::on_receive_request!(),
         )
         .on_receive_request(
-            async move |_request: acp::NewSessionRequest,
+            async move |request: acp::NewSessionRequest,
                         responder,
                         connection: ConnectionTo<Client>| {
                 record(&received_new, "new_session");
+                lock(&new_session_params).push(params_json("session/new", &request)?);
                 let index = next_session.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
                 if fail_new_session {
                     return responder.respond_with_error(

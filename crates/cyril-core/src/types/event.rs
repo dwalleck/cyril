@@ -811,7 +811,7 @@ pub enum BridgeCommand {
         workspace_paths: Vec<std::path::PathBuf>,
     },
     /// One `/workflow` control-plane op against `_kiro/workflow/*`
-    /// (ADR-0011: gate never set; the model never gains `run_workflow`).
+    /// (ADR-0013: user-issued, whatever the workflow gate).
     /// Response-carrying like [`BridgeCommand::ListKasHooks`]: the bridge
     /// awaits the reply and answers with `WorkflowSnapshot`/`WorkflowCommand`
     /// notifications, or `BridgeError` — one outcome per op, always.
