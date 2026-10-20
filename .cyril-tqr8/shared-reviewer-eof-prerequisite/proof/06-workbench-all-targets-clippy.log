@@ -1,0 +1,26 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo clippy -p cyril-workbench --all-targets -- -D warnings
+started_utc=2026-10-20T18:35:04.322283+00:00
+
+    Checking tokio v1.53.1
+    Checking derive_more v2.1.1
+    Checking schemars v1.2.1
+    Checking tracing-subscriber v0.3.23
+    Checking serde_with v3.22.0
+    Checking agent-client-protocol-schema v1.5.0
+    Checking hyper v1.11.1
+    Checking tower v0.5.3
+    Checking tokio-util v0.7.18
+    Checking cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-review)
+    Checking hyper-util v0.1.20
+    Checking axum v0.8.9
+    Checking agent-client-protocol-trace-viewer v2.0.0
+    Checking agent-client-protocol v2.0.0
+    Checking agent-client-protocol-conductor v2.0.0
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-core)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.21s
+
+qualification_exit_code=0
+qualification_elapsed_seconds=16.296736
