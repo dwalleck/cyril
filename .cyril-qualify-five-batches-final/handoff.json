@@ -6,9 +6,9 @@
   "branch": "ci/qualify-five-batches-final-20261020",
   "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
   "issue_count": 9,
-  "source_revision_scope": "Nine-issue source assembly after published fiv/x5/Zj refresh-evidence ancestry merges and before the current handoff refresh; source_commit and source_tree include the prior handoff, not this updated record or later integration additions.",
-  "source_commit": "138dc60e637682780093b59beadedc05c4a55cc3",
-  "source_tree": "ba43c8d16a4c2d7a700ae9e97c92f4c66d21e93f",
+  "source_revision_scope": "Nine-issue assembly plus shared reviewer EOF test prerequisite, before the current handoff refresh; source_commit and source_tree include the prior handoff, not this updated record or later integration additions.",
+  "source_commit": "a847f3f726e7e6a8db575348c2d3b8cf572dfe03",
+  "source_tree": "8286218456c4ed0f9aa8fcea390e79d91102924a",
   "previous_assembly": {
     "source_commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
     "source_tree": "34f54951e9784b124a995b29b64787f9d9fc17bc",
@@ -120,6 +120,24 @@
       "net_tree_delta_scope": ".cyril-zj0m/refresh-7972f884 only; no production/tracker/README/Cargo changes",
       "textual_conflicts": [],
       "manual_integration_edits": []
+    },
+    {
+      "commit": "a847f3f726e7e6a8db575348c2d3b8cf572dfe03",
+      "parents": ["098534c1e217ab292f1ff5a05a74aec26fe29984", "3730d5aa843aec8b6b36e0e7d42770a4824167bd"],
+      "issues_added": [],
+      "shared_prerequisite": "Reviewer peer flushed-readiness synchronization before runtime drop; no historical-cause claim.",
+      "prerequisite_base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+      "changed_paths": ["crates/cyril-workbench/tests/reviewer.rs", "crates/cyril-workbench/tests/fixtures/reviewer_peer.py"],
+      "textual_conflicts": [],
+      "manual_integration_edits": [],
+      "qualification_provenance": {
+        "owner": "Main",
+        "status": "Main reports fresh prerequisite review, prompt-BrokenPipe RED/post-flush GREEN, named retention-mutation RED/exact-restore GREEN, reviewer37/clippy/fmt PASS. Integrator did not execute those checks; final assembled qualification remains separate.",
+        "canonical_handoff": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/canonical-handoff.json",
+        "canonical_handoff_sha256": "2b9c887c60fafc891b3ddecc65b4a0d8404597c23b63f832bd95e94d18009e81"
+      },
+      "dependency_change_applied": false,
+      "other_pending_issue_heads_included": false
     }
   ],
   "retained_semantics": [
