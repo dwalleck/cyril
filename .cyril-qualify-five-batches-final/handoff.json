@@ -6,9 +6,9 @@
   "branch": "ci/qualify-five-batches-final-20261020",
   "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
   "issue_count": 9,
-  "source_revision_scope": "Nine-issue source assembly after refreshed Zj ancestry merge and before the current handoff refresh; source_commit and source_tree include the prior handoff, not this updated record or later integration additions.",
-  "source_commit": "af5717252f8485e7201085799b71ae547299622d",
-  "source_tree": "eac8a57389e8232d7a41d2ba950cc5c873434cd6",
+  "source_revision_scope": "Nine-issue source assembly after published fiv/x5/Zj refresh-evidence ancestry merges and before the current handoff refresh; source_commit and source_tree include the prior handoff, not this updated record or later integration additions.",
+  "source_commit": "138dc60e637682780093b59beadedc05c4a55cc3",
+  "source_tree": "ba43c8d16a4c2d7a700ae9e97c92f4c66d21e93f",
   "previous_assembly": {
     "source_commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
     "source_tree": "34f54951e9784b124a995b29b64787f9d9fc17bc",
@@ -38,7 +38,7 @@
     {
       "commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
       "parents": ["42c468971c804bf404482744966f2cad01fb918e", "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77"],
-      "source_pr_pending_refresh": 189,
+      "source_pr": 189,
       "included_source_heads": {
         "pr183": "6f866bf3cd3590553c1abdefff2ccc108edca94d",
         "pr184": "5e523ebf10978cc990746934732e4256596244ff"
@@ -87,6 +87,39 @@
       "manual_integration_edits": [],
       "net_tree_delta": ["Added .cyril-zj0m/parent-refresh-20261020.json only; no production, fixture, Cargo or README delta"],
       "qualification": "Source-only ancestry refresh; no new qualification or publication."
+    },
+    {
+      "commit": "5c47ee0f7feff6b16f78c82bc89c2f97e6099b45",
+      "parents": ["8ea9adfeb6b91cbcd525daff1a3bd08ed3bb0803", "5c1d4e1a07551d938ef2d1387e595d3052b1d403"],
+      "source_pr": 184,
+      "issues_added": [],
+      "purpose": "Complete published PR-head ancestry and retain refreshed fiv qualification evidence.",
+      "already_included_source": "5e523ebf10978cc990746934732e4256596244ff",
+      "net_tree_delta_scope": ".cyril-fiv1 evidence and route only; no production/tracker/README/Cargo changes",
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "75a430b7bf6e762109a42b5148e3844acc117c55",
+      "parents": ["5c47ee0f7feff6b16f78c82bc89c2f97e6099b45", "7d3a03be7d8cf9d467c4cd4fe4d2f334f900c358"],
+      "source_pr": 189,
+      "issues_added": [],
+      "purpose": "Complete published PR-head ancestry and retain refreshed x5 qualification evidence.",
+      "already_included_source": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+      "net_tree_delta_scope": ".cyril-x5xi/refresh-pr189 only; no production/tracker/README/Cargo changes",
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "138dc60e637682780093b59beadedc05c4a55cc3",
+      "parents": ["75a430b7bf6e762109a42b5148e3844acc117c55", "3390f2cb75dd8a7d9df9c6f646b92f868277f281"],
+      "source_pr": 192,
+      "issues_added": [],
+      "purpose": "Complete published PR-head ancestry and retain refreshed Zj qualification evidence.",
+      "already_included_source": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+      "net_tree_delta_scope": ".cyril-zj0m/refresh-7972f884 only; no production/tracker/README/Cargo changes",
+      "textual_conflicts": [],
+      "manual_integration_edits": []
     }
   ],
   "retained_semantics": [
@@ -125,8 +158,30 @@
     "unchanged_zj_tool_diff_blob": "b36b158cb7c86669c99670c3bcbb93fc7a7808a5",
     "mechanism_boundary": "Zj cache/renderer changes arrive via auto-merged traits.rs and unchanged Zj chat.rs/tool_diff.rs, not by reverting the X/EJ approval body. No new integration algorithm or checks."
   },
+  "individual_refresh_evidence": {
+    "status_authority": "Main reports affected parent refreshes published with fresh gates, reviews and consumers passed. Integrator merged records only and did not rerun those checks; final assembled qualification is still separate.",
+    "fiv": {
+      "published_head": "5c1d4e1a07551d938ef2d1387e595d3052b1d403",
+      "source": "5e523ebf10978cc990746934732e4256596244ff",
+      "record": ".cyril-fiv1/refresh-verification.json",
+      "receipts": ".cyril-fiv1/receipts/refresh-20261020/"
+    },
+    "x5": {
+      "published_head": "7d3a03be7d8cf9d467c4cd4fe4d2f334f900c358",
+      "source": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+      "record": ".cyril-x5xi/refresh-pr189/handoff.json",
+      "verification": ".cyril-x5xi/refresh-pr189/verification.md"
+    },
+    "zj": {
+      "published_head": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+      "source": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+      "record": ".cyril-zj0m/refresh-7972f884/handoff.json",
+      "verification": ".cyril-zj0m/refresh-7972f884/verification.md"
+    },
+    "additional_main_report": "B1 additional output repair complete; 1v native CI green in run 39449299250. These reports are not new integrator execution or assembled acceptance."
+  },
   "future_integration_constraints": [
-    "Published PR192 and refreshed Zj source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3 are included. Refreshed-parent qualification remains pending with Main. C6/Tqr/NK/Caar remain excluded until Main supplies actual issue heads.",
+    "Published fiv/x5/Zj refreshed documentation heads are included and Main reports individual refresh qualification passed. Final assembled qualification remains separate. C6/Tqr/NK/Caar remain excluded until Main supplies actual issue heads; remaining MCP native user acceptance is reported blocked.",
     "Retain shared profile-root resolution and independent credential locations when adding MCP consumers.",
     "Preserve ledger merge -> KAS shell normalization -> consent/request construction, original permission response conversion, and display-only preview text.",
     "Later C6 consumers must preserve TrackedToolCall preview_body/output_text/error_message, first-Diff cache invalidation and ToolCall merge-presence behavior; no imported source-fence expansion.",
@@ -138,8 +193,8 @@
     "owner": "Main",
     "build_test_lint_format_gate_smoke_runs_by_integrator": [],
     "required": "Fresh final assembled qualification, applicable consumer/platform proof, and final assembled review before publication.",
-    "refreshed_fiv1_x5xi": "Local source-ready sources only; this assembly does not newly qualify or publish their refreshes.",
-    "zj_qualification_boundary": "Published source 7a19fc742f109411c421af296addc5fe4db4d42b is individually qualified on old x5/common-fixture base only. Refreshed source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3 is now merged for ancestry, not newly qualified; final nine-issue union and refreshed-parent qualification remain Main-owned.",
+    "refreshed_fiv1_x5xi": "Main reports published and individually qualified refreshes; exact source/docs heads and evidence paths are in individual_refresh_evidence. Integrator merged records only; this does not qualify the final union.",
+    "zj_qualification_boundary": "Historical 7a19fc74 evidence remains scoped to old x5/common-fixture source. Main reports fresh qualification passed for refreshed source 7972f884fa35de6a0cffa8cb7e78349af4b7d3f3 and published docs head 3390f2cb75dd8a7d9df9c6f646b92f868277f281. Final nine-issue assembled qualification remains Main-owned.",
     "no_push": true,
     "no_force": true,
     "no_github_merges": true,
