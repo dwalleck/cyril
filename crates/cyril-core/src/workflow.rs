@@ -6,14 +6,14 @@ use crate::types::workflow::{
     WorkflowSnapshotParts,
 };
 use crate::types::{
-    AgentInitiation, SessionId, StopReason, WorkflowCompletionSignal,
-    WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId, WorkflowLoopIteration,
-    WorkflowNodeCompleted, WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath,
-    WorkflowNodePathError, WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted,
-    WorkflowNodeStatus, WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution,
-    WorkflowRepeatCap, WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted,
-    WorkflowRunStatus, WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome,
-    WorkflowWatchPoll,
+    AgentInitiation, SessionId, StopReason, TurnMeteringUpdate, WorkflowAttention,
+    WorkflowCompletionSignal, WorkflowCompletionSignalSource, WorkflowEvent, WorkflowId,
+    WorkflowLoopIteration, WorkflowMessage, WorkflowMessageSender, WorkflowNodeCompleted,
+    WorkflowNodeDescriptor, WorkflowNodeId, WorkflowNodePath, WorkflowNodePathError,
+    WorkflowNodePaused, WorkflowNodeSnapshot, WorkflowNodeStarted, WorkflowNodeStatus,
+    WorkflowNodeType, WorkflowPaused, WorkflowQueueResolution, WorkflowRepeatCap,
+    WorkflowRunCompleted, WorkflowRunPause, WorkflowRunStarted, WorkflowRunStatus,
+    WorkflowSnapshot, WorkflowStepsQueued, WorkflowWatchOutcome, WorkflowWatchPoll,
 };
 
 /// State-application failure that leaves the tracker byte-for-byte unchanged.
@@ -309,6 +309,10 @@ pub struct WorkflowRun {
     /// KAS `finalState.pause` (cyril-6lql): the structured reason the latest
     /// reconciled snapshot gives for a pause; `None` otherwise.
     pause: Option<WorkflowRunPause>,
+    /// KAS run-level `attention[]` (cyril-9104): the run's complete current
+    /// waiting-on-the-user list, replaced by every event or snapshot that
+    /// carries one; `None` until one does.
+    attention: Option<Vec<WorkflowAttention>>,
     opening_plan: Option<Vec<WorkflowNodeDescriptor>>,
     snapshot_plan: Option<WorkflowNodeDescriptor>,
     nodes: HashMap<WorkflowNodePath, WorkflowNodeState>,
@@ -416,6 +420,12 @@ impl WorkflowRun {
         self.run_pause_reason.as_deref()
     }
 
+    /// The run's waiting-on-the-user markers as of its latest event or
+    /// snapshot (cyril-9104); `None` until the engine sent a list.
+    pub fn attention(&self) -> Option<&[WorkflowAttention]> {
+        self.attention.as_deref()
+    }
+
     /// Returns one node by exact canonical path.
     pub fn node(&self, path: &WorkflowNodePath) -> Option<&WorkflowNodeState> {
         self.nodes.get(path)
@@ -467,6 +477,160 @@ pub struct WorkflowTracker {
     /// the rest belonged to wakes that never rendered a header and are
     /// discarded at the next claim.
     claimed_wake_labels: HashMap<SessionId, Vec<WakeCause>>,
+    /// cyril-2lh8: the agent-initiated turn running on each session — the
+    /// run its wake is attributed to and the credits KAS metered for it —
+    /// from its announcement until it ends or the session's next turn starts.
+    turns: HashMap<SessionId, TurnRecord>,
+    /// cyril-2lh8: credits attributed to each run. Kept apart from
+    /// [`WorkflowRun`] on purpose: a retry's `run_start` replaces the run's
+    /// state but continues the same run and its bill.
+    run_credits: HashMap<WorkflowId, f64>,
+    /// cyril-2lh8 review: per run, how many attributed turns reported no
+    /// credits — a nonzero count makes the run's total a lower bound.
+    run_unmetered: HashMap<WorkflowId, u32>,
+    /// cyril-9104: each step session's latest `send_message` question to its
+    /// parent (`warning`), from its arrival until the step's node starts or
+    /// completes again, or its run ends — the text of the question the step
+    /// then parks on.
+    step_notes: HashMap<SessionId, String>,
+    /// cyril-9104: the park episodes already raised for display, as (step
+    /// session, `since`) — a question shows once although KAS repeats it on
+    /// every later event. Pruned to the currently parked set at each raise.
+    raised_questions: std::collections::HashSet<(SessionId, String)>,
+    /// cyril-9104 review M1: park episodes already answered — by the user's
+    /// `/answer` or the parent's own `send_message` — but not yet resumed by
+    /// KAS. They leave [`WorkflowTracker::step_questions`] at once, so a
+    /// second prompt cannot pre-empt the turn the first answer started.
+    answered_questions: std::collections::HashSet<(SessionId, String)>,
+}
+
+/// A workflow step parked until the user's next message (cyril-9104): its
+/// run, its step, and what it asked, for the transcript, `/answer` and the
+/// `/workflow` view.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StepQuestion {
+    workflow_id: WorkflowId,
+    run_name: String,
+    node_id: WorkflowNodeId,
+    node_path: WorkflowNodePath,
+    session_id: SessionId,
+    since: String,
+    question: Option<String>,
+    selector: String,
+}
+
+impl StepQuestion {
+    /// A parked step's question. The tracker builds these via
+    /// [`WorkflowTracker::step_questions`]; the constructor exists so
+    /// presentation code can be exercised with a question directly. The
+    /// selector starts as the node id.
+    pub fn new(
+        workflow_id: WorkflowId,
+        run_name: String,
+        attention: &WorkflowAttention,
+        question: Option<String>,
+    ) -> Self {
+        Self {
+            workflow_id,
+            run_name,
+            node_id: attention.node_id().clone(),
+            node_path: attention.node_path().clone(),
+            session_id: attention.session_id().clone(),
+            since: attention.since().to_owned(),
+            question,
+            selector: attention.node_id().as_str().to_owned(),
+        }
+    }
+
+    pub fn workflow_id(&self) -> &WorkflowId {
+        &self.workflow_id
+    }
+
+    /// The run's name by KAS's precedence `runLabel → workflowName →
+    /// workflowId`.
+    pub fn run_name(&self) -> &str {
+        &self.run_name
+    }
+
+    pub fn node_id(&self) -> &WorkflowNodeId {
+        &self.node_id
+    }
+
+    pub fn node_path(&self) -> &WorkflowNodePath {
+        &self.node_path
+    }
+
+    /// The parked step's session — where an answer is sent.
+    pub fn session_id(&self) -> &SessionId {
+        &self.session_id
+    }
+
+    /// When the step parked, exactly as KAS sent it.
+    pub fn since(&self) -> &str {
+        &self.since
+    }
+
+    /// What the step asked, when cyril knows: its `send_message` question,
+    /// else its captured output. `None` before either has arrived (the
+    /// transcript then shows the step's own last reply).
+    pub fn question(&self) -> Option<&str> {
+        self.question.as_deref()
+    }
+
+    /// How `/answer @<selector>` names this step: its node id, or
+    /// `<workflow-id>/<node-id>` when another parked step shares the node id.
+    pub fn selector(&self) -> &str {
+        &self.selector
+    }
+}
+
+/// The run's parent model answering a workflow step itself (cyril-9104):
+/// KAS `_kiro/session/notify{sender:"parent"}`, resolved to the step it
+/// answered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StepAnswer {
+    answered_by: Option<SessionId>,
+    step: Option<WorkflowNodeId>,
+    message: String,
+}
+
+impl StepAnswer {
+    /// An answer to `step` (when known) by `answered_by`'s model. Built by
+    /// [`WorkflowTracker::record_message`]; public for presentation tests.
+    pub fn new(
+        answered_by: Option<SessionId>,
+        step: Option<WorkflowNodeId>,
+        message: String,
+    ) -> Self {
+        Self {
+            answered_by,
+            step,
+            message,
+        }
+    }
+
+    /// The session whose model answered (KAS `callerSessionId`).
+    pub fn answered_by(&self) -> Option<&SessionId> {
+        self.answered_by.as_ref()
+    }
+
+    /// The answered step's node, when the tracker knows the step session.
+    pub fn step(&self) -> Option<&WorkflowNodeId> {
+        self.step.as_ref()
+    }
+
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
+
+/// The tracker's view of one running agent-initiated turn (cyril-2lh8).
+#[derive(Debug, Default)]
+struct TurnRecord {
+    /// The run whose wake this turn is, as its header named it.
+    wake: Option<(WorkflowId, WakeLabel)>,
+    /// What KAS metered for the turn; `None` until (unless) it reports.
+    credits: Option<f64>,
 }
 
 /// A `run_complete` KAS wakes the parent session for.
@@ -479,12 +643,27 @@ enum WakeCause {
     /// (cyril-6lql, KAS 0.66.43): KAS sends the parent a note and announces
     /// the wake as a message wake (`send-message-wake`), not a completion.
     RepeatCap(WorkflowId, WorkflowRepeatCap),
+    /// A step of the run asked its parent a question with `send_message`
+    /// (`warning`, cyril-9104): KAS wakes an idle parent at once and
+    /// announces it as a message wake.
+    StepQuestion(WorkflowId, WorkflowNodeId),
+}
+
+impl WakeCause {
+    /// The run of a pause or question cause — what a later wake for the same
+    /// run supersedes; `None` for a terminal completion.
+    fn superseded_run(&self) -> Option<&WorkflowId> {
+        match self {
+            Self::Ended(_) => None,
+            Self::RepeatCap(id, _) | Self::StepQuestion(id, _) => Some(id),
+        }
+    }
 }
 
 /// What an agent-initiated turn header names: a run, by KAS's own precedence
 /// `runLabel → workflowName → workflowId`, and why KAS woke the parent for it
-/// — its terminal status (cyril-lki9 C13) or the repeat whose iteration cap
-/// paused it (cyril-6lql).
+/// — its terminal status (cyril-lki9 C13), the repeat whose iteration cap
+/// paused it (cyril-6lql), or the step that asked a question (cyril-9104).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WakeLabel {
     name: String,
@@ -495,6 +674,7 @@ pub struct WakeLabel {
 enum WakeLabelCause {
     Ended(WorkflowRunStatus),
     RepeatCap(WorkflowRepeatCap),
+    StepQuestion(WorkflowNodeId),
 }
 
 impl WakeLabel {
@@ -517,26 +697,165 @@ impl WakeLabel {
         }
     }
 
+    /// A label for a run whose step `node_id` asked the parent a question
+    /// (cyril-9104).
+    pub fn step_question(name: String, node_id: WorkflowNodeId) -> Self {
+        Self {
+            name,
+            cause: WakeLabelCause::StepQuestion(node_id),
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
 
     /// The run's status when KAS woke the parent for it: its terminal status,
-    /// or `Paused` for a repeat-cap wake.
+    /// `Paused` for a repeat-cap wake, `Running` for a step's question (the
+    /// step parks only after its turn ends).
     pub fn status(&self) -> WorkflowRunStatus {
         match self.cause {
             WakeLabelCause::Ended(status) => status,
             WakeLabelCause::RepeatCap(_) => WorkflowRunStatus::Paused,
+            WakeLabelCause::StepQuestion(_) => WorkflowRunStatus::Running,
         }
     }
 
     /// The repeat whose iteration cap paused the run, for a repeat-cap wake;
-    /// `None` for a run that ended.
+    /// `None` otherwise.
     pub fn repeat_cap(&self) -> Option<&WorkflowRepeatCap> {
         match &self.cause {
-            WakeLabelCause::Ended(_) => None,
             WakeLabelCause::RepeatCap(repeat_cap) => Some(repeat_cap),
+            WakeLabelCause::Ended(_) | WakeLabelCause::StepQuestion(_) => None,
         }
+    }
+
+    /// The step that asked, for a step-question wake (cyril-9104); `None`
+    /// otherwise.
+    pub fn asking_step(&self) -> Option<&WorkflowNodeId> {
+        match &self.cause {
+            WakeLabelCause::StepQuestion(node_id) => Some(node_id),
+            WakeLabelCause::Ended(_) | WakeLabelCause::RepeatCap(_) => None,
+        }
+    }
+
+    /// The wake follows the run's end — the only wake that closes with the
+    /// run's credit total (cyril-2lh8).
+    fn is_run_end(&self) -> bool {
+        matches!(self.cause, WakeLabelCause::Ended(_))
+    }
+}
+
+/// How an agent-initiated turn closes (cyril-2lh8): what the turn cost and,
+/// when it is the wake that follows a run's end, that run's credit total —
+/// its step and creator turns plus every parent wake attributed to it.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentTurnClose {
+    credits: Option<f64>,
+    run: Option<RunCredits>,
+}
+
+impl AgentTurnClose {
+    /// A close with the turn's credits (`None` when the engine reported none)
+    /// and, for a run-completion wake, the run's total.
+    pub fn new(credits: Option<f64>, run: Option<RunCredits>) -> Self {
+        Self { credits, run }
+    }
+
+    /// The turn's own credits; `None` when the engine metered none — never
+    /// a stand-in 0.
+    pub fn credits(&self) -> Option<f64> {
+        self.credits
+    }
+
+    /// The ended run this wake followed, with its credit total; `None` for
+    /// any other agent-initiated turn, or a run no turn ever metered.
+    pub fn run(&self) -> Option<&RunCredits> {
+        self.run.as_ref()
+    }
+}
+
+/// A workflow completion KAS delivered into a busy turn instead of waking
+/// the parent (cyril-lki9 B5): the run, and its credits so far (cyril-2lh8).
+#[derive(Debug, Clone, PartialEq)]
+pub struct CompletionNotice {
+    label: WakeLabel,
+    run_total: Option<f64>,
+    unmetered_turns: u32,
+}
+
+impl CompletionNotice {
+    /// A notice for `label`'s run with its credit total, `None` when no turn
+    /// of the run reported credits.
+    pub fn new(label: WakeLabel, run_total: Option<f64>) -> Self {
+        Self {
+            label,
+            run_total,
+            unmetered_turns: 0,
+        }
+    }
+
+    /// Marks the total partial: `unmetered_turns` of the run's turns
+    /// reported no credits (cyril-2lh8 review).
+    pub fn with_unmetered_turns(mut self, unmetered_turns: u32) -> Self {
+        self.unmetered_turns = unmetered_turns;
+        self
+    }
+
+    /// How many of the run's turns reported no credits; nonzero means the
+    /// total is a lower bound.
+    pub fn unmetered_turns(&self) -> u32 {
+        self.unmetered_turns
+    }
+
+    pub fn label(&self) -> &WakeLabel {
+        &self.label
+    }
+
+    /// The run's credits so far; `None` — never 0 — when none were metered.
+    pub fn run_total(&self) -> Option<f64> {
+        self.run_total
+    }
+}
+
+/// An ended run's credit total, for its completion line (cyril-2lh8).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RunCredits {
+    label: WakeLabel,
+    total: f64,
+    unmetered_turns: u32,
+}
+
+impl RunCredits {
+    /// The run, named as its wake header names it, with its credit total.
+    pub fn new(label: WakeLabel, total: f64) -> Self {
+        Self {
+            label,
+            total,
+            unmetered_turns: 0,
+        }
+    }
+
+    /// Marks the total partial: `unmetered_turns` of the run's turns
+    /// reported no credits (cyril-2lh8 review).
+    pub fn with_unmetered_turns(mut self, unmetered_turns: u32) -> Self {
+        self.unmetered_turns = unmetered_turns;
+        self
+    }
+
+    /// How many of the run's turns reported no credits; nonzero means
+    /// [`Self::total`] is a lower bound, never a complete figure.
+    pub fn unmetered_turns(&self) -> u32 {
+        self.unmetered_turns
+    }
+
+    pub fn label(&self) -> &WakeLabel {
+        &self.label
+    }
+
+    /// Credits summed over every metered turn attributed to the run.
+    pub fn total(&self) -> f64 {
+        self.total
     }
 }
 
@@ -553,7 +872,39 @@ impl WorkflowTracker {
     /// Returns a structured error without changing state when an accepted
     /// completion snapshot fails canonical validation.
     pub fn apply_event(&mut self, event: WorkflowEvent) -> Result<bool, WorkflowStateError> {
-        match event {
+        let workflow_id = event.workflow_id().clone();
+        // cyril-9104: every event carries the run's whole current attention
+        // list. A completion's list rides its `finalState` too and is applied
+        // with the snapshot, so only the other events apply theirs here.
+        let attention = match &event {
+            WorkflowEvent::RunCompleted(completion) => {
+                // KAS sends `attention: []` on the event but omits an empty
+                // `finalState.attention`: absent and empty are the same here.
+                if completion.attention().unwrap_or_default()
+                    != completion.final_state().attention().unwrap_or_default()
+                {
+                    tracing::warn!(
+                        workflow_id = %workflow_id,
+                        "run_complete attention differs from its finalState; finalState applied"
+                    );
+                }
+                None
+            }
+            other => other.attention().map(<[WorkflowAttention]>::to_vec),
+        };
+        // A step's question note lasts until the step runs or ends again. A
+        // resume `node_start` may omit `sessionId`, so the node's own session
+        // (after the event merges) is consulted too.
+        let restarted = match &event {
+            WorkflowEvent::NodeStarted(started) => started.details().session_id().cloned(),
+            _ => None,
+        };
+        let touched = match &event {
+            WorkflowEvent::NodeStarted(started) => Some(started.node_path().clone()),
+            WorkflowEvent::NodeCompleted(completed) => Some(completed.node_path().clone()),
+            _ => None,
+        };
+        let mut changed = match event {
             WorkflowEvent::RunStarted(opening) => self.apply_opening(opening),
             WorkflowEvent::NodeStarted(started) => Ok(self.apply_node_started(started)),
             WorkflowEvent::NodeCompleted(completed) => Ok(self.apply_node_completed(completed)),
@@ -563,7 +914,28 @@ impl WorkflowTracker {
             WorkflowEvent::Paused(paused) => Ok(self.apply_paused(paused)),
             WorkflowEvent::RunCompleted(completion) => self.apply_completion(completion),
             WorkflowEvent::StepsQueued(queued) => Ok(self.apply_steps_queued(queued)),
+        }?;
+        if let Some(session) = restarted {
+            self.step_notes.remove(&session);
         }
+        let Some(run) = self.runs.get_mut(&workflow_id) else {
+            return Ok(changed);
+        };
+        if let Some(session) = touched
+            .and_then(|path| run.nodes.get(&path))
+            .and_then(WorkflowNodeState::session_id)
+        {
+            self.step_notes.remove(session);
+        }
+        if is_terminal(run.status) {
+            for session in run.nodes.values().filter_map(WorkflowNodeState::session_id) {
+                self.step_notes.remove(session);
+            }
+        } else if let Some(attention) = attention {
+            // A terminal run is absorbing: a straggler's list never edits it.
+            changed |= replace(&mut run.attention, Some(attention));
+        }
+        Ok(changed)
     }
 
     /// Applies one complete persisted snapshot.
@@ -909,9 +1281,7 @@ impl WorkflowTracker {
             // cyril-6lql review guard (a): a run's newer cause supersedes its
             // pending pause — a pause the run has moved past (aborted, ended,
             // or paused again) can never be what a later wake is about.
-            queue.retain(
-                |pending| !matches!(pending, WakeCause::RepeatCap(id, _) if id == &snapshot_id),
-            );
+            queue.retain(|pending| pending.superseded_run() != Some(&snapshot_id));
             queue.push_back(cause);
         }
         Ok(changed)
@@ -925,6 +1295,117 @@ impl WorkflowTracker {
         let queued = self.wake_labels.remove(session).unwrap_or_default();
         self.claimed_wake_labels
             .insert(session.clone(), queued.into_iter().collect());
+    }
+
+    /// A turn began on `session` (KAS `turn_start`): it claims the session's
+    /// queued wake causes ([`Self::claim_wake_labels`]) and opens the turn's
+    /// credit record (cyril-2lh8).
+    pub fn begin_turn(&mut self, session: &SessionId) {
+        self.claim_wake_labels(session);
+        self.turns.remove(session);
+    }
+
+    /// Records the credits KAS metered for the current turn on `session`
+    /// (`turn_completion`, cyril-2lh8) and attributes them to a run: the run
+    /// whose wake the turn is, else the run whose step or creator owns the
+    /// session. Attributed on arrival, not at the turn's end: a step turn's
+    /// `turn_end` reaches the App only while the parent is busy (the
+    /// mediator drops an idle foreign terminal), its `turn_completion`
+    /// always does. KAS reports once per turn; reports are summed. A report
+    /// with no credit charge (`promptTurnSummaries: []`) adds nothing — never
+    /// a stand-in 0 — and counts the turn as unmetered for its run, so the
+    /// run's total is shown as partial (cyril-2lh8 review). An
+    /// agent-initiated turn is counted once, when it ends.
+    pub fn record_turn_metering(&mut self, session: &SessionId, update: &TurnMeteringUpdate) {
+        let credits = update.credits();
+        // `Some(wake run)` while an agent-initiated turn is open on the
+        // session (the run its header named, if any); `None` otherwise.
+        let announced = self.turns.get_mut(session).map(|record| {
+            if let Some(credits) = credits {
+                *record.credits.get_or_insert(0.0) += credits;
+            }
+            record
+                .wake
+                .as_ref()
+                .map(|(workflow_id, _)| workflow_id.clone())
+        });
+        let Some(run) = self.attributed_run(session, announced.clone().flatten()) else {
+            return;
+        };
+        match credits {
+            Some(credits) => *self.run_credits.entry(run).or_insert(0.0) += credits,
+            // An agent-initiated turn is counted unmetered once, when it ends.
+            None if announced.is_some() => {}
+            None => {
+                tracing::debug!(session = %session, workflow_id = %run, "workflow turn metering carried no credits; run total is partial");
+                *self.run_unmetered.entry(run).or_insert(0) += 1;
+            }
+        }
+    }
+
+    /// The run a turn on `session` counts toward: the run whose wake it is,
+    /// else the run whose step or creator owns the session (cyril-2lh8).
+    fn attributed_run(
+        &self,
+        session: &SessionId,
+        wake_run: Option<WorkflowId>,
+    ) -> Option<WorkflowId> {
+        wake_run.or_else(|| {
+            self.session_owner(session)
+                .map(|(workflow_id, _)| workflow_id.clone())
+        })
+    }
+
+    /// The turn on `session` ended (cyril-2lh8). Its pauses that never woke
+    /// the parent are evicted ([`Self::end_turn`], cyril-6lql). An
+    /// agent-initiated turn closes with its credits and, when it is the wake
+    /// that follows a run's end, that run's total — marked partial when any
+    /// of the run's turns reported no credits. `None` for every turn cyril or
+    /// the user started.
+    pub fn finish_turn(
+        &mut self,
+        session: &SessionId,
+        stop_reason: StopReason,
+    ) -> Option<AgentTurnClose> {
+        self.end_turn(session, stop_reason);
+        let record = self.turns.remove(session)?;
+        if record.credits.is_none() {
+            tracing::debug!(session = %session, "agent-initiated turn ended without credit metering; no figure shown");
+            let wake_run = record
+                .wake
+                .as_ref()
+                .map(|(workflow_id, _)| workflow_id.clone());
+            if let Some(run) = self.attributed_run(session, wake_run) {
+                *self.run_unmetered.entry(run).or_insert(0) += 1;
+            }
+        }
+        let ended_run = record.wake.and_then(|(workflow_id, label)| {
+            if !label.is_run_end() {
+                return None;
+            }
+            let total = self.run_credits(&workflow_id);
+            if total.is_none() {
+                tracing::debug!(workflow_id = %workflow_id, "run ended without credit metering; no total shown");
+            }
+            total.map(|total| {
+                RunCredits::new(label, total)
+                    .with_unmetered_turns(self.run_unmetered_turns(&workflow_id))
+            })
+        });
+        Some(AgentTurnClose::new(record.credits, ended_run))
+    }
+
+    /// The credits attributed to a run so far (cyril-2lh8): every metered
+    /// turn of its step and creator sessions plus its parent wakes. `None`
+    /// until one of them reports credits — never a stand-in 0.
+    pub fn run_credits(&self, workflow_id: &WorkflowId) -> Option<f64> {
+        self.run_credits.get(workflow_id).copied()
+    }
+
+    /// How many of a run's attributed turns reported no credits
+    /// (cyril-2lh8 review): nonzero makes [`Self::run_credits`] partial.
+    pub fn run_unmetered_turns(&self, workflow_id: &WorkflowId) -> u32 {
+        self.run_unmetered.get(workflow_id).copied().unwrap_or(0)
     }
 
     /// A turn on `session` ended with `stop_reason` (cyril-6lql review guard
@@ -965,13 +1446,19 @@ impl WorkflowTracker {
     /// Only workflow-completion wakes ask, so `None` is spec B4's run-less
     /// wake and is logged.
     pub fn take_wake_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        self.take_ended(session).map(|(_, label)| label)
+    }
+
+    fn take_ended(&mut self, session: &SessionId) -> Option<(WorkflowId, WakeLabel)> {
         let label = self
             .claimed_wake_labels
             .remove(session)
             .and_then(|claimed| {
-                claimed.iter().rev().find_map(|cause| match cause {
-                    WakeCause::Ended(workflow_id) => wake_label(&self.runs, workflow_id),
-                    WakeCause::RepeatCap(..) => None,
+                claimed.into_iter().rev().find_map(|cause| match cause {
+                    WakeCause::Ended(workflow_id) => {
+                        wake_label(&self.runs, &workflow_id).map(|label| (workflow_id, label))
+                    }
+                    WakeCause::RepeatCap(..) | WakeCause::StepQuestion(..) => None,
                 })
             });
         if label.is_none() {
@@ -985,37 +1472,63 @@ impl WorkflowTracker {
     /// ([`Self::take_wake_label`], cyril-lki9); any other wake names the
     /// newest repeat-cap pause the turn claimed (cyril-6lql: KAS 0.66.43
     /// wakes the parent for one as a message wake), or nothing — a generic
-    /// wake.
+    /// wake. The turn is recorded as agent-initiated, its wake attributed to
+    /// the named run (cyril-2lh8).
     pub fn take_turn_label(
         &mut self,
         session: &SessionId,
         origin: &AgentInitiation,
     ) -> Option<WakeLabel> {
-        if origin.is_workflow_completion() {
-            self.take_wake_label(session)
+        let wake = if origin.is_workflow_completion() {
+            self.take_ended(session)
         } else {
-            self.take_repeat_cap_label(session)
+            self.take_message_wake(session)
+        };
+        let label = wake.as_ref().map(|(_, label)| label.clone());
+        let record = self.turns.entry(session.clone()).or_default();
+        if wake.is_some() {
+            record.wake = wake;
         }
+        label
     }
 
-    /// Consumes the repeat-cap pauses the current turn on `session` claimed
+    /// Consumes the message-wake causes the current turn on `session` claimed
+    /// — repeat-cap pauses (cyril-6lql) and step questions (cyril-9104) —
     /// and names the newest; its terminal completions stay claimed for a
     /// workflow-completion announcement.
-    fn take_repeat_cap_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+    fn take_message_wake(&mut self, session: &SessionId) -> Option<(WorkflowId, WakeLabel)> {
         let claimed = self.claimed_wake_labels.get_mut(session)?;
         let mut label = None;
-        claimed.retain(|cause| match cause {
-            WakeCause::Ended(_) => true,
-            WakeCause::RepeatCap(workflow_id, repeat_cap) => {
-                // Causes are in arrival order: the last resolvable one wins.
-                if let Some(run) = wake_label(&self.runs, workflow_id) {
-                    label = Some(WakeLabel::paused_at_repeat_cap(
-                        run.name,
-                        repeat_cap.clone(),
-                    ));
+        claimed.retain(|cause| {
+            let named = match cause {
+                WakeCause::Ended(_) => return true,
+                WakeCause::RepeatCap(workflow_id, repeat_cap) => {
+                    wake_label(&self.runs, workflow_id).map(|run| {
+                        (
+                            workflow_id.clone(),
+                            WakeLabel::paused_at_repeat_cap(run.name, repeat_cap.clone()),
+                        )
+                    })
                 }
-                false
+                // A run that only opened has no status yet; its name is all
+                // a question's label needs.
+                WakeCause::StepQuestion(workflow_id, node_id) => match self.runs.get(workflow_id)
+                {
+                    Some(run) => Some((
+                        workflow_id.clone(),
+                        WakeLabel::step_question(run_name(workflow_id, run), node_id.clone()),
+                    )),
+                    None => {
+                        tracing::debug!(workflow_id = %workflow_id, "step question of an untracked run; wake left unlabelled");
+                        None
+                    }
+                },
+            };
+            // Causes are in arrival order: the last resolvable one wins.
+            if named.is_some() {
+                label = named;
             }
+            false
         });
         label
     }
@@ -1025,6 +1538,16 @@ impl WorkflowTracker {
     /// consuming it. A pending repeat-cap pause is not a completion: it stays
     /// queued for the turn its wake starts.
     pub fn take_injection_label(&mut self, session: &SessionId) -> Option<WakeLabel> {
+        self.take_injection(session).map(|notice| notice.label)
+    }
+
+    /// The `notify-wf` injection on `session` ([`Self::take_injection_label`])
+    /// with the run's credits so far (cyril-2lh8). KAS delivers a completion
+    /// into a busy parent instead of waking it, so this notice is the run's
+    /// completion line: the total is its step and creator turns plus any
+    /// earlier wake already attributed to it. `None` total (debug-logged)
+    /// when no turn of the run reported credits — never a stand-in 0.
+    pub fn take_injection(&mut self, session: &SessionId) -> Option<CompletionNotice> {
         let queue = self.wake_labels.get_mut(session)?;
         while let Some(index) = queue
             .iter()
@@ -1033,7 +1556,14 @@ impl WorkflowTracker {
             if let Some(WakeCause::Ended(workflow_id)) = queue.remove(index)
                 && let Some(label) = wake_label(&self.runs, &workflow_id)
             {
-                return Some(label);
+                let run_total = self.run_credits(&workflow_id);
+                if run_total.is_none() {
+                    tracing::debug!(workflow_id = %workflow_id, "busy-parent completion of a run without credit metering; no total shown");
+                }
+                return Some(
+                    CompletionNotice::new(label, run_total)
+                        .with_unmetered_turns(self.run_unmetered_turns(&workflow_id)),
+                );
             }
         }
         None
@@ -1107,6 +1637,214 @@ impl WorkflowTracker {
                 (node.session_id() == Some(session_id)).then_some((workflow_id, path))
             })
         })
+    }
+
+    /// One workflow `send_message` relayed by KAS (cyril-9104). A step's
+    /// question (`warning`) is remembered as the text of the question the
+    /// step parks on, and queued as the cause of the parent wake KAS starts
+    /// for it (labelled like a repeat-cap pause, cyril-6lql). The parent
+    /// answering a step resolves to a [`StepAnswer`] naming that step, for
+    /// the caller to show. Any other message changes nothing here (logged).
+    pub fn record_message(&mut self, message: &WorkflowMessage) -> Option<StepAnswer> {
+        match message.sender() {
+            WorkflowMessageSender::Parent => {
+                let step = self
+                    .session_owner(message.recipient())
+                    .and_then(|(id, path)| {
+                        self.runs
+                            .get(id)
+                            .and_then(|run| run.nodes.get(path))
+                            .map(|node| node.node_id().clone())
+                    });
+                if step.is_none() {
+                    tracing::debug!(session = %message.recipient(), "parent message to a session no tracked step owns");
+                }
+                self.mark_answered(message.recipient());
+                Some(StepAnswer {
+                    answered_by: message.caller().cloned(),
+                    step,
+                    message: message.message().to_owned(),
+                })
+            }
+            WorkflowMessageSender::Step if message.is_step_question() => {
+                match message.caller() {
+                    Some(step) => {
+                        self.step_notes
+                            .insert(step.clone(), message.message().to_owned());
+                    }
+                    None => tracing::debug!("step question without callerSessionId; text not kept"),
+                }
+                match (message.workflow_id(), message.node_id()) {
+                    (Some(workflow_id), Some(node_id)) => {
+                        let queue = self
+                            .wake_labels
+                            .entry(message.recipient().clone())
+                            .or_default();
+                        // A run's newer cause supersedes its pending pause or
+                        // question (cyril-6lql review guard a).
+                        queue.retain(|pending| pending.superseded_run() != Some(workflow_id));
+                        queue.push_back(WakeCause::StepQuestion(
+                            workflow_id.clone(),
+                            node_id.clone(),
+                        ));
+                    }
+                    _ => tracing::debug!(
+                        "step question without workflowId/nodeId; wake left unlabelled"
+                    ),
+                }
+                None
+            }
+            WorkflowMessageSender::Step => {
+                tracing::debug!(
+                    severity = %message.severity(),
+                    "step message is not a question; nothing recorded"
+                );
+                None
+            }
+        }
+    }
+
+    /// Every workflow step parked until the user's next message (cyril-9104):
+    /// each `question` in a non-terminal run's current attention list with no
+    /// pending interaction, ordered by when it parked. The question text is
+    /// the step's `send_message` question, else its captured output.
+    pub fn step_questions(&self) -> Vec<StepQuestion> {
+        let mut questions: Vec<StepQuestion> = self
+            .parked_episodes()
+            .into_iter()
+            .filter(|question| {
+                !self
+                    .answered_questions
+                    .contains(&(question.session_id.clone(), question.since.clone()))
+            })
+            .collect();
+        assign_selectors(&mut questions);
+        questions
+    }
+
+    /// The step session's current park episode is answered (cyril-9104
+    /// review M1): it stops being listed until KAS parks the step again.
+    pub fn mark_answered(&mut self, session: &SessionId) {
+        let episodes: Vec<(SessionId, String)> = self
+            .parked_episodes()
+            .into_iter()
+            .filter(|question| &question.session_id == session)
+            .map(|question| (question.session_id, question.since))
+            .collect();
+        if episodes.is_empty() {
+            tracing::debug!(session = %session, "answer for a step that is not parked; nothing marked");
+        }
+        self.answered_questions.extend(episodes);
+    }
+
+    /// The answer to `session` never reached the step (its prompt failed):
+    /// the park episode `mark_answered` closed on dispatch reopens, since KAS
+    /// still has the step waiting (cyril-9104 review).
+    pub fn reopen_answered(&mut self, session: &SessionId) {
+        let before = self.answered_questions.len();
+        self.answered_questions
+            .retain(|(answered, _)| answered != session);
+        if self.answered_questions.len() == before {
+            tracing::debug!(session = %session, "failed answer for a step with no answered episode; nothing reopened");
+        }
+    }
+
+    /// Every parked question in the runs' current attention lists, answered
+    /// or not, ordered by when it parked.
+    fn parked_episodes(&self) -> Vec<StepQuestion> {
+        let mut questions: Vec<StepQuestion> = self
+            .runs
+            .iter()
+            .filter(|(_, run)| !is_terminal(run.status))
+            .flat_map(|(workflow_id, run)| {
+                run.attention()
+                    .unwrap_or_default()
+                    .iter()
+                    .filter(|attention| attention.is_parked_question())
+                    .map(move |attention| StepQuestion {
+                        workflow_id: workflow_id.clone(),
+                        run_name: run_name(workflow_id, run),
+                        node_id: attention.node_id().clone(),
+                        node_path: attention.node_path().clone(),
+                        session_id: attention.session_id().clone(),
+                        since: attention.since().to_owned(),
+                        question: self
+                            .step_notes
+                            .get(attention.session_id())
+                            .cloned()
+                            .or_else(|| {
+                                run.nodes
+                                    .get(attention.node_path())
+                                    .and_then(WorkflowNodeState::captured_output)
+                                    .and_then(serde_json::Value::as_str)
+                                    .filter(|text| !text.is_empty())
+                                    .map(str::to_owned)
+                            }),
+                        selector: attention.node_id().as_str().to_owned(),
+                    })
+            })
+            .collect();
+        questions.sort_by(|a, b| {
+            (a.since.as_str(), a.workflow_id.as_str(), &a.node_path).cmp(&(
+                b.since.as_str(),
+                b.workflow_id.as_str(),
+                &b.node_path,
+            ))
+        });
+        questions
+    }
+
+    /// The parked questions not yet raised for display (cyril-9104), each
+    /// once per park episode — KAS repeats a parked step's entry on every
+    /// later event of the run.
+    pub fn take_raised_questions(&mut self) -> Vec<StepQuestion> {
+        let current: std::collections::HashSet<(SessionId, String)> = self
+            .parked_episodes()
+            .into_iter()
+            .map(|question| (question.session_id, question.since))
+            .collect();
+        self.answered_questions
+            .retain(|episode| current.contains(episode));
+        let parked = self.step_questions();
+        let raised: Vec<StepQuestion> = parked
+            .into_iter()
+            .filter(|question| {
+                !self
+                    .raised_questions
+                    .contains(&(question.session_id.clone(), question.since.clone()))
+            })
+            .collect();
+        self.raised_questions = current;
+        raised
+    }
+}
+
+/// Gives each parked question the shortest `/answer` selector that names it
+/// alone: its node id, else `<workflow-id>/<node-id>`, else its full node path
+/// (cyril-9104 review L1: one node id parked on two paths of one run).
+fn assign_selectors(questions: &mut [StepQuestion]) {
+    fn counts(keys: impl Iterator<Item = String>) -> HashMap<String, usize> {
+        let mut counts = HashMap::new();
+        for key in keys {
+            *counts.entry(key).or_insert(0) += 1;
+        }
+        counts
+    }
+    let by_node = counts(questions.iter().map(|q| q.node_id.as_str().to_owned()));
+    let by_run = counts(
+        questions
+            .iter()
+            .map(|q| format!("{}/{}", q.workflow_id, q.node_id)),
+    );
+    for question in questions.iter_mut() {
+        let qualified = format!("{}/{}", question.workflow_id, question.node_id);
+        question.selector = if by_node.get(question.node_id.as_str()) == Some(&1) {
+            question.node_id.as_str().to_owned()
+        } else if by_run.get(&qualified) == Some(&1) {
+            qualified
+        } else {
+            question.node_path.segments().join("/")
+        };
     }
 }
 
@@ -1199,6 +1937,7 @@ fn canonicalize_snapshot(
         workspace_path,
         run_label,
         pause,
+        attention,
     } = snapshot.into_parts();
     let root_path = WorkflowNodePath::try_new(&workflow_id, vec![workflow_id.as_str().to_owned()])
         .map_err(|source| WorkflowStateError::InvalidCanonicalPath { source })?;
@@ -1266,6 +2005,7 @@ fn canonicalize_snapshot(
             workspace_path,
             run_label,
             pause,
+            attention,
             opening_plan: None,
             snapshot_plan: Some(snapshot_plan),
             pending_steps: None,
@@ -1298,13 +2038,17 @@ fn label_for_run(workflow_id: &WorkflowId, run: &WorkflowRun) -> Option<WakeLabe
         tracing::debug!(workflow_id = %workflow_id, "wake label for a run without status skipped");
         return None;
     };
-    let name = run
-        .run_label()
+    Some(WakeLabel::new(run_name(workflow_id, run), status))
+}
+
+/// A run's display name by KAS's own precedence: `runLabel`, else
+/// `workflowName`, else the workflow id.
+fn run_name(workflow_id: &WorkflowId, run: &WorkflowRun) -> String {
+    run.run_label()
         .filter(|l| !l.is_empty())
         .or_else(|| Some(run.workflow_name()).filter(|n| !n.is_empty()))
         .unwrap_or(workflow_id.as_str())
-        .to_owned();
-    Some(WakeLabel::new(name, status))
+        .to_owned()
 }
 
 fn sparse_opening_run(
@@ -1325,6 +2069,7 @@ fn sparse_opening_run(
         workspace_path: None,
         run_label: None,
         pause: None,
+        attention: None,
         opening_plan: Some(opening_plan),
         snapshot_plan: None,
         nodes: HashMap::new(),
@@ -1577,6 +2322,7 @@ mod tests {
                 workspace_path: None,
                 run_label: None,
                 pause: None,
+                attention: None,
                 opening_plan: None,
                 snapshot_plan: None,
                 pending_steps: None,
@@ -4554,6 +5300,266 @@ mod tests {
         );
     }
 
+    /// A KAS `turn_completion` reporting `credits` (cyril-2lh8); `None`
+    /// reports no charge at all (`promptTurnSummaries: []`, an aborted turn).
+    fn metering(credits: Option<f64>) -> crate::types::TurnMeteringUpdate {
+        let charges = credits
+            .map(|amount| {
+                crate::types::MeteredAmount::try_new(amount, "credit", "credits")
+                    .unwrap_or_else(|e| panic!("credit fixture: {e}"))
+            })
+            .into_iter()
+            .collect();
+        crate::types::TurnMeteringUpdate::new(charges, None, None, Vec::new(), None)
+    }
+
+    /// One turn on `session`: start, optional announcement, metering, end —
+    /// the App's per-session sequence (cyril-2lh8).
+    fn run_turn(
+        tracker: &mut WorkflowTracker,
+        session: &SessionId,
+        origin: Option<&AgentInitiation>,
+        credits: Option<f64>,
+    ) -> Option<AgentTurnClose> {
+        tracker.begin_turn(session);
+        if let Some(origin) = origin {
+            tracker.take_turn_label(session, origin);
+        }
+        tracker.record_turn_metering(session, &metering(credits));
+        tracker.finish_turn(session, StopReason::EndTurn)
+    }
+
+    /// `(turn credits, Option<(run name, status, run total)>)`.
+    type CloseView = (Option<f64>, Option<(String, WorkflowRunStatus, f64)>);
+
+    fn close_view(close: Option<AgentTurnClose>) -> Option<CloseView> {
+        close.map(|close| {
+            (
+                close.credits(),
+                close.run().map(|run| {
+                    (
+                        run.label().name().to_owned(),
+                        run.label().status(),
+                        run.total(),
+                    )
+                }),
+            )
+        })
+    }
+
+    /// A run `w` whose step ran in session `step` (cyril-2lh8 fixtures).
+    fn run_with_step(tracker: &mut WorkflowTracker, step: &SessionId) -> WorkflowId {
+        let id = workflow_id("w");
+        opened(tracker, &id);
+        assert_eq!(
+            tracker.apply_event(started(
+                &id,
+                "step",
+                &["w", "step"],
+                WorkflowNodeStartDetails::new().with_session_id(step.clone()),
+            )),
+            Ok(true)
+        );
+        id
+    }
+
+    /// cyril-2lh8: a step turn's credits count toward its run; the parent
+    /// wake that follows the run's end closes with its own credits and the
+    /// run's total — steps plus the wakes attributed to it.
+    #[test]
+    fn completion_wake_closes_with_its_credits_and_the_run_total() {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &step, None, Some(0.25))),
+            None,
+            "a step's own turn is not agent-initiated: no footer"
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+        ));
+        let wake = initiation(Some("workflow-complete-wake"), true);
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, Some(&wake), Some(0.5))),
+            Some((
+                Some(0.5),
+                Some(("recipe-W".to_owned(), WorkflowRunStatus::Completed, 0.75))
+            ))
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.75));
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, None, Some(1.0))),
+            None,
+            "the user's own next turn closes with no footer and is not the run's"
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.75));
+    }
+
+    /// cyril-2lh8: a repeat-cap wake (cyril-6lql) closes with its own credits
+    /// only — the run has not ended — and its credits count toward the run;
+    /// a wake with no run closes with its credits alone.
+    #[test]
+    fn repeat_cap_and_generic_wakes_close_with_turn_credits_only() {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let message_wake = initiation(Some("send-message-wake"), false);
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("w", "W", Some("s"), "loop", 1)
+        ));
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, Some(&message_wake), Some(0.25))),
+            Some((Some(0.25), None))
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+        assert_eq!(
+            close_view(run_turn(&mut tracker, &s, Some(&message_wake), Some(0.5))),
+            Some((Some(0.5), None)),
+            "no pause claimed: a generic wake, its credits are no run's"
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+    }
+
+    /// cyril-2lh8: missing metering degrades to NO figure, never 0, with a
+    /// debug log — for the wake itself, and for a run none of whose turns
+    /// reported credits.
+    #[rstest::rstest]
+    #[case::completion_wake_keeps_the_run_total(
+        initiation(Some("workflow-complete-wake"), true),
+        Some(0.25),
+        Some((None, Some(("recipe-W".to_owned(), WorkflowRunStatus::Completed, 0.25))))
+    )]
+    #[case::completion_wake_of_an_unmetered_run(
+        initiation(Some("workflow-complete-wake"), true),
+        None,
+        Some((None, None))
+    )]
+    #[case::generic_wake(initiation(Some("send-message-wake"), false), Some(0.25), Some((None, None)))]
+    fn missing_metering_is_no_figure(
+        #[case] origin: AgentInitiation,
+        #[case] step_credits: Option<f64>,
+        #[case] want: Option<CloseView>,
+    ) {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        run_turn(&mut tracker, &step, None, step_credits);
+        assert_eq!(tracker.run_credits(&id), step_credits, "never a 0 total");
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+        ));
+        let (close, logs) = with_captured_logs(tracing::Level::DEBUG, || {
+            run_turn(&mut tracker, &s, Some(&origin), None)
+        });
+        assert_eq!(close_view(close), want);
+        assert!(
+            logs.contains("turn ended without credit metering"),
+            "missing-metering debug log: {logs}"
+        );
+    }
+
+    /// cyril-2lh8 (user decision 2026-10-18): a completion KAS delivers into
+    /// a busy parent (`notify-wf`, no wake) is the run's completion line and
+    /// carries the run's credits so far; a run nothing metered carries no
+    /// figure — never 0 — and is debug-logged.
+    #[rstest::rstest]
+    #[case::metered_run(Some(0.25), Some(0.25))]
+    #[case::unmetered_run(None, None)]
+    fn busy_parent_notice_carries_the_run_total(
+        #[case] step_credits: Option<f64>,
+        #[case] want: Option<f64>,
+    ) {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        run_with_step(&mut tracker, &step);
+        run_turn(&mut tracker, &step, None, step_credits);
+        tracker.begin_turn(&s); // the parent's own turn is running
+        assert!(apply_ok(
+            &mut tracker,
+            parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+        ));
+        let (notice, logs) =
+            with_captured_logs(tracing::Level::DEBUG, || tracker.take_injection(&s));
+        let notice = notice.unwrap_or_else(|| panic!("the completion is noted mid-turn"));
+        assert_eq!(notice.label().name(), "recipe-W");
+        assert_eq!(notice.run_total(), want);
+        assert_eq!(
+            logs.contains("busy-parent completion of a run without credit metering"),
+            want.is_none(),
+            "{logs}"
+        );
+    }
+
+    /// cyril-2lh8 review (Medium): a run total over turns some of which
+    /// reported no credits is a PARTIAL figure and must say so — an
+    /// unmetered turn is counted per run, never folded in as 0. Covers a
+    /// step turn reporting `promptTurnSummaries: []`, a wake that ended
+    /// unmetered, and the busy-parent notice.
+    #[rstest::rstest]
+    #[case::completion_wake(false)]
+    #[case::busy_parent_notice(true)]
+    fn partial_metering_marks_the_run_total_incomplete(#[case] parent_busy: bool) {
+        let s = SessionId::new("s");
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        run_turn(&mut tracker, &step, None, None); // aborted: `[]`
+        run_turn(&mut tracker, &step, None, Some(0.25));
+        assert!(apply_ok(
+            &mut tracker,
+            repeat_cap_completion("w", "W", Some("s"), "loop", 1)
+        ));
+        // The repeat-cap wake ends with no turn_completion at all.
+        tracker.begin_turn(&s);
+        tracker.take_turn_label(&s, &initiation(Some("send-message-wake"), false));
+        assert_eq!(
+            tracker
+                .finish_turn(&s, StopReason::EndTurn)
+                .map(|close| close.credits()),
+            Some(None)
+        );
+        assert_eq!(tracker.run_credits(&id), Some(0.25));
+        assert_eq!(tracker.run_unmetered_turns(&id), 2);
+
+        if parent_busy {
+            tracker.begin_turn(&s);
+            assert!(apply_ok(
+                &mut tracker,
+                parented_completion("w", WorkflowRunStatus::Aborted, "W", "s", None)
+            ));
+            let notice = tracker
+                .take_injection(&s)
+                .unwrap_or_else(|| panic!("the abort is noted mid-turn"));
+            assert_eq!(
+                (notice.run_total(), notice.unmetered_turns()),
+                (Some(0.25), 2)
+            );
+        } else {
+            assert!(apply_ok(
+                &mut tracker,
+                parented_completion("w", WorkflowRunStatus::Completed, "W", "s", None)
+            ));
+            let close = run_turn(
+                &mut tracker,
+                &s,
+                Some(&initiation(Some("workflow-complete-wake"), true)),
+                Some(0.5),
+            )
+            .unwrap_or_else(|| panic!("the wake closes"));
+            let run = close.run().unwrap_or_else(|| panic!("a completion line"));
+            assert_eq!((run.total(), run.unmetered_turns()), (0.75, 2));
+        }
+    }
+
     /// The repeat-cap causes still queued (unclaimed) for `session`, as
     /// `(run, cap)`.
     fn pending_pauses(tracker: &WorkflowTracker, session: &SessionId) -> Vec<(String, u32)> {
@@ -4567,7 +5573,7 @@ mod tests {
                         WakeCause::RepeatCap(id, cap) => {
                             Some((id.as_str().to_owned(), cap.max_iterations()))
                         }
-                        WakeCause::Ended(_) => None,
+                        WakeCause::Ended(_) | WakeCause::StepQuestion(..) => None,
                     })
                     .collect()
             })
@@ -4710,5 +5716,634 @@ mod tests {
             Some(("recipe-A".to_owned(), WorkflowRunStatus::Completed, None)),
             "the terminal completion still names its wake"
         );
+    }
+
+    /// cyril-2lh8 delta review (Medium): an agent-initiated turn with no
+    /// run label of its own on a workflow-owned session (a step woken by a
+    /// message) counts toward the run that owns the session — its credits,
+    /// or, unmetered, its unmetered count.
+    #[rstest::rstest]
+    #[case::metered(Some(0.25), Some(0.25), 0)]
+    #[case::unmetered(None, None, 1)]
+    fn owned_session_wake_counts_toward_its_run(
+        #[case] credits: Option<f64>,
+        #[case] want_credits: Option<f64>,
+        #[case] want_unmetered: u32,
+    ) {
+        let step = SessionId::new("step-1");
+        let mut tracker = WorkflowTracker::new();
+        let id = run_with_step(&mut tracker, &step);
+        let close = run_turn(
+            &mut tracker,
+            &step,
+            Some(&initiation(Some("send-message-wake"), false)),
+            credits,
+        );
+        assert_eq!(close_view(close), Some((credits, None)));
+        assert_eq!(tracker.run_credits(&id), want_credits);
+        assert_eq!(tracker.run_unmetered_turns(&id), want_unmetered);
+    }
+
+    // ---- cyril-9104: step questions --------------------------------------
+
+    /// (run, step, step session, since, question text, selector).
+    #[cfg(feature = "kas")]
+    type QuestionView = (String, String, String, String, Option<String>, String);
+
+    #[cfg(feature = "kas")]
+    fn question_view(question: &StepQuestion) -> QuestionView {
+        (
+            question.run_name().to_owned(),
+            question.node_id().as_str().to_owned(),
+            question.session_id().as_str().to_owned(),
+            question.since().to_owned(),
+            question.question().map(str::to_owned),
+            question.selector().to_owned(),
+        )
+    }
+
+    /// Replays the `conn` rows of a committed capture, file lines
+    /// `first..=last`, into `tracker` through the production KAS conversion:
+    /// lifecycle events and messages apply as the App applies them. Returns
+    /// the questions raised after each frame and the parent answers resolved.
+    #[cfg(feature = "kas")]
+    fn replay_lines(
+        tracker: &mut WorkflowTracker,
+        rel: &str,
+        conn: &str,
+        first: usize,
+        last: usize,
+    ) -> (Vec<QuestionView>, Vec<StepAnswer>) {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+        let trace = std::fs::read_to_string(root.join(rel)).expect("read committed trace");
+        let mut rows = String::new();
+        for line in trace
+            .lines()
+            .enumerate()
+            .filter(|(index, _)| (first..=last).contains(&(index + 1)))
+            .map(|(_, line)| line)
+            .filter(|line| !line.is_empty())
+        {
+            let row: serde_json::Value = serde_json::from_str(line).expect("trace row");
+            if row["conn"] == conn {
+                rows.push_str(line);
+                rows.push('\n');
+            }
+        }
+        let (mut raised, mut answers) = (Vec::new(), Vec::new());
+        for (_, notification) in crate::test_support::kas_trace_to_routed(&rows) {
+            match notification {
+                crate::types::Notification::Workflow(event) => {
+                    tracker.apply_event(*event).expect("captured event applies");
+                }
+                crate::types::Notification::WorkflowSnapshot(snapshot) => {
+                    tracker
+                        .apply_snapshot(*snapshot)
+                        .expect("captured snapshot applies");
+                }
+                crate::types::Notification::WorkflowMessage(message) => {
+                    answers.extend(tracker.record_message(&message));
+                }
+                _ => continue,
+            }
+            raised.extend(tracker.take_raised_questions().iter().map(question_view));
+        }
+        (raised, answers)
+    }
+
+    #[cfg(feature = "kas")]
+    const GATEOFF: &str =
+        "experiments/conductor-spike/audit-2.32.0/live/kas-workflow-gateoff-2.32.0.jsonl";
+    #[cfg(feature = "kas")]
+    const WFPLAN: &str =
+        "experiments/conductor-spike/audit-2.32.0/live/kas-lead-wfplan-2.32.0.jsonl";
+    #[cfg(feature = "kas")]
+    const PARK_STEP: &str = "sess_e7ecaab0-bc52-4a73-ab46-d391c4b7057b";
+    #[cfg(feature = "kas")]
+    const WFPLAN_PARENT: &str = "sess_df3e2821-4f61-4189-809d-064794e17d41";
+    #[cfg(feature = "kas")]
+    const WFPLAN_STEP: &str = "sess_39b38845-0255-474a-83d7-d8723160f149";
+
+    /// cyril-9104 C3: the live gate-off `park` step parks on its own reply.
+    /// Its question is raised once although `node_paused`, `paused` and
+    /// `run_complete` each repeat it; its text is the step's captured output
+    /// once the paused snapshot lands; the client's prompt to the step
+    /// (`run_start`/`node_start` with `attention:[]`) clears it.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn park_question_raised_once_and_cleared_on_resume() {
+        let mut tracker = WorkflowTracker::new();
+        let (raised, answers) = replay_lines(&mut tracker, GATEOFF, "main", 1, 993);
+        assert_eq!(
+            raised,
+            vec![(
+                "park".to_owned(),
+                "ask".to_owned(),
+                PARK_STEP.to_owned(),
+                "2026-10-18T17:29:17.092Z".to_owned(),
+                None,
+                "ask".to_owned(),
+            )],
+            "one raise, at node_paused, before any text is known"
+        );
+        assert!(answers.is_empty(), "the gate is off: no parent answers");
+        let parked: Vec<QuestionView> =
+            tracker.step_questions().iter().map(question_view).collect();
+        assert_eq!(parked.len(), 1);
+        assert_eq!(parked[0].4.as_deref(), Some("WAITING"), "captured output");
+        let (raised, _) = replay_lines(&mut tracker, GATEOFF, "main", 994, 1019);
+        assert!(
+            raised.is_empty(),
+            "the resumed step raises nothing: {raised:?}"
+        );
+        assert!(tracker.step_questions().is_empty(), "answered and resumed");
+    }
+
+    /// cyril-9104 C3/C4: the live gate-on `send_message` question. The step's
+    /// `warning` labels the parent's wake with the run and step; the step's
+    /// later park raises the question with the `send_message` text; the
+    /// parent's own `send_message` resolves to an answer naming the step; the
+    /// resumed run clears the question.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn send_message_question_labels_the_wake_and_resolves_the_answer() {
+        let parent = SessionId::new(WFPLAN_PARENT);
+        let mut tracker = WorkflowTracker::new();
+        let (raised, _) = replay_lines(&mut tracker, WFPLAN, "wfplan", 1, 110);
+        assert!(raised.is_empty(), "nothing parked yet");
+        // KAS wakes the parent 5 ms later (line 111) as a message wake.
+        tracker.begin_turn(&parent);
+        let label = tracker
+            .take_turn_label(&parent, &initiation(Some("send-message-wake"), false))
+            .expect("the step's question names the wake");
+        assert_eq!(label.name(), "workflow-from-prompt");
+        assert_eq!(
+            label.asking_step().map(WorkflowNodeId::as_str),
+            Some("create-workflow")
+        );
+        assert_eq!(label.repeat_cap(), None);
+
+        let (raised, answers) = replay_lines(&mut tracker, WFPLAN, "wfplan", 111, 160);
+        assert!(answers.is_empty());
+        assert_eq!(raised.len(), 1, "{raised:?}");
+        let (run, step, session, _, text, selector) = &raised[0];
+        assert_eq!(
+            (
+                run.as_str(),
+                step.as_str(),
+                session.as_str(),
+                selector.as_str()
+            ),
+            (
+                "workflow-from-prompt",
+                "create-workflow",
+                WFPLAN_STEP,
+                "create-workflow"
+            )
+        );
+        assert!(
+            text.as_deref()
+                .is_some_and(|t| t.ends_with("What would you like changed before I hand it off?")),
+            "the send_message question: {text:?}"
+        );
+
+        let (raised, answers) = replay_lines(&mut tracker, WFPLAN, "wfplan", 161, 166);
+        assert!(raised.is_empty());
+        assert_eq!(answers.len(), 1);
+        assert_eq!(answers[0].answered_by(), Some(&parent));
+        assert_eq!(
+            answers[0].step().map(WorkflowNodeId::as_str),
+            Some("create-workflow")
+        );
+        assert!(
+            answers[0]
+                .message()
+                .starts_with("The proposed plan is exactly right.")
+        );
+        assert!(
+            tracker.step_questions().is_empty(),
+            "review M1: the parent's answer closes the episode before KAS resumes the step"
+        );
+        let (raised, _) = replay_lines(&mut tracker, WFPLAN, "wfplan", 167, 175);
+        assert!(raised.is_empty());
+        assert!(tracker.step_questions().is_empty(), "the step resumed");
+    }
+
+    fn step_message(
+        severity: crate::types::WorkflowMessageSeverity,
+        run: &str,
+        node: &str,
+    ) -> WorkflowMessage {
+        WorkflowMessage::new(
+            SessionId::new("parent"),
+            "Which file?".to_owned(),
+            severity,
+            WorkflowMessageSender::Step,
+        )
+        .with_caller(SessionId::new("step"))
+        .with_step(Some(workflow_id(run)), Some(node_id(node)), None)
+    }
+
+    /// cyril-9104 C4: a step question queues a message-wake label exactly
+    /// like a repeat-cap pause: a turn that ends without a cancel evicts it
+    /// (KAS buffers a note for a busy parent and never wakes for it), a
+    /// cancelled turn keeps it for KAS's re-wake, a workflow-completion wake
+    /// never names it, and a non-question message queues nothing.
+    #[rstest::rstest]
+    #[case::idle_parent_wake(None, Some("send-message-wake"), false, Some("ask"))]
+    #[case::evicted_by_turn_end(Some(StopReason::EndTurn), Some("send-message-wake"), false, None)]
+    #[case::kept_through_cancel(
+        Some(StopReason::Cancelled),
+        Some("send-message-wake"),
+        false,
+        Some("ask")
+    )]
+    #[case::completion_wake_never_names_it(None, Some("workflow-complete-wake"), true, None)]
+    fn step_question_wake_label(
+        #[case] busy_turn_end: Option<StopReason>,
+        #[case] reason: Option<&str>,
+        #[case] workflow_completion: bool,
+        #[case] want_step: Option<&str>,
+    ) {
+        let parent = SessionId::new("parent");
+        let mut tracker = WorkflowTracker::new();
+        let id = workflow_id("wf_q");
+        opened(&mut tracker, &id);
+        assert_eq!(
+            tracker.record_message(&step_message(
+                crate::types::WorkflowMessageSeverity::Warning,
+                "wf_q",
+                "ask"
+            )),
+            None
+        );
+        if let Some(stop_reason) = busy_turn_end {
+            tracker.end_turn(&parent, stop_reason);
+        }
+        tracker.begin_turn(&parent);
+        let label = tracker.take_turn_label(&parent, &initiation(reason, workflow_completion));
+        assert_eq!(
+            label
+                .as_ref()
+                .and_then(WakeLabel::asking_step)
+                .map(WorkflowNodeId::as_str),
+            want_step
+        );
+        if let Some(label) = label {
+            assert_eq!(label.name(), "recipe");
+            assert_eq!(label.status(), WorkflowRunStatus::Running);
+        }
+    }
+
+    /// cyril-9104: only a step's `warning` is a question; its other
+    /// severities keep the wake generic (cyril-pd4b owns give-up notes).
+    #[rstest::rstest]
+    #[case::info(crate::types::WorkflowMessageSeverity::Info)]
+    #[case::success(crate::types::WorkflowMessageSeverity::Success)]
+    #[case::error(crate::types::WorkflowMessageSeverity::Error)]
+    fn only_a_step_warning_labels_the_wake(
+        #[case] severity: crate::types::WorkflowMessageSeverity,
+    ) {
+        let parent = SessionId::new("parent");
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_q"));
+        assert_eq!(
+            tracker.record_message(&step_message(severity, "wf_q", "ask")),
+            None
+        );
+        tracker.begin_turn(&parent);
+        assert_eq!(
+            tracker.take_turn_label(&parent, &initiation(Some("send-message-wake"), false)),
+            None
+        );
+    }
+
+    /// cyril-9104 C4: a run's newer cause replaces its pending question —
+    /// a later repeat-cap pause of the same run is what a wake is about.
+    #[test]
+    fn newer_cause_replaces_the_runs_pending_question() {
+        let parent = SessionId::new("parent");
+        let mut tracker = WorkflowTracker::new();
+        let id = workflow_id("wf_q");
+        opened(&mut tracker, &id);
+        tracker.record_message(&step_message(
+            crate::types::WorkflowMessageSeverity::Warning,
+            "wf_q",
+            "ask",
+        ));
+        let paused = repeat_cap_completion("wf_q", "p", Some("parent"), "loop", 2);
+        apply_ok(&mut tracker, paused);
+        tracker.begin_turn(&parent);
+        let label = tracker
+            .take_turn_label(&parent, &initiation(Some("send-message-wake"), false))
+            .expect("a label");
+        assert_eq!(label.asking_step(), None);
+        assert!(label.repeat_cap().is_some());
+    }
+
+    fn attention(
+        kind: crate::types::WorkflowAttentionKind,
+        run: &str,
+        node: &str,
+        session: &str,
+        since: &str,
+    ) -> WorkflowAttention {
+        let id = workflow_id(run);
+        WorkflowAttention::new(
+            kind,
+            since.to_owned(),
+            node_id(node),
+            node_path(&id, &[run, node]),
+            SessionId::new(session),
+        )
+    }
+
+    fn park(tracker: &mut WorkflowTracker, run: &str, list: Vec<WorkflowAttention>) {
+        let id = workflow_id(run);
+        apply_ok(
+            tracker,
+            WorkflowEvent::Paused(
+                WorkflowPaused::new(id, "waiting".to_owned()).with_attention(list),
+            ),
+        );
+    }
+
+    /// cyril-9104 C3: a question with a pending interaction (user_input,
+    /// answered in the approval overlay) and a permission wait are not
+    /// parked steps; a parked step whose node id another parked step shares
+    /// gets a run-qualified selector; parked questions order by `since`.
+    #[test]
+    fn parked_questions_exclude_interactions_and_disambiguate_selectors() {
+        use crate::types::WorkflowAttentionKind::{Permission, Question};
+        let mut tracker = WorkflowTracker::new();
+        for run in ["wf_a", "wf_b"] {
+            opened(&mut tracker, &workflow_id(run));
+        }
+        park(
+            &mut tracker,
+            "wf_a",
+            vec![
+                attention(Question, "wf_a", "ask", "s-a", "t2"),
+                attention(Question, "wf_a", "pick", "s-pick", "t0")
+                    .with_tool_call_id(crate::types::ToolCallId::new("tc-1")),
+                attention(Permission, "wf_a", "write", "s-write", "t0")
+                    .with_tool_call_id(crate::types::ToolCallId::new("tc-2"))
+                    .with_consent_round(1),
+            ],
+        );
+        park(
+            &mut tracker,
+            "wf_b",
+            vec![
+                attention(Question, "wf_b", "ask", "s-b", "t1"),
+                attention(Question, "wf_b", "review", "s-r", "t3"),
+            ],
+        );
+        let parked: Vec<(String, String)> = tracker
+            .step_questions()
+            .iter()
+            .map(|q| (q.session_id().as_str().to_owned(), q.selector().to_owned()))
+            .collect();
+        assert_eq!(
+            parked,
+            vec![
+                ("s-b".to_owned(), "wf_b/ask".to_owned()),
+                ("s-a".to_owned(), "wf_a/ask".to_owned()),
+                ("s-r".to_owned(), "review".to_owned()),
+            ]
+        );
+    }
+
+    /// cyril-9104 review M1: an answered park episode leaves the list at
+    /// once and is not raised again; KAS parking the step anew (a new
+    /// `since`) lists and raises it again.
+    #[test]
+    fn answered_episode_leaves_the_list_until_the_step_parks_again() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_m"));
+        park(
+            &mut tracker,
+            "wf_m",
+            vec![attention(Question, "wf_m", "ask", "s-m", "t0")],
+        );
+        assert_eq!(tracker.take_raised_questions().len(), 1);
+        tracker.mark_answered(&SessionId::new("s-m"));
+        assert!(tracker.step_questions().is_empty(), "answered");
+        park(
+            &mut tracker,
+            "wf_m",
+            vec![attention(Question, "wf_m", "ask", "s-m", "t0")],
+        );
+        assert!(
+            tracker.take_raised_questions().is_empty(),
+            "the same episode repeated is still answered"
+        );
+        park(
+            &mut tracker,
+            "wf_m",
+            vec![attention(Question, "wf_m", "ask", "s-m", "t1")],
+        );
+        assert_eq!(
+            tracker.take_raised_questions().len(),
+            1,
+            "a new park episode"
+        );
+        assert_eq!(tracker.step_questions().len(), 1);
+    }
+
+    /// cyril-9104 review (1): an answer whose prompt failed never reached
+    /// the step, so the episode `/answer` closed on dispatch reopens — the
+    /// step is listed (and answerable) again without being re-raised.
+    #[test]
+    fn failed_answer_reopens_the_episode() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_f"));
+        park(
+            &mut tracker,
+            "wf_f",
+            vec![
+                attention(Question, "wf_f", "ask", "s-f", "t0"),
+                attention(Question, "wf_f", "other", "s-o", "t0"),
+            ],
+        );
+        assert_eq!(tracker.take_raised_questions().len(), 2);
+        tracker.mark_answered(&SessionId::new("s-f"));
+        tracker.mark_answered(&SessionId::new("s-o"));
+        assert!(tracker.step_questions().is_empty());
+        tracker.reopen_answered(&SessionId::new("s-f"));
+        let parked: Vec<String> = tracker
+            .step_questions()
+            .iter()
+            .map(|q| q.session_id().as_str().to_owned())
+            .collect();
+        assert_eq!(parked, ["s-f"], "only the failed answer's step reopens");
+        assert!(
+            tracker.take_raised_questions().is_empty(),
+            "already shown once"
+        );
+    }
+
+    /// cyril-9104 review (3): a node id shared by parked steps of two runs —
+    /// nested, so its full path differs from `<wf>/<node>` — is selected by
+    /// `<wf>/<node>`, the middle tier; a node id shared within one run falls
+    /// through to the full path.
+    #[test]
+    fn nested_shared_node_ids_get_the_run_qualified_tier() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let nested = |run: &str, branch: &str, session: &str| {
+            let id = workflow_id(run);
+            WorkflowAttention::new(
+                Question,
+                "t0".to_owned(),
+                node_id("ask"),
+                node_path(&id, &[run, branch, "ask"]),
+                SessionId::new(session),
+            )
+        };
+        let mut tracker = WorkflowTracker::new();
+        for run in ["wf_a", "wf_b", "wf_c"] {
+            opened(&mut tracker, &workflow_id(run));
+        }
+        park(&mut tracker, "wf_a", vec![nested("wf_a", "seq", "s-a")]);
+        park(&mut tracker, "wf_b", vec![nested("wf_b", "seq", "s-b")]);
+        park(
+            &mut tracker,
+            "wf_c",
+            vec![
+                nested("wf_c", "left", "s-l"),
+                nested("wf_c", "right", "s-r"),
+            ],
+        );
+        let mut selectors: Vec<(String, String)> = tracker
+            .step_questions()
+            .iter()
+            .map(|q| (q.session_id().as_str().to_owned(), q.selector().to_owned()))
+            .collect();
+        selectors.sort();
+        assert_eq!(
+            selectors,
+            [
+                ("s-a".to_owned(), "wf_a/ask".to_owned()),
+                ("s-b".to_owned(), "wf_b/ask".to_owned()),
+                ("s-l".to_owned(), "wf_c/left/ask".to_owned()),
+                ("s-r".to_owned(), "wf_c/right/ask".to_owned()),
+            ]
+        );
+    }
+
+    /// cyril-9104 review (2): KAS always sends top-level `attention: []` on
+    /// `run_complete` but OMITS `finalState.attention` when empty — no warn
+    /// for that; a real disagreement still warns.
+    #[rstest::rstest]
+    #[case::empty_vs_omitted(Some(Vec::new()), false)]
+    #[case::both_omitted(None, false)]
+    #[case::disagreement(Some(vec!["ask"]), true)]
+    fn completion_attention_disagreement_warns_only_for_real(
+        #[case] top_level: Option<Vec<&str>>,
+        #[case] warns: bool,
+    ) {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        opened(&mut tracker, &workflow_id("wf_w"));
+        let WorkflowEvent::RunCompleted(completion) =
+            parented_completion("wf_w", WorkflowRunStatus::Completed, "w", "parent", None)
+        else {
+            panic!("a completion");
+        };
+        let completion = match top_level {
+            Some(nodes) => completion.with_attention(
+                nodes
+                    .into_iter()
+                    .map(|node| attention(Question, "wf_w", node, "s-w", "t0"))
+                    .collect(),
+            ),
+            None => completion,
+        };
+        let (result, logs) = with_captured_logs(tracing::Level::WARN, || {
+            tracker.apply_event(WorkflowEvent::RunCompleted(completion))
+        });
+        assert!(result.is_ok());
+        assert_eq!(
+            logs.contains("run_complete attention differs from its finalState"),
+            warns,
+            "{logs}"
+        );
+    }
+
+    /// cyril-9104 review L3: a resume `node_start` without `sessionId` still
+    /// clears the step's old question note (resolved through the node).
+    #[test]
+    fn sessionless_restart_clears_the_question_note() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        let id = workflow_id("wf_n");
+        opened(&mut tracker, &id);
+        apply_ok(
+            &mut tracker,
+            started(
+                &id,
+                "ask",
+                &["wf_n", "ask"],
+                WorkflowNodeStartDetails::new().with_session_id(SessionId::new("s-n")),
+            ),
+        );
+        tracker.record_message(
+            &WorkflowMessage::new(
+                SessionId::new("parent"),
+                "Old question?".to_owned(),
+                crate::types::WorkflowMessageSeverity::Warning,
+                WorkflowMessageSender::Step,
+            )
+            .with_caller(SessionId::new("s-n")),
+        );
+        apply_ok(
+            &mut tracker,
+            started(
+                &id,
+                "ask",
+                &["wf_n", "ask"],
+                WorkflowNodeStartDetails::new(),
+            ),
+        );
+        park(
+            &mut tracker,
+            "wf_n",
+            vec![attention(Question, "wf_n", "ask", "s-n", "t1")],
+        );
+        let parked = tracker.step_questions();
+        assert_eq!(parked.len(), 1);
+        assert_eq!(parked[0].question(), None, "the stale note is gone");
+    }
+
+    /// cyril-9104 C3: a terminal run has no parked steps — even if its last
+    /// list still named one — and a later straggler's list never edits it.
+    #[test]
+    fn terminal_runs_have_no_parked_questions() {
+        use crate::types::WorkflowAttentionKind::Question;
+        let mut tracker = WorkflowTracker::new();
+        let id = workflow_id("wf_t");
+        opened(&mut tracker, &id);
+        park(
+            &mut tracker,
+            "wf_t",
+            vec![attention(Question, "wf_t", "ask", "s-t", "t0")],
+        );
+        assert_eq!(tracker.step_questions().len(), 1);
+        apply_ok(
+            &mut tracker,
+            parented_completion("wf_t", WorkflowRunStatus::Aborted, "x", "parent", None),
+        );
+        assert!(tracker.step_questions().is_empty());
+        assert!(!apply_ok(
+            &mut tracker,
+            WorkflowEvent::Paused(
+                WorkflowPaused::new(id, "late".to_owned())
+                    .with_attention(vec![attention(Question, "wf_t", "ask", "s-t", "t9")])
+            )
+        ));
+        assert!(tracker.step_questions().is_empty());
+        assert!(tracker.take_raised_questions().is_empty());
     }
 }

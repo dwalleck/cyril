@@ -1,0 +1,14 @@
+⠧ sess_423b0ca2-2446-4ffc-8f87-39dc14e7ce56 · vibe · auto · 1s
+Connecting to agent...
+Session created: sess_423b0ca2-2446-4ffc-8f87-39dc14e7ce56
+Launched park — run wf_a1a0acaa52867c4d. Lifecycle events stream as it executes; /workflow status shows what is known.
+⚙ workflow "park" · step "ask" is waiting for your answer:
+Which colour do you prefer, red or blue?
+↳ /answer @ask <your answer>
+⠧ Thinking... 1s
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                         │
+│                                                                                                                                          │
+│                                                                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+Context: 1% · Context Files 0%  Session Files 0%  Tools 1%  Prompts 0%  Responses 0%

@@ -397,6 +397,21 @@ pub enum Notification {
     /// rides inside `Fetched`'s own `Box<WorkflowSnapshot>`), so a box here
     /// would be indirection without a size win — see the fence below.
     WorkflowCommand(WorkflowCommandOutcome),
+
+    /// A workflow `send_message` between a step and its run's parent, relayed
+    /// by KAS `_kiro/session/notify` (cyril-9104). Global: the App hands it to
+    /// the `WorkflowTracker` once (a step's question, the parent's answer) and
+    /// never forwards it to `SessionController` or `UiState`. Boxed like
+    /// [`Notification::Workflow`].
+    WorkflowMessage(Box<crate::types::WorkflowMessage>),
+    /// cyril-9104 review: the `session/prompt` carrying the user's answer to
+    /// a parked workflow step failed. Names the step session so the App can
+    /// reopen the park episode `/answer` closed on dispatch (the step is
+    /// still waiting), then renders like a `BridgeError`.
+    WorkflowStepAnswerFailed {
+        session_id: SessionId,
+        message: String,
+    },
     UsageAccountUpdated {
         account: UsageAccount,
         fetched_at_ms: Option<u64>,
@@ -818,6 +833,17 @@ pub enum BridgeCommand {
         enabled: bool,
         /// Workspace roots for the follow-up listing that reports the result.
         workspace_paths: Vec<std::path::PathBuf>,
+    },
+    /// Answer a workflow step parked on a question (cyril-9104): the user's
+    /// text as `session/prompt` to the step session, which resumes the step
+    /// and its run. Deliberately outside cyril's own turn mediation — the
+    /// step's turn is not the main session's, so the main session stays free
+    /// and its busy guard untouched. A failed prompt answers
+    /// `Notification::WorkflowStepAnswerFailed` naming the step session;
+    /// success is the run's own lifecycle frames.
+    AnswerWorkflowStep {
+        session_id: SessionId,
+        answer: String,
     },
     Shutdown,
 }

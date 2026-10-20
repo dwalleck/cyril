@@ -1,0 +1,30 @@
+cyril-9104 slice 1 red-first receipt (converter), 2026-10-18.
+
+A. attention — state: domain types + tests added; the converter does not yet read `attention`.
+   Command: cargo nextest run -p cyril-core --features kas -E 'test(attention)'
+        FAIL  unreadable_attention_is_skipped_not_fatal::case_1_not_an_array
+        FAIL  unreadable_attention_is_skipped_not_fatal::case_2_null
+        FAIL  unreadable_attention_is_skipped_not_fatal::case_3_entry_missing_session
+        FAIL  unreadable_attention_is_skipped_not_fatal::case_4_unknown_kind
+        FAIL  unreadable_attention_is_skipped_not_fatal::case_5_foreign_path
+        FAIL  unreadable_attention_is_skipped_not_fatal::case_6_one_bad_one_good
+        FAIL  absent_attention_is_none_and_empty_is_empty
+        FAIL  attention_read_on_every_event_of_live_captures::case_1_gateoff_park
+        FAIL  attention_read_on_every_event_of_live_captures::case_2_gateon_send_message
+        FAIL  attention_read_on_every_event_of_live_captures::case_3_permission_waits
+        FAIL  state_reply_carries_attention
+     Summary 11 tests run: 0 passed, 11 failed
+   After the converter change: 10 passed, 1 failed (case_3_permission_waits: that capture's
+   lifecycle events carry EMPTY lists; its permission entries live in `_kiro/workflow/inspect`
+   replies). The test was corrected to also read inspect replies' `state.attention`; then
+   11 passed.
+
+B. `_kiro/session/notify` — state: `convert/kas/notify.rs` + tests written; the KAS engine does
+   not yet dispatch the method.
+   Command: cargo nextest run -p cyril-core --features kas
+            -E 'test(kas_converts_workflow_message_relay) | test(/convert::kas::notify/)'
+        FAIL  protocol::engine::tests::kas_converts_workflow_message_relay
+        PASS  (the 9 adapter-level notify tests)
+     Summary 10 tests run: 9 passed, 1 failed
+   After wiring `convert::kas::notify::to_notification` into `KasEngine::convert_ext_notification`:
+   the whole cyril-core suite passed (1438 passed).

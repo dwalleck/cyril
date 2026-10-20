@@ -361,6 +361,10 @@ impl Engine for KasEngine {
                 if let Some(powers) = convert::kas::powers::to_notification(method, params)? {
                     return Ok(Some(powers));
                 }
+                // cyril-9104: a workflow `send_message` relayed to the client.
+                if let Some(message) = convert::kas::notify::to_notification(method, params)? {
+                    return Ok(Some(message));
+                }
                 // Shared V2 conversion cannot classify supported KAS commands.
                 // Never let its bridge-only command list reach the registry.
                 Ok(convert::kiro::to_ext_notification(method, params)?
@@ -866,6 +870,33 @@ mod tests {
             empty,
             Ok(Some(crate::types::Notification::PowersChanged { ref powers })) if powers.is_empty()
         ));
+    }
+
+    /// cyril-9104: the KAS engine converts the workflow message relay; v2
+    /// has no workflow surface and leaves it alone.
+    #[cfg(feature = "kas")]
+    #[test]
+    fn kas_converts_workflow_message_relay() {
+        let params = json!({
+            "sessionId": "sess_parent",
+            "callerSessionId": "sess_step",
+            "message": "Which file?",
+            "severity": "warning",
+            "sender": "step",
+            "workflowId": "wf_1",
+            "nodeId": "ask",
+            "agentName": "wf-coder"
+        });
+        let kas = KasEngine::default().convert_ext_notification("kiro/session/notify", &params);
+        match kas {
+            Ok(Some(crate::types::Notification::WorkflowMessage(message))) => {
+                assert!(message.is_step_question());
+                assert_eq!(message.recipient().as_str(), "sess_parent");
+            }
+            other => panic!("KAS must convert the message relay, got {other:?}"),
+        }
+        let v2 = V2Engine.convert_ext_notification("kiro/session/notify", &params);
+        assert!(matches!(v2, Ok(None)), "v2 stays inert, got {v2:?}");
     }
 
     #[cfg(feature = "kas")]

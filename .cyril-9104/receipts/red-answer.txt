@@ -1,0 +1,36 @@
+cyril-9104 slice 4 red receipts (answering), 2026-10-18.
+
+A. Bridge (C7) — state: tests written, `answer_workflow_step` stubbed to return before sending.
+   Command: cargo nextest run -p cyril-core --features kas --no-fail-fast -E 'test(/step_answer/)'
+        FAIL  step_answer::step_answer_prompts_the_step_session_outside_the_main_turn
+        FAIL  step_answer::failed_step_answer_is_a_bridge_error   (5 s: no BridgeError ever arrived)
+     Summary 2 tests run: 0 passed, 2 failed
+   Restored handler: 2 passed. C5 (default-features lane) gains the AnswerWorkflowStep quiet
+   cell: `cargo nextest run -p cyril-core --no-default-features -E 'test(c5_every_bridge_command)'`
+   → 1 passed.
+
+B. `/answer` (C6) — state: tests written, `execute` stubbed to return the usage text.
+   Command: cargo nextest run -p cyril-core --features kas --no-fail-fast -E 'test(/commands::answer/)'
+        FAIL  a_resumed_step_is_refused
+        FAIL  bare_answer_lists_the_parked_steps
+        FAIL  refusals_send_nothing::{case_1_nothing_parked, case_2_unknown_step, case_4_blank}
+        FAIL  several_parked_steps_need_a_selector::{case_1..case_4}
+        FAIL  the_only_parked_step_is_answered_directly
+        PASS  refusals_send_nothing::case_3_empty_answer   (expects the usage text)
+     Summary 11 tests run: 1 passed, 10 failed
+   Implemented: 11 passed.
+
+C. /workflow view (C9).
+   `status_no_arg_names_parked_step_questions` before the change:
+      left:  "Known workflow runs (2):\n  wf_a  paused  park\n  wf_b  unknown  other\n(...)"
+      right: "...\n  wf_a  paused  park\n      waiting for your answer: step \"ask\" — /answer @ask <your answer>\n  wf_b ..."
+   `workflow_format::tests::fetched_marks_the_parked_step` FAIL before marking parked nodes.
+   After: both pass.
+
+D. End to end on the live gate-off capture (C8) — the test passed on first run (the command was
+   already implemented); sensitivity run with `/answer` left unregistered:
+        FAIL  app::tests::answer_command_prompts_the_parked_step_and_the_run_resumes
+              "the answer must prompt the step session, got SendPrompt { session_id:
+               SessionId(\"sess_259b943b-…\"), prompt: … [\"/answer FINISHED\"] }"
+   i.e. without the command the text would go to the MAIN session as a prompt.
+   Registration restored: 1 passed.
