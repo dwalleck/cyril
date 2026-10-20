@@ -1,0 +1,23 @@
+## Separate bounded review: Zj parent refresh
+
+**Findings: none.**
+
+**Reviewed head:** `7972f884fa35de6a0cffa8cb7e78349af4b7d3f3`  
+**Compared against first parent:** `7a19fc742f109411c421af296addc5fe4db4d42b`  
+**Merged parent:** `aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77`
+
+This is a new review of the actual Zj merge delta, not a relabeling of the earlier verdict.
+
+### Evidence
+- **Cache/first-Diff coexistence:** `crates/cyril-ui/src/traits.rs:377-430` still derives and invalidates the cache solely from the selected first-Diff content. `output_text()` reads raw output independently; adding the alias does not change cache inputs, selection, invalidation, or clone behavior.
+- **Consuming dispatch checked:** `widgets/chat.rs:382-430` uses the same cached preview for summary and diff body, then calls the separate output renderer. At `438-510`, Failed calls use `error_message()`, Completed Write calls retain their existing output exclusion, and Completed Other calls—including the captured kind-less completion—reach the generic output preview.
+- **Error precedence preserved:** `traits.rs:576-603` remains Failed-only, with raw strings and explicit `error`/`message` before output extraction and nonblank content fallback. The approved string `output` alias remains last among direct text fields.
+- **Owner preservation:** the first-parent diff is empty for six other Zj owner files: `Cargo.toml`, `benches/conversation_render.rs`, `src/lib.rs`, `src/tool_diff.rs`, `widgets/approval.rs`, and `widgets/chat.rs`. Within `traits.rs`, production changes are confined to the alias and its documentation; the remaining additions are the two controls.
+- **Manual README resolution preserves both intentions:** `README.md:213-229` retains Zj’s first-Diff/cache/pending-approval paragraphs and the inherited successful-KAS-output paragraph. The tracker delta touches only the `cyril-1v25` record.
+- **Captured regression remains self-contained:** the completion fixture and regression match the merged parent exactly. The regression retains raw-field assertions, omitted-kind coverage, and the exact output-body assertion without reading the original capture.
+
+**Overall correctness: correct.**
+
+**Explanation:** No provable patch-introduced semantic conflict was found between Zj’s retained first-Diff cache and the inherited output alias/error fallback behavior. The manually resolved README preserves both contracts. This verdict covers static source integration only; no checks, consumer runs, qualification, edits, or private-artifact inspection were performed.
+
+**Confidence: 0.97.**
