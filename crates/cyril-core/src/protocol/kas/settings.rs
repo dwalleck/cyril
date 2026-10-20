@@ -1,5 +1,5 @@
 //! KAS settings handshake (cyril-nhzw): marshal the user's kiro-cli settings
-//! (`~/.kiro/settings/cli.json`) into an `AgentSettings` object attached as
+//! (`<validated-kiro-home>/settings/cli.json`) into an `AgentSettings` object attached as
 //! `clientCapabilities._meta.kiro.settings` at `initialize`. Without it, KAS runs
 //! with its bare fallback flags (no toolSearch, no thinking, `invoke_sub_agent`
 //! instead of `orchestrate_subagent`, …).
@@ -49,28 +49,19 @@ fn read_settings_at(path: &std::path::Path) -> Map<String, Value> {
     }
 }
 
-/// The kiro-cli config base directory, mirroring the CLI's own resolution
-/// (`R4e()` in `kiro-tui-2.8.1.js`): `$KIRO_HOME` wins when set and non-empty
-/// (used verbatim, NOT joined with `.kiro`), otherwise `$HOME/.kiro`. Reading a
-/// different path would silently fall back to empty settings for users who set
-/// `$KIRO_HOME` — exactly the bare-fallback-flags bug this handshake fixes.
-fn kiro_home_dir(environment: &crate::types::SpawnEnvironment) -> Option<std::path::PathBuf> {
-    use std::ffi::OsStr;
-    match environment.effective_var(OsStr::new("KIRO_HOME")) {
-        Some(path) if !path.is_empty() => Some(path.into()),
-        _ => environment
-            .effective_var(OsStr::new("HOME"))
-            .or_else(|| environment.effective_var(OsStr::new("USERPROFILE")))
-            .map(|home| std::path::PathBuf::from(home).join(".kiro")),
-    }
-}
-
 /// Read the global kiro-cli settings (`<kiro-home>/settings/cli.json`, where
-/// `<kiro-home>` follows [`kiro_home_dir`]). Missing home or file → empty map (see
+/// `<kiro-home>` follows [`crate::kiro_agent_config::resolve_kiro_home`]).
+/// Missing home or file → empty map (see
 /// [`read_settings_at`]). Workspace-scoped overlay is out of scope for v1
 /// (tracked: cyril-sa39).
 fn read_cli_settings(environment: &crate::types::SpawnEnvironment) -> Map<String, Value> {
-    match kiro_home_dir(environment) {
+    use std::ffi::OsStr;
+    let home = environment
+        .effective_var(OsStr::new("HOME"))
+        .or_else(|| environment.effective_var(OsStr::new("USERPROFILE")))
+        .map(std::path::PathBuf::from);
+    let value = environment.effective_var(OsStr::new("KIRO_HOME"));
+    match crate::kiro_agent_config::resolve_kiro_home(home.as_deref(), value.as_deref()) {
         Some(dir) => read_settings_at(&dir.join("settings/cli.json")),
         None => {
             tracing::debug!("selected environment has no Kiro settings home; using KAS defaults");
@@ -579,6 +570,63 @@ mod tests {
             gate_keys(settings),
             (Some(&on()), Some(&on())),
             "gate on from {variable}: {settings}"
+        );
+    }
+
+    #[rstest::rstest]
+    #[case::home_equal("HOME", "home")]
+    #[case::home_ancestor("HOME", "ancestor")]
+    #[case::userprofile_ancestor("USERPROFILE", "ancestor")]
+    #[case::trimmed_override("HOME", "trimmed")]
+    #[case::blank_override("HOME", "whitespace")]
+    fn initialize_workflow_gate_uses_validated_selected_profile(
+        #[case] home_variable: &str,
+        #[case] kind: &str,
+    ) {
+        use crate::protocol::engine::{KasEngine, client_capabilities};
+        use crate::types::SpawnEnvironment;
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("home");
+        let override_root = root.path().join("profile ü");
+        let value = match kind {
+            "home" => home.as_os_str().to_owned(),
+            "ancestor" => root.path().as_os_str().to_owned(),
+            "trimmed" => format!(" \t{} \u{2003}", override_root.display()).into(),
+            _ => " \t\u{2003} ".into(),
+        };
+        for (profile, enabled) in [
+            (home.join(".kiro"), kind != "trimmed"),
+            (override_root, kind == "trimmed"),
+            (home.clone(), false),
+            (root.path().to_path_buf(), false),
+        ] {
+            let settings = profile.join("settings");
+            std::fs::create_dir_all(&settings).unwrap();
+            std::fs::write(
+                settings.join("cli.json"),
+                serde_json::json!({"chat.enableWorkflows": enabled}).to_string(),
+            )
+            .unwrap();
+        }
+        let environment = SpawnEnvironment::Replace(std::collections::BTreeMap::from([
+            (home_variable.into(), home.into_os_string()),
+            ("KIRO_HOME".into(), value),
+        ]));
+        let engine = KasEngine {
+            settings: settings_extra_value(&environment),
+            ..Default::default()
+        };
+        let caps = client_capabilities(&engine);
+        let settings = caps
+            .meta
+            .as_ref()
+            .and_then(|meta| meta.get("kiro"))
+            .and_then(|kiro| kiro.get("settings"))
+            .expect("_meta.kiro.settings");
+        assert_eq!(
+            gate_keys(settings),
+            (Some(&on()), Some(&on())),
+            "{kind} must select the validated profile, not an invalid-root cli.json: {settings}"
         );
     }
 }
