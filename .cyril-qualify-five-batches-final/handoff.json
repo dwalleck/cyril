@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "status": "SOURCE_ASSEMBLED_NOT_QUALIFIED",
+  "integration_owner": "AssembleFiveBatchIntegration",
+  "worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
+  "branch": "ci/qualify-five-batches-final-20261020",
+  "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+  "source_revision_scope": "Pre-documentation eight-issue source assembly; source_commit and source_tree do not include this handoff file or later integration additions.",
+  "source_commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
+  "source_tree": "34f54951e9784b124a995b29b64787f9d9fc17bc",
+  "handoff_path": ".cyril-qualify-five-batches-final/handoff.json",
+  "merges": [
+    {
+      "commit": "54e85593720fe2189fafc214bfdaa0a0caa48648",
+      "parents": ["8e5c325ebb5dac3a4ad89f71838fd198cc177543", "855b73dbba4509a5b04785285f1f548d1a006079"],
+      "source_pr": 186,
+      "includes_prs": [185],
+      "issues": ["cyril-d7ve", "cyril-0ssb"],
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "42c468971c804bf404482744966f2cad01fb918e",
+      "parents": ["54e85593720fe2189fafc214bfdaa0a0caa48648", "bc6f48a21016320cc6491356f880f37463cf8c6e"],
+      "source_pr": 191,
+      "includes_prs": [188, 190],
+      "issues": ["cyril-un4p", "cyril-ej7y", "cyril-xavt"],
+      "auto_merged_paths": [".rivets/issues.jsonl", "README.md", "crates/cyril-core/src/protocol/domain_mediator/mod.rs"],
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    },
+    {
+      "commit": "a9c67bb29569b09ae140de83ef4bf7cba8fbb2a4",
+      "parents": ["42c468971c804bf404482744966f2cad01fb918e", "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77"],
+      "source_pr_pending_refresh": 189,
+      "included_source_heads": {
+        "pr183": "6f866bf3cd3590553c1abdefff2ccc108edca94d",
+        "pr184": "5e523ebf10978cc990746934732e4256596244ff"
+      },
+      "issues": ["cyril-1v25", "cyril-fiv1", "cyril-x5xi"],
+      "auto_merged_paths": [".rivets/issues.jsonl", "README.md", "crates/cyril-ui/src/state.rs", "crates/cyril-ui/src/traits.rs"],
+      "textual_conflicts": [],
+      "manual_integration_edits": []
+    }
+  ],
+  "retained_semantics": [
+    "Shared validated Kiro profile roots remain separate from bundle discovery roots and native credential locations.",
+    "Permission ledger merge precedes KAS shell normalization; V2 trust and original permission-response semantics remain unchanged.",
+    "PreviewBody stays Shell-first; ToolCall retains Option<Box<ShellCommand>> and raw-input-presence merge semantics.",
+    "Successful rawOutput.output remains a string-only LAST alias after the existing supported output formats; no formatted message/object coercion fallback.",
+    "Content fallback remains Failed-only; explicit raw-output errors keep precedence.",
+    "Update-first main-history tool rows retain first-observed chronology, retained indices and session isolation.",
+    "Theme/HighlightStyle/MarkdownStyle identities and renderer-specific concrete input closures are retained without cache or source-fence policy expansion.",
+    "All eight issue records and their notes remain in the auto-merged JSONL; inherited issue closure/receipt statements are not claims of assembled qualification.",
+    "README roots, credentials, validation-failure, successful-output, tool-history, theme, visible-approval, shell-preview and workflow-pagination policies are all retained."
+  ],
+  "static_inspection": {
+    "roots_approval_readme": "No integration defect found in assigned seam; mediator roots at 268-273 and permission path 663-733; README 101-167 and 213-337.",
+    "preview_results_state": "No integration defect found in assigned seam; traits.rs 327-340,431-465,493-577; tool_call.rs 90-101,146-170,194-215; state.rs 542-552,927-931,1273-1314,1819,2338-2372.",
+    "scope": "Read-only source comparisons and callsite inspection only; not an assembled code review or runtime qualification."
+  },
+  "future_integration_constraints": [
+    "Do not merge Zj/C6/MCP until Main supplies actual issue heads; none are included in this eight-issue assembly.",
+    "Retain shared profile-root resolution and independent credential locations when adding MCP consumers.",
+    "Preserve ledger merge -> KAS shell normalization -> consent/request construction, original permission response conversion, and display-only preview text.",
+    "C6/Zj consumers must preserve Shared TrackedToolCall preview_body/output_text/error_message and ToolCall merge-presence behavior; no imported source-fence expansion.",
+    "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
+  ],
+  "qualification_and_publication": {
+    "owner": "Main",
+    "build_test_lint_format_gate_smoke_runs_by_integrator": [],
+    "required": "Fresh final assembled qualification, applicable consumer/platform proof, and final assembled review before publication.",
+    "refreshed_fiv1_x5xi": "Local source-ready sources only; this assembly does not newly qualify or publish their refreshes.",
+    "no_push": true,
+    "no_force": true,
+    "no_github_merges": true,
+    "no_tracker_cli": true,
+    "primary_checkout_unmodified_by_integrator": true,
+    "existing_pr187_unmodified": true,
+    "integration_only_unshipped_source_edits": []
+  }
+}
