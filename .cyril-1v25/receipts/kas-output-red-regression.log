@@ -1,0 +1,73 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-memory)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 14.20s
+220233c41b9d774d0890b3343fab6cf45213d310a1cc61f6e3909fe486803764  /tmp/cyril-1v25-before-output-extension-20261020
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 21.06s
+     Running tests/missing_tool_updates.rs (/home/dwalleck/repos/cyril/target/debug/deps/missing_tool_updates-63041eb119eb25dc)
+
+running 1 test
+
+thread 'kas_completed_output_capture_renders_exact_body_without_kind' (3594362) panicked at crates/cyril-ui/tests/missing_tool_updates.rs:163:5:
+assertion `left == right` failed: stdout must be an exact body line, not a header/command match
+✓ Run the exact sed/tr pipeline requested                                                                                                   
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+  left: (None, 0)
+ right: (Some("XAVT_BEGIN XAVT_END\n"), 1)
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test kas_completed_output_capture_renders_exact_body_without_kind ... FAILED
+
+failures:
+
+failures:
+    kas_completed_output_capture_renders_exact_body_without_kind
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-ui --test missing_tool_updates`

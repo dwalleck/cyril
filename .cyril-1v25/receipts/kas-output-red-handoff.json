@@ -1,0 +1,38 @@
+{
+  "stage": "immutable first-phase test-only RED handoff",
+  "source_pin": "a5d2c4b5d5db88889ba5bc5e3f560375715977cd",
+  "branch": "fix/cyril-1v25",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25",
+  "production_output_text": "HELD: unchanged; explicit Main RED GO required before editing",
+  "execution": "No builds, tests, lint, formatter, smoke, commit, push, or tracker mutations by this worker",
+  "canonical_source": "/tmp/cyril-xavt-live.ZiHasL/evidence/completed-tool-call-nonsecret.json",
+  "canonical_source_sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+  "fixture": "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+  "fixture_sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+  "test_only_patch": ".cyril-1v25/receipts/kas-output-test-only.patch",
+  "test_only_patch_sha256": "84f7af326722e14ea9d7a00c948e410b6c6790a6bb9fee763a9f1fa1b13dd635",
+  "trace_envelope": ".cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+  "trace_envelope_sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+  "snapshot_files": {
+    "crates/cyril-ui/tests/missing_tool_updates.rs": {
+      "base_sha256": "aaad25f46f3160e74d7f851fcce3884667ed2b32c874042de02b3ec581f3f57e",
+      "test_only_sha256": "ea894d2d3f4c7e8830719db68cc434f5cbbd450f4007e9e76abd5e2dd44280ea"
+    },
+    "crates/cyril-ui/src/traits.rs": {
+      "base_sha256": "1ed00867007c9f3b96588731e116c71e4cf974119b2d79ae34bd45a1023ea53e",
+      "test_only_sha256": "d9ebbaba1b8fc51b1a8d5eaaa3422f84cf4c2df46e4bbfad7781c238ad840366"
+    }
+  },
+  "integration_regression": "kas_completed_output_capture_renders_exact_body_without_kind",
+  "projection_controls": [
+    "tracked_tool_call_output_field_preserves_existing_precedence",
+    "tracked_tool_call_output_field_accepts_only_strings_without_message_fallback"
+  ],
+  "expected_red_observation": "The retained row is completed and raw output intact, but output_text is None and exact stdout body-line count is zero; Main must observe actual RED, not infer it.",
+  "main_red_commands": [
+    "env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui --test missing_tool_updates kas_completed_output_capture_renders_exact_body_without_kind -- --exact --nocapture",
+    "env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui tracked_tool_call_output_field -- --nocapture"
+  ],
+  "main_consumer_command": "uv run --script .cyril-1v25/smoke.py --binary \"$BIN\" --engine kas --capture .cyril-1v25/receipts/kas-completed-output-trace.jsonl --preserve-session-id --expect \"\u2713 Run the exact sed/tr pipeline requested\" --expect \"| XAVT_BEGIN XAVT_END\" --output \"$FRESH_OUTPUT\"",
+  "consumer_safety": "Owned controlled ACP peer; captured parsed frame unchanged including sessionId; rawInput shell command inert; isolated HOME/PATH/cwd; fake token helper; no real account and no permission request/grant."
+}

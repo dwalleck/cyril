@@ -12,7 +12,7 @@ use unicode_width::UnicodeWidthStr;
 use crate::cache::HashCache;
 use crate::highlight;
 use crate::text;
-use crate::theme::Theme;
+use crate::theme::{MarkdownStyle, Theme};
 
 const MAX_BORDER_WIDTH: usize = 120;
 
@@ -22,18 +22,18 @@ static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
 /// Convert a Markdown string into styled ratatui lines.
 ///
 /// `width` controls table sizing, code padding, rules, and borders. Results are
-/// cached by content, width, syntax component, and all 29 semantic colors.
+/// cached by content, width, and the complete direct/transitive Markdown style.
 pub fn render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> {
-    render_with_cache(&MARKDOWN_CACHE, markdown, width, theme)
+    render_with_cache(&MARKDOWN_CACHE, markdown, width, MarkdownStyle::from(theme))
 }
 
 fn render_with_cache(
     cache: &Mutex<HashCache<Vec<Line<'static>>>>,
     markdown: &str,
     width: usize,
-    theme: &Theme,
+    style: MarkdownStyle,
 ) -> Vec<Line<'static>> {
-    let hash = markdown_cache_key(markdown, width, theme);
+    let hash = markdown_cache_key(markdown, width, style);
 
     if let Ok(cache) = cache.lock()
         && let Some(cached) = cache.get(hash)
@@ -41,7 +41,7 @@ fn render_with_cache(
         return cached.clone();
     }
 
-    let result = do_render(markdown, width, theme);
+    let result = do_render(markdown, width, style);
 
     if let Ok(mut cache) = cache.lock() {
         cache.insert(hash, result.clone());
@@ -50,48 +50,15 @@ fn render_with_cache(
     result
 }
 
-fn markdown_cache_key(markdown: &str, width: usize, theme: &Theme) -> u64 {
+fn markdown_cache_key(markdown: &str, width: usize, style: MarkdownStyle) -> u64 {
     let mut hasher = DefaultHasher::new();
     markdown.hash(&mut hasher);
     width.hash(&mut hasher);
-    theme.syntax.map(|syntax| syntax.name()).hash(&mut hasher);
-    for color in [
-        theme.canvas,
-        theme.chrome,
-        theme.code,
-        theme.selection,
-        theme.text,
-        theme.muted,
-        theme.border,
-        theme.accent,
-        theme.accent_alt,
-        theme.user,
-        theme.agent,
-        theme.system,
-        theme.info,
-        theme.success,
-        theme.warning,
-        theme.danger,
-        theme.diff_add,
-        theme.diff_delete,
-        theme.diff_context,
-        theme.emphasis,
-        theme.accent_tertiary,
-        theme.accent_quaternary,
-        theme.accent_quinary,
-        theme.subdued,
-        theme.subdued_positive,
-        theme.subdued_negative,
-        theme.soft_accent,
-        theme.positive_accent,
-        theme.inset_background,
-    ] {
-        color.hash(&mut hasher);
-    }
+    style.hash(&mut hasher);
     hasher.finish()
 }
 
-fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> {
+fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'static>> {
     let options = Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES;
     let parser = Parser::new_ext(markdown, options);
 
@@ -119,11 +86,11 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         flush_line(&mut lines, &mut current_spans);
                         let heading_style = match level as u8 {
                             1 => base
-                                .fg(theme.accent_quinary)
+                                .fg(style.accent_quinary)
                                 .add_modifier(Modifier::BOLD | Modifier::UNDERLINED),
-                            2 => base.fg(theme.accent_quinary).add_modifier(Modifier::BOLD),
-                            3 => base.fg(theme.text).add_modifier(Modifier::BOLD),
-                            _ => base.fg(theme.text).add_modifier(Modifier::BOLD),
+                            2 => base.fg(style.accent_quinary).add_modifier(Modifier::BOLD),
+                            3 => base.fg(style.highlight.text).add_modifier(Modifier::BOLD),
+                            _ => base.fg(style.highlight.text).add_modifier(Modifier::BOLD),
                         };
                         style_stack.push(heading_style);
                     }
@@ -146,8 +113,8 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                             _ => None,
                         };
                         flush_line(&mut lines, &mut current_spans);
-                        let border_style = Style::default().fg(theme.subdued);
-                        let bg = theme.code;
+                        let border_style = Style::default().fg(style.subdued);
+                        let bg = style.code;
                         let mut header_spans: Vec<Span<'static>> = Vec::new();
                         // Border fills to available width (capped at 120).
                         let border_width = width.min(MAX_BORDER_WIDTH);
@@ -161,7 +128,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                                 header_spans.push(Span::styled(
                                     display_lang.clone(),
                                     Style::default()
-                                        .fg(theme.accent_quinary)
+                                        .fg(style.accent_quinary)
                                         .add_modifier(Modifier::BOLD),
                                 ));
                                 let lang_cols = display_lang.width();
@@ -181,7 +148,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         let mut header_line = Line::from(header_spans);
                         header_line.style = Style::default().bg(bg);
                         lines.push(header_line);
-                        style_stack.push(Style::default().fg(theme.text).bg(theme.code));
+                        style_stack.push(Style::default().fg(style.highlight.text).bg(style.code));
                     }
                     Tag::List(_) => {
                         list_depth += 1;
@@ -191,7 +158,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         let indent = "  ".repeat(list_depth.saturating_sub(1));
                         current_spans.push(Span::styled(
                             format!("{indent}• "),
-                            Style::default().fg(theme.accent_quinary),
+                            Style::default().fg(style.accent_quinary),
                         ));
                     }
                     Tag::Table(_) => {
@@ -210,11 +177,11 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                     }
                     Tag::BlockQuote(_) => {
                         in_blockquote = true;
-                        style_stack.push(base.fg(theme.subdued).add_modifier(Modifier::ITALIC));
+                        style_stack.push(base.fg(style.subdued).add_modifier(Modifier::ITALIC));
                     }
                     Tag::Link { .. } => {
                         style_stack.push(
-                            base.fg(theme.accent_tertiary)
+                            base.fg(style.accent_tertiary)
                                 .add_modifier(Modifier::UNDERLINED),
                         );
                     }
@@ -234,17 +201,17 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                     style_stack.pop();
 
                     let code = code_block_content.trim_end_matches('\n');
-                    let highlighted = highlight::highlight_block_with_theme(
+                    let highlighted = highlight::highlight_block_with_style(
                         code,
                         code_block_lang.as_deref(),
-                        theme,
+                        style.highlight,
                     );
-                    let bg = theme.code;
+                    let bg = style.code;
 
                     for spans in highlighted {
                         let mut line_spans = vec![Span::styled(
                             "│ ".to_string(),
-                            Style::default().fg(theme.subdued),
+                            Style::default().fg(style.subdued),
                         )];
                         for (style, text) in spans {
                             line_spans.push(Span::styled(text, style));
@@ -257,9 +224,9 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                     let border_width = width.min(MAX_BORDER_WIDTH);
                     let mut footer_line = Line::from(Span::styled(
                         "╰".to_string() + &"─".repeat(border_width.saturating_sub(1)),
-                        Style::default().fg(theme.subdued),
+                        Style::default().fg(style.subdued),
                     ));
-                    footer_line.style = Style::default().bg(theme.code);
+                    footer_line.style = Style::default().bg(style.code);
                     lines.push(footer_line);
                 }
                 TagEnd::Paragraph => {
@@ -313,16 +280,16 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         let mut spans: Vec<Span<'static>> = Vec::new();
                         for (i, cell) in row.iter().enumerate() {
                             if i > 0 {
-                                spans.push(Span::styled(" │ ", Style::default().fg(theme.subdued)));
+                                spans.push(Span::styled(" │ ", Style::default().fg(style.subdued)));
                             }
                             let max_w = col_widths.get(i).copied().unwrap_or(0);
                             let padded = text::truncate_and_pad(cell, max_w);
                             let style = if *is_header {
                                 Style::default()
-                                    .fg(theme.accent_quinary)
+                                    .fg(style.accent_quinary)
                                     .add_modifier(Modifier::BOLD)
                             } else {
-                                Style::default().fg(theme.text)
+                                Style::default().fg(style.highlight.text)
                             };
                             spans.push(Span::styled(padded, style));
                         }
@@ -332,7 +299,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                                 col_widths.iter().sum::<usize>() + separator_space;
                             lines.push(Line::from(Span::styled(
                                 "─".repeat(sep_width),
-                                Style::default().fg(theme.subdued),
+                                Style::default().fg(style.subdued),
                             )));
                         }
                     }
@@ -361,7 +328,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                 _ => {}
             },
             Event::Text(text) => {
-                let style = current_style(&style_stack);
+                let text_style = current_style(&style_stack);
                 if in_table {
                     current_cell.push_str(&text);
                 } else if in_code_block {
@@ -374,12 +341,12 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                         }
                         if current_spans.is_empty() {
                             current_spans
-                                .push(Span::styled("│ ", Style::default().fg(theme.subdued)));
+                                .push(Span::styled("│ ", Style::default().fg(style.subdued)));
                         }
-                        current_spans.push(Span::styled(bq_line.to_string(), style));
+                        current_spans.push(Span::styled(bq_line.to_string(), text_style));
                     }
                 } else {
-                    current_spans.push(Span::styled(text.to_string(), style));
+                    current_spans.push(Span::styled(text.to_string(), text_style));
                 }
             }
             Event::Code(code) => {
@@ -388,11 +355,11 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                     current_cell.push_str(&code);
                 } else {
                     if in_blockquote && current_spans.is_empty() {
-                        current_spans.push(Span::styled("│ ", Style::default().fg(theme.subdued)));
+                        current_spans.push(Span::styled("│ ", Style::default().fg(style.subdued)));
                     }
                     current_spans.push(Span::styled(
                         code,
-                        current_style(&style_stack).fg(theme.emphasis),
+                        current_style(&style_stack).fg(style.emphasis),
                     ));
                 }
             }
@@ -407,7 +374,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
                 let rule_width = width.min(MAX_BORDER_WIDTH);
                 lines.push(Line::from(Span::styled(
                     "─".repeat(rule_width),
-                    Style::default().fg(theme.subdued),
+                    Style::default().fg(style.subdued),
                 )));
             }
             _ => {}
@@ -419,7 +386,7 @@ fn do_render(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> 
     // Pad code-block lines so the dark background fills the full terminal width.
     // Intentionally uses `width` (not MAX_BORDER_WIDTH) — borders are decorative
     // and capped, but the background fill should reach the terminal edge.
-    let bg = theme.code;
+    let bg = style.code;
     for line in &mut lines {
         if line.style.bg != Some(bg) {
             continue;
@@ -867,7 +834,11 @@ mod tests {
     fn markdown_cache_key_distinguishes_bundled_palettes() {
         const DOC: &str = "# heading\n\n```rust\nfn main() {}\n```\n";
         let key = |id: ThemeId, mode: ColorMode| {
-            markdown_cache_key(DOC, 80, &crate::theme::resolve(id, mode))
+            markdown_cache_key(
+                DOC,
+                80,
+                MarkdownStyle::from(&crate::theme::resolve(id, mode)),
+            )
         };
         for mode in [ColorMode::TrueColor, ColorMode::Ansi256, ColorMode::Ansi16] {
             let mut seen = std::collections::HashMap::new();
@@ -946,10 +917,10 @@ mod tests {
     #[test]
     fn local_cache_records_rendered_entry() {
         let cache = Mutex::new(HashCache::new(256));
-        let theme = cyril_dark();
+        let style = MarkdownStyle::from(&cyril_dark());
         let markdown = "# cached entry";
-        let rendered = render_with_cache(&cache, markdown, 80, &theme);
-        let key = markdown_cache_key(markdown, 80, &theme);
+        let rendered = render_with_cache(&cache, markdown, 80, style);
+        let key = markdown_cache_key(markdown, 80, style);
         assert_eq!(
             cache.lock().ok().and_then(|cache| cache.get(key).cloned()),
             Some(rendered)
@@ -960,18 +931,18 @@ mod tests {
     fn markdown_cache_eviction_matches_oldest_half_ledger() {
         let cache = Mutex::new(HashCache::new(256));
         let mut keys = Vec::with_capacity(257);
-        let base = crate::traits::test_support::marker_theme();
+        let base = MarkdownStyle::from(&crate::traits::test_support::marker_theme());
 
         for index in 0..256usize {
-            let mut theme = base;
-            theme.text = Color::Indexed(index as u8);
+            let mut style = base;
+            style.highlight.text = Color::Indexed(index as u8);
             let markdown = format!("# eviction-{index}");
-            render_with_cache(&cache, &markdown, 80, &theme);
-            keys.push(markdown_cache_key(&markdown, 80, &theme));
+            render_with_cache(&cache, &markdown, 80, style);
+            keys.push(markdown_cache_key(&markdown, 80, style));
         }
         let overflow = "# eviction-overflow";
-        render_with_cache(&cache, overflow, 80, &base);
-        keys.push(markdown_cache_key(overflow, 80, &base));
+        render_with_cache(&cache, overflow, 80, base);
+        keys.push(markdown_cache_key(overflow, 80, base));
         assert_eq!(
             keys.iter()
                 .copied()
@@ -993,12 +964,12 @@ mod tests {
         }
         drop(ledger);
 
-        let mut repeated_theme = base;
-        repeated_theme.text = Color::Indexed(200);
-        let repeated = render_with_cache(&cache, "# eviction-200", 80, &repeated_theme);
+        let mut repeated_style = base;
+        repeated_style.highlight.text = Color::Indexed(200);
+        let repeated = render_with_cache(&cache, "# eviction-200", 80, repeated_style);
         assert_eq!(
             repeated,
-            do_render("# eviction-200", 80, &repeated_theme),
+            do_render("# eviction-200", 80, repeated_style),
             "EVICTION repeat changed output"
         );
     }
@@ -1009,10 +980,11 @@ mod tests {
 
         let cache = Arc::new(Mutex::new(HashCache::new(256)));
         let barrier = Arc::new(Barrier::new(8));
-        let colored = cyril_dark();
-        let plain = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None);
-        let colored_expected = do_render("# concurrent", 80, &colored);
-        let plain_expected = do_render("# concurrent", 80, &plain);
+        let colored = MarkdownStyle::from(&cyril_dark());
+        let plain =
+            MarkdownStyle::from(&crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None));
+        let colored_expected = do_render("# concurrent", 80, colored);
+        let plain_expected = do_render("# concurrent", 80, plain);
         let mut workers = Vec::new();
 
         for worker in 0usize..8 {
@@ -1023,13 +995,13 @@ mod tests {
             workers.push(std::thread::spawn(move || {
                 barrier.wait();
                 for query in 0usize..100 {
-                    let (theme, expected) = if (worker + query).is_multiple_of(2) {
-                        (&colored, &colored_expected)
+                    let (style, expected) = if (worker + query).is_multiple_of(2) {
+                        (colored, &colored_expected)
                     } else {
-                        (&plain, &plain_expected)
+                        (plain, &plain_expected)
                     };
                     assert_eq!(
-                        render_with_cache(&cache, "# concurrent", 80, theme),
+                        render_with_cache(&cache, "# concurrent", 80, style),
                         *expected,
                         "CONCURRENT worker {worker} query {query}"
                     );
@@ -1060,73 +1032,234 @@ mod tests {
         }));
         assert!(cache.is_poisoned());
 
-        let theme = crate::traits::test_support::marker_theme();
-        let expected = do_render("# poison", 80, &theme);
-        let actual = render_with_cache(&cache, "# poison", 80, &theme);
+        let style = MarkdownStyle::from(&crate::traits::test_support::marker_theme());
+        let expected = do_render("# poison", 80, style);
+        let actual = render_with_cache(&cache, "# poison", 80, style);
         assert_eq!(actual, expected, "POISON uncached fallback drifted");
     }
 
     #[test]
     fn five_hundred_markdown_cache_hits_return_same_output() {
         let cache = Mutex::new(HashCache::new(256));
-        let theme = cyril_dark();
-        let expected = render_with_cache(&cache, "cached", 80, &theme);
+        let style = MarkdownStyle::from(&cyril_dark());
+        let expected = render_with_cache(&cache, "cached", 80, style);
         for _ in 0..500 {
             assert_eq!(
-                std::hint::black_box(render_with_cache(&cache, "cached", 80, &theme)),
+                std::hint::black_box(render_with_cache(&cache, "cached", 80, style)),
                 expected
             );
         }
     }
 
+    const CACHE_IDENTITY_DOC: &str = concat!(
+        "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6\n\n",
+        "- item\n\n> quote\n\n[link](https://example.com)\n\n",
+        "| A | B |\n|---|---|\n| x | y |\n\ninline `code`\n\n---\n\n",
+        "```rust\nfn cache_identity() -> u8 { 42 }\n```\n\n",
+        "```missing_language\nfallback_identity\n```",
+    );
+
+    fn foreground_for(lines: &[Line<'static>], content: &str) -> Option<Color> {
+        lines
+            .iter()
+            .flat_map(|line| &line.spans)
+            .find(|span| span.content == content)
+            .and_then(|span| span.style.fg)
+    }
+
+    fn isolated_markdown_outputs(
+        first: MarkdownStyle,
+        second: MarkdownStyle,
+    ) -> (Vec<Line<'static>>, Vec<Line<'static>>) {
+        let first_key = markdown_cache_key(CACHE_IDENTITY_DOC, 80, first);
+        let second_key = markdown_cache_key(CACHE_IDENTITY_DOC, 80, second);
+        assert_ne!(first_key, second_key, "relevant input reused a cache key");
+
+        let first_expected = do_render(CACHE_IDENTITY_DOC, 80, first);
+        let second_expected = do_render(CACHE_IDENTITY_DOC, 80, second);
+        assert_ne!(
+            first_expected, second_expected,
+            "style did not affect output"
+        );
+        assert_eq!(text(&first_expected), text(&second_expected));
+
+        for (first_style, first_output, second_style, second_output) in [
+            (first, &first_expected, second, &second_expected),
+            (second, &second_expected, first, &first_expected),
+        ] {
+            let cache = Mutex::new(HashCache::new(2));
+            assert_eq!(
+                render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style),
+                *first_output
+            );
+            assert_eq!(
+                render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, second_style),
+                *second_output
+            );
+            assert_eq!(
+                render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style),
+                *first_output,
+                "alternating styles leaked cached output"
+            );
+            let ledger = match cache.lock() {
+                Ok(ledger) => ledger,
+                Err(error) => panic!("IDENTITY local cache lock failed: {error}"),
+            };
+            assert_eq!(ledger.get(first_key), Some(&first_expected));
+            assert_eq!(ledger.get(second_key), Some(&second_expected));
+        }
+
+        (first_expected, second_expected)
+    }
+
     #[test]
-    fn markdown_cache_identity_contains_the_complete_theme() {
-        let base = crate::traits::test_support::marker_theme();
-        let baseline = markdown_cache_key("cache", 80, &base);
-        macro_rules! assert_role_changes_key {
-            ($field:ident) => {{
+    fn markdown_cache_isolates_direct_and_fallback_colors_in_both_orders() {
+        let mut base = crate::traits::test_support::marker_theme();
+        base.syntax = None;
+        let replacement = Color::Indexed(255);
+        macro_rules! assert_role_isolated {
+            ($field:ident, [$($content:expr),+ $(,)?]) => {{
                 let mut changed = base;
-                changed.$field = Color::Indexed(255);
-                assert_ne!(
-                    markdown_cache_key("cache", 80, &changed),
-                    baseline,
-                    "{} missing from cache key",
-                    stringify!($field)
+                changed.$field = replacement;
+                let (original, recolored) = isolated_markdown_outputs(
+                    MarkdownStyle::from(&base),
+                    MarkdownStyle::from(&changed),
                 );
+                assert_eq!(markdown_shape(&original), markdown_shape(&recolored));
+                $(
+                    assert_eq!(foreground_for(&original, $content), Some(base.$field));
+                    assert_eq!(foreground_for(&recolored, $content), Some(replacement));
+                )+
             }};
         }
-        let mut changed_syntax = base;
-        changed_syntax.syntax = Some(crate::theme::SyntaxTheme::Base16EightiesDark);
-        assert_ne!(markdown_cache_key("cache", 80, &changed_syntax), baseline);
-        assert_role_changes_key!(canvas);
-        assert_role_changes_key!(chrome);
-        assert_role_changes_key!(code);
-        assert_role_changes_key!(selection);
-        assert_role_changes_key!(text);
-        assert_role_changes_key!(muted);
-        assert_role_changes_key!(border);
-        assert_role_changes_key!(accent);
-        assert_role_changes_key!(accent_alt);
-        assert_role_changes_key!(user);
-        assert_role_changes_key!(agent);
-        assert_role_changes_key!(system);
-        assert_role_changes_key!(info);
-        assert_role_changes_key!(success);
-        assert_role_changes_key!(warning);
-        assert_role_changes_key!(danger);
-        assert_role_changes_key!(diff_add);
-        assert_role_changes_key!(diff_delete);
-        assert_role_changes_key!(diff_context);
-        assert_role_changes_key!(emphasis);
-        assert_role_changes_key!(accent_tertiary);
-        assert_role_changes_key!(accent_quaternary);
-        assert_role_changes_key!(accent_quinary);
-        assert_role_changes_key!(subdued);
-        assert_role_changes_key!(subdued_positive);
-        assert_role_changes_key!(subdued_negative);
-        assert_role_changes_key!(soft_accent);
-        assert_role_changes_key!(positive_accent);
-        assert_role_changes_key!(inset_background);
+        assert_role_isolated!(
+            text,
+            [
+                "H3",
+                "H4",
+                "H5",
+                "H6",
+                "x",
+                "fn cache_identity() -> u8 { 42 }",
+                "fallback_identity",
+            ]
+        );
+        assert_role_isolated!(subdued, ["quote", "│ ", " │ "]);
+        assert_role_isolated!(emphasis, ["`code`"]);
+        assert_role_isolated!(accent_tertiary, ["link"]);
+        assert_role_isolated!(accent_quinary, ["H1", "H2", "• ", "A", "rust"]);
+
+        let mut changed = base;
+        changed.code = replacement;
+        let (original, recolored) =
+            isolated_markdown_outputs(MarkdownStyle::from(&base), MarkdownStyle::from(&changed));
+        assert_eq!(markdown_shape(&original), markdown_shape(&recolored));
+        assert_eq!(
+            original
+                .iter()
+                .filter(|line| line.style.bg == Some(base.code))
+                .count(),
+            6,
+            "both code frames must use the original background"
+        );
+        assert_eq!(
+            recolored
+                .iter()
+                .filter(|line| line.style.bg == Some(replacement))
+                .count(),
+            6,
+            "both code frames must use the changed background"
+        );
+    }
+
+    #[test]
+    fn markdown_cache_isolates_transitive_syntax_in_both_orders() {
+        let mut base = crate::traits::test_support::marker_theme();
+        base.syntax = None;
+        let mut changed = base;
+        changed.syntax = Some(crate::theme::SyntaxTheme::Base16EightiesDark);
+        let (plain, colored) =
+            isolated_markdown_outputs(MarkdownStyle::from(&base), MarkdownStyle::from(&changed));
+        assert_eq!(
+            foreground_for(&plain, "fn cache_identity() -> u8 { 42 }"),
+            Some(base.text)
+        );
+        assert!(
+            colored
+                .iter()
+                .flat_map(|line| &line.spans)
+                .any(|span| matches!(span.style.fg, Some(Color::Rgb(_, _, _)))),
+            "the nested syntax style must reach the real code renderer"
+        );
+    }
+
+    #[test]
+    fn markdown_cache_reuses_composite_output_for_irrelevant_theme_roles() {
+        let assert_reused = |first: MarkdownStyle, second: MarkdownStyle| {
+            assert_eq!(first, second, "unrelated role entered Markdown inputs");
+            let key = markdown_cache_key(CACHE_IDENTITY_DOC, 80, first);
+            assert_eq!(key, markdown_cache_key(CACHE_IDENTITY_DOC, 80, second));
+            let expected = do_render(CACHE_IDENTITY_DOC, 80, first);
+            for (first_style, second_style) in [(first, second), (second, first)] {
+                let cache = Mutex::new(HashCache::new(2));
+                assert_eq!(
+                    render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style),
+                    expected
+                );
+                // Fill the other slot with a real render. An unrelated-role
+                // miss would evict the composite document from this full cache.
+                let sentinel_doc = "# cache sentinel";
+                let sentinel_key = markdown_cache_key(sentinel_doc, 80, first_style);
+                assert_ne!(key, sentinel_key);
+                let sentinel = render_with_cache(&cache, sentinel_doc, 80, first_style);
+                assert_eq!(
+                    render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, second_style),
+                    expected
+                );
+                let ledger = match cache.lock() {
+                    Ok(ledger) => ledger,
+                    Err(error) => panic!("REUSE local cache lock failed: {error}"),
+                };
+                assert_eq!(ledger.get(key), Some(&expected));
+                assert_eq!(ledger.get(sentinel_key), Some(&sentinel));
+            }
+        };
+
+        for syntax in [None, Some(crate::theme::SyntaxTheme::Base16EightiesDark)] {
+            let mut base = crate::traits::test_support::marker_theme();
+            base.syntax = syntax;
+            macro_rules! assert_role_reuses_entry {
+                ($field:ident) => {{
+                    let mut changed = base;
+                    changed.$field = Color::Indexed(255);
+                    assert_ne!(base.$field, changed.$field);
+                    assert_reused(MarkdownStyle::from(&base), MarkdownStyle::from(&changed));
+                }};
+            }
+            assert_role_reuses_entry!(canvas);
+            assert_role_reuses_entry!(chrome);
+            assert_role_reuses_entry!(selection);
+            assert_role_reuses_entry!(muted);
+            assert_role_reuses_entry!(border);
+            assert_role_reuses_entry!(accent);
+            assert_role_reuses_entry!(accent_alt);
+            assert_role_reuses_entry!(user);
+            assert_role_reuses_entry!(agent);
+            assert_role_reuses_entry!(system);
+            assert_role_reuses_entry!(info);
+            assert_role_reuses_entry!(success);
+            assert_role_reuses_entry!(warning);
+            assert_role_reuses_entry!(danger);
+            assert_role_reuses_entry!(diff_add);
+            assert_role_reuses_entry!(diff_delete);
+            assert_role_reuses_entry!(diff_context);
+            assert_role_reuses_entry!(accent_quaternary);
+            assert_role_reuses_entry!(subdued_positive);
+            assert_role_reuses_entry!(subdued_negative);
+            assert_role_reuses_entry!(soft_accent);
+            assert_role_reuses_entry!(positive_accent);
+            assert_role_reuses_entry!(inset_background);
+        }
     }
 
     #[test]

@@ -1,0 +1,55 @@
+70000000-0000-4000-8000-000000000001                                                                                                                                                
+Connecting to agent...                                                                                                                                                              
+                                                                                                                                                                                    
+Session created: 70000000-0000-4000-8000-000000000001                                                                                                                               
+                                                                                                                                                                                    
+You:                                                                                                                                                                                
+  Replay missing-start tool rows                                                                                                                                                    
+                                                                                                                                                                                    
+Kiro:                                                                                                                                                                               
+BEFORE_TOOL_ROWS                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+✗ Read(/home/dwalleck/repos/cyril/Cargo.toml)                                                                                                                                       
+    Error: The tool arguments failed validation: '/home/dwalleck/repos/cyril/crates/cyril-core/src/protocol/convert' is not a file                                                  
+                                                                                                                                                                                    
+Kiro:                                                                                                                                                                               
+AFTER_TOOL_ROWS                                                                                                                                                                     
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                                                 │
+│                                                                                                                                                                                  │
+│                                                                                                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+cyril                                                                                                                                                                               

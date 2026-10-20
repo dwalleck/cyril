@@ -98,6 +98,12 @@ credential-reading capability from a normal binary. A workspace build is not
 proof of exclusion: `cyril-workbench` enables core KAS through feature
 unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 
+On v2, a tool rejected during argument validation is shown as a failed call with
+its validation error, even when the agent sends only an input chunk and a failed
+update without a start. Error text supplied in the update's content is displayed
+when no usable raw-output error is available; a chunk alone remains activity,
+not a fabricated tool result.
+
 The default KAS `free` spawn runs discovered Node.js plus the extracted
 `acp-server.js` directly, with callback authentication: on each KAS token
 callback Cyril runs `kiro-cli chat _ get-kas-token` (cyril-zbu7), so kiro-cli
@@ -203,6 +209,35 @@ Key presses and held-key repeats are handled; key releases are ignored to preven
 duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
 because Crossterm reports those characters only on release. Paste the character
 instead; Unicode paste remains supported.
+
+### Themes and Markdown rendering
+
+Use `/theme` to preview a bundled palette. `Esc` cancels the preview and
+restores the previous colors; `Enter` applies the selection for the current
+session. Committed and streaming Markdown, including syntax-highlighted code,
+use the selected palette without changing the preview/cancel/commit behavior.
+
+Highlighting and Markdown caches identify their output by the concrete style
+inputs their renderers use, rather than every role in the full theme.
+Highlighting depends on the resolved syntax palette and fallback text color;
+Markdown also includes its own formatting colors and render width. Unrelated
+theme-role changes can reuse cached output, while changes to a used style
+remain isolated. Adding a rendering dependency to a style input automatically
+includes it in that input's derived identity.
+
+### Tool call history
+
+Tool rows stay at their first observed position in the conversation. An update
+without a preceding start creates a row from the fields it supplies, including
+KAS **Tool Load** and **Subagent Response** updates. Later frames for the same
+call within a session merge into that row rather than adding duplicates,
+preserving the text before and after it. A new session can reuse a tool ID
+without changing the previous session's history.
+
+For successful KAS commands, string-valued `rawOutput.output` is shown beneath
+the completed row, including completions that omit `kind`. Existing output
+formats keep precedence; non-string `output` values and the formatted `message`
+field are not used as substitutes.
 
 ### Rejecting a tool with feedback (KAS)
 
@@ -444,6 +479,7 @@ findings and the path to `report.md`.
 | `/clear` | Clear the chat |
 | `/mode <id>` | Switch agent mode |
 | `/model [id]` | Switch model (opens picker if no ID given) |
+| `/theme` | Preview a palette; `Enter` applies it for this session, `Esc` cancels |
 | `/memory status` | Show local memory runtime health, store versions, and project binding |
 | `/memory teach <text>` | Store an explicit lesson for the bound project |
 | `/memory teach --replace <id> <text>` | Supersede one lesson with new text |

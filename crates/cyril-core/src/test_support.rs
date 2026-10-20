@@ -335,6 +335,54 @@ pub fn kas_trace_routed(trace: &str) -> Vec<crate::types::RoutedNotification> {
     kas_capture_routed(&capture)
 }
 
+/// Replays v2 recorder `{ts, dir: "in", msg}` notification rows through the
+/// bound production V2 engine, including `kiro.dev/*` tool-call chunks.
+pub fn v2_trace_to_routed(
+    trace: &str,
+) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    use agent_client_protocol::schema::v1 as acp;
+
+    use crate::protocol::engine::{Engine, V2Engine};
+    use crate::types::SessionId;
+
+    let engine = V2Engine;
+    let mut forwarded = Vec::new();
+    for line in trace.lines().filter(|line| !line.is_empty()) {
+        let row: serde_json::Value =
+            must_succeed(serde_json::from_str(line), "v2 trace row is valid JSON");
+        if row.get("dir").and_then(serde_json::Value::as_str) != Some("in") {
+            continue;
+        }
+        let frame = &row["msg"];
+        if frame.get("id").is_some() {
+            continue; // Requests and responses are not notifications.
+        }
+        let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        if method == "session/update" {
+            let args: acp::SessionNotification = must_succeed(
+                serde_json::from_value(frame["params"].clone()),
+                "v2 session/update deserializes at the ACP boundary",
+            );
+            if let Some(notification) = engine.convert_session_update(&args) {
+                forwarded.push((
+                    Some(SessionId::new(args.session_id.to_string())),
+                    notification,
+                ));
+            }
+        } else if let Some(method) = method.strip_prefix('_')
+            && let Some(notification) = must_succeed(
+                engine.convert_ext_notification(method, &frame["params"]),
+                "v2 extension notification converts",
+            )
+        {
+            forwarded.push((None, notification));
+        }
+    }
+    forwarded
+}
+
 /// One step of a mediated capture replay (cyril-lki9 C20).
 #[cfg(feature = "kas")]
 #[derive(Debug)]
