@@ -688,21 +688,27 @@ fn runtime_drop_retains_evidence_until_core_completion() -> TestResult {
         .build()?;
     let (run, spawn) = runtime.block_on(async {
         let run = peer.reviewer()?.start(input("visible")).await?;
-        peer.event("prompt").await?;
+        peer.event("runtime-drop-ready").await?;
         Ok::<_, Box<dyn Error>>((run, peer.event("spawn").await?))
     })?;
     let cwd = std::path::PathBuf::from(spawn["cwd"].as_str().ok_or("cwd")?);
     drop(runtime);
     drop(run);
     let deadline = Instant::now() + Duration::from_secs(15);
-    while cwd.exists() && Instant::now() < deadline {
+    // Observe the full EOF window even if a defect removes the tree early.
+    while (cwd.exists() || peer.events("cleanup-window-end")?.is_empty())
+        && Instant::now() < deadline
+    {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert!(!cwd.exists(), "cleanup waiter did not release evidence");
     for event in ["cleanup-window", "cleanup-window-end"] {
         assert_eq!(
-            peer.events(event)?.first().ok_or("missing EOF window")?["evidence_exists"],
-            true
+            peer.events(event)?
+                .first()
+                .ok_or_else(|| format!("missing EOF window event {event}"))?["evidence_exists"],
+            true,
+            "{event}: evidence removed before core completion"
         );
     }
     for key in ["pid", "child"] {
