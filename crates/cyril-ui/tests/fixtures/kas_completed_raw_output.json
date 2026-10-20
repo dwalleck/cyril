@@ -1,0 +1,39 @@
+{
+  "time": 1792482460.579,
+  "direction": "agent_to_client",
+  "parsed": {
+    "jsonrpc": "2.0",
+    "method": "session/update",
+    "params": {
+      "sessionId": "sess_973df141-0181-47bf-977a-2f58ca21220f",
+      "update": {
+        "_meta": {
+          "kiro": {
+            "toolOrigin": "default"
+          }
+        },
+        "content": [
+          {
+            "terminalId": "term-1",
+            "type": "terminal"
+          }
+        ],
+        "rawInput": {
+          "command": "printf '%s\\n' 'XAVT_BEGIN XAVT_END' | sed 's/XAVT_SEG_01/XAVT_SEG_01/' | sed 's/XAVT_SEG_02/XAVT_SEG_02/' | sed 's/XAVT_SEG_03/XAVT_SEG_03/' | sed 's/XAVT_SEG_04/XAVT_SEG_04/' | sed 's/XAVT_SEG_05/XAVT_SEG_05/' | sed 's/XAVT_SEG_06/XAVT_SEG_06/' | sed 's/XAVT_SEG_07/XAVT_SEG_07/' | sed 's/XAVT_SEG_08/XAVT_SEG_08/' | sed 's/XAVT_SEG_09/XAVT_SEG_09/' | sed 's/XAVT_SEG_10/XAVT_SEG_10/' | sed 's/XAVT_SEG_11/XAVT_SEG_11/' | sed 's/XAVT_SEG_12/XAVT_SEG_12/' | sed 's/XAVT_SEG_13/XAVT_SEG_13/' | sed 's/XAVT_SEG_14/XAVT_SEG_14/' | sed 's/XAVT_SEG_15/XAVT_SEG_15/' | sed 's/XAVT_SEG_16/XAVT_SEG_16/' | sed 's/XAVT_SEG_17/XAVT_SEG_17/' | sed 's/XAVT_SEG_18/XAVT_SEG_18/' | sed 's/XAVT_SEG_19/XAVT_SEG_19/' | sed 's/XAVT_SEG_20/XAVT_SEG_20/' | sed 's/XAVT_SEG_21/XAVT_SEG_21/' | sed 's/XAVT_SEG_22/XAVT_SEG_22/' | sed 's/XAVT_SEG_23/XAVT_SEG_23/' | sed 's/XAVT_SEG_24/XAVT_SEG_24/' | tr 'a-z' 'A-Z'",
+          "cwd": "/tmp/cyril-xavt-live.ZiHasL/ws",
+          "description": "Run the exact sed/tr pipeline requested",
+          "run_in_background": false
+        },
+        "rawOutput": {
+          "exitCode": 0,
+          "message": "Output:\nXAVT_BEGIN XAVT_END\n\n\nExit Code: 0",
+          "output": "XAVT_BEGIN XAVT_END\n"
+        },
+        "sessionUpdate": "tool_call_update",
+        "status": "completed",
+        "title": "Run the exact sed/tr pipeline requested",
+        "toolCallId": "run_command_toolu_bdrk_014qXfCGiFdVfYrawhVgy3TQ"
+      }
+    }
+  }
+}

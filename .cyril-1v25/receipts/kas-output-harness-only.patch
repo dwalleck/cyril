@@ -1,0 +1,64 @@
+--- a/.cyril-1v25/smoke.py
++++ b/.cyril-1v25/smoke.py
+@@ -38,6 +38,15 @@
+     capture = Path(os.environ["CYRIL_TOOL_SMOKE_CAPTURE"])
+     session = "sess_missing_updates" if engine == "kas" else "70000000-0000-4000-8000-000000000001"
+     two_sessions = os.environ.get("CYRIL_TOOL_SMOKE_TWO_SESSIONS") == "1"
++    preserve_session_id = os.environ.get("CYRIL_TOOL_SMOKE_PRESERVE_SESSION_ID") == "1"
++    if preserve_session_id:
++        captured_sessions = {
++            json.loads(line)["msg"]["params"]["sessionId"]
++            for line in capture.read_text().splitlines()
++        }
++        if len(captured_sessions) != 1 or two_sessions:
++            raise AssertionError("unchanged-frame replay requires one captured session")
++        session = captured_sessions.pop()
+     session_count = 0
+ 
+     def send(message):
+@@ -80,7 +89,8 @@
+                 recorded = json.loads(recorded_line)["msg"]
+                 if "id" in recorded or "method" not in recorded:
+                     raise AssertionError("smoke fixture must contain only inbound notifications")
+-                recorded["params"]["sessionId"] = session
++                if not preserve_session_id:
++                    recorded["params"]["sessionId"] = session
+                 send(recorded)
+                 if recorded["params"]["update"]["sessionUpdate"] == "tool_call_update":
+                     repeated.append(recorded)
+@@ -134,6 +144,7 @@
+             CYRIL_TOOL_SMOKE_ENGINE=args.engine, CYRIL_TOOL_SMOKE_CAPTURE=str(capture),
+             CYRIL_TOOL_SMOKE_OUTPUT=str(output),
+             CYRIL_TOOL_SMOKE_TWO_SESSIONS="1" if args.two_sessions else "0",
++            CYRIL_TOOL_SMOKE_PRESERVE_SESSION_ID="1" if args.preserve_session_id else "0",
+         )
+         for key in ["KIRO_AGENT_PATH", "KIRO_KAS_SERVER_PATH", "CYRIL_AGENT_LOCATION", "CYRIL_AGENT_HOST_OS"]:
+             environment.pop(key, None)
+@@ -288,6 +299,17 @@
+                     raise AssertionError(f"Expected exactly {expected_count} {expected!r}\n{text}")
+                 if not args.two_sessions and not text.index(BEFORE) < text.index(expected) < text.index(AFTER):
+                     raise AssertionError(f"Wrong arrival chronology for {expected!r}\n{text}")
++            if args.preserve_session_id:
++                wire = wire_rows("agent-wire.jsonl")
++                for line in capture.read_text().splitlines():
++                    original = json.loads(line)["msg"]
++                    expected_copies = (
++                        2 if original["params"]["update"]["sessionUpdate"] == "tool_call_update"
++                        else 1
++                    )
++                    if wire.count(original) != expected_copies:
++                        raise AssertionError("peer did not replay the captured frame unchanged")
++                scenario_receipt["captured_frames_preserved"] = True
+             receipt = {"result": "PASS", "binary": str(binary), "engine": args.engine,
+                        "capture": str(capture), "expected": args.expect,
+                        "proof": "real Cyril binary, controlled ACP peer, PTY-decoded TUI"}
+@@ -324,6 +346,8 @@
+         parser.add_argument("--engine", choices=["kas", "v2"], required=True)
+         parser.add_argument("--capture", required=True)
+         parser.add_argument("--expect", action="append", required=True)
+-        parser.add_argument("--two-sessions", action="store_true", help="drive /new, then reuse the same captured tool IDs in a second ordinary prompt")
++        session_options = parser.add_mutually_exclusive_group()
++        session_options.add_argument("--two-sessions", action="store_true", help="drive /new, then reuse the same captured tool IDs in a second ordinary prompt")
++        session_options.add_argument("--preserve-session-id", action="store_true", help="return the fixture's sole session ID from session/new and replay every captured frame unchanged")
+         parser.add_argument("--output", required=True, help="fresh evidence directory (must not exist)")
+         smoke(parser.parse_args())
