@@ -1,0 +1,235 @@
+{
+  "status": "READY_FOR_MAIN_PUBLICATION_NOT_PUBLISHED",
+  "date": "2026-10-20",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25",
+  "pr": 183,
+  "branch": "fix/cyril-1v25",
+  "source_provenance": {
+    "published_pre_extension_pin": "a5d2c4b5d5db88889ba5bc5e3f560375715977cd",
+    "checked_assembled_head": "9e537238d88f7afea4eb676710db9ca36e016b90",
+    "uncommitted_checked_delta": "Successful-output extension: string-valued output last in existing direct-field extraction, frozen capture/regressions/harness, plus final docs/evidence only.",
+    "test_only_auth_prerequisite": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "no_invented_extension_commit": true,
+    "final_docs_scope": "README and workflow/evidence finalization after the repaired actual replay; no further source/test/harness changes."
+  },
+  "approved_scope": {
+    "production_path": "crates/cyril-ui/src/traits.rs::TrackedToolCall::output_text",
+    "complete_production_delta": "Append output after text/content/result in the existing ordered direct-string field list; document that field in the extraction list.",
+    "unchanged": [
+      "stdout/stderr and item-envelope precedence",
+      "raw input/output retention",
+      "existing as_str-only direct-field interpretation",
+      "no Execute-only guard",
+      "no formatted-message fallback or generic-object serialization",
+      "no auth, approval, terminal, or shell-execution behavior"
+    ],
+    "approval": "Main explicitly authorized this minimal production repair only after ActualRED822."
+  },
+  "captured_input": {
+    "canonical_source": "/tmp/cyril-xavt-live.ZiHasL/evidence/completed-tool-call-nonsecret.json",
+    "portable_exact_fixture": "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+    "sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+    "wire_input": ".cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+    "wire_input_sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+    "payload_fidelity": "Full parsed JSON-RPC frame unchanged: captured sessionId, omitted kind, terminal-reference content, Completed status, rawInput, and all rawOutput fields.",
+    "expected_output_text": "XAVT_BEGIN XAVT_END\n",
+    "expected_body_line": "| XAVT_BEGIN XAVT_END"
+  },
+  "permanent_regressions": [
+    "kas_completed_output_capture_renders_exact_body_without_kind",
+    "tracked_tool_call_output_field_preserves_existing_precedence",
+    "tracked_tool_call_output_field_accepts_only_strings_without_message_fallback"
+  ],
+  "historical_immutable_preparation": {
+    "regression_handoff": ".cyril-1v25/receipts/kas-output-red-handoff.json",
+    "regression_patch": ".cyril-1v25/receipts/kas-output-test-only.patch",
+    "regression_patch_sha256": "84f7af326722e14ea9d7a00c948e410b6c6790a6bb9fee763a9f1fa1b13dd635",
+    "harness_handoff": ".cyril-1v25/receipts/kas-output-harness-handoff.json",
+    "harness_patch": ".cyril-1v25/receipts/kas-output-harness-only.patch",
+    "harness_patch_sha256": "57cd631affdc7f9082fc5f8c338313da4246fcb406b90f7a1a4952868903f40b",
+    "meaning": "These immutable records describe first-phase production-held preparation; this final handoff owns current readiness. Replay reconstruction from the published pin needs both patches plus the pinned trace; repaired production is the separately named minimal delta."
+  },
+  "verification": {
+    "actual_regression_red": {
+      "owner": "Main",
+      "result": "EXPECTED_FAIL_SENSITIVITY_PROVEN",
+      "original": "artifact://822",
+      "portable": ".cyril-1v25/receipts/kas-output-red-regression.log",
+      "observation": "One executed regression failed after completed-row/header/raw-output controls, with (None, 0 body lines) versus exact Some stdout and 1 body line."
+    },
+    "green_gates": {
+      "owner": "Main",
+      "result": "PASS",
+      "original": "artifact://847",
+      "portable": ".cyril-1v25/receipts/kas-output-green-gates.log",
+      "parent_report": "bg127/artifact847 allGREEN: capture1+controls2, clippyworkspacealltargets, wholeworkspace2830PASS/13ignored, defaultbuild/fmt.",
+      "exact_command_chain": "env -u CARGO_TARGET_DIR cargo fmt --all && touch crates/cyril-core/src/lib.rs crates/cyril-ui/src/lib.rs crates/cyril/src/main.rs && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui --test missing_tool_updates kas_completed_output_capture_renders_exact_body_without_kind -- --exact --nocapture && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui --lib tracked_tool_call_output_field -- --nocapture && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo clippy --workspace --all-targets -- -D warnings && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test --workspace && env CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril && env -u CARGO_TARGET_DIR cargo fmt --all --check && cp /home/dwalleck/repos/cyril/target/debug/cyril /tmp/cyril-1v25-after-output-extension-20261020 && sha256sum /tmp/cyril-1v25-after-output-extension-20261020",
+      "command_chain_provenance": "Main supplied the exact actual bg127 invocation from the named 1v25 worktree; preserved here without re-execution. Entrypoint mtimes were touched before the shared-target gates.",
+      "focused_executed_passed": 3,
+      "workspace_passed": 2830,
+      "workspace_ignored_not_exercised": 13,
+      "clippy_scope": "workspace/all targets with -D warnings",
+      "build": "default cyril executable",
+      "formatting": "cargo fmt --all followed by cargo fmt --all --check; PASS as explicitly reported by Main",
+      "stdout_provenance": "Full original captured gate output is preserved. The exact invocation and silent formatting success are attributed to Main, not inferred from stdout."
+    },
+    "actual_consumer_before_after": {
+      "owner": "MissingToolResults under Main binary-specific GO",
+      "old": {
+        "result": "BEHAVIORAL_RED",
+        "receipt": ".cyril-1v25/receipts/kas-output-old-replay.json",
+        "binary_sha256": "220233c41b9d774d0890b3343fab6cf45213d310a1cc61f6e3909fe486803764"
+      },
+      "new": {
+        "result": "PASS",
+        "receipt": ".cyril-1v25/receipts/kas-output-new-replay.json",
+        "binary_sha256": "3b7d7f09dee22a3f05d726eaada4aa2ec093fe7bd230ea911641a9c0d48646ee"
+      },
+      "actual_replays_old_new": [
+        1,
+        1
+      ],
+      "retries": 0,
+      "header_counts_old_new": [
+        1,
+        1
+      ],
+      "body_counts_old_new": [
+        0,
+        1
+      ],
+      "complete_original_frame_copies_each": 2,
+      "same_payload_and_harness": true,
+      "only_invocation_changes": [
+        "--binary",
+        "--output"
+      ],
+      "old_proof_order_caveat": "Expected body failure precedes the frozen harness frame-equality assertion; the canonical old receipt separately qualifies saved-wire/screen equality and session identity.",
+      "new_chronology": "BEFORE_TOOL_ROWS < completed header < exact stdout body < AFTER_TOOL_ROWS"
+    },
+    "independent_source_review": {
+      "reviewer": "ReviewMissingKas",
+      "result": "correct; no blocking findings",
+      "confidence": 0.98,
+      "original": "agent://ReviewMissingKas",
+      "portable": ".cyril-1v25/receipts/kas-output-source-review.txt",
+      "scope": "Minimal projection, captured frame fidelity, public conversion/state/render oracle, boundaries, inert harness, and failed-call/fiv1 precedence interactions.",
+      "review_did_not_execute_tests_or_consumers": true
+    },
+    "permanent_documentation": {
+      "result": "DELIVERED",
+      "path": "README.md",
+      "section": "Tool call history"
+    }
+  },
+  "safety_and_limits": {
+    "captured_command_is_inert_json": true,
+    "real_account_access": false,
+    "permission_grants": 0,
+    "agent_permission_or_terminal_requests": 0,
+    "local_fake_token_helper_only": true,
+    "owned_home_path_and_workspace": true,
+    "cleanup_receipts": "Both canonical replay receipts report no remaining owned app/agent matches.",
+    "qualification": "Actual Cyril controlled-peer execution under PTY with pyte-decoded text; no new live-upstream run or native-terminal glyph/platform qualification.",
+    "actual_cyril_exit_code": "Not separately recorded by the frozen harness; harness exit codes are old=1/new=0.",
+    "ignored_tests": "13 ignored workspace cases remain unexercised; no PASS claim for them."
+  },
+  "portable_copy_origins": {
+    ".cyril-1v25/receipts/kas-output-red-regression.log": "artifact://822",
+    ".cyril-1v25/receipts/kas-output-green-gates.log": "artifact://847",
+    ".cyril-1v25/receipts/kas-output-controlled-peer-preflight.json": "local://kas-output-controlled-peer-preflight.json",
+    ".cyril-1v25/receipts/kas-output-old-replay.json": "local://kas-output-old-replay.json",
+    ".cyril-1v25/receipts/kas-output-old-screen.txt": "/tmp/cyril-kas-output-old-20261020-a/screen.txt",
+    ".cyril-1v25/receipts/kas-output-old-agent-wire.jsonl": "/tmp/cyril-kas-output-old-20261020-a/agent-wire.jsonl",
+    ".cyril-1v25/receipts/kas-output-new-replay.json": "local://kas-output-new-replay.json",
+    ".cyril-1v25/receipts/kas-output-new-screen.txt": "/tmp/cyril-kas-output-new-20261020-a/screen.txt",
+    ".cyril-1v25/receipts/kas-output-new-agent-wire.jsonl": "/tmp/cyril-kas-output-new-20261020-a/agent-wire.jsonl",
+    ".cyril-1v25/receipts/kas-output-new-result.json": "/tmp/cyril-kas-output-new-20261020-a/result.json",
+    ".cyril-1v25/receipts/kas-output-source-review.txt": "agent://ReviewMissingKas",
+    ".cyril-1v25/receipts/kas-output-old-kiro-cli-argv.txt": "/tmp/cyril-kas-output-old-20261020-a/kiro-cli-argv.txt",
+    ".cyril-1v25/receipts/kas-output-new-kiro-cli-argv.txt": "/tmp/cyril-kas-output-new-20261020-a/kiro-cli-argv.txt",
+    ".cyril-1v25/receipts/kas-output-old-terminal.ansi": "/tmp/cyril-kas-output-old-20261020-a/terminal.ansi",
+    ".cyril-1v25/receipts/kas-output-old-cyril.log": "/tmp/cyril-kas-output-old-20261020-a/cyril.log",
+    ".cyril-1v25/receipts/kas-output-new-terminal.ansi": "/tmp/cyril-kas-output-new-20261020-a/terminal.ansi",
+    ".cyril-1v25/receipts/kas-output-new-cyril.log": "/tmp/cyril-kas-output-new-20261020-a/cyril.log"
+  },
+  "publication_manifest": [
+    "README.md",
+    "crates/cyril-ui/src/traits.rs",
+    "crates/cyril-ui/tests/missing_tool_updates.rs",
+    "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+    ".cyril-1v25/smoke.py",
+    ".cyril-1v25/route.md",
+    ".cyril-1v25/review-decisions.md",
+    ".cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+    ".cyril-1v25/receipts/kas-output-red-handoff.json",
+    ".cyril-1v25/receipts/kas-output-test-only.patch",
+    ".cyril-1v25/receipts/kas-output-harness-handoff.json",
+    ".cyril-1v25/receipts/kas-output-harness-only.patch",
+    ".cyril-1v25/receipts/kas-output-red-regression.log",
+    ".cyril-1v25/receipts/kas-output-green-gates.log",
+    ".cyril-1v25/receipts/kas-output-controlled-peer-preflight.json",
+    ".cyril-1v25/receipts/kas-output-old-replay.json",
+    ".cyril-1v25/receipts/kas-output-old-screen.txt",
+    ".cyril-1v25/receipts/kas-output-old-agent-wire.jsonl",
+    ".cyril-1v25/receipts/kas-output-new-replay.json",
+    ".cyril-1v25/receipts/kas-output-new-screen.txt",
+    ".cyril-1v25/receipts/kas-output-new-agent-wire.jsonl",
+    ".cyril-1v25/receipts/kas-output-new-result.json",
+    ".cyril-1v25/receipts/kas-output-source-review.txt",
+    ".cyril-1v25/receipts/kas-output-old-kiro-cli-argv.txt",
+    ".cyril-1v25/receipts/kas-output-new-kiro-cli-argv.txt",
+    ".cyril-1v25/receipts/kas-output-old-terminal.ansi",
+    ".cyril-1v25/receipts/kas-output-old-cyril.log",
+    ".cyril-1v25/receipts/kas-output-new-terminal.ansi",
+    ".cyril-1v25/receipts/kas-output-new-cyril.log",
+    ".cyril-1v25/receipts/kas-output-final-handoff.json"
+  ],
+  "publication_file_sha256": {
+    "README.md": "1e3ae45f39e8bccdcf7f1dd7150e2b830cbd4f8c6eb46383fdc6a11b8a14a4ff",
+    "crates/cyril-ui/src/traits.rs": "d5f94afaa9585a2f7585ece839f83e4d198ec338f2d8c59c436815aeebfa99ca",
+    "crates/cyril-ui/tests/missing_tool_updates.rs": "0110546141bc2ef433b00b01af4413c6d0a0400a8c2ffcca175778ead7cac988",
+    "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+    ".cyril-1v25/smoke.py": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+    ".cyril-1v25/route.md": "1abf5e22f13b435922a3c5ab49a252b04021faa50ad06f7d7be9911a4fa00e64",
+    ".cyril-1v25/review-decisions.md": "cb33427bdb80575fee685a3f8110fc9151165cf88a22c33e7adb2cae4c6bc1bb",
+    ".cyril-1v25/receipts/kas-completed-output-trace.jsonl": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+    ".cyril-1v25/receipts/kas-output-red-handoff.json": "6c065337b84e73dba0d9ca6590291aadc483550b3c85f5bb021d6c91fa8b2aaa",
+    ".cyril-1v25/receipts/kas-output-test-only.patch": "84f7af326722e14ea9d7a00c948e410b6c6790a6bb9fee763a9f1fa1b13dd635",
+    ".cyril-1v25/receipts/kas-output-harness-handoff.json": "cfb0be2bc9418de58b3ae9a1a37853bb77f3f2c758ccf7ad5d96588ee628c651",
+    ".cyril-1v25/receipts/kas-output-harness-only.patch": "57cd631affdc7f9082fc5f8c338313da4246fcb406b90f7a1a4952868903f40b",
+    ".cyril-1v25/receipts/kas-output-red-regression.log": "3dee3a8685b9b5d95030113b98e0fd336c1a5c2dadfcd3768e64cd263d7f7bce",
+    ".cyril-1v25/receipts/kas-output-green-gates.log": "78cb5b6abad2b1b7c1b4b546a7fa678985370412584f8ac892d03fd03033cb4f",
+    ".cyril-1v25/receipts/kas-output-controlled-peer-preflight.json": "297fad33b4ad1652eda558956f6588efbb0ac20cba258ce948c3b7cc331cbeb5",
+    ".cyril-1v25/receipts/kas-output-old-replay.json": "bb320c4070f52d154e97a893c459710496e609da5300a6ef51800e76267cc263",
+    ".cyril-1v25/receipts/kas-output-old-screen.txt": "bd6916b2d4fb24cc2c10b1d5ef6c8b1c770d9ce9db728d36f30cea0ae7e251f7",
+    ".cyril-1v25/receipts/kas-output-old-agent-wire.jsonl": "330aca3426598c9e6fd2b77bfca0e87151584e6e7c976baa03a0a3b039093c40",
+    ".cyril-1v25/receipts/kas-output-new-replay.json": "b48035e20d6a2367de5f744f5afd20c0b346dfed2f076fffaabaa83aeae8f82f",
+    ".cyril-1v25/receipts/kas-output-new-screen.txt": "2df1b4cd0a4b7f03190919477cd789c48f18b28d1ca7312835a92e74fae1b582",
+    ".cyril-1v25/receipts/kas-output-new-agent-wire.jsonl": "a8ca78e51accd7ca7d829f9b048555f25d89124f3305c2c69939f21f362d26be",
+    ".cyril-1v25/receipts/kas-output-new-result.json": "86b668da2fe373f0f434d3896d256fd3b0142f9a3abf56dc7a2bf3887171668c",
+    ".cyril-1v25/receipts/kas-output-source-review.txt": "41f62a26367bb0b76a6a342664cd7412e0b1342c9fb0e0d48a66d0c4aa362a3f",
+    ".cyril-1v25/receipts/kas-output-old-kiro-cli-argv.txt": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+    ".cyril-1v25/receipts/kas-output-new-kiro-cli-argv.txt": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+    ".cyril-1v25/receipts/kas-output-old-terminal.ansi": "a0d324654f997615916d16dae301f5e6c88eb85384d5aad8e53217cc69b03bb3",
+    ".cyril-1v25/receipts/kas-output-old-cyril.log": "c979a26a018b3f1ac8c976bde6ca3b6d70b4c533f7925ce00a72d43705c6d56b",
+    ".cyril-1v25/receipts/kas-output-new-terminal.ansi": "4de0412cb2734976aaf9de984c3ec0d355eafeb579a63b21fe24e0329c2522b8",
+    ".cyril-1v25/receipts/kas-output-new-cyril.log": "6680e78435ce5ca7ce4c3362b102861f95c5c5b960f0ff20dbc9b649a023ea41"
+  },
+  "manifest_self_hash": "Intentionally omitted to avoid self-reference; all other named publication-file hashes are explicit.",
+  "publication_exclusions": [
+    "Already committed test-only auth prerequisite files",
+    "Private old/new binaries under /tmp",
+    "Unrelated tracker or repository files",
+    "Unchanged original PR smoke receipts"
+  ],
+  "remaining_owner_actions": {
+    "owner": "Main",
+    "actions": [
+      "Commit only the explicit publication manifest",
+      "Update PR183 with this extension and evidence",
+      "Refresh the descendant stack under existing publication authorization"
+    ]
+  },
+  "worker_execution": "No builds/tests/lint/formatters/smoke or commit/push/tracker mutations; no auth or git-index edits. Parent and peer runs are attributed above."
+}
