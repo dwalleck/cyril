@@ -512,7 +512,7 @@ impl TrackedToolCall {
     /// 2. Shell commands: `stdout` (non-empty), then `stderr` (non-empty)
     /// 3. Kiro item envelope: `items[0].Text`
     /// 4. Kiro item envelope: `items[0].Json` (pretty-printed as JSON)
-    /// 5. Direct text fields: `text`, `content`, `result`
+    /// 5. Direct text fields: `text`, `content`, `result`, `output`
     /// 6. Non-object values (arrays, numbers, bools): JSON serialization
     ///
     /// Inspired by the `unwrapResultOutput` / `extractResultText` pattern in
@@ -553,7 +553,7 @@ impl TrackedToolCall {
             }
         }
 
-        for key in ["text", "content", "result"] {
+        for key in ["text", "content", "result", "output"] {
             if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
                 return Some(s.to_string());
             }
@@ -2170,6 +2170,98 @@ mod tests {
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(tracked.output_text(), Some("plain output".to_string()));
+    }
+
+    #[test]
+    fn tracked_tool_call_output_field_preserves_existing_precedence() {
+        use cyril_core::types::*;
+        let cases = [
+            (serde_json::json!({"stdout": "stdout wins"}), "stdout wins"),
+            (
+                serde_json::json!({"stdout": " \n", "stderr": "stderr wins"}),
+                "stderr wins",
+            ),
+            (
+                serde_json::json!({"items": [{"Text": "item text wins"}]}),
+                "item text wins",
+            ),
+            (
+                serde_json::json!({"items": [{"Json": {"selected": true}}]}),
+                "{\n  \"selected\": true\n}",
+            ),
+            (serde_json::json!({"text": "text wins"}), "text wins"),
+            (
+                serde_json::json!({"content": "content wins"}),
+                "content wins",
+            ),
+            (serde_json::json!({"result": "result wins"}), "result wins"),
+        ];
+        for (mut output, expected) in cases {
+            output["output"] = serde_json::json!("lower-priority captured output");
+            let tracked = TrackedToolCall::new(
+                ToolCall::new(
+                    ToolCallId::new("output-precedence"),
+                    "tool".into(),
+                    ToolKind::Other,
+                    ToolCallStatus::Completed,
+                    None,
+                )
+                .with_raw_output(Some(output.clone())),
+            );
+            assert_eq!(
+                tracked.output_text().as_deref(),
+                Some(expected),
+                "established extraction must beat output: {output}",
+            );
+        }
+    }
+
+    #[test]
+    fn tracked_tool_call_output_field_accepts_only_strings_without_message_fallback() {
+        use cyril_core::types::*;
+        for value in [
+            serde_json::Value::Null,
+            serde_json::json!(false),
+            serde_json::json!(42),
+            serde_json::json!(["nested output"]),
+            serde_json::json!({"text": "nested output"}),
+        ] {
+            let output = serde_json::json!({
+                "output": value,
+                "message": "formatted message must not become stdout",
+            });
+            let tracked = TrackedToolCall::new(
+                ToolCall::new(
+                    ToolCallId::new("output-non-string"),
+                    "tool".into(),
+                    ToolKind::Other,
+                    ToolCallStatus::Completed,
+                    None,
+                )
+                .with_raw_output(Some(output.clone())),
+            );
+            assert_eq!(
+                tracked.output_text(),
+                None,
+                "do not coerce output or fall back to message: {output}",
+            );
+        }
+        for (output, expected) in [
+            (serde_json::json!({"output": ""}), Some("")),
+            (serde_json::json!({"message": "formatted message"}), None),
+        ] {
+            let tracked = TrackedToolCall::new(
+                ToolCall::new(
+                    ToolCallId::new("output-string-boundary"),
+                    "tool".into(),
+                    ToolKind::Other,
+                    ToolCallStatus::Completed,
+                    None,
+                )
+                .with_raw_output(Some(output)),
+            );
+            assert_eq!(tracked.output_text().as_deref(), expected);
+        }
     }
 
     #[test]

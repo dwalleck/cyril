@@ -1,0 +1,84 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "pull_request": 192,
+  "record_kind": "parent-stack source refresh, separate from historical publication evidence",
+  "status": "SOURCE READY; Main-owned fresh qualification and publication remain pending",
+  "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m",
+  "branch": "perf/cyril-zj0m",
+  "pre_refresh_commit": "7a19fc742f109411c421af296addc5fe4db4d42b",
+  "merged_parent_commit": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+  "commit_binding": "This record is included in the local merge commit whose first parent is pre_refresh_commit and second parent is merged_parent_commit.",
+  "merge_bases": [
+    "194ec404a325843a1b002940784dda7296ef355c",
+    "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69"
+  ],
+  "merge_method": "git merge --no-commit --no-ff; ordinary local merge commit with hooks enabled; no history rewrite",
+  "initial_worktree_state": "Clean; no reported untracked paths",
+  "conflicts": [
+    {
+      "path": "README.md",
+      "original_conflicted_lines": "213-230",
+      "mechanism": "Both branches added independent paragraphs at the end of Tool call history; the recursively merged common-ancestor section was empty.",
+      "resolution": "Retain the child's first-Diff summary/body, bounded-row, retained-derivation and pending-approval paragraphs, then retain the parent's successful string-valued rawOutput.output paragraph, separated by a blank line. No paragraph content was rewritten."
+    }
+  ],
+  "automatic_merges_reviewed": [
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "resolution": "Keep the lazy OnceLock<Arc<DiffPreview>>, first-Diff selection, effective-source invalidation and all existing wrapper tests. Append output last in the existing ordered direct-string extraction list and inherit its two controls. Failed-only content fallback remains after explicit raw error/message and output extraction."
+    },
+    {
+      "path": ".rivets/issues.jsonl",
+      "resolution": "Inherit only the parent's cyril-1v25 successful-output note while preserving the child's existing tracker changes. No tracker CLI writes or issue closures were performed by this refresh worker."
+    }
+  ],
+  "source_delta_from_pre_refresh": [
+    "crates/cyril-ui/src/traits.rs",
+    "crates/cyril-ui/tests/missing_tool_updates.rs",
+    "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json"
+  ],
+  "production_delta": "Only the output_text extraction documentation and an output key appended after text/content/result in the existing as_str probe list. No diff/cache algorithm, source lifetime, status, kind, terminal, or authentication behavior is changed by the refresh.",
+  "preserved_contracts": [
+    "The first Diff supplies both exact summary and bounded body; unchanged first Diff suppresses both even if a later Diff changed.",
+    "Retained derivation remains lazy and theme-independent; equivalent source and metadata/status changes reuse it, replacement invalidates only the updating wrapper, and initialized clones share the immutable preview.",
+    "Pending approval previews retain the same shared renderer without a Completed restriction.",
+    "The string-valued output alias is last after all established extraction precedence; no message fallback, nested-value coercion, generic unrecognized-object serialization, or Execute/Completed guard is added.",
+    "Failed-only text-content fallback remains lower priority than raw string, error, message, and output_text.",
+    "x5xi Theme and concrete used-style identities, cache policy, renderer input closure and exact source-fence policy remain unchanged.",
+    "The common test-only immutable authentication fixture prerequisite was already present before this merge and remains unchanged, including required callers. No production authentication change is introduced."
+  ],
+  "seven_source_owner_sha256": {
+    "crates/cyril-ui/Cargo.toml": "dca84714e572fbd0543f20b150c928b09ace0e7ebc8ee34dae9dabc5c2b64c93",
+    "crates/cyril-ui/benches/conversation_render.rs": "72e4dd8534216d23bf4ed2b1843ee05aa11cbcaf2ab393ca7bb6c6ec3b19e510",
+    "crates/cyril-ui/src/lib.rs": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+    "crates/cyril-ui/src/tool_diff.rs": "d4ae79652e8eca09f1c61145cddd23f8ee3f6723a5b04de3588cec1cafdc0036",
+    "crates/cyril-ui/src/traits.rs": "9ad6d18463c9648ccd596802cee4db37a4ae609decfbf90eff1853a3cb28586c",
+    "crates/cyril-ui/src/widgets/approval.rs": "76d03ff8fc99290683455afba94e6fd1edbb515bc267e2d5cde17fa184bd5234",
+    "crates/cyril-ui/src/widgets/chat.rs": "9f763f63588e61b438111908f4ef7ba217709c54deed6b9fac3670f711c8ef53"
+  },
+  "source_identity_boundary": "Six zj0m owners retain their historical qualified hashes. Only traits.rs changes, by the inherited output alias/documentation and two unit-test controls; no old qualification is relabeled as evidence for the refreshed assembled tree.",
+  "capture_sha256": {
+    "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc"
+  },
+  "historical_qualification_unchanged": {
+    "qualified_checkout_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+    "actual_app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+    "scope": "Pre-refresh zj0m qualification only; the historical handoff explicitly excludes the later output-alias refresh.",
+    "preserved_historical_file_sha256": {
+      ".cyril-zj0m/handoff.json": "ed2ede0694ce9e3ae4976f747e156f5494bb083256615928b58a095c17a71118",
+      ".cyril-zj0m/publication-manifest.json": "de0623bbc0696f6e9eda28c5711d95aca86f8ce62b339112eb32a26f58f612aa",
+      ".cyril-zj0m/production.patch": "5c0d35de8fd980228f9f595199f86014b70e6f7a376ae51c40d7ceb915a655f9",
+      ".cyril-zj0m/verification-evidence.tar.gz": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc"
+    }
+  },
+  "worker_verification": "Static ancestry, source, merge-intent and byte-identity inspection only. No Cargo, tests, builds, lint, formatter, benchmark or actual-consumer runs were performed.",
+  "pending_main_obligations": [
+    "Run the required fresh gates against the containing merge commit with source/binary provenance bound to this worktree.",
+    "Qualify the refreshed actual App consumer for first-Diff/cache behavior and the captured successful KAS output, including exact body/header and unchanged-frame controls.",
+    "Exercise or explicitly adjudicate the inherited v2 failed-validation and raw-error/content/status controls for this assembled state.",
+    "Assess retained zj0m/x5xi source-sensitive evidence under its original scope; no historical PASS is silently widened by this record.",
+    "Review and publish the local merge without force only after required qualification; Main owns tracker and PR actions."
+  ],
+  "safety": "Only this zj0m worktree was edited. No other worktree, historical publication manifest, GitHub merge, push, force operation, tracker closure or check bypass was used."
+}

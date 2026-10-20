@@ -221,6 +221,11 @@ colors; replacing the selected source refreshes the summary and body together.
 Pending approval comparisons use the same diff renderer without requiring the
 tool to be completed.
 
+For successful KAS commands, string-valued `rawOutput.output` is shown beneath
+the completed row, including completions that omit `kind`. Existing output
+formats keep precedence; non-string `output` values and the formatted `message`
+field are not used as substitutes.
+
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
