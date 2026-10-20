@@ -115,14 +115,23 @@ do not relocate credentials. There is no silent Wrapper or v2 fallback.
 
 ### KAS on native platforms
 
-Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and, only
-for the stored-token fallback above, reads `<data dir>/data.sqlite3`. Both use the same platform root:
+By default, Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas`.
+The stored-token fallback reads `<data dir>/data.sqlite3`. Native defaults are:
 
-| Platform | Kiro data directory |
+| Platform | Default Kiro data directory |
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/kiro-cli` when absolute; otherwise `~/.local/share/kiro-cli` |
 | macOS | `~/Library/Application Support/kiro-cli` |
 | Native Windows | `%LOCALAPPDATA%\Kiro-Cli`, falling back to Windows' local-app-data known folder when `LOCALAPPDATA` is unset or not absolute |
+
+`KIRO_DATA_DIR` overrides **bundle discovery only**. A value that is nonblank
+after checking whitespace is used with its original spelling, including leading
+or trailing spaces; Cyril does not append a `kiro-cli` or `Kiro-Cli` directory.
+An unset, empty, or whitespace-only value uses the native default above. Relative
+bundle roots resolve from Cyril's launch directory and stay bound there even
+when the agent runs in a different `--cwd` workspace. The credential store always
+keeps its native default location; neither `KIRO_DATA_DIR` nor `KIRO_HOME`
+relocates it.
 
 `XDG_DATA_HOME` does not redirect macOS or native Windows KAS discovery.
 macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME` and does not
