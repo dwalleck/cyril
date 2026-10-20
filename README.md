@@ -136,6 +136,21 @@ The macOS data-root correction from
 Live native macOS/Windows KAS qualification is not claimed here. See the
 [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d).
 
+### Kiro profile roots
+
+Cyril uses one validated Kiro profile root for KAS settings, sidecar reads,
+global agent configurations and trust writes, and global host hooks. It defaults
+to `<home>/.kiro`; `KIRO_HOME` selects another profile without relocating KAS
+bundles or credentials.
+
+`KIRO_HOME` has leading/trailing whitespace trimmed; an unset, empty, or
+whitespace-only value uses the default. A nonempty value must be absolute on Unix
+or rooted on Windows (drive-relative paths such as `C:profile` are rejected).
+Filesystem roots and paths equal to or containing the user's home are also
+rejected, including symlink aliases. Rejected overrides produce a warning and
+fall back to the default profile. Workspace agents still shadow globals, and
+workspace hooks still merge with global hooks.
+
 ### Local memory runtime
 
 Cyril's local memory runtime is disabled by default. It is separate from native

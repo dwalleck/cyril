@@ -14,10 +14,11 @@
 //! - Grants live at `toolsSettings.execute_bash.allowedCommands` (array of regex
 //!   strings); the `setting_key` on the wire (`allowedCommands`) names the field.
 //! - Agent configs resolve from a workspace `<cwd>/.kiro/agents/<name>.json` that
-//!   **fully overrides** the global `~/.kiro/agents/<name>.json` (not a merge), so
+//!   **fully overrides** the global `<kiro-home>/agents/<name>.json` (not a merge), so
 //!   cyril writes to whichever Kiro actually reads — workspace first.
 
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::path::{Path, PathBuf};
 
 /// Kiro's built-in agents. cyril did not author these and must not write trust
@@ -89,23 +90,143 @@ pub(crate) fn home_dir() -> Option<PathBuf> {
         .map(PathBuf::from)
 }
 
-/// Kiro's profile root: non-empty `KIRO_HOME`, otherwise `<home>/.kiro`.
+/// Kiro's validated profile root, shared by agents, hooks, settings and sidecar.
 pub(crate) fn kiro_home_dir() -> Option<PathBuf> {
-    match std::env::var_os("KIRO_HOME") {
-        Some(path) if !path.is_empty() => Some(PathBuf::from(path)),
-        _ => home_dir().map(|home| home.join(".kiro")),
+    let home = home_dir();
+    let value = std::env::var_os("KIRO_HOME");
+    resolve_kiro_home(home.as_deref(), value.as_deref())
+}
+
+/// Resolve the profile root from explicit environment inputs, so a replacement
+/// launch environment never falls back to the host's HOME or KIRO_HOME.
+/// Mirrors KAS `P8o`/`O9u`/`A8o` (2.31.0+) and the current TUI: real paths are
+/// used only for rejection checks; an accepted path retains its lexical spelling.
+pub(crate) fn resolve_kiro_home(home: Option<&Path>, value: Option<&OsStr>) -> Option<PathBuf> {
+    let default = || home.map(|home| home.join(".kiro"));
+    let Some(value) = value.map(OsStr::to_string_lossy) else {
+        return default();
+    };
+    // ECMAScript trim includes BOM, but not the Unicode NEL character.
+    let value =
+        value.trim_matches(|c: char| c == '\u{feff}' || (c.is_whitespace() && c != '\u{85}'));
+    if value.is_empty() {
+        return default();
+    }
+    let input = Path::new(value);
+    // Node's Windows isAbsolute accepts rooted /foo and \foo; drive-relative
+    // C:foo is still rejected. std::path::absolute supplies the current drive.
+    if !(input.is_absolute() || (cfg!(windows) && input.has_root())) {
+        tracing::warn!(
+            value,
+            reason = "relative",
+            "ignoring KIRO_HOME; using the default Kiro home"
+        );
+        return default();
+    }
+    let candidate = match lexical_absolute(input) {
+        Ok(path) => path,
+        Err(error) => {
+            tracing::warn!(value, %error, "cannot resolve KIRO_HOME; using the default Kiro home");
+            return default();
+        }
+    };
+    let normalized = nearest_existing_real_path(&candidate);
+    let reason = if normalized.has_root() && normalized.parent().is_none() {
+        Some("root")
+    } else if let Some(home) = home {
+        let home = match lexical_absolute(home) {
+            Ok(path) => nearest_existing_real_path(&path),
+            Err(error) => {
+                tracing::warn!(value, %error, "cannot resolve HOME for KIRO_HOME validation; using the default Kiro home");
+                return default();
+            }
+        };
+        kiro_path_contains_home(&normalized, &home).then_some("contains-home")
+    } else {
+        None
+    };
+    if let Some(reason) = reason {
+        tracing::warn!(
+            value,
+            reason,
+            "ignoring KIRO_HOME; using the default Kiro home"
+        );
+        return default();
+    }
+    Some(candidate)
+}
+
+/// Node path.resolve removes dot components before realpath validation.
+fn lexical_absolute(path: &Path) -> std::io::Result<PathBuf> {
+    let absolute = std::path::absolute(path)?;
+    let mut resolved = PathBuf::with_capacity(absolute.as_os_str().len());
+    for component in absolute.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                resolved.pop();
+            }
+            component => resolved.push(component.as_os_str()),
+        }
+    }
+    Ok(resolved)
+}
+
+/// Like Kiro's A8o: an absent/unreadable leaf does not prevent detecting a
+/// symlink in its existing ancestors. Failure at every ancestor retains the
+/// lexical path, matching upstream rather than creating or requiring a leaf.
+fn nearest_existing_real_path(path: &Path) -> PathBuf {
+    let mut ancestor = path;
+    let mut suffix = Vec::new();
+    loop {
+        if let Ok(mut real) = std::fs::canonicalize(ancestor) {
+            real.extend(suffix.into_iter().rev());
+            return real;
+        }
+        match (ancestor.parent(), ancestor.file_name()) {
+            (Some(parent), Some(name)) => {
+                suffix.push(name);
+                ancestor = parent;
+            }
+            _ => return path.to_path_buf(),
+        }
     }
 }
 
-/// The directory holding global agent configs (`~/.kiro/agents`), if a home
-/// directory can be determined.
+/// Equivalent to Node relative(candidate, home)'s empty-or-not-".." test,
+/// not a textual prefix test (/home/u is not an ancestor of /home/user).
+fn kiro_path_contains_home(candidate: &Path, home: &Path) -> bool {
+    let mut home = home.components();
+    for component in candidate.components() {
+        let Some(next) = home.next() else {
+            return false;
+        };
+        #[cfg(windows)]
+        let equal = {
+            let component = component.as_os_str().to_string_lossy();
+            let next = next.as_os_str().to_string_lossy();
+            component.eq_ignore_ascii_case(&next)
+                || (!(component.is_ascii() && next.is_ascii())
+                    && component.to_lowercase() == next.to_lowercase())
+        };
+        #[cfg(not(windows))]
+        let equal = component == next;
+        if !equal {
+            return false;
+        }
+    }
+    home.next()
+        .is_none_or(|component| !component.as_os_str().as_encoded_bytes().starts_with(b".."))
+}
+
+/// The global agent directory follows the same validated profile as Kiro.
 fn global_agents_dir() -> Option<PathBuf> {
-    home_dir().map(|home| home.join(".kiro").join("agents"))
+    kiro_home_dir().map(|home| home.join("agents"))
 }
 
 /// Resolve the agent config file Kiro actually reads for `agent_name` when
 /// spawned in `cwd`: the workspace file shadows the global one, so prefer
-/// `<cwd>/.kiro/agents/<name>.json`, then `~/.kiro/agents/<name>.json`.
+/// `<cwd>/.kiro/agents/<name>.json`, then `<kiro-home>/agents/<name>.json`.
 ///
 /// Returns `None` when neither exists — cyril only appends to a config the user
 /// authored, so there is nothing to write.
@@ -288,6 +409,195 @@ fn write_atomic(path: &Path, content: &str) -> std::io::Result<()> {
 #[expect(clippy::unwrap_used)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn profile_defaults_are_silent_and_valid_overrides_are_trimmed() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("home");
+        let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
+        tracing::dispatcher::with_default(&dispatch, || {
+            for value in [
+                None,
+                Some(OsStr::new("")),
+                Some(OsStr::new(" \t\u{2003}\u{feff} ")),
+            ] {
+                assert_eq!(
+                    resolve_kiro_home(Some(&home), value),
+                    Some(home.join(".kiro"))
+                );
+                assert_eq!(resolve_kiro_home(None, value), None);
+            }
+            let expected = root.path().join("profile ü");
+            let input = format!(" \t\u{feff}{} \u{2003}", expected.display());
+            for home in [Some(home.as_path()), None] {
+                assert_eq!(
+                    resolve_kiro_home(home, Some(OsStr::new(&input))),
+                    Some(expected.clone())
+                );
+            }
+            assert!(!expected.exists(), "resolving must not create a profile");
+        });
+        assert!(
+            capture
+                .captured()
+                .iter()
+                .all(|event| event["level"] != "WARN"),
+            "default and accepted roots must not warn"
+        );
+    }
+
+    #[test]
+    fn profile_rejects_relative_root_and_home_ancestors_with_reasons() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("home");
+        let filesystem_root = root.path().ancestors().last().unwrap().to_path_buf();
+        let values = [
+            (PathBuf::from("relative/profile"), "relative"),
+            (PathBuf::from("."), "relative"),
+            (filesystem_root, "root"),
+            (home.clone(), "contains-home"),
+            (root.path().to_path_buf(), "contains-home"),
+            (home.join("child/.."), "contains-home"),
+        ];
+        let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
+        for (value, reason) in values {
+            let before = capture.captured().len();
+            assert_eq!(
+                tracing::dispatcher::with_default(&dispatch, || {
+                    resolve_kiro_home(Some(&home), Some(value.as_os_str()))
+                }),
+                Some(home.join(".kiro")),
+                "value={value:?}"
+            );
+            let events = capture.captured();
+            let warnings: Vec<_> = events[before..]
+                .iter()
+                .filter(|event| event["level"] == "WARN")
+                .collect();
+            assert_eq!(warnings.len(), 1, "value={value:?}: {events:?}");
+            assert_eq!(warnings[0]["fields"]["reason"], reason);
+            assert_eq!(
+                warnings[0]["fields"]["value"],
+                value.to_string_lossy().as_ref()
+            );
+        }
+        assert_eq!(resolve_kiro_home(None, Some(OsStr::new("relative"))), None);
+    }
+
+    #[test]
+    fn profile_normalizes_lexically_without_using_textual_home_prefixes() {
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("username");
+        for candidate in [
+            root.path().join("user"),
+            home.join(".kiro"),
+            root.path().join("profiles/unused/../selected"),
+        ] {
+            let expected = if candidate.ends_with("selected") {
+                root.path().join("profiles/selected")
+            } else {
+                candidate.clone()
+            };
+            assert_eq!(
+                resolve_kiro_home(Some(&home), Some(candidate.as_os_str())),
+                Some(expected)
+            );
+        }
+        // Preserve Kiro's precise relative-path predicate: "..hidden" is not
+        // considered a contained relative path because it starts with "..".
+        assert!(!kiro_path_contains_home(
+            root.path(),
+            &root.path().join("..hidden")
+        ));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn profile_validation_rejects_symlink_aliases_but_retains_accepted_spelling() {
+        use std::os::unix::fs::symlink;
+        let root = tempfile::tempdir().unwrap();
+        let home = root.path().join("real/home");
+        std::fs::create_dir_all(&home).unwrap();
+        let home_alias = root.path().join("home-alias");
+        let parent_alias = root.path().join("parent-alias");
+        let root_alias = root.path().join("root-alias");
+        symlink(&home, &home_alias).unwrap();
+        symlink(root.path().join("real"), &parent_alias).unwrap();
+        symlink("/", &root_alias).unwrap();
+        for candidate in [&home_alias, &parent_alias, &root_alias] {
+            assert_eq!(
+                resolve_kiro_home(Some(&home), Some(candidate.as_os_str())),
+                Some(home.join(".kiro")),
+                "alias={candidate:?}"
+            );
+        }
+        assert_eq!(
+            resolve_kiro_home(Some(&home_alias), Some(home.as_os_str())),
+            Some(home_alias.join(".kiro")),
+            "HOME itself must also be normalized through its symlink"
+        );
+        let absent_home = root.path().join("real/not-created/user");
+        let absent_alias = parent_alias.join("not-created");
+        assert_eq!(
+            resolve_kiro_home(Some(&absent_home), Some(absent_alias.as_os_str())),
+            Some(absent_home.join(".kiro")),
+            "existing symlink ancestors must be resolved even with an absent suffix"
+        );
+        let real_profile = root.path().join("real/profile");
+        std::fs::create_dir_all(&real_profile).unwrap();
+        let profile_alias = root.path().join("profile-alias");
+        symlink(&real_profile, &profile_alias).unwrap();
+        assert_eq!(
+            resolve_kiro_home(Some(&home), Some(profile_alias.as_os_str())),
+            Some(profile_alias),
+            "accepted roots retain the user's lexical spelling, not realpath"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn profile_windows_native_rooted_case_and_unc_boundaries() {
+        assert_eq!(
+            resolve_kiro_home(None, Some(OsStr::new(r"C:relative"))),
+            None
+        );
+        for value in [
+            r"\cyril-d7ve-owned-nonexistent",
+            "/cyril-d7ve-owned-nonexistent",
+        ] {
+            let path = resolve_kiro_home(None, Some(OsStr::new(value))).unwrap();
+            assert!(
+                path.is_absolute(),
+                "root-relative paths acquire the current drive"
+            );
+            assert!(path.ends_with("cyril-d7ve-owned-nonexistent"));
+        }
+        for (candidate, home, expected) in [
+            (r"C:\Users\PROFILE", r"c:\users\profile\child", true),
+            (r"C:\Users\Ü", r"c:\users\ü\child", true),
+            (r"C:\Users", r"D:\Users\child", false),
+            (
+                r"\\SERVER\Share\Profiles",
+                r"\\server\share\profiles\User",
+                true,
+            ),
+            (
+                r"\\server\share\Profiles",
+                r"\\server\other\Profiles\User",
+                false,
+            ),
+        ] {
+            assert_eq!(
+                kiro_path_contains_home(Path::new(candidate), Path::new(home)),
+                expected
+            );
+        }
+        // Lexical classification only: never contact a real UNC server.
+        for root in [r"C:\", r"\\server\share\"] {
+            let root = lexical_absolute(Path::new(root)).unwrap();
+            assert!(root.has_root() && root.parent().is_none());
+        }
+    }
 
     fn write_agent(dir: &Path, name: &str, body: &str) -> PathBuf {
         let agents = dir.join(".kiro").join("agents");
