@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
@@ -6,8 +7,19 @@ use cyril_core::types::{
 };
 
 pub use crate::feedback_editor::RejectionFeedback;
+use crate::message_history::{LiveRevision, MessageHistory};
 use crate::theme::Theme;
 use crate::tool_diff::{DiffPreview, DiffSource};
+
+#[cfg(test)]
+std::thread_local! {
+    static DIFF_SELECTION_STEPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+#[cfg(test)]
+pub(crate) fn diff_selection_steps() -> usize {
+    DIFF_SELECTION_STEPS.with(std::cell::Cell::get)
+}
 
 /// Which transcript a line belongs in (cyril-lki9): the main conversation, or
 /// the stream of a workflow step / subagent session. The App decides which —
@@ -38,10 +50,10 @@ pub trait TuiState {
     fn theme(&self) -> Theme;
 
     // Chat content
-    fn messages(&self) -> &[ChatMessage];
+    fn history(&self) -> &MessageHistory;
     fn streaming_text(&self) -> &str;
     fn streaming_thought(&self) -> Option<&str>;
-    fn messages_version(&self) -> u64;
+    fn live_revision(&self) -> LiveRevision;
 
     // Tool calls & plans
     fn active_tool_calls(&self) -> &[TrackedToolCall];
@@ -355,6 +367,34 @@ fn json_shape(v: &serde_json::Value) -> &'static str {
     }
 }
 
+/// The authoritative branch selected while preparing a tool's display text.
+/// Resolving it never reruns precedence checks or serializes JSON.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ToolTextSource {
+    RawOutput,
+    RawField(&'static str),
+    ItemText,
+    Content(usize),
+}
+
+#[derive(Debug)]
+pub(crate) enum ToolText<'a> {
+    Borrowed {
+        source: ToolTextSource,
+        text: &'a str,
+    },
+    Derived(String),
+}
+
+impl<'a> ToolText<'a> {
+    fn into_cow(self) -> Cow<'a, str> {
+        match self {
+            Self::Borrowed { text, .. } => Cow::Borrowed(text),
+            Self::Derived(text) => Cow::Owned(text),
+        }
+    }
+}
+
 /// A tool call enriched for display (wraps `cyril_core::types::ToolCall`).
 #[derive(Debug, Clone)]
 pub struct TrackedToolCall {
@@ -375,7 +415,9 @@ impl TrackedToolCall {
     /// content and locations from the initial ToolCall if the update
     /// doesn't carry them.
     pub fn update(&mut self, tc: &cyril_core::types::ToolCall) {
-        if !tc.content().is_empty() && self.diff_source() != Self::selected_diff(tc.content()) {
+        if !tc.content().is_empty()
+            && self.diff_source() != Self::selected_diff(tc.content()).map(|(_, source)| source)
+        {
             self.diff_preview = OnceLock::new();
         }
         self.inner.merge_update(tc);
@@ -413,19 +455,38 @@ impl TrackedToolCall {
             .get_or_init(|| Arc::new(DiffPreview::new(self.diff_source())))
     }
 
-    pub(crate) fn diff_source(&self) -> Option<DiffSource<'_>> {
-        Self::selected_diff(self.content())
+    /// Select once during preparation, initializing even an absent preview.
+    /// The ordinal belongs to the current content, not the cached derivation.
+    pub(crate) fn diff_view(&self) -> Option<(usize, DiffSource<'_>, &DiffPreview)> {
+        let selected = Self::selected_diff(self.content());
+        let preview = self
+            .diff_preview
+            .get_or_init(|| Arc::new(DiffPreview::new(selected.map(|(_, source)| source))));
+        selected.map(|(ordinal, source)| (ordinal, source, preview.as_ref()))
     }
 
-    fn selected_diff(content: &[cyril_core::types::ToolCallContent]) -> Option<DiffSource<'_>> {
-        content.iter().find_map(|block| match block {
-            cyril_core::types::ToolCallContent::Diff {
-                old_text, new_text, ..
-            } => Some(DiffSource {
-                old: old_text.as_deref().unwrap_or(""),
-                new: new_text,
-            }),
-            cyril_core::types::ToolCallContent::Text(_) => None,
+    pub(crate) fn diff_source(&self) -> Option<DiffSource<'_>> {
+        Self::selected_diff(self.content()).map(|(_, source)| source)
+    }
+
+    fn selected_diff(
+        content: &[cyril_core::types::ToolCallContent],
+    ) -> Option<(usize, DiffSource<'_>)> {
+        content.iter().enumerate().find_map(|(ordinal, block)| {
+            #[cfg(test)]
+            DIFF_SELECTION_STEPS.with(|steps| steps.set(steps.get() + 1));
+            match block {
+                cyril_core::types::ToolCallContent::Diff {
+                    old_text, new_text, ..
+                } => Some((
+                    ordinal,
+                    DiffSource {
+                        old: old_text.as_deref().unwrap_or(""),
+                        new: new_text,
+                    },
+                )),
+                cyril_core::types::ToolCallContent::Text(_) => None,
+            }
         })
     }
 
@@ -505,60 +566,61 @@ impl TrackedToolCall {
         self.inner.raw_output()
     }
 
-    /// Extract displayable text from raw_output.
+    /// Extract displayable text without copying authoritative JSON strings.
+    /// Only JSON pretty-printing requires owned derived text.
+    pub fn output_text(&self) -> Option<Cow<'_, str>> {
+        self.output_text_view().map(ToolText::into_cow)
+    }
+
+    /// Select display text once; retained rows record the selected source.
     ///
-    /// Tries the following strategies in order:
-    /// 1. Plain string value
-    /// 2. Shell commands: `stdout` (non-empty), then `stderr` (non-empty)
-    /// 3. Kiro item envelope: `items[0].Text`
-    /// 4. Kiro item envelope: `items[0].Json` (pretty-printed as JSON)
-    /// 5. Direct text fields: `text`, `content`, `result`, `output`
-    /// 6. Non-object values (arrays, numbers, bools): JSON serialization
-    ///
-    /// Inspired by the `unwrapResultOutput` / `extractResultText` pattern in
-    /// tui.js, with adaptations for the Rust context.
-    pub fn output_text(&self) -> Option<String> {
+    /// Precedence remains plain string, nonblank stdout/stderr, first item
+    /// Text/Json, direct text/content/result/output, then non-object serialization.
+    pub(crate) fn output_text_view(&self) -> Option<ToolText<'_>> {
         let output = self.inner.raw_output()?;
-
-        if let Some(s) = output.as_str() {
-            return Some(s.to_string());
+        if let Some(text) = output.as_str() {
+            return Some(ToolText::Borrowed {
+                source: ToolTextSource::RawOutput,
+                text,
+            });
         }
-
-        let obj = match output.as_object() {
-            Some(o) => o,
-            None => {
-                return serde_json::to_string_pretty(output).ok();
-            }
+        let Some(object) = output.as_object() else {
+            return serialize_tool_text(output);
         };
 
-        if let Some(stdout) = obj.get("stdout").and_then(|v| v.as_str())
-            && !stdout.trim().is_empty()
-        {
-            return Some(stdout.to_string());
-        }
-        if let Some(stderr) = obj.get("stderr").and_then(|v| v.as_str())
-            && !stderr.trim().is_empty()
-        {
-            return Some(stderr.to_string());
-        }
-
-        if let Some(items) = obj.get("items").and_then(|v| v.as_array())
-            && let Some(first) = items.first()
-        {
-            if let Some(text) = first.get("Text").and_then(|v| v.as_str()) {
-                return Some(text.to_string());
-            }
-            if let Some(json_val) = first.get("Json") {
-                return serde_json::to_string_pretty(json_val).ok();
+        for key in ["stdout", "stderr"] {
+            if let Some(text) = object.get(key).and_then(serde_json::Value::as_str)
+                && !text.trim().is_empty()
+            {
+                return Some(ToolText::Borrowed {
+                    source: ToolTextSource::RawField(key),
+                    text,
+                });
             }
         }
-
+        if let Some(first) = object
+            .get("items")
+            .and_then(serde_json::Value::as_array)
+            .and_then(|items| items.first())
+        {
+            if let Some(text) = first.get("Text").and_then(serde_json::Value::as_str) {
+                return Some(ToolText::Borrowed {
+                    source: ToolTextSource::ItemText,
+                    text,
+                });
+            }
+            if let Some(value) = first.get("Json") {
+                return serialize_tool_text(value);
+            }
+        }
         for key in ["text", "content", "result", "output"] {
-            if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
-                return Some(s.to_string());
+            if let Some(text) = object.get(key).and_then(serde_json::Value::as_str) {
+                return Some(ToolText::Borrowed {
+                    source: ToolTextSource::RawField(key),
+                    text,
+                });
             }
         }
-
         None
     }
 
@@ -573,34 +635,76 @@ impl TrackedToolCall {
     }
 
     /// Extract a failed call's error from raw output, then text content.
-    pub fn error_message(&self) -> Option<String> {
+    /// The public consumer view shares the renderer's authoritative decoder.
+    pub fn error_message(&self) -> Option<Cow<'_, str>> {
+        self.error_text_view().map(ToolText::into_cow)
+    }
+
+    pub(crate) fn error_text_view(&self) -> Option<ToolText<'_>> {
         if self.inner.status() != cyril_core::types::ToolCallStatus::Failed {
             return None;
         }
         if let Some(output) = self.inner.raw_output() {
-            if let Some(s) = output.as_str() {
-                return Some(s.to_string());
+            if let Some(text) = output.as_str() {
+                return Some(ToolText::Borrowed {
+                    source: ToolTextSource::RawOutput,
+                    text,
+                });
             }
-            if let Some(obj) = output.as_object() {
-                for key in ["error", "message"] {
-                    if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
-                        return Some(s.to_string());
-                    }
+            for key in ["error", "message"] {
+                if let Some(text) = output.get(key).and_then(serde_json::Value::as_str) {
+                    return Some(ToolText::Borrowed {
+                        source: ToolTextSource::RawField(key),
+                        text,
+                    });
                 }
             }
         }
-        self.output_text().or_else(|| {
-            // v2 validation failures carry their error only in ACP content.
+        self.output_text_view().or_else(|| {
+            // Preserve reviewed fiv1: first nonblank ACP Text, only after raw output.
             self.inner
                 .content()
                 .iter()
-                .find_map(|content| match content {
+                .enumerate()
+                .find_map(|(index, content)| match content {
                     cyril_core::types::ToolCallContent::Text(text) if !text.trim().is_empty() => {
-                        Some(text.clone())
+                        Some(ToolText::Borrowed {
+                            source: ToolTextSource::Content(index),
+                            text,
+                        })
                     }
                     _ => None,
                 })
         })
+    }
+
+    pub(crate) fn resolve_text_source(&self, source: ToolTextSource) -> Option<&str> {
+        match source {
+            ToolTextSource::RawOutput => self.inner.raw_output()?.as_str(),
+            ToolTextSource::RawField(key) => self.inner.raw_output()?.get(key)?.as_str(),
+            ToolTextSource::ItemText => self
+                .inner
+                .raw_output()?
+                .get("items")?
+                .as_array()?
+                .first()?
+                .get("Text")?
+                .as_str(),
+            ToolTextSource::Content(index) => match self.inner.content().get(index)? {
+                cyril_core::types::ToolCallContent::Text(text) => Some(text),
+                cyril_core::types::ToolCallContent::Diff { .. } => None,
+            },
+        }
+    }
+}
+
+fn serialize_tool_text(value: &serde_json::Value) -> Option<ToolText<'_>> {
+    match serde_json::to_string_pretty(value) {
+        Ok(text) => Some(ToolText::Derived(text)),
+        Err(error) => {
+            tracing::warn!(%error, "failed to serialize tool output");
+            None
+        }
     }
 }
 
@@ -1191,7 +1295,8 @@ pub mod test_support {
     /// Mock for rendering tests. Has public fields matching every TuiState method.
     pub struct MockTuiState {
         pub theme: Theme,
-        pub messages: Vec<ChatMessage>,
+        pub messages: MessageHistory,
+        pub live_revision: LiveRevision,
         pub streaming_text: String,
         pub streaming_thought: Option<String>,
         pub active_tool_calls: Vec<TrackedToolCall>,
@@ -1236,7 +1341,8 @@ pub mod test_support {
         fn default() -> Self {
             Self {
                 theme: marker_theme(),
-                messages: Vec::new(),
+                messages: MessageHistory::new(),
+                live_revision: LiveRevision::default(),
                 streaming_text: String::new(),
                 streaming_thought: None,
                 active_tool_calls: Vec::new(),
@@ -1279,11 +1385,31 @@ pub mod test_support {
         }
     }
 
+    impl MockTuiState {
+        pub fn bump_live_text(&mut self) {
+            self.live_revision.bump_text();
+        }
+
+        pub fn bump_live_thought(&mut self) {
+            self.live_revision.bump_thought();
+        }
+
+        pub fn set_live_text(&mut self, text: String) {
+            self.streaming_text = text;
+            self.bump_live_text();
+        }
+
+        pub fn set_live_thought(&mut self, thought: Option<String>) {
+            self.streaming_thought = thought;
+            self.bump_live_thought();
+        }
+    }
+
     impl TuiState for MockTuiState {
         fn theme(&self) -> Theme {
             self.theme
         }
-        fn messages(&self) -> &[ChatMessage] {
+        fn history(&self) -> &MessageHistory {
             &self.messages
         }
         fn streaming_text(&self) -> &str {
@@ -1292,8 +1418,8 @@ pub mod test_support {
         fn streaming_thought(&self) -> Option<&str> {
             self.streaming_thought.as_deref()
         }
-        fn messages_version(&self) -> u64 {
-            0
+        fn live_revision(&self) -> LiveRevision {
+            self.live_revision
         }
         fn active_tool_calls(&self) -> &[TrackedToolCall] {
             &self.active_tool_calls
@@ -1422,6 +1548,35 @@ mod tests {
     }
 
     #[test]
+    fn mock_history_ownership_and_live_revision_helpers_are_real() {
+        let mut first = test_support::MockTuiState::default();
+        let second = test_support::MockTuiState::default();
+        assert!(
+            second
+                .history()
+                .changed_since(first.history().revision())
+                .reset
+        );
+        let initial = first.live_revision();
+        first.set_live_text("text".to_owned());
+        assert_eq!(first.streaming_text(), "text");
+        assert_ne!(first.live_revision().text, initial.text);
+        assert_eq!(first.live_revision().thought, initial.thought);
+        let after_text = first.live_revision();
+        first.streaming_text.push_str(" delta");
+        first.bump_live_text();
+        assert_ne!(first.live_revision().text, after_text.text);
+        first.set_live_thought(Some("thought".to_owned()));
+        assert_eq!(first.streaming_thought(), Some("thought"));
+        assert_ne!(first.live_revision().thought, initial.thought);
+        let before = first.live_revision();
+        first.streaming_thought = None;
+        first.bump_live_thought();
+        assert_eq!(first.live_revision().text, before.text);
+        assert_ne!(first.live_revision().thought, before.thought);
+    }
+
+    #[test]
     fn approval_origin_label_preserves_valid_ids_and_names_empty_ids() {
         assert_eq!(
             approval_origin_label(&SessionId::new("peer-session")),
@@ -1515,6 +1670,70 @@ mod tests {
             old_text: old.map(str::to_owned),
             new_text: new.into(),
         }])
+    }
+
+    #[test]
+    fn tracked_diff_view_selects_once_and_initializes_absence() {
+        use cyril_core::types::ToolCallContent;
+
+        let tracked = TrackedToolCall::new(diff_cache_call(None, "").with_content(vec![
+            ToolCallContent::Text("first".into()),
+            ToolCallContent::Text("second".into()),
+        ]));
+        assert!(tracked.diff_preview.get().is_none());
+        let before = diff_selection_steps();
+        assert!(tracked.diff_view().is_none());
+        assert_eq!(diff_selection_steps() - before, 2);
+        assert!(tracked.diff_preview.get().is_some());
+        assert_eq!(tracked.diff_preview().summary(), None);
+        assert_eq!(diff_selection_steps() - before, 2);
+    }
+
+    #[test]
+    fn tracked_diff_view_retains_preview_when_selected_ordinal_moves() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::ToolCallContent;
+
+        let first = ToolCallContent::Diff {
+            path: "first.rs".into(),
+            old_text: None,
+            new_text: "selected\n".into(),
+        };
+        let later = ToolCallContent::Diff {
+            path: "later.rs".into(),
+            old_text: None,
+            new_text: "not selected\n".into(),
+        };
+        let mut tracked = TrackedToolCall::new(diff_cache_call(None, "").with_content(vec![
+            ToolCallContent::Text("preceding".into()),
+            first.clone(),
+            later.clone(),
+        ]));
+        let constructions = text_diff_constructions();
+        let before = diff_selection_steps();
+        let (ordinal, source, preview) = tracked.diff_view().unwrap();
+        assert_eq!(diff_selection_steps() - before, 2);
+        assert_eq!(ordinal, 1);
+        assert_eq!(source.new, "selected\n");
+        assert_eq!(preview.summary(), Some((1, 0)));
+        assert_eq!(preview.rows()[0].text(source).as_ptr(), source.new.as_ptr());
+        let retained = tracked.diff_preview.get().unwrap().clone();
+
+        tracked.update(&diff_cache_call(None, "").with_content(vec![
+            ToolCallContent::Text("another preceding".into()),
+            ToolCallContent::Text("preceding".into()),
+            first,
+            later,
+        ]));
+        assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
+        let before = diff_selection_steps();
+        let (ordinal, source, preview) = tracked.diff_view().unwrap();
+        assert_eq!(diff_selection_steps() - before, 3);
+        assert_eq!(ordinal, 2);
+        assert_eq!(source.new, "selected\n");
+        assert!(std::ptr::eq(preview, retained.as_ref()));
+        assert_eq!(preview.rows()[0].text(source).as_ptr(), source.new.as_ptr());
+        assert_eq!(text_diff_constructions() - constructions, 1);
     }
 
     #[test]
@@ -1986,7 +2205,7 @@ mod tests {
         )
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(tracked.output_text(), Some("hello world".to_string()));
+        assert_eq!(tracked.output_text().as_deref(), Some("hello world"));
     }
 
     #[test]
@@ -2002,7 +2221,7 @@ mod tests {
         )
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(tracked.output_text(), Some("error output".to_string()));
+        assert_eq!(tracked.output_text().as_deref(), Some("error output"));
     }
 
     #[test]
@@ -2018,10 +2237,7 @@ mod tests {
         )
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(
-            tracked.output_text(),
-            Some("file contents here".to_string())
-        );
+        assert_eq!(tracked.output_text().as_deref(), Some("file contents here"));
     }
 
     #[test]
@@ -2037,7 +2253,7 @@ mod tests {
         )
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(tracked.output_text(), Some("plain text output".to_string()));
+        assert_eq!(tracked.output_text().as_deref(), Some("plain text output"));
     }
 
     #[test]
@@ -2098,8 +2314,8 @@ mod tests {
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(
-            tracked.error_message(),
-            Some("Command timed out".to_string())
+            tracked.error_message().as_deref(),
+            Some("Command timed out")
         );
     }
 
@@ -2133,8 +2349,8 @@ mod tests {
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(
-            tracked.error_message(),
-            Some("permission denied".to_string())
+            tracked.error_message().as_deref(),
+            Some("permission denied")
         );
     }
 
@@ -2169,7 +2385,7 @@ mod tests {
         )
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(tracked.output_text(), Some("plain output".to_string()));
+        assert_eq!(tracked.output_text().as_deref(), Some("plain output"));
     }
 
     #[test]
@@ -2313,8 +2529,8 @@ mod tests {
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
         assert_eq!(
-            tracked.error_message(),
-            Some("permission denied".to_string())
+            tracked.error_message().as_deref(),
+            Some("permission denied")
         );
     }
 
@@ -2331,6 +2547,6 @@ mod tests {
         )
         .with_raw_output(Some(output));
         let tracked = TrackedToolCall::new(tc);
-        assert_eq!(tracked.error_message(), Some("not found".to_string()));
+        assert_eq!(tracked.error_message().as_deref(), Some("not found"));
     }
 }

@@ -5,12 +5,50 @@ use ratatui::widgets::Paragraph;
 
 use crate::traits::{Overlay, TuiState, approval_origin_label};
 
+/// Retained layout storage counts for the selected transcript.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct LayoutMetrics {
+    pub messages: usize,
+    pub rows: usize,
+    pub runs: usize,
+    pub source_slots: usize,
+    pub owned_text_bytes: usize,
+}
+
+/// Prepared rendering data retained across frames of one application.
+///
+/// Keep this beside the UI state and pass it to every [`draw`] call. Transcript,
+/// theme and geometry invalidation remain owned by the chat renderer.
+#[derive(Default)]
+pub struct RenderState {
+    chat: crate::widgets::chat::ChatRenderState,
+}
+
+impl RenderState {
+    /// Create empty rendering state for a new application lifetime.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Inspect retained layout storage without preparing or drawing another frame.
+    pub fn layout_metrics(&self) -> LayoutMetrics {
+        self.chat.layout_metrics()
+    }
+
+    fn invalidate(&mut self) {
+        self.chat = crate::widgets::chat::ChatRenderState::default();
+    }
+}
+
 /// Draw the full TUI frame. Panic-safe wrapper with fallback rendering.
-pub fn draw(frame: &mut Frame, state: &dyn TuiState) {
+pub fn draw(frame: &mut Frame, state: &dyn TuiState, render_state: &mut RenderState) {
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        draw_inner(frame, state);
+        draw_inner(frame, state, render_state);
     }));
     if result.is_err() {
+        // A panic may interrupt preparation after only part of the layout changed.
+        // Never let the next frame reuse that partially updated state.
+        render_state.invalidate();
         draw_fallback(frame);
     }
 }
@@ -150,7 +188,7 @@ pub(crate) fn powers_window(state: &dyn TuiState, len: usize) -> usize {
         .map_or(0, |(_popup, window)| window)
 }
 
-fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
+fn draw_inner(frame: &mut Frame, state: &dyn TuiState, render_state: &mut RenderState) {
     let area = frame.area();
     let theme = state.theme();
 
@@ -179,7 +217,7 @@ fn draw_inner(frame: &mut Frame, state: &dyn TuiState) {
     ] = frame_areas(area, &rows);
 
     crate::widgets::toolbar::render(frame, toolbar_area, state, &theme);
-    crate::widgets::chat::render(frame, chat_area, state, &theme);
+    crate::widgets::chat::render(frame, chat_area, state, &theme, &mut render_state.chat);
     if rows.crew > 0 {
         crate::widgets::crew_panel::render(frame, crew_area, state, &theme);
     }
@@ -301,10 +339,13 @@ mod tests {
     use ratatui::backend::TestBackend;
     use ratatui::buffer::Buffer;
 
-    fn render_buffer(state: &MockTuiState) -> anyhow::Result<Buffer> {
+    fn render_buffer(
+        state: &MockTuiState,
+        render_state: &mut super::RenderState,
+    ) -> anyhow::Result<Buffer> {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend)?;
-        terminal.draw(|frame| super::draw(frame, state))?;
+        terminal.draw(|frame| super::draw(frame, state, render_state))?;
         Ok(terminal.backend().buffer().clone())
     }
 
@@ -316,7 +357,8 @@ mod tests {
                 ChatMessage::user_text("user".into()),
                 ChatMessage::agent_text("agent reply".into()),
                 ChatMessage::system("system".into()),
-            ],
+            ]
+            .into(),
             activity: Activity::ToolRunning,
             activity_elapsed: Some(Duration::from_secs(1)),
             theme,
@@ -330,7 +372,7 @@ mod tests {
             crate::theme::ThemeId::CyrilLight,
             crate::theme::ColorMode::TrueColor,
         );
-        let buffer = render_buffer(&canvas_state(theme))?;
+        let buffer = render_buffer(&canvas_state(theme), &mut super::RenderState::default())?;
         let canvas = theme.canvas;
         let mut canvas_cells = 0usize;
         let mut terminal_owned = Vec::new();
@@ -364,7 +406,7 @@ mod tests {
             crate::theme::ColorMode::TrueColor,
         );
         assert_eq!(theme.canvas, ratatui::style::Color::Reset);
-        let buffer = render_buffer(&canvas_state(theme))?;
+        let buffer = render_buffer(&canvas_state(theme), &mut super::RenderState::default())?;
         assert!(
             buffer
                 .content()
@@ -404,7 +446,8 @@ mod tests {
                 baseline_steer("applied", SteerEchoStatus::Applied),
                 baseline_steer("cleared", SteerEchoStatus::Cleared),
                 baseline_steer("unsupported", SteerEchoStatus::Unsupported),
-            ],
+            ]
+            .into(),
             activity: Activity::ToolRunning,
             activity_elapsed: Some(Duration::from_secs(1)),
             ..MockTuiState::default()
@@ -415,8 +458,15 @@ mod tests {
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend)?;
         let state = baseline_message_state();
+        let mut render_state = crate::widgets::chat::ChatRenderState::default();
         terminal.draw(|frame| {
-            crate::widgets::chat::render(frame, frame.area(), &state, &state.theme);
+            crate::widgets::chat::render(
+                frame,
+                frame.area(),
+                &state,
+                &state.theme,
+                &mut render_state,
+            );
         })?;
         Ok(terminal.backend().buffer().clone())
     }
@@ -532,7 +582,8 @@ mod tests {
                 ChatMessage::user_text("Update the greeting without losing Unicode.".into()),
                 ChatMessage::agent_text("I updated the Rust greeting and status.".into()),
                 ChatMessage::tool_call(tool_call),
-            ],
+            ]
+            .into(),
             activity: Activity::Ready,
             session_label: Some("theme-contract".into()),
             current_mode: Some("code".into()),
@@ -557,11 +608,101 @@ mod tests {
         let state = MockTuiState::default();
         let backend = TestBackend::new(80, 24);
         let mut terminal = Terminal::new(backend).expect("test terminal");
+        let mut render_state = super::RenderState::new();
         terminal
             .draw(|frame| {
-                super::draw(frame, &state);
+                super::draw(frame, &state, &mut render_state);
             })
             .expect("draw should succeed");
+    }
+
+    #[test]
+    fn retained_root_draw_survives_updates_and_resize() -> anyhow::Result<()> {
+        let mut state = crate::state::UiState::new(100);
+        state.add_system_message("retained root history".into());
+        let mut render_state = super::RenderState::new();
+        assert_eq!(
+            render_state.layout_metrics(),
+            super::LayoutMetrics::default()
+        );
+        let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        terminal.draw(|frame| super::draw(frame, &state, &mut render_state))?;
+        let first = terminal.backend().buffer().clone();
+        let text: String = first.content().iter().map(|cell| cell.symbol()).collect();
+        assert!(text.contains("retained root history"), "{text}");
+        let metrics = render_state.layout_metrics();
+        assert_eq!(metrics.messages, 1);
+        assert!(metrics.rows > 0);
+        assert!(metrics.runs > 0);
+        for _ in 0..3 {
+            terminal.draw(|frame| super::draw(frame, &state, &mut render_state))?;
+            assert_eq!(terminal.backend().buffer(), &first);
+            assert_eq!(render_state.layout_metrics(), metrics);
+        }
+
+        state.add_system_message("new root suffix".into());
+        for (width, height) in [(60, 16), (100, 30), (80, 24)] {
+            terminal.backend_mut().resize(width, height);
+            terminal.draw(|frame| {
+                assert_eq!(
+                    frame.area(),
+                    ratatui::layout::Rect::new(0, 0, width, height),
+                    "the retained renderer must receive the resized frame"
+                );
+                super::draw(frame, &state, &mut render_state);
+            })?;
+            let text: String = terminal
+                .backend()
+                .buffer()
+                .content()
+                .iter()
+                .map(|cell| cell.symbol())
+                .collect();
+            assert!(
+                text.contains("retained root history"),
+                "{width}x{height}: {text}"
+            );
+            assert!(text.contains("new root suffix"), "{width}x{height}: {text}");
+            assert!(!text.contains("Render error"), "{width}x{height}: {text}");
+        }
+
+        let prepared = terminal.backend().buffer().clone();
+        // The panic path uses this same reset before drawing its fallback.
+        render_state.invalidate();
+        assert_eq!(
+            render_state.layout_metrics(),
+            super::LayoutMetrics::default()
+        );
+        terminal.draw(|frame| super::draw(frame, &state, &mut render_state))?;
+        assert_eq!(terminal.backend().buffer(), &prepared);
+        Ok(())
+    }
+
+    #[test]
+    fn retained_root_draw_switches_distinct_history_owners() -> anyhow::Result<()> {
+        let mut first = crate::state::UiState::new(100);
+        first.add_system_message("first transcript only".into());
+        let mut second = crate::state::UiState::new(100);
+        second.add_system_message("second transcript only".into());
+        let mut render_state = super::RenderState::default();
+        let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        for (state, visible, absent) in [
+            (&first, "first transcript only", "second transcript only"),
+            (&second, "second transcript only", "first transcript only"),
+            (&first, "first transcript only", "second transcript only"),
+        ] {
+            terminal.draw(|frame| super::draw(frame, state, &mut render_state))?;
+            let text: String = terminal
+                .backend()
+                .buffer()
+                .content()
+                .iter()
+                .map(|cell| cell.symbol())
+                .collect();
+            assert!(text.contains(visible), "{text}");
+            assert!(!text.contains(absent), "{text}");
+        }
+        Ok(())
     }
 
     #[test]
@@ -603,10 +744,10 @@ mod tests {
         use crate::traits::ChatMessage;
 
         let state = MockTuiState {
-            messages: vec![ChatMessage::user_text("marker".into())],
+            messages: vec![ChatMessage::user_text("marker".into())].into(),
             ..Default::default()
         };
-        let buffer = render_buffer(&state)?;
+        let buffer = render_buffer(&state, &mut super::RenderState::default())?;
         let user_label = buffer
             .cell((0, 1))
             .ok_or_else(|| anyhow::anyhow!("missing first chat cell"))?;
@@ -629,14 +770,14 @@ mod tests {
             ),
             ..MockTuiState::default()
         };
-        let buffer = render_buffer(&state)?;
+        let buffer = render_buffer(&state, &mut super::RenderState::default())?;
         insta::assert_debug_snapshot!("theme_seam_idle", buffer);
         Ok(())
     }
 
     #[test]
     fn theme_seam_tool_diff() -> anyhow::Result<()> {
-        let buffer = render_buffer(&tool_diff_state())?;
+        let buffer = render_buffer(&tool_diff_state(), &mut super::RenderState::default())?;
         insta::assert_debug_snapshot!("theme_seam_tool_diff", buffer);
         Ok(())
     }
@@ -665,7 +806,7 @@ mod tests {
                 )],
                 pending_stages: vec![],
             });
-        let buffer = render_buffer(&state)?;
+        let buffer = render_buffer(&state, &mut super::RenderState::default())?;
 
         let toolbar = buffer
             .cell((79, 0))
@@ -765,7 +906,8 @@ mod tests {
         // Chrome widgets (toolbar, status bar) are cyril-dij8's batch and may
         // still paint hardcoded colors — scope the Rgb ban to cells the
         // OVERLAY itself changed vs a no-overlay frame.
-        let base = render_buffer(&MockTuiState::default())?;
+        let mut render_state = super::RenderState::default();
+        let base = render_buffer(&MockTuiState::default(), &mut render_state)?;
         let marker = crate::traits::test_support::marker_theme();
         for (name, state, signature) in [
             ("approval", &approval_state, marker.emphasis),
@@ -773,7 +915,7 @@ mod tests {
             ("hooks", &hooks_state, marker.accent_violet),
             ("code", &code_state, marker.accent_quinary),
         ] {
-            let buffer = render_buffer(state)?;
+            let buffer = render_buffer(state, &mut render_state)?;
             let mut saw_signature = false;
             for (cell, base_cell) in buffer.content().iter().zip(base.content()) {
                 if cell == base_cell {
@@ -831,8 +973,9 @@ mod tests {
             ..MockTuiState::default()
         };
 
-        let text = |state: &MockTuiState| -> anyhow::Result<String> {
-            Ok(render_buffer(state)?
+        let mut render_state = super::RenderState::default();
+        let mut text = |state: &MockTuiState| -> anyhow::Result<String> {
+            Ok(render_buffer(state, &mut render_state)?
                 .content()
                 .iter()
                 .map(|cell| cell.symbol())
@@ -914,20 +1057,30 @@ mod tests {
             scroll_offset: 0,
         };
 
-        let base = render_buffer(&MockTuiState::default())?;
-        let approval_only = render_buffer(&MockTuiState {
-            approval: Some(approval()),
-            ..MockTuiState::default()
-        })?;
-        let powers_only = render_buffer(&MockTuiState {
-            powers_panel: Some(powers.clone()),
-            ..MockTuiState::default()
-        })?;
-        let both = render_buffer(&MockTuiState {
-            approval: Some(approval()),
-            powers_panel: Some(powers),
-            ..MockTuiState::default()
-        })?;
+        let mut render_state = super::RenderState::default();
+        let base = render_buffer(&MockTuiState::default(), &mut render_state)?;
+        let approval_only = render_buffer(
+            &MockTuiState {
+                approval: Some(approval()),
+                ..MockTuiState::default()
+            },
+            &mut render_state,
+        )?;
+        let powers_only = render_buffer(
+            &MockTuiState {
+                powers_panel: Some(powers.clone()),
+                ..MockTuiState::default()
+            },
+            &mut render_state,
+        )?;
+        let both = render_buffer(
+            &MockTuiState {
+                approval: Some(approval()),
+                powers_panel: Some(powers),
+                ..MockTuiState::default()
+            },
+            &mut render_state,
+        )?;
 
         let claimed =
             |buffer: &Buffer, index: usize| buffer.content()[index] != base.content()[index];
@@ -974,7 +1127,7 @@ mod tests {
 
     #[test]
     fn theme_seam_picker() -> anyhow::Result<()> {
-        let buffer = render_buffer(&picker_state())?;
+        let buffer = render_buffer(&picker_state(), &mut super::RenderState::default())?;
         insta::assert_debug_snapshot!("theme_seam_picker", buffer);
         Ok(())
     }
@@ -1090,7 +1243,8 @@ mod conversation_baseline_compatibility {
                 steer("applied", SteerEchoStatus::Applied),
                 steer("cleared", SteerEchoStatus::Cleared),
                 steer("unsupported", SteerEchoStatus::Unsupported),
-            ],
+            ]
+            .into(),
             activity: Activity::ToolRunning,
             activity_elapsed: Some(Duration::from_secs(1)),
             theme,
@@ -1101,8 +1255,15 @@ mod conversation_baseline_compatibility {
     fn render_message_scene(theme: Theme) -> anyhow::Result<Buffer> {
         let state = message_state(theme);
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        let mut render_state = crate::widgets::chat::ChatRenderState::default();
         terminal.draw(|frame| {
-            crate::widgets::chat::render(frame, frame.area(), &state, &state.theme);
+            crate::widgets::chat::render(
+                frame,
+                frame.area(),
+                &state,
+                &state.theme,
+                &mut render_state,
+            );
         })?;
         Ok(terminal.backend().buffer().clone())
     }
@@ -1219,12 +1380,12 @@ mod conversation_baseline_compatibility {
         (
             MockTuiState {
                 theme,
-                messages: vec![ChatMessage::tool_call(write)],
+                messages: vec![ChatMessage::tool_call(write)].into(),
                 ..Default::default()
             },
             MockTuiState {
                 theme,
-                messages: right,
+                messages: right.into(),
                 ..Default::default()
             },
         )
@@ -1233,14 +1394,44 @@ mod conversation_baseline_compatibility {
     fn render_tool_scene(theme: Theme) -> anyhow::Result<Buffer> {
         let (left_state, right_state) = tool_states(theme);
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        let mut left_render_state = crate::widgets::chat::ChatRenderState::default();
+        let mut right_render_state = crate::widgets::chat::ChatRenderState::default();
         terminal.draw(|frame| {
             let [left, right] =
                 Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
                     .areas(frame.area());
-            crate::widgets::chat::render(frame, left, &left_state, &left_state.theme);
-            crate::widgets::chat::render(frame, right, &right_state, &right_state.theme);
+            crate::widgets::chat::render(
+                frame,
+                left,
+                &left_state,
+                &left_state.theme,
+                &mut left_render_state,
+            );
+            crate::widgets::chat::render(
+                frame,
+                right,
+                &right_state,
+                &right_state.theme,
+                &mut right_render_state,
+            );
         })?;
         Ok(terminal.backend().buffer().clone())
+    }
+
+    fn borrowed_lines<'a>(lines: &'a [ratatui::text::Line<'static>]) -> ratatui::text::Text<'a> {
+        lines
+            .iter()
+            .map(|line| ratatui::text::Line {
+                spans: line
+                    .spans
+                    .iter()
+                    .map(|span| ratatui::text::Span::styled(span.content.as_ref(), span.style))
+                    .collect(),
+                style: line.style,
+                alignment: line.alignment,
+            })
+            .collect::<Vec<_>>()
+            .into()
     }
 
     fn render_markdown_scene(theme: Theme) -> anyhow::Result<Buffer> {
@@ -1253,6 +1444,12 @@ mod conversation_baseline_compatibility {
             ..Default::default()
         };
         let mut terminal = Terminal::new(TestBackend::new(80, 24))?;
+        let heading_lines = crate::widgets::markdown::render_with_theme(HEADINGS, 40, &state.theme);
+        let structure_lines =
+            crate::widgets::markdown::render_with_theme(STRUCTURE, 40, &state.theme);
+        let formatting_lines =
+            crate::widgets::markdown::render_with_theme(FORMATTING, 40, &state.theme);
+        let code_lines = crate::widgets::markdown::render_with_theme(CODE, 40, &state.theme);
         terminal.draw(|frame| {
             let [left, right] =
                 Layout::horizontal([Constraint::Length(40), Constraint::Length(40)])
@@ -1263,38 +1460,13 @@ mod conversation_baseline_compatibility {
                 Constraint::Min(1),
             ])
             .areas(left);
+            frame.render_widget(Paragraph::new(borrowed_lines(&heading_lines)), headings);
+            frame.render_widget(Paragraph::new(borrowed_lines(&structure_lines)), structure);
             frame.render_widget(
-                Paragraph::new(crate::widgets::markdown::render_with_theme(
-                    HEADINGS,
-                    40,
-                    &state.theme,
-                )),
-                headings,
-            );
-            frame.render_widget(
-                Paragraph::new(crate::widgets::markdown::render_with_theme(
-                    STRUCTURE,
-                    40,
-                    &state.theme,
-                )),
-                structure,
-            );
-            frame.render_widget(
-                Paragraph::new(crate::widgets::markdown::render_with_theme(
-                    FORMATTING,
-                    40,
-                    &state.theme,
-                )),
+                Paragraph::new(borrowed_lines(&formatting_lines)),
                 formatting,
             );
-            frame.render_widget(
-                Paragraph::new(crate::widgets::markdown::render_with_theme(
-                    CODE,
-                    40,
-                    &state.theme,
-                )),
-                right,
-            );
+            frame.render_widget(Paragraph::new(borrowed_lines(&code_lines)), right);
         })?;
         Ok(terminal.backend().buffer().clone())
     }

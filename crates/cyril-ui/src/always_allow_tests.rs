@@ -501,9 +501,12 @@ fn v2_trust_tiers_keep_their_own_page() {
     assert!(matches!(phase(&state), ApprovalPhase::SelectTrust { .. }));
 }
 
-fn screen(state: &UiState) -> anyhow::Result<String> {
+fn screen(
+    state: &UiState,
+    render_state: &mut crate::render::RenderState,
+) -> anyhow::Result<String> {
     let mut terminal = Terminal::new(TestBackend::new(100, 30))?;
-    terminal.draw(|frame| crate::render::draw(frame, state as &dyn TuiState))?;
+    terminal.draw(|frame| crate::render::draw(frame, state as &dyn TuiState, render_state))?;
     let buffer = terminal.backend().buffer().clone();
     let width = usize::from(buffer.area.width);
     Ok(buffer
@@ -520,7 +523,7 @@ fn scope_page_renders_the_tui_rows() -> anyhow::Result<()> {
     let (request, _rx) = request("main", Some(shell_consent()), Vec::new());
     open_scope_page(&mut state, request);
     state.approval_cycle_scope();
-    let text = screen(&state)?;
+    let text = screen(&state, &mut crate::render::RenderState::default())?;
 
     for expected in [
         "shell → echo AUXTV1 now",
@@ -543,14 +546,15 @@ fn folder_page_renders_the_live_validation() -> anyhow::Result<()> {
     let (request, _rx) = request("main", Some(write_consent()), Vec::new());
     open_scope_page(&mut state, request);
     state.approval_select_next();
-    let text = screen(&state)?;
+    let mut render_state = crate::render::RenderState::default();
+    let text = screen(&state, &mut render_state)?;
     assert!(
         text.contains("Allow a folder for this session…") && text.contains("src/a · session"),
         "folder row in\n{text}"
     );
 
     state.approval_confirm();
-    let text = screen(&state)?;
+    let text = screen(&state, &mut render_state)?;
     assert!(
         text.contains("Allows writes in src/a and every folder under it, for this session only."),
         "valid folder line in\n{text}"
@@ -558,7 +562,7 @@ fn folder_page_renders_the_live_validation() -> anyhow::Result<()> {
     for _ in 0.."src/a".len() {
         state.approval_folder_key(key(KeyCode::Backspace));
     }
-    let text = screen(&state)?;
+    let text = screen(&state, &mut render_state)?;
     assert!(text.contains("Type a folder path."), "reason in\n{text}");
     Ok(())
 }
@@ -568,15 +572,20 @@ fn tiny_viewport_does_not_panic() -> anyhow::Result<()> {
     let mut state = with_main("main");
     let (request, _rx) = request("main", Some(write_consent()), Vec::new());
     open_scope_page(&mut state, request);
+    let mut render_state = crate::render::RenderState::default();
     for (width, height) in [(20, 6), (60, 10), (8, 3)] {
         let mut terminal = Terminal::new(TestBackend::new(width, height))?;
-        terminal.draw(|frame| crate::render::draw(frame, &state as &dyn TuiState))?;
+        terminal.draw(|frame| {
+            crate::render::draw(frame, &state as &dyn TuiState, &mut render_state);
+        })?;
     }
     state.approval_select_next();
     state.approval_confirm();
     for (width, height) in [(20, 6), (60, 10), (8, 3)] {
         let mut terminal = Terminal::new(TestBackend::new(width, height))?;
-        terminal.draw(|frame| crate::render::draw(frame, &state as &dyn TuiState))?;
+        terminal.draw(|frame| {
+            crate::render::draw(frame, &state as &dyn TuiState, &mut render_state);
+        })?;
     }
     Ok(())
 }
@@ -679,10 +688,14 @@ fn open_later_page(page: LaterPage) -> (UiState, Receiver<PermissionResponse>) {
 
 /// Record an 80x`height` frame in the state, as the App's draw path does,
 /// and return that frame's text.
-fn screen_at(state: &mut UiState, height: u16) -> anyhow::Result<String> {
+fn screen_at(
+    state: &mut UiState,
+    height: u16,
+    render_state: &mut crate::render::RenderState,
+) -> anyhow::Result<String> {
     state.set_terminal_size(80, height);
     let mut terminal = Terminal::new(TestBackend::new(80, height))?;
-    terminal.draw(|frame| crate::render::draw(frame, &*state as &dyn TuiState))?;
+    terminal.draw(|frame| crate::render::draw(frame, &*state as &dyn TuiState, render_state))?;
     let buffer = terminal.backend().buffer().clone();
     Ok(buffer
         .content()
@@ -709,9 +722,10 @@ fn screen_at(state: &mut UiState, height: u16) -> anyhow::Result<String> {
 #[case::trust_page_long_pattern_list(LaterPage::TrustLong)]
 fn later_pages_confirm_only_what_is_drawn(#[case] page: LaterPage) -> anyhow::Result<()> {
     let (mut inert, mut answered_at) = (0, 0);
+    let mut render_state = crate::render::RenderState::default();
     for height in 4u16..=22 {
         let (mut state, mut rx) = open_later_page(page);
-        let text = screen_at(&mut state, height)?;
+        let text = screen_at(&mut state, height, &mut render_state)?;
         let drawn = match page {
             LaterPage::Folder => text.contains("src/a█"),
             LaterPage::FolderLong => text.contains(&format!("{LONG_FOLDER}█")),

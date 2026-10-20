@@ -1,0 +1,543 @@
+diff --git a/crates/cyril-core/src/types/steer_receipt.rs b/crates/cyril-core/src/types/steer_receipt.rs
+index af9fa6c0fa15f94041386c1bbe6dae9d73629eff..ef7f36eeb2ceb505cea85c5ad85e765dee3d0996 100644
+--- a/crates/cyril-core/src/types/steer_receipt.rs
++++ b/crates/cyril-core/src/types/steer_receipt.rs
+@@ -74,6 +74,24 @@ impl SteerReceipt {
+     }
+ }
+ 
++/// Receipts removed by [`harvest`] and conservative metadata about its edits.
++#[derive(Debug)]
++pub struct HarvestedReceipts {
++    receipts: Vec<SteerReceipt>,
++    earliest_removed_start: Option<usize>,
++}
++
++impl HarvestedReceipts {
++    /// Move out the receipts in emission order and the minimum start offset
++    /// across all removals, measured in the buffer at each splice.
++    ///
++    /// Bytes before that offset were not removed. `None` means the buffer was
++    /// not mutated; offsets after the first removal may have shifted left.
++    pub fn into_parts(self) -> (Vec<SteerReceipt>, Option<usize>) {
++        (self.receipts, self.earliest_removed_start)
++    }
++}
++
+ /// Is `id` a well-formed receipt id?
+ fn is_valid_id(id: &str) -> bool {
+     id.len() > ID_PREFIX.len()
+@@ -143,13 +161,15 @@ fn plausible_prefix(s: &str) -> bool {
+     }
+ }
+ 
+-/// Remove every complete receipt from `buf`, returning them in emission order.
++/// Remove every complete receipt from `buf`, retaining emission order and the
++/// earliest removal offset in the returned [`HarvestedReceipts`].
+ ///
+ /// Call on each streaming append. Malformed `[STEERING` runs are stepped over
+ /// and left in the buffer; an unterminated trailing marker is left for a later
+ /// chunk to complete.
+-pub fn harvest(buf: &mut String) -> Vec<SteerReceipt> {
++pub fn harvest(buf: &mut String) -> HarvestedReceipts {
+     let mut found = Vec::new();
++    let mut earliest_removed_start: Option<usize> = None;
+     let mut from = 0usize;
+     while let Some(rel) = buf[from..].find(OPEN) {
+         let start = from + rel;
+@@ -163,6 +183,8 @@ pub fn harvest(buf: &mut String) -> Vec<SteerReceipt> {
+         match parse_marker(&buf[start..end]) {
+             Some(receipt) => {
+                 buf.replace_range(start..end, "");
++                earliest_removed_start =
++                    Some(earliest_removed_start.map_or(start, |earliest| earliest.min(start)));
+                 found.push(receipt);
+                 // Resume at the splice point — a second receipt may follow.
+                 from = start;
+@@ -171,7 +193,10 @@ pub fn harvest(buf: &mut String) -> Vec<SteerReceipt> {
+             None => from = start + OPEN.len(),
+         }
+     }
+-    found
++    HarvestedReceipts {
++        receipts: found,
++        earliest_removed_start,
++    }
+ }
+ 
+ /// Byte length of the trailing run of `buf` that must be withheld from the live
+@@ -211,7 +236,11 @@ mod tests {
+     #[test]
+     fn harvests_the_captured_trailer() {
+         let mut buf = format!("Committed and pushed.\n\n{CAPTURED}");
+-        let found = harvest(&mut buf);
++        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(
++            earliest_removed_start,
++            Some("Committed and pushed.\n\n".len())
++        );
+         assert_eq!(found.len(), 1, "one receipt in {buf:?}");
+         assert_eq!(found[0].id(), "steer-3f2a9c14-7b6d-4e05-9a81-2c5d8e0b41f7");
+         assert!(
+@@ -232,7 +261,8 @@ mod tests {
+     #[test]
+     fn harvests_multiple_receipts() {
+         let mut buf = "a [STEERING steer-1a: first] b [STEERING steer-2b: second] c".to_string();
+-        let found = harvest(&mut buf);
++        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(earliest_removed_start, Some(2));
+         assert_eq!(
+             found.iter().map(SteerReceipt::id).collect::<Vec<_>>(),
+             ["steer-1a", "steer-2b"]
+@@ -248,7 +278,8 @@ mod tests {
+     fn empty_note_is_still_a_receipt() {
+         // Proves pickup even when the model says nothing useful.
+         let mut buf = "[STEERING steer-x9: ]".to_string();
+-        let found = harvest(&mut buf);
++        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(earliest_removed_start, Some(0));
+         assert_eq!(found.len(), 1);
+         assert_eq!(found[0].note(), "");
+         assert_eq!(buf, "");
+@@ -265,7 +296,8 @@ mod tests {
+             "[STEERING steer- 1: x]",      // whitespace inside the id
+         ] {
+             let mut buf = text.to_string();
+-            let found = harvest(&mut buf);
++            let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
++            assert_eq!(earliest_removed_start, None, "{text:?} reported a removal");
+             assert!(found.is_empty(), "{text:?} parsed as a receipt");
+             assert_eq!(buf, text, "{text:?} was mutated");
+         }
+@@ -274,7 +306,8 @@ mod tests {
+     #[test]
+     fn unterminated_marker_is_left_for_a_later_chunk() {
+         let mut buf = "done. [STEERING steer-abc: partial no".to_string();
+-        let found = harvest(&mut buf);
++        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(earliest_removed_start, None);
+         assert!(found.is_empty());
+         assert_eq!(buf, "done. [STEERING steer-abc: partial no");
+     }
+@@ -284,7 +317,8 @@ mod tests {
+         // Documented trade-off: stop at the first `]`, never swallow prose that
+         // follows. The remainder stays visible.
+         let mut buf = "[STEERING steer-z: see docs[1] for why] tail".to_string();
+-        let found = harvest(&mut buf);
++        let (found, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(earliest_removed_start, Some(0));
+         assert_eq!(found.len(), 1);
+         assert_eq!(found[0].note(), "see docs[1");
+         assert_eq!(buf, " for why] tail", "over-stripped past the first ]");
+@@ -298,7 +332,8 @@ mod tests {
+         let visible_prefix = "ok. ";
+         for end in visible_prefix.len()..full.len() {
+             let mut buf = full[..end].to_string();
+-            let receipts = harvest(&mut buf);
++            let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
++            assert_eq!(earliest_removed_start, None, "premature removal at {end}");
+             assert!(receipts.is_empty(), "premature harvest at {end}");
+             let cut = buf.len() - withheld_tail(&buf);
+             assert_eq!(
+@@ -310,11 +345,36 @@ mod tests {
+         }
+         // The final byte completes it: harvested, and nothing withheld.
+         let mut buf = full.to_string();
+-        assert_eq!(harvest(&mut buf).len(), 1);
++        let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(receipts.len(), 1);
++        assert_eq!(earliest_removed_start, Some(visible_prefix.len()));
+         assert_eq!(buf, visible_prefix);
+         assert_eq!(withheld_tail(&buf), 0);
+     }
+ 
++    #[test]
++    fn empty_buffer_has_no_receipts_or_removals() {
++        let mut buf = String::new();
++        let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert!(receipts.is_empty());
++        assert_eq!(earliest_removed_start, None);
++        assert!(buf.is_empty());
++    }
++
++    #[test]
++    fn removal_metadata_preserves_the_byte_prefix_across_splices() {
++        let prefix = "café — [STEERING GROUP] ";
++        let mut buf =
++            format!("{prefix}[STEERING steer-first: one][STEERING steer-second: two] tail");
++        let (receipts, earliest_removed_start) = harvest(&mut buf).into_parts();
++        assert_eq!(earliest_removed_start, Some(prefix.len()));
++        assert_eq!(
++            receipts.iter().map(SteerReceipt::id).collect::<Vec<_>>(),
++            ["steer-first", "steer-second"]
++        );
++        assert_eq!(buf, format!("{prefix} tail"));
++    }
++
+     #[test]
+     fn withholds_nothing_for_ordinary_bracket_text() {
+         for text in [
+diff --git a/crates/cyril-ui/src/state.rs b/crates/cyril-ui/src/state.rs
+index 741c56810729a9149923d306270aeb1ce8f2c978..f23cc2c9b9ac0549dbb7faa91d92458d53f77f00 100644
+--- a/crates/cyril-ui/src/state.rs
++++ b/crates/cyril-ui/src/state.rs
+@@ -42,6 +42,8 @@ pub struct UiState {
+     messages: MessageHistory,
+     live_revision: LiveRevision,
+     streaming_text: String,
++    /// Displayed byte prefix after append/harvest withholding; reset on raw take.
++    streaming_text_cutoff: usize,
+     streaming_user_text: String,
+     streaming_thought: Option<String>,
+ 
+@@ -209,13 +211,10 @@ impl TuiState for UiState {
+     }
+ 
+     /// The live agent text, minus any trailing run that may still be growing
+-    /// into a `[STEERING <id>: …]` receipt (cyril-3qwa). Withholding is a
+-    /// suffix-only operation, so this stays a borrow of the buffer; the hidden
+-    /// bytes are released the moment the run either completes (harvested away)
+-    /// or is disproved (`withheld_tail` returns 0).
++    /// into a `[STEERING <id>: …]` receipt (cyril-3qwa). The append/harvest owner
++    /// maintains the displayed cutoff, so reads never rescan the raw buffer.
+     fn streaming_text(&self) -> &str {
+-        let cut = self.streaming_text.len() - steer_receipt::withheld_tail(&self.streaming_text);
+-        &self.streaming_text[..cut]
++        &self.streaming_text[..self.streaming_text_cutoff]
+     }
+ 
+     fn streaming_thought(&self) -> Option<&str> {
+@@ -409,6 +408,7 @@ impl UiState {
+             messages: MessageHistory::new(),
+             live_revision: LiveRevision::default(),
+             streaming_text: String::new(),
++            streaming_text_cutoff: 0,
+             streaming_user_text: String::new(),
+             streaming_thought: None,
+             active_tool_calls: Vec::new(),
+@@ -502,19 +502,10 @@ impl UiState {
+                 // A preceding thought block ends once response text begins —
+                 // commit it first so it is ordered before the response.
+                 self.flush_streaming_thought();
++                self.append_streaming_agent_text(&msg.text);
+                 if msg.is_streaming {
+-                    self.streaming_text.push_str(&msg.text);
+-                    if !msg.text.is_empty() {
+-                        self.live_revision.bump_text();
+-                    }
+-                    self.harvest_steer_receipts();
+                     self.set_activity(Activity::Streaming);
+                 } else {
+-                    self.streaming_text.push_str(&msg.text);
+-                    if !msg.text.is_empty() {
+-                        self.live_revision.bump_text();
+-                    }
+-                    self.harvest_steer_receipts();
+                     self.commit_streaming();
+                     self.set_activity(Activity::Ready);
+                 }
+@@ -1341,6 +1332,7 @@ impl UiState {
+     fn flush_streaming_agent_text(&mut self) {
+         if !self.streaming_text.is_empty() {
+             let text = std::mem::take(&mut self.streaming_text);
++            self.streaming_text_cutoff = 0;
+             self.messages.push(ChatMessage::agent_text(text));
+             self.live_revision.bump_text();
+         }
+@@ -1517,17 +1509,32 @@ impl UiState {
+         })
+     }
+ 
+-    /// Pull every complete `[STEERING <id>: …]` receipt out of the live agent
+-    /// text and reconcile it onto its chip (cyril-3qwa).
+-    ///
+-    /// Called on each `AgentMessage` append, BEFORE any flush, so a receipt is
+-    /// excised while it is still in the streaming buffer and never reaches a
+-    /// committed `AgentText` message. Harvesting mutates `streaming_text` in
+-    /// place; the caller has already decided the notification is state-changing,
+-    /// so no return value is needed.
+-    fn harvest_steer_receipts(&mut self) {
+-        let receipts = steer_receipt::harvest(&mut self.streaming_text);
+-        if !receipts.is_empty() {
++    /// Append agent text and harvest complete receipts before any raw flush.
++    /// This owns the displayed cutoff and its live-source revision; chip edits
++    /// remain independent and follow receipt emission order (cyril-3qwa).
++    fn append_streaming_agent_text(&mut self, text: &str) {
++        let old_len = self.streaming_text.len();
++        let old_cutoff = self.streaming_text_cutoff;
++        self.streaming_text.push_str(text);
++        let (receipts, earliest_removed_start) =
++            steer_receipt::harvest(&mut self.streaming_text).into_parts();
++
++        // Append plus suffix-only removals can leave the entire old raw buffer
++        // intact. Otherwise recompute with full context: a splice may expose an
++        // earlier '[' before the old displayed cutoff.
++        let raw_unchanged = self.streaming_text.len() == old_len
++            && earliest_removed_start.is_none_or(|start| start >= old_len);
++        let cutoff = if raw_unchanged {
++            old_cutoff
++        } else {
++            self.streaming_text.len() - steer_receipt::withheld_tail(&self.streaming_text)
++        };
++        self.streaming_text_cutoff = cutoff;
++        // A deletion can change already-displayed bytes without changing their
++        // total length. Conservatively invalidate when it touches that prefix.
++        if cutoff != old_cutoff
++            || earliest_removed_start.is_some_and(|start| start < old_cutoff)
++        {
+             self.live_revision.bump_text();
+         }
+         for receipt in receipts {
+@@ -3894,6 +3901,7 @@ mod tests {
+         let mut state = UiState::new(500);
+         state.input_text = "preserve input".to_owned();
+         state.streaming_text = "preserve stream".to_owned();
++        state.streaming_text_cutoff = state.streaming_text.len();
+         state.live_revision.bump_text();
+         state.set_activity(Activity::Sending);
+         let before = (
+@@ -4572,6 +4580,38 @@ mod tests {
+         }
+     }
+ 
++    #[test]
++    fn raw_flush_resets_displayed_cutoff_and_commits_unfiltered_text() {
++        for (raw, expected_cutoff) in [
++            (" \t\n", 3),
++            ("[STEERING steer-pending: unfinished", 0),
++        ] {
++            let mut state = UiState::new(500);
++            assert_eq!(state.streaming_text_cutoff, 0);
++            agent_chunk(&mut state, raw, true);
++            assert_eq!(state.streaming_text_cutoff, expected_cutoff);
++            let before_flush = state.live_revision().text;
++
++            state.commit_streaming();
++            assert!(state.streaming_text.is_empty());
++            assert_eq!(state.streaming_text_cutoff, 0);
++            assert_eq!(state.streaming_text(), "");
++            assert_ne!(state.live_revision().text, before_flush);
++            assert!(matches!(
++                state.history().messages().last().map(ChatMessage::kind),
++                Some(ChatMessageKind::AgentText(text)) if text == raw
++            ));
++
++            let settled = state.live_revision();
++            state.commit_streaming();
++            assert_eq!(state.live_revision(), settled);
++            agent_chunk(&mut state, "fresh — text", true);
++            assert_eq!(state.streaming_text_cutoff, "fresh — text".len());
++            assert_eq!(state.streaming_text(), "fresh — text");
++            assert_ne!(state.live_revision().text, settled.text);
++        }
++    }
++
+     // Prose that merely opens with `[` must not be withheld from the live view —
+     // withholding real text would look like the stream had stalled.
+     #[test]
+diff --git a/crates/cyril-ui/src/traits.rs b/crates/cyril-ui/src/traits.rs
+index 4ef981e7fd100f85cbd479938f3c20eb8437ec28..f404f432360896bec2cf6c93b8f108163138daf9 100644
+--- a/crates/cyril-ui/src/traits.rs
++++ b/crates/cyril-ui/src/traits.rs
+@@ -415,7 +415,9 @@ impl TrackedToolCall {
+     /// content and locations from the initial ToolCall if the update
+     /// doesn't carry them.
+     pub fn update(&mut self, tc: &cyril_core::types::ToolCall) {
+-        if !tc.content().is_empty() && self.diff_source() != Self::selected_diff(tc.content()) {
++        if !tc.content().is_empty()
++            && self.diff_source() != Self::selected_diff(tc.content()).map(|(_, source)| source)
++        {
+             self.diff_preview = OnceLock::new();
+         }
+         self.inner.merge_update(tc);
+@@ -453,21 +455,33 @@ impl TrackedToolCall {
+             .get_or_init(|| Arc::new(DiffPreview::new(self.diff_source())))
+     }
+ 
++    /// Select once during preparation, initializing even an absent preview.
++    /// The ordinal belongs to the current content, not the cached derivation.
++    pub(crate) fn diff_view(&self) -> Option<(usize, DiffSource<'_>, &DiffPreview)> {
++        let selected = Self::selected_diff(self.content());
++        let preview = self.diff_preview.get_or_init(|| {
++            Arc::new(DiffPreview::new(selected.map(|(_, source)| source)))
++        });
++        selected.map(|(ordinal, source)| (ordinal, source, preview.as_ref()))
++    }
++
+     pub(crate) fn diff_source(&self) -> Option<DiffSource<'_>> {
+-        Self::selected_diff(self.content())
++        Self::selected_diff(self.content()).map(|(_, source)| source)
+     }
+ 
+-    fn selected_diff(content: &[cyril_core::types::ToolCallContent]) -> Option<DiffSource<'_>> {
+-        content.iter().find_map(|block| {
++    fn selected_diff(
++        content: &[cyril_core::types::ToolCallContent],
++    ) -> Option<(usize, DiffSource<'_>)> {
++        content.iter().enumerate().find_map(|(ordinal, block)| {
+             #[cfg(test)]
+             DIFF_SELECTION_STEPS.with(|steps| steps.set(steps.get() + 1));
+             match block {
+                 cyril_core::types::ToolCallContent::Diff {
+                     old_text, new_text, ..
+-                } => Some(DiffSource {
++                } => Some((ordinal, DiffSource {
+                     old: old_text.as_deref().unwrap_or(""),
+                     new: new_text,
+-                }),
++                })),
+                 cyril_core::types::ToolCallContent::Text(_) => None,
+             }
+         })
+@@ -1650,6 +1664,74 @@ mod tests {
+         }])
+     }
+ 
++    #[test]
++    fn tracked_diff_view_selects_once_and_initializes_absence() {
++        use cyril_core::types::ToolCallContent;
++
++        let tracked = TrackedToolCall::new(
++            diff_cache_call(None, "").with_content(vec![
++                ToolCallContent::Text("first".into()),
++                ToolCallContent::Text("second".into()),
++            ]),
++        );
++        assert!(tracked.diff_preview.get().is_none());
++        let before = diff_selection_steps();
++        assert!(tracked.diff_view().is_none());
++        assert_eq!(diff_selection_steps() - before, 2);
++        assert!(tracked.diff_preview.get().is_some());
++        assert_eq!(tracked.diff_preview().summary(), None);
++        assert_eq!(diff_selection_steps() - before, 2);
++    }
++
++    #[test]
++    fn tracked_diff_view_retains_preview_when_selected_ordinal_moves() {
++        use crate::tool_diff::text_diff_constructions;
++        use cyril_core::types::ToolCallContent;
++
++        let first = ToolCallContent::Diff {
++            path: "first.rs".into(),
++            old_text: None,
++            new_text: "selected\n".into(),
++        };
++        let later = ToolCallContent::Diff {
++            path: "later.rs".into(),
++            old_text: None,
++            new_text: "not selected\n".into(),
++        };
++        let mut tracked = TrackedToolCall::new(
++            diff_cache_call(None, "").with_content(vec![
++                ToolCallContent::Text("preceding".into()),
++                first.clone(),
++                later.clone(),
++            ]),
++        );
++        let constructions = text_diff_constructions();
++        let before = diff_selection_steps();
++        let (ordinal, source, preview) = tracked.diff_view().unwrap();
++        assert_eq!(diff_selection_steps() - before, 2);
++        assert_eq!(ordinal, 1);
++        assert_eq!(source.new, "selected\n");
++        assert_eq!(preview.summary(), Some((1, 0)));
++        assert_eq!(preview.rows()[0].text(source).as_ptr(), source.new.as_ptr());
++        let retained = tracked.diff_preview.get().unwrap().clone();
++
++        tracked.update(&diff_cache_call(None, "").with_content(vec![
++            ToolCallContent::Text("another preceding".into()),
++            ToolCallContent::Text("preceding".into()),
++            first,
++            later,
++        ]));
++        assert!(Arc::ptr_eq(&retained, tracked.diff_preview.get().unwrap()));
++        let before = diff_selection_steps();
++        let (ordinal, source, preview) = tracked.diff_view().unwrap();
++        assert_eq!(diff_selection_steps() - before, 3);
++        assert_eq!(ordinal, 2);
++        assert_eq!(source.new, "selected\n");
++        assert!(std::ptr::eq(preview, retained.as_ref()));
++        assert_eq!(preview.rows()[0].text(source).as_ptr(), source.new.as_ptr());
++        assert_eq!(text_diff_constructions() - constructions, 1);
++    }
++
+     #[test]
+     fn tracked_diff_cache_is_lazy_and_caches_absence_and_no_change() {
+         use crate::tool_diff::text_diff_constructions;
+diff --git a/crates/cyril-ui/src/widgets/chat/presentation.rs b/crates/cyril-ui/src/widgets/chat/presentation.rs
+index 856dcf05de5bbe5917f1a8cb3848ac78130e29ae..c847615493953ba1cfc29918880989fa665fdce8 100644
+--- a/crates/cyril-ui/src/widgets/chat/presentation.rs
++++ b/crates/cyril-ui/src/widgets/chat/presentation.rs
+@@ -8,6 +8,7 @@ use ratatui::prelude::*;
+ use unicode_segmentation::{GraphemeCursor, GraphemeIncomplete};
+ 
+ use crate::theme::Theme;
++use crate::tool_diff::{DiffPreview, DiffSource};
+ use crate::traits::{ChatMessage, ChatMessageKind, SteerEchoStatus, ToolText, ToolTextSource, TrackedToolCall};
+ use crate::widgets::chat_layout::wrap::{SourceLine, SourceSpan, WrappedRow, wrap_lines};
+ use crate::widgets::markdown;
+@@ -20,7 +21,7 @@ enum Source {
+     PlanTitle(usize),
+     SteerNote,
+     Tool(ToolTextSource),
+-    DiffRow(usize),
++    DiffRow { content: usize, row: usize },
+     DerivedSlice(usize),
+     LiveThought,
+     Markdown { backing: usize, line: usize, span: usize },
+@@ -78,9 +79,16 @@ impl<'a> Sources<'a> {
+                 _ => None,
+             },
+             Source::Tool(selector) => self.tool?.resolve_text_source(*selector),
+-            Source::DiffRow(index) => {
++            Source::DiffRow { content, row } => {
+                 let tool = self.tool?;
+-                Some(tool.diff_preview().rows().get(*index)?.text(tool.diff_source()?))
++                let cyril_core::types::ToolCallContent::Diff { old_text, new_text, .. } =
++                    tool.content().get(*content)?
++                else { return None; };
++                let source = DiffSource {
++                    old: old_text.as_deref().unwrap_or(""),
++                    new: new_text,
++                };
++                Some(tool.diff_preview().rows().get(*row)?.text(source))
+             }
+             Source::LiveThought => self.thought,
+             Source::Generated(_) | Source::DerivedSlice(_) | Source::Markdown { .. } => None,
+@@ -372,20 +380,21 @@ impl Preparation {
+         let icon = self.literal(icon);
+         let label = self.generated(label);
+         let mut spans = vec![(icon, Style::default().fg(status_color)), (label, Style::default().fg(kind_color))];
+-        if let Some((added, removed)) = tool.diff_preview().summary() {
++        let diff = tool.diff_view();
++        if let Some((added, removed)) = diff.and_then(|(_, _, preview)| preview.summary()) {
+             let summary = self.generated(format!("  +{added} -{removed}"));
+             spans.push((summary, Style::default().fg(theme.subdued)));
+         }
+         self.line(spans, Style::default());
+-        if tool.status() == ToolCallStatus::Completed && tool.kind() == ToolKind::Write {
+-            self.diff(tool, theme);
++        if tool.status() == ToolCallStatus::Completed && tool.kind() == ToolKind::Write
++            && let Some((content, source, preview)) = diff
++        {
++            self.diff(content, source, preview, theme);
+         }
+         self.output(tool, theme);
+     }
+ 
+-    fn diff(&mut self, tool: &TrackedToolCall, theme: &Theme) {
+-        let preview = tool.diff_preview();
+-        let Some(source) = tool.diff_source() else { return; };
++    fn diff(&mut self, content: usize, source: DiffSource<'_>, preview: &DiffPreview, theme: &Theme) {
+         for (index, row) in preview.rows().iter().enumerate() {
+             let (marker, color) = match row.tag {
+                 similar::ChangeTag::Delete => ("- ", theme.subdued_negative),
+@@ -393,7 +402,7 @@ impl Preparation {
+                 similar::ChangeTag::Equal => ("  ", theme.subdued),
+             };
+             let gutter = self.generated(format!("    {:>4} │{marker}", row.line_number));
+-            let text = self.source(Source::DiffRow(index), 0..row.text(source).len());
++            let text = self.source(Source::DiffRow { content, row: index }, 0..row.text(source).len());
+             self.line(vec![(gutter, Style::default().fg(color)), (text, Style::default().fg(color))], Style::default());
+         }
+         if preview.truncated() { self.label("      ...", Style::default().fg(theme.subdued)); }

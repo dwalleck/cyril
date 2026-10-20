@@ -6,22 +6,29 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 
+use crate::render::RenderState;
 use crate::traits::test_support::MockTuiState;
 use crate::traits::{
     ApprovalPhase, ApprovalState, ChatMessage, PickerKind, Suggestion, UsageAccountStatus,
     UsageRefreshStatus,
 };
 
-fn render_frame(state: &MockTuiState, width: u16, height: u16) -> anyhow::Result<Buffer> {
+fn render_frame(
+    state: &MockTuiState,
+    width: u16,
+    height: u16,
+    render_state: &mut RenderState,
+) -> anyhow::Result<Buffer> {
     let mut terminal = Terminal::new(TestBackend::new(width, height))?;
-    terminal.draw(|frame| crate::render::draw(frame, state))?;
+    terminal.draw(|frame| crate::render::draw(frame, state, render_state))?;
     Ok(terminal.backend().buffer().clone())
 }
 
-fn chat_messages(count: usize) -> Vec<ChatMessage> {
+fn chat_messages(count: usize) -> crate::message_history::MessageHistory {
     (1..=count)
         .map(|index| ChatMessage::user_text(format!("chat-{index}")))
-        .collect()
+        .collect::<Vec<_>>()
+        .into()
 }
 
 fn suggestions(count: usize) -> Vec<Suggestion> {
@@ -218,8 +225,9 @@ fn input_content(buffer: &Buffer) -> Option<(Vec<String>, CursorCells)> {
 fn input_top_is_the_drawn_input_row_at_every_height() -> anyhow::Result<()> {
     let state = MockTuiState::default();
     let mut compared = 0;
+    let mut render_state = RenderState::default();
     for height in 0u16..=30 {
-        let buffer = render_frame(&state, 80, height)?;
+        let buffer = render_frame(&state, 80, height, &mut render_state)?;
         let Some(drawn) = input_top_row(&buffer) else {
             continue; // the input box has no titled top border at this height
         };
@@ -254,7 +262,7 @@ fn input_cursor_always_visible() -> anyhow::Result<()> {
         input_cursor: draft.len(),
         ..Default::default()
     };
-    let buffer = render_frame(&state, 60, 16)?;
+    let buffer = render_frame(&state, 60, 16, &mut RenderState::default())?;
     let (rows, cursors) = input_content(&buffer)
         .ok_or_else(|| anyhow::anyhow!("input box not found in 60x16 frame"))?;
 
@@ -293,7 +301,7 @@ fn input_cursor_always_visible() -> anyhow::Result<()> {
         input_cursor: tall_draft.len(),
         ..Default::default()
     };
-    let tall_buffer = render_frame(&tall_state, 80, 24)?;
+    let tall_buffer = render_frame(&tall_state, 80, 24, &mut RenderState::default())?;
     let (tall_rows, tall_cursors) = input_content(&tall_buffer)
         .ok_or_else(|| anyhow::anyhow!("input box not found in 80x24 frame"))?;
     anyhow::ensure!(
@@ -318,6 +326,7 @@ fn input_scroll_window_matches_oracle() -> anyhow::Result<()> {
     let lines: Vec<String> = (1..=30).map(|index| format!("世界-{index}")).collect();
     let text = lines.join("\n");
     let middle_cursor: usize = lines[..14].iter().map(|line| line.len() + 1).sum();
+    let mut render_state = RenderState::default();
 
     for (label, cursor, cursor_line) in [
         ("start", 0usize, 0usize),
@@ -330,7 +339,7 @@ fn input_scroll_window_matches_oracle() -> anyhow::Result<()> {
             input_cursor: cursor,
             ..Default::default()
         };
-        let buffer = render_frame(&state, 60, 16)?;
+        let buffer = render_frame(&state, 60, 16, &mut render_state)?;
         let (rows, cursors) = input_content(&buffer)
             .ok_or_else(|| anyhow::anyhow!("{label}: input box not found"))?;
         let content_rows = rows.len();
@@ -495,6 +504,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
         ),
     ];
 
+    let mut render_state = RenderState::default();
     for (width, height) in [(60u16, 16u16), (80, 24)] {
         for (input_label, input_text) in [("one-line", "reply"), ("max-draft", big_draft.as_str())]
         {
@@ -505,7 +515,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                 session_label: Some("main".into()),
                 ..Default::default()
             };
-            let base = render_frame(&base_state, width, height)?;
+            let base = render_frame(&base_state, width, height, &mut render_state)?;
             let input_top = input_top_row(&base).ok_or_else(|| {
                 anyhow::anyhow!("no input border in base frame {width}x{height} {input_label}")
             })?;
@@ -519,7 +529,7 @@ fn modals_never_cover_input() -> anyhow::Result<()> {
                     ..Default::default()
                 };
                 mutate(&mut state);
-                let overlaid = render_frame(&state, width, height)?;
+                let overlaid = render_frame(&state, width, height, &mut render_state)?;
                 for (index, (cell, base_cell)) in
                     overlaid.content().iter().zip(base.content()).enumerate()
                 {
@@ -597,10 +607,11 @@ fn layout_floors_hold_across_adversarial_matrix() -> anyhow::Result<()> {
     ];
 
     for (label, state) in &states {
+        let mut render_state = RenderState::default();
         let crew = crate::widgets::crew_panel::height_for(state);
         let voice = crate::widgets::voice::height_for(state);
         for (width, height) in [(60u16, 16u16), (60, 17), (61, 20), (80, 24)] {
-            let buffer = render_frame(state, width, height)?;
+            let buffer = render_frame(state, width, height, &mut render_state)?;
             let (input_top, input_bottom) = input_rect_rows(&buffer)
                 .ok_or_else(|| anyhow::anyhow!("{label} {width}x{height}: input box not found"))?;
             anyhow::ensure!(
@@ -648,6 +659,8 @@ fn suggestions_overlay_under_pressure() -> anyhow::Result<()> {
     // (width, height, draft, selected) — the last case pins the accepted
     // above-floor behavior change (D4): max draft + 10 suggestions at 80×24
     // also floats, where the old solver crushed both surfaces.
+    let mut closed_render_state = RenderState::default();
+    let mut open_render_state = RenderState::default();
     for (width, height, draft, selected) in [
         (60u16, 16u16, "@probe", Some(7usize)),
         (60, 16, big_draft.as_str(), Some(7)),
@@ -667,8 +680,8 @@ fn suggestions_overlay_under_pressure() -> anyhow::Result<()> {
             autocomplete_selected: selected,
             ..Default::default()
         };
-        let closed_frame = render_frame(&closed, width, height)?;
-        let open_frame = render_frame(&open, width, height)?;
+        let closed_frame = render_frame(&closed, width, height, &mut closed_render_state)?;
+        let open_frame = render_frame(&open, width, height, &mut open_render_state)?;
 
         let closed_top = input_top_row(&closed_frame)
             .ok_or_else(|| anyhow::anyhow!("{width}x{height}: closed frame lost its input"))?;
@@ -726,9 +739,10 @@ fn floated_autocomplete_is_keyboard_operable() -> anyhow::Result<()> {
     ));
     ui.insert_text("@probe");
 
-    let render = |ui: &UiState| -> anyhow::Result<Buffer> {
+    let mut render_state = RenderState::default();
+    let mut render = |ui: &UiState| -> anyhow::Result<Buffer> {
         let mut terminal = Terminal::new(TestBackend::new(60, 16))?;
-        terminal.draw(|frame| crate::render::draw(frame, ui))?;
+        terminal.draw(|frame| crate::render::draw(frame, ui, &mut render_state))?;
         Ok(terminal.backend().buffer().clone())
     };
     let marked_row = |buffer: &Buffer| -> Option<String> {
@@ -785,7 +799,7 @@ fn browse_mode_usable_at_floor() -> anyhow::Result<()> {
         input_cursor: "reply".len(),
         ..Default::default()
     };
-    let buffer = render_frame(&state, 60, 16)?;
+    let buffer = render_frame(&state, 60, 16, &mut RenderState::default())?;
     let (input_top, _) = input_rect_rows(&buffer)
         .ok_or_else(|| anyhow::anyhow!("input box not found in browse frame"))?;
     anyhow::ensure!(input_top >= 4, "chat floor broken in browse mode");
@@ -829,7 +843,7 @@ fn browse_mode_usable_at_floor() -> anyhow::Result<()> {
         input_cursor: "reply".len(),
         ..Default::default()
     };
-    let follow_buffer = render_frame(&follow, 60, 16)?;
+    let follow_buffer = render_frame(&follow, 60, 16, &mut RenderState::default())?;
     let follow_ref = &follow_buffer;
     let follow_rows: String = (1..input_top)
         .flat_map(|y| {
@@ -881,9 +895,10 @@ fn no_fallback_size_sweep() -> anyhow::Result<()> {
         ..Default::default()
     });
     for (index, state) in states.iter().enumerate() {
+        let mut render_state = RenderState::default();
         for width in [1u16, 2, 5, 10, 20, 59, 60, 61, 80, 200] {
             for height in [1u16, 2, 3, 5, 8, 15, 16, 17, 24, 100] {
-                let buffer = render_frame(state, width, height)?;
+                let buffer = render_frame(state, width, height, &mut render_state)?;
                 let text: String = buffer
                     .content()
                     .iter()
@@ -907,7 +922,10 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
         messages: chat_messages(6),
         ..Default::default()
     };
-    insta::assert_debug_snapshot!("roomy_idle_80x24", render_frame(&idle, 80, 24)?);
+    insta::assert_debug_snapshot!(
+        "roomy_idle_80x24",
+        render_frame(&idle, 80, 24, &mut RenderState::default())?
+    );
 
     let draft = "draft-1\ndraft-2\ndraft-3";
     let inflow = MockTuiState {
@@ -918,7 +936,10 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
         autocomplete_selected: Some(5),
         ..Default::default()
     };
-    insta::assert_debug_snapshot!("roomy_inflow_80x24", render_frame(&inflow, 80, 24)?);
+    insta::assert_debug_snapshot!(
+        "roomy_inflow_80x24",
+        render_frame(&inflow, 80, 24, &mut RenderState::default())?
+    );
 
     let approval = MockTuiState {
         messages: chat_messages(6),
@@ -929,6 +950,9 @@ fn roomy_frame_matches_main_fixture() -> anyhow::Result<()> {
         main_session_id: Some(cyril_core::types::SessionId::new("main")),
         ..Default::default()
     };
-    insta::assert_debug_snapshot!("roomy_approval_80x24", render_frame(&approval, 80, 24)?);
+    insta::assert_debug_snapshot!(
+        "roomy_approval_80x24",
+        render_frame(&approval, 80, 24, &mut RenderState::default())?
+    );
     Ok(())
 }

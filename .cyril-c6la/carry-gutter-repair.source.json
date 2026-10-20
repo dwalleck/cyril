@@ -1,0 +1,80 @@
+{
+  "issue": "cyril-c6la",
+  "findings": [
+    "F11",
+    "F12"
+  ],
+  "base_tree": "830b4673e7e3d49ed3f1e272af420f8fba75059e",
+  "after_tree": "43db6bd5ef8d3b7919a501094e8e6bca10570a9a",
+  "patch": "review-carry-gutter-repair.patch",
+  "patch_bytes": 46711,
+  "patch_sha256": "14945de13e4a94f4210b9f5d65995e9ea70f3d06b45df0d863d67f758eb25502",
+  "files": [
+    "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+    "crates/cyril-ui/src/widgets/chat/presentation.rs",
+    "crates/cyril-ui/src/widgets/chat/retained.rs",
+    "crates/cyril-ui/src/conversation_performance_tests.rs",
+    "crates/cyril-ui/benches/conversation_render.rs"
+  ],
+  "name_status": [
+    "M\tcrates/cyril-ui/benches/conversation_render.rs",
+    "M\tcrates/cyril-ui/src/conversation_performance_tests.rs",
+    "M\tcrates/cyril-ui/src/widgets/chat/presentation.rs",
+    "M\tcrates/cyril-ui/src/widgets/chat/retained.rs",
+    "M\tcrates/cyril-ui/src/widgets/chat_layout/wrap.rs"
+  ],
+  "numstat": [
+    "20\t20\tcrates/cyril-ui/benches/conversation_render.rs",
+    "245\t3\tcrates/cyril-ui/src/conversation_performance_tests.rs",
+    "126\t8\tcrates/cyril-ui/src/widgets/chat/presentation.rs",
+    "90\t8\tcrates/cyril-ui/src/widgets/chat/retained.rs",
+    "297\t3\tcrates/cyril-ui/src/widgets/chat_layout/wrap.rs"
+  ],
+  "after_blobs": [
+    "100644 blob 6336fa6cbe4d154c4671f98c51d73cfa00fd3bc1\tcrates/cyril-ui/benches/conversation_render.rs",
+    "100644 blob 4876bc0d7d2a5f8ce8594a965886fcb2033020ce\tcrates/cyril-ui/src/conversation_performance_tests.rs",
+    "100644 blob 52fca6728692b9298b006d0344dca318fa9c3147\tcrates/cyril-ui/src/widgets/chat/presentation.rs",
+    "100644 blob 78f8f7457d5a78a84e6b7b7e9d015fea982cc814\tcrates/cyril-ui/src/widgets/chat/retained.rs",
+    "100644 blob 9881199a65740ef90d532810e71efbc6055db070\tcrates/cyril-ui/src/widgets/chat_layout/wrap.rs"
+  ],
+  "already_present_in_original_worktree": true,
+  "worker_checks_run": [],
+  "worker_formatter_run": false,
+  "approval_record": "design.md sections F11/F12",
+  "dependency_changes": false,
+  "vendor_changes": false,
+  "source_reviews": {
+    "F11": {
+      "agent": "ConversationPerformance.ReviewCarryParitySource",
+      "result": "correct; no findings",
+      "confidence": 0.93,
+      "scope": [
+        "wrap.rs",
+        "presentation.rs"
+      ],
+      "kind": "pre-qualification source review only"
+    },
+    "F12": {
+      "agent": "ConversationPerformance.ReviewStableGutterSource",
+      "result": "correct; no findings",
+      "confidence": 0.93,
+      "scope": [
+        "retained.rs",
+        "conversation_performance_tests.rs",
+        "conversation_render.rs"
+      ],
+      "kind": "pre-qualification source review only"
+    }
+  },
+  "prior_receipt_scope": "Only base830b4673 has parent Clippy GREEN and UI882PASS/3FAIL/1ignored. No checks or mutation runs for this after-tree.",
+  "required_sensitivity": {
+    "F11": "Change ONLY wrap_lines entry wrap_lines_with_carry::<true> to false; original classifier remains false-mode; literal rows and safe-start/content assertions must fail, then restore and pass.",
+    "F12": "At140-column full-URL test restore old production geometry: content.width=area.width and render scrollbar on area rather than separate gutter. Full URL/gutter assertions must fail on actual old overlay, then restore and pass."
+  },
+  "historical_artifacts": "Earlier production/c690/8ad and source-policy/sensitivity artifacts remain unchanged; this delta applies only after exact base_tree.",
+  "source_save_normalization": {
+    "observed": "edit tool warned that saved benchmark bytes differ from sent patch; actual artifact includes import ordering and ensure! layout normalization outside the intended local padding change",
+    "worker_formatter_command_run": false,
+    "disposition": "Preserved actual saved bytes; reported tool behavior; Main owns repository-format qualification and any subsequent formatted source pin."
+  }
+}

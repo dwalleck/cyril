@@ -1,5 +1,5 @@
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::sync::{LazyLock, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 use pulldown_cmark::{CodeBlockKind, Event, Options, Parser, Tag, TagEnd};
 use ratatui::{
@@ -16,41 +16,61 @@ use crate::theme::{MarkdownStyle, Theme};
 
 const MAX_BORDER_WIDTH: usize = 120;
 
-static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Vec<Line<'static>>>>> =
+static MARKDOWN_CACHE: LazyLock<Mutex<HashCache<Arc<[Line<'static>]>>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
+
+#[cfg(test)]
+std::thread_local! {
+    static WORK_COUNTS: std::cell::Cell<(usize, usize)> = const {
+        std::cell::Cell::new((0, 0))
+    };
+}
+
+/// Snapshot this thread's actual Markdown source hashes and parser derivations.
+#[cfg(test)]
+pub(crate) fn work_counts() -> (usize, usize) {
+    WORK_COUNTS.get()
+}
 
 /// Convert a Markdown string into styled ratatui lines.
 ///
 /// `width` controls table sizing, code padding, rules, and borders. Results are
 /// cached by content, width, and the complete direct/transitive Markdown style.
-pub fn render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Vec<Line<'static>> {
+/// Cache hits share immutable lines with earlier results, which remain valid
+/// after later renders and cache eviction.
+pub fn render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Arc<[Line<'static>]> {
     render_with_cache(&MARKDOWN_CACHE, markdown, width, MarkdownStyle::from(theme))
 }
 
 fn render_with_cache(
-    cache: &Mutex<HashCache<Vec<Line<'static>>>>,
+    cache: &Mutex<HashCache<Arc<[Line<'static>]>>>,
     markdown: &str,
     width: usize,
     style: MarkdownStyle,
-) -> Vec<Line<'static>> {
+) -> Arc<[Line<'static>]> {
     let hash = markdown_cache_key(markdown, width, style);
 
     if let Ok(cache) = cache.lock()
         && let Some(cached) = cache.get(hash)
     {
-        return cached.clone();
+        return Arc::clone(cached);
     }
 
-    let result = do_render(markdown, width, style);
+    let result: Arc<[Line<'static>]> = do_render(markdown, width, style).into();
 
     if let Ok(mut cache) = cache.lock() {
-        cache.insert(hash, result.clone());
+        cache.insert(hash, Arc::clone(&result));
     }
 
     result
 }
 
 fn markdown_cache_key(markdown: &str, width: usize, style: MarkdownStyle) -> u64 {
+    #[cfg(test)]
+    WORK_COUNTS.with(|counts| {
+        let (source_hashes, parses) = counts.get();
+        counts.set((source_hashes + 1, parses));
+    });
     let mut hasher = DefaultHasher::new();
     markdown.hash(&mut hasher);
     width.hash(&mut hasher);
@@ -60,6 +80,11 @@ fn markdown_cache_key(markdown: &str, width: usize, style: MarkdownStyle) -> u64
 
 fn do_render(markdown: &str, width: usize, style: MarkdownStyle) -> Vec<Line<'static>> {
     let options = Options::ENABLE_STRIKETHROUGH | Options::ENABLE_TABLES;
+    #[cfg(test)]
+    WORK_COUNTS.with(|counts| {
+        let (source_hashes, parses) = counts.get();
+        counts.set((source_hashes, parses + 1));
+    });
     let parser = Parser::new_ext(markdown, options);
 
     let mut lines: Vec<Line<'static>> = Vec::new();
@@ -424,7 +449,7 @@ mod tests {
         crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor)
     }
 
-    fn render(markdown: &str, width: usize) -> Vec<Line<'static>> {
+    fn render(markdown: &str, width: usize) -> Arc<[Line<'static>]> {
         render_with_theme(markdown, width, &cyril_dark())
     }
 
@@ -687,14 +712,89 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn production_exposes_only_the_explicit_theme_entry_point() {
-        let production = include_str!("markdown.rs")
-            .split_once("#[cfg(test)]")
-            .map_or(include_str!("markdown.rs"), |(production, _)| production);
+    fn production_source(source: &str) -> &str {
+        [
+            source.find("\n#[cfg(test)]\nmod tests {"),
+            source.find("\r\n#[cfg(test)]\r\nmod tests {"),
+            source.find("\n#[cfg(test)]\r\nmod tests {"),
+            source.find("\r\n#[cfg(test)]\nmod tests {"),
+        ]
+        .into_iter()
+        .flatten()
+        .min()
+        .map_or(source, |boundary| &source[..boundary])
+    }
+
+    fn assert_explicit_theme_entry_point(source: &str) {
+        let production = production_source(source);
         assert!(!production.contains("pub fn render("));
         assert!(!production.contains("crate::theme::resolve"));
         assert!(production.contains("pub fn render_with_theme("));
+    }
+
+    #[test]
+    fn production_exposes_only_the_explicit_theme_entry_point() {
+        assert_explicit_theme_entry_point(include_str!("markdown.rs"));
+    }
+
+    #[test]
+    fn explicit_theme_entry_fence_accepts_lf_and_crlf_test_only_forbidden_patterns() {
+        for (newline, module_newline) in [
+            ("\n", "\n"),
+            ("\r\n", "\r\n"),
+            ("\n", "\r\n"),
+            ("\r\n", "\n"),
+        ] {
+            let opposite_newline = if newline == "\n" { "\r\n" } else { "\n" };
+            let runtime = [
+                "// Runtime instrumentation.",
+                "#[cfg(test)]",
+                "fn record_work() {}",
+                "pub fn render_with_theme() {",
+                "    #[cfg(test)]",
+                "    record_work();",
+                "}",
+            ]
+            .join(newline);
+            let source = format!(
+                "{runtime}{newline}#[cfg(test)]{module_newline}mod tests {{\
+                 {newline}    // pub fn render(\
+                 {newline}    // crate::theme::resolve\
+                 {newline}}}\
+                 {opposite_newline}#[cfg(test)]{opposite_newline}mod tests {{}}"
+            );
+            assert_explicit_theme_entry_point(&source);
+        }
+    }
+
+    #[test]
+    fn explicit_theme_entry_fence_rejects_lf_and_crlf_runtime_after_instrumentation() {
+        for (newline, module_newline) in [
+            ("\n", "\n"),
+            ("\r\n", "\r\n"),
+            ("\n", "\r\n"),
+            ("\r\n", "\n"),
+        ] {
+            let runtime = [
+                "pub fn render_with_theme() {",
+                "    #[cfg(test)]",
+                "    record_work();",
+                "}",
+                "#[cfg(test)]",
+                "fn record_work() {}",
+            ]
+            .join(newline);
+            for forbidden in ["pub fn render(", "crate::theme::resolve"] {
+                let source = format!(
+                    "{runtime}{newline}// {forbidden}{newline}#[cfg(test)]{module_newline}mod tests {{}}"
+                );
+                assert!(
+                    std::panic::catch_unwind(|| assert_explicit_theme_entry_point(&source))
+                        .is_err(),
+                    "accepted runtime forbidden pattern {forbidden:?} with newlines {newline:?}, {module_newline:?}"
+                );
+            }
+        }
     }
 
     /// Extract plain text from rendered lines (ignoring styles).
@@ -711,7 +811,7 @@ mod tests {
             .join("\n")
     }
 
-    fn render_md(md: &str) -> Vec<Line<'static>> {
+    fn render_md(md: &str) -> Arc<[Line<'static>]> {
         render(md, 200)
     }
 
@@ -921,10 +1021,12 @@ mod tests {
         let markdown = "# cached entry";
         let rendered = render_with_cache(&cache, markdown, 80, style);
         let key = markdown_cache_key(markdown, 80, style);
-        assert_eq!(
-            cache.lock().ok().and_then(|cache| cache.get(key).cloned()),
-            Some(rendered)
-        );
+        let ledger = match cache.lock() {
+            Ok(ledger) => ledger,
+            Err(error) => panic!("INSERT local cache lock failed: {error}"),
+        };
+        let cached = ledger.get(key).expect("rendered entry must be cached");
+        assert!(Arc::ptr_eq(cached, &rendered));
     }
 
     #[test]
@@ -968,30 +1070,30 @@ mod tests {
         repeated_style.highlight.text = Color::Indexed(200);
         let repeated = render_with_cache(&cache, "# eviction-200", 80, repeated_style);
         assert_eq!(
-            repeated,
-            do_render("# eviction-200", 80, repeated_style),
+            repeated.as_ref(),
+            do_render("# eviction-200", 80, repeated_style).as_slice(),
             "EVICTION repeat changed output"
         );
     }
 
     #[test]
     fn markdown_cache_concurrent_alternating_themes_never_leak() {
-        use std::sync::{Arc, Barrier};
+        use std::sync::Barrier;
 
         let cache = Arc::new(Mutex::new(HashCache::new(256)));
         let barrier = Arc::new(Barrier::new(8));
         let colored = MarkdownStyle::from(&cyril_dark());
         let plain =
             MarkdownStyle::from(&crate::theme::resolve(ThemeId::CyrilDark, ColorMode::None));
-        let colored_expected = do_render("# concurrent", 80, colored);
-        let plain_expected = do_render("# concurrent", 80, plain);
+        let colored_expected: Arc<[Line<'static>]> = do_render("# concurrent", 80, colored).into();
+        let plain_expected: Arc<[Line<'static>]> = do_render("# concurrent", 80, plain).into();
         let mut workers = Vec::new();
 
         for worker in 0usize..8 {
             let cache = Arc::clone(&cache);
             let barrier = Arc::clone(&barrier);
-            let colored_expected = colored_expected.clone();
-            let plain_expected = plain_expected.clone();
+            let colored_expected = Arc::clone(&colored_expected);
+            let plain_expected = Arc::clone(&plain_expected);
             workers.push(std::thread::spawn(move || {
                 barrier.wait();
                 for query in 0usize..100 {
@@ -1035,20 +1137,75 @@ mod tests {
         let style = MarkdownStyle::from(&crate::traits::test_support::marker_theme());
         let expected = do_render("# poison", 80, style);
         let actual = render_with_cache(&cache, "# poison", 80, style);
-        assert_eq!(actual, expected, "POISON uncached fallback drifted");
+        assert_eq!(
+            actual.as_ref(),
+            expected.as_slice(),
+            "POISON uncached fallback drifted"
+        );
+        let later = render_with_cache(&cache, "# poison", 80, style);
+        assert_eq!(later, actual);
+        assert!(!Arc::ptr_eq(&later, &actual), "POISON reused an entry");
     }
 
     #[test]
-    fn five_hundred_markdown_cache_hits_return_same_output() {
+    fn five_hundred_markdown_cache_hits_share_the_same_allocation() {
         let cache = Mutex::new(HashCache::new(256));
         let style = MarkdownStyle::from(&cyril_dark());
         let expected = render_with_cache(&cache, "cached", 80, style);
         for _ in 0..500 {
-            assert_eq!(
-                std::hint::black_box(render_with_cache(&cache, "cached", 80, style)),
-                expected
+            let actual = std::hint::black_box(render_with_cache(&cache, "cached", 80, style));
+            assert_eq!(actual, expected);
+            assert!(Arc::ptr_eq(&actual, &expected));
+        }
+    }
+
+    #[test]
+    fn work_counts_distinguish_source_hashes_from_actual_parses() {
+        let cache = Mutex::new(HashCache::new(2));
+        let style = MarkdownStyle::from(&cyril_dark());
+        let before = work_counts();
+        let original = render_with_cache(&cache, "# counted work", 80, style);
+        let after_miss = work_counts();
+        assert_eq!(after_miss, (before.0 + 1, before.1 + 1));
+
+        let repeated = render_with_cache(&cache, "# counted work", 80, style);
+        let after_hit = work_counts();
+        assert_eq!(after_hit, (after_miss.0 + 1, after_miss.1));
+        assert!(Arc::ptr_eq(&original, &repeated));
+    }
+
+    #[test]
+    fn retained_markdown_result_survives_later_renders_and_eviction() {
+        let cache = Mutex::new(HashCache::new(2));
+        let style = MarkdownStyle::from(&crate::traits::test_support::marker_theme());
+        let original = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, style);
+        let shared = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, style);
+        assert!(Arc::ptr_eq(&original, &shared));
+        let expected = do_render(CACHE_IDENTITY_DOC, 80, style);
+        let original_key = markdown_cache_key(CACHE_IDENTITY_DOC, 80, style);
+
+        render_with_cache(&cache, CACHE_IDENTITY_DOC, 40, style);
+        let mut changed = style;
+        changed.highlight.text = Color::Indexed(255);
+        render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, changed);
+        {
+            let ledger = match cache.lock() {
+                Ok(ledger) => ledger,
+                Err(error) => panic!("RETAIN local cache lock failed: {error}"),
+            };
+            assert!(
+                ledger.get(original_key).is_none(),
+                "original was not evicted"
             );
         }
+        let rederived = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, style);
+        assert!(!Arc::ptr_eq(&original, &rederived));
+        assert_eq!(original, rederived);
+        drop(cache);
+
+        assert!(Arc::ptr_eq(&original, &shared));
+        assert_eq!(original.as_ref(), expected.as_slice());
+        assert!(text(&original).contains("fallback_identity"));
     }
 
     const CACHE_IDENTITY_DOC: &str = concat!(
@@ -1070,13 +1227,14 @@ mod tests {
     fn isolated_markdown_outputs(
         first: MarkdownStyle,
         second: MarkdownStyle,
-    ) -> (Vec<Line<'static>>, Vec<Line<'static>>) {
+    ) -> (Arc<[Line<'static>]>, Arc<[Line<'static>]>) {
         let first_key = markdown_cache_key(CACHE_IDENTITY_DOC, 80, first);
         let second_key = markdown_cache_key(CACHE_IDENTITY_DOC, 80, second);
         assert_ne!(first_key, second_key, "relevant input reused a cache key");
 
-        let first_expected = do_render(CACHE_IDENTITY_DOC, 80, first);
-        let second_expected = do_render(CACHE_IDENTITY_DOC, 80, second);
+        let first_expected: Arc<[Line<'static>]> = do_render(CACHE_IDENTITY_DOC, 80, first).into();
+        let second_expected: Arc<[Line<'static>]> =
+            do_render(CACHE_IDENTITY_DOC, 80, second).into();
         assert_ne!(
             first_expected, second_expected,
             "style did not affect output"
@@ -1088,19 +1246,17 @@ mod tests {
             (second, &second_expected, first, &first_expected),
         ] {
             let cache = Mutex::new(HashCache::new(2));
+            let first_actual = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style);
+            let second_actual = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, second_style);
+            assert_eq!(&first_actual, first_output);
+            assert_eq!(&second_actual, second_output);
+            assert!(!Arc::ptr_eq(&first_actual, &second_actual));
+            let repeated = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style);
             assert_eq!(
-                render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style),
-                *first_output
-            );
-            assert_eq!(
-                render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, second_style),
-                *second_output
-            );
-            assert_eq!(
-                render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style),
-                *first_output,
+                &repeated, first_output,
                 "alternating styles leaked cached output"
             );
+            assert!(Arc::ptr_eq(&repeated, &first_actual));
             let ledger = match cache.lock() {
                 Ok(ledger) => ledger,
                 Err(error) => panic!("IDENTITY local cache lock failed: {error}"),
@@ -1202,25 +1358,22 @@ mod tests {
             let expected = do_render(CACHE_IDENTITY_DOC, 80, first);
             for (first_style, second_style) in [(first, second), (second, first)] {
                 let cache = Mutex::new(HashCache::new(2));
-                assert_eq!(
-                    render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style),
-                    expected
-                );
+                let original = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, first_style);
+                assert_eq!(original.as_ref(), expected.as_slice());
                 // Fill the other slot with a real render. An unrelated-role
                 // miss would evict the composite document from this full cache.
                 let sentinel_doc = "# cache sentinel";
                 let sentinel_key = markdown_cache_key(sentinel_doc, 80, first_style);
                 assert_ne!(key, sentinel_key);
                 let sentinel = render_with_cache(&cache, sentinel_doc, 80, first_style);
-                assert_eq!(
-                    render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, second_style),
-                    expected
-                );
+                let repeated = render_with_cache(&cache, CACHE_IDENTITY_DOC, 80, second_style);
+                assert_eq!(repeated.as_ref(), expected.as_slice());
+                assert!(Arc::ptr_eq(&original, &repeated));
                 let ledger = match cache.lock() {
                     Ok(ledger) => ledger,
                     Err(error) => panic!("REUSE local cache lock failed: {error}"),
                 };
-                assert_eq!(ledger.get(key), Some(&expected));
+                assert_eq!(ledger.get(key), Some(&original));
                 assert_eq!(ledger.get(sentinel_key), Some(&sentinel));
             }
         };
@@ -1303,6 +1456,7 @@ mod tests {
         use ratatui::Terminal;
         use ratatui::backend::TestBackend;
         use ratatui::layout::{Constraint, Layout};
+        use ratatui::text::Text;
         use ratatui::widgets::Paragraph;
 
         const HEADINGS: &str = "# H1\n## H2\n### H3\n#### H4\n##### H5\n###### H6";
@@ -1321,10 +1475,27 @@ mod tests {
                 Constraint::Min(1),
             ])
             .areas(left);
-            frame.render_widget(Paragraph::new(render(HEADINGS, 40)), heading_area);
-            frame.render_widget(Paragraph::new(render(STRUCTURE, 40)), structure_area);
-            frame.render_widget(Paragraph::new(render(FORMATTING, 40)), formatting_area);
-            frame.render_widget(Paragraph::new(render(CODE, 40)), right);
+            for (markdown, area) in [
+                (HEADINGS, heading_area),
+                (STRUCTURE, structure_area),
+                (FORMATTING, formatting_area),
+                (CODE, right),
+            ] {
+                let lines = render(markdown, 40);
+                let borrowed: Text<'_> = lines
+                    .iter()
+                    .map(|line| Line {
+                        style: line.style,
+                        alignment: line.alignment,
+                        spans: line
+                            .spans
+                            .iter()
+                            .map(|span| Span::styled(span.content.as_ref(), span.style))
+                            .collect(),
+                    })
+                    .collect();
+                frame.render_widget(Paragraph::new(borrowed), area);
+            }
         })?;
 
         let expected = include_str!("../../tests/fixtures/conversation-theme-baseline.tsv")
@@ -1516,7 +1687,7 @@ mod tests {
     fn code_block_lines_padded_to_width() {
         let lines = render("```\nhi\n```", 40);
         let bg = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor).code;
-        for line in &lines {
+        for line in lines.iter() {
             if line.style.bg != Some(bg) {
                 continue;
             }
@@ -1665,7 +1836,7 @@ mod tests {
         let md = format!("```\n{long_code}\n```");
         let lines = render(&md, 80);
         let bg = crate::theme::resolve(ThemeId::CyrilDark, ColorMode::TrueColor).code;
-        for line in &lines {
+        for line in lines.iter() {
             if line.style.bg != Some(bg) {
                 continue;
             }

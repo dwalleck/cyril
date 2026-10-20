@@ -13,9 +13,9 @@ use cyril_core::types::{
     AgentMessage, AgentThought, Notification, SessionId, StopReason, ToolCall, ToolCallContent,
     ToolCallId, ToolCallLocation, ToolCallStatus, ToolKind, UserMessage,
 };
+use cyril_ui::render::{self, RenderState};
 use cyril_ui::state::UiState;
 use cyril_ui::traits::{ChatMessageKind, TrackedToolCall, TuiState};
-use cyril_ui::widgets::chat;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 
@@ -37,6 +37,7 @@ fn orphan_call(id: &str) -> ToolCall {
 
 fn calls(state: &UiState) -> Vec<&TrackedToolCall> {
     state
+        .history()
         .messages()
         .iter()
         .filter_map(|message| match message.kind() {
@@ -48,9 +49,10 @@ fn calls(state: &UiState) -> Vec<&TrackedToolCall> {
 
 fn render_text(state: &UiState) -> String {
     let mut terminal = must_succeed(Terminal::new(TestBackend::new(140, 45)), "terminal");
+    let mut render_state = RenderState::default();
     must_succeed(
-        terminal.draw(|frame| chat::render(frame, frame.area(), state, &state.theme())),
-        "draw chat",
+        terminal.draw(|frame| render::draw(frame, state, &mut render_state)),
+        "draw root",
     );
     let buffer = terminal.backend().buffer();
     (0..45)
@@ -162,12 +164,12 @@ fn kas_completed_output_capture_renders_exact_body_without_kind() {
     );
     assert_eq!(
         (
-            retained.output_text(),
+            retained.output_text().as_deref(),
             text.lines()
                 .filter(|line| line.trim() == "| XAVT_BEGIN XAVT_END")
                 .count(),
         ),
-        (Some("XAVT_BEGIN XAVT_END\n".to_string()), 1),
+        (Some("XAVT_BEGIN XAVT_END\n"), 1),
         "stdout must be an exact body line, not a header/command match\n{text}",
     );
     assert!(
@@ -191,21 +193,34 @@ fn missing_start_update_commits_preceding_streams_at_arrival() {
         text: "thought before".into(),
     }));
     let call = orphan_call("orphan");
-    let version = state.messages_version();
+    let revision = state.history().revision();
     state.apply_notification(&Notification::ToolCallUpdated(call.clone()));
-    assert!(state.messages_version() > version);
-    assert_eq!(state.messages().len(), 4);
+    assert_ne!(state.history().revision(), revision);
+    let mut changes = state.history().changed_since(revision);
     assert!(
-        matches!(state.messages()[0].kind(), ChatMessageKind::UserText(t) if t == "user before")
+        !changes.reset,
+        "orphan insertion is an incremental history change"
     );
     assert!(
-        matches!(state.messages()[1].kind(), ChatMessageKind::AgentText(t) if t == "agent before")
+        changes.changed.any(|position| matches!(
+            state.history().get(position),
+            Some((message, _))
+                if matches!(message.kind(), ChatMessageKind::ToolCall(tool) if tool.id() == call.id())
+        )),
+        "the inserted tool row invalidates rendering"
+    );
+    assert_eq!(state.history().messages().len(), 4);
+    assert!(
+        matches!(state.history().messages()[0].kind(), ChatMessageKind::UserText(t) if t == "user before")
     );
     assert!(
-        matches!(state.messages()[2].kind(), ChatMessageKind::Thought(t) if t == "thought before")
+        matches!(state.history().messages()[1].kind(), ChatMessageKind::AgentText(t) if t == "agent before")
+    );
+    assert!(
+        matches!(state.history().messages()[2].kind(), ChatMessageKind::Thought(t) if t == "thought before")
     );
     assert!(matches!(
-        state.messages()[3].kind(),
+        state.history().messages()[3].kind(),
         ChatMessageKind::ToolCall(_)
     ));
     assert_eq!(state.streaming_text(), "");
@@ -227,7 +242,7 @@ fn missing_start_update_commits_preceding_streams_at_arrival() {
         stop_reason: StopReason::EndTurn,
     });
     assert!(
-        matches!(state.messages()[4].kind(), ChatMessageKind::AgentText(t) if t == "agent after")
+        matches!(state.history().messages()[4].kind(), ChatMessageKind::AgentText(t) if t == "agent after")
     );
 }
 
@@ -236,7 +251,7 @@ fn known_tool_updates_keep_normal_field_preserving_merge() {
     let mut state = UiState::new(500);
     let original = orphan_call("known");
     state.apply_notification(&Notification::ToolCallStarted(original.clone()));
-    let version = state.messages_version();
+    let revision = state.history().revision();
     state.apply_notification(&Notification::ToolCallUpdated(ToolCall::new(
         ToolCallId::new("known"),
         String::new(),
@@ -244,9 +259,29 @@ fn known_tool_updates_keep_normal_field_preserving_merge() {
         ToolCallStatus::Failed,
         None,
     )));
-    assert!(
-        state.messages_version() > version,
+    assert_ne!(
+        state.history().revision(),
+        revision,
         "merged rows invalidate rendering"
+    );
+    let mut changes = state.history().changed_since(revision);
+    assert!(
+        !changes.reset,
+        "a field merge is an incremental history edit"
+    );
+    let Some(position) = changes.changed.next() else {
+        panic!("merged tool row must change");
+    };
+    assert!(
+        changes.changed.next().is_none(),
+        "only the merged row changes"
+    );
+    let Some((message, _)) = state.history().get(position) else {
+        panic!("changed row is retained");
+    };
+    assert!(
+        matches!(message.kind(), ChatMessageKind::ToolCall(call) if call.id() == original.id()),
+        "the merge invalidates the resolved tool row"
     );
     for call in [calls(&state)[0], &state.active_tool_calls()[0]] {
         assert_eq!(call.title(), original.title());
@@ -275,12 +310,12 @@ fn retained_tool_index_survives_commit_and_history_pruning() {
         None,
     );
     state.apply_notification(&Notification::ToolCallUpdated(update));
-    assert_eq!(state.messages().len(), 2);
+    assert_eq!(state.history().messages().len(), 2);
     assert!(
-        matches!(state.messages()[0].kind(), ChatMessageKind::ToolCall(call) if call.title() == "Renamed load")
+        matches!(state.history().messages()[0].kind(), ChatMessageKind::ToolCall(call) if call.title() == "Renamed load")
     );
     assert!(
-        matches!(state.messages()[1].kind(), ChatMessageKind::System(text) if text == "following message")
+        matches!(state.history().messages()[1].kind(), ChatMessageKind::System(text) if text == "following message")
     );
     assert!(state.active_tool_calls().is_empty());
 
@@ -288,7 +323,11 @@ fn retained_tool_index_survives_commit_and_history_pruning() {
     state.apply_notification(&Notification::ToolCallUpdated(orphan_call("retained")));
     assert_eq!(calls(&state).len(), 1, "evicted IDs can create a new row");
     assert!(matches!(
-        state.messages().last().map(|message| message.kind()),
+        state
+            .history()
+            .messages()
+            .last()
+            .map(|message| message.kind()),
         Some(ChatMessageKind::ToolCall(_))
     ));
 }
@@ -301,9 +340,9 @@ fn clearing_history_does_not_leave_a_stale_tool_index_or_duplicate_live_call() {
     state.clear_messages();
     state.add_system_message("unrelated retained row".into());
     state.apply_notification(&Notification::ToolCallUpdated(call));
-    assert_eq!(state.messages().len(), 2);
+    assert_eq!(state.history().messages().len(), 2);
     assert!(matches!(
-        state.messages()[0].kind(),
+        state.history().messages()[0].kind(),
         ChatMessageKind::System(_)
     ));
     assert_eq!(calls(&state).len(), 1);

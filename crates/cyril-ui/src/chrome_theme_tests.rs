@@ -38,7 +38,7 @@ struct Scene {
     buffer: Buffer,
 }
 
-fn draw(width: u16, height: u16, render: impl Fn(&mut Frame)) -> Buffer {
+fn draw(width: u16, height: u16, mut render: impl FnMut(&mut Frame)) -> Buffer {
     let mut terminal = Terminal::new(TestBackend::new(width, height)).expect("test terminal");
     terminal.draw(|frame| render(frame)).expect("draw");
     terminal.backend().buffer().clone()
@@ -604,8 +604,9 @@ fn refusal_alert_renders_in_chat_and_toolbar() {
         stop_reason: StopReason::EndTurn,
     });
 
+    let mut render_state = crate::widgets::chat::ChatRenderState::default();
     let chat = draw(80, 10, |frame| {
-        crate::widgets::chat::render(frame, frame.area(), &state, &marker());
+        crate::widgets::chat::render(frame, frame.area(), &state, &marker(), &mut render_state);
     });
     assert!(
         buffer_text(&chat).contains("blocked by policy"),

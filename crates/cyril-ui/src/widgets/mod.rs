@@ -1,5 +1,6 @@
 pub mod approval;
 pub mod chat;
+mod chat_layout;
 pub mod code_panel;
 pub mod crew_panel;
 pub mod hooks_panel;

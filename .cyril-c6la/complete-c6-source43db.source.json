@@ -1,0 +1,538 @@
+{
+  "issue": "cyril-c6la",
+  "original_worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la-conversation-rendering",
+  "source_candidate_tree": "43db6bd5ef8d3b7919a501094e8e6bca10570a9a",
+  "export_base_tree": "84b4681afd30af1f537a56ca6ec4fe3b6951cbb4",
+  "export_base_kind": "pre-C6 virtual tree snapshot, not a commit or target head",
+  "base_composition": "Reviewed1v25a5d2c4b5 integrated as1ee1d92f; reviewed fiv1 7eefe275 integrated as75aaa6f1; original frozen x5xi/zj0m deltas already in pre-C6 snapshot.",
+  "scope_origin": {
+    "historical_feature_after_tree": "dc200a8276d7ed7aafbeced4bd7c4824e20451dc",
+    "historical_patch": "production-after-f9.patch",
+    "historical_patch_sha256": "c69099f25f98fa6635abeeb0adc8caa9b2856211333b98eb147a2d3f553e4318",
+    "path_count": 34
+  },
+  "complete_patch": {
+    "path": ".cyril-c6la/production-complete-source43db.patch",
+    "bytes": 555698,
+    "sha256": "b7d78998aa8ca5fbdb2db8682a30f18eac73a782156860a1bfc41aab63c87c4c",
+    "file_count": 34,
+    "numstat": [
+      "1\t0\tCargo.lock",
+      "1\t0\tCargo.toml",
+      "71\t11\tcrates/cyril-core/src/types/steer_receipt.rs",
+      "1\t0\tcrates/cyril-ui/Cargo.toml",
+      "634\t52\tcrates/cyril-ui/benches/conversation_render.rs",
+      "25\t11\tcrates/cyril-ui/src/always_allow_tests.rs",
+      "3\t2\tcrates/cyril-ui/src/chrome_theme_tests.rs",
+      "2105\t0\tcrates/cyril-ui/src/conversation_performance_tests.rs",
+      "45\t21\tcrates/cyril-ui/src/floor_tests.rs",
+      "5\t0\tcrates/cyril-ui/src/lib.rs",
+      "472\t0\tcrates/cyril-ui/src/message_history.rs",
+      "244\t72\tcrates/cyril-ui/src/render.rs",
+      "700\t272\tcrates/cyril-ui/src/state.rs",
+      "152\t27\tcrates/cyril-ui/src/subagent_ui.rs",
+      "129\t46\tcrates/cyril-ui/src/theme.rs",
+      "224\t0\tcrates/cyril-ui/src/tool_text_tests.rs",
+      "325\t97\tcrates/cyril-ui/src/traits.rs",
+      "263\t521\tcrates/cyril-ui/src/widgets/chat.rs",
+      "1063\t0\tcrates/cyril-ui/src/widgets/chat/presentation.rs",
+      "666\t0\tcrates/cyril-ui/src/widgets/chat/retained.rs",
+      "384\t0\tcrates/cyril-ui/src/widgets/chat_layout/index.rs",
+      "50\t0\tcrates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "901\t0\tcrates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "166\t66\tcrates/cyril-ui/src/widgets/markdown.rs",
+      "1\t0\tcrates/cyril-ui/src/widgets/mod.rs",
+      "2\t1\tcrates/cyril-ui/src/widgets/powers_panel.rs",
+      "112\t3\tcrates/cyril-ui/src/workflow_ui.rs",
+      "59\t20\tcrates/cyril-ui/tests/missing_tool_updates.rs",
+      "7\t4\tcrates/cyril-ui/tests/v2_failed_validation.rs",
+      "96\t26\tcrates/cyril-ui/tests/widget_theme_sources.rs",
+      "118\t64\tcrates/cyril/src/app.rs",
+      "2\t2\tcrates/cyril/src/app/tests/current_runtime_contract/ordering.rs",
+      "26\t15\tcrates/cyril/src/app/tests/review.rs",
+      "5\t5\tcrates/cyril/tests/event_routing.rs"
+    ]
+  },
+  "feature_only_after_tree": "f80aea98ef9a5b42df7deffbcf3f26deb6848319",
+  "feature_only_after_meaning": "Candidate43db source blobs on exactly34 C6 feature paths; pre-C6 base everywhere else. NOT entire candidate43db and NOT a replacement for actual target tree.",
+  "assembly_target_reference": {
+    "commit": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "relation_scope": "Per-feature-source-blob identity only; no merge or qualification claim. Any docs-only FF needs assembly owner provenance."
+  },
+  "file_ledger": [
+    {
+      "path": "Cargo.lock",
+      "pre_c6_blob": "28959bcda985264f8c7066f5f22205002c88e669",
+      "candidate43db_blob": "a80a5e5c3083ea05115fd527bb3143593abf1ef9",
+      "assembly_base7972_blob": "28959bcda985264f8c7066f5f22205002c88e669",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "Cargo.toml",
+      "pre_c6_blob": "dd8a193aca234f3a3c8b96d6f322d2cf2038bece",
+      "candidate43db_blob": "974107397e19c27535f91eba84903b2ca3f6616c",
+      "assembly_base7972_blob": "dd8a193aca234f3a3c8b96d6f322d2cf2038bece",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-core/src/types/steer_receipt.rs",
+      "pre_c6_blob": "af9fa6c0fa15f94041386c1bbe6dae9d73629eff",
+      "candidate43db_blob": "ef7f36eeb2ceb505cea85c5ad85e765dee3d0996",
+      "assembly_base7972_blob": "af9fa6c0fa15f94041386c1bbe6dae9d73629eff",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/Cargo.toml",
+      "pre_c6_blob": "891af8325354ec44c624f1b84da570d169c6ba08",
+      "candidate43db_blob": "78d0521595cd3a98718ee60c00a7d18e2e4d7113",
+      "assembly_base7972_blob": "891af8325354ec44c624f1b84da570d169c6ba08",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/benches/conversation_render.rs",
+      "pre_c6_blob": "c23b9785d3ac046f033607143033a8d80eb1382c",
+      "candidate43db_blob": "6336fa6cbe4d154c4671f98c51d73cfa00fd3bc1",
+      "assembly_base7972_blob": "46c3d5112f32f576d12d9c97a33d24f1ab804772",
+      "assembly_blob_relation": "diverged_from_both"
+    },
+    {
+      "path": "crates/cyril-ui/src/always_allow_tests.rs",
+      "pre_c6_blob": "6a930d2e80252b748b08ae06d2d9d05c636253d3",
+      "candidate43db_blob": "8596a86781a5b0995ceb7e68900ee3d06cf6beb8",
+      "assembly_base7972_blob": "6a930d2e80252b748b08ae06d2d9d05c636253d3",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/chrome_theme_tests.rs",
+      "pre_c6_blob": "77013cad139b5b6e3b8849bb90f4e073cb276375",
+      "candidate43db_blob": "42cd48c34c12d1168fa7de6d22d9346a11e31d02",
+      "assembly_base7972_blob": "77013cad139b5b6e3b8849bb90f4e073cb276375",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/conversation_performance_tests.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "4876bc0d7d2a5f8ce8594a965886fcb2033020ce",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "pre_c6_blob": "8295bc5e0d1e96f2724de576844bd76061fcbbaa",
+      "candidate43db_blob": "714afbdf15b239b5022c2ea36d6e39ec0adcdc2f",
+      "assembly_base7972_blob": "8295bc5e0d1e96f2724de576844bd76061fcbbaa",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "pre_c6_blob": "525eaf9827aab4fa37575a7cb65a5f8691b30954",
+      "candidate43db_blob": "ffce977a4e58c5907c2c9ac8aa82e92469c311bf",
+      "assembly_base7972_blob": "525eaf9827aab4fa37575a7cb65a5f8691b30954",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/message_history.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "0fe96b9c500917e63501da2802ebb1b6189a732c",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/render.rs",
+      "pre_c6_blob": "dedb5da70757fbaa9870655fb4091d53ae60374d",
+      "candidate43db_blob": "a483fe3b07c983240b552d72d62256e36897a571",
+      "assembly_base7972_blob": "dedb5da70757fbaa9870655fb4091d53ae60374d",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "pre_c6_blob": "19d90ead2e73454a159cb7c68f73fbe151f4e479",
+      "candidate43db_blob": "ece7c58f55c22939ba55dfa31df55f96c9b5d533",
+      "assembly_base7972_blob": "19d90ead2e73454a159cb7c68f73fbe151f4e479",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "pre_c6_blob": "a6af43fac637690d0f16a74471e3214f3eae4cb6",
+      "candidate43db_blob": "cbb58df035e6555acb7f304bfd128e664a8e0bd3",
+      "assembly_base7972_blob": "a6af43fac637690d0f16a74471e3214f3eae4cb6",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/theme.rs",
+      "pre_c6_blob": "510950f10dd84d8d2810b044ff68489ed27257df",
+      "candidate43db_blob": "0f93f3a65ca914fdbdf950bf4faf0851234c27bf",
+      "assembly_base7972_blob": "ea8223437e746a2b151b62fa5dd7ad50d7218816",
+      "assembly_blob_relation": "diverged_from_both"
+    },
+    {
+      "path": "crates/cyril-ui/src/tool_text_tests.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "26d40ca2c29b807186d4f9678888377eeb8b80a7",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "pre_c6_blob": "275e9c8e226e058f9bad80f331487a196bd52ac1",
+      "candidate43db_blob": "95c657ea4a71c4f9907b0cec301e2383cfdcb0de",
+      "assembly_base7972_blob": "eff7b25deec6088b8ef6ba81c01cee7575059d42",
+      "assembly_blob_relation": "diverged_from_both"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "pre_c6_blob": "1ae6664a4480da789f7e7ab0640183575f0928a7",
+      "candidate43db_blob": "10c54784914893c6ca2a365ca8ce2fc2083aad51",
+      "assembly_base7972_blob": "1e82b2a4bd74956bdc5112711856b6a47d06797d",
+      "assembly_blob_relation": "diverged_from_both"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat/presentation.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "52fca6728692b9298b006d0344dca318fa9c3147",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat/retained.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "78f8f7457d5a78a84e6b7b7e9d015fea982cc814",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/index.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "ed0fa15f3e8fb517eea824522bf11d32685119ed",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "f3a5a33c5e1d59baefe843f2efa504db2d1b0577",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "pre_c6_blob": null,
+      "candidate43db_blob": "9881199a65740ef90d532810e71efbc6055db070",
+      "assembly_base7972_blob": null,
+      "assembly_blob_relation": "absent"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/markdown.rs",
+      "pre_c6_blob": "9cbfd5cba4d0c785bf9738327b2ed11bc32d98cd",
+      "candidate43db_blob": "e0ab58b1ce8214846607fe461c7e3b0875b80e4a",
+      "assembly_base7972_blob": "88dbfebb7e67b7a3cf172ef63d3d51c19d741b4b",
+      "assembly_blob_relation": "diverged_from_both"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/mod.rs",
+      "pre_c6_blob": "76a5ddd18873316776878ad01e1dfd73a9a98c3f",
+      "candidate43db_blob": "e9eebe5caeb5fdde1f3a13b75b58b22b8d68d4aa",
+      "assembly_base7972_blob": "76a5ddd18873316776878ad01e1dfd73a9a98c3f",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/powers_panel.rs",
+      "pre_c6_blob": "421b581eaa832950a0a1d93a0aa85a9efc5c1296",
+      "candidate43db_blob": "675a6210bc4c85064e9efcdfc1bbc711d5eccaee",
+      "assembly_base7972_blob": "421b581eaa832950a0a1d93a0aa85a9efc5c1296",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/src/workflow_ui.rs",
+      "pre_c6_blob": "42892c7f8b054468d5d36f62f2fd4c4ca700101d",
+      "candidate43db_blob": "ab550509f49cecf11cc31e92b9a0ae142d65b3c2",
+      "assembly_base7972_blob": "42892c7f8b054468d5d36f62f2fd4c4ca700101d",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/tests/missing_tool_updates.rs",
+      "pre_c6_blob": "2f37a6081d3a64e92abb4b2b70fb64c43ce72c8b",
+      "candidate43db_blob": "c1f8a8e07035c628e6895bbdf7167b20e8f8a79c",
+      "assembly_base7972_blob": "bff7df45282eb1c383a7016bc3c3ca2a679301b6",
+      "assembly_blob_relation": "diverged_from_both"
+    },
+    {
+      "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "pre_c6_blob": "449a38f4b05539a6407dfd86892ea1a41cd22cb8",
+      "candidate43db_blob": "798d653bced4889cdc0f4a2211730d2dd64b32b7",
+      "assembly_base7972_blob": "449a38f4b05539a6407dfd86892ea1a41cd22cb8",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+      "pre_c6_blob": "b6dd0899688f5e0a6c9db86d4b23b06631bcbaec",
+      "candidate43db_blob": "930654a9f47fe666f4813d9dd086055a1b6afb43",
+      "assembly_base7972_blob": "b6dd0899688f5e0a6c9db86d4b23b06631bcbaec",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "pre_c6_blob": "e70304e79cf3d576283eeaaa6dcfa1e43294f769",
+      "candidate43db_blob": "54cdf5d14f5f84dacc0e83dc9a00b465b01a41e0",
+      "assembly_base7972_blob": "e70304e79cf3d576283eeaaa6dcfa1e43294f769",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril/src/app/tests/current_runtime_contract/ordering.rs",
+      "pre_c6_blob": "8033d960ab41b647a11528374c07de6d17405b24",
+      "candidate43db_blob": "cec858b5227c1d4d34df0a1aa942695601ccc5e2",
+      "assembly_base7972_blob": "8033d960ab41b647a11528374c07de6d17405b24",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril/src/app/tests/review.rs",
+      "pre_c6_blob": "a2c5e19e6b1c0239d28227e09481c2eb23caa5e1",
+      "candidate43db_blob": "daada176d1c12167ffb4427e2d1f2039fa5cf454",
+      "assembly_base7972_blob": "a2c5e19e6b1c0239d28227e09481c2eb23caa5e1",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    },
+    {
+      "path": "crates/cyril/tests/event_routing.rs",
+      "pre_c6_blob": "e8bf7f408b75aa5b533777cc2892fef1a3f62489",
+      "candidate43db_blob": "4c526ffe6a5243316a92bedfb7a2f7809b4bb8b0",
+      "assembly_base7972_blob": "e8bf7f408b75aa5b533777cc2892fef1a3f62489",
+      "assembly_blob_relation": "equals_pre_c6_base"
+    }
+  ],
+  "excluded_changes": {
+    "common_auth_commit": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "common_auth_paths": [
+      "crates/cyril-core/src/protocol/kas/auth.rs"
+    ],
+    "common_auth_feature_path_overlap": [],
+    "other_source_exclusion": {
+      "path": "crates/cyril-ui/src/highlight.rs",
+      "reason": "Source diff is only test formatting, outside C6 ownership; preserve actual x5xi target source."
+    },
+    "all_candidate_changes_outside_feature_scope": [
+      "A\t.cyril-c6la/clippy-repair.source.json",
+      "A\t.cyril-c6la/design.md",
+      "A\t.cyril-c6la/gate-review-f3.py",
+      "A\t.cyril-c6la/gate-review-f9.py",
+      "A\t.cyril-c6la/plan.md",
+      "A\t.cyril-c6la/production-after-f9.patch",
+      "A\t.cyril-c6la/production-after-review.patch",
+      "A\t.cyril-c6la/production.patch",
+      "A\t.cyril-c6la/review-clippy-repair.patch",
+      "A\t.cyril-c6la/review-decisions.md",
+      "A\t.cyril-c6la/review-f9-gate.patch",
+      "A\t.cyril-c6la/review-production-fix.patch",
+      "A\t.cyril-c6la/review-test-only.patch",
+      "A\t.cyril-c6la/route.md",
+      "A\t.cyril-c6la/widget-theme-after-f9.rs",
+      "A\t.cyril-c6la/widget-theme-before-f9.rs",
+      "A\t.cyril-x5xi/design.md",
+      "A\t.cyril-x5xi/gate-review-f1.py",
+      "A\t.cyril-x5xi/plan.md",
+      "A\t.cyril-x5xi/production.patch",
+      "A\t.cyril-x5xi/review-decisions.md",
+      "A\t.cyril-x5xi/route.md",
+      "A\t.cyril-zj0m/design.md",
+      "A\t.cyril-zj0m/plan.md",
+      "A\t.cyril-zj0m/production.patch",
+      "A\t.cyril-zj0m/review-decisions.md",
+      "A\t.cyril-zj0m/route.md",
+      "M\tcrates/cyril-core/src/protocol/kas/auth.rs",
+      "M\tcrates/cyril-ui/src/highlight.rs"
+    ]
+  },
+  "assembly_rules": [
+    "Use full-index complete patch/base blob ledger for both-sides reconciliation, not whole-file overwrite or checkout of feature-only tree.",
+    "Do not apply b84/9b7/f51/095/F9/8ad/14945de1 incrementals again after this complete export.",
+    "Preserve actual Zj alias-LAST and every already-landed target fix; six diverged feature paths are explicitly identified in file_ledger.",
+    "C6 thin chat::render passes ORIGINAL outer Rect; only retained::render subtracts gutter. Avoid carrying old-Tqr subtraction into wrapper plus retained.",
+    "Original22-widget F3/F9 snapshots/recipes retain their historical source pins; combined MCP23-widget/current-checker qualification is assembly-owned.",
+    "No Cargo/vendor change in F11/F12. Earlier approved unicode-segmentation workspace declaration/identical UI edge remains; reconcile already-present edge rather than duplicate.",
+    "No actual source/tracker/auth/index/commit mutation performed by this artifact export."
+  ],
+  "workflow_copy_inventory": [
+    {
+      "path": ".cyril-c6la/route.md",
+      "bytes": 26112,
+      "sha256": "f4d716533e8c801b545d7bdd2397e2c69068466b8db4fafc07b2cf6a2d4c2493",
+      "role": "Current canonical route, source boundaries, complete assembly export and remaining gates; copy CURRENT working file, not stale candidate-tree doc.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/design.md",
+      "bytes": 51878,
+      "sha256": "e76044d9de077e89dcc5f35275a0555d9b6497ccd878197a3818b1c97ac6623f",
+      "role": "Current approved claims, explicit requester F11 exception and F12 DG; copy CURRENT working file.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/plan.md",
+      "bytes": 29940,
+      "sha256": "686ed9862e6a77da8ee8fbbdb3f7d4100fe9070fadb9871aaadf30e164e672df",
+      "role": "Current atomic work/repair and required sensitivity/qualification plan; copy CURRENT working file.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/review-decisions.md",
+      "bytes": 39960,
+      "sha256": "751ff9a52b1ba17a81f51e5af379dd4c1dbb72d669d2e348bd544f5d19f3a42c",
+      "role": "Current evidence/finding/repair/source-review record and portable mutation obligations; copy CURRENT working file.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/production.patch",
+      "bytes": 461128,
+      "sha256": "b84fb6d259ad446bba113de49b08a103b3aa8d0f9b1ae06fbcc63e9c7331f8fa",
+      "role": "Immutable b84 pre-review initial C6 production delta.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/review-test-only.patch",
+      "bytes": 22116,
+      "sha256": "9b7aeba7f91b651247bb18659517bab082e1766a4f7e8e8705b05af19a9dec1a",
+      "role": "Immutable 9b7 actual review-RED test/instrumentation delta after b84.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/review-production-fix.patch",
+      "bytes": 25203,
+      "sha256": "f51b2d57d82d92a09b903759715cdb56db04a1537cf84f86c611e88318a71238",
+      "role": "Immutable f51 approved F6/F8 root production repair.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/production-after-review.patch",
+      "bytes": 497894,
+      "sha256": "095e357c3e80f71de9c2ee3fc6fddfae8c9dc8fcc3b3642e0eefcadf3f1acf9b",
+      "role": "Immutable 095 cumulative33-path F6/F8 feature boundary.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/review-f9-gate.patch",
+      "bytes": 7444,
+      "sha256": "5448abe06ff6d2185e79fa4ebc22f5d0991a6bd90b1dafb6c188d530a13ff13b",
+      "role": "Immutable 544 separate color-source checker repair.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/production-after-f9.patch",
+      "bytes": 505338,
+      "sha256": "c69099f25f98fa6635abeeb0adc8caa9b2856211333b98eb147a2d3f553e4318",
+      "role": "Immutable c690 cumulative34-path pre-format feature boundary; defines complete export path scope.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/widget-theme-before-f9.rs",
+      "bytes": 9961,
+      "sha256": "661d8badc938a073ebcc2fa916b7b35907454d50f1b91be63ac662d54544cc57",
+      "role": "Frozen BEFORE input for actual F9 checker A/B; do not port into production.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/widget-theme-after-f9.rs",
+      "bytes": 12752,
+      "sha256": "e3d7b75288869fae0a885c8318ea3600a4dd853c5655dcc6ec8702c7bb191403",
+      "role": "Frozen AFTER input for actual F9 checker A/B; do not port into production.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/gate-review-f3.py",
+      "bytes": 6514,
+      "sha256": "b134d6d51f6ba527276615bc3988c4feb06158a28a6d73d4cfa9af0334f907ea",
+      "role": "Retained actual-theme-checker A/B recipe on original22-widget source scope; proof owner Main.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/gate-review-f9.py",
+      "bytes": 8198,
+      "sha256": "ff12c0466374d85f0fc3b2135bb0d90b41f8a80f35cfd31106dc5ae19e6a1055",
+      "role": "Retained frozen checker7-pair A/B recipe with historical original22-widget source scope; parent bg116 receipts retain original pins.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/review-clippy-repair.patch",
+      "bytes": 11028,
+      "sha256": "8ad00e53daa307c6bfbc52b90b5237641d514aef632418d4080dbff3c2759b2d",
+      "role": "Immutable 8ad seven-file F10 delta after parent post-format519b tree.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/clippy-repair.source.json",
+      "bytes": 1462,
+      "sha256": "5e62bb6415f7a635fe6115e632c3722dcc0173dd56e81b9ee6cdb7256a59b7c2",
+      "role": "Immutable F10/pre-post-format/common-auth source and external qualifier provenance.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/review-carry-gutter-repair.patch",
+      "bytes": 46711,
+      "sha256": "14945de13e4a94f4210b9f5d65995e9ea70f3d06b45df0d863d67f758eb25502",
+      "role": "Immutable 14945de1 five-file F11/F12 incremental delta after830b.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/carry-gutter-repair.source.json",
+      "bytes": 3944,
+      "sha256": "743af5b346c08945a8d8b3ae1c7f618151f207edb66bf35ef4b3e02348092f72",
+      "role": "Exact F11/F12 after43db identity, source reviews, new-fence mutation recipes and absent executable proof.",
+      "copy_verbatim": true
+    },
+    {
+      "path": ".cyril-c6la/production-complete-source43db.patch",
+      "bytes": 555698,
+      "sha256": "b7d78998aa8ca5fbdb2db8682a30f18eac73a782156860a1bfc41aab63c87c4c",
+      "role": "Complete C6-only34-source-path export from84b taking candidate43db blobs; do not apply incremental repairs again afterward.",
+      "copy_verbatim": true
+    }
+  ],
+  "workflow_manifest_self": {
+    "path": ".cyril-c6la/complete-c6-source43db.source.json",
+    "copy_verbatim": true,
+    "checksum": "Provided externally in handoff; excluded internally to avoid recursive self-hash."
+  },
+  "workflow_origin": "CURRENT original-worktree files, separately hashed after final route amendment, not stale workflow blobs embedded in source candidate43db.",
+  "do_not_overwrite_workflow": [
+    ".cyril-x5xi",
+    ".cyril-zj0m"
+  ],
+  "external_original_receipts": [
+    {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la/pre-format.source.json",
+      "tree": "53386832198e5c430e9a48a5e6567aee53a4be76",
+      "scope": "Original pre-format source provenance"
+    },
+    {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la/qualified-source.source.json",
+      "tree": "519b1445d0a3f13f24a01b05dc3ca93556111964",
+      "scope": "Original formatted F10 Clippy failure, not current PASS"
+    },
+    {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-repair1/02-test.log",
+      "tree": "830b4673e7e3d49ed3f1e272af420f8fba75059e",
+      "scope": "Original real F11 UI882PASS3FAIL1ignored; prior parent Clippy GREEN is830b only"
+    }
+  ],
+  "portable_mutation_recipes": [
+    {
+      "finding": "F11",
+      "target_file": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "change": "ONLY production wrap_lines entry wrap_lines_with_carry::<true>(lines,width) to::<false>; do not alter legacy classifier or assertions.",
+      "test": "widgets::chat_layout::wrap::tests::carried_prefix_repair_has_literal_rows_cells_styles_and_windows",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib widgets::chat_layout::wrap::tests::carried_prefix_repair_has_literal_rows_cells_styles_and_windows -- --exact --nocapture --test-threads=1",
+      "expected": "Named test executes and fails literal a/\u754c/a row or safe-start assertion on legacy OWNED output; unrelated compile failure/zero tests is not sensitivity. Restore exact source and require GREEN."
+    },
+    {
+      "finding": "F12",
+      "target_file": "crates/cyril-ui/src/widgets/chat/retained.rs",
+      "change": "Restore BOTH old140-column production geometry points: content Rect.width=area.width (not minus gutter), and scrollbar render Rect argument=area (not separate right-column Rect). Keep tests/counters/root outer geometry unchanged.",
+      "test": "conversation_performance_tests::c2_c5_stable_gutter_preserves_complete_auth_url_at_bottom_and_page_up",
+      "command": "env -u CARGO_TARGET_DIR cargo test -p cyril-ui --lib conversation_performance_tests::c2_c5_stable_gutter_preserves_complete_auth_url_at_bottom_and_page_up -- --exact --nocapture --test-threads=1",
+      "expected": "Named140x40 test executes and fails full URL/gutter assertions with actual old content overwrite/wrapping, not merely a removed indicator; restore exact source and require GREEN."
+    }
+  ],
+  "mutation_protocol": "Assembly/Main owns safe snapshot/restore of existing dirty files. First establish current target test GREEN, record pre-mutation source identity, inject only named production defect, require intended named-test RED, restore byte-exact source and verify restored GREEN/identity. Do not transplant temporary probes into production; run source-policy gates uninstrumented.",
+  "worker_checks_run": [],
+  "worker_source_unchanged": true,
+  "qualification_limit": "Source reviews only correct/no findings for F11/F12 at43db. No executed sensitivity/test/build/fmt/bench/native for43db or assembled target. Main owns new pinned qualification/final review/PR; native Kiro remains separately paused; accepted Windows baseline exception covers only its recorded old failures."
+}

@@ -27,6 +27,7 @@ use cyril_core::usage::{
     UsageSnapshotHandle, UsageSnapshotResult, UsageWrite, spawn_usage_enrichment_worker,
 };
 use cyril_core::workflow::WorkflowTracker;
+use cyril_ui::render::RenderState;
 use cyril_ui::state::{AutocompleteAction, UiState};
 use cyril_ui::traits::{
     Activity, Overlay, PickerKind, Transcript, TuiState, approval_origin_label,
@@ -73,6 +74,7 @@ pub struct App {
     bridge_completion_rx: Option<oneshot::Receiver<()>>,
     capture_forwarder: Option<CaptureForwarder>,
     ui_state: UiState,
+    render_state: RenderState,
     session: SessionController,
     commands: CommandRegistry,
     redraw_needed: bool,
@@ -461,6 +463,7 @@ impl App {
             bridge_completion_rx: Some(bridge_completion_rx),
             capture_forwarder: None,
             ui_state,
+            render_state: RenderState::new(),
             session: SessionController::new(),
             commands,
             redraw_needed: true,
@@ -961,7 +964,9 @@ impl App {
         })?;
         self.ui_state.set_terminal_size(size.width, size.height);
         terminal
-            .draw(|frame| cyril_ui::render::draw(frame, &self.ui_state))
+            .draw(|frame| {
+                cyril_ui::render::draw(frame, &self.ui_state, &mut self.render_state);
+            })
             .map_err(|e| {
                 cyril_core::Error::with_source(
                     cyril_core::ErrorKind::Transport {
@@ -3349,6 +3354,7 @@ mod tests {
 
     fn system_messages(app: &App) -> Vec<String> {
         app.ui_state
+            .history()
             .messages()
             .iter()
             .filter_map(|message| match &message.kind {
@@ -3777,7 +3783,12 @@ mod tests {
             cyril_core::types::MemoryStoreVersions::new(1, 1),
         );
         app.handle_command_result(CommandResult::memory_status(status));
-        let message = app.ui_state.messages().last().expect("command output");
+        let message = app
+            .ui_state
+            .history()
+            .messages()
+            .last()
+            .expect("command output");
         match message.kind() {
             cyril_ui::traits::ChatMessageKind::CommandOutput { command, text } => {
                 assert_eq!(command, "memory");
@@ -3851,7 +3862,7 @@ mod tests {
                 other => panic!("KAS command must use session/prompt, got {other:?}"),
             }
             assert!(commands.try_recv().is_err(), "no V2 command RPC");
-            assert!(app.ui_state.messages().iter().any(
+            assert!(app.ui_state.history().messages().iter().any(
                 |message| matches!(message.kind(), ChatMessageKind::UserText(text) if text == raw)
             ));
             assert!(matches!(app.session.status(), SessionStatus::Busy));
@@ -4099,6 +4110,7 @@ mod tests {
         assert!(commands.try_recv().is_err());
         assert!(
             !app.ui_state
+                .history()
                 .messages()
                 .iter()
                 .any(|message| matches!(message.kind(), ChatMessageKind::UserText(_)))
@@ -4651,7 +4663,7 @@ mod tests {
             "chat draft",
             "voice transcript must remain guarded by the active approval"
         );
-        assert!(app.ui_state.messages().iter().any(|message| {
+        assert!(app.ui_state.history().messages().iter().any(|message| {
             matches!(
                 message.kind(),
                 ChatMessageKind::System(text)
@@ -4809,7 +4821,7 @@ mod tests {
             original,
             "foreign approval must not write the main agent config"
         );
-        assert!(app.ui_state.messages().iter().any(|message| {
+        assert!(app.ui_state.history().messages().iter().any(|message| {
             matches!(
                 message.kind(),
                 ChatMessageKind::System(text)
@@ -4982,7 +4994,7 @@ mod tests {
             Ok(PermissionResponse::Selected { .. })
         ));
         assert_eq!(std::fs::read(&config_path).unwrap(), original);
-        assert!(app.ui_state.messages().iter().any(|message| {
+        assert!(app.ui_state.history().messages().iter().any(|message| {
             matches!(
                 message.kind(),
                 ChatMessageKind::System(text)
@@ -5033,7 +5045,7 @@ mod tests {
             Ok(PermissionResponse::Selected { .. })
         ));
         assert_eq!(std::fs::read(&config_path).unwrap(), original);
-        assert!(app.ui_state.messages().iter().any(|message| {
+        assert!(app.ui_state.history().messages().iter().any(|message| {
             matches!(
                 message.kind(),
                 ChatMessageKind::System(text)
@@ -5409,6 +5421,7 @@ mod tests {
 
     fn last_system_message(app: &App) -> String {
         app.ui_state
+            .history()
             .messages()
             .iter()
             .rev()
@@ -5506,6 +5519,7 @@ mod tests {
         assert!(!original.iter().any(|text| text.contains("<CYRIL_LESSONS")));
         let user_texts = app
             .ui_state
+            .history()
             .messages()
             .iter()
             .filter_map(|message| match message.kind() {
@@ -5660,10 +5674,10 @@ mod tests {
         assert!(content_blocks[0].contains("- prefer boring Rust"));
         assert_eq!(content_blocks[1], original);
         // The transcript shows the user's text only; the block is wire-only.
-        assert!(app.ui_state.messages().iter().any(
+        assert!(app.ui_state.history().messages().iter().any(
             |message| matches!(message.kind(), ChatMessageKind::UserText(text) if text == original)
         ));
-        assert!(!app.ui_state.messages().iter().any(|message| {
+        assert!(!app.ui_state.history().messages().iter().any(|message| {
             matches!(
                 message.kind(),
                 ChatMessageKind::UserText(text) if text.contains("<CYRIL_LESSONS")
@@ -5838,12 +5852,12 @@ mod tests {
             MemoryRuntimeHandle::start(cyril_memory::MemoryConfigState::Absent),
             ProjectBinding::Bound(memory),
         );
-        let before = app.ui_state.messages().len();
+        let before = app.ui_state.history().messages().len();
         app.ui_state.insert_text("/memory list");
         app.submit_input().await.expect("submit list");
         // The command returned without touching the transcript: the round
         // trip is in flight on a task, not awaited on the loop.
-        assert_eq!(app.ui_state.messages().len(), before);
+        assert_eq!(app.ui_state.history().messages().len(), before);
         drain_one_memory_result(&mut app).await;
         assert_eq!(last_system_message(&app), "No active project lessons.");
 
@@ -5879,6 +5893,7 @@ mod tests {
         app.submit_input().await.expect("submit status");
         let status = match app
             .ui_state
+            .history()
             .messages()
             .last()
             .expect("status output")
@@ -5952,7 +5967,7 @@ mod tests {
         );
         // UX parity with a typed submit: the text appears as a user message.
         assert!(
-            app.ui_state.messages().iter().any(
+            app.ui_state.history().messages().iter().any(
                 |m| matches!(m.kind(), ChatMessageKind::UserText(t) if t == "run the requested smoke")
             ),
             "the one-shot prompt must show in the transcript like a typed prompt"
@@ -6059,7 +6074,7 @@ mod tests {
         }
         // Optimistic Queued echo present immediately.
         assert!(
-            ui.messages().iter().any(|m| matches!(
+            ui.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 cyril_ui::traits::ChatMessageKind::SteerEcho {
                     text,
@@ -6094,7 +6109,7 @@ mod tests {
             "unsupported session must not send a SteerSession"
         );
         assert!(
-            !ui.messages().iter().any(|m| matches!(
+            !ui.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 cyril_ui::traits::ChatMessageKind::SteerEcho {
                     status: cyril_ui::traits::SteerEchoStatus::Queued,
@@ -6104,7 +6119,8 @@ mod tests {
             "no Queued echo on an unsupported session"
         );
         assert!(
-            ui.messages()
+            ui.history()
+                .messages()
                 .iter()
                 .any(|m| matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(_))),
             "an advisory system message is shown instead"
@@ -6130,7 +6146,7 @@ mod tests {
             .unwrap();
         assert!(rx.try_recv().is_err(), "no session: nothing on the bridge");
         assert!(
-            ui.messages()
+            ui.history().messages()
                 .iter()
                 .any(|m| matches!(m.kind(), ChatMessageKind::System(s) if s.contains("No active session"))),
             "no-session advisory shown"
@@ -6159,7 +6175,7 @@ mod tests {
         session.set_session(SessionId::new("sess_1"), SessionStatus::Busy);
         ui.add_steer_echo("queued one");
         ui.add_steer_echo("queued two");
-        let msgs_before = ui.messages().len();
+        let msgs_before = ui.history().messages().len();
         dispatch_clear_steer(&mut ui, &session, &bridge)
             .await
             .unwrap();
@@ -6171,7 +6187,8 @@ mod tests {
         }
         assert_eq!(ui.steering_queued(), 2, "no optimistic counter drain");
         assert_eq!(
-            ui.messages()
+            ui.history()
+                .messages()
                 .iter()
                 .filter(|m| matches!(
                     m.kind(),
@@ -6185,7 +6202,7 @@ mod tests {
             "no optimistic chip flip — the broadcast is the truth (D4)"
         );
         assert_eq!(
-            ui.messages().len(),
+            ui.history().messages().len(),
             msgs_before,
             "silent success: no message added on dispatch"
         );
@@ -6215,7 +6232,7 @@ mod tests {
             "failed send must not leave an optimistic steer chip"
         );
         assert!(
-            !ui.messages().iter().any(|m| matches!(
+            !ui.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 cyril_ui::traits::ChatMessageKind::SteerEcho {
                     status: cyril_ui::traits::SteerEchoStatus::Queued,
@@ -6742,7 +6759,7 @@ mod tests {
             "both hooks should be parsed"
         );
         assert_eq!(
-            ui_state.messages().len(),
+            ui_state.history().messages().len(),
             0,
             "no command-output message when panel handles the response"
         );
@@ -6769,7 +6786,7 @@ mod tests {
             "panel should NOT open for malformed response"
         );
         assert_eq!(
-            ui_state.messages().len(),
+            ui_state.history().messages().len(),
             1,
             "should fall through and add a command-output message"
         );
@@ -6794,13 +6811,13 @@ mod tests {
             "panel should NOT open when backend reports success: false"
         );
         assert_eq!(
-            ui_state.messages().len(),
+            ui_state.history().messages().len(),
             1,
             "error message should be added as a command-output message"
         );
         // The error message should be visible to the user. format_command_response
         // returns the `message` field directly when no structured data shape matches.
-        let msg_text = match ui_state.messages()[0].kind() {
+        let msg_text = match ui_state.history().messages()[0].kind() {
             cyril_ui::traits::ChatMessageKind::CommandOutput { text, .. } => text.clone(),
             other => panic!("expected CommandOutput, got {other:?}"),
         };
@@ -6818,7 +6835,7 @@ mod tests {
         dispatch_command_executed("hooks", &response, &mut ui_state);
 
         assert!(!ui_state.has_hooks_panel());
-        assert_eq!(ui_state.messages().len(), 1);
+        assert_eq!(ui_state.history().messages().len(), 1);
     }
 
     #[test]
@@ -6835,7 +6852,7 @@ mod tests {
             !ui_state.has_hooks_panel(),
             "non-hooks commands should never open the hooks panel"
         );
-        assert_eq!(ui_state.messages().len(), 1);
+        assert_eq!(ui_state.history().messages().len(), 1);
     }
 
     // --- powers panel (cyril-v19o) ---
@@ -6942,7 +6959,7 @@ mod tests {
             "no catalog means no panel — an empty one would claim the user has \
              nothing installed"
         );
-        let messages = app.ui_state.messages();
+        let messages = app.ui_state.history().messages();
         assert_eq!(
             messages.len(),
             1,
@@ -6976,7 +6993,7 @@ mod tests {
             "a known-empty catalog is a fact the panel can state"
         );
         assert_eq!(
-            app.ui_state.messages().len(),
+            app.ui_state.history().messages().len(),
             1,
             "opening the panel must not also add a message"
         );
@@ -7193,6 +7210,7 @@ mod tests {
         // a guard that drops the text *and* swallows the notice.
         let notice = |app: &App| {
             app.ui_state
+                .history()
                 .messages()
                 .iter()
                 .filter(|message| {
@@ -7209,6 +7227,7 @@ mod tests {
         // a guard that drops the text *and* swallows the notice.
         let notice = |app: &App| {
             app.ui_state
+                .history()
                 .messages()
                 .iter()
                 .filter(|message| {
@@ -7860,7 +7879,7 @@ mod tests {
         assert_eq!(ui.activity(), Activity::Sending);
         // claim #1: the active path commits the injected prompt as a UserText.
         assert!(
-            ui.messages().iter().any(|m| matches!(
+            ui.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 cyril_ui::traits::ChatMessageKind::UserText(t) if t == "Analyze the code..."
             )),
@@ -7890,7 +7909,8 @@ mod tests {
         let mut ui = UiState::new(500);
         dispatch_code_command(&code_prompt_json(), &busy_code_session(), &mut ui);
         assert!(
-            !ui.messages()
+            !ui.history()
+                .messages()
                 .iter()
                 .any(|m| matches!(m.kind(), cyril_ui::traits::ChatMessageKind::UserText(_))),
             "busy must not commit a UserText it will never send"
@@ -7916,7 +7936,7 @@ mod tests {
         let mut ui = UiState::new(500);
         dispatch_code_command(&code_prompt_json(), &busy_code_session(), &mut ui);
         assert!(
-            ui.messages().iter().any(|m| matches!(
+            ui.history().messages().iter().any(|m| matches!(
                 m.kind(),
                 cyril_ui::traits::ChatMessageKind::System(t) if t.contains("busy")
             )),
@@ -7966,7 +7986,7 @@ mod tests {
         );
         assert!(result.is_empty());
         // Should show error, not the prompt system message
-        assert!(!ui.messages().is_empty());
+        assert!(!ui.history().messages().is_empty());
         assert_eq!(ui.activity(), Activity::Idle);
     }
 
@@ -7985,7 +8005,7 @@ mod tests {
             &mut ui,
         );
         // System message should use the default label
-        let has_default_label = ui.messages().iter().any(|m| {
+        let has_default_label = ui.history().messages().iter().any(|m| {
             matches!(m.kind(), cyril_ui::traits::ChatMessageKind::System(s) if s.contains("Code Intelligence"))
         });
         assert!(
@@ -8008,7 +8028,7 @@ mod tests {
         );
         assert!(result.is_empty());
         assert!(!ui.has_code_panel());
-        assert!(!ui.messages().is_empty());
+        assert!(!ui.history().messages().is_empty());
     }
 
     // --- dispatch_rewind_command tests ---
@@ -8088,7 +8108,7 @@ mod tests {
             other => panic!("expected TerminateSession second, got {other:?}"),
         }
         // System message announces the swap
-        assert!(!ui.messages().is_empty());
+        assert!(!ui.history().messages().is_empty());
     }
 
     #[test]
@@ -8639,7 +8659,7 @@ mod tests {
                 false,
             )),
         ));
-        let lines = lki9_system_lines(app.ui_state.messages());
+        let lines = lki9_system_lines(app.ui_state.history().messages());
         assert_eq!(lines.last().map(String::as_str), Some(want), "{lines:?}");
     }
 
@@ -8714,7 +8734,7 @@ mod tests {
                 workflow_completion: false,
             },
         ));
-        let lines = lki9_system_lines(app.ui_state.messages());
+        let lines = lki9_system_lines(app.ui_state.history().messages());
         let tail: Vec<&str> = lines
             .iter()
             .rev()
@@ -8765,7 +8785,7 @@ mod tests {
                 true,
             )),
         ));
-        let lines = lki9_system_lines(app.ui_state.messages());
+        let lines = lki9_system_lines(app.ui_state.history().messages());
         assert_eq!(
             lines.last().map(String::as_str),
             Some("─── ⚙ workflow \"recipe-wf-b\" completed · agent follow-up ───"),
@@ -8785,7 +8805,7 @@ mod tests {
         let step = SessionId::new("child-9");
         app.handle_notification(session_created_frame(&main));
         lki9_seed_completion(&mut app, "wf-1", &main);
-        let before = lki9_system_lines(app.ui_state.messages()).len();
+        let before = lki9_system_lines(app.ui_state.history().messages()).len();
         app.handle_notification(lki9_on(&step, Notification::TurnStarted));
         app.handle_notification(lki9_on(
             &step,
@@ -8795,7 +8815,7 @@ mod tests {
             )),
         ));
         assert_eq!(
-            lki9_system_lines(app.ui_state.messages()).len(),
+            lki9_system_lines(app.ui_state.history().messages()).len(),
             before,
             "a step session's header never lands in the main transcript"
         );
@@ -8806,7 +8826,7 @@ mod tests {
             .get(&step)
             .unwrap_or_else(|| panic!("step stream created on first contact"));
         assert_eq!(
-            lki9_system_lines(stream.messages()),
+            lki9_system_lines(stream.history().messages()),
             ["─── ⚙ agent-initiated · send-message-wake ───"]
         );
         app.workflow_tracker.claim_wake_labels(&main);
@@ -8843,7 +8863,7 @@ mod tests {
     impl Lki9Replay {
         /// The main transcript's system and agent-text messages, in order.
         fn transcript(&self) -> Vec<&ChatMessageKind> {
-            lki9_transcript(self.app.ui_state.messages())
+            lki9_transcript(self.app.ui_state.history().messages())
         }
 
         /// Busy for every frame of every main turn, then Active/Ready.
@@ -8948,7 +8968,7 @@ mod tests {
                     permissions.push(Lki9Permission {
                         session_id: request.session_id.clone(),
                         title: request.tool_call.title().to_owned(),
-                        messages_before: app.ui_state.messages().len(),
+                        messages_before: app.ui_state.history().messages().len(),
                     });
                     // App::run's own permission path, including the review
                     // router; an ordinary wake uses the normal overlay.
@@ -9100,7 +9120,7 @@ mod tests {
             "the captured approval belongs to the main wake"
         );
         let before_permission =
-            lki9_transcript(&r.app.ui_state.messages()[..permission.messages_before]);
+            lki9_transcript(&r.app.ui_state.history().messages()[..permission.messages_before]);
         assert_eq!(
             lki9_count_system(&before_permission, header),
             1,
@@ -9115,7 +9135,7 @@ mod tests {
             .get(&step)
             .expect("creator step stream exists");
         assert_eq!(
-            lki9_system_lines(stream.messages())
+            lki9_system_lines(stream.history().messages())
                 .iter()
                 .filter(|line| *line == "─── ⚙ agent-initiated · send-message-wake ───")
                 .count(),
@@ -9467,11 +9487,17 @@ mod tests {
             other => panic!("the answer must prompt the step session, got {other:?}"),
         }
         assert!(commands.try_recv().is_err(), "nothing else is sent");
-        assert!(app.ui_state.messages().iter().any(|message| matches!(
-            message.kind(),
-            ChatMessageKind::System(text)
-                if text == "Sent your answer to step \"ask\" of workflow \"park\"."
-        )));
+        assert!(
+            app.ui_state
+                .history()
+                .messages()
+                .iter()
+                .any(|message| matches!(
+                    message.kind(),
+                    ChatMessageKind::System(text)
+                        if text == "Sent your answer to step \"ask\" of workflow \"park\"."
+                ))
+        );
         // Review M1: the episode is answered at once — a second `/answer`
         // before KAS resumes the step must not pre-empt the turn just started.
         app.ui_state.insert_text("/answer again");
@@ -9554,11 +9580,17 @@ mod tests {
             1,
             "the failed answer reopens the question"
         );
-        assert!(app.ui_state.messages().iter().any(|message| matches!(
-            message.kind(),
-            ChatMessageKind::System(text)
-                if text == "answer workflow step failed: Internal error: session not found"
-        )));
+        assert!(
+            app.ui_state
+                .history()
+                .messages()
+                .iter()
+                .any(|message| matches!(
+                    message.kind(),
+                    ChatMessageKind::System(text)
+                        if text == "answer workflow step failed: Internal error: session not found"
+                ))
+        );
 
         app.ui_state.insert_text("/answer FINISHED");
         app.submit_input().await.expect("submit /answer again");
@@ -9721,7 +9753,7 @@ mod tests {
                 false,
             )),
         ));
-        let lines = lki9_system_lines(r.app.ui_state.messages());
+        let lines = lki9_system_lines(r.app.ui_state.history().messages());
         assert_eq!(
             lines.last().map(String::as_str),
             Some("─── ⚙ agent-initiated · send-message-wake ───"),
@@ -9832,7 +9864,10 @@ mod tests {
         app.handle_notification(agent_text_frame(&step, "pre-claim one", false));
         app.handle_notification(agent_text_frame(&step, "pre-claim two", false));
         assert_eq!(
-            app.ui_state.subagent_ui().streams()[&step].messages().len(),
+            app.ui_state.subagent_ui().streams()[&step]
+                .history()
+                .messages()
+                .len(),
             2,
             "pre-claim frames must land in the optimistic subagent stream"
         );
@@ -9852,7 +9887,10 @@ mod tests {
             "C8: re-parenting the focused stream must clear drill-in focus"
         );
         assert_eq!(
-            app.ui_state.workflow_streams()[&step].messages().len(),
+            app.ui_state.workflow_streams()[&step]
+                .history()
+                .messages()
+                .len(),
             2,
             "adopted history must arrive intact"
         );
@@ -9860,7 +9898,10 @@ mod tests {
 
         app.handle_notification(agent_text_frame(&step, "post-claim", false));
         assert_eq!(
-            app.ui_state.workflow_streams()[&step].messages().len(),
+            app.ui_state.workflow_streams()[&step]
+                .history()
+                .messages()
+                .len(),
             3,
             "post-claim frames must append to the workflow stream"
         );
@@ -9891,7 +9932,13 @@ mod tests {
         );
 
         app.handle_notification(agent_text_frame(&step, "first frame", false));
-        assert_eq!(app.ui_state.workflow_streams()[&step].messages().len(), 1);
+        assert_eq!(
+            app.ui_state.workflow_streams()[&step]
+                .history()
+                .messages()
+                .len(),
+            1
+        );
         assert!(!app.ui_state.subagent_ui().streams().contains_key(&step));
         assert_eq!(app.subagent_ui_apply_calls, 0);
         assert_eq!(app.workflow_stream_apply_calls, 1);
@@ -9913,7 +9960,13 @@ mod tests {
             )));
             assert_no_owned_subagent_stream(&app);
         }
-        assert_eq!(app.ui_state.workflow_streams()[&step].messages().len(), 1);
+        assert_eq!(
+            app.ui_state.workflow_streams()[&step]
+                .history()
+                .messages()
+                .len(),
+            1
+        );
     }
 
     // C6 / AC1 — THE capture replay fence: the real
@@ -9959,11 +10012,12 @@ mod tests {
         for (sid, node) in [(ALPHA, "alpha"), (BETA, "beta")] {
             let stream = &app.ui_state.workflow_streams()[&SessionId::new(sid)];
             assert_eq!(
-                stream.messages().len(),
+                stream.history().messages().len(),
                 1,
                 "step {node}: one committed message — its Send Message tool call"
             );
-            let cyril_ui::traits::ChatMessageKind::ToolCall(tracked) = &stream.messages()[0].kind
+            let cyril_ui::traits::ChatMessageKind::ToolCall(tracked) =
+                &stream.history().messages()[0].kind
             else {
                 panic!("step {node}: the committed message must be the tool call");
             };
@@ -10394,7 +10448,7 @@ mod tests {
     }
 
     fn last_system_text(app: &App) -> &str {
-        match app.ui_state.messages().last().map(|m| m.kind()) {
+        match app.ui_state.history().messages().last().map(|m| m.kind()) {
             Some(cyril_ui::traits::ChatMessageKind::System(text)) => text,
             other => panic!("expected a system message, got {other:?}"),
         }

@@ -1,7 +1,13 @@
-use std::path::Path;
+use std::collections::BTreeSet;
+use std::path::{Path, PathBuf};
 
-const MODULES: [(&str, &str); 18] = [
+const MODULES: [(&str, &str); 23] = [
     ("chat", "src/widgets/chat.rs"),
+    ("chat_presentation", "src/widgets/chat/presentation.rs"),
+    ("chat_retained", "src/widgets/chat/retained.rs"),
+    ("chat_layout", "src/widgets/chat_layout/mod.rs"),
+    ("chat_layout_wrap", "src/widgets/chat_layout/wrap.rs"),
+    ("chat_layout_index", "src/widgets/chat_layout/index.rs"),
     ("markdown", "src/widgets/markdown.rs"),
     ("input", "src/widgets/input.rs"),
     ("suggestions", "src/widgets/suggestions.rs"),
@@ -127,17 +133,23 @@ fn production_source(relative: &str) -> String {
     let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(relative);
     let source = std::fs::read_to_string(&path)
         .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+    production_source_text(&source)
+}
+
+fn production_source_text(source: &str) -> String {
     // Normalize CRLF (cyril-xi4a): `audit_source` advances its running offset
     // by `line.len() + 1` per line, but `signed_ranges` come from true byte
     // offsets — on a CRLF checkout (Windows runners; no .gitattributes) every
     // token drifts one byte per preceding line and deep tokens fall out of
     // their signed exemption. Auditing an LF-normalized copy keeps offsets
     // and ranges in the same coordinate space on every platform.
-    let source = source.replace("\r\n", "\n");
+    let mut source = source.replace("\r\n", "\n");
+    // Test-only counters can precede production code. Strip only the ordinary
+    // final test module, not instrumentation carrying the same cfg attribute.
+    if let Some(boundary) = source.find("\n#[cfg(test)]\nmod tests {") {
+        source.truncate(boundary);
+    }
     source
-        .split_once("#[cfg(test)]")
-        .map_or(source.as_str(), |(production, _)| production)
-        .to_string()
 }
 
 #[test]
@@ -215,6 +227,47 @@ fn crlf_source_keeps_signed_exemption_aligned() {
 }
 
 #[test]
+fn production_source_keeps_code_after_cfg_test_counters() {
+    let source = concat!(
+        "// retained production source\n",
+        "#[cfg(test)]\n",
+        "static WORK: usize = 0;\n",
+        "fn render() { Style::default().fg(Color::White); }\n",
+        "\n#[cfg(test)]\n",
+        "mod tests {\n",
+        "    fn fixture() { Style::default().fg(Color::Red); }\n",
+        "}\n",
+    );
+    for (encoding, source) in [
+        ("LF", source.to_string()),
+        ("CRLF", source.replace('\n', "\r\n")),
+    ] {
+        let production = production_source_text(&source);
+        assert!(
+            production.contains("static WORK: usize = 0;"),
+            "{encoding}: cfg(test) instrumentation must not truncate production"
+        );
+        assert!(
+            !production.contains("mod tests {"),
+            "{encoding}: the final test module must be stripped"
+        );
+        assert!(
+            !production.contains('\r'),
+            "{encoding}: normalize CRLF before identifying the test module"
+        );
+        assert_eq!(
+            audit_source(&production),
+            vec![Finding {
+                line: 4,
+                token: "Color::White".into(),
+                kind: FindingKind::HardCodedColor,
+            }],
+            "{encoding}: retain the production violation but not fixture colors"
+        );
+    }
+}
+
+#[test]
 fn one_mebibyte_audit_finds_violation() {
     let mut source = " ".repeat(1024 * 1024);
     source.push_str("\nfn render() { Style::default().fg(Color::White); }\n");
@@ -228,7 +281,7 @@ fn all_widget_modules_are_clean() {
     for (label, relative) in MODULES {
         let findings = audit_source(&production_source(relative));
         if !findings.is_empty() {
-            dirty.push(format!("{label}: {findings:#?}"));
+            dirty.push(format!("{relative} ({label}): {findings:#?}"));
         }
     }
     assert!(
@@ -238,32 +291,49 @@ fn all_widget_modules_are_clean() {
     );
 }
 
-/// cyril-6r3a C5 anti-rot: every file in src/widgets/ must be covered by
-/// MODULES — a widget added later cannot silently dodge the fence.
+/// cyril-6r3a C5 anti-rot: every Rust file recursively below src/widgets/
+/// must be covered by MODULES — a widget added later cannot dodge the fence.
 #[test]
 fn modules_list_covers_the_widgets_directory() {
-    let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
-    let mut on_disk: Vec<String> = std::fs::read_dir(&dir)
-        .unwrap_or_else(|error| panic!("failed to read {}: {error}", dir.display()))
-        .map(|entry| {
+    fn collect_widget_sources(root: &Path, directory: &Path, sources: &mut BTreeSet<PathBuf>) {
+        let entries = std::fs::read_dir(directory)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", directory.display()));
+        for entry in entries {
             let entry = entry.unwrap_or_else(|error| {
-                panic!("failed to read entry in {}: {error}", dir.display())
+                panic!("failed to read entry in {}: {error}", directory.display())
             });
-            entry.file_name().to_string_lossy().into_owned()
-        })
-        .filter(|name| name.ends_with(".rs"))
-        .map(|name| format!("src/widgets/{name}"))
+            let path = entry.path();
+            let file_type = entry.file_type().unwrap_or_else(|error| {
+                panic!("failed to read file type for {}: {error}", path.display())
+            });
+            if file_type.is_dir() {
+                collect_widget_sources(root, &path, sources);
+            } else if path.extension().is_some_and(|extension| extension == "rs") {
+                sources.insert(
+                    path.strip_prefix(root)
+                        .expect("widget source must be below its inventory root")
+                        .to_path_buf(),
+                );
+            }
+        }
+    }
+    let mut listed_paths = BTreeSet::new();
+    for (_, relative) in MODULES {
+        assert!(
+            listed_paths.insert(PathBuf::from(relative)),
+            "MODULES contains a duplicate source path: {relative}"
+        );
+    }
+    let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut on_disk = BTreeSet::new();
+    collect_widget_sources(root, &root.join("src/widgets"), &mut on_disk);
+    let fenced: BTreeSet<_> = listed_paths
+        .into_iter()
+        .filter(|path| path.starts_with("src/widgets"))
         .collect();
-    on_disk.sort();
-    let mut fenced: Vec<String> = MODULES
-        .iter()
-        .map(|(_, relative)| (*relative).to_string())
-        .filter(|relative| relative.starts_with("src/widgets/"))
-        .collect();
-    fenced.sort();
     assert_eq!(
         fenced, on_disk,
-        "MODULES must fence exactly the widget files on disk"
+        "MODULES must fence exactly the recursive widget Rust files on disk"
     );
     assert!(
         MODULES.iter().any(|(_, r)| *r == "src/highlight.rs"),
