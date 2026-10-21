@@ -1,0 +1,12 @@
+diff --git a/crates/cyril-workbench/src/reviewer/evidence.rs b/crates/cyril-workbench/src/reviewer/evidence.rs
+index baf7cc5d5fe66dc7af47dc4d087f2f67a00dbf9b..acaddb35bc64dce92f1613e3b21085d7e0075cb4 100644
+--- a/crates/cyril-workbench/src/reviewer/evidence.rs
++++ b/crates/cyril-workbench/src/reviewer/evidence.rs
+@@ -58,6 +58,7 @@ impl Drop for EvidenceCleanup {
+         // Persist BEFORE spawning: a failed thread spawn drops its closure.
+         // Neither that drop nor a lost completion may remove a live child's cwd.
+         let root = tree.root.keep();
++        fs::remove_dir_all(&root).expect("owned early-evidence-cleanup mutation");
+         if self.completed == Some(false) {
+             tracing::warn!(root = %root.display(), "core completion lost; retaining review tree");
+             return;

@@ -98,6 +98,14 @@ credential-reading capability from a normal binary. A workspace build is not
 proof of exclusion: `cyril-workbench` enables core KAS through feature
 unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 
+On v2, a tool rejected during argument validation is shown as a failed call with
+its validation error, even when the agent sends only an input chunk and a failed
+update without a start. Error text supplied in the update's content is displayed
+when no usable raw-output error is available. Empty or whitespace-only raw
+strings and error fields do not suppress that content fallback. Nonblank raw
+errors retain precedence; the original raw output remains unchanged. A chunk
+alone remains activity, not a fabricated tool result.
+
 The default KAS `free` spawn runs discovered Node.js plus the extracted
 `acp-server.js` directly, with callback authentication: on each KAS token
 callback Cyril runs `kiro-cli chat _ get-kas-token` (cyril-zbu7), so kiro-cli
