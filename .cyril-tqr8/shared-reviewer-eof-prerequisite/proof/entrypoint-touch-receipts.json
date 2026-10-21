@@ -1,0 +1,150 @@
+[
+  {
+    "boundary": "switch-to-exclusive-reviewer-EOF-prerequisite-before-first-command",
+    "utc": "2026-10-20T18:31:09.390094+00:00",
+    "entrypoints": [
+      {
+        "path": "crates/cyril-core/src/lib.rs",
+        "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+        "before_mtime_ns": 1792358376911073396,
+        "after_mtime_ns": 1792521069388047504
+      },
+      {
+        "path": "crates/cyril-ui/src/lib.rs",
+        "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+        "before_mtime_ns": 1792358376913575606,
+        "after_mtime_ns": 1792521069388047504
+      },
+      {
+        "path": "crates/cyril/src/main.rs",
+        "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+        "before_mtime_ns": 1792459185109697106,
+        "after_mtime_ns": 1792521069388047504
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+        "before_mtime_ns": 1792455538201852712,
+        "after_mtime_ns": 1792521069389047489
+      },
+      {
+        "path": "crates/cyril-workbench/src/lib.rs",
+        "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+        "before_mtime_ns": 1788817551005656580,
+        "after_mtime_ns": 1792521069389047489
+      }
+    ],
+    "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+  },
+  {
+    "boundary": "after-exact-early-evidence-cleanup-inverse-edit-restore",
+    "utc": "2026-10-20T18:33:25.360696+00:00",
+    "entrypoints": [
+      {
+        "path": "crates/cyril-core/src/lib.rs",
+        "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+        "before_mtime_ns": 1792521069388047504,
+        "after_mtime_ns": 1792521205358890388
+      },
+      {
+        "path": "crates/cyril-ui/src/lib.rs",
+        "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+        "before_mtime_ns": 1792521069388047504,
+        "after_mtime_ns": 1792521205358890388
+      },
+      {
+        "path": "crates/cyril/src/main.rs",
+        "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+        "before_mtime_ns": 1792521069388047504,
+        "after_mtime_ns": 1792521205358890388
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+        "before_mtime_ns": 1792521069389047489,
+        "after_mtime_ns": 1792521205358950392
+      },
+      {
+        "path": "crates/cyril-workbench/src/lib.rs",
+        "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+        "before_mtime_ns": 1792521069389047489,
+        "after_mtime_ns": 1792521205359950376
+      }
+    ],
+    "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+  },
+  {
+    "boundary": "after-owned-early-evidence-cleanup-mutation-before-focused-RED",
+    "utc": "2026-10-20T18:34:22.963068+00:00",
+    "entrypoints": [
+      {
+        "path": "crates/cyril-core/src/lib.rs",
+        "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+        "before_mtime_ns": 1792521205358890388,
+        "after_mtime_ns": 1792521262961059942
+      },
+      {
+        "path": "crates/cyril-ui/src/lib.rs",
+        "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+        "before_mtime_ns": 1792521205358890388,
+        "after_mtime_ns": 1792521262961059942
+      },
+      {
+        "path": "crates/cyril/src/main.rs",
+        "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+        "before_mtime_ns": 1792521205358890388,
+        "after_mtime_ns": 1792521262961059942
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+        "before_mtime_ns": 1792521205358950392,
+        "after_mtime_ns": 1792521262962187705
+      },
+      {
+        "path": "crates/cyril-workbench/src/lib.rs",
+        "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+        "before_mtime_ns": 1792521205359950376,
+        "after_mtime_ns": 1792521262962187705
+      }
+    ],
+    "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+  },
+  {
+    "boundary": "after-exact-early-evidence-cleanup-inverse-edit-restore",
+    "utc": "2026-10-20T18:34:27.428517+00:00",
+    "entrypoints": [
+      {
+        "path": "crates/cyril-core/src/lib.rs",
+        "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+        "before_mtime_ns": 1792521262961059942,
+        "after_mtime_ns": 1792521267426990860
+      },
+      {
+        "path": "crates/cyril-ui/src/lib.rs",
+        "sha256": "6a51ee025a6406687a3eeff5642efe144243597f6e07c06e4bc49903e01241bc",
+        "before_mtime_ns": 1792521262961059942,
+        "after_mtime_ns": 1792521267426990860
+      },
+      {
+        "path": "crates/cyril/src/main.rs",
+        "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+        "before_mtime_ns": 1792521262961059942,
+        "after_mtime_ns": 1792521267426990860
+      },
+      {
+        "path": "crates/cyril/src/app.rs",
+        "sha256": "9635f7e344bec4907afe17c8235b6cbc8b2af21dd36770b9e00eaf66b8e9778e",
+        "before_mtime_ns": 1792521262962187705,
+        "after_mtime_ns": 1792521267426990860
+      },
+      {
+        "path": "crates/cyril-workbench/src/lib.rs",
+        "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+        "before_mtime_ns": 1792521262962187705,
+        "after_mtime_ns": 1792521267426990860
+      }
+    ],
+    "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+  }
+]

@@ -540,35 +540,42 @@ impl TrackedToolCall {
         obj.get("exit_status").and_then(|v| v.as_i64())
     }
 
-    /// Extract a failed call's error from raw output, then text content.
+    /// Extract a failed call's first nonblank error from raw output, then content.
     pub fn error_message(&self) -> Option<String> {
         if self.inner.status() != cyril_core::types::ToolCallStatus::Failed {
             return None;
         }
-        if let Some(output) = self.inner.raw_output() {
-            if let Some(s) = output.as_str() {
-                return Some(s.to_string());
-            }
-            if let Some(obj) = output.as_object() {
-                for key in ["error", "message"] {
-                    if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
-                        return Some(s.to_string());
+        self.inner
+            .raw_output()
+            .and_then(|output| {
+                if let Some(text) = output.as_str() {
+                    return (!text.trim().is_empty()).then(|| text.to_string());
+                }
+                if let Some(obj) = output.as_object() {
+                    for key in ["error", "message"] {
+                        if let Some(text) = obj.get(key).and_then(|value| value.as_str())
+                            && !text.trim().is_empty()
+                        {
+                            return Some(text.to_string());
+                        }
                     }
                 }
-            }
-        }
-        self.output_text().or_else(|| {
-            // v2 validation failures carry their error only in ACP content.
-            self.inner
-                .content()
-                .iter()
-                .find_map(|content| match content {
-                    cyril_core::types::ToolCallContent::Text(text) if !text.trim().is_empty() => {
-                        Some(text.clone())
-                    }
-                    _ => None,
-                })
-        })
+                self.output_text().filter(|text| !text.trim().is_empty())
+            })
+            .or_else(|| {
+                // v2 validation failures carry their error only in ACP content.
+                self.inner
+                    .content()
+                    .iter()
+                    .find_map(|content| match content {
+                        cyril_core::types::ToolCallContent::Text(text)
+                            if !text.trim().is_empty() =>
+                        {
+                            Some(text.clone())
+                        }
+                        _ => None,
+                    })
+            })
     }
 }
 

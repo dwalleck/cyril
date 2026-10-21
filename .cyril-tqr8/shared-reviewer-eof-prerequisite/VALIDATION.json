@@ -1,0 +1,21 @@
+{
+  "status": "PASS",
+  "scope": "Explicitly Main-requested artifact-only hash,size,mode,allowlist and archive validation;no Cargo/tests/lint/fmt/producer/mutation/consumer/native execution",
+  "qualified_canonical_receipt_sha256": "2b9c887c60fafc891b3ddecc65b4a0d8404597c23b63f832bd95e94d18009e81",
+  "retained_origin_files_matched_qualified_catalogue_during_preparation": 43,
+  "current_source_snapshots_matched_recorded_qualified_hashes_during_preparation": 3,
+  "manifest_payload_files_verified": 49,
+  "all_listed_written_file_sha_size_and_modes_match": true,
+  "archive_members_including_manifest": 50,
+  "archive_members_exact_explicit_allowlist": true,
+  "archive_member_sha_size_and_modes_match_manifest": true,
+  "archive_manifest_equals_written_manifest": true,
+  "all_archive_members_regular_utf8_text_no_links_traversal_or_executable_binary_headers": true,
+  "checksum_sidecar_matches_archive_and_manifest": true,
+  "manifest_sha256": "2bf17be6d46705ee794ad6c751f08fb9b384a338f7e023c1aed99c42f54e3341",
+  "archive_sha256": "2b9f49c0144b3a82c83d026da32f65ad5ee5a86fe0c16f0abbe0f0df28c6f2c0",
+  "archive_bytes": 46301,
+  "writes_limited_to_new_owned_artifact_directory": "/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/.cyril-tqr8/shared-reviewer-eof-prerequisite",
+  "existing_Tqr_B_C_2954_publications": "Not modified or refreshed by packager;not independently revalidated here",
+  "qualification_limit": "SharedEOFtest-onlyprerequisitePASS only;historicalcauseUNPROVEN;NOT fullworkspace/Tqr/C6/native/auth/PRreadiness"
+}

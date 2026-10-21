@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "session/prompt",
+  "params": {
+    "sessionId": "owned-synthetic",
+    "prompt": [
+      {
+        "type": "text",
+        "text": "owned synthetic prompt"
+      }
+    ]
+  }
+}
