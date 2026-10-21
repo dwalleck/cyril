@@ -1,0 +1,59 @@
+diff --git a/crates/cyril-workbench/tests/fixtures/reviewer_peer.py b/crates/cyril-workbench/tests/fixtures/reviewer_peer.py
+index c987a91d..a088d107 100755
+--- a/crates/cyril-workbench/tests/fixtures/reviewer_peer.py
++++ b/crates/cyril-workbench/tests/fixtures/reviewer_peer.py
+@@ -223,6 +223,8 @@ for line in sys.stdin:
+             end_turn()
+         elif SCENARIO in ('stall', 'runtime-drop'):
+             text('waiting')
++            if SCENARIO == 'runtime-drop':
++                journal('runtime-drop-ready')
+         else:
+             text(captured[0]['text'] if TURN == 1 else 'continued')
+             end_turn()
+@@ -247,6 +249,7 @@ journal('stdin-closed')
+ if SCENARIO == 'runtime-drop':
+     # Keep the direct child alive after EOF so evidence ordering is observable
+     # from outside the now-destroyed caller runtime.
+-    journal('cleanup-window', evidence_exists=(Path.cwd() / 'evidence/manifest.json').is_file())
++    # Reuse the absolute path so early cleanup reports false even if cwd is gone.
++    journal('cleanup-window', evidence_exists=(evidence / 'manifest.json').is_file())
+     time.sleep(0.4)
+-    journal('cleanup-window-end', evidence_exists=(Path.cwd() / 'evidence/manifest.json').is_file())
++    journal('cleanup-window-end', evidence_exists=(evidence / 'manifest.json').is_file())
+diff --git a/crates/cyril-workbench/tests/reviewer.rs b/crates/cyril-workbench/tests/reviewer.rs
+index 386fae65..05d25253 100644
+--- a/crates/cyril-workbench/tests/reviewer.rs
++++ b/crates/cyril-workbench/tests/reviewer.rs
+@@ -688,21 +688,27 @@ fn runtime_drop_retains_evidence_until_core_completion() -> TestResult {
+         .build()?;
+     let (run, spawn) = runtime.block_on(async {
+         let run = peer.reviewer()?.start(input("visible")).await?;
+-        peer.event("prompt").await?;
++        peer.event("runtime-drop-ready").await?;
+         Ok::<_, Box<dyn Error>>((run, peer.event("spawn").await?))
+     })?;
+     let cwd = std::path::PathBuf::from(spawn["cwd"].as_str().ok_or("cwd")?);
+     drop(runtime);
+     drop(run);
+     let deadline = Instant::now() + Duration::from_secs(15);
+-    while cwd.exists() && Instant::now() < deadline {
++    // Observe the full EOF window even if a defect removes the tree early.
++    while (cwd.exists() || peer.events("cleanup-window-end")?.is_empty())
++        && Instant::now() < deadline
++    {
+         std::thread::sleep(Duration::from_millis(10));
+     }
+     assert!(!cwd.exists(), "cleanup waiter did not release evidence");
+     for event in ["cleanup-window", "cleanup-window-end"] {
+         assert_eq!(
+-            peer.events(event)?.first().ok_or("missing EOF window")?["evidence_exists"],
+-            true
++            peer.events(event)?
++                .first()
++                .ok_or_else(|| format!("missing EOF window event {event}"))?["evidence_exists"],
++            true,
++            "{event}: evidence removed before core completion"
+         );
+     }
+     for key in ["pid", "child"] {

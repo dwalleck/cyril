@@ -223,6 +223,8 @@ for line in sys.stdin:
             end_turn()
         elif SCENARIO in ('stall', 'runtime-drop'):
             text('waiting')
+            if SCENARIO == 'runtime-drop':
+                journal('runtime-drop-ready')
         else:
             text(captured[0]['text'] if TURN == 1 else 'continued')
             end_turn()
@@ -247,6 +249,7 @@ journal('stdin-closed')
 if SCENARIO == 'runtime-drop':
     # Keep the direct child alive after EOF so evidence ordering is observable
     # from outside the now-destroyed caller runtime.
-    journal('cleanup-window', evidence_exists=(Path.cwd() / 'evidence/manifest.json').is_file())
+    # Reuse the absolute path so early cleanup reports false even if cwd is gone.
+    journal('cleanup-window', evidence_exists=(evidence / 'manifest.json').is_file())
     time.sleep(0.4)
-    journal('cleanup-window-end', evidence_exists=(Path.cwd() / 'evidence/manifest.json').is_file())
+    journal('cleanup-window-end', evidence_exists=(evidence / 'manifest.json').is_file())

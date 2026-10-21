@@ -5,8 +5,8 @@
   "canonical_handoff": ".cyril-x5xi/handoff.json",
   "verification_index": ".cyril-x5xi/verification.md",
   "publication_manifest": ".cyril-x5xi/publication-manifest.json",
-  "publication_manifest_sha256": "341a17812873f277914355a1ac02014cdcfbe3fc2d74985856a061f9d241404d",
-  "publication_file_count": 14,
+  "publication_manifest_sha256": "db9d6a666f3dd02c069481a5b7c10437d8c30afec58d5ded4626c727b49fb61e",
+  "publication_file_count": 16,
   "publication_owner": "Main",
   "source_base": "7eefe275fbec97f610677b2ee6433af996806599",
   "base_public_pr": "https://github.com/dwalleck/cyril/pull/184",
@@ -48,7 +48,18 @@
     "Inherited requester-accepted cyril-u62f Windows readiness exception; cancelled coverage not green; new failures remain blocking",
     "Two initial smoke failures were orchestration defects; first F1 A/B had NO TEST VERDICT due omitted fixture dependencies; neither is product RED"
   ],
-  "worker_actions": "Only README and .cyril-x5xi workflow/evidence/publication records changed. No production/Cargo edits, checks/formatters/smokes, commits, pushes or tracker writes by this worker.",
+  "historical_original_handoff_fields": "source_base, production_files_sha256, smoke_executable_sha256, archive, observed_results and original sensitivity/limits retain their original handoff attribution; old workspace totals and consumers are not current executions.",
+  "current_final_fiv_refresh": {
+    "index": ".cyril-x5xi/final-fiv-refresh/INDEX.json",
+    "archive": ".cyril-x5xi/final-fiv-refresh/evidence.tar.gz",
+    "review_record": ".cyril-x5xi/review-decisions.md",
+    "review_section": "Current final-Fiv qualification and owned consumer",
+    "checked_source_tree": "55fd655ebcaa390310486b492c080c028fd635df",
+    "binary_sha256": "f968e016dc58539e0646891978315a89755884f7d3eae2e6e6dc818a70871b9d",
+    "checked_tree_excludes_this_later_packet_and_publication_update": true,
+    "binary_included": false
+  },
+  "worker_actions": "Original documentation packaging ran no product checks. This separately authorized current refresh ran exactly one unchanged-harness mixed-raw V2 owned consumer, inspected declared output assertions, and added only its compact packet plus these three publication records. No production/test/README/Git/index/commit/push/tracker changes or Cargo/formatter runs.",
   "remaining_parent_actions": [
     "Publish exactly the manifest file set as the x5xi issue PR on published fiv1 base",
     "Adjudicate issue PR CI with only the already requester-approved Windows baseline exception",
