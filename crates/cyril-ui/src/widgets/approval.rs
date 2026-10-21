@@ -101,6 +101,8 @@ struct Preview<'a> {
     path_width: usize,
     /// Rows the whole path needs when wrapped.
     path_rows: usize,
+    /// The chosen path fit is shared by allocation, painting and the guard.
+    fitted_path: FittedPath,
     body: Vec<Line<'a>>,
 }
 
@@ -111,7 +113,7 @@ impl<'a> Preview<'a> {
         // at least one column, even when the border/indent clips every glyph.
         let path_width = usize::from(super::modal::popup_width(area, desired_width))
             .saturating_sub(2 + text::width(PATH_INDENT));
-        let path_rows = path.map_or(0, |path| wrap_columns(path, path_width.max(1)).len());
+        let path_rows = path.map_or(0, |path| wrapped_row_count(path, path_width.max(1)));
         let text_width = usize::from(super::modal::popup_width(area, desired_width))
             .saturating_sub(2 + text::width(TEXT_INDENT))
             .max(1);
@@ -119,6 +121,10 @@ impl<'a> Preview<'a> {
             path,
             path_width,
             path_rows,
+            fitted_path: FittedPath {
+                rows: Vec::new(),
+                target_shown: false,
+            },
             body: preview_lines(state, theme, text_width),
         }
     }
@@ -132,16 +138,39 @@ impl<'a> Preview<'a> {
         self.path.is_some()
     }
 
+    /// Keep the preferred allocation only when its actual fit identifies
+    /// the target. More rows can expose an overwide whole-path prefix, so
+    /// otherwise retain the smallest identifying fit, not just its budget.
+    fn identifying_path_rows(&mut self, preferred: usize, available: usize) -> Option<usize> {
+        let path = self.path?;
+        let preferred = self.path_rows.min(preferred);
+        self.fitted_path =
+            fit_path_with_rows(path, self.path_width.max(1), preferred, self.path_rows);
+        if self.path_width == 0 {
+            return None;
+        }
+        if self.fitted_path.target_shown {
+            return Some(preferred);
+        }
+        for rows in 1..=self.path_rows.min(available) {
+            if rows == preferred {
+                continue; // This exact fit has already failed.
+            }
+            let fitted = fit_path_with_rows(path, self.path_width, rows, self.path_rows);
+            if fitted.target_shown {
+                self.fitted_path = fitted;
+                return Some(rows);
+            }
+        }
+        // No identifying fit: preserve the preferred insufficient-space
+        // rendering and its strict refusal, rather than the last candidate.
+        None
+    }
+
     /// A wholly drawn one-grapheme target is valid; an actually elided
     /// target still needs two retained tail graphemes.
-    fn path_shown(&self, rows: usize) -> bool {
-        let Some(path) = self.path else {
-            return true;
-        };
-        if self.path_width == 0 {
-            return false;
-        }
-        fit_path(path, self.path_width, self.path_rows.min(rows)).target_shown
+    fn path_shown(&self) -> bool {
+        !self.has_path() || (self.path_width > 0 && self.fitted_path.target_shown)
     }
 
     /// The path fitted into one run of `width` columns, for a row it shares
@@ -159,13 +188,11 @@ impl<'a> Preview<'a> {
     /// first and is fitted to its share; the body fills whatever is left.
     fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
         let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
-        if let Some(path) = self.path {
-            for row in fit_path(path, self.path_width.max(1), self.path_rows.min(rows)).rows {
-                lines.push(Line::styled(
-                    format!("{PATH_INDENT}{row}"),
-                    Style::default().fg(theme.text_secondary),
-                ));
-            }
+        for row in self.fitted_path.rows {
+            lines.push(Line::styled(
+                format!("{PATH_INDENT}{row}"),
+                Style::default().fg(theme.text_secondary),
+            ));
         }
         let body_rows = rows.saturating_sub(lines.len());
         lines.extend(self.body.into_iter().take(body_rows));
@@ -181,16 +208,13 @@ fn option_prefix(selected: bool) -> &'static str {
     if selected { "▸ " } else { "  " }
 }
 
-/// Which rows the option page shows inside `inner` rows, by priority
-/// (cyril-rcub). The selection always gets a row. When the call has a path,
-/// any shown option is accompanied by the path, so nothing is approvable
-/// with its target hidden: from inner height 2 the path has its own row
-/// (ahead of the message at 2, and ahead of the cosmetic blanks at 3), and
-/// at height 1 it shares the lone option row. Calls without a path keep the
-/// message-first order. Above height 3 the message and blank return, the
-/// preview takes all but one row, and its blank separator appears only when
-/// a row is spare: the separator wins over a second option row, as the
-/// selection stays visible through `window_start`.
+/// The base option-page allocation with one separate path row (cyril-rcub).
+/// [`OptionPage`] reserves any additional identifying path rows by dropping
+/// cosmetic rows before rendering. The selection always gets a row, and
+/// at inner height one the path shares it after the label.
+/// Calls without a path keep their message-first order. Cosmetic message,
+/// blanks and separator return only after the identifying context fits;
+/// the remaining preview and option window retain their established order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct OptionLayout {
     message: bool,
@@ -292,14 +316,24 @@ pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
 /// wrapped whole when it fits; otherwise it is middle-elided
 /// ([`elide_middle`]) into the space available.
 fn fit_path(path: &str, width: usize, rows: usize) -> FittedPath {
+    let path_rows = if rows == 0 {
+        0
+    } else {
+        wrapped_row_count(path, width)
+    };
+    fit_path_with_rows(path, width, rows, path_rows)
+}
+
+/// The same fitter with the whole-path row count already known by Preview.
+fn fit_path_with_rows(path: &str, width: usize, rows: usize, path_rows: usize) -> FittedPath {
     if rows == 0 {
         return FittedPath {
             rows: Vec::new(),
             target_shown: false,
         };
     }
-    let wrapped = wrap_columns(path, width);
-    if wrapped.len() <= rows {
+    if path_rows <= rows {
+        let wrapped = wrap_columns(path, width);
         let target_shown =
             path_grapheme_count(path) > 0 && wrapped.iter().all(|row| text::width(row) <= width);
         return FittedPath {
@@ -667,7 +701,7 @@ impl<'a> OptionPage<'a> {
         // wrapped rows + up to MAX_PREVIEW_LINES of body + blanks; clamped
         // below when space is tight (the path is then middle-elided,
         // cyril-rcub).
-        let preview = Preview::new(state, theme, area, OPTION_POPUP_WIDTH);
+        let mut preview = Preview::new(state, theme, area, OPTION_POPUP_WIDTH);
         let show_feedback_hint = state.can_reject_with_reason();
         // options.len() is a handful of user-facing choices; the sum stays
         // far below u16::MAX, so try_from is infallible and the saturation is
@@ -687,7 +721,24 @@ impl<'a> OptionPage<'a> {
         // [`OptionLayout`]: the selection always, the path beside any option,
         // then message, blanks, the rest of the preview and the other options.
         let inner = usize::from(popup.height.saturating_sub(2));
-        let layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+        let mut layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+        if let Some(path_rows) =
+            preview.identifying_path_rows(layout.preview_rows, inner.saturating_sub(1))
+        {
+            for chrome in [
+                &mut layout.separator,
+                &mut layout.blank,
+                &mut layout.message,
+            ] {
+                if layout.preview_rows >= path_rows {
+                    break;
+                }
+                if *chrome {
+                    *chrome = false;
+                    layout.preview_rows += 1;
+                }
+            }
+        }
         let mut option_rows = layout.option_rows;
         let show_feedback_hint = show_feedback_hint && option_rows > 1;
         if show_feedback_hint {
@@ -727,8 +778,7 @@ impl<'a> OptionPage<'a> {
     fn selection_shown_with_path(&self, selected: usize) -> bool {
         let selection_shown = has_inner_row(self.popup)
             && (self.start..self.start.saturating_add(self.visible)).contains(&selected);
-        let path_shown = !self.preview.has_path()
-            || self.preview.path_shown(self.layout.preview_rows)
+        let path_shown = self.preview.path_shown()
             || self
                 .inline_path
                 .as_ref()
@@ -845,7 +895,7 @@ impl<'a> ReasonPage<'a> {
         has_notice: bool,
         theme: &Theme,
     ) -> Option<Self> {
-        let preview = Preview::new(state, theme, area, REASON_POPUP_WIDTH);
+        let mut preview = Preview::new(state, theme, area, REASON_POPUP_WIDTH);
         let desired_height = u16::try_from(
             preview
                 .len()
@@ -856,16 +906,17 @@ impl<'a> ReasonPage<'a> {
         let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
         let inner = usize::from(popup.height.saturating_sub(2));
 
-        // Keep the editor and target context ahead of chrome.
+        // Start with the established chrome policy, then give back only the
+        // rows needed to identify the path beside the reserved editor row.
         let reserved = usize::from(preview.has_path()).min(inner.saturating_sub(1));
-        let show_limit = inner >= 2 + reserved;
-        let show_notice = has_notice && inner >= 3 + 2 * reserved;
-        let show_editor_label = inner >= 4;
-        let show_tool_title = inner >= 6;
-        let show_selected = inner >= 7;
-        let show_message = inner >= 8;
-        let show_blank = inner >= 9;
-        let fixed = 1usize
+        let mut show_limit = inner >= 2 + reserved;
+        let mut show_notice = has_notice && inner >= 3 + 2 * reserved;
+        let mut show_editor_label = inner >= 4;
+        let mut show_tool_title = inner >= 6;
+        let mut show_selected = inner >= 7;
+        let mut show_message = inner >= 8;
+        let mut show_blank = inner >= 9;
+        let mut fixed = 1usize
             .saturating_add(usize::from(show_editor_label))
             .saturating_add(usize::from(show_limit))
             .saturating_add(usize::from(show_notice))
@@ -873,6 +924,29 @@ impl<'a> ReasonPage<'a> {
             .saturating_add(usize::from(show_selected))
             .saturating_add(usize::from(show_message))
             .saturating_add(usize::from(show_blank));
+        if let Some(path_rows) =
+            preview.identifying_path_rows(inner.saturating_sub(fixed), inner.saturating_sub(1))
+        {
+            let mut missing = path_rows.saturating_sub(inner.saturating_sub(fixed));
+            for chrome in [
+                &mut show_blank,
+                &mut show_message,
+                &mut show_selected,
+                &mut show_tool_title,
+                &mut show_notice,
+                &mut show_editor_label,
+                &mut show_limit,
+            ] {
+                if missing == 0 {
+                    break;
+                }
+                if *chrome {
+                    *chrome = false;
+                    fixed -= 1;
+                    missing -= 1;
+                }
+            }
+        }
         let preview_rows = preview.len().min(inner.saturating_sub(fixed));
         let editor_rows = inner
             .saturating_sub(fixed.saturating_add(preview_rows))
@@ -896,7 +970,7 @@ impl<'a> ReasonPage<'a> {
     /// Whether the editor row is drawn, with the path on screen when the
     /// call has one (the path leads the preview rows).
     fn editor_shown_with_path(&self) -> bool {
-        has_inner_row(self.popup) && self.preview.path_shown(self.preview_rows)
+        has_inner_row(self.popup) && self.preview.path_shown()
     }
 }
 
@@ -2449,6 +2523,98 @@ mod tests {
             ),
             fully_drawn,
             "confirmation must track the actual last target grapheme: {rows:?}"
+        );
+    }
+
+    /// A two-row identifying tail outranks the cosmetic request message.
+    #[test]
+    fn un4p_option_identifying_path_rows_precede_message() {
+        let state = write_approval("/tmp/a");
+        // Terminal width ten leaves a six-cell popup, two path columns
+        // after borders/indent, and three inner rows above input_top six.
+        let terminal = render_at(&state, 10, 16, 6);
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body, ["/…", "/a", "▸ Al"], "{rows:?}");
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 10, 16),
+            6,
+            &state,
+            &theme()
+        ));
+    }
+
+    /// Limit and a validation notice cannot take the second path row that
+    /// makes a narrow target identifiable beside the reason editor.
+    #[rstest::rstest]
+    fn un4p_reason_identifying_path_rows_precede_limit_and_notice(
+        #[values(false, true)] notice: bool,
+    ) {
+        let mut ui = un4p_review_target_ui("/tmp/a", true);
+        if notice {
+            ui.approval_feedback_paste(&"x".repeat(4_096));
+            let ApprovalPhase::EnterReason { editor, .. } =
+                &ui.approval().expect("reason approval").phase
+            else {
+                panic!("reason editor must stay active");
+            };
+            assert_eq!(editor.text(), "why");
+            assert!(editor.notice().is_some());
+        }
+        let terminal = render_ui(&ui, 10, 16, 6);
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body, ["/…", "/a", "why█"], "{rows:?}");
+        assert!(confirm_is_on_screen(
+            Rect::new(0, 0, 10, 16),
+            6,
+            ui.approval().expect("approval"),
+            &theme()
+        ));
+    }
+
+    /// More path rows are not necessarily identifying: whole wrapping can
+    /// expose an overwide prefix that a smaller elided fit safely omits.
+    #[rstest::rstest]
+    fn un4p_nonmonotone_path_fit_remains_identifying(#[values(false, true)] reason: bool) {
+        let ui = un4p_review_target_ui("界/ab", reason);
+        let input_top = if reason { 14 } else { 10 };
+        let terminal = render_ui(&ui, 9, 20, input_top);
+        let painted = terminal.backend().buffer();
+        assert_eq!(painted[(2, 1)].symbol(), "┌");
+        assert_eq!(painted[(6, 1)].symbol(), "┐");
+        assert_eq!(painted[(2, input_top - 1)].symbol(), "└");
+        let rows = screen_rows(&terminal);
+        let body: Vec<_> = rows.iter().filter_map(|row| popup_body(row)).collect();
+        assert_eq!(body.len(), if reason { 11 } else { 7 }, "{rows:?}");
+        assert!(
+            body.iter()
+                .any(|row| row.contains(if reason { '█' } else { '▸' })),
+            "the editor/selection must actually be drawn: {rows:?}"
+        );
+        let path: Vec<_> = rows
+            .iter()
+            .filter_map(|row| {
+                let start = row.find("│  ")? + "│  ".len();
+                let end = row.rfind('│')?;
+                row.get(start..end).map(str::trim_end)
+            })
+            .filter(|row| !row.is_empty())
+            .collect();
+        assert!(path.ends_with(&["a", "b"]), "fixture tail: {rows:?}");
+        assert!(
+            confirm_is_on_screen(
+                Rect::new(0, 0, 9, 20),
+                input_top,
+                ui.approval().expect("approval"),
+                &theme()
+            ),
+            "an available identifying fit must survive a larger preferred budget: {rows:?}"
+        );
+        assert_eq!(
+            path,
+            ["…", "a", "b"],
+            "retain the physical elided fit rather than the clipped whole prefix: {rows:?}"
         );
     }
 

@@ -1,8 +1,8 @@
 # cyril-un4p verification index
 
-2026-10-20. Scope: the isolated un4p worktree based on8e5c325e, without ej7y scrolling or xavt shell-preview changes. Main ran the gates and owned-process smoke; this documentation/receipt step ran no tests, builds, linters, formatters or smoke commands and changed no production/Cargo source.
+2026-10-21. Scope: PR188's isolated un4p delivery worktree, without ej7y scrolling or xavt shell-preview changes. Main's qualifier/review/owned-consumer records supply execution evidence; this publication step ran no tests, builds, linters, formatters, product runtime or Git/PR/tracker operations and changed no source.
 
-**Current release-pair refresh:** See [Released-renderer refresh](#released-renderer-refresh-2026-10-20) for the newly qualified assembled source and sole refreshed U10 run. The original archive, executable digest, artifact476/503 statements and relocation template below remain historical evidence, not current-source full-workspace/native PASS.
+**Current delivered repairs:** [Current PR188 repair qualification](#current-pr188-repair-qualification-2026-10-21) is the active evidence index. Original artifact476/503 and the released-renderer bundle below remain historical records tied to their original source/binary identities. Scoped Un4 PASS is not final cross-batch integration, current-head CI, native or authentication qualification.
 
 ## Retained evidence
 
@@ -59,7 +59,7 @@ README feedback guidance is updated after the successful smoke, including contex
 
 ## Released-renderer refresh 2026-10-20
 
-Portable refresh bundle: [evidence/released-width-refresh-20261020.tar.gz](evidence/released-width-refresh-20261020.tar.gz). [The JSON publication index](evidence/released-width-refresh-20261020.json) records its digest, complete member inventory/hashes, exact publication allowlist and source-preservation binding. The original `verification-20261020.tar.gz` remains unchanged, SHA-256 `10a5377c4a3faf89dd4f58233696c19a1595546fd4ef91477b8f56f842a1f9e7`.
+**Historical released-renderer qualification, superseded as current-source evidence by the repair qualification below.** Portable refresh bundle: [evidence/released-width-refresh-20261020.tar.gz](evidence/released-width-refresh-20261020.tar.gz). [Its immutable JSON publication index](evidence/released-width-refresh-20261020.json) records the original digest, member inventory/hashes, publication allowlist and source-preservation binding. Both it and `verification-20261020.tar.gz` remain unchanged. The omissions and next-step language in this historical section describe that run only; they are not the current repaired qualification status.
 
 ### Tested source, not the stale index
 
@@ -95,4 +95,39 @@ uv run --script "$EXTRACTED/consumer/smoke/harness.py" \
 The same Unix/Node/Python/pyte/owned-auth-fixture prerequisites above apply; binary is supplied separately and output must be fresh. Raw receipts retain original paths and the historical artifact476 limitation citation; that citation is not new-source qualification. The refreshed consumer proves actual-process permission conversion/manual wire and decoded ASCII/text geometry, **not real KAS/backend/account/auth or native Unicode-cell fidelity**. Physical halfwidth/combining boundaries are separate literal Buffer/diff tests in the current UI+App gate.
 
 **Limits and landing obligations:** This refresh did not execute local full-workspace tests, core unit/integration tests, new mutation/test drivers, all-feature/platform or native/auth acceptance. Workspace Clippy does not substitute for those lanes. **Main-target CI remains mandatory, and inherited auth6c remains unavailable here and unwaived.** The user working-bootstrap prerequisite is satisfied; native execution still requires a newly qualified MCP binary and separate bounded authorization. Main owns staging the actual formatted source plus the five-file publication allowlist, commit/push/CI and subsequent child GO. Ambient delivery-patches, historical proof and #190/#191 are excluded and unchanged.
+
+## Current PR188 repair qualification 2026-10-21
+
+Portable current bundle: [evidence/current-repairs-20261021.tar.gz](evidence/current-repairs-20261021.tar.gz). [The current publication index](evidence/current-repairs-20261021.json) owns the explicit member/source allowlists, immutable receipt hashes, source/binary provenance, documentation postimages, exclusions and remaining gates. It references each canonical record's result fields rather than maintaining another mutable count table. Old archives/indexes and old first-smoke bytes are preserved.
+
+### Delivered behavior and checked state
+
+The [approved repair record](review-decisions.md#pr188-identifying-row-allocation-review--2026-10-20) owns R188P1/R188P2, the repeated-repair stop and R188C1 disposition. Both pages keep an actually identifying preferred fit or reuse an identifying available alternative before chrome, including a smaller row budget when whole-path wrapping becomes physically invalid. They preserve the same strict painted-context guard, selection/editor, whole-target/actual-elision metadata, physical widths, borrowed fitting and impossible-space/pathless/inline fallbacks.
+
+The shared tracing correction relocates the established persistent non-capturing interest subscriber from App to `test_support::tracing_capture_lock`; it does not change the production warning, thread-local JSON/fmt captures, first-installer policy or behavioral assertions. The known empty-capture occurrence remains a historical failure, not a newly proven callsite-cache causal diagnosis.
+
+The publication index binds the current **bounded workspace-input descriptor**, its before/after manifest and preserved private binary. This is not a whole-Git-tree or new commit identity. The current qualifier proves those bounded inputs and frozen regression frames stayed unchanged through its gates; publication edits only these workflow documents and the new archive/index. The private executable, source snapshots, Git indexes and real HOME/config/auth data are not bundled.
+
+### Canonical executed evidence — scoped PASS
+
+Archive member names below are relative to the current bundle. Raw receipts retain their original absolute provenance paths and chronological statuses; later records discharge only the steps they actually executed.
+
+| Owning canonical record | Current conclusion and evidence |
+|---|---|
+| `qualifier/canonical-handoff.json` and `qualifier/running-command-receipts.json` | Current local gates **PASS**: warning positive/negative controls alone and with the uncaptured marker under default/serial scheduling; App WARN/DEBUG controls; frozen priority/nonmonotone regressions; full affected Core/UI/App including integrations/doc targets; standalone library-default non-KAS Core; workspace all-target Clippy, default bins and final format check. Exact commands, exits, overlapping lane totals and exclusions live in this canonical only. Selected affected packages are not a full-workspace test claim; ignored tests remain ignored. |
+| `qualifier/retained-evidence-applicability.json`, `retained/priority-red/`, `retained/nonmonotone-red/`, `retained/warning-capture-failure/` | Actual priority and nonmonotone RED remain attached to their original source revisions and exact assertion reach. The warning-capture failure remains FAIL at its pre-capture-repair state. Current qualification/review establishes retained applicability; no new mutations, retries or causal A/B proof are invented. |
+| `review/current-repair-review.json` and `review/capture-safety-review.md` | Independent actual-source repair/capture review **PASS** with no findings. Scope includes preferred/alternative fitted-result retention, both consumers, shared initialization, no global capture and unchanged regression/dispatch assumptions. Qualifier evidence is separate from static review. |
+| `consumer/completion-repair.json`, `completion-review.json`, `completion-only.diff` | Approved technical smoke correction and independent bounded review: the existing helper validates the independent exact response while narrow, then optionally restores ordinary geometry before its unchanged contiguous visual completion wait. All new priority/nonmonotone modes opt in; original U10, narrow pre-action assertions, wire parser/decoder and cleanup remain unchanged. |
+| `consumer/canonical-result.json`, `runtime-raw-artifacts-manifest.json`, `run/` | The completed **15-case owned consumer PASS** covers original U10 plus priority option/reason/notice and nonmonotone option/reason. Exact request/response IDs, singleton option/reasons, draft retention, refusal/recovery, final callback/request gates and complete raw capture inventory live in this canonical. Raw wire, observations, ANSI, runner and every manifest-listed run file are included unchanged. It is actual-process/manual permission-wire proof, not real KAS/backend/account/auth or native Unicode-cell qualification. |
+| `consumer/execution-host-receipt.json`, `cleanup-final-observation.json` | Harness success, owned process/session absence and scratch removal were observed. Exact Cyril exit status and signal-fallback choice were **not instrumented**; no App exit code or complete historical descendant census is inferred. |
+| `retained/first-consumer-failure/` | The original separately authorized exit1 smoke remains FAIL, with its original receipt, selected raw failure/ANSI/wire evidence and manifest. An impossible narrow contiguous-marker postcondition was technically corrected; actual underscore loss remains genuine known Tqr main-chat gutter loss. It is not erased by the current scoped approval PASS. |
+
+The executed runner and authorization are archived as evidence, **not authorization to rerun**. Runtime reproduction requires Main's fresh exact binary/source binding, owned output and bounded GO; no new runner, decoder or generic evidence framework is introduced here.
+
+### Remaining unwaived gates and publication boundary
+
+- **PENDING — Main/Tqr:** repair/integrate the known main-chat gutter loss and qualify final assembled behavior. Current new cases check narrow approval action/wire before ordinary-width acknowledgement; they do **not** prove narrow main-chat retention. This is a separate still-blocking final cross-batch integration obligation, not an approved risk.
+- **PENDING — Main:** stage the three exact qualified repair source files plus the publication allowlist in the current JSON index, commit/push/update PR188 and obtain **current-head CI**. Existing PR188 discussion threads remain unresolved until that exact publication. This packaging phase performs none of those operations.
+- **PENDING — Main/RefreshApprovalWidthStack:** authorize descendants only after the exact published-parent binding and required integration conditions; no #190/#191 descendant edit or qualification is included.
+- Required platform/all-feature/native/auth acceptance is not supplied by these Linux local gates or the owned peer. Inherited auth6c remains unavailable and **unwaived**. No bootstrap/login/account/network/native retry or acceptance claim was made.
 
