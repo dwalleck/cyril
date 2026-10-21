@@ -12,8 +12,8 @@
 //! terminal: a bidi override in a step id must not be able to make an
 //! approval read differently from what it approves.
 
+use crate::text;
 use ratatui::prelude::*;
-use unicode_width::UnicodeWidthStr;
 
 use crate::theme::Theme;
 use cyril_core::types::{
@@ -159,7 +159,7 @@ fn wrap_words(row: &str, width: usize) -> Vec<String> {
     let mut has_word = false;
     for word in body.split(' ') {
         let gap = usize::from(has_word);
-        if current.width() + gap + word.width() <= width {
+        if text::width(&current) + gap + text::width(word) <= width {
             if has_word {
                 current.push(' ');
             }
@@ -174,7 +174,7 @@ fn wrap_words(row: &str, width: usize) -> Vec<String> {
         // later piece a continuation row of its own.
         let mut rest = word;
         loop {
-            let room = width.saturating_sub(current.width()).max(1);
+            let room = width.saturating_sub(text::width(&current)).max(1);
             let pieces = super::approval::wrap_columns(rest, room);
             let Some(first) = pieces.first() else {
                 break;
@@ -399,6 +399,8 @@ mod tests {
     #[case::keeps_indent("  x: alpha beta", 10, &["  x: alpha", "      beta"])]
     #[case::splits_long_word("t: abcdefghij", 7, &["t:", "    abc", "    def", "    ghi", "    j"])]
     #[case::splits_leading_long_word("abcdefghij: x", 6, &["abcdef", "    gh", "    ij", "    :", "    x"])]
+    #[case::halfwidth_cells_wrap("a: ｶﾞ Z", 6, &["a: ｶﾞ", "    Z"])]
+    #[case::combining_mark_still_fits("a: ｶ\u{3099} Z", 6, &["a: ｶ\u{3099} Z"])]
     #[case::empty("", 5, &[""])]
     fn wrap_words_wraps_at_spaces(
         #[case] row: &str,
@@ -408,8 +410,93 @@ mod tests {
         let rows = wrap_words(row, width);
         assert_eq!(rows, expected);
         for row in &rows {
-            assert!(row.width() <= width, "{row:?} wider than {width}");
+            assert!(text::width(row) <= width, "{row:?} wider than {width}");
         }
+    }
+
+    /// Literal rows and emitted cell coordinates distinguish physical halfwidth
+    /// sound marks from ordinary combining marks, including long-word splits.
+    #[rstest::rstest]
+    #[case::voiced_current(
+        "ｶﾞ x yy",
+        &["ｶﾞ x", "    yy"],
+        &[(0, 0, "ｶﾞ"), (3, 0, "x"), (4, 1, "y"), (5, 1, "y")]
+    )]
+    #[case::semivoiced_current(
+        "ﾊﾟ x yy",
+        &["ﾊﾟ x", "    yy"],
+        &[(0, 0, "ﾊﾟ"), (3, 0, "x"), (4, 1, "y"), (5, 1, "y")]
+    )]
+    #[case::combining_voiced_current(
+        "ｶ\u{3099} x yy",
+        &["ｶ\u{3099} x yy"],
+        &[(0, 0, "ｶ\u{3099}"), (2, 0, "x"), (4, 0, "y"), (5, 0, "y")]
+    )]
+    #[case::combining_semivoiced_current(
+        "ﾊ\u{309A} x yy",
+        &["ﾊ\u{309A} x yy"],
+        &[(0, 0, "ﾊ\u{309A}"), (2, 0, "x"), (4, 0, "y"), (5, 0, "y")]
+    )]
+    #[case::voiced_next_word(
+        "xxxx ｶﾞ",
+        &["xxxx", "    ｶﾞ"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (4, 1, "ｶﾞ")]
+    )]
+    #[case::semivoiced_next_word(
+        "xxxx ﾊﾟ",
+        &["xxxx", "    ﾊﾟ"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (4, 1, "ﾊﾟ")]
+    )]
+    #[case::combining_voiced_next_word(
+        "xxxx ｶ\u{3099}",
+        &["xxxx ｶ\u{3099}"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (5, 0, "ｶ\u{3099}")]
+    )]
+    #[case::combining_semivoiced_next_word(
+        "xxxx ﾊ\u{309A}",
+        &["xxxx ﾊ\u{309A}"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (5, 0, "ﾊ\u{309A}")]
+    )]
+    #[case::voiced_long_word(
+        "ｶﾞabcde",
+        &["ｶﾞabcd", "    e"],
+        &[(0, 0, "ｶﾞ"), (2, 0, "a"), (3, 0, "b"), (4, 0, "c"), (5, 0, "d"), (4, 1, "e")]
+    )]
+    #[case::semivoiced_long_word(
+        "ﾊﾟabcde",
+        &["ﾊﾟabcd", "    e"],
+        &[(0, 0, "ﾊﾟ"), (2, 0, "a"), (3, 0, "b"), (4, 0, "c"), (5, 0, "d"), (4, 1, "e")]
+    )]
+    #[case::combining_voiced_long_word(
+        "ｶ\u{3099}abcde",
+        &["ｶ\u{3099}abcde"],
+        &[(0, 0, "ｶ\u{3099}"), (1, 0, "a"), (2, 0, "b"), (3, 0, "c"), (4, 0, "d"), (5, 0, "e")]
+    )]
+    #[case::combining_semivoiced_long_word(
+        "ﾊ\u{309A}abcde",
+        &["ﾊ\u{309A}abcde"],
+        &[(0, 0, "ﾊ\u{309A}"), (1, 0, "a"), (2, 0, "b"), (3, 0, "c"), (4, 0, "d"), (5, 0, "e")]
+    )]
+    fn wrap_words_matches_released_cell_columns_and_diff(
+        #[case] row: &str,
+        #[case] expected_rows: &[&str],
+        #[case] expected_cells: &[(u16, u16, &str)],
+    ) {
+        let rows = wrap_words(row, 6);
+        assert_eq!(rows, expected_rows);
+
+        let area = Rect::new(0, 0, 6, 2);
+        let previous = Buffer::empty(area);
+        let mut painted = previous.clone();
+        for (y, row) in rows.iter().enumerate() {
+            painted.set_line(0, y as u16, &Line::raw(row.as_str()), 6);
+        }
+        let diff = previous.diff(&painted);
+        let cells: Vec<_> = diff
+            .iter()
+            .map(|(x, y, cell)| (*x, *y, cell.symbol()))
+            .collect();
+        assert_eq!(cells, expected_cells);
     }
 
     /// `cap_rows` keeps everything that fits; otherwise the marker takes the

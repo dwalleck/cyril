@@ -123,11 +123,17 @@ pub fn render(frame: &mut Frame, area: Rect, input_top: u16, data: &CodePanelDat
     ]));
 
     // Size and position: input-protected placement (cyril-a14l C7).
-    let content_width = lines.iter().map(|l| l.width()).max().unwrap_or(30) as u16 + 4;
+    let content_width = lines
+        .iter()
+        .map(crate::text::line_width)
+        .max()
+        .unwrap_or(30)
+        .saturating_add(4)
+        .clamp(40, 80) as u16;
     let Some(popup_area) = crate::widgets::modal::place(
         area,
         input_top,
-        content_width.clamp(40, 80),
+        content_width,
         (lines.len() as u16).saturating_add(2),
     ) else {
         return; // no rows above the input can hold the popup

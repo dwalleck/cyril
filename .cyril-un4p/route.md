@@ -2,6 +2,8 @@
 
 Date: 2026-10-19. Base: supplied worktree at 8e5c325e. Full Rivets record read, including empty notes and prerequisite/dependent lists.
 
+**Released-renderer refresh, 2026-10-20:** Current source/consumer/review receipts are indexed in [verification.md](verification.md#released-renderer-refresh-2026-10-20). The original implementation and artifact476/503 history below is retained, not reused as migrated-state full-workspace or native qualification.
+
 ## Routing evidence
 
 | Test | Verdict and evidence |
@@ -39,3 +41,13 @@ PASS — Main's artifact476 establishes all11 focused repair regressions, full w
 Evidence and limits: [verification.md](verification.md) indexes the portable original harness/receipts/screens, gate output and independent review. The owned peer is not real KAS/backend/account qualification; Pyte decoded ASCII/text geometry is not native-terminal Unicode glyph proof. Exact grapheme boundaries are separately covered by the passing App/TestBackend regressions. The failed initial smoke was a harness-oracle defect, not product RED; corrected-b is the successful10exchange run.
 
 Publication remains Main-owned: commit, issue-specific PR, required publication/CI checks and tracker closure. This worker ran no tests/builds/linters/formatters/smokes, made no production/Cargo edit during this receipt step and performed no commit/close. Child delivery-patches and ej7y/xavt files are excluded from the un4p publication scope.
+
+## Released-renderer refresh — 2026-10-20
+
+- Route remains **Local**: released ratatui-core0.1.2/widgets0.3.2 compatibility within existing UI owners, with no new public API, permission semantics, backend behavior or execution path.
+- Preserve `FittedPath`/`ElidedPath`, whole-target versus actual-elision metadata, borrowed grapheme wrapping/counting and exact raw path bytes. Shared text helpers measure complete rows/strings; already-segmented glyphs use borrowed `CellWidth` directly. Control-containing graphemes contribute no painted cells without normalizing their bytes. Actual zero path width stays non-confirmable; `.max(1)` is layout-only.
+- Both fitted-row guards use physical columns. Whole visible meaningful targets remain eligible, including standalone halfwidth sound marks; clipped targets and combining-only/zero-cell context remain ineligible. The existing cap2 counts meaningful graphemes, not terminal columns.
+- Parent qualified assembled source tree `b4c644051b65b500053dea089a1206d93220d43b`, distinct from both feature HEAD and the preformat staged tree. Current local results are UI+App1263passed/0failed/3ignored, workspace all-target Clippy, default binary build and format checks PASS. ReviewCurrentUn4 found no findings on the actual postformat working source, confidence0.94.
+- Exactly one refreshed U10 owned-peer consumer passed against the matching preserved private executable: ten requests/responses, unchanged scenarios/oracles, retained drafts/reasons and narrow Enter refusal. This exercises the production process/converter/manual response wire, not live KAS/backend/auth or native glyph cells.
+- **Main-target CI is mandatory.** Local full-workspace/core execution, all-feature/platform and native/auth acceptance are not claimed; inherited auth6c remains unavailable here and unwaived. Publication/commit/push and sequential child authorization remain Main-owned. Historical proof and ambient delivery-patches are preserved.
+

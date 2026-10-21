@@ -1,0 +1,9 @@
+{
+  "original_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+  "restored_sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+  "byte_exact": true,
+  "restored_in_finally": true,
+  "inverse_specialized_edit": false,
+  "git_restore_used": false,
+  "problem": "TypeError: tool.edit(...) expects a dict of arguments (got str)"
+}

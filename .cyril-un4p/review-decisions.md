@@ -2,6 +2,8 @@
 
 2026-10-19 findings, refreshed2026-10-20 after parent qualification. Worker ran no tests/builds/linters/formatters/smokes. Main's artifact476 supplies passing isolated-source gates, ReviewApprovalPaths supplies independent repair approval, and artifact503 supplies the successful owned-peer/actual-Cyril-process smoke. Portable receipts and limits are indexed in verification.md; publication remains parent-owned.
 
+**Current refresh:** The released-renderer review and qualification are recorded in the final section below and [verification.md](verification.md#released-renderer-refresh-2026-10-20). The artifact476/503 findings, primitive decision and execution statements in the original sections remain historical records, not current-source gate receipts.
+
 | finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
 |---|---|---|---|---|---|---|---|
 | F1 | App sweep checks path tail on a single physical row although narrow paths wrap; concatenate drawn path rows. | Aggregated advisory | Verified | Direct reading established that fit_path can return multiple drawn rows and a filename's last two characters can cross a row boundary. | Accept | App sweep extracts actual displayed path rows between rendered borders, concatenates them and separately checks inline layout; no production fit/helper oracle. | Resolved — original sensitivity401/403/412 and parent full-workspace GREEN476 retained; independent review covered regression assertions. |
@@ -45,3 +47,14 @@ Main's artifact503 is the successful corrected-b run: one actual Cyril session, 
 The earlier-a smoke failed a harness observation expecting why! plus cursor within four cells; cursor wrapping was legitimate. The corrected harness uses ordered Enter/Backspace/! to observe wh! plus cursor, preserving the no-response fence and exact eventual answer. No production edit occurred between those smoke runs. The failed-a harness result is not product RED.
 
 See verification.md and its portable evidence bundle for unchanged executed harness, complete corrected-b receipt/wire/output/screens, parent gate log and independent review transcription. This proves real-process permission conversion/geometry/manual responses against an owned peer, not real KAS/backend/account execution or native-terminal Unicode glyph cells. Pyte text/ASCII evidence and TestBackend Unicode evidence are explicitly separate. Main owns commit, PR, publication/CI checks and tracker closure; this worker performs none.
+
+## Released-renderer refresh review — 2026-10-20
+
+Independent `ReviewCurrentUn4` reviewed the actual postformat working source, not merely its parent-staged index, against feature HEAD `2fd94879db1b4281dc85cf7dcf528649c1da3087` and common prerequisite `3a5b88b66b1267844ea764c4ff58e48294c93141`. **No findings; correct within scoped source review; confidence0.94.** Its portable original report and transcription are retained in the refresh bundle.
+
+The approved compatibility decision preserves RAP1/RAP2 rather than copying common's obsolete scalar/plain-string approval implementation. `FittedPath`/`ElidedPath`, inline/separate consumers, actual-elision predicates, raw-zero-width confirmation, borrowed grapheme boundaries and exact bytes survive. Released physical widths and fitted-row guards align confirmation with what is drawn. Already-segmented glyphs use direct borrowed `CellWidth`; raw control-containing graphemes are filtered for painted contribution only. UnicodeWidthStr0.2.2 formerly counts ordinary control strings/CRLF as one; these guards align with renderer filtering, not a claim that prior raw-string measurement was zero.
+
+The reviewer traced approval render/confirm callers through `UiState::approval_confirm` before responder ownership is removed, and checked literal Buffer-cell/diff controls for halfwidth pairs, standalone marks, ordinary combining/zero-cell context and the twelve-case workflow matrix. The cap remains `.take(2).count()`, a meaningful-grapheme count, not a physical-column cap. No new cap guard, semantic limit or deprecated shim was introduced.
+
+Current execution is separate from static review: parent qualifier passes UI+App1263/0/3, workspace all-target Clippy, default binary build and formatting; the one authorized refreshed U10 consumer passes10/10 exchanges with unchanged harness source and no retry/normalization. Full-workspace/core execution, all-feature/platform and native/auth gates were not run locally for this refresh. **Main-target CI remains mandatory; auth6c is not waived.** Review and U10 PASS do not authorize child integration or replace those remaining gates.
+
