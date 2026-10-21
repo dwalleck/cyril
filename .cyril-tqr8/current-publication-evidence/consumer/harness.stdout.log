@@ -1,0 +1,22 @@
+{
+  "result": "PASS",
+  "binary_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+  "binary": "/tmp/cyril-tqr8-current-tested-20261020",
+  "fake_cli_sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+  "native_url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+  "scope": "Current integrated Tqr binary manual notice/durable error under owned ACP peer/PTy; not full qualification, PR readiness, native KAS/host, C6, NK panel or caar acceptance",
+  "source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "fully_qualified": false,
+  "pr_ready": false,
+  "callback_during_new_wait": true,
+  "main_conversation_navigation": "PageUp then PageDown",
+  "full_native_url_exact": true,
+  "manual_display_ack_is_not_authorization": true,
+  "durable_error_after_unrelated_notifications": true,
+  "no_prompt_reset_permission": true,
+  "secret_storage_absent": true,
+  "native_frame_fidelity": "synthetic envelopes/session/request IDs, retained native URL/error text; no raw-frame replay claim",
+  "consumer_returncode": 0,
+  "owned_root_removed_on_exit": true,
+  "no_private_logs_read_or_packaged": true
+}

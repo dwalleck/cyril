@@ -1,0 +1,23 @@
+{
+  "native_session_observed_on_terminal": "sess_PRIVATE_NATIVE_ID_REDACTED",
+  "native_session_sha256_matches_projection": "c003e35c4b149f5c6ad9a3542fda9456e5d5682cdaa6cb6ee3bf66fb69b26ead",
+  "native_url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+  "native_url_callback_reconstructed_envelope": {
+    "jsonrpc": "2.0",
+    "id": 10,
+    "method": "_kiro/openExternalUrl",
+    "params": {
+      "url": "http://127.0.0.1:53181/authorize?response_type=code&client_id=fixture-client-Y3MJNQDviGUdqOlIufGINxJN&code_challenge=95-UuZxwqCCXXt7MXkIvXLlZHehBdsBuKA1TqkkQOM4&code_challenge_method=S256&redirect_uri=http%3A%2F%2Flocalhost%3A37667%2Foauth%2Fcallback&state=cbd3b9a5-e21e-4cdc-bd6e-328e05e7cfb3&scope=fixture.read&resource=http%3A%2F%2F127.0.0.1%3A53181%2Fmcp%2Foauth"
+    }
+  },
+  "native_failure_message_observed_on_terminal": "MCP server \"fixture-failed\" failed to connect: Error POSTing to endpoint: {\"error\":\"synthetic_unavailable\",\"error_description\":\"Deliberately unavailable synthetic MCP endpoint.\"}",
+  "synthetic_control_url": "http://127.0.0.1:1/authorize?state=apostrophe'a\\b&hint=café&quote=\"exact\"&control=\u001b[31m\n\r\t‮&tail=TQR_SAFE_TAIL",
+  "synthetic_expected_visible_control_url": "http://127.0.0.1:1/authorize?state=apostrophe'a\\b&hint=café&quote=\"exact\"&control=\\u{1b}[31m\\n\\r\\t\\u{202e}&tail=TQR_SAFE_TAIL",
+  "provenance": {
+    "screen": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/06-active-manual-url-visible-before-any-local-oauth.txt",
+    "screen_sha256": "0063821ae2558af1dd49086c7f51b0cfabef2f0ca1c8f74b31975a30ee54e082",
+    "projection": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/live-active-df5d9437/live/wire.nonsecret.jsonl",
+    "projection_sha256": "8ae4f551697ae74d079da6915d63a5f052740bc22c1424fc11924bc6344b768d"
+  },
+  "limit": "Not raw native ACP frames. Supported envelopes reconstructed; only URL/id/session/error text are retained native observations."
+}

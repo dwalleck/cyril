@@ -1,0 +1,656 @@
+{
+  "schema": "cyril-shared-rendering-prerequisite-evidence-v1",
+  "purpose": "Explicit allowlisted portable evidence and current scoped documentation only; no new verification runner or overall PASS.",
+  "packaging_code_changes": [],
+  "base_head": "42151d93a87f3a083d96ff3b8b754f944b86785c",
+  "qualified_code_tree": "d83bf82f35b41b1bbca2cda4d0e35629e49169ad",
+  "full_receipt_tree_including_retained_generated_snapshot": "bc049e7782a9bb12ff7277f90353d28767a6a475",
+  "approved_versions": {
+    "ratatui": "0.30.0",
+    "ratatui-core": "0.1.2",
+    "ratatui-widgets": "0.3.2",
+    "unicode-segmentation": "1.12.0",
+    "unicode-width": "0.2.2"
+  },
+  "canonical_receipts": [
+    {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/canonical-handoff.json",
+      "sha256": "5076709476f8e20e28d9299ee2be1155cc2ddb74a0b0e82eb724935c73069f46",
+      "packaged_raw": false,
+      "omission": "Contains private/environment provenance; only explicit selected receipts archived."
+    },
+    {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-attempt1/canonical-handoff.json",
+      "sha256": "216387d457ac8a037d690de8f9f2be244fd89d9732ce0322fd42727c97c0e6b5",
+      "packaged_raw": false,
+      "omission": "Contains private/environment provenance; only explicit selected receipts archived."
+    }
+  ],
+  "frozen_code_input_allowlist": [
+    {
+      "path": "Cargo.lock",
+      "state": "present",
+      "sha256": "67f80b06648c4f534e91435fc49c374f71908874faf0b5b9df5a63831f114600",
+      "bytes": 101346
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "state": "present",
+      "sha256": "4dc58102ebd855573e6ccd9d90f1c5db24667306739b5dca03475bc8330c35b6",
+      "bytes": 37139
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap",
+      "state": "deleted-tracked-path"
+    },
+    {
+      "path": "crates/cyril-ui/src/text.rs",
+      "state": "present",
+      "sha256": "b9744d47e36b2d00bc270bb8273830623d81f36978bb9c6c510f8d8b5d83bae2",
+      "bytes": 6600
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "state": "present",
+      "sha256": "60ff7c6ae1ba1c0e05d08ecd4d48f08d8130c9c013920e8590b13891e6888464",
+      "bytes": 119452
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/code_panel.rs",
+      "state": "present",
+      "sha256": "5ab238af60b004f24847129785541c403240ab95936e0ebadf23ea33143352b0",
+      "bytes": 10297
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/input.rs",
+      "state": "present",
+      "sha256": "55920f0d2d2e9aaad635816cc79f80402c3a37b43b43cea78ecc3ab54063220c",
+      "bytes": 24164
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/markdown.rs",
+      "state": "present",
+      "sha256": "3bca952c1b3428b3837b9490a608a2001667174b27214c9232cf403a147187e0",
+      "bytes": 65045
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/review.rs",
+      "state": "present",
+      "sha256": "d9d55a2346c45ac4782a4abe9dec9ff8e6fac62a744725f6e52d7efe2451d906",
+      "bytes": 14835
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/toolbar.rs",
+      "state": "present",
+      "sha256": "a7c4f29824a157fbf8680ff21645bb2c33d6c46d753f78a371345034a533626c",
+      "bytes": 36299
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "state": "present",
+      "sha256": "af191e64dffce27e9a67aa60d56d7da2c533cb80005a01150da6e468013804fc",
+      "bytes": 17048
+    }
+  ],
+  "package_files": [
+    {
+      "path": "verification.md",
+      "bytes": 11177,
+      "sha256": "a1f555eab5b4645a82a8a1f20404b0de70bfa13959bf1b93a3bcd64a9f14f176"
+    },
+    {
+      "path": "evidence.tar.gz",
+      "bytes": 223466,
+      "sha256": "f059a66b021261acf2b53abdd8baa4024009e0ed828ceb5eb823fcecdcb3913f",
+      "members": 54
+    }
+  ],
+  "archive_members": [
+    {
+      "path": "consumer/attempt01-original-FAIL.result.json",
+      "kind": "byte-identical-original",
+      "bytes": 15895,
+      "sha256": "0650ec1ccbe5d7664f0653fa669fcdb29970e695c2ac558c709dd0d26116547a",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-01/result.json",
+      "origin_sha256": "0650ec1ccbe5d7664f0653fa669fcdb29970e695c2ac558c709dd0d26116547a"
+    },
+    {
+      "path": "consumer/attempt02-assessment.json",
+      "kind": "byte-identical-original",
+      "bytes": 10518,
+      "sha256": "95eaeaf4052b934c40f39c1359f35d55c18f97bb4a8f6d68a80babcb66b9ae41",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-assessment.json",
+      "origin_sha256": "95eaeaf4052b934c40f39c1359f35d55c18f97bb4a8f6d68a80babcb66b9ae41"
+    },
+    {
+      "path": "consumer/attempt02-derived-final.cells.json",
+      "kind": "explicitly-derived-retained-cells",
+      "bytes": 423618,
+      "sha256": "854a2d4fb32fff0b9b3ed934151514f033c13dca66a5b4ca32abbf953abc94e0",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-derived-final.cells.json",
+      "origin_sha256": "854a2d4fb32fff0b9b3ed934151514f033c13dca66a5b4ca32abbf953abc94e0",
+      "copy_fidelity": "Byte-identical to the retained derived artifact, not an original successful final capture.",
+      "derived_from": [
+        "consumer/attempt02/terminal.ansi",
+        "consumer/attempt02-existing-replay-selected.json"
+      ],
+      "not_original_capture": true
+    },
+    {
+      "path": "consumer/attempt02-existing-replay-selected.json",
+      "kind": "explicitly-derived-receipt",
+      "bytes": 7419,
+      "sha256": "6fe44756d161edddbbf05b5f49ff1242d2acb422fadcbcb4275b0b99399b792c",
+      "origins": [
+        {
+          "path": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-pyte-replay.json",
+          "sha256": "abd87320e1c8930573364b1252ce959351bfa5da361573b2548fef081e0bcb96"
+        }
+      ]
+    },
+    {
+      "path": "consumer/attempt02-observed-surfaces.json",
+      "kind": "byte-identical-original",
+      "bytes": 39506,
+      "sha256": "7fdc6c4d3d36cf0b6e74d89a3f87087d85b58fd375ba1ee37d6bac5a3bb013cc",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-observed-surfaces.json",
+      "origin_sha256": "7fdc6c4d3d36cf0b6e74d89a3f87087d85b58fd375ba1ee37d6bac5a3bb013cc"
+    },
+    {
+      "path": "consumer/attempt02-wrapper-traceback.txt",
+      "kind": "byte-identical-original",
+      "bytes": 1613,
+      "sha256": "cf75b5f51fa8a952bd3de56012584f58cf8f714bb16793adde28068b6463fd9b",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-wrapper-traceback.txt",
+      "origin_sha256": "cf75b5f51fa8a952bd3de56012584f58cf8f714bb16793adde28068b6463fd9b"
+    },
+    {
+      "path": "consumer/attempt02/captures/a01-pending-reject-only.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423627,
+      "sha256": "73a9dfbba546c9647bb04929b74f3c400ecc1c66378f0e07ddd1aedbc42e9509",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/a01-pending-reject-only.cells.json",
+      "origin_sha256": "73a9dfbba546c9647bb04929b74f3c400ecc1c66378f0e07ddd1aedbc42e9509"
+    },
+    {
+      "path": "consumer/attempt02/captures/a02-pending-geometry.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 651823,
+      "sha256": "0226c0de5f8e926ba7ca040fd3a50b6884c6550713ef7482e97ac77b290fe290",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/a02-pending-geometry.cells.json",
+      "origin_sha256": "0226c0de5f8e926ba7ca040fd3a50b6884c6550713ef7482e97ac77b290fe290"
+    },
+    {
+      "path": "consumer/attempt02/captures/a03-closed-draft-preserved.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423615,
+      "sha256": "7f2e95fc5d1b4029c4ec06d5277dae680e6e8bb79fcbc8ad6a46c0ea8cc52d34",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/a03-closed-draft-preserved.cells.json",
+      "origin_sha256": "7f2e95fc5d1b4029c4ec06d5277dae680e6e8bb79fcbc8ad6a46c0ea8cc52d34"
+    },
+    {
+      "path": "consumer/attempt02/captures/b-halfwidth-semivoiced-char-wrap.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423410,
+      "sha256": "7ddda188b619a8a214a254e96f509aedf69bdfd86213e8f97fd89061c2b8a44a",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-halfwidth-semivoiced-char-wrap.cells.json",
+      "origin_sha256": "7ddda188b619a8a214a254e96f509aedf69bdfd86213e8f97fd89061c2b8a44a"
+    },
+    {
+      "path": "consumer/attempt02/captures/b-halfwidth-voiced-char-wrap.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423357,
+      "sha256": "be6cdbf1524f9534ce6f1469d165ac36a9d5ca879f1b1f6f0a9e3f9de181e89f",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-halfwidth-voiced-char-wrap.cells.json",
+      "origin_sha256": "be6cdbf1524f9534ce6f1469d165ac36a9d5ca879f1b1f6f0a9e3f9de181e89f"
+    },
+    {
+      "path": "consumer/attempt02/captures/b-ordinary-combining-semivoiced-char-wrap.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423672,
+      "sha256": "651a4310be362130f384b14122ac402593d984511ad748a0d4dbe8d278fad9f7",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-ordinary-combining-semivoiced-char-wrap.cells.json",
+      "origin_sha256": "651a4310be362130f384b14122ac402593d984511ad748a0d4dbe8d278fad9f7"
+    },
+    {
+      "path": "consumer/attempt02/captures/b-ordinary-combining-voiced-char-wrap.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423613,
+      "sha256": "3826af4dda1b6efce5074e3065fef9d7b79e5e49f0819ca769040cb7cb0c8200",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-ordinary-combining-voiced-char-wrap.cells.json",
+      "origin_sha256": "3826af4dda1b6efce5074e3065fef9d7b79e5e49f0819ca769040cb7cb0c8200"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-halfwidth-semivoiced-between-scalars.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423314,
+      "sha256": "6fd1ac4760bf4646be6c1cd1c497fb91383b70151008bbb597b7ccb13a63164e",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-halfwidth-semivoiced-between-scalars.cells.json",
+      "origin_sha256": "6fd1ac4760bf4646be6c1cd1c497fb91383b70151008bbb597b7ccb13a63164e"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-halfwidth-semivoiced-end.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423314,
+      "sha256": "f8226ab622174802fa3350c53785106cb39cae92d6308c75a73a635bdfe03ad5",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-halfwidth-semivoiced-end.cells.json",
+      "origin_sha256": "f8226ab622174802fa3350c53785106cb39cae92d6308c75a73a635bdfe03ad5"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-halfwidth-voiced-between-scalars.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423236,
+      "sha256": "0601a6636793c216f2326fd263ee3772f0d0986932672b3e499bf04195f1f954",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-halfwidth-voiced-between-scalars.cells.json",
+      "origin_sha256": "0601a6636793c216f2326fd263ee3772f0d0986932672b3e499bf04195f1f954"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-halfwidth-voiced-end.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423236,
+      "sha256": "c5ab82030e7997253ca3fd24c50c0ab0596cc61a08199e70772db34ae2263b4d",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-halfwidth-voiced-end.cells.json",
+      "origin_sha256": "c5ab82030e7997253ca3fd24c50c0ab0596cc61a08199e70772db34ae2263b4d"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-ordinary-combining-semivoiced-between-scalars.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423351,
+      "sha256": "99f3019895e16f323feea359c624b5c157de0771eaa838cd930d3bfa3371ebf7",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-ordinary-combining-semivoiced-between-scalars.cells.json",
+      "origin_sha256": "99f3019895e16f323feea359c624b5c157de0771eaa838cd930d3bfa3371ebf7"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-ordinary-combining-semivoiced-end.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423354,
+      "sha256": "ddaed4b7141d2b474741c7f5045490d77324bf54b2e9986b77cf18b318004349",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-ordinary-combining-semivoiced-end.cells.json",
+      "origin_sha256": "ddaed4b7141d2b474741c7f5045490d77324bf54b2e9986b77cf18b318004349"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-ordinary-combining-voiced-between-scalars.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423319,
+      "sha256": "9d935b30fd707f1a32e9049c83c756259de127db702e50ce30be8ea7f29963cd",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-ordinary-combining-voiced-between-scalars.cells.json",
+      "origin_sha256": "9d935b30fd707f1a32e9049c83c756259de127db702e50ce30be8ea7f29963cd"
+    },
+    {
+      "path": "consumer/attempt02/captures/i-ordinary-combining-voiced-end.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423322,
+      "sha256": "3fd36b0a0328dc016d1bc7bd6359e16e616b031342d57fd43d1518a562ac2b17",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-ordinary-combining-voiced-end.cells.json",
+      "origin_sha256": "3fd36b0a0328dc016d1bc7bd6359e16e616b031342d57fd43d1518a562ac2b17"
+    },
+    {
+      "path": "consumer/attempt02/captures/m01-live-160.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1958314,
+      "sha256": "4b9545a7f8e881e7142694c854b20cb4312002deed1e755f7501c5685756081d",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/m01-live-160.cells.json",
+      "origin_sha256": "4b9545a7f8e881e7142694c854b20cb4312002deed1e755f7501c5685756081d"
+    },
+    {
+      "path": "consumer/attempt02/captures/m02-committed-160.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1958315,
+      "sha256": "c984677d359e0137d72fdc18cdd3daaac3ef565660b2a0faec69c69b55b0655f",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/m02-committed-160.cells.json",
+      "origin_sha256": "c984677d359e0137d72fdc18cdd3daaac3ef565660b2a0faec69c69b55b0655f"
+    },
+    {
+      "path": "consumer/attempt02/captures/m03-committed-80.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 814315,
+      "sha256": "92f17612fd3151ee7173074c430ea6f636790cbaf4504ed66bb44125525bb505",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/m03-committed-80.cells.json",
+      "origin_sha256": "92f17612fd3151ee7173074c430ea6f636790cbaf4504ed66bb44125525bb505"
+    },
+    {
+      "path": "consumer/attempt02/captures/m04-committed-52.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 423231,
+      "sha256": "981859c9c22552ef3f22d44a79f9b09a68cffb2e1cc09e527994bf1d34d420a5",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/m04-committed-52.cells.json",
+      "origin_sha256": "981859c9c22552ef3f22d44a79f9b09a68cffb2e1cc09e527994bf1d34d420a5"
+    },
+    {
+      "path": "consumer/attempt02/events.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 9519,
+      "sha256": "a00f2c5d1bc53c6605fcaa7b8ece00b2d0bb43e93ccb8239ec4e31f1fbebe76b",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/events.jsonl",
+      "origin_sha256": "a00f2c5d1bc53c6605fcaa7b8ece00b2d0bb43e93ccb8239ec4e31f1fbebe76b"
+    },
+    {
+      "path": "consumer/attempt02/payloads/b-halfwidth-semivoiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 1057,
+      "sha256": "64a2b23c526890f03eeab0d18b6a7b96702f17b99e3d431d6e27cb3d270aa546",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-halfwidth-semivoiced.payload.json",
+      "origin_sha256": "64a2b23c526890f03eeab0d18b6a7b96702f17b99e3d431d6e27cb3d270aa546"
+    },
+    {
+      "path": "consumer/attempt02/payloads/b-halfwidth-voiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 1057,
+      "sha256": "4a73edb1664af7e9170ef65f5f0e587a6e0b1436b151b654911155154e60b960",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-halfwidth-voiced.payload.json",
+      "origin_sha256": "4a73edb1664af7e9170ef65f5f0e587a6e0b1436b151b654911155154e60b960"
+    },
+    {
+      "path": "consumer/attempt02/payloads/b-ordinary-combining-semivoiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 1051,
+      "sha256": "0e8e47066455badb5758b45dad5099e81e0e1a0b6a75e3d0bfbe63e22d5d3b81",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-ordinary-combining-semivoiced.payload.json",
+      "origin_sha256": "0e8e47066455badb5758b45dad5099e81e0e1a0b6a75e3d0bfbe63e22d5d3b81"
+    },
+    {
+      "path": "consumer/attempt02/payloads/b-ordinary-combining-voiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 1051,
+      "sha256": "414a8919ab40319952d230bd37c85fbd1478e928a3cb9d4833c3c3e22663b2b5",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/b-ordinary-combining-voiced.payload.json",
+      "origin_sha256": "414a8919ab40319952d230bd37c85fbd1478e928a3cb9d4833c3c3e22663b2b5"
+    },
+    {
+      "path": "consumer/attempt02/payloads/i-halfwidth-semivoiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 360,
+      "sha256": "5f776ebc1390d579c6a3c05892ea440d6c425ed514f56dc2a50d420cc490de2e",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-halfwidth-semivoiced.payload.json",
+      "origin_sha256": "5f776ebc1390d579c6a3c05892ea440d6c425ed514f56dc2a50d420cc490de2e"
+    },
+    {
+      "path": "consumer/attempt02/payloads/i-halfwidth-voiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 360,
+      "sha256": "5c4bb841125017d7b4f1e8b523c04dbacf18485be356c062cd5dd35a6705a3f9",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-halfwidth-voiced.payload.json",
+      "origin_sha256": "5c4bb841125017d7b4f1e8b523c04dbacf18485be356c062cd5dd35a6705a3f9"
+    },
+    {
+      "path": "consumer/attempt02/payloads/i-ordinary-combining-semivoiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 354,
+      "sha256": "b516927b3554594ef50f837415958d1cda12c30dc0455e4d67a1dc983ee1ae11",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-ordinary-combining-semivoiced.payload.json",
+      "origin_sha256": "b516927b3554594ef50f837415958d1cda12c30dc0455e4d67a1dc983ee1ae11"
+    },
+    {
+      "path": "consumer/attempt02/payloads/i-ordinary-combining-voiced.payload.json",
+      "kind": "byte-identical-original",
+      "bytes": 354,
+      "sha256": "cc055159df65d0458363d93be32ee48f73539d5c6f7a58bce83b39b1b1ca132f",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/i-ordinary-combining-voiced.payload.json",
+      "origin_sha256": "cc055159df65d0458363d93be32ee48f73539d5c6f7a58bce83b39b1b1ca132f"
+    },
+    {
+      "path": "consumer/attempt02/peer-state.json",
+      "kind": "byte-identical-original",
+      "bytes": 333,
+      "sha256": "00f8a26feab983007696687370e313dd23abe7cae85091c834dbbf9711e57f23",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/peer-state.json",
+      "origin_sha256": "00f8a26feab983007696687370e313dd23abe7cae85091c834dbbf9711e57f23"
+    },
+    {
+      "path": "consumer/attempt02/terminal.ansi",
+      "kind": "byte-identical-original",
+      "bytes": 321512,
+      "sha256": "56533d6b82883e1a89fd6871965d49025b01b1e8005cccff26cf97e52ba8911d",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/terminal.ansi",
+      "origin_sha256": "56533d6b82883e1a89fd6871965d49025b01b1e8005cccff26cf97e52ba8911d"
+    },
+    {
+      "path": "consumer/attempt02/wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 7364,
+      "sha256": "4425838abf26f4ab42b9c6dc323bcafb7dedf4214b9eb2913a440fafdd755cdd",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/wire.jsonl",
+      "origin_sha256": "4425838abf26f4ab42b9c6dc323bcafb7dedf4214b9eb2913a440fafdd755cdd"
+    },
+    {
+      "path": "consumer/current-scoped-disposition.json",
+      "kind": "explicitly-derived-receipt",
+      "bytes": 2676,
+      "sha256": "fc22022be6904e9566fd5cdcec84ba7cccc4461b24640d296e193f82d1e74d9b",
+      "origins": [
+        {
+          "path": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-assessment.json",
+          "sha256": "95eaeaf4052b934c40f39c1359f35d55c18f97bb4a8f6d68a80babcb66b9ae41"
+        },
+        {
+          "path": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/attempt02-observed-surfaces.json",
+          "sha256": "7fdc6c4d3d36cf0b6e74d89a3f87087d85b58fd375ba1ee37d6bac5a3bb013cc"
+        },
+        {
+          "path": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/handoff.json",
+          "sha256": "ec87af56cff208afb230a641dcb3e42290f98c305e05386eac0cb20466d3d442"
+        },
+        {
+          "uri": "local://shared-width-smoke-adjudication.md",
+          "kind": "parent decision, quoted above"
+        },
+        {
+          "uri": "local://approved-ratatui-release-migration.md",
+          "kind": "current authorization boundary and integration contract"
+        }
+      ]
+    },
+    {
+      "path": "consumer/executed-source/fixtures.json",
+      "kind": "byte-identical-original",
+      "bytes": 2548,
+      "sha256": "acb2d4932e791c85cb2d6bfd18622e5f9fdbfad72870fefea7f57c147a838229",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/harness-snapshot/shared-width-prepare/fixtures.json",
+      "origin_sha256": "acb2d4932e791c85cb2d6bfd18622e5f9fdbfad72870fefea7f57c147a838229"
+    },
+    {
+      "path": "consumer/executed-source/owned_peer.py",
+      "kind": "byte-identical-original",
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/harness-snapshot/owned_peer.py",
+      "origin_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe"
+    },
+    {
+      "path": "consumer/executed-source/smoke.py",
+      "kind": "byte-identical-original",
+      "bytes": 23335,
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/harness-snapshot/smoke.py",
+      "origin_sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a"
+    },
+    {
+      "path": "consumer/executed-source/width_smoke.py",
+      "kind": "byte-identical-original",
+      "bytes": 17326,
+      "sha256": "0359c288d92e284a35d8780843941c7d14635658c892f8f638d86565c509f2b8",
+      "origin": "/tmp/cyril-perf-consumer-20261020/shared-width-actual-02/harness-snapshot/shared-width-prepare/width_smoke.py",
+      "origin_sha256": "0359c288d92e284a35d8780843941c7d14635658c892f8f638d86565c509f2b8"
+    },
+    {
+      "path": "qualification/checked-eleven-path-source.patch",
+      "kind": "byte-identical-original",
+      "bytes": 47065,
+      "sha256": "499e926e424bcedc0737a9dda191432aacc34709f6f7607557b6f0886811f845",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/repaired-common-final-after-all-authorized-gates.checked-code-inputs.versus-head.patch",
+      "origin_sha256": "499e926e424bcedc0737a9dda191432aacc34709f6f7607557b6f0886811f845"
+    },
+    {
+      "path": "qualification/current-clippy.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 1092,
+      "sha256": "4b8083f08cd3a03f706ce82fe9aa80f4b5afc816907b89b02400041bd25cf8bf",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/05-workspace-alltargets-clippy.log",
+      "origin_sha256": "fc30aae879dd0979768d2614640a0a2d1765786bbcfe6a41102ab6284e10446c",
+      "original_line_ranges": [
+        [
+          3,
+          15
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "qualification/current-default-build.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 817,
+      "sha256": "ad0d8f852b62d70991a2c247c954209ed00ac5640554d4ecc7ccc28fdce93b89",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/06-default-cyril-build.log",
+      "origin_sha256": "77e384fc37bbe75e48f23a9882acead0fbf2f0a41d54a25c8084c501fe78dec5",
+      "original_line_ranges": [
+        [
+          3,
+          13
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "qualification/current-final-format.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 297,
+      "sha256": "9277a3644445a2123d5de81ba9fb17d57a338291462ba11457067fe03b94e00a",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/07-final-format-check.log",
+      "origin_sha256": "2bf3b10d63845a7cc316cb1fae6f102545ebf4d65a8ef92f706f1bde54261ab3",
+      "original_line_ranges": [
+        [
+          3,
+          8
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "qualification/current-focused-preserved-fixtures.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 722,
+      "sha256": "8233baa3140fc0afa0613c1e7200796c0bb5056c692614ddba788c1b78d727be",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/03-focused-floor_tests-roomy_frame_matches_main_fixture.log",
+      "origin_sha256": "297b06bbc31c6da520812104a6ca3dc081acf94db519eb1b0699b67a873c8780",
+      "original_line_ranges": [
+        [
+          3,
+          16
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "qualification/current-focused-roomy-placement.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 956,
+      "sha256": "b7e572e0f8ed1f18fe0d7db78d8c215f7fb257241abab032eba0aac2978bdf2a",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/02-focused-floor_tests-roomy_autocomplete_stays_below_input.log",
+      "origin_sha256": "7be91355ac11aa782ab567ae75d8d93b4b4f48f86fac23e7e7d26ac311746eb4",
+      "original_line_ranges": [
+        [
+          3,
+          18
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "qualification/current-full-ui-summary.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 3757,
+      "sha256": "c216bcaf1d858223687655539cfbd5b384bce9222519993f67f254d19a1f14d3",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/04-full-cyril-ui-including-integration-and-doc.log",
+      "origin_sha256": "ee0c2662ab74fa2c695432d073e9219f2f8a4a06ecc02d0896b5ebc677f1e811",
+      "original_line_ranges": [
+        [
+          3,
+          4
+        ],
+        [
+          810,
+          892
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "qualification/current-selected-receipt.json",
+      "kind": "explicitly-derived-receipt",
+      "bytes": 9796,
+      "sha256": "4e4a54238bdffc4572f66eb54bd3cb49c48aa9e18452a901a2312fca44d4aedc",
+      "origins": [
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/canonical-handoff.json",
+          "sha256": "5076709476f8e20e28d9299ee2be1155cc2ddb74a0b0e82eb724935c73069f46"
+        },
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-floor-repaired-attempt2/repaired-common-final-after-all-authorized-gates.checked-code-inputs.source-manifest.json",
+          "sha256": "022905764f80c95d617a375ac5f6f31d4f7484edb49ec2aa13433d6da6a16d61"
+        }
+      ]
+    },
+    {
+      "path": "qualification/historical-roomy_inflow_80x24.snap.new",
+      "kind": "byte-identical-original",
+      "bytes": 6182,
+      "sha256": "f3c976adc7a2c243c79fb8339306fdbbbd29c9a6c065dcf482f076b63924fe97",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-attempt1/generated-snapshot/crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap.new",
+      "origin_sha256": "f3c976adc7a2c243c79fb8339306fdbbbd29c9a6c065dcf482f076b63924fe97"
+    },
+    {
+      "path": "qualification/historical-selected-receipt.json",
+      "kind": "explicitly-derived-receipt",
+      "bytes": 2323,
+      "sha256": "3337c748b2c1ed5b8f90fe1c7af89963af63e2a594c0d662a6433e9feef49cd6",
+      "origins": [
+        {
+          "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-attempt1/canonical-handoff.json",
+          "sha256": "216387d457ac8a037d690de8f9f2be244fd89d9732ce0322fd42727c97c0e6b5"
+        }
+      ]
+    },
+    {
+      "path": "qualification/historical-ui-failure.excerpt.log",
+      "kind": "explicitly-derived-log-excerpt",
+      "bytes": 3531,
+      "sha256": "f4787e8cf7f7da008bcc0dd5df93d38b0f53dab438d05091d8be1f27f60460bf",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/common-existing-ui-width-attempt1/02-full-cyril-ui-crate-including-integration.log",
+      "origin_sha256": "270214d04aaf56b6e472c9671c4ba5b550a1f86ccd311c6bcccb7412a6cc453e",
+      "original_line_ranges": [
+        [
+          814,
+          851
+        ]
+      ],
+      "omission": "Unselected lines, including captured environment header records; no substitutions inside selected source lines."
+    },
+    {
+      "path": "reviews.json",
+      "kind": "explicitly-derived-receipt",
+      "bytes": 2229,
+      "sha256": "f09221e97bc57a421fe6e50244649360b3cf32a8d5a5aa1c4a315118d88b44e1",
+      "origins": [
+        {
+          "uri": "agent://ReviewExistingWidthCutover"
+        },
+        {
+          "uri": "agent://ReviewRoomyOracleRepair"
+        },
+        {
+          "uri": "agent://ReviewSharedSmokeAdjudication"
+        }
+      ]
+    }
+  ],
+  "excluded": [
+    "Executable/staged binaries and all *.utf8.bin files; payload JSON hex plus original wire retain byte proof.",
+    "All isolated HOME/config/data/cache/state/runtime/workspace trees, private journals/session data, private-index files and environment dumps.",
+    "Raw qualifier and consumer handoff manifests, raw safety.json, and raw session.cast with environment header; exact original pins/selected receipts retained instead.",
+    "Full repository source-manifest inventory; only eleven approved code-input paths selected.",
+    "Duplicate text screenshots, extra controls/acks and other scratch artifacts; no broad directory recursion.",
+    "Nonexistent attempt02 result.json/final screenshot; no replacement generated."
+  ],
+  "archive_handling": "Inert retained source/data. Do not print raw terminal.ansi directly to a terminal. Executed harness snapshots preserve attribution, not a new supported runner.",
+  "packaging_execution": "No Cargo/test/lint/format/product/native/parser-replay/mutation run; no source edit, commit, push, or tracker update. Hashing/copying only explicit owned artifacts."
+}

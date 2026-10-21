@@ -1,0 +1,85 @@
+{
+  "source": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+  "copy": "/tmp/cyril-auth-retarget-proof-20261020/source",
+  "target": "/home/dwalleck/repos/cyril/target",
+  "supplied_sha256": "ad9b9ad0f0ff29c9d122211d47394a13d038916b264d392c7ab374695210b271",
+  "original_sha256": "7f145d64fba63a4ae1231df690bf100d5592f91e0aafdeb58d613d57c3069eb0",
+  "repaired_sha256": "ad9b9ad0f0ff29c9d122211d47394a13d038916b264d392c7ab374695210b271",
+  "patch_sha256": "ccaaab48c4e909666bfcc278fdf9c92308e7aac245d516e5a92587add7f206f4",
+  "a5wo_retained": true,
+  "refreshed_entrypoints": [
+    "crates/cyril/src/main.rs",
+    "crates/cyril-core/src/lib.rs",
+    "crates/cyril-memory/src/lib.rs",
+    "crates/cyril-review/src/lib.rs",
+    "crates/cyril-ui/src/lib.rs",
+    "crates/cyril-voice/src/lib.rs",
+    "crates/cyril-workbench/src/lib.rs"
+  ],
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "cyril-core",
+    "--features",
+    "kas",
+    "--lib",
+    "protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget",
+    "--",
+    "--exact",
+    "--nocapture"
+  ],
+  "timeout_seconds": 900,
+  "cases": [
+    {
+      "name": "old-held-writer",
+      "source_sha256": "cdab8e1666415d5f8e7b27e86beec5997f50cf3dbcc9e2305d2cdf769165b79e",
+      "returncode": 101,
+      "log": "/tmp/cyril-auth-retarget-proof-20261020/old-held-writer.log",
+      "expected_marker": "AUTH_RETARGET_PROOF busy=true overlap=false success=false",
+      "pass": true
+    },
+    {
+      "name": "repaired-held-writer",
+      "source_sha256": "3e6931bc32b3da367b6c01e31ee0ad95f3a3d8d2196e8f995d76cacafe5848e7",
+      "returncode": 0,
+      "log": "/tmp/cyril-auth-retarget-proof-20261020/repaired-held-writer.log",
+      "expected_marker": "AUTH_RETARGET_PROOF busy=false overlap=false success=true",
+      "pass": true
+    },
+    {
+      "name": "remove-shared-gate",
+      "source_sha256": "e6011c34f72e1fb30502b91a75bb6e41e606d7aab3a0885384333fdf8fdbe392",
+      "returncode": 101,
+      "log": "/tmp/cyril-auth-retarget-proof-20261020/remove-shared-gate.log",
+      "expected_marker": "AUTH_RETARGET_PROOF busy=false overlap=true success=false",
+      "pass": true
+    },
+    {
+      "name": "restore-after-no-gate",
+      "source_sha256": "3e6931bc32b3da367b6c01e31ee0ad95f3a3d8d2196e8f995d76cacafe5848e7",
+      "returncode": 0,
+      "log": "/tmp/cyril-auth-retarget-proof-20261020/restore-after-no-gate.log",
+      "expected_marker": "AUTH_RETARGET_PROOF busy=false overlap=false success=true",
+      "pass": true
+    },
+    {
+      "name": "cached-construction-key",
+      "source_sha256": "721859ce1a5e3e5499d69ea451214de33aec71480603874230b919fe647efd7f",
+      "returncode": 101,
+      "log": "/tmp/cyril-auth-retarget-proof-20261020/cached-construction-key.log",
+      "expected_marker": "AUTH_RETARGET_PROOF busy=false overlap=true success=false",
+      "pass": true
+    },
+    {
+      "name": "restore-after-cached-key",
+      "source_sha256": "3e6931bc32b3da367b6c01e31ee0ad95f3a3d8d2196e8f995d76cacafe5848e7",
+      "returncode": 0,
+      "log": "/tmp/cyril-auth-retarget-proof-20261020/restore-after-cached-key.log",
+      "expected_marker": "AUTH_RETARGET_PROOF busy=false overlap=false success=true",
+      "pass": true
+    }
+  ],
+  "restored_sha256": "ad9b9ad0f0ff29c9d122211d47394a13d038916b264d392c7ab374695210b271",
+  "supplied_source_unchanged": true
+}

@@ -1,0 +1,50 @@
+{
+  "command": [
+    "uv",
+    "run",
+    "--offline",
+    "--script",
+    "/tmp/cyril-tqr8-current-owned-setup-20261020/controlled-peer-current-harness.py",
+    "--output",
+    "/tmp/cyril-tqr8-current-owned-20261020-b"
+  ],
+  "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+  "product_scenario_invocations": 1,
+  "wrapper_returncode": 0,
+  "harness_reported_consumer_returncode": 0,
+  "harness_result": "PASS",
+  "observer_timeout": false,
+  "duration_seconds": 1.327018,
+  "observed_processes": [
+    {
+      "pid": 308315,
+      "state": "R",
+      "ppid": 297378,
+      "pgrp": 308315,
+      "session": 308315,
+      "starttime": 33607304,
+      "exe": "/home/dwalleck/.local/bin/uv",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8"
+    }
+  ],
+  "observed_owned_product_groups": [],
+  "after_exit_cleanup_observation": {
+    "roots": [
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-e8yjojcj",
+        "absent_after_exit": true
+      }
+    ],
+    "observed_identity_survivors": [],
+    "remaining_owned_product_groups": [],
+    "observation_seconds": 5.7e-05,
+    "all_observed_process_identities_gone": true,
+    "all_observed_product_groups_gone": false,
+    "owned_roots_observed_and_absent": true,
+    "independent_of_harness_preassigned_cleanup_flag": true
+  },
+  "observation_scope": "Only launched uv descendant tree and its observed owned product process groups; no unrelated process cmdline/environment, private journals/HOME/indexes/credentials read. No observer signal sent unless 120-second timeout.",
+  "raw_stdout": "harness.stdout.log",
+  "raw_stderr": "harness.stderr.log",
+  "independent_cleanup_evidence": "independent-cleanup.json"
+}

@@ -1,0 +1,17 @@
+--- qualified-a09/README.md
++++ postqualification-documentation/README.md
+@@ -180,9 +180,11 @@
+ persist OAuth credentials or implement a completion-notification protocol;
+ passive inventory and server-management actions belong to the separate MCP
+ management change. See the [qualification record](.cyril-tqr8/evidence.md#delivery-checkpoint-2026-10-20)
+-for the exact exercised scope and outstanding acceptance. The owned-peer proof
+-now passes full-URL PageUp/PageDown, escaping, durable errors and draft
+-preservation; full-workspace qualification remains blocked, not waived.
++for the exact exercised scope and evidence. Current local workspace, isolated
++KAS and no-default qualification pass, as does one current owned ACP/PTy
++consumer covering full-URL PageUp/PageDown, escaping, durable errors and draft
++preservation. These are not real-native KAS, native-terminal/host or CI
++acceptance claims.
+ 
+ ### Local memory runtime
+ 

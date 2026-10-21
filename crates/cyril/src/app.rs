@@ -10154,6 +10154,7 @@ mod tests {
         );
     }
     mod current_runtime_contract;
+    mod mcp_oauth;
     mod review;
 
     // ── cyril-qaq0: /theme command and picker session ───────────────────────

@@ -540,44 +540,15 @@ impl UiState {
                 true
             }
             Notification::ToolCallStarted(tc) => {
-                // Flush any accumulated text before the tool call starts.
-                // This prevents text before and after a tool call from
-                // concatenating into one message.
-                self.flush_streaming_user_text();
-                self.flush_streaming_agent_text();
-                // Commit any reasoning that preceded the tool call.
-                self.flush_streaming_thought();
-
-                // Commit tool call directly to messages in chronological position.
-                // This ensures tool calls stay between the text segments that
-                // surround them, rather than moving to the end on TurnCompleted.
-                let tracked = TrackedToolCall::new(tc.clone());
-                let idx = self.messages.len();
-                self.messages.push(ChatMessage::tool_call(tracked));
-                self.tool_call_index.insert(tc.id().clone(), idx);
-                self.messages_version += 1;
-
-                // Also keep in active_tool_calls for the live display section
-                self.active_tool_calls
-                    .push(TrackedToolCall::new(tc.clone()));
+                self.track_tool_call(tc);
                 self.set_activity(Activity::ToolRunning);
                 true
             }
             Notification::ToolCallUpdated(tc) => {
-                // Update in active_tool_calls (for live display)
-                for tracked in &mut self.active_tool_calls {
-                    if tracked.id() == tc.id() {
-                        tracked.update(tc);
-                        break;
-                    }
-                }
-                // Update in committed messages (for history)
-                if let Some(&idx) = self.tool_call_index.get(tc.id())
-                    && let Some(msg) = self.messages.get_mut(idx)
-                    && let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind
-                {
-                    tracked.update(tc);
-                }
+                // KAS Tool Load/Subagent Response and v2 validation failures
+                // can arrive without a start. Their first update owns the same
+                // chronological row as a normal call; subsequent frames merge.
+                self.track_tool_call(tc);
                 true
             }
             Notification::PlanUpdated(plan) => {
@@ -953,6 +924,12 @@ impl UiState {
                 available_modes,
                 available_models: _,
             } => {
+                if self.main_session_id.as_ref() != Some(session_id) {
+                    // IDs are unique only within a session. Keep old history,
+                    // but never merge a new session's call into its old row.
+                    self.tool_call_index.clear();
+                    self.active_tool_calls.clear();
+                }
                 // A config picker belongs to the session whose catalog opened
                 // it. Close it at the session boundary so a delayed `/new` or
                 // `/load` response cannot apply the old selection to the new
@@ -1150,6 +1127,24 @@ impl UiState {
                 // Handled by App (cross-cutting concern: displays URL for manual browser opening)
                 false
             }
+            Notification::ExternalUrlRequested { url } => {
+                // Delivery requests manual sign-in, not authorization completion.
+                // Keep the full URL while making terminal controls visible.
+                self.add_system_message(format!(
+                    "Sign-in requested. Open in browser: {}",
+                    crate::mcp_notice::terminal_safe(url)
+                ));
+                true
+            }
+            Notification::McpConnectionError { message } => {
+                // A durable, non-terminal notice: later MCP status must not
+                // replace it or release the busy turn.
+                self.add_system_message(format!(
+                    "[error] {}",
+                    crate::mcp_notice::terminal_safe(message)
+                ));
+                true
+            }
             Notification::AgentNotFound {
                 requested,
                 fallback,
@@ -1293,16 +1288,46 @@ impl UiState {
         changed || stall_cleared || thinking_changed
     }
 
+    /// Insert the first observed call frame, or merge into its retained row.
+    fn track_tool_call(&mut self, tc: &ToolCall) {
+        let inserted = if let Some(&idx) = self.tool_call_index.get(tc.id()) {
+            if let ChatMessageKind::ToolCall(tracked) = &mut self.messages[idx].kind {
+                tracked.update(tc);
+            }
+            false
+        } else {
+            self.flush_streaming_user_text();
+            self.flush_streaming_agent_text();
+            self.flush_streaming_thought();
+            let idx = self.messages.len();
+            self.messages
+                .push(ChatMessage::tool_call(TrackedToolCall::new(tc.clone())));
+            self.tool_call_index.insert(tc.id().clone(), idx);
+            true
+        };
+        self.messages_version += 1;
+
+        if let Some(tracked) = self
+            .active_tool_calls
+            .iter_mut()
+            .find(|tracked| tracked.id() == tc.id())
+        {
+            tracked.update(tc);
+        } else if inserted {
+            self.active_tool_calls
+                .push(TrackedToolCall::new(tc.clone()));
+        }
+    }
+
     /// Flush remaining streaming text and clear active tool call display.
-    /// Tool calls are already committed to messages in chronological position
-    /// (done in ToolCallStarted handler), so we only flush trailing text here.
+    /// Tool calls are already committed at their first start or update frame;
+    /// keep their history index so late updates cannot duplicate retained rows.
     pub fn commit_streaming(&mut self) {
         self.flush_streaming_user_text();
         self.flush_streaming_agent_text();
 
         // Clear active display — tool calls are already in messages
         self.active_tool_calls.clear();
-        self.tool_call_index.clear();
         self.flush_streaming_thought();
         self.enforce_message_limit();
     }
@@ -1861,6 +1886,7 @@ impl UiState {
     /// Clear all messages from the chat history.
     pub fn clear_messages(&mut self) {
         self.messages.clear();
+        self.tool_call_index.clear();
         self.messages_version += 1;
     }
 
@@ -3546,6 +3572,14 @@ impl UiState {
         if self.messages.len() > self.max_messages {
             let excess = self.messages.len() - self.max_messages;
             self.messages.drain(..excess);
+            self.tool_call_index.retain(|_, idx| {
+                if let Some(shifted) = idx.checked_sub(excess) {
+                    *idx = shifted;
+                    true
+                } else {
+                    false
+                }
+            });
         }
     }
 }
@@ -6168,6 +6202,83 @@ mod tests {
             "McpOAuthRequest should be handled by App, not UiState"
         );
         assert!(state.messages().is_empty());
+    }
+
+    #[test]
+    fn external_url_request_is_manual_and_nonterminal() {
+        for (url, expected) in [
+            (
+                "https://example.com/authorize?code=a%2Fb&state=unchanged#continue",
+                "Sign-in requested. Open in browser: https://example.com/authorize?code=a%2Fb&state=unchanged#continue",
+            ),
+            (
+                "https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next",
+                r"Sign-in requested. Open in browser: https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next",
+            ),
+        ] {
+            let mut state = UiState::new(500);
+            state.set_activity(Activity::Streaming);
+            state.apply_notification(&Notification::TurnStalled {
+                quiet: Duration::from_secs(31),
+            });
+            let version = state.messages_version();
+            assert!(
+                state.apply_notification(&Notification::ExternalUrlRequested { url: url.into() })
+            );
+            assert_eq!(state.messages_version(), version + 1);
+            assert_eq!(state.messages().len(), 1);
+            assert!(matches!(
+                state.messages()[0].kind(),
+                ChatMessageKind::System(text) if text == expected
+            ));
+            assert_eq!(state.activity(), Activity::Streaming);
+            assert!(state.stall().is_some());
+            assert!(state.main_session_id().is_none());
+            assert!(state.last_turn().is_none());
+            assert!(!state.has_modal_overlay());
+        }
+    }
+
+    #[test]
+    fn mcp_connection_error_is_durable_and_nonterminal() {
+        for (message, expected) in [
+            (
+                "MCP connection failed: café endpoint refused",
+                "[error] MCP connection failed: café endpoint refused",
+            ),
+            (
+                "MCP failed:\u{1b}[2J\n\u{202e}endpoint",
+                r"[error] MCP failed:\u{1b}[2J\n\u{202e}endpoint",
+            ),
+        ] {
+            let mut state = UiState::new(500);
+            state.set_activity(Activity::Waiting);
+            assert!(state.apply_notification(&Notification::McpConnectionError {
+                message: message.into(),
+            }));
+            assert_eq!(state.activity(), Activity::Waiting);
+            assert!(state.last_turn().is_none());
+            assert!(!state.has_modal_overlay());
+            assert!(
+                state.apply_notification(&Notification::McpServerInitialized {
+                    server_name: "subsequent-status".into(),
+                })
+            );
+            assert_eq!(state.activity(), Activity::Waiting);
+            assert!(state.apply_notification(&Notification::SessionCreated {
+                session_id: SessionId::new("new-session"),
+                current_mode: None,
+                current_model: None,
+                available_modes: Vec::new(),
+                available_models: Vec::new(),
+            }));
+            assert!(matches!(
+                state.messages()[0].kind(),
+                ChatMessageKind::System(text) if text == expected
+            ));
+            assert_eq!(state.messages().len(), 3);
+            assert!(!state.has_modal_overlay());
+        }
     }
 
     #[test]

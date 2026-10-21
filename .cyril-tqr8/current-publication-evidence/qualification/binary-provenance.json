@@ -1,0 +1,11 @@
+{
+  "path": "/tmp/cyril-tqr8-current-tested-20261020",
+  "sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+  "bytes": 102040072,
+  "source_executable": "/home/dwalleck/repos/cyril/target/debug/cyril",
+  "source_executable_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+  "actual_assembled_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "profile": "dev/defaultKAS, cargo build -p cyril --bins",
+  "preserved_before_any_next_build": true,
+  "classification": "Current actualassembledTqr workspace/noDefault/isolatedKAS gated build candidate; no native/consumer/CIallfeature/platform claim"
+}

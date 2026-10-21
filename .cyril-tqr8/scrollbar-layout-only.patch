@@ -1,0 +1,63 @@
+diff --git a/crates/cyril-ui/src/widgets/chat.rs b/crates/cyril-ui/src/widgets/chat.rs
+--- a/crates/cyril-ui/src/widgets/chat.rs
++++ b/crates/cyril-ui/src/widgets/chat.rs
+@@ -16,11 +16,22 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+         return;
+     }
+ 
++    // Keep wrapping stable as content overflows or the user enters browse mode.
++    // The scrollbar must never paint over the last cell of a wrapped URL.
++    let content_area = Rect {
++        width: if area.width > 1 {
++            area.width - 1
++        } else {
++            area.width
++        },
++        ..area
++    };
++
+     let mut lines: Vec<Line> = Vec::new();
+ 
+     // Render committed messages (includes tool calls in chronological position)
+     for msg in state.messages() {
+-        render_message(&mut lines, msg, area.width as usize, theme);
++        render_message(&mut lines, msg, content_area.width as usize, theme);
+         lines.push(Line::default()); // spacing between messages
+     }
+ 
+@@ -33,7 +44,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+                 .fg(theme.agent)
+                 .add_modifier(Modifier::BOLD),
+         ));
+-        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
++        let md_lines = markdown::render_with_theme(streaming, content_area.width as usize, theme);
+         lines.extend(md_lines);
+     }
+ 
+@@ -53,7 +64,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+         .block(Block::default());
+ 
+     // Use line_count to get the wrapped height (accounts for long lines wrapping)
+-    let total_lines = chat.line_count(area.width);
++    let total_lines = chat.line_count(content_area.width);
+ 
+     let max_scroll = total_lines.saturating_sub(visible_height);
+     let scroll_offset = match state.chat_scroll_back() {
+@@ -67,13 +78,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+     let scroll_clamped = scroll_offset.min(u16::MAX as usize) as u16;
+     let chat = chat.scroll((scroll_clamped, 0));
+ 
+-    frame.render_widget(chat, area);
++    frame.render_widget(chat, content_area);
+ 
+     // Scrollbar
+-    if total_lines > visible_height {
++    if area.width > 1 && total_lines > visible_height {
+         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
+         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+-        frame.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
++        let gutter = Rect::new(area.right() - 1, area.y, 1, area.height);
++        frame.render_stateful_widget(scrollbar, gutter, &mut scrollbar_state);
+     }
+ }
+ 

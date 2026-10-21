@@ -1,0 +1,79 @@
+{
+  "result": "FAIL",
+  "binary_sha256": "6e99e92dc88c01e7c7c25b305338d6edb87dd225868ead0931f52c47c7a521db",
+  "binary": "/tmp/cyril-tqr8-final-tested-20261020",
+  "fake_cli_sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+  "native_url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+  "scope": "Actual qualified standalone Tqr consumer manual notice and durable error under owned ACP peer/PTy, not real KAS/native-host qualification or NK panel/caar acceptance",
+  "observations": [
+    {
+      "capture": "01-native-url-manual-ack-not-auth.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 2268,
+      "full_native_url_exact": true,
+      "callback_delivery_ack": true,
+      "no_connected_or_authorized_claim": true
+    },
+    {
+      "capture": "02-durable-native-shaped-error.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 2518,
+      "message_preserved": true
+    },
+    {
+      "capture": "03-escaped-controls-printable-exact.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 2744,
+      "full_synthetic_url_exact": true,
+      "apostrophe_quote_backslash_unicode_exact": true,
+      "terminal_controls_and_bidi_visible_escapes": true
+    },
+    {
+      "capture": "04-later-content-before-navigation.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 24716,
+      "draft_preserved": true
+    },
+    {
+      "capture": "FAILED-final-screen.txt",
+      "columns": 140,
+      "rows": 40,
+      "raw_byte_offset": 36803
+    }
+  ],
+  "error": "AssertionError('full original URL not reachable by main-conversation PageUp')",
+  "consumer_returncode": 0,
+  "owned_root_removed_on_exit": true,
+  "no_private_logs_read_or_packaged": true,
+  "launch": {
+    "command": [
+      "/tmp/cyril-tqr8-final-tested-20261020",
+      "--cwd",
+      "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/ws",
+      "--agent-engine",
+      "kas"
+    ],
+    "environment": {
+      "TERM": "xterm-256color",
+      "COLORTERM": "truecolor",
+      "LANG": "C.UTF-8",
+      "PATH": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/bin",
+      "SHELL": "/bin/bash",
+      "HOME": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/home",
+      "USERPROFILE": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/home",
+      "XDG_CONFIG_HOME": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/config",
+      "XDG_DATA_HOME": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/data",
+      "XDG_CACHE_HOME": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/cache",
+      "TMPDIR": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/tmp",
+      "KIRO_HOME": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/home/.kiro",
+      "KIRO_AGENT_PATH": "/usr/bin/node",
+      "KIRO_KAS_SERVER_PATH": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-xul4ub6l/server.js",
+      "TQR_OWNED_OUTPUT": "/tmp/cyril-tqr8-manual-owned-20261020-a"
+    },
+    "boundary": "fresh isolated roots, PATH contains only immutable fake kiro-cli; explicit Node->owned Python peer, no actual native KAS"
+  }
+}

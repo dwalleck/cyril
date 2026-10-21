@@ -1,0 +1,18 @@
+{
+  "stage": "immutable harness reproducibility supplement",
+  "source_pin": "a5d2c4b5d5db88889ba5bc5e3f560375715977cd",
+  "original_handoff": ".cyril-1v25/receipts/kas-output-red-handoff.json",
+  "regression_patch": ".cyril-1v25/receipts/kas-output-test-only.patch",
+  "regression_patch_sha256": "84f7af326722e14ea9d7a00c948e410b6c6790a6bb9fee763a9f1fa1b13dd635",
+  "harness_file": ".cyril-1v25/smoke.py",
+  "harness_edit_status": "worktree-applied test-harness-only edit; not part of the original regression-only patch",
+  "harness_base_sha256": "60932a2c55a135a155e8a5100a0705d49f7d2b6dac82d8d62c9c3b40a8bbdd83",
+  "harness_prepared_sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+  "harness_patch": ".cyril-1v25/receipts/kas-output-harness-only.patch",
+  "harness_patch_sha256": "57cd631affdc7f9082fc5f8c338313da4246fcb406b90f7a1a4952868903f40b",
+  "trace_envelope": ".cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+  "trace_envelope_sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+  "reconstruction": "From the source pin, apply both regression_patch and harness_patch; supply the separately hash-pinned trace_envelope at its stated path. The original immutable artifacts remain unchanged.",
+  "production_output_text": "HELD: unchanged; explicit Main RED GO required before editing",
+  "execution": "Artifact preparation only; no builds/tests/lint/formatters/smoke/commit/push/tracker mutations"
+}

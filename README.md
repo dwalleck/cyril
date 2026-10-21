@@ -115,14 +115,23 @@ do not relocate credentials. There is no silent Wrapper or v2 fallback.
 
 ### KAS on native platforms
 
-Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and, only
-for the stored-token fallback above, reads `<data dir>/data.sqlite3`. Both use the same platform root:
+By default, Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas`.
+The stored-token fallback reads `<data dir>/data.sqlite3`. Native defaults are:
 
-| Platform | Kiro data directory |
+| Platform | Default Kiro data directory |
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/kiro-cli` when absolute; otherwise `~/.local/share/kiro-cli` |
 | macOS | `~/Library/Application Support/kiro-cli` |
 | Native Windows | `%LOCALAPPDATA%\Kiro-Cli`, falling back to Windows' local-app-data known folder when `LOCALAPPDATA` is unset or not absolute |
+
+`KIRO_DATA_DIR` overrides **bundle discovery only**. A value that is nonblank
+after checking whitespace is used with its original spelling, including leading
+or trailing spaces; Cyril does not append a `kiro-cli` or `Kiro-Cli` directory.
+An unset, empty, or whitespace-only value uses the native default above. Relative
+bundle roots resolve from Cyril's launch directory and stay bound there even
+when the agent runs in a different `--cwd` workspace. The credential store always
+keeps its native default location; neither `KIRO_DATA_DIR` nor `KIRO_HOME`
+relocates it.
 
 `XDG_DATA_HOME` does not redirect macOS or native Windows KAS discovery.
 macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME` and does not
@@ -135,6 +144,47 @@ The macOS data-root correction from
 [PR #167](https://github.com/dwalleck/cyril/pull/167) is integrated.
 Live native macOS/Windows KAS qualification is not claimed here. See the
 [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d).
+
+### Kiro profile roots
+
+Cyril uses one validated Kiro profile root for KAS settings, sidecar reads,
+global agent configurations and trust writes, and global host hooks. It defaults
+to `<home>/.kiro`; `KIRO_HOME` selects another profile without relocating KAS
+bundles or credentials.
+
+`KIRO_HOME` has leading/trailing whitespace trimmed; an unset, empty, or
+whitespace-only value uses the default. A nonempty value must be absolute on Unix
+or rooted on Windows (drive-relative paths such as `C:profile` are rejected).
+Filesystem roots and paths equal to or containing the user's home are also
+rejected, including symlink aliases. Rejected overrides produce a warning and
+fall back to the default profile. Workspace agents still shadow globals, and
+workspace hooks still merge with global hooks.
+
+### MCP sign-in requests and connection errors (KAS)
+
+Cyril handles KAS's `_kiro/openExternalUrl` callback by displaying a manual
+**“Sign-in requested. Open in browser:”** notice in the conversation. Cyril
+does not launch a browser or copy the URL to the clipboard. Printable quotes,
+apostrophes, backslashes and Unicode remain unchanged; terminal controls and
+Unicode bidirectional controls are shown as visible escape sequences.
+
+The main conversation reserves a fixed right-hand scrollbar column whenever
+at least two columns are available, so scrolling does not paint over wrapped
+URL text or change its wrapping width. A zero- or one-column viewport keeps
+all available content space and omits the scrollbar.
+
+The callback's `{success:true}` reply acknowledges accepted delivery for
+display, **not** a browser launch, completed authorization or a connected MCP
+server. MCP connection-error messages remain in the conversation independently
+of later notifications. This callback does not add an MCP management panel,
+persist OAuth credentials or implement a completion-notification protocol;
+passive inventory and server-management actions belong to the separate MCP
+management change. See the [qualification record](.cyril-tqr8/evidence.md#delivery-checkpoint-2026-10-20)
+for the exact exercised scope and evidence. Current local workspace, isolated
+KAS and no-default qualification pass, as does one current owned ACP/PTy
+consumer covering full-URL PageUp/PageDown, escaping, durable errors and draft
+preservation. These are not real-native KAS, native-terminal/host or CI
+acceptance claims.
 
 ### Local memory runtime
 
@@ -179,6 +229,20 @@ Key presses and held-key repeats are handled; key releases are ignored to preven
 duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
 because Crossterm reports those characters only on release. Paste the character
 instead; Unicode paste remains supported.
+
+### Tool call history
+
+Tool rows stay at their first observed position in the conversation. An update
+without a preceding start creates a row from the fields it supplies, including
+KAS **Tool Load** and **Subagent Response** updates. Later frames for the same
+call within a session merge into that row rather than adding duplicates,
+preserving the text before and after it. A new session can reuse a tool ID
+without changing the previous session's history.
+
+For successful KAS commands, string-valued `rawOutput.output` is shown beneath
+the completed row, including completions that omit `kind`. Existing output
+formats keep precedence; non-string `output` values and the formatted `message`
+field are not used as substitutes.
 
 ### Rejecting a tool with feedback (KAS)
 

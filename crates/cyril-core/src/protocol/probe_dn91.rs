@@ -55,6 +55,12 @@ fn adapter_matrix_advertises_if_and_only_if_the_mediator_answers() {
             host_io,
             "{name}: Kiro fs dialect",
         );
+        assert_eq!(
+            json.pointer("/_meta/kiro/openExternalUrl") == Some(&serde_json::Value::Bool(true)),
+            host::supports(adapters, HostFamily::ExternalUrl),
+            "{name}: external URL delivery",
+        );
+        assert!(json.pointer("/_meta/kiro/secretStorage").is_none());
 
         let hooks = json.pointer("/_meta/kiro/hooks");
         let inbound_hooks = matches!(hooks, Some(value) if value.get("v2").is_none());
@@ -82,6 +88,7 @@ fn v2_refuses_every_kas_host_family() {
     for family in [
         HostFamily::Auth,
         HostFamily::HostIo,
+        HostFamily::ExternalUrl,
         HostFamily::HooksInbound,
         HostFamily::HooksAny,
     ] {
@@ -109,6 +116,7 @@ fn advertisement_is_fully_determined_by_presence_direction_and_settings() {
 
         let mut kiro = serde_json::Map::new();
         kiro.insert("settings".into(), settings);
+        kiro.insert("openExternalUrl".into(), serde_json::Value::Bool(true));
         match mode {
             KasHooksMode::Off => {}
             KasHooksMode::Host => {

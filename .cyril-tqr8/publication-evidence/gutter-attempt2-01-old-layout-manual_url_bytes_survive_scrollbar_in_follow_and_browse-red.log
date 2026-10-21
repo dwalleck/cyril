@@ -1,0 +1,28 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo test -p cyril-ui widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse -- --exact --nocapture
+started_utc=2026-10-20T17:57:14.650416+00:00
+
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 27.18s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-e2af3c1da0e3aa98)
+
+running 1 test
+
+thread 'widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse' (4001191) panicked at crates/cyril-ui/src/widgets/chat.rs:2253:13:
+full opaque URL lost in browse=false: "Later unrelated statusSign-in requested. Open in browser:https://example.com/authorize?state=Ab0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_cfé界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyzAb0%2F_café界'\"\\xyz&control=\\u{1b}31m\\n\\u{202e}#FULL_URL_END"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse ... FAILED
+
+failures:
+
+failures:
+    widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 795 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p cyril-ui --lib`
+
+qualification_exit_code=101
+qualification_elapsed_seconds=27.226441

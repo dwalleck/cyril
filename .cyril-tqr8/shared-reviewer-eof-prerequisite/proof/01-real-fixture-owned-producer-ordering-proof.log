@@ -1,0 +1,9 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=python3 /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/reviewer-eof-fixture-proof-recipe.py --fixture /home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture/crates/cyril-workbench/tests/fixtures/reviewer_peer.py --output /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof
+started_utc=2026-10-20T18:31:09.390303+00:00
+
+{"producer_proof": "PASS", "output": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof", "cases": [{"case": "old-prompt", "exit_code": 1}, {"case": "post-flush", "exit_code": 0}]}
+
+qualification_exit_code=0
+qualification_elapsed_seconds=0.581807

@@ -1,0 +1,996 @@
+{
+  "scope": "Actual Tqr feature tree stable-scrollbar-gutter sensitivity and final qualification, authorized attempt2 with mandatory entrypoint touches",
+  "commands": [
+    {
+      "label": "01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:14.650416+00:00",
+      "elapsed_seconds": 27.226440946018556,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red.log",
+      "log_sha256": "28a5fc90a474c23e3edda547dd7c9344fb30fc4301b58a0f6585af0a6e70da08",
+      "expected_exit": 101
+    },
+    {
+      "label": "02-old-layout-chat_gutter_width_is_stable_without_overflow-red",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::chat_gutter_width_is_stable_without_overflow -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:41.877723+00:00",
+      "elapsed_seconds": 0.13622933099395595,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/02-old-layout-chat_gutter_width_is_stable_without_overflow-red.log",
+      "log_sha256": "2e6ee3b92d0465fd9c5b6d61c5c136a097b7883dccfe6759abb6ae2083ae60ca",
+      "expected_exit": 101
+    },
+    {
+      "label": "03-old-layout-live_text_uses_the_same_reserved_content_width-red",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::live_text_uses_the_same_reserved_content_width -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:42.014347+00:00",
+      "elapsed_seconds": 0.12548997800331563,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/03-old-layout-live_text_uses_the_same_reserved_content_width-red.log",
+      "log_sha256": "0698b44a07ae4fe1608c8be5415be484e4a6ca9c9ac16a4a9b317198542569d7",
+      "expected_exit": 101
+    },
+    {
+      "label": "04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:42.140238+00:00",
+      "elapsed_seconds": 0.12142991900327615,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red.log",
+      "log_sha256": "2ffc2549576439a4c38d3156a306fa1e48269d665b8fd47348160677496bed8d",
+      "expected_exit": 101
+    },
+    {
+      "label": "05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:42.871250+00:00",
+      "elapsed_seconds": 6.658213260001503,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green.log",
+      "log_sha256": "32476ee6196256c37a2787a6f650d3b21c3deb1462e8a1fe45491d72685777bb"
+    },
+    {
+      "label": "06-restored-chat_gutter_width_is_stable_without_overflow-green",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::chat_gutter_width_is_stable_without_overflow -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:49.529903+00:00",
+      "elapsed_seconds": 0.13000217502121814,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/06-restored-chat_gutter_width_is_stable_without_overflow-green.log",
+      "log_sha256": "6028c7ecc9a41d02d5ba8f6391774586ccded5294da5a789ac3535c44769a9da"
+    },
+    {
+      "label": "07-restored-live_text_uses_the_same_reserved_content_width-green",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::live_text_uses_the_same_reserved_content_width -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:49.660256+00:00",
+      "elapsed_seconds": 0.13375373400049284,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/07-restored-live_text_uses_the_same_reserved_content_width-green.log",
+      "log_sha256": "292b8b43e0f714e5de9402c1ba6e499f85abc1ad7b3214b8e881e9062b530b3d"
+    },
+    {
+      "label": "08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:57:49.794354+00:00",
+      "elapsed_seconds": 0.1256885300099384,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green.log",
+      "log_sha256": "c9c542a6202e5803f063b9e8f9567af05f41825230c276b1a58a7c124c779a04"
+    },
+    {
+      "label": "09-indicator-only-width-one-full-cell-red",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:58:26.748204+00:00",
+      "elapsed_seconds": 4.279880829009926,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/09-indicator-only-width-one-full-cell-red.log",
+      "log_sha256": "cd6f8727a43eb30f4edeec3f2fb3e2959b86b23928af920e5284333a7b1d69e1",
+      "expected_exit": 101
+    },
+    {
+      "label": "10-restored-width-one-full-cell-green",
+      "command": "cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:58:31.625307+00:00",
+      "elapsed_seconds": 3.9762334270053543,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/10-restored-width-one-full-cell-green.log",
+      "log_sha256": "6ced843a478a3a4090a2037702340766962ebd3eee68724b5ffb31fd85699ff3"
+    },
+    {
+      "label": "11-initial-final-format",
+      "command": "cargo fmt --all",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:59:22.455018+00:00",
+      "elapsed_seconds": 0.9319085610040929,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/11-initial-final-format.log",
+      "log_sha256": "89c83f75888d4c0b1c3e6eda9127da538af5d2d52f86f11a11150088128bd725"
+    },
+    {
+      "label": "12-workspace-all-targets-clippy",
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:59:40.700249+00:00",
+      "elapsed_seconds": 15.589050406997558,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/12-workspace-all-targets-clippy.log",
+      "log_sha256": "474236f6056cede726d4041384895e91f861a84a3e7b2d4a971e85f7b7666864"
+    },
+    {
+      "label": "13-full-workspace-tests",
+      "command": "cargo test --workspace",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T17:59:56.289922+00:00",
+      "elapsed_seconds": 76.94188410899369,
+      "exit_code": 101,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/13-full-workspace-tests.log",
+      "log_sha256": "7e7a9cad24d29654361c4310b36d41167fde1887b39ec8420f39799d0501ee2e"
+    }
+  ],
+  "cargo_slot": "released",
+  "native_status": "No native/auth/live GO",
+  "previous_attempt": {
+    "handoff": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt1/canonical-handoff.json",
+    "sha256": "5808e773d60270a87e998812438b35794f06e95f141d5271801afb317c4de583",
+    "status": "Compiler setup failure, NOT behavioral RED; touchless history immutable"
+  },
+  "source_inspection": {
+    "enum": "crates/cyril-core/src/types/event.rs:32-35",
+    "variants": {
+      "ExternalUrlRequested": "211-213",
+      "McpConnectionError": "216-218"
+    },
+    "module_and_reexport": "crates/cyril-core/src/types/mod.rs:6,37-41; crates/cyril-core/src/lib.rs:10",
+    "unconditional": true,
+    "source_finding": "Variants/APIs ARE present without cfg gates; attempt1 not missing feature source"
+  },
+  "verification_recipe": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/.cyril-tqr8/scrollbar-parent-verification.json",
+  "source-ready-before-proof": {
+    "actual_source_tree": "b7b9d2546a945d2278a5aec359ed276bce335699",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/source-ready-before-proof.source.json",
+    "source_manifest_sha256": "bfe4e31d6f7a6d0fc61133ef96d4fc425ca3dec27d3d540ef69c9a325adb950b",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "entrypoint_touches": [
+    {
+      "boundary": "switch-to-actual-Tqr-before-any-focused-Cargo",
+      "utc": "2026-10-20T17:56:24.831988+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792507756929367612,
+          "after_mtime_ns": 1792518984830329077
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792507756929367612,
+          "after_mtime_ns": 1792518984830329077
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792507756929367612,
+          "after_mtime_ns": 1792518984830329077
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792470510973538170,
+          "after_mtime_ns": 1792518984831329060
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-reverse-layout-only-mutation-before-first-focused-invocation",
+      "utc": "2026-10-20T17:57:14.048278+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792518984830329077,
+          "after_mtime_ns": 1792519034046542421
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792518984830329077,
+          "after_mtime_ns": 1792519034046542421
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792518984830329077,
+          "after_mtime_ns": 1792519034046542421
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792518984831329060,
+          "after_mtime_ns": 1792519034046542421
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-exact-layout-restore-before-restored-focused-tests",
+      "utc": "2026-10-20T17:57:42.263230+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792519034046542421,
+          "after_mtime_ns": 1792519062262633327
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792519034046542421,
+          "after_mtime_ns": 1792519062262633327
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792519034046542421,
+          "after_mtime_ns": 1792519062262633327
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792519034046542421,
+          "after_mtime_ns": 1792519062262633327
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-indicator-only-width-one-mutation-before-focused-test",
+      "utc": "2026-10-20T17:58:26.135470+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792519062262633327,
+          "after_mtime_ns": 1792519106134385777
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792519062262633327,
+          "after_mtime_ns": 1792519106134385777
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792519062262633327,
+          "after_mtime_ns": 1792519106134385777
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792519062262633327,
+          "after_mtime_ns": 1792519106134385777
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-exact-indicator-mutation-restore-before-restored-GREEN",
+      "utc": "2026-10-20T17:58:31.029697+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792519106134385777,
+          "after_mtime_ns": 1792519111029060703
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792519106134385777,
+          "after_mtime_ns": 1792519111029060703
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792519106134385777,
+          "after_mtime_ns": 1792519111029060703
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792519106134385777,
+          "after_mtime_ns": 1792519111029060703
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    },
+    {
+      "boundary": "after-initial-final-format-before-final-source-pin-and-full-gates",
+      "utc": "2026-10-20T17:59:23.387970+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792519111029060703,
+          "after_mtime_ns": 1792519163386464206
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792519111029060703,
+          "after_mtime_ns": 1792519163386464206
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792519111029060703,
+          "after_mtime_ns": 1792519163386464206
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792519111029060703,
+          "after_mtime_ns": 1792519163387464190
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    }
+  ],
+  "old-layout-feature-source": {
+    "actual_source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/old-layout-feature-source.source.json",
+    "source_manifest_sha256": "f80d9077fd101f77e51d46ae5957fbe59ec777987e289b26503d5a07215c34f8",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "restored-layout-source": {
+    "actual_source_tree": "b7b9d2546a945d2278a5aec359ed276bce335699",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/restored-layout-source.source.json",
+    "source_manifest_sha256": "d5f719e536a5b8a7cdb4cb81c8d0b495144c229788cf6554050b0b9fa97a1391",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "old_layout_proof": {
+    "red": [
+      {
+        "test": "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+        "label": "01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red",
+        "exit_code": 101,
+        "intended_behavioral_red": true,
+        "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+      },
+      {
+        "test": "chat_gutter_width_is_stable_without_overflow",
+        "label": "02-old-layout-chat_gutter_width_is_stable_without_overflow-red",
+        "exit_code": 101,
+        "intended_behavioral_red": true,
+        "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+      },
+      {
+        "test": "live_text_uses_the_same_reserved_content_width",
+        "label": "03-old-layout-live_text_uses_the_same_reserved_content_width-red",
+        "exit_code": 101,
+        "intended_behavioral_red": true,
+        "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+      },
+      {
+        "test": "zero_and_one_column_chat_keep_available_content_without_scrollbar",
+        "label": "04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red",
+        "exit_code": 101,
+        "intended_behavioral_red": true,
+        "source_tree": "78edc99546f4a8edcab554aa346ed70f9941a7e3"
+      }
+    ],
+    "restored_green": [
+      {
+        "test": "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+        "label": "05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green",
+        "passed": true
+      },
+      {
+        "test": "chat_gutter_width_is_stable_without_overflow",
+        "label": "06-restored-chat_gutter_width_is_stable_without_overflow-green",
+        "passed": true
+      },
+      {
+        "test": "live_text_uses_the_same_reserved_content_width",
+        "label": "07-restored-live_text_uses_the_same_reserved_content_width-green",
+        "passed": true
+      },
+      {
+        "test": "zero_and_one_column_chat_keep_available_content_without_scrollbar",
+        "label": "08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green",
+        "passed": true
+      }
+    ],
+    "problem": null,
+    "passed": true,
+    "exact_tree_restoration": true
+  },
+  "indicator-only-width-one-source": {
+    "actual_source_tree": "4eaf4b7fe99f7990b932a01e8e4b0a8255707915",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/indicator-only-width-one-source.source.json",
+    "source_manifest_sha256": "4701df431545ca59dd50072d414c8f4962a9b5e8724260ba678e23594d4f41a3",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "restored-indicator-source": {
+    "actual_source_tree": "b7b9d2546a945d2278a5aec359ed276bce335699",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/restored-indicator-source.source.json",
+    "source_manifest_sha256": "ce84f0ad06bd138bbfd4c0592b3f9c193b0d3ea70124c1c53965ab792883228d",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "indicator_only_proof": {
+    "name": "allow-width-one-scrollbar",
+    "patch_sha256": "69af8d72462d3ace0b60b8d0ee7b6b906686745a64c6b74443144f5c3807a689",
+    "red": {
+      "label": "09-indicator-only-width-one-full-cell-red",
+      "exit_code": 101,
+      "intended_behavioral_red": true,
+      "source_tree": "4eaf4b7fe99f7990b932a01e8e4b0a8255707915"
+    },
+    "restored_green": {
+      "label": "10-restored-width-one-full-cell-green",
+      "passed": true
+    },
+    "problem": null,
+    "passed": true,
+    "content_width_unchanged": true,
+    "whole_tree_exact_restoration": true
+  },
+  "checked-after-initial-format": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/checked-after-initial-format.source.json",
+    "source_manifest_sha256": "96b49e1dd681f05c41984913dfc1135f780157414f32aefc5e9036f5bab3f8ad",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "checked_source": {
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "source_ready_historical_chat_sha256": "e750b9765c6843b9d649b9897f407992e4385cdfee81188e0c03d12465896b1c",
+    "checked_post_format_chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+    "proof_correct_tree": "b7b9d2546a945d2278a5aec359ed276bce335699",
+    "pre_vs_post_format_paths": [
+      "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "crates/cyril-ui/src/widgets/chat.rs"
+    ],
+    "parent_url_callback_fixture_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674"
+  },
+  "stopped_on_failure": "13-full-workspace-tests",
+  "source-after-stopped-gates": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/source-after-stopped-gates.source.json",
+    "source_manifest_sha256": "99f135b08c06f3b26bf07fb593e8abcd56722ac6c013b63ff8c67523d1f251d8",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "workspace_test_summary": {
+    "passed": 2834,
+    "failed": 1,
+    "ignored": 13,
+    "measured": 0,
+    "top_level_suite_rows": 34,
+    "excluded_nested_filtered_summaries": 6,
+    "totals_scope": "Observed completed top-level suites before cargo stop, not entire workspace/doc-test completion",
+    "rows": [
+      {
+        "line": 272,
+        "suite": "Running unittests src/main.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril-9f955a21866522e2)",
+        "status": "ok",
+        "passed": 254,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 2.88
+      },
+      {
+        "line": 278,
+        "suite": "Running unittests src/bin/cyril-memory-runtime.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_memory_runtime-dd67042bfa42d4c5)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 286,
+        "suite": "Running tests/architecture_tests.rs (/home/dwalleck/repos/cyril/target/debug/deps/architecture_tests-8b09ee02118023d7)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.04
+      },
+      {
+        "line": 294,
+        "suite": "Running tests/crtool_cli.rs (/home/dwalleck/repos/cyril/target/debug/deps/crtool_cli-7a79698cbd4efb91)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.06
+      },
+      {
+        "line": 318,
+        "suite": "Running tests/event_routing.rs (/home/dwalleck/repos/cyril/target/debug/deps/event_routing-5036132d48d326e2)",
+        "status": "ok",
+        "passed": 18,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 332,
+        "suite": "Running tests/memory_runtime.rs (/home/dwalleck/repos/cyril/target/debug/deps/memory_runtime-96b6eab334e66763)",
+        "status": "ok",
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.38
+      },
+      {
+        "line": 345,
+        "suite": "Running tests/nd4h_source_fences.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_source_fences-bbafb705fba6be60)",
+        "status": "ok",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 354,
+        "suite": "Running tests/powers_source_fence.rs (/home/dwalleck/repos/cyril/target/debug/deps/powers_source_fence-df4f0c2f003a7c5f)",
+        "status": "ok",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.04
+      },
+      {
+        "line": 1868,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-3d9b924f2d5da95b)",
+        "status": "ok",
+        "passed": 1485,
+        "failed": 0,
+        "ignored": 5,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 3.06
+      },
+      {
+        "line": 1875,
+        "suite": "Running tests/kas_freepath_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_freepath_smoke-25287a270cfdb3e2)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1882,
+        "suite": "Running tests/kas_fs_host_io_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_fs_host_io_smoke-3507622e1e1b32d6)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1889,
+        "suite": "Running tests/kas_settings_handshake_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_settings_handshake_smoke-65bab2b88c6fdc6e)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1896,
+        "suite": "Running tests/kas_wrapper_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_wrapper_smoke-31c774cf5835563b)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1904,
+        "suite": "Running tests/nd4h_legacy_config_compat.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_legacy_config_compat-036b27f8538f2ef7)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1916,
+        "suite": "Running tests/review_launch.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_launch-062656e0dbbe2ccb)",
+        "status": "ok",
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.05
+      },
+      {
+        "line": 1923,
+        "suite": "Running tests/review_policy_vectors.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_policy_vectors-b0b172d1d189997c)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1930,
+        "suite": "Running tests/session_configuration.rs (/home/dwalleck/repos/cyril/target/debug/deps/session_configuration-3af268c4bc6f9bb4)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.02
+      },
+      {
+        "line": 1963,
+        "suite": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-ce57e2f048f72de4)",
+        "status": "ok",
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 11.15
+      },
+      {
+        "line": 1974,
+        "suite": "Running tests/win_wsl_wiring.rs (/home/dwalleck/repos/cyril/target/debug/deps/win_wsl_wiring-035e7ae79fd0441f)",
+        "status": "ok",
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 2068,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_memory-c78bae333d55ed0b)",
+        "status": "ok",
+        "passed": 87,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.09
+      },
+      {
+        "line": 2115,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_review-31a7e87459a2f3f5)",
+        "status": "ok",
+        "passed": 41,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.03
+      },
+      {
+        "line": 2129,
+        "suite": "Running tests/check.rs (/home/dwalleck/repos/cyril/target/debug/deps/check-f717d162c5ca76ee)",
+        "status": "ok",
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 3.03
+      },
+      {
+        "line": 2137,
+        "suite": "Running tests/findings.rs (/home/dwalleck/repos/cyril/target/debug/deps/findings-c647e22a1a41ec0c)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 2152,
+        "suite": "Running tests/goldens.rs (/home/dwalleck/repos/cyril/target/debug/deps/goldens-fee99dae9603d7ec)",
+        "status": "ok",
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.15
+      },
+      {
+        "line": 2160,
+        "suite": "Running tests/probe.rs (/home/dwalleck/repos/cyril/target/debug/deps/probe-129c271651635d1e)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.03
+      },
+      {
+        "line": 2962,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-56f43fc088f818c2)",
+        "status": "ok",
+        "passed": 795,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.07
+      },
+      {
+        "line": 2983,
+        "suite": "Running tests/modal_theme.rs (/home/dwalleck/repos/cyril/target/debug/deps/modal_theme-5bcd44f31f532636)",
+        "status": "ok",
+        "passed": 14,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.01
+      },
+      {
+        "line": 2992,
+        "suite": "Running tests/no_percentile_computation.rs (/home/dwalleck/repos/cyril/target/debug/deps/no_percentile_computation-b5f2377a07a73f6c)",
+        "status": "ok",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.01
+      },
+      {
+        "line": 3001,
+        "suite": "Running tests/picker_active_marker.rs (/home/dwalleck/repos/cyril/target/debug/deps/picker_active_marker-ed8586b70810ff31)",
+        "status": "ok",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 3018,
+        "suite": "Running tests/picker_viewport.rs (/home/dwalleck/repos/cyril/target/debug/deps/picker_viewport-42f20880a08891e9)",
+        "status": "ok",
+        "passed": 11,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.02
+      },
+      {
+        "line": 3032,
+        "suite": "Running tests/widget_theme_sources.rs (/home/dwalleck/repos/cyril/target/debug/deps/widget_theme_sources-8c8b9d22d99c2ee0)",
+        "status": "ok",
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 3041,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_voice-aa3a0ea83b9cefbb)",
+        "status": "ok",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 3056,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_workbench-e7fb272ddfb679ff)",
+        "status": "ok",
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.01
+      },
+      {
+        "line": 3108,
+        "suite": "Running tests/reviewer.rs (/home/dwalleck/repos/cyril/target/debug/deps/reviewer-372e2f3a051b7c69)",
+        "status": "FAILED",
+        "passed": 36,
+        "failed": 1,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 5.13
+      }
+    ],
+    "nested_rows": [
+      {
+        "line": 1112,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-3d9b924f2d5da95b)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 1489,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1123,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-3d9b924f2d5da95b)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 1489,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1144,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-3d9b924f2d5da95b)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 1489,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1941,
+        "suite": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-ce57e2f048f72de4)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 8,
+        "elapsed_seconds": 0.01
+      },
+      {
+        "line": 1949,
+        "suite": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-ce57e2f048f72de4)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 8,
+        "elapsed_seconds": 0.01
+      },
+      {
+        "line": 1957,
+        "suite": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-ce57e2f048f72de4)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 8,
+        "elapsed_seconds": 0.0
+      }
+    ]
+  },
+  "unexpected_failure": {
+    "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test --workspace",
+    "exit_code": 101,
+    "package": "cyril-workbench",
+    "test_binary": "tests/reviewer.rs",
+    "test": "runtime_drop_retains_evidence_until_core_completion",
+    "exact_error": "Error: \"missing EOF window\"",
+    "failed_suite": {
+      "passed": 36,
+      "failed": 1,
+      "ignored": 0
+    },
+    "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/13-full-workspace-tests.log",
+    "log_sha256": "7e7a9cad24d29654361c4310b36d41167fde1887b39ec8420f39799d0501ee2e",
+    "retry": false,
+    "repair": false,
+    "classification": "Unexpected workspace-gate failure; not suppressed or classified as flake"
+  },
+  "final_status": "BLOCKED by full workspace test failure after all five sensitivity pairs passed and workspace Clippy passed",
+  "qualified_binary": null,
+  "source_after_stop": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "matches_checked_pin": true,
+    "post_format_chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+    "post_format_callback_fixture_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674"
+  },
+  "totals": {
+    "commands_run": 13,
+    "expected_behavioral_red_commands": 5,
+    "restored_green_commands": 5,
+    "unexpected_failed_commands": 1,
+    "initial_final_format_passes": 1,
+    "full_workspace_clippy_passes": 1,
+    "full_workspace_test_failures": 1,
+    "temporary_mutation_kinds": 2,
+    "exact_source_restorations": 2,
+    "qualified_binaries": 0,
+    "benchmarks": 0,
+    "native_consumer_runs": 0,
+    "commits": 0,
+    "pushes": 0,
+    "tracker_mutations": 0
+  },
+  "not_run": [
+    "Default cargo build -p cyril",
+    "Final cargo fmt --all --check",
+    "No-default core callback-focused test",
+    "Full no-default core tests",
+    "Final no-default cyril binary build",
+    "Qualified private binary /tmp/cyril-tqr8-gutter-qualified-20261020",
+    "Native/auth/live consumer"
+  ],
+  "limits": [
+    "All4 unchanged old-layout behavior oracles plus exact named indicator-only width1 mutation sensitivity passed; all mutations restored byte-exactly before initialfmt.",
+    "Authorized initialfmt changed only formatting in chat.rs and external_url_wire.rs; historical source/patch hashes are not relabeled as checked post-format hashes.",
+    "Post-format full workspace UI suite (795 passed/0 failed/1 ignored) includes all4 oracles GREEN.",
+    "Workspace gate failed at workbench missing EOF window; no later build/no-default gates were run, no qualified private binary was produced.",
+    "Attempt1 compiler-only failure retained immutable; actual source inspection confirmed unconditional APIs; attempt2 mandate-touch forced actual-core rebuild and first same-source oracle compiled successfully.",
+    "No native/auth/consumer GO; old6e actual consumer failure remains historical."
+  ]
+}

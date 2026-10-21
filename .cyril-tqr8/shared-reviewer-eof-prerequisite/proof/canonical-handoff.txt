@@ -1,0 +1,10 @@
+REVIEWER EOF TEST-ONLY PREREQUISITE ATTEMPT1 — SCOPED PASS; CARGO RELEASED
+Canonical /home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/canonical-handoff.json
+SeparateWT /home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture; HEAD8e5c325ebb5dac3a4ad89f71838fd198cc177543; checked/restored finaltree 8186d065a18643af3053ea75acaedeff0b064a3b
+RepairpatchSHA9c04a71ab9ca59f0c8d8ccd6a1db5d7f067337489ca676f996eaf8ef8d026baf; recipeSHA06a20aa55e588a75ae96b5c047f1b76f99ef9fdaca2bdde0185de9af8bbe9511. Private-index equivalence proves exactly2test-file repair; realindex untouched.
+Owned real-producer proof PASS: old-prompt exit1/literalBrokenPipeError/no readiness or EOF events; post-flush exit0/actualwaitingstdout/bothEOF events evidence_exists=true/prompt stillpending. Samecorrectedfixture; owned naturally released sleeper substitute onlyinproducerproof. No historical-cause or original descendant-lifetime inference.
+Actualbridge focus currentGREEN; temporary production earlyremove afterroot.keep compiled and RED at cleanup-window:evidence removed beforecorecompletion leftBool(false)/righttrue; inverse specializededit FINALLY exactrestored SHA626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff; samefocusedGREEN. No assertion/wait/timeout/budget edit.
+Full workbench reviewer integrationtarget37pass0fail0ignored; workbenchalltargetClippy-DwarningsPASS; cargo fmt --all --checkPASS. Original actualbridge120sleeper/process assertions retained.
+Expected mutanttree 576fb47736e3195ab6206bac655cad00b35c7d7f; final production unchanged. No unexpected qualificationcommand failures/retries. Allcommands sharedtarget /home/dwalleck/repos/cyril/target, root touches eachboundary.
+Scoped prerequisite only: NOT fullworkspace, NOT integratedTqr/C6 PASS, NOT historical EOF cause proof, no native/auth/consumer/commit/publication. Prior actual failures not waived.
+CARGO RELEASED.

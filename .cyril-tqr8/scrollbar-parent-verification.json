@@ -1,0 +1,63 @@
+{
+  "status": "PARENT_OBSERVED_FIVE_RED_RESTORED_GREEN_PAIRS;WORKSPACEBLOCKED;OWNED_CONSUMER_SCOPED_PASS",
+  "scope": "Executed parent proof receipt plus historical pre-format mutation inputs;not worker authorization to rerun",
+  "old_source_setup": "Use the actual feature postimages (ExternalUrlRequested etc already present) in parent-owned isolated proof tree. Reverse only scrollbar-layout-only.patch from assembled chat.rs; keep the four new regressions and all other feature source unchanged. Bare HEAD6c0f41c7 lacks feature APIs and is NOT the intended RED source.",
+  "new_source_setup": "Apply scrollbar-layout-only.patch forward to restore exact assembled chat.rs postimage; do not change test oracle or test inputs.",
+  "tests_only_patch": "scrollbar-regression-tests.patch;can instead apply to pre-gutter actual feature tree whose chat.rs remains base-production layout",
+  "combined_patch": "scrollbar-source-and-tests.patch",
+  "layout_only_patch": "scrollbar-layout-only.patch",
+  "tests": [
+    {
+      "name": "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+      "executed_parent_command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse -- --exact --nocapture",
+      "behavioral_red": true,
+      "restored_green": true,
+      "old_layout_red_log": "publication-evidence/gutter-attempt2-01-old-layout-manual_url_bytes_survive_scrollbar_in_follow_and_browse-red.log",
+      "restored_green_log": "publication-evidence/gutter-attempt2-05-restored-manual_url_bytes_survive_scrollbar_in_follow_and_browse-green.log"
+    },
+    {
+      "name": "chat_gutter_width_is_stable_without_overflow",
+      "executed_parent_command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui widgets::chat::tests::chat_gutter_width_is_stable_without_overflow -- --exact --nocapture",
+      "behavioral_red": true,
+      "restored_green": true,
+      "old_layout_red_log": "publication-evidence/gutter-attempt2-02-old-layout-chat_gutter_width_is_stable_without_overflow-red.log",
+      "restored_green_log": "publication-evidence/gutter-attempt2-06-restored-chat_gutter_width_is_stable_without_overflow-green.log"
+    },
+    {
+      "name": "live_text_uses_the_same_reserved_content_width",
+      "executed_parent_command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui widgets::chat::tests::live_text_uses_the_same_reserved_content_width -- --exact --nocapture",
+      "behavioral_red": true,
+      "restored_green": true,
+      "old_layout_red_log": "publication-evidence/gutter-attempt2-03-old-layout-live_text_uses_the_same_reserved_content_width-red.log",
+      "restored_green_log": "publication-evidence/gutter-attempt2-07-restored-live_text_uses_the_same_reserved_content_width-green.log"
+    },
+    {
+      "name": "zero_and_one_column_chat_keep_available_content_without_scrollbar",
+      "executed_parent_command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture",
+      "behavioral_red": true,
+      "restored_green": true,
+      "old_layout_red_log": "publication-evidence/gutter-attempt2-04-old-layout-zero_and_one_column_chat_keep_available_content_without_scrollbar-red.log",
+      "restored_green_log": "publication-evidence/gutter-attempt2-08-restored-zero_and_one_column_chat_keep_available_content_without_scrollbar-green.log"
+    }
+  ],
+  "red_receipt_requirement": "Must execute the intended test and fail its behavior assertion on old layout;compilation/tool errors or zero-test runs are not sensitivity evidence.",
+  "green_receipt_requirement": "Unchanged tests execute and pass on repaired source;then parent runs applicable repository gates and fresh repair review.",
+  "named_mutation": {
+    "name": "allow-width-one-scrollbar",
+    "patch": "scrollbar-width-one-guard-mutation.patch",
+    "mechanism": "Change ONLY the indicator guard after frame.render_widget(chat,content_area) from area.width>1 to area.width>0. Leave content_area's separate width>1 rule,contentwidth,rowgeometry and four-row overflow input unchanged. Width0 stays safe; width1 keeps its full content rect while arrows/track paint into those existing cells.",
+    "required_parent_sequence": "Correct source GREEN;apply named mutation and observe executed width1 full-cell assertion RED;reverse mutation and observe unchanged test restored GREEN;retain patch/source pins and raw receipts",
+    "why_four_rows": "Scrollbar has nonzero track after its two default arrowheads;old two-row viewport caused early return and could not discriminate the width guard",
+    "status": "OBSERVED intended width1fullcell behavioralRED and unchangedtest restoredGREEN;whole-tree exactrestoration/contentwidth unchanged;parentattempt2",
+    "executed_parent_command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture"
+  },
+  "consumer_boundary": "Main separatelyauthorizedexactpartial2954 controlledpeerB/C;both scopedPASS,firstAFAILimmutable. No furtherconsumer/native/account/auth/config GO implied;workspaceblocked not fullyqualified.",
+  "pre_format_proof_chat_sha256": "e750b9765c6843b9d649b9897f407992e4385cdfee81188e0c03d12465896b1c",
+  "post_format_publication_chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+  "proof_source_tree": "b7b9d2546a945d2278a5aec359ed276bce335699",
+  "post_format_qualified_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+  "proof_source_limit": "Existing patches pinpreformat inputs;parent afterproofs formattedchat+callbacktest. Do not claim oldpatches are finalpostformat sourcepostimages or replayed oncurrenttree.",
+  "executed_parent_receipt": "publication-evidence/gutter-attempt2-canonical-handoff.json",
+  "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+  "overall_remaining": "Mandatory fullworkspace missingEOFgate remains unwaived;commit/tracker/ownPR parentowned"
+}

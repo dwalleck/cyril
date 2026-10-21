@@ -206,6 +206,16 @@ pub enum Notification {
         server_name: String,
         url: String,
     },
+    /// A global host request to surface this exact, untrusted URL for manual
+    /// authorization. Delivery does not mean a browser opened or OAuth completed.
+    ExternalUrlRequested {
+        url: String,
+    },
+    /// KAS reported an MCP connection failure. This is display-only: it neither
+    /// completes a chat turn nor implies that the agent disconnected.
+    McpConnectionError {
+        message: String,
+    },
     McpServerInitialized {
         server_name: String,
     },

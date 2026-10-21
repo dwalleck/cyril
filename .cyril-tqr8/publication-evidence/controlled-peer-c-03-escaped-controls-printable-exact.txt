@@ -1,0 +1,40 @@
+sess_5f9db173-329e-4c0f-8e5b-43eec1a2858f                                                                                                   
+Connecting to agent...                                                                                                                      
+                                                                                                                                            
+Sign-in requested. Open in browser:                                                                                                         
+http://127.0.0.1:53181/authorize?response_type=code&client_id=fixture-client-Y3MJNQDviGUdqOlIufGINxJN&code_challenge=95-UuZxwqCCXXt7MXkIvXL 
+lZHehBdsBuKA1TqkkQOM4&code_challenge_method=S256&redirect_uri=http%3A%2F%2Flocalhost%3A37667%2Foauth%2Fcallback&state=cbd3b9a5-e21e-4cdc-bd 
+6e-328e05e7cfb3&scope=fixture.read&resource=http%3A%2F%2F127.0.0.1%3A53181%2Fmcp%2Foauth                                                    
+                                                                                                                                            
+Session created: sess_5f9db173-329e-4c0f-8e5b-43eec1a2858f                                                                                  
+                                                                                                                                            
+[error] MCP server "fixture-failed" failed to connect: Error POSTing to endpoint:                                                           
+{"error":"synthetic_unavailable","error_description":"Deliberately unavailable synthetic MCP endpoint."}                                    
+                                                                                                                                            
+Sign-in requested. Open in browser:                                                                                                         
+http://127.0.0.1:1/authorize?state=apostrophe'a\b&hint=café&quote="exact"&control=\u{1b}[31m\n\r\t\u{202e}&tail=TQR_SAFE_TAIL               
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                         │
+│                                                                                                                                          │
+│                                                                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+cyril                                                                                                                                       

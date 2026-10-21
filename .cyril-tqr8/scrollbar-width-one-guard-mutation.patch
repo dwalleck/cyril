@@ -1,0 +1,12 @@
+diff --git a/crates/cyril-ui/src/widgets/chat.rs b/crates/cyril-ui/src/widgets/chat.rs
+--- a/crates/cyril-ui/src/widgets/chat.rs
++++ b/crates/cyril-ui/src/widgets/chat.rs
+@@ -81,7 +81,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+     frame.render_widget(chat, content_area);
+ 
+     // Scrollbar
+-    if area.width > 1 && total_lines > visible_height {
++    if area.width > 0 && total_lines > visible_height {
+         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
+         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+         let gutter = Rect::new(area.right() - 1, area.y, 1, area.height);

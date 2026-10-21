@@ -1,0 +1,475 @@
+{
+  "scope": "Main-authorized remaining changed-path Tqr qualification after accepted but NOT waived workbench workspace failure",
+  "commands": [
+    {
+      "label": "01-default-binary-build",
+      "command": "cargo build -p cyril",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:04:40.824749+00:00",
+      "elapsed_seconds": 12.763093957997626,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/01-default-binary-build.log",
+      "log_sha256": "464ff34f4d57f01a78631ca48af91ccc5be35ead523410b2a4294274c2e3c628"
+    },
+    {
+      "label": "02-final-format-check",
+      "command": "cargo fmt --all --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:05:43.844433+00:00",
+      "elapsed_seconds": 0.9178781799855642,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/02-final-format-check.log",
+      "log_sha256": "acb1572a3da142ffc92a2ea1d905d03ad44e894f9ca45469578a31fe3ff0c4dd"
+    },
+    {
+      "label": "03-no-default-binary-build",
+      "command": "cargo build -p cyril --no-default-features",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:05:44.762905+00:00",
+      "elapsed_seconds": 9.079653805994894,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/03-no-default-binary-build.log",
+      "log_sha256": "665a7126992133a796fb3c9dc804b358de26ed5dadbd7f35b3a54db657cfed6d"
+    },
+    {
+      "label": "04-no-default-binary-all-targets-clippy",
+      "command": "cargo clippy -p cyril --no-default-features --all-targets -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:05:53.843678+00:00",
+      "elapsed_seconds": 8.179293891997077,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/04-no-default-binary-all-targets-clippy.log",
+      "log_sha256": "c7fdf996512d42e116de36ceef80c81daf802abed16f246d5f94df00b5328dab"
+    },
+    {
+      "label": "05-no-default-binary-package-tests",
+      "command": "cargo test -p cyril --no-default-features",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:06:02.023655+00:00",
+      "elapsed_seconds": 24.186366802023258,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/05-no-default-binary-package-tests.log",
+      "log_sha256": "72630694d0ab062dd00fe21f8d37984c40ca21befa68b3b66baace72faeb26a9"
+    },
+    {
+      "label": "06-no-default-core-url-callback-focused",
+      "command": "cargo test -p cyril-core --no-default-features protocol::domain_mediator::tests::external_url_wire::external_url_callback_refused_on_v2_with_or_without_kas -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:06:26.211576+00:00",
+      "elapsed_seconds": 25.509967529011192,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/06-no-default-core-url-callback-focused.log",
+      "log_sha256": "e7ec937b5cb8e81cb572a498f5a01cbb40d6cd407a509c08c7b787de1504f09e"
+    },
+    {
+      "label": "07-no-default-core-full-tests",
+      "command": "cargo test -p cyril-core --no-default-features",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+      "started_utc": "2026-10-20T18:06:51.722952+00:00",
+      "elapsed_seconds": 7.482489667017944,
+      "exit_code": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/07-no-default-core-full-tests.log",
+      "log_sha256": "4d1a9ee58905bf49e1407eb71a574c801461a254bf1ec597b9ef906e05e50f83"
+    }
+  ],
+  "cargo_slot": "released",
+  "workspace_status": "WORKSPACEBLOCKED; not fully qualified",
+  "carried_proofs": {
+    "handoff": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/canonical-handoff.json",
+    "sha256": "5fc5a42e64b3da345e3f5d427704a778bec5f0d11fbc0f7ec5ccf116b4723ba7",
+    "four_layout_behavior_red_restored_green": true,
+    "indicator_only_behavior_red_restored_green": true,
+    "workspace_clippy_pass": true,
+    "workbench_failure": "runtime_drop_retains_evidence_until_core_completion: Error: \"missing EOF window\"",
+    "failure_not_waived": true,
+    "proofs_or_failed_workspace_not_repeated": true
+  },
+  "native_status": "No native/auth/live GO; Main alone may authorize actual owned MCP URL consumer against partial candidate",
+  "requested_private_candidate": "/tmp/cyril-tqr8-gutter-smoke-candidate-20261020",
+  "continued-checked-source-before-gates": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/continued-checked-source-before-gates.source.json",
+    "source_manifest_sha256": "e8dca9348968fb4b94535bf3f2ddd51b68f5239abc1bfa474d70a7b24c2109b4",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "checked_source": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+    "url_fixture_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+    "pre_format_proof_tree": "b7b9d2546a945d2278a5aec359ed276bce335699",
+    "pre_format_proof_chat_sha256": "e750b9765c6843b9d649b9897f407992e4385cdfee81188e0c03d12465896b1c"
+  },
+  "entrypoint_touches": [
+    {
+      "boundary": "continued-attempt-source-boundary-before-any-Cargo",
+      "utc": "2026-10-20T18:04:40.824467+00:00",
+      "entrypoints": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "before_mtime_ns": 1792519163386464206,
+          "after_mtime_ns": 1792519480823349414
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256": "1f51c757cc882908f00d08c59812771790013925219080f2cc8fb22e5fadd76f",
+          "before_mtime_ns": 1792519163386464206,
+          "after_mtime_ns": 1792519480823349414
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "before_mtime_ns": 1792519163386464206,
+          "after_mtime_ns": 1792519480823349414
+        },
+        {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "b15e76832a0c0999d7ec4472a575fe3d060b507f5a9ebb6d2bebce34f41e99c5",
+          "before_mtime_ns": 1792519163387464190,
+          "after_mtime_ns": 1792519480823349414
+        }
+      ],
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target"
+    }
+  ],
+  "partial_binary": {
+    "path": "/tmp/cyril-tqr8-gutter-smoke-candidate-20261020",
+    "sha256": "2954a006f2cf3cff62b5bf3c0ba1a547bc86a4ba2e797feee22be934d80924b2",
+    "bytes": 101964600,
+    "source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "profile": "dev (opt-level=0,incremental=true,debuginfo default)",
+    "features": "cyril default=[kas] -> cyril-core/kas",
+    "target": "x86_64-unknown-linux-gnu (rustc host, no --target)",
+    "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril",
+    "copied_utc": "2026-10-20T18:04:53.709899+00:00",
+    "classification": "WORKSPACEBLOCKED partial smoke candidate; all Main-authorized remaining changed-path gates passed; NOT fully qualified; no consumer/native/authGO inferred",
+    "hash_confirmed_after_other_builds": true,
+    "remaining_changed_path_gates": "PASS",
+    "workspace_gate": "BLOCKED: prior workbench failure accepted but NOT waived"
+  },
+  "no_default_binary_package_tests": {
+    "passed": 278,
+    "failed": 0,
+    "ignored": 1,
+    "measured": 0,
+    "rows": [
+      {
+        "line": 254,
+        "suite": "Running unittests src/main.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril-3e21a79637b7e5f6)",
+        "status": "ok",
+        "passed": 238,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 2.8
+      },
+      {
+        "line": 260,
+        "suite": "Running unittests src/bin/cyril-memory-runtime.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_memory_runtime-afdd80596f5e3a37)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 268,
+        "suite": "Running tests/architecture_tests.rs (/home/dwalleck/repos/cyril/target/debug/deps/architecture_tests-a01c3b42f4bc9f5d)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.03
+      },
+      {
+        "line": 276,
+        "suite": "Running tests/crtool_cli.rs (/home/dwalleck/repos/cyril/target/debug/deps/crtool_cli-3b35b6474f62c911)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.05
+      },
+      {
+        "line": 300,
+        "suite": "Running tests/event_routing.rs (/home/dwalleck/repos/cyril/target/debug/deps/event_routing-0a2a11bf443068a3)",
+        "status": "ok",
+        "passed": 18,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 314,
+        "suite": "Running tests/memory_runtime.rs (/home/dwalleck/repos/cyril/target/debug/deps/memory_runtime-25139dfbed3e338b)",
+        "status": "ok",
+        "passed": 8,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.38
+      },
+      {
+        "line": 327,
+        "suite": "Running tests/nd4h_source_fences.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_source_fences-20414c1ef84b7173)",
+        "status": "ok",
+        "passed": 7,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 336,
+        "suite": "Running tests/powers_source_fence.rs (/home/dwalleck/repos/cyril/target/debug/deps/powers_source_fence-0c599d2d995129ea)",
+        "status": "ok",
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.04
+      }
+    ],
+    "excluded_nested_filtered_rows": [],
+    "scope": "Completed top-level unfiltered suites only; nested subprocess summaries excluded"
+  },
+  "no_default_core_full_tests": {
+    "passed": 1031,
+    "failed": 0,
+    "ignored": 4,
+    "measured": 0,
+    "rows": [
+      {
+        "line": 1030,
+        "suite": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-ef9a7513f551e418)",
+        "status": "ok",
+        "passed": 1014,
+        "failed": 0,
+        "ignored": 4,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 1.18
+      },
+      {
+        "line": 1036,
+        "suite": "Running tests/kas_freepath_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_freepath_smoke-8e49d9e2ee6b9404)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1042,
+        "suite": "Running tests/kas_fs_host_io_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_fs_host_io_smoke-599f98e0b2bf1dca)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1048,
+        "suite": "Running tests/kas_settings_handshake_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_settings_handshake_smoke-7d95518fb1b6473a)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1054,
+        "suite": "Running tests/kas_wrapper_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_wrapper_smoke-caec17fd51ad93c4)",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1062,
+        "suite": "Running tests/nd4h_legacy_config_compat.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_legacy_config_compat-464b1c88435afa9f)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1074,
+        "suite": "Running tests/review_launch.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_launch-b4270c32cf44c76e)",
+        "status": "ok",
+        "passed": 6,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.06
+      },
+      {
+        "line": 1081,
+        "suite": "Running tests/review_policy_vectors.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_policy_vectors-3bf2a66d305bb6ee)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1088,
+        "suite": "Running tests/session_configuration.rs (/home/dwalleck/repos/cyril/target/debug/deps/session_configuration-1c6421f91bb3b8e8)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.02
+      },
+      {
+        "line": 1102,
+        "suite": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-290cb26341df1fea)",
+        "status": "ok",
+        "passed": 2,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 5.02
+      },
+      {
+        "line": 1113,
+        "suite": "Running tests/win_wsl_wiring.rs (/home/dwalleck/repos/cyril/target/debug/deps/win_wsl_wiring-0831c2b8686fe14f)",
+        "status": "ok",
+        "passed": 5,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      },
+      {
+        "line": 1119,
+        "suite": "Doc-tests cyril_core",
+        "status": "ok",
+        "passed": 0,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 0,
+        "elapsed_seconds": 0.0
+      }
+    ],
+    "excluded_nested_filtered_rows": [
+      {
+        "line": 1098,
+        "suite": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-290cb26341df1fea)",
+        "status": "ok",
+        "passed": 1,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0,
+        "filtered_out": 1,
+        "elapsed_seconds": 0.01
+      }
+    ],
+    "scope": "Completed top-level unfiltered suites only; nested subprocess summaries excluded"
+  },
+  "no_default_core_url_callback_focused": {
+    "name": "protocol::domain_mediator::tests::external_url_wire::external_url_callback_refused_on_v2_with_or_without_kas",
+    "executed": true,
+    "passed": 1,
+    "failed": 0
+  },
+  "continued-source-after-gates": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "head": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-continued1/continued-source-after-gates.source.json",
+    "source_manifest_sha256": "c10bbe1e06901ff0237dcfdabe472f866ac4591fc41bc3ec3a47d48aa510cde5",
+    "real_index_sha256": "5e6474520f13b68f93fb79c1d246bb2ef2fa50c96c192fba02732f49b0f1a1ab"
+  },
+  "source_after_gates": {
+    "actual_source_tree": "851c899f9e9da24cccc001020640de47771d8a5a",
+    "matches_checked_source": true,
+    "chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+    "url_fixture_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674"
+  },
+  "no_default_built_binary": {
+    "shared_target_path": "/home/dwalleck/repos/cyril/target/debug/cyril",
+    "sha256": "66b55fe7a026aef66d3a035fc656c26cc6de0bdfecff213cbd58ce3e2cedc903",
+    "profile": "dev",
+    "features": "-p cyril --no-default-features (KAS absent)",
+    "private_copy": false,
+    "warning": "Shared-target artifact is not the preserved defaultKAS smoke candidate and may be overwritten after Cargo release"
+  },
+  "totals": {
+    "continued_commands_run": 7,
+    "continued_commands_passed": 7,
+    "continued_commands_failed": 0,
+    "prior_workspace_failed_commands": 1,
+    "prior_workspace_failure_not_waived": true,
+    "default_binary_builds": 1,
+    "no_default_binary_builds": 1,
+    "no_default_binary_package_tests": {
+      "passed": 278,
+      "failed": 0,
+      "ignored": 1
+    },
+    "no_default_core_full_tests": {
+      "passed": 1031,
+      "failed": 0,
+      "ignored": 4
+    },
+    "no_default_callback_focused": {
+      "passed": 1,
+      "failed": 0
+    },
+    "private_partial_candidates": 1,
+    "fully_qualified_binaries": 0,
+    "native_auth_runs": 0,
+    "consumer_runs_by_qualifier": 0
+  },
+  "final_status": "REACHABLE CHANGED-PATH GATES PASS; WORKSPACEBLOCKED partial candidate, NOT fully qualified",
+  "not_run": [
+    "No repeat of failed workbench test",
+    "No repeat full workspace tests",
+    "No repeat successful gutter sensitivity proofs or workspace Clippy",
+    "No native/auth/live consumer",
+    "No PR closure/full PASS claim"
+  ],
+  "limits": [
+    "This is explicitly Main-authorized continued qualification AFTER a recorded workspace failure, not a green whole-chain rerun.",
+    "Prior2834pass/1fail/13ignored workspace result and missing EOF window remain blocked/unwaived in immutable attempt2 receipt.",
+    "All4 layout sensitivity pairs and named indicator-only width1 proof carried from attempt2; no repeated mutation/setup.",
+    "Preserved defaultKAS binary before any no-default build; source and private binary unchanged through remaining gates.",
+    "Full no-default package/core totals are separate overlapping lanes, not unique test counts; focused callback overlaps corefull.",
+    "Only Main may authorize an owned MCP URL consumer using the partial candidate; no native/auth implied."
+  ]
+}

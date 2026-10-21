@@ -1,0 +1,28 @@
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
+index 7a25c20e..2ab28189 100644
+--- a/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
++++ b/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
+@@ -100,10 +100,19 @@ pub(super) async fn external_url_round_trip(
+         ),
+         "URL callback initialization response",
+     );
+-    runtime.shutdown().await;
+-    host_task.abort();
+-    let joined = host_task.await;
+-    assert!(joined.is_err_and(|error| error.is_cancelled()));
++    let joined = must_succeed(
++        tokio::time::timeout(Duration::from_secs(5), async {
++            runtime.shutdown().await;
++            // Shutdown may let the host finish normally before abort.
++            host_task.abort();
++            host_task.await
++        })
++        .await,
++        "URL callback cleanup completes",
++    );
++    if let Err(error) = joined {
++        assert!(error.is_cancelled(), "URL callback host task failed: {error}");
++    }
+     let mut notifications = Vec::new();
+     if let Some(rx) = &mut domain_rx {
+         while let Ok(work) = rx.try_recv() {

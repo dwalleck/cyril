@@ -1,0 +1,1041 @@
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
+deleted file mode 100644
+index adb2666b..00000000
+--- a/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
++++ /dev/null
+@@ -1,203 +0,0 @@
+-use std::cell::RefCell;
+-use std::rc::Rc;
+-use std::sync::{Arc, Mutex};
+-use std::time::Duration;
+-
+-use agent_client_protocol::schema::v1 as acp;
+-use agent_client_protocol::{Agent, Client, ConnectionTo, UntypedMessage};
+-
+-use super::super::{DomainChannels, DomainWork, host};
+-use crate::protocol::engine::Engine;
+-use crate::protocol::host_mediator::HostMediator;
+-use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
+-use crate::protocol::source_observer::IngressTracker;
+-use crate::test_support::must_succeed;
+-use crate::types::RoutedNotification;
+-
+-/// Uses only pre-fix production interfaces so these wire assertions can be
+-/// transplanted onto the base without requiring the new notification variants.
+-pub(super) async fn external_url_round_trip(
+-    engine: Rc<dyn Engine>,
+-    params: Vec<serde_json::Value>,
+-    close_delivery: bool,
+-) -> (
+-    Vec<agent_client_protocol::Result<serde_json::Value>>,
+-    Vec<RoutedNotification>,
+-) {
+-    let (channels, domain_rx, host_rx) = must_succeed(
+-        DomainChannels::new(IngressTracker::new()),
+-        "URL callback channels",
+-    );
+-    let mut domain_rx = if close_delivery {
+-        drop(domain_rx);
+-        None
+-    } else {
+-        Some(domain_rx)
+-    };
+-    #[cfg(feature = "kas")]
+-    let ctx = Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
+-        notify_tx: channels.clone(),
+-        terminals: Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+-            None,
+-        )),
+-        hooks: None,
+-        hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+-        cwd: std::path::PathBuf::new(),
+-        kas_token: None,
+-    });
+-    let host_task = host::run(
+-        host_rx,
+-        engine,
+-        Rc::new(RefCell::new(HostMediator::new())),
+-        #[cfg(feature = "kas")]
+-        ctx,
+-    );
+-    let replies = Arc::new(Mutex::new(Vec::new()));
+-    let sink = Arc::clone(&replies);
+-    let agent = Agent
+-        .builder()
+-        .name("external-url-callback-test-agent")
+-        .on_receive_request(
+-            async move |request: acp::InitializeRequest,
+-                        responder,
+-                        connection: ConnectionTo<Client>| {
+-                let callback_connection = connection.clone();
+-                let sink = Arc::clone(&sink);
+-                let params = params.clone();
+-                connection.spawn(async move {
+-                    for params in params {
+-                        let reply = callback_connection
+-                            .send_request(UntypedMessage::new("_kiro/openExternalUrl", params)?)
+-                            .block_task()
+-                            .await;
+-                        sink.lock()
+-                            .unwrap_or_else(std::sync::PoisonError::into_inner)
+-                            .push(reply);
+-                    }
+-                    responder.respond(acp::InitializeResponse::new(request.protocol_version))
+-                })?;
+-                Ok(())
+-            },
+-            agent_client_protocol::on_receive_request!(),
+-        );
+-    let runtime = must_succeed(
+-        SdkRuntime::start_for_test(agent, channels, StageChain::default()).await,
+-        "URL callback runtime",
+-    );
+-    must_succeed(
+-        must_succeed(
+-            tokio::time::timeout(
+-                Duration::from_secs(5),
+-                runtime
+-                    .connection()
+-                    .send_request(acp::InitializeRequest::new(
+-                        agent_client_protocol::schema::ProtocolVersion::V1,
+-                    ))
+-                    .block_task(),
+-            )
+-            .await,
+-            "URL callback initialization completes",
+-        ),
+-        "URL callback initialization response",
+-    );
+-    let joined = must_succeed(
+-        tokio::time::timeout(Duration::from_secs(5), async {
+-            runtime.shutdown().await;
+-            // Shutdown may let the host finish normally before abort.
+-            host_task.abort();
+-            host_task.await
+-        })
+-        .await,
+-        "URL callback cleanup completes",
+-    );
+-    if let Err(error) = joined {
+-        assert!(
+-            error.is_cancelled(),
+-            "URL callback host task failed: {error}"
+-        );
+-    }
+-    let mut notifications = Vec::new();
+-    if let Some(rx) = &mut domain_rx {
+-        while let Ok(work) = rx.try_recv() {
+-            if let DomainWork::Routed(routed) = work {
+-                notifications.push(routed);
+-            }
+-        }
+-    }
+-    let replies = std::mem::take(
+-        &mut *replies
+-            .lock()
+-            .unwrap_or_else(std::sync::PoisonError::into_inner),
+-    );
+-    (replies, notifications)
+-}
+-
+-#[cfg(feature = "kas")]
+-#[tokio::test]
+-async fn external_url_callback_wire_result() {
+-    tokio::task::LocalSet::new()
+-        .run_until(async {
+-            let (replies, _) = external_url_round_trip(
+-                Rc::new(crate::protocol::engine::KasEngine::default()),
+-                vec![serde_json::json!({"url": "https://login.invalid/authorize?state=exact#fragment"})],
+-                false,
+-            )
+-            .await;
+-            assert_eq!(replies.len(), 1);
+-            assert_eq!(
+-                must_succeed(
+-                    replies.into_iter().next().unwrap_or_else(|| panic!("one reply")),
+-                    "URL reply",
+-                ),
+-                serde_json::json!({"success": true}),
+-                "the actual callback must return the supported success object, never null",
+-            );
+-        })
+-        .await;
+-}
+-
+-#[tokio::test]
+-async fn external_url_callback_refused_on_v2_with_or_without_kas() {
+-    tokio::task::LocalSet::new()
+-        .run_until(async {
+-            let (replies, notifications) = external_url_round_trip(
+-                Rc::new(crate::protocol::engine::V2Engine),
+-                vec![
+-                    serde_json::json!({"url": "https://login.invalid/"}),
+-                    serde_json::json!({}),
+-                ],
+-                false,
+-            )
+-            .await;
+-            assert_eq!(replies.len(), 2);
+-            for reply in replies {
+-                let Err(error) = reply else {
+-                    panic!("a v2-bound callback must be refused");
+-                };
+-                assert_eq!(error.code, agent_client_protocol::ErrorCode::MethodNotFound);
+-            }
+-            assert!(notifications.is_empty());
+-        })
+-        .await;
+-}
+-
+-#[cfg(feature = "kas")]
+-#[tokio::test]
+-async fn external_url_callback_closed_delivery_is_not_success() {
+-    tokio::task::LocalSet::new()
+-        .run_until(async {
+-            let (replies, notifications) = external_url_round_trip(
+-                Rc::new(crate::protocol::engine::KasEngine::default()),
+-                vec![serde_json::json!({"url": "https://login.invalid/authorize"})],
+-                true,
+-            )
+-            .await;
+-            assert_eq!(replies.len(), 1);
+-            let Some(Err(error)) = replies.into_iter().next() else {
+-                panic!("closed delivery cannot acknowledge handling");
+-            };
+-            assert_eq!(error.code, agent_client_protocol::ErrorCode::InternalError);
+-            assert!(notifications.is_empty());
+-        })
+-        .await;
+-}
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs
+deleted file mode 100644
+index e49f1960..00000000
+--- a/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs
++++ /dev/null
+@@ -1,117 +0,0 @@
+-use agent_client_protocol::schema::v1 as acp;
+-use serde_json::json;
+-
+-use crate::protocol::engine::{Engine, KasEngine, V2Engine};
+-use crate::test_support::must_succeed;
+-
+-fn session_info_frame(kiro: serde_json::Value) -> acp::SessionNotification {
+-    must_succeed(
+-        serde_json::from_value(json!({
+-            "sessionId": "mcp-error-session",
+-            "update": {"sessionUpdate": "session_info_update", "_meta": {"kiro": kiro}},
+-        })),
+-        "source-shaped session-info envelope decodes through the SDK schema",
+-    )
+-}
+-
+-/// Source-derived MCP payload, not a claimed raw MCP capture. The producer's
+-/// flat fields are authoritative; displayError is the optional emitted mirror.
+-/// This test deliberately uses only base production interfaces, allowing a real
+-/// pre-fix red on missing conversion rather than an unknown-variant compile error.
+-#[test]
+-fn kas_mcp_display_error_preserves_conversion_result_and_message() {
+-    let message = "  MCP server 'private-server' connection failed: authorization refused.  ";
+-    for mirror in [false, true] {
+-        let mut kiro = json!({
+-            "kind": "display_error",
+-            "errorType": "mcp_connection_error",
+-            "message": message,
+-        });
+-        if mirror {
+-            kiro["displayError"] = json!({
+-                "errorType": "mcp_connection_error",
+-                "message": message,
+-            });
+-        }
+-        let frame = session_info_frame(kiro);
+-        let Some(converted) = KasEngine::default().convert_session_update(&frame) else {
+-            panic!("a source-shaped MCP display_error must produce a consumer event");
+-        };
+-        assert_eq!(
+-            format!("{converted:?}"),
+-            format!("McpConnectionError {{ message: {message:?} }}"),
+-            "classification and original message must survive conversion",
+-        );
+-        assert!(V2Engine.convert_session_update(&frame).is_none());
+-    }
+-}
+-
+-#[test]
+-fn kas_mcp_display_error_requires_flat_classification_and_nonempty_message() {
+-    let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
+-    tracing::dispatcher::with_default(&dispatch, || {
+-        for kiro in [
+-            json!({"kind": "display_error", "message": "private-error-not-for-logs"}),
+-            json!({"kind": "display_error", "errorType": null, "message": "private-error-not-for-logs"}),
+-            json!({"kind": "display_error", "errorType": "mcp_connection_error"}),
+-            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": null}),
+-            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": 7}),
+-            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": ""}),
+-            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": " \n\t"}),
+-            json!({"kind": "display_error", "displayError": {
+-                "errorType": "mcp_connection_error", "message": "private-error-not-for-logs",
+-            }}),
+-        ] {
+-            assert!(
+-                KasEngine::default()
+-                    .convert_session_update(&session_info_frame(kiro))
+-                    .is_none()
+-            );
+-        }
+-    });
+-    let events = capture.captured();
+-    assert_eq!(
+-        events
+-            .iter()
+-            .filter(|event| event["level"] == "WARN")
+-            .count(),
+-        8
+-    );
+-    assert!(
+-        !must_succeed(
+-            serde_json::to_string(&events),
+-            "error diagnostics serialize"
+-        )
+-        .contains("private-error-not-for-logs")
+-    );
+-}
+-
+-#[test]
+-fn kas_mcp_display_error_does_not_claim_other_error_kinds_or_missing_envelopes() {
+-    for kiro in [
+-        json!({"kind": "display_error", "errorType": "InvalidModelError", "message": "model unavailable"}),
+-        json!({"kind": "display_error", "errorType": "other_error", "message": "other failure",
+-            "displayError": {"errorType": "mcp_connection_error", "message": "not authoritative"}}),
+-        json!({"kind": "other_kind", "errorType": "mcp_connection_error", "message": "not display_error"}),
+-        json!({"errorType": "mcp_connection_error", "message": "no kind"}),
+-        serde_json::Value::Null,
+-    ] {
+-        assert!(
+-            KasEngine::default()
+-                .convert_session_update(&session_info_frame(kiro))
+-                .is_none()
+-        );
+-    }
+-    let no_meta = must_succeed(
+-        serde_json::from_value(json!({
+-            "sessionId": "mcp-error-session",
+-            "update": {"sessionUpdate": "session_info_update"},
+-        })),
+-        "missing optional metadata remains a valid SDK envelope",
+-    );
+-    assert!(
+-        KasEngine::default()
+-            .convert_session_update(&no_meta)
+-            .is_none()
+-    );
+-}
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs
+deleted file mode 100644
+index 10703c9a..00000000
+--- a/crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs
++++ /dev/null
+@@ -1,357 +0,0 @@
+-use std::rc::Rc;
+-use std::time::Duration;
+-
+-use agent_client_protocol::schema::v1 as acp;
+-use agent_client_protocol::{Agent, Client, ConnectionTo, UntypedMessage};
+-use serde_json::json;
+-
+-use super::super::{DomainChannels, DomainConfig, DomainMediator, DomainWork};
+-use super::external_url_wire::external_url_round_trip;
+-use crate::protocol::bridge::create_channel_pair;
+-use crate::protocol::engine::KasEngine;
+-use crate::protocol::kas::callbacks::{DispatchCtx, HostCallback, OpenExternalUrlArgs};
+-use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
+-use crate::protocol::source_observer::IngressTracker;
+-use crate::test_support::must_succeed;
+-use crate::types::{BridgeCommand, Notification};
+-
+-#[tokio::test]
+-async fn external_url_callback_preserves_exact_global_payload_and_rejects_malformed_params() {
+-    tokio::task::LocalSet::new()
+-        .run_until(async {
+-            let url = " https://login.invalid/authorize?state=exact%2Fstate#fragment\u{1b}[31m ";
+-            let (replies, notifications) = external_url_round_trip(
+-                Rc::new(KasEngine::default()),
+-                vec![json!({"url": url})],
+-                false,
+-            )
+-            .await;
+-            assert_eq!(replies.len(), 1);
+-            assert!(replies[0].is_ok());
+-            assert_eq!(notifications.len(), 1);
+-            let routed = &notifications[0];
+-            assert!(routed.session_id.is_none());
+-            assert!(routed.turn.is_none());
+-            assert!(routed.origin.is_none());
+-            assert!(matches!(&routed.notification,
+-                Notification::ExternalUrlRequested { url: received } if received == url));
+-
+-            let (replies, notifications) = external_url_round_trip(
+-                Rc::new(KasEngine::default()),
+-                vec![
+-                    json!({}),
+-                    json!({"url": null}),
+-                    json!({"url": 7}),
+-                    json!({"url": {"private": "do-not-reflect-this-query"}}),
+-                    json!({"url": ""}),
+-                    json!({"url": " \n\t"}),
+-                    json!([]),
+-                ],
+-                false,
+-            )
+-            .await;
+-            assert_eq!(replies.len(), 7);
+-            for reply in replies {
+-                let Err(error) = reply else {
+-                    panic!("malformed URL shape must be an explicit parameter error");
+-                };
+-                assert_eq!(error.code, agent_client_protocol::ErrorCode::InvalidParams);
+-                assert!(!format!("{error:?}").contains("do-not-reflect-this-query"));
+-            }
+-            assert!(notifications.is_empty(), "no fabricated URL events");
+-        })
+-        .await;
+-}
+-
+-#[tokio::test]
+-async fn external_url_success_waits_for_bounded_domain_acceptance() {
+-    let (channels, mut domain_rx, _host_rx) = must_succeed(
+-        DomainChannels::new(IngressTracker::new()),
+-        "bounded URL channels",
+-    );
+-    while channels.remaining_capacity() > 0 {
+-        must_succeed(
+-            channels
+-                .enqueue(DomainWork::Routed(
+-                    Notification::SystemNotify {
+-                        level: crate::types::event::SystemNotifyLevel::Info,
+-                        message: "occupy capacity".into(),
+-                    }
+-                    .into(),
+-                ))
+-                .await,
+-            "fill the bounded domain path",
+-        );
+-    }
+-    let ctx = DispatchCtx {
+-        notify_tx: channels,
+-        terminals: Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
+-            None,
+-        )),
+-        hooks: None,
+-        hook_ops: crate::protocol::kas::hooks::HookOps::default(),
+-        cwd: std::path::PathBuf::new(),
+-        kas_token: None,
+-    };
+-    let (reply, mut response_rx) = tokio::sync::oneshot::channel();
+-    let callback = HostCallback::OpenExternalUrl {
+-        args: must_succeed(
+-            OpenExternalUrlArgs::parse(&json!({"url": "https://login.invalid/exact"})),
+-            "valid URL callback params",
+-        ),
+-        reply,
+-    };
+-    let delivery = crate::protocol::kas::callbacks::dispatch(callback, &ctx);
+-    tokio::pin!(delivery);
+-    assert!(futures_util::poll!(delivery.as_mut()).is_pending());
+-    assert!(matches!(
+-        response_rx.try_recv(),
+-        Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+-    ));
+-    must_succeed(domain_rx.try_recv(), "free one bounded domain slot");
+-    delivery.await;
+-    let response = must_succeed(
+-        must_succeed(response_rx.await, "URL response delivered"),
+-        "URL accepted",
+-    );
+-    assert_eq!(
+-        must_succeed(
+-            serde_json::from_str::<serde_json::Value>(response.0.get()),
+-            "URL response JSON"
+-        ),
+-        json!({"success": true})
+-    );
+-    let mut delivered = 0;
+-    while let Ok(work) = domain_rx.try_recv() {
+-        if let DomainWork::Routed(routed) = work
+-            && let Notification::ExternalUrlRequested { url } = routed.notification
+-        {
+-            assert!(routed.session_id.is_none());
+-            assert_eq!(url, "https://login.invalid/exact");
+-            delivered += 1;
+-        }
+-    }
+-    assert_eq!(delivered, 1);
+-}
+-
+-async fn request_url(
+-    connection: &ConnectionTo<Client>,
+-    url: &str,
+-) -> agent_client_protocol::Result<()> {
+-    let reply = connection
+-        .send_request(UntypedMessage::new(
+-            "_kiro/openExternalUrl",
+-            json!({"url": url}),
+-        )?)
+-        .block_task()
+-        .await?;
+-    if reply != json!({"success": true}) {
+-        return Err(agent_client_protocol::Error::internal_error()
+-            .data("incorrect URL delivery acknowledgement"));
+-    }
+-    Ok(())
+-}
+-
+-fn session_info(
+-    kiro: serde_json::Value,
+-) -> agent_client_protocol::Result<acp::SessionNotification> {
+-    serde_json::from_value(json!({
+-        "sessionId": "sess_oauth-runtime-session",
+-        "update": {"sessionUpdate": "session_info_update", "_meta": {"kiro": kiro}},
+-    }))
+-    .map_err(|error| agent_client_protocol::Error::internal_error().data(error.to_string()))
+-}
+-
+-#[tokio::test]
+-async fn kas_sdk_url_callbacks_and_mcp_errors_survive_initialize_and_new_session() {
+-    tokio::task::LocalSet::new()
+-        .run_until(async {
+-            let session_bound = std::sync::Arc::new(tokio::sync::Notify::new());
+-            let agent_session_bound = std::sync::Arc::clone(&session_bound);
+-            let agent = Agent
+-                .builder()
+-                .name("oauth-lifecycle-test-agent")
+-                .on_receive_request(
+-                    async move |request: acp::InitializeRequest,
+-                                responder,
+-                                connection: ConnectionTo<Client>| {
+-                        let request_json = serde_json::to_value(&request).map_err(|error| {
+-                            agent_client_protocol::Error::internal_error().data(error.to_string())
+-                        })?;
+-                        assert_eq!(
+-                            request_json.pointer("/clientCapabilities/_meta/kiro/openExternalUrl"),
+-                            Some(&json!(true))
+-                        );
+-                        assert!(
+-                            request_json
+-                                .pointer("/clientCapabilities/_meta/kiro/secretStorage")
+-                                .is_none()
+-                        );
+-                        let callback_connection = connection.clone();
+-                        connection.spawn(async move {
+-                            request_url(
+-                                &callback_connection,
+-                                "https://login.invalid/during-initialize",
+-                            )
+-                            .await?;
+-                            responder.respond(
+-                                serde_json::from_value(json!({
+-                                    "protocolVersion": request.protocol_version,
+-                                    "agentCapabilities": {"_meta": {"kiro": {}}},
+-                                }))
+-                                .map_err(|error| {
+-                                    agent_client_protocol::Error::internal_error()
+-                                        .data(error.to_string())
+-                                })?,
+-                            )
+-                        })?;
+-                        Ok(())
+-                    },
+-                    agent_client_protocol::on_receive_request!(),
+-                )
+-                .on_receive_request(
+-                    async move |_request: acp::NewSessionRequest,
+-                                responder,
+-                                connection: ConnectionTo<Client>| {
+-                        let callback_connection = connection.clone();
+-                        let session_bound = std::sync::Arc::clone(&agent_session_bound);
+-                        connection.spawn(async move {
+-                            request_url(&callback_connection, "https://login.invalid/during-new")
+-                                .await?;
+-                            responder.respond(acp::NewSessionResponse::new(
+-                                "sess_oauth-runtime-session",
+-                            ))?;
+-                            request_url(&callback_connection, "https://login.invalid/after-new")
+-                                .await?;
+-                            // Wait for the real SessionStarted outcome to bind main
+-                            // before emitting a main-session turn bracket.
+-                            session_bound.notified().await;
+-                            callback_connection
+-                                .send_notification(session_info(json!({"kind": "turn_start"}))?)?;
+-                            callback_connection.send_notification(session_info(json!({
+-                                "kind": "display_error", "errorType": "mcp_connection_error",
+-                                "message": "MCP server 'flat' failed to connect.",
+-                            }))?)?;
+-                            callback_connection.send_notification(session_info(json!({
+-                                "kind": "display_error", "errorType": "mcp_connection_error",
+-                                "message": "  MCP server 'mirror' requires authorization.  ",
+-                                "displayError": {"errorType": "mcp_connection_error",
+-                                    "message": "  MCP server 'mirror' requires authorization.  "},
+-                            }))?)?;
+-                            // An ordinary message after both failures proves the SDK/domain
+-                            // stream remains usable without a synthetic terminal/disconnect.
+-                            let after: acp::SessionNotification = serde_json::from_value(json!({
+-                                "sessionId": "sess_oauth-runtime-session",
+-                                "update": {"sessionUpdate": "agent_message_chunk",
+-                                    "content": {"type": "text", "text": "after MCP errors"}},
+-                            }))
+-                            .map_err(|error| {
+-                                agent_client_protocol::Error::internal_error()
+-                                    .data(error.to_string())
+-                            })?;
+-                            callback_connection.send_notification(after)?;
+-                            Ok(())
+-                        })?;
+-                        Ok(())
+-                    },
+-                    agent_client_protocol::on_receive_request!(),
+-                );
+-            let directory = must_succeed(tempfile::tempdir(), "OAuth runtime workspace");
+-            let (handle, bridge) = create_channel_pair();
+-            let (sender, mut notifications, _permissions, _source, _completion) = handle.split();
+-            let (mediator, channels) = must_succeed(
+-                DomainMediator::new(
+-                    DomainConfig {
+-                        engine: Rc::new(KasEngine::default()),
+-                        cwd: directory.path().to_path_buf(),
+-                        present_as: None,
+-                        stall_threshold: Duration::from_secs(30),
+-                        host_shell: None,
+-                        kas_token: None,
+-                    },
+-                    bridge,
+-                ),
+-                "OAuth runtime mediator",
+-            );
+-            let runtime = must_succeed(
+-                SdkRuntime::start_for_test(agent, channels, StageChain::default()).await,
+-                "OAuth SDK runtime",
+-            );
+-            let loop_handle = tokio::task::spawn_local(mediator.run(runtime));
+-            must_succeed(
+-                sender
+-                    .send(BridgeCommand::NewSession {
+-                        cwd: directory.path().to_path_buf(),
+-                    })
+-                    .await,
+-                "request new OAuth test session",
+-            );
+-            let mut urls = Vec::new();
+-            let mut errors = Vec::new();
+-            let mut created = false;
+-            let mut started = false;
+-            loop {
+-                let routed = must_succeed(
+-                    tokio::time::timeout(Duration::from_secs(5), notifications.recv()).await,
+-                    "OAuth runtime event deadline",
+-                )
+-                .unwrap_or_else(|| panic!("OAuth runtime event channel closed"));
+-                match routed.notification {
+-                    Notification::ExternalUrlRequested { url } => {
+-                        assert!(routed.session_id.is_none());
+-                        urls.push(url);
+-                    }
+-                    Notification::McpConnectionError { message } => {
+-                        assert_eq!(
+-                            routed
+-                                .session_id
+-                                .as_ref()
+-                                .map(crate::types::SessionId::as_str),
+-                            Some("sess_oauth-runtime-session")
+-                        );
+-                        assert!(started, "error arrives during a still-active turn");
+-                        errors.push(message);
+-                    }
+-                    Notification::SessionCreated { .. } => {
+-                        created = true;
+-                        session_bound.notify_one();
+-                    }
+-                    Notification::TurnStarted => started = true,
+-                    Notification::AgentMessage(message) if message.text == "after MCP errors" => {
+-                        break;
+-                    }
+-                    Notification::TurnCompleted { .. }
+-                    | Notification::BridgeDisconnected { .. } => {
+-                        panic!("display_error must not imply completion or disconnect")
+-                    }
+-                    _ => {}
+-                }
+-            }
+-            assert!(created);
+-            assert!(started);
+-            assert_eq!(
+-                urls,
+-                [
+-                    "https://login.invalid/during-initialize",
+-                    "https://login.invalid/during-new",
+-                    "https://login.invalid/after-new"
+-                ]
+-            );
+-            assert_eq!(
+-                errors,
+-                [
+-                    "MCP server 'flat' failed to connect.",
+-                    "  MCP server 'mirror' requires authorization.  "
+-                ]
+-            );
+-            must_succeed(
+-                sender.send(BridgeCommand::Shutdown).await,
+-                "OAuth runtime shutdown",
+-            );
+-            must_succeed(
+-                must_succeed(loop_handle.await, "OAuth mediator join"),
+-                "OAuth mediator shutdown",
+-            );
+-        })
+-        .await;
+-}
+diff --git a/crates/cyril-ui/src/mcp_notice.rs b/crates/cyril-ui/src/mcp_notice.rs
+deleted file mode 100644
+index 7ff0bf87..00000000
+--- a/crates/cyril-ui/src/mcp_notice.rs
++++ /dev/null
+@@ -1,77 +0,0 @@
+-//! Display external MCP notices literally while neutralizing terminal controls.
+-
+-use std::fmt::{self, Write};
+-
+-pub(crate) struct TerminalSafe<'a>(&'a str);
+-
+-/// Render printable text exactly while visibly escaping terminal controls and bidi.
+-pub fn terminal_safe(text: &str) -> impl fmt::Display + '_ {
+-    TerminalSafe(text)
+-}
+-
+-pub(crate) fn needs_escape(character: char) -> bool {
+-    character.is_control()
+-        || matches!(character, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+-}
+-
+-enum SafeCharacter {
+-    Literal(Option<char>),
+-    Escaped(std::char::EscapeDebug),
+-}
+-
+-impl Iterator for SafeCharacter {
+-    type Item = char;
+-
+-    fn next(&mut self) -> Option<char> {
+-        match self {
+-            Self::Literal(character) => character.take(),
+-            Self::Escaped(characters) => characters.next(),
+-        }
+-    }
+-}
+-
+-/// The same projection for a cached panel document, without a temporary string.
+-pub(crate) fn characters(text: &str) -> impl Iterator<Item = char> + '_ {
+-    text.chars().flat_map(|character| {
+-        if needs_escape(character) {
+-            SafeCharacter::Escaped(character.escape_debug())
+-        } else {
+-            SafeCharacter::Literal(Some(character))
+-        }
+-    })
+-}
+-
+-impl fmt::Display for TerminalSafe<'_> {
+-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+-        for character in characters(self.0) {
+-            formatter.write_char(character)?;
+-        }
+-        Ok(())
+-    }
+-}
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::terminal_safe;
+-
+-    #[test]
+-    fn printable_urls_and_messages_are_byte_exact() {
+-        let text = "https://example.com/a'b\"c\\日?state=original#fragment";
+-        assert_eq!(terminal_safe(text).to_string(), text);
+-    }
+-
+-    #[test]
+-    fn terminal_controls_and_direction_controls_are_visible_not_active() {
+-        assert_eq!(
+-            terminal_safe("a\u{1b}[2J\r\n\t\u{202e}b").to_string(),
+-            r"a\u{1b}[2J\r\n\t\u{202e}b"
+-        );
+-        for character in [
+-            '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
+-            '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
+-        ] {
+-            let value = character.to_string();
+-            assert!(!terminal_safe(&value).to_string().contains(character));
+-        }
+-    }
+-}
+diff --git a/crates/cyril/src/app/tests/mcp_oauth.rs b/crates/cyril/src/app/tests/mcp_oauth.rs
+deleted file mode 100644
+index 8290a4a1..00000000
+--- a/crates/cyril/src/app/tests/mcp_oauth.rs
++++ /dev/null
+@@ -1,257 +0,0 @@
+-use super::*;
+-use cyril_ui::traits::Activity;
+-use ratatui::backend::TestBackend;
+-
+-fn draw_mcp_screen(app: &mut App) -> String {
+-    let mut terminal = Terminal::new(TestBackend::new(160, 32)).expect("test terminal");
+-    app.draw_frame(&mut terminal, "MCP notification draw")
+-        .expect("draw");
+-    let buffer = terminal.backend().buffer();
+-    (0..buffer.area.height)
+-        .map(|y| {
+-            (0..buffer.area.width)
+-                .map(|x| buffer[(x, y)].symbol())
+-                .collect::<String>()
+-        })
+-        .collect::<Vec<_>>()
+-        .join("\n")
+-}
+-
+-#[test]
+-fn external_url_is_visible_before_session_and_survives_creation() {
+-    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+-    let prior_status = app.session.status().clone();
+-    app.ui_state.set_activity(Activity::Waiting);
+-    app.redraw_needed = false;
+-    let expected = "Sign-in requested. Open in browser: https://example.com/authorize?code=a%2Fb&state=unchanged#continue";
+-
+-    let deferred = app.handle_notification(RoutedNotification::global(
+-        Notification::ExternalUrlRequested {
+-            url: "https://example.com/authorize?code=a%2Fb&state=unchanged#continue".into(),
+-        },
+-    ));
+-
+-    assert!(deferred.is_empty());
+-    assert!(commands.try_recv().is_err());
+-    assert_eq!(system_messages(&app), [expected]);
+-    assert!(app.redraw_needed);
+-    assert!(app.session.id().is_none());
+-    assert_eq!(app.session.status(), &prior_status);
+-    assert_eq!(app.ui_state.activity(), Activity::Waiting);
+-    assert!(app.pending_session_notifications.is_empty());
+-    assert!(!app.ui_state.has_modal_overlay());
+-    assert!(draw_mcp_screen(&mut app).contains(expected));
+-
+-    assert!(
+-        app.handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
+-            .is_empty()
+-    );
+-    assert_eq!(
+-        system_messages(&app),
+-        [expected, "Session created: mcp-startup"]
+-    );
+-    assert!(draw_mcp_screen(&mut app).contains(expected));
+-    assert!(commands.try_recv().is_err());
+-    assert!(!app.ui_state.has_modal_overlay());
+-}
+-
+-#[test]
+-fn mcp_callback_and_error_escape_controls_without_releasing_busy_turn() {
+-    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+-    let main = SessionId::new("mcp-busy");
+-    establish_main_session(&mut app, &main);
+-    app.handle_notification(RoutedNotification::scoped(
+-        main.clone(),
+-        Notification::TurnStarted,
+-    ));
+-    app.handle_notification(RoutedNotification::scoped(
+-        main.clone(),
+-        Notification::ToolCallStarted(ToolCall::new(
+-            ToolCallId::new("mcp-active-tool"),
+-            "Active tool".into(),
+-            ToolKind::Execute,
+-            ToolCallStatus::InProgress,
+-            None,
+-        )),
+-    ));
+-    app.handle_notification(RoutedNotification::scoped(
+-        main.clone(),
+-        Notification::TurnStalled {
+-            quiet: Duration::from_secs(31),
+-        },
+-    ));
+-    app.redraw_needed = false;
+-
+-    assert!(
+-        app.handle_notification(RoutedNotification::global(
+-            Notification::ExternalUrlRequested {
+-                url: "https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next".into(),
+-            },
+-        ))
+-        .is_empty()
+-    );
+-    assert!(
+-        app.handle_notification(RoutedNotification::scoped(
+-            main.clone(),
+-            Notification::McpConnectionError {
+-                message: "MCP failed:\u{1b}[2J\n\u{202e}endpoint".into(),
+-            },
+-        ))
+-        .is_empty()
+-    );
+-
+-    let url_notice = r"Sign-in requested. Open in browser: https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next";
+-    let error_notice = r"[error] MCP failed:\u{1b}[2J\n\u{202e}endpoint";
+-    assert_eq!(
+-        system_messages(&app),
+-        ["Session created: mcp-busy", url_notice, error_notice]
+-    );
+-    assert!(app.redraw_needed);
+-    assert_eq!(app.session.id(), Some(&main));
+-    assert_eq!(app.session.status(), &SessionStatus::Busy);
+-    assert!(app.session.last_turn().is_none());
+-    assert_eq!(app.ui_state.activity(), Activity::ToolRunning);
+-    assert!(app.ui_state.last_turn().is_none());
+-    assert_eq!(app.ui_state.active_tool_calls().len(), 1);
+-    assert!(app.ui_state.stall().is_some());
+-    assert!(!app.ui_state.has_modal_overlay());
+-    assert!(commands.try_recv().is_err());
+-
+-    app.handle_notification(RoutedNotification::scoped(
+-        main,
+-        Notification::McpServerInitialized {
+-            server_name: "later-status".into(),
+-        },
+-    ));
+-    let screen = draw_mcp_screen(&mut app);
+-    assert!(screen.contains(url_notice), "manual URL missing:\n{screen}");
+-    assert!(
+-        screen.contains(error_notice),
+-        "original error missing:\n{screen}"
+-    );
+-    assert_eq!(app.session.status(), &SessionStatus::Busy);
+-    assert_eq!(app.ui_state.activity(), Activity::ToolRunning);
+-    assert_eq!(app.ui_state.active_tool_calls().len(), 1);
+-    assert!(app.ui_state.stall().is_some());
+-    assert!(!app.ui_state.has_modal_overlay());
+-}
+-
+-#[test]
+-fn v2_mcp_oauth_request_keeps_existing_manual_message() {
+-    let (mut app, mut commands) = test_app_with_command_rx();
+-    let main = SessionId::new("mcp-v2");
+-    establish_main_session(&mut app, &main);
+-    app.handle_notification(RoutedNotification::scoped(main, Notification::TurnStarted));
+-    assert!(
+-        app.handle_notification(RoutedNotification::global(Notification::McpOAuthRequest {
+-            server_name: "legacy-mcp".into(),
+-            url: "https://example.com/v2?state=original#finish".into(),
+-        }))
+-        .is_empty()
+-    );
+-    let expected = "MCP server 'legacy-mcp' requires authentication. Open in browser: https://example.com/v2?state=original#finish";
+-    assert_eq!(system_messages(&app), ["Session created: mcp-v2", expected]);
+-    assert!(draw_mcp_screen(&mut app).contains(expected));
+-    assert_eq!(app.session.status(), &SessionStatus::Busy);
+-    assert_eq!(app.ui_state.activity(), Activity::Waiting);
+-    assert!(!app.ui_state.has_modal_overlay());
+-    assert!(commands.try_recv().is_err());
+-}
+-
+-#[cfg(feature = "kas")]
+-#[test]
+-fn kas_mcp_display_error_before_new_response_reaches_visible_history() {
+-    const FRAME: &str = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"mcp-startup","update":{"sessionUpdate":"session_info_update","_meta":{"kiro":{"kind":"display_error","errorType":"mcp_connection_error","message":"MCP connection failed: café endpoint refused"}}}}}"#;
+-    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+-    let mut converted = cyril_core::test_support::kas_capture_routed(FRAME);
+-    assert_eq!(
+-        converted.len(),
+-        1,
+-        "production conversion must retain the error"
+-    );
+-    let error = converted.remove(0);
+-    assert_eq!(error.session_id, Some(SessionId::new("mcp-startup")));
+-    assert!(app.handle_notification(error).is_empty());
+-    assert_eq!(app.pending_session_notifications.len(), 1);
+-    assert!(system_messages(&app).is_empty());
+-
+-    assert!(
+-        app.handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
+-            .is_empty()
+-    );
+-    let expected = "[error] MCP connection failed: café endpoint refused";
+-    assert_eq!(
+-        system_messages(&app),
+-        ["Session created: mcp-startup", expected]
+-    );
+-    assert!(app.pending_session_notifications.is_empty());
+-    assert!(draw_mcp_screen(&mut app).contains(expected));
+-    assert_eq!(app.session.status(), &SessionStatus::Active);
+-    assert!(!app.ui_state.has_modal_overlay());
+-    assert!(commands.try_recv().is_err());
+-
+-    app.handle_notification(session_created_frame(&SessionId::new("mcp-next")));
+-    assert_eq!(
+-        system_messages(&app),
+-        [
+-            "Session created: mcp-startup",
+-            expected,
+-            "Session created: mcp-next"
+-        ]
+-    );
+-    assert!(draw_mcp_screen(&mut app).contains(expected));
+-}
+-
+-#[test]
+-fn scoped_mcp_error_stays_in_subagent_history_and_renders_on_focus() {
+-    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+-    let main = SessionId::new("mcp-main");
+-    let peer = SessionId::new("mcp-peer");
+-    establish_main_session(&mut app, &main);
+-    app.handle_notification(RoutedNotification::scoped(main, Notification::TurnStarted));
+-    app.handle_notification(RoutedNotification::scoped(
+-        peer.clone(),
+-        Notification::AgentMessage(AgentMessage {
+-            text: "Peer is still working".into(),
+-            is_streaming: true,
+-        }),
+-    ));
+-    assert!(
+-        app.handle_notification(RoutedNotification::scoped(
+-            peer.clone(),
+-            Notification::McpConnectionError {
+-                message: "Peer MCP failed:\u{1b}[2J\u{202e}endpoint".into(),
+-            },
+-        ))
+-        .is_empty()
+-    );
+-
+-    assert_eq!(system_messages(&app), ["Session created: mcp-main"]);
+-    assert_eq!(app.session.status(), &SessionStatus::Busy);
+-    assert_eq!(app.ui_state.activity(), Activity::Waiting);
+-    assert!(app.ui_state.subagent_ui().focused_stream().is_none());
+-    assert!(!app.ui_state.has_modal_overlay());
+-    assert!(commands.try_recv().is_err());
+-
+-    assert!(app.ui_state.focus_subagent(peer));
+-    let stream = app
+-        .ui_state
+-        .subagent_ui()
+-        .focused_stream()
+-        .expect("focused peer stream");
+-    assert_eq!(stream.activity(), Activity::Streaming);
+-    assert_eq!(stream.messages().len(), 2);
+-    assert!(matches!(
+-        stream.messages()[0].kind(),
+-        ChatMessageKind::AgentText(text) if text == "Peer is still working"
+-    ));
+-    let expected = r"[error] Peer MCP failed:\u{1b}[2J\u{202e}endpoint";
+-    assert!(matches!(
+-        stream.messages()[1].kind(),
+-        ChatMessageKind::System(text) if text == expected
+-    ));
+-    let screen = draw_mcp_screen(&mut app);
+-    assert!(screen.contains(expected), "peer error missing:\n{screen}");
+-    assert_eq!(app.session.status(), &SessionStatus::Busy);
+-    assert_eq!(app.ui_state.activity(), Activity::Waiting);
+-}

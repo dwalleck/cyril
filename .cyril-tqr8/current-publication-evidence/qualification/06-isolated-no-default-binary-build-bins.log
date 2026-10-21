@@ -1,0 +1,24 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+GIT_OPTIONAL_LOCKS=0
+command=cargo build -p cyril --no-default-features --bins
+started_utc=2026-10-21T00:25:15.454405+00:00
+
+   Compiling rustix v1.1.4
+   Compiling polling v3.11.0
+   Compiling crossterm v0.29.0
+   Compiling async-io v2.6.0
+   Compiling async-signal v0.2.14
+   Compiling ratatui-crossterm v0.1.0
+   Compiling async-process v2.5.0
+   Compiling ratatui v0.30.0
+   Compiling agent-client-protocol v2.0.0
+   Compiling agent-client-protocol-conductor v2.0.0
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-ui)
+   Compiling cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-memory)
+   Compiling cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.66s
+
+exit_code=0
+elapsed_seconds=17.701175993

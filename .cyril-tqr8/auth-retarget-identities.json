@@ -1,0 +1,59 @@
+{
+  "status": "parent_executed_six_case_proof_passed",
+  "proof_index": "auth-retarget-proof-index.json",
+  "owner": "tqr8 predecessor delivery; Main owns propagation and qualification",
+  "source": "crates/cyril-core/src/protocol/kas/auth.rs",
+  "original_tqr8_sha256": "7f145d64fba63a4ae1231df690bf100d5592f91e0aafdeb58d613d57c3069eb0",
+  "repaired_tqr8_sha256": "ad9b9ad0f0ff29c9d122211d47394a13d038916b264d392c7ab374695210b271",
+  "original_snapshot": "/tmp/cyril-tqr8-auth-retarget-before-RepairAuthRetargetFixture.rs",
+  "patch": "auth-retarget-immutable-interpreter.patch",
+  "patch_sha256": "ccaaab48c4e909666bfcc278fdf9c92308e7aac245d516e5a92587add7f206f4",
+  "runner": "auth-retarget-proof.py",
+  "runner_sha256": "9a687014bd7dd22d49678b8c38477c4ebe19ea6e247c2f10c6eef8c796e88dd7",
+  "portable_patch_targets": [
+    "/home/dwalleck/repos/cyril-wt-review-cyril-nk4o",
+    "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup",
+    "/home/dwalleck/repos/cyril-wt-proof-caar-review",
+    "/home/dwalleck/repos/cyril-wt-proof-caar-deadline"
+  ],
+  "construction_identities": {
+    "v1": "canonical committed crates/cyril-core/tests/fixtures/fake-kiro-cli.sh; never executed",
+    "v2": "canonical /bin/sh; both actual fetches execute this current target",
+    "shell_canonical_on_preparation_host": "/usr/bin/bash",
+    "shell_sha256_on_preparation_host": "c157074818b094c84aaf31b8c80a1e149f234bb1c8c84a25e9a53e96afa30a29",
+    "committed_fixture_sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+    "program_for_both_sources": "temporary bin/kiro-cli symlink, not /bin/sh",
+    "shared_prefix_argument": "same generated overlap-detecting script, read as data",
+    "assertions": [
+      "canonical v1 and v2 differ",
+      "before construction-time lock key differs from after current lock key",
+      "both sources have equal current lock keys after retarget",
+      "both joined fetches succeed with existing atomic mkdir overlap oracle"
+    ]
+  },
+  "parent_run": "python3 /home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/.cyril-tqr8/auth-retarget-proof.py SOURCE_TREE NEW_EXTERNAL_PROOF_ROOT EXPLICIT_NONEMPTY_CARGO_TARGET_DIR",
+  "parent_run_contract": [
+    "Run alone against the shared target; the runner never writes the supplied tree.",
+    "The new copy includes all ambient/uncommitted source and hidden .cyril-a5wo fixtures; only root .git and target are omitted.",
+    "Crate lib.rs/main.rs entrypoint timestamps are refreshed for the shared Cargo target; ambient empty CARGO_TARGET_DIR is replaced by the explicit argument.",
+    "Each Cargo invocation has a 900-second bound by default and no retries; the runner kills the process group on expiry.",
+    "The only old-fixture run holds the v2 executable open for writing. This is the new deterministic diagnostic, not an oldrace rerun.",
+    "The repaired cases hold the generated data script open for writing while both actual fetches run through the immutable interpreter.",
+    "The shared-gate mutation drops its guard immediately before helper execution; the construction-cache mutation actually caches the gate key in KasTokenSource::new while leaving invocation and dynamic identity assertions unchanged.",
+    "Mutant reds are accepted only with the typed overlap exit-9 receipt; compiler failures, identity-assertion failures, spawn failures and zero-test runs are not accepted reds.",
+    "Each mutant is followed by byte-exact restoration and the same held-writer fence going green. Finally the copy restores the repaired source without proof instrumentation; supplied auth.rs bytes must remain unchanged.",
+    "Logs, exact per-case source patches, actual source hashes and receipt.json are retained in the new proof root.",
+    "The existing 0.3-second overlap oracle is unchanged. A missed overlap is a failed proof, never retried or relabeled as PASS.",
+    "Main must still run the original normal-concurrency workspace qualification; this preparation creates no baseline waiver."
+  ],
+  "observed_parent_case_results": [
+    "old-held-writer: OS-code-26 Spawn, Cargo exit 101",
+    "repaired-held-writer: both successful tokens, Cargo exit 0",
+    "remove-shared-gate: overlap NonZeroExit status 9, Cargo exit 101",
+    "restore-after-no-gate: both successful tokens, Cargo exit 0",
+    "cached-construction-key: overlap NonZeroExit status 9, Cargo exit 101",
+    "restore-after-cached-key: both successful tokens, Cargo exit 0"
+  ],
+  "historical_attribution": "The bg112 writable-descriptor holder was not recorded. The held-writer diagnostic tests the source-supported mechanism without claiming that historical attribution.",
+  "not_performed_by_preparer": ["build", "test", "lint", "formatter", "proof execution", "commit", "tracker mutation", "writes to other worktrees"]
+}

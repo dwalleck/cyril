@@ -5,12 +5,9 @@
 //! handles lifecycle, and the dispatch side resolves against the
 //! Engine-selected adapter set (ADR-0001).
 //!
-//! Variant census: the enum grows one family per cutover slice (variants are
-//! STAGED with their constructing slice — lib-target dead_code enforces it;
-//! the full 15-variant shape is at commit b36c3a8 and re-lands family by
-//! family). [`WIRE_METHODS`] stays the full 19-method census
-//! (`.cyril-dn91/findings.md`) throughout, fenced by
-//! [`tests::census_matches_the_dn91_count`].
+//! The exhaustive callback enum and [`WIRE_METHODS`] census grow together
+//! when a supported host concern is installed. Capability knowledge stays in
+//! parsing/dispatch, never in the generic host lifecycle mediator.
 
 use agent_client_protocol::schema::v1 as acp;
 
@@ -34,6 +31,11 @@ pub(crate) enum HostCallback {
     /// `--force-refresh`).
     GetAccessToken {
         force_refresh: bool,
+        reply: Reply<acp::ExtResponse>,
+    },
+    /// `_kiro/openExternalUrl {url}` — global, with no session/server wire fields.
+    OpenExternalUrl {
+        args: OpenExternalUrlArgs,
         reply: Reply<acp::ExtResponse>,
     },
     /// Bare-ACP `fs/read_text_file` (KAS-5a) — already typed by the acp layer.
@@ -109,6 +111,7 @@ pub(crate) enum HostCallback {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum HostFamily {
     Auth,
+    ExternalUrl,
     HostIo,
     HooksInbound,
     HooksAny,
@@ -118,6 +121,7 @@ impl HostCallback {
     pub(crate) const fn family(&self) -> HostFamily {
         match self {
             Self::GetAccessToken { .. } => HostFamily::Auth,
+            Self::OpenExternalUrl { .. } => HostFamily::ExternalUrl,
             Self::ReadTextFile { .. }
             | Self::WriteTextFile { .. }
             | Self::KiroFs { .. }
@@ -146,6 +150,7 @@ impl HostCallback {
         }
         match self {
             Self::GetAccessToken { reply, .. }
+            | Self::OpenExternalUrl { reply, .. }
             | Self::KiroFs { reply, .. }
             | Self::ShellType { reply, .. }
             | Self::HooksList { reply, .. }
@@ -162,6 +167,26 @@ impl HostCallback {
                 tracing::debug!("host control notification refused by engine adapter gate");
             }
         }
+    }
+}
+
+/// Required URL shape at the wire seam. Validation must not rewrite the URL
+/// or include its potentially sensitive query/fragment in error diagnostics.
+#[derive(Debug)]
+pub(crate) struct OpenExternalUrlArgs {
+    url: String,
+}
+
+impl OpenExternalUrlArgs {
+    pub(crate) fn parse(params: &serde_json::Value) -> Result<Self, &'static str> {
+        let url = params
+            .get("url")
+            .and_then(serde_json::Value::as_str)
+            .filter(|url| !url.trim().is_empty())
+            .ok_or("openExternalUrl requires a nonempty string `url`")?;
+        Ok(Self {
+            url: url.to_owned(),
+        })
     }
 }
 
@@ -273,6 +298,7 @@ impl HostCallback {
         let kind = self.kind();
         match self {
             Self::GetAccessToken { reply, .. } => send(kind, reply, err),
+            Self::OpenExternalUrl { reply, .. } => send(kind, reply, err),
             Self::ReadTextFile { reply, .. } => send(kind, reply, err),
             Self::WriteTextFile { reply, .. } => send(kind, reply, err),
             Self::KiroFs { reply, .. } => send(kind, reply, err),
@@ -302,7 +328,9 @@ impl CallbackMeta for HostCallback {
     fn scope(&self) -> Option<SessionId> {
         let sid = |s: &acp::SessionId| SessionId::new(s.to_string());
         match self {
-            Self::GetAccessToken { .. } | Self::KiroFs { .. } => None,
+            Self::GetAccessToken { .. } | Self::OpenExternalUrl { .. } | Self::KiroFs { .. } => {
+                None
+            }
             Self::ReadTextFile { req, .. } => Some(sid(&req.session_id)),
             Self::WriteTextFile { req, .. } => Some(sid(&req.session_id)),
             Self::CreateTerminal { req, .. } => Some(sid(&req.session_id)),
@@ -326,6 +354,7 @@ impl CallbackMeta for HostCallback {
     fn kind(&self) -> &'static str {
         match self {
             Self::GetAccessToken { .. } => "auth/getAccessToken",
+            Self::OpenExternalUrl { .. } => "_kiro/openExternalUrl",
             Self::ReadTextFile { .. } => "fs/read_text_file",
             Self::WriteTextFile { .. } => "fs/write_text_file",
             Self::KiroFs { args, .. } => args.op().wire,
@@ -397,6 +426,18 @@ async fn resolve<T>(
 pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
     let kind = cb.kind();
     match cb {
+        HostCallback::OpenExternalUrl { args, reply } => {
+            // Acknowledgement means only bounded-path delivery acceptance.
+            // A closed domain channel must never look like successful handling.
+            let result = ctx
+                .notify_tx
+                .enqueue(crate::protocol::domain_mediator::DomainWork::Routed(
+                    crate::types::Notification::ExternalUrlRequested { url: args.url }.into(),
+                ))
+                .await
+                .and_then(|()| super::json_ext_response(&serde_json::json!({"success": true})));
+            resolve(ctx, kind, None, reply, result).await;
+        }
         HostCallback::CreateTerminal { req, reply } => {
             let r = ctx.terminals.create(&req);
             resolve(ctx, kind, None, reply, r).await;
@@ -533,13 +574,12 @@ fn auth_failure_notification(
     }
 }
 
-/// The full census of wire methods the callback seam will cover — 19,
-/// matching the dn91 probe census. Static from slice 2 onward; the enum
-/// catches up to it family by family, and slice 8's end-to-end census drives
-/// every entry through the client entry points.
+/// The full census of wire methods covered by the callback seam: the original
+/// 19-method dn91 census plus the supported external-URL callback.
 #[cfg(test)]
 pub(crate) const WIRE_METHODS: &[&str] = &[
     "auth/getAccessToken",
+    "_kiro/openExternalUrl",
     "fs/read_text_file",
     "fs/write_text_file",
     "_kiro/fs/read_file",
@@ -566,15 +606,14 @@ mod tests {
 
     use super::*;
 
-    // The census: 19 wire methods, exactly the dn91 probe count (the
-    // independent oracle for the seam's completeness target).
+    // The original dn91 census plus the real external-URL callback.
     #[test]
-    fn census_matches_the_dn91_count() {
-        assert_eq!(WIRE_METHODS.len(), 19);
+    fn census_includes_the_external_url_callback() {
+        assert_eq!(WIRE_METHODS.len(), 20);
         let mut sorted: Vec<_> = WIRE_METHODS.to_vec();
         sorted.sort_unstable();
         sorted.dedup();
-        assert_eq!(sorted.len(), 19, "census entries are distinct");
+        assert_eq!(sorted.len(), 20, "census entries are distinct");
     }
 
     // The reply channel rides the envelope to the resolution task and back —

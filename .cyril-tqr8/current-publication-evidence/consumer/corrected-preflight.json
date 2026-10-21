@@ -1,0 +1,99 @@
+{
+  "source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+  "method": "Earlier tracked-file git diff plus exactly five direct blob-byte/mode comparisons, per parent disposition; no claim real index equals assembled tree",
+  "direct_files": [
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "tree_blob": "adb2666b2fc6cd388e543d486f7adbe866cc7ef8",
+      "tree_mode": "100644",
+      "actual_mode": "100644",
+      "actual_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "tree_sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "bytes_equal": true,
+      "mode_equal": true,
+      "regular_file": true
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "tree_blob": "e49f19603789f30032e4c850f11984d5d8e53c0f",
+      "tree_mode": "100644",
+      "actual_mode": "100644",
+      "actual_sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "tree_sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "bytes_equal": true,
+      "mode_equal": true,
+      "regular_file": true
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "tree_blob": "10703c9ab7531286bd896b815e722ee8e672014e",
+      "tree_mode": "100644",
+      "actual_mode": "100644",
+      "actual_sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "tree_sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "bytes_equal": true,
+      "mode_equal": true,
+      "regular_file": true
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "tree_blob": "7ff0bf87eea13b58ab504f9898c95093d84977b1",
+      "tree_mode": "100644",
+      "actual_mode": "100644",
+      "actual_sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "tree_sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "bytes_equal": true,
+      "mode_equal": true,
+      "regular_file": true
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "tree_blob": "8290a4a16ab62ee90291eaf3d98f1ff72c686319",
+      "tree_mode": "100644",
+      "actual_mode": "100644",
+      "actual_sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0",
+      "tree_sha256": "6dcb77951f2785d01335251b497044c9cdb3870034b94be8d5a01b416e5c65e0",
+      "bytes_equal": true,
+      "mode_equal": true,
+      "regular_file": true
+    }
+  ],
+  "pin_checks": [
+    {
+      "path": "/tmp/cyril-tqr8-current-tested-20261020",
+      "sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+      "expected_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+      "equal": true,
+      "executable": true
+    },
+    {
+      "path": "/tmp/cyril-tqr8-current-owned-setup-20261020/controlled-peer-current-harness.py",
+      "sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+      "expected_sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+      "equal": true,
+      "executable": true
+    },
+    {
+      "path": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "expected_sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "equal": true,
+      "executable": true
+    }
+  ],
+  "product_invocations_before": 0,
+  "fresh_output_absent": true,
+  "result": "PASS_CORRECTED_READ_ONLY_PREFLIGHT",
+  "prior_inapplicable_pin_check": {
+    "command": "git diff --exit-code --no-ext-diff a09f1dfb63b17d380f4661823de431bfb5d72160 -- Cargo.toml Cargo.lock crates",
+    "exit_code": 1,
+    "raw_output": "artifact://1779",
+    "parent_disposition": "Known new files were untracked; tree-vs-index diff cannot establish assembled-tree equality. Parent explicitly authorized the exact-five blob/mode comparisons; command was not repeated. Product invocation remained zero until corrected preflight passed."
+  },
+  "source_pin_limit": "Cargo/crates source identity combines the original tracked-path diff and exact five direct blob/mode matches; no claim actual index equals assembled tree or that all documentation/tracker bytes match.",
+  "setup_evidence": {
+    "path": "/tmp/cyril-tqr8-current-owned-setup-20261020/setup-evidence.json",
+    "sha256": "9027d1105035cedcd7ed5b97ed46a933aeb2e68e2d39349dd6a5bbb907c48c69",
+    "harness_sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45"
+  }
+}

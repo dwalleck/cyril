@@ -1,0 +1,15 @@
+Reviewer: ReviewMcpUrl; fresh scoped follow-on source review,2026-10-20.
+Verdict: P3 tiny-test vacuity RESOLVED by inspection; no new actionable finding.
+Overall correctness: correct for amended geometry+test repair.
+Confidence:0.97.
+
+Actual amended chat.rs2323-2357: height4 leaves nonzero track after two default arrowheads; three system messages+spacing give six lines>four-rowviewport; follow/browse both render X/blank/X/blank; all18backendcells checked for widths0/1. Removing only area.width>1 should paint scrollbar into x1 and fail those assertions. This is source derivation,NOT an observed mutationRED.
+
+Retain prior fresh production geometry review: main committed/live/count/wrap/scroll/paint use contentwidth; scrollbar only gutter; widths0/1 retain content; focusedsubagent unchanged.
+Newest independently observed reviewer source pin: chat.rs Gitblob7535e86096b0a32c8204c55667bd981396772e10,artifact://1156:2.
+Prior pre-tiny-correction review pin: Gitblob0f72828c6d2339b607a52b07c30bccb2d2c6aa35,artifact://1126:2.
+Final SHA256 e750b9765c6843b9d649b9897f407992e4385cdfee81188e0c03d12465896b1c computed by preparer,not independently recomputed by reviewer. Earlier008c0af4990df021558717dbfd06552356e30035c060f0475fd0f989fd120796 is pre-tinycorrection and not newest.
+
+No edits/checks/formatter executed by reviewer. Parent mutation sensitivity/restoredGREEN,fullgates and actual140widePageUpconsumer acceptance remain pending.
+Distinct reviews: original featurefidelity/F1repair0.98; commonauthfixture/proof0.97; guttergeometry+amendedtinytest0.97. No empiricalPASS claimed by any source-only review.
+Full transcript: history://ReviewMcpUrl.

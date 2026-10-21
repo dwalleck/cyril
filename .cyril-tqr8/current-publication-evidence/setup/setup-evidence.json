@@ -1,0 +1,81 @@
+{
+  "result": "SETUP_ONLY_PASS_NO_PRODUCT_EXECUTION",
+  "awaiting": "parent review of setup patch; earlier ONE-run GO paused",
+  "original_b_harness": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/.cyril-tqr8/publication-evidence/controlled-peer-b-harness.py",
+  "original_b_harness_sha256": "0d77cdd2799bc2f8c0df144ea3e5df4f37a6e8955cfcd16829cb01e179ba64dc",
+  "archive": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/.cyril-tqr8/tqr8-publication-evidence.tar.gz",
+  "archive_sha256": "741218ed866b16aec3f7dbcec75b510875b77700a90bc27fbd83e7c878216850",
+  "archive_b_harness_identical": true,
+  "proposed_harness_sha256": "a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+  "patch_sha256": "b94071a371f97f00a3ec39061be30b0021fa7d6daf9c7fcc09f704c0d4559aab",
+  "current_binary": "/tmp/cyril-tqr8-current-tested-20261020",
+  "current_binary_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+  "source_pin": {
+    "git_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+    "object_type_observed": "tree",
+    "head_from_parent_context": "7a010878",
+    "open_merge_parent_from_parent_context": "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+    "open_merge_common_parent_from_parent_context": "3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "tree_to_binary_association": "parent supplied; current binary exact hash independently observed"
+  },
+  "public_inputs_sha256": {
+    "native-live-active-df5d9437--06-active-manual-url-visible-before-any-local-oauth.txt": "6cc09b32d18455b532ed0c4690ed2102a466a79bb34ef06d32a72229ff82e2ca",
+    "native-live-active-df5d9437--live--wire.nonsecret.jsonl": "8ae4f551697ae74d079da6915d63a5f052740bc22c1424fc11924bc6344b768d",
+    "controlled-peer-b-reconstructed-inputs.json": "d7f29a544c3669a32e293a02551a9781b6905b0aa8375bc83d5278b22bcad015"
+  },
+  "native_identity": "public terminal screen explicitly redacts native session; no original native SID recovered/read; original-session SHA256 from pinned B receipt exactly present in pinned wire projection",
+  "owned_synthetic_session": "sess_tqr_owned_synthetic",
+  "full_url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+  "full_url_equal_to_published_b": true,
+  "error_control_url_and_escaped_expectation_equal_to_published_b": true,
+  "ast_equality": {
+    "functions_unchanged": [
+      "sha",
+      "save",
+      "journal",
+      "agent"
+    ],
+    "all_main_code_except_reconstructed_input_and_status_metadata_unchanged": true,
+    "all_main_assertions_unchanged_count": 13,
+    "scenario_constants_unchanged": [
+      "ROOT",
+      "FAKE",
+      "FAKE_SHA",
+      "URL_SHA",
+      "SESSION",
+      "URL_REQUEST_ID",
+      "CONTROL_URL",
+      "CONTROL_DISPLAY",
+      "ERROR"
+    ]
+  },
+  "offline_actions_only": [
+    "hash public repository inputs/current binary/archive",
+    "parse harness AST and compare product predicates",
+    "execute native_values only via non-main namespace",
+    "create owned temporary symlink and verify executable file/hash; remove same temporary root"
+  ],
+  "no_main_or_agent_called": true,
+  "no_product_subprocess_or_pty_spawned": true,
+  "cli_selection_preflight": {
+    "absolute_bin": true,
+    "bin_outside_cwd": true,
+    "symlink_resolves_to_exact_fake": true,
+    "file": true,
+    "executable_via_owned_symlink": true,
+    "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+    "temporary_setup_root": "/tmp/cyril-tqr8-owned-setup-uzsnc_vl",
+    "temporary_setup_root_removed_after_context": true
+  },
+  "root_safety": {
+    "explicit_server_override_wins": "discovery.rs:322-349,448,472-487",
+    "explicit_node_override_wins": "discovery.rs:351-360,449",
+    "bundle_scan_and_installed_cli_probe_skipped_with_explicit_server": "discovery.rs:466-477",
+    "CLI_executable_absolute_PATH_outside_workspace_wins_before_global_fallbacks": "auth.rs:319-353,361-373",
+    "fresh_HOME_XDG_KIRO_HOME_and_config_with_hooks_off_memory_off": "unchanged B main AST",
+    "residual_risk": "global CLI fallbacks exist if fake CLI absent/nonexecutable/under cwd; setup preflight verifies exact current immutable executable and identical sibling bin/ws layout, no product launch yet"
+  },
+  "planned_command": "uv run --offline --script /tmp/cyril-tqr8-current-owned-setup-20261020/controlled-peer-current-harness.py --output /tmp/cyril-tqr8-current-owned-20261020-b",
+  "retained_scope": "manual URL, exact escaping, durable error, ACK-not-authorization, draft, PageUp then PageDown at 140x40 outer /139 content columns; no duplicate C, C6, NK/caar, native KAS/account/provider/network/model/grants/browser/clipboard/host qualification",
+  "cleanup_scope": "offline setup temporary root only; future unchanged B harness may stop only owned process group and remove only its TemporaryDirectory; output retained; no real/private roots touched"
+}

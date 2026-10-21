@@ -1,0 +1,19 @@
+{
+  "owned_roots": [
+    {
+      "path": "/home/dwalleck/.claude/tmp/cyril-tqr8-owned-private-e8yjojcj",
+      "absent_after_exit": true
+    }
+  ],
+  "post_exit_proc_census": {
+    "matching_processes": [],
+    "numeric_proc_entries_examined": 937,
+    "matched_processes_exited_during_inspection": 0,
+    "selection": "Exact owned-root cwd prefix (including deleted-cwd symlinks) or exact current-tested binary executable symlink; no unrelated process argv/environ or private file content read"
+  },
+  "no_matching_owned_processes": true,
+  "scope_justification": "Unchanged B Node launcher and Python ACP peer inherit the owned workspace cwd and never chdir; fake CLI is shell-builtins-only. Product uses explicit owned --cwd. This census checks those owned identity markers after exit without another product run.",
+  "live_observer_limitation": "Original live monitor inspected main-thread children only; only uv PID was recorded and no product PGID was captured. [INFERENCE] thread-owned subprocess creation may explain the missed tree; exact cause was not inspected. all_observed_product_groups_gone=false means unobserved, not a detected surviving group. No claim of a captured-complete live descendant tree.",
+  "cleanup_signals_sent_by_observer": false,
+  "product_runs_total": 1
+}

@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "issue": "cyril-0ssb",
+  "date": "2026-10-19",
+  "result": "PASS",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-0ssb",
+  "stack_base": {
+    "commit": "8146f7a53cd85088917bf64e05ed665f8183ecd3",
+    "issue": "cyril-d7ve",
+    "pull_request": 185
+  },
+  "owning_change_scope": [
+    "README.md (bundle-only native data-root paragraphs)",
+    "crates/cyril-core/src/protocol/kas/discovery.rs",
+    "crates/cyril-core/tests/fixtures/relative-bundle-node.sh (executable)",
+    ".cyril-0ssb/"
+  ],
+  "archives": [
+    {
+      "path": "0ssb-qualification-evidence.zip",
+      "bytes": 411248,
+      "sha256": "0d87faa8b35e9470268a24aa77ff822d6355b60595007c39c0d70254b58e8236",
+      "contents": "Fresh exact-branch command/log/count/fence/source receipts, checked source/README/Cargo files, nested smoke archive, retained full Linux matrix receipts."
+    },
+    {
+      "path": "0ssb-smoke-evidence.zip",
+      "bytes": 189145,
+      "sha256": "1e717654e338e8f5636ff7c0ec9049969d38e8f2fc513af73ba27888ef980f35",
+      "contents": "Reviewed five-case harness, exact source identity, launch/wire/callback/terminal/exit receipts and owned synthetic fixtures."
+    }
+  ],
+  "archive_identity_source": "VerifyRootSensitivity exact-delivery qualification receipt; archives copied byte-for-byte, no checks rerun by publication-artifact worker.",
+  "checked_identity": {
+    "source_identity_member": "0ssb-qualification-evidence.zip:source-identity.json",
+    "discovery_sha256": "0c6868d443f3081904e0d3f9c8c8393504207adc663033870fa46234e6e57b85",
+    "fixture_sha256": "0afc9d9a21dda5e0a08605d1ce520f4834daee91a484e2e13fa2c9762e45a95d",
+    "readme_sha256": "4cf73642059c3f5d56b22f0e1f791ad22a6bb7ac30d8d6d094e2afb6bfd6429b",
+    "binary_sha256": "b569d68a7c059e64bfd6044a7fbdcec23be6cbbcb02344e44e6bc6e4e7b77ad7",
+    "binary_path_at_execution": "/tmp/cyril-0ssb-pr-qualification-20261019/cyril-0ssb-smoke",
+    "harness_sha256": "8f6f5f00143ef648175d0e4dce2b2fda63308bc9760def265cad09f2d9f05dde"
+  },
+  "fresh_qualification": {
+    "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-0ssb",
+    "cargo_target_dir": "/home/dwalleck/repos/cyril/target",
+    "runs_member": "0ssb-qualification-evidence.zip:runs.json",
+    "commands": [
+      {
+        "label": "format-check",
+        "argv": ["env", "-u", "CARGO_TARGET_DIR", "cargo", "fmt", "--all", "--", "--check"],
+        "exit": 0
+      },
+      {
+        "label": "workspace-tests",
+        "argv": ["cargo", "test", "--workspace"],
+        "exit": 0
+      },
+      {
+        "label": "workspace-clippy",
+        "argv": ["cargo", "clippy", "--workspace", "--all-targets", "--", "-D", "warnings"],
+        "exit": 0
+      },
+      {
+        "label": "binary-build",
+        "argv": ["cargo", "build", "-p", "cyril"],
+        "exit": 0
+      },
+      {
+        "label": "actual-binary-smoke",
+        "argv": ["/usr/bin/python3", "/tmp/cyril-0ssb-pr-qualification-20261019/smoke.py", "/tmp/cyril-0ssb-pr-qualification-20261019/cyril-0ssb-smoke"],
+        "exit": 0
+      }
+    ],
+    "workspace_summary": {
+      "runtime_passed": 2826,
+      "runtime_failed": 0,
+      "runtime_repo_ignored": 13,
+      "doctests_passed": 2,
+      "manual_exclusions_or_retries": 0
+    },
+    "affected_fence_execution_member": "0ssb-qualification-evidence.zip:affected-fence-execution.json"
+  },
+  "retained_full_matrix": {
+    "fresh_on_this_worktree": false,
+    "source_and_cargo_byte_identity_confirmed_by_verifier": true,
+    "member_prefix": "0ssb-qualification-evidence.zip:retained-full-matrix/",
+    "scope": "Prior all-features/default/KAS-isolation/no-default tests and clippy, release build, doctests and native POSIX prefix, retained with their original combined-tree cwd/revision."
+  },
+  "smoke_cases": [
+    {"case": "trimmed-profile", "result": "PASS", "exit_code": 0},
+    {"case": "invalid-ancestor", "result": "PASS", "exit_code": 0},
+    {"case": "padded-assets", "result": "PASS", "exit_code": 0},
+    {"case": "relative-assets-different-cwd", "result": "PASS", "exit_code": 0},
+    {"case": "stored-fallback", "result": "PASS", "exit_code": 0}
+  ],
+  "smoke_index_member": "0ssb-smoke-evidence.zip:index.json",
+  "review": {
+    "agent": "ReviewKiroData",
+    "verdict": "correct",
+    "confidence": 0.98,
+    "scope": "Final exact stacked delivery review, reported by Main; unchanged production/regression bytes preserve prior repair reviews."
+  },
+  "limits": [
+    "Linux-native Cyril PTY with owned fake helper/node/agent peers and synthetic tokens only.",
+    "No native Windows/macOS execution or authenticated upstream extraction/backend acceptance claimed.",
+    "No real Node/KAS backend login, TUI trust-persistence smoke or sidecar-enrichment smoke claimed.",
+    "No real credentials/account state, no manually excluded tests, no blind retries.",
+    "Existing repository-declared ignored tests are reported as ignored, not executed.",
+    "Archives exclude executable binaries; exact build receipt, source identity and immutable executable hash bind the smoke."
+  ],
+  "publication_owner": "Main; no commit, issue close or PR opening by publication-artifact worker"
+}

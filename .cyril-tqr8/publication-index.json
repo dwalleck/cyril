@@ -1,0 +1,239 @@
+{
+  "issue": "cyril-tqr8",
+  "date": "2026-10-20",
+  "status": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+  "ready_for_parent_staging_issue_close_and_PR_actions": true,
+  "shipping_authorized_by_this_record": false,
+  "publication_actions_performed": false,
+  "qualified_source_state": {
+    "git_tree_not_commit": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+    "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
+    "merge_parents": [
+      "7a0108786a0cc52c01c87c14b42d5d449017328b",
+      "26b6dcb9346dbecf16c8c79f7abb86271ddd26bd",
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "feature_paths": 19,
+    "affected_source_paths_including_deletion": 40,
+    "inventory": ".cyril-tqr8/current-publication-evidence/integration/assembled-source-allowlist.json",
+    "inventory_sha256": "a593b24eccb68461035deb7e4c736ed24909e10c3200ba006ed689ae528e4114",
+    "integration_receipt": ".cyril-tqr8/current-publication-evidence/integration/integration-receipt.json",
+    "integration_receipt_sha256": "0f156837a23b220b588f1bf4d9d5e47e5051fa273e2c97b024c22c814b6d267f"
+  },
+  "current_evidence_index": {
+    "path": ".cyril-tqr8/current-publication-evidence/index.json",
+    "bytes": 58245,
+    "sha256": "34413bbbdf5dbe2fefa76098dd095b57b81ffe141e29f45ba55b59001e6ca302"
+  },
+  "current_local_qualification": {
+    "canonical": ".cyril-tqr8/current-publication-evidence/qualification/canonical-handoff.json",
+    "sha256": "e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104",
+    "binary_sha256": "1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0",
+    "requested_lanes": 12,
+    "test_counts_by_lane": {
+      "02-default-full-workspace-tests": {
+        "passed": 2869,
+        "failed": 0,
+        "ignored": 13,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 41
+      },
+      "04-isolated-no-default-binary-package-tests": {
+        "passed": 278,
+        "failed": 0,
+        "ignored": 1,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 8
+      },
+      "07-isolated-no-default-core-full-tests": {
+        "passed": 1035,
+        "failed": 0,
+        "ignored": 4,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 12
+      },
+      "09-isolated-explicit-KAS-both-packages-tests": {
+        "passed": 1816,
+        "failed": 0,
+        "ignored": 10,
+        "measured": 0,
+        "filtered_out": 0,
+        "direct_Cargo_targets": 20
+      }
+    },
+    "ignored_not_executed": true,
+    "overlapping_lanes_not_unique_aggregate": true
+  },
+  "current_owned_consumer": {
+    "result": "PASS",
+    "product_invocations": 1,
+    "retries": 0,
+    "oracle_changes": 0,
+    "capture_count": 6,
+    "outer_columns": 140,
+    "rows": 40,
+    "content_columns": 139,
+    "receipt": "consumer/result.json",
+    "result_sha256": "e6bddc068c68ed2dd31603f88b310ef3b5e8b376e6a18d4692d7345ce0d34367",
+    "owned_session": "sess_tqr_owned_synthetic",
+    "historical_native_identity": "Public placeholder sess_PRIVATE_NATIVE_ID_REDACTED; never the owned SID",
+    "raw_receipt_fully_qualified_false_is_consumer_scope_only": true,
+    "all_six_observations": [
+      {
+        "capture": "01-native-url-manual-ack-not-auth.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 2234,
+        "full_native_url_exact": true,
+        "callback_delivery_ack": true,
+        "no_connected_or_authorized_claim": true
+      },
+      {
+        "capture": "02-durable-native-shaped-error.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 2484,
+        "message_preserved": true
+      },
+      {
+        "capture": "03-escaped-controls-printable-exact.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 2710,
+        "full_synthetic_url_exact": true,
+        "apostrophe_quote_backslash_unicode_exact": true,
+        "terminal_controls_and_bidi_visible_escapes": true
+      },
+      {
+        "capture": "04-later-content-before-navigation.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 24518,
+        "draft_preserved": true
+      },
+      {
+        "capture": "05-pageup-durable-full-urls-and-error.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 29679,
+        "native_url_full_exact": true,
+        "synthetic_url_full_exact": true,
+        "durable_error_after_other_notifications": true,
+        "draft_preserved": true
+      },
+      {
+        "capture": "06-pagedown-return-to-latest.txt",
+        "columns": 140,
+        "rows": 40,
+        "raw_byte_offset": 34318,
+        "draft_preserved": true
+      }
+    ],
+    "cleanup": {
+      "root_absent_after_exit": true,
+      "post_exit_owned_marker_matches": 0,
+      "numeric_proc_entries_examined": 937,
+      "complete_live_descendant_or_PGID_history_claimed": false,
+      "observer_cleanup_signals_sent": false
+    },
+    "initial_preflight": "METHOD_FAILURE; zero product invocations before correction; exact-five blob/mode correction passed; not repeated and not a product retry."
+  },
+  "current_source_review": {
+    "result": "NO_FINDINGS",
+    "confidence": 0.96,
+    "source": "agent://ReviewCurrentTqr",
+    "receipt": "review/current-source-review.txt",
+    "feature_path_count": 19,
+    "scope": "Source inspection699->a09; no empirical/native checks or later README status-only review."
+  },
+  "historical_sensitivity": {
+    "five_RED_restored_GREEN_pairs": "Retained historical evidence, NOT rerun under the current released pair",
+    "applicability_receipt": "qualification/retained-gutter-mutation-applicability.json",
+    "current_four_GREEN_and_current_consumer_are_separate": true
+  },
+  "postqualification_documentation_delta": {
+    "classification": "POSTQUALIFICATION_README_STATUS_ONLY_DOCUMENTATION_DELTA",
+    "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
+    "qualified_readme_sha256": "080fc6dba24454b8ff877ebbd9ac7d65ad6d376268cf820fa7da9bac897ea8e3",
+    "publication_readme_sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+    "qualified_readme_bytes": 24541,
+    "publication_readme_bytes": 24639,
+    "qualified_bytes_copy": ".cyril-tqr8/current-publication-evidence/integration/qualified-source-README.txt",
+    "exact_delta_patch": ".cyril-tqr8/current-publication-evidence/integration/README-status-only.patch",
+    "authorization": "Main explicit GO: README STATUS-ONLY correction; current local qualification and owned consumer PASS, native/CI limits, preserve all feature/landed-main content; no Rust/Git/index/tracker/commit changes.",
+    "not_the_same_a09_whole_tree": true,
+    "scope": "Replace only the stale full-workspace-blocked checkpoint sentence with current local workspace/isolated KAS/no-default and one owned ACP/PTy consumer PASS plus native/host/CI limits.",
+    "rust_feature_postimages_unchanged_from_qualified_source": 18,
+    "review_applicability": "Current source review pins a09 before this factual README status-only correction; no new production behavior or source review is claimed."
+  },
+  "historical_publication": {
+    "path": ".cyril-tqr8/tqr8-publication-evidence.tar.gz",
+    "sha256": "741218ed866b16aec3f7dbcec75b510875b77700a90bc27fbd83e7c878216850",
+    "retention_ledger": ".cyril-tqr8/current-publication-evidence/historical/original-116-retention-ledger.json",
+    "original_manifest_snapshot": ".cyril-tqr8/current-publication-evidence/historical/publication-manifest.json",
+    "original_index_snapshot": ".cyril-tqr8/current-publication-evidence/historical/publication-index.json",
+    "original_active_docs_in_archive": true
+  },
+  "current_documentation": [
+    {
+      "path": "README.md",
+      "bytes": 24639,
+      "sha256": "091a1508f75799caec4809194ad94fc2af1e75479d6de27ea1733142f0278baa",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/route.md",
+      "bytes": 5292,
+      "sha256": "30a6dbdde5156d418a2da3f57251c69daba72e5c3e757f5cfeca898b7889bc9e",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/design.md",
+      "bytes": 14409,
+      "sha256": "cdba13cc1cbedbc172313c043cc57358006532d6a1b7ddffdc8d52928d019e36",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/plan.md",
+      "bytes": 9889,
+      "sha256": "b1d037725ae9c956b3d0eb8c75f28d7a6e0f21cb1cc8f4a363886dfa350e8efd",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/evidence.md",
+      "bytes": 46753,
+      "sha256": "815a912693d74c9e0a957b8db6230e67fbfd783c0a03c7deac25ac5e76175e81",
+      "kind": "current_publication_documentation"
+    },
+    {
+      "path": ".cyril-tqr8/review-decisions.md",
+      "bytes": 19790,
+      "sha256": "4222f8fa1dbe0d5fb65eab26f71160ccebba76f312c9fde4fb511250c4bce8b1",
+      "kind": "current_publication_documentation"
+    }
+  ],
+  "archive": {
+    "path": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz",
+    "checksum_sidecar": ".cyril-tqr8/tqr8-current-publication-evidence.tar.gz.sha256",
+    "manifest": ".cyril-tqr8/publication-manifest.json",
+    "contains": "Every file in the final root manifest, the root manifest itself, and the eight explicitly listed archive-only original README/historical-doc postimages.",
+    "hash_convention": "File SHA256 over exact bytes; current index excludes its own hash. Root manifest records this index. Root manifest excludes its own hash and current archive/sidecar to avoid cycles; archive hash is only external in checksum sidecar and parent handoff.",
+    "excludes": "Compiled executable/target, Git/index bytes, private HOME/credentials, private journals/runtime logs and all unlisted files. No source-manifest path is dereferenced to add unrelated files."
+  },
+  "remaining_parent_actions": [
+    "Stage exact feature/documentation/evidence paths while preserving the parent-owned open merge/index.",
+    "Parent alone commits, closes the tracker issue and creates/pushes the substantive PR under existing authorization.",
+    "Any fresh native/CI/platform evidence remains separate and must not be inferred from this local/owned package."
+  ],
+  "limits": [
+    "Current local/owned/source-review PASS is not current real-native KAS/OAuth, host-terminal/platform or CI-all-features acceptance.",
+    "No new native/login/account/config/credential/browser/clipboard/network/model/grant operation. No raw native-frame or invented sourceURL claim.",
+    "Ignored tests did not execute; no overlapping lane counts added as unique tests.",
+    "Cleanup is owned-root absence plus bounded post-exit marker census, not captured-complete process-group history.",
+    "Raw setup awaiting/no-launch and consumer fully_qualified:false/pr_ready:false fields retain their original scoped meaning.",
+    "Main owns staging, merge/feature commit, tracker closure, PR and any subsequent CI/native decisions."
+  ]
+}

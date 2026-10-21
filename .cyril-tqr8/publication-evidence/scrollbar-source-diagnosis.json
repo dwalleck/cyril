@@ -1,0 +1,29 @@
+{
+  "status": "VERIFIED_STATIC_CAUSE; bounded source repair DG-approved and implemented; parent qualification pending",
+  "date": "2026-10-20",
+  "actual_consumer_failure": "controlled-peer-a-result.json and controlled-peer-a-FAILED-final-screen.txt; full opaque URL bytes covered at rightmost column after PageUp under vertical overflow",
+  "source": "crates/cyril-ui/src/widgets/chat.rs",
+  "pre_repair_cause": [
+    {"lines": "22-36", "fact": "Committed message and streaming rendering receive full area.width"},
+    {"lines": "49-70", "fact": "Paragraph line_count uses full area.width; paragraph paints into full area"},
+    {"lines": "72-76", "fact": "VerticalRight scrollbar paints into the same full rectangle after text whenever content exceeds viewport height"},
+    {"lines": "58-62", "fact": "Follow and browse change vertical offset only; PageUp does not introduce different content geometry"}
+  ],
+  "pinned_dependency": {
+    "package": "ratatui-widgets 0.3.0",
+    "owner_supplied_source": "/home/dwalleck/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/ratatui-widgets-0.3.0/src/scrollbar.rs",
+    "lines": "590-595 chooses area's last column for VerticalRight;508-520 writes symbols to those cells"
+  },
+  "diagnosis_qualification": "Source establishes overlap independently. Actual screen shows the expected resulting lost characters. Scrollbar can overwrite follow-mode rows too when overflowing, not only browse mode.",
+  "bounded_repair": {
+    "authorization": "Main DG approved fixed gutter main-chat viewport/test/doc source-only edit; no checks or new consumer until parent qualified-binaryGO",
+    "contract": "Reserve one stable rightmost gutter column when outer width>1; use the content rectangle width consistently for rendering, streaming preparation, line count and painting; scrollbar owns gutter only. For width0/1 retain full content width and omit scrollbar.",
+    "forbidden_workarounds": ["URL clipping or truncation", "changing exact-byte oracle", "enlarging consumer test geometry", "scroll- or overflow-dependent content width"],
+    "C6_owner_coordination": "ConversationPerformance confirms same exposure: retained.rs394 synchronize(history,area.width),406 live(area.width),413 activity(area.width),428-436 paint(fullarea),438-444 scrollbar(fullarea); geometry key is(width,theme). Fixed gutter must feed all cached preparation and painting once, never rewrap committed history on PageUp. No C6 edit authorized here.",
+    "regression_seam": "Four new real chat-renderer tests cover exact opaque URL with Unicode/visible control escapes in follow/browse, stable no-overflow gutter, complete live text and width0/1. No execution claimed; tests-only and assembled patches are separate parent inputs.",
+    "scope": "Main-conversation repair only; focused subagent is a separate duplicated branch and no expansion is authorized"
+  },
+  "performed_checks": "none; source-only diagnosis and subsequent bounded repair",
+  "production_changes": "widgets/chat.rs main viewport only, consistent content rectangle and separate gutter; no URLbytes/protocol/auth changes",
+  "native_runs_or_auth_changes": false
+}

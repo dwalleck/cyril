@@ -151,6 +151,13 @@ impl SubagentStream {
                 self.messages.push(ChatMessage::plan(plan.clone()));
                 true
             }
+            Notification::McpConnectionError { message } => {
+                self.push_system(format!(
+                    "[error] {}",
+                    crate::mcp_notice::terminal_safe(message)
+                ));
+                true
+            }
             _ => false,
         }
     }

@@ -1,0 +1,20 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/tmp/cyril-auth-retarget-proof-20261020/source/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 41.60s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-53f67d275e59ff75)
+
+running 1 test
+AUTH_RETARGET_PROOF busy=false overlap=true success=false
+
+thread 'protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget' (3548217) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1812:9:
+Err(NonZeroExit { command: "/home/dwalleck/.claude/tmp/.tmpkZhwuQ/bin/kiro-cli /home/dwalleck/.claude/tmp/.tmpkZhwuQ/fake-kiro-cli.sh chat _ get-kas-token", status: "exit status: 9", stderr_tail: ": mkdir: cannot create directory ‘/home/dwalleck/.claude/tmp/.tmpkZhwuQ/held’: File exists" })
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget ... FAILED
+
+failures:
+
+failures:
+    protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1489 filtered out; finished in 0.31s
+
+error: test failed, to rerun pass `-p cyril-core --lib`

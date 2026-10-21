@@ -1,0 +1,8 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo fmt --all --check
+started_utc=2026-10-20T18:35:20.620478+00:00
+
+
+qualification_exit_code=0
+qualification_elapsed_seconds=0.880152

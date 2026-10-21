@@ -41,6 +41,26 @@ struct Cli {
     prompt: Option<String>,
 }
 
+/// Keep the example's copyable URL output on a testable formatting boundary.
+fn external_url_text(url: &str) -> impl std::fmt::Display + '_ {
+    cyril_ui::mcp_notice::terminal_safe(url)
+}
+
+#[test]
+fn external_url_output_preserves_printable_url_exactly() {
+    let url = "https://example.com/authorize?state=a'b&hint=日本語#copy";
+    assert_eq!(external_url_text(url).to_string(), url);
+}
+
+#[test]
+fn external_url_output_escapes_only_terminal_controls() {
+    let url = "https://example.com/auth?state=ok\u{1b}[31m\u{202e}\n\t";
+    assert_eq!(
+        external_url_text(url).to_string(),
+        r"https://example.com/auth?state=ok\u{1b}[31m\u{202e}\n\t"
+    );
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
@@ -603,6 +623,15 @@ fn print_notification(n: &Notification) {
         }
         Notification::McpOAuthRequest { server_name, url } => {
             println!("  [McpOAuth] {server_name}: {url}");
+        }
+        Notification::ExternalUrlRequested { url } => {
+            println!(
+                "  [ExternalUrlRequested] Open in browser: {}",
+                external_url_text(url)
+            );
+        }
+        Notification::McpConnectionError { message } => {
+            println!("  [McpConnectionError] [error] {}", message.escape_debug());
         }
         Notification::McpServerInitialized { server_name } => {
             println!("  [McpReady] {server_name}");
