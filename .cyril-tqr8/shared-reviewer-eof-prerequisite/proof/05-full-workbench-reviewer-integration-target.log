@@ -1,0 +1,52 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-reviewer-eof-fixture
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo test -p cyril-workbench --test reviewer
+started_utc=2026-10-20T18:34:59.008108+00:00
+
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.07s
+     Running tests/reviewer.rs (/home/dwalleck/repos/cyril/target/debug/deps/reviewer-e8c4e466c218338e)
+
+running 37 tests
+test staging_io_failure_never_creates_child ... ok
+test deployment_rejects_credential_environment_and_invalid_bounds ... ok
+test connection_loss_keeps_incomplete_output ... ok
+test fresh_runs_do_not_share_state_and_continue_same_session ... ok
+test unauthorized_read_is_denied ... ok
+test configuration_drift_preserves_partial_but_never_completes ... ok
+test all_permission_sources_are_cancelled ... ok
+test blocked_observer_does_not_block_cancel ... ok
+test runtime_command_diagnostic_is_explicitly_retrievable_but_not_logged ... ok
+test closed_permission_responder_is_visible ... ok
+test rejected_privacy_change_preserves_private_cause_without_sending_evidence ... ok
+test cancel_never_completes_review ... ok
+test empty_text_and_exact_label_bounds_remain_distinct_documents ... ok
+test failed_tool_is_observed_without_inventing_permission_denial ... ok
+test authoritative_completion_survives_late_disconnect ... ok
+test content_collection_must_be_confirmed_disabled ... ok
+test malformed_configuration_response_is_not_silently_discarded ... ok
+test output_limit_is_incomplete ... ok
+test unsupported_executable_version_never_starts_session ... ok
+test content_collection_drift_is_incomplete ... ok
+test missing_collection_confirmation_never_prompts ... ok
+test dropping_owner_terminates_process_tree_before_removing_evidence ... ok
+test incomplete_staging_never_spawns ... ok
+test evidence_labels_cannot_escape_staging ... ok
+test cancel_before_readiness_never_dispatches_prompt ... ok
+test late_configuration_starts_once ... ok
+test late_collection_confirmation_precedes_first_prompt ... ok
+test post_switch_model_confirmation_allows_inspection ... ok
+test unsolicited_collection_update_cannot_repair_invalid_acknowledgement ... ok
+test runtime_drop_retains_evidence_until_core_completion ... ok
+test missing_model_catalog_never_starts ... ok
+test model_from_wrong_mode_cannot_authorize_mode_only_switch ... ok
+test model_mismatch_never_starts_inspection ... ok
+test missing_configuration_never_starts ... ok
+test wrong_mode_never_starts ... ok
+test continuation_after_startup_deadline_still_completes ... ok
+test stalled_turn_stays_active ... ok
+
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.20s
+
+
+qualification_exit_code=0
+qualification_elapsed_seconds=5.313112

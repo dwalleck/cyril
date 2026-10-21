@@ -1,0 +1,15 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo clippy --workspace --all-targets -- -D warnings
+started_utc=2026-10-20T16:01:22.694709+00:00
+
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-ui)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-memory)
+    Checking cyril-workbench v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-workbench)
+    Checking cyril-voice v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-voice)
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 16.82s
+
+qualification_exit_code=0
+qualification_elapsed_seconds=16.886847

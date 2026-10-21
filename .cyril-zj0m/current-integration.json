@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "pull_request": 192,
+  "record_kind": "Live source integration binding; not a qualification or publication receipt",
+  "status": "COMPLETE integration; Main-owned assembled qualification, independent review and publication remain required",
+  "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m",
+  "branch": "perf/cyril-zj0m",
+  "ownership": {
+    "premerge_head": "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+    "expected_head_matched": true,
+    "initial_worktree_state": "Clean; no tracked, staged or untracked changes reported by git status --short --branch",
+    "unexpected_drift": [],
+    "scope": "Only the assigned zj0m worktree; C6 and all other worktrees untouched",
+    "publication_owner": "Main"
+  },
+  "merge": {
+    "command": "git merge --no-commit --no-ff 8b80323450013fd4a780d468b579298efb3725f6 3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "method": "Normal multi-parent octopus merge; no commit, history rewrite, manual staging or strategy override",
+    "prospective_parents_in_order": [
+      "3390f2cb75dd8a7d9df9c6f646b92f868277f281",
+      "8b80323450013fd4a780d468b579298efb3725f6",
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "merge_head_observed": [
+      "8b80323450013fd4a780d468b579298efb3725f6",
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "qualified_x5_parent": "8b80323450013fd4a780d468b579298efb3725f6",
+    "shared_released_width_parent": "3a5b88b66b1267844ea764c4ff58e48294c93141",
+    "merge_base_with_x5": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+    "merge_base_with_common": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "merge_base_between_added_parents": "42151d93a87f3a083d96ff3b8b754f944b86785c",
+    "result": "Automatic merge went well; stopped before committing as requested",
+    "conflicts": [],
+    "manual_conflict_resolutions": [],
+    "automatic_merge_overlap_paths": [
+      "README.md",
+      "crates/cyril-ui/src/traits.rs",
+      "crates/cyril-ui/src/widgets/approval.rs",
+      "crates/cyril-ui/src/widgets/markdown.rs"
+    ],
+    "automatic_index_delta_path_count": 96,
+    "index_boundary": "The 96-path automatic merge index does not include the later unstaged README addition or new untracked current-integration.json. Main owns their staging and the final merge commit."
+  },
+  "manual_edit_allowlist": [
+    "README.md",
+    ".cyril-zj0m/current-integration.json"
+  ],
+  "manual_production_edits": [],
+  "integration_reconciliation": {
+    "traits.rs": "Automatic composition retains the exact selected-first-Diff/OnceLock/Arc implementation and inherits final Fiv private RawOutputPolicy::{Display,Error}/raw_output_text repair. Display keeps blank direct text semantics and existing extraction precedence; Error skips blank candidates and remains Failed-only, with nonblank raw errors before text-content fallback. The successful string output alias remains last after text/content/result.",
+    "widgets/approval.rs": "Automatic composition inherits only the common physical-width/helper and boundary-control changes in this owner; the Zj shared render_diff_lines dispatch for PreviewBody::Diff remains independent of tool completion/kind.",
+    "widgets/markdown.rs": "Automatic composition keeps X5 MarkdownStyle/HighlightStyle input ownership, derived identity, cache key, cache capacity/locking and nested style-only highlighting. Only the common physical width changes are adopted in production: text::width for code-language fill and table columns, text::line_width for code-background padding. Two common halfwidth boundary tests are inherited. No old whole-file overwrite.",
+    "algorithm_changes": "None beyond the explicitly approved released-width prerequisite and final Fiv repair inherited from the two parents; no Zj diff/cache/row-selection algorithm or new compatibility shim was added."
+  },
+  "source_owners": {
+    "zj_seven_source_sha256": {
+      "crates/cyril-ui/Cargo.toml": "dca84714e572fbd0543f20b150c928b09ace0e7ebc8ee34dae9dabc5c2b64c93",
+      "crates/cyril-ui/benches/conversation_render.rs": "72e4dd8534216d23bf4ed2b1843ee05aa11cbcaf2ab393ca7bb6c6ec3b19e510",
+      "crates/cyril-ui/src/lib.rs": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+      "crates/cyril-ui/src/tool_diff.rs": "d4ae79652e8eca09f1c61145cddd23f8ee3f6723a5b04de3588cec1cafdc0036",
+      "crates/cyril-ui/src/traits.rs": "0149dac8b5171a1ad133add709661098cb23376edfe8c8677ba8bfaa37c150a8",
+      "crates/cyril-ui/src/widgets/approval.rs": "4c4b18ab3c1a5765623e434fc35fd16e2b57668abc0e587b4e4a49ff66d3f204",
+      "crates/cyril-ui/src/widgets/chat.rs": "9f763f63588e61b438111908f4ef7ba217709c54deed6b9fac3670f711c8ef53"
+    },
+    "zj_premerge_changed_owner_sha256": {
+      "crates/cyril-ui/src/traits.rs": "9ad6d18463c9648ccd596802cee4db37a4ae609decfbf90eff1853a3cb28586c",
+      "crates/cyril-ui/src/widgets/approval.rs": "76d03ff8fc99290683455afba94e6fd1edbb515bc267e2d5cde17fa184bd5234"
+    },
+    "zj_identity_boundary": "Five of seven owner files are byte-identical to premerge HEAD. traits.rs changes only for final Fiv extraction repair; approval.rs changes only for the common released-width prerequisite. tool_diff.rs and chat.rs are byte-unchanged, including derivation, summary/body selection, bounded rows, current palette application and pending preview regressions.",
+    "x5_current_sha256": {
+      "crates/cyril-ui/src/theme.rs": "fefab546a9d63cf300d70c986f48ed485ddf99c1cf7f240b13e649cb58215eaf",
+      "crates/cyril-ui/src/highlight.rs": "f4142b29e3561b392a08e65eb5ca5827735e671577510f4d46a41a041f29fdc9",
+      "crates/cyril-ui/src/widgets/markdown.rs": "377c592d232281459e6422cf9bfcdb65b8b62131eea2261de4453f1fd16c0900"
+    },
+    "x5_markdown_premerge_sha256": "37719f3bf96799c5240660db27607ab43582ffce098bc21c5242bc4794b2ff2a",
+    "x5_identity_boundary": "Theme and highlight owners remain byte-identical to the qualified X5 parent; Markdown keeps its complete concrete style identity/cache owner while adopting the common physical-width calls. No source-fence policy or cap is edited.",
+    "shared_text_sha256": "b9744d47e36b2d00bc270bb8273830623d81f36978bb9c6c510f8d8b5d83bae2",
+    "cargo_lock_sha256": "67f80b06648c4f534e91435fc49c374f71908874faf0b5b9df5a63831f114600",
+    "automatic_source_delta_paths": [
+      "crates/cyril-ui/src/floor_tests.rs",
+      "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap",
+      "crates/cyril-ui/src/text.rs",
+      "crates/cyril-ui/src/traits.rs",
+      "crates/cyril-ui/src/widgets/approval.rs",
+      "crates/cyril-ui/src/widgets/code_panel.rs",
+      "crates/cyril-ui/src/widgets/input.rs",
+      "crates/cyril-ui/src/widgets/markdown.rs",
+      "crates/cyril-ui/src/widgets/review.rs",
+      "crates/cyril-ui/src/widgets/toolbar.rs",
+      "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+      "crates/cyril-workbench/tests/reviewer.rs"
+    ]
+  },
+  "expected_released_pair": {
+    "facade": "ratatui 0.30.0",
+    "core": "ratatui-core 0.1.2",
+    "widgets": "ratatui-widgets 0.3.2",
+    "backend_features": "Existing facade/backend/feature choices retained; inherited lockfile resolution only; no Cargo command, direct package pin or vendoring",
+    "physical_width": "crate-local text::{width,line_width,char_width} uses ratatui::buffer::CellWidth. width iterates borrowed Span::styled_graphemes after its control filtering; long string/line accumulation is usize. line_width retains painted span boundaries.",
+    "input_contract": "Character wrapping and scalar/codepoint cursor semantics retained; cursor input remains a byte offset floored to a character boundary and returned cursor column counts characters. The Python oracle fixture is not repinned. FF9E/FF9F receive physical columns; U3099/U309A remain combining; raw submitted bytes are not normalized."
+  },
+  "preserved_obligations": [
+    "The selected first Diff exclusively supplies the coherent summary/body; an unchanged first Diff suppresses both even when a later Diff changes.",
+    "Lazy OnceLock<Arc<DiffPreview>> retains theme-independent derivation, reuses equivalent source and metadata/status updates, detaches only the changed wrapper, and shares initialized clones.",
+    "One context row, maximum 20 rows plus ellipsis, source borrowing, LF-only presentation trimming, CRLF/bare-CR/Unicode source ranges and full summary counts remain unchanged.",
+    "Pending preview continues through the shared Diff renderer without a Completed/kind gate; main/focused child tracked wrappers and active/history snapshots keep their existing owners.",
+    "No application terminal/backend diff implementation is modified. The exclusive first_diff boundary, first-frame/full-clear/skip behavior and released native-width behavior are not weakened or special-cased; changed-dependency runtime qualification remains Main-owned.",
+    "Full Theme identity, concrete HighlightStyle/MarkdownStyle closure, all five existing source policies, inventories and 300000 raw-byte cap remain unchanged. No cap/count increase or line-ending byte discount is introduced.",
+    "The final Fiv Display/Error private helper repair and captured successful-output alias retain distinct error/display policies; the original raw output is unchanged.",
+    "Shared reviewer EOF fixture prerequisites are inherited from the parent; the already-present common immutable authentication fixture prerequisite and callers are not edited.",
+    "The common floor repair is inherited, not repinned: remove only the obsolete inflow snapshot, keep idle/approval snapshots pinned, and retain the literal roomy input/suggestion/status/newest-chat placement test."
+  ],
+  "source_callers": {
+    "tracked_lifetime": [
+      "crates/cyril-ui/src/state.rs:1277,1286,1297,1300 — historical/active tool updates and creation",
+      "crates/cyril-ui/src/state.rs:1814 — immutable approval tracked snapshot",
+      "crates/cyril-ui/src/subagent_ui.rs:120,132 — focused-child tracked creation/update"
+    ],
+    "first_diff_consumers": [
+      "crates/cyril-ui/src/traits.rs:384-438 — selected-source invalidation, lazy preview and first-Diff selection",
+      "crates/cyril-ui/src/widgets/chat.rs:207,316-432 — shared tool header/body projection for history/focused child",
+      "crates/cyril-ui/src/widgets/approval.rs:481-482 — pending PreviewBody::Diff dispatch"
+    ],
+    "markdown_theme_and_width": [
+      "crates/cyril-ui/src/widgets/chat.rs:36,125,200 — committed and streaming Markdown adapters",
+      "crates/cyril-ui/src/widgets/markdown.rs:24-59 — Theme adapter, complete MarkdownStyle cache key and style-only renderer",
+      "crates/cyril-ui/src/widgets/markdown.rs:124,132,250,284,392 — language truncation/fill, table columns/padding, code background width",
+      "crates/cyril-ui/src/widgets/approval.rs:99,103,249,293-355,420,638-640 — popup/character-wrap/path/option display budgets",
+      "crates/cyril-ui/src/widgets/input.rs:41-74 — existing character-wrap/codepoint-cursor path using text::char_width",
+      "crates/cyril-ui/src/widgets/code_panel.rs:128; widgets/review.rs:35; widgets/toolbar.rs:161; widgets/workflow_plan.rs:162,177 — shared line/string display budgets"
+    ],
+    "navigation_limit": "rust-analyzer reports ready and lists linked-worktree symbols, but references queries returned no references for width/diff_preview despite directly observed callers. Reported to tool QA; named source callsites above were inspected directly as fallback. No diagnostics/build/check was requested."
+  },
+  "existing_actual_first_diff_consumer": {
+    "archive": ".cyril-zj0m/refresh-7972f884/verification-evidence.tar.gz",
+    "archive_sha256": "13cd101ddc2e694d6d096866d0ebc84713bbd0e93e6b67cb05c339ec73212203",
+    "portable_recipe": ".cyril-zj0m/refresh-7972f884/reproduction.md",
+    "recipe_sections": "Archived layout; Relocated replay after a new authorization",
+    "harness_archive_paths": [
+      "consumer/zj0m-refreshed-truecolor-01/harness-snapshot/smoke.py",
+      "consumer/zj0m-refreshed-truecolor-01/harness-snapshot/owned_peer.py"
+    ],
+    "harness_sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+    "owned_peer_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+    "dependency": "pyte==0.8.2; Linux PTY and separately supplied uv/Python/offline cached dependencies",
+    "replay_command_after_fresh_authorization": "uv run --offline --script ARCHIVE_ROOT/consumer/zj0m-refreshed-truecolor-01/harness-snapshot/smoke.py --authorization FRESH_GO_JSON --scope zj0m --color-mode truecolor --output FRESH_OUTPUT_DIRECTORY",
+    "fresh_go_requirements": "Explicit Main GO with go=true, scopes containing zj0m, newly qualified absolute App binary, actual sha256 and checked source_revision; private staging verifies binary hash. Archived GO authorizes no new execution.",
+    "historical_source_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "historical_source_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "historical_app_binary_sha256": "27f0642339b92a6e6f2330917060b9a50172bb5b5083821c7eec528014572ff0",
+    "checkpoint_stems": [
+      "z01-write-start",
+      "z02-write-incremental",
+      "z03-write-completed",
+      "z04-write-resized",
+      "z05-unchanged-first-changed-second",
+      "z06-replaced-diff-source",
+      "z06a-retained-diff-new-palette",
+      "z06b-diff-scrolled-out",
+      "z06c-diff-browsed-back",
+      "z07-pending-comparison",
+      "z08-pending-resized",
+      "z09-completed-and-rejected",
+      "final"
+    ],
+    "required_observations": "Exact first-Diff +2 -1/body/gutters and second exclusion; unchanged suppression; source replacement; 160x48/100x32 resize; committed Gruvbox style; offscreen/PageUp return; pending matching-ID comparison and resize; sole RejectOnly response; palette restoration, chronology and turn completion. Preserve the existing 13 text/cell checkpoints and raw wire/ANSI safety controls.",
+    "current_execution": "Not run; historical first-attempt PASS/18 ACP frames remain attributed only to 7972f884/tree858bfff9 and its binary. No native graphical glyph/font, real Kiro/model, grant, file operation, native50k or C6 claim."
+  },
+  "main_owned_gate_recipes_not_executed": {
+    "assembled": [
+      "cargo clippy --workspace --all-targets -- -D warnings",
+      "cargo test --workspace",
+      "cargo build -p cyril",
+      "cargo fmt --all --check"
+    ],
+    "zj_focused_selectors": [
+      "cargo test -p cyril-ui --lib tool_diff::tests",
+      "cargo test -p cyril-ui --lib traits::tests::tracked_diff_cache",
+      "cargo test -p cyril-ui --lib widgets::chat::tests::render_tool_call_",
+      "cargo test -p cyril-ui --lib widgets::chat::tests::completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change -- --exact",
+      "cargo test -p cyril-ui --lib widgets::chat::tests::pending_approval_diff_preview_reuses_derivation_and_current_colors -- --exact",
+      "cargo test -p cyril-ui --lib widgets::approval::tests"
+    ],
+    "width_and_x5_selectors": [
+      "cargo test -p cyril-ui --lib text::tests",
+      "cargo test -p cyril-ui --lib widgets::input::tests::wrap_rows_match_python_oracle -- --exact",
+      "cargo test -p cyril-ui --lib widgets::input::tests::halfwidth_wrap_keeps_char_cursor_contract_and_following_glyph -- --exact",
+      "cargo test -p cyril-ui --lib widgets::markdown::tests",
+      "cargo test -p cyril-ui --lib highlight::tests",
+      "cargo test -p cyril-ui --lib theme::tests::full_theme_hash_includes_previously_omitted_roles_and_syntax -- --exact",
+      "cargo test -p cyril-ui --lib theme::tests::widgets_only_use_the_explicit_theme -- --exact",
+      "cargo test -p cyril-ui --lib floor_tests::roomy_autocomplete_stays_below_input -- --exact",
+      "cargo test -p cyril-ui --lib floor_tests::roomy_frame_matches_main_fixture -- --exact"
+    ],
+    "fiv_and_alias_selectors": [
+      "cargo test -p cyril-ui --test v2_failed_validation",
+      "cargo test -p cyril-ui --test missing_tool_updates kas_completed_output_capture_renders_exact_body_without_kind -- --exact"
+    ],
+    "performance_recipe": "cargo bench -p cyril-ui --bench conversation_render -- completed-write",
+    "performance_boundary": "Recipe only; not executed or newly authorized here. Existing cold/warm timings, work-count sensitivity and benchmark CLI evidence remain on the original 6241931f tree, not this merge.",
+    "consumer_and_review": "Main qualifies the exact assembled source/new binary and commissions separate review plus a fresh scoped actual first-Diff consumer GO. Main retains/adjudicates prerequisite EOF/auth obligations and exclusive first_diff/first-frame/full-clear/skip/native-width coverage without narrowing them. C6 receives only the qualified published Zj parent."
+  },
+  "immutable_historical_boundaries": {
+    "original_benchmark_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+    "original_app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+    "original_evidence_archive": ".cyril-zj0m/verification-evidence.tar.gz",
+    "original_evidence_sha256": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc",
+    "prior_source_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "prior_source_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "policy": "All existing Zj root workflow/handoff/publication/production.patch/parent-refresh records and refresh-7972f884 files/archives remain unchanged. The latter archive hashes the older root records, so this new live binding and README link do not rewrite them. Historical review, gates, binaries, pins, failures and benchmarks are not relabeled current."
+  },
+  "worker_actions": "Only the authorized normal no-commit merge, static ancestry/source/identity inspection, README update and this new source binding. No Cargo/check/test/build/lint/fmt/benchmark/runtime/native run; no manual Git staging, commit, push, tracker operation, other-worktree edit or user-drift cleanup."
+}

@@ -31,16 +31,14 @@ pub fn height_for(state: &dyn TuiState) -> u16 {
 /// length and floored to a char boundary — flooring is defined behavior,
 /// not an error path, so out-of-range cursors from a stale state still
 /// render), splits on `'\n'`, and char-wraps each logical line at `width`
-/// cells (`width` is clamped to ≥ 1). East-Asian wide chars take 2 cells
-/// and move whole to the next row rather than straddling the boundary;
-/// combining marks take 0 cells and never force a wrap. Returns the visual
-/// rows plus the (row, char-column) of the cursor block — tracked
+/// cells (`width` is clamped to ≥ 1). Scalars use Ratatui's painted cell
+/// widths, including one column for each halfwidth sound mark. Wide chars
+/// move whole to the next row; combining marks still take zero columns.
+/// Returns the visual rows plus the (row, char-column) of the cursor block — tracked
 /// structurally during the wrap, so text that itself contains `█` cannot
 /// confuse it. Independently oracled by `.cyril-a14l/oracle-input-wrap.py`
 /// via `tests/fixtures/input-wrap-oracle.tsv`.
 pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, usize, usize) {
-    use unicode_width::UnicodeWidthChar;
-
     let width = width.max(1);
     let mut cursor = cursor.min(text.len());
     while cursor > 0 && !text.is_char_boundary(cursor) {
@@ -60,7 +58,7 @@ pub fn wrapped_rows(text: &str, cursor: usize, width: usize) -> (Vec<String>, us
             used = 0;
             continue;
         }
-        let cells = character.width().unwrap_or(0);
+        let cells = crate::text::char_width(character);
         if cells > 0 && used + cells > width && !current.is_empty() {
             rows.push(std::mem::take(&mut current));
             used = 0;
@@ -598,5 +596,36 @@ mod tests {
             r1 < r2 && r2 < r3,
             "lines must be on increasing rows: {rows:?}"
         );
+    }
+
+    #[test]
+    fn halfwidth_wrap_keeps_char_cursor_contract_and_following_glyph() -> anyhow::Result<()> {
+        for (text, expected_rows, expected_cursor, z_position, cursor_position) in [
+            ("ｶﾞZ", vec!["ｶﾞZ", "█"], (1, 0), (3, 1), (1, 2)),
+            ("ﾊﾟZ", vec!["ﾊﾟZ", "█"], (1, 0), (3, 1), (1, 2)),
+            ("ﾞZ", vec!["ﾞZ█"], (0, 2), (2, 1), (3, 1)),
+            ("ﾟZ", vec!["ﾟZ█"], (0, 2), (2, 1), (3, 1)),
+            ("ｶ\u{3099}Z", vec!["ｶ\u{3099}Z█"], (0, 3), (2, 1), (3, 1)),
+            ("ﾊ\u{309A}Z", vec!["ﾊ\u{309A}Z█"], (0, 3), (2, 1), (3, 1)),
+        ] {
+            let (rows, row, column) = wrapped_rows(text, text.len(), 3);
+            assert_eq!(rows, expected_rows, "{text:?}");
+            assert_eq!((row, column), expected_cursor, "{text:?}");
+            let painted = render_input_buffer(text, text.len(), 5, 5)?;
+            assert_eq!(painted[z_position].symbol(), "Z", "{text:?}");
+            assert_eq!(painted[cursor_position].symbol(), "█", "{text:?}");
+            let previous = ratatui::buffer::Buffer::empty(*painted.area());
+            assert!(
+                previous
+                    .diff(&painted)
+                    .iter()
+                    .any(|(x, y, cell)| (*x, *y) == z_position && cell.symbol() == "Z"),
+                "following glyph omitted from diff for {text:?}"
+            );
+        }
+        let (rows, row, column) = wrapped_rows("ｶﾞZ", "ｶ".len(), 3);
+        assert_eq!(rows, ["ｶ█ﾞ", "Z"]);
+        assert_eq!((row, column), (0, 1));
+        Ok(())
     }
 }

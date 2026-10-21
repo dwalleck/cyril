@@ -1,0 +1,90 @@
+{
+  "case": "old-prompt",
+  "exit_code": 1,
+  "events": [
+    {
+      "event": "spawn",
+      "time": 139677.02336944,
+      "pid": 4082671,
+      "child": 4082672,
+      "cwd": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/run",
+      "session": "sess_review-4082671",
+      "environment_names": [
+        "CARGO_TARGET_DIR",
+        "HOME",
+        "LANG",
+        "LC_ADDRESS",
+        "LC_IDENTIFICATION",
+        "LC_MEASUREMENT",
+        "LC_MONETARY",
+        "LC_NAME",
+        "LC_NUMERIC",
+        "LC_PAPER",
+        "LC_TELEPHONE",
+        "LC_TIME",
+        "LOGNAME",
+        "MPLBACKEND",
+        "PATH",
+        "PI_ARTIFACTS_DIR",
+        "PI_EVAL_LOCAL_ROOTS",
+        "PI_LENS_LSP_DIAGNOSTICS_MAX_WAIT_MS",
+        "PI_SESSION_FILE",
+        "PI_TOOL_BRIDGE_SESSION",
+        "PI_TOOL_BRIDGE_TOKEN",
+        "PI_TOOL_BRIDGE_URL",
+        "PYTHONIOENCODING",
+        "PYTHONUNBUFFERED",
+        "SHELL",
+        "TERM",
+        "TERM_PROGRAM",
+        "TERM_PROGRAM_VERSION",
+        "TMPDIR",
+        "USER",
+        "XDG_CONFIG_DIRS",
+        "XDG_CURRENT_DESKTOP",
+        "XDG_DATA_DIRS",
+        "XDG_MENU_PREFIX",
+        "XDG_RUNTIME_DIR",
+        "XDG_SEAT",
+        "XDG_SEAT_PATH",
+        "XDG_SESSION_CLASS",
+        "XDG_SESSION_DESKTOP",
+        "XDG_SESSION_ID",
+        "XDG_SESSION_PATH",
+        "XDG_SESSION_TYPE",
+        "XDG_VTNR"
+      ]
+    },
+    {
+      "event": "prompt",
+      "time": 139677.023463417,
+      "params": {
+        "sessionId": "owned-synthetic",
+        "prompt": [
+          {
+            "type": "text",
+            "text": "owned synthetic prompt"
+          }
+        ]
+      },
+      "turn": 1
+    },
+    {
+      "event": "evidence",
+      "time": 139677.023936958,
+      "documents": [
+        {
+          "entry": {
+            "file": "document.txt",
+            "source_label": "owned synthetic",
+            "bytes": 25
+          },
+          "text": "owned synthetic evidence\n"
+        }
+      ]
+    }
+  ],
+  "stderr": "Traceback (most recent call last):\n  File \"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/shim.py\", line 41, in <module>\n    runpy.run_path(fixture, run_name='__main__')\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen runpy>\", line 294, in run_path\n  File \"<frozen runpy>\", line 98, in _run_module_code\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/reviewer_peer.py\", line 225, in <module>\n    text('waiting')\n    ~~~~^^^^^^^^^^^\n  File \"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/reviewer_peer.py\", line 73, in text\n    update(dict(sessionUpdate='agent_message_chunk', content=dict(type='text', text=value)))\n    ~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/reviewer_peer.py\", line 45, in update\n    send(dict(method='session/update', params=dict(sessionId=session, update=body)))\n    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/old-prompt/peer/reviewer_peer.py\", line 37, in send\n    print(json.dumps(dict(jsonrpc='2.0', **value)), flush=True)\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nBrokenPipeError: [Errno 32] Broken pipe\n",
+  "stdout": "",
+  "fixture_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a"
+}

@@ -101,8 +101,10 @@ unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 On v2, a tool rejected during argument validation is shown as a failed call with
 its validation error, even when the agent sends only an input chunk and a failed
 update without a start. Error text supplied in the update's content is displayed
-when no usable raw-output error is available; a chunk alone remains activity,
-not a fabricated tool result.
+when no usable raw-output error is available. Empty or whitespace-only raw
+strings and error fields do not suppress that content fallback. Nonblank raw
+errors retain precedence; the original raw output remains unchanged. A chunk
+alone remains activity, not a fabricated tool result.
 
 The default KAS `free` spawn runs discovered Node.js plus the extracted
 `acp-server.js` directly, with callback authentication: on each KAS token
@@ -200,6 +202,16 @@ Markdown also includes its own formatting colors and render width. Unrelated
 theme-role changes can reuse cached output, while changes to a used style
 remain isolated. Adding a rendering dependency to a style input automatically
 includes it in that input's derived identity.
+
+Display budgets use the released `ratatui-core 0.1.2` /
+`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
+and affected popup/status text. Halfwidth sound marks occupy their painted
+columns; combining marks and original input bytes are preserved. The input
+editor retains character wrapping and its character-cursor contract.
+
+The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
+separates this source state and its outstanding qualification from the frozen
+earlier benchmark and consumer evidence.
 
 ### Tool call history
 

@@ -12,8 +12,8 @@
 //! terminal: a bidi override in a step id must not be able to make an
 //! approval read differently from what it approves.
 
+use crate::text;
 use ratatui::prelude::*;
-use unicode_width::UnicodeWidthStr;
 
 use crate::theme::Theme;
 use cyril_core::types::{
@@ -159,7 +159,7 @@ fn wrap_words(row: &str, width: usize) -> Vec<String> {
     let mut has_word = false;
     for word in body.split(' ') {
         let gap = usize::from(has_word);
-        if current.width() + gap + word.width() <= width {
+        if text::width(&current) + gap + text::width(word) <= width {
             if has_word {
                 current.push(' ');
             }
@@ -174,7 +174,7 @@ fn wrap_words(row: &str, width: usize) -> Vec<String> {
         // later piece a continuation row of its own.
         let mut rest = word;
         loop {
-            let room = width.saturating_sub(current.width()).max(1);
+            let room = width.saturating_sub(text::width(&current)).max(1);
             let pieces = super::approval::wrap_columns(rest, room);
             let Some(first) = pieces.first() else {
                 break;
@@ -399,6 +399,8 @@ mod tests {
     #[case::keeps_indent("  x: alpha beta", 10, &["  x: alpha", "      beta"])]
     #[case::splits_long_word("t: abcdefghij", 7, &["t:", "    abc", "    def", "    ghi", "    j"])]
     #[case::splits_leading_long_word("abcdefghij: x", 6, &["abcdef", "    gh", "    ij", "    :", "    x"])]
+    #[case::halfwidth_cells_wrap("a: ｶﾞ Z", 6, &["a: ｶﾞ", "    Z"])]
+    #[case::combining_mark_still_fits("a: ｶ\u{3099} Z", 6, &["a: ｶ\u{3099} Z"])]
     #[case::empty("", 5, &[""])]
     fn wrap_words_wraps_at_spaces(
         #[case] row: &str,
@@ -408,7 +410,7 @@ mod tests {
         let rows = wrap_words(row, width);
         assert_eq!(rows, expected);
         for row in &rows {
-            assert!(row.width() <= width, "{row:?} wider than {width}");
+            assert!(text::width(row) <= width, "{row:?} wider than {width}");
         }
     }
 

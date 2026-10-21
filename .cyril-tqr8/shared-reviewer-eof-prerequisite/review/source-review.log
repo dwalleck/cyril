@@ -1,0 +1,19 @@
+Independent source-and-recipe review
+Source: agent://ReviewReviewerEofFixture, read during artifact preparation on2026-10-20.
+Identity note: Main described this as the fresh ReviewReviewerEofFixture review. The registered reviewer ID is ReviewReviewerEofFixture, not a separate FreshReviewReviewerEofFixture agent.
+This is a preparer transcription of the returned review, not a raw execution transcript or additional qualification.
+
+Findings: None.
+Overall correctness: correct.
+Confidence: 0.94.
+
+Explanation: The two-file delta establishes the readiness barrier after evidence reads and text('waiting')'s successful stdout flush, and the Rust consumer awaits that marker before dropping either runtime or run. Cached absolute evidence paths avoid Path.cwd() failure after premature removal; the unchanged15-second deadline now waits for both cwd removal and cleanup-window-end, while preserving both evidence-retention assertions, eventual cleanup, process-state checks, and empty-parent-directory assertion. Missing-event diagnostics identify the specific absent event; no production changes, swallowed exceptions, increased budgets, or weakened retention requirements appear in the patch.
+
+Proof-recipe review:
+- The producer comparison gates the real fixture immediately after the old prompt journal returns. Old-order teardown requires evidence processing followed by BrokenPipeError, nonzero exit, and absent readiness/EOF windows; post-flush teardown requires actual waiting output, an unanswered prompt, successful exit, and both retention windows.
+- The proposed early-cleanup mutation removes the tree synchronously in EvidenceCleanup::drop. Cached paths and polling through window-end allow that defect to reach the retention assertions rather than an immediate missing-event snapshot.
+- The mutation recipe correctly rejects compilation errors, missing events, and unrelated panics as sensitivity evidence. It requires the named retention assertion with false-versus-true evidence and exact original-byte restoration.
+
+Limits: This was source-and-recipe review only; nothing was executed. Producer RED/GREEN, actual-bridge retention-specific mutation RED/restored GREEN, and affected qualification remained parent-owned and unobserved by this reviewer. This review does not establish the historical failure's cause or waive the reported workspace failure.
+
+Subsequent empirical qualification is recorded separately in proof/canonical-handoff.json. Do not attribute its executions/results or package hash validation to the reviewer.

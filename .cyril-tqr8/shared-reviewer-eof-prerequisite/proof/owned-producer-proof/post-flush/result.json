@@ -1,0 +1,108 @@
+{
+  "case": "post-flush",
+  "exit_code": 0,
+  "events": [
+    {
+      "event": "spawn",
+      "time": 139677.112724143,
+      "pid": 4082673,
+      "child": 4082674,
+      "cwd": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/reviewer-eof-prerequisite-attempt1/owned-producer-proof/post-flush/run",
+      "session": "sess_review-4082673",
+      "environment_names": [
+        "CARGO_TARGET_DIR",
+        "HOME",
+        "LANG",
+        "LC_ADDRESS",
+        "LC_IDENTIFICATION",
+        "LC_MEASUREMENT",
+        "LC_MONETARY",
+        "LC_NAME",
+        "LC_NUMERIC",
+        "LC_PAPER",
+        "LC_TELEPHONE",
+        "LC_TIME",
+        "LOGNAME",
+        "MPLBACKEND",
+        "PATH",
+        "PI_ARTIFACTS_DIR",
+        "PI_EVAL_LOCAL_ROOTS",
+        "PI_LENS_LSP_DIAGNOSTICS_MAX_WAIT_MS",
+        "PI_SESSION_FILE",
+        "PI_TOOL_BRIDGE_SESSION",
+        "PI_TOOL_BRIDGE_TOKEN",
+        "PI_TOOL_BRIDGE_URL",
+        "PYTHONIOENCODING",
+        "PYTHONUNBUFFERED",
+        "SHELL",
+        "TERM",
+        "TERM_PROGRAM",
+        "TERM_PROGRAM_VERSION",
+        "TMPDIR",
+        "USER",
+        "XDG_CONFIG_DIRS",
+        "XDG_CURRENT_DESKTOP",
+        "XDG_DATA_DIRS",
+        "XDG_MENU_PREFIX",
+        "XDG_RUNTIME_DIR",
+        "XDG_SEAT",
+        "XDG_SEAT_PATH",
+        "XDG_SESSION_CLASS",
+        "XDG_SESSION_DESKTOP",
+        "XDG_SESSION_ID",
+        "XDG_SESSION_PATH",
+        "XDG_SESSION_TYPE",
+        "XDG_VTNR"
+      ]
+    },
+    {
+      "event": "prompt",
+      "time": 139677.112827608,
+      "params": {
+        "sessionId": "owned-synthetic",
+        "prompt": [
+          {
+            "type": "text",
+            "text": "owned synthetic prompt"
+          }
+        ]
+      },
+      "turn": 1
+    },
+    {
+      "event": "evidence",
+      "time": 139677.113452574,
+      "documents": [
+        {
+          "entry": {
+            "file": "document.txt",
+            "source_label": "owned synthetic",
+            "bytes": 25
+          },
+          "text": "owned synthetic evidence\n"
+        }
+      ]
+    },
+    {
+      "event": "runtime-drop-ready",
+      "time": 139677.113550859
+    },
+    {
+      "event": "stdin-closed",
+      "time": 139677.123559635
+    },
+    {
+      "event": "cleanup-window",
+      "time": 139677.123697294,
+      "evidence_exists": true
+    },
+    {
+      "event": "cleanup-window-end",
+      "time": 139677.524139253,
+      "evidence_exists": true
+    }
+  ],
+  "stderr": "",
+  "stdout": "{\"jsonrpc\": \"2.0\", \"method\": \"session/update\", \"params\": {\"sessionId\": \"sess_review-4082673\", \"update\": {\"sessionUpdate\": \"agent_message_chunk\", \"content\": {\"type\": \"text\", \"text\": \"waiting\"}}}}\n",
+  "fixture_sha256": "e0f3efab80b799bd7a052d32fda8c9e959f181a70c0ad89b69e6498f0469d04a"
+}

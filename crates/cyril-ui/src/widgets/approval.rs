@@ -1,7 +1,8 @@
+use ratatui::buffer::CellWidth;
 use ratatui::prelude::*;
 use ratatui::widgets::{Block, Borders, Clear, Paragraph};
-use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
+use crate::text;
 use crate::theme::Theme;
 use crate::traits::{ApprovalPhase, ApprovalState, PreviewBody, TuiState};
 
@@ -95,11 +96,11 @@ impl<'a> Preview<'a> {
         // Borders take two columns. A popup too narrow to show any path
         // column still lays the path out one column per row; ratatui clips it.
         let path_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + PATH_INDENT.width())
+            .saturating_sub(2 + text::width(PATH_INDENT))
             .max(1);
         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width).len());
         let text_width = usize::from(super::modal::popup_width(area, desired_width))
-            .saturating_sub(2 + TEXT_INDENT.width())
+            .saturating_sub(2 + text::width(TEXT_INDENT))
             .max(1);
         Self {
             path,
@@ -245,7 +246,7 @@ pub(crate) fn wrap_columns(text: &str, width: usize) -> Vec<String> {
     let mut row = String::new();
     let mut used = 0usize;
     for ch in text.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        let ch_width = text::char_width(ch);
         if used.saturating_add(ch_width) > width && !row.is_empty() {
             rows.push(std::mem::take(&mut row));
             used = 0;
@@ -289,10 +290,10 @@ fn fit_path(path: &str, width: usize, rows: usize) -> Vec<String> {
 /// context. If the file name alone is wider than the budget, its end (the
 /// extension) is what stays.
 fn elide_middle(path: &str, budget: usize) -> String {
-    if path.width() <= budget {
+    if text::width(path) <= budget {
         return path.to_owned();
     }
-    let Some(room) = budget.checked_sub(ELLIPSIS.width()) else {
+    let Some(room) = budget.checked_sub(text::width(ELLIPSIS)) else {
         return String::new();
     };
     // Separator offsets, ignoring a trailing separator so a directory path
@@ -309,8 +310,12 @@ fn elide_middle(path: &str, budget: usize) -> String {
         .rev()
         .nth(1)
         .map_or(name, |&offset| &path[offset..]);
-    let tail = if parent.width() <= room { parent } else { name };
-    match room.checked_sub(tail.width()) {
+    let tail = if text::width(parent) <= room {
+        parent
+    } else {
+        name
+    };
+    match room.checked_sub(text::width(tail)) {
         Some(head_room) => format!("{}{ELLIPSIS}{tail}", leading_components(path, head_room)),
         None => format!("{ELLIPSIS}{}", trailing_columns(tail, room)),
     }
@@ -325,7 +330,7 @@ fn leading_components(path: &str, width: usize) -> &str {
     let mut used = 0usize;
     let mut cut = 0usize;
     for (offset, ch) in path.char_indices() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
+        used = used.saturating_add(text::char_width(ch));
         if used > width {
             break;
         }
@@ -336,40 +341,26 @@ fn leading_components(path: &str, width: usize) -> &str {
     &path[..cut]
 }
 
-/// The longest prefix of `text` at most `width` display columns wide.
-fn head_columns(text: &str, width: usize) -> &str {
-    let mut used = 0usize;
-    for (offset, ch) in text.char_indices() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
-        if used > width {
-            return &text[..offset];
-        }
-    }
-    text
-}
-
 /// `text` fitted to one row of `width` columns: whole when it fits,
 /// otherwise cut and ended with `…`, so a clipped row says it was clipped.
 fn clip_row(text: &str, width: usize) -> String {
-    if text.width() <= width {
-        return text.to_owned();
-    }
-    match width.checked_sub(ELLIPSIS.width()) {
-        Some(room) => format!("{}{ELLIPSIS}", head_columns(text, room)),
-        None => String::new(),
-    }
+    crate::text::truncate(text, width)
 }
 
 /// The longest suffix of `text` at most `width` display columns wide.
 fn trailing_columns(text: &str, width: usize) -> &str {
-    let mut used = 0usize;
-    for (offset, ch) in text.char_indices().rev() {
-        used = used.saturating_add(UnicodeWidthChar::width(ch).unwrap_or(0));
-        if used > width {
-            return &text[offset + ch.len_utf8()..];
+    let mut remaining = text::width(text);
+    let span = Span::raw(text);
+    let mut start = 0;
+    for grapheme in span.styled_graphemes(Style::default()) {
+        if remaining <= width {
+            break;
         }
+        remaining -= usize::from(grapheme.symbol.cell_width());
+        // The symbol is a borrowed subslice of the original span.
+        start = grapheme.symbol.as_ptr() as usize - text.as_ptr() as usize + grapheme.symbol.len();
     }
-    text
+    &text[start..]
 }
 
 /// Max body lines in the approval preview (cyril-j1b3). Five matches the
@@ -426,7 +417,7 @@ fn wrapped_row_count(text: &str, width: usize) -> usize {
     let mut used = 0usize;
     let mut row_empty = true;
     for ch in text.chars() {
-        let ch_width = UnicodeWidthChar::width(ch).unwrap_or(0);
+        let ch_width = text::char_width(ch);
         if used.saturating_add(ch_width) > width && !row_empty {
             rows += 1;
             used = 0;
@@ -644,10 +635,9 @@ impl<'a> OptionPage<'a> {
         // `window_start`); the path shares it after the label.
         let inline_path = if layout.inline_path && visible == 1 {
             state.options.get(start).and_then(|opt| {
-                let label_width = option_prefix(start == state.selected)
-                    .width()
-                    .saturating_add(opt.label.width())
-                    .saturating_add(INLINE_PATH_GAP.width());
+                let label_width = text::width(option_prefix(start == state.selected))
+                    .saturating_add(text::width(&opt.label))
+                    .saturating_add(text::width(INLINE_PATH_GAP));
                 preview.inline_path(
                     usize::from(popup.width.saturating_sub(2)).saturating_sub(label_width),
                 )
@@ -1408,6 +1398,7 @@ mod tests {
     use crate::traits::TuiState;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use unicode_width::UnicodeWidthStr;
 
     fn option(id: &str, label: &str) -> cyril_core::types::PermissionOption {
         cyril_core::types::PermissionOption {
@@ -2248,6 +2239,36 @@ mod tests {
         let elided = elide_middle(path, budget);
         assert_eq!(elided, expected);
         assert!(elided.width() <= budget, "over budget: {elided:?}");
+    }
+
+    #[test]
+    fn halfwidth_preview_rows_and_clipping_match_painted_columns() {
+        use ratatui::buffer::Buffer;
+        use ratatui::widgets::Widget;
+
+        for text in ["ｶﾞZ", "ﾊﾟZ"] {
+            let rows = wrap_columns(text, 2);
+            assert_eq!(rows, [&text[..text.len() - 1], "Z"]);
+            assert_eq!(wrapped_row_count(text, 2), 2);
+            assert_eq!(clip_row(text, 2), "…");
+            let area = Rect::new(0, 0, 2, 2);
+            let previous = Buffer::empty(area);
+            let mut painted = previous.clone();
+            Paragraph::new(rows.into_iter().map(Line::raw).collect::<Vec<_>>())
+                .render(area, &mut painted);
+            assert_eq!(painted[(0, 1)].symbol(), "Z", "{text:?}");
+            assert!(
+                previous
+                    .diff(&painted)
+                    .iter()
+                    .any(|(x, y, cell)| (*x, *y) == (0, 1) && cell.symbol() == "Z")
+            );
+        }
+        assert_eq!(clip_row("ｶ\u{3099}ZZ", 2), "ｶ\u{3099}…");
+        assert_eq!(wrap_columns("ｶ\u{3099}Z", 2), ["ｶ\u{3099}Z"]);
+        assert_eq!(trailing_columns("Zｶﾞ", 1), "");
+        assert_eq!(trailing_columns("Zｶﾞ", 2), "ｶﾞ");
+        assert_eq!(trailing_columns("Zｶ\u{3099}", 1), "ｶ\u{3099}");
     }
 
     #[rstest::rstest]
