@@ -227,6 +227,16 @@ theme-role changes can reuse cached output, while changes to a used style
 remain isolated. Adding a rendering dependency to a style input automatically
 includes it in that input's derived identity.
 
+Display budgets use the released `ratatui-core 0.1.2` /
+`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
+and affected popup/status text. Halfwidth sound marks occupy their painted
+columns; combining marks and original input bytes are preserved. The input
+editor retains character wrapping and its character-cursor contract.
+
+The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
+separates this source state and its outstanding qualification from the frozen
+earlier benchmark and consumer evidence.
+
 ### Tool call history
 
 Tool rows stay at their first observed position in the conversation. An update
@@ -236,6 +246,17 @@ call within a session merge into that row rather than adding duplicates,
 preserving the text before and after it. A new session can reuse a tool ID
 without changing the previous session's history.
 
+Completed Write calls use the **first diff** for both the `+added -removed`
+summary and the inline body. An unchanged first diff shows no change counts,
+even if a later diff in the same call changed. The body keeps one context line
+and at most 20 rows, followed by an ellipsis when truncated.
+
+The tracked call retains one theme-independent derivation for unchanged diff
+text. Redraws, resizes and palette changes reuse it while applying the current
+colors; replacing the selected source refreshes the summary and body together.
+Pending approval comparisons use the same diff renderer without requiring the
+tool to be completed.
+
 For successful KAS commands, string-valued `rawOutput.output` is shown beneath
 the completed row, including completions that omit `kind`. Existing output
 formats keep precedence; non-string `output` values and the formatted `message`
@@ -244,8 +265,8 @@ field are not used as substitutes.
 ### Rejecting a tool with feedback (KAS)
 
 Select the agent's one-time rejection option, then press `r` to **Reject with
-reason**. Pressing `Enter` on the option itself still rejects immediately
-without feedback.
+reason**. `Enter` on the option rejects without feedback, subject to the
+visible-context checks below.
 
 The feedback editor accepts multiline paste. `Ctrl+J` inserts a newline,
 `Enter` submits, and `Esc` discards the draft and returns to the same approval
@@ -254,10 +275,20 @@ newline, but many terminals send it as plain Enter; use `Ctrl+J` reliably.
 Empty or whitespace-only feedback sends a plain rejection.
 
 Reasons are limited to 4,096 Unicode characters. An insertion that would exceed
-the limit is refused in full with a visible notice; it is never silently
-truncated. The editor does not alter the chat draft or a queued approval.
+the limit is refused in full, never silently truncated. An overflow notice is
+shown when space permits; cramped prompts reserve the target path and editor
+ahead of that notice. The editor does not alter the chat draft or a queued approval.
 KAS 0.66.8 and newer receive the reason through permission-response metadata;
 older KAS may ignore it. The action is not shown for v2 or always-reject options.
+
+Before an approval can answer, its selected choice or feedback editor must be
+visible, together with an identifiable target path when one is present. If a
+small window hides that context, `Enter` leaves the request pending: enlarge
+the window and continue without losing the feedback draft or chat draft.
+In cramped reason prompts, the target path takes priority over the character
+limit and overflow notice. A fully visible target containing a literal `…`
+(such as `/tmp/report…`) or consisting of one visible grapheme (such as `a`)
+remains actionable; a genuinely shortened path must retain an identifiable tail.
 
 ### Host hooks (KAS)
 

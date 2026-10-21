@@ -1,0 +1,225 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "refresh": "7972f884",
+  "frozen_documentation_handoff": true,
+  "canonical_handoff": ".cyril-zj0m/refresh-7972f884/handoff.json",
+  "publication_owner": "Main",
+  "publication_status": "Not committed/pushed/PR-created/CI-run/tracker-written by packaging worker; separate Main-owned documentation/evidence-only publication",
+  "publication_root": ".cyril-zj0m/refresh-7972f884",
+  "publication_file_count": 8,
+  "publication_files": [
+    ".cyril-zj0m/refresh-7972f884/archive-index.json",
+    ".cyril-zj0m/refresh-7972f884/handoff.json",
+    ".cyril-zj0m/refresh-7972f884/publication-manifest.json",
+    ".cyril-zj0m/refresh-7972f884/reproduction.md",
+    ".cyril-zj0m/refresh-7972f884/review-provenance.json",
+    ".cyril-zj0m/refresh-7972f884/review.txt",
+    ".cyril-zj0m/refresh-7972f884/verification-evidence.tar.gz",
+    ".cyril-zj0m/refresh-7972f884/verification.md"
+  ],
+  "content_sha256": {
+    ".cyril-zj0m/refresh-7972f884/archive-index.json": "d75bd394f936d1afde456094e610d625837225f35cd62fd8f16073a17518acf3",
+    ".cyril-zj0m/refresh-7972f884/handoff.json": "9289dd13643dd93483560d34351ee58bdf6f84cda10ab317eeeddb246510bf65",
+    ".cyril-zj0m/refresh-7972f884/reproduction.md": "47e428f02fcbaf412c1683b62b03db3ef0fea5c4d2f00bd0ca310b1381280e71",
+    ".cyril-zj0m/refresh-7972f884/review-provenance.json": "b24abca9e2f39258789b2f7272e4476a600933829f1baa72c8e232981c63b95c",
+    ".cyril-zj0m/refresh-7972f884/review.txt": "6bc19601d95f0f2c9df3b175559c5b4560122023c3d5829b90f58b8d829acbef",
+    ".cyril-zj0m/refresh-7972f884/verification-evidence.tar.gz": "13cd101ddc2e694d6d096866d0ebc84713bbd0e93e6b67cb05c339ec73212203",
+    ".cyril-zj0m/refresh-7972f884/verification.md": "726f49ccb01fc4dde0efcede962d47b60de6e519b2f64f3ebb1f904847238f41"
+  },
+  "content_bytes": {
+    ".cyril-zj0m/refresh-7972f884/archive-index.json": 45807,
+    ".cyril-zj0m/refresh-7972f884/handoff.json": 14182,
+    ".cyril-zj0m/refresh-7972f884/reproduction.md": 8407,
+    ".cyril-zj0m/refresh-7972f884/review-provenance.json": 1717,
+    ".cyril-zj0m/refresh-7972f884/review.txt": 2600,
+    ".cyril-zj0m/refresh-7972f884/verification-evidence.tar.gz": 782586,
+    ".cyril-zj0m/refresh-7972f884/verification.md": 15331
+  },
+  "metadata_files_without_self_referential_digests": [
+    ".cyril-zj0m/refresh-7972f884/publication-manifest.json"
+  ],
+  "digest_policy": "Only this manifest is excluded from its own content digest/byte map. Every other allowlisted publication file has exact SHA-256/bytes above; own manifest digest/bytes are returned externally to Main. Archive index self digest is the content_sha256 value for byte-identical archive-index.json and archive.index_sha256 in handoff; no recursive hash or placeholder.",
+  "source_pins": {
+    "head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+    "actual_qualified_checkout_tree": "858bfff965633bb3b876a13a701457936af17ec9",
+    "app_binary_sha256": "27f0642339b92a6e6f2330917060b9a50172bb5b5083821c7eec528014572ff0",
+    "app_binary_bytes": 101966368,
+    "source_manifest": {
+      "archive_path": "source/qualified-source.source.json",
+      "sha256": "1ee93d2cb35d46e2368d741c9519a3aba45cfd36db63d342ddcfa54dac82c395"
+    },
+    "qualifier_canonical_handoff": {
+      "original_input": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-refreshed/canonical-handoff.json",
+      "archive_path": "gates/canonical-handoff.json",
+      "sha256": "d44ca303e5a515d0666f036a339a0b0d5fcc6d4c21276a646cfd39db933f8797"
+    },
+    "identity_authority": "Actual tree/binary identities come from completed qualifier, not separate reviewer; receipts preserved unchanged.",
+    "publication_tree_boundary": "Only these new documentation/evidence files are added after qualification; no later publication commit/tree is represented as already checked."
+  },
+  "evidence_archive": {
+    "path": ".cyril-zj0m/refresh-7972f884/verification-evidence.tar.gz",
+    "sha256": "13cd101ddc2e694d6d096866d0ebc84713bbd0e93e6b67cb05c339ec73212203",
+    "bytes": 782586,
+    "members": 79,
+    "member_count_definition": "79 regular-file members; no directory entries",
+    "index": "index.json",
+    "published_index": ".cyril-zj0m/refresh-7972f884/archive-index.json",
+    "index_sha256": "d75bd394f936d1afde456094e610d625837225f35cd62fd8f16073a17518acf3",
+    "hashed_nonself_members": 78,
+    "deterministic_metadata": "Lexically sorted explicit file list, zero timestamps, uid/gid 0, empty uname/gname, normalized 0644/0755 script modes; gzip mtime 0",
+    "compiled_executables_included": false
+  },
+  "observed_results": {
+    "repository_gates": {
+      "result": "PASS",
+      "commands_run_by_qualifier": 5,
+      "commands_passed": 5,
+      "unexpected_failures": 0,
+      "test_passed": 2848,
+      "test_failed": 0,
+      "test_ignored_unexercised": 13,
+      "test_measured": 0,
+      "test_filtered_out": 0,
+      "top_level_summary_groups": 42,
+      "nested_child_summaries_excluded": 6,
+      "clippy": "workspace/all-targets, -D warnings, exit0",
+      "default_build": "cargo build -p cyril, exit0",
+      "initial_fmt": "cargo fmt --all, exit0",
+      "final_fmt": "cargo fmt --all --check, exit0",
+      "scope": "Default-feature x86_64 Linux only"
+    },
+    "separate_accepted_review": {
+      "reviewer": "ReviewRefreshedResultStacks",
+      "verdict": "correct",
+      "confidence": 0.97,
+      "findings": [],
+      "reviewed_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+      "compared_first_parent": "7a19fc742f109411c421af296addc5fe4db4d42b",
+      "merged_parent": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+      "archive_text": "review/accepted-review.txt",
+      "archive_scope_provenance": "review/provenance.json",
+      "scope": "New bounded static integration/dispatch review; not independent qualification-tree/private-artifact inspection, not fiv1/x5 joint review, no checks run by reviewer"
+    },
+    "first_diff_actual_app": {
+      "result": "PASS first attempt",
+      "archive_receipt": "consumer/zj0m-refreshed-truecolor-01/result.json",
+      "screen_cell_checkpoints": 13,
+      "wire_frames": 18,
+      "unexpected_host_callbacks": [],
+      "terminal_ansi_sha256": "effe300117612a7e95f3762bef66b96c48e42fc2f88f3239dd300850c571d41b",
+      "observed": [
+        "Exact first-Diff +2 -1 header, context/delete/insert body and line gutters; changed second Diff excluded.",
+        "Unchanged first/changed second suppression and actual source replacement.",
+        "Actual 160x48 -> 100x32 -> 160x48 resize; retained palette style change.",
+        "Actual offscreen/back retained counts/body/colors with seventy padding paragraphs.",
+        "Seeded pending comparison joined to partial permission by session/tool ID through resize; only reject_once and actual optionId deny.",
+        "Cyril Dark return, chronology marker and actual turn completion."
+      ]
+    },
+    "kas_completed_actual_app": {
+      "result": "PASS first attempt",
+      "archive_receipt": "consumer/zj0m-refreshed-kas-output-01/result.json",
+      "archive_safety": "consumer/zj0m-refreshed-kas-output-01/safety.json",
+      "unchanged_frozen_harness_sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+      "trace_sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+      "fixture_sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+      "captured_frames_preserved": true,
+      "captured_session_id": "sess_973df141-0181-47bf-977a-2f58ca21220f",
+      "full_unchanged_completed_wire_copies": 2,
+      "completed_header_screen_occurrences": 1,
+      "completed_body_screen_occurrences": 1,
+      "screen_chronology": "BEFORE_TOOL_ROWS < completed header/body < AFTER_TOOL_ROWS",
+      "safety": "env-i/offline uv, synthetic token helper, Node -> owned Python peer; captured rawInput.command is inert JSON, no real account/model/file operation/fs or terminal callback/grant."
+    },
+    "consumer_identity": "Both launches used actual newly qualified binary27f06423, first attempt; not old PASS transfer.",
+    "historical_benchmark": "NOT RERUN; old tree6241931f/private App binaryb603b8 proof remains untouched; no refreshed timing/work-counter conclusion."
+  },
+  "production_files": [],
+  "source_readme_tracker_changes": false,
+  "preserved_historical_records": [
+    {
+      "path": ".cyril-zj0m/verification.md",
+      "sha256": "b57772c3d85f1605e09915f207da3fafa958f82d714d92f85cc6d232b54824ce",
+      "bytes": 15812
+    },
+    {
+      "path": ".cyril-zj0m/publication-manifest.json",
+      "sha256": "de0623bbc0696f6e9eda28c5711d95aca86f8ce62b339112eb32a26f58f612aa",
+      "bytes": 4688
+    },
+    {
+      "path": ".cyril-zj0m/verification-evidence.tar.gz",
+      "sha256": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc",
+      "bytes": 1366757
+    },
+    {
+      "path": ".cyril-zj0m/handoff.json",
+      "sha256": "ed2ede0694ce9e3ae4976f747e156f5494bb083256615928b58a095c17a71118",
+      "bytes": 6076
+    },
+    {
+      "path": ".cyril-zj0m/parent-refresh-20261020.json",
+      "sha256": "b2e34e22e1948ebcd68e954f868c57c83698c63a6966fb648c24f7e878c670f1",
+      "bytes": 7023
+    },
+    {
+      "path": ".cyril-zj0m/review-decisions.md",
+      "sha256": "fea78140b39d5e6ec562a7cbec935f4763f9c6829b6d27bccfdb1d8e79a1523e",
+      "bytes": 4476
+    },
+    {
+      "path": ".cyril-zj0m/route.md",
+      "sha256": "1f1cd09252f5be09094ed4978e64541da6072f168feaf850ef4b2215fd20ffbd",
+      "bytes": 8568
+    },
+    {
+      "path": ".cyril-zj0m/plan.md",
+      "sha256": "4dba07744837cd88dd780211fc8846110fca163956019140ba538f290fae58e9",
+      "bytes": 8565
+    },
+    {
+      "path": ".cyril-zj0m/design.md",
+      "sha256": "ad72d2a55bb08027e9f443d9f3c60951ee2d87ea382964216c68691d217d964a",
+      "bytes": 12029
+    },
+    {
+      "path": ".cyril-zj0m/production.patch",
+      "sha256": "5c0d35de8fd980228f9f595199f86014b70e6f7a376ae51c40d7ceb915a655f9",
+      "bytes": 60053
+    }
+  ],
+  "historical_measurement_boundary": {
+    "actual_source_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+    "private_app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+    "benchmark_rerun": false,
+    "new_head_timing_claim": false,
+    "original_manifest_unchanged": true,
+    "original_archive_unchanged": true,
+    "older_parent_refresh_record_unchanged": true
+  },
+  "inclusion_policy": "Explicit file whitelist only. Nine fresh qualification inputs, owning consumer GO/summary, 54 safe first-Diff receipt/snapshot files, six safe KAS receipt/safety files, four approved frozen KAS mini-layout files, separate accepted review/provenance, portable reproduction document and index. No recursive scratch-root copy.",
+  "excluded": [
+    "All compiled App/benchmark executables and staged binary copies.",
+    "All isolated/ directories, HOME/USERPROFILE/XDG/config/data/cache/state/runtime/workspace trees; only specifically allowlisted safe config-final.toml and KAS runner safety.json retained.",
+    "All private Git indexes, credentials/auth stores, environment dumps beyond the Main-authorized qualification environment.json, journals, cyril.log and unrelated runtime logs.",
+    "Unrelated issue packages, fiv1/x5 joint review, other branch/worktree source trees, tracker records and private scratch roots.",
+    "Whole KAS runner HOME, uv environment/cache and mutable later harnesses; the four explicit KAS mini-layout files are the only selected cross-issue replay dependencies.",
+    "Old publication/handoff/benchmark/review/sensitivity archive bytes are not recopied or replaced; linked as bounded historical evidence only.",
+    "No additional production source, root README, Cargo manifests/lockfiles or benchmark output in refresh publication list."
+  ],
+  "not_claimed": [
+    "Fresh gates cover only default-feature x86_64 Linux; no all-features/other-platform result. Thirteen ignored tests are unexercised.",
+    "Accepted static review covers HEAD/first-parent integration, not independent qualification-tree/private-artifact inspection; actual tree/binary identities come from qualifier.",
+    "Both new actual App launches passed first attempt; not transferred old-head smoke. PTY/pyte ANSI/cells/text are not native graphical font/glyph/emoji/CJK/combining-width qualification.",
+    "No real account, live Kiro/model, real file operation, fs/terminal callback or permission grant. The pending RejectOnly wire selects deny; captured rawInput.command is inert JSON.",
+    "No native50000 or focused-child proof. Configured max_messages=1000/default500; seventy padding paragraphs are not seventy retained messages.",
+    "No fresh benchmark, timing comparison/threshold, Myers/work-counter measurement or performance conclusion on refreshed HEAD. Historical completed-write proof retains old tree6241931f/App binaryb603b8 pins.",
+    "No C6 execution/acceptance or unrelated issue qualification. Other script entrypoints retained only to preserve exact executed harness bytes.",
+    "No compiled binary or complete source checkout/runtime cache is distributed; future replay needs separately qualified binary, offline dependencies and fresh explicit scoped Main GO. Frozen KAS pyte dependency is unpinned.",
+    "Packaging-only publication changes Git metadata/tree; the exact qualification claim remains bound to source tree858bfff9 and binary27f06423, not a new publication commit tree.",
+    "No source/README/tracker changes, check/formatter/product/benchmark execution, commit, push, PR, CI or tracker write by packaging worker. Main owns publication and any later authorized actions."
+  ],
+  "worker_actions": "Only new files under owned refresh directory; documentation/evidence packaging/hashes only. No verification/product/benchmark commands or executions, production/source/README/tracker edits, existing record edits, commits or pushes.",
+  "main_next_action": "Add exactly these eight publication_files in a separate docs/evidence-only commit on refreshed Zj branch; preserve every existing publication record and production byte. Main owns any push/PR/CI/tracker action; no fresh native/benchmark/C6 GO supplied here."
+}
