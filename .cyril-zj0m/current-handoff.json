@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "pull_request": 192,
+  "status": "Current assembled source1226b07c qualified; fresh owned13 consumer PASS/exit0/cleanupCOMPLETE; ready for Main publication, not yet published by worker",
+  "canonical_handoff": ".cyril-zj0m/current-width-1226b07c/handoff.json",
+  "canonical_handoff_sha256": "79b9061aed7db80a8cf9403c05327bbe253059ddd1a5ede9ec6225aaabd2bba2",
+  "publication_manifest": ".cyril-zj0m/current-width-1226b07c/publication-manifest.json",
+  "checked_source_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+  "binary_sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+  "evidence_archive_sha256": "3034f8b443f6ac01899517d70c6001f2cb67c3ef589f09052591e88e3d471459",
+  "integration_binding": ".cyril-zj0m/current-integration.json",
+  "point_in_time_boundary": "README/current-integration retain qualified bytes; integration-only not-yet-run statuses there are historical point-in-time statements superseded only for current qualification status by this new packet. No old root/7972f884 evidence is rewritten.",
+  "publication_tree_boundary": "Evidence/documentation additions postdate checked source1226; no publication tree/commit already-tested claim. Main owns staging/PR retarget/commit/push/tracker and subsequent C6 qualified published-parent delivery."
+}

@@ -227,6 +227,16 @@ theme-role changes can reuse cached output, while changes to a used style
 remain isolated. Adding a rendering dependency to a style input automatically
 includes it in that input's derived identity.
 
+Display budgets use the released `ratatui-core 0.1.2` /
+`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
+and affected popup/status text. Halfwidth sound marks occupy their painted
+columns; combining marks and original input bytes are preserved. The input
+editor retains character wrapping and its character-cursor contract.
+
+The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
+separates this source state and its outstanding qualification from the frozen
+earlier benchmark and consumer evidence.
+
 ### Tool call history
 
 Tool rows stay at their first observed position in the conversation. An update
@@ -235,6 +245,17 @@ KAS **Tool Load** and **Subagent Response** updates. Later frames for the same
 call within a session merge into that row rather than adding duplicates,
 preserving the text before and after it. A new session can reuse a tool ID
 without changing the previous session's history.
+
+Completed Write calls use the **first diff** for both the `+added -removed`
+summary and the inline body. An unchanged first diff shows no change counts,
+even if a later diff in the same call changed. The body keeps one context line
+and at most 20 rows, followed by an ellipsis when truncated.
+
+The tracked call retains one theme-independent derivation for unchanged diff
+text. Redraws, resizes and palette changes reuse it while applying the current
+colors; replacing the selected source refreshes the summary and body together.
+Pending approval comparisons use the same diff renderer without requiring the
+tool to be completed.
 
 For successful KAS commands, string-valued `rawOutput.output` is shown beneath
 the completed row, including completions that omit `kind`. Existing output

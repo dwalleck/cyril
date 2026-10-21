@@ -1,0 +1,33 @@
+Source: completed agent://ReviewZjCurrentStack, retained after Main reported acceptance. Static review only; decoder proof remains pending.
+
+Findings: None.
+Overall correctness: correct within the reviewed integration seams.
+Confidence: 0.96.
+
+Exact scope — actual working files in /home/dwalleck/repos/cyril-wt-perf-cyril-zj0m, not merely staged content:
+
+- Zj ownership: current and premerge bindings agree on the five unchanged owners—Cargo.toml, conversation_render.rs, lib.rs, tool_diff.rs, and widgets/chat.rs. Inspected their relevant current declarations and consumers.
+- traits.rs: first-Diff selection remains exclusive, including an empty or unchanged first Diff; later blocks cannot supply counts or rows. Effective-source invalidation, lazy OnceLock<Arc<DiffPreview>>, equivalent-source reuse, and clone detachment remain coherent. The inherited private Display/Error policies preserve their separate precedence and blank-string semantics.
+- Caller/lifetime/viewport seams: inspected main history and active-wrapper updates, focused-child updates, immutable approval installation, chat summary/body consumers, pending approval dispatch, and resize/scroll/current-theme projection.
+- Approval/physical width: inspected wrapping, path fitting, clipping, suffix selection, option budgets, and the shared Diff dispatch, which remains independent of completion/kind.
+- Markdown integration: complete MarkdownStyle/nested HighlightStyle identity, independent cache ownership, keys, capacity, lock boundaries, public adapters, and style-only highlighting remain intact alongside the common physical-width helpers and control-filtered measurement.
+- Documentation/pins: README links the new live integration binding without promoting historical 6241931f benchmark or 7972f884 consumer evidence into current qualification. Inspected floor assertions and remaining snapshot references; no repinning surfaced.
+
+Limits: source hashes and historical/snapshot byte identity were not independently recomputed. No edits, Git, Cargo, builds, tests, formatters, runtime, or benchmark runs were performed. This is not an assembled qualification or GREEN verdict.
+
+
+--- Separate static bootstrap review and runtime applicability boundary ---
+
+Source: completed agent://ReviewZjDecoderBootstrap. Review was static and preceded Main's GO and both runtime preflight outcomes; statements about go:false and no fresh full13 PASS are point-in-time, not current status. The unchanged source review is retained; host-runtime applicability is established separately by Main's unchanged offline proof and the fresh owned02 execution.
+
+**Findings: none.**
+
+**Overall correctness: correct within the requested static-review scope.**
+
+- **Exact adapter:** `wide_overwrite.py:8–21` matches the executed offline definitions at lines 20–33, including both overwrite boundaries. Bootstrap enforces that equality before installation. No exception-to-PASS masking, display substitution, or late blank-predicate change is present.
+- **Decoder seam:** `bootstrap.py:168–170` installs the subclass before running the original harness. The harness constructs `pyte.Screen`; both installed Stream drawing paths dispatch to that instance’s `draw`. Other Screen behavior remains inherited.
+- **Frozen inputs:** Preflight retains harness pin `c9ce8830…`, peer/proof/decoder pins, binary `b9c98854…`, and source-tree identity `1226b07c…`. The original scenario, fixture, truecolor mode, geometry sequence, assertions, and all 13 checkpoint paths remain unchanged. `parent-go.json` is still **`go:false`**.
+- **Cleanup:** `bootstrap.py:38–119,167–185` requires the exact marker, private HOME/PATH, and recognized App/peer argv before admitting pidfds for signaling. New cleanup introduces no numeric-PID or group-wide signals. Waits are bounded; unmatched marker identities and surviving proven-owned processes fail attestation. Cleanup exceptions record FAIL and re-raise, preventing successful wrapper completion.
+- **PASS interpretation:** The frozen harness can publish its **scenario PASS before external cleanup**. That alone is not overall PASS: parent acceptance must require **wrapper exit 0 and cleanup receipt COMPLETE**. A later cleanup failure leaves the scenario record intact but fails the wrapper and separate attestation.
+
+**Confidence: 0.96** for the reviewed static control flow and source correspondence. Static reads only—no execution, imports, edits, Git, Cargo, native, or consumer runs; no fresh full-13 PASS is established, and failed01 remains failed. General terminal conformance was not re-reviewed.
