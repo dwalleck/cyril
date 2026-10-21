@@ -212,6 +212,21 @@ duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
 because Crossterm reports those characters only on release. Paste the character
 instead; Unicode paste remains supported.
 
+### Themes and Markdown rendering
+
+Use `/theme` to preview a bundled palette. `Esc` cancels the preview and
+restores the previous colors; `Enter` applies the selection for the current
+session. Committed and streaming Markdown, including syntax-highlighted code,
+use the selected palette without changing the preview/cancel/commit behavior.
+
+Highlighting and Markdown caches identify their output by the concrete style
+inputs their renderers use, rather than every role in the full theme.
+Highlighting depends on the resolved syntax palette and fallback text color;
+Markdown also includes its own formatting colors and render width. Unrelated
+theme-role changes can reuse cached output, while changes to a used style
+remain isolated. Adding a rendering dependency to a style input automatically
+includes it in that input's derived identity.
+
 ### Tool call history
 
 Tool rows stay at their first observed position in the conversation. An update
@@ -387,6 +402,7 @@ findings and the path to `report.md`.
 | `/clear` | Clear the chat |
 | `/mode <id>` | Switch agent mode |
 | `/model [id]` | Switch model (opens picker if no ID given) |
+| `/theme` | Preview a palette; `Enter` applies it for this session, `Esc` cancels |
 | `/memory status` | Show local memory runtime health, store versions, and project binding |
 | `/memory teach <text>` | Store an explicit lesson for the bound project |
 | `/memory teach --replace <id> <text>` | Supersede one lesson with new text |

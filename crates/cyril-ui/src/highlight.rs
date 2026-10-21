@@ -7,7 +7,7 @@ use syntect::highlighting::{Style as SynStyle, ThemeSet};
 use syntect::parsing::SyntaxSet;
 
 use crate::cache::HashCache;
-use crate::theme::Theme;
+use crate::theme::{HighlightStyle, Theme};
 
 static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
 static THEME_SET: LazyLock<ThemeSet> = LazyLock::new(ThemeSet::load_defaults);
@@ -21,22 +21,30 @@ type HighlightedBlock = Vec<HighlightedLine>;
 static HIGHLIGHT_CACHE: LazyLock<Mutex<HashCache<HighlightedBlock>>> =
     LazyLock::new(|| Mutex::new(HashCache::new(256)));
 
-/// Highlight a full code block. Cached by hash(content, language, complete theme).
+/// Highlight a full code block. Cached by hash(content, language, highlight style).
 pub fn highlight_block_with_theme(
     code: &str,
     lang: Option<&str>,
     theme: &Theme,
 ) -> HighlightedBlock {
-    highlight_block_with_cache(&HIGHLIGHT_CACHE, code, lang, theme)
+    highlight_block_with_style(code, lang, HighlightStyle::from(theme))
+}
+
+pub(crate) fn highlight_block_with_style(
+    code: &str,
+    lang: Option<&str>,
+    style: HighlightStyle,
+) -> HighlightedBlock {
+    highlight_block_with_cache(&HIGHLIGHT_CACHE, code, lang, style)
 }
 
 fn highlight_block_with_cache(
     cache: &Mutex<HashCache<HighlightedBlock>>,
     code: &str,
     lang: Option<&str>,
-    theme: &Theme,
+    style: HighlightStyle,
 ) -> HighlightedBlock {
-    let hash = highlight_cache_key(code, lang, theme);
+    let hash = highlight_cache_key(code, lang, style);
 
     if let Ok(cache) = cache.lock()
         && let Some(cached) = cache.get(hash)
@@ -44,10 +52,10 @@ fn highlight_block_with_cache(
         return cached.clone();
     }
 
-    let syntax_theme = theme
+    let syntax_theme = style
         .syntax
         .and_then(|syntax_theme| THEME_SET.themes.get(syntax_theme.name()));
-    let result = do_highlight_block(code, lang, theme, syntax_theme);
+    let result = do_highlight_block(code, lang, style, syntax_theme);
 
     if let Ok(mut cache) = cache.lock() {
         cache.insert(hash, result.clone());
@@ -56,55 +64,22 @@ fn highlight_block_with_cache(
     result
 }
 
-fn highlight_cache_key(code: &str, lang: Option<&str>, theme: &Theme) -> u64 {
+fn highlight_cache_key(code: &str, lang: Option<&str>, style: HighlightStyle) -> u64 {
     let mut hasher = DefaultHasher::new();
     code.hash(&mut hasher);
     lang.hash(&mut hasher);
-    theme.syntax.map(|syntax| syntax.name()).hash(&mut hasher);
-    for color in [
-        theme.canvas,
-        theme.chrome,
-        theme.code,
-        theme.selection,
-        theme.text,
-        theme.muted,
-        theme.border,
-        theme.accent,
-        theme.accent_alt,
-        theme.user,
-        theme.agent,
-        theme.system,
-        theme.info,
-        theme.success,
-        theme.warning,
-        theme.danger,
-        theme.diff_add,
-        theme.diff_delete,
-        theme.diff_context,
-        theme.emphasis,
-        theme.accent_tertiary,
-        theme.accent_quaternary,
-        theme.accent_quinary,
-        theme.subdued,
-        theme.subdued_positive,
-        theme.subdued_negative,
-        theme.soft_accent,
-        theme.positive_accent,
-        theme.inset_background,
-    ] {
-        color.hash(&mut hasher);
-    }
+    style.hash(&mut hasher);
     hasher.finish()
 }
 
 fn do_highlight_block(
     code: &str,
     lang: Option<&str>,
-    theme: &Theme,
+    style: HighlightStyle,
     syntax_theme: Option<&syntect::highlighting::Theme>,
 ) -> HighlightedBlock {
     let Some(syntax_theme) = syntax_theme else {
-        return plain_fallback(code, theme.text);
+        return plain_fallback(code, style.text);
     };
     let syntax = lang
         .and_then(|language| SYNTAX_SET.find_syntax_by_token(language))
@@ -117,7 +92,7 @@ fn do_highlight_block(
             normalize_highlight_result(
                 highlighter.highlight_line(&line_with_newline, &SYNTAX_SET),
                 line,
-                theme.text,
+                style.text,
             )
         })
         .collect()
@@ -125,11 +100,19 @@ fn do_highlight_block(
 
 /// Highlight a single line (for diffs). Uncached.
 pub fn highlight_line_with_theme(code: &str, ext: Option<&str>, theme: &Theme) -> HighlightedLine {
-    let Some(syntax_theme) = theme
+    highlight_line_with_style(code, ext, HighlightStyle::from(theme))
+}
+
+fn highlight_line_with_style(
+    code: &str,
+    ext: Option<&str>,
+    style: HighlightStyle,
+) -> HighlightedLine {
+    let Some(syntax_theme) = style
         .syntax
         .and_then(|syntax_theme| THEME_SET.themes.get(syntax_theme.name()))
     else {
-        return fallback_line(code, theme.text);
+        return fallback_line(code, style.text);
     };
     let syntax = ext
         .and_then(|extension| {
@@ -144,7 +127,7 @@ pub fn highlight_line_with_theme(code: &str, ext: Option<&str>, theme: &Theme) -
     normalize_highlight_result(
         highlighter.highlight_line(&line_with_newline, &SYNTAX_SET),
         code,
-        theme.text,
+        style.text,
     )
 }
 
@@ -266,8 +249,9 @@ mod tests {
         let cache = Mutex::new(HashCache::new(256));
         let theme = cyril_dark();
         let code = "fn cached() {}";
-        let highlighted = highlight_block_with_cache(&cache, code, Some("rs"), &theme);
-        let key = highlight_cache_key(code, Some("rs"), &theme);
+        let style = HighlightStyle::from(&theme);
+        let highlighted = highlight_block_with_cache(&cache, code, Some("rs"), style);
+        let key = highlight_cache_key(code, Some("rs"), style);
         assert_eq!(
             cache.lock().ok().and_then(|cache| cache.get(key).cloned()),
             Some(highlighted)
@@ -275,10 +259,11 @@ mod tests {
     }
 
     fn uncached_block(code: &str, lang: Option<&str>, theme: &Theme) -> HighlightedBlock {
-        let syntax_theme = theme
+        let style = HighlightStyle::from(theme);
+        let syntax_theme = style
             .syntax
             .and_then(|syntax| THEME_SET.themes.get(syntax.name()));
-        do_highlight_block(code, lang, theme, syntax_theme)
+        do_highlight_block(code, lang, style, syntax_theme)
     }
 
     #[test]
@@ -290,11 +275,13 @@ mod tests {
         for index in 0..256usize {
             let mut theme = base;
             theme.text = Color::Indexed(index as u8);
-            highlight_block_with_cache(&cache, "x", Some("rs"), &theme);
-            keys.push(highlight_cache_key("x", Some("rs"), &theme));
+            let style = HighlightStyle::from(&theme);
+            highlight_block_with_cache(&cache, "x", Some("rs"), style);
+            keys.push(highlight_cache_key("x", Some("rs"), style));
         }
-        highlight_block_with_cache(&cache, "y", Some("rs"), &base);
-        keys.push(highlight_cache_key("y", Some("rs"), &base));
+        let base_style = HighlightStyle::from(&base);
+        highlight_block_with_cache(&cache, "y", Some("rs"), base_style);
+        keys.push(highlight_cache_key("y", Some("rs"), base_style));
         assert_eq!(
             keys.iter()
                 .copied()
@@ -319,7 +306,12 @@ mod tests {
         let mut repeated_theme = base;
         repeated_theme.text = Color::Indexed(200);
         assert_eq!(
-            highlight_block_with_cache(&cache, "x", Some("rs"), &repeated_theme),
+            highlight_block_with_cache(
+                &cache,
+                "x",
+                Some("rs"),
+                HighlightStyle::from(&repeated_theme),
+            ),
             uncached_block("x", Some("rs"), &repeated_theme),
             "EVICTION repeat changed output"
         );
@@ -351,7 +343,12 @@ mod tests {
                         (&plain, &plain_expected)
                     };
                     assert_eq!(
-                        highlight_block_with_cache(&cache, "x", Some("rs"), theme),
+                        highlight_block_with_cache(
+                            &cache,
+                            "x",
+                            Some("rs"),
+                            HighlightStyle::from(theme),
+                        ),
                         *expected,
                         "CONCURRENT worker {worker} query {query}"
                     );
@@ -384,7 +381,7 @@ mod tests {
 
         let theme = cyril_dark();
         assert_eq!(
-            highlight_block_with_cache(&cache, "x", Some("rs"), &theme),
+            highlight_block_with_cache(&cache, "x", Some("rs"), HighlightStyle::from(&theme)),
             uncached_block("x", Some("rs"), &theme),
             "POISON highlight fallback drifted"
         );
@@ -394,100 +391,188 @@ mod tests {
     fn five_hundred_highlight_cache_hits_return_same_output() {
         let cache = Mutex::new(HashCache::new(256));
         let theme = cyril_dark();
-        let expected = highlight_block_with_cache(&cache, "x", Some("rs"), &theme);
+        let style = HighlightStyle::from(&theme);
+        let expected = highlight_block_with_cache(&cache, "x", Some("rs"), style);
         for _ in 0..500 {
             assert_eq!(
-                std::hint::black_box(highlight_block_with_cache(&cache, "x", Some("rs"), &theme,)),
+                std::hint::black_box(highlight_block_with_cache(&cache, "x", Some("rs"), style)),
                 expected
             );
         }
     }
 
     #[test]
-    fn complete_theme_participates_in_cache_identity() {
-        let base = crate::traits::test_support::marker_theme();
-        let baseline = highlight_cache_key("cache-key", Some("rs"), &base);
-        macro_rules! assert_role_changes_key {
-            ($field:ident) => {{
-                let mut changed = base;
-                changed.$field = Color::Indexed(255);
-                assert_ne!(
-                    highlight_cache_key("cache-key", Some("rs"), &changed),
-                    baseline,
-                    "{} missing from cache key",
-                    stringify!($field)
-                );
-            }};
+    fn highlight_cache_isolates_syntax_and_fallback_text_inputs() {
+        let code = "fn main() -> u8 { 42 }";
+        let colored = cyril_dark();
+        let mut alternate_syntax = colored;
+        alternate_syntax.syntax = Some(crate::theme::SyntaxTheme::Base16OceanLight);
+        let plain = crate::traits::test_support::marker_theme();
+        let mut alternate_text = plain;
+        alternate_text.text = Color::Indexed(255);
+
+        for (base, changed) in [(colored, alternate_syntax), (plain, alternate_text)] {
+            let base_expected = uncached_block(code, Some("rs"), &base);
+            let changed_expected = uncached_block(code, Some("rs"), &changed);
+            assert_ne!(
+                base_expected, changed_expected,
+                "positive control must differ"
+            );
+
+            for (first, second) in [(base, changed), (changed, base)] {
+                let cache = Mutex::new(HashCache::new(256));
+                let first_style = HighlightStyle::from(&first);
+                let second_style = HighlightStyle::from(&second);
+                let first_key = highlight_cache_key(code, Some("rs"), first_style);
+                let second_key = highlight_cache_key(code, Some("rs"), second_style);
+                assert_ne!(first_key, second_key);
+
+                for theme in [first, second, first] {
+                    let style = HighlightStyle::from(&theme);
+                    let expected = uncached_block(code, Some("rs"), &theme);
+                    assert_eq!(
+                        highlight_block_with_cache(&cache, code, Some("rs"), style),
+                        expected
+                    );
+                    assert_eq!(
+                        cached_entry(&cache, highlight_cache_key(code, Some("rs"), style)),
+                        Some(expected)
+                    );
+                }
+                assert!(cached_entry(&cache, first_key).is_some());
+                assert!(cached_entry(&cache, second_key).is_some());
+            }
         }
-        let mut changed_syntax = base;
-        changed_syntax.syntax = Some(crate::theme::SyntaxTheme::Base16EightiesDark);
-        assert_ne!(
-            highlight_cache_key("cache-key", Some("rs"), &changed_syntax),
-            baseline
-        );
-        assert_role_changes_key!(canvas);
-        assert_role_changes_key!(chrome);
-        assert_role_changes_key!(code);
-        assert_role_changes_key!(selection);
-        assert_role_changes_key!(text);
-        assert_role_changes_key!(muted);
-        assert_role_changes_key!(border);
-        assert_role_changes_key!(accent);
-        assert_role_changes_key!(accent_alt);
-        assert_role_changes_key!(user);
-        assert_role_changes_key!(agent);
-        assert_role_changes_key!(system);
-        assert_role_changes_key!(info);
-        assert_role_changes_key!(success);
-        assert_role_changes_key!(warning);
-        assert_role_changes_key!(danger);
-        assert_role_changes_key!(diff_add);
-        assert_role_changes_key!(diff_delete);
-        assert_role_changes_key!(diff_context);
-        assert_role_changes_key!(emphasis);
-        assert_role_changes_key!(accent_tertiary);
-        assert_role_changes_key!(accent_quaternary);
-        assert_role_changes_key!(accent_quinary);
-        assert_role_changes_key!(subdued);
-        assert_role_changes_key!(subdued_positive);
-        assert_role_changes_key!(subdued_negative);
-        assert_role_changes_key!(soft_accent);
-        assert_role_changes_key!(positive_accent);
-        assert_role_changes_key!(inset_background);
+    }
+
+    fn cached_entry(
+        cache: &Mutex<HashCache<HighlightedBlock>>,
+        key: u64,
+    ) -> Option<HighlightedBlock> {
+        match cache.lock() {
+            Ok(cache) => cache.get(key).cloned(),
+            Err(error) => panic!("local highlight cache lock failed: {error}"),
+        }
     }
 
     #[test]
-    fn cache_key_distinguishes_bundled_palettes() {
-        let key = |id: ThemeId, mode: ColorMode| {
-            highlight_cache_key(
-                "fn main() {}\n",
-                Some("rust"),
-                &crate::theme::resolve(id, mode),
-            )
-        };
-        for mode in [ColorMode::TrueColor, ColorMode::Ansi256, ColorMode::Ansi16] {
-            let mut seen = std::collections::HashMap::new();
-            for id in ThemeId::ALL.iter().copied() {
-                if let Some(previous) = seen.insert(key(id, mode), id) {
-                    panic!(
-                        "highlight cache key collision in {mode:?}: {} and {}",
-                        previous.name(),
-                        id.name()
+    fn irrelevant_theme_roles_reuse_highlight_cache_entries() {
+        let code = "fn reused() {}";
+        for base in [cyril_dark(), crate::traits::test_support::marker_theme()] {
+            // Cover a colored syntax path and no-syntax fallback independently.
+            for changed in [
+                Theme {
+                    canvas: Color::Indexed(255),
+                    ..base
+                },
+                Theme {
+                    chrome: Color::Indexed(255),
+                    ..base
+                },
+                Theme {
+                    code: Color::Indexed(255),
+                    ..base
+                },
+                Theme {
+                    selection: Color::Indexed(255),
+                    ..base
+                },
+                Theme {
+                    text_secondary: Color::Indexed(255),
+                    ..base
+                },
+                Theme {
+                    accent_violet: Color::Indexed(255),
+                    ..base
+                },
+            ] {
+                assert_ne!(changed, base);
+                for (first, second) in [(base, changed), (changed, base)] {
+                    // A miss at capacity would evict the first entry, making
+                    // reuse observable without changing HashCache's API.
+                    let cache = Mutex::new(HashCache::new(2));
+                    let first_style = HighlightStyle::from(&first);
+                    let second_style = HighlightStyle::from(&second);
+                    let key = highlight_cache_key(code, Some("rs"), first_style);
+                    assert_eq!(highlight_cache_key(code, Some("rs"), second_style), key);
+                    let expected =
+                        highlight_block_with_cache(&cache, code, Some("rs"), first_style);
+                    let probe_code = "fn retained_probe() {}";
+                    let probe_key = highlight_cache_key(probe_code, Some("rs"), first_style);
+                    let probe =
+                        highlight_block_with_cache(&cache, probe_code, Some("rs"), first_style);
+                    assert_ne!(key, probe_key);
+
+                    assert_eq!(
+                        highlight_block_with_cache(&cache, code, Some("rs"), second_style),
+                        expected
                     );
+                    assert_eq!(cached_entry(&cache, key), Some(expected));
+                    assert_eq!(cached_entry(&cache, probe_key), Some(probe));
                 }
             }
-            assert_eq!(seen.len(), ThemeId::ALL.len());
         }
-        // No-color resolves every palette to the same reset theme with no
-        // syntax, so one shared key is correct there rather than a stale-cache
-        // bug. Pinned explicitly so a future per-palette difference in
-        // no-color resolution cannot hide behind that assumption.
-        let no_color_keys: std::collections::HashSet<_> = ThemeId::ALL
-            .iter()
-            .copied()
-            .map(|id| key(id, ColorMode::None))
-            .collect();
-        assert_eq!(no_color_keys.len(), 1);
+    }
+
+    #[test]
+    fn highlight_cache_preserves_content_and_language_inputs() {
+        let cache = Mutex::new(HashCache::new(256));
+        let style = HighlightStyle::from(&cyril_dark());
+        let mut keys = std::collections::HashSet::new();
+        for (code, lang) in [
+            ("fn main() {}", Some("rs")),
+            ("fn other() {}", Some("rs")),
+            ("fn main() {}", None),
+        ] {
+            let key = highlight_cache_key(code, lang, style);
+            assert!(
+                keys.insert(key),
+                "content and language must isolate entries"
+            );
+            let rendered = highlight_block_with_cache(&cache, code, lang, style);
+            assert_eq!(cached_entry(&cache, key), Some(rendered));
+        }
+    }
+
+    #[test]
+    fn cache_identity_matches_resolved_highlight_styles_across_palettes_and_modes() {
+        let code = "fn main() -> u8 { 42 }";
+        for mode in [
+            ColorMode::TrueColor,
+            ColorMode::Ansi256,
+            ColorMode::Ansi16,
+            ColorMode::None,
+        ] {
+            let mut seen = std::collections::HashMap::new();
+            let mut styles = std::collections::HashSet::new();
+            let cache = Mutex::new(HashCache::new(256));
+            for id in ThemeId::ALL
+                .iter()
+                .chain(ThemeId::ALL.iter().rev())
+                .copied()
+            {
+                let theme = crate::theme::resolve(id, mode);
+                let style = HighlightStyle::from(&theme);
+                let key = highlight_cache_key(code, Some("rs"), style);
+                if let Some(previous) = seen.insert(key, style) {
+                    assert_eq!(
+                        previous, style,
+                        "different resolved highlight inputs collided in {mode:?}"
+                    );
+                }
+                styles.insert(style);
+                assert_eq!(
+                    highlight_block_with_cache(&cache, code, Some("rs"), style),
+                    uncached_block(code, Some("rs"), &theme),
+                    "palette {} in {mode:?}",
+                    id.name()
+                );
+            }
+            assert_eq!(seen.len(), styles.len());
+            if mode == ColorMode::None {
+                assert_eq!(seen.len(), 1, "no-color palettes share reset style inputs");
+            }
+        }
     }
 
     #[test]
@@ -522,12 +607,17 @@ mod tests {
 
     #[test]
     fn catalog_and_highlighter_failures_use_primary_text() {
-        let theme = crate::traits::test_support::marker_theme();
-        let missing_catalog = do_highlight_block("catalog", Some("rs"), &theme, None);
-        assert!(
-            missing_catalog[0]
-                .iter()
-                .all(|(style, _)| style.fg == Some(theme.text))
+        let mut theme = crate::traits::test_support::marker_theme();
+        theme.syntax = Some(crate::theme::SyntaxTheme::Base16EightiesDark);
+        let missing_catalog = do_highlight_block(
+            "catalog\nsecond line",
+            Some("rs"),
+            HighlightStyle::from(&theme),
+            None,
+        );
+        assert_eq!(
+            missing_catalog,
+            plain_fallback("catalog\nsecond line", theme.text)
         );
 
         let failed = normalize_highlight_result(
@@ -536,6 +626,69 @@ mod tests {
             theme.text,
         );
         assert_eq!(failed, fallback_line("highlighter", theme.text));
+    }
+
+    #[test]
+    fn cached_error_fallback_isolates_text_but_reuses_irrelevant_roles() {
+        let code = "fn failed_highlighter() {}";
+        let base = cyril_dark();
+        let mut alternate_text = base;
+        alternate_text.text = Color::Indexed(255);
+        let failed_block = |style: HighlightStyle| {
+            vec![normalize_highlight_result(
+                Err::<Vec<(SynStyle, &str)>, ()>(()),
+                code,
+                style.text,
+            )]
+        };
+        assert_ne!(
+            failed_block(HighlightStyle::from(&base)),
+            failed_block(HighlightStyle::from(&alternate_text))
+        );
+
+        for (first, second) in [(base, alternate_text), (alternate_text, base)] {
+            let cache = Mutex::new(HashCache::new(2));
+            let first_style = HighlightStyle::from(&first);
+            let second_style = HighlightStyle::from(&second);
+            let first_key = highlight_cache_key(code, Some("rs"), first_style);
+            let second_key = highlight_cache_key(code, Some("rs"), second_style);
+            assert_ne!(first_key, second_key);
+
+            // Syntect errors are not reliably input-triggerable. Seed the
+            // local cache with the real error normalizer's fallback output.
+            match cache.lock() {
+                Ok(mut cache) => {
+                    cache.insert(first_key, failed_block(first_style));
+                    cache.insert(second_key, failed_block(second_style));
+                }
+                Err(error) => panic!("error fallback cache lock failed: {error}"),
+            }
+            for theme in [first, second, first] {
+                let mut irrelevant_change = theme;
+                irrelevant_change.canvas = Color::Indexed(255);
+                irrelevant_change.chrome = Color::Indexed(255);
+                irrelevant_change.code = Color::Indexed(255);
+                irrelevant_change.selection = Color::Indexed(255);
+                let style = HighlightStyle::from(&irrelevant_change);
+                let expected = failed_block(HighlightStyle::from(&theme));
+                assert_eq!(
+                    highlight_block_with_cache(&cache, code, Some("rs"), style),
+                    expected
+                );
+                assert_eq!(
+                    cached_entry(&cache, highlight_cache_key(code, Some("rs"), style)),
+                    Some(expected)
+                );
+            }
+            assert_eq!(
+                cached_entry(&cache, first_key),
+                Some(failed_block(first_style))
+            );
+            assert_eq!(
+                cached_entry(&cache, second_key),
+                Some(failed_block(second_style))
+            );
+        }
     }
 
     #[test]

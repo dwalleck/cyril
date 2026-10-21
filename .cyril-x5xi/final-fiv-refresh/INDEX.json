@@ -1,0 +1,290 @@
+{
+  "schema": 1,
+  "issue": "cyril-x5xi",
+  "status": "Current local affected-source gates/static review plus ONE authorized mixed-raw V2 consumer PASS; Main publication/CI pending.",
+  "checked_source_tree": "55fd655ebcaa390310486b492c080c028fd635df",
+  "checked_source_identity_scope": "Pre-publication state only. Current packet/publication record changes are separate from checked tree55fd; see archive publication-boundary.json.",
+  "binary_sha256": "f968e016dc58539e0646891978315a89755884f7d3eae2e6e6dc818a70871b9d",
+  "binary_included": false,
+  "gate_receipt": "gates/canonical-handoff.json",
+  "gate_receipt_sha256": "c5df4177d74cc5ebdafd6cbb6db53b833d71dd9035e41492c25c00f5e6de53c3",
+  "gate_summary": {
+    "initialfmt": "PASS;0sourcefilechanges",
+    "full_v2_failed_validation_integration": "PASS4/0/0",
+    "full_UI_App_packages": {
+      "passed": 1137,
+      "failed": 0,
+      "ignored": 3,
+      "measured": 0,
+      "filtered_out": 0,
+      "direct_Cargo_targets": 17
+    },
+    "workspace_all_targets_Clippy_Dwarnings": "PASS",
+    "default_cyril_build_bins": "PASS",
+    "finalfmt": "PASS",
+    "unexpected_failures": 0,
+    "retries": 0,
+    "mutants_or_product_repairs": 0
+  },
+  "no_full_workspace_or_core_test_claim": true,
+  "independent_review": {
+    "member": "review/ReviewX5FinalFiv.txt",
+    "source": "agent://ReviewX5FinalFiv",
+    "correctness": "correct",
+    "confidence": 0.98,
+    "findings": [],
+    "scope": "Static final-ancestry/source/metadata review; no product/gate/consumer runs by reviewer"
+  },
+  "consumer_receipt": "consumer/canonical-handoff.json",
+  "consumer": {
+    "attempts": 1,
+    "engine": "v2",
+    "four_positive_counts_once": true,
+    "five_negative_counts_zero": true,
+    "failed_rows": 2,
+    "wire_frames": 9,
+    "full_original_frame_copy_counts": {
+      "fiv1-owned-content-first": 2,
+      "fiv1-owned-content-unknown-raw": 2
+    },
+    "preserved_completed_kas_not_run": true
+  },
+  "archive": {
+    "path": ".cyril-x5xi/final-fiv-refresh/evidence.tar.gz",
+    "sha256": "cfdfb0819a91a8a1e5b5780ce54e2a02fe336500c708fcd8705a32400b5510a7",
+    "bytes": 367317,
+    "members": 22,
+    "index_is_external": true
+  },
+  "member_inventory": [
+    {
+      "path": "consumer/agent-wire.jsonl",
+      "bytes": 3345,
+      "sha256": "73cd689afec0c74ea679db0346444da2b2d5ede445cf09be0fa89260a5f89c8f",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/tmp/cyril-x5xi-final-fiv-mixed-raw-consumer-20261020-01/agent-wire.jsonl"
+      }
+    },
+    {
+      "path": "consumer/canonical-handoff.json",
+      "bytes": 4261,
+      "sha256": "08a75508dad0ec4174f869ce25236b1c7fed39d05e1f23384329c5853df478c8",
+      "mode": "0644",
+      "provenance": {
+        "kind": "generated current one-attempt consumer receipt",
+        "source": "local://x5-final-fiv-current-consumer-receipt.json"
+      }
+    },
+    {
+      "path": "consumer/cyril.log",
+      "bytes": 3335,
+      "sha256": "26741b16af2a7117a8a8849274e36bccc23de155b3b25df22d55f87276b5c294",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/tmp/cyril-x5xi-final-fiv-mixed-raw-consumer-20261020-01/cyril.log"
+      }
+    },
+    {
+      "path": "consumer/result.json",
+      "bytes": 535,
+      "sha256": "f97df330dc6ad5a8f1913359884786fc3c63dd89a4fd91028617b5ca466bb31c",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/tmp/cyril-x5xi-final-fiv-mixed-raw-consumer-20261020-01/result.json"
+      }
+    },
+    {
+      "path": "consumer/screen.txt",
+      "bytes": 10686,
+      "sha256": "2223bfbd3ad278d077243b460400046607ef6ab59bb756dbbefd750b84cc1766",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/tmp/cyril-x5xi-final-fiv-mixed-raw-consumer-20261020-01/screen.txt"
+      }
+    },
+    {
+      "path": "consumer/terminal.ansi",
+      "bytes": 2181,
+      "sha256": "d059c5bae4e3232574fc279661a5c72844c7d5dc166069b590e622a5fffad050",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/tmp/cyril-x5xi-final-fiv-mixed-raw-consumer-20261020-01/terminal.ansi"
+      }
+    },
+    {
+      "path": "gates/01-initial-canonical-format.log",
+      "bytes": 239,
+      "sha256": "9e1887c1b02b96603456f9a35edf07c06f3de237e015d2e04f9a39aebd7547c2",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/01-initial-canonical-format.log"
+      }
+    },
+    {
+      "path": "gates/02-full-v2-failed-validation-integration.log",
+      "bytes": 1149,
+      "sha256": "d54fb44586a2c57f6e1884c2e61bdd1e7b94adbb0e3a8139f77a5ff20008a33c",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/02-full-v2-failed-validation-integration.log"
+      }
+    },
+    {
+      "path": "gates/03-full-affected-UI-and-App-package-tests.log",
+      "bytes": 87911,
+      "sha256": "aca9356980b70ce7ca7cc817ca37c6b94cf1088f0853865c28b5da0bb536fb55",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/03-full-affected-UI-and-App-package-tests.log"
+      }
+    },
+    {
+      "path": "gates/04-workspace-all-targets-clippy.log",
+      "bytes": 1019,
+      "sha256": "729a23b9fce6b84a70caead8c874035d2dd00c974a547671e8f549cf1c44e7d6",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/04-workspace-all-targets-clippy.log"
+      }
+    },
+    {
+      "path": "gates/05-default-binary-build-bins.log",
+      "bytes": 759,
+      "sha256": "bab939dab8ea9fba301295ea14de6a409cba0b805eec819d52894361a580f954",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/05-default-binary-build-bins.log"
+      }
+    },
+    {
+      "path": "gates/06-final-format-check.log",
+      "bytes": 247,
+      "sha256": "169ebcae0bd47db187959e30051493a8cb60c5e3ca924bda5823de6a41065aad",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/06-final-format-check.log"
+      }
+    },
+    {
+      "path": "gates/canonical-handoff.json",
+      "bytes": 80938,
+      "sha256": "c5df4177d74cc5ebdafd6cbb6db53b833d71dd9035e41492c25c00f5e6de53c3",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/canonical-handoff.json"
+      }
+    },
+    {
+      "path": "gates/checked-source-manifest.json",
+      "bytes": 1140199,
+      "sha256": "6fc2bceae2321633ce995332ab4aafe6f7f1403edb0af6393f722aa45aec8084",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/x5xi-final-fiv-current-assembled-attempt1/final-actual-assembled-after-all-requested-local-gates.source-manifest.json"
+      }
+    },
+    {
+      "path": "inputs/declared-assertions.json",
+      "bytes": 3329,
+      "sha256": "3085162665076c8cc5e1d83a19777e9c9f4372d61164ea90db026d01891220e3",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-consumer-assertions.json"
+      }
+    },
+    {
+      "path": "inputs/mixed-raw.jsonl",
+      "bytes": 1180,
+      "sha256": "d051bae80798949b534514d92035742e70c41b3cb3ad1214dd9884ea0e0fb235",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-mixed-raw-controls-content.jsonl"
+      }
+    },
+    {
+      "path": "inputs/prepared-consumer.json",
+      "bytes": 4680,
+      "sha256": "6129de35dafb1bd66dccde46ed7a4242b62fcf1914a00310408da25200bd77e4",
+      "mode": "0644",
+      "provenance": {
+        "kind": "original preparation provenance, not authorization to run both cases",
+        "source": "local://fiv1-mixed-raw-consumer-prepared.json"
+      }
+    },
+    {
+      "path": "publication-boundary.json",
+      "bytes": 1730,
+      "sha256": "be1990a28b9f725543c323c5fb08fd13b08b784c94ac4672b1c30d9003fcd3e2",
+      "mode": "0644",
+      "provenance": {
+        "kind": "generated publication/source attribution boundary"
+      }
+    },
+    {
+      "path": "replay-repo/.cyril-1v25/smoke.py",
+      "bytes": 16779,
+      "sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+      "mode": "0644",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-x5xi-stack/.cyril-1v25/smoke.py"
+      }
+    },
+    {
+      "path": "replay-repo/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh",
+      "bytes": 779,
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "mode": "0755",
+      "provenance": {
+        "kind": "byte-identical input",
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-x5xi-stack/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh"
+      }
+    },
+    {
+      "path": "reproduction.json",
+      "bytes": 2494,
+      "sha256": "a21e4162c65bd735d04481dfe73be47a16332374bd52fbbd966104062ac02d42",
+      "mode": "0644",
+      "provenance": {
+        "kind": "generated portable reproduction receipt, not a product or harness implementation"
+      }
+    },
+    {
+      "path": "review/ReviewX5FinalFiv.txt",
+      "bytes": 1178,
+      "sha256": "618b26a5a9cda79e951f7bd16740bdc012490e74d069b277de68f4fecdd65632",
+      "mode": "0644",
+      "provenance": {
+        "kind": "exact independent review response",
+        "source": "agent://ReviewX5FinalFiv",
+        "verdict": "correct",
+        "confidence": 0.98,
+        "findings": []
+      }
+    }
+  ],
+  "binding_cycle_avoidance": "Root manifest hashes new INDEX.json and archive; INDEX hashes archive/members; archive does not contain INDEX or current root publication records; handoff hashes root manifest.",
+  "limits": [
+    "One V2 mixed-raw owned synthetic-peer replay only; preserved Completed/KAS case was NOT run in this X5 GO.",
+    "Actual pinned Cyril CLI process, PTY and pyte-decoded output; no native graphical glyph/host qualification.",
+    "No real Kiro/account/auth/model/grant, network/live-upstream behavior, full-workspace/core-test, all-feature/other-platform, benchmark, current theme-picker or same-process mode-switch claim.",
+    "Checked source tree55fd is pre-publication metadata/packet state; forthcoming documentation-only files do not receive that whole-tree source identity."
+  ],
+  "privacy_and_scope": "No executable, private Git index, HOME/XDG/workspace/cache/env/credentials, other packet/archive or scratch recursion included."
+}
