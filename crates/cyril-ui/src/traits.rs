@@ -353,6 +353,13 @@ fn json_shape(v: &serde_json::Value) -> &'static str {
     }
 }
 
+enum RawOutputPolicy {
+    /// Preserve the display projection's blank strings and omit error-only fields.
+    Display,
+    /// Prefer explicit errors and skip blank string candidates during selection.
+    Error,
+}
+
 /// A tool call enriched for display (wraps `cyril_core::types::ToolCall`).
 #[derive(Debug, Clone)]
 pub struct TrackedToolCall {
@@ -486,10 +493,15 @@ impl TrackedToolCall {
     /// Inspired by the `unwrapResultOutput` / `extractResultText` pattern in
     /// tui.js, with adaptations for the Rust context.
     pub fn output_text(&self) -> Option<String> {
+        self.raw_output_text(RawOutputPolicy::Display)
+    }
+
+    fn raw_output_text(&self, policy: RawOutputPolicy) -> Option<String> {
+        let skip_blank = matches!(policy, RawOutputPolicy::Error);
         let output = self.inner.raw_output()?;
 
         if let Some(s) = output.as_str() {
-            return Some(s.to_string());
+            return (!skip_blank || !s.trim().is_empty()).then(|| s.to_string());
         }
 
         let obj = match output.as_object() {
@@ -498,6 +510,16 @@ impl TrackedToolCall {
                 return serde_json::to_string_pretty(output).ok();
             }
         };
+
+        if skip_blank {
+            for key in ["error", "message"] {
+                if let Some(text) = obj.get(key).and_then(|value| value.as_str())
+                    && !text.trim().is_empty()
+                {
+                    return Some(text.to_string());
+                }
+            }
+        }
 
         if let Some(stdout) = obj.get("stdout").and_then(|v| v.as_str())
             && !stdout.trim().is_empty()
@@ -513,7 +535,9 @@ impl TrackedToolCall {
         if let Some(items) = obj.get("items").and_then(|v| v.as_array())
             && let Some(first) = items.first()
         {
-            if let Some(text) = first.get("Text").and_then(|v| v.as_str()) {
+            if let Some(text) = first.get("Text").and_then(|v| v.as_str())
+                && (!skip_blank || !text.trim().is_empty())
+            {
                 return Some(text.to_string());
             }
             if let Some(json_val) = first.get("Json") {
@@ -522,7 +546,9 @@ impl TrackedToolCall {
         }
 
         for key in ["text", "content", "result", "output"] {
-            if let Some(s) = obj.get(key).and_then(|v| v.as_str()) {
+            if let Some(s) = obj.get(key).and_then(|v| v.as_str())
+                && (!skip_blank || !s.trim().is_empty())
+            {
                 return Some(s.to_string());
             }
         }
@@ -545,37 +571,18 @@ impl TrackedToolCall {
         if self.inner.status() != cyril_core::types::ToolCallStatus::Failed {
             return None;
         }
-        self.inner
-            .raw_output()
-            .and_then(|output| {
-                if let Some(text) = output.as_str() {
-                    return (!text.trim().is_empty()).then(|| text.to_string());
-                }
-                if let Some(obj) = output.as_object() {
-                    for key in ["error", "message"] {
-                        if let Some(text) = obj.get(key).and_then(|value| value.as_str())
-                            && !text.trim().is_empty()
-                        {
-                            return Some(text.to_string());
-                        }
+        self.raw_output_text(RawOutputPolicy::Error).or_else(|| {
+            // v2 validation failures carry their error only in ACP content.
+            self.inner
+                .content()
+                .iter()
+                .find_map(|content| match content {
+                    cyril_core::types::ToolCallContent::Text(text) if !text.trim().is_empty() => {
+                        Some(text.clone())
                     }
-                }
-                self.output_text().filter(|text| !text.trim().is_empty())
-            })
-            .or_else(|| {
-                // v2 validation failures carry their error only in ACP content.
-                self.inner
-                    .content()
-                    .iter()
-                    .find_map(|content| match content {
-                        cyril_core::types::ToolCallContent::Text(text)
-                            if !text.trim().is_empty() =>
-                        {
-                            Some(text.clone())
-                        }
-                        _ => None,
-                    })
-            })
+                    _ => None,
+                })
+        })
     }
 }
 

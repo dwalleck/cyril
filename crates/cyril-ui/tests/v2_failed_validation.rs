@@ -245,3 +245,59 @@ fn blank_raw_errors_fall_back_to_visible_content_without_changing_precedence() {
         }
     }
 }
+
+#[test]
+fn failed_raw_selection_skips_blank_fields_without_changing_completed_output() {
+    const RAW_ERROR: &str = "  actual raw error \t";
+    const CONTENT_ERROR: &str = "content must not hide usable raw text";
+    for (raw_output, completed_output) in [
+        (serde_json::json!({"text": "", "output": RAW_ERROR}), ""),
+        (
+            serde_json::json!({"items": [{"Text": " \t"}], "output": RAW_ERROR}),
+            " \t",
+        ),
+    ] {
+        let make_call = |status| {
+            ToolCall::new(
+                ToolCallId::new("mixed-raw-fields"),
+                "mixed raw fields".into(),
+                ToolKind::Other,
+                status,
+                None,
+            )
+            .with_raw_output(Some(raw_output.clone()))
+            .with_content(vec![ToolCallContent::Text(CONTENT_ERROR.into())])
+        };
+        let completed = TrackedToolCall::new(make_call(ToolCallStatus::Completed));
+        assert_eq!(
+            completed.output_text().as_deref(),
+            Some(completed_output),
+            "Completed output must retain the first blank candidate: {raw_output}"
+        );
+        assert_eq!(completed.error_message(), None);
+        assert_eq!(completed.raw_output(), Some(&raw_output));
+
+        let failed = make_call(ToolCallStatus::Failed);
+        let tracked = TrackedToolCall::new(failed.clone());
+        assert_eq!(
+            tracked.error_message().as_deref(),
+            Some(RAW_ERROR),
+            "failed output must continue past blank candidates: {raw_output}"
+        );
+        assert_eq!(
+            tracked.output_text().as_deref(),
+            Some(completed_output),
+            "error selection must not change the public output projection"
+        );
+        assert_eq!(tracked.raw_output(), Some(&raw_output));
+        let mut state = UiState::new(500);
+        state.apply_notification(&Notification::ToolCallUpdated(failed));
+        state.apply_notification(&Notification::TurnCompleted {
+            stop_reason: StopReason::EndTurn,
+        });
+        let text = rendered(&state);
+        assert_eq!(text.matches("✗ ").count(), 1, "{text}");
+        assert_eq!(text.matches(RAW_ERROR.trim()).count(), 1, "{text}");
+        assert!(!text.contains(CONTENT_ERROR), "{text}");
+    }
+}
