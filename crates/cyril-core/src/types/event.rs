@@ -198,6 +198,8 @@ pub enum Notification {
         /// and this field is effectively just a tag.
         session_id: Option<SessionId>,
     },
+    /// Typed, session-bound KAS MCP management; v2 retains its existing events.
+    McpUpdate(crate::types::McpUpdate),
     McpServerInitFailure {
         server_name: String,
         error: Option<String>,
@@ -808,6 +810,10 @@ pub enum BridgeCommand {
     /// skipped silently — the bridge never re-sends on an unsupported session.
     ClearSteering {
         session_id: SessionId,
+    },
+    /// An explicit operation pinned to the original session/server/catalog entry.
+    Mcp {
+        request: crate::types::McpRequest,
     },
     /// Query KAS's own hook registry via `_kiro/hooks/list` (cyril-gk17).
     ///

@@ -61,6 +61,12 @@ fn adapter_matrix_advertises_if_and_only_if_the_mediator_answers() {
             "{name}: external URL delivery",
         );
         assert!(json.pointer("/_meta/kiro/secretStorage").is_none());
+        assert!(json.pointer("/_meta/kiro/mcp/elicitation").is_none());
+        assert!(json.pointer("/_meta/kiro/elicitation").is_none());
+        assert_eq!(
+            host::supports(adapters, HostFamily::McpElicitation),
+            engine.kind() == crate::types::AgentEngine::Kas
+        );
 
         let hooks = json.pointer("/_meta/kiro/hooks");
         let inbound_hooks = matches!(hooks, Some(value) if value.get("v2").is_none());
@@ -89,6 +95,7 @@ fn v2_refuses_every_kas_host_family() {
         HostFamily::Auth,
         HostFamily::HostIo,
         HostFamily::ExternalUrl,
+        HostFamily::McpElicitation,
         HostFamily::HooksInbound,
         HostFamily::HooksAny,
     ] {

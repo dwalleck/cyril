@@ -1,5 +1,7 @@
 pub mod answer;
 pub mod builtin;
+mod mcp;
+pub use mcp::McpCommandSource;
 pub mod subagent;
 pub mod workflow;
 
@@ -243,7 +245,9 @@ pub enum CommandResultKind {
     /// this through its async `dispatch_steer` (optimistic echo + `SteerSession`),
     /// because the command layer has no UI access and must not touch the bridge
     /// directly.
-    Steer { text: String },
+    Steer {
+        text: String,
+    },
     /// Drop every queued steer (`/steer clear` → `_session/steer/clear`;
     /// cyril-vgcm C10). The App routes this through `dispatch_clear_steer` —
     /// same command-layer split as `Steer`. No payload: the wire method clears
@@ -255,7 +259,9 @@ pub enum CommandResultKind {
     ToggleVoice,
     /// Open Cyril's local usage dashboard; records whether an async KAS
     /// account query was dispatched before returning.
-    ShowUsage { account_query_started: bool },
+    ShowUsage {
+        account_query_started: bool,
+    },
     /// Open the `/powers` panel with the agent's installed power set
     /// (cyril-v19o). Carries the catalog because the command layer can read it
     /// (`SessionController::powers`) while the panel lives in `cyril-ui`; the
@@ -267,6 +273,9 @@ pub enum CommandResultKind {
     /// is information the empty panel cannot express.
     ShowPowers {
         powers: Vec<crate::types::PowerInfo>,
+    },
+    ShowMcp {
+        state: Arc<crate::types::McpState>,
     },
     /// Open the picker over a KAS session config select (`/model` `/effort`
     /// `/mode`, cyril-vh69). Carries the validated, snapshot-derived picker —
@@ -286,7 +295,9 @@ pub enum CommandResultKind {
     },
     /// `/review resume [<run dir | workflow id>]`: continue a failed or
     /// paused review run after fresh consent.
-    ReviewResume { selector: Option<String> },
+    ReviewResume {
+        selector: Option<String>,
+    },
     /// `/review cancel`: stop the review at any phase.
     ReviewCancel,
     /// Return Cyril's current typed memory runtime status.
@@ -484,6 +495,7 @@ impl CommandRegistry {
             workflows,
             UsageAccountCommandSource::None,
             ConfigCommandSource::Agent,
+            McpCommandSource::Agent,
         )
     }
 
@@ -492,12 +504,17 @@ impl CommandRegistry {
         workflows: WorkflowCommandSource,
         usage_account: UsageAccountCommandSource,
         config: ConfigCommandSource,
+        mcp: McpCommandSource,
     ) -> Self {
         let mut registry = Self::new();
         let mut names: Vec<&str> = vec![
             "help", "clear", "quit", "new", "load", "steer", "voice", "usage", "memory", "theme",
             "thinking", "sessions", "spawn", "kill", "msg",
         ];
+        if mcp == McpCommandSource::Kas {
+            names.push("mcp");
+            registry.register(Arc::new(mcp::McpCommand));
+        }
         if let HooksCommandSource::Kas { workspace_root } = hooks {
             names.push("hooks");
             registry.register(Arc::new(builtin::KasHooksCommand::new(workspace_root)));
@@ -1269,6 +1286,7 @@ mod tests {
             WorkflowCommandSource::None,
             UsageAccountCommandSource::Kas,
             ConfigCommandSource::Agent,
+            McpCommandSource::Agent,
         );
         let (command, args) = registry.parse("/usage").expect("/usage is registered");
         let result = command.execute(&ctx, args).await.expect("/usage executes");
@@ -2242,6 +2260,7 @@ mod thinking_command_tests {
                 },
                 UsageAccountCommandSource::Kas,
                 ConfigCommandSource::Kas,
+                McpCommandSource::Kas,
             ),
         ] {
             let (command, args) = registry
@@ -2281,6 +2300,7 @@ mod config_command_tests {
             },
             UsageAccountCommandSource::Kas,
             ConfigCommandSource::Kas,
+            McpCommandSource::Kas,
         )
     }
 

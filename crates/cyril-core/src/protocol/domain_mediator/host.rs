@@ -52,7 +52,11 @@ fn dispatch_extension(
     let method = super::canonical_extension_method(request.method()).to_owned();
     #[cfg(not(feature = "kas"))]
     {
-        if method == crate::protocol::engine::OPEN_EXTERNAL_URL_METHOD {
+        if matches!(
+            method.as_str(),
+            crate::protocol::engine::OPEN_EXTERNAL_URL_METHOD
+                | crate::protocol::engine::MCP_ELICITATION_METHOD
+        ) {
             respond_extension_error(
                 responder,
                 &method,
@@ -116,6 +120,31 @@ fn dispatch_extension(
             let (reply, response_rx) = tokio::sync::oneshot::channel();
             (
                 callbacks::HostCallback::OpenExternalUrl { args, reply },
+                response_rx,
+            )
+        } else if method == crate::protocol::engine::MCP_ELICITATION_METHOD {
+            if !supports(adapters, HostFamily::McpElicitation) {
+                respond_extension_error(
+                    responder,
+                    &method,
+                    agent_client_protocol::Error::method_not_found(),
+                );
+                return;
+            }
+            let args = match crate::protocol::kas::mcp::ElicitationArgs::parse(&params) {
+                Ok(args) => args,
+                Err(error) => {
+                    respond_extension_error(
+                        responder,
+                        &method,
+                        agent_client_protocol::Error::invalid_params().data(error),
+                    );
+                    return;
+                }
+            };
+            let (reply, response_rx) = tokio::sync::oneshot::channel();
+            (
+                callbacks::HostCallback::McpElicitation { args, reply },
                 response_rx,
             )
         } else if method == terminal_io::SHELL_TYPE_METHOD {
@@ -262,6 +291,7 @@ pub(crate) fn supports(
         HostFamily::Auth => adapters.auth.is_some(),
         HostFamily::HostIo => adapters.host_io.is_some(),
         HostFamily::ExternalUrl => adapters.external_url.is_some(),
+        HostFamily::McpElicitation => adapters.mcp_elicitation.is_some(),
         HostFamily::HooksInbound => adapters.hooks == HooksAdapter::Inbound,
         HostFamily::HooksAny => adapters.hooks != HooksAdapter::None,
     }

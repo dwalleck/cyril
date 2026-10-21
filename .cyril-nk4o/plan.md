@@ -1,0 +1,28 @@
+# cyril-nk4o — actual published-parent integration plan
+
+## Contract and boundaries
+
+Adopt the approved Structural route, complete spec and design in this directory. Canonical historical workflow/export artifacts remain read-only in `/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-nk4o/`; do not replay old whole-file exports over the published parent. No scope is reduced. Both read-only preview paths and visible valid elicitation decline remain included. Named reported/OAuth-waiting/silent states require actual authoritative inventory; otherwise status remains truthfully unknown.
+
+## Actual source composition
+
+- Worktree `/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o`, branch `fix/cyril-nk4o`, currently has predecessor `b75010427c16b1dac13b7cf00c595ce2492f391f`, the source-identical empty refresh of published Tqr `4574293e0325a325c5570115eaf01b2f0ef57919` / PR #193 lineage. This is not latest main or the final propagated Tqr source: four additional Tqr review repairs are in progress elsewhere. Main owns explicit final-parent propagation and its affected requalification.
+- Apply archival-Tqr tree `99979e0a923d208865d57857317e8674bf14c778` → canonical NK tree `3cac24272886d0c557aa2109f0071eca98b4650a` only for the 49 paths in `integration-source-paths.txt`. Nineteen paths are new; thirty existing paths are edited surgically.
+- Compose the eight shared owners rather than replacing published-parent source: Cargo.lock, KAS converter modules, domain host, domain mediator, KAS callbacks, capability census, UI state and UI traits. Preserve current external-URL callback/cleanup, Kiro root selection, session/tool-call lifecycle, direct output-string extraction, released dependency resolution and all untouched gutter/root/auth/EOF owners.
+- Explicitly graft actual qualified-D tree `195dad4a23292907a26d21d9fadfa784c14b4af1` UI presentation blob `95ec653d2bc13cbcd43fbcfdf6c4bb37ca6dc57a` and UI tests preimage `31cf1e23284f9db2de112778ff1245045ebdfa28`. This is the complete producer-plus-twenty-regression closure, not the older sixteen-only proposal.
+- The write client initially reformatted D tests to baseline blob `2c24c463a3c2d0295dc29690c2dddb06978c4ba7`; `d-tests-client-format.diff` remains the exact historical formatting-only delta from D. The frozen hidden-action regressions now extend that baseline in UI tests blob `b4d11810d0d9822928d677381c33f8d4b004155a`; the original D20 cases and assertions remain unchanged. Presentation remains D blob `95ec653d2bc13cbcd43fbcfdf6c4bb37ca6dc57a`. No incremental D test layer, manual formatter or byte-forcing bypass is used.
+- No Caar Core/App/startup provenance, session/new 90-second budget or Caar diagnostic changes are included. No tracker, index feature staging, commit or push is performed by this worker.
+
+## Actual-assembly bounded repairs
+
+`review-decisions.md` owns `Assembly/Core-F1` (independent replay/live admission), `Assembly/UI-F1` (shared selected-target visibility) and technical `Proof/Unwrap17`. Existing class-wide DG scope/interfaces/budgets/risk are unchanged. At compiled24694a, all seven original complete cases/74 named controls, affected UI/D20 and authorized17-command matrix pass; independent bounded repair review is correct/no findings/.98. Original actual RED, attempt1 workspace PASS and subsequent Clippy17 FAIL retain their own sources and logs.
+
+The canonical actual test-only RED receipt is referenced once by the review record. It executed seven distinct cases: one isolation PASS and six intended behavioral failures, with zero ignored. Assertion reach is bounded: later same-ID equality/retry and UI/App reanchor, exact second action and close assertions were not all reached. No SDK timeout passage, consumer/native execution or enterprise governance is inferred.
+
+## Checkpoint and publication ownership
+
+`assembly-handoff.json` owns current all49 compiled24694a/bounded517993da5 and17-command PASS from canonical48f84d46. Entry1ff48c/9a042d and compiledb58a540/24694a remain distinct. Binary91771 was unexecuted by qualifier, then one separately authorized owned run04 passed33/33 consumer and9/9 exact management checks across11 frames, original width3 Z/caret and raw UTF8 bytes; ordinary cleanup succeeded. This is owned-decoder actual App proof, not live KAS/native glyph/external URL/inventory-scale/timing/final integration. Historical source frames/FAILs remain preserved; this update reads metadata only, no source/Git/checks.
+
+Current17-command/UI56/D20/no-default/isolated-KAS compiler/test gates and bounded .98 production review remain source-specific. Old workspace2964/0/13 stays at466871, not a new invocation. Failed03 remains FAIL; source-attributed offline comparison and unchanged established-adapter reuse (.96 review) preceded Main's separate single run04 GO. `review-decisions.md` owns exact chronology and scope. Main owns Cargo, final Tqr propagation/affected requalification, final conformance/CI/integration and separately authorized live/native/final-source acceptance; no new permission is inferred from owned-run04 PASS.
+
+Main may commit this qualified current point before final Tqr restack using the proposed exact60-path allowlist:49 existing source paths,7 workflow records and4 portable metadata receipts. No staging/commit occurs here; Main compares actual parent/index/delta to expectedb750 and qualified source pins. Historical source-diff inputs remain local/canonical and excluded, not deleted; archive750644B/150members is a separately retained exact-SHA asset. PR/final Tqr/Caar/native acceptance remains pending; publication order and final-propagated NK prerequisite for Caar are unchanged. No source/binary copies or runtime/checks/Git by this update.

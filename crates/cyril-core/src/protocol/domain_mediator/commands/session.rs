@@ -129,11 +129,14 @@ fn load_failed(error: impl std::fmt::Display) -> Notification {
 }
 
 impl DomainMediator {
-    pub(super) fn new_session(
+    pub(super) async fn new_session(
         &mut self,
         connection: &ConnectionTo<Agent>,
         cwd: std::path::PathBuf,
     ) -> crate::Result<()> {
+        if !self.begin_mcp_session(None).await? {
+            return Ok(());
+        }
         let request = new_session_request(&cwd, self.config.engine.settings_extra());
         let engine_kind = self.config.engine.kind();
         let channels = self.channels.clone();
@@ -191,6 +194,9 @@ impl DomainMediator {
                 .await?;
             return Ok(true);
         }
+        if !self.begin_mcp_session(Some(session_id.clone())).await? {
+            return Ok(false);
+        }
         let request = load_session_request(&session_id, &self.config.cwd);
         let channels = self.channels.clone();
         match send_standard(connection, "session/load", request) {
@@ -226,7 +232,7 @@ impl DomainMediator {
                     // `BridgeError`, not `BridgeDisconnected`: the latter
                     // resets the live session's state (status, context,
                     // thinking) as if the connection had died (cyril-k3lz).
-                    Err(error) => CommandOutcome::notify(load_failed(error)),
+                    Err(error) => CommandOutcome::SessionStartFailed(Box::new(load_failed(error))),
                 };
                 channels.enqueue_outcome(outcome).await;
             }),
@@ -234,7 +240,7 @@ impl DomainMediator {
                 let notification = load_failed(error);
                 self.spawn_command(async move {
                     channels
-                        .enqueue_outcome(CommandOutcome::notify(notification))
+                        .enqueue_outcome(CommandOutcome::SessionStartFailed(Box::new(notification)))
                         .await;
                 });
             }
@@ -251,8 +257,14 @@ impl DomainMediator {
     ) -> crate::Result<()> {
         self.active_session_id = Some(session_id.clone());
         self.steering_unsupported.remove(&session_id);
-        self.notify(Notification::UsageSessionStarted { session_id, origin }.into())
-            .await?;
+        self.notify(
+            Notification::UsageSessionStarted {
+                session_id: session_id.clone(),
+                origin,
+            }
+            .into(),
+        )
+        .await?;
         // `SessionCreated` is a reset boundary for per-session state (model,
         // effort, thinking), so the response's own config snapshot must land
         // AFTER it — emitted first, the reset would discard it (cyril-k3lz).
@@ -260,6 +272,7 @@ impl DomainMediator {
         if let Some(config_options) = config_options {
             self.notify(config_options.into()).await?;
         }
+        self.activate_mcp_session(session_id).await?;
         Ok(())
     }
 
@@ -282,6 +295,7 @@ impl DomainMediator {
         #[cfg(feature = "kas")]
         self.host_ctx.terminals.reap_session(&acp_session_id).await;
         self.host_mediator.borrow_mut().cancel_scope(&session_id);
+        self.cancel_mcp_commands().await;
     }
 
     pub(super) async fn set_mode(

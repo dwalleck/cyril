@@ -86,6 +86,7 @@ fn command_name(command: &BridgeCommand) -> &'static str {
         BridgeCommand::SetConfigOption { .. } => "SetConfigOption",
         BridgeCommand::SetThinking { .. } => "SetThinking",
         BridgeCommand::ExtMethod { .. } => "ExtMethod",
+        BridgeCommand::Mcp { .. } => "Mcp",
         BridgeCommand::ListSettings => "ListSettings",
         BridgeCommand::QueryUsageAccount => "QueryUsageAccount",
         BridgeCommand::QueryCommandOptions { .. } => "QueryCommandOptions",

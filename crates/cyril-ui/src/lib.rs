@@ -10,6 +10,7 @@ pub mod file_completer;
 mod floor_tests;
 pub mod highlight;
 pub mod mcp_notice;
+pub mod mcp_panel;
 pub mod memory_format;
 pub mod render;
 pub mod spinner;

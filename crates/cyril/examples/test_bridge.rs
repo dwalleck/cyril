@@ -10,6 +10,7 @@
 
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use std::fmt::Write as _;
 use std::time::Duration;
 
 use clap::Parser;
@@ -615,6 +616,9 @@ fn print_notification(n: &Notification) {
                 }
             }
         }
+        Notification::McpUpdate(update) => {
+            println!("  [McpUpdate] {}", mcp_update_summary(update));
+        }
         Notification::McpServerInitFailure { server_name, error } => {
             println!(
                 "  [McpInitFail] {server_name}: {}",
@@ -792,6 +796,209 @@ fn print_notification(n: &Notification) {
         }
         Notification::SteeringClearUnsupported { message } => {
             println!("  [SteeringClearUnsupported] {message}");
+        }
+    }
+}
+
+fn mcp_operation_kind(operation: &McpOperation) -> &'static str {
+    match operation {
+        McpOperation::Reset { start_oauth: true } => "authenticate",
+        McpOperation::Reset { start_oauth: false } => "reset",
+        McpOperation::GetPrompt { .. } => "getPrompt",
+        McpOperation::GetResource { .. } => "getResource",
+    }
+}
+
+/// Diagnostic inventory, not a dump of OAuth values or fetched external data.
+fn mcp_update_summary(update: &McpUpdate) -> String {
+    let mut summary = format!("session={} ", update.session_id().as_str().escape_debug());
+    match update {
+        McpUpdate::Snapshot(snapshot) => {
+            write!(summary, "kind=status servers={}", snapshot.servers.len())
+                .expect("String write");
+            for server in &snapshot.servers {
+                let (status, authorization_url_present) = match &server.status {
+                    McpServerStatus::Connecting => ("connecting", false),
+                    McpServerStatus::Connected { .. } => ("connected", false),
+                    McpServerStatus::Failed {
+                        authorization_url,
+                        failed_authorization,
+                        ..
+                    } => (
+                        if *failed_authorization {
+                            "authentication-required"
+                        } else {
+                            "failed"
+                        },
+                        authorization_url.is_some(),
+                    ),
+                    McpServerStatus::Disabled => ("disabled", false),
+                    McpServerStatus::Unknown { .. } => ("unrecognized", false),
+                };
+                write!(summary, " [server={} status={status} authorization_url_present={authorization_url_present}",
+                    server.name.escape_debug()).expect("String write");
+                if let McpServerStatus::Connected { catalog } = &server.status {
+                    write!(
+                        summary,
+                        " tools={} prompts={} resources={} templates={}",
+                        catalog.tools.len(),
+                        catalog.prompts.len(),
+                        catalog.resources.len(),
+                        catalog.resource_templates.len()
+                    )
+                    .expect("String write");
+                }
+                summary.push(']');
+            }
+        }
+        McpUpdate::AuthorizationUrls { urls, .. } => {
+            write!(
+                summary,
+                "kind=retained-authorization servers={}",
+                urls.len()
+            )
+            .expect("String write");
+            for name in urls.keys() {
+                write!(
+                    summary,
+                    " [server={} authorization_url_present=true]",
+                    name.escape_debug()
+                )
+                .expect("String write");
+            }
+        }
+        McpUpdate::Policy { policy, .. } => {
+            let reason = match policy {
+                McpPolicy::ApiFailure => "api-failure",
+                McpPolicy::AdminDisabled => "administrator-disabled",
+                McpPolicy::NoEndpoint => "no-endpoint",
+                McpPolicy::Unknown(_) => "unrecognized",
+            };
+            write!(summary, "kind=policy reason={reason}").expect("String write");
+        }
+        McpUpdate::Diagnostic { .. } => summary.push_str("kind=status-diagnostic"),
+        McpUpdate::Pending(pending) => {
+            write!(
+                summary,
+                "kind=pending server={} operation={} correlation={}",
+                pending.request.server_name.escape_debug(),
+                mcp_operation_kind(&pending.request.operation),
+                pending.id
+            )
+            .expect("String write");
+        }
+        McpUpdate::Outcome(outcome) => {
+            write!(
+                summary,
+                "kind=outcome server={} operation={} correlation={} result=",
+                outcome.request.server_name.escape_debug(),
+                mcp_operation_kind(&outcome.request.operation),
+                outcome.id
+            )
+            .expect("String write");
+            match &outcome.result {
+                Ok(McpOperationResult::Acknowledged) => {
+                    summary.push_str("acknowledged-not-connected")
+                }
+                Ok(McpOperationResult::Preview(preview)) => match preview.as_ref() {
+                    McpPreview::Prompt { messages, .. } => {
+                        write!(summary, "prompt-preview messages={}", messages.len())
+                            .expect("String write");
+                    }
+                    McpPreview::Resource { contents } => {
+                        write!(summary, "resource-preview contents={}", contents.len())
+                            .expect("String write");
+                    }
+                },
+                Err(error) => {
+                    write!(summary, "error:{:?}", error.kind).expect("String write");
+                }
+            }
+        }
+        McpUpdate::ElicitationDeclined(notice) => {
+            let mode = match notice.mode {
+                McpElicitationMode::Form => "form",
+                McpElicitationMode::Url => "url",
+                McpElicitationMode::Unknown(_) => "unrecognized",
+            };
+            write!(
+                summary,
+                "kind=elicitation-declined tool={} mode={mode} authorization_url_present={}",
+                notice.tool_call_id.as_str().escape_debug(),
+                notice.url.is_some()
+            )
+            .expect("String write");
+        }
+    }
+    summary
+}
+
+#[cfg(test)]
+mod mcp_summary_tests {
+    use super::*;
+    use std::sync::Arc;
+
+    #[test]
+    fn status_diagnostic_reports_identity_and_url_presence_without_url_value() {
+        let update = McpUpdate::Snapshot(Arc::new(McpSnapshot {
+            session_id: SessionId::new("actual-session"),
+            servers: vec![McpServer {
+                name: "actual-server".into(),
+                auth_type: None,
+                status: McpServerStatus::Failed {
+                    failed_authorization: true,
+                    authorization_url: Some(
+                        "https://auth.invalid/path?secret=never-print#fragment".into(),
+                    ),
+                    error_message: "not a raw object dump".into(),
+                    error_code: None,
+                },
+                provenance: None,
+            }],
+            access_mode: None,
+            registry_servers: None,
+            access_mode_filtered_servers: None,
+            unresolved_registry_servers: None,
+            provenance: None,
+        }));
+        let summary = mcp_update_summary(&update);
+        for expected in [
+            "actual-session",
+            "kind=status",
+            "servers=1",
+            "actual-server",
+            "authentication-required",
+            "authorization_url_present=true",
+        ] {
+            assert!(summary.contains(expected), "missing {expected}");
+        }
+        for forbidden in [
+            "https://",
+            "secret=",
+            "never-print",
+            "#fragment",
+            "not a raw object dump",
+        ] {
+            assert!(!summary.contains(forbidden), "leaked {forbidden}");
+        }
+        let retained = mcp_update_summary(&McpUpdate::AuthorizationUrls {
+            session_id: SessionId::new("actual-session"),
+            urls: std::collections::BTreeMap::from([(
+                "actual-server".into(),
+                "https://auth.invalid/retained?secret=never-print#fragment".into(),
+            )]),
+        });
+        for expected in [
+            "actual-session",
+            "kind=retained-authorization",
+            "servers=1",
+            "actual-server",
+            "authorization_url_present=true",
+        ] {
+            assert!(retained.contains(expected), "missing {expected}");
+        }
+        for forbidden in ["https://", "secret=", "never-print", "#fragment"] {
+            assert!(!retained.contains(forbidden), "leaked {forbidden}");
         }
     }
 }

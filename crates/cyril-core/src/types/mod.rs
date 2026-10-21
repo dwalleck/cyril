@@ -8,6 +8,7 @@ pub mod hook;
 pub mod kas_config;
 pub mod kas_hooks;
 pub mod kas_spawn;
+pub mod mcp;
 pub mod memory;
 pub mod message;
 pub mod plan;
@@ -44,6 +45,13 @@ pub use kas_config::{
     ConfigPicker, ConfigTarget, KasConfigId, KasConfigRequest, KasConfigSnapshot,
 };
 pub use kas_spawn::KasSpawn;
+pub use mcp::{
+    McpAccessMode, McpCatalog, McpContent, McpElicitationMode, McpElicitationNotice, McpErrorKind,
+    McpMessage, McpOperation, McpOperationError, McpOperationResult, McpOutcome, McpPending,
+    McpPolicy, McpPreview, McpPrompt, McpPromptArgument, McpProvenance, McpRegistryServer,
+    McpRequest, McpResource, McpResourceTemplate, McpServer, McpServerStatus, McpSnapshot,
+    McpState, McpTool, McpUpdate,
+};
 pub use memory::{
     MemoryBoundedTextView, MemoryDisabledReason, MemoryLessonListView, MemoryLessonMetadataView,
     MemoryLessonProvenance, MemoryLessonStatus, MemoryLessonTrust, MemoryLessonView,

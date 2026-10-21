@@ -1,0 +1,653 @@
+{
+  "kind": "Portable field projection of immutable qualification receipt, not a byte-identical copy or new execution",
+  "origin": {
+    "sha256": "48f84d46a6dbbebecc82b182a0729020824bc836bf3b9079903c4fb286f206d9",
+    "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/canonical-handoff.json",
+    "full_receipt_archive_member": "run04/canonical-source.snapshot.json"
+  },
+  "qualified_point": {
+    "source49_descriptor": "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+    "bounded517_descriptor": "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005",
+    "binary_sha256": "91771f462b9acb697bdd4a1028db896acbb23a5230e6653249c1ecaacf69931f",
+    "expected_parent": "b75010427c16b1dac13b7cf00c595ce2492f391f",
+    "is_final_Tqr_or_final_delivery": false
+  },
+  "recorded_qualification": {
+    "HEAD": "b75010427c16b1dac13b7cf00c595ce2492f391f",
+    "status": "PASS_ALL_AUTHORIZED_REMAINING_GATES_AT_CURRENT_SOURCE; UI56+D20GREEN/workspaceClippyGREEN/default+no-defaultactualbuildsGREEN/no-defaultAppCore+isolatedKASfulltestsClippyGREEN/finalfmtGREEN; priorfullworkspace2964/0/13 retainedwithsourceapplicability, NOTnewfullworkspacerun",
+    "all17_actual_commands_exit0": true,
+    "postformat_actual49_descriptor": "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+    "postformat_actual49_postimages": {
+      "crates/cyril-core/src/commands/mod.rs": {
+        "blob": "9e2112f889bbf362c8d07c88ac77a1237e8cf3c4",
+        "sha256": "8a0af7b18f277d9a1b676b3f70b1091da9acec0e8e6d5a5a23fd16b40f38ae46"
+      },
+      "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/commands.rs": {
+        "blob": "fa7dc8d018e24c8c34627a1518d4140217c7b392",
+        "sha256": "35ef2fb5f9a483626d622dd31ae8ec89ce5fcd27d06d46c72c05f620eda75856"
+      },
+      "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs": {
+        "blob": "b4069ae3853717aa3cbcab6fd3e71f88209b907a",
+        "sha256": "8ece8de9892a7b5d819e403f147f84339874fcb0a0413ddb5e6771b574a1dc61"
+      },
+      "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/saturation.rs": {
+        "blob": "1042f1652646b8936cdf3bbd34ae2e16c3d109d9",
+        "sha256": "e455860e6bfac1f2d0ea8b571399b5251809a0c9637099be204e365cdc15392e"
+      },
+      "crates/cyril-core/src/protocol/convert/kas.rs": {
+        "blob": "fe8cf580b34983fdca6970d5a4f2bb4a802f7d03",
+        "sha256": "4eb91d95634f36843a063f95ead26c36fdd2c9bbd3794c1244841e9fa0bec70f"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs": {
+        "blob": "a1c55d422319a34544b0fec0c7eb861832c373f6",
+        "sha256": "6e06c1b50b1143a88f6a83b6e9be8b23c2572780adbfa0976bde145cb9da7471"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs": {
+        "blob": "da29f6f79e732acc07a5d3b66a4c3245d944cfcf",
+        "sha256": "a6ae7c0eb05b2c2106967376518000996b197fd25630770655cb99ac7bf444c7"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/host.rs": {
+        "blob": "10b880acdab46528c2c970e467b742278929cfe1",
+        "sha256": "d4e64d6b25799c011a7c9a6ed8c9807c2e6f2ea641f3be3146124c83a6db8a08"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/inbound.rs": {
+        "blob": "af13f51efd2641554b3513ffcaf8d7a629d3110d",
+        "sha256": "1d2b613502d209566182dee3c373d584e09269a489cf7597caadbb914520b171"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/mod.rs": {
+        "blob": "6cc8420c5061adb45a65271617d9db8a97e77c39",
+        "sha256": "f7c03ccf8e2c511c7901cdd0e97a540cb19beaf9f0280a07fbeaf773b7f00d93"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs": {
+        "blob": "16d3dfdc24953c958ec8e097fe33dbd4cdc39226",
+        "sha256": "ef477a10fc9906a834da87d5ffa4a7a76247cf48813d637d9097e879c68cc3ce"
+      },
+      "crates/cyril-core/src/protocol/engine.rs": {
+        "blob": "0d6335f70c6064afaf4938df4ecbc058e4af4e97",
+        "sha256": "768e90520a0383d7f7a5c14b69d0838f2d974664d0a8441e5d5e1770994434a9"
+      },
+      "crates/cyril-core/src/protocol/kas/callbacks.rs": {
+        "blob": "bffdc6cd74b6807994f2c21d5865601476bec0ff",
+        "sha256": "b924c11261c1fe804d260fbfccff5acd59055e203a5c6c57150cfa6476afb87a"
+      },
+      "crates/cyril-core/src/protocol/kas/mod.rs": {
+        "blob": "7d7a04c4a666e2bb0872fa9937669aa14f447a6c",
+        "sha256": "d6b370e0fd274b32cf8ce8955d765613789a8488965f9f6f3df7df9700479c02"
+      },
+      "crates/cyril-core/src/protocol/probe_dn91.rs": {
+        "blob": "f2b433b26155525387b2f450fb5602d7f0030933",
+        "sha256": "18569468a12bf2f0263e4aff058f90a128ac8a69c6dd614df2c9277bdd922ced"
+      },
+      "crates/cyril-core/src/session.rs": {
+        "blob": "9b8ee54366d135347e2382158989709c8e5aae81",
+        "sha256": "ea2ebc490e36ba6bfe93589eae140f06c68aaa43d8125dd04ba9841eece9e10c"
+      },
+      "crates/cyril-core/src/types/event.rs": {
+        "blob": "59d57e54c97772ae482e636557458758b80c1be1",
+        "sha256": "b49d196d7dce3b1f572c2107d751996c1a8df412cef5d81fb34fe8cf7f788d1e"
+      },
+      "crates/cyril-core/src/types/mod.rs": {
+        "blob": "d5e78ec98961b5591dc305ab35c5a9a473ec6e7c",
+        "sha256": "fe33a26ffbcea22485cdfed8c7599bac64916a9ad5120068c9fd4af964dbb948"
+      },
+      "crates/cyril-core/src/types/mcp.rs": {
+        "blob": "8e9c5d2c3a24e87d7a2c97ce5c48f824fc0d1aa5",
+        "sha256": "be6af2133977d8ce0988483891c747ef23ec39f23cd33cfae801318cf27ddf72"
+      },
+      "crates/cyril-core/src/types/mcp_tests.rs": {
+        "blob": "f79b8864df48abe2ce8cccc11f055cd1f280f41d",
+        "sha256": "3865015d96a3e92f401147073cdfa5a38511c435033b92ddca84a415fc6f514e"
+      },
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs": {
+        "blob": "619961065d106db65f9605886ac18ab5eb1846ee",
+        "sha256": "2faaff9a52f8e978577280809561af9650b9489f3201a3f18397162cbffc6463"
+      },
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": {
+        "blob": "6286c1a73746ffd09d3426510893ff6a802fde96",
+        "sha256": "207696302fc2cb6257ac7bff2045289e31fe5a8d5f5281f0fe7ff82ea04f5689"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/mcp.rs": {
+        "blob": "ac65c3afe39074b7147d49e7c64a0b61515bfedb",
+        "sha256": "e7c2f1cb90988faf32996dd2965da89f389e28e1fede2ff499a1b23a306e2a1b"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/commands/mcp.rs": {
+        "blob": "d39b8aec17e0481e18653aa88752f1c34fd5a759",
+        "sha256": "d2b7887ca867f5b91d7a38c38ad0905ace627db95ebb9d35f636a46013975bd5"
+      },
+      "crates/cyril-core/src/protocol/kas/mcp.rs": {
+        "blob": "3ac964c9e0e8aad6a2e456677af6639bb6bca4d4",
+        "sha256": "334b3a7fe96e3252938f786bffefc2163994abb0c831d9fb0318f0002a7a8a72"
+      },
+      "crates/cyril-core/src/commands/mcp.rs": {
+        "blob": "db7c3d2b4eb54a77e461bfd07087d28afae52e51",
+        "sha256": "7f6372c3ac3991cf04e4cf683f0d34ffed2d337d65388e0fe1eff606412e3b4c"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs": {
+        "blob": "d897364caa6cc11d344ed7e36d5d8149ff6358d7",
+        "sha256": "c55ec5d964e0d7c22409b27183fa154216384fb265b620494ea69b4cd0e6c5b7"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_runtime.rs": {
+        "blob": "045bdef09316b3ff67713a3c8ad5e23b7344f48f",
+        "sha256": "91b787b87d81bf58492b8879027cb89cae0fc80c51c907a7cd332ed63f555210"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_wire.rs": {
+        "blob": "0df3f36cefb7ccbaddc1f76ac48562c1a320ef62",
+        "sha256": "0159174666d0417bf290ec073b5f15b593a3d516f6a4c705ba8af05add909758"
+      },
+      "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_admission.rs": {
+        "blob": "ddc3ac8a29efa467d02078d51f2351decd1ddde8",
+        "sha256": "37d1c0d1e8698b92ab24fe78805f7e4c661554f4ef52020abd14f9d695c170ad"
+      },
+      "Cargo.lock": {
+        "blob": "3eb72d29a07915ac281fc7591d9dc447448e7d88",
+        "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035"
+      },
+      "Cargo.toml": {
+        "blob": "32b8cdfbdcb3ba224b9e03c7e66381c6f3daf380",
+        "sha256": "3c070ad419471bb81a8a5b6b7e41f814c934d9eeef397915528ed385a30ad54a"
+      },
+      "crates/cyril-ui/Cargo.toml": {
+        "blob": "6b932be0e61a96e7ba78d51220d07616f7e6d22a",
+        "sha256": "2e7f13cfd50c352b1d67a48934c8ed343f9c82e34a0d881c9d8abd9973867e2e"
+      },
+      "crates/cyril-ui/src/lib.rs": {
+        "blob": "c0f57f4276b8e2e4fb03f19a35c29d5c8bb89348",
+        "sha256": "86ea47362a38fbb6ceb904a16f02731b998b7cc7a74801e336a2826b5a05c445"
+      },
+      "crates/cyril-ui/src/render.rs": {
+        "blob": "84ae0a7a1e745d7638e53de3f472c69d67c40f5f",
+        "sha256": "f93f8ff52b22e24b9594a1ff42635b0034420cd30a13963190de15d38e4c857a"
+      },
+      "crates/cyril-ui/src/state.rs": {
+        "blob": "b5c47b212cc6f868a4092348f154a288035fc9b6",
+        "sha256": "01b81f97f9fdb23780899729a26975b4cceb11972865a55cf77838236380eacb"
+      },
+      "crates/cyril-ui/src/theme.rs": {
+        "blob": "98db7338cdf185fc09e67977ec3694a8dfac6d83",
+        "sha256": "2f1b9740ae62aeaae2d174499ef64990e6eeb7c3928c2f7a71edd82acd2e3c2e"
+      },
+      "crates/cyril-ui/src/traits.rs": {
+        "blob": "fca0f7efb436001ccf5ccc82f3a96db535a0f523",
+        "sha256": "53e4a41e7c5bc628accd6819f4d9b8bb471f5d1e87033544d9633ef42eb5d1b4"
+      },
+      "crates/cyril-ui/src/widgets/mod.rs": {
+        "blob": "c7864e66889d52a8fb518d40f8bf40b249f6a097",
+        "sha256": "03d2a3f3c85d6edfae6bc6e2d302564d6d77f2fdc610b5ce8fad5cb549b00c83"
+      },
+      "crates/cyril-ui/tests/widget_theme_sources.rs": {
+        "blob": "7a4e4adce2e1befd34d01cbcc8718af2913e9cb0",
+        "sha256": "b6ddcf2b672d022257522002f0853b136f854b28b00a659a6e514a5c03521368"
+      },
+      "crates/cyril/examples/test_bridge.rs": {
+        "blob": "0ddb9f828661dfb9150ce5bc13b44cdd5031d155",
+        "sha256": "588d0b125dd2fb12faa0533ffbddb0e6ede1a8e0fb59210f61b4f028ec18aa8d"
+      },
+      "crates/cyril/src/app.rs": {
+        "blob": "1df8f50ec51baffe981a4876629d74624b786de1",
+        "sha256": "2461dd527c241ea1fb4084939b4b187b49d42aabe79ce07fe2a5e562d302eccc"
+      },
+      "crates/cyril-ui/src/mcp_panel/arguments.rs": {
+        "blob": "b8a15ecfaa1e9a658046ba3c32243c0697101268",
+        "sha256": "a1ed26e0040ed681923a821877920fc251be7b0653ddb7f29e3ec149f7f495cf"
+      },
+      "crates/cyril-ui/src/mcp_panel/integration.rs": {
+        "blob": "cd15720b84224bcc507beaedc169ae7771d01ee7",
+        "sha256": "a8fd8a35ce59e1f13af72ed6ad7cd0a53c37d6e07028b2575e16aeb074de2c26"
+      },
+      "crates/cyril-ui/src/mcp_panel/mod.rs": {
+        "blob": "7e67a20daa9be5130179ce4e263c071c533f28d5",
+        "sha256": "6b68d5c039a0c5cdd31aec70107516965168db521ce5b5240eee8636a138ebf8"
+      },
+      "crates/cyril-ui/src/mcp_panel/presentation.rs": {
+        "blob": "95ec653d2bc13cbcd43fbcfdf6c4bb37ca6dc57a",
+        "sha256": "251d6fc63604dca833f93bea21eb63a34d78790ed0880671cd1e164523e2f02d"
+      },
+      "crates/cyril-ui/src/mcp_panel/tests.rs": {
+        "blob": "65f8be4b9cb2a255bce8827032fff95c79b2ee05",
+        "sha256": "b58a54004388d5e4b3ca09e73d2fa9f7cc9d418e9acf7747367b55aa50e91f7d"
+      },
+      "crates/cyril-ui/src/widgets/mcp_panel.rs": {
+        "blob": "45aff62f39e05c1cdc7a052fd4cc4f102e92ecdc",
+        "sha256": "157f92e4fd5306d26d03018216b0548a28b2a397743c00cc04092ae74298d92e"
+      },
+      "crates/cyril/src/app/tests/mcp_panel.rs": {
+        "blob": "f6284f387982bc8b8b53563da78d7ee442932387",
+        "sha256": "64942696924d639e2a20c2ca1af6dd5ca006786c35c4276d6ae1705af6168278"
+      }
+    },
+    "postformat_bounded517_descriptor": "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005",
+    "current_actual_test_totals": {
+      "affected_UI_panel": {
+        "passed": 56,
+        "failed": 0,
+        "ignored": 0
+      },
+      "D20_five_selectors": {
+        "passed": 20,
+        "failed": 0,
+        "ignored": 0
+      },
+      "no_default_App": {
+        "passed": 287,
+        "failed": 0,
+        "ignored": 1,
+        "direct_targets": 8
+      },
+      "no_default_Core": {
+        "passed": 1044,
+        "failed": 0,
+        "ignored": 4,
+        "direct_targets": 12
+      },
+      "isolated_explicit_KAS_App_Core": {
+        "passed": 1855,
+        "failed": 0,
+        "ignored": 10,
+        "direct_targets": 20
+      },
+      "all_current_test_command_executions_with_overlap": {
+        "passed": 3262,
+        "failed": 0,
+        "ignored": 15,
+        "test_commands": 9,
+        "not_unique_case_count": true,
+        "nested_child_summaries_excluded": true
+      }
+    },
+    "current_original7_and_retained74_runtime_reach": {
+      "all7observedPASS_at_current_postformat_source": true,
+      "original7names": [
+        "app::tests::mcp_panel::offscreen_server_authenticate_reanchors_before_any_bridge_dispatch",
+        "app::tests::mcp_panel::offscreen_server_reset_reanchors_before_any_bridge_dispatch",
+        "mcp_panel::tests::offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity",
+        "mcp_panel::tests::offscreen_server_reset_reanchors_before_dispatching_the_retained_identity",
+        "protocol::domain_mediator::tests::mcp::different_id_load_failure_discards_candidate_without_hiding_active_root_updates",
+        "protocol::domain_mediator::tests::mcp::same_id_reload_failure_preserves_live_status_policy_diagnostic_and_url_resolution",
+        "protocol::domain_mediator::tests::mcp::same_id_reload_success_replays_live_mcp_authority_after_created_and_config"
+      ],
+      "original7current_lanes": "UI56containsUI2; isolatedexplicitKASfullApp/CorecontainsApp2+Core3. No repeatofprior5exactselectors claimed.",
+      "all74previously_selected_MCP_runtime_names_observedPASS_current": true,
+      "retained74_current_lanes": "UI56 + isolatedexplicitKASfullApp/Core cover priorCoremodule7, SDK2, App9, UI56; D20alsoexplicitlyrerun20/20. Counts overlap.",
+      "prior_regression_assertion_reach": [
+        {
+          "lane": "same-ID failedload",
+          "observed": "PASS through entire shared helper: pre-resultobsoleteURL cleared, connectedreplacement removesoldrow, AdminDisabled+malformeddiagnostic visible, exactly3immediate root-routed publications, recoverableerror/rootretention and stateequality, retryadmission and no failedstaging replay. Previouslyunreachedpostconditions nowcomplete."
+        },
+        {
+          "lane": "same-ID success",
+          "observed": "PASS exactusage/created/config/snapshot/urls/policy/diagnosticreplay, currentURLthroughconnecting, policy+diagnostic+rootroutes; live4 before reset; pre/postauthority equality and mediator/controller equality previouslyunreached nowcomplete."
+        },
+        {
+          "lane": "different-ID isolation",
+          "observed": "PASS complete activeauthority helper including peer/candidate isolation, failedload retention and retrywithoutfailedstaging replay. ExistingbaselinePASSnotrelabelednewregression."
+        },
+        {
+          "lane": "twoUIhiddenserver reset/authcases",
+          "observed": "PASS actual80x6/popup2/body1/hiddenotherpaint/retainedidentity/modifier+inertcontrols; firstplainactionNoneBEFOREdraw, no submittedrequest, originalselectionreanchor+paint, secondexactroot/original/resetfalse|true, messagesempty/draftpreserved/Escclose. All formerlyunreachedpostconditions complete."
+        },
+        {
+          "lane": "twoApphiddenserver reset/authcases",
+          "observed": "PASS real typedchannelEmptybeforeanotherdraw onfirstplainaction; reanchorpaint then exactlyone secondBridgeCommand::Mcp originalroot/server/resetfalse|true; noextra command/draftpreserved/Escclose. All formerlyunreachedpostconditions complete."
+        }
+      ],
+      "scope": "Passingfullcasecompletionnowconfirmedagainatcurrentframe; testfixture/serial/SDKfake/TestBackend evidence, notnativeenterprise/actual30stimeout/consumerproof."
+    },
+    "private_default_binary": {
+      "path": "/tmp/cyril-nk4o-repaired-current-tested-20261021",
+      "sha256": "91771f462b9acb697bdd4a1028db896acbb23a5230e6653249c1ecaacf69931f",
+      "bytes": 104522728,
+      "mode": "0o755",
+      "copied_from": "/home/dwalleck/repos/cyril/target/debug/cyril",
+      "source_actual49_descriptor": "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+      "source_bounded517_descriptor": "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005",
+      "build_receipt": {
+        "label": "09-default-cyril-bins-build",
+        "command": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--bins"
+        ],
+        "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+        "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+        "started_utc": "2026-10-21T04:45:26.134939+00:00",
+        "exit_code": 0,
+        "elapsed_seconds": 15.815121761988848,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/09-default-cyril-bins-build.log",
+        "log_sha256": "889a038df0fa7b56c6631b366f49275d8afb6beef4ae3b3ee00e81accaee4a95"
+      },
+      "features": "cyrildefaultkas; no--release/--no-default-features/extra--features; devprofile[unoptimized+debuginfo]",
+      "preserved_before_any_feature_variant_build": true,
+      "executed_by_qualifier": false
+    },
+    "prior_workspace_applicability": {
+      "command": [
+        "cargo",
+        "test",
+        "--workspace"
+      ],
+      "actual_executed_on": "immutableattempt1postfmt49descriptor4668713359c929ee280a92c6eca413a00d6bfc8f29c50821417f3ee076524226",
+      "observed": {
+        "passed": 2964,
+        "failed": 0,
+        "ignored": 13,
+        "direct_targets": 41,
+        "nested_child_summaries_not_added": true
+      },
+      "not_rerun_at_current_source": true,
+      "Main_authorized_retention": "Productionandallother516boundedinputs unchanged; only17UItestNone panicdiagnostics plusformatterdelta. Re-runaffectedUI56+D20 andremaininggates; do notrelabelfullworkspace asnewexecution."
+    },
+    "initial_formatter_statement_identity": {
+      "verified": true,
+      "only_changed_path": "crates/cyril-ui/src/mcp_panel/tests.rs",
+      "before_ui_sha256": "1ff48cd353cbca83b299fc19f94e28eae32ca9158a0af386bf45605fa4adf0d6",
+      "after_ui_sha256": "b58a54004388d5e4b3ca09e73d2fa9f7cc9d418e9acf7747367b55aa50e91f7d",
+      "changes": "WhitespaceoutsideRustliterals/comments plusoneunchangedTerminalimportmovedwithinunchangedratatuiimportlist. Allotherliteral/comment/word/punctuationtokens equal; no optionalcomma or statementmutation in thisinitialfmt delta.",
+      "strict_tokens_compared_after_explicit_import_move": 15793,
+      "whole_frame_byte_identity_claimed": false
+    },
+    "remaining_matrix_results": {
+      "no_default_App": {
+        "passed_total": 287,
+        "failed_total": 0,
+        "ignored_total": 1
+      },
+      "no_default_Core": {
+        "passed_total": 1044,
+        "failed_total": 0,
+        "ignored_total": 4
+      },
+      "isolated_explicit_KAS_App_Core": {
+        "passed_total": 1855,
+        "failed_total": 0,
+        "ignored_total": 10
+      },
+      "workspace_alltargets_Clippy_exit": 0,
+      "defaultbuild_exit": 0,
+      "no_default_App_Clippy_exit": 0,
+      "no_default_App_build_exit": 0,
+      "no_default_Core_Clippy_exit": 0,
+      "isolated_KAS_Clippy_exit": 0,
+      "final_fmtcheck_exit": 0
+    },
+    "scope_limits": [
+      "Currentremainingqualification only. Priorworkspaceandunchangedregressioncontrols retainedexplicitlyatsource466871...; no newfullworkspaceexecution claimed.",
+      "No manualrepairs/retries/lintsuppressions/featurematrixshortening/nativeconsumer/Git/index/tracker/publication. Parentb750notfinalTqr; finalpropagation/conformancereviewstillMainowned.",
+      "No sourceproduction/testassertion repair byqualifier. Onlynewattemptsoleinitialcargo fmt --all normalizedoneUItestfile1ff48c→b58a540; strictliteral/comment/word/punctuationidentity preservedafterexplicitunchangedTerminalimportmove. Frozenold47cd/RED9292 wholeframesnotclaimedidentical.",
+      "No genericmutationrerun/newmutation/thresholdchange/suppression. Attempt1Clippy17failureimmutable; exact17Nonepanicdiagnosticreplacements authorizedbyMain andindependentlysource-reviewed; successpath unchanged.",
+      "FourliveKASintegrationtests remainedignoredwiththeiroriginalprerequisitereasons. No --ignored orliveauthattempt, binaryexecution/native/consumer/enterprise acceptance/benchmark/timingcomparison/CI/Windows proof.",
+      "ParentHEADb750notfinalTqr. LaterTqrnotice/CLI/Windowsreviews sourcepropagation andfullindependentproductionconformancereview remainMain-owned, notwaivedbythispass."
+    ],
+    "final_source_stability": {
+      "all517source_rows_unchanged_after_initialfmt": true,
+      "all49postimages_unchanged": true,
+      "all9workflowdocs_unchanged_after_pin": true,
+      "administrative_and_immutable_receipts_unchanged": true,
+      "final_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/after-all-gates.workspace-input-manifest.json",
+      "final_manifest_sha256": "731c73a6d97a80ef927e9cbef0b67dc5c262b6f9e713b3f1c41fcc6450ede99a",
+      "49_descriptor_definition": "SHA256 UTF8JSON({base_commit,postimages:{path:git_blob_sha1}},sort_keys=True,separators=(comma,colon)); sourceactualbyteblobcomputedviahashlib, noGit. PerpathSHA256mapalsoretained.",
+      "517_descriptor_definition": "SHA256 compactsorted-keyJSON ofall517sortedworkspaceinputrows {path,sha256,bytes,executable}; sevenmemberroots+fourrootinputs; notwholeGit tree."
+    },
+    "released_utc": "2026-10-21T04:50:41.413522+00:00",
+    "commands": [
+      {
+        "label": "01-authorized-initial-format",
+        "command": [
+          "cargo",
+          "fmt",
+          "--all"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/01-authorized-initial-format.log",
+        "log_sha256": "7bad7687b595edcad5a08c51f6f127e7b4b86485070b9d90476a20dabac15299"
+      },
+      {
+        "label": "02-current-affected-UI-panel56",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "mcp_panel"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/02-current-affected-UI-panel56.log",
+        "log_sha256": "dd6d7aefea47dd40a769becaed994456f517edec5fabff3f06a203353f877fa3"
+      },
+      {
+        "label": "03-current-canonical-D20-two_cell_contract",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "two_cell_contract",
+          "--",
+          "--nocapture"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/03-current-canonical-D20-two_cell_contract.log",
+        "log_sha256": "ac24c356eabcaf531f11863da63ac037596bff15093a4e724e0e1a1066b00b7a"
+      },
+      {
+        "label": "04-current-canonical-D20-one_cell_contract",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "one_cell_contract",
+          "--",
+          "--nocapture"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/04-current-canonical-D20-one_cell_contract.log",
+        "log_sha256": "142c04a8f0796f1721f19abc98cc7dba853fe5981932f407bd235f635101ce42"
+      },
+      {
+        "label": "05-current-canonical-D20-argument_preserves_data_caret_and_canonical_bytes",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "argument_preserves_data_caret_and_canonical_bytes",
+          "--",
+          "--nocapture"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/05-current-canonical-D20-argument_preserves_data_caret_and_canonical_bytes.log",
+        "log_sha256": "4b5cae0e032ffcabe54acce892a8f67480f89fa4d34445ac928a6fe05db9b2e2"
+      },
+      {
+        "label": "06-current-canonical-D20-argument_preserves_one_cell_data_caret_and_bytes",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "argument_preserves_one_cell_data_caret_and_bytes",
+          "--",
+          "--nocapture"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/06-current-canonical-D20-argument_preserves_one_cell_data_caret_and_bytes.log",
+        "log_sha256": "ed653598a132d46e4a3b6057f59b09163d303c802ad92d52ac3a6ab35c2dda1c"
+      },
+      {
+        "label": "07-current-canonical-D20-prepend_argument_",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "prepend_argument_",
+          "--",
+          "--nocapture"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/07-current-canonical-D20-prepend_argument_.log",
+        "log_sha256": "6ab996c2b2fd36b886488367c8fa0744d7d4b525b76234f32fa55f462e65a24b"
+      },
+      {
+        "label": "08-workspace-all-target-Clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "--workspace",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/08-workspace-all-target-Clippy.log",
+        "log_sha256": "85d6316f3f5e3b17c7bb4e7fe6ba1ca5509fdc5ead19896d65e555af8152d65a"
+      },
+      {
+        "label": "09-default-cyril-bins-build",
+        "command": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--bins"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/09-default-cyril-bins-build.log",
+        "log_sha256": "889a038df0fa7b56c6631b366f49275d8afb6beef4ae3b3ee00e81accaee4a95"
+      },
+      {
+        "label": "10-no-default-cyril-tests",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--no-default-features"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/10-no-default-cyril-tests.log",
+        "log_sha256": "e997f2aa19618f358739fa9a8e7707e868e1ab206480afb541847dafed39d297"
+      },
+      {
+        "label": "11-no-default-cyril-all-target-Clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/11-no-default-cyril-all-target-Clippy.log",
+        "log_sha256": "eaa01d7cc8709549707f214533062711e930bcef248bb32a412b93f0bcd0c24d"
+      },
+      {
+        "label": "12-no-default-cyril-bins-build",
+        "command": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--bins"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/12-no-default-cyril-bins-build.log",
+        "log_sha256": "32b9bd1719e0f63d4313b6d90055379ea74c725239547d2b77c915103cd6fc09"
+      },
+      {
+        "label": "13-no-default-Core-tests",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-core",
+          "--no-default-features"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/13-no-default-Core-tests.log",
+        "log_sha256": "fa8dedbcbffed0dfa69da3516b7d42ad19669ca1a43c35fb6e68298fbe584fc7"
+      },
+      {
+        "label": "14-no-default-Core-all-target-Clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/14-no-default-Core-all-target-Clippy.log",
+        "log_sha256": "f2af81d29ce16104d91d0aa51ffe7081b1e0141952c9266ea37f477eac342f44"
+      },
+      {
+        "label": "15-isolated-explicit-KAS-App-Core-tests",
+        "command": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--features",
+          "cyril/kas,cyril-core/kas"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/15-isolated-explicit-KAS-App-Core-tests.log",
+        "log_sha256": "5442f88b338d1d3621a98ad7e0beec470452cbbc2d9da495d4534df52c4c5b2a"
+      },
+      {
+        "label": "16-isolated-explicit-KAS-App-Core-all-target-Clippy",
+        "command": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--features",
+          "cyril/kas,cyril-core/kas",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/16-isolated-explicit-KAS-App-Core-all-target-Clippy.log",
+        "log_sha256": "8f6f00ebb8e09c5db55a5cc41d88d0a87726f3cd25bb64a10c502391c3ac972c"
+      },
+      {
+        "label": "17-final-all-workspace-format-check",
+        "command": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--check"
+        ],
+        "exit_code": 0,
+        "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/17-final-all-workspace-format-check.log",
+        "log_sha256": "94215d655825baa693a61dde85bcbd5629a2b80b1230acc8190f8ef49c489482"
+      }
+    ]
+  },
+  "scope_note": "No new fullworkspace run; original2964/0/13 belongs to466871 with its recorded applicability. No live/native/final-Tqr/Caar or timing/inventory/external-URL acceptance."
+}

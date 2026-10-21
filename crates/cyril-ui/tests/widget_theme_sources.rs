@@ -1,6 +1,6 @@
 use std::path::Path;
 
-const MODULES: [(&str, &str); 18] = [
+const MODULES: [(&str, &str); 19] = [
     ("chat", "src/widgets/chat.rs"),
     ("markdown", "src/widgets/markdown.rs"),
     ("input", "src/widgets/input.rs"),
@@ -9,6 +9,7 @@ const MODULES: [(&str, &str); 18] = [
     ("code_panel", "src/widgets/code_panel.rs"),
     ("crew_panel", "src/widgets/crew_panel.rs"),
     ("hooks_panel", "src/widgets/hooks_panel.rs"),
+    ("mcp_panel", "src/widgets/mcp_panel.rs"),
     ("modal", "src/widgets/modal.rs"),
     ("picker", "src/widgets/picker.rs"),
     ("review", "src/widgets/review.rs"),

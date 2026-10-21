@@ -33,6 +33,13 @@ fn all_commands() -> Vec<BridgeCommand> {
             method: "oracle/ext".to_owned(),
             params: serde_json::json!({}),
         },
+        BridgeCommand::Mcp {
+            request: crate::types::McpRequest {
+                session_id: session_id.clone(),
+                server_name: "server".into(),
+                operation: crate::types::McpOperation::Reset { start_oauth: false },
+            },
+        },
         BridgeCommand::ListSettings,
         BridgeCommand::QueryUsageAccount,
         BridgeCommand::QueryCommandOptions {

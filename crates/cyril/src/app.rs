@@ -418,6 +418,7 @@ impl App {
             workflows,
             cyril_core::commands::UsageAccountCommandSource::resolve(agent_engine),
             cyril_core::commands::ConfigCommandSource::resolve(agent_engine),
+            cyril_core::commands::McpCommandSource::resolve(agent_engine),
         );
         let info: Vec<(String, Option<String>)> = commands
             .all_commands()
@@ -1616,6 +1617,12 @@ impl App {
             self.redraw_needed = true;
         }
 
+        if matches!(notification, Notification::McpUpdate(_))
+            && self.ui_state.refresh_mcp_panel(self.session.mcp())
+        {
+            self.redraw_needed = true;
+        }
+
         // A KAS model set was read back (cyril-vh69, review round 4 F9): the
         // session prepared the effort step from the rebuilt catalog, if any.
         if matches!(notification, Notification::ConfigOptionSet { .. }) {
@@ -1823,6 +1830,8 @@ impl App {
                     if self.ui_state.approval_folder_paste(&text) {
                         self.redraw_needed = true;
                     }
+                } else if self.ui_state.mcp_argument_paste(&text) {
+                    self.redraw_needed = true;
                 } else if !self.ui_state.has_modal_overlay() {
                     self.ui_state.insert_text(&text);
                     self.redraw_needed = true;
@@ -1884,6 +1893,14 @@ impl App {
                 Overlay::Review => self.handle_review_key(key),
                 Overlay::Hooks => self.handle_hooks_panel_key(key),
                 Overlay::Powers => dispatch_powers_panel_key(key, &mut self.ui_state),
+                Overlay::Mcp => {
+                    if let Some(request) = self.ui_state.handle_mcp_key(key)
+                        && let Err(error) =
+                            self.bridge_sender.try_send(BridgeCommand::Mcp { request })
+                    {
+                        self.ui_state.mcp_dispatch_failed(error.to_string());
+                    }
+                }
                 Overlay::Code => self.handle_code_panel_key(key).await?,
                 Overlay::Usage => dispatch_usage_panel_key(key, &mut self.ui_state),
             }
@@ -2365,6 +2382,7 @@ impl App {
                 // the end, so a store here would be dead (review finding 19).
                 self.ui_state.show_powers_panel(powers);
             }
+            CommandResultKind::ShowMcp { state } => self.ui_state.show_mcp_panel(state),
             CommandResultKind::ShowUsage {
                 account_query_started,
             } => {
@@ -10155,6 +10173,7 @@ mod tests {
     }
     mod current_runtime_contract;
     mod mcp_oauth;
+    mod mcp_panel;
     mod review;
 
     // ── cyril-qaq0: /theme command and picker session ───────────────────────

@@ -38,6 +38,10 @@ pub(crate) enum HostCallback {
         args: OpenExternalUrlArgs,
         reply: Reply<acp::ExtResponse>,
     },
+    McpElicitation {
+        args: super::mcp::ElicitationArgs,
+        reply: Reply<acp::ExtResponse>,
+    },
     /// Bare-ACP `fs/read_text_file` (KAS-5a) — already typed by the acp layer.
     ReadTextFile {
         req: acp::ReadTextFileRequest,
@@ -112,6 +116,7 @@ pub(crate) enum HostCallback {
 pub(crate) enum HostFamily {
     Auth,
     ExternalUrl,
+    McpElicitation,
     HostIo,
     HooksInbound,
     HooksAny,
@@ -122,6 +127,7 @@ impl HostCallback {
         match self {
             Self::GetAccessToken { .. } => HostFamily::Auth,
             Self::OpenExternalUrl { .. } => HostFamily::ExternalUrl,
+            Self::McpElicitation { .. } => HostFamily::McpElicitation,
             Self::ReadTextFile { .. }
             | Self::WriteTextFile { .. }
             | Self::KiroFs { .. }
@@ -151,6 +157,7 @@ impl HostCallback {
         match self {
             Self::GetAccessToken { reply, .. }
             | Self::OpenExternalUrl { reply, .. }
+            | Self::McpElicitation { reply, .. }
             | Self::KiroFs { reply, .. }
             | Self::ShellType { reply, .. }
             | Self::HooksList { reply, .. }
@@ -299,6 +306,7 @@ impl HostCallback {
         match self {
             Self::GetAccessToken { reply, .. } => send(kind, reply, err),
             Self::OpenExternalUrl { reply, .. } => send(kind, reply, err),
+            Self::McpElicitation { reply, .. } => send(kind, reply, err),
             Self::ReadTextFile { reply, .. } => send(kind, reply, err),
             Self::WriteTextFile { reply, .. } => send(kind, reply, err),
             Self::KiroFs { reply, .. } => send(kind, reply, err),
@@ -328,6 +336,7 @@ impl CallbackMeta for HostCallback {
     fn scope(&self) -> Option<SessionId> {
         let sid = |s: &acp::SessionId| SessionId::new(s.to_string());
         match self {
+            Self::McpElicitation { args, .. } => Some(args.notice.session_id.clone()),
             Self::GetAccessToken { .. } | Self::OpenExternalUrl { .. } | Self::KiroFs { .. } => {
                 None
             }
@@ -355,6 +364,7 @@ impl CallbackMeta for HostCallback {
         match self {
             Self::GetAccessToken { .. } => "auth/getAccessToken",
             Self::OpenExternalUrl { .. } => "_kiro/openExternalUrl",
+            Self::McpElicitation { .. } => "_kiro/mcp/elicitation",
             Self::ReadTextFile { .. } => "fs/read_text_file",
             Self::WriteTextFile { .. } => "fs/write_text_file",
             Self::KiroFs { args, .. } => args.op().wire,
@@ -426,6 +436,10 @@ async fn resolve<T>(
 pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
     let kind = cb.kind();
     match cb {
+        HostCallback::McpElicitation { args, reply } => {
+            let result = super::mcp::decline(args, &ctx.notify_tx).await;
+            resolve(ctx, kind, None, reply, result).await;
+        }
         HostCallback::OpenExternalUrl { args, reply } => {
             // Acknowledgement means only bounded-path delivery acceptance.
             // A closed domain channel must never look like successful handling.
@@ -580,6 +594,7 @@ fn auth_failure_notification(
 pub(crate) const WIRE_METHODS: &[&str] = &[
     "auth/getAccessToken",
     "_kiro/openExternalUrl",
+    "_kiro/mcp/elicitation",
     "fs/read_text_file",
     "fs/write_text_file",
     "_kiro/fs/read_file",
@@ -609,11 +624,11 @@ mod tests {
     // The original dn91 census plus the real external-URL callback.
     #[test]
     fn census_includes_the_external_url_callback() {
-        assert_eq!(WIRE_METHODS.len(), 20);
+        assert_eq!(WIRE_METHODS.len(), 21);
         let mut sorted: Vec<_> = WIRE_METHODS.to_vec();
         sorted.sort_unstable();
         sorted.dedup();
-        assert_eq!(sorted.len(), 20, "census entries are distinct");
+        assert_eq!(sorted.len(), 21, "census entries are distinct");
     }
 
     // The reply channel rides the envelope to the resolution task and back —

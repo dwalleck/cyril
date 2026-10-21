@@ -35,6 +35,16 @@ impl DomainMediator {
         routed: RoutedNotification,
         terminal_disposition: Option<crate::types::SourceTurnDisposition>,
     ) -> crate::Result<bool> {
+        let routed = match routed {
+            RoutedNotification {
+                notification: Notification::McpUpdate(update),
+                ..
+            } => {
+                self.handle_mcp_update(update).await?;
+                return Ok(false);
+            }
+            routed => routed,
+        };
         if routed.session_id.is_none()
             || self.turn_mediator.active_turn_session() == routed.session_id.as_ref()
         {
@@ -191,6 +201,9 @@ impl DomainMediator {
         match self.config.engine.convert_ext_notification(method, params) {
             Ok(Some(notification)) => {
                 let routed = match &notification {
+                    Notification::McpUpdate(update) => {
+                        RoutedNotification::scoped(update.session_id().clone(), notification)
+                    }
                     Notification::ToolCallChunk {
                         session_id: Some(id),
                         ..

@@ -1,6 +1,7 @@
 mod extensions;
 #[cfg(feature = "kas")]
 pub(super) mod kas;
+mod mcp;
 mod session;
 mod subagents;
 
@@ -51,7 +52,7 @@ impl DomainMediator {
         command: BridgeCommand,
     ) -> crate::Result<bool> {
         match command {
-            BridgeCommand::NewSession { cwd } => self.new_session(connection, cwd)?,
+            BridgeCommand::NewSession { cwd } => self.new_session(connection, cwd).await?,
             BridgeCommand::LoadSession { session_id } => {
                 return self.load_session(connection, session_id).await;
             }
@@ -86,6 +87,7 @@ impl DomainMediator {
             BridgeCommand::ExtMethod { method, params } => {
                 self.execute_extension(connection, method, params);
             }
+            BridgeCommand::Mcp { request } => self.mcp_command(connection, request).await?,
             BridgeCommand::QueryCommandOptions {
                 command,
                 session_id,

@@ -124,6 +124,7 @@ pub struct UiState {
     review_form: Option<crate::traits::ReviewForm>,
     hooks_panel: Option<HooksPanelState>,
     powers_panel: Option<PowersPanelState>,
+    pub(crate) mcp_panel: Option<crate::mcp_panel::McpPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
     usage_panel: Option<UsagePanelState>,
     /// The last completed snapshot, kept across a panel close so a reopen is
@@ -335,6 +336,10 @@ impl TuiState for UiState {
         self.powers_panel.as_ref()
     }
 
+    fn mcp_panel(&self) -> Option<&crate::mcp_panel::McpPanelState> {
+        self.mcp_panel.as_ref()
+    }
+
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
         self.code_panel.as_ref()
     }
@@ -447,6 +452,7 @@ impl UiState {
             review_form: None,
             hooks_panel: None,
             powers_panel: None,
+            mcp_panel: None,
             code_panel: None,
             usage_panel: None,
             last_usage_snapshot: None,
@@ -749,6 +755,7 @@ impl UiState {
             }
             Notification::BridgeDisconnected { reason } => {
                 self.add_system_message(format!("Disconnected: {reason}"));
+                self.mcp_panel = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
@@ -924,6 +931,7 @@ impl UiState {
                 available_modes,
                 available_models: _,
             } => {
+                self.mcp_panel = None;
                 if self.main_session_id.as_ref() != Some(session_id) {
                     // IDs are unique only within a session. Keep old history,
                     // but never merge a new session's call into its old row.
@@ -1107,6 +1115,7 @@ impl UiState {
                 // notification is observable via tracing but not displayed.
                 false
             }
+            Notification::McpUpdate(update) => self.apply_mcp_notice(update),
             Notification::McpServerInitFailure { server_name, error } => {
                 if let Some(err) = error {
                     self.add_system_message(format!(
@@ -1871,6 +1880,7 @@ impl UiState {
     /// Update the terminal size.
     pub fn set_terminal_size(&mut self, w: u16, h: u16) {
         self.terminal_size = (w, h);
+        self.sync_mcp_geometry();
     }
 
     /// Set mouse capture state (used to sync with terminal on startup).
@@ -1950,6 +1960,7 @@ impl UiState {
             Overlay::Review => self.review_form.is_some(),
             Overlay::Hooks => self.has_hooks_panel(),
             Overlay::Powers => self.has_powers_panel(),
+            Overlay::Mcp => self.mcp_panel.is_some(),
             Overlay::Code => self.has_code_panel(),
             Overlay::Usage => self.has_usage_panel(),
         }
@@ -7362,6 +7373,7 @@ mod tests {
                 Overlay::Code,
                 Overlay::Powers,
                 Overlay::Hooks,
+                Overlay::Mcp,
                 Overlay::Picker,
                 Overlay::Review,
                 Overlay::Approval,

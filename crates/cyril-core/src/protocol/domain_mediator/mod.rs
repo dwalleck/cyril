@@ -19,6 +19,7 @@ use crate::types::{AgentEngine, PermissionResponse, SessionId};
 pub(crate) mod commands;
 pub(crate) mod host;
 pub(crate) mod inbound;
+mod mcp;
 
 const WORK_CAPACITY: usize = 256;
 const HOST_CAPACITY: usize = 16;
@@ -63,6 +64,10 @@ pub(crate) enum CommandOutcome {
     Notify(Box<Notification>),
     /// A `session/new` or `session/load` RPC succeeded: bind the session.
     SessionStarted(Box<SessionStart>),
+    /// Recoverable session/load failure also discards its early MCP staging.
+    SessionStartFailed(Box<Notification>),
+    #[cfg(feature = "kas")]
+    Mcp(crate::types::McpOutcome),
     /// A fail-stop condition: notify `BridgeDisconnected` and exit the loop.
     FatalDisconnect { reason: String },
     /// The agent answered `session/steer` with -32601: mark the session and
@@ -235,6 +240,7 @@ pub(crate) struct DomainMediator {
     source_observer: SourceObserver,
     ingress: IngressTracker,
     active_session_id: Option<SessionId>,
+    mcp: mcp::McpOwner,
     steering_unsupported: HashSet<SessionId>,
     turn_mediator: TurnMediator,
     tool_call_ledger: crate::protocol::tool_call_ledger::ToolCallLedger,
@@ -287,6 +293,7 @@ impl DomainMediator {
                 source_observer,
                 ingress,
                 active_session_id: None,
+                mcp: mcp::McpOwner::default(),
                 steering_unsupported: HashSet::new(),
                 turn_mediator: TurnMediator::new(),
                 tool_call_ledger: crate::protocol::tool_call_ledger::ToolCallLedger::new(),
@@ -533,7 +540,18 @@ impl DomainMediator {
                     .await?;
                 Ok(ControlFlow::Continue(false))
             }
+            CommandOutcome::SessionStartFailed(notification) => {
+                self.mcp.fail_session();
+                self.notify((*notification).into()).await?;
+                Ok(ControlFlow::Continue(false))
+            }
+            #[cfg(feature = "kas")]
+            CommandOutcome::Mcp(outcome) => {
+                self.finish_mcp_command(outcome).await?;
+                Ok(ControlFlow::Continue(false))
+            }
             CommandOutcome::FatalDisconnect { reason } => {
+                self.mcp.fail_session();
                 self.notify(Notification::BridgeDisconnected { reason }.into())
                     .await?;
                 Ok(ControlFlow::Break(()))
