@@ -5,7 +5,7 @@
   "canonical_handoff": ".cyril-x5xi/handoff.json",
   "verification_index": ".cyril-x5xi/verification.md",
   "publication_manifest": ".cyril-x5xi/publication-manifest.json",
-  "publication_manifest_sha256": "951ef2e3d998363349e726057b4f25581eb786ef01db30f80ac707b490d63155",
+  "publication_manifest_sha256": "341a17812873f277914355a1ac02014cdcfbe3fc2d74985856a061f9d241404d",
   "publication_file_count": 14,
   "publication_owner": "Main",
   "source_base": "7eefe275fbec97f610677b2ee6433af996806599",
