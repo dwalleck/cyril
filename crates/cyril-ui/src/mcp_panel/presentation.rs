@@ -473,7 +473,7 @@ pub(super) fn document(
                     if selected { ">" } else { " " },
                     server.name
                 ));
-                if selected && panel.tab == Tab::Servers {
+                if selected {
                     focus = row;
                 }
                 if let McpServerStatus::Unknown { status } = &server.status {

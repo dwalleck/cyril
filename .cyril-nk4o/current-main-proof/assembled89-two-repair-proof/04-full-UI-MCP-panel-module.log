@@ -1,0 +1,67 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.09s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-a48b0b6077a5f241)
+
+running 60 tests
+test mcp_panel::arguments::tests::editing_keeps_unicode_boundaries_and_present_empty ... ok
+test mcp_panel::arguments::tests::optional_absence_and_explicit_empty_are_different ... ok
+test mcp_panel::arguments::tests::strings_preserve_whitespace_controls_and_more_than_feedback_limit ... ok
+test mcp_panel::presentation::tests::focus_uses_source_offset_not_a_user_entered_cursor_glyph ... ok
+test mcp_panel::presentation::tests::focus_tracks_newlines_escaped_controls_and_combining_characters ... ok
+test mcp_panel::presentation::tests::grapheme_width_focus_uses_source_offset_at_two_and_four_columns ... ok
+test mcp_panel::presentation::tests::grapheme_width_preserves_compound_symbols_that_fit_one_row ... ok
+test mcp_panel::presentation::tests::halfwidth_base_combining_handakuten_document_keeps_one_cell_contract ... ok
+test mcp_panel::presentation::tests::halfwidth_base_combining_dakuten_document_keeps_one_cell_contract ... ok
+test mcp_panel::presentation::tests::grapheme_width_wraps_preview_tail_at_two_and_four_columns ... ok
+test mcp_panel::presentation::tests::halfwidth_handakuten_document_uses_released_two_cell_contract ... ok
+test mcp_panel::presentation::tests::halfwidth_dakuten_document_uses_released_two_cell_contract ... ok
+test mcp_panel::presentation::tests::ordinary_combining_dakuten_document_keeps_two_cell_contract ... ok
+test mcp_panel::presentation::tests::ordinary_combining_handakuten_document_keeps_two_cell_contract ... ok
+test mcp_panel::presentation::tests::standalone_halfwidth_dakuten_document_uses_released_one_cell_contract ... ok
+test mcp_panel::presentation::tests::standalone_halfwidth_handakuten_document_uses_released_one_cell_contract ... ok
+test mcp_panel::tests::both_elicitation_modes_are_visible_with_real_context_without_opening_overlay ... ok
+test mcp_panel::tests::grapheme_width_preview_tail_reaches_testbackend_after_scrolling ... ok
+test mcp_panel::tests::governance_optional_registry_and_provenance_remain_distinct ... ok
+test mcp_panel::tests::all_statuses_and_exact_catalog_are_visible ... ok
+test mcp_panel::tests::hidden_geometry_and_key_releases_cannot_fire_actions ... ok
+test mcp_panel::tests::invisible_argument_editor_refuses_paste_without_changing_presence ... ok
+test mcp_panel::tests::reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url ... ok
+test mcp_panel::tests::semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes ... ok
+test mcp_panel::tests::passive_authorization_url_survives_connecting_and_reopen_until_authoritative_resolution ... ok
+test mcp_panel::tests::pushes_never_open_and_unknown_is_not_known_empty ... ok
+test mcp_panel::tests::opaque_names_and_manual_urls_preserve_printable_punctuation ... ok
+test mcp_panel::tests::semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor ... ok
+test mcp_panel::tests::removed_selection_clamps_without_dispatch_and_editor_keeps_original_target ... ok
+test mcp_panel::tests::result_shortcut_requires_an_unmodified_key ... ok
+test mcp_panel::tests::operation_errors_survive_reopen_and_dispatch_failure_is_visible ... ok
+test mcp_panel::tests::offscreen_server_reset_reanchors_before_dispatching_the_retained_identity ... ok
+test mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch ... ok
+test mcp_panel::tests::semantic_caret_is_painted_after_prepend_without_changing_argument_bytes ... ok
+test mcp_panel::tests::mcp_paste_is_inert_when_review_owns_keyboard ... ok
+test mcp_panel::tests::offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity ... ok
+test widgets::mcp_panel::tests::geometry_uses_actual_modal_placement_and_protects_input ... ok
+test mcp_panel::tests::session_boundaries_close_editor_and_no_read_or_paste_reaches_chat ... ok
+test widgets::mcp_panel::tests::unreported_state_and_small_terminal_footer_are_visible ... ok
+test mcp_panel::tests::titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name ... ok
+test mcp_panel::tests::read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata ... ok
+test mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch ... ok
+test mcp_panel::tests::prompt_strings_preserve_presence_empty_whitespace_and_large_pastes ... ok
+test mcp_panel::tests::standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes ... ok
+test mcp_panel::tests::ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes ... ok
+test mcp_panel::tests::full_width_prepend_argument_survives_real_diff_and_crossterm_output ... ok
+test mcp_panel::tests::halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes ... ok
+test mcp_panel::tests::prepend_argument_focus_and_appearance_repaint_protect_current_columns ... ok
+test mcp_panel::tests::prepend_argument_shrink_and_delete_restore_vacated_diff_columns ... ok
+test mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch ... ok
+test mcp_panel::tests::focused_selection_and_argument_cursor_stay_in_actual_small_viewport ... ok
+test mcp_panel::tests::prepend_argument_movement_geometry_and_close_restore_former_columns ... ok
+test mcp_panel::tests::standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes ... ok
+test mcp_panel::tests::halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes ... ok
+test mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch ... ok
+test mcp_panel::tests::halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes ... ok
+test mcp_panel::tests::ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes ... ok
+test mcp_panel::tests::halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes ... ok
+test mcp_panel::tests::wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes ... ok
+test mcp_panel::tests::offscreen_resource_activation_reanchors_before_dispatching_the_retained_identity ... ok
+
+test result: ok. 60 passed; 0 failed; 0 ignored; 0 measured; 916 filtered out; finished in 0.02s
+

@@ -101,6 +101,20 @@ struct ResourceTemplate {
     mime_type: Option<String>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ResourceProvenance {
+    resource_type: Option<String>,
+    source: Option<ResourceSource>,
+    krn: Option<String>,
+    layer: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ResourceSource {
+    origin: Option<String>,
+}
+
 pub(crate) fn convert(method: &str, params: &Value) -> crate::Result<Option<Notification>> {
     if !matches!(method, "kiro/mcp/status" | "kiro/mcp/governance_disabled") {
         return Ok(None);
@@ -158,16 +172,21 @@ fn provenance(value: &Value) -> Result<Option<McpProvenance>, String> {
     if !resource.is_object() {
         return Err("Malformed MCP resource provenance: expected object".into());
     }
-    let text = |key| resource.get(key).and_then(Value::as_str).map(str::to_owned);
+    if resource
+        .get("source")
+        .is_some_and(|source| !source.is_null() && !source.is_object())
+    {
+        return Err(
+            "Malformed MCP resource provenance: source must be an object when non-null".into(),
+        );
+    }
+    let wire = ResourceProvenance::deserialize(resource)
+        .map_err(|error| format!("Malformed MCP resource provenance: {error}"))?;
     Ok(Some(McpProvenance {
-        resource_type: text("resourceType"),
-        origin: resource
-            .get("source")
-            .and_then(|source| source.get("origin"))
-            .and_then(Value::as_str)
-            .map(str::to_owned),
-        krn: text("krn"),
-        layer: text("layer"),
+        resource_type: wire.resource_type,
+        origin: wire.source.and_then(|source| source.origin),
+        krn: wire.krn,
+        layer: wire.layer,
         details: serde_json::to_string_pretty(resource)
             .map_err(|error| format!("Malformed MCP resource descriptor: {error}"))?,
     }))

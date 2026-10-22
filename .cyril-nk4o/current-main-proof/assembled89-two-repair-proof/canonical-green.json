@@ -1,0 +1,1722 @@
+{
+  "schema": "nk4o.89.final-four-file-post-authoritative-format-repaired-green/1",
+  "started_utc": "2026-10-22T16:43:06.533755+00:00",
+  "status": "FINAL_FOUR_FILE_POSTFORMAT_SCOPED_REPAIRED_GREEN_COMPLETE",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+  "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+  "held_MERGE_HEAD": null,
+  "source": {
+    "original521_qualified_descriptor_recorded": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "preformat521_descriptor": "fd669d60bdd76ff5604a310c4f0181a66ef8656ed77b7781dd69ae7dcd943e07",
+    "current521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+    "definition": "SHA256 compact sorted-key JSON array of {path,sha256,bytes} in original521 path order; original521 policy excludes rootclippy, separately pinnedfull522/modes. Not Git tree/commit.",
+    "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/actual521-post-authoritative-format-source-inputs.json",
+    "manifest_sha256": "c0619624e468ed5fc1cfe46b9654767b3b2eea64fc64e56fb4d5caa322cff768",
+    "actual_4_changed_from_original521": [
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "crates/cyril-ui/src/mcp_panel/presentation.rs",
+      "crates/cyril-ui/src/mcp_panel/tests.rs"
+    ],
+    "other517_original_pinned_names_bytes_sha_equal": true,
+    "fullfresh522_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/full-fresh522-postformat-inputs-and-current-modes.json",
+    "fullfresh522_manifest_sha256": "ae3e89786a2caab47981c2ec8b6aa4bc3f7668254d1b5346eb12fa72fe3ca34a",
+    "supplemental_clippy_control": [
+      {
+        "path": "clippy.toml",
+        "sha256": "3b87cbe407c6bebad3564d70a7ff65e5defcc7159c09dffccf2d979aefdf02c9",
+        "bytes": 385
+      }
+    ],
+    "current_modes_before_after_pinned": "Separately current522modes;no historicalmodeidentityinventedfrombyte-only521scheme",
+    "four_current_postformat_source_pins": {
+      "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+      "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+    },
+    "preformat_snapshots": [
+      {
+        "relative_path": "crates/cyril-ui/src/mcp_panel/presentation.rs",
+        "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/1-crates__cyril-ui__src__mcp_panel__presentation.rs.prequalification-source",
+        "sha256": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "bytes": 32692
+      },
+      {
+        "relative_path": "crates/cyril-ui/src/mcp_panel/tests.rs",
+        "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/2-crates__cyril-ui__src__mcp_panel__tests.rs.prequalification-source",
+        "sha256": "bfe027fc5eab6aaa86aafffba71c628ad575783f596189378babf0ebe1ffc7d7",
+        "bytes": 77959
+      },
+      {
+        "relative_path": "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+        "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/3-crates__cyril-core__src__protocol__convert__kas__mcp.rs.prequalification-source",
+        "sha256": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "bytes": 15976
+      },
+      {
+        "relative_path": "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+        "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/4-crates__cyril-core__src__protocol__convert__kas__mcp_tests.rs.prequalification-source",
+        "sha256": "dc56ff8f0d9862e8e8dcbf9772f655bf25943e1c1b8407e4ecd77174cbeb3d33",
+        "bytes": 17875
+      }
+    ],
+    "changed_postformat_snapshots": [
+      {
+        "relative_path": "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+        "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/crates__cyril-core__src__protocol__convert__kas__mcp_tests.rs.postformat-source",
+        "sha256": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4",
+        "bytes": 18008
+      },
+      {
+        "relative_path": "crates/cyril-ui/src/mcp_panel/tests.rs",
+        "snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/crates__cyril-ui__src__mcp_panel__tests.rs.postformat-source",
+        "sha256": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "bytes": 78005
+      }
+    ]
+  },
+  "initial_first_fmtFAIL_preserved": {
+    "canonical": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/canonical-first-fmtCHECK-FAIL-STOP-handoff.json",
+    "local": "local://nk4o-89-final-four-file-green-attempt1-fmtFAIL-handoff.json",
+    "sha256": "02a27888eec7338f874e690d2e8b89dc6332275e934729203e9435dc739e2d23",
+    "source521_descriptor": "fd669d60bdd76ff5604a310c4f0181a66ef8656ed77b7781dd69ae7dcd943e07",
+    "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/01-initial-fmtCHECK.log",
+    "full_log_sha256": "b2d79c82468a356ca9c079a3320e1cced9db01ec7a07121096006c4af85b8a68",
+    "exit_code": 1,
+    "tests_or_Clippy_ran": false,
+    "not_behavioral_RED": true,
+    "no_reclassification_or_overwrite": true
+  },
+  "one_authoritative_formatter": {
+    "label": "00-one-authorized-authoritative-cargo-fmt-all",
+    "argv": [
+      "cargo",
+      "fmt",
+      "--all"
+    ],
+    "shell_escaped_command": "cargo fmt --all",
+    "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+    "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "started_utc": "2026-10-22T16:41:46.542647+00:00",
+    "source521_descriptor_before": "fd669d60bdd76ff5604a310c4f0181a66ef8656ed77b7781dd69ae7dcd943e07",
+    "permitted_changed_paths": [
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "crates/cyril-ui/src/mcp_panel/presentation.rs",
+      "crates/cyril-ui/src/mcp_panel/tests.rs"
+    ],
+    "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/00-one-authorized-authoritative-cargo-fmt-all.log",
+    "expected": "PASS with formatterdeltaONLYwithin4reviewedfiles;anyotherpathSTOP",
+    "authorization": "MainONEauthoritativecargo fmt --all;preserveinitialFAIL;freshfmtCHECK+5pendinggates;nohandlogicchange",
+    "pid": 2626999,
+    "exit_code": 0,
+    "completed_utc": "2026-10-22T16:41:47.561085+00:00",
+    "command_wall_seconds_including_compile": 1.0182910629955586,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "log_bytes": 0,
+    "raw_libtest_summaries": [],
+    "actual_unique_case_starts": [],
+    "standalone_result_lines_if_emitted": [],
+    "source521_descriptor_after": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+    "actual_changed_paths": [
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "crates/cyril-ui/src/mcp_panel/tests.rs"
+    ],
+    "out_of_scope_paths": [],
+    "mode_changes": [],
+    "postformat_four_pins": {
+      "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+      "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+    },
+    "complete_formatter_delta": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/complete-authoritative-formatter-delta.patch",
+    "complete_formatter_delta_sha256": "65f1dde3cf55ffaa4c4aa9b72f0abaea423e0e19de0bf9857a01884c5adad506",
+    "scope_ok": true,
+    "classification": "PASS",
+    "formatter_applicability": "Oneactualauthoritativerustfmtapplication;completebefore/afterdelta retained,notclaimingrawbyteidentity/importorder-tokenidentity;nohandedits."
+  },
+  "formatter_applicability": {
+    "only_two_test_files_changed": [
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "crates/cyril-ui/src/mcp_panel/tests.rs"
+    ],
+    "other519_of_original521_sourcebytes_exact_preformat": true,
+    "both_production_files_byte_identical_to_final_review16b2330d_and_cca5728d": true,
+    "full_delta": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/complete-authoritative-formatter-delta.patch",
+    "full_delta_sha256": "65f1dde3cf55ffaa4c4aa9b72f0abaea423e0e19de0bf9857a01884c5adad506",
+    "statement_claim": "Onlyactualauthoritativerustfmtapplication;testimports/signatures/assertlayoutnormalized. No handlogic/predicate/threshold/caseedit. DoNOTclaimrawtestbyteidentityorimportorder-tokenidentity.",
+    "source_review_retention": "Finalnone/.98privateproductionfixesunchangedexactbytes;test-onlynormalizationsretainboundedsource-reviewassessmentunderMainapprovedformatterapplicability."
+  },
+  "source_review": {
+    "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/nk4o-89-two-repair-source-rereview.md",
+    "sha256": "f5084a1e4f71a245fa6603adb3524eef6ecba4cad8c7edff6a37612e18afbdd6",
+    "result": "Scoped finalfourfilePASSnone/.98; includesMainauthorizednested-arrayfollowup;notexecutedGREEN",
+    "initial_DTO_9e4795": "Source-partialnotfinalPASS; final16b2330dshape guard required;not qualified here asoldDTO"
+  },
+  "original_RED_immutable": {
+    "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-two-test-only-behavioral-RED-20261022T160117912763Z/canonical-two-independent-test-only-RED-handoff.json",
+    "sha256": "284a282952ebd5a74a5f64f341d31e779a983377fc7cf59f36452edcd6641938",
+    "current_bytes_match": true,
+    "UI_reach": "4firstToolsassertionfailures;4of24scenariosstarted,notlaterreanchor/request/close",
+    "Core_reach": "Firstserverkrn[]SnapshotnotDiagnostic;later13of14oldmalformedunreached;oldpositivecontrols2PASS",
+    "no_extended_array_RED": "Final18currentmalformedmatrixincludes4extra server/snapshotnestedarrayscenarios;no freshhistoricalREDclaimed"
+  },
+  "approved_exact_commands": [
+    {
+      "label": "01-initial-fmtCHECK",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "selector": null,
+      "source_expected_registered_count": null
+    },
+    {
+      "label": "02-UI-hidden-target-repaired-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-ui",
+        "--lib",
+        "mcp_panel::tests::hidden_target_",
+        "--",
+        "--nocapture"
+      ],
+      "selector": "mcp_panel::tests::hidden_target_",
+      "source_expected_registered_count": 4
+    },
+    {
+      "label": "03-Core-final18-provenance-repaired-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--features",
+        "kas",
+        "--lib",
+        "kas_provenance_",
+        "--",
+        "--nocapture"
+      ],
+      "selector": "kas_provenance_",
+      "source_expected_registered_count": 3
+    },
+    {
+      "label": "04-full-UI-MCP-panel-module",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-ui",
+        "--lib",
+        "mcp_panel::",
+        "--",
+        "--nocapture"
+      ],
+      "selector": "mcp_panel::",
+      "source_expected_registered_count": 58
+    },
+    {
+      "label": "05-full-Core-actual-MCP-tests-module",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--features",
+        "kas",
+        "--lib",
+        "protocol::convert::kas::mcp::tests",
+        "--",
+        "--nocapture"
+      ],
+      "selector": "protocol::convert::kas::mcp::tests",
+      "source_expected_registered_count": 9
+    },
+    {
+      "label": "06-strict-Core-UI-alltarget-KAS-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril-core",
+        "-p",
+        "cyril-ui",
+        "--all-targets",
+        "--features",
+        "cyril-core/kas",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "selector": null,
+      "source_expected_registered_count": null
+    }
+  ],
+  "actual_Core_module_selector_preflight": {
+    "source_parent": "protocol/convert/kas.rs18 pub(crate)modmcp",
+    "source_colocal": "mcp.rs462-464 #[cfg(test)] #[path=\"mcp_tests.rs\"] modtests",
+    "actual_prefix": "protocol::convert::kas::mcp::tests",
+    "tentative_filename_prefix_not_executed": "protocol::convert::kas::mcp_tests wouldnotmatch; correctedperMainexplicitprecommandverification;NOzero-testinvocation"
+  },
+  "source_registration_mapping_NOT_EXECUTED": {
+    "report": "agent://QualifyPerformanceTrees.MapNkFinalModuleCoverage",
+    "UI_hidden_target": 4,
+    "Core_provenance": 3,
+    "full_UI_mcp_panel": {
+      "total": 58,
+      "tests": 42,
+      "arguments_tests": 3,
+      "presentation_tests": 13
+    },
+    "full_Core_actual_mcp_tests": 9,
+    "ordinary_tests_no_rstest_or_ignored": true,
+    "UI_internal_scenarios": {
+      "unavailable_reset": 8,
+      "unavailable_authenticate": 8,
+      "empty_reset": 4,
+      "empty_authenticate": 4,
+      "total": 24
+    },
+    "Core_internal_scenarios": {
+      "malformed": 18,
+      "missing_null": 8,
+      "future_strings": 2,
+      "total": 28
+    },
+    "auth_url_limit": "UIFailedfixtureauthorization_urlNoneandCoreretainedinventorynotauthseeded;noAuthURLretentioninferencefromthesecases",
+    "full_UI_mcp_panel_original_expected58_omitted_widget_substring_matches": [
+      "widgets::mcp_panel::tests::geometry_uses_actual_modal_placement_and_protects_input",
+      "widgets::mcp_panel::tests::unreported_state_and_small_terminal_footer_are_visible"
+    ],
+    "full_UI_mcp_panel_actual_command_total": 60
+  },
+  "environment": {
+    "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "normal_PATH_HOME_retained": true,
+    "home_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+    "diagnostic_child_vars_removed": [
+      "CYRIL_U62F_POST_BIND_DELAY_500MS",
+      "CYRIL_U62F_READY_AUTH_MISMATCH",
+      "CYRIL_MEMORY_PHASE_PROBE",
+      "CYRIL_MEMORY_PHASE_DIRECTORY",
+      "CYRIL_MEMORY_PROBE_SOURCE",
+      "NEXTEST_TEST_NAME",
+      "NEXTEST_PROFILE",
+      "NEXTEST_TEST_THREADS",
+      "CYRIL_D7VE_PROFILE_CHILD",
+      "CYRIL_D7VE_PROFILE_CASE",
+      "CYRIL_BRUI_XDG_WRAPPER_CHILD",
+      "CYRIL_0SSB_RELATIVE_SPAWN_CHILD",
+      "CYRIL_0SSB_AGENT_WORKSPACE",
+      "CYRIL_ZBU7_FREE_GATE_CHILD",
+      "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD"
+    ],
+    "buildflags": {
+      "RUSTFLAGS": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC": null,
+      "RUSTDOC": null,
+      "CARGO_INCREMENTAL": null,
+      "CARGO_PROFILE_DEV_DEBUG": null,
+      "CARGO_PROFILE_TEST_DEBUG": null,
+      "CARGO_PROFILE_DEV_OPT_LEVEL": null,
+      "CARGO_PROFILE_TEST_OPT_LEVEL": null
+    },
+    "profiles_current_actual_Cargo_toml": {
+      "dev": {
+        "incremental": true,
+        "opt-level": 0
+      },
+      "test": {
+        "opt-level": 1
+      },
+      "release": {
+        "lto": "fat",
+        "codegen-units": 1,
+        "strip": "symbols"
+      },
+      "release-with-debug": {
+        "inherits": "release",
+        "debug": 2,
+        "strip": "none"
+      }
+    },
+    "established_toolchain_host": {
+      "prior_receipt": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-qualified-handoff.json",
+      "prior_receipt_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+      "toolchain_Cargo_profiles_current": {
+        "dev": {
+          "incremental": true,
+          "opt-level": 0
+        },
+        "test": {
+          "opt-level": 1
+        },
+        "release": {
+          "lto": "fat",
+          "codegen-units": 1,
+          "strip": "symbols"
+        },
+        "release-with-debug": {
+          "inherits": "release",
+          "debug": 2,
+          "strip": "none"
+        }
+      },
+      "current_global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "existing_actual_toolchain_and_host_observation_receipts": [
+        {
+          "label": "rustc-Vv",
+          "argv": [
+            "rustc",
+            "-Vv"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.309631+00:00",
+          "finished_utc": "2026-10-22T11:25:59.328721+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log",
+          "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+          "bytes": 196
+        },
+        {
+          "label": "cargo-version",
+          "argv": [
+            "cargo",
+            "--version"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.330023+00:00",
+          "finished_utc": "2026-10-22T11:25:59.343768+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log",
+          "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+          "bytes": 36
+        },
+        {
+          "label": "rustfmt-path",
+          "argv": [
+            "rustup",
+            "which",
+            "rustfmt"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.345136+00:00",
+          "finished_utc": "2026-10-22T11:25:59.357986+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustfmt-path.log",
+          "sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+          "bytes": 78
+        },
+        {
+          "label": "kernel",
+          "argv": [
+            "uname",
+            "-a"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.359309+00:00",
+          "finished_utc": "2026-10-22T11:25:59.360086+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log",
+          "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+          "bytes": 107
+        },
+        {
+          "label": "CPU",
+          "argv": [
+            "lscpu"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.360877+00:00",
+          "finished_utc": "2026-10-22T11:25:59.366419+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-CPU.log",
+          "sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+          "bytes": 3990
+        }
+      ],
+      "no_new_toolchain_probe_or_Cargo_metadata_command": true
+    }
+  },
+  "source_freeze_owners": [
+    "RepairNkHiddenTarget confirmed freeze",
+    "RepairNkProvenanceTypes confirmed final16b2330d/dc56ff8freeze"
+  ],
+  "scope": "OnlyfmtCHECK,2exactoldREDselectors,wholecurrentUI-MCP andactualCore-MCPmodule,strictCoreUIalltargetKASClippy; nofullWS/old40replay/mutation/build/Git/native",
+  "initial_index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+  "preformat_initial_index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+  "index_drift_policy": "Rawindexbyteonlydriftrecordold/newunknowncausewithoutrestore/notCargoSTOP ifactualinput/refscopeunchanged",
+  "commands": [
+    {
+      "label": "00-one-authorized-authoritative-cargo-fmt-all",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all"
+      ],
+      "shell_escaped_command": "cargo fmt --all",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:41:46.542647+00:00",
+      "source521_descriptor_before": "fd669d60bdd76ff5604a310c4f0181a66ef8656ed77b7781dd69ae7dcd943e07",
+      "permitted_changed_paths": [
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+        "crates/cyril-ui/src/mcp_panel/presentation.rs",
+        "crates/cyril-ui/src/mcp_panel/tests.rs"
+      ],
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/00-one-authorized-authoritative-cargo-fmt-all.log",
+      "expected": "PASS with formatterdeltaONLYwithin4reviewedfiles;anyotherpathSTOP",
+      "authorization": "MainONEauthoritativecargo fmt --all;preserveinitialFAIL;freshfmtCHECK+5pendinggates;nohandlogicchange",
+      "pid": 2626999,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:41:47.561085+00:00",
+      "command_wall_seconds_including_compile": 1.0182910629955586,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log_bytes": 0,
+      "raw_libtest_summaries": [],
+      "actual_unique_case_starts": [],
+      "standalone_result_lines_if_emitted": [],
+      "source521_descriptor_after": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "actual_changed_paths": [
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+        "crates/cyril-ui/src/mcp_panel/tests.rs"
+      ],
+      "out_of_scope_paths": [],
+      "mode_changes": [],
+      "postformat_four_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "complete_formatter_delta": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/complete-authoritative-formatter-delta.patch",
+      "complete_formatter_delta_sha256": "65f1dde3cf55ffaa4c4aa9b72f0abaea423e0e19de0bf9857a01884c5adad506",
+      "scope_ok": true,
+      "classification": "PASS",
+      "formatter_applicability": "Oneactualauthoritativerustfmtapplication;completebefore/afterdelta retained,notclaimingrawbyteidentity/importorder-tokenidentity;nohandedits."
+    },
+    {
+      "label": "01-initial-fmtCHECK",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "shell_escaped_command": "cargo fmt --all -- --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:43:06.701462+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "expected": "PASS",
+      "source_registered_expected_count": null,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/01-initial-fmtCHECK.log",
+      "pid": 2628274,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:43:07.694951+00:00",
+      "command_wall_seconds_including_compile": 0.9925740929902531,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log_bytes": 0,
+      "raw_libtest_summaries": [],
+      "actual_unique_case_starts": [],
+      "standalone_result_lines_if_emitted": [],
+      "interleaved_stderr_policy": "Actualexit/rawsummary+uniquecasestartsauthoritative;standalone-linesnotmandatory",
+      "actual_test_executables_immediately_after_run": [],
+      "classification": "PASS"
+    },
+    {
+      "label": "02-UI-hidden-target-repaired-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-ui",
+        "--lib",
+        "mcp_panel::tests::hidden_target_",
+        "--",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril-ui --lib mcp_panel::tests::hidden_target_ -- --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:43:07.819785+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "expected": "PASS",
+      "source_registered_expected_count": 4,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/02-UI-hidden-target-repaired-GREEN.log",
+      "pid": 2628308,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:43:23.771024+00:00",
+      "command_wall_seconds_including_compile": 15.95073135799612,
+      "log_sha256": "714db7869e32ae958a638d12ba0e42188d795b0ad615be14a0f04cccad9abbbe",
+      "log_bytes": 884,
+      "raw_libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 972,
+          "libtest_reported_wall": "0.00s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch",
+        "mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch",
+        "mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch",
+        "mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch"
+      ],
+      "standalone_result_lines_if_emitted": [
+        {
+          "name": "mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actualexit/rawsummary+uniquecasestartsauthoritative;standalone-linesnotmandatory",
+      "actual_test_executables_immediately_after_run": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-a48b0b6077a5f241",
+          "sha256": "dc96879a7116fd94cb0efd4304a3c1a5d5a4784b01b3c03aaa247810dc26a6ba",
+          "bytes": 66678272,
+          "test_harness_not_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "03-Core-final18-provenance-repaired-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--features",
+        "kas",
+        "--lib",
+        "kas_provenance_",
+        "--",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril-core --features kas --lib kas_provenance_ -- --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:43:23.933329+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "expected": "PASS",
+      "source_registered_expected_count": 3,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/03-Core-final18-provenance-repaired-GREEN.log",
+      "pid": 2629222,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:43:49.771806+00:00",
+      "command_wall_seconds_including_compile": 25.837655728013488,
+      "log_sha256": "d16515ddbf33f16db3279e6f192c23788d23f7af960a4738dca2a2697d56171e",
+      "log_bytes": 741,
+      "raw_libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 1533,
+          "libtest_reported_wall": "0.00s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved",
+        "protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid",
+        "protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory"
+      ],
+      "standalone_result_lines_if_emitted": [
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actualexit/rawsummary+uniquecasestartsauthoritative;standalone-linesnotmandatory",
+      "actual_test_executables_immediately_after_run": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-5b7bf32d2da0c87b",
+          "sha256": "9cfa5d154f619d949b1ce2754c1de5021fce1ce5fa87456474c0c25e906f781b",
+          "bytes": 128575360,
+          "test_harness_not_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "04-full-UI-MCP-panel-module",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-ui",
+        "--lib",
+        "mcp_panel::",
+        "--",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril-ui --lib mcp_panel:: -- --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:43:49.971482+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "expected": "PASS",
+      "source_registered_expected_count": 58,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/04-full-UI-MCP-panel-module.log",
+      "pid": 2630175,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:43:50.120711+00:00",
+      "command_wall_seconds_including_compile": 0.1484278219868429,
+      "log_sha256": "2e4edbbcdeafee6b4548e7e137edbec24523b722c5427abbbeeda9bf6ac9c249",
+      "log_bytes": 6336,
+      "raw_libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 60,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 916,
+          "libtest_reported_wall": "0.02s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "mcp_panel::arguments::tests::editing_keeps_unicode_boundaries_and_present_empty",
+        "mcp_panel::arguments::tests::optional_absence_and_explicit_empty_are_different",
+        "mcp_panel::arguments::tests::strings_preserve_whitespace_controls_and_more_than_feedback_limit",
+        "mcp_panel::presentation::tests::focus_uses_source_offset_not_a_user_entered_cursor_glyph",
+        "mcp_panel::presentation::tests::focus_tracks_newlines_escaped_controls_and_combining_characters",
+        "mcp_panel::presentation::tests::grapheme_width_focus_uses_source_offset_at_two_and_four_columns",
+        "mcp_panel::presentation::tests::grapheme_width_preserves_compound_symbols_that_fit_one_row",
+        "mcp_panel::presentation::tests::halfwidth_base_combining_handakuten_document_keeps_one_cell_contract",
+        "mcp_panel::presentation::tests::halfwidth_base_combining_dakuten_document_keeps_one_cell_contract",
+        "mcp_panel::presentation::tests::grapheme_width_wraps_preview_tail_at_two_and_four_columns",
+        "mcp_panel::presentation::tests::halfwidth_handakuten_document_uses_released_two_cell_contract",
+        "mcp_panel::presentation::tests::halfwidth_dakuten_document_uses_released_two_cell_contract",
+        "mcp_panel::presentation::tests::ordinary_combining_dakuten_document_keeps_two_cell_contract",
+        "mcp_panel::presentation::tests::ordinary_combining_handakuten_document_keeps_two_cell_contract",
+        "mcp_panel::presentation::tests::standalone_halfwidth_dakuten_document_uses_released_one_cell_contract",
+        "mcp_panel::presentation::tests::standalone_halfwidth_handakuten_document_uses_released_one_cell_contract",
+        "mcp_panel::tests::both_elicitation_modes_are_visible_with_real_context_without_opening_overlay",
+        "mcp_panel::tests::grapheme_width_preview_tail_reaches_testbackend_after_scrolling",
+        "mcp_panel::tests::governance_optional_registry_and_provenance_remain_distinct",
+        "mcp_panel::tests::all_statuses_and_exact_catalog_are_visible",
+        "mcp_panel::tests::hidden_geometry_and_key_releases_cannot_fire_actions",
+        "mcp_panel::tests::invisible_argument_editor_refuses_paste_without_changing_presence",
+        "mcp_panel::tests::reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url",
+        "mcp_panel::tests::semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes",
+        "mcp_panel::tests::passive_authorization_url_survives_connecting_and_reopen_until_authoritative_resolution",
+        "mcp_panel::tests::pushes_never_open_and_unknown_is_not_known_empty",
+        "mcp_panel::tests::opaque_names_and_manual_urls_preserve_printable_punctuation",
+        "mcp_panel::tests::semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor",
+        "mcp_panel::tests::removed_selection_clamps_without_dispatch_and_editor_keeps_original_target",
+        "mcp_panel::tests::result_shortcut_requires_an_unmodified_key",
+        "mcp_panel::tests::operation_errors_survive_reopen_and_dispatch_failure_is_visible",
+        "mcp_panel::tests::offscreen_server_reset_reanchors_before_dispatching_the_retained_identity",
+        "mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch",
+        "mcp_panel::tests::semantic_caret_is_painted_after_prepend_without_changing_argument_bytes",
+        "mcp_panel::tests::mcp_paste_is_inert_when_review_owns_keyboard",
+        "mcp_panel::tests::offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity",
+        "widgets::mcp_panel::tests::geometry_uses_actual_modal_placement_and_protects_input",
+        "mcp_panel::tests::session_boundaries_close_editor_and_no_read_or_paste_reaches_chat",
+        "widgets::mcp_panel::tests::unreported_state_and_small_terminal_footer_are_visible",
+        "mcp_panel::tests::titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name",
+        "mcp_panel::tests::read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata",
+        "mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch",
+        "mcp_panel::tests::prompt_strings_preserve_presence_empty_whitespace_and_large_pastes",
+        "mcp_panel::tests::standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes",
+        "mcp_panel::tests::ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes",
+        "mcp_panel::tests::full_width_prepend_argument_survives_real_diff_and_crossterm_output",
+        "mcp_panel::tests::halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes",
+        "mcp_panel::tests::prepend_argument_focus_and_appearance_repaint_protect_current_columns",
+        "mcp_panel::tests::prepend_argument_shrink_and_delete_restore_vacated_diff_columns",
+        "mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch",
+        "mcp_panel::tests::focused_selection_and_argument_cursor_stay_in_actual_small_viewport",
+        "mcp_panel::tests::prepend_argument_movement_geometry_and_close_restore_former_columns",
+        "mcp_panel::tests::standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes",
+        "mcp_panel::tests::halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes",
+        "mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch",
+        "mcp_panel::tests::halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes",
+        "mcp_panel::tests::ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes",
+        "mcp_panel::tests::halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes",
+        "mcp_panel::tests::wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes",
+        "mcp_panel::tests::offscreen_resource_activation_reanchors_before_dispatching_the_retained_identity"
+      ],
+      "standalone_result_lines_if_emitted": [
+        {
+          "name": "mcp_panel::arguments::tests::editing_keeps_unicode_boundaries_and_present_empty",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::arguments::tests::optional_absence_and_explicit_empty_are_different",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::arguments::tests::strings_preserve_whitespace_controls_and_more_than_feedback_limit",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::focus_uses_source_offset_not_a_user_entered_cursor_glyph",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::focus_tracks_newlines_escaped_controls_and_combining_characters",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::grapheme_width_focus_uses_source_offset_at_two_and_four_columns",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::grapheme_width_preserves_compound_symbols_that_fit_one_row",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::halfwidth_base_combining_handakuten_document_keeps_one_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::halfwidth_base_combining_dakuten_document_keeps_one_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::grapheme_width_wraps_preview_tail_at_two_and_four_columns",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::halfwidth_handakuten_document_uses_released_two_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::halfwidth_dakuten_document_uses_released_two_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::ordinary_combining_dakuten_document_keeps_two_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::ordinary_combining_handakuten_document_keeps_two_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::standalone_halfwidth_dakuten_document_uses_released_one_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::presentation::tests::standalone_halfwidth_handakuten_document_uses_released_one_cell_contract",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::both_elicitation_modes_are_visible_with_real_context_without_opening_overlay",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::grapheme_width_preview_tail_reaches_testbackend_after_scrolling",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::governance_optional_registry_and_provenance_remain_distinct",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::all_statuses_and_exact_catalog_are_visible",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_geometry_and_key_releases_cannot_fire_actions",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::invisible_argument_editor_refuses_paste_without_changing_presence",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::passive_authorization_url_survives_connecting_and_reopen_until_authoritative_resolution",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::pushes_never_open_and_unknown_is_not_known_empty",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::opaque_names_and_manual_urls_preserve_printable_punctuation",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::removed_selection_clamps_without_dispatch_and_editor_keeps_original_target",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::result_shortcut_requires_an_unmodified_key",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::operation_errors_survive_reopen_and_dispatch_failure_is_visible",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::offscreen_server_reset_reanchors_before_dispatching_the_retained_identity",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::semantic_caret_is_painted_after_prepend_without_changing_argument_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::mcp_paste_is_inert_when_review_owns_keyboard",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity",
+          "result": "ok"
+        },
+        {
+          "name": "widgets::mcp_panel::tests::geometry_uses_actual_modal_placement_and_protects_input",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::session_boundaries_close_editor_and_no_read_or_paste_reaches_chat",
+          "result": "ok"
+        },
+        {
+          "name": "widgets::mcp_panel::tests::unreported_state_and_small_terminal_footer_are_visible",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::prompt_strings_preserve_presence_empty_whitespace_and_large_pastes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::full_width_prepend_argument_survives_real_diff_and_crossterm_output",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::prepend_argument_focus_and_appearance_repaint_protect_current_columns",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::prepend_argument_shrink_and_delete_restore_vacated_diff_columns",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::focused_selection_and_argument_cursor_stay_in_actual_small_viewport",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::prepend_argument_movement_geometry_and_close_restore_former_columns",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes",
+          "result": "ok"
+        },
+        {
+          "name": "mcp_panel::tests::offscreen_resource_activation_reanchors_before_dispatching_the_retained_identity",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actualexit/rawsummary+uniquecasestartsauthoritative;standalone-linesnotmandatory",
+      "actual_test_executables_immediately_after_run": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-a48b0b6077a5f241",
+          "sha256": "dc96879a7116fd94cb0efd4304a3c1a5d5a4784b01b3c03aaa247810dc26a6ba",
+          "bytes": 66678272,
+          "test_harness_not_production_App": true
+        }
+      ],
+      "classification": "PASS",
+      "initial_countguard_EXPECTED58_ACTUAL60_administrative_stop_preserved": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/immutable-administrative-expected58-actual60-partial.json",
+      "actual_registered_count_reconciled": 60
+    },
+    {
+      "label": "05-full-Core-actual-MCP-tests-module",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril-core",
+        "--features",
+        "kas",
+        "--lib",
+        "protocol::convert::kas::mcp::tests",
+        "--",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril-core --features kas --lib protocol::convert::kas::mcp::tests -- --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:47:02.749149+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "expected": "PASS",
+      "source_registered_expected_count": 9,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/05-full-Core-actual-MCP-tests-module.log",
+      "pid": 2632650,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:47:02.881875+00:00",
+      "command_wall_seconds_including_compile": 0.132034182024654,
+      "log_sha256": "f3d8d0a09eb3c172534873a444f75e8ca00fb02b978fd61dded16634255bceb0",
+      "log_bytes": 1368,
+      "raw_libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 1527,
+          "libtest_reported_wall": "0.00s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "protocol::convert::kas::mcp::tests::kas_prompt_without_a_wire_name_is_diagnostic_not_a_display_name_fallback",
+        "protocol::convert::kas::mcp::tests::absent_registry_is_not_non_registry_and_malformed_known_status_is_visible",
+        "protocol::convert::kas::mcp::tests::kas_prompt_wire_identity_survives_a_title_colliding_with_another_prompt_name",
+        "protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved",
+        "protocol::convert::kas::mcp::tests::malformed_unscoped_frames_are_visible_without_inventing_a_session",
+        "protocol::convert::kas::mcp::tests::kas_engine_decodes_complete_union_catalog_registry_and_resource_provenance",
+        "protocol::convert::kas::mcp::tests::read_results_are_ordered_external_data_with_nontext_metadata_and_strict_errors",
+        "protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory",
+        "protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid"
+      ],
+      "standalone_result_lines_if_emitted": [
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_prompt_without_a_wire_name_is_diagnostic_not_a_display_name_fallback",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::absent_registry_is_not_non_registry_and_malformed_known_status_is_visible",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_prompt_wire_identity_survives_a_title_colliding_with_another_prompt_name",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::malformed_unscoped_frames_are_visible_without_inventing_a_session",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_engine_decodes_complete_union_catalog_registry_and_resource_provenance",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::read_results_are_ordered_external_data_with_nontext_metadata_and_strict_errors",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory",
+          "result": "ok"
+        },
+        {
+          "name": "protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actualexit/rawsummary+uniquecasestartsauthoritative;standalone-linesnotmandatory",
+      "actual_test_executables_immediately_after_run": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-5b7bf32d2da0c87b",
+          "sha256": "9cfa5d154f619d949b1ce2754c1de5021fce1ce5fa87456474c0c25e906f781b",
+          "bytes": 128575360,
+          "test_harness_not_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "06-strict-Core-UI-alltarget-KAS-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril-core",
+        "-p",
+        "cyril-ui",
+        "--all-targets",
+        "--features",
+        "cyril-core/kas",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "shell_escaped_command": "cargo clippy -p cyril-core -p cyril-ui --all-targets --features cyril-core/kas -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:47:03.122212+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "expected": "PASS",
+      "source_registered_expected_count": null,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/06-strict-Core-UI-alltarget-KAS-Clippy.log",
+      "pid": 2632670,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:47:23.791669+00:00",
+      "command_wall_seconds_including_compile": 20.669052930985345,
+      "log_sha256": "6445536c872f3a682da35ccc83520246ea3b64bc3960da435cf1c83fa8067d6f",
+      "log_bytes": 661,
+      "raw_libtest_summaries": [],
+      "actual_unique_case_starts": [],
+      "standalone_result_lines_if_emitted": [],
+      "interleaved_stderr_policy": "Actualexit/rawsummary+uniquecasestartsauthoritative;standalone-linesnotmandatory",
+      "actual_test_executables_immediately_after_run": [],
+      "classification": "PASS"
+    }
+  ],
+  "guards": [
+    {
+      "phase": "initial newpostformatframe before freshfmtCHECK",
+      "utc": "2026-10-22T16:43:06.616463+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "before 01-initial-fmtCHECK",
+      "utc": "2026-10-22T16:43:06.699878+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "after 01-initial-fmtCHECK",
+      "utc": "2026-10-22T16:43:07.755662+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "before 02-UI-hidden-target-repaired-GREEN",
+      "utc": "2026-10-22T16:43:07.818396+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "after 02-UI-hidden-target-repaired-GREEN",
+      "utc": "2026-10-22T16:43:23.866555+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "before 03-Core-final18-provenance-repaired-GREEN",
+      "utc": "2026-10-22T16:43:23.931847+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "after 03-Core-final18-provenance-repaired-GREEN",
+      "utc": "2026-10-22T16:43:49.901544+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "before 04-full-UI-MCP-panel-module",
+      "utc": "2026-10-22T16:43:49.969908+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "after 04-full-UI-MCP-panel-module",
+      "utc": "2026-10-22T16:43:50.223750+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "before 05-full-Core-actual-MCP-tests-module",
+      "utc": "2026-10-22T16:47:02.747701+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "after 05-full-Core-actual-MCP-tests-module",
+      "utc": "2026-10-22T16:47:03.045909+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "before 06-strict-Core-UI-alltarget-KAS-Clippy",
+      "utc": "2026-10-22T16:47:03.120949+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "after 06-strict-Core-UI-alltarget-KAS-Clippy",
+      "utc": "2026-10-22T16:47:23.854872+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    },
+    {
+      "phase": "FINAL currentpostformat4fileNK sourceboundGREEN allsixgatescomplete no codechangeafterfmt",
+      "utc": "2026-10-22T16:49:46.987738+00:00",
+      "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+      "all521_and_full522_current_bytes_names_modes_stable": true,
+      "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+      "held_MERGE_HEAD": null,
+      "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+      "four_source_pins": {
+        "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+        "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+        "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+      },
+      "config_and_original_RED_receipt_stable": true
+    }
+  ],
+  "entrypoint_touches": [
+    {
+      "why": "MANDATED after authoritativeformatter source boundary before newframe firstinvocation",
+      "utc": "2026-10-22T16:43:06.617528+00:00",
+      "metadata_only": true,
+      "files": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792686918255364228,
+          "mtime_ns_after": 1792687386617225197
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "13ebd90c9afc7b64ba78952ed99e33bb2ed6c1f41c5337f846cd96750f821dad",
+          "mtime_ns_before": 1792686918255364228,
+          "mtime_ns_after": 1792687386617225197
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792686918255364228,
+          "mtime_ns_after": 1792687386617436832
+        }
+      ]
+    }
+  ],
+  "not_claimed": [
+    "PostrepairGREENuntilactualtestsuccess",
+    "Fullold40matrixreexecuted",
+    "Wholeworkspace/build/privateproductionAppbinary",
+    "ActualAppbridgedispatch/nativephysicalkeys/liveKAS/auth/enterprise/Windows/CI/publication",
+    "AuthURLretentionfromprovenancefixture; noauthseededassertionhere"
+  ],
+  "historical_retention": "517unchangedoriginalsourcebytes+unchangedpublicinterfaces/private2operationrepair supportdependency-specificold40applicabilityonly; oldcommands remainhistoricalnotcurrentwholePASS",
+  "administrative_expectation_history": {
+    "immutable_partial": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/immutable-administrative-expected58-actual60-partial.json",
+    "sha256": "82074d863474740c9f2c327a07bbbe11196d0f00835d99b7961e7ffde20954c7",
+    "old_expected": 58,
+    "actual": 60,
+    "actual_exit": 0,
+    "actual_failed": 0,
+    "actual_ignored": 0,
+    "missing_source_map_names": [
+      "widgets::mcp_panel::tests::geometry_uses_actual_modal_placement_and_protects_input",
+      "widgets::mcp_panel::tests::unreported_state_and_small_terminal_footer_are_visible"
+    ],
+    "correction_only_metadata_no_Cargo_replay_or_sourceedit": true,
+    "Main_notified_and_existing_actual_exit_summary_policy": "Alloriginalapprovedcommandsunchanged;onlyremainingCore9/Clippycontinue. Source58wasnotanassertion/threshold.",
+    "Main_confirmation": "Confirmedmetadata-only60actualPASSincluding2widgettests; do notrerunpassedcommands;finishCore9+Clippy;planned58mistakenotproductFAIL.",
+    "independent_source_anchor_correction": {
+      "report": "agent://QualifyPerformanceTrees.MapNkFinalModuleCoverage",
+      "file": "crates/cyril-ui/src/widgets/mcp_panel.rs",
+      "test_module_lines": "128-129",
+      "geometry_test_lines": "137-138",
+      "unreported_state_test_lines": "152-153",
+      "both_registered_nonignored_ordinary_tests": true,
+      "corrected_counts": {
+        "UI_hidden": 4,
+        "Core_provenance": 3,
+        "full_UI": 60,
+        "full_Core": 9
+      }
+    }
+  },
+  "completed_utc": "2026-10-22T16:49:46.989627+00:00",
+  "final_guard": {
+    "phase": "FINAL currentpostformat4fileNK sourceboundGREEN allsixgatescomplete no codechangeafterfmt",
+    "utc": "2026-10-22T16:49:46.987738+00:00",
+    "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+    "all521_and_full522_current_bytes_names_modes_stable": true,
+    "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+    "held_MERGE_HEAD": null,
+    "index_sha256": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+    "four_source_pins": {
+      "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+      "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+    },
+    "config_and_original_RED_receipt_stable": true
+  },
+  "actual_gate_totals": {
+    "commands_in_authorized_continuation": 7,
+    "one_authoritative_format_application": 1,
+    "fresh_fmtCHECK": 1,
+    "focused_and_full_module_test_commands": 4,
+    "strict_CoreUI_alltarget_KAS_Clippy": 1,
+    "exit0_commands": 7,
+    "unexpected_product_compile_setup_test_or_lint_failures": 0,
+    "actual_passed_case_invocations_with_intentional_focus_module_overlap": 76,
+    "actual_failed_case_invocations": 0,
+    "actual_ignored_case_invocations": 0,
+    "filtered_with_overlap": 4948,
+    "actual_unique_case_count": 69,
+    "actual_unique_case_names": [
+      "mcp_panel::arguments::tests::editing_keeps_unicode_boundaries_and_present_empty",
+      "mcp_panel::arguments::tests::optional_absence_and_explicit_empty_are_different",
+      "mcp_panel::arguments::tests::strings_preserve_whitespace_controls_and_more_than_feedback_limit",
+      "mcp_panel::presentation::tests::focus_tracks_newlines_escaped_controls_and_combining_characters",
+      "mcp_panel::presentation::tests::focus_uses_source_offset_not_a_user_entered_cursor_glyph",
+      "mcp_panel::presentation::tests::grapheme_width_focus_uses_source_offset_at_two_and_four_columns",
+      "mcp_panel::presentation::tests::grapheme_width_preserves_compound_symbols_that_fit_one_row",
+      "mcp_panel::presentation::tests::grapheme_width_wraps_preview_tail_at_two_and_four_columns",
+      "mcp_panel::presentation::tests::halfwidth_base_combining_dakuten_document_keeps_one_cell_contract",
+      "mcp_panel::presentation::tests::halfwidth_base_combining_handakuten_document_keeps_one_cell_contract",
+      "mcp_panel::presentation::tests::halfwidth_dakuten_document_uses_released_two_cell_contract",
+      "mcp_panel::presentation::tests::halfwidth_handakuten_document_uses_released_two_cell_contract",
+      "mcp_panel::presentation::tests::ordinary_combining_dakuten_document_keeps_two_cell_contract",
+      "mcp_panel::presentation::tests::ordinary_combining_handakuten_document_keeps_two_cell_contract",
+      "mcp_panel::presentation::tests::standalone_halfwidth_dakuten_document_uses_released_one_cell_contract",
+      "mcp_panel::presentation::tests::standalone_halfwidth_handakuten_document_uses_released_one_cell_contract",
+      "mcp_panel::tests::all_statuses_and_exact_catalog_are_visible",
+      "mcp_panel::tests::both_elicitation_modes_are_visible_with_real_context_without_opening_overlay",
+      "mcp_panel::tests::focused_selection_and_argument_cursor_stay_in_actual_small_viewport",
+      "mcp_panel::tests::full_width_prepend_argument_survives_real_diff_and_crossterm_output",
+      "mcp_panel::tests::governance_optional_registry_and_provenance_remain_distinct",
+      "mcp_panel::tests::grapheme_width_preview_tail_reaches_testbackend_after_scrolling",
+      "mcp_panel::tests::halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes",
+      "mcp_panel::tests::halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes",
+      "mcp_panel::tests::halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes",
+      "mcp_panel::tests::halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes",
+      "mcp_panel::tests::hidden_geometry_and_key_releases_cannot_fire_actions",
+      "mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch",
+      "mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch",
+      "mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch",
+      "mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch",
+      "mcp_panel::tests::invisible_argument_editor_refuses_paste_without_changing_presence",
+      "mcp_panel::tests::mcp_paste_is_inert_when_review_owns_keyboard",
+      "mcp_panel::tests::offscreen_resource_activation_reanchors_before_dispatching_the_retained_identity",
+      "mcp_panel::tests::offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity",
+      "mcp_panel::tests::offscreen_server_reset_reanchors_before_dispatching_the_retained_identity",
+      "mcp_panel::tests::opaque_names_and_manual_urls_preserve_printable_punctuation",
+      "mcp_panel::tests::operation_errors_survive_reopen_and_dispatch_failure_is_visible",
+      "mcp_panel::tests::ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes",
+      "mcp_panel::tests::ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes",
+      "mcp_panel::tests::passive_authorization_url_survives_connecting_and_reopen_until_authoritative_resolution",
+      "mcp_panel::tests::prepend_argument_focus_and_appearance_repaint_protect_current_columns",
+      "mcp_panel::tests::prepend_argument_movement_geometry_and_close_restore_former_columns",
+      "mcp_panel::tests::prepend_argument_shrink_and_delete_restore_vacated_diff_columns",
+      "mcp_panel::tests::prompt_strings_preserve_presence_empty_whitespace_and_large_pastes",
+      "mcp_panel::tests::pushes_never_open_and_unknown_is_not_known_empty",
+      "mcp_panel::tests::read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata",
+      "mcp_panel::tests::removed_selection_clamps_without_dispatch_and_editor_keeps_original_target",
+      "mcp_panel::tests::reset_and_authenticate_are_distinct_and_ack_does_not_connect_or_clear_url",
+      "mcp_panel::tests::result_shortcut_requires_an_unmodified_key",
+      "mcp_panel::tests::semantic_caret_is_painted_after_prepend_without_changing_argument_bytes",
+      "mcp_panel::tests::semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes",
+      "mcp_panel::tests::semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor",
+      "mcp_panel::tests::session_boundaries_close_editor_and_no_read_or_paste_reaches_chat",
+      "mcp_panel::tests::standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes",
+      "mcp_panel::tests::standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes",
+      "mcp_panel::tests::titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name",
+      "mcp_panel::tests::wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes",
+      "protocol::convert::kas::mcp::tests::absent_registry_is_not_non_registry_and_malformed_known_status_is_visible",
+      "protocol::convert::kas::mcp::tests::kas_engine_decodes_complete_union_catalog_registry_and_resource_provenance",
+      "protocol::convert::kas::mcp::tests::kas_prompt_wire_identity_survives_a_title_colliding_with_another_prompt_name",
+      "protocol::convert::kas::mcp::tests::kas_prompt_without_a_wire_name_is_diagnostic_not_a_display_name_fallback",
+      "protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved",
+      "protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory",
+      "protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid",
+      "protocol::convert::kas::mcp::tests::malformed_unscoped_frames_are_visible_without_inventing_a_session",
+      "protocol::convert::kas::mcp::tests::read_results_are_ordered_external_data_with_nontext_metadata_and_strict_errors",
+      "widgets::mcp_panel::tests::geometry_uses_actual_modal_placement_and_protects_input",
+      "widgets::mcp_panel::tests::unreported_state_and_small_terminal_footer_are_visible"
+    ],
+    "per_command_actual_pass_counts": {
+      "UI_hidden_target": 4,
+      "Core_kas_provenance": 3,
+      "full_UI_mcp_panel_substring": 60,
+      "full_Core_actual_mcp_tests_module": 9
+    },
+    "administrative_countguard": "Planned58wasonlyrootsubtotal;actual60includes2registeredwidgettests. Immutablepartial82074d86retained/Mainconfirmedmetadataonly,notproductFAIL/no testreplay."
+  },
+  "actual_reached_scenario_coverage": {
+    "UI_hidden_target": {
+      "actual_focused_harnesses": 4,
+      "unique_internal_scenarios_completed": 24,
+      "per_harness": {
+        "unavailable_reset": 8,
+        "unavailable_authenticate": 8,
+        "empty_reset": 4,
+        "empty_authenticate": 4
+      },
+      "tab_matrix": [
+        "Tools",
+        "Prompts",
+        "Resources",
+        "Templates"
+      ],
+      "unavailable_status_variants": "failed_authorizationfalse/true;authorization_urlNone",
+      "reset": "unmodifiedr ->Reset{start_oauth:false}",
+      "authenticate": "unmodifieda ->Reset{start_oauth:true}",
+      "all_assertions_reached": [
+        "RealfullUI TestBackend80x6;popupheight2/bodyheight1",
+        "Originalexactserverinitiallyvisible,then3PageUpSession-onlypaintneitheroriginalnorother",
+        "Retainedoriginalselectedserver/tab,noentry/submitted",
+        "FirsthiddenactivationreturnsNone andretainsdraft,originaltarget/tab/uncsubmitted",
+        "ReanchoredrealpaintshowsoriginalnotothernorSession",
+        "SecondexplicitvisibleactivationreturnsEXACTMcpRequestsessionroot/serverexactJapaneseoriginal/ResetOAuthboolean",
+        "Messagesempty/draftunchanged",
+        "EscreturnsNone,closespanel,draftunchanged"
+      ],
+      "module_run": "Same4harnessesreranwithallassertionsinsidefullUI60;24unique scenarios,not48unique cases",
+      "scope_limit": "UiState/TestBackend/keyreturnproof,NOTactualAppbridge/backend/nativeactiondispatch orrealOAuth;noauthURLseededclaim"
+    },
+    "Core_provenance": {
+      "actual_focused_harnesses": 3,
+      "malformed_unique_internal_scenarios_completed": 18,
+      "malformed_matrix": "server/snapshot x9:krn[],origin17,resourceTypefalse,layer{},source[],source[workspace],source[null],source17,sourcestring",
+      "all_malformed_assertions_reached": [
+        "Convertinitiallast-validconnectedinventoryandapplyit",
+        "Convert each malformed input -> Diagnostic",
+        "ExactsessionrootandMalformedmessage",
+        "ApplyconvertedDiagnostictoMcpState",
+        "Arc::ptr_eq current inventorywithoriginallast_validsnapshot",
+        "Storeexactdiagnosticmessage"
+      ],
+      "optional_null_internal_scenarios_completed": 8,
+      "future_string_unknown_field_internal_scenarios_completed": 2,
+      "positive_assertions": "AllknownoptionalNoneandparsedoriginaldetails equal input;exactknownfuturestrings andunknownnestedfields preserved",
+      "module_run": "All3provenanceharnessesrepeatedinsidefullCore9;28unique internalprovenancescenariosnot28libtestcases",
+      "scope_limit": "Noauth-seededinventoryorURLretentionassertion;unknownfuture fields intentionallynotvalidated asrecognizedknownfields"
+    },
+    "full_UI_scope": "60actualregisteredcases=42root tests+3arguments+13presentation+2widgets;includescurrentvisibility/arguments/read/selection/draft/URL-safe/render/diffcontrols underLinuxunitfixture conditions",
+    "full_Core_scope": "9actualordinaryMCPconverter/resulttests atverifiedprotocol::convert::kas::mcp::tests;nozero-testinvocation"
+  },
+  "historical_evidence_calibration": {
+    "original_ui_RED": "4firstToolsfailuresonly; no retroactive24REDclaim",
+    "original_Core_RED": "Firstserverkrn[]SnapshotnotDiagnostic;later13oldmalformedunreached,malformedSnapshotnotapplied;old2positivecontrolsPASS",
+    "new_nested_array_inputs": "NowactualGREENinfinal18matrix,butNOnewoldDTOarrayRED/mutationperformedorclaimed",
+    "initial_fmtFAIL": "Actualsourcefd669d60exit1 immutable02a27888;notbehaviorRED;0testsran",
+    "format_source_review": "BothprivateproductionfilesareEXACTpreformatreviewedbytes;only2testfilesauthoritativerustfmt-normalized. Source-reviewnone/.98retainedbyMainboundedformatterapplicability,not anewfullrevieworrawtestbyteequalityclaim",
+    "old_full40": "Notreplayed.517originalsourcebyteinputs andpublicinterfaces/privateownerboundaries supportonlydependency-specificretention;oldresultsremainhistorical,notcurrentwholeworkspacePASS"
+  },
+  "final_source_provenance": {
+    "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+    "all522_current_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/full-fresh522-postformat-inputs-and-current-modes.json",
+    "manifest_sha256": "c0619624e468ed5fc1cfe46b9654767b3b2eea64fc64e56fb4d5caa322cff768",
+    "full522_manifest_sha256": "ae3e89786a2caab47981c2ec8b6aa4bc3f7668254d1b5346eb12fa72fe3ca34a",
+    "four_final_pins": {
+      "crates/cyril-ui/src/mcp_panel/presentation.rs": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+      "crates/cyril-ui/src/mcp_panel/tests.rs": "85554eb234a7c0d3aa5b61ed8a2f7a9b104a0088ae1421cf1c9091bf59532581",
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs": "99dabaf90a8b5527463ee9057fd018440c8515f87bbc67e90c8a775f65657cd4"
+    },
+    "only_four_changed_vs_original521": [
+      "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+      "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "crates/cyril-ui/src/mcp_panel/presentation.rs",
+      "crates/cyril-ui/src/mcp_panel/tests.rs"
+    ],
+    "other517_names_bytes_sha_equal_original": true,
+    "original521_excludes_rootclippy_separatelypinned": true,
+    "all_current_522names_bytes_modes_stable_afterpostformatpin": true,
+    "HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+    "held_MERGE_HEAD": null,
+    "raw_index_initial_postformat": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+    "raw_index_final": "9ac0c3d20abe05a879668ebb474439e7cb5f8ef05c042c79c897f8d0afbd7ca9",
+    "raw_index_drift_observed": false,
+    "source_descriptor_not_Git_tree_or_publication_head": true
+  },
+  "no_extraneous_activity": [
+    "No handproduction/testsemanticrepair",
+    "No mutation orfaultinjection",
+    "No fullworkspace orold40genericreplay",
+    "No Appbuild/privateproductionbinary",
+    "No native/liveKAS/browser/auth/account/enterprise/Windows/benchmark/consumer runtime",
+    "No Git/index/ref/staging/commit/PR/tracker operation"
+  ],
+  "release": {
+    "HOST_CARGO": "FREE after final strictClippyprocess exit andimmutablecanonicalfinish",
+    "NK_source_freeze": "RELEASED toMain-only nextsource/publicationauthority;allfourgatesourcepinscurrent",
+    "record_owner": "RecordNkTwoRepairs receivesactualpostformatpins/source/commands/logs;oldFAIL/REDunextended",
+    "X": "STILLHOLD;read-only10commandproposal exists,needsseparateMainGO",
+    "native_or_product_consumer_GO": "NONE fromqualifier"
+  }
+}
