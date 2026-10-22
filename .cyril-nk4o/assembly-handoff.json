@@ -1,7 +1,7 @@
 {
   "schema": "cyril-nk4o-current-integration-handoff/v2",
   "issue": "cyril-nk4o",
-  "state": "CURRENT_QUALIFIED_SOURCE_RETAINED_AT_NORMAL_PARENT_COMPOSITION_FINAL_COMMIT_NATIVE_CI_PR_PENDING",
+  "state": "PUBLISHED_PR196_QUALIFIED_SOURCE_RETAINED_NATIVE_CURRENT_CI_CAAR_PENDING",
   "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
   "branch": "fix/cyril-nk4o",
   "current_evidence": "current-main-proof/index.json",
@@ -16,7 +16,7 @@
     "index_followup": "After consumer completion Main explicitly authorized source-only staging while docs continue; checkpoint index pin is historical, not a claim current index is unchanged. Worker performed no Git.",
     "qualified_Tqr_prerequisite": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
     "prerequisite_source_already_consumed_once": true,
-    "prerequisite_commit_ancestry_complete": false,
+    "prerequisite_commit_ancestry_complete": true,
     "source_overlay_reapplication_authorized": false,
     "full521_manifest_retained_local_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
     "public_selected_source_paths": 49,
@@ -27,7 +27,8 @@
       "held_normal_merge_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
       "qualified521_source_differences_reported_by_Main": [],
       "README_semantic_union_sha256_reported_by_Main": "19cf4c2e8e3bdc1dc6001a75a81035c6170619b48ba7ebb1525aa798128e6795",
-      "composition_status": "NORMAL_PARENT_MERGE_FORMED_AND_README_RESOLVED_FINAL_MERGE_COMMIT_PENDING",
+      "composition_status": "NORMAL_PARENT_MERGE_COMPLETED_AND_PUBLISHED",
+      "published_parent_merge_commit": "432ce6d613435c23945dfb6de873bbfd4c6a9218",
       "evidence_applicability": "The original ef46/09 execution frame, logs and raw archives remain unchanged. Main's exact521 match retains the existing source-bound local qualification, reviews and controlled-consumer conclusions; ancestry and documentation composition is not new execution or native/CI acceptance.",
       "bounded_independent_review": "current-main-proof/source-review.json#post_parent_documentation_applicability"
     }
@@ -38,19 +39,23 @@
     "fixture_review": "current-main-proof/fixture-review.json",
     "consumers": "current-main-proof/consumer.json",
     "archive_manifest": "current-main-proof/manifest.json",
-    "scope": "Current source-bound local gates and controlled App/CLI PASS retained at Main's exact521 normal-parent composition; not whole-feature/native/final-commit/CI/Caar completion. Owning selected records hold figures and hashes."
+    "scope": "Current source-bound local gates and controlled App/CLI PASS retained at Main's exact521 normal-parent composition; not whole-feature/native/CI/Caar completion. Owning selected records hold figures and hashes."
   },
   "publication": {
     "owner": "Main",
-    "next_source_step": "Main completed held09 as 9dc81ba6 and normally formed the qualifiedd0cc60 merge; README semantic union is resolved and Main reports all521 qualified inputs unchanged. Finish the held final merge commit and publication; do not reapply any source overlay. Any subsequent relevant input change requires its owning applicability decision or affected qualification.",
-    "source_index_tree_for_Caar": "Main owns freezing qualified source-index tree for base→NK source integration while documentation continues. No staged-tree identity invented by worker.",
-    "docs_and_packet": "Original selected packet and private source-input metadata remain in local://nk4o-current-main-publication-handoff.json; minimal post-parent document pins and bounded review are in local://nk4o-post-parent-publication-handoff.json. Neither JSON is an observed final merge commit/PR.",
+    "next_source_step": "Normal parent ancestry is complete at published432ce6d6; no source overlay may be reapplied. Any subsequent relevant input change requires its owning applicability decision or affected qualification.",
+    "source_index_tree_for_Caar": "Main froze qualified source-index tree511dea6aa2e1e95565667b6476bfdf0b56bddb48 and applied its source-only delta to Caar's exact saved baseline; final commit ancestry remains a separate normal merge.",
+    "docs_and_packet": "The original selected packet and minimal post-parent pins are pre-publication snapshots retained unchanged. This publication metadata update does not rewrite their execution identities, raw evidence or hashes.",
+    "PR": 196,
+    "PR_base": "main",
+    "merge_dependency_PR": 193,
+    "CI_trigger": "The workflow only targets main. PR196 initially targeted its parent branch and had no checks; retargeting to main plus this documentation-only publication update requests the first applicable CI run, not a failed-run retry.",
     "PR_body": "pr-body.md",
     "issue_close_authorized": false,
     "remaining": [
-      "Main's final held normal-parent merge commit, push and source-bound publication/CI identity; composition and exact521 comparison are already reported complete, not pending replay",
+      "Current-head CI and platform results",
       "Final native MCP/auth/physical-glyph and required designC1–C8 consumer/platform obligations",
-      "Applicable full delivery conformance/CI and substantive new NK PR",
+      "Applicable full delivery conformance",
       "Caar separate startup/deadline/diagnostic/platform integration and own PR"
     ],
     "original_archives": "Keep exact8d6/f2 originals locally unchanged. No upload/accessibility is claimed. Public packet contains selectedJSON/logs/curatedraw/fixtures and explicit exclusions, not full canonical/env/source-inventory/private product data.",
