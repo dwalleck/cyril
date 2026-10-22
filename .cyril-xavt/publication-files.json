@@ -1,226 +1,204 @@
 {
-  "format": 3,
-  "schema": "cyril-xavt-F4-exact-publication-delta/1",
+  "format": 4,
+  "schema": "cyril-xavt-parent-integration-exact-publication-delta/1",
   "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-xavt",
   "branch": "fix/cyril-xavt",
-  "scope": "Exactly seven F4 repair delta paths against actual held75 index, not the prior21-path modal roster. Main owns commit/push/current-head CI/final propagation. No held merge.",
-  "held_HEAD": "75b6d148dd1936210399e725b17a6be75dce9b69",
-  "held_MERGE_HEAD": null,
+  "scope": "Exactly five X-owned non-input publication metadata/evidence paths against actual held afa2+dbb index. No source or already-imported PR199/EJ proof payload is owned by this refresh. Main owns all staging/refs/commit/PR/publication/fresh-current-head CI/final propagation.",
+  "held_HEAD": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+  "held_MERGE_HEAD": [
+    "dbb109697c01d5984222a56a901384faa1c10ec6"
+  ],
   "held_index": {
-    "path": "/home/dwalleck/repos/cyril/.git/worktrees/cyril-wt-fix-cyril-xavt/index",
-    "sha256": "2234c0ac507ccb7479dc8ad67e33d2c8b1876c12ee4bbef5332570cdd4cefeb3",
-    "qualification_index_sha256": "2234c0ac507ccb7479dc8ad67e33d2c8b1876c12ee4bbef5332570cdd4cefeb3",
+    "qualification_initial_raw_index_sha256": "3590d68a25bae05286018b9ba336fb8267b901978f4fdb4d79990242ba8c2926",
     "preimage_command": [
       "git",
       "ls-files",
       "--stage",
       "--",
-      "crates/cyril-core/src/test_support.rs",
-      "crates/cyril/src/app.rs",
-      ".cyril-xavt/review-decisions.md",
       ".cyril-xavt/verification.md",
+      ".cyril-xavt/review-decisions.md",
       ".cyril-xavt/publication-files.json"
     ],
-    "authorization": "Main explicitly authorized this read-only exact-five-path lookup plus raw index SHA only. No index mutation/other Git command.",
-    "preimage_scope": "Five actual existing stage0 preimages returned; the two new worker-created evidence paths are expected additions, not separately index-queried."
+    "preimage_scope": "Three actual existing stage0 metadata preimages returned. The two new evidence paths had absent filesystem preimages and are expected additions; Main enforces absent index preimages when staging.",
+    "authorization": "Only user-authorized read-only ls-files --stage; no index/ref/commit/PR mutation by publication worker."
   },
   "source_binding": {
-    "qualified_count": 532,
-    "descriptor": "e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e",
-    "full532_manifest_sha256": "49365a2068906cf0847ea77751057449b13641020b964fd221af54b4efa115c2",
-    "qualification_canonical": "qualification/xavt75-two-box-replay-repair-scoped-qualified-attempt1-handoff.json",
-    "qualification_canonical_sha256": "5cbecc649c234205e0ff3341d19c402d3ebd2afb11cb2f021e19ea14cc81a727",
-    "source_pins": {
-      "crates/cyril-core/src/test_support.rs": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
-      "crates/cyril/src/app.rs": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0"
-    },
-    "actual_changed_source_rows": [
-      "crates/cyril-core/src/test_support.rs",
-      "crates/cyril/src/app.rs"
+    "qualification": "Sole HOST actual completed PASS, exactly three scoped Linux commands; not publication-head CI or whole-issue acceptance",
+    "canonical_uri": "local://xavt-afa2-dbb-parent-integration-scoped-qualified-handoff.json",
+    "canonical_member": "qualification/canonical.json",
+    "canonical_sha256": "7bac20b649ab62341c7f56297cbdbb3cd0449b9c232f3ff336e702436b59f3e6",
+    "canonical_bytes": 23664,
+    "source_count": 532,
+    "source_descriptor": "ce38fa24a3b5924b41fba1e4931afa05d036772de4b8191e484a1575108e6360",
+    "source_manifest_sha256": "03ed73be4ba0825c7ed76a7d8ad3a2f5ab75a79344be76d156e530008d0a55e2",
+    "source_manifest_member": "qualification/full-actual-source-inputs.json",
+    "source_delta_from_prior_e872": [
+      {
+        "path": "crates/cyril/src/capture_forwarder.rs",
+        "before": {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "mode": "100644",
+          "blob": "b70203fe6e992e6621df13524462d5cb8a35bd95",
+          "sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf"
+        },
+        "current": {
+          "path": "crates/cyril/src/capture_forwarder.rs",
+          "mode": "100644",
+          "blob": "dfcf20f079c3efe70a069713e38231ab7fcb3620",
+          "sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc"
+        }
+      }
     ],
-    "other530_rows_unchanged": true,
-    "Cargo_lock_unchanged_sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
-    "qualification_result": "PASS exactly three scoped Linux commands; initial fmt CHECK without formatter,13tests passed456filtered, strict explicit-KAS App/Core alltargets Clippy",
-    "source_review": "NONE/correct/confidence0.97 ordinary independent source-only review; raw output retained in portable archive",
-    "no_source_changes_during_metadata_finalization": true,
-    "no_new_private_App_or_consumer": true
+    "unchanged_prior_rows": 531,
+    "actual_tests": {
+      "passed": 2,
+      "skipped": 467,
+      "scope": "Exactly original default App C9/C10 names; skips not coverage"
+    },
+    "review_retention": "Original oracle NONE/.96, prior X ordinary modal NONE/.97 and ReviewReplayRepair NONE/.97 remain prior source-only reviews; no new review."
   },
-  "publication_file_count": 7,
+  "publication_file_count": 5,
   "publication_paths": [
-    ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
-    ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
+    ".cyril-xavt/evidence-parent-integration-afa2-dbb10969-index.json",
+    ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
     ".cyril-xavt/publication-files.json",
     ".cyril-xavt/review-decisions.md",
-    ".cyril-xavt/verification.md",
-    "crates/cyril-core/src/test_support.rs",
-    "crates/cyril/src/app.rs"
+    ".cyril-xavt/verification.md"
   ],
-  "source_owner_count": 2,
+  "source_owner_count": 0,
   "existing_metadata_owner_count": 3,
   "new_evidence_owner_count": 2,
   "manifest_self_path": ".cyril-xavt/publication-files.json",
-  "self_hash_contract": "The six other selected paths have exact current identities below. This manifest is explicitly selected; its own bytes/SHA256/modes/blobSHA1 are external in local://xavt75-replay-repair-publication-ready-handoff.json to avoid recursive self-hashing.",
+  "self_hash_contract": "The four other selected paths have exact current identities below. This manifest is explicitly selected; its own current bytes/SHA256/modes/blobSHA1 are external in local://xavt-afa2-dbb-parent-publication-ready-handoff.json to avoid recursive self-hashing.",
   "manifest_self_entry": {
     "path": ".cyril-xavt/publication-files.json",
     "held_index": {
       "path": ".cyril-xavt/publication-files.json",
-      "mode": "100644",
-      "blob_sha1": "5f7beca42114134e6100da8b3a0bcd58986175ea",
       "stage": 0,
-      "bytes": 20910,
-      "sha256": "fd0295604bb2b1c8bbe7156235dbd5222d216c170844c8b8922bace0e3bd2f82"
+      "bytes": 11145,
+      "sha256": "0a3bebdd942395632906524f3211017ae0734521847200074d9bf0b0a0871d9c",
+      "filesystem_mode": "0644",
+      "mode": "100644",
+      "blob_sha1": "87f608e021b3e7f1d351d18b36bebf2c8bef3598"
     },
-    "role": "Current exact seven-path F4 delta roster; current self identity deliberately external"
+    "role": "Current exact-five-path parent-integration publication roster; current self identity deliberately external"
   },
   "files": [
     {
-      "path": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
-      "role": "New portable F4 member/source/qualification/CI index",
+      "path": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969-index.json",
+      "role": "New minimal six-member canonical/source/three-full-log/reference index",
       "held_index": null,
       "current": {
-        "bytes": 8329,
-        "sha256": "a5bda67cdc4c7c5d2df3f7608d84e3ee8feba585aafef5a609b86faecbe18d4b",
+        "bytes": 13043,
+        "sha256": "bcaae91c7ad202d4441dfdbbfb1caf9b317ef7d10ab0bd1b60da999b7faee746",
         "filesystem_mode": "0644",
         "mode": "100644",
-        "blob_sha1": "2264d1794f8028868b95d1dab59b652089eadc48"
+        "blob_sha1": "27185eaf316d63fe0eabbde47d89f2ed6ca74a03"
       },
-      "change_vs_held_index": "new worker-created artifact; expected index addition",
-      "preimage_evidence": "New artifact creation; Main enforces expected absent preimage while staging"
+      "change_vs_held_index": "new worker-created artifact; expected absent index preimage",
+      "preimage_evidence": "Absent filesystem preimage at first authorized write; Main enforces expected absent stage0 entry"
     },
     {
-      "path": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
-      "role": "New minimal portable F4 proof archive",
+      "path": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
+      "role": "New deterministic minimal six-member portable parent-integration proof archive",
       "held_index": null,
       "current": {
-        "bytes": 55420,
-        "sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
+        "bytes": 52575,
+        "sha256": "0af8e013a04053c4eaf422f308caf99cc917acb535b7c3a02c1504bcccea3a01",
         "filesystem_mode": "0644",
         "mode": "100644",
-        "blob_sha1": "593ba222cdcbb5a42290de9a8a72dfca67fd8ee2"
+        "blob_sha1": "b039421a6f93bc2137772659db24fd2bc3017a8c"
       },
-      "change_vs_held_index": "new worker-created artifact; expected index addition",
-      "preimage_evidence": "New artifact creation; Main enforces expected absent preimage while staging"
+      "change_vs_held_index": "new worker-created artifact; expected absent index preimage",
+      "preimage_evidence": "Absent filesystem preimage at first authorized write; Main enforces expected absent stage0 entry"
     },
     {
       "path": ".cyril-xavt/review-decisions.md",
-      "role": "Existing X F4 decision, ordinary review, scoped qualification and remaining Windows obligation owner",
+      "role": "Original-review retention and current bounded parent-integration decision owner",
       "held_index": {
         "path": ".cyril-xavt/review-decisions.md",
-        "mode": "100644",
-        "blob_sha1": "f48a733b0a019287abcd2d20ed99c325b99ae186",
         "stage": 0,
-        "bytes": 23026,
-        "sha256": "d259d4b22e54b336975aabca1b763ac3c0c09325dfed9cd5753a755579bfa036"
-      },
-      "current": {
         "bytes": 34074,
         "sha256": "ca1ba68c845096f608a98c3b0ae18ca6cb8b4c4d2b0fb0f34567ce23282f53b2",
         "filesystem_mode": "0644",
         "mode": "100644",
         "blob_sha1": "de0d3d5f418f30f183047c1ddc6e918922b580d7"
       },
+      "current": {
+        "bytes": 37873,
+        "sha256": "c8bd69668288315fa5e8a257be0db8a64d09178e75ede0c6758e3cb172d8a1a9",
+        "filesystem_mode": "0644",
+        "mode": "100644",
+        "blob_sha1": "bf9c7a935ba6dff47a09e4a7e06e824aa6d56b98"
+      },
       "change_vs_held_index": "modified",
-      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
+      "preimage_evidence": "Authorized actual stage0 entry; held bytes match its blobSHA1"
     },
     {
       "path": ".cyril-xavt/verification.md",
-      "role": "Existing X verification summary; scoped Linux PASS distinct from Windows CI pending",
+      "role": "Latest bounded parent-integration qualification and historical evidence/CI boundary owner",
       "held_index": {
         "path": ".cyril-xavt/verification.md",
-        "mode": "100644",
-        "blob_sha1": "8dd23e6bc2ad762963998c04afe3aed5bf1b20cc",
         "stage": 0,
-        "bytes": 24067,
-        "sha256": "b917362ad8c63f60c6dec42fa196f47d64f1d4bf33c90a1663dd00bc3db85ee8"
-      },
-      "current": {
         "bytes": 26094,
         "sha256": "271b1f8c1297d74f816ca68a6df442fca9b50823d86c2f0e81a5e0276429ab7c",
         "filesystem_mode": "0644",
         "mode": "100644",
         "blob_sha1": "a76adb662a15d3bd3c27b3e4fd4e1860e009a800"
       },
-      "change_vs_held_index": "modified",
-      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
-    },
-    {
-      "path": "crates/cyril-core/src/test_support.rs",
-      "role": "Qualified replay-only boxed representation and two creation paths",
-      "held_index": {
-        "path": "crates/cyril-core/src/test_support.rs",
-        "mode": "100644",
-        "blob_sha1": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
-        "stage": 0,
-        "bytes": 23864,
-        "sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee"
-      },
       "current": {
-        "bytes": 24084,
-        "sha256": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+        "bytes": 30519,
+        "sha256": "82525181cf435bc4c3638edfe3ed4e6016e64f5168feca2b0f4d464f0aa89716",
         "filesystem_mode": "0644",
         "mode": "100644",
-        "blob_sha1": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805"
+        "blob_sha1": "89049e73700fae2f853ae731da7d7a9ef83ba35a"
       },
       "change_vs_held_index": "modified",
-      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
-    },
-    {
-      "path": "crates/cyril/src/app.rs",
-      "role": "Qualified four boxed-payload moves in existing cfg(test)+kas replay consumers",
-      "held_index": {
-        "path": "crates/cyril/src/app.rs",
-        "mode": "100644",
-        "blob_sha1": "696beaacdd624f1c466cd29db1bfdf8b68c5d886",
-        "stage": 0,
-        "bytes": 510525,
-        "sha256": "75241006e287566870b67dfae9234cbb04c1edde72ded0f260890aa2c3eaf26d"
-      },
-      "current": {
-        "bytes": 510529,
-        "sha256": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0",
-        "filesystem_mode": "0644",
-        "mode": "100644",
-        "blob_sha1": "8ca3ac3174209d44e2749bc800e950bc0ad21146"
-      },
-      "change_vs_held_index": "modified",
-      "preimage_evidence": "Actual authorized stage0 entry; reconstructed preimage bytes match its blobSHA1"
+      "preimage_evidence": "Authorized actual stage0 entry; held bytes match its blobSHA1"
     }
   ],
   "portable_evidence": {
-    "index": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
-    "archive": ".cyril-xavt/evidence-replay-repair532-e8728c85.tar.gz",
-    "archive_bytes": 55420,
-    "archive_sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
-    "index_bytes": 8329,
-    "index_sha256": "a5bda67cdc4c7c5d2df3f7608d84e3ee8feba585aafef5a609b86faecbe18d4b",
-    "members": 9,
-    "only": "canonical/full532manifest/threefullscopedlogs/ordinarysource-reviewcopy/retainedCIerror+sixunrunsteps/exacttwofilediff/payloadmanifest",
-    "excludes": "binaries,fulltrees,nestedarchives,unrelatedhostedlogs,privateHOME,credentials"
+    "index": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969-index.json",
+    "archive": ".cyril-xavt/evidence-parent-integration-afa2-dbb10969.tar.gz",
+    "archive_bytes": 52575,
+    "archive_sha256": "0af8e013a04053c4eaf422f308caf99cc917acb535b7c3a02c1504bcccea3a01",
+    "index_bytes": 13043,
+    "index_sha256": "bcaae91c7ad202d4441dfdbbfb1caf9b317ef7d10ab0bd1b60da999b7faee746",
+    "members": 6,
+    "only": "Actual completed canonical/full532inputmanifest/threefullscopedlogs/reference-onlyretained-proofmap",
+    "excludes": "Duplicate already-imported PR199/oracle/EJ proof payloads,binaries,fulltrees,nestedarchives,privateHOME,credentials,unrelatedhostedlogs"
   },
   "retained_prior_proof": {
-    "modal_archive": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
-    "modal_archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+    "reference_map_member": "references/retained-proof-reference-map.json",
     "modal_index": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
-    "modal_index_sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19",
-    "original_evidence_index": ".cyril-xavt/evidence-index.json",
-    "meaning": "Prior proof remains at its original source/consumer/native scope; not a rerun or current repair-head CI PASS"
+    "replay_index": ".cyril-xavt/evidence-replay-repair532-e8728c85-index.json",
+    "imported_oracle_review": ".cyril-n3j7/evidence/capture-batch-oracle-20261022/source-review.md",
+    "imported_EJ_index": ".cyril-ej7y/evidence-c9-integration-index.json",
+    "meaning": "Original532 source qualifications/13replay/actualownedconsumer/native boundaries and original source reviews remain prior-scope records, not newly executed or rerun."
+  },
+  "prior_component_CI": {
+    "run_id": 39854475502,
+    "url": "https://github.com/dwalleck/cyril/actions/runs/39854475502",
+    "head": "afa2b9ecc84e660bdb471e6f1b6c4393c598905b",
+    "conclusion": "success",
+    "meaning": "Prior component only: Windows default strictClippy and six formerly unrun product steps succeeded; no claim of current parent-integration-head CI."
   },
   "superseded_publication_manifest": {
-    "held_index_blob_sha1": "5f7beca42114134e6100da8b3a0bcd58986175ea",
-    "sha256": "fd0295604bb2b1c8bbe7156235dbd5222d216c170844c8b8922bace0e3bd2f82",
-    "meaning": "Prior21-path modal publication roster retained in pre-repair commit75 history and prior proof; not the current delta."
+    "held_index_blob_sha1": "87f608e021b3e7f1d351d18b36bebf2c8bef3598",
+    "sha256": "0a3bebdd942395632906524f3211017ae0734521847200074d9bf0b0a0871d9c",
+    "meaning": "Previous seven-path replay-repair delta roster remains original history, not the current five-path publication delta."
   },
   "remaining_required": {
-    "fresh_current_head_Windows_DEFAULT_Clippy": "PENDING — Main after actual repair publication",
-    "six_previously_unrun_Windows_product_steps": "PENDING — no PASS inferred from Linux or all-feature Windows success",
-    "final_integration_and_propagation": "PENDING — actual new published repair HEAD required; old partial final matrix not resumed here",
-    "publication_merge": "Main owned; no merge or whole-issue acceptance claimed"
+    "new_current_X_head_CI": "PENDING — Main after actual publication",
+    "publication_and_final_propagation": "Main-owned; no merge or whole-issue acceptance claimed"
   },
   "worker_actions": {
     "further_source_or_Cargo_changes": false,
-    "further_Cargo_or_application_runtime": false,
-    "new_GitHub_fetch": false,
-    "Git_operations": "Only explicitly authorized exact-five-path read-only ls-files; no mutation",
-    "tracker_or_final_worktree_changes": false
+    "runtime_input_dynamic_summary_tracker_assertion_changes": false,
+    "Cargo_formatter_or_runtime_execution": false,
+    "native_auth_or_extra_product_checks": false,
+    "new_review_or_fault_injection": false,
+    "git_mutations_or_PR_actions": false,
+    "only_git": "User-authorized read-only exact-three-existing-metadata-path ls-files --stage"
   }
 }

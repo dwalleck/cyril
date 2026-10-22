@@ -1,0 +1,1468 @@
+{
+  "schema": "capture-oracle.main038.scoped-checkpoint/1",
+  "started_utc": "2026-10-22T16:15:36.623795+00:00",
+  "status": "SCOPED_CAPTURE_ORACLE_QUALIFIED_BOTH_DISCRIMINATIONS_PROVEN_EXACT_RESTORATIONS_GREEN",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+  "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+  "held_MERGE_HEAD": null,
+  "source": {
+    "descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+    "entries": 498,
+    "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/baseline-actual-source-inputs.json",
+    "manifest_sha256": "fbeb14cd8cbcde4d4daa79bfa500711bd4dbfc4b75c7b00354a90467d1a58f02",
+    "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+    "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+    "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+    "review": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/capture-batch-oracle-source-review.md",
+    "review_sha256": "4ab74573168afd45ce9ae3e378a6508db3263d68f24326fd0455b5751dbe18c4",
+    "review_result": "None/.96; static only; no repeated review"
+  },
+  "Main_GO": "fmtCHECK, exact default/all/no-default c9, shutdown-order selector, strictAppallfeaturesClippy; only if GREEN two authorized temporary150ms discriminations each exact restore+GREEN; first unexpected STOP. No source repairs/fmt application/fullworkspace/build/native/auth/Git.",
+  "source_owner_freeze": "RepairCaptureBatchOracle confirmed entire WT frozen; no further owner writes until immutable final release",
+  "unchanged_obligations": {
+    "batch_maximum_ms": 100,
+    "drain_timeout_ms": 2000,
+    "original_CI_failure": "PR190 af78b161 DefaultFeatures Ubuntu attempt1 C9 153.901529ms FAIL, not flaky; old producer-through-drain measure not perbatch; preserved in baseline evidence snapshot",
+    "original_CI_job": "https://github.com/dwalleck/cyril/actions/runs/39806350722/job/119920492208"
+  },
+  "environment": {
+    "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "normal_PATH_HOME_retained": true,
+    "home_cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+    "diagnostic_child_vars_removed": [
+      "CYRIL_U62F_POST_BIND_DELAY_500MS",
+      "CYRIL_U62F_READY_AUTH_MISMATCH",
+      "CYRIL_MEMORY_PHASE_PROBE",
+      "CYRIL_MEMORY_PHASE_DIRECTORY",
+      "CYRIL_MEMORY_PROBE_SOURCE",
+      "NEXTEST_TEST_NAME",
+      "NEXTEST_PROFILE",
+      "NEXTEST_TEST_THREADS",
+      "CYRIL_D7VE_PROFILE_CHILD",
+      "CYRIL_D7VE_PROFILE_CASE",
+      "CYRIL_BRUI_XDG_WRAPPER_CHILD",
+      "CYRIL_0SSB_RELATIVE_SPAWN_CHILD",
+      "CYRIL_0SSB_AGENT_WORKSPACE",
+      "CYRIL_ZBU7_FREE_GATE_CHILD",
+      "CYRIL_ZBU7_SHARED_KIRO_CLI_CHILD"
+    ],
+    "buildflag_values_no_credentials": {
+      "RUSTFLAGS": null,
+      "CARGO_ENCODED_RUSTFLAGS": null,
+      "CARGO_BUILD_RUSTFLAGS": null,
+      "CARGO_BUILD_TARGET": null,
+      "RUSTC_WRAPPER": null,
+      "RUSTC_WORKSPACE_WRAPPER": null,
+      "RUSTC": null,
+      "RUSTDOC": null,
+      "CARGO_INCREMENTAL": null,
+      "CARGO_PROFILE_DEV_DEBUG": null,
+      "CARGO_PROFILE_TEST_DEBUG": null,
+      "CARGO_PROFILE_DEV_OPT_LEVEL": null,
+      "CARGO_PROFILE_TEST_OPT_LEVEL": null
+    },
+    "profiles_current_actual_Cargo_toml": {
+      "dev": {
+        "incremental": true,
+        "opt-level": 0
+      },
+      "test": {
+        "opt-level": 1
+      },
+      "release": {
+        "lto": "fat",
+        "codegen-units": 1,
+        "strip": "symbols"
+      },
+      "release-with-debug": {
+        "inherits": "release",
+        "debug": 2,
+        "strip": "none"
+      }
+    },
+    "established_toolchain_and_host": {
+      "prior_receipt": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-restored-layout-owner-current506-qualified-handoff.json",
+      "prior_receipt_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+      "toolchain_Cargo_profiles_current": {
+        "dev": {
+          "incremental": true,
+          "opt-level": 0
+        },
+        "test": {
+          "opt-level": 1
+        },
+        "release": {
+          "lto": "fat",
+          "codegen-units": 1,
+          "strip": "symbols"
+        },
+        "release-with-debug": {
+          "inherits": "release",
+          "debug": 2,
+          "strip": "none"
+        }
+      },
+      "current_global_Cargo_config_sha256": "da245b7ce1e884f2631aa3da41a2c06b53a85739e1b7d72c32e50e6c7a452e04",
+      "existing_actual_toolchain_and_host_observation_receipts": [
+        {
+          "label": "rustc-Vv",
+          "argv": [
+            "rustc",
+            "-Vv"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.309631+00:00",
+          "finished_utc": "2026-10-22T11:25:59.328721+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustc-Vv.log",
+          "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+          "bytes": 196
+        },
+        {
+          "label": "cargo-version",
+          "argv": [
+            "cargo",
+            "--version"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.330023+00:00",
+          "finished_utc": "2026-10-22T11:25:59.343768+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-cargo-version.log",
+          "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+          "bytes": 36
+        },
+        {
+          "label": "rustfmt-path",
+          "argv": [
+            "rustup",
+            "which",
+            "rustfmt"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.345136+00:00",
+          "finished_utc": "2026-10-22T11:25:59.357986+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-rustfmt-path.log",
+          "sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+          "bytes": 78
+        },
+        {
+          "label": "kernel",
+          "argv": [
+            "uname",
+            "-a"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.359309+00:00",
+          "finished_utc": "2026-10-22T11:25:59.360086+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-kernel.log",
+          "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+          "bytes": 107
+        },
+        {
+          "label": "CPU",
+          "argv": [
+            "lscpu"
+          ],
+          "cwd": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+          "started_utc": "2026-10-22T11:25:59.360877+00:00",
+          "finished_utc": "2026-10-22T11:25:59.366419+00:00",
+          "returncode": 0,
+          "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-layout-owner-D1-restored-current506-20261022T112557311831Z/metadata-CPU.log",
+          "sha256": "f03edd6b296b46ef2ca700a73ea37aa1aee4b73c1a11f05dda3db25356eb8553",
+          "bytes": 3990
+        }
+      ],
+      "no_new_toolchain_probe_or_Cargo_metadata_command": true
+    }
+  },
+  "initial_index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+  "index_drift_policy": "Raw index bytes alone do not invalidate source-bound Cargo gates; record both/no restore/no invented cause; actual source/ref/semantic drift STOP",
+  "entrypoint_touches": [
+    {
+      "why": "MANDATED after NK->capture WT source boundary before first invocation",
+      "utc": "2026-10-22T16:15:36.659739+00:00",
+      "metadata_only_no_bytes_changed": true,
+      "files": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792684482356702846,
+          "mtime_ns_after": 1792685736659516135
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792684490257812033,
+          "mtime_ns_after": 1792685736659516135
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792684482382721039,
+          "mtime_ns_after": 1792685736659516135
+        }
+      ]
+    },
+    {
+      "why": "MANDATED after applying external150ms source mutation before focused invocation",
+      "utc": "2026-10-22T16:20:31.383882+00:00",
+      "metadata_only_no_bytes_changed": true,
+      "files": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792685736659516135,
+          "mtime_ns_after": 1792686031383667544
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792685736659516135,
+          "mtime_ns_after": 1792686031383667544
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792685736659516135,
+          "mtime_ns_after": 1792686031383667544
+        }
+      ]
+    },
+    {
+      "why": "MANDATED after exact external150ms restoration before focused GREEN",
+      "utc": "2026-10-22T16:21:07.166635+00:00",
+      "metadata_only_no_bytes_changed": true,
+      "files": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792686031383667544,
+          "mtime_ns_after": 1792686067166018981
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792686031383667544,
+          "mtime_ns_after": 1792686067166018981
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792686031383667544,
+          "mtime_ns_after": 1792686067166018981
+        }
+      ]
+    },
+    {
+      "why": "MANDATED after IPC150ms runtime dependency mutation before focused invocation",
+      "utc": "2026-10-22T16:22:51.984047+00:00",
+      "metadata_only_no_bytes_changed": true,
+      "files": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792686067166018981,
+          "mtime_ns_after": 1792686171983830546
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792686067166018981,
+          "mtime_ns_after": 1792686171983830546
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792686067166018981,
+          "mtime_ns_after": 1792686171983830546
+        }
+      ]
+    },
+    {
+      "why": "MANDATED after exact IPC150ms dependency restoration before focused GREEN",
+      "utc": "2026-10-22T16:23:16.843417+00:00",
+      "metadata_only_no_bytes_changed": true,
+      "files": [
+        {
+          "path": "crates/cyril-core/src/lib.rs",
+          "sha256_before_after": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+          "mtime_ns_before": 1792686171983830546,
+          "mtime_ns_after": 1792686196842557871
+        },
+        {
+          "path": "crates/cyril-ui/src/lib.rs",
+          "sha256_before_after": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+          "mtime_ns_before": 1792686171983830546,
+          "mtime_ns_after": 1792686196842557871
+        },
+        {
+          "path": "crates/cyril/src/main.rs",
+          "sha256_before_after": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+          "mtime_ns_before": 1792686171983830546,
+          "mtime_ns_after": 1792686196842557871
+        }
+      ]
+    }
+  ],
+  "guards": [
+    {
+      "phase": "initial exact frozen capture-oracle baseline",
+      "utc": "2026-10-22T16:15:36.658359+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 01-initial-fmtCHECK",
+      "utc": "2026-10-22T16:16:34.471308+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 01-initial-fmtCHECK",
+      "utc": "2026-10-22T16:16:35.458107+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 02-c9-default",
+      "utc": "2026-10-22T16:17:37.531349+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 02-c9-default",
+      "utc": "2026-10-22T16:18:06.092705+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 03-c9-all-features",
+      "utc": "2026-10-22T16:18:06.119250+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 03-c9-all-features",
+      "utc": "2026-10-22T16:18:14.718407+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 04-c9-no-default",
+      "utc": "2026-10-22T16:18:14.746456+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 04-c9-no-default",
+      "utc": "2026-10-22T16:18:35.993735+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 05-shutdown-order",
+      "utc": "2026-10-22T16:18:36.021337+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 05-shutdown-order",
+      "utc": "2026-10-22T16:18:36.267393+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 06-strict-App-alltarget-allfeature-Clippy",
+      "utc": "2026-10-22T16:18:36.295844+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 06-strict-App-alltarget-allfeature-Clippy",
+      "utc": "2026-10-22T16:18:48.862220+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "immediately before external-delay backup",
+      "utc": "2026-10-22T16:20:01.905964+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 07-external150ms-before-worker-excluded-PASS",
+      "utc": "2026-10-22T16:20:31.418240+00:00",
+      "actual_input_descriptor": "3d04dfea9d5436f0b6f9c80b74ef2c4cb73f4eba767298413adece6f14026030",
+      "entries": 498,
+      "worker_sha256": "0bfb38136bfff5deac36025e02773b9f691cf121e94f5184e534fc3987b7c142",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 07-external150ms-before-worker-excluded-PASS",
+      "utc": "2026-10-22T16:20:39.027792+00:00",
+      "actual_input_descriptor": "3d04dfea9d5436f0b6f9c80b74ef2c4cb73f4eba767298413adece6f14026030",
+      "entries": 498,
+      "worker_sha256": "0bfb38136bfff5deac36025e02773b9f691cf121e94f5184e534fc3987b7c142",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "external150ms exact backup restoration before GREEN",
+      "utc": "2026-10-22T16:21:07.164331+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 08-external150ms-exact-restoration-GREEN",
+      "utc": "2026-10-22T16:21:07.201189+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 08-external150ms-exact-restoration-GREEN",
+      "utc": "2026-10-22T16:21:14.408418+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "immediately before IPC-response-delay backup",
+      "utc": "2026-10-22T16:22:04.454507+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 09-inside-real-IPC150ms-specific100ms-fence-RED",
+      "utc": "2026-10-22T16:22:52.019412+00:00",
+      "actual_input_descriptor": "9586e1fba89f60f2bcc2887e1228357910a41489cbb3653d11744b150039581d",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 09-inside-real-IPC150ms-specific100ms-fence-RED",
+      "utc": "2026-10-22T16:23:00.375718+00:00",
+      "actual_input_descriptor": "9586e1fba89f60f2bcc2887e1228357910a41489cbb3653d11744b150039581d",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "IPC150ms exact backup restoration before GREEN",
+      "utc": "2026-10-22T16:23:16.841167+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "before 10-inside-IPC150ms-exact-restoration-GREEN",
+      "utc": "2026-10-22T16:23:16.877605+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "after 10-inside-IPC150ms-exact-restoration-GREEN",
+      "utc": "2026-10-22T16:23:25.025191+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    },
+    {
+      "phase": "FINAL immutable capture checkpoint after both exact restorations and actual final GREEN",
+      "utc": "2026-10-22T16:25:17.239175+00:00",
+      "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "entries": 498,
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+      "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+      "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "held_MERGE_HEAD": null,
+      "actual_input_modes_bytes_refs_config_stable": true
+    }
+  ],
+  "commands": [
+    {
+      "label": "01-initial-fmtCHECK",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "shell_escaped_command": "cargo fmt --all -- --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:16:34.472862+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/01-initial-fmtCHECK.log",
+      "pid": 2598767,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:16:35.431597+00:00",
+      "command_wall_seconds_including_compile": 0.9578233420033939,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "log_bytes": 0,
+      "libtest_summaries": [],
+      "actual_case_results": [],
+      "actual_test_executables": [],
+      "classification": "PASS"
+    },
+    {
+      "label": "02-c9-default",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:17:37.533257+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/02-c9-default.log",
+      "pid": 2599710,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:18:06.032875+00:00",
+      "command_wall_seconds_including_compile": 28.498339807993034,
+      "log_sha256": "c25cd06b805b13cefb007941d77577f17e7b0dd07ab954acf039f02e8c6a17e5",
+      "log_bytes": 949,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.02s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75",
+          "sha256_immediately_after_execution_before_next_Cargo": "9b89e6b3ac57c1e20b2bb2408b69ec7194e1530d99e97754b8c5c9b8dc93319e",
+          "bytes": 70379920,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "03-c9-all-features",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "--all-features",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril --all-features capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:18:06.120501+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/03-c9-all-features.log",
+      "pid": 2601855,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:18:14.658851+00:00",
+      "command_wall_seconds_including_compile": 8.53756013000384,
+      "log_sha256": "500fcd35ea40cd0e8c9ffa2e35724a40ada471688629b6cfbcde49f3a0b71f4a",
+      "log_bytes": 604,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.03s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-baa4873c3e7e02a8",
+          "sha256_immediately_after_execution_before_next_Cargo": "e36215bc0a2bd953b918beb94ee68d6258b76981219596bd6e50854d4d34d61b",
+          "bytes": 70611904,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "04-c9-no-default",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "--no-default-features",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril --no-default-features capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:18:14.747939+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/04-c9-no-default.log",
+      "pid": 2602553,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:18:35.937564+00:00",
+      "command_wall_seconds_including_compile": 21.18885674100602,
+      "log_sha256": "5c06281c4e475ccdbc3c4ff71b2e460e3b41ec0e8904121f7f74b9c0f80498a9",
+      "log_bytes": 831,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 301,
+          "libtest_reported_wall": "0.02s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-35edfbf2ffe3fad0",
+          "sha256_immediately_after_execution_before_next_Cargo": "8b1ef72615841b664c28aa37b244b64b7c24616a45d74339b60af37206d185e0",
+          "bytes": 59881320,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "05-shutdown-order",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory",
+        "--",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory -- --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:18:36.022851+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/05-shutdown-order.log",
+      "pid": 2604205,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:18:36.207171+00:00",
+      "command_wall_seconds_including_compile": 0.18360847898293287,
+      "log_sha256": "1256e3584b0ef18d7f1187b25855322fb23c1daace51a1287cc79cd20327770a",
+      "log_bytes": 414,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.06s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75",
+          "sha256_immediately_after_execution_before_next_Cargo": "9b89e6b3ac57c1e20b2bb2408b69ec7194e1530d99e97754b8c5c9b8dc93319e",
+          "bytes": 70379920,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "06-strict-App-alltarget-allfeature-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "shell_escaped_command": "cargo clippy -p cyril --all-targets --all-features -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:18:36.297186+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/06-strict-App-alltarget-allfeature-Clippy.log",
+      "pid": 2604228,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:18:48.836010+00:00",
+      "command_wall_seconds_including_compile": 12.537990609998815,
+      "log_sha256": "ccaa42af964dbea02c35718e8238a0a6dfd5f023c9fa397e0989b5ec257107ca",
+      "log_bytes": 753,
+      "libtest_summaries": [],
+      "actual_unique_case_starts": [],
+      "actual_standalone_case_results_if_emitted": [],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [],
+      "classification": "PASS"
+    },
+    {
+      "label": "07-external150ms-before-worker-excluded-PASS",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:20:31.420085+00:00",
+      "source_descriptor": "3d04dfea9d5436f0b6f9c80b74ef2c4cb73f4eba767298413adece6f14026030",
+      "worker_sha256": "0bfb38136bfff5deac36025e02773b9f691cf121e94f5184e534fc3987b7c142",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/07-external150ms-before-worker-excluded-PASS.log",
+      "pid": 2606009,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:20:38.968529+00:00",
+      "command_wall_seconds_including_compile": 7.547340254997835,
+      "log_sha256": "b087a971eb047851a034288d2b58d65774560a8473e6767571d891013635f80c",
+      "log_bytes": 942,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.17s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75",
+          "sha256_immediately_after_execution_before_next_Cargo": "4483c204ccf3da1e0d06751e64bfb451c389e5f89d4a62b3a905801e1fdf5e38",
+          "bytes": 70533016,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "08-external150ms-exact-restoration-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:21:07.203154+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/08-external150ms-exact-restoration-GREEN.log",
+      "pid": 2607280,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:21:14.350214+00:00",
+      "command_wall_seconds_including_compile": 7.1459810189844575,
+      "log_sha256": "508ead3fa357e74a5c4762b51b080255e961d9f26c9d6eb555e55ed978bf9a53",
+      "log_bytes": 830,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.04s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75",
+          "sha256_immediately_after_execution_before_next_Cargo": "9b89e6b3ac57c1e20b2bb2408b69ec7194e1530d99e97754b8c5c9b8dc93319e",
+          "bytes": 70379920,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    },
+    {
+      "label": "09-inside-real-IPC150ms-specific100ms-fence-RED",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:22:52.021281+00:00",
+      "source_descriptor": "9586e1fba89f60f2bcc2887e1228357910a41489cbb3653d11744b150039581d",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "expected": "SPECIFIC_C9_100MS_ASSERTION_RED",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/09-inside-real-IPC150ms-specific100ms-fence-RED.log",
+      "pid": 2609432,
+      "exit_code": 101,
+      "completed_utc": "2026-10-22T16:23:00.317095+00:00",
+      "command_wall_seconds_including_compile": 8.294552478997502,
+      "log_sha256": "36b7eb5e703da9e71186f30b8f2fc2de17a509acc3fac8a0d52f9eec682e9c68",
+      "log_bytes": 1398,
+      "libtest_summaries": [
+        {
+          "result": "FAILED",
+          "passed": 0,
+          "failed": 1,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.17s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "FAILED"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75",
+          "sha256_immediately_after_execution_before_next_Cargo": "2207143113b4f9cb7427ecda1030b108afbad0ba46366ba191ad08f340ab8e0b",
+          "bytes": 70382352,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "EXPECTED_C9_100MS_ASSERTION_RED"
+    },
+    {
+      "label": "10-inside-IPC150ms-exact-restoration-GREEN",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "shell_escaped_command": "cargo test -p cyril --bin cyril capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown -- --exact --nocapture",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-capture-batch-oracle",
+      "explicit_CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target",
+      "GIT_OPTIONAL_LOCKS": "0",
+      "started_utc": "2026-10-22T16:23:16.879559+00:00",
+      "source_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "expected": "PASS",
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/10-inside-IPC150ms-exact-restoration-GREEN.log",
+      "pid": 2610526,
+      "exit_code": 0,
+      "completed_utc": "2026-10-22T16:23:24.965899+00:00",
+      "command_wall_seconds_including_compile": 8.08471676899353,
+      "log_sha256": "2426a9f1fdb52014819f03e36641e7aa8ca963d4623a15b9f083eb9b0ae41a8d",
+      "log_bytes": 830,
+      "libtest_summaries": [
+        {
+          "result": "ok",
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0,
+          "measured": 0,
+          "filtered": 316,
+          "libtest_reported_wall": "0.02s"
+        }
+      ],
+      "actual_unique_case_starts": [
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+      ],
+      "actual_standalone_case_results_if_emitted": [
+        {
+          "name": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+          "result": "ok"
+        }
+      ],
+      "interleaved_stderr_policy": "Actual exit, raw libtest summary and unique case starts authoritative; no standalone result-line requirement.",
+      "actual_test_executables": [
+        {
+          "path": "/home/dwalleck/repos/cyril/target/debug/deps/cyril-245ee9484e54bc75",
+          "sha256_immediately_after_execution_before_next_Cargo": "9b89e6b3ac57c1e20b2bb2408b69ec7194e1530d99e97754b8c5c9b8dc93319e",
+          "bytes": 70379920,
+          "is_test_harness_not_qualified_production_App": true
+        }
+      ],
+      "classification": "PASS"
+    }
+  ],
+  "mutations": [
+    {
+      "name": "external150ms-before-worker-entry-excluded",
+      "authorization": "Main controllingcaptureGO +existingownerplan; only test-local asyncwrapper/outerclock/observabletiming, unchanged100msfence and2sdrain",
+      "immediate_backup": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/mutation1-external150ms-excluded/capture_forwarder.rs.immediate-byte-backup",
+      "immediate_backup_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "baseline_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256_before": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256_before": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "planned_exact_worker_sha256": "0bfb38136bfff5deac36025e02773b9f691cf121e94f5184e534fc3987b7c142",
+      "applied_utc": "2026-10-22T16:20:31.383506+00:00",
+      "status": "EXTERNAL150MS_EXCLUSION_PROVEN_AND_EXACT_RESTORED_GREEN",
+      "worker_sha256_applied": "0bfb38136bfff5deac36025e02773b9f691cf121e94f5184e534fc3987b7c142",
+      "mutant_descriptor": "3d04dfea9d5436f0b6f9c80b74ef2c4cb73f4eba767298413adece6f14026030",
+      "exact_delta_paths": [
+        "crates/cyril/src/capture_forwarder.rs"
+      ],
+      "test_record_label": "07-external150ms-before-worker-excluded-PASS",
+      "actual_timing_output": [
+        "C9 throwaway external delay: outer=155.679395ms; batch=BatchObservation { event_count: 3, elapsed: 4.427638ms }"
+      ],
+      "restored_utc": "2026-10-22T16:21:07.129688+00:00",
+      "restored_worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "restored_from_exact_immediate_backup_byte_equal": true,
+      "runtime_never_mutated_in_scenario1": true,
+      "restoration_test_label": "08-external150ms-exact-restoration-GREEN"
+    },
+    {
+      "name": "inside-real-IPC-before-Captured-response150ms-included",
+      "authorization": "Main explicitly authorizes temporary memory/runtime.rs dependency mutation after execute_request and before awaited Captured response; not cfg(test); no startup/inspect/shutdown delay",
+      "immediate_backup": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/capture-batch-oracle-main038-current-checkpoint-attempt1-20261022T161536533240Z/mutation2-inside-IPC150ms-specific100ms-RED/runtime.rs.immediate-byte-backup",
+      "immediate_backup_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "baseline_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+      "worker_sha256_before": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+      "runtime_sha256_before": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "planned_exact_runtime_sha256": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "status": "SPECIFIC_100MS_IPC_SENSITIVITY_PROVEN_AND_EXACT_RESTORED_GREEN",
+      "expected_failure": "Only exact C9 actual forwarder batch exceeded100ms assertion AFTER persistedprompt/FinishedCompleted/one3eventbatch/drain/runtimeShutdown; not compile or2sdrainfailure",
+      "applied_utc": "2026-10-22T16:22:51.983653+00:00",
+      "runtime_sha256_applied": "928aedf728df65c11b76499caa7a430abd26e6b301cf4fb33c8d8f28b45f79e2",
+      "mutant_descriptor": "9586e1fba89f60f2bcc2887e1228357910a41489cbb3653d11744b150039581d",
+      "exact_delta_paths": [
+        "crates/cyril-memory/src/runtime.rs"
+      ],
+      "test_record_label": "09-inside-real-IPC150ms-specific100ms-fence-RED",
+      "actual_panic_and_measurement": [
+        "thread 'capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown' (2610306) panicked at crates/cyril/src/capture_forwarder.rs:333:9:",
+        "C9 actual forwarder batch exceeded 100ms including conversion, connection and awaited capture IPC: BatchObservation { event_count: 3, elapsed: 155.291782ms }"
+      ],
+      "restored_utc": "2026-10-22T16:23:16.806728+00:00",
+      "restored_runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "restored_from_exact_immediate_backup_byte_equal": true,
+      "worker_never_mutated_in_scenario2": true,
+      "restoration_test_label": "10-inside-IPC150ms-exact-restoration-GREEN"
+    }
+  ],
+  "no_product_qualification_claims": {
+    "new_default_App_binary": false,
+    "fullworkspace": false,
+    "native": false,
+    "live_auth": false,
+    "Windows_behavior": false,
+    "finalCI": false
+  },
+  "source_semantic_edits_by_worker": "Only subsequently Main-authorized throwaway exact-restored discriminations; no permanent changes",
+  "planned_initial_exact_commands": [
+    {
+      "label": "01-initial-fmtCHECK",
+      "argv": [
+        "cargo",
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "expected_case_suffix": null
+    },
+    {
+      "label": "02-c9-default",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "expected_case_suffix": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+    },
+    {
+      "label": "03-c9-all-features",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "--all-features",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "expected_case_suffix": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+    },
+    {
+      "label": "04-c9-no-default",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "--no-default-features",
+        "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown",
+        "--",
+        "--exact",
+        "--nocapture"
+      ],
+      "expected_case_suffix": "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+    },
+    {
+      "label": "05-shutdown-order",
+      "argv": [
+        "cargo",
+        "test",
+        "-p",
+        "cyril",
+        "--bin",
+        "cyril",
+        "c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory",
+        "--",
+        "--nocapture"
+      ],
+      "expected_case_suffix": "c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory"
+    },
+    {
+      "label": "06-strict-App-alltarget-allfeature-Clippy",
+      "argv": [
+        "cargo",
+        "clippy",
+        "-p",
+        "cyril",
+        "--all-targets",
+        "--all-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "expected_case_suffix": null
+    }
+  ],
+  "completed_utc": "2026-10-22T16:25:17.241082+00:00",
+  "final_guard": {
+    "phase": "FINAL immutable capture checkpoint after both exact restorations and actual final GREEN",
+    "utc": "2026-10-22T16:25:17.239175+00:00",
+    "actual_input_descriptor": "1ddc92faa9079f4f59cf597d301c9646fd4bec9c14c25659b18d10f1462c1e14",
+    "entries": 498,
+    "worker_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+    "runtime_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+    "evidence_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+    "index_sha256": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+    "HEAD": "03838a501dad8be140acd78dc3fff4cae35fafef",
+    "held_MERGE_HEAD": null,
+    "actual_input_modes_bytes_refs_config_stable": true
+  },
+  "totals": {
+    "actual_commands": 10,
+    "expected_exit0_commands": 9,
+    "expected_exit101_specific_assertion_commands": 1,
+    "unexpected_failures": 0,
+    "initial_gates_passed": 6,
+    "actual_libtest_invocations": 8,
+    "passed_case_invocations_overlapping_variants_controls_restores": 7,
+    "expected_failed_case_invocations": 1,
+    "ignored_case_invocations": 0,
+    "filtered_overlapping": 2513,
+    "unique_case_names": [
+      "app::tests::current_runtime_contract::shutdown::c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory",
+      "capture_forwarder::tests::c9_forwarder_batches_and_drains_before_runtime_shutdown"
+    ],
+    "unique_case_count": 2
+  },
+  "actual_timing_evidence": {
+    "external150ms_exclusion": {
+      "outer_elapsed_ms": 155.679395,
+      "batch_elapsed_ms": 4.427638,
+      "batch_event_count": 3,
+      "source_of_values": "exact printed observation in command07 rawlog; outer>=150 and unchanged batch<=100 assertions both passed"
+    },
+    "inside_IPC150ms_inclusion": {
+      "batch_elapsed_ms": 155.291782,
+      "batch_event_count": 3,
+      "failure_at": "crates/cyril/src/capture_forwarder.rs:333:9",
+      "exact_assertion": "C9 actual forwarder batch exceeded 100ms including conversion, connection and awaited capture IPC: BatchObservation { event_count: 3, elapsed: 155.291782ms }",
+      "source_of_values": "actual command09 exit101 panic; exact100ms timing assertion, not compile/setup/drain failure"
+    },
+    "unmutated_batch_numeric_elapsed": "Not printed. Each actual successful c9 guarantees only its observed batch <=100ms; retained libtest total-wall summaries are not relabeled as batch measurements.",
+    "comparability_limit": "No speedup or timing comparison against original153.901529ms CI producer-through-drain measurement; scope differs. No subtraction of injected delay to invent an unmeasured baseline."
+  },
+  "reached_coverage": {
+    "baseline_c9_each_default_all_no_default_and_both_restored_GREEN": [
+      "Actual in-process authenticated local memory runtime and real Unix-domain-socket IPC; not a mocked capture backend",
+      "Prequeued and closed Started/PromptFragment/Finished contiguous3events",
+      "Forwarder drain within original2second policy",
+      "Stored exact prompt forward this decision",
+      "Stored Finished(Completed)",
+      "Awaited runtime.shutdown",
+      "One observed batch event_count3",
+      "Observation channel disconnected with no second batch",
+      "Actual forwarder measured interval <=100ms including gather/conversion/validation/fresh connection/awaited IPC"
+    ],
+    "external_control": [
+      "Added only temporary test-local sleep150ms before super::run entry plus outer clock/assert/printed timings",
+      "Outer>=150ms proves delay actually exercised",
+      "Measured actual3eventbatch4.427638ms passed unchanged100msfence",
+      "All persistence/completion/shutdown/singlebatch controls passed",
+      "Exact original worker restored and fresh defaultc9GREEN before next mutation"
+    ],
+    "inside_IPC_control": [
+      "Only temporary runtime response-specific sleep150ms after execute_request before sending Captured; startup/inspect/shutdown undelayed",
+      "Not dependencycfg(test); actual linked runtime delayed real IPC acknowledgement",
+      "Stored exact prompt/FinishedCompleted, runtime.shutdown, event_count3 and no-secondbatch assertions reached/passed BEFORE specific timing panic",
+      "Actual155.291782ms failed unchanged100msfence",
+      "Exact original runtime restored and fresh defaultc9GREEN"
+    ],
+    "shutdown_order": "Actual sole c10_shutdown_waits_bridge_then_drains_capture_then_stops_memory case PASS, not generic source assertion"
+  },
+  "byte_restoration_and_retained_gate_applicability": {
+    "all498_actual_source_input_bytes_modes_final_equal_initial": true,
+    "worker_exact_immediate_backup_sha256": "4fb824a80afdbf4cba3174e5b3fd55d625562d84a1d2357455c39cd9ee73fefc",
+    "runtime_exact_immediate_backup_sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+    "original_evidence_bytes_preserved_sha256": "72913c86625c0f2b1f19a9ff3e03f13dffbf52d5716006cb50593d56f3f0bd07",
+    "initial_fmtCHECK_and_strict_Clippy_retained": "Both actually passed on exact baseline498; all498 input bytes/modes returned exactly after controlled throwaways. No generic final rerun needed or performed.",
+    "no_permanent_changes_by_qualifier": true,
+    "entrypoint_touches": "Only mandated metadata-only Core/UI/App touches after WT switch and every mutation/restoration; SHA bytes unchanged.",
+    "raw_index_sha256_initial": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+    "raw_index_sha256_final": "06677f67e4e66f8950777fdc8d5400b56ac585d00f2fd9cd096f208cc238a250",
+    "raw_index_drift_observed": false
+  },
+  "limits_and_remaining_ownership": [
+    "Original CI FAIL remains FAIL/notflaky; no CI rerun/waiver claimed",
+    "This is only exact authorized scopedLinuxcheckpoint, not fullworkspace or assembled X/EJ/NK qualification",
+    "No normalformatterapplication, permanentproductrepair, fullbuild, productprivateAppbinary, native terminal, liveKAS/auth, Windowsbehavior, Git/staging/commit/PR/tracker operation",
+    "Actual test-harness paths/SHA captured immediately after each command, not production App consumer binaries",
+    "Current source retains static sourcePASSreview none/.96; no fullreviewreplay",
+    "Main owns source publication/porting/nextCargolease and any future product/nativeconsumerGO"
+  ],
+  "release": {
+    "HOST_CARGO": "FREE after final test process exited and immutable receipt finalized",
+    "source_freeze": "RELEASED exact baseline498 worker/runtime after both restorations; owner may act only under Main authority",
+    "X": "STILLHOLD; separate GO required; read-only checkpoint proposal follows",
+    "NKproduction": "Repair ownership/MainGO separate; these historical RED receipts are not corrected-sourceGREEN"
+  }
+}
