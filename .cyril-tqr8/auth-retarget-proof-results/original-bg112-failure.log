@@ -1,0 +1,12 @@
+Provenance: original normal-concurrency qualification bg112, artifact://740:1949-1958.
+Excerpt only; this file is not a rerun.
+
+---- protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget stdout ----
+
+thread 'protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget' (3263655) panicked at crates/cyril-core/src/protocol/kas/auth.rs:1795:9:
+Err(Spawn { command: "/home/dwalleck/.claude/tmp/.tmpZf5Xb6/bin/kiro-cli chat _ get-kas-token", source: Os { code: 26, kind: ExecutableFileBusy, message: "Text file busy" }, remedy: "check the kiro-cli named by --agent-command" })
+
+failures:
+    protocol::kas::auth::tests::fetch_serializes_across_a_symlink_retarget
+
+test result: FAILED. 1511 passed; 1 failed; 5 ignored; 0 measured; 0 filtered out; finished in 3.06s

@@ -1,0 +1,62 @@
+{
+  "kind": "Separate evidence-only adjudication; no product rerun or original-receipt rewrite",
+  "binary_sha256": "04eb4da4cc068c08e00e8ec6bd7bc6d8d70329ecaf01fdaa6db6e65beb7cb96f",
+  "git_source_tree": "19e2d205b717f828fd7d18e46153b0553bbb22e9",
+  "git_source_tree_is_not_commit": true,
+  "fixture_sha256": "df5d94371067133efcac70ef637f7f92b18b5d5540efdb2bbba7160da9fef9b7",
+  "original_scenario": {
+    "receipt": "live-active-df5d9437/scenario-receipt.json",
+    "recorded_verdict": "FAIL:31/32 recorded cases passed",
+    "sole_failed_assertion": "normal_reset_authoritative_reconnect",
+    "immutable": true,
+    "not_relabelled_as_a_pass": true,
+    "no_active_rerun": true
+  },
+  "selected_source_classification": {
+    "verified_by": "McpLifecycle selected-source trace, confirmed and sent Main",
+    "selected_kas_package_version": "0.66.43",
+    "inspected_installed_source": "/home/dwalleck/.local/share/kiro-cli/kas/2.32.0-f3c560628fc814c59257082d0d914826583f83aa202043fad5ae73f24a037721/node_modules/@kiro/agent/dist/server/acp-server.js",
+    "inspected_file_sha256": "d4a1d28831cd07b5d5f68ff1264eaaf51e07be674fd26e69a6f1b74bbe36a325",
+    "identity_scope": "Installed-file identity supplied by source owner, NOT fresh proof of the JavaScript bytes loaded by the already-recorded consumer process",
+    "source_anchors_from_owner": {
+      "16540": "D8e runReset -> transitionOut/closeState -> new WNt; WNt constructs new P8e. replaceClosedClient preserves a provider only within the same WNt. True auth explicitly invalidates credentials; false does not.",
+      "16459": "P8e optional I8e credential storage; tokens() reads local _tokens then optional storage; saveTokens writes local plus optional storage. Passive redirect records URL without onOpenExternalUrl.",
+      "17463": "Credential adapter exists only when resolvedCapabilities.secretStorage is true",
+      "17416": "ACP credential-storage adapter",
+      "17467": "handleReset defaults startOAuth false; reset ACK can follow absorbed failure or bounded wait"
+    },
+    "owner_decision_record": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-nk4o/review-decisions.md:94-108 Live/A1; table row25 rejects only the extra persistence premise; approved spec sections14/28/41",
+    "mechanism": "Normal reset closes the old WNt and constructs a new WNt/new P8e. Tokens are provider-local; with secretStorage:false there is no credential adapter from which the new provider can recover them. The new passive flow records authorizationUrl and can report Unauthorized/authentication-required without awaiting or emitting the active host callback. A subsequent reset success ACK is allowed.",
+    "scope": "This selected-runtime, no-secretStorage synthetic fixture only",
+    "not_claimed": "Normal false reset does not explicitly invalidate persisted credentials; true reset has additional invalidation behavior. This adjudication makes no general persisted-credential or enterprise-policy claim.",
+    "contract": "ACK is not authorization/connection success; authoritative auth-required/failure after normal reset is permitted. Connected or persistent tokens after r were never promised."
+  },
+  "actual_evidence": {
+    "wire": "live-active-df5d9437/live/wire.nonsecret.jsonl",
+    "capability_line": "1: openExternalUrl:true, secretStorage:false",
+    "normal_reset_request_line": "35: exact fixture-oauth resetServer request, start_oauth:false and start_oauth_field_present:false",
+    "normal_reset_status_lines": "36 then39: authoritative matching-session connecting then failed with failed_authorization:true and new passive URL hash",
+    "normal_reset_ack_line": "42: correlated reset RPC acknowledgement after the auth-required status",
+    "browser_callback_observation": "No additional openExternalUrl request appears after the normal-r request in lines35-43",
+    "truthful_terminal": "live-active-df5d9437/09-FAILED-normal_reset_authoritative_reconnect.txt:8-14 shows ACKNOWLEDGED Reset(no OAuth), expressly says this does not mean connected, and shows fixture-oauth authentication required",
+    "fixture_http_lifecycle": "live-active-df5d9437/live/requests.jsonl:35-49 shows synthetic token issuance and authenticated MCP/catalog200 responses;50-57 shows the later new client receiving401/discovery/registration, with no second authorization or token exchange",
+    "owned_teardown": "live-active-df5d9437/live/teardown.json: consumer0, fixture0, fixture port closed",
+    "browser_clipboard_verdict": "Original scenario receipt records no_browser_or_clipboard_process_attempt:true, prohibited_executables:[]"
+  },
+  "strict_active_auth_proof_unchanged": {
+    "full_opaque_url_capture_before_local_http": "live-active-df5d9437/06-active-manual-url-visible-before-any-local-oauth.txt:11-14",
+    "url_sha256": "92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a",
+    "matching_host_callback_wire": "29-30; delivery ACK alone was not accepted as auth success",
+    "authoritative_connected_wire": "31: actual connected status plus all four catalogs, after local authorization/token exchange",
+    "connected_terminal": "live-active-df5d9437/07-active-authoritative-connected.txt:8-15",
+    "not_substituted_by": "Neither callback HTTP200 nor RPC ACK nor status-URL presence substitutes for full visible URL and authoritative connected status"
+  },
+  "adjudication": {
+    "normal_r_required_contract_observed": "SATISFIED for this no-storage fixture: omitted startOAuth, actual authoritative auth-required state, truthful non-authoritative ACK UI, no automatic browser",
+    "failed_oracle_classification": "Unsupported extra harness assumption requiring connected after a normal no-OAuth reset, not an observed Cyril product defect",
+    "does_not_qualify_whole_original_scenario": true,
+    "complete_issue_acceptance": false,
+    "remaining_arms": ["previews not run", "natural95s inventory not run", "caar/new-* not authorized and not run"],
+    "next_action": "Main decides continuation GO for previews/inventory only; no active rerun, product fix, or credential/configuration change"
+  }
+}

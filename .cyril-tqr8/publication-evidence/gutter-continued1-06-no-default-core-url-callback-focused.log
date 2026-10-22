@@ -1,0 +1,77 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo test -p cyril-core --no-default-features protocol::domain_mediator::tests::external_url_wire::external_url_callback_refused_on_v2_with_or_without_kas -- --exact --nocapture
+started_utc=2026-10-20T18:06:26.211576+00:00
+
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 25.46s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-ef9a7513f551e418)
+
+running 1 test
+test protocol::domain_mediator::tests::external_url_wire::external_url_callback_refused_on_v2_with_or_without_kas ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1017 filtered out; finished in 0.00s
+
+     Running tests/kas_freepath_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_freepath_smoke-8e49d9e2ee6b9404)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kas_fs_host_io_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_fs_host_io_smoke-599f98e0b2bf1dca)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kas_settings_handshake_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_settings_handshake_smoke-7d95518fb1b6473a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/kas_wrapper_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_wrapper_smoke-caec17fd51ad93c4)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/nd4h_legacy_config_compat.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_legacy_config_compat-464b1c88435afa9f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/review_launch.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_launch-b4270c32cf44c76e)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 0.00s
+
+     Running tests/review_policy_vectors.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_policy_vectors-3bf2a66d305bb6ee)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/session_configuration.rs (/home/dwalleck/repos/cyril/target/debug/deps/session_configuration-1c6421f91bb3b8e8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+     Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-290cb26341df1fea)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+     Running tests/win_wsl_wiring.rs (/home/dwalleck/repos/cyril/target/debug/deps/win_wsl_wiring-0831c2b8686fe14f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+
+qualification_exit_code=0
+qualification_elapsed_seconds=25.509968

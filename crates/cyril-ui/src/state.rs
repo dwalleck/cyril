@@ -127,6 +127,7 @@ pub struct UiState {
     review_form: Option<crate::traits::ReviewForm>,
     hooks_panel: Option<HooksPanelState>,
     powers_panel: Option<PowersPanelState>,
+    pub(crate) mcp_panel: Option<crate::mcp_panel::McpPanelState>,
     code_panel: Option<cyril_core::types::CodePanelData>,
     usage_panel: Option<UsagePanelState>,
     /// The last completed snapshot, kept across a panel close so a reopen is
@@ -335,6 +336,10 @@ impl TuiState for UiState {
         self.powers_panel.as_ref()
     }
 
+    fn mcp_panel(&self) -> Option<&crate::mcp_panel::McpPanelState> {
+        self.mcp_panel.as_ref()
+    }
+
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
         self.code_panel.as_ref()
     }
@@ -448,6 +453,7 @@ impl UiState {
             review_form: None,
             hooks_panel: None,
             powers_panel: None,
+            mcp_panel: None,
             code_panel: None,
             usage_panel: None,
             last_usage_snapshot: None,
@@ -749,6 +755,7 @@ impl UiState {
             }
             Notification::BridgeDisconnected { reason } => {
                 self.add_system_message(format!("Disconnected: {reason}"));
+                self.mcp_panel = None;
                 self.last_turn = None;
                 self.pending_tokens = None;
                 self.pending_metering = None;
@@ -917,6 +924,7 @@ impl UiState {
                 available_modes,
                 available_models: _,
             } => {
+                self.mcp_panel = None;
                 if self.main_session_id.as_ref() != Some(session_id) {
                     // IDs are unique only within a session. Keep old history,
                     // but never merge a new session's call into its old row.
@@ -1100,25 +1108,30 @@ impl UiState {
                 // notification is observable via tracing but not displayed.
                 false
             }
-            Notification::McpServerInitFailure { server_name, error } => {
-                if let Some(err) = error {
-                    self.add_system_message(format!(
-                        "MCP server '{server_name}' failed to initialize: {err}"
-                    ));
-                } else {
-                    self.add_system_message(format!(
-                        "MCP server '{server_name}' failed to initialize"
-                    ));
-                }
-                true
-            }
-            Notification::McpServerInitialized { server_name } => {
-                self.add_system_message(format!("MCP server '{server_name}' ready"));
-                true
-            }
+            Notification::McpUpdate(update) => self.apply_mcp_notice(update),
+            Notification::McpServerInitFailure { .. }
+            | Notification::McpServerInitialized { .. } => self.show_mcp_progress(notification),
             Notification::McpOAuthRequest { .. } => {
                 // Handled by App (cross-cutting concern: displays URL for manual browser opening)
                 false
+            }
+            Notification::ExternalUrlRequested { url } => {
+                // Delivery requests manual sign-in, not authorization completion.
+                // Keep the full URL while making terminal controls visible.
+                self.add_mcp_notice(format!(
+                    "Sign-in requested. Open in browser: {}",
+                    crate::mcp_notice::terminal_safe(url)
+                ));
+                true
+            }
+            Notification::McpConnectionError { message } => {
+                // A durable, non-terminal notice: later MCP status must not
+                // replace it or release the busy turn.
+                self.add_mcp_notice(format!(
+                    "[error] {}",
+                    crate::mcp_notice::terminal_safe(message)
+                ));
+                true
             }
             Notification::AgentNotFound {
                 requested,
@@ -1380,6 +1393,56 @@ impl UiState {
         self.flush_streaming_thought();
         self.messages.push(ChatMessage::system(text));
         self.enforce_message_limit();
+    }
+
+    /// Reveal durable MCP notices without changing ordinary system-message policy.
+    pub(crate) fn add_mcp_notice(&mut self, text: String) {
+        self.add_system_message(text);
+        self.unfocus_subagent();
+        self.chat_scroll_reset();
+    }
+
+    /// A presentation copy only: the canonical error stays in its scoped stream.
+    fn add_scoped_mcp_error_notice(&mut self, session_id: &SessionId, message: &str) {
+        self.add_mcp_notice(format!(
+            "[error] [session {}] {}",
+            crate::mcp_notice::terminal_safe(session_id.as_str()),
+            crate::mcp_notice::terminal_safe(message)
+        ));
+    }
+
+    /// Display v2 progress without changing connection, turn, or OAuth state.
+    pub fn show_mcp_progress(&mut self, notification: &Notification) -> bool {
+        let Some(notice) = crate::mcp_notice::v2_progress(notification) else {
+            return false;
+        };
+        self.add_mcp_notice(notice.to_string());
+        true
+    }
+
+    /// Show qualified startup progress: an explicitly requested Load target
+    /// awaiting its response, or an uncorrelated New/cold-start scope.
+    /// Its notice is durable history, not a root-state update or replay entry.
+    pub fn show_unbound_mcp_progress(
+        &mut self,
+        session_id: &SessionId,
+        notification: &Notification,
+        startup: Option<StartupObservation>,
+    ) -> bool {
+        let Some(notice) = crate::mcp_notice::v2_progress(notification) else {
+            return false;
+        };
+        let qualification = match startup {
+            Some(StartupObservation::BoundRequestedLoad { .. }) => {
+                "requested load; response pending"
+            }
+            Some(StartupObservation::UnboundNew { .. }) | None => "not yet correlated to root",
+        };
+        self.add_mcp_notice(format!(
+            "Session '{}' ({qualification}): {notice}",
+            crate::mcp_notice::terminal_safe(session_id.as_str()),
+        ));
+        true
     }
 
     /// Open an agent-initiated turn with its header line in `transcript`
@@ -1878,6 +1941,7 @@ impl UiState {
     /// Update the terminal size.
     pub fn set_terminal_size(&mut self, w: u16, h: u16) {
         self.terminal_size = (w, h);
+        self.sync_mcp_geometry();
     }
 
     /// Set mouse capture state (used to sync with terminal on startup).
@@ -1956,6 +2020,7 @@ impl UiState {
             Overlay::Review => self.review_form.is_some(),
             Overlay::Hooks => self.has_hooks_panel(),
             Overlay::Powers => self.has_powers_panel(),
+            Overlay::Mcp => self.mcp_panel.is_some(),
             Overlay::Code => self.has_code_panel(),
             Overlay::Usage => self.has_usage_panel(),
         }
@@ -2082,7 +2147,11 @@ impl UiState {
         session_id: &SessionId,
         notification: &Notification,
     ) -> bool {
-        self.subagents.apply_notification(session_id, notification)
+        let changed = self.subagents.apply_notification(session_id, notification);
+        if let Notification::McpConnectionError { message } = notification {
+            self.add_scoped_mcp_error_notice(session_id, message);
+        }
+        changed
     }
 
     /// Apply a list update to subagent streams — marks terminated streams
@@ -2119,8 +2188,13 @@ impl UiState {
         session_id: &SessionId,
         notification: &Notification,
     ) -> bool {
-        self.workflow_streams
-            .apply_notification(session_id, notification)
+        let changed = self
+            .workflow_streams
+            .apply_notification(session_id, notification);
+        if let Notification::McpConnectionError { message } = notification {
+            self.add_scoped_mcp_error_notice(session_id, message);
+        }
+        changed
     }
 
     /// Re-parent an optimistic subagent stream onto the workflow store after
@@ -6570,6 +6644,7 @@ mod tests {
     fn mcp_server_init_failure_with_error() {
         let mut state = UiState::new(500);
         let changed = state.apply_notification(&Notification::McpServerInitFailure {
+            session_id: None,
             server_name: "my-mcp".into(),
             error: Some("connection refused".into()),
         });
@@ -6583,6 +6658,7 @@ mod tests {
     fn mcp_server_init_failure_without_error() {
         let mut state = UiState::new(500);
         let changed = state.apply_notification(&Notification::McpServerInitFailure {
+            session_id: None,
             server_name: "my-mcp".into(),
             error: None,
         });
@@ -6596,6 +6672,7 @@ mod tests {
     fn mcp_server_initialized_adds_system_message() {
         let mut state = UiState::new(500);
         let changed = state.apply_notification(&Notification::McpServerInitialized {
+            session_id: None,
             server_name: "github-mcp".into(),
         });
         assert!(changed);
@@ -6608,6 +6685,7 @@ mod tests {
     fn mcp_oauth_request_not_handled_by_ui() {
         let mut state = UiState::new(500);
         let changed = state.apply_notification(&Notification::McpOAuthRequest {
+            session_id: None,
             server_name: "server".into(),
             url: "https://example.com".into(),
         });
@@ -6616,6 +6694,190 @@ mod tests {
             "McpOAuthRequest should be handled by App, not UiState"
         );
         assert!(state.history().messages().is_empty());
+    }
+
+    #[test]
+    fn external_url_request_is_manual_and_nonterminal() {
+        for (url, expected) in [
+            (
+                "https://example.com/authorize?code=a%2Fb&state=unchanged#continue",
+                "Sign-in requested. Open in browser: https://example.com/authorize?code=a%2Fb&state=unchanged#continue",
+            ),
+            (
+                "https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next",
+                r"Sign-in requested. Open in browser: https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next",
+            ),
+        ] {
+            let mut state = UiState::new(500);
+            state.set_activity(Activity::Streaming);
+            state.apply_notification(&Notification::TurnStalled {
+                quiet: Duration::from_secs(31),
+            });
+            let revision = state.history().revision();
+            assert!(
+                state.apply_notification(&Notification::ExternalUrlRequested { url: url.into() })
+            );
+            let changes = state.history().changed_since(revision);
+            assert!(!changes.reset);
+            assert_eq!(changes.changed.count(), 1);
+            assert_eq!(state.history().messages().len(), 1);
+            assert!(matches!(
+                state.history().messages()[0].kind(),
+                ChatMessageKind::System(text) if text == expected
+            ));
+            assert_eq!(state.activity(), Activity::Streaming);
+            assert!(state.stall().is_some());
+            assert!(state.main_session_id().is_none());
+            assert!(state.last_turn().is_none());
+            assert!(!state.has_modal_overlay());
+        }
+    }
+
+    #[test]
+    fn mcp_connection_error_is_durable_and_nonterminal() {
+        for (message, expected) in [
+            (
+                "MCP connection failed: café endpoint refused",
+                "[error] MCP connection failed: café endpoint refused",
+            ),
+            (
+                "MCP failed:\u{1b}[2J\n\u{202e}endpoint",
+                r"[error] MCP failed:\u{1b}[2J\n\u{202e}endpoint",
+            ),
+        ] {
+            let mut state = UiState::new(500);
+            state.set_activity(Activity::Waiting);
+            assert!(state.apply_notification(&Notification::McpConnectionError {
+                message: message.into(),
+            }));
+            assert_eq!(state.activity(), Activity::Waiting);
+            assert!(state.last_turn().is_none());
+            assert!(!state.has_modal_overlay());
+            assert!(
+                state.apply_notification(&Notification::McpServerInitialized {
+                    session_id: None,
+                    server_name: "subsequent-status".into(),
+                })
+            );
+            assert_eq!(state.activity(), Activity::Waiting);
+            assert!(state.apply_notification(&Notification::SessionCreated {
+                session_id: SessionId::new("new-session"),
+                current_mode: None,
+                current_model: None,
+                available_modes: Vec::new(),
+                available_models: Vec::new(),
+            }));
+            assert!(matches!(
+                state.history().messages()[0].kind(),
+                ChatMessageKind::System(text) if text == expected
+            ));
+            assert_eq!(state.history().messages().len(), 3);
+            assert!(!state.has_modal_overlay());
+        }
+    }
+
+    #[test]
+    fn mcp_notices_reveal_main_without_changing_draft_or_activity() {
+        for notification in [
+            Notification::ExternalUrlRequested {
+                url: "https://example.com/authorize?state=manual".into(),
+            },
+            Notification::McpConnectionError {
+                message: "Endpoint refused".into(),
+            },
+        ] {
+            let mut state = UiState::new(500);
+            let child = SessionId::new("notice-child");
+            state.apply_subagent_notification(
+                &child,
+                &Notification::AgentMessage(AgentMessage {
+                    text: "Child is working".into(),
+                    is_streaming: true,
+                }),
+            );
+            state.insert_text("keep café draft");
+            state.handle_input_key(crossterm::event::KeyCode::Left.into());
+            let cursor = state.input_cursor();
+            state.apply_notification(&Notification::AgentThought(AgentThought {
+                text: "Earlier thought".into(),
+            }));
+            state.apply_notification(&Notification::AgentMessage(AgentMessage {
+                text: "Earlier main text".into(),
+                is_streaming: true,
+            }));
+            state.apply_notification(&Notification::TurnStalled {
+                quiet: Duration::from_secs(31),
+            });
+            state.chat_scroll_up(40);
+            assert!(state.focus_subagent(child.clone()));
+            let revision = state.history().revision();
+            let live_revision = state.live_revision();
+            let child_revision = state.subagent_ui().streams()[&child].history().revision();
+            let child_live_revision = state.subagent_ui().streams()[&child].live_revision();
+
+            assert!(state.apply_notification(&notification));
+            let changes = state.history().changed_since(revision);
+            assert!(!changes.reset);
+            assert_eq!(changes.changed.count(), 2, "commit live text, then notice");
+            assert_ne!(state.live_revision().text, live_revision.text);
+            assert!(state.streaming_text().is_empty());
+
+            assert!(
+                state.subagent_ui().focused_session_id().is_none(),
+                "MCP notices must reveal their durable main-history entry"
+            );
+            assert_eq!(state.chat_scroll_back(), None);
+            assert_eq!(state.input_text(), "keep café draft");
+            assert_eq!(state.input_cursor(), cursor);
+            assert_eq!(state.activity(), Activity::Streaming);
+            assert!(state.stall().is_some());
+            assert!(state.last_turn().is_none());
+            assert!(state.main_session_id().is_none());
+            assert!(!state.has_modal_overlay());
+            assert!(matches!(
+                state.history().messages()[0].kind(),
+                ChatMessageKind::Thought(text) if text == "Earlier thought"
+            ));
+            assert!(matches!(
+                state.history().messages()[1].kind(),
+                ChatMessageKind::AgentText(text) if text == "Earlier main text"
+            ));
+            assert!(matches!(
+                state.history().messages()[2].kind(),
+                ChatMessageKind::System(_)
+            ));
+            assert_eq!(state.history().messages().len(), 3);
+            let stream = &state.subagent_ui().streams()[&child];
+            assert_eq!(stream.history().revision(), child_revision);
+            assert_eq!(stream.live_revision(), child_live_revision);
+            assert!(stream.history().messages().is_empty());
+            assert_eq!(stream.streaming_text(), "Child is working");
+            assert_eq!(stream.activity(), Activity::Streaming);
+        }
+    }
+
+    #[test]
+    fn ordinary_system_message_keeps_child_focus_and_main_browse_position() {
+        let mut state = UiState::new(500);
+        let child = SessionId::new("ordinary-notice-child");
+        state.apply_subagent_notification(
+            &child,
+            &Notification::AgentMessage(AgentMessage {
+                text: "Child text".into(),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.focus_subagent(child.clone()));
+        state.chat_scroll_up(40);
+
+        state.add_system_message("Ordinary status".into());
+
+        assert_eq!(state.subagent_ui().focused_session_id(), Some(&child));
+        assert_eq!(state.chat_scroll_back(), Some(40));
+        assert!(matches!(
+            state.history().messages()[0].kind(),
+            ChatMessageKind::System(text) if text == "Ordinary status"
+        ));
     }
 
     #[test]
@@ -7707,6 +7969,7 @@ mod tests {
                 Overlay::Code,
                 Overlay::Powers,
                 Overlay::Hooks,
+                Overlay::Mcp,
                 Overlay::Picker,
                 Overlay::Review,
                 Overlay::Approval,

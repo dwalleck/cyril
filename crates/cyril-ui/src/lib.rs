@@ -11,6 +11,8 @@ pub mod file_completer;
 #[cfg(test)]
 mod floor_tests;
 pub mod highlight;
+pub mod mcp_notice;
+pub mod mcp_panel;
 pub mod memory_format;
 pub mod message_history;
 pub mod render;

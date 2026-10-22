@@ -1,0 +1,30 @@
+Source: agent://ReviewCurrentTqr
+Publication form: copied public reviewer handoff; source inspection only, not an empirical consumer or Cargo receipt.
+
+**Findings: None.**
+
+**Overall correctness: correct within the assigned source-review scope.**
+**Confidence: 0.96.**
+
+Reviewed the assembled feature delta from prerequisite tree `699256c2b0dadf4000f72f6beb178b15ae8d1b90` to source tree `a09f1dfb63b17d380f4661823de431bfb5d72160`, the integration receipt, existing `.cyril-tqr8` workflow/evidence, and actual source context.
+
+Confirmed by inspection:
+- KAS advertisement and callback execution share the external-URL adapter gate; v2/no-KAS refusal remains explicit.
+- The ACK follows bounded domain acceptance and does not assert browser launch, authorization, or MCP connection success.
+- URLs reach durable manual notices without browser/clipboard effects. UI formatting preserves printable opaque content while visibly escaping terminal and bidi controls.
+- New URL/error values reach consuming dispatch paths, including pending-session replay and main, subagent, and workflow-owned error streams, without introducing turn completion.
+- Main-chat preparation, wrapping, line counting, painting, and scrollbar placement use consistent stable-gutter geometry. All four gutter regressions were inspected, including the nonvacuous width-zero/one assertions.
+- Callback cleanup accepts normal completion or cancellation while still rejecting other join failures.
+- README/state reconciliation retains landed-main behavior alongside the feature additions. The 17 unchanged-file identities and retained README24/state18+77-line blocks are receipt-backed; I did not independently recompute their hashes.
+
+**Exact feature scope — all 19 paths:**
+- `README.md`
+- Under `crates/cyril-core/src/`: `protocol/convert/kas.rs`, `protocol/domain_mediator/host.rs`, `protocol/domain_mediator/tests/{external_url_wire,mcp_error,mod,oauth}.rs`, `protocol/engine.rs`, `protocol/kas/callbacks.rs`, `protocol/probe_dn91.rs`, `types/event.rs`
+- Under `crates/cyril-ui/src/`: `lib.rs`, `mcp_notice.rs`, `state.rs`, `subagent_ui.rs`, `widgets/chat.rs`
+- `crates/cyril/examples/test_bridge.rs`
+- `crates/cyril/src/app.rs`
+- `crates/cyril/src/app/tests/mcp_oauth.rs`
+
+This was read-only source review: no edits, builds, tests, lint, formatting, mutation reruns, binary execution, or consumer acceptance. Current gutter GREEN results remain parent-supplied evidence; old mutations remain historical sensitivity evidence. Common auth/EOF mechanisms and unrelated prerequisites were not re-audited. Current owned-consumer acceptance and qualification finalization remain separate parent-owned judgments.
+
+Publication annotation: this review predates the separately authorized README status-only documentation correction. Its qualified-source scope remains the exact a09 tree; the README documentation delta is recorded separately and is not represented as reviewed source-tree identity.

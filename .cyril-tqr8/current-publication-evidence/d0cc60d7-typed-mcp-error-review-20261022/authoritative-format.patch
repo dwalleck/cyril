@@ -1,0 +1,64 @@
+--- crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs.initial-fmtFAIL
++++ crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs.authoritative-rustfmt
+@@ -62,9 +62,11 @@
+                 "errorType": "mcp_connection_error", "message": "private-error-not-for-logs",
+             }}),
+         ] {
+-            assert!(KasEngine::default()
+-                .convert_session_update(&session_info_frame(kiro))
+-                .is_none());
++            assert!(
++                KasEngine::default()
++                    .convert_session_update(&session_info_frame(kiro))
++                    .is_none()
++            );
+         }
+     });
+     let events = capture.captured();
+@@ -75,11 +77,13 @@
+             .count(),
+         8
+     );
+-    assert!(!must_succeed(
+-        serde_json::to_string(&events),
+-        "error diagnostics serialize"
+-    )
+-    .contains("private-error-not-for-logs"));
++    assert!(
++        !must_succeed(
++            serde_json::to_string(&events),
++            "error diagnostics serialize"
++        )
++        .contains("private-error-not-for-logs")
++    );
+ }
+ 
+ #[test]
+@@ -92,9 +96,11 @@
+         json!({"errorType": "mcp_connection_error", "message": "no kind"}),
+         serde_json::Value::Null,
+     ] {
+-        assert!(KasEngine::default()
+-            .convert_session_update(&session_info_frame(kiro))
+-            .is_none());
++        assert!(
++            KasEngine::default()
++                .convert_session_update(&session_info_frame(kiro))
++                .is_none()
++        );
+     }
+     let no_meta = must_succeed(
+         serde_json::from_value(json!({
+@@ -103,7 +109,9 @@
+         })),
+         "missing optional metadata remains a valid SDK envelope",
+     );
+-    assert!(KasEngine::default()
+-        .convert_session_update(&no_meta)
+-        .is_none());
++    assert!(
++        KasEngine::default()
++            .convert_session_update(&no_meta)
++            .is_none()
++    );
+ }

@@ -3,8 +3,11 @@ use std::future::Future;
 use agent_client_protocol::{Agent, ConnectionTo, UntypedMessage, schema::v1 as acp};
 use serde::Deserialize;
 
+use super::super::startup::{RootStartKind, RootStartResult};
 use super::super::{CommandOutcome, DomainMediator, SessionStart};
-use super::{COMMAND_RPC_TIMEOUT, SESSION_RPC_TIMEOUT, await_response};
+use super::{
+    COMMAND_RPC_TIMEOUT, LOAD_SESSION_RPC_TIMEOUT, NEW_SESSION_RPC_TIMEOUT, await_response,
+};
 use crate::protocol::bridge::source_disposition;
 use crate::protocol::turn_mediator::BeginTurn;
 use crate::types::{
@@ -102,7 +105,7 @@ fn session_started_outcome(
     origin: SessionOrigin,
     response: &acp::NewSessionResponse,
     raw_response: &serde_json::Value,
-) -> CommandOutcome {
+) -> RootStartResult {
     let config_options = response.config_options.as_deref().map(|options| {
         Notification::ConfigOptionsUpdated(crate::protocol::convert::to_config_options(options))
     });
@@ -111,7 +114,7 @@ fn session_started_outcome(
         response.modes.as_ref(),
         raw_response.get("models"),
     );
-    CommandOutcome::SessionStarted(Box::new(SessionStart {
+    RootStartResult::Started(Box::new(SessionStart {
         session_id,
         origin,
         config_options,
@@ -119,57 +122,58 @@ fn session_started_outcome(
     }))
 }
 
-/// The recoverable failure of `session/load`: an operation error on a bridge
-/// (and any live session) that keeps running.
-fn load_failed(error: impl std::fmt::Display) -> Notification {
-    Notification::BridgeError {
-        operation: "Load session".into(),
-        message: error.to_string(),
-    }
-}
-
 impl DomainMediator {
-    pub(super) fn new_session(
+    pub(super) async fn new_session(
         &mut self,
         connection: &ConnectionTo<Agent>,
         cwd: std::path::PathBuf,
     ) -> crate::Result<()> {
+        let Some(attempt) = self.begin_root_start(RootStartKind::New, None).await? else {
+            return Ok(());
+        };
         let request = new_session_request(&cwd, self.config.engine.settings_extra());
         let engine_kind = self.config.engine.kind();
         let channels = self.channels.clone();
         match send_standard(connection, "session/new", request) {
             Ok(sent) => self.spawn_command(async move {
-                let outcome = match await_response(sent, "session/new", SESSION_RPC_TIMEOUT)
-                    .await
-                    .and_then(|value| {
+                // Classify Elapsed before any ACP error conversion. The serial
+                // owner joins ordered ingress facts when applying this outcome.
+                let result = match tokio::time::timeout(NEW_SESSION_RPC_TIMEOUT, sent).await {
+                    Err(_elapsed) => RootStartResult::TimedOut {
+                        budget: NEW_SESSION_RPC_TIMEOUT,
+                    },
+                    Ok(result) => match result.and_then(|value| {
                         parse_standard::<acp::NewSessionResponse>("session/new", value)
                     }) {
-                    Ok((response, raw_response)) => {
-                        match crate::protocol::fingerprint::session_id_mismatch(
-                            engine_kind,
-                            &response.session_id.to_string(),
-                            cfg!(feature = "kas"),
-                        ) {
-                            Some(reason) => CommandOutcome::FatalDisconnect { reason },
-                            None => session_started_outcome(
-                                SessionId::new(response.session_id.to_string()),
-                                SessionOrigin::Fresh,
-                                &response,
-                                &raw_response,
-                            ),
+                        Ok((response, raw_response)) => {
+                            match crate::protocol::fingerprint::session_id_mismatch(
+                                engine_kind,
+                                &response.session_id.to_string(),
+                                cfg!(feature = "kas"),
+                            ) {
+                                Some(reason) => RootStartResult::Fatal(reason),
+                                None => session_started_outcome(
+                                    SessionId::new(response.session_id.to_string()),
+                                    SessionOrigin::Fresh,
+                                    &response,
+                                    &raw_response,
+                                ),
+                            }
                         }
-                    }
-                    Err(error) => CommandOutcome::FatalDisconnect {
-                        reason: format!("Failed to create session: {error}"),
+                        Err(error) => {
+                            RootStartResult::Failed(format!("Failed to create session: {error}"))
+                        }
                     },
                 };
-                channels.enqueue_outcome(outcome).await;
+                channels
+                    .enqueue_outcome(CommandOutcome::RootStartFinished { attempt, result })
+                    .await;
             }),
             Err(error) => {
-                let reason = format!("Failed to create session: {error}");
+                let result = RootStartResult::Failed(format!("Failed to create session: {error}"));
                 self.spawn_command(async move {
                     channels
-                        .enqueue_outcome(CommandOutcome::FatalDisconnect { reason })
+                        .enqueue_outcome(CommandOutcome::RootStartFinished { attempt, result })
                         .await;
                 });
             }
@@ -187,15 +191,24 @@ impl DomainMediator {
             session_id.as_str(),
             cfg!(feature = "kas"),
         ) {
+            // A known dialect contradiction is fatal even while another
+            // root start is pending; it must precede admission and generation.
+            self.mcp.fail_session();
             self.notify(Notification::BridgeDisconnected { reason }.into())
                 .await?;
             return Ok(true);
         }
+        let Some(attempt) = self
+            .begin_root_start(RootStartKind::Load, Some(session_id.clone()))
+            .await?
+        else {
+            return Ok(false);
+        };
         let request = load_session_request(&session_id, &self.config.cwd);
         let channels = self.channels.clone();
         match send_standard(connection, "session/load", request) {
             Ok(sent) => self.spawn_command(async move {
-                let outcome = match await_response(sent, "session/load", SESSION_RPC_TIMEOUT)
+                let result = match await_response(sent, "session/load", LOAD_SESSION_RPC_TIMEOUT)
                     .await
                     .and_then(|value| {
                         parse_standard::<acp::LoadSessionResponse>("session/load", value)
@@ -211,30 +224,26 @@ impl DomainMediator {
                             response.modes.as_ref(),
                             raw_response.get("models"),
                         );
-                        CommandOutcome::SessionStarted(Box::new(SessionStart {
+                        RootStartResult::Started(Box::new(SessionStart {
                             session_id,
                             origin: SessionOrigin::Loaded,
                             config_options,
                             created,
                         }))
                     }
-                    // Unlike session/new (deliberately fatal, fenced by
-                    // c5_new_session_rpc_failure_is_fatal), a failed load is
-                    // recoverable: the id may be a typo or expired, and any
-                    // live session must survive it. Main-line behavior: the
-                    // App is told, the bridge keeps running. Reported as a
-                    // `BridgeError`, not `BridgeDisconnected`: the latter
-                    // resets the live session's state (status, context,
-                    // thinking) as if the connection had died (cyril-k3lz).
-                    Err(error) => CommandOutcome::notify(load_failed(error)),
+                    // Load retains its original recoverable ACP error and
+                    // independent 30s budget; it never uses new's fatal timeout.
+                    Err(error) => RootStartResult::Failed(error.to_string()),
                 };
-                channels.enqueue_outcome(outcome).await;
+                channels
+                    .enqueue_outcome(CommandOutcome::RootStartFinished { attempt, result })
+                    .await;
             }),
             Err(error) => {
-                let notification = load_failed(error);
+                let result = RootStartResult::Failed(error.to_string());
                 self.spawn_command(async move {
                     channels
-                        .enqueue_outcome(CommandOutcome::notify(notification))
+                        .enqueue_outcome(CommandOutcome::RootStartFinished { attempt, result })
                         .await;
                 });
             }
@@ -251,8 +260,14 @@ impl DomainMediator {
     ) -> crate::Result<()> {
         self.active_session_id = Some(session_id.clone());
         self.steering_unsupported.remove(&session_id);
-        self.notify(Notification::UsageSessionStarted { session_id, origin }.into())
-            .await?;
+        self.notify(
+            Notification::UsageSessionStarted {
+                session_id: session_id.clone(),
+                origin,
+            }
+            .into(),
+        )
+        .await?;
         // `SessionCreated` is a reset boundary for per-session state (model,
         // effort, thinking), so the response's own config snapshot must land
         // AFTER it — emitted first, the reset would discard it (cyril-k3lz).
@@ -260,6 +275,7 @@ impl DomainMediator {
         if let Some(config_options) = config_options {
             self.notify(config_options.into()).await?;
         }
+        self.activate_mcp_session(session_id).await?;
         Ok(())
     }
 
@@ -282,6 +298,7 @@ impl DomainMediator {
         #[cfg(feature = "kas")]
         self.host_ctx.terminals.reap_session(&acp_session_id).await;
         self.host_mediator.borrow_mut().cancel_scope(&session_id);
+        self.cancel_mcp_commands().await;
     }
 
     pub(super) async fn set_mode(

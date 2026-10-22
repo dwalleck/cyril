@@ -15,6 +15,7 @@ use crate::types::{
     UsageAccountBreakdown, UsageAddOnCredit, UsageBonusCredit, UsageTurnStatus,
 };
 
+pub(crate) mod mcp;
 pub(crate) mod notify;
 pub(crate) mod powers;
 pub(crate) mod workflow;
@@ -589,6 +590,8 @@ pub(crate) enum WorkflowFrameOutcome {
 /// KAS multiplexes turn lifecycle, metering, context telemetry, and steering
 /// echoes through one `session_info_update` envelope, discriminated by
 /// `_meta.kiro.kind`. Sub-kinds surfaced today:
+/// - **`display_error` / `mcp_connection_error`** — the original required
+///   message → [`Notification::McpConnectionError`], never a turn terminal.
 /// - **`turn_start`** — the opening lifecycle signal of every KAS turn, cyril's
 ///   own and agent-initiated (workflow auto-wakes) alike →
 ///   [`Notification::TurnStarted`] (cyril-lki9 B7).
@@ -622,6 +625,30 @@ pub(crate) enum WorkflowFrameOutcome {
 pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Option<Notification> {
     let kiro = siu.meta.as_ref()?.get("kiro")?;
     match kiro.get("kind").and_then(serde_json::Value::as_str) {
+        Some("display_error") => {
+            // KAS emits flat fields beside `kind`; `displayError` is a mirror,
+            // not a separate error or an alternative required-field source.
+            let Some(error_type) = kiro.get("errorType").and_then(serde_json::Value::as_str) else {
+                tracing::warn!("KAS display_error is missing string `errorType`; dropped");
+                return None;
+            };
+            if error_type != "mcp_connection_error" {
+                return None;
+            }
+            let Some(message) = kiro
+                .get("message")
+                .and_then(serde_json::Value::as_str)
+                .filter(|message| !message.trim().is_empty())
+            else {
+                tracing::warn!(
+                    "KAS MCP display_error is missing nonempty string `message`; dropped"
+                );
+                return None;
+            };
+            Some(Notification::McpConnectionError {
+                message: message.to_owned(),
+            })
+        }
         // cyril-gk17: a KAS-executed hook changed state. Carved producer:
         // `ContextualHookInvoked` / `handleHookAction` build
         // `{hook: {hookId, operationId, name, status, actionType, output?}}`,

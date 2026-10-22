@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "SOURCE_ASSEMBLY_IN_PROGRESS_NOT_QUALIFIED",
+  "status": "SOURCE_RESOLVED_HELD_NOT_QUALIFIED_FINAL_X_PENDING",
   "integration_owner": "AssembleFiveBatchIntegration",
   "worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
   "branch": "ci/qualify-five-batches-final-20261020",
@@ -208,7 +208,7 @@
     "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
   ],
   "source_assembly_refresh": {
-    "status": "C6_SOURCE_RESOLVED_READY_FOR_AUTHORIZED_SEQUENCING_COMMIT_MCP_PENDING",
+    "status": "C6_SEQUENCING_COMMITTED_REPAIRED_MCP_SOURCE_RESOLVED_HELD_FINAL_X_PENDING",
     "owner": "AssembleFiveBatchIntegration",
     "preceding_head": "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
     "preceding_tree": "627089b5adbfaed791a43cfe764529ee7b397f28",
@@ -230,6 +230,18 @@
       "isolated_integration_worktree_only": true
     },
     "octopus_attempt": "Normal --no-commit two-head octopus refused complex first merge and rolled back cleanly; no commit or manual rollback occurred.",
+    "sequencing_c6_merge": {
+      "commit": "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+      "parents": [
+        "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
+        "96fae2712888489dccd4cdfbf60e290879e8f6a5"
+      ],
+      "label": "UNQUALIFIED_LOCAL_SEQUENCING_ONLY",
+      "authorized_commits_consumed": 1,
+      "git_version": "2.56.0",
+      "hooks_disabled_for_authorized_commit": "core.hooksPath=/dev/null prevents forbidden mid-flight check/formatter hooks",
+      "mcp_final_commit_authorized": false
+    },
     "held_c6_conflict": {
       "path": "crates/cyril-ui/src/widgets/approval.rs",
       "original_blocks": 10,
@@ -261,6 +273,101 @@
         }
       ]
     },
+    "held_mcp_merge": {
+      "head": "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+      "merge_head": "ec2cae8c6816f30823b105bc649843c7b78430db",
+      "base": "03838a501dad8be140acd78dc3fff4cae35fafef",
+      "command": "git merge --no-ff --no-commit ec2cae8c6816f30823b105bc649843c7b78430db",
+      "resolution_status": "SOURCE_RESOLVED_HOLD_BEFORE_FINAL_COMMIT",
+      "issue_count_represented": 13,
+      "issues_represented": [
+        "cyril-d7ve", "cyril-0ssb", "cyril-un4p", "cyril-ej7y", "cyril-xavt",
+        "cyril-1v25", "cyril-fiv1", "cyril-x5xi", "cyril-zj0m",
+        "cyril-c6la", "cyril-tqr8", "cyril-nk4o", "cyril-caar"
+      ],
+      "scope_limit": "All thirteen issue lines are source-represented, but approval X is still the older guarded implementation composed with C6. Final qualified X and its approved whole-grapheme clear repair remain unsupplied. No final acceptance.",
+      "textual_conflicts": [
+        {
+          "path": "crates/cyril-ui/src/render.rs",
+          "blocks": 1,
+          "base_blob": "dedb5da70757fbaa9870655fb4091d53ae60374d",
+          "ours_blob": "af21ab4415854fe86024bb83b5e2964f92e29b25",
+          "theirs_blob": "84ae0a7a1e745d7638e53de3f472c69d67c40f5f"
+        },
+        {
+          "path": "crates/cyril-ui/src/theme.rs",
+          "blocks": 2,
+          "base_blob": "ea8223437e746a2b151b62fa5dd7ad50d7218816",
+          "ours_blob": "9e46748e620b93ad4fd204a1b134a41bbe63470d",
+          "theirs_blob": "f3a03a5e8739c25b7d5c759d05c2d276d429ed31"
+        },
+        {
+          "path": "crates/cyril-ui/src/widgets/chat.rs",
+          "blocks": 3,
+          "base_blob": "1e82b2a4bd74956bdc5112711856b6a47d06797d",
+          "ours_blob": "10c54784914893c6ca2a365ca8ce2fc2083aad51",
+          "theirs_blob": "2089a8aa7b6db492e80bb438bf0d828cabd09184"
+        },
+        {
+          "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+          "blocks": 1,
+          "base_blob": "b6dd0899688f5e0a6c9db86d4b23b06631bcbaec",
+          "ours_blob": "930654a9f47fe666f4813d9dd086055a1b6afb43",
+          "theirs_blob": "7a4e4adce2e1befd34d01cbcc8718af2913e9cb0"
+        }
+      ],
+      "disjoint_owners": {
+        "history_notice_chat_and_four_focused_regressions": "AssembleFiveBatchIntegration.ComposeMcpHistoryAndChat",
+        "root_theme_inventory_panel_test_callers_and_benchmark": "AssembleFiveBatchIntegration.ComposeMcpRootThemeCallers",
+        "app_and_mcp_app_test_callers": "AssembleFiveBatchIntegration.ComposeMcpAppCallers",
+        "git_resolution_patches_and_owner_ledger": "AssembleFiveBatchIntegration"
+      },
+      "resolutions": [
+        "Root draw keeps three arguments, panic invalidation and persistent retained chat forwarding; incoming MCP geometry/dispatch is additive, with Hooks -> Mcp -> Picker overlay order.",
+        "Theme inventories retain recursive C6 chat modules and add the MCP widget; production theme inventory bound is 23 and widget source test inventory contains 24 modules. Raw 300000-byte cap, CRLF handling and policy remain unchanged.",
+        "Chat keeps C6's thin original-rectangle wrapper and retained presentation; no immediate renderer or second gutter subtraction is restored.",
+        "All four focused Tqr gutter regressions and main-path counterparts use persistent ChatRenderState. Error/live regressions warm it before mutation, preserving complete opaque bytes, 140/139 wrapping, all 415 live L characters and zero/one-column outside-cell expectations.",
+        "Actual MCP notice operations flow through C6 chronological add_system_message; canonical child/workflow error precedes one attributed main notice. Incoming tests now use real history change cursors/live revisions, including unchanged child-revision assertions.",
+        "Subagent canonical-error tests use MessageHistory incremental appends; real stream push/flush and occupied-adoption stable-position rebuild survive. Auto-merged workflow adoption moves/prepends without replay.",
+        "MCP UI root render and producer snapshot helpers accept caller-owned mutable RenderState, reused throughout each edit/resize/focus/close scenario. Widget-only producer helper and actual released diff/Crossterm assertions remain.",
+        "App MCP OAuth/panel/startup main, child and workflow readers migrate to history().messages() without weakening assertions. Production App and C6 benchmark adapter already retain their renderer and required no integration edit.",
+        "Frozen ec2 repaired focus reanchor, strict recognized-provenance admission and truthful requested-load response-pending wording are retained; generic clearing remains a separately supplied final-X prerequisite."
+      ],
+      "resolved_source_blobs": {
+        "crates/cyril-ui/src/render.rs": "1443f40f30adfdc7596a447513dac79cb503a6a2",
+        "crates/cyril-ui/src/theme.rs": "a8f1d668994bb0d296bdc1813b8e2fcbad6d4f20",
+        "crates/cyril-ui/src/widgets/chat.rs": "92d2f61a9a3529df592b79a6275e8c6ecd69bdbd",
+        "crates/cyril-ui/tests/widget_theme_sources.rs": "3f4e12d2b2894555e97b8670dab008feef9ca0f9",
+        "crates/cyril-ui/src/mcp_panel/tests.rs": "719fcde81d124336e9c4a1cf0a9fb0b604efb2e1",
+        "crates/cyril-ui/src/state.rs": "4f00692f76308c95b97cbfc9282bdf2e3e4ff920",
+        "crates/cyril-ui/src/subagent_ui.rs": "a8fab358e0c22088be8d8b91c38db1e38c1a9193",
+        "crates/cyril/src/app/tests/mcp_oauth.rs": "febf601f868d5e3ac97dca3826a835bacf56db27",
+        "crates/cyril/src/app/tests/mcp_panel.rs": "d2ef5f81ddd240cc45f2dedd5f7e0946a05ff0e4",
+        "crates/cyril/src/app/tests/mcp_startup.rs": "c66962e763d9e4ec64393936ad2f9d802bcc5321"
+      },
+      "exact_resolution_patches": [
+        {
+          "path": ".cyril-qualify-five-batches-final/mcp-resolution.combined.patch",
+          "format": "Git combined conflict diff plus ordinary working-tree integration edits, captured before staging against held merge index",
+          "sha256": "f4c947f708b3321d7338547e2e608a43affeb45c44f8206535a3ddc7aace4f9c",
+          "bytes": 84375
+        },
+        {
+          "path": ".cyril-qualify-five-batches-final/mcp-resolution.against-ec2.patch",
+          "format": "Git patch from frozen repaired MCP source to the ten resolved/manual integration source paths",
+          "sha256": "e8c6c3d99e66a066c015f5d9b4514b039aad506fd46490474871e512738092ea",
+          "bytes": 235442
+        }
+      ],
+      "pending_additional_mcp_clear_caller": {
+        "path": "crates/cyril-ui/src/widgets/mcp_panel.rs",
+        "frozen_source_lines": {"import": 4, "call": 48},
+        "existing_call": "frame.render_widget(Clear, placed.popup);",
+        "later_migration": "crate::widgets::modal::clear(frame, placed.popup);",
+        "status": "DEFERRED_UNTIL_FINAL_X_SUPPLIES_APPROVED_HELPER",
+        "invariants": "Remove only obsolete Clear import; preserve popup geometry, placement early return, border paint order and overlay stacking. No duplicate helper or boundary repair."
+      }
+    },
     "retained_ownership": [
       "C6 MessageHistory stable positions/identity/epoch and revision-aware real history mutation remain authoritative; no raw Vec or messages_version compatibility restoration.",
       "C6 live text/thought revisions and one persistent App RenderState remain authoritative; panic recovery invalidates retained render state.",
@@ -273,6 +380,25 @@
       "boundary_repair_owner": "RepairOverlayWideBoundary",
       "approved_design": "local://approved-overlay-wide-boundary-repair.md",
       "integration_rule": "Do not invent a duplicate whole-grapheme clear helper or repair. After final X supplies existing widgets/modal.rs crate-private clear helper, migrate the additional incoming MCP overlay clear caller through that same owner."
+    },
+    "source_review": {
+      "status": "PASS_SOURCE_ONLY_NO_FINDINGS",
+      "artifact": "local://c6-mcp-ec2-assembled-source-review.md",
+      "artifact_sha256": "bbf12b0c95190287db0cd786154244e94c1d05a45f3213a00e462ed6481777f1",
+      "artifact_sha256_authority": "Supplied by Main; integrator read the review without rerunning source or runtime checks.",
+      "confidence": 0.95,
+      "head": "fa6b99afcb9b3586b80f72f21f267614fc40592a",
+      "merge_head": "ec2cae8c6816f30823b105bc649843c7b78430db",
+      "frozen_c6": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+      "preceding_staged_tree": "2349ac9babdf3377ce425ab780c97641805f52bb",
+      "reviewed_source_delta": "Review reports 63 staged files under crates/ and no unstaged source delta; history/live/render/notice/startup/panel/caller interactions are within its bounded verdict.",
+      "applicability": "Retained for unchanged reviewed C6/MCP source interactions. This receipt-only ledger update changes no source. Main requires no new full review unless affected source changes.",
+      "excluded": [
+        "Final X source and its pending whole-grapheme modal-clear 13-callsite cutover",
+        "Build/compile/test/formatter/runtime/native qualification",
+        "Final assembled acceptance or permission to commit/push/publish"
+      ],
+      "hold": "No final commit before X is available; any later local sequencing commit requires Main's separate explicit authority."
     },
     "executed_verification": [],
     "qualification": "SOURCE ONLY. Fresh final assembled qualification/review and affected consumer/platform evidence remain Main-owned; historical individual evidence is not promoted."

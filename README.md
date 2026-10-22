@@ -17,6 +17,7 @@ Cyril is a polished terminal interface for the Agent Client Protocol ecosystem. 
 - **Approval prompts** — review and approve command execution with Yes/Always/No options
 - **Session management** — create, load, and resume previous sessions via `/chat`
 - **Agent/model switching** — switch agents (`/agent`) and models (`/model`) via picker UI
+- **MCP management (KAS)** — live server status, governance explanations, explicit reconnect/sign-in, and read-only prompt/resource previews
 - **Live activity indicator** — animated spinner with elapsed time and current tool activity in the toolbar
 - **Context bar** — visual gauge showing context window usage
 - **Opt-in local memory runtime** — teach explicit per-project lessons for a fresh session's first ordinary chat prompt, backed by private versioned stores and authenticated health reporting, without making chat depend on memory availability
@@ -167,6 +168,94 @@ Filesystem roots and paths equal to or containing the user's home are also
 rejected, including symlink aliases. Rejected overrides produce a warning and
 fall back to the default profile. Workspace agents still shadow globals, and
 workspace hooks still merge with global hooks.
+
+### MCP sign-in requests and connection errors (KAS)
+
+Cyril handles KAS's `_kiro/openExternalUrl` callback by displaying a manual
+**“Sign-in requested. Open in browser:”** notice in the conversation. Cyril
+does not launch a browser or copy the URL to the clipboard. Printable quotes,
+apostrophes, backslashes and Unicode remain unchanged; terminal controls and
+Unicode bidirectional controls are shown as visible escape sequences.
+
+Main/global MCP notices appear once in the main conversation and reveal its
+latest content even after browsing older history. A scoped connection error
+keeps its canonical child/workflow owner and adds one attributed, safely escaped
+main-conversation presentation; a later workflow claim does not present it again.
+This does not add a workflow view or a production focus-entry command/key.
+
+Both existing main and focused conversation render branches reserve a fixed
+right-hand scrollbar column whenever at least two columns are available.
+Content preparation, wrapping, line counts, scrolling and painting use the same
+remaining width, so chrome cannot overwrite opaque URL/error text. A zero- or
+one-column viewport keeps all available content space and omits the scrollbar.
+
+A `{success:true}` callback response acknowledges delivery for display, **not**
+a browser launch, completed authorization or a connected MCP server. Connection
+errors remain in the conversation independently of later notifications. The
+callback itself neither stores OAuth credentials nor implements a speculative
+completion notification. Source-bound qualification and its exact exercised
+scope are retained in the
+[URL/error evidence](.cyril-tqr8/evidence.md#held-main-integration-2026-10-22),
+[consumer evidence index](.cyril-tqr8/current-publication-evidence/held-main-integration-20261022/tqr8-current-main-consumer-archive-index.json)
+and earlier
+[repair package](.cyril-tqr8/current-publication-evidence/pr193-repair/index.json).
+
+### MCP server management (KAS)
+
+`/mcp` opens the live MCP panel on KAS; v2 keeps its agent-provided command.
+The panel distinguishes an unknown inventory from a known empty one, shows
+connection/authentication/disabled/unrecognized states and explains governance
+or registry restrictions instead of treating every unavailable server as
+disconnected. Status updates replace the matching session's inventory without
+opening a modal unsolicited or changing another session's authority.
+
+Reconnect and authenticate are explicit actions on the selected server.
+Their acknowledgement is not a connected state: only authoritative status
+updates resolve the attempt. Passive authorization URLs remain available for
+manual opening; Cyril does not launch a browser, bypass organization policy,
+or retry automatically.
+
+Advertised tools and resource templates are inspectable. Prompt arguments are
+entered explicitly, and prompt/resource fetch results are **read-only external
+data**, including visible metadata for unsupported/nontext content. Fetching
+does not send a model prompt, run a tool, write a file or grant permission.
+Both MCP form and URL elicitation requests receive a valid decline and a
+visible attributed notice; interactive acceptance is not advertised.
+
+The [current MCP evidence index](.cyril-nk4o/current-main-proof/index.json)
+separates current local qualification and owned App/CLI consumer proof from
+historical failures and remaining native MCP, final ancestry, Caar and CI
+acceptance. CLI proof uses controlled termination after its assertions, not
+normal completion; its privacy claim covers complete `McpUpdate` summary
+lines, not every raw diagnostic prefix.
+
+The separate `u62f` Windows readiness investigation remains open; a green CI
+run alone does not attribute its earlier failure. Native KAS/auth/host/platform,
+cache/performance and final MCP startup integration remain separate acceptance
+obligations, not claims established by the linked owned-consumer proof.
+
+### MCP startup waits and diagnostics
+
+New-session creation has its own 90-second response budget. Session loading
+retains its separate 30-second budget, ordinary control calls retain 10 seconds,
+and prompt responses have no response-wait deadline. Slow MCP initialization
+does not stop ready, failure or manual sign-in notices from reaching the
+conversation while the new-session reply is pending.
+
+On a genuine creation timeout, Cyril reports known server outcomes and explicit
+OAuth waits. It names silent servers only when the agent supplied a complete,
+authoritative inventory for the actual scope; otherwise it explicitly reports
+that no complete startup inventory was supplied. A connecting or pending server
+has already reported and is not automatically silent. A displayed sign-in URL
+still does not mean authorization or connection succeeded.
+
+The [current startup proof index](.cyril-caar/current-main-proof/index.json)
+records the source-complete implementation and local qualification separately
+from outstanding acceptance. This remains a draft: the latest native attempt
+stopped before initialize completed with the CLI reporting “not logged in”;
+native preview/inventory and 80/95-second held-response acceptance, CI and final
+conformance are not claimed. The CLI message alone does not diagnose global
+logout, credential expiry or a product defect.
 
 ### Local memory runtime
 
@@ -557,6 +646,7 @@ findings and the path to `report.md`.
 | `/memory list` | List active project lessons (newest first) |
 | `/memory inspect <id>` | Show one lesson, active or replaced |
 | `/review` | Review changes with a multi-agent workflow (KAS); `/review resume`, `/review cancel` |
+| `/mcp` | Inspect/manage MCP servers and read-only previews (KAS; v2 retains its agent command) |
 | `/quit` | Quit |
 
 **V2 agent commands** (forwarded to Kiro via ACP; examples, not a KAS parity guarantee):

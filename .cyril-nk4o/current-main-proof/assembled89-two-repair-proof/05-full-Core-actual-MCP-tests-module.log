@@ -1,0 +1,16 @@
+    Finished `test` profile [optimized + debuginfo] target(s) in 0.09s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-5b7bf32d2da0c87b)
+
+running 9 tests
+test protocol::convert::kas::mcp::tests::kas_prompt_without_a_wire_name_is_diagnostic_not_a_display_name_fallback ... ok
+test protocol::convert::kas::mcp::tests::absent_registry_is_not_non_registry_and_malformed_known_status_is_visible ... ok
+test protocol::convert::kas::mcp::tests::kas_prompt_wire_identity_survives_a_title_colliding_with_another_prompt_name ... ok
+test protocol::convert::kas::mcp::tests::kas_provenance_future_fields_and_string_values_are_preserved ... ok
+test protocol::convert::kas::mcp::tests::malformed_unscoped_frames_are_visible_without_inventing_a_session ... ok
+test protocol::convert::kas::mcp::tests::kas_engine_decodes_complete_union_catalog_registry_and_resource_provenance ... ok
+test protocol::convert::kas::mcp::tests::read_results_are_ordered_external_data_with_nontext_metadata_and_strict_errors ... ok
+test protocol::convert::kas::mcp::tests::kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory ... ok
+test protocol::convert::kas::mcp::tests::kas_provenance_missing_and_null_optional_fields_remain_valid ... ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 1527 filtered out; finished in 0.00s
+

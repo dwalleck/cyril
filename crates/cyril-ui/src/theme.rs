@@ -2020,11 +2020,9 @@ mod tests {
     #[test]
     fn no_color_resets_every_role() {
         let theme = resolve_no_color(ThemeId::CyrilDark);
-        assert!(
-            resolved_roles(theme)
-                .into_iter()
-                .all(|(_, color)| color == Color::Reset)
-        );
+        assert!(resolved_roles(theme)
+            .into_iter()
+            .all(|(_, color)| color == Color::Reset));
         assert_eq!(theme.syntax, None);
     }
 
@@ -2055,6 +2053,7 @@ mod tests {
             ("hooks_panel.rs", include_str!("widgets/hooks_panel.rs")),
             ("input.rs", include_str!("widgets/input.rs")),
             ("markdown.rs", include_str!("widgets/markdown.rs")),
+            ("mcp_panel.rs", include_str!("widgets/mcp_panel.rs")),
             ("mod.rs", include_str!("widgets/mod.rs")),
             ("modal.rs", include_str!("widgets/modal.rs")),
             ("picker.rs", include_str!("widgets/picker.rs")),
@@ -2114,7 +2113,7 @@ mod tests {
             .iter()
             .map(|(_, source)| source.len())
             .sum();
-        assert!(production_sources.len() <= 22);
+        assert!(production_sources.len() <= 23);
         assert!(scanned_bytes <= 300_000);
         for (path, source) in production_sources {
             assert_widget_uses_explicit_theme(path, source);

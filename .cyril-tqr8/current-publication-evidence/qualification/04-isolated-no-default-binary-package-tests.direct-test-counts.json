@@ -1,0 +1,111 @@
+{
+  "label": "04-isolated-no-default-binary-package-tests",
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "cyril",
+    "--no-default-features"
+  ],
+  "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/04-isolated-no-default-binary-package-tests.log",
+  "log_sha256": "6ad6663ff0f0386c3d5a80b20c98d3e0e151c9fd26ee79e6d8e8b72d918d5e56",
+  "totals": {
+    "passed": 278,
+    "failed": 0,
+    "ignored": 1,
+    "measured": 0,
+    "filtered_out": 0,
+    "direct_Cargo_targets": 8
+  },
+  "direct_target_rows": [
+    {
+      "target": "Running unittests src/main.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril-9e7c7469bc640171)",
+      "passed": 238,
+      "failed": 0,
+      "ignored": 1,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 238 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 2.99s",
+      "nested_summary_count": 0,
+      "declared_running": 239
+    },
+    {
+      "target": "Running unittests src/bin/cyril-memory-runtime.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_memory_runtime-82f4256d694a5fea)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 0
+    },
+    {
+      "target": "Running tests/architecture_tests.rs (/home/dwalleck/repos/cyril/target/debug/deps/architecture_tests-517692eddaddaaa6)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+      "nested_summary_count": 0,
+      "declared_running": 2
+    },
+    {
+      "target": "Running tests/crtool_cli.rs (/home/dwalleck/repos/cyril/target/debug/deps/crtool_cli-c467266f56884952)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+      "nested_summary_count": 0,
+      "declared_running": 2
+    },
+    {
+      "target": "Running tests/event_routing.rs (/home/dwalleck/repos/cyril/target/debug/deps/event_routing-51b35956fb32903d)",
+      "passed": 18,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 18
+    },
+    {
+      "target": "Running tests/memory_runtime.rs (/home/dwalleck/repos/cyril/target/debug/deps/memory_runtime-decf45c47e8063bc)",
+      "passed": 8,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.38s",
+      "nested_summary_count": 0,
+      "declared_running": 8
+    },
+    {
+      "target": "Running tests/nd4h_source_fences.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_source_fences-5a4760b3af6f13cc)",
+      "passed": 7,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 7
+    },
+    {
+      "target": "Running tests/powers_source_fence.rs (/home/dwalleck/repos/cyril/target/debug/deps/powers_source_fence-62210cbd8170841d)",
+      "passed": 3,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.05s",
+      "nested_summary_count": 0,
+      "declared_running": 3
+    }
+  ],
+  "attribution": "One final0filtered summary per direct Cargo Running/Doc-tests block; declared running count equals pass+fail+ignored. Nested subprocess summaries retained in log but excluded from top-level counts."
+}

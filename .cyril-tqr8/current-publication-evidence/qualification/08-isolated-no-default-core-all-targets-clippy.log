@@ -1,0 +1,20 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+GIT_OPTIONAL_LOCKS=0
+command=cargo clippy -p cyril-core --no-default-features --all-targets -- -D warnings
+started_utc=2026-10-21T00:26:19.955979+00:00
+
+    Checking rustix v1.1.4
+    Checking nix v0.31.3
+    Checking polling v3.11.0
+    Checking tempfile v3.27.0
+    Checking async-io v2.6.0
+    Checking async-signal v0.2.14
+    Checking async-process v2.5.0
+    Checking agent-client-protocol v2.0.0
+    Checking agent-client-protocol-conductor v2.0.0
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 15.27s
+
+exit_code=0
+elapsed_seconds=15.350419205

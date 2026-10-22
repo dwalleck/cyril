@@ -1,0 +1,2613 @@
+{
+  "schema": "nk4o.actual521.final-four-file-repair-inputs/1",
+  "definition": "SHA256 compact sorted-key JSON array of {path,sha256,bytes} in original521 path order; original521 policy excludes rootclippy, separately pinnedfull522/modes. Not Git tree/commit.",
+  "descriptor": "fd669d60bdd76ff5604a310c4f0181a66ef8656ed77b7781dd69ae7dcd943e07",
+  "entries": 521,
+  "rows": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "bytes": 101371
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "bytes": 3557
+    },
+    {
+      "path": "crates/cyril-core/Cargo.toml",
+      "sha256": "a3a260a4d71e418409aef182a99096fae40d11329274959fe9d96adcf49051ce",
+      "bytes": 3309
+    },
+    {
+      "path": "crates/cyril-core/examples/kas0_turnend_probe.rs",
+      "sha256": "615c763d7f00367a51baa471c5d4613e0cd9393442891614d22eddb36581d870",
+      "bytes": 7191
+    },
+    {
+      "path": "crates/cyril-core/examples/review_prefix.rs",
+      "sha256": "648d6e86964734d7010a36598f634ac9bc9a1c9d783cf20eb0a54b1a76240e08",
+      "bytes": 5135
+    },
+    {
+      "path": "crates/cyril-core/src/always_allow.rs",
+      "sha256": "f8e3eb6b677ca46730cc56d1d3bcd39e8c528fe7d868f2c19cee2342f28ec5b6",
+      "bytes": 50378
+    },
+    {
+      "path": "crates/cyril-core/src/commands/answer.rs",
+      "sha256": "bacf64a960062ce69b28b21f5c2b382f606de4bdc4e38c3cad47d45f0c0ba1ec",
+      "bytes": 18663
+    },
+    {
+      "path": "crates/cyril-core/src/commands/builtin.rs",
+      "sha256": "ecd5cbe128dcb39271072610acffafd0939d41701d8ec1791da3b33ef1ed4d0c",
+      "bytes": 26769
+    },
+    {
+      "path": "crates/cyril-core/src/commands/mcp.rs",
+      "sha256": "7f6372c3ac3991cf04e4cf683f0d34ffed2d337d65388e0fe1eff606412e3b4c",
+      "bytes": 4219
+    },
+    {
+      "path": "crates/cyril-core/src/commands/mod.rs",
+      "sha256": "8a0af7b18f277d9a1b676b3f70b1091da9acec0e8e6d5a5a23fd16b40f38ae46",
+      "bytes": 105875
+    },
+    {
+      "path": "crates/cyril-core/src/commands/subagent.rs",
+      "sha256": "8ee7b51826f5a15276993c4a198268fc9fdd2b029c9181263a5c8d0c11daa14e",
+      "bytes": 15355
+    },
+    {
+      "path": "crates/cyril-core/src/commands/workflow.rs",
+      "sha256": "61726ec19e27f48745f9db4b94289d267a3a43bffcb3a4ba87c69b926b27d518",
+      "bytes": 20148
+    },
+    {
+      "path": "crates/cyril-core/src/error.rs",
+      "sha256": "1f5dbca48ee29c43c8123e1ed54e2063cb3da6fcafdaa0c18e814ecc49db7f59",
+      "bytes": 4764
+    },
+    {
+      "path": "crates/cyril-core/src/kiro_agent_config.rs",
+      "sha256": "18bd77b6739a9e2f3513a4d44e0eac692c21efb8c0ce3f35e6bbbcd5ffb847dd",
+      "bytes": 29367
+    },
+    {
+      "path": "crates/cyril-core/src/lib.rs",
+      "sha256": "b525e06e90c75e8b269febb5b696ac11f7d2fc89c22664c7a97d515b3cb50ff5",
+      "bytes": 566
+    },
+    {
+      "path": "crates/cyril-core/src/platform/mod.rs",
+      "sha256": "9e0fcdae9e8d930d5472a5e203cb6c4e11f7e720c1dd16f909829c759215080c",
+      "bytes": 14
+    },
+    {
+      "path": "crates/cyril-core/src/platform/path.rs",
+      "sha256": "98d31b6bcb5f4de6f322281a130dd6c3f394b4f9c480d4f5d28387b59868355a",
+      "bytes": 44454
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge.rs",
+      "sha256": "50a24099fa85efa4a28135e03c2bbccaee870cb6bf85192d1033ebcab46c489d",
+      "bytes": 22420
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/agent_initiated.rs",
+      "sha256": "875439010925f57536bae232565e2841f257a461c7f5dd8b141fc30cb8408f39",
+      "bytes": 15210
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/always_allow.rs",
+      "sha256": "8942c4be8b03da1fc7ae0d4cdc7f0e5740c298490b520e69cc440e287b6e234c",
+      "bytes": 5996
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/commands.rs",
+      "sha256": "35ef2fb5f9a483626d622dd31ae8ec89ce5fcd27d06d46c72c05f620eda75856",
+      "bytes": 24826
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/config_options.rs",
+      "sha256": "f1184a2c2724dc5132a4c29225a2b7662d7ff12bfd95fac2848aef9b6c2b3b05",
+      "bytes": 5010
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/death.rs",
+      "sha256": "0a8d9a3d68644b8421cee0b792b2315c608021e28af9b1f5e83f20f2b1003341",
+      "bytes": 11287
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/fingerprint_stops.rs",
+      "sha256": "5f064fcb2b78bb84b735357c54563a239da6a96d3c34ccf249089bcc0c3d7929",
+      "bytes": 6251
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/lifecycle.rs",
+      "sha256": "fe79d96987da8b7d6528eb3189f247ab2c3ad89cd56cffb94b9468a17fdf6f51",
+      "bytes": 8913
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs",
+      "sha256": "8ece8de9892a7b5d819e403f147f84339874fcb0a0413ddb5e6771b574a1dc61",
+      "bytes": 4164
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/powers.rs",
+      "sha256": "7ddc625e1ce698abaca4241785a242ceb2c1544011a0752d33ca07fd2a53c2df",
+      "bytes": 6419
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/rejection_feedback.rs",
+      "sha256": "a8193e272de28f0fe9d9a45cf5e492b928ce84e9648107234f57452a96da8d65",
+      "bytes": 3725
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/review.rs",
+      "sha256": "6df53f583f5321faad384e0de61da43ac9ffbc5dee5872415e991fdf8983f055",
+      "bytes": 11583
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/routing.rs",
+      "sha256": "977866a2669269dee362e155bfa49ec9e4cd9f6304548905d64e25a8cb300d9a",
+      "bytes": 12722
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/saturation.rs",
+      "sha256": "e455860e6bfac1f2d0ea8b571399b5251809a0c9637099be204e365cdc15392e",
+      "bytes": 14061
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/session_settings.rs",
+      "sha256": "6e01007a13c06d0e336f4ee71e66ddf460b8ddf2a17ad399fcc6d32ed6fdb6b2",
+      "bytes": 7078
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/stall.rs",
+      "sha256": "77b77208b93407e6e13163e5e02f7d374b85bd9a12bfbeae5d09b6c34d0cdf3a",
+      "bytes": 5568
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/step_answer.rs",
+      "sha256": "a610d8fe5c3dfaaddc5cad58cc519ae2430b81d222a9aeaa157d1db2748c3401",
+      "bytes": 3778
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/thinking.rs",
+      "sha256": "0904fcfc0c85484115fa35e5452eb0ae52660f10cd62d04865e0aaee93141ece",
+      "bytes": 11485
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/workflow_plan.rs",
+      "sha256": "2f6e260507104168f7a7a045982a41ab71bf910879aa8aa8029df991504e5ff5",
+      "bytes": 3471
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/harness.rs",
+      "sha256": "33844c625df32c30919f13c8c8cd2b151bc8d0aa8f44c2004adc860c061e5d01",
+      "bytes": 35339
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/client.rs",
+      "sha256": "dda841a12f009960d916a4f291d066bea2848bdb86291403894f9f5651465576",
+      "bytes": 12838
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "sha256": "4eb91d95634f36843a063f95ead26c36fdd2c9bbd3794c1244841e9fa0bec70f",
+      "bytes": 107548
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+      "sha256": "16b2330d61729860e45b2322c2d7c6a3307ccf00ac739f53209afe9999d2c1f0",
+      "bytes": 15976
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "sha256": "dc56ff8f0d9862e8e8dcbf9772f655bf25943e1c1b8407e4ecd77174cbeb3d33",
+      "bytes": 17875
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/notify.rs",
+      "sha256": "cc8786999f1ec2578809d1ffff5fd3f721dc2420fc086af95084da223a552a9c",
+      "bytes": 10784
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/powers.rs",
+      "sha256": "990841cd4e3d3423010252e733861e977aafa30c136826fcdd781fd09e386dcb",
+      "bytes": 19380
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/workflow.rs",
+      "sha256": "cf581f12172daa243e357799e5fc767ffbc4c71f456127319fc4c13132b080b1",
+      "bytes": 247872
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/workflow_plan.rs",
+      "sha256": "59b9081689e175ba69011d7ae7e6186d7e265b622aa98be24222c4832a826020",
+      "bytes": 29263
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kiro.rs",
+      "sha256": "1167cb8af5838ae49366826f8fcd23bd7325b24ee619432c7fb4e869d5921dad",
+      "bytes": 96556
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/mod.rs",
+      "sha256": "2b81dc24fcba931e9cb864b55611bc4b3587ace059b92460804b0b6216eefb0a",
+      "bytes": 120468
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/probe_j1b3.rs",
+      "sha256": "ed78da8c1ca1deba31bf960d22c80302b7de7b77210748f96f8a940faa2d1a93",
+      "bytes": 4446
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/probe_qo13.rs",
+      "sha256": "728ae524b92c14564393ca1eb150a6d945e36470f0b4cbcf44795faa6579eeaa",
+      "bytes": 11119
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/extensions.rs",
+      "sha256": "a00c217c3662034ddd5c75b5739e8af7b6267fdfab24e1cb4a32706a16d03b1c",
+      "bytes": 10973
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/kas.rs",
+      "sha256": "0120fed007db1c5d621030e83127aeb60e548135c18af2ef774c04c8fc8d15bd",
+      "bytes": 15702
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/mcp.rs",
+      "sha256": "d2b7887ca867f5b91d7a38c38ad0905ace627db95ebb9d35f636a46013975bd5",
+      "bytes": 7550
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+      "sha256": "6e06c1b50b1143a88f6a83b6e9be8b23c2572780adbfa0976bde145cb9da7471",
+      "bytes": 8150
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+      "sha256": "a6ae7c0eb05b2c2106967376518000996b197fd25630770655cb99ac7bf444c7",
+      "bytes": 29607
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/subagents.rs",
+      "sha256": "93239a4b0942c95f0132252049002a9bab5916c14047e760af9b09d365d6881d",
+      "bytes": 5546
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "sha256": "d4e64d6b25799c011a7c9a6ed8c9807c2e6f2ea641f3be3146124c83a6db8a08",
+      "bytes": 27911
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+      "sha256": "1d2b613502d209566182dee3c373d584e09269a489cf7597caadbb914520b171",
+      "bytes": 9418
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mcp.rs",
+      "sha256": "e7c2f1cb90988faf32996dd2965da89f389e28e1fede2ff499a1b23a306e2a1b",
+      "bytes": 8576
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+      "sha256": "f7c03ccf8e2c511c7901cdd0e97a540cb19beaf9f0280a07fbeaf773b7f00d93",
+      "bytes": 33428
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs",
+      "sha256": "01fccc081c3f9343b02e9b789b03de3f291a7ce130853989c7ab41100c1cf674",
+      "bytes": 7169
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/handlers.rs",
+      "sha256": "8b1e1bf3bafc4a2c3de0fb19545d78fe38c12fede00c673682012fbeb3c798a7",
+      "bytes": 190
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs",
+      "sha256": "c55ec5d964e0d7c22409b27183fa154216384fb265b620494ea69b4cd0e6c5b7",
+      "bytes": 24701
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_admission.rs",
+      "sha256": "37d1c0d1e8698b92ab24fe78805f7e4c661554f4ef52020abd14f9d695c170ad",
+      "bytes": 15987
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs",
+      "sha256": "5c698790b29b14e17a710e04ba9484b14fe8dc25cdfd4db854a4ed5324e59842",
+      "bytes": 4789
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_runtime.rs",
+      "sha256": "91b787b87d81bf58492b8879027cb89cae0fc80c51c907a7cd332ed63f555210",
+      "bytes": 12559
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_wire.rs",
+      "sha256": "0159174666d0417bf290ec073b5f15b593a3d516f6a4c705ba8af05add909758",
+      "bytes": 7826
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "sha256": "ef477a10fc9906a834da87d5ffa4a7a76247cf48813d637d9097e879c68cc3ce",
+      "bytes": 268
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs",
+      "sha256": "58f6b2b4709fed233370be0304a7444ce0a49ca28208bfe97b8edb38ace25dec",
+      "bytes": 15709
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/serial.rs",
+      "sha256": "822b1e616b319ade9ef9491b0edb06c1b438a33d0186aef7898d3e4d2335c6a7",
+      "bytes": 60305
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/topology.rs",
+      "sha256": "1237158ffe3cf7d5bec6d62c5324c9aab56513e5fea2540b228a21f620e0d1ce",
+      "bytes": 2114
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "sha256": "768e90520a0383d7f7a5c14b69d0838f2d974664d0a8441e5d5e1770994434a9",
+      "bytes": 42721
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/fingerprint.rs",
+      "sha256": "01b98e8b4b419732ccb7eda086e2a93b3d4d4555fec43247f1564c88f997a6ca",
+      "bytes": 11035
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/host_mediator.rs",
+      "sha256": "3a1fb15b45b0d93b5ea55636ec8e62218be91ee9c934d2383f33bddb9789b9ea",
+      "bytes": 19785
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/identity.rs",
+      "sha256": "c13b94a396493d5048dc3c2165a4c6ecb01d138dba783bb79999cac49794f12a",
+      "bytes": 5558
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/auth.rs",
+      "sha256": "ad9b9ad0f0ff29c9d122211d47394a13d038916b264d392c7ab374695210b271",
+      "bytes": 83564
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "sha256": "b924c11261c1fe804d260fbfccff5acd59055e203a5c6c57150cfa6476afb87a",
+      "bytes": 30910
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/discovery.rs",
+      "sha256": "0c6868d443f3081904e0d3f9c8c8393504207adc663033870fa46234e6e57b85",
+      "bytes": 77278
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/hooks.rs",
+      "sha256": "70dd29fd36080c2dbb66920a2f0cc68ac1e4e07b0a85faec538942d2789a2e65",
+      "bytes": 82600
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/host_io.rs",
+      "sha256": "4bbe6483b073f8c417fa69b2214f5762232670d855fa32942c7522b04ccbe52c",
+      "bytes": 28484
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/host_shell.rs",
+      "sha256": "bf1d6bc4386825333f2d974263b3a17d10375aa72bd18540b719f7b0358943d0",
+      "bytes": 44136
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/kiro_fs.rs",
+      "sha256": "1c59f492443ca1bcb534d807dc7d43a14f77785cf4be677aba76c27bbd69b97a",
+      "bytes": 49083
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/mcp.rs",
+      "sha256": "334b3a7fe96e3252938f786bffefc2163994abb0c831d9fb0318f0002a7a8a72",
+      "bytes": 4444
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/mod.rs",
+      "sha256": "d6b370e0fd274b32cf8ce8955d765613789a8488965f9f6f3df7df9700479c02",
+      "bytes": 2284
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/settings.rs",
+      "sha256": "030e416487846f6fa31119e3054f5ada4e5917ff931b23078905f476f57606c3",
+      "bytes": 27862
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/stored_token.rs",
+      "sha256": "0c17ce86699b8ee0f73ed56d6e46b267a23cedabdf6ddc48ccb52ef74cd497a9",
+      "bytes": 26743
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/terminal_io.rs",
+      "sha256": "f0b477216d989eccf0ef563c5796b685d48ec55764fedcfe1e5e38e0a03789ae",
+      "bytes": 74718
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/version.rs",
+      "sha256": "122ae1f015644302c23a6c85e8ecaf9420d2278a4d7944545620a45e68976ed8",
+      "bytes": 27001
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/mod.rs",
+      "sha256": "4080c3099b693cf73fb23c6ba04969e364f94581bd0571c0ee2d486744856ae2",
+      "bytes": 1622
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "sha256": "18569468a12bf2f0263e4aff058f90a128ac8a69c6dd614df2c9277bdd922ced",
+      "bytes": 5732
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_g9vt_c13.rs",
+      "sha256": "ce25944a50b4376efc7a80341e48a4d6b32346af78397d15c88e08ed6b472eea",
+      "bytes": 1081
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/mod.rs",
+      "sha256": "6b7e5efabb98d513d1073bebc012c44cd51abd45728dc540515300103b4bd3e7",
+      "bytes": 8009
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/process.rs",
+      "sha256": "0f1988d3dd1fbc29fee8800113aa5a22448584729085fe11a6c7e8d6bb068ea1",
+      "bytes": 5467
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/handlers.rs",
+      "sha256": "29b0586ccafbf363a97dbea5d986d137afd9c76f5a45b096e65778ac24119789",
+      "bytes": 4524
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/mod.rs",
+      "sha256": "ceff635842ae8ae31b77a3ca0f26b2cff36576fb3c97096d955c697e92ff8442",
+      "bytes": 41
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/process.rs",
+      "sha256": "28482aaafcaa73a816a0edd92077e8cc0be833bff7b0c4f4890886a99b3b571d",
+      "bytes": 18324
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/sdk_runtime/tests/topology.rs",
+      "sha256": "74ccba679bfabd0196cd72033d37177f59a122638f17262d104a0be691c049dc",
+      "bytes": 8037
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/source_observer.rs",
+      "sha256": "558783f64e26084b8ce985e960f43a3a699f0bdae4e8566d447677ffcb51d9a1",
+      "bytes": 27789
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/source_observer/tests/current_runtime_contract.rs",
+      "sha256": "1e18fa111dafd447a262c12bf2ab60a1c6a32b3d740001ced60d3fe36d3c3728",
+      "bytes": 18322
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/tool_call_ledger.rs",
+      "sha256": "79d763c0474661c8b7fcd90347fd4da9408dc9e3bf52002f64ad0fa979eabf74",
+      "bytes": 7792
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/transport.rs",
+      "sha256": "40e75bb39e887bbb6ef12b8a7824b902b7c526d2ac9349d90474c7e42fc1fbe0",
+      "bytes": 22140
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/transport/tests/current_runtime_contract.rs",
+      "sha256": "5d5b63e4471682e40bbff2a9ff60ddd3172ab8253929fc2ea0634537342e0c07",
+      "bytes": 2334
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/turn_liveness.rs",
+      "sha256": "5daf83c6cb0a0d899840d370e391d9adb0477f8220a2710ae8667dd1f159e7a1",
+      "bytes": 15214
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/turn_mediator.rs",
+      "sha256": "57688aa0ee6b991bdace8096be5f8d9ae21b7e22b855f77aeb1ea66a057a3781",
+      "bytes": 56980
+    },
+    {
+      "path": "crates/cyril-core/src/review/authorization.rs",
+      "sha256": "e167225dbd88e89dcdb0ba0deb96c350b0faa94a477143d8d3e66db63c9ff738",
+      "bytes": 4013
+    },
+    {
+      "path": "crates/cyril-core/src/review/config.rs",
+      "sha256": "e489d0ca20790d690d9efeea5b06c56afb0a47018e33a727f6884fccaf163284",
+      "bytes": 17142
+    },
+    {
+      "path": "crates/cyril-core/src/review/consent.rs",
+      "sha256": "783fc24c37640fc51d5a06fb0e64a4ab4541276f558e499ee5379e405184eefc",
+      "bytes": 5033
+    },
+    {
+      "path": "crates/cyril-core/src/review/inputs.rs",
+      "sha256": "fe5d3b5978187a0f5d5cc4d202cb2bf945c42ae1ee2cb3a8bf9a6d6d5614ef22",
+      "bytes": 3457
+    },
+    {
+      "path": "crates/cyril-core/src/review/launch.rs",
+      "sha256": "f18dd3edcddc1ff9bb3931f82690f5323a4269691db5e402566aa31150b1d785",
+      "bytes": 11672
+    },
+    {
+      "path": "crates/cyril-core/src/review/mod.rs",
+      "sha256": "c6a2cd02eda4b4a726597ee205a4b4f56817941f821aad01d56b034d02fbb300",
+      "bytes": 13697
+    },
+    {
+      "path": "crates/cyril-core/src/review/policy.rs",
+      "sha256": "4a6d3b50567ddbe87808391116b4def3c446a158881cdbc983028d8c9b31b03e",
+      "bytes": 14737
+    },
+    {
+      "path": "crates/cyril-core/src/review/resume.rs",
+      "sha256": "336512c0c54d66690de7e8d5f66d0f0443c479a73fa32bb2aaead6603216c2d2",
+      "bytes": 11576
+    },
+    {
+      "path": "crates/cyril-core/src/review/run_record.rs",
+      "sha256": "db3beefa1e97705b7dccc2046bfb253040c91d48a28e9cb392536b2bfc60a197",
+      "bytes": 3139
+    },
+    {
+      "path": "crates/cyril-core/src/review/scope.rs",
+      "sha256": "3c3053bb36bdbaf9fce15b8b2210bde5b2175f3dc29195cf877605927ab0dd2a",
+      "bytes": 7308
+    },
+    {
+      "path": "crates/cyril-core/src/review/summary.rs",
+      "sha256": "8f5f1c9db814e91b27ca9546dc3883cd0a88939d1f6eb75a196e98d7e74b8db8",
+      "bytes": 5798
+    },
+    {
+      "path": "crates/cyril-core/src/review/target.rs",
+      "sha256": "944d7b8bf322468ab851a6ace9775d8822b736700c0c235a14f6d4beb23cd568",
+      "bytes": 8791
+    },
+    {
+      "path": "crates/cyril-core/src/session.rs",
+      "sha256": "ea2ebc490e36ba6bfe93589eae140f06c68aaa43d8125dd04ba9841eece9e10c",
+      "bytes": 73476
+    },
+    {
+      "path": "crates/cyril-core/src/subagent.rs",
+      "sha256": "51647413b0d2b5f79a94d38bcd8a72944e0e52b563651ed07f3285d1d2d8d241",
+      "bytes": 8457
+    },
+    {
+      "path": "crates/cyril-core/src/test_support.rs",
+      "sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee",
+      "bytes": 23864
+    },
+    {
+      "path": "crates/cyril-core/src/types/agent_command.rs",
+      "sha256": "a912465e68967e3527b6509a397df51fd29bd9f76aff8dff2d43338940ffac4f",
+      "bytes": 2874
+    },
+    {
+      "path": "crates/cyril-core/src/types/agent_engine.rs",
+      "sha256": "9b9e603b28b207533d48db276de63171f3f85082371d62fb21926a7c6ef50574",
+      "bytes": 4242
+    },
+    {
+      "path": "crates/cyril-core/src/types/code_panel.rs",
+      "sha256": "550d91a290e5deb63de57efa09d7837d8443a9e85bb04cdac283b1268a6f5db8",
+      "bytes": 11759
+    },
+    {
+      "path": "crates/cyril-core/src/types/command.rs",
+      "sha256": "9ad47bd556246dc1f5264db439c308a5340fc85fc2228d34f2a38b2973941e0a",
+      "bytes": 8718
+    },
+    {
+      "path": "crates/cyril-core/src/types/config.rs",
+      "sha256": "b8741dc4840011365f521a43e1faf9deb3f2976fe61226ec20ee94c26db155b7",
+      "bytes": 20625
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "sha256": "b49d196d7dce3b1f572c2107d751996c1a8df412cef5d81fb34fe8cf7f788d1e",
+      "bytes": 53098
+    },
+    {
+      "path": "crates/cyril-core/src/types/hook.rs",
+      "sha256": "f7d141c9e4a6e3a3dd5fa3b78f8b5d6c724af57559045f548019de29c0393050",
+      "bytes": 6099
+    },
+    {
+      "path": "crates/cyril-core/src/types/kas_config.rs",
+      "sha256": "7cb3bb749e67c5e462b70a7f15f098dacc560230f60316c4857e7f50183e1257",
+      "bytes": 20031
+    },
+    {
+      "path": "crates/cyril-core/src/types/kas_hooks.rs",
+      "sha256": "7217ce9a68c29ff32f9f63637cd5dcb2ec4d1910e3c1a9ea23867a257f4b1ddb",
+      "bytes": 4123
+    },
+    {
+      "path": "crates/cyril-core/src/types/kas_spawn.rs",
+      "sha256": "0ef17cda6a8e4cff83a25832e9c523b859cb627bac2db4a823b104f4b58c7e87",
+      "bytes": 1561
+    },
+    {
+      "path": "crates/cyril-core/src/types/mcp.rs",
+      "sha256": "be6af2133977d8ce0988483891c747ef23ec39f23cd33cfae801318cf27ddf72",
+      "bytes": 14863
+    },
+    {
+      "path": "crates/cyril-core/src/types/mcp_tests.rs",
+      "sha256": "3865015d96a3e92f401147073cdfa5a38511c435033b92ddca84a415fc6f514e",
+      "bytes": 14028
+    },
+    {
+      "path": "crates/cyril-core/src/types/memory.rs",
+      "sha256": "57355f92da7aad40abd6f129813f67b06ee117e03ba754981abba5ae131b5618",
+      "bytes": 20419
+    },
+    {
+      "path": "crates/cyril-core/src/types/message.rs",
+      "sha256": "abe86fbe8ac6522c7020f06a9b2a8af4b82ca911f7a7382080eede7f6ad642d5",
+      "bytes": 1757
+    },
+    {
+      "path": "crates/cyril-core/src/types/mod.rs",
+      "sha256": "fe33a26ffbcea22485cdfed8c7599bac64916a9ad5120068c9fd4af964dbb948",
+      "bytes": 5467
+    },
+    {
+      "path": "crates/cyril-core/src/types/plan.rs",
+      "sha256": "a510a77adca1fb403f87e7bcb601cb212ca58ccba84f9ca46b5f2ff2ec1acaca",
+      "bytes": 3491
+    },
+    {
+      "path": "crates/cyril-core/src/types/power.rs",
+      "sha256": "27c2a30093f9d47b67c067b3cb20b2597e12f448e18cc245eaea7d4e7c1bb308",
+      "bytes": 6993
+    },
+    {
+      "path": "crates/cyril-core/src/types/present_as.rs",
+      "sha256": "cbf85e6f3dff868f2cfceff74b84029e3c2b34f63f9c6336df50742d802f96bb",
+      "bytes": 4001
+    },
+    {
+      "path": "crates/cyril-core/src/types/prompt.rs",
+      "sha256": "b4505e07824666eddbf5af5ce313cf8999f62c5520f0905e44277feef82010ff",
+      "bytes": 2953
+    },
+    {
+      "path": "crates/cyril-core/src/types/session.rs",
+      "sha256": "c9d366cc62c65461248e740161c0e9d87626f9f0909444c241c9e63062ceca59",
+      "bytes": 41003
+    },
+    {
+      "path": "crates/cyril-core/src/types/source_turn.rs",
+      "sha256": "eff536d0c920b26b25cdf5073b66393ce4ad63268bc643145f167ecb74e89ad3",
+      "bytes": 4234
+    },
+    {
+      "path": "crates/cyril-core/src/types/spawn_environment.rs",
+      "sha256": "ea9a615d047b4540b608126237a29aa4edd4ac466b9e94544609513a3d6a56ea",
+      "bytes": 3238
+    },
+    {
+      "path": "crates/cyril-core/src/types/steer_receipt.rs",
+      "sha256": "b34cc12d1530076b6ca5cd02155b6582eb1af4a6298ef372da19a7da054d5809",
+      "bytes": 13601
+    },
+    {
+      "path": "crates/cyril-core/src/types/subagent.rs",
+      "sha256": "2b9fc7cca0bdf0dd962543e99e25c743f835ed42550b26ac56592f37bd8dc56f",
+      "bytes": 10965
+    },
+    {
+      "path": "crates/cyril-core/src/types/thinking.rs",
+      "sha256": "76bed7da5dae43a7b78757d9e32ba3fe3e7b22a9b2cf3e764c6f1b9a5bbf668f",
+      "bytes": 17509
+    },
+    {
+      "path": "crates/cyril-core/src/types/tool_call.rs",
+      "sha256": "db94f113ed0f10bb0dbc8e2d8da418be651118c4d27b823a8d124d42ef480f22",
+      "bytes": 17445
+    },
+    {
+      "path": "crates/cyril-core/src/types/turn.rs",
+      "sha256": "eb2d4d5754420299b7a13672c78b658550a01f172e332a717e34fc820afeb36c",
+      "bytes": 6667
+    },
+    {
+      "path": "crates/cyril-core/src/types/usage.rs",
+      "sha256": "4c8df83687bae0d168ab7061b1834016f8929f971e5372448cfa63fdc4e84148",
+      "bytes": 27765
+    },
+    {
+      "path": "crates/cyril-core/src/types/voice.rs",
+      "sha256": "02e8e3900b36ee05e589aebc0ffb63e9956477b2a0e65ebba2c6e507305d92b7",
+      "bytes": 2451
+    },
+    {
+      "path": "crates/cyril-core/src/types/workflow.rs",
+      "sha256": "3d5c37a539f384af717b8dc0b74cc4542c7a9348082adcd472abd0a9c0fecf16",
+      "bytes": 116963
+    },
+    {
+      "path": "crates/cyril-core/src/types/workflow/plan.rs",
+      "sha256": "c39e0d9321b9febaf336e81c558f29dda070750a79cb967518c8a0c034b6c40c",
+      "bytes": 6383
+    },
+    {
+      "path": "crates/cyril-core/src/types/workflow_command.rs",
+      "sha256": "1ce55ca77906c1a6dd95da52211b4887cd1531ab59c9f5c1956daef5098f6882",
+      "bytes": 17088
+    },
+    {
+      "path": "crates/cyril-core/src/usage.rs",
+      "sha256": "8bd51a0e9b1f1d7fc72bb5540786bb832af5d9b84d2bea710dcae364bcaa267c",
+      "bytes": 215637
+    },
+    {
+      "path": "crates/cyril-core/src/usage/kiro_sidecar.rs",
+      "sha256": "b86b656b04485f2440731cb8d9880ad648b288de6e9e2a18acc517037a2739b0",
+      "bytes": 54836
+    },
+    {
+      "path": "crates/cyril-core/src/voice.rs",
+      "sha256": "283b9f2012b9c1ba477521f3c94a93a96c9b6715916f69cfefc453c2cf360934",
+      "bytes": 4775
+    },
+    {
+      "path": "crates/cyril-core/src/workflow.rs",
+      "sha256": "31066a1261e21076ec86bd30cc14ea6ec98c631e30585634b9354bb6d39e5956",
+      "bytes": 249094
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/fake-kiro-cli.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/README.md",
+      "sha256": "44e5687182f1ab541fe0b69c387f5e76c603eb9236b981c9cb9f7fd6d462734d",
+      "bytes": 4608
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/agent_message_chunk.json",
+      "sha256": "57bde2e6083b8672086b8ee5337f0e7aa454864f32095af7b309526bd5ff0f99",
+      "bytes": 191
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/powers/items-changed-2.21.2.json",
+      "sha256": "e95129c731cd8c05becb2de6162117bc2d6ce124e986baebb9fbb4cec2b8ffec",
+      "bytes": 2669
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update.json",
+      "sha256": "4e8366123346e8c2ce58450edc9b3e864f8bad3afcf099b6c55c3903b96fc733",
+      "bytes": 279
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_context_usage.json",
+      "sha256": "f0a6434c94ab11bcd9015d27c2e3ad1087383bc36d5eef6b4673d55ab2ca0349",
+      "bytes": 844
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_steering_cleared.json",
+      "sha256": "44239b8e1c0033024c3e5acb56887e6b0b8c194c95028ae845a10d870400cbcb",
+      "bytes": 276
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_steering_inclusion.json",
+      "sha256": "6d50db695e3de7f6780a73a9d24be1a26fd66e6cd96ca3cc54827704d2b5e1df",
+      "bytes": 289
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_steering_injected.json",
+      "sha256": "68e9542e39b720fc3a5f6712cd79070c463dd700591c05b751d2141e8fab4cd0",
+      "bytes": 358
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_steering_queued.json",
+      "sha256": "6803573c40fe6991e8a36775f40b5407453bb25cd34a2ca138e8b752fba54af5",
+      "bytes": 356
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_turn_completion.json",
+      "sha256": "6d4d1693c0866d026539fa13a5ac723569bde3bb1f88c6c4bbc401005b31eddc",
+      "bytes": 613
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_info_update_turn_end.json",
+      "sha256": "1d1d5e40ed336ab7e1e6e5a4df797ecf8d54fe409daee8cd5b35738925f6867b",
+      "bytes": 299
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/session_new/initialize-and-session-new-gateon-2.32.0.json",
+      "sha256": "a92779697c027c1444e395ab470723c44adb98d22045d312bcbb20d10216b909",
+      "bytes": 1075
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/startup-cloud-config-2.21.0.jsonl",
+      "sha256": "f54a91f7fc582b7d6d62b5d912713a4e4dd85ac752f64ae347aba73d8dc1c31e",
+      "bytes": 701
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/thinking/set-config-sequence-0668.json",
+      "sha256": "27afde0a319d38205b3c4330762a358745b8d86fa5fa28798e88ffbd168e4e34",
+      "bytes": 56941
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/tool_call_raw_input_2_18_1_source_derived.jsonl",
+      "sha256": "384dc37487079a49ac1f344648c32850cd2e81bced44165d6a6cfa86fe03719b",
+      "bytes": 1105
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/turn_completion_2_16_0_four.jsonl",
+      "sha256": "4c1a059c75d8e862694bc24888a31376fa02f15380977e599c9578c064fd893a",
+      "bytes": 1671
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/README.md",
+      "sha256": "36c57a02572f42f90fadb4d8101ce0b81a579d6b915d535d7140f9afdd01d407",
+      "bytes": 2533
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/cancel-reply-2.18.0.json",
+      "sha256": "bdbc7356edf348606890098d780fac32a711c482de26fb228e15a2a7fa55acce",
+      "bytes": 46
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/inspect-reply-2.18.0.json",
+      "sha256": "c302f449b97e67cd5ff20b458f2d6201262b2880d475937ba83b189234215d63",
+      "bytes": 1118
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/kas-csig-2.16.0-neutral.jsonl",
+      "sha256": "fa73c4546e9671eed880e5d04442c6b32f3b8fd56f9774b0ad26d76f3e6a08b4",
+      "bytes": 137979
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/kas-csig-2.16.2-explicit.jsonl",
+      "sha256": "039f74a26066874490955d05bb128425ecd856333b0c336139155c69d315d2f9",
+      "bytes": 140883
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/kas-csig-2.16.2-neutral.jsonl",
+      "sha256": "d876814056290e9cfabee30fdb330a99a3248eb5c3ab768711fe461401e6fdb3",
+      "bytes": 121068
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/kas-custom-dag-2.16.0.jsonl",
+      "sha256": "2ee82411cf3910902a3b09f54dad9966e28298867903d61e4e061811b98798d1",
+      "bytes": 115993
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/kas-repeat-watch-2.16.0.jsonl",
+      "sha256": "6213c673a1331d9c3037a5d9df505d5ef1f61da68c58e7526a103367462515c3",
+      "bytes": 157268
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/list-reply-2.18.0.json",
+      "sha256": "f1791cfe77a0cfe68541d70e6993394f4814d413a75c7e5fd1286eaa5b8914e4",
+      "bytes": 362
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/list-reply-never-invoked-2.18.0.json",
+      "sha256": "97cb7cbea7a28c3f2c7ed050ab76013b5dd842da9e86e5baca889eaa0d8e108d",
+      "bytes": 277
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/new-reply-2.18.0.json",
+      "sha256": "bd4ceb19399d860abc5c9d9240e7f18dee7e10ae9526ba86dc33d775f43e0110",
+      "bytes": 659
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/oracle-manifest.json",
+      "sha256": "c790f0ec517ec824450955ef8ce1d4db3d5f8454dd4885478ef0031874838e20",
+      "bytes": 14948
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/oracle-replay-events.jsonl",
+      "sha256": "310c481b986dc5d276a8cb3498974b6c401d4a466081a4abfa83df1669dfb1fe",
+      "bytes": 9252
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/oracle-replay-expected.json",
+      "sha256": "d1765c0104214ee317b12a2255a913518e9b3d24caba897097bc7f5091fb4d1d",
+      "bytes": 48698
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/oracle-snapshot-expected.json",
+      "sha256": "39c07252310aaf65e377c12961b043c4875f41e370cfa85d1ec6475c1c17fb51",
+      "bytes": 1715
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/pause-late-summary-2.18.0-source-derived.jsonl",
+      "sha256": "1f39a6f6424680cb6b88435ca4075bfd0f8495b6970f61cc214decbcf31bb28e",
+      "bytes": 9380
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/recipes-reply-2.16.2.json",
+      "sha256": "3a4081e01702227f6c0f56e00b5ec6e0d40387de6607c3be641cda776410b9aa",
+      "bytes": 9590
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/recipes-reply-diskrecipe-2.16.2.json",
+      "sha256": "6d219b52edb0eb82d339045603dbbd3627d26390e210ee6d50329491f744aa4d",
+      "bytes": 9988
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/resume-refusal-error-2.16.2.json",
+      "sha256": "f8beeee8fc957c88798dafeb83bf2f55074f8e7ccc216595a4e90f0c1968ef0f",
+      "bytes": 283
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/terminal-aborted-2.16.2.jsonl",
+      "sha256": "27390e60aa44a5322cbbac7c4352081d0a128f456c429b57934db203d5757385",
+      "bytes": 123659
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas/workflow/terminal-failed-2.16.2.jsonl",
+      "sha256": "27e21c303255b3d7cf32ed949be56526bbb9675669051bf63a9f3d544963ecdc",
+      "bytes": 77870
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas_permission/permission-consent-echo-2.32.0.json",
+      "sha256": "f8d8194b4148dc78abf96fe26d4ca502fb3fe496fe6897982482a2af36c35d90",
+      "bytes": 5430
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/kas_permission/workflow-plan-2.32.0.json",
+      "sha256": "0e657b925610b37e8ede9109534db0b672ae36494cf5316980227d661c0a40cb",
+      "bytes": 7396
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/native-prefix.sh",
+      "sha256": "e9c1e34dcbc24d2d90bd296cf3dfd9edde95ec0ef6ecfcc5ecc817449c0e893c",
+      "bytes": 82
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/relative-bundle-node.sh",
+      "sha256": "0afc9d9a21dda5e0a08605d1ce520f4834daee91a484e2e13fa2c9762e45a95d",
+      "bytes": 603
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/review_policy_vectors.json",
+      "sha256": "c54633389cdbc377b3baeefc4310c45c0dba85553aabab15831f859225d66e26",
+      "bytes": 8496
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/turn_liveness_timings.json",
+      "sha256": "c73e22a13854af9e8aec645b5b823315b8ab5014e19efdb3c9d904ead65a8ad7",
+      "bytes": 46423
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/v2/metadata-effort-2.22.0.jsonl",
+      "sha256": "6da4739978c5e33e5b633825d267f4f6a66dab561fff3902b73f5baed6650ba1",
+      "bytes": 991
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/v2/metadata-reasoning-2.24.0.jsonl",
+      "sha256": "1c0263033db00c6e3e990781c8f319de9e1d2c01f307cdfc2f877eeeed79d385",
+      "bytes": 3015
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/v2/model-fallback-live-2.28.0.json",
+      "sha256": "5723a7beec75393eabf1236deb3900e2a0ca810f55d82b23d78f160a70b326a8",
+      "bytes": 953
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/v2/thinking/reasoning-args2-2.24.0.json",
+      "sha256": "07390c31ace4c9490b0dbb9a0bcaa6ee5177916ef4ea3d2616cfba9d525aa200",
+      "bytes": 3961
+    },
+    {
+      "path": "crates/cyril-core/tests/fixtures/wsl-launcher.sh",
+      "sha256": "d1fb062bc3a25418c9836b4bf4b5596d8f26d30215caf37aae61f2d4ea6edfa5",
+      "bytes": 496
+    },
+    {
+      "path": "crates/cyril-core/tests/kas_freepath_smoke.rs",
+      "sha256": "87d51a81d5952677cd42c413c3514e09f28b43b82e2d9085557f05a8969a0725",
+      "bytes": 4643
+    },
+    {
+      "path": "crates/cyril-core/tests/kas_fs_host_io_smoke.rs",
+      "sha256": "700eb2bc864c515c176555ecc8c7ba64590527f2f4c5d6917309659c9f3d90f1",
+      "bytes": 7018
+    },
+    {
+      "path": "crates/cyril-core/tests/kas_settings_handshake_smoke.rs",
+      "sha256": "85b531c500a641535e7015ef8d1121bec5ee9194bc4a0391aec5238a22986e3a",
+      "bytes": 6517
+    },
+    {
+      "path": "crates/cyril-core/tests/kas_wrapper_smoke.rs",
+      "sha256": "f15f0cbe934715f40581ada2fd89e3c66dbe9eba9d6268039dee8ef68c481f75",
+      "bytes": 4263
+    },
+    {
+      "path": "crates/cyril-core/tests/nd4h_legacy_config_compat.rs",
+      "sha256": "ac92158a0bfd65807946aede4d1c6f12b6f174941809c9167bece2c45be39a65",
+      "bytes": 2735
+    },
+    {
+      "path": "crates/cyril-core/tests/review_launch.rs",
+      "sha256": "4fd68c39ff74d187ed833853fdce82298de574f14b7774310f378238b0d07954",
+      "bytes": 8035
+    },
+    {
+      "path": "crates/cyril-core/tests/review_policy_vectors.rs",
+      "sha256": "4a6d05cd9395eace8596616f81d931bcbea711790af9e51c186671eaab922c04",
+      "bytes": 2529
+    },
+    {
+      "path": "crates/cyril-core/tests/session_configuration.rs",
+      "sha256": "983dba7ef7ff906fa47d51685b48d78fa07ced545950bd0861e94a16b40fb59c",
+      "bytes": 10356
+    },
+    {
+      "path": "crates/cyril-core/tests/spawn_isolation.rs",
+      "sha256": "b3a75fb39636f9386272045614ce62fbf81a50c52a879bcaa629ed9ad84d5594",
+      "bytes": 20124
+    },
+    {
+      "path": "crates/cyril-core/tests/win_wsl_wiring.rs",
+      "sha256": "9faaa966ecbb525945ff1402d180b023d429cef9fb01d59cce3db0502c887ca3",
+      "bytes": 13483
+    },
+    {
+      "path": "crates/cyril-memory/Cargo.toml",
+      "sha256": "40ebfe727104e3dc68ac2fce1e20bc627d06c755acd54dc2c71e153a1a7507b0",
+      "bytes": 1048
+    },
+    {
+      "path": "crates/cyril-memory/src/client.rs",
+      "sha256": "78e8c32d209d240e1fc13cb7d667546dffc02fcf163e5c71e636bd5c8aba7a92",
+      "bytes": 9038
+    },
+    {
+      "path": "crates/cyril-memory/src/config.rs",
+      "sha256": "6fe247ed12c07b76576ac5cc5b9553fee88bd5db57fa31b0ff165d663926c7b0",
+      "bytes": 18564
+    },
+    {
+      "path": "crates/cyril-memory/src/encoding.rs",
+      "sha256": "2870d95079192369958155197f394a366b07eb1294b0c25f7ff3a13ae0bffdf0",
+      "bytes": 2447
+    },
+    {
+      "path": "crates/cyril-memory/src/ipc/mod.rs",
+      "sha256": "b89b961e0f542077d8a6c56e3619df13010e7f7b7245844735eab4a5c1dbf5cf",
+      "bytes": 4923
+    },
+    {
+      "path": "crates/cyril-memory/src/ipc/unix.rs",
+      "sha256": "594d68de9d69b7f196e49dc5100608b4928d495a85601aad37afb5a7df580719",
+      "bytes": 2222
+    },
+    {
+      "path": "crates/cyril-memory/src/ipc/windows.rs",
+      "sha256": "cf2ed06fc3fb9a1657eaa8bc209579941dd0104fb0cead87ef5ae3186bcd9b36",
+      "bytes": 4081
+    },
+    {
+      "path": "crates/cyril-memory/src/lesson.rs",
+      "sha256": "224265efce41a4f7841ea78946ab0b3de82f07b8f6bf797a416f386aa3d89d8b",
+      "bytes": 17699
+    },
+    {
+      "path": "crates/cyril-memory/src/lib.rs",
+      "sha256": "c0a7d6f679771eba977bd761ab712f1cc2d5cbd9aca2e2905d6b3424a1b91e9a",
+      "bytes": 1988
+    },
+    {
+      "path": "crates/cyril-memory/src/paths.rs",
+      "sha256": "82d264e9d0b5af9e5e18f0bf616b36fa38b85103db10e2ff30bbd4a59a220ef3",
+      "bytes": 11957
+    },
+    {
+      "path": "crates/cyril-memory/src/permissions.rs",
+      "sha256": "ec69faf461443740bd92b4cbcbfecf3b76ea97e48cca3f1ef2e8a56352ee18f7",
+      "bytes": 6722
+    },
+    {
+      "path": "crates/cyril-memory/src/project.rs",
+      "sha256": "3857965b5086ab5ecaef0776161d5f3041d77b6b9619535433e977280661d2e3",
+      "bytes": 14037
+    },
+    {
+      "path": "crates/cyril-memory/src/protocol.rs",
+      "sha256": "cf466bc41adc4b3d26116eaed571c52bd92c38cee02d2d1dfaac925c74cd1417",
+      "bytes": 22050
+    },
+    {
+      "path": "crates/cyril-memory/src/redaction.rs",
+      "sha256": "1911759665fb719e271503c6413dbf59123f27826cd928debb513e740f125adc",
+      "bytes": 6553
+    },
+    {
+      "path": "crates/cyril-memory/src/runtime.rs",
+      "sha256": "f26507aaee55f6e9c7351c5e577d0285a0e3ab60b699d30bd1ba6858ed6188de",
+      "bytes": 15962
+    },
+    {
+      "path": "crates/cyril-memory/src/source_turn.rs",
+      "sha256": "8b2b5f752840a1c9814cda7c093c87445b450ea724ff15a8790df595019bd92a",
+      "bytes": 60063
+    },
+    {
+      "path": "crates/cyril-memory/src/store.rs",
+      "sha256": "c7ee76a493ce1774da7342497dc98dd1729ee8733ac392f98f66c5add09f00a2",
+      "bytes": 130016
+    },
+    {
+      "path": "crates/cyril-memory/src/wire.rs",
+      "sha256": "c300b82ab3bf71639c7ab7199bd7fa58db9e2f1029f0631d6da009f4df747734",
+      "bytes": 66773
+    },
+    {
+      "path": "crates/cyril-review/Cargo.toml",
+      "sha256": "a679695f65c692070b985e4336dcaddd705e6400a41480b14f7e2c437622a09b",
+      "bytes": 684
+    },
+    {
+      "path": "crates/cyril-review/assets/.gitattributes",
+      "sha256": "6cf4f9c9fa745b9b84e05ca4a44de1c9792fd6ffc497d70b56f4011b80d1e5ea",
+      "bytes": 75
+    },
+    {
+      "path": "crates/cyril-review/assets/agents/cyril-review-clerk.md",
+      "sha256": "0526e13867c4798a3d1b5d7d46e810efcfe59b4a22c39a2d726b174a7b6b3746",
+      "bytes": 2595
+    },
+    {
+      "path": "crates/cyril-review/assets/agents/cyril-review-commenter.md",
+      "sha256": "5ee5602018d303292636e68a85d205501ecafc9806fc737558565503aaeaf3c2",
+      "bytes": 7064
+    },
+    {
+      "path": "crates/cyril-review/assets/agents/cyril-review-finder.md",
+      "sha256": "0e4a618a59f80971b7ce1008db11c181c5f060adeab313f9b6fc2372db8509ac",
+      "bytes": 6100
+    },
+    {
+      "path": "crates/cyril-review/assets/agents/cyril-review-verifier.md",
+      "sha256": "865ba0dfa6a16cb9937c79505fe72b5b62d01bac34dd5e418aaa3c79d8ea13e4",
+      "bytes": 8628
+    },
+    {
+      "path": "crates/cyril-review/assets/cyril-review.workflow.json",
+      "sha256": "7afd28787023e575da974101b763cfcefaaa102127f0a7a1ca2cd3b4d5c6a20b",
+      "bytes": 23454
+    },
+    {
+      "path": "crates/cyril-review/src/assets.rs",
+      "sha256": "30ad80072d73ea505132292bc6aaf12a916137edd86acaf7f75572c44c378178",
+      "bytes": 5515
+    },
+    {
+      "path": "crates/cyril-review/src/check.rs",
+      "sha256": "936e9ca923053f841c82f36b9df629393b86d7d8f6a850507a691aa2e6bf4de9",
+      "bytes": 19413
+    },
+    {
+      "path": "crates/cyril-review/src/facts.rs",
+      "sha256": "11c46023c3f0365367b456f0b73dcbba8a5bfb9338df1c47a2de82ad4cb07124",
+      "bytes": 17419
+    },
+    {
+      "path": "crates/cyril-review/src/gather.rs",
+      "sha256": "7f1b2dfda5594a8d7304c6b71ec724c4a50dae9992505b7f7d4ebef1e1795794",
+      "bytes": 11365
+    },
+    {
+      "path": "crates/cyril-review/src/git.rs",
+      "sha256": "177d3e4e6529b6ef15a89fdcc162e43061efac3e15005d96df599fc49c58bd1b",
+      "bytes": 3674
+    },
+    {
+      "path": "crates/cyril-review/src/lib.rs",
+      "sha256": "0a5da1afcf9a52eb3c2664292f7567c87bcef59669f95fb55ef8802a558a56fd",
+      "bytes": 3290
+    },
+    {
+      "path": "crates/cyril-review/src/merge.rs",
+      "sha256": "330738a5e6f5d025ede311968c0914eb3cdcd5e081c1c05deb5dcc6c3645247e",
+      "bytes": 17663
+    },
+    {
+      "path": "crates/cyril-review/src/record.rs",
+      "sha256": "8fc7fee696f87b1addaeeaa5d342a2bdf32947e60e41dc831c786318eac4da94",
+      "bytes": 7021
+    },
+    {
+      "path": "crates/cyril-review/src/report.rs",
+      "sha256": "28ee16c33fe444a0aefe71ccd8c7b73ce88dcb8f521c2b80e84d900b2d3d4ec1",
+      "bytes": 38904
+    },
+    {
+      "path": "crates/cyril-review/src/run.rs",
+      "sha256": "4037d4acae2fcd8ae5f8a4975fdeaf0752544f7b5feb1a1bba479e2911e894ab",
+      "bytes": 10686
+    },
+    {
+      "path": "crates/cyril-review/src/verdict.rs",
+      "sha256": "d109e0ffb51d4bf6030855600d1da8d6eb72574f9d9d815009392813efae199b",
+      "bytes": 2454
+    },
+    {
+      "path": "crates/cyril-review/src/verdicts.rs",
+      "sha256": "0f8ca12d183a929ce64dee8922d97f60ac8d64ce1b3666d98c8affc9b1665ace",
+      "bytes": 22374
+    },
+    {
+      "path": "crates/cyril-review/tests/check.rs",
+      "sha256": "2c6481ab832aca0be9b7aca7f28684bd1a6bc048824c1042cfb8a9f639b0f9d9",
+      "bytes": 8282
+    },
+    {
+      "path": "crates/cyril-review/tests/findings.rs",
+      "sha256": "b52f347fb3265f4f2d9f3df8b96c875f426d029a70599d96478a6dad417714ee",
+      "bytes": 2118
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens.rs",
+      "sha256": "c67df932200ad05591d04eef824f99355d50ffce22cc71551707cd9187a344a5",
+      "bytes": 16520
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/.gitattributes",
+      "sha256": "1be473fedcbdc3bfcbe1f6fad1ec593c038c5e5a26bf29e5462996ec46d457a0",
+      "bytes": 81
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/capture.py",
+      "sha256": "b3d37970b8d5a6088c3883666b6905f561eaacf79caa985ea4a082a92ba9f96d",
+      "bytes": 6047
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/case.json",
+      "sha256": "4e02cb9b66f52852b98e61ea9b1931d73d17c71a79f99d676e7af7e0dc93d438",
+      "bytes": 616
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/changed-files.txt",
+      "sha256": "d35b4366df6334db16c4aeedeafda9c10bf6acbe0ceefb9ab4a839672de112e2",
+      "bytes": 23
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/diff.patch",
+      "sha256": "4fd1c87e99f37dc611d0e886afa348e5f986b0adb6ea916f3ef3f14618229d95",
+      "bytes": 421
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/facts/symbols.json",
+      "sha256": "1753f550d463c59ffaf7d92a4e601b978f274bbcab7f02f197c610515d8311f9",
+      "bytes": 644
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/facts/usages-1.txt",
+      "sha256": "7616350ab3f2b7e1f2cf99d6676577475bb3e69d6984dc93942a2882d5ec7e90",
+      "bytes": 467
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/manifest.json",
+      "sha256": "7846643d9307b6a8cf9488093559858e73ae3099da2ee57b0e75f43041db0357",
+      "bytes": 838
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/patches/001.patch",
+      "sha256": "449e4a7ad468d54d0aa68fbed71bb4796c8cf060c87125fe5a1720175e888aa9",
+      "bytes": 235
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/run/patches/002.patch",
+      "sha256": "455fae702618597af2107ceba1595058fcef7d04129670f27488c8326c16783f",
+      "bytes": 186
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/auto/expected/steps.json",
+      "sha256": "406352eec843b4a52e4ace33604e6d3d2ad758ce9b7ee294582a6df9eb37d342",
+      "bytes": 250
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/case.json",
+      "sha256": "cc1b20844ff10c285ed9e99e2ae822ef273424e227061017c6d4dd2c6bfffe35",
+      "bytes": 978
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/ballots.json",
+      "sha256": "9bf9101e1b1ebb34e3a1bc1991d4c49781d30fbca45661f261764c32bb83f62b",
+      "bytes": 125
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/candidates/a-line-scan.json",
+      "sha256": "8e4584e3fc2c5482283d5f8f5e803d54d03fc3ac37461047bc1cbdaa230162fc",
+      "bytes": 242
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/candidates/all.json",
+      "sha256": "9de8716dd7654693d3f4a5491b577187c36e1d36fa3f9101a8c901698c4a27fb",
+      "bytes": 483
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/candidates/digest-1.txt",
+      "sha256": "e9a49cc1f0817d4f25d884ded47372f316f1fe612076182dacb9aaf5f3c09667",
+      "bytes": 234
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/candidates/raw/a-line-scan-1.json",
+      "sha256": "6278ebb44cb8af4bcebc6de5dee9651dbbb4e1eed6be7ec90d2f0c24a6182166",
+      "bytes": 215
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/changed-files.txt",
+      "sha256": "69e60dfa93cd96df971be40145a88a8f44dfbd44e373349f13884fbd89effb27",
+      "bytes": 11
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/comments.json",
+      "sha256": "40ffa676ed288870480790e78ce06caca9706fed2a996713c49e18d84e8230d6",
+      "bytes": 456
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/comments.md",
+      "sha256": "47add0f542e126116b27683e582c3d10610f766b33ec624f1a299005b6e0ae7d",
+      "bytes": 321
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/comments/brief-1.txt",
+      "sha256": "a31381a24219be90db73b31e80661874f583a8803e6a4070995d0b0e3a5e90fe",
+      "bytes": 351
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/deduped/C01.json",
+      "sha256": "665709f829e31c3bae2f0d7455380b97b1b901690ae8c2a9fbc79e16a1eeab27",
+      "bytes": 230
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/deduped/C01.v2.json",
+      "sha256": "8b1c6ba22a4c4a2f6c526a9d93c1235f35d093f188865ed113953afe72a8091c",
+      "bytes": 255
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/deduped/C01.v3.json",
+      "sha256": "6981120b6bc8c3eafc91c376da92ef99ffa380240cc4544c69499bc9654291f0",
+      "bytes": 255
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/deduped/decisions.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/deduped/digest-1.txt",
+      "sha256": "2e06be29b08f9dd8d0c0e6ad8b94b658e9647c9e08c77f9094995d1b36c4e018",
+      "bytes": 138
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/deduped/index.json",
+      "sha256": "c8a151cb79ddca0dfa51ce5d0ae01386ccd0a4c5b54eb4d9004c599995c72700",
+      "bytes": 551
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/diff.patch",
+      "sha256": "a98b6c9bc680e23264e672975df059b2b76b8fe1322320ad3f7c24c358a9a48e",
+      "bytes": 149
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/facts/symbols.json",
+      "sha256": "03977decefc0baf7f54c5a56fd9d66446fa0054692d39957f16acae373919744",
+      "bytes": 175
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/facts/usages-1.txt",
+      "sha256": "5b0bd0a0d9ccb9ec9dabf9355ca07348691804911ac939eee438e75f48e3a01b",
+      "bytes": 313
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/findings.json",
+      "sha256": "a2a3039c4f66e60ac3074d3308f4cfd34f6069da78bfcabe79916f7a084f087e",
+      "bytes": 408
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/manifest.json",
+      "sha256": "5bd922140b2c215de854e7d44fd142562beeeab13faf082cf932cf704d79d311",
+      "bytes": 621
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/patches/001.patch",
+      "sha256": "a98b6c9bc680e23264e672975df059b2b76b8fe1322320ad3f7c24c358a9a48e",
+      "bytes": 149
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/queues/queue-1.json",
+      "sha256": "5769030f926c87702d03d0f419e34b73f2a0a1b9cc71058a001d4c979386955c",
+      "bytes": 84
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/queues/queue-2.json",
+      "sha256": "8dd2fc0b3fb8ab52226d1c5ca059b512ad88cf5ca69b147aca11e357532a216e",
+      "bytes": 70
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/queues/queue-3.json",
+      "sha256": "3c76b80f5f4c5889dc1441f8247c043208e10d6d979271b42b42f9ef1f07ca46",
+      "bytes": 70
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/queues/queue-4.json",
+      "sha256": "0b9bb81e8939f9898f3556811c8362ad217c8dd420873fb28590d223c9391099",
+      "bytes": 70
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/queues/queue-r1.json",
+      "sha256": "a07185ab0cb5f77c40a147f964201c74114d33948d5221cc6540f922d72f33c2",
+      "bytes": 87
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/queues/queue-r2.json",
+      "sha256": "542f4692243992a3d6c83cecb2feff00dbb07f7845ca5b41bc313c7b5ce96990",
+      "bytes": 87
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/report.md",
+      "sha256": "401dcdf0ee8d4393ca3f22d30f535cef63922ba60c588c4514c39e0d1d4cb4e5",
+      "bytes": 1653
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/verified-digest-1.txt",
+      "sha256": "0b8d8c677e0d60cc3885870a1292ad074d06c94d588ee6d4afb341e4a709360e",
+      "bytes": 287
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/run/verified.json",
+      "sha256": "0b3456f2c1a9a0234184e503f0d6380585b79bfe4a4e8c1bc534fb9f5d7ee9a1",
+      "bytes": 1156
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/degraded/expected/steps.json",
+      "sha256": "5e1368a22a19d88df05d9a7d6420a133fbf527887aec9d731cbd974f79d5324e",
+      "bytes": 2219
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/empty/case.json",
+      "sha256": "b863a5fd0906513a5c26c9f0be24fc57a6e714cfcbfc59699041388a42d53fef",
+      "bytes": 190
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/empty/expected/steps.json",
+      "sha256": "3bc3cdf94328a6c4d98dffb5346a2dce36e2feb3a7162a8a2099d901c82bf75d",
+      "bytes": 105
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/case.json",
+      "sha256": "dc6f500bb8dadcfe7fdd649a68f07c475c020670816169af23529b2cd8da8515",
+      "bytes": 11615
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/ballots.json",
+      "sha256": "050b76c3e23b1e775568d47fee91c1ad73b9becbf01355d0d68742ea6b31f9a7",
+      "bytes": 324
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/a-line-scan.json",
+      "sha256": "3c890c418c4a6bc54ec67a1763953f5cc37bbd1ef524fdf428e23b92ae5c8414",
+      "bytes": 905
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/all.json",
+      "sha256": "6b76f77f92810ae5f5e5e9f47fe8c012fffa5100bb393c410674845eb5e317c9",
+      "bytes": 4751
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/altitude.json",
+      "sha256": "5eec830392527bf5ec9aa3b0275dbfb893e9f2403e956f4b85fb443edc9ca935",
+      "bytes": 253
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/b-removed-behavior.json",
+      "sha256": "12f2a171cc7c853fb35376b19bc87849e857583442c98645ac0cd4713b419524",
+      "bytes": 262
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/c-cross-file.json",
+      "sha256": "945075b8662b07dab0c5bb904b379f813ee232cfc67dad2ec1e370c50d7b6602",
+      "bytes": 49
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/cleanup.json",
+      "sha256": "036980e10afe53fc5a87f38ad6eeb96748e373d356b0dba116936ab22a372735",
+      "bytes": 1648
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/conventions.json",
+      "sha256": "ffa06f6b792bd9981b63a1324f07ab0e09ed931fdf4fb76a5d72a6291cfd319d",
+      "bytes": 300
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/d-language-pitfalls.json",
+      "sha256": "92072df399cb74703f8e86f450d552bc0bb01eeeb98a90985a1b7772c8fd0016",
+      "bytes": 9
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/digest-1.txt",
+      "sha256": "efc1d9b270e44e346536663fb911444d00fd3a8c41ad8020e52dbde9ab82698c",
+      "bytes": 1840
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/a-line-scan-1.json",
+      "sha256": "31f7719acbf2202659706afbfef93d2e1889868c02d626a99d3384604d7e3d61",
+      "bytes": 245
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/a-line-scan-2.json",
+      "sha256": "81f181cf0c29a7f737cf50a27e969e76f489523266494ddc442b43e13d49e20a",
+      "bytes": 476
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/a-line-scan-3.json",
+      "sha256": "fc542d16ab67f39f3e4e4d38222bf56f229da3ed5736c033a0f4850159ce9f38",
+      "bytes": 239
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/altitude-1.json",
+      "sha256": "0d4741006b073a7d6ad08e2479512327250873e85d5f26463010a5e0c239d608",
+      "bytes": 225
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/b-removed-behavior-1.json",
+      "sha256": "82da65c806923ce38ea5164cd86f95e37c4b76e841c57e8c6590a42d4ea927b9",
+      "bytes": 309
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-1.json",
+      "sha256": "5f831620a975e787c2c54098db7690c9a90c387eab35b8a6d87b50b9f09c4cce",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-2.json",
+      "sha256": "d3ebc4c3d979d89d79c19e3ed5ad49fc0ad98bf2253bb316c998bc80847f628d",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-3.json",
+      "sha256": "7e71a005061103ddf958578a3e12483d83e70b1153d93b6a9581be1add4a4877",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-4.json",
+      "sha256": "5cddc87647de28bdabf6450eb31d8f7e83f5f1d610e2592733085f2de976ffec",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-5.json",
+      "sha256": "5f542322c8b54e44d4a18d3fe16c56a6ae32c569711d195ee4678a5469aceee9",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-6.json",
+      "sha256": "39bc0e8f6eb4c33e626b8fcd3f5045989ca4c4ce21cb9c3f773e408ad5f3c8ca",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-7.json",
+      "sha256": "68b67e242e2f3a55a9c24a437d588d410cf94c297396fd2e0a3cd6d497bd50bc",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/cleanup-8.json",
+      "sha256": "c5a100bcaca2cc18dc81adcd8946b23a5d9faa3c669e406f40d6fc7a818a2e34",
+      "bytes": 193
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/raw/conventions-1.json",
+      "sha256": "49fca8d57bb038bd05bdc1e859917a832d19a2d2d393e8510eb00a0313d0b9c9",
+      "bytes": 269
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/candidates/sweep.json",
+      "sha256": "02591c0d430630c3c26168196efa5ce827572123745b113768806be56bd5708d",
+      "bytes": 462
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/changed-files.txt",
+      "sha256": "69e60dfa93cd96df971be40145a88a8f44dfbd44e373349f13884fbd89effb27",
+      "bytes": 11
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments.json",
+      "sha256": "80075c0404b1b4532c60b82f3c4ff25a9a29ca3c93e5d1f44c5afc64e93df57c",
+      "bytes": 4150
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments.md",
+      "sha256": "4b7eb130de7d7b8cf3b7db866ca9d4794d673ea027e88e4dd1875c04971791ab",
+      "bytes": 1402
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C01.json",
+      "sha256": "de81efdb969024c07a1551867481c5727044047453e8b06a0475988a13ada069",
+      "bytes": 27
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C02.json",
+      "sha256": "be302461cda285db3ed2d45fb767b23e08ca8808b35a638009937df22b332d73",
+      "bytes": 7
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C03.json",
+      "sha256": "79b6aa1118224a2a04918137529dad86d169640fe02d71205417cef92159f7c3",
+      "bytes": 206
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C04.json",
+      "sha256": "feacdb2ca8bb156528daf122daf1c012a210dd394ae65222109d41449d6befa9",
+      "bytes": 146
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C06.json",
+      "sha256": "f1b1d37a12544c87bd7a1a43d0dae2128711b6c8f056ea22bf8c3896a08e3ef2",
+      "bytes": 51
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C08.json",
+      "sha256": "194473bf1f49aaa0045601f4db3c41833075545826ea8c0b1ac2ef413fcc065c",
+      "bytes": 162
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/C09.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/S01.json",
+      "sha256": "7de4f381a67d797584fd7cc3652ca11438c744734547da90e519a5f7fe1b5413",
+      "bytes": 27
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/comments/brief-1.txt",
+      "sha256": "94232d7b58b272f6947f7bb07ad929d52bfb021014e2cdb5fe1de0087434bf62",
+      "bytes": 3586
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C01.json",
+      "sha256": "613551ae5087a6d7a82f60006efe0b56e22145103b62cb41a859c20b71d7b801",
+      "bytes": 491
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C02.json",
+      "sha256": "0c8f022eb0a0543ff76d6e4478dd7fd9e6852fdbae7b837ca13ad0ac1549d3f9",
+      "bytes": 254
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C03.json",
+      "sha256": "f63e0d966cace472cd4987306a0a11112ba12ffedbd8b463939913003a6bb897",
+      "bytes": 468
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C03.v2.json",
+      "sha256": "7ac69c27e0664e992a00bf52f417489eafb481674650f8d380fa402476a3f1cd",
+      "bytes": 493
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C03.v3.json",
+      "sha256": "b1ce373e21a72c306521675cd521ae903eabdd0e9a4565a9e19b3cebf16e3649",
+      "bytes": 493
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C04.json",
+      "sha256": "1b1cf529e4a7cff13ffcd35cc2edb6eb47231a29c447cb1b15fd5b6a174466e9",
+      "bytes": 338
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C05.json",
+      "sha256": "e1b2ea05f5a3ac05d9ffb0706b688229f1dad5f967a366d05c792a9df5fdc64c",
+      "bytes": 338
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C06.json",
+      "sha256": "d3d9494926a4da41381d5717ac51a755ea33cc4f32407155f6a090ed547e8183",
+      "bytes": 338
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C07.json",
+      "sha256": "9965f48bef5b0d0afa5fd638197d5bf711f1c6ef866fc3bef86037a156866fd6",
+      "bytes": 208
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C08.json",
+      "sha256": "245f0448e63b3717e8f3b82f68c34606c4c1f28c24c70adeefcf7829e5045ca9",
+      "bytes": 208
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C09.json",
+      "sha256": "821c63604e5c5085456a75abe548918dd8229af89ff582122d28059cb1df60c6",
+      "bytes": 240
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C10.json",
+      "sha256": "f0122f48f07c37316aa1a4ba88ed3e2ef48d5ced23163eb110914502955f8bdd",
+      "bytes": 284
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C10.v2.json",
+      "sha256": "81f55489701dc641fde852a092ae4e964c17211b402f51bd08285daaa2581ebc",
+      "bytes": 309
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/C10.v3.json",
+      "sha256": "605706cc0967da860be10ca9b684f6e5ae11b8bf33806af4092c18d0d4e1d6de",
+      "bytes": 309
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/S01.v2.json",
+      "sha256": "366b9c8cb19c1060bdac06b8972121e742c01ed94eabca05d7b50075cc977e03",
+      "bytes": 235
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/S01.v3.json",
+      "sha256": "6b783012e75217a2ce46fa2090079d927ab968e7354bde3b4136e4fc44de8030",
+      "bytes": 235
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/decisions.json",
+      "sha256": "f38871650dff6e6743773c10e165355bbe69ab8deaf636074c9ff1dc1bf17e6e",
+      "bytes": 559
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/digest-1.txt",
+      "sha256": "48fade2be9dbab5883fc19eb3416930bc2e3c200727c5b21c79b012c13be36a4",
+      "bytes": 604
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/deduped/index.json",
+      "sha256": "ed2faaf98139ab767a374e8ef4d442e039129509f1c7ef5f09c89c84b7168a7d",
+      "bytes": 4544
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/diff.patch",
+      "sha256": "a98b6c9bc680e23264e672975df059b2b76b8fe1322320ad3f7c24c358a9a48e",
+      "bytes": 149
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/facts/symbols.json",
+      "sha256": "03977decefc0baf7f54c5a56fd9d66446fa0054692d39957f16acae373919744",
+      "bytes": 175
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/facts/usages-1.txt",
+      "sha256": "5b0bd0a0d9ccb9ec9dabf9355ca07348691804911ac939eee438e75f48e3a01b",
+      "bytes": 313
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/findings.json",
+      "sha256": "4284f167b0b83e77b4b32447b997a607b11dfaafe66ec6e21bfde2e5a780ac68",
+      "bytes": 3994
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/manifest.json",
+      "sha256": "5bd922140b2c215de854e7d44fd142562beeeab13faf082cf932cf704d79d311",
+      "bytes": 621
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/patches/001.patch",
+      "sha256": "a98b6c9bc680e23264e672975df059b2b76b8fe1322320ad3f7c24c358a9a48e",
+      "bytes": 149
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/queues/queue-1.json",
+      "sha256": "248b0b35a151bd450535dcf38b749be201481fa92e100e9d8852793a258919af",
+      "bytes": 117
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/queues/queue-2.json",
+      "sha256": "617345c4c156b4733b969b020925818c871dbab5ad104471a576ef9df56e43c6",
+      "bytes": 106
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/queues/queue-3.json",
+      "sha256": "86494043221bbd79ce381f91b1f24754e7fa73755be7de1e9cfd306797bb5c2d",
+      "bytes": 106
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/queues/queue-r1.json",
+      "sha256": "ec010f0738807f404108274971098b3dfdd46de0ab14ff6d8042a762dd05f517",
+      "bytes": 115
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/queues/queue-r2.json",
+      "sha256": "08363cb3b75f336774566b4fa2cf083403feef41070250d519583d0155d1d837",
+      "bytes": 115
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/ranking.json",
+      "sha256": "0d930a2152bc549ea56ee2138300bb9a68f3d0f161d7e85521edfcd649de33c2",
+      "bytes": 160
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/report.md",
+      "sha256": "0f7e86b3e5bab9b1ad1c2146b2866503d5350319e21d83c1afe71147af2d8ccd",
+      "bytes": 6742
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/C09.json",
+      "sha256": "e7bab4fbe2cc5ddda253477c4a8b0812fe90694394de02393cbd2c63cc7c386f",
+      "bytes": 113
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q1/C01.json",
+      "sha256": "2d259114e47e31644f5018bc5241cc48ed096c667ab2b8ec0ef37f4f4cd905f3",
+      "bytes": 113
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q1/C04.json",
+      "sha256": "d23b3e93dd2d41c00758b765a343a1e7b48341d98cb345924ea4de384a3cfbe9",
+      "bytes": 109
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q1/C07.json",
+      "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "bytes": 2
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q2/C05.json",
+      "sha256": "935aaf3a54c0648c74df48a8025f20086019843f5b9fbffe5540b9cba0edcc97",
+      "bytes": 5
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q2/C08.json",
+      "sha256": "07f832763e02f25caabe33742b959587d0d480037e1499d4c69f60ca3270d552",
+      "bytes": 162
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q3/C03.json",
+      "sha256": "0fb8f272005f6a87ff8d196e04be62d834b2a2c90d0056313b102046a6072178",
+      "bytes": 111
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q3/C06.json",
+      "sha256": "e0833aa565cd75b6bc32d0510fb579cf785b19653156e0dfab2e83ecd636da89",
+      "bytes": 182
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/q3/C10.json",
+      "sha256": "aeb0d7744182e38ad9c7c8b9c0d8b4224d940cdb6f9ccb655da18df1024d01c8",
+      "bytes": 113
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/r1/C03.v2.json",
+      "sha256": "bd317df2701da65cb8832e91297be3a3e72152578800e319beaf824cf2e5d350",
+      "bytes": 122
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/r1/C10.v2.json",
+      "sha256": "46828a1726d534aa97183cfd7489b81f4bcb9dbc22a3296e4b33f0c7156a2731",
+      "bytes": 120
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/r1/S01.v2.json",
+      "sha256": "762deee72a180a4ab5ae0ef708ed3f1a5d570372bbb5541167909ff76bf376de",
+      "bytes": 168
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/r2/C03.v3.json",
+      "sha256": "309f6cd6abbb793d3d0e16d22132afeb99e54545a90b9108547589056b3dda7b",
+      "bytes": 122
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/r2/C10.v3.json",
+      "sha256": "245a734efbf73e48da6c993b101ed685fb6f1e4c255717943ee6b05a6adcd5b2",
+      "bytes": 180
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verdicts/sweep/S01.json",
+      "sha256": "3eb9bd8e802295989f4209bd6017c71de1102e7d066114ea55dcb9e5b10d5c41",
+      "bytes": 111
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verified-digest-1.txt",
+      "sha256": "cadd6cdbb2c324368529e330916236b41d21ac6eafbd80ce6307fdfdb68ee6a1",
+      "bytes": 1607
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/run/verified.json",
+      "sha256": "dc52eab7d1d3328543eb826580eb6c75b6bae62eeaf7fb19734f2d12173d6d98",
+      "bytes": 7482
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/pipeline/expected/steps.json",
+      "sha256": "f9662e2067e7b63864e6bb015d51d0d433cdb9c9333e3f9521413d4b08a7fb4e",
+      "bytes": 15828
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/case.json",
+      "sha256": "c5fa668267aca7a30c0bc09e094512461652b7650c762459cb2e431a21da400f",
+      "bytes": 2065
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/changed-files.txt",
+      "sha256": "0a123fcebc77aa4435ef6064f255debaf7237653853198065a89991ab29f8262",
+      "bytes": 64
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/diff.patch",
+      "sha256": "50f843a97b9c443ea82cbb2233bf3540b09a821691293d6153ca212ab20bef69",
+      "bytes": 1340
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/facts/diagnostics-raw.txt",
+      "sha256": "558c2ac245212d71f8a0a70eb00065deeeafa5f3a71a930c177644657eae8ad6",
+      "bytes": 79
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/facts/diagnostics.txt",
+      "sha256": "c5fef9862af0febfd3e06b3aabaff3b11be6b3583f9bdbe43e404ff1a7f02b48",
+      "bytes": 308
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/facts/symbols.json",
+      "sha256": "e7cb85d53b4902d58e7a638cb80610b46c95a3ffcf2a00e93a3d86252722c57f",
+      "bytes": 1876
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/facts/usages-1.txt",
+      "sha256": "897cf07e8bb3eca90d31647d82da507867fb2843ce6eada87c584aac7e84edf6",
+      "bytes": 931
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/manifest.json",
+      "sha256": "133390bb4592fe36f52219cc7db57383a17d938fa414048c6c3b4a034eb1e3cd",
+      "bytes": 1648
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/patches/001.patch",
+      "sha256": "4dffb7e6093043caf4cafcb77b26e5b6348976a591e303effafb13ba36e1e70a",
+      "bytes": 137
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/patches/002.patch",
+      "sha256": "5782ae7fcd8beb3c71e14503fbd5cdaf6909e77487827089a0637028b1fd4469",
+      "bytes": 224
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/patches/003.patch",
+      "sha256": "dbaec0e77d34f099eed830492d7c1de90b2b7426351e822c73de130c74da534d",
+      "bytes": 600
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/patches/004.patch",
+      "sha256": "6317cd86d9a01efa1aa11f847cb6434757a5c832858e622888bd83ff8738e834",
+      "bytes": 151
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/run/patches/005.patch",
+      "sha256": "fcac4c4385e9dac21b32ae590eab7625590197ef648aa8d7cf25e0522753bf17",
+      "bytes": 228
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/range/expected/steps.json",
+      "sha256": "52070c4d55c09d038a7bacf20d138ec5200f40508e50c8a6976822323be4f03e",
+      "bytes": 823
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/case.json",
+      "sha256": "522c3d010eb297a695106c55f3f8c30bbbfe6e8687b6cd8002cddb9055d58fa0",
+      "bytes": 763
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/changed-files.txt",
+      "sha256": "9476b7af611b3597a125c3444c83d93a9f1094bf55be34f29db0d337e581bddc",
+      "bytes": 24
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/diff.patch",
+      "sha256": "3c37decdddc6058864177ab60b48d3f1e0a1719924b4f7e853be67cad12e7d93",
+      "bytes": 508
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/facts/symbols.json",
+      "sha256": "b390fb3242f399f1137f24f1838b0e4cb4aae19ac8df15a94aaab08c55df0250",
+      "bytes": 1016
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/facts/usages-1.txt",
+      "sha256": "f002cdca27d34c21f9affb03bdbc49cc63f24e818d44f0d7146b91483ec455f9",
+      "bytes": 634
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/manifest.json",
+      "sha256": "9fd41979410307d60c388077da03281a0aef7a62b38a2fba72108d92b6fd1e7e",
+      "bytes": 832
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/patches/001.patch",
+      "sha256": "d2a94e9e3df4cd942aae1535094af40ff9bfa50bb23e481dd71ce463f4f98899",
+      "bytes": 213
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/run/patches/002.patch",
+      "sha256": "6f692a815f5e00af132f8e5153a779ca2ecc78cefa4689452898c9aa9be1cb1e",
+      "bytes": 295
+    },
+    {
+      "path": "crates/cyril-review/tests/goldens/cases/worktree/expected/steps.json",
+      "sha256": "a1d3522c25ab3070a4bd2312b83785d4bb13675d7b3b2e55b15fc767ef6b7398",
+      "bytes": 346
+    },
+    {
+      "path": "crates/cyril-review/tests/probe.rs",
+      "sha256": "d0d3ccb59c582ad746e9b1beac8cfa833afae3afb26f450c20d29233ea8e6c82",
+      "bytes": 3222
+    },
+    {
+      "path": "crates/cyril-ui/Cargo.toml",
+      "sha256": "c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c",
+      "bytes": 1090
+    },
+    {
+      "path": "crates/cyril-ui/benches/conversation_render.rs",
+      "sha256": "72e4dd8534216d23bf4ed2b1843ee05aa11cbcaf2ab393ca7bb6c6ec3b19e510",
+      "bytes": 14886
+    },
+    {
+      "path": "crates/cyril-ui/src/always_allow_tests.rs",
+      "sha256": "3017783c56eb64fb39dfa9bf923566b65377674c2e85921b6a00632e29e95bb0",
+      "bytes": 25903
+    },
+    {
+      "path": "crates/cyril-ui/src/cache.rs",
+      "sha256": "e7b3aa659fd66f997f364fe4ab221d33033575b572f402988f9f87e9dc827362",
+      "bytes": 2700
+    },
+    {
+      "path": "crates/cyril-ui/src/chrome_theme_tests.rs",
+      "sha256": "1f89e57d133b0c65f19d12771beb442ebbe831f00399e7874d25dcc840a49984",
+      "bytes": 30791
+    },
+    {
+      "path": "crates/cyril-ui/src/error.rs",
+      "sha256": "285dfcad4960cde3d0aa6af29cbdd9147bcd9d4a423d39c7a80facb1a9b30a3f",
+      "bytes": 2544
+    },
+    {
+      "path": "crates/cyril-ui/src/feedback_editor.rs",
+      "sha256": "611cfc7da2d14321de3de442e1f237edd1557c2cacd53a072fbf4b268d4aa1b1",
+      "bytes": 16732
+    },
+    {
+      "path": "crates/cyril-ui/src/file_completer.rs",
+      "sha256": "a5ef37dbecbfb88ff75500d70c64633f1b1456e2ae035a11283cf20198a43196",
+      "bytes": 13743
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "sha256": "4dc58102ebd855573e6ccd9d90f1c5db24667306739b5dca03475bc8330c35b6",
+      "bytes": 37139
+    },
+    {
+      "path": "crates/cyril-ui/src/highlight.rs",
+      "sha256": "f4142b29e3561b392a08e65eb5ca5827735e671577510f4d46a41a041f29fdc9",
+      "bytes": 28701
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "sha256": "13ebd90c9afc7b64ba78952ed99e33bb2ed6c1f41c5337f846cd96750f821dad",
+      "bytes": 524
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_notice.rs",
+      "sha256": "d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+      "bytes": 2341
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/arguments.rs",
+      "sha256": "a1ed26e0040ed681923a821877920fc251be7b0653ddb7f29e3ec149f7f495cf",
+      "bytes": 4386
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/integration.rs",
+      "sha256": "a79911bf6ef3ad4899e9addbc2df9f785f37a719e03aaf11fccf4af6f936884a",
+      "bytes": 2983
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/mod.rs",
+      "sha256": "6b68d5c039a0c5cdd31aec70107516965168db521ce5b5240eee8636a138ebf8",
+      "bytes": 17069
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/presentation.rs",
+      "sha256": "cca5728d3913e3355136a87368dfa3da7ec928ce278dd3523a9287d28e43eb75",
+      "bytes": 32692
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/tests.rs",
+      "sha256": "bfe027fc5eab6aaa86aafffba71c628ad575783f596189378babf0ebe1ffc7d7",
+      "bytes": 77959
+    },
+    {
+      "path": "crates/cyril-ui/src/memory_format.rs",
+      "sha256": "dbc57b40135fa6fcc1a3c2539ba8feac5719ecd91b5bec7a5c89b4ec273ab454",
+      "bytes": 18476
+    },
+    {
+      "path": "crates/cyril-ui/src/render.rs",
+      "sha256": "f93f8ff52b22e24b9594a1ff42635b0034420cd30a13963190de15d38e4c857a",
+      "bytes": 66711
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_approval_80x24.snap",
+      "sha256": "12cdbd79881f80a4f88930302fe4e2d3f779180258bbb3d55662cd45c6166c9f",
+      "bytes": 8677
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_idle_80x24.snap",
+      "sha256": "d5f9d9245d7de373c5f72c542f53d29c1639d84ebc3347541962703db656dc76",
+      "bytes": 4899
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__render__tests__theme_seam_idle.snap",
+      "sha256": "2616f4a81bd29e1abca85c589db4fb74174994195adc0b863c6e5bde105b9fb4",
+      "bytes": 4040
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__render__tests__theme_seam_picker.snap",
+      "sha256": "c1f197d19edf8343223515ca9a3fc9c0b9837165961fd53a35655b23510f4997",
+      "bytes": 8210
+    },
+    {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__render__tests__theme_seam_tool_diff.snap",
+      "sha256": "18dc7a6252b88f417ebc8fb4da35b5df76491afc42e62401db995695beda20e5",
+      "bytes": 6632
+    },
+    {
+      "path": "crates/cyril-ui/src/spinner.rs",
+      "sha256": "d7a2fb263fe10a1904b62a2591a96a6663b7b12ce820c0ecb5853aa3e1dc5403",
+      "bytes": 881
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "sha256": "650741c521b836512b75293e843fb5cc7a4a18921b92cc3e3b15594a9695d025",
+      "bytes": 420084
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "sha256": "abebac758d9d004c8a5794301c4f2d9c89d1fb9ce6dc39352df9b381217a1737",
+      "bytes": 21375
+    },
+    {
+      "path": "crates/cyril-ui/src/text.rs",
+      "sha256": "b9744d47e36b2d00bc270bb8273830623d81f36978bb9c6c510f8d8b5d83bae2",
+      "bytes": 6600
+    },
+    {
+      "path": "crates/cyril-ui/src/theme.rs",
+      "sha256": "52f4c87eb29ad0559c29064edd056cb4c0f25687783476fa740db48591d5eeba",
+      "bytes": 89016
+    },
+    {
+      "path": "crates/cyril-ui/src/tool_diff.rs",
+      "sha256": "d4ae79652e8eca09f1c61145cddd23f8ee3f6723a5b04de3588cec1cafdc0036",
+      "bytes": 9152
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "f3c07acfe83086edd8732aef9c872740af4ecf3a1e3cc7635ed41a24640e37b3",
+      "bytes": 87165
+    },
+    {
+      "path": "crates/cyril-ui/src/turn_labels.rs",
+      "sha256": "cfa88af4c4c81a863cb7f712213648d871ed82f923505b506f2cd0254de78993",
+      "bytes": 21575
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "sha256": "e77c9fce8341a1680089ca879e72b5a31b865c3bbc6e9d2d313f652060fb9c4e",
+      "bytes": 141152
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "sha256": "659eeaab887ca78a28a0179dc3980d56041d6e95cef700e12b235cca972aa9b8",
+      "bytes": 112427
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/code_panel.rs",
+      "sha256": "5ab238af60b004f24847129785541c403240ab95936e0ebadf23ea33143352b0",
+      "bytes": 10297
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/crew_panel.rs",
+      "sha256": "06419cbac3810f6601f7954565eefedfa807a12888eba4de35ea21dfb3df55ed",
+      "bytes": 21037
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/hooks_panel.rs",
+      "sha256": "e1da1a4ef881711d382ff6eb5cb9d7f27cfe7a710e88cb75bbad7a5c0e642177",
+      "bytes": 12749
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/input.rs",
+      "sha256": "55920f0d2d2e9aaad635816cc79f80402c3a37b43b43cea78ecc3ab54063220c",
+      "bytes": 24164
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/markdown.rs",
+      "sha256": "377c592d232281459e6422cf9bfcdb65b8b62131eea2261de4453f1fd16c0900",
+      "bytes": 71481
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/mcp_panel.rs",
+      "sha256": "157f92e4fd5306d26d03018216b0548a28b2a397743c00cc04092ae74298d92e",
+      "bytes": 6272
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/mod.rs",
+      "sha256": "03d2a3f3c85d6edfae6bc6e2d302564d6d77f2fdc610b5ce8fad5cb549b00c83",
+      "bytes": 318
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/modal.rs",
+      "sha256": "a35a24ebf5ecb687d97bde4a5730236a1f5fcb1cdd89475f2057bf0fdfed098a",
+      "bytes": 8208
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/picker.rs",
+      "sha256": "d963541d07b240e47fca0d47fa4671346756267af51f86cbc4999afbff4b2967",
+      "bytes": 7769
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/powers_panel.rs",
+      "sha256": "ef106b19dc0a133291a1098001a78e255ff8a7c3cffe3a6471dd00473509be50",
+      "bytes": 28603
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/review.rs",
+      "sha256": "d9d55a2346c45ac4782a4abe9dec9ff8e6fac62a744725f6e52d7efe2451d906",
+      "bytes": 14835
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__8wh0_text_content_preview_80x24.snap",
+      "sha256": "c2c680bbf3012b57c087b4f0721e072730b62c1977e3dfec36309b0ddf1dae22",
+      "bytes": 1852
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__8wh0_workflow_plan_80x24.snap",
+      "sha256": "40d75fc402596e0f07f471d9cfd0abe2d300e9f73e637c15ecffe0221338985f",
+      "bytes": 1857
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__8wh0_workflow_plan_nested_90x40.snap",
+      "sha256": "6a1a67030f9d0778dd717b496ead1a73db7c94bade735f0cee5baaafb4447ff6",
+      "bytes": 2979
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__8wh0_workflow_plan_overflow_keeps_comparison_90x50.snap",
+      "sha256": "c370c2b89f3af18504c5d5eb326406750c737b0c265e1ec69cf109f8839a4417",
+      "bytes": 3532
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__rcub_reason_phase_clamped_80x16.snap",
+      "sha256": "58b3a8e3c42af26a8fc7c47df9925a5acf56d5cc010f9c565856b24f0e7374b4",
+      "bytes": 870
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__rcub_write_path_clamped_44x16.snap",
+      "sha256": "0cbeb4d1804031375cf3d4c8a1fcdbb2605e08a778d9ccc616979dc309f98ca6",
+      "bytes": 558
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__rcub_write_path_clamped_80x16.snap",
+      "sha256": "ea30b79cb6b8944f20dbeac1bf68db02cd71d913f2ff2c0b9992cfa720709bdf",
+      "bytes": 882
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__rcub_write_path_roomy_40x24.snap",
+      "sha256": "fcd3f0bec07de452a202b41703c116052a863dec3df773c4500e6012b76b6f47",
+      "bytes": 991
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/snapshots/cyril_ui__widgets__approval__tests__rcub_write_path_roomy_80x24.snap",
+      "sha256": "cda5316e69553a8d811ef0767b9a49eca4a11791e2dae3e7e57cfe4340f1a094",
+      "bytes": 1795
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/suggestions.rs",
+      "sha256": "2d4b1ab6e85896efc015cdeef272d61dd2bcf1e8ad98f5a56032ce9b0def4010",
+      "bytes": 30250
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/toolbar.rs",
+      "sha256": "a7c4f29824a157fbf8680ff21645bb2c33d6c46d753f78a371345034a533626c",
+      "bytes": 36299
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/usage_panel.rs",
+      "sha256": "64e8fd5d49f5d4a7a1249bf6ba53bc56b04653de5b62360d2dc5305962329a14",
+      "bytes": 49178
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/voice.rs",
+      "sha256": "4048846ccaf9ed92a2781be7151d99c79d20b45cb7c3bbb484392e43707a9411",
+      "bytes": 3516
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/workflow_plan.rs",
+      "sha256": "702a09e4eba2a9ec66e0801b081d60c93faeebfe7a37af09fbe2c2e0e6a9864f",
+      "bytes": 20189
+    },
+    {
+      "path": "crates/cyril-ui/src/workflow_format.rs",
+      "sha256": "4a2ce5fd45453fa2ee22bbccd42f2a9d02cd185b8bc50407c5affe561f6b85ef",
+      "bytes": 16397
+    },
+    {
+      "path": "crates/cyril-ui/src/workflow_ui.rs",
+      "sha256": "f807ca54c00541c5f041d3d343703d65ab274805cfffe1f91cd3fdb61a76564d",
+      "bytes": 7456
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/chrome-theme-baseline.tsv",
+      "sha256": "03305e6cea16273fe83cdb7dba035607876765b3dfd5ac6a5dce915e22bf0f95",
+      "bytes": 159927
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/conversation-theme-baseline.tsv",
+      "sha256": "39b8b9933a4d91d2d26a9435d57b3346e14359151665b7a32ced0f69c9386408",
+      "bytes": 268569
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/input-wrap-oracle.tsv",
+      "sha256": "f888417f646f789de385a2919b31930e479ddce7e7995fea8f8cdba4ea36da22",
+      "bytes": 14641
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+      "sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+      "bytes": 1958
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/kas_missing_start_2_31_1.jsonl",
+      "sha256": "b200340600665de77d9cb962f28bdcf2426180a5f57e5a402f702812e896c9e1",
+      "bytes": 2705
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/modal-baseline.tsv",
+      "sha256": "ff032a85825ad916f5d2c0b570921fd0f40e3fd99ca91c670efbe18b64b33b54",
+      "bytes": 343569
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/v2_failed_validation_2_11_0.jsonl",
+      "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+      "bytes": 1924
+    },
+    {
+      "path": "crates/cyril-ui/tests/fixtures/v2_failed_validation_2_4_1.jsonl",
+      "sha256": "a297eca10a7537cf544a6204fc11e40a56fff70e7853cb1abeeb781c106d3d00",
+      "bytes": 1295
+    },
+    {
+      "path": "crates/cyril-ui/tests/missing_tool_updates.rs",
+      "sha256": "0110546141bc2ef433b00b01af4413c6d0a0400a8c2ffcca175778ead7cac988",
+      "bytes": 14296
+    },
+    {
+      "path": "crates/cyril-ui/tests/modal_theme.rs",
+      "sha256": "d8106c6e468be36107046871d9f0d896065752ca435ab84f259e75a8d6056af3",
+      "bytes": 22259
+    },
+    {
+      "path": "crates/cyril-ui/tests/no_percentile_computation.rs",
+      "sha256": "98f6e1d4449a7f6923123cbf8627c0fd45f81cf3376a46f6f23bf2376c6beaf9",
+      "bytes": 7387
+    },
+    {
+      "path": "crates/cyril-ui/tests/picker_active_marker.rs",
+      "sha256": "561eda6bde66f026d4f671cb31de24b8ba573af5ed918a30b0d6dedfe82a3570",
+      "bytes": 5369
+    },
+    {
+      "path": "crates/cyril-ui/tests/picker_viewport.rs",
+      "sha256": "99452902065939a037e49b16e86069f98e57fb7008785cb7ada8d428586fcd0e",
+      "bytes": 12630
+    },
+    {
+      "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "sha256": "8b0cfdeacfc6fb81bf426cc8dd36279ab58ab8c628964ff13c14df6a6432e684",
+      "bytes": 11505
+    },
+    {
+      "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+      "sha256": "b6ddcf2b672d022257522002f0853b136f854b28b00a659a6e514a5c03521368",
+      "bytes": 10008
+    },
+    {
+      "path": "crates/cyril-voice/Cargo.toml",
+      "sha256": "6a65c56f60c5024cb353b24d395d213fd5d1d8e11688e6284415e235568f02e6",
+      "bytes": 654
+    },
+    {
+      "path": "crates/cyril-voice/src/lib.rs",
+      "sha256": "43038f4a43e0401c78e8a83854ead5cfb4b701359eca9b32e8411cd08003341f",
+      "bytes": 8347
+    },
+    {
+      "path": "crates/cyril-workbench/Cargo.toml",
+      "sha256": "d30d65e9a385889c210051f0f3f2556389988e9980892683500c80ea88c6a64d",
+      "bytes": 645
+    },
+    {
+      "path": "crates/cyril-workbench/src/lib.rs",
+      "sha256": "c5b5885522b9544f5956560de88d2a15ec241150139cd31233f03998c2717349",
+      "bytes": 107
+    },
+    {
+      "path": "crates/cyril-workbench/src/reviewer.rs",
+      "sha256": "2b767f10fd0a48b86a8227d68ec39f439eca0ba4bf62b379438b1a8604b3df50",
+      "bytes": 25598
+    },
+    {
+      "path": "crates/cyril-workbench/src/reviewer/evidence.rs",
+      "sha256": "626f7307fdcb0879e16aa947ce0840df57e9e262f9ba1aaf9b4a9c631efe85ff",
+      "bytes": 8851
+    },
+    {
+      "path": "crates/cyril-workbench/src/reviewer/runtime.rs",
+      "sha256": "31ad2d3da345d62eb83a0fad66458b0401ef5bcc03502d02c626f4b55c2dd046",
+      "bytes": 12621
+    },
+    {
+      "path": "crates/cyril-workbench/src/reviewer/types.rs",
+      "sha256": "03bc7e15495a5789a0d4b71d99e423f3cbb45dedbb0aedcfa6efc4fd285f0818",
+      "bytes": 8211
+    },
+    {
+      "path": "crates/cyril-workbench/tests/fixtures/reviewer_peer.py",
+      "sha256": "16f4352dcbcf7dd1a0e518bda3d723f0416556e9e3834e3af4945cf973ad9195",
+      "bytes": 10407
+    },
+    {
+      "path": "crates/cyril-workbench/tests/reviewer.rs",
+      "sha256": "5c79f579058928fa6b3a18f62a0ac095e47a40691a4077d4fc0f8e26c62b9b56",
+      "bytes": 27433
+    },
+    {
+      "path": "crates/cyril/Cargo.toml",
+      "sha256": "576d1e2fdff5b49d1956a8eee1dfec91bb064099be690e6607ecdb5237e14295",
+      "bytes": 1859
+    },
+    {
+      "path": "crates/cyril/examples/l7tw_death_probe.rs",
+      "sha256": "a785eac1addd8b213673c205dbf07f1cad7e3e77efba795b541a7837cacadee7",
+      "bytes": 6033
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "sha256": "8f51bc683b8587e244a3f5d2a997903ba7c5d183b81e4c2273868ad4ea36d3c5",
+      "bytes": 49939
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "e4501ee00778db38ea6ec7bf8ed76c156dcbf8e3f5e18a9ccef816dfc26808d7",
+      "bytes": 466642
+    },
+    {
+      "path": "crates/cyril/src/app/review.rs",
+      "sha256": "e2b120dc7a8b20694750244aa41cd0ce21b4ed48a8cf0c4b4929167f059e776a",
+      "bytes": 61419
+    },
+    {
+      "path": "crates/cyril/src/app/review/resume.rs",
+      "sha256": "568443a712df82587b06c4ab4bd96b2b4a3c7ec32b8a606b1ad6daf477237624",
+      "bytes": 21622
+    },
+    {
+      "path": "crates/cyril/src/app/tests/current_runtime_contract/memory.rs",
+      "sha256": "6a233345bf10ae5c7fead70d722fc0bc1f2d54ae58bcbba6b1e2edddbd29d38a",
+      "bytes": 9541
+    },
+    {
+      "path": "crates/cyril/src/app/tests/current_runtime_contract/mod.rs",
+      "sha256": "43df26210d19ffba7e4a18095368e7a36f3e05bc8c5f06f8da55dcbedf7523cd",
+      "bytes": 207
+    },
+    {
+      "path": "crates/cyril/src/app/tests/current_runtime_contract/ordering.rs",
+      "sha256": "5ff84eb9854f173a40d34d30caf865422c53156a54990dbed6ddfdf96b5bb3e5",
+      "bytes": 3283
+    },
+    {
+      "path": "crates/cyril/src/app/tests/current_runtime_contract/shutdown.rs",
+      "sha256": "e9317525b37d2c475b92568d23d7c8d8f729cfe6cea6d22f0ef6cb92c9c43205",
+      "bytes": 3771
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "sha256": "70bde9a2ea9c981c4fc98a9e7b7136a83dab98797997c958834cb01f69acab33",
+      "bytes": 24314
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_panel.rs",
+      "sha256": "7f39942bfb2fda3ea89bb61fdf03a8d2e1720cf95e9ec004dbcd4268d752cb53",
+      "bytes": 22068
+    },
+    {
+      "path": "crates/cyril/src/app/tests/review.rs",
+      "sha256": "21771cf85ca2bc09d40fd82fc279ee1938875c681d3a601d2883de6317945ffe",
+      "bytes": 84776
+    },
+    {
+      "path": "crates/cyril/src/bin/cyril-memory-runtime.rs",
+      "sha256": "061be93ab705cc03fc4880133e1679ca161a02afcc01f5c867dd3dc8bbb97e60",
+      "bytes": 428
+    },
+    {
+      "path": "crates/cyril/src/capture_forwarder.rs",
+      "sha256": "b80f4de46766295ddd06940cae80abed68eef0e12494a969ba1ac4f70dccaebf",
+      "bytes": 9856
+    },
+    {
+      "path": "crates/cyril/src/crtool.rs",
+      "sha256": "2dabc8e1c8523d9156ed0bae7be60176dd1a15e206f9ee88c4120abaf4b27574",
+      "bytes": 4549
+    },
+    {
+      "path": "crates/cyril/src/main.rs",
+      "sha256": "493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f",
+      "bytes": 15235
+    },
+    {
+      "path": "crates/cyril/src/memory_runtime.rs",
+      "sha256": "c24adfb7f90688701d7c6102783c0f267ce74e0247d7c8f1ff29d0afc2f229e9",
+      "bytes": 48450
+    },
+    {
+      "path": "crates/cyril/tests/architecture_tests.rs",
+      "sha256": "9dd9fe452548bb2b78d04408618ad4add11ced81131a0fb9605d8ec6bac0e635",
+      "bytes": 2784
+    },
+    {
+      "path": "crates/cyril/tests/crtool_cli.rs",
+      "sha256": "eb847d3c17314bfbbcfad4307314a2c61712953a6592fb6541baea0b626a6197",
+      "bytes": 4917
+    },
+    {
+      "path": "crates/cyril/tests/event_routing.rs",
+      "sha256": "166645414bf77e50bd3420f1934bf8c8505738fe2425735fb8d6c94ec1337bc9",
+      "bytes": 12373
+    },
+    {
+      "path": "crates/cyril/tests/memory_runtime.rs",
+      "sha256": "d381754f49acb6ab25dd5aa1b3a48e2dc704dec435226486dde1768d7bd6fa52",
+      "bytes": 27126
+    },
+    {
+      "path": "crates/cyril/tests/nd4h_source_fences.rs",
+      "sha256": "aa286a8465ad4d9506acc0213e3b8df672a2de41cb8cd3a7263ab416a669113a",
+      "bytes": 12972
+    },
+    {
+      "path": "crates/cyril/tests/powers_source_fence.rs",
+      "sha256": "76539de342c166b0766a04952f0cabe377b19bc7c77a07d67407fc4111c731e4",
+      "bytes": 13968
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "sha256": "474342a18df37f923f59df43b1b90e6c0b0d6758612462bbc0dadbe37fe2cadf",
+      "bytes": 86
+    }
+  ]
+}

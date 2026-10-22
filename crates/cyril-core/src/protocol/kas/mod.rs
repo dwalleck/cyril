@@ -21,6 +21,7 @@ pub(crate) mod hooks;
 pub(crate) mod host_io;
 pub(crate) mod host_shell;
 pub(crate) mod kiro_fs;
+pub(crate) mod mcp;
 pub(crate) mod settings;
 /// Stored-token fallback for a kiro-cli without `chat _ get-kas-token`
 /// (cyril-zbu7 amendment).

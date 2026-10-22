@@ -1,0 +1,432 @@
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs:110:
+             matches!(update("kiro/mcp/governance_disabled", json!({"sessionId":"root","reason":reason})), McpUpdate::Policy {policy, ..} if policy == expected)
+         );
+     }
+[31m-    assert!(V2Engine
+(B[m[31m-        .convert_ext_notification("kiro/mcp/status", &json!({"sessionId":"root","servers":[]}))
+(B[m[31m-        .is_ok_and(|value| value.is_none()));
+(B[m[31m-    assert!(must_succeed(
+(B[m[31m-        KasEngine::default().convert_ext_notification("kiro/mcp/status/near-miss", &Value::Null),
+(B[m[31m-        "near miss"
+(B[m[31m-    )
+(B[m[31m-    .is_none());
+(B[m[32m+    assert!(
+(B[m[32m+        V2Engine
+(B[m[32m+            .convert_ext_notification("kiro/mcp/status", &json!({"sessionId":"root","servers":[]}))
+(B[m[32m+            .is_ok_and(|value| value.is_none())
+(B[m[32m+    );
+(B[m[32m+    assert!(
+(B[m[32m+        must_succeed(
+(B[m[32m+            KasEngine::default()
+(B[m[32m+                .convert_ext_notification("kiro/mcp/status/near-miss", &Value::Null),
+(B[m[32m+            "near miss"
+(B[m[32m+        )
+(B[m[32m+        .is_none()
+(B[m[32m+    );
+(B[m }
+ 
+ #[test]
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs:411:
+             .map(|error| error.kind),
+         Some(McpErrorKind::InvalidArguments)
+     );
+[31m-    assert!(state
+(B[m[31m-        .validate(&request(
+(B[m[31m-            "first-wire-id",
+(B[m[31m-            [("marker".into(), "  exact\nvalue  ".into())]
+(B[m[31m-                .into_iter()
+(B[m[31m-                .collect(),
+(B[m[31m-        ))
+(B[m[31m-        .is_ok());
+(B[m[31m-    assert!(state
+(B[m[31m-        .validate(&request("second-wire-id", Default::default()))
+(B[m[31m-        .is_ok());
+(B[m[32m+    assert!(
+(B[m[32m+        state
+(B[m[32m+            .validate(&request(
+(B[m[32m+                "first-wire-id",
+(B[m[32m+                [("marker".into(), "  exact\nvalue  ".into())]
+(B[m[32m+                    .into_iter()
+(B[m[32m+                    .collect(),
+(B[m[32m+            ))
+(B[m[32m+            .is_ok()
+(B[m[32m+    );
+(B[m[32m+    assert!(
+(B[m[32m+        state
+(B[m[32m+            .validate(&request("second-wire-id", Default::default()))
+(B[m[32m+            .is_ok()
+(B[m[32m+    );
+(B[m     assert_eq!(
+         state
+             .validate(&request("Second display title", Default::default()))
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:3:
+ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+ use cyril_core::types::*;
+ use ratatui::{
+[32m+    Terminal,
+(B[m     backend::{Backend, CrosstermBackend, TestBackend},
+     buffer::{Buffer, Cell},
+     layout::Rect,
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:9:
+[31m-    Terminal,
+(B[m };
+ 
+ use crate::state::UiState;
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:511:
+ }
+ 
+ #[test]
+[31m-fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn read_preview_is_full_scrollable_literal_external_data_with_nontext_metadata()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     let initial = state(vec![server("exact")]);
+     let mut ui = UiState::new(100);
+     ui.show_mcp_panel(Arc::clone(&initial));
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:581:
+ }
+ 
+ #[test]
+[31m-fn grapheme_width_preview_tail_reaches_testbackend_after_scrolling(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn grapheme_width_preview_tail_reaches_testbackend_after_scrolling()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     use ratatui::layout::Rect;
+ 
+     for (terminal_width, body_width, tail) in [(8, 2, "#\u{fe0f}Z"), (10, 4, "#\u{fe0f}#\u{fe0f}Z")]
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:679:
+ }
+ 
+ #[test]
+[31m-fn focused_selection_and_argument_cursor_stay_in_actual_small_viewport(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn focused_selection_and_argument_cursor_stay_in_actual_small_viewport()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     let mut ui = UiState::new(100);
+     ui.show_mcp_panel(state(
+         (0..20)
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:706:
+ }
+ 
+ #[test]
+[31m-fn wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn wrapped_cjk_cursor_stays_visible_through_editing_and_odd_width_resizes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     fn assert_cursor_visible(
+         ui: &mut UiState,
+         width: u16,
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:814:
+ }
+ 
+ #[test]
+[31m-fn semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn semantic_caret_is_painted_before_spacing_marks_without_changing_argument_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_semantic_caret_visible_and_argument_bytes_preserved(
+         "\u{09cb}\u{09cb}Z",
+         &[KeyCode::Home],
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:823:
+ }
+ 
+ #[test]
+[31m-fn semantic_caret_is_painted_after_prepend_without_changing_argument_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn semantic_caret_is_painted_after_prepend_without_changing_argument_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_semantic_caret_visible_and_argument_bytes_preserved(
+         "\u{0600}\u{0600}Z",
+         &[KeyCode::Home, KeyCode::Right, KeyCode::Right],
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:832:
+ }
+ 
+ #[test]
+[31m-fn semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn semantic_caret_visual_snap_preserves_composed_data_and_logical_byte_cursor()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     use ratatui::layout::Rect;
+ 
+     fn argument_row(
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1109:
+ }
+ 
+ #[test]
+[31m-fn halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn halfwidth_dakuten_argument_preserves_data_caret_and_canonical_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{ff76}\u{ff9e}", 2)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1117:
+ #[test]
+[31m-fn halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn halfwidth_handakuten_argument_preserves_data_caret_and_canonical_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{ff8a}\u{ff9f}", 2)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1123:
+ #[test]
+[31m-fn ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn ordinary_combining_dakuten_argument_preserves_data_caret_and_canonical_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{304b}\u{3099}", 2)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1129:
+ #[test]
+[31m-fn ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn ordinary_combining_handakuten_argument_preserves_data_caret_and_canonical_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{306f}\u{309a}", 2)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1135:
+ #[test]
+[31m-fn standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn standalone_halfwidth_dakuten_argument_preserves_one_cell_data_caret_and_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{ff9e}", 1)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1141:
+ #[test]
+[31m-fn standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn standalone_halfwidth_handakuten_argument_preserves_one_cell_data_caret_and_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{ff9f}", 1)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1147:
+ #[test]
+[31m-fn halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn halfwidth_base_combining_dakuten_argument_preserves_one_cell_data_caret_and_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{ff76}\u{3099}", 1)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1153:
+ #[test]
+[31m-fn halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn halfwidth_base_combining_handakuten_argument_preserves_one_cell_data_caret_and_bytes()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_sound_mark_argument_width_contract("\u{ff8a}\u{309a}", 1)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1159:
+ #[test]
+[31m-fn full_width_prepend_argument_survives_real_diff_and_crossterm_output(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn full_width_prepend_argument_survives_real_diff_and_crossterm_output()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     let mut ui = diff_prompt_form();
+     let previous = mcp_ui_producer_snapshot(&ui)?;
+     assert!(ui.mcp_argument_paste(PREPEND_ARGUMENT));
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1194:
+ }
+ 
+ #[test]
+[31m-fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn prepend_argument_shrink_and_delete_restore_vacated_diff_columns()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     let mut ui = diff_prompt_form();
+     ui.set_appearance(
+         crate::theme::ThemeId::CyrilDark,
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1236:
+     let deleted = mcp_ui_producer_snapshot(&ui)?;
+     let delete_diff = mcp_consumer_diff(&shrunk, &deleted)?;
+ 
+[31m-    assert!(ui
+(B[m[31m-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+(B[m[31m-        .is_none());
+(B[m[32m+    assert!(
+(B[m[32m+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+(B[m[32m+            .is_none()
+(B[m[32m+    );
+(B[m     assert_prompt_argument_bytes(
+         ui.mcp_panel()
+             .unwrap_or_else(|| panic!("MCP panel should remain open")),
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1265:
+ }
+ 
+ #[test]
+[31m-fn prepend_argument_focus_and_appearance_repaint_protect_current_columns(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn prepend_argument_focus_and_appearance_repaint_protect_current_columns()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     let mut ui = diff_prompt_form();
+     ui.set_appearance(
+         crate::theme::ThemeId::CyrilDark,
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1315:
+     );
+     let light = mcp_ui_producer_snapshot(&ui)?;
+     let appearance_diff = mcp_consumer_diff(&refocused, &light)?;
+[31m-    assert!(ui
+(B[m[31m-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+(B[m[31m-        .is_none());
+(B[m[32m+    assert!(
+(B[m[32m+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('e'), KeyModifiers::CONTROL))
+(B[m[32m+            .is_none()
+(B[m[32m+    );
+(B[m     assert_prompt_argument_bytes(
+         ui.mcp_panel()
+             .unwrap_or_else(|| panic!("MCP panel should remain open")),
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1357:
+ }
+ 
+ #[test]
+[31m-fn prepend_argument_movement_geometry_and_close_restore_former_columns(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn prepend_argument_movement_geometry_and_close_restore_former_columns()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     let mut ui = UiState::new(100);
+     ui.set_terminal_size(80, 24);
+     ui.set_appearance(
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1509:
+             .uri
+             .clone();
+         for _ in 0..3 {
+[31m-            assert!(ui
+(B[m[31m-                .handle_mcp_key(key(if scroll_up {
+(B[m[32m+            assert!(
+(B[m[32m+                ui.handle_mcp_key(key(if scroll_up {
+(B[m                     KeyCode::PageUp
+                 } else {
+                     KeyCode::PageDown
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1517:
+                 }))
+[31m-                .is_none());
+(B[m[32m+                .is_none()
+(B[m[32m+            );
+(B[m         }
+         let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
+         assert_eq!(panel.selected_entry.as_ref(), Some(&selected));
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1634:
+ }
+ 
+ #[test]
+[31m-fn offscreen_server_reset_reanchors_before_dispatching_the_retained_identity(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn offscreen_server_reset_reanchors_before_dispatching_the_retained_identity()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_offscreen_server_action_reanchors(KeyCode::Char('r'), false)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1642:
+ #[test]
+[31m-fn offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn offscreen_server_authenticate_reanchors_before_dispatching_the_retained_identity()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_offscreen_server_action_reanchors(KeyCode::Char('a'), true)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1747:
+ }
+ 
+ #[test]
+[31m-fn hidden_target_unavailable_catalog_reset_reanchors_before_dispatch(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn hidden_target_unavailable_catalog_reset_reanchors_before_dispatch()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_hidden_target_unavailable_catalog_action_reanchors(KeyCode::Char('r'), false)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1755:
+ #[test]
+[31m-fn hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_hidden_target_unavailable_catalog_action_reanchors(KeyCode::Char('a'), true)
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1761:
+ #[test]
+[31m-fn hidden_target_empty_catalog_reset_reanchors_before_dispatch(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn hidden_target_empty_catalog_reset_reanchors_before_dispatch()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_hidden_target_catalog_action_reanchors(
+         McpServerStatus::Connected {
+             catalog: Arc::new(McpCatalog {
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1776:
+ }
+ 
+ #[test]
+[31m-fn hidden_target_empty_catalog_authenticate_reanchors_before_dispatch(
+(B[m[31m-) -> Result<(), Box<dyn std::error::Error>> {
+(B[m[32m+fn hidden_target_empty_catalog_authenticate_reanchors_before_dispatch()
+(B[m[32m+-> Result<(), Box<dyn std::error::Error>> {
+(B[m     assert_hidden_target_catalog_action_reanchors(
+         McpServerStatus::Connected {
+             catalog: Arc::new(McpCatalog {
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1821:
+         Some("wire/prompt exact 日")
+     );
+     assert!(ui.handle_mcp_key(key(KeyCode::Enter)).is_none());
+[31m-    assert!(ui
+(B[m[31m-        .mcp_panel()
+(B[m[31m-        .unwrap_or_else(|| panic!("panel"))
+(B[m[31m-        .heading
+(B[m[31m-        .contains("Arguments: Advertised display label"));
+(B[m[32m+    assert!(
+(B[m[32m+        ui.mcp_panel()
+(B[m[32m+            .unwrap_or_else(|| panic!("panel"))
+(B[m[32m+            .heading
+(B[m[32m+            .contains("Arguments: Advertised display label")
+(B[m[32m+    );
+(B[m     assert!(ui.mcp_argument_paste(" exact string "));
+     let request = ui
+         .handle_mcp_key(key(KeyCode::Enter))
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1932:
+     ui.set_terminal_size(2, 2);
+     assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_none());
+     ui.set_terminal_size(80, 24);
+[31m-    assert!(ui
+(B[m[31m-        .handle_mcp_key(KeyEvent::new_with_kind(
+(B[m[32m+    assert!(
+(B[m[32m+        ui.handle_mcp_key(KeyEvent::new_with_kind(
+(B[m             KeyCode::Char('r'),
+             KeyModifiers::NONE,
+             crossterm::event::KeyEventKind::Release,
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:1940:
+         ))
+[31m-        .is_none());
+(B[m[31m-    assert!(ui
+(B[m[31m-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL))
+(B[m[31m-        .is_none());
+(B[m[32m+        .is_none()
+(B[m[32m+    );
+(B[m[32m+    assert!(
+(B[m[32m+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL))
+(B[m[32m+            .is_none()
+(B[m[32m+    );
+(B[m     assert!(ui.handle_mcp_key(key(KeyCode::Char('r'))).is_some());
+ }
+ 
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui/src/mcp_panel/tests.rs:2049:
+     let mut ui = UiState::new(100);
+     ui.show_mcp_panel(Arc::new(data));
+     let before = document(&ui);
+[31m-    assert!(ui
+(B[m[31m-        .handle_mcp_key(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL))
+(B[m[31m-        .is_none());
+(B[m[32m+    assert!(
+(B[m[32m+        ui.handle_mcp_key(KeyEvent::new(KeyCode::Char('v'), KeyModifiers::CONTROL))
+(B[m[32m+            .is_none()
+(B[m[32m+    );
+(B[m     assert_eq!(document(&ui), before);
+     assert!(ui.handle_mcp_key(key(KeyCode::Char('v'))).is_none());
+     assert!(

@@ -1,0 +1,36 @@
+{
+  "schema": "cyril-caar-independent-draft-metadata-review/v1",
+  "reviewer": "AssembleFinalMcpStartup.CaarDraftMetadataReview",
+  "reviewer_role": "reviewer",
+  "retained_report": "agent://AssembleFinalMcpStartup.CaarDraftMetadataReview",
+  "verdict": "APPROVE_FOR_EXPLICITLY_PENDING_DRAFT_METADATA",
+  "result": "NO_BLOCKING_METADATA_FINDINGS",
+  "confidence": 0.96,
+  "reviewed_publication_postimages": [
+    "README.md",
+    ".cyril-caar/route.md",
+    ".cyril-caar/spec.md",
+    ".cyril-caar/design.md",
+    ".cyril-caar/plan.md",
+    ".cyril-caar/evidence.md",
+    ".cyril-caar/review-decisions.md",
+    ".cyril-caar/pr-body.md",
+    ".cyril-caar/current-main-proof/index.json",
+    ".cyril-caar/current-main-proof/source-pins.json",
+    ".cyril-caar/current-main-proof/source-inventory.json",
+    ".cyril-caar/current-main-proof/integration-boundary.json",
+    ".cyril-caar/current-main-proof/feature-files.json",
+    ".cyril-caar/current-main-proof/qualification.json",
+    ".cyril-caar/current-main-proof/review-applicability.json",
+    ".cyril-caar/current-main-proof/native-consumer.json",
+    ".cyril-caar/current-main-proof/timing-contract-citations.json"
+  ],
+  "original_report_sha256": "2222cf349648d781126c05fdc105e8ee0d7c23f1c365e8dc2800bd88dee23bd7",
+  "original_report_verbatim": "NO_BLOCKING_METADATA_FINDINGS\n\n**Verdict: APPROVE_FOR_EXPLICITLY_PENDING_DRAFT_METADATA**  \n**Overall correctness:** correct within this metadata-only review scope.  \n**Confidence:** 0.96.\n\nThe reviewed postimages accurately distinguish draft publication from completed acceptance. I found no blocking metadata misattribution, hidden waiver, or unsupported native/CI/final-conformance/merge-ready claim.\n\n### Reviewed scope\n\nUnder `/home/dwalleck/repos/cyril-wt-fix-cyril-caar-final`:\n\n- `README.md`: MCP startup section, with adjacent Tqr/NK documentation context.\n- `.cyril-caar/`: `route.md`, `spec.md`, `design.md`, `plan.md`, `evidence.md`, `review-decisions.md`, `pr-body.md`.\n- `.cyril-caar/current-main-proof/`: `index.json`, `source-pins.json`, `source-inventory.json`, `integration-boundary.json`, `feature-files.json`, `qualification.json`, `review-applicability.json`, `native-consumer.json`, `timing-contract-citations.json`.\n\nLarge metadata was reviewed through bounded reads and structured queries, including inventory structure/identity fields, exact 22 command records, target summaries, ignored reasons, roster attribution, feature exclusions, and all four current-source native attempts. Governing original Caar spec/design and the cited native-arm contract were also read.\n\n### Material conclusions\n\n- **Hierarchy and identities:** Current banners govern the retained historical narratives. Old source/fixture recipes are not elevated into current instructions. The packet preserves the original `ef46…/09e4…` qualification frame separately from Main’s `879505…/89ef…` held integration boundary, with applicability explicitly resting on the qualified `5c63…` source identity and private default App `a5c6…`.\n- **Qualification honesty:** The 22 assigned local PASS gates, workspace `3198/0/13`, and roster `500 groups / 587 unique names / 1471 feature-lane executions` have distinct semantics. Isolated Core no-default evidence is not inferred from UI/workspace feature unification. Unix/Linux restrictions, ignored cases, and all-features/nextest/release/platform exclusions remain explicit.\n- **Immutable history and review applicability:** Initial fmt `FAIL`, 92 hunks/10 paths, remains separate from the one authorized normal formatter pass and subsequent matrix. The raw-`ddb804…` reviews retain their original 0.94/0.95 scope and explicit formatter applicability—not retroactive independent `5c63…` review. The stale canonical copied-preflight `NOT_RUN` is disclosed beside executed qualification evidence.\n- **Native and timing:** Latest auth rejection is correctly before initialize response and New; no New budget began. Earlier ordinary New/present-preview observations remain attempt-specific, both observation gaps and failed totals remain intact, and corrected d558 startup/navigation layers remain unexercised. The ≥90s actual-request policy, complementary native80/95 proof, and separate natural-inventory95 actual≥90 observation are not conflated.\n- **Publication:** Draft base is **main**, with explicit dependency **#196 → #193**. Caar’s 25-path feature boundary is distinguished from the cumulative diff. Tqr/NK user-documentation semantics remain intact; PR187 is untouched and the issue remains open.\n\n### Assumptions and exclusions\n\nI relied on Main’s supplied source-equivalence authority and the sealed receipts’ recorded identities; I did not independently verify source/index contents or recompute recorded hashes. The reserved `metadata-review.json` and `publication-manifest.json` locations were treated as subsequently generated records, not acceptance stubs, and were not reviewed.\n\nNo edits, Git/index operations, source-code review, builds, tests, lint, formatting, gate reruns, runtime/native/auth/config operations, CI inspection, tracker/PR operations, or final design-conformance review were performed. This approval authorizes **only the explicitly pending draft metadata**, not acceptance, closure, native continuation, or merge readiness.",
+  "authority_limit": "Independent metadata assessment supports only the pending draft Main already authorized. Not source re-verification, final design conformance, native/CI acceptance, issue closure, native continuation or merge readiness.",
+  "not_reviewed": [
+    "This mechanically frozen review projection",
+    "The subsequently generated publication-manifest.json"
+  ],
+  "operations": "Read-only bounded document/metadata review. No edits, Git/index, code review, checks/builds/tests/lint/fmt/gate reruns, runtime/native/auth/config, CI inspection or tracker/PR operations. Recorded source-equivalence and hashes were not independently recomputed by reviewer."
+}

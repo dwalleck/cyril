@@ -1,0 +1,81 @@
+--- controlled-peer-b-harness.py
++++ controlled-peer-current-harness.py
+@@ -2,7 +2,7 @@
+ # /// script
+ # dependencies = ["pyte"]
+ # ///
+-"""Owned peer / actual WORKSPACEBLOCKED partial Tqr candidate consumer evidence.
++"""Owned peer / current integrated Tqr binary scoped consumer evidence.
+ No native KAS/account/network/auth/browser/clipboard/model/grants. The native
+ URL and failure text are retained observations; ACP envelopes and session/
+ request IDs are explicitly synthetic, NOT byte-for-byte native-frame replay.
+@@ -27,14 +27,15 @@
+ import time
+ 
+ ROOT = Path('/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8')
+-BINARY = Path('/tmp/cyril-tqr8-gutter-smoke-candidate-20261020')
+-BINARY_SHA = '2954a006f2cf3cff62b5bf3c0ba1a547bc86a4ba2e797feee22be934d80924b2'
+-SOURCE_TREE = '851c899f9e9da24cccc001020640de47771d8a5a'
++BINARY = Path('/tmp/cyril-tqr8-current-tested-20261020')
++BINARY_SHA = '1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0'
++SOURCE_TREE = 'a09f1dfb63b17d380f4661823de431bfb5d72160'
+ FAKE = ROOT / 'crates/cyril-core/tests/fixtures/fake-kiro-cli.sh'
+ FAKE_SHA = '61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d'
+-SAFE_ROOT = Path('/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod')
+-NATIVE_SCREEN = SAFE_ROOT / 'live-active-df5d9437/06-active-manual-url-visible-before-any-local-oauth.txt'
+-NATIVE_PROJECTION = SAFE_ROOT / 'live-active-df5d9437/live/wire.nonsecret.jsonl'
++PUBLIC = ROOT / '.cyril-tqr8/publication-evidence'
++NATIVE_SCREEN = PUBLIC / 'native-live-active-df5d9437--06-active-manual-url-visible-before-any-local-oauth.txt'
++NATIVE_PROJECTION = PUBLIC / 'native-live-active-df5d9437--live--wire.nonsecret.jsonl'
++PUBLISHED_B_INPUTS = PUBLIC / 'controlled-peer-b-reconstructed-inputs.json'
+ URL_SHA = '92961ea663eec802f2dc1a32a3893165cf170cfa2869f8588647d1c7e9346c5a'
+ SESSION = 'sess_tqr_owned_synthetic'
+ URL_REQUEST_ID = 10010
+@@ -58,6 +59,10 @@
+ 
+ 
+ def native_values():
++    assert sha(NATIVE_SCREEN) == '6cc09b32d18455b532ed0c4690ed2102a466a79bb34ef06d32a72229ff82e2ca'
++    assert sha(NATIVE_PROJECTION) == '8ae4f551697ae74d079da6915d63a5f052740bc22c1424fc11924bc6344b768d'
++    assert sha(PUBLISHED_B_INPUTS) == 'd7f29a544c3669a32e293a02551a9781b6905b0aa8375bc83d5278b22bcad015'
++    published = json.loads(PUBLISHED_B_INPUTS.read_text())
+     lines = NATIVE_SCREEN.read_text().splitlines()
+     session = next(line.removeprefix('Session created: ') for line in lines if line.startswith('Session created: '))
+     index = lines.index('Sign-in requested. Open in browser:') + 1
+@@ -70,7 +75,16 @@
+     callback = next(frame for frame in projections if frame.get('method') == '_kiro/openExternalUrl')
+     assert callback['url_sha256'] == URL_SHA and callback['id'] == 10
+     observed_session_hashes = {frame['session_id_sha256'] for frame in projections if 'session_id_sha256' in frame}
+-    assert hashlib.sha256(session.encode()).hexdigest() in observed_session_hashes
++    # The public screen redacts native identity; its original SID is unavailable.
++    assert session == 'sess_PRIVATE_NATIVE_ID_REDACTED'
++    assert published['native_session_sha256_from_projection'] in observed_session_hashes
++    assert published['controlled_peer_synthetic_session'] == SESSION
++    assert published['controlled_native_url_callback_reconstructed_envelope'] == {
++        'jsonrpc': '2.0', 'id': URL_REQUEST_ID, 'method': '_kiro/openExternalUrl', 'params': {'url': value}}
++    assert published['native_url_sha256'] == URL_SHA
++    assert ERROR == published['native_failure_message_observed_on_terminal']
++    assert CONTROL_URL == published['synthetic_control_url']
++    assert CONTROL_DISPLAY == published['synthetic_expected_visible_control_url']
+     assert ERROR == lines[5].removeprefix('[error] ') + ' ' + lines[6]
+     return SESSION, value
+ 
+@@ -149,13 +163,15 @@
+         'synthetic_control_url': CONTROL_URL,
+         'synthetic_expected_visible_control_url': CONTROL_DISPLAY,
+         'provenance': {'screen': str(NATIVE_SCREEN), 'screen_sha256': sha(NATIVE_SCREEN),
+-                       'projection': str(NATIVE_PROJECTION), 'projection_sha256': sha(NATIVE_PROJECTION)},
++                       'projection': str(NATIVE_PROJECTION), 'projection_sha256': sha(NATIVE_PROJECTION),
++                       'published_b_inputs': str(PUBLISHED_B_INPUTS), 'published_b_inputs_sha256': sha(PUBLISHED_B_INPUTS),
++                       'screen_is_redacted_identity_projection': True,
++                       'native_identity_linkage': 'published B original-session SHA256 matches public wire projection; original native SID unavailable'},
+         'limit': 'Not raw native ACP frames. Supported envelopes and session/request IDs are synthetic; only URL/error text are retained native observations.'})
+     receipt = {'result': 'FAIL', 'binary_sha256': BINARY_SHA, 'binary': str(BINARY),
+                'fake_cli_sha256': FAKE_SHA, 'native_url_sha256': URL_SHA,
+-               'scope': 'Actual WORKSPACEBLOCKED partial Tqr candidate manual notice/durable error under owned ACP peer/PTy; not full qualification, PR readiness, native KAS/host, NK panel or caar acceptance',
++               'scope': 'Current integrated Tqr binary manual notice/durable error under owned ACP peer/PTy; not full qualification, PR readiness, native KAS/host, C6, NK panel or caar acceptance',
+                'source_tree': SOURCE_TREE, 'fully_qualified': False, 'pr_ready': False,
+-               'workspace_blocker': 'cyril-workbench reviewer runtime_drop_retains_evidence_until_core_completion: missing EOF window',
+                'observations': []}
+     with tempfile.TemporaryDirectory(prefix='cyril-tqr8-owned-private-') as temporary:
+         scratch = Path(temporary)

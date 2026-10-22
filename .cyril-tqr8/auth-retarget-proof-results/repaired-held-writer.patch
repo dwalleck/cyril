@@ -1,0 +1,25 @@
+--- a/crates/cyril-core/src/protocol/kas/auth.rs
++++ b/crates/cyril-core/src/protocol/kas/auth.rs
+@@ -1792,7 +1792,22 @@
+         );
+         assert_ne!(before_key, after.current_lock_key());
+         assert_eq!(before.current_lock_key(), after.current_lock_key());
++        let script_writer = std::fs::OpenOptions::new()
++            .write(true)
++            .open(&fake.args()[0])
++            .unwrap();
+         let (first, second) = tokio::join!(before.fetch(false), after.fetch(false));
++        drop(script_writer);
++        let busy = [&first, &second].iter().any(|result| {
++            matches!(result, Err(KasTokenError::Spawn { source, .. })
++                if source.raw_os_error() == Some(26))
++        });
++        let overlap = [&first, &second].iter().any(|result| {
++            matches!(result, Err(KasTokenError::NonZeroExit { status, .. })
++                if status == "exit status: 9")
++        });
++        eprintln!("AUTH_RETARGET_PROOF busy={busy} overlap={overlap} success={}",
++            first.is_ok() && second.is_ok());
+         assert!(first.is_ok(), "{first:?}");
+         assert!(second.is_ok(), "{second:?}");
+     }

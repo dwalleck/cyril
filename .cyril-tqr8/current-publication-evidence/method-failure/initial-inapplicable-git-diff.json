@@ -1,0 +1,15 @@
+{
+  "classification": "METHOD_FAILURE_INAPPLICABLE_SOURCE_PIN_COMPARISON",
+  "original_observation": "artifact://1779",
+  "raw_observation": "initial-inapplicable-git-diff.txt",
+  "original_command": "git diff --exit-code --no-ext-diff a09f1dfb63b17d380f4661823de431bfb5d72160 -- Cargo.toml Cargo.lock crates",
+  "original_exit_code": 1,
+  "product_invocations_before_correction": 0,
+  "cause": "The five known new feature files were untracked. The tree-versus-index comparison showed apparent deletions and was inapplicable to the intended assembled-source identity.",
+  "correction": "Main authorized exact direct blob-byte and regular-file mode comparisons for precisely those five files; the retained corrected preflight records matching bytes and mode 100644 before the one owned B product invocation.",
+  "original_failed_command_repeated": false,
+  "product_failure_or_retry": false,
+  "index_equals_assembled_tree_claimed": false,
+  "documentation_or_tracker_equality_claimed": false,
+  "current_preflight_receipt": "../consumer/corrected-preflight.json"
+}

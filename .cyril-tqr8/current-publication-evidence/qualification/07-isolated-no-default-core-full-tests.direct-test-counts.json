@@ -1,0 +1,155 @@
+{
+  "label": "07-isolated-no-default-core-full-tests",
+  "command": [
+    "cargo",
+    "test",
+    "-p",
+    "cyril-core",
+    "--no-default-features"
+  ],
+  "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/07-isolated-no-default-core-full-tests.log",
+  "log_sha256": "898a1837a3d7350057fdc286aa33839f04e18e21b64fa6e59a6141490b4af490",
+  "totals": {
+    "passed": 1035,
+    "failed": 0,
+    "ignored": 4,
+    "measured": 0,
+    "filtered_out": 0,
+    "direct_Cargo_targets": 12
+  },
+  "direct_target_rows": [
+    {
+      "target": "Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-675761cfb1be6eef)",
+      "passed": 1018,
+      "failed": 0,
+      "ignored": 4,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 1018 passed; 0 failed; 4 ignored; 0 measured; 0 filtered out; finished in 1.26s",
+      "nested_summary_count": 0,
+      "declared_running": 1022
+    },
+    {
+      "target": "Running tests/kas_freepath_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_freepath_smoke-f6d8cb26b5409b1c)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 0
+    },
+    {
+      "target": "Running tests/kas_fs_host_io_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_fs_host_io_smoke-b319d69ffe9954f1)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 0
+    },
+    {
+      "target": "Running tests/kas_settings_handshake_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_settings_handshake_smoke-27d016b592333478)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 0
+    },
+    {
+      "target": "Running tests/kas_wrapper_smoke.rs (/home/dwalleck/repos/cyril/target/debug/deps/kas_wrapper_smoke-b807048486481b98)",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 0
+    },
+    {
+      "target": "Running tests/nd4h_legacy_config_compat.rs (/home/dwalleck/repos/cyril/target/debug/deps/nd4h_legacy_config_compat-c4578c1d27c536a0)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 2
+    },
+    {
+      "target": "Running tests/review_launch.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_launch-b172db89cd18e7cf)",
+      "passed": 6,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.07s",
+      "nested_summary_count": 0,
+      "declared_running": 6
+    },
+    {
+      "target": "Running tests/review_policy_vectors.rs (/home/dwalleck/repos/cyril/target/debug/deps/review_policy_vectors-18699963f1b69e84)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 1
+    },
+    {
+      "target": "Running tests/session_configuration.rs (/home/dwalleck/repos/cyril/target/debug/deps/session_configuration-7af848e042d4774f)",
+      "passed": 1,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.03s",
+      "nested_summary_count": 0,
+      "declared_running": 1
+    },
+    {
+      "target": "Running tests/spawn_isolation.rs (/home/dwalleck/repos/cyril/target/debug/deps/spawn_isolation-60a4294cf294617a)",
+      "passed": 2,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.03s",
+      "nested_summary_count": 1,
+      "declared_running": 2
+    },
+    {
+      "target": "Running tests/win_wsl_wiring.rs (/home/dwalleck/repos/cyril/target/debug/deps/win_wsl_wiring-a718d7121763d70e)",
+      "passed": 5,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 5
+    },
+    {
+      "target": "Doc-tests cyril_core",
+      "passed": 0,
+      "failed": 0,
+      "ignored": 0,
+      "measured": 0,
+      "filtered_out": 0,
+      "summary": "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s",
+      "nested_summary_count": 0,
+      "declared_running": 0
+    }
+  ],
+  "attribution": "One final0filtered summary per direct Cargo Running/Doc-tests block; declared running count equals pass+fail+ignored. Nested subprocess summaries retained in log but excluded from top-level counts."
+}

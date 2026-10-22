@@ -1,0 +1,48 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo test -p cyril-ui widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar -- --exact --nocapture
+started_utc=2026-10-20T17:58:31.625307+00:00
+
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 3.93s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-e2af3c1da0e3aa98)
+
+running 1 test
+test widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 795 filtered out; finished in 0.00s
+
+     Running tests/modal_theme.rs (/home/dwalleck/repos/cyril/target/debug/deps/modal_theme-7a25ee91a00e6963)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+     Running tests/no_percentile_computation.rs (/home/dwalleck/repos/cyril/target/debug/deps/no_percentile_computation-641664608be28fe6)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/picker_active_marker.rs (/home/dwalleck/repos/cyril/target/debug/deps/picker_active_marker-8b3ff59ad8cf8f12)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+     Running tests/picker_viewport.rs (/home/dwalleck/repos/cyril/target/debug/deps/picker_viewport-4e46a84917f2ff2a)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+     Running tests/widget_theme_sources.rs (/home/dwalleck/repos/cyril/target/debug/deps/widget_theme_sources-9a58c2b8a49fbcdd)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
+
+qualification_exit_code=0
+qualification_elapsed_seconds=3.976233

@@ -1,0 +1,64 @@
+{
+  "scout": "agent://QualifyPerformanceTrees.CheckGutterProofApplicability",
+  "historical_canonical": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/canonical-handoff.json",
+  "historical_canonical_sha256": "5fc5a42e64b3da345e3f5d427704a778bec5f0d11fbc0f7ec5ccf116b4723ba7",
+  "current_chat_path": "crates/cyril-ui/src/widgets/chat.rs",
+  "current_chat_sha256": "76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5",
+  "same_as_historical_POSTformat_chat_sha256": true,
+  "historical_PREformat_mutated_chat_sha256": "e750b9765c6843b9d649b9897f407992e4385cdfee81188e0c03d12465896b1c",
+  "production_lines_unchanged": [
+    {
+      "lines": "19-28",
+      "meaning": "Reserve last column only when area.width>1, preserve availablewidth otherwise"
+    },
+    {
+      "lines": "34,47,67,81",
+      "meaning": "History+live width,linecount,andrender all use content_area width"
+    },
+    {
+      "lines": "84,87-88",
+      "meaning": "Scrollbar requires area.width>1 and renders only finalcolumn gutter"
+    }
+  ],
+  "tests": [
+    {
+      "name": "manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+      "current_lines": "2231-2275",
+      "assertion_lines": "2265-2273",
+      "historical_body_byte_identical": true,
+      "fixture": "Same140x8viewport139contentcols,sameopaque caf\u00e9\u754c string and escapedcontrols; completeescapedURL and scrollbar/noactiveESC/bidi assertions"
+    },
+    {
+      "name": "chat_gutter_width_is_stable_without_overflow",
+      "current_lines": "2278-2295",
+      "assertion_lines": "2288-2294",
+      "historical_body_byte_identical": true,
+      "fixture": "ASCII x repeat140;140cellsrecoveredfrom139contentcols,blankgutter,continuationx at0,1"
+    },
+    {
+      "name": "live_text_uses_the_same_reserved_content_width",
+      "current_lines": "2298-2318",
+      "assertion_lines": "2312-2317",
+      "historical_body_byte_identical": true,
+      "fixture": "ASCII L repeat415 and20earliermessages;exact415visibleL andnonblankscrollbar"
+    },
+    {
+      "name": "zero_and_one_column_chat_keep_available_content_without_scrollbar",
+      "current_lines": "2321-2355",
+      "assertion_lines": "2346-2350",
+      "historical_body_byte_identical": false,
+      "difference": "Onlyrustfmtfoldedconditionat2340-2345 vs historical2340-2348; allinputs,conditions,assertiontokens/arguments/diagnosticunchanged",
+      "fixture": "ASCII X, widths0/1,follow/browse,3x6backingbuffer,(1,1,width,4)rect,every-cell assertion"
+    }
+  ],
+  "historical_five_pairs": [
+    "oldlayoutURL intendedRED->restoredGREEN",
+    "oldlayoutstablewidth139vs140 intendedRED->restoredGREEN",
+    "oldlayoutlive413vs415 intendedRED->restoredGREEN",
+    "oldlayoutwidth1 arrowvsX intendedRED->restoredGREEN",
+    "indicator-onlywidth1 arrowvsX intendedRED->restoredGREEN"
+  ],
+  "ASCII_assumption_correction": "URLfixture was NEVERASCII-only: unchangedprecomposed\u00e9 and\u754c plus controls escapedprintably. x/L/X fixtures areASCII. Unchangedviewport_content_text scalarwidthhelper at2214-2228 is fixture-specific, NOT generalgraphemecorrectness proof.",
+  "applicability_inference": "[INFERENCE] ASCII+precomposed\u00e9+\u754c andprintableescapedcontrols retainfixture-specific widths; noemoji/ZWJ/halfwidthsoundmarks. Releasedcellwidthcorrection suppliesno concrete fixture-specificinvalidator. This is historicalgutter-sensitivity evidence, NOT an observedcurrentreleasedpairmutationresult.",
+  "not_run": "No mutationreruns/newdrivers/native/consumer/CIallfeature/platform checks."
+}

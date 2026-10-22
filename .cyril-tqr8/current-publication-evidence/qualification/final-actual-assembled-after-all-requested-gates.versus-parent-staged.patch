@@ -1,0 +1,1902 @@
+diff --git a/README.md b/README.md
+index c7893234..346cf29b 100644
+--- a/README.md
++++ b/README.md
+@@ -160,6 +160,30 @@ rejected, including symlink aliases. Rejected overrides produce a warning and
+ fall back to the default profile. Workspace agents still shadow globals, and
+ workspace hooks still merge with global hooks.
+ 
++### MCP sign-in requests and connection errors (KAS)
++
++Cyril handles KAS's `_kiro/openExternalUrl` callback by displaying a manual
++**“Sign-in requested. Open in browser:”** notice in the conversation. Cyril
++does not launch a browser or copy the URL to the clipboard. Printable quotes,
++apostrophes, backslashes and Unicode remain unchanged; terminal controls and
++Unicode bidirectional controls are shown as visible escape sequences.
++
++The main conversation reserves a fixed right-hand scrollbar column whenever
++at least two columns are available, so scrolling does not paint over wrapped
++URL text or change its wrapping width. A zero- or one-column viewport keeps
++all available content space and omits the scrollbar.
++
++The callback's `{success:true}` reply acknowledges accepted delivery for
++display, **not** a browser launch, completed authorization or a connected MCP
++server. MCP connection-error messages remain in the conversation independently
++of later notifications. This callback does not add an MCP management panel,
++persist OAuth credentials or implement a completion-notification protocol;
++passive inventory and server-management actions belong to the separate MCP
++management change. See the [qualification record](.cyril-tqr8/evidence.md#delivery-checkpoint-2026-10-20)
++for the exact exercised scope and outstanding acceptance. The owned-peer proof
++now passes full-URL PageUp/PageDown, escaping, durable errors and draft
++preservation; full-workspace qualification remains blocked, not waived.
++
+ ### Local memory runtime
+ 
+ Cyril's local memory runtime is disabled by default. It is separate from native
+diff --git a/crates/cyril-core/src/protocol/convert/kas.rs b/crates/cyril-core/src/protocol/convert/kas.rs
+index 2880ebf7..c3558dda 100644
+--- a/crates/cyril-core/src/protocol/convert/kas.rs
++++ b/crates/cyril-core/src/protocol/convert/kas.rs
+@@ -550,6 +550,8 @@ pub(crate) enum WorkflowFrameOutcome {
+ /// KAS multiplexes turn lifecycle, metering, context telemetry, and steering
+ /// echoes through one `session_info_update` envelope, discriminated by
+ /// `_meta.kiro.kind`. Sub-kinds surfaced today:
++/// - **`display_error` / `mcp_connection_error`** — the original required
++///   message → [`Notification::McpConnectionError`], never a turn terminal.
+ /// - **`turn_start`** — the opening lifecycle signal of every KAS turn, cyril's
+ ///   own and agent-initiated (workflow auto-wakes) alike →
+ ///   [`Notification::TurnStarted`] (cyril-lki9 B7).
+@@ -583,6 +585,30 @@ pub(crate) enum WorkflowFrameOutcome {
+ pub(crate) fn session_info_to_notification(siu: &acp::SessionInfoUpdate) -> Option<Notification> {
+     let kiro = siu.meta.as_ref()?.get("kiro")?;
+     match kiro.get("kind").and_then(serde_json::Value::as_str) {
++        Some("display_error") => {
++            // KAS emits flat fields beside `kind`; `displayError` is a mirror,
++            // not a separate error or an alternative required-field source.
++            let Some(error_type) = kiro.get("errorType").and_then(serde_json::Value::as_str) else {
++                tracing::warn!("KAS display_error is missing string `errorType`; dropped");
++                return None;
++            };
++            if error_type != "mcp_connection_error" {
++                return None;
++            }
++            let Some(message) = kiro
++                .get("message")
++                .and_then(serde_json::Value::as_str)
++                .filter(|message| !message.trim().is_empty())
++            else {
++                tracing::warn!(
++                    "KAS MCP display_error is missing nonempty string `message`; dropped"
++                );
++                return None;
++            };
++            Some(Notification::McpConnectionError {
++                message: message.to_owned(),
++            })
++        }
+         // cyril-gk17: a KAS-executed hook changed state. Carved producer:
+         // `ContextualHookInvoked` / `handleHookAction` build
+         // `{hook: {hookId, operationId, name, status, actionType, output?}}`,
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/host.rs b/crates/cyril-core/src/protocol/domain_mediator/host.rs
+index 1565f7d8..5b24adc7 100644
+--- a/crates/cyril-core/src/protocol/domain_mediator/host.rs
++++ b/crates/cyril-core/src/protocol/domain_mediator/host.rs
+@@ -52,6 +52,14 @@ fn dispatch_extension(
+     let method = super::canonical_extension_method(request.method()).to_owned();
+     #[cfg(not(feature = "kas"))]
+     {
++        if method == crate::protocol::engine::OPEN_EXTERNAL_URL_METHOD {
++            respond_extension_error(
++                responder,
++                &method,
++                agent_client_protocol::Error::method_not_found(),
++            );
++            return;
++        }
+         tracing::debug!(%method, "unhandled extension request answered with protocol-default null");
+         if let Err(error) = responder.respond(serde_json::Value::Null) {
+             tracing::debug!(%error, %method, "extension response receiver dropped");
+@@ -85,6 +93,31 @@ fn dispatch_extension(
+                 },
+                 response_rx,
+             )
++        } else if method == crate::protocol::engine::OPEN_EXTERNAL_URL_METHOD {
++            if !supports(adapters, HostFamily::ExternalUrl) {
++                respond_extension_error(
++                    responder,
++                    &method,
++                    agent_client_protocol::Error::method_not_found(),
++                );
++                return;
++            }
++            let args = match callbacks::OpenExternalUrlArgs::parse(&params) {
++                Ok(args) => args,
++                Err(error) => {
++                    respond_extension_error(
++                        responder,
++                        &method,
++                        agent_client_protocol::Error::invalid_params().data(error),
++                    );
++                    return;
++                }
++            };
++            let (reply, response_rx) = tokio::sync::oneshot::channel();
++            (
++                callbacks::HostCallback::OpenExternalUrl { args, reply },
++                response_rx,
++            )
+         } else if method == terminal_io::SHELL_TYPE_METHOD {
+             if !supports(adapters, HostFamily::HostIo) {
+                 respond_extension_error(
+@@ -207,7 +240,6 @@ fn dispatch_extension(
+     }
+ }
+ 
+-#[cfg(feature = "kas")]
+ fn respond_extension_error(
+     responder: Responder<serde_json::Value>,
+     method: &str,
+@@ -229,6 +261,7 @@ pub(crate) fn supports(
+     match family {
+         HostFamily::Auth => adapters.auth.is_some(),
+         HostFamily::HostIo => adapters.host_io.is_some(),
++        HostFamily::ExternalUrl => adapters.external_url.is_some(),
+         HostFamily::HooksInbound => adapters.hooks == HooksAdapter::Inbound,
+         HostFamily::HooksAny => adapters.hooks != HooksAdapter::None,
+     }
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
+new file mode 100644
+index 00000000..adb2666b
+--- /dev/null
++++ b/crates/cyril-core/src/protocol/domain_mediator/tests/external_url_wire.rs
+@@ -0,0 +1,203 @@
++use std::cell::RefCell;
++use std::rc::Rc;
++use std::sync::{Arc, Mutex};
++use std::time::Duration;
++
++use agent_client_protocol::schema::v1 as acp;
++use agent_client_protocol::{Agent, Client, ConnectionTo, UntypedMessage};
++
++use super::super::{DomainChannels, DomainWork, host};
++use crate::protocol::engine::Engine;
++use crate::protocol::host_mediator::HostMediator;
++use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
++use crate::protocol::source_observer::IngressTracker;
++use crate::test_support::must_succeed;
++use crate::types::RoutedNotification;
++
++/// Uses only pre-fix production interfaces so these wire assertions can be
++/// transplanted onto the base without requiring the new notification variants.
++pub(super) async fn external_url_round_trip(
++    engine: Rc<dyn Engine>,
++    params: Vec<serde_json::Value>,
++    close_delivery: bool,
++) -> (
++    Vec<agent_client_protocol::Result<serde_json::Value>>,
++    Vec<RoutedNotification>,
++) {
++    let (channels, domain_rx, host_rx) = must_succeed(
++        DomainChannels::new(IngressTracker::new()),
++        "URL callback channels",
++    );
++    let mut domain_rx = if close_delivery {
++        drop(domain_rx);
++        None
++    } else {
++        Some(domain_rx)
++    };
++    #[cfg(feature = "kas")]
++    let ctx = Rc::new(crate::protocol::kas::callbacks::DispatchCtx {
++        notify_tx: channels.clone(),
++        terminals: Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
++            None,
++        )),
++        hooks: None,
++        hook_ops: crate::protocol::kas::hooks::HookOps::default(),
++        cwd: std::path::PathBuf::new(),
++        kas_token: None,
++    });
++    let host_task = host::run(
++        host_rx,
++        engine,
++        Rc::new(RefCell::new(HostMediator::new())),
++        #[cfg(feature = "kas")]
++        ctx,
++    );
++    let replies = Arc::new(Mutex::new(Vec::new()));
++    let sink = Arc::clone(&replies);
++    let agent = Agent
++        .builder()
++        .name("external-url-callback-test-agent")
++        .on_receive_request(
++            async move |request: acp::InitializeRequest,
++                        responder,
++                        connection: ConnectionTo<Client>| {
++                let callback_connection = connection.clone();
++                let sink = Arc::clone(&sink);
++                let params = params.clone();
++                connection.spawn(async move {
++                    for params in params {
++                        let reply = callback_connection
++                            .send_request(UntypedMessage::new("_kiro/openExternalUrl", params)?)
++                            .block_task()
++                            .await;
++                        sink.lock()
++                            .unwrap_or_else(std::sync::PoisonError::into_inner)
++                            .push(reply);
++                    }
++                    responder.respond(acp::InitializeResponse::new(request.protocol_version))
++                })?;
++                Ok(())
++            },
++            agent_client_protocol::on_receive_request!(),
++        );
++    let runtime = must_succeed(
++        SdkRuntime::start_for_test(agent, channels, StageChain::default()).await,
++        "URL callback runtime",
++    );
++    must_succeed(
++        must_succeed(
++            tokio::time::timeout(
++                Duration::from_secs(5),
++                runtime
++                    .connection()
++                    .send_request(acp::InitializeRequest::new(
++                        agent_client_protocol::schema::ProtocolVersion::V1,
++                    ))
++                    .block_task(),
++            )
++            .await,
++            "URL callback initialization completes",
++        ),
++        "URL callback initialization response",
++    );
++    let joined = must_succeed(
++        tokio::time::timeout(Duration::from_secs(5), async {
++            runtime.shutdown().await;
++            // Shutdown may let the host finish normally before abort.
++            host_task.abort();
++            host_task.await
++        })
++        .await,
++        "URL callback cleanup completes",
++    );
++    if let Err(error) = joined {
++        assert!(
++            error.is_cancelled(),
++            "URL callback host task failed: {error}"
++        );
++    }
++    let mut notifications = Vec::new();
++    if let Some(rx) = &mut domain_rx {
++        while let Ok(work) = rx.try_recv() {
++            if let DomainWork::Routed(routed) = work {
++                notifications.push(routed);
++            }
++        }
++    }
++    let replies = std::mem::take(
++        &mut *replies
++            .lock()
++            .unwrap_or_else(std::sync::PoisonError::into_inner),
++    );
++    (replies, notifications)
++}
++
++#[cfg(feature = "kas")]
++#[tokio::test]
++async fn external_url_callback_wire_result() {
++    tokio::task::LocalSet::new()
++        .run_until(async {
++            let (replies, _) = external_url_round_trip(
++                Rc::new(crate::protocol::engine::KasEngine::default()),
++                vec![serde_json::json!({"url": "https://login.invalid/authorize?state=exact#fragment"})],
++                false,
++            )
++            .await;
++            assert_eq!(replies.len(), 1);
++            assert_eq!(
++                must_succeed(
++                    replies.into_iter().next().unwrap_or_else(|| panic!("one reply")),
++                    "URL reply",
++                ),
++                serde_json::json!({"success": true}),
++                "the actual callback must return the supported success object, never null",
++            );
++        })
++        .await;
++}
++
++#[tokio::test]
++async fn external_url_callback_refused_on_v2_with_or_without_kas() {
++    tokio::task::LocalSet::new()
++        .run_until(async {
++            let (replies, notifications) = external_url_round_trip(
++                Rc::new(crate::protocol::engine::V2Engine),
++                vec![
++                    serde_json::json!({"url": "https://login.invalid/"}),
++                    serde_json::json!({}),
++                ],
++                false,
++            )
++            .await;
++            assert_eq!(replies.len(), 2);
++            for reply in replies {
++                let Err(error) = reply else {
++                    panic!("a v2-bound callback must be refused");
++                };
++                assert_eq!(error.code, agent_client_protocol::ErrorCode::MethodNotFound);
++            }
++            assert!(notifications.is_empty());
++        })
++        .await;
++}
++
++#[cfg(feature = "kas")]
++#[tokio::test]
++async fn external_url_callback_closed_delivery_is_not_success() {
++    tokio::task::LocalSet::new()
++        .run_until(async {
++            let (replies, notifications) = external_url_round_trip(
++                Rc::new(crate::protocol::engine::KasEngine::default()),
++                vec![serde_json::json!({"url": "https://login.invalid/authorize"})],
++                true,
++            )
++            .await;
++            assert_eq!(replies.len(), 1);
++            let Some(Err(error)) = replies.into_iter().next() else {
++                panic!("closed delivery cannot acknowledge handling");
++            };
++            assert_eq!(error.code, agent_client_protocol::ErrorCode::InternalError);
++            assert!(notifications.is_empty());
++        })
++        .await;
++}
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs
+new file mode 100644
+index 00000000..e49f1960
+--- /dev/null
++++ b/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs
+@@ -0,0 +1,117 @@
++use agent_client_protocol::schema::v1 as acp;
++use serde_json::json;
++
++use crate::protocol::engine::{Engine, KasEngine, V2Engine};
++use crate::test_support::must_succeed;
++
++fn session_info_frame(kiro: serde_json::Value) -> acp::SessionNotification {
++    must_succeed(
++        serde_json::from_value(json!({
++            "sessionId": "mcp-error-session",
++            "update": {"sessionUpdate": "session_info_update", "_meta": {"kiro": kiro}},
++        })),
++        "source-shaped session-info envelope decodes through the SDK schema",
++    )
++}
++
++/// Source-derived MCP payload, not a claimed raw MCP capture. The producer's
++/// flat fields are authoritative; displayError is the optional emitted mirror.
++/// This test deliberately uses only base production interfaces, allowing a real
++/// pre-fix red on missing conversion rather than an unknown-variant compile error.
++#[test]
++fn kas_mcp_display_error_preserves_conversion_result_and_message() {
++    let message = "  MCP server 'private-server' connection failed: authorization refused.  ";
++    for mirror in [false, true] {
++        let mut kiro = json!({
++            "kind": "display_error",
++            "errorType": "mcp_connection_error",
++            "message": message,
++        });
++        if mirror {
++            kiro["displayError"] = json!({
++                "errorType": "mcp_connection_error",
++                "message": message,
++            });
++        }
++        let frame = session_info_frame(kiro);
++        let Some(converted) = KasEngine::default().convert_session_update(&frame) else {
++            panic!("a source-shaped MCP display_error must produce a consumer event");
++        };
++        assert_eq!(
++            format!("{converted:?}"),
++            format!("McpConnectionError {{ message: {message:?} }}"),
++            "classification and original message must survive conversion",
++        );
++        assert!(V2Engine.convert_session_update(&frame).is_none());
++    }
++}
++
++#[test]
++fn kas_mcp_display_error_requires_flat_classification_and_nonempty_message() {
++    let (_guard, capture, dispatch) = crate::test_support::capture_json_subscriber();
++    tracing::dispatcher::with_default(&dispatch, || {
++        for kiro in [
++            json!({"kind": "display_error", "message": "private-error-not-for-logs"}),
++            json!({"kind": "display_error", "errorType": null, "message": "private-error-not-for-logs"}),
++            json!({"kind": "display_error", "errorType": "mcp_connection_error"}),
++            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": null}),
++            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": 7}),
++            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": ""}),
++            json!({"kind": "display_error", "errorType": "mcp_connection_error", "message": " \n\t"}),
++            json!({"kind": "display_error", "displayError": {
++                "errorType": "mcp_connection_error", "message": "private-error-not-for-logs",
++            }}),
++        ] {
++            assert!(
++                KasEngine::default()
++                    .convert_session_update(&session_info_frame(kiro))
++                    .is_none()
++            );
++        }
++    });
++    let events = capture.captured();
++    assert_eq!(
++        events
++            .iter()
++            .filter(|event| event["level"] == "WARN")
++            .count(),
++        8
++    );
++    assert!(
++        !must_succeed(
++            serde_json::to_string(&events),
++            "error diagnostics serialize"
++        )
++        .contains("private-error-not-for-logs")
++    );
++}
++
++#[test]
++fn kas_mcp_display_error_does_not_claim_other_error_kinds_or_missing_envelopes() {
++    for kiro in [
++        json!({"kind": "display_error", "errorType": "InvalidModelError", "message": "model unavailable"}),
++        json!({"kind": "display_error", "errorType": "other_error", "message": "other failure",
++            "displayError": {"errorType": "mcp_connection_error", "message": "not authoritative"}}),
++        json!({"kind": "other_kind", "errorType": "mcp_connection_error", "message": "not display_error"}),
++        json!({"errorType": "mcp_connection_error", "message": "no kind"}),
++        serde_json::Value::Null,
++    ] {
++        assert!(
++            KasEngine::default()
++                .convert_session_update(&session_info_frame(kiro))
++                .is_none()
++        );
++    }
++    let no_meta = must_succeed(
++        serde_json::from_value(json!({
++            "sessionId": "mcp-error-session",
++            "update": {"sessionUpdate": "session_info_update"},
++        })),
++        "missing optional metadata remains a valid SDK envelope",
++    );
++    assert!(
++        KasEngine::default()
++            .convert_session_update(&no_meta)
++            .is_none()
++    );
++}
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs
+index 8b75e780..5ce9ea57 100644
+--- a/crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs
++++ b/crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs
+@@ -1,3 +1,8 @@
++mod external_url_wire;
+ mod handlers;
++#[cfg(feature = "kas")]
++mod mcp_error;
++#[cfg(feature = "kas")]
++mod oauth;
+ mod serial;
+ mod topology;
+diff --git a/crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs b/crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs
+new file mode 100644
+index 00000000..10703c9a
+--- /dev/null
++++ b/crates/cyril-core/src/protocol/domain_mediator/tests/oauth.rs
+@@ -0,0 +1,357 @@
++use std::rc::Rc;
++use std::time::Duration;
++
++use agent_client_protocol::schema::v1 as acp;
++use agent_client_protocol::{Agent, Client, ConnectionTo, UntypedMessage};
++use serde_json::json;
++
++use super::super::{DomainChannels, DomainConfig, DomainMediator, DomainWork};
++use super::external_url_wire::external_url_round_trip;
++use crate::protocol::bridge::create_channel_pair;
++use crate::protocol::engine::KasEngine;
++use crate::protocol::kas::callbacks::{DispatchCtx, HostCallback, OpenExternalUrlArgs};
++use crate::protocol::sdk_runtime::{SdkRuntime, StageChain};
++use crate::protocol::source_observer::IngressTracker;
++use crate::test_support::must_succeed;
++use crate::types::{BridgeCommand, Notification};
++
++#[tokio::test]
++async fn external_url_callback_preserves_exact_global_payload_and_rejects_malformed_params() {
++    tokio::task::LocalSet::new()
++        .run_until(async {
++            let url = " https://login.invalid/authorize?state=exact%2Fstate#fragment\u{1b}[31m ";
++            let (replies, notifications) = external_url_round_trip(
++                Rc::new(KasEngine::default()),
++                vec![json!({"url": url})],
++                false,
++            )
++            .await;
++            assert_eq!(replies.len(), 1);
++            assert!(replies[0].is_ok());
++            assert_eq!(notifications.len(), 1);
++            let routed = &notifications[0];
++            assert!(routed.session_id.is_none());
++            assert!(routed.turn.is_none());
++            assert!(routed.origin.is_none());
++            assert!(matches!(&routed.notification,
++                Notification::ExternalUrlRequested { url: received } if received == url));
++
++            let (replies, notifications) = external_url_round_trip(
++                Rc::new(KasEngine::default()),
++                vec![
++                    json!({}),
++                    json!({"url": null}),
++                    json!({"url": 7}),
++                    json!({"url": {"private": "do-not-reflect-this-query"}}),
++                    json!({"url": ""}),
++                    json!({"url": " \n\t"}),
++                    json!([]),
++                ],
++                false,
++            )
++            .await;
++            assert_eq!(replies.len(), 7);
++            for reply in replies {
++                let Err(error) = reply else {
++                    panic!("malformed URL shape must be an explicit parameter error");
++                };
++                assert_eq!(error.code, agent_client_protocol::ErrorCode::InvalidParams);
++                assert!(!format!("{error:?}").contains("do-not-reflect-this-query"));
++            }
++            assert!(notifications.is_empty(), "no fabricated URL events");
++        })
++        .await;
++}
++
++#[tokio::test]
++async fn external_url_success_waits_for_bounded_domain_acceptance() {
++    let (channels, mut domain_rx, _host_rx) = must_succeed(
++        DomainChannels::new(IngressTracker::new()),
++        "bounded URL channels",
++    );
++    while channels.remaining_capacity() > 0 {
++        must_succeed(
++            channels
++                .enqueue(DomainWork::Routed(
++                    Notification::SystemNotify {
++                        level: crate::types::event::SystemNotifyLevel::Info,
++                        message: "occupy capacity".into(),
++                    }
++                    .into(),
++                ))
++                .await,
++            "fill the bounded domain path",
++        );
++    }
++    let ctx = DispatchCtx {
++        notify_tx: channels,
++        terminals: Rc::new(crate::protocol::kas::terminal_io::TerminalRegistry::new(
++            None,
++        )),
++        hooks: None,
++        hook_ops: crate::protocol::kas::hooks::HookOps::default(),
++        cwd: std::path::PathBuf::new(),
++        kas_token: None,
++    };
++    let (reply, mut response_rx) = tokio::sync::oneshot::channel();
++    let callback = HostCallback::OpenExternalUrl {
++        args: must_succeed(
++            OpenExternalUrlArgs::parse(&json!({"url": "https://login.invalid/exact"})),
++            "valid URL callback params",
++        ),
++        reply,
++    };
++    let delivery = crate::protocol::kas::callbacks::dispatch(callback, &ctx);
++    tokio::pin!(delivery);
++    assert!(futures_util::poll!(delivery.as_mut()).is_pending());
++    assert!(matches!(
++        response_rx.try_recv(),
++        Err(tokio::sync::oneshot::error::TryRecvError::Empty)
++    ));
++    must_succeed(domain_rx.try_recv(), "free one bounded domain slot");
++    delivery.await;
++    let response = must_succeed(
++        must_succeed(response_rx.await, "URL response delivered"),
++        "URL accepted",
++    );
++    assert_eq!(
++        must_succeed(
++            serde_json::from_str::<serde_json::Value>(response.0.get()),
++            "URL response JSON"
++        ),
++        json!({"success": true})
++    );
++    let mut delivered = 0;
++    while let Ok(work) = domain_rx.try_recv() {
++        if let DomainWork::Routed(routed) = work
++            && let Notification::ExternalUrlRequested { url } = routed.notification
++        {
++            assert!(routed.session_id.is_none());
++            assert_eq!(url, "https://login.invalid/exact");
++            delivered += 1;
++        }
++    }
++    assert_eq!(delivered, 1);
++}
++
++async fn request_url(
++    connection: &ConnectionTo<Client>,
++    url: &str,
++) -> agent_client_protocol::Result<()> {
++    let reply = connection
++        .send_request(UntypedMessage::new(
++            "_kiro/openExternalUrl",
++            json!({"url": url}),
++        )?)
++        .block_task()
++        .await?;
++    if reply != json!({"success": true}) {
++        return Err(agent_client_protocol::Error::internal_error()
++            .data("incorrect URL delivery acknowledgement"));
++    }
++    Ok(())
++}
++
++fn session_info(
++    kiro: serde_json::Value,
++) -> agent_client_protocol::Result<acp::SessionNotification> {
++    serde_json::from_value(json!({
++        "sessionId": "sess_oauth-runtime-session",
++        "update": {"sessionUpdate": "session_info_update", "_meta": {"kiro": kiro}},
++    }))
++    .map_err(|error| agent_client_protocol::Error::internal_error().data(error.to_string()))
++}
++
++#[tokio::test]
++async fn kas_sdk_url_callbacks_and_mcp_errors_survive_initialize_and_new_session() {
++    tokio::task::LocalSet::new()
++        .run_until(async {
++            let session_bound = std::sync::Arc::new(tokio::sync::Notify::new());
++            let agent_session_bound = std::sync::Arc::clone(&session_bound);
++            let agent = Agent
++                .builder()
++                .name("oauth-lifecycle-test-agent")
++                .on_receive_request(
++                    async move |request: acp::InitializeRequest,
++                                responder,
++                                connection: ConnectionTo<Client>| {
++                        let request_json = serde_json::to_value(&request).map_err(|error| {
++                            agent_client_protocol::Error::internal_error().data(error.to_string())
++                        })?;
++                        assert_eq!(
++                            request_json.pointer("/clientCapabilities/_meta/kiro/openExternalUrl"),
++                            Some(&json!(true))
++                        );
++                        assert!(
++                            request_json
++                                .pointer("/clientCapabilities/_meta/kiro/secretStorage")
++                                .is_none()
++                        );
++                        let callback_connection = connection.clone();
++                        connection.spawn(async move {
++                            request_url(
++                                &callback_connection,
++                                "https://login.invalid/during-initialize",
++                            )
++                            .await?;
++                            responder.respond(
++                                serde_json::from_value(json!({
++                                    "protocolVersion": request.protocol_version,
++                                    "agentCapabilities": {"_meta": {"kiro": {}}},
++                                }))
++                                .map_err(|error| {
++                                    agent_client_protocol::Error::internal_error()
++                                        .data(error.to_string())
++                                })?,
++                            )
++                        })?;
++                        Ok(())
++                    },
++                    agent_client_protocol::on_receive_request!(),
++                )
++                .on_receive_request(
++                    async move |_request: acp::NewSessionRequest,
++                                responder,
++                                connection: ConnectionTo<Client>| {
++                        let callback_connection = connection.clone();
++                        let session_bound = std::sync::Arc::clone(&agent_session_bound);
++                        connection.spawn(async move {
++                            request_url(&callback_connection, "https://login.invalid/during-new")
++                                .await?;
++                            responder.respond(acp::NewSessionResponse::new(
++                                "sess_oauth-runtime-session",
++                            ))?;
++                            request_url(&callback_connection, "https://login.invalid/after-new")
++                                .await?;
++                            // Wait for the real SessionStarted outcome to bind main
++                            // before emitting a main-session turn bracket.
++                            session_bound.notified().await;
++                            callback_connection
++                                .send_notification(session_info(json!({"kind": "turn_start"}))?)?;
++                            callback_connection.send_notification(session_info(json!({
++                                "kind": "display_error", "errorType": "mcp_connection_error",
++                                "message": "MCP server 'flat' failed to connect.",
++                            }))?)?;
++                            callback_connection.send_notification(session_info(json!({
++                                "kind": "display_error", "errorType": "mcp_connection_error",
++                                "message": "  MCP server 'mirror' requires authorization.  ",
++                                "displayError": {"errorType": "mcp_connection_error",
++                                    "message": "  MCP server 'mirror' requires authorization.  "},
++                            }))?)?;
++                            // An ordinary message after both failures proves the SDK/domain
++                            // stream remains usable without a synthetic terminal/disconnect.
++                            let after: acp::SessionNotification = serde_json::from_value(json!({
++                                "sessionId": "sess_oauth-runtime-session",
++                                "update": {"sessionUpdate": "agent_message_chunk",
++                                    "content": {"type": "text", "text": "after MCP errors"}},
++                            }))
++                            .map_err(|error| {
++                                agent_client_protocol::Error::internal_error()
++                                    .data(error.to_string())
++                            })?;
++                            callback_connection.send_notification(after)?;
++                            Ok(())
++                        })?;
++                        Ok(())
++                    },
++                    agent_client_protocol::on_receive_request!(),
++                );
++            let directory = must_succeed(tempfile::tempdir(), "OAuth runtime workspace");
++            let (handle, bridge) = create_channel_pair();
++            let (sender, mut notifications, _permissions, _source, _completion) = handle.split();
++            let (mediator, channels) = must_succeed(
++                DomainMediator::new(
++                    DomainConfig {
++                        engine: Rc::new(KasEngine::default()),
++                        cwd: directory.path().to_path_buf(),
++                        present_as: None,
++                        stall_threshold: Duration::from_secs(30),
++                        host_shell: None,
++                        kas_token: None,
++                    },
++                    bridge,
++                ),
++                "OAuth runtime mediator",
++            );
++            let runtime = must_succeed(
++                SdkRuntime::start_for_test(agent, channels, StageChain::default()).await,
++                "OAuth SDK runtime",
++            );
++            let loop_handle = tokio::task::spawn_local(mediator.run(runtime));
++            must_succeed(
++                sender
++                    .send(BridgeCommand::NewSession {
++                        cwd: directory.path().to_path_buf(),
++                    })
++                    .await,
++                "request new OAuth test session",
++            );
++            let mut urls = Vec::new();
++            let mut errors = Vec::new();
++            let mut created = false;
++            let mut started = false;
++            loop {
++                let routed = must_succeed(
++                    tokio::time::timeout(Duration::from_secs(5), notifications.recv()).await,
++                    "OAuth runtime event deadline",
++                )
++                .unwrap_or_else(|| panic!("OAuth runtime event channel closed"));
++                match routed.notification {
++                    Notification::ExternalUrlRequested { url } => {
++                        assert!(routed.session_id.is_none());
++                        urls.push(url);
++                    }
++                    Notification::McpConnectionError { message } => {
++                        assert_eq!(
++                            routed
++                                .session_id
++                                .as_ref()
++                                .map(crate::types::SessionId::as_str),
++                            Some("sess_oauth-runtime-session")
++                        );
++                        assert!(started, "error arrives during a still-active turn");
++                        errors.push(message);
++                    }
++                    Notification::SessionCreated { .. } => {
++                        created = true;
++                        session_bound.notify_one();
++                    }
++                    Notification::TurnStarted => started = true,
++                    Notification::AgentMessage(message) if message.text == "after MCP errors" => {
++                        break;
++                    }
++                    Notification::TurnCompleted { .. }
++                    | Notification::BridgeDisconnected { .. } => {
++                        panic!("display_error must not imply completion or disconnect")
++                    }
++                    _ => {}
++                }
++            }
++            assert!(created);
++            assert!(started);
++            assert_eq!(
++                urls,
++                [
++                    "https://login.invalid/during-initialize",
++                    "https://login.invalid/during-new",
++                    "https://login.invalid/after-new"
++                ]
++            );
++            assert_eq!(
++                errors,
++                [
++                    "MCP server 'flat' failed to connect.",
++                    "  MCP server 'mirror' requires authorization.  "
++                ]
++            );
++            must_succeed(
++                sender.send(BridgeCommand::Shutdown).await,
++                "OAuth runtime shutdown",
++            );
++            must_succeed(
++                must_succeed(loop_handle.await, "OAuth mediator join"),
++                "OAuth mediator shutdown",
++            );
++        })
++        .await;
++}
+diff --git a/crates/cyril-core/src/protocol/engine.rs b/crates/cyril-core/src/protocol/engine.rs
+index bf1a31ca..c0fafad6 100644
+--- a/crates/cyril-core/src/protocol/engine.rs
++++ b/crates/cyril-core/src/protocol/engine.rs
+@@ -19,6 +19,10 @@ use agent_client_protocol::schema::v1 as acp;
+ use crate::protocol::convert;
+ use crate::types::{AgentEngine, AgentInitiation, Notification};
+ 
++/// Canonical extension method after the SDK's leading-underscore normalization.
++/// Known even in builds that cannot install its adapter.
++pub(crate) const OPEN_EXTERNAL_URL_METHOD: &str = "kiro/openExternalUrl";
++
+ /// The bound engine's capability-adapter set (ADR-0001 amendment): which
+ /// host-callback families this engine installs. `KiroClient` dispatch consults
+ /// it — a family with no adapter is refused with JSON-RPC method-not-found,
+@@ -39,6 +43,9 @@ pub(crate) struct Adapters {
+     /// `_kiro/terminal/shell_type`.
+     #[cfg(feature = "kas")]
+     pub(crate) host_io: Option<HostIoAdapter>,
++    /// Manual external-URL delivery through the bounded domain notification path.
++    #[cfg(feature = "kas")]
++    pub(crate) external_url: Option<ExternalUrlAdapter>,
+     /// Per-direction hooks (ADR-0010) — the one family where cyril is both
+     /// server and client of the same method names.
+     pub(crate) hooks: HooksAdapter,
+@@ -52,6 +59,8 @@ impl Adapters {
+         auth: None,
+         #[cfg(feature = "kas")]
+         host_io: None,
++        #[cfg(feature = "kas")]
++        external_url: None,
+         hooks: HooksAdapter::None,
+     };
+ }
+@@ -69,6 +78,12 @@ pub(crate) struct AuthAdapter;
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ pub(crate) struct HostIoAdapter;
+ 
++/// The external-URL concern surfaces a link; it never launches a process or
++/// claims authorization. Presence gates both dispatch and advertisement.
++#[cfg(feature = "kas")]
++#[derive(Clone, Copy, Debug, PartialEq, Eq)]
++pub(crate) struct ExternalUrlAdapter;
++
+ /// Which side of the bidirectional `_kiro/hooks/*` surface cyril occupies
+ /// (CONTEXT.md "Hook generation"; ADR-0010). Not a bool pair: `Outbound`
+ /// advertises `{enabled, v2}` with NO inbound serving, and must not be
+@@ -113,6 +128,10 @@ pub(crate) fn client_capabilities(engine: &dyn Engine) -> acp::ClientCapabilitie
+     if let Some(settings) = engine.settings_extra() {
+         kiro.insert("settings".to_string(), settings);
+     }
++    #[cfg(feature = "kas")]
++    if adapters.external_url.is_some() {
++        kiro.insert("openExternalUrl".to_string(), serde_json::Value::Bool(true));
++    }
+     match adapters.hooks {
+         HooksAdapter::None => {}
+         #[cfg(feature = "kas")]
+@@ -305,6 +324,7 @@ impl Engine for KasEngine {
+         Adapters {
+             auth: Some(AuthAdapter),
+             host_io: Some(HostIoAdapter),
++            external_url: Some(ExternalUrlAdapter),
+             hooks: match self.hooks_mode {
+                 KasHooksMode::Off => HooksAdapter::None,
+                 KasHooksMode::Host => HooksAdapter::Inbound,
+diff --git a/crates/cyril-core/src/protocol/kas/callbacks.rs b/crates/cyril-core/src/protocol/kas/callbacks.rs
+index f7cfe290..12e5b89e 100644
+--- a/crates/cyril-core/src/protocol/kas/callbacks.rs
++++ b/crates/cyril-core/src/protocol/kas/callbacks.rs
+@@ -5,12 +5,9 @@
+ //! handles lifecycle, and the dispatch side resolves against the
+ //! Engine-selected adapter set (ADR-0001).
+ //!
+-//! Variant census: the enum grows one family per cutover slice (variants are
+-//! STAGED with their constructing slice — lib-target dead_code enforces it;
+-//! the full 15-variant shape is at commit b36c3a8 and re-lands family by
+-//! family). [`WIRE_METHODS`] stays the full 19-method census
+-//! (`.cyril-dn91/findings.md`) throughout, fenced by
+-//! [`tests::census_matches_the_dn91_count`].
++//! The exhaustive callback enum and [`WIRE_METHODS`] census grow together
++//! when a supported host concern is installed. Capability knowledge stays in
++//! parsing/dispatch, never in the generic host lifecycle mediator.
+ 
+ use agent_client_protocol::schema::v1 as acp;
+ 
+@@ -36,6 +33,11 @@ pub(crate) enum HostCallback {
+         force_refresh: bool,
+         reply: Reply<acp::ExtResponse>,
+     },
++    /// `_kiro/openExternalUrl {url}` — global, with no session/server wire fields.
++    OpenExternalUrl {
++        args: OpenExternalUrlArgs,
++        reply: Reply<acp::ExtResponse>,
++    },
+     /// Bare-ACP `fs/read_text_file` (KAS-5a) — already typed by the acp layer.
+     ReadTextFile {
+         req: acp::ReadTextFileRequest,
+@@ -109,6 +111,7 @@ pub(crate) enum HostCallback {
+ #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+ pub(crate) enum HostFamily {
+     Auth,
++    ExternalUrl,
+     HostIo,
+     HooksInbound,
+     HooksAny,
+@@ -118,6 +121,7 @@ impl HostCallback {
+     pub(crate) const fn family(&self) -> HostFamily {
+         match self {
+             Self::GetAccessToken { .. } => HostFamily::Auth,
++            Self::OpenExternalUrl { .. } => HostFamily::ExternalUrl,
+             Self::ReadTextFile { .. }
+             | Self::WriteTextFile { .. }
+             | Self::KiroFs { .. }
+@@ -146,6 +150,7 @@ impl HostCallback {
+         }
+         match self {
+             Self::GetAccessToken { reply, .. }
++            | Self::OpenExternalUrl { reply, .. }
+             | Self::KiroFs { reply, .. }
+             | Self::ShellType { reply, .. }
+             | Self::HooksList { reply, .. }
+@@ -165,6 +170,26 @@ impl HostCallback {
+     }
+ }
+ 
++/// Required URL shape at the wire seam. Validation must not rewrite the URL
++/// or include its potentially sensitive query/fragment in error diagnostics.
++#[derive(Debug)]
++pub(crate) struct OpenExternalUrlArgs {
++    url: String,
++}
++
++impl OpenExternalUrlArgs {
++    pub(crate) fn parse(params: &serde_json::Value) -> Result<Self, &'static str> {
++        let url = params
++            .get("url")
++            .and_then(serde_json::Value::as_str)
++            .filter(|url| !url.trim().is_empty())
++            .ok_or("openExternalUrl requires a nonempty string `url`")?;
++        Ok(Self {
++            url: url.to_owned(),
++        })
++    }
++}
++
+ /// `executeHook` typed params. Semantic defaults (missing command → exit 127
+ /// reply, missing userPrompt → empty with a warn) stay with the responder;
+ /// re-serialized in dispatch for `respond_execute`'s raw-params signature.
+@@ -273,6 +298,7 @@ impl HostCallback {
+         let kind = self.kind();
+         match self {
+             Self::GetAccessToken { reply, .. } => send(kind, reply, err),
++            Self::OpenExternalUrl { reply, .. } => send(kind, reply, err),
+             Self::ReadTextFile { reply, .. } => send(kind, reply, err),
+             Self::WriteTextFile { reply, .. } => send(kind, reply, err),
+             Self::KiroFs { reply, .. } => send(kind, reply, err),
+@@ -302,7 +328,9 @@ impl CallbackMeta for HostCallback {
+     fn scope(&self) -> Option<SessionId> {
+         let sid = |s: &acp::SessionId| SessionId::new(s.to_string());
+         match self {
+-            Self::GetAccessToken { .. } | Self::KiroFs { .. } => None,
++            Self::GetAccessToken { .. } | Self::OpenExternalUrl { .. } | Self::KiroFs { .. } => {
++                None
++            }
+             Self::ReadTextFile { req, .. } => Some(sid(&req.session_id)),
+             Self::WriteTextFile { req, .. } => Some(sid(&req.session_id)),
+             Self::CreateTerminal { req, .. } => Some(sid(&req.session_id)),
+@@ -326,6 +354,7 @@ impl CallbackMeta for HostCallback {
+     fn kind(&self) -> &'static str {
+         match self {
+             Self::GetAccessToken { .. } => "auth/getAccessToken",
++            Self::OpenExternalUrl { .. } => "_kiro/openExternalUrl",
+             Self::ReadTextFile { .. } => "fs/read_text_file",
+             Self::WriteTextFile { .. } => "fs/write_text_file",
+             Self::KiroFs { args, .. } => args.op().wire,
+@@ -397,6 +426,18 @@ async fn resolve<T>(
+ pub(crate) async fn dispatch(cb: HostCallback, ctx: &DispatchCtx) {
+     let kind = cb.kind();
+     match cb {
++        HostCallback::OpenExternalUrl { args, reply } => {
++            // Acknowledgement means only bounded-path delivery acceptance.
++            // A closed domain channel must never look like successful handling.
++            let result = ctx
++                .notify_tx
++                .enqueue(crate::protocol::domain_mediator::DomainWork::Routed(
++                    crate::types::Notification::ExternalUrlRequested { url: args.url }.into(),
++                ))
++                .await
++                .and_then(|()| super::json_ext_response(&serde_json::json!({"success": true})));
++            resolve(ctx, kind, None, reply, result).await;
++        }
+         HostCallback::CreateTerminal { req, reply } => {
+             let r = ctx.terminals.create(&req);
+             resolve(ctx, kind, None, reply, r).await;
+@@ -533,13 +574,12 @@ fn auth_failure_notification(
+     }
+ }
+ 
+-/// The full census of wire methods the callback seam will cover — 19,
+-/// matching the dn91 probe census. Static from slice 2 onward; the enum
+-/// catches up to it family by family, and slice 8's end-to-end census drives
+-/// every entry through the client entry points.
++/// The full census of wire methods covered by the callback seam: the original
++/// 19-method dn91 census plus the supported external-URL callback.
+ #[cfg(test)]
+ pub(crate) const WIRE_METHODS: &[&str] = &[
+     "auth/getAccessToken",
++    "_kiro/openExternalUrl",
+     "fs/read_text_file",
+     "fs/write_text_file",
+     "_kiro/fs/read_file",
+@@ -566,15 +606,14 @@ mod tests {
+ 
+     use super::*;
+ 
+-    // The census: 19 wire methods, exactly the dn91 probe count (the
+-    // independent oracle for the seam's completeness target).
++    // The original dn91 census plus the real external-URL callback.
+     #[test]
+-    fn census_matches_the_dn91_count() {
+-        assert_eq!(WIRE_METHODS.len(), 19);
++    fn census_includes_the_external_url_callback() {
++        assert_eq!(WIRE_METHODS.len(), 20);
+         let mut sorted: Vec<_> = WIRE_METHODS.to_vec();
+         sorted.sort_unstable();
+         sorted.dedup();
+-        assert_eq!(sorted.len(), 19, "census entries are distinct");
++        assert_eq!(sorted.len(), 20, "census entries are distinct");
+     }
+ 
+     // The reply channel rides the envelope to the resolution task and back —
+diff --git a/crates/cyril-core/src/protocol/probe_dn91.rs b/crates/cyril-core/src/protocol/probe_dn91.rs
+index f4073727..a1113fbe 100644
+--- a/crates/cyril-core/src/protocol/probe_dn91.rs
++++ b/crates/cyril-core/src/protocol/probe_dn91.rs
+@@ -55,6 +55,12 @@ fn adapter_matrix_advertises_if_and_only_if_the_mediator_answers() {
+             host_io,
+             "{name}: Kiro fs dialect",
+         );
++        assert_eq!(
++            json.pointer("/_meta/kiro/openExternalUrl") == Some(&serde_json::Value::Bool(true)),
++            host::supports(adapters, HostFamily::ExternalUrl),
++            "{name}: external URL delivery",
++        );
++        assert!(json.pointer("/_meta/kiro/secretStorage").is_none());
+ 
+         let hooks = json.pointer("/_meta/kiro/hooks");
+         let inbound_hooks = matches!(hooks, Some(value) if value.get("v2").is_none());
+@@ -82,6 +88,7 @@ fn v2_refuses_every_kas_host_family() {
+     for family in [
+         HostFamily::Auth,
+         HostFamily::HostIo,
++        HostFamily::ExternalUrl,
+         HostFamily::HooksInbound,
+         HostFamily::HooksAny,
+     ] {
+@@ -109,6 +116,7 @@ fn advertisement_is_fully_determined_by_presence_direction_and_settings() {
+ 
+         let mut kiro = serde_json::Map::new();
+         kiro.insert("settings".into(), settings);
++        kiro.insert("openExternalUrl".into(), serde_json::Value::Bool(true));
+         match mode {
+             KasHooksMode::Off => {}
+             KasHooksMode::Host => {
+diff --git a/crates/cyril-core/src/types/event.rs b/crates/cyril-core/src/types/event.rs
+index fac9aaf8..57b3bcad 100644
+--- a/crates/cyril-core/src/types/event.rs
++++ b/crates/cyril-core/src/types/event.rs
+@@ -206,6 +206,16 @@ pub enum Notification {
+         server_name: String,
+         url: String,
+     },
++    /// A global host request to surface this exact, untrusted URL for manual
++    /// authorization. Delivery does not mean a browser opened or OAuth completed.
++    ExternalUrlRequested {
++        url: String,
++    },
++    /// KAS reported an MCP connection failure. This is display-only: it neither
++    /// completes a chat turn nor implies that the agent disconnected.
++    McpConnectionError {
++        message: String,
++    },
+     McpServerInitialized {
+         server_name: String,
+     },
+diff --git a/crates/cyril-ui/src/lib.rs b/crates/cyril-ui/src/lib.rs
+index 47f0f62d..e4835975 100644
+--- a/crates/cyril-ui/src/lib.rs
++++ b/crates/cyril-ui/src/lib.rs
+@@ -9,6 +9,7 @@ pub mod file_completer;
+ #[cfg(test)]
+ mod floor_tests;
+ pub mod highlight;
++pub mod mcp_notice;
+ pub mod memory_format;
+ pub mod render;
+ pub mod spinner;
+diff --git a/crates/cyril-ui/src/mcp_notice.rs b/crates/cyril-ui/src/mcp_notice.rs
+new file mode 100644
+index 00000000..7ff0bf87
+--- /dev/null
++++ b/crates/cyril-ui/src/mcp_notice.rs
+@@ -0,0 +1,77 @@
++//! Display external MCP notices literally while neutralizing terminal controls.
++
++use std::fmt::{self, Write};
++
++pub(crate) struct TerminalSafe<'a>(&'a str);
++
++/// Render printable text exactly while visibly escaping terminal controls and bidi.
++pub fn terminal_safe(text: &str) -> impl fmt::Display + '_ {
++    TerminalSafe(text)
++}
++
++pub(crate) fn needs_escape(character: char) -> bool {
++    character.is_control()
++        || matches!(character, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
++}
++
++enum SafeCharacter {
++    Literal(Option<char>),
++    Escaped(std::char::EscapeDebug),
++}
++
++impl Iterator for SafeCharacter {
++    type Item = char;
++
++    fn next(&mut self) -> Option<char> {
++        match self {
++            Self::Literal(character) => character.take(),
++            Self::Escaped(characters) => characters.next(),
++        }
++    }
++}
++
++/// The same projection for a cached panel document, without a temporary string.
++pub(crate) fn characters(text: &str) -> impl Iterator<Item = char> + '_ {
++    text.chars().flat_map(|character| {
++        if needs_escape(character) {
++            SafeCharacter::Escaped(character.escape_debug())
++        } else {
++            SafeCharacter::Literal(Some(character))
++        }
++    })
++}
++
++impl fmt::Display for TerminalSafe<'_> {
++    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
++        for character in characters(self.0) {
++            formatter.write_char(character)?;
++        }
++        Ok(())
++    }
++}
++
++#[cfg(test)]
++mod tests {
++    use super::terminal_safe;
++
++    #[test]
++    fn printable_urls_and_messages_are_byte_exact() {
++        let text = "https://example.com/a'b\"c\\日?state=original#fragment";
++        assert_eq!(terminal_safe(text).to_string(), text);
++    }
++
++    #[test]
++    fn terminal_controls_and_direction_controls_are_visible_not_active() {
++        assert_eq!(
++            terminal_safe("a\u{1b}[2J\r\n\t\u{202e}b").to_string(),
++            r"a\u{1b}[2J\r\n\t\u{202e}b"
++        );
++        for character in [
++            '\u{061c}', '\u{200e}', '\u{200f}', '\u{202a}', '\u{202b}', '\u{202c}', '\u{202d}',
++            '\u{202e}', '\u{2066}', '\u{2067}', '\u{2068}', '\u{2069}',
++        ] {
++            let value = character.to_string();
++            assert!(!terminal_safe(&value).to_string().contains(character));
++        }
++    }
++}
+diff --git a/crates/cyril-ui/src/state.rs b/crates/cyril-ui/src/state.rs
+index 19d90ead..b4e30bed 100644
+--- a/crates/cyril-ui/src/state.rs
++++ b/crates/cyril-ui/src/state.rs
+@@ -1127,6 +1127,24 @@ impl UiState {
+                 // Handled by App (cross-cutting concern: displays URL for manual browser opening)
+                 false
+             }
++            Notification::ExternalUrlRequested { url } => {
++                // Delivery requests manual sign-in, not authorization completion.
++                // Keep the full URL while making terminal controls visible.
++                self.add_system_message(format!(
++                    "Sign-in requested. Open in browser: {}",
++                    crate::mcp_notice::terminal_safe(url)
++                ));
++                true
++            }
++            Notification::McpConnectionError { message } => {
++                // A durable, non-terminal notice: later MCP status must not
++                // replace it or release the busy turn.
++                self.add_system_message(format!(
++                    "[error] {}",
++                    crate::mcp_notice::terminal_safe(message)
++                ));
++                true
++            }
+             Notification::AgentNotFound {
+                 requested,
+                 fallback,
+@@ -6186,6 +6204,83 @@ mod tests {
+         assert!(state.messages().is_empty());
+     }
+ 
++    #[test]
++    fn external_url_request_is_manual_and_nonterminal() {
++        for (url, expected) in [
++            (
++                "https://example.com/authorize?code=a%2Fb&state=unchanged#continue",
++                "Sign-in requested. Open in browser: https://example.com/authorize?code=a%2Fb&state=unchanged#continue",
++            ),
++            (
++                "https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next",
++                r"Sign-in requested. Open in browser: https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next",
++            ),
++        ] {
++            let mut state = UiState::new(500);
++            state.set_activity(Activity::Streaming);
++            state.apply_notification(&Notification::TurnStalled {
++                quiet: Duration::from_secs(31),
++            });
++            let version = state.messages_version();
++            assert!(
++                state.apply_notification(&Notification::ExternalUrlRequested { url: url.into() })
++            );
++            assert_eq!(state.messages_version(), version + 1);
++            assert_eq!(state.messages().len(), 1);
++            assert!(matches!(
++                state.messages()[0].kind(),
++                ChatMessageKind::System(text) if text == expected
++            ));
++            assert_eq!(state.activity(), Activity::Streaming);
++            assert!(state.stall().is_some());
++            assert!(state.main_session_id().is_none());
++            assert!(state.last_turn().is_none());
++            assert!(!state.has_modal_overlay());
++        }
++    }
++
++    #[test]
++    fn mcp_connection_error_is_durable_and_nonterminal() {
++        for (message, expected) in [
++            (
++                "MCP connection failed: café endpoint refused",
++                "[error] MCP connection failed: café endpoint refused",
++            ),
++            (
++                "MCP failed:\u{1b}[2J\n\u{202e}endpoint",
++                r"[error] MCP failed:\u{1b}[2J\n\u{202e}endpoint",
++            ),
++        ] {
++            let mut state = UiState::new(500);
++            state.set_activity(Activity::Waiting);
++            assert!(state.apply_notification(&Notification::McpConnectionError {
++                message: message.into(),
++            }));
++            assert_eq!(state.activity(), Activity::Waiting);
++            assert!(state.last_turn().is_none());
++            assert!(!state.has_modal_overlay());
++            assert!(
++                state.apply_notification(&Notification::McpServerInitialized {
++                    server_name: "subsequent-status".into(),
++                })
++            );
++            assert_eq!(state.activity(), Activity::Waiting);
++            assert!(state.apply_notification(&Notification::SessionCreated {
++                session_id: SessionId::new("new-session"),
++                current_mode: None,
++                current_model: None,
++                available_modes: Vec::new(),
++                available_models: Vec::new(),
++            }));
++            assert!(matches!(
++                state.messages()[0].kind(),
++                ChatMessageKind::System(text) if text == expected
++            ));
++            assert_eq!(state.messages().len(), 3);
++            assert!(!state.has_modal_overlay());
++        }
++    }
++
+     #[test]
+     fn agent_not_found_with_fallback() {
+         let mut state = UiState::new(500);
+diff --git a/crates/cyril-ui/src/subagent_ui.rs b/crates/cyril-ui/src/subagent_ui.rs
+index a6af43fa..ecbb98d0 100644
+--- a/crates/cyril-ui/src/subagent_ui.rs
++++ b/crates/cyril-ui/src/subagent_ui.rs
+@@ -151,6 +151,13 @@ impl SubagentStream {
+                 self.messages.push(ChatMessage::plan(plan.clone()));
+                 true
+             }
++            Notification::McpConnectionError { message } => {
++                self.push_system(format!(
++                    "[error] {}",
++                    crate::mcp_notice::terminal_safe(message)
++                ));
++                true
++            }
+             _ => false,
+         }
+     }
+diff --git a/crates/cyril-ui/src/widgets/chat.rs b/crates/cyril-ui/src/widgets/chat.rs
+index ad203b3a..9c255f08 100644
+--- a/crates/cyril-ui/src/widgets/chat.rs
++++ b/crates/cyril-ui/src/widgets/chat.rs
+@@ -16,11 +16,22 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+         return;
+     }
+ 
++    // Keep wrapping stable as content overflows or the user enters browse mode.
++    // The scrollbar must never paint over the last cell of a wrapped URL.
++    let content_area = Rect {
++        width: if area.width > 1 {
++            area.width - 1
++        } else {
++            area.width
++        },
++        ..area
++    };
++
+     let mut lines: Vec<Line> = Vec::new();
+ 
+     // Render committed messages (includes tool calls in chronological position)
+     for msg in state.messages() {
+-        render_message(&mut lines, msg, area.width as usize, theme);
++        render_message(&mut lines, msg, content_area.width as usize, theme);
+         lines.push(Line::default()); // spacing between messages
+     }
+ 
+@@ -33,7 +44,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+                 .fg(theme.agent)
+                 .add_modifier(Modifier::BOLD),
+         ));
+-        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
++        let md_lines = markdown::render_with_theme(streaming, content_area.width as usize, theme);
+         lines.extend(md_lines);
+     }
+ 
+@@ -53,7 +64,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+         .block(Block::default());
+ 
+     // Use line_count to get the wrapped height (accounts for long lines wrapping)
+-    let total_lines = chat.line_count(area.width);
++    let total_lines = chat.line_count(content_area.width);
+ 
+     let max_scroll = total_lines.saturating_sub(visible_height);
+     let scroll_offset = match state.chat_scroll_back() {
+@@ -67,13 +78,14 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
+     let scroll_clamped = scroll_offset.min(u16::MAX as usize) as u16;
+     let chat = chat.scroll((scroll_clamped, 0));
+ 
+-    frame.render_widget(chat, area);
++    frame.render_widget(chat, content_area);
+ 
+     // Scrollbar
+-    if total_lines > visible_height {
++    if area.width > 1 && total_lines > visible_height {
+         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
+         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
+-        frame.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
++        let gutter = Rect::new(area.right() - 1, area.y, 1, area.height);
++        frame.render_stateful_widget(scrollbar, gutter, &mut scrollbar_state);
+     }
+ }
+ 
+@@ -2199,6 +2211,149 @@ mod tests {
+         );
+     }
+ 
++    fn viewport_content_text(buffer: &Buffer, area: Rect) -> String {
++        let mut text = String::new();
++        for y in area.y..area.bottom() {
++            let mut row = String::new();
++            let mut x = area.x;
++            while x < area.right() {
++                let symbol = buffer[(x, y)].symbol();
++                row.push_str(symbol);
++                let width: usize = symbol.chars().filter_map(UnicodeWidthChar::width).sum();
++                x = x.saturating_add(width.max(1) as u16);
++            }
++            text.push_str(row.trim_end());
++        }
++        text
++    }
++
++    #[test]
++    fn manual_url_bytes_survive_scrollbar_in_follow_and_browse() {
++        use crate::state::UiState;
++        use cyril_core::types::Notification;
++
++        let opaque = "Ab0%2F_café界'\"\\xyz".repeat(12);
++        let url = format!(
++            "https://example.com/authorize?state={opaque}&control=\u{1b}[31m\n\u{202e}#FULL_URL_END"
++        );
++        let expected = format!(
++            "https://example.com/authorize?state={opaque}&control=\\u{{1b}}[31m\\n\\u{{202e}}#FULL_URL_END"
++        );
++        let area = Rect::new(0, 0, 140, 8);
++        let content = Rect::new(0, 0, 139, 8);
++
++        for browse in [false, true] {
++            let mut state = UiState::new(500);
++            if browse {
++                state.apply_notification(&Notification::ExternalUrlRequested { url: url.clone() });
++            }
++            for _ in 0..20 {
++                state.add_system_message("Later unrelated status".into());
++            }
++            if browse {
++                state.chat_scroll_up(usize::MAX);
++            } else {
++                state.apply_notification(&Notification::ExternalUrlRequested { url: url.clone() });
++            }
++            let mut terminal =
++                Terminal::new(TestBackend::new(area.width, area.height)).expect("test terminal");
++            terminal
++                .draw(|frame| render(frame, area, &state, &state.theme()))
++                .expect("draw manual URL with overflow");
++            let buffer = terminal.backend().buffer();
++            let visible = viewport_content_text(buffer, content);
++            assert!(
++                visible.contains(&expected),
++                "full opaque URL lost in browse={browse}: {visible:?}"
++            );
++            assert!(
++                (0..area.height).any(|y| buffer[(139, y)].symbol() != " "),
++                "overflow must exercise the scrollbar, not only an uncluttered URL"
++            );
++            assert!(!visible.contains('\u{1b}') && !visible.contains('\u{202e}'));
++        }
++    }
++
++    #[test]
++    fn chat_gutter_width_is_stable_without_overflow() {
++        let state = MockTuiState {
++            messages: vec![ChatMessage::system("x".repeat(140))],
++            ..Default::default()
++        };
++        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
++        terminal
++            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
++            .expect("draw short history");
++        let buffer = terminal.backend().buffer();
++        assert_eq!(
++            viewport_content_text(buffer, Rect::new(0, 0, 139, 8)),
++            "x".repeat(140),
++            "the same content width applies before a scrollbar is needed"
++        );
++        assert!((0..8).all(|y| buffer[(139, y)].symbol() == " "));
++        assert_eq!(buffer[(0, 1)].symbol(), "x");
++    }
++
++    #[test]
++    fn live_text_uses_the_same_reserved_content_width() {
++        let state = MockTuiState {
++            messages: (0..20)
++                .map(|_| ChatMessage::system("Earlier status".into()))
++                .collect(),
++            streaming_text: "L".repeat(415),
++            ..Default::default()
++        };
++        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
++        terminal
++            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
++            .expect("draw streaming text with overflow");
++        let buffer = terminal.backend().buffer();
++        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
++        assert_eq!(
++            visible.chars().filter(|ch| *ch == 'L').count(),
++            415,
++            "scrollbar must not overwrite live text or pre-wrapped continuation cells"
++        );
++        assert!((0..8).any(|y| buffer[(139, y)].symbol() != " "));
++    }
++
++    #[test]
++    fn zero_and_one_column_chat_keep_available_content_without_scrollbar() {
++        for width in [0, 1] {
++            for scroll_back in [None, Some(usize::MAX)] {
++                let state = MockTuiState {
++                    messages: (0..3).map(|_| ChatMessage::system("X".into())).collect(),
++                    chat_scroll_back: scroll_back,
++                    ..Default::default()
++                };
++                // Leave a real track after both arrowheads: a two-row viewport
++                // would make Scrollbar return early even without the width guard.
++                let mut terminal = Terminal::new(TestBackend::new(3, 6)).expect("test terminal");
++                terminal
++                    .draw(|frame| {
++                        render(frame, Rect::new(1, 1, width, 4), &state, &state.theme);
++                    })
++                    .expect("draw narrow chat");
++                let buffer = terminal.backend().buffer();
++                for y in 0..6 {
++                    for x in 0..3 {
++                        let expected =
++                            if width == 1 && x == 1 && (1..5).contains(&y) && (y - 1) % 2 == 0 {
++                                "X"
++                            } else {
++                                " "
++                            };
++                        assert_eq!(
++                            buffer[(x, y)].symbol(),
++                            expected,
++                            "width={width} scroll_back={scroll_back:?} cell=({x},{y})"
++                        );
++                    }
++                }
++            }
++        }
++    }
++
+     #[test]
+     fn chat_scroll_back_short_content_clamps_to_zero() {
+         // When content fits in the viewport, browse mode should still render
+diff --git a/crates/cyril/examples/test_bridge.rs b/crates/cyril/examples/test_bridge.rs
+index 40576d6f..ac2bf6d2 100644
+--- a/crates/cyril/examples/test_bridge.rs
++++ b/crates/cyril/examples/test_bridge.rs
+@@ -41,6 +41,26 @@ struct Cli {
+     prompt: Option<String>,
+ }
+ 
++/// Keep the example's copyable URL output on a testable formatting boundary.
++fn external_url_text(url: &str) -> impl std::fmt::Display + '_ {
++    cyril_ui::mcp_notice::terminal_safe(url)
++}
++
++#[test]
++fn external_url_output_preserves_printable_url_exactly() {
++    let url = "https://example.com/authorize?state=a'b&hint=日本語#copy";
++    assert_eq!(external_url_text(url).to_string(), url);
++}
++
++#[test]
++fn external_url_output_escapes_only_terminal_controls() {
++    let url = "https://example.com/auth?state=ok\u{1b}[31m\u{202e}\n\t";
++    assert_eq!(
++        external_url_text(url).to_string(),
++        r"https://example.com/auth?state=ok\u{1b}[31m\u{202e}\n\t"
++    );
++}
++
+ #[tokio::main]
+ async fn main() -> anyhow::Result<()> {
+     tracing_subscriber::fmt()
+@@ -604,6 +624,15 @@ fn print_notification(n: &Notification) {
+         Notification::McpOAuthRequest { server_name, url } => {
+             println!("  [McpOAuth] {server_name}: {url}");
+         }
++        Notification::ExternalUrlRequested { url } => {
++            println!(
++                "  [ExternalUrlRequested] Open in browser: {}",
++                external_url_text(url)
++            );
++        }
++        Notification::McpConnectionError { message } => {
++            println!("  [McpConnectionError] [error] {}", message.escape_debug());
++        }
+         Notification::McpServerInitialized { server_name } => {
+             println!("  [McpReady] {server_name}");
+         }
+diff --git a/crates/cyril/src/app.rs b/crates/cyril/src/app.rs
+index e70304e7..b27d9350 100644
+--- a/crates/cyril/src/app.rs
++++ b/crates/cyril/src/app.rs
+@@ -10154,6 +10154,7 @@ mod tests {
+         );
+     }
+     mod current_runtime_contract;
++    mod mcp_oauth;
+     mod review;
+ 
+     // ── cyril-qaq0: /theme command and picker session ───────────────────────
+diff --git a/crates/cyril/src/app/tests/mcp_oauth.rs b/crates/cyril/src/app/tests/mcp_oauth.rs
+new file mode 100644
+index 00000000..8290a4a1
+--- /dev/null
++++ b/crates/cyril/src/app/tests/mcp_oauth.rs
+@@ -0,0 +1,257 @@
++use super::*;
++use cyril_ui::traits::Activity;
++use ratatui::backend::TestBackend;
++
++fn draw_mcp_screen(app: &mut App) -> String {
++    let mut terminal = Terminal::new(TestBackend::new(160, 32)).expect("test terminal");
++    app.draw_frame(&mut terminal, "MCP notification draw")
++        .expect("draw");
++    let buffer = terminal.backend().buffer();
++    (0..buffer.area.height)
++        .map(|y| {
++            (0..buffer.area.width)
++                .map(|x| buffer[(x, y)].symbol())
++                .collect::<String>()
++        })
++        .collect::<Vec<_>>()
++        .join("\n")
++}
++
++#[test]
++fn external_url_is_visible_before_session_and_survives_creation() {
++    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
++    let prior_status = app.session.status().clone();
++    app.ui_state.set_activity(Activity::Waiting);
++    app.redraw_needed = false;
++    let expected = "Sign-in requested. Open in browser: https://example.com/authorize?code=a%2Fb&state=unchanged#continue";
++
++    let deferred = app.handle_notification(RoutedNotification::global(
++        Notification::ExternalUrlRequested {
++            url: "https://example.com/authorize?code=a%2Fb&state=unchanged#continue".into(),
++        },
++    ));
++
++    assert!(deferred.is_empty());
++    assert!(commands.try_recv().is_err());
++    assert_eq!(system_messages(&app), [expected]);
++    assert!(app.redraw_needed);
++    assert!(app.session.id().is_none());
++    assert_eq!(app.session.status(), &prior_status);
++    assert_eq!(app.ui_state.activity(), Activity::Waiting);
++    assert!(app.pending_session_notifications.is_empty());
++    assert!(!app.ui_state.has_modal_overlay());
++    assert!(draw_mcp_screen(&mut app).contains(expected));
++
++    assert!(
++        app.handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
++            .is_empty()
++    );
++    assert_eq!(
++        system_messages(&app),
++        [expected, "Session created: mcp-startup"]
++    );
++    assert!(draw_mcp_screen(&mut app).contains(expected));
++    assert!(commands.try_recv().is_err());
++    assert!(!app.ui_state.has_modal_overlay());
++}
++
++#[test]
++fn mcp_callback_and_error_escape_controls_without_releasing_busy_turn() {
++    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
++    let main = SessionId::new("mcp-busy");
++    establish_main_session(&mut app, &main);
++    app.handle_notification(RoutedNotification::scoped(
++        main.clone(),
++        Notification::TurnStarted,
++    ));
++    app.handle_notification(RoutedNotification::scoped(
++        main.clone(),
++        Notification::ToolCallStarted(ToolCall::new(
++            ToolCallId::new("mcp-active-tool"),
++            "Active tool".into(),
++            ToolKind::Execute,
++            ToolCallStatus::InProgress,
++            None,
++        )),
++    ));
++    app.handle_notification(RoutedNotification::scoped(
++        main.clone(),
++        Notification::TurnStalled {
++            quiet: Duration::from_secs(31),
++        },
++    ));
++    app.redraw_needed = false;
++
++    assert!(
++        app.handle_notification(RoutedNotification::global(
++            Notification::ExternalUrlRequested {
++                url: "https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next".into(),
++            },
++        ))
++        .is_empty()
++    );
++    assert!(
++        app.handle_notification(RoutedNotification::scoped(
++            main.clone(),
++            Notification::McpConnectionError {
++                message: "MCP failed:\u{1b}[2J\n\u{202e}endpoint".into(),
++            },
++        ))
++        .is_empty()
++    );
++
++    let url_notice = r"Sign-in requested. Open in browser: https://example.com/authorize?\u{1b}[31mstate=x\n\u{202e}next";
++    let error_notice = r"[error] MCP failed:\u{1b}[2J\n\u{202e}endpoint";
++    assert_eq!(
++        system_messages(&app),
++        ["Session created: mcp-busy", url_notice, error_notice]
++    );
++    assert!(app.redraw_needed);
++    assert_eq!(app.session.id(), Some(&main));
++    assert_eq!(app.session.status(), &SessionStatus::Busy);
++    assert!(app.session.last_turn().is_none());
++    assert_eq!(app.ui_state.activity(), Activity::ToolRunning);
++    assert!(app.ui_state.last_turn().is_none());
++    assert_eq!(app.ui_state.active_tool_calls().len(), 1);
++    assert!(app.ui_state.stall().is_some());
++    assert!(!app.ui_state.has_modal_overlay());
++    assert!(commands.try_recv().is_err());
++
++    app.handle_notification(RoutedNotification::scoped(
++        main,
++        Notification::McpServerInitialized {
++            server_name: "later-status".into(),
++        },
++    ));
++    let screen = draw_mcp_screen(&mut app);
++    assert!(screen.contains(url_notice), "manual URL missing:\n{screen}");
++    assert!(
++        screen.contains(error_notice),
++        "original error missing:\n{screen}"
++    );
++    assert_eq!(app.session.status(), &SessionStatus::Busy);
++    assert_eq!(app.ui_state.activity(), Activity::ToolRunning);
++    assert_eq!(app.ui_state.active_tool_calls().len(), 1);
++    assert!(app.ui_state.stall().is_some());
++    assert!(!app.ui_state.has_modal_overlay());
++}
++
++#[test]
++fn v2_mcp_oauth_request_keeps_existing_manual_message() {
++    let (mut app, mut commands) = test_app_with_command_rx();
++    let main = SessionId::new("mcp-v2");
++    establish_main_session(&mut app, &main);
++    app.handle_notification(RoutedNotification::scoped(main, Notification::TurnStarted));
++    assert!(
++        app.handle_notification(RoutedNotification::global(Notification::McpOAuthRequest {
++            server_name: "legacy-mcp".into(),
++            url: "https://example.com/v2?state=original#finish".into(),
++        }))
++        .is_empty()
++    );
++    let expected = "MCP server 'legacy-mcp' requires authentication. Open in browser: https://example.com/v2?state=original#finish";
++    assert_eq!(system_messages(&app), ["Session created: mcp-v2", expected]);
++    assert!(draw_mcp_screen(&mut app).contains(expected));
++    assert_eq!(app.session.status(), &SessionStatus::Busy);
++    assert_eq!(app.ui_state.activity(), Activity::Waiting);
++    assert!(!app.ui_state.has_modal_overlay());
++    assert!(commands.try_recv().is_err());
++}
++
++#[cfg(feature = "kas")]
++#[test]
++fn kas_mcp_display_error_before_new_response_reaches_visible_history() {
++    const FRAME: &str = r#"{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"mcp-startup","update":{"sessionUpdate":"session_info_update","_meta":{"kiro":{"kind":"display_error","errorType":"mcp_connection_error","message":"MCP connection failed: café endpoint refused"}}}}}"#;
++    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
++    let mut converted = cyril_core::test_support::kas_capture_routed(FRAME);
++    assert_eq!(
++        converted.len(),
++        1,
++        "production conversion must retain the error"
++    );
++    let error = converted.remove(0);
++    assert_eq!(error.session_id, Some(SessionId::new("mcp-startup")));
++    assert!(app.handle_notification(error).is_empty());
++    assert_eq!(app.pending_session_notifications.len(), 1);
++    assert!(system_messages(&app).is_empty());
++
++    assert!(
++        app.handle_notification(session_created_frame(&SessionId::new("mcp-startup")))
++            .is_empty()
++    );
++    let expected = "[error] MCP connection failed: café endpoint refused";
++    assert_eq!(
++        system_messages(&app),
++        ["Session created: mcp-startup", expected]
++    );
++    assert!(app.pending_session_notifications.is_empty());
++    assert!(draw_mcp_screen(&mut app).contains(expected));
++    assert_eq!(app.session.status(), &SessionStatus::Active);
++    assert!(!app.ui_state.has_modal_overlay());
++    assert!(commands.try_recv().is_err());
++
++    app.handle_notification(session_created_frame(&SessionId::new("mcp-next")));
++    assert_eq!(
++        system_messages(&app),
++        [
++            "Session created: mcp-startup",
++            expected,
++            "Session created: mcp-next"
++        ]
++    );
++    assert!(draw_mcp_screen(&mut app).contains(expected));
++}
++
++#[test]
++fn scoped_mcp_error_stays_in_subagent_history_and_renders_on_focus() {
++    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
++    let main = SessionId::new("mcp-main");
++    let peer = SessionId::new("mcp-peer");
++    establish_main_session(&mut app, &main);
++    app.handle_notification(RoutedNotification::scoped(main, Notification::TurnStarted));
++    app.handle_notification(RoutedNotification::scoped(
++        peer.clone(),
++        Notification::AgentMessage(AgentMessage {
++            text: "Peer is still working".into(),
++            is_streaming: true,
++        }),
++    ));
++    assert!(
++        app.handle_notification(RoutedNotification::scoped(
++            peer.clone(),
++            Notification::McpConnectionError {
++                message: "Peer MCP failed:\u{1b}[2J\u{202e}endpoint".into(),
++            },
++        ))
++        .is_empty()
++    );
++
++    assert_eq!(system_messages(&app), ["Session created: mcp-main"]);
++    assert_eq!(app.session.status(), &SessionStatus::Busy);
++    assert_eq!(app.ui_state.activity(), Activity::Waiting);
++    assert!(app.ui_state.subagent_ui().focused_stream().is_none());
++    assert!(!app.ui_state.has_modal_overlay());
++    assert!(commands.try_recv().is_err());
++
++    assert!(app.ui_state.focus_subagent(peer));
++    let stream = app
++        .ui_state
++        .subagent_ui()
++        .focused_stream()
++        .expect("focused peer stream");
++    assert_eq!(stream.activity(), Activity::Streaming);
++    assert_eq!(stream.messages().len(), 2);
++    assert!(matches!(
++        stream.messages()[0].kind(),
++        ChatMessageKind::AgentText(text) if text == "Peer is still working"
++    ));
++    let expected = r"[error] Peer MCP failed:\u{1b}[2J\u{202e}endpoint";
++    assert!(matches!(
++        stream.messages()[1].kind(),
++        ChatMessageKind::System(text) if text == expected
++    ));
++    let screen = draw_mcp_screen(&mut app);
++    assert!(screen.contains(expected), "peer error missing:\n{screen}");
++    assert_eq!(app.session.status(), &SessionStatus::Busy);
++    assert_eq!(app.ui_state.activity(), Activity::Waiting);
++}

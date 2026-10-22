@@ -6,9 +6,9 @@ use crate::traits::{TrackedToolCall, TuiState};
 mod presentation;
 mod retained;
 
-pub(crate) use retained::ChatRenderState;
 #[cfg(test)]
 pub(crate) use retained::work_counts;
+pub(crate) use retained::ChatRenderState;
 
 #[cfg(test)]
 pub(crate) fn wrap_count() -> usize {
@@ -71,8 +71,9 @@ mod tests {
 
     use crate::traits::test_support::MockTuiState;
     use crate::traits::{Activity, ChatMessage};
-    use ratatui::Terminal;
     use ratatui::backend::TestBackend;
+    use ratatui::buffer::CellWidth;
+    use ratatui::Terminal;
     use unicode_width::UnicodeWidthChar;
 
     use super::presentation::{Preparation, Sources};
@@ -2126,6 +2127,370 @@ mod tests {
         );
     }
 
+    fn viewport_content_text(buffer: &Buffer, area: Rect) -> String {
+        let mut text = String::new();
+        for y in area.y..area.bottom() {
+            let mut row = String::new();
+            let mut x = area.x;
+            while x < area.right() {
+                let symbol = buffer[(x, y)].symbol();
+                row.push_str(symbol);
+                x = x.saturating_add(symbol.cell_width().max(1));
+            }
+            text.push_str(row.trim_end());
+        }
+        text
+    }
+
+    #[test]
+    fn manual_url_bytes_survive_scrollbar_in_follow_and_browse() {
+        use crate::state::UiState;
+        use cyril_core::types::Notification;
+
+        let opaque = "Ab0%2F_café界'\"\\xyz".repeat(12);
+        let url = format!(
+            "https://example.com/authorize?state={opaque}&control=\u{1b}[31m\n\u{202e}#FULL_URL_END"
+        );
+        let expected = format!(
+            "https://example.com/authorize?state={opaque}&control=\\u{{1b}}[31m\\n\\u{{202e}}#FULL_URL_END"
+        );
+        let area = Rect::new(0, 0, 140, 8);
+        let content = Rect::new(0, 0, 139, 8);
+
+        for browse in [false, true] {
+            let mut state = UiState::new(500);
+            if browse {
+                state.apply_notification(&Notification::ExternalUrlRequested { url: url.clone() });
+            }
+            for _ in 0..20 {
+                state.add_system_message("Later unrelated status".into());
+            }
+            if browse {
+                state.chat_scroll_up(usize::MAX);
+            } else {
+                state.apply_notification(&Notification::ExternalUrlRequested { url: url.clone() });
+            }
+            let mut terminal =
+                Terminal::new(TestBackend::new(area.width, area.height)).expect("test terminal");
+            let mut retained = ChatRenderState::default();
+            for _ in 0..2 {
+                terminal
+                    .draw(|frame| render(frame, area, &state, &state.theme(), &mut retained))
+                    .expect("draw manual URL with overflow");
+            }
+            let buffer = terminal.backend().buffer();
+            let visible = viewport_content_text(buffer, content);
+            assert!(
+                visible.contains(&expected),
+                "full opaque URL lost in browse={browse}: {visible:?}"
+            );
+            assert!(
+                (0..area.height).any(|y| buffer[(139, y)].symbol() != " "),
+                "overflow must exercise the scrollbar, not only an uncluttered URL"
+            );
+            assert!(!visible.contains('\u{1b}') && !visible.contains('\u{202e}'));
+        }
+    }
+
+    #[test]
+    fn chat_gutter_width_is_stable_without_overflow() {
+        let state = MockTuiState {
+            messages: vec![ChatMessage::system("x".repeat(140))].into(),
+            ..Default::default()
+        };
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        let mut retained = ChatRenderState::default();
+        for _ in 0..2 {
+            terminal
+                .draw(|frame| {
+                    render(frame, frame.area(), &state, &state.theme, &mut retained);
+                })
+                .expect("draw short history");
+        }
+        let buffer = terminal.backend().buffer();
+        assert_eq!(
+            viewport_content_text(buffer, Rect::new(0, 0, 139, 8)),
+            "x".repeat(140),
+            "the same content width applies before a scrollbar is needed"
+        );
+        assert!((0..8).all(|y| buffer[(139, y)].symbol() == " "));
+        assert_eq!(buffer[(0, 1)].symbol(), "x");
+    }
+
+    #[test]
+    fn live_text_uses_the_same_reserved_content_width() {
+        let mut state = MockTuiState {
+            messages: (0..20)
+                .map(|_| ChatMessage::system("Earlier status".into()))
+                .collect::<Vec<_>>()
+                .into(),
+            ..Default::default()
+        };
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        let mut retained = ChatRenderState::default();
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state, &state.theme, &mut retained);
+            })
+            .expect("prepare committed history before live text");
+        state.set_live_text("L".repeat(415));
+        for _ in 0..2 {
+            terminal
+                .draw(|frame| {
+                    render(frame, frame.area(), &state, &state.theme, &mut retained);
+                })
+                .expect("draw streaming text with overflow");
+        }
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        assert_eq!(
+            visible.chars().filter(|ch| *ch == 'L').count(),
+            415,
+            "scrollbar must not overwrite live text or pre-wrapped continuation cells"
+        );
+        assert!((0..8).any(|y| buffer[(139, y)].symbol() != " "));
+    }
+
+    #[test]
+    fn zero_and_one_column_chat_keep_available_content_without_scrollbar() {
+        for width in [0, 1] {
+            for scroll_back in [None, Some(usize::MAX)] {
+                let state = MockTuiState {
+                    messages: (0..3)
+                        .map(|_| ChatMessage::system("X".into()))
+                        .collect::<Vec<_>>()
+                        .into(),
+                    chat_scroll_back: scroll_back,
+                    ..Default::default()
+                };
+                // Leave a real track after both arrowheads: a two-row viewport
+                // would make Scrollbar return early even without the width guard.
+                let mut terminal = Terminal::new(TestBackend::new(3, 6)).expect("test terminal");
+                let mut retained = ChatRenderState::default();
+                for _ in 0..2 {
+                    terminal
+                        .draw(|frame| {
+                            render(
+                                frame,
+                                Rect::new(1, 1, width, 4),
+                                &state,
+                                &state.theme,
+                                &mut retained,
+                            );
+                        })
+                        .expect("draw narrow chat");
+                }
+                let buffer = terminal.backend().buffer();
+                for y in 0..6 {
+                    for x in 0..3 {
+                        let expected =
+                            if width == 1 && x == 1 && (1..5).contains(&y) && (y - 1) % 2 == 0 {
+                                "X"
+                            } else {
+                                " "
+                            };
+                        assert_eq!(
+                            buffer[(x, y)].symbol(),
+                            expected,
+                            "width={width} scroll_back={scroll_back:?} cell=({x},{y})"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn focused_mcp_error_bytes_survive_scrollbar() {
+        use crate::state::UiState;
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = UiState::new(500);
+        let child = SessionId::new("gutter-child");
+        for _ in 0..20 {
+            state.apply_subagent_notification(
+                &child,
+                &Notification::AgentMessage(AgentMessage {
+                    text: "Earlier child text".into(),
+                    is_streaming: false,
+                }),
+            );
+        }
+        assert!(state.focus_subagent(child.clone()));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        let mut retained = ChatRenderState::default();
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state, &state.theme(), &mut retained);
+            })
+            .expect("prepare focused history before error");
+        let opaque = "Ab0%2F_café界'\"\\xyz".repeat(12);
+        state.apply_subagent_notification(
+            &child,
+            &Notification::McpConnectionError {
+                message: format!("MCP failed {opaque}\u{1b}[31m\n\u{202e}#FULL_ERROR_END"),
+            },
+        );
+        // Re-enter through the supported UI interface after notice delivery.
+        assert!(state.focus_subagent(child.clone()));
+        let expected =
+            format!("[error] MCP failed {opaque}\\u{{1b}}[31m\\n\\u{{202e}}#FULL_ERROR_END");
+        assert!(matches!(
+            state
+                .subagent_ui()
+                .streams()[&child]
+                .history()
+                .messages()
+                .last()
+                .expect("canonical scoped error")
+                .kind(),
+            ChatMessageKind::System(text) if text == &expected
+        ));
+        for _ in 0..2 {
+            terminal
+                .draw(|frame| {
+                    render(frame, frame.area(), &state, &state.theme(), &mut retained);
+                })
+                .expect("draw focused error");
+        }
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        // Word wrapping may consume the separator at the prefix's row boundary.
+        // Compare every opaque payload byte without inventing that separator.
+        let prefix = "[error] MCP failed";
+        let payload = format!("{opaque}\\u{{1b}}[31m\\n\\u{{202e}}#FULL_ERROR_END");
+        let prefix_position = visible
+            .find(prefix)
+            .unwrap_or_else(|| panic!("focused error prefix lost: {visible:?}"));
+        let payload_position = visible
+            .find(&payload)
+            .unwrap_or_else(|| panic!("full focused error payload lost: {visible:?}"));
+        assert!(prefix_position + prefix.len() <= payload_position);
+        assert!(
+            (0..8).any(|y| buffer[(139, y)].symbol() != " "),
+            "overflow must exercise the scrollbar"
+        );
+        assert!(!visible.contains('\u{1b}') && !visible.contains('\u{202e}'));
+        assert_eq!(state.subagent_ui().focused_session_id(), Some(&child));
+    }
+
+    #[test]
+    fn focused_gutter_width_is_stable_without_overflow() {
+        use cyril_core::types::SessionId;
+
+        let mut state = MockTuiState::default();
+        let child = SessionId::new("child");
+        state
+            .subagent_ui
+            .add_system_message(&child, "x".repeat(140));
+        assert!(state.subagent_ui.focus(child));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        let mut retained = ChatRenderState::default();
+        for _ in 0..2 {
+            terminal
+                .draw(|frame| {
+                    render(frame, frame.area(), &state, &state.theme, &mut retained);
+                })
+                .expect("draw short focused history");
+        }
+        let buffer = terminal.backend().buffer();
+        assert!(viewport_content_text(buffer, Rect::new(0, 0, 139, 8)).contains(&"x".repeat(140)));
+        assert!((0..8).all(|y| buffer[(139, y)].symbol() == " "));
+        assert_eq!(buffer[(0, 3)].symbol(), "x");
+        assert!(viewport_content_text(buffer, Rect::new(0, 0, 139, 2)).contains("[Esc] Back"));
+    }
+
+    #[test]
+    fn focused_live_text_uses_reserved_content_width() {
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = MockTuiState::default();
+        let child = SessionId::new("child");
+        for _ in 0..20 {
+            state
+                .subagent_ui
+                .add_system_message(&child, "Earlier child status".into());
+        }
+        assert!(state.subagent_ui.focus(child.clone()));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        let mut retained = ChatRenderState::default();
+        terminal
+            .draw(|frame| {
+                render(frame, frame.area(), &state, &state.theme, &mut retained);
+            })
+            .expect("prepare focused history before live text");
+        state.subagent_ui.apply_notification(
+            &child,
+            &Notification::AgentMessage(AgentMessage {
+                text: "L".repeat(415),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.subagent_ui.focus(child));
+        for _ in 0..2 {
+            terminal
+                .draw(|frame| {
+                    render(frame, frame.area(), &state, &state.theme, &mut retained);
+                })
+                .expect("draw focused live text");
+        }
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        assert_eq!(
+            visible
+                .chars()
+                .filter(|character| *character == 'L')
+                .count(),
+            415
+        );
+        assert!((0..8).any(|y| buffer[(139, y)].symbol() != " "));
+    }
+
+    #[test]
+    fn zero_and_one_column_focused_chat_keep_content_without_scrollbar() {
+        use cyril_core::types::SessionId;
+
+        for width in [0, 1] {
+            let mut state = MockTuiState::default();
+            let child = SessionId::new("child");
+            for _ in 0..3 {
+                state.subagent_ui.add_system_message(&child, "X".into());
+            }
+            assert!(state.subagent_ui.focus(child));
+            // Four rows leave a nonempty track even after both arrowheads.
+            let mut terminal = Terminal::new(TestBackend::new(3, 6)).expect("test terminal");
+            let mut retained = ChatRenderState::default();
+            for _ in 0..2 {
+                terminal
+                    .draw(|frame| {
+                        render(
+                            frame,
+                            Rect::new(1, 1, width, 4),
+                            &state,
+                            &state.theme,
+                            &mut retained,
+                        );
+                    })
+                    .expect("draw narrow focused chat");
+            }
+            let buffer = terminal.backend().buffer();
+            for y in 0..6 {
+                for x in 0..3 {
+                    let expected = if width == 1 && x == 1 && matches!(y, 1 | 3) {
+                        "X"
+                    } else {
+                        " "
+                    };
+                    assert_eq!(
+                        buffer[(x, y)].symbol(),
+                        expected,
+                        "width={width} cell=({x},{y})"
+                    );
+                }
+            }
+        }
+    }
+
     #[test]
     fn chat_scroll_back_short_content_clamps_to_zero() {
         // When content fits in the viewport, browse mode should still render
@@ -2260,11 +2625,9 @@ mod tests {
         assert!(text.contains("test result: FAILED"), "should show stdout");
         let theme = crate::traits::test_support::marker_theme();
         assert_eq!(lines[0].style.fg, Some(theme.emphasis));
-        assert!(
-            lines[1..]
-                .iter()
-                .all(|line| line.style.fg == Some(theme.subdued))
-        );
+        assert!(lines[1..]
+            .iter()
+            .all(|line| line.style.fg == Some(theme.subdued)));
     }
 
     #[test]

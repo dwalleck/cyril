@@ -1,0 +1,127 @@
+{
+  "schema": "cyril-tqr8-pr193-selected-history-and-cli/v1",
+  "record_kind": "selected primary-receipt projection; retained actual executions, not replay or executable portable recipe",
+  "links": {"current_qualification":"qualification.json","review":"repair-review.json","source_manifest":"source-inputs.json","format_applicability":"format-applicability.json","later_consumer":"owned-consumer.json"},
+  "original_RED": {
+    "original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-test-only-red-attempt1/canonical-handoff.json",
+    "sha256":"b7035ad7ab352b290981d9558959881d7a9330101a3e1018694e962945b17256",
+    "bounded498_descriptor":"0556e444909cab450c0326eb2f7c25aabafa2f014fdc77b11ae20267ac263382",
+    "actual_totals":{"commands":8,"new_or_replacement_cases":17,"intended_RED":14,"new_GREEN_controls":3,"retained_prior_App_GREEN_controls":4,"runnables":21,"all_passed":7,"ignored":0,"unexpected_compile_setup_or_wrong_assertion_failures":0,"UI_passed":2,"UI_intended_failed":5,"App_passed":5,"App_intended_failed":9},
+    "log_original_directory":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-test-only-red-attempt1",
+    "log_path_resolution":"Exact original path is log_original_directory + '/' + label + '.log'",
+    "commands":[
+      {"label":"01-exact-UI-main-MCP-notice-reveal","exit_code":101,"log_sha256":"2203e6b917e2a9a358667aafe224fb01e9e8fde1ecd887206d93d8a4dc4b9262"},
+      {"label":"02-exact-UI-ordinary_system_message_keeps_child_focus_and_main_browse_position","exit_code":0,"log_sha256":"3cdae600a2efe82fbfe6c11dd92050bb16d2ab82e2c8598b16f3f354b83a0411"},
+      {"label":"03-exact-UI-mcp_error_retains_canonical_text_chronology_and_active_tool","exit_code":0,"log_sha256":"27d37b377bd264da02f984661e6470e73e3fb625919a718c12b2f3f6fbdbc0b9"},
+      {"label":"04-exact-UI-focused_mcp_error_bytes_survive_scrollbar","exit_code":101,"log_sha256":"589750f1d10e639bd7cfecbe3b3afc762592428ba61e16d2191debdfa1335d84"},
+      {"label":"05-exact-UI-focused_gutter_width_is_stable_without_overflow","exit_code":101,"log_sha256":"17731b1ea4824b81056c5ff52a22443cd3e27ae58f8892833858e7614be8ee92"},
+      {"label":"06-exact-UI-focused_live_text_uses_reserved_content_width","exit_code":101,"log_sha256":"6713693cf9eee616ac317f79d5d6ffec8125e941e6f2edc64cfc99a079e0cbd0"},
+      {"label":"07-exact-UI-zero_and_one_column_focused_chat_keep_content_without_scrollbar","exit_code":101,"log_sha256":"179fdab29176e4f6e08cfa0b3df3fc5f5d8de74a274ca7aa1c5fd08d441b01c0"},
+      {"label":"08-whole-App-mcp_oauth-module","exit_code":101,"log_sha256":"4c40a6b198121e22cf1d94424b0164f64859583d088cd1ed2d4874401157f590"}
+    ],
+    "UI_RED_cases":[
+      {"name":"state::tests::mcp_notices_reveal_main_without_changing_draft_or_activity","observed":"First URL iteration fails reveal; child focus remains","unreached":"Preservation/chronology and entire second McpConnectionError input"},
+      {"name":"widgets::chat::tests::focused_mcp_error_bytes_survive_scrollbar","observed":"Complete opaque safe-error containment fails in139 content columns; missing underscore","unreached":"Actual scrollbar/raw-control absence/focus-retention assertions"},
+      {"name":"widgets::chat::tests::focused_gutter_width_is_stable_without_overflow","observed":"139-column content projection lacks all140 x characters","unreached":"Gutter blank, continuation geometry and Esc-back assertions"},
+      {"name":"widgets::chat::tests::focused_live_text_uses_reserved_content_width","observed":"413 visible L versus415 expected","unreached":"Actual-scrollbar assertion"},
+      {"name":"widgets::chat::tests::zero_and_one_column_focused_chat_keep_content_without_scrollbar","observed":"Width1 first mismatch cell(1,1): ▲ versus X","nested_control":"Width0 all18 backend cells blank PASS, not another runnable control","unreached":"Remaining width1 cells"}
+    ],
+    "App_RED_cases": {
+      "name_prefix":"app::tests::mcp_oauth::",
+      "cases":[
+        {"name":"global_mcp_url_reveals_main_after_child_focus_and_prior_browse","observed":"40 prior main messages, browse and different focused child; URL absent from actual painted frame","unreached":"Reveal/follow/exact-once/no-child-copy/chronology/draft/session/model/activity/turn/modal/outbound preservation"},
+        {"name":"mcp_error_keeps_canonical_owner_and_reveals_main_presentation::case_1_main","reach_group":"five_error_routes"},
+        {"name":"mcp_error_keeps_canonical_owner_and_reveals_main_presentation::case_2_main_outranks_workflow_claim","reach_group":"five_error_routes"},
+        {"name":"mcp_error_keeps_canonical_owner_and_reveals_main_presentation::case_3_tracked_child","reach_group":"five_error_routes"},
+        {"name":"mcp_error_keeps_canonical_owner_and_reveals_main_presentation::case_4_optimistic_child","reach_group":"five_error_routes"},
+        {"name":"mcp_error_keeps_canonical_owner_and_reveals_main_presentation::case_5_claimed_workflow","reach_group":"five_error_routes"},
+        {"name":"premain_mcp_error_waits_for_authority_then_presents_once::case_2_child","reach_group":"pending_child_workflow"},
+        {"name":"premain_mcp_error_waits_for_authority_then_presents_once::case_3_workflow","reach_group":"pending_child_workflow"},
+        {"name":"late_workflow_adoption_moves_canonical_mcp_error_without_representing_it","observed":"Initial optimistic-child error presentation absent","unreached":"ALL late-adoption actions/assertions after initial presentation failure; no dynamic old-production adoption proof"}
+      ],
+      "reach_groups": {
+        "five_error_routes":"Registration/claim as applicable, different viewer focus, browse/live-tool/stall/draft, empty commands and actual draw reached; main-notice containment fails. Later canonical ownership/order/session escaping/preservation/later-text/status durability/outbound checks UNREACHED.",
+        "pending_child_workflow":"Three ordered frames buffered, no guessed ownership/premature notice, session-created/queue-drain reached. Main history lacks attributed presentation; later canonical stream/order/visible presentation/session/turn/modal/outbound checks UNREACHED."
+      }
+    },
+    "three_new_GREEN_controls":[
+      {"name":"state::tests::ordinary_system_message_keeps_child_focus_and_main_browse_position","reach":"Complete body: child focus, browseSome40, system text; ordinary policy unchanged"},
+      {"name":"subagent_ui::tests::mcp_error_retains_canonical_text_chronology_and_active_tool","reach":"Complete canonical escaped text/text-tool-error-text chronology, nonterminal ToolRunning/live buffer, later in-place tool update/status ignore"},
+      {"name":"app::tests::mcp_oauth::premain_mcp_error_waits_for_authority_then_presents_once::case_1_main","reach":"Complete pending-main body, drain/order/canonical history/visible notice/authority/no outbound action checks"}
+    ],
+    "four_retained_App_GREEN_controls":["external_url_is_visible_before_session_and_survives_creation","mcp_callback_and_error_escape_controls_without_releasing_busy_turn","v2_mcp_oauth_request_keeps_existing_manual_message","kas_mcp_display_error_before_new_response_reaches_visible_history"],
+    "input_reach_limit":"19 declared inputs across17 cases; only18 iterations entered originally. Do not call all original postconditions or both UI-state inputs executed/passed. Original receipts/failures remain immutable; no old-production corrected-test/helper replay."
+  },
+  "oracle_failures_and_corrections": {
+    "separator": {
+      "original_handoff":"local://tqr8-focused-error-oracle-repair.json",
+      "handoff_sha256":"06e8fb696b321583675255c9fb65bd3c21e76a64825faf38d6c0138f3b45398a",
+      "failed_attempt_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt1/canonical-handoff.json",
+      "failed_attempt_sha256":"bc29bc7153e388d31d3e4e0452692fc16caf5a74f223b0d39470b19d4800857d",
+      "failed_log_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt1/04-exact-UI-focused_mcp_error_bytes_survive_scrollbar.log",
+      "failed_log_sha256":"80c8276bdbcb6385e968044853371cf9c2b48191a0aa69c7d0fbc7eae04a7f9b",
+      "actual_attempt1":"First3 UI PASS, focused-error separator assertion FAIL, stopped; immutable FAIL never relabelled GREEN",
+      "cause":"Locked ratatui-widgets0.3.2 WordWrapper consumes separator whitespace at prefix/overlong-word boundary. Earlier0.3.0 diagnosis citation corrected to actual0.3.2.",
+      "correction":"Exact canonical306 UTF8 bytes INCLUDING separator; exact rendered prefix ordered before entire unchanged287-byte opaque/escaped suffix plus final marker, contiguous; retain scrollbar/control/focus assertions",
+      "captured_sensitivity":{"old_gutter_payload_bytes":286,"expected_payload_bytes":287,"old_difference":"One underscore missing inside required opaque tail","repaired_payload_bytes":287,"repaired_prefix_directly_followed_by_payload_without_separator":true},
+      "preserved":"No product/input/geometry/viewport-helper/whitespace-policy change, no normalization/reinsertion/masking",
+      "later_actual_result":"Corrected Rust test actually PASS in attempt2 and current suites; offline capture comparison alone was not retroactive execution on old production"
+    },
+    "wide_cell": {
+      "original_handoff":"local://tqr8-wide-cell-oracle-repair.json",
+      "handoff_sha256":"5f2c811ec58f616cb44cf9f946c88e5d9ee9414dad9e8b12eb07e803682ba03b",
+      "failed_attempt_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt2/canonical-handoff.json",
+      "failed_attempt_sha256":"e2d07ddfebad7f1097ea7c524b76c9bee89db4ca2913688b24b89e3d57d28dd4",
+      "failed_log_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt2/05-fresh-08-whole-App-mcp_oauth-module.log",
+      "failed_log_sha256":"fe0c7e676f80f6506885397cc348f12f2988c5ef2f96d17183771559f51c3f82",
+      "actual_attempt2":"Corrected focused-error plus remaining3 UI PASS; first3 UI retained by identity; App13PASS/1URL-projectionFAIL; broader gates stopped",
+      "cause":"Old App helper appends every physical Cell; width2 日 has a covered blank continuation cell, inserting phantom space. Expected96 versus projected97 UTF8 bytes; complete actual notice is otherwise present on one row.",
+      "correction":"Existing width-advancing physical-cell pattern via already available CellWidth: append each symbol unchanged, advance cell_width().max(1); preserve real spaces and row newlines",
+      "case_body_identity_at_correction":{"bytes":23444,"sha256":"7464720a7b20852b2d68c985c38259ad88616d63bd6b045c6a54ce8011f61569","all14case_bodies_and_later_helpers_unchanged":true},
+      "preserved":"No fixture-specific replacement/filter/trim/normalize; no product/URL/sanitization/geometry/canonical assertion changes. Later authorized formatting changes raw bytes, NOT complete Rust tokens INCLUDING punctuation.",
+      "retained_RED":"Wrong-child original frames lack required notice prefixes/payloads; skipping covered padding cannot invent them. Pending fails before extraction; adoption fails initial presentation. No corrected-helper old-production execution claimed.",
+      "later_actual_result":"Fresh complete App14PASS in attempt3, reaching later URL preservation/authority assertions; qualification.json gates01-11 retained after format-only correction"
+    }
+  },
+  "retained_Core_and_gutter": {
+    "current_applicability_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/retained-Core-CLI-UI-and-original-RED-current-applicability.json",
+    "current_applicability_sha256":"16f20c17d66a82d1279595951e7215a2d2a02f2c98b8de5b3a58d4ae87c735b9",
+    "prior_supplement_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt1/retained-evidence-applicability-supplement.json",
+    "prior_supplement_sha256":"d1a50a939a12f33161d24f99160e2075b351bd9b2f6986185a5223c22a6e085b",
+    "Core_historical_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-current-assembled-attempt1/canonical-handoff.json",
+    "Core_historical_sha256":"e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104",
+    "retention_basis":"Same complete paths/bytes/SHA256 for199 Core +179 Review inputs, unchanged manifests/lock/toolchain/features and source-fence applicability; not fresh isolated Core commands",
+    "Core_actual_historical_gates":[
+      {"scope":"no-default Core tests","passed":1035,"failed":0,"ignored":4,"log_sha256":"898a1837a3d7350057fdc286aa33839f04e18e21b64fa6e59a6141490b4af490"},
+      {"scope":"no-default Core alltargets Clippy","exit_code":0,"log_sha256":"090cb52cec8c1900964eca1ac7dba915adb8dc25d71b51084c62eb118711dd11"},
+      {"scope":"historical combined explicit-KAS tests: Core portion ONLY","passed":1522,"failed":0,"ignored":9,"combined_log_sha256":"3e081e85f2696a73869224d4f011aaa6706643c3abab808c4d691028269f6a0a"},
+      {"scope":"historical combined explicit-KAS Clippy: Core portion ONLY","exit_code":0,"combined_log_sha256":"efb3ec501c49861ee045510fe6c1e8b810c090688a09e267d5bebad330fcbb3a"}
+    ],
+    "gutter_historical_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-gutter-attempt2/canonical-handoff.json",
+    "gutter_historical_sha256":"5fc5a42e64b3da345e3f5d427704a778bec5f0d11fbc0f7ec5ccf116b4723ba7",
+    "gutter_limit":"Five old main-layout RED/restoredGREEN pairs retain historical last-column/wrap/live415vs413/width1/indicator sensitivity only. Old inlineRect/indicator anchors are gone, NOT current postimages, focused-path mutations or general grapheme proof. No mutation replay.",
+    "stale_status_limit":"Retained supplement preformat FAIL/pending fields describe their original time. Final qualification.json and later owned-consumer.json own later results; originals are not rewritten. Prior a09/six-capture publication package remains historical, not current repaired acceptance."
+  },
+  "CLI_actual_finite_peer": {
+    "scope":"Actual test_bridge MCP-error arm, owned finite ACP peer initialize/new plus initial notification drain and existing no-SessionCreated exit; three exact rows. Retained unchanged proof, not replay/full-example/native/network/platformCI.",
+    "source_path":"crates/cyril/examples/test_bridge.rs",
+    "unchanged_formatter_path":"crates/cyril-ui/src/mcp_notice.rs",
+    "unchanged_formatter_sha256":"d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5",
+    "probe_sha256":"41bac1cf68e50f401eb8953c687d5c72fec2c869677efaaabab8b7ddfbfc0e41",
+    "recipe_sha256":"a9b194233c78c6970c2fd01408f7eae75d22e6e515a659c9c3b207dd4c7daa45",
+    "red":{"original_path":"/tmp/cyril-tqr8-cli-error-red-20261020/result.json","sha256":"7ace3887377db2068246a64ee41490175c970416ba2a611eec1477f69d695e63","result":"EXPECTED_RED_OBSERVED","fidelity":"FAIL","exact_pre_fix_prediction":true,"consumer_returncode":0,"source_sha256":"042b4623699df8e923b6e6790972538b02888e1fbd197e3513575e8a2671c288","binary_sha256":"bedb91ba30249f0856ca7962bef27cc774634cfa8dfbb19329566e47f246599a"},
+    "green":{"original_path":"/tmp/cyril-tqr8-cli-error-green-20261020/result.json","sha256":"2216b12630aa3743881403aa2047629417c2b522129b8fc99564c4d91cced3ea","result":"PASS","fidelity":"PASS","consumer_returncode":0,"source_sha256":"42d991b5008f86c583bf65503310afd0c381c8eb2736511efb242def13f43c12","binary_sha256":"80eace069898be6828aa884713b67018a13bd6dbee4cf1d525d8d42820fab4f0"},
+    "actual_RED_rows":[
+      "  [McpConnectionError] [error] can\\'t open \\\"C:\\\\MCP\\\\café\\\\日\\\"; café café 日本語 👩\\u{200d}💻",
+      "  [McpConnectionError] [error] literal \\\\n \\\\r \\\\t \\\\u{202e} and \\\\\\\\ remain literal",
+      "  [McpConnectionError] [error] before\\0\\t\\r\\n\\u{1b}[31m\\u{7f}\\u{85}\\u{61c}\\u{200e}\\u{200f}\\u{202a}\\u{202b}\\u{202c}\\u{202d}\\u{202e}\\u{2066}\\u{2067}\\u{2068}\\u{2069}after"
+    ],
+    "actual_GREEN_rows":[
+      "  [McpConnectionError] [error] can't open \"C:\\MCP\\café\\日\"; café café 日本語 👩‍💻",
+      "  [McpConnectionError] [error] literal \\n \\r \\t \\u{202e} and \\\\ remain literal",
+      "  [McpConnectionError] [error] before\\0\\t\\r\\n\\u{1b}[31m\\u{7f}\\u{85}\\u{61c}\\u{200e}\\u{200f}\\u{202a}\\u{202b}\\u{202c}\\u{202d}\\u{202e}\\u{2066}\\u{2067}\\u{2068}\\u{2069}after"
+    ],
+    "cleanup":"Both actual runs: direct example reaped, owned temporary root absent, exact recorded live Node/peer markers absent, no group signals; not a global descendant census",
+    "meaning":"Existing terminal_safe reuse preserves printable apostrophe/quote/backslash/Unicode/combining/ZWJ while controls and bidi are visible escapes; no helper/interface/protocol change or rerun"
+  }
+}

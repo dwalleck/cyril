@@ -125,6 +125,17 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
             )
             .await;
 
+            send_command(&sender, &mut ledger, BridgeCommand::Mcp {
+                request: crate::types::McpRequest {
+                    session_id: session_id.clone(),
+                    server_name: "original-server".into(),
+                    operation: crate::types::McpOperation::Reset { start_oauth: false },
+                },
+            }).await;
+            assert!(matches!(next_notification("Mcp", &mut rx).await,
+                Notification::McpUpdate(crate::types::McpUpdate::Outcome(crate::types::McpOutcome {
+                    result: Err(crate::types::McpOperationError {kind: crate::types::McpErrorKind::Unsupported, ..}), ..
+                }))));
             send_command(
                 &sender,
                 &mut ledger,
@@ -343,6 +354,7 @@ async fn c5_every_bridge_command_has_an_explicit_current_runtime_outcome() {
                     "SetMode",
                     "SetModel",
                     "ExtMethod",
+                    "Mcp",
                     "QueryCommandOptions",
                     "ExecuteCommand",
                     "SpawnSession",

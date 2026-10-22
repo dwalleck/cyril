@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
 
-const MODULES: [(&str, &str); 23] = [
+const MODULES: [(&str, &str); 24] = [
     ("chat", "src/widgets/chat.rs"),
     ("chat_presentation", "src/widgets/chat/presentation.rs"),
     ("chat_retained", "src/widgets/chat/retained.rs"),
@@ -15,6 +15,7 @@ const MODULES: [(&str, &str); 23] = [
     ("code_panel", "src/widgets/code_panel.rs"),
     ("crew_panel", "src/widgets/crew_panel.rs"),
     ("hooks_panel", "src/widgets/hooks_panel.rs"),
+    ("mcp_panel", "src/widgets/mcp_panel.rs"),
     ("modal", "src/widgets/modal.rs"),
     ("picker", "src/widgets/picker.rs"),
     ("review", "src/widgets/review.rs"),

@@ -1,0 +1,40 @@
+sess_PRIVATE_NATIVE_ID_REDACTED                                                                                                   
+Connecting to agent...                                                                                                                      
+                                                                                                                                            
+Sign-in requested. Open in browser:                                                                                                         
+http://127.0.0.1:53181/authorize?response_type=code&client_id=fixture-client-Y3MJNQDviGUdqOlIufGINxJN&code_challenge=95-UuZxwqCCXXt7MXkIvXLl
+ZHehBdsBuKA1TqkkQOM4&code_challenge_method=S256&redirect_uri=http%3A%2F%2Flocalhost%3A37667%2Foauth%2Fcallback&state=cbd3b9a5-e21e-4cdc-bd6e
+-328e05e7cfb3&scope=fixture.read&resource=http%3A%2F%2F127.0.0.1%3A53181%2Fmcp%2Foauth                                                      
+                                                                                                                                            
+Session created: sess_PRIVATE_NATIVE_ID_REDACTED                                                                                  
+                                                                                                                                            
+[error] MCP server "fixture-failed" failed to connect: Error POSTing to endpoint:                                                           
+{"error":"synthetic_unavailable","error_description":"Deliberately unavailable synthetic MCP endpoint."}                                    
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+                                                                                                                                            
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                         │
+│                                                                                                                                          │
+│                                                                                                                                          │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+cyril                                                                                                                                       

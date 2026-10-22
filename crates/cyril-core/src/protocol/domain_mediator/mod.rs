@@ -19,6 +19,8 @@ use crate::types::{AgentEngine, PermissionResponse, SessionId};
 pub(crate) mod commands;
 pub(crate) mod host;
 pub(crate) mod inbound;
+mod mcp;
+mod startup;
 
 const WORK_CAPACITY: usize = 256;
 const HOST_CAPACITY: usize = 16;
@@ -61,10 +63,13 @@ pub(crate) enum DomainWork {
 pub(crate) enum CommandOutcome {
     /// Deliver one notification to the App exactly as `notify` would have.
     Notify(Box<Notification>),
-    /// A `session/new` or `session/load` RPC succeeded: bind the session.
-    SessionStarted(Box<SessionStart>),
-    /// A fail-stop condition: notify `BridgeDisconnected` and exit the loop.
-    FatalDisconnect { reason: String },
+    /// Every result of an admitted root transition returns to the serial owner.
+    RootStartFinished {
+        attempt: crate::types::StartupAttemptId,
+        result: startup::RootStartResult,
+    },
+    #[cfg(feature = "kas")]
+    Mcp(crate::types::McpOutcome),
     /// The agent answered `session/steer` with -32601: mark the session and
     /// tell the App once.
     SteeringUnsupported { session_id: SessionId },
@@ -104,7 +109,7 @@ impl CommandOutcome {
     }
 }
 
-/// Payload of [`CommandOutcome::SessionStarted`].
+/// Successful payload of [`startup::RootStartResult::Started`].
 #[derive(Debug)]
 pub(crate) struct SessionStart {
     pub(crate) session_id: SessionId,
@@ -235,6 +240,8 @@ pub(crate) struct DomainMediator {
     source_observer: SourceObserver,
     ingress: IngressTracker,
     active_session_id: Option<SessionId>,
+    mcp: mcp::McpOwner,
+    startup: startup::Startup,
     steering_unsupported: HashSet<SessionId>,
     turn_mediator: TurnMediator,
     tool_call_ledger: crate::protocol::tool_call_ledger::ToolCallLedger,
@@ -287,6 +294,8 @@ impl DomainMediator {
                 source_observer,
                 ingress,
                 active_session_id: None,
+                mcp: mcp::McpOwner::default(),
+                startup: startup::Startup::default(),
                 steering_unsupported: HashSet::new(),
                 turn_mediator: TurnMediator::new(),
                 tool_call_ledger: crate::protocol::tool_call_ledger::ToolCallLedger::new(),
@@ -522,21 +531,13 @@ impl DomainMediator {
                 self.notify((*notification).into()).await?;
                 Ok(ControlFlow::Continue(false))
             }
-            CommandOutcome::SessionStarted(start) => {
-                let SessionStart {
-                    session_id,
-                    origin,
-                    config_options,
-                    created,
-                } = *start;
-                self.publish_session_start(session_id, origin, config_options, created)
-                    .await?;
-                Ok(ControlFlow::Continue(false))
+            CommandOutcome::RootStartFinished { attempt, result } => {
+                self.apply_root_start(attempt, result).await
             }
-            CommandOutcome::FatalDisconnect { reason } => {
-                self.notify(Notification::BridgeDisconnected { reason }.into())
-                    .await?;
-                Ok(ControlFlow::Break(()))
+            #[cfg(feature = "kas")]
+            CommandOutcome::Mcp(outcome) => {
+                self.finish_mcp_command(outcome).await?;
+                Ok(ControlFlow::Continue(false))
             }
             CommandOutcome::ForSession {
                 session_id,

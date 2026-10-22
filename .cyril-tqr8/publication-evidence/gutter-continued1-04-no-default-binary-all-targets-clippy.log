@@ -1,0 +1,13 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo clippy -p cyril --no-default-features --all-targets -- -D warnings
+started_utc=2026-10-20T18:05:53.843678+00:00
+
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+    Checking cyril-memory v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-memory)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-ui)
+    Checking cyril v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.12s
+
+qualification_exit_code=0
+qualification_elapsed_seconds=8.179294

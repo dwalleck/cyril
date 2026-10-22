@@ -1,0 +1,180 @@
+{
+  "issue": "cyril-nk4o",
+  "reviewer": "ReviewNkCurrentRepairs",
+  "status": "SCOPED_CURRENT_REPAIR_REVIEW_COMPLETE_NO_FINDINGS",
+  "overall_correctness": "correct",
+  "explanation": "The current replay/live-admission and shared catalog-visibility repairs resolve their recorded defects without a concrete patch-introduced regression in the affected consumers. The seventeen test-only unwrap replacements preserve successful values, fixtures and assertions, and still panic on missing values. This verdict is scoped source review, not whole-feature, final-parent, qualification-matrix or native acceptance.",
+  "confidence": 0.98,
+  "findings": [],
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o",
+  "source_authority": {
+    "parent_commit": "b75010427c16b1dac13b7cf00c595ce2492f391f",
+    "parent_of_parent": "4574293e0325a325c5570115eaf01b2f0ef57919",
+    "actual_current49_descriptor": "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+    "actual_current_bounded517_input_descriptor": "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005",
+    "identity_receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/pinned-before-first-focused-invocation.json",
+    "context_hash_receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/after-authorized-initial-format.workspace-input-manifest.json",
+    "identity_method": "Read the actual frozen worktree files and exact current diff/snapshots. Full SHA256/blob identities are taken from the independently generated qualifier pins and Main's freeze, not recomputed by this reviewer. These descriptors are bounded source/input descriptors, not a Git tree, qualified commit or whole-repository identity.",
+    "ordinary_git_diff_limit": "The initial git diff against b750 for the four new repair-owner/test paths was empty because these feature files are untracked relative to that parent. They were not omitted: current new production files were read directly and through git diff --no-index /dev/null; actual pre-repair production was read with git show 41c326871293998a9665982a95d6eab0e58ddcb6:path. The exact current fixture repair was diffed against attempt1's stored postformat tests.rs.",
+    "superseded_frames_not_relabeled": [
+      "The original actual RED remains tree41c326871293998a9665982a95d6eab0e58ddcb6 / descriptor75fff2d0ecd05a1f3a1482f9ff6059d5a3da88ddf9a25c737d221e05d83b98ab.",
+      "Attempt1 repaired execution remains descriptor4668713359c929ee280a92c6eca413a00d6bfc8f29c50821417f3ee076524226 / bounded517 descriptor38a3978082c37f236ab7ef6affcf997a428969453415b60bcc0a7d6696db75ef.",
+      "assembly-handoff.json's 9a042d9ea338d16442feea05e96aa649a4d9d8c6878f20fa414264a00f5bc849 is explicitly attempt2 entry BEFORE its formatter. The qualifier's 24694a4d descriptor, not9a042d, identifies the reviewed postformat source.",
+      "The lint owner's preformatter UI tests SHA2561ff48cd353cbca83b299fc19f94e28eae32ca9158a0af386bf45605fa4adf0d6 is not the current postformat tests SHA256b58a54004388d5e4b3ca09e73d2fa9f7cc9d418e9acf7747367b55aa50e91f7d.",
+      "Core production's original repaired preformat SHA25612f8440757482e47d52bb366f765253a7206175d0d197b34c710b7b51683764c is not its current formatted SHA256e7c2f1cb90988faf32996dd2965da89f389e28e1fede2ff499a1b23a306e2a1b."
+    ],
+    "private_default_binary": {
+      "path": "/tmp/cyril-nk4o-repaired-current-tested-20261021",
+      "sha256": "91771f462b9acb697bdd4a1028db896acbb23a5230e6653249c1ecaacf69931f",
+      "receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/ready-private-default-binary.json",
+      "applicability": "Qualifier records default cargo build -p cyril --bins exit0 at current24694a4d/993da564 inputs, preserved before feature-variant builds. It was not executed by the qualifier or this reviewer; no runtime/native result is inferred."
+    }
+  },
+  "reviewed_repair_and_test_file_identities": [
+    {"path":"crates/cyril-core/src/protocol/domain_mediator/mcp.rs","sha256":"e7c2f1cb90988faf32996dd2965da89f389e28e1fede2ff499a1b23a306e2a1b","git_blob_sha1":"ac65c3afe39074b7147d49e7c64a0b61515bfedb","scope":"Entire current owner, actual pre-repair owner, publication and lifecycle interactions"},
+    {"path":"crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs","sha256":"c55ec5d964e0d7c22409b27183fa154216384fb265b620494ea69b4cd0e6c5b7","git_blob_sha1":"d897364caa6cc11d344ed7e36d5d8149ff6358d7","scope":"Entire current module, all three new cases/shared helper and four retained cases"},
+    {"path":"crates/cyril-ui/src/mcp_panel/mod.rs","sha256":"6b68d5c039a0c5cdd31aec70107516965168db521ce5b5240eee8636a138ebf8","git_blob_sha1":"7e67a20daa9be5130179ce4e263c071c533f28d5","scope":"Entire current owner and actual pre-repair owner"},
+    {"path":"crates/cyril-ui/src/mcp_panel/tests.rs","sha256":"b58a54004388d5e4b3ca09e73d2fa9f7cc9d418e9acf7747367b55aa50e91f7d","git_blob_sha1":"65f8be4b9cb2a255bce8827032fff95c79b2ee05","scope":"Entire current file; exact attempt1-postformat to current diff; all seventeen replacements; both offscreen-server cases; D20 helpers and preserved controls"},
+    {"path":"crates/cyril/src/app/tests/mcp_panel.rs","sha256":"64942696924d639e2a20c2ca1af6dd5ca006786c35c4276d6ae1705af6168278","git_blob_sha1":"f6284f387982bc8b8b53563da78d7ee442932387","scope":"Entire current module, compact real-App paint/key/typed-channel helper and both new cases"}
+  ],
+  "affected_context_file_sha256": {
+    "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs":"a6ae7c0eb05b2c2106967376518000996b197fd25630770655cb99ac7bf444c7",
+    "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs":"6e06c1b50b1143a88f6a83b6e9be8b23c2572780adbfa0976bde145cb9da7471",
+    "crates/cyril-core/src/protocol/domain_mediator/mod.rs":"f7c03ccf8e2c511c7901cdd0e97a540cb19beaf9f0280a07fbeaf773b7f00d93",
+    "crates/cyril-core/src/protocol/domain_mediator/inbound.rs":"1d2b613502d209566182dee3c373d584e09269a489cf7597caadbb914520b171",
+    "crates/cyril-core/src/protocol/engine.rs":"768e90520a0383d7f7a5c14b69d0838f2d974664d0a8441e5d5e1770994434a9",
+    "crates/cyril-core/src/protocol/convert/kas/mcp.rs":"2faaff9a52f8e978577280809561af9650b9489f3201a3f18397162cbffc6463",
+    "crates/cyril-core/src/protocol/kas/mcp.rs":"334b3a7fe96e3252938f786bffefc2163994abb0c831d9fb0318f0002a7a8a72",
+    "crates/cyril-core/src/types/mcp.rs":"be6af2133977d8ce0988483891c747ef23ec39f23cd33cfae801318cf27ddf72",
+    "crates/cyril-core/src/session.rs":"ea2ebc490e36ba6bfe93589eae140f06c68aaa43d8125dd04ba9841eece9e10c",
+    "crates/cyril-ui/src/mcp_panel/integration.rs":"a8fd8a35ce59e1f13af72ed6ad7cd0a53c37d6e07028b2575e16aeb074de2c26",
+    "crates/cyril-ui/src/mcp_panel/presentation.rs":"251d6fc63604dca833f93bea21eb63a34d78790ed0880671cd1e164523e2f02d",
+    "crates/cyril-ui/src/widgets/mcp_panel.rs":"157f92e4fd5306d26d03018216b0548a28b2a397743c00cc04092ae74298d92e",
+    "crates/cyril-ui/src/render.rs":"f93f8ff52b22e24b9594a1ff42635b0034420cd30a13963190de15d38e4c857a",
+    "crates/cyril/src/app.rs":"2461dd527c241ea1fb4084939b4b187b49d42aabe79ce07fe2a5e562d302eccc"
+  },
+  "governing_records": {
+    "contract":"skill://gilfoyle/references/CONTRACT.md",
+    "review_stage":"skill://gilfoyle/references/assessing-review-feedback.md",
+    "current_directory":"/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/.cyril-nk4o",
+    "current_spec_sha256":"5611cf344ee26082e65091785f560074ffd6f6a8409fd1f8f917f67be64f7d47",
+    "current_design_sha256":"2e42f4642158faaac5f50ed1520ddc6f6bc1fb84a667ec1b37c3d61d86c231e9",
+    "current_review_decisions_sha256":"03ed76db9120cd65e8f4005703f3d3ef635f559f9db195fb83cddeb0c4476e7f",
+    "canonical_history":"/home/dwalleck/repos/cyril-wt-fix-cyril-caar-mcp-startup/.cyril-nk4o/review-decisions.md",
+    "canonical_history_sha256":"7f4ccd5c61a923880f069952bac33a6af89343c659f632ad1ffddd14def5f48c",
+    "handoffs_read":["local://nk4o-active-reload-production-handoff.json","local://nk4o-hidden-server-actions-test-handoff.json","local://nk4o-test-unwrap-repair-handoff.json"],
+    "claims":"Existing spec B2/B3/B4/B8, design C1-C4 and Actual-assembly repeated-mechanism dispositions; unchanged captured-form/read-only and placement obligations. No contract reversal or risk waiver is proposed."
+  },
+  "per_item_verdicts": [
+    {
+      "id":"Assembly/Core-F1",
+      "verdict":"resolved",
+      "evidence_state":"Verified",
+      "decision_retained":"Modify",
+      "source_evidence":[
+        "domain_mediator/mcp.rs91-111 retains original staging eligibility and staging reducer, removes the exclusive staged return, then always invokes self.state.apply(update). types/mcp.rs303-306 independently refuses foreign IDs before mutation.",
+        "For same-ID pending load, each status/policy/diagnostic is captured for replay AND immediately reduced/published to the established active root. types/mcp.rs307-347 preserves authoritative replacement/removal, clears connected/removed OAuth URLs, and applies policy/diagnostics.",
+        "Recoverable SessionStartFailed at domain_mediator/mod.rs543-546 calls fail_session, emits the original error and continues. mcp.rs51-53 remains drop-only; no failure merge, old-state reset or rollback is introduced.",
+        "Successful publish_session_start at commands/session.rs251-275 retains usage -> created -> optional config -> activation. mcp.rs55-88 takes only matching staged state, resets the owner and replays snapshot -> retained authorization URLs -> policy -> diagnostic.",
+        "Different-ID candidate/peer frames may stage under the unchanged eligibility predicate but cannot pass the live identity guard; current-root frames still reach the live reducer while a different candidate is opening. A failed opening is dropped, and later activation cannot revive its staging.",
+        "New-session staging still excludes the already-active ID, root-start admission remains single/pre-send, elicitation still bypasses staging and keeps global contextual publication, and fatal/recoverable outcomes remain distinct. No new epoch, clone, allocation, public type, caller contract or timeout was added."
+      ],
+      "regression_evidence":"Current tests/mcp.rs491-604 captures consumer authority BEFORE failed-load resolution and then checks immediate three-event root publications, cleared URL/replacement/policy/diagnostic, surviving root, exact error, owner/controller equality and retry without stale replay. Same-ID success617-726 checks four LIVE events separately from exact reset/config/replay order and final equality. Different-ID612-615 is a retained pre-fix-passing isolation control, not a newly failing regression.",
+      "new_findings":[]
+    },
+    {
+      "id":"Assembly/UI-F1",
+      "verdict":"resolved",
+      "evidence_state":"Verified",
+      "decision_retained":"Modify",
+      "source_evidence":[
+        "mcp_panel/mod.rs307-318 extracts exactly the existing Enter bounds into target_visible(): nonzero window and source-derived focus within scroll..saturating_add(window). Enter retains its first-reanchor semantics.",
+        "The existing combined unmodified r/a arm457-464 uses that same predicate before request construction/admission. A hidden action yields no request/submitted value but does not return early from key:477-506 rebuilds and reanchors the unchanged original selection.",
+        "The next explicit visible action uses unchanged catalog_request299-304 and request276-288 with the same session/server and Reset{start_oauth:false|true}. Session/pending/submitted guards and acknowledgement meaning remain intact.",
+        "Control/Alt/Shift action keys and inert keys still take the unmatched return before rebuild; release/topmost/zero-body guards remain in integration.rs33-45. PageUp/PageDown remain free scroll with retained selection.",
+        "The new predicate is confined to catalog activation: local v-result viewing466-473, captured argument-form submission356-382/414-415, read scrolling/inert read actions, Esc, raw argument bytes and other navigation remain unchanged. No draw-ack latch, key classifier, new geometry owner, App production body or public interface was added.",
+        "integration.rs72-82 and widgets/mcp_panel.rs18-40/80-95 use the same actual body dimensions and scroll window. App draw_frame synchronizes terminal size; real compact80x6 tests prove popup2/body1 with the original target physically absent after scrolling."
+      ],
+      "regression_evidence":"UI tests1553-1648 and App tests388-467 separately cover reset/auth. Both use actual opening/key/geometry/paint paths, first-action silence BEFORE another draw, retained-original reanchor and physical paint, exact second request/typed command, no extra dispatch, preserved draft and closure. UI adds modified/inert scroll-preservation and submitted-empty assertions. Existing offscreen-resource test1482-1551 retains both viewport-side controls and exact URI/session/server semantics.",
+      "new_findings":[]
+    },
+    {
+      "id":"Proof/Unwrap17",
+      "verdict":"resolved",
+      "evidence_state":"Verified",
+      "decision_retained":"Accept",
+      "source_evidence":[
+        "Exact git diff --no-index from attempt1/after-initial-format-source/.../tests.rs to the current file has only the seventeen unwrap substitutions with call/match formatting:16 panel Option accesses and1 geometry Option access. All literals, assertion conditions, fixtures, loops, calls and their order remain present.",
+        "Current tests.rs1209-1430/1588-1603 keeps the same value on Some and still panics on None, now with explicit panel/geometry context. The clone stays on the extracted panel, .page/.scroll remain on the same panel, and .popup remains on the same geometry value. No expect/allow/helper/early return/skip/default value was added.",
+        "Read both formatter drift diffs and the independent fixture-equivalence receipt. Current postformat b58a5400 is authoritative; preformat1ff48cd3 and requested-only7b982866 retain their original provenance. Net comparison against attempt1 eliminates unrelated format-only movement and leaves no altered oracle/assertion or fixture."
+      ],
+      "runtime_evidence":"Consumed current qualifier receipts: UI MCP56 passed/0failed/0ignored, all five D20 selector lanes4passed each, and workspace all-target Clippy exit0. These are qualifier runs, not reviewer execution; overlapping selectors are not additive unique coverage.",
+      "new_findings":[]
+    }
+  ],
+  "cross_boundary_consumers_reviewed": {
+    "core_live_update":"Extension work dispatch domain_mediator/mod.rs496-499 -> inbound normalization/bound-engine conversion -> inbound.rs38-44 explicit McpUpdate interception -> mcp.rs195-209 normal actual-ID scoped publication -> App1475-1542 routing/application. classify_notification_route2576-2587 explicitly routes matching main IDs to Main, not a peer/workflow or discard path. SessionController301-306 applies the same reducer;455-464 resets on SessionCreated; App1620-1623 refreshes the existing panel. Newly live same-ID values therefore reach the real consumer, not only owner state.",
+    "ui_request":"McpPanelState::request276-288 -> PanelAction::Request -> integration.rs33-53 explicit Request forwarding -> App1896-1902 BridgeCommand::Mcp try_send with visible dispatch failure -> domain_mediator/commands/mod.rs90 explicit MCP branch -> existing mcp_command. Exact captured session/server/reset mode is forwarded without retargeting. Hidden actions produce no value at this boundary.",
+    "new_boundary_types":"Neither production repair introduces a type, variant, event, payload or public function. The changed flow reuses existing McpUpdate and PanelAction/McpRequest paths whose receiving dispatches were explicitly read."
+  },
+  "execution_evidence_consumed_not_rerun": {
+    "reviewer_checks_run":[],
+    "actual_red": {
+      "receipt":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-review-regressions-test-only-red-attempt1/canonical-handoff.json",
+      "sha256":"08428f42d3a8e6e45740a9ac19da4e03ebf97260abddb39ec95f6de33c8af471",
+      "result":"Five commands, seven distinct compiled cases:6intended behavioral FAIL/1different-ID isolation PASS/0ignored.",
+      "reach_limit":"Same-ID failure stopped at captured pre-result uncleared URL; success had already passed replay/order checks but failed0 versus4live publications; UI stopped at first hidden-action non-None; App stopped at nonempty channel before draw. Later assertions were NOT reached on RED and are not claimed as RED coverage."
+    },
+    "attempt1_repaired_green": {
+      "receipt":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt1/canonical-handoff.json",
+      "sha256":"e771b433b477007bc8ba2b68d768726015ced8dfbaa6bdd1e3396165b89387d4",
+      "source_descriptor":"4668713359c929ee280a92c6eca413a00d6bfc8f29c50821417f3ee076524226",
+      "result":"All seven cases completed GREEN, including previously unreached authority/equality/retry and UI/App reanchor/exact-second-dispatch/draft/close assertions. Retained Core MCP7, both SDK admission controls, UI MCP56, App MCP9, D20 and fullworkspace2964PASS/0FAIL/13ignored across41direct targets passed. Nested child summaries are excluded; selector lanes overlap.",
+      "subsequent_failure_preserved":"Attempt1 then stopped at workspace all-target Clippy exit101 with17unwrap_used errors; that actual FAIL remains unchanged, not waived or relabeled."
+    },
+    "attempt2_current_affected": {
+      "receipt":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-repaired-current-assembled-attempt2/running-command-receipts.json",
+      "source_descriptor":"24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+      "UI56":{"passed":56,"failed":0,"ignored":0,"log_sha256":"dd6d7aefea47dd40a769becaed994456f517edec5fabff3f06a203353f877fa3"},
+      "D20":"Five named selector lanes each4PASS/0FAIL/0ignored; same cases overlap UI56 and must not be added as unique tests.",
+      "workspace_all_target_Clippy":{"exit_code":0,"log_sha256":"85d6316f3f5e3b17c7bb4e7fe6ba1ca5509fdc5ead19896d65e555af8152d65a"},
+      "matrix_status_limit":"Additional no-default/strict-KAS commands were progressing and individual completed exit0 entries were visible during review. This report does not own or declare the final matrix/fmt/source-stability checkpoint; qualifier/Main must consume its final canonical receipt."
+    }
+  },
+  "prior_review_and_evidence_retention": [
+    {
+      "scope":"Historical Core/F1-F3 and UI/F1-F4, callback/proof/placement and exact-wire decisions outside the two repaired mechanisms",
+      "disposition":"Retain unchanged conclusions; do not reopen without new evidence.",
+      "reason":"The current repairs change no public/wire type, canonical identity, converter policy, SDK method, callback resolution, request budget, captured form, renderer-width/caret policy or owner assignment. Existing historical Core/F2/UI/F2 are the governing precedents, and the recorded repeated-mechanism checkpoint already selected the present class-wide solutions. The affected live publication and catalog-action portions were freshly reviewed here rather than blanket-retained."
+    },
+    {
+      "scope":"Attempt1 repaired Core/SDK/App behavior and workspace2964/0/13",
+      "disposition":"Retain as source-applicable evidence, with original descriptor and logs.",
+      "reason":"The only substantive later change is test-only Option failure diagnostics; exact current net diff preserves successful fixture behavior, all assertions/case inputs/order and every production path. Current affected UI56/D20 and workspace Clippy provide fresh evidence for the changed fixture input. This does not assert a repeated fullworkspace invocation on24694a4d or waive isolated feature lanes."
+    },
+    {
+      "scope":"Actual RED sensitivity and D20 producer/width fences",
+      "disposition":"Retain original RED identities and their precise assertion reach; no new mutation or rerun was performed.",
+      "reason":"The removed exclusive return and old r/a bypass are the actual pre-fix defects exercised by the immutable behaviorally failing tests. Formatter changes and None-panic contexts do not change their Some-path inputs/assertions. Independent format/equivalence receipts plus direct net-diff reading support applicability; current UI/D20 execution passes. Different-ID isolation was green before the repair and remains a control."
+    },
+    {
+      "scope":"Live/A1, preview login-prerequisite hold, owned run02 renderer FAIL/STOP, standalone zero-width limitation and separate Tqr/Caar obligations",
+      "disposition":"Preserve existing adjudications and pending obligations exactly; not reopened or declared complete.",
+      "reason":"No new runtime/account/native evidence was produced by this source review. The current bounded repairs do not authorize credential storage, draw-ack state, broader zero-width rendering scope, timeout changes or source-independent consumer acceptance."
+    }
+  ],
+  "independent_slice_reviews": [
+    {"reviewer":"ReviewNkCurrentRepairs.CoreRepairReview","artifact":"agent://ReviewNkCurrentRepairs.CoreRepairReview","verdict":"Assembly/Core-F1 resolved; no findings; actual inbound/publication/App/controller consumers traced; no execution or edits"},
+    {"reviewer":"ReviewNkCurrentRepairs.UiRepairReview","artifact":"agent://ReviewNkCurrentRepairs.UiRepairReview","verdict":"Assembly/UI-F1 resolved; no findings; actual geometry/input/typed bridge consumers traced; no execution or edits"}
+  ],
+  "explicit_limits_and_remaining_owners": [
+    "No repository/source/workflow-doc edits, builds, tests, lint, formatter, smoke, native/consumer runs or Git mutations were performed by this reviewer or its scouts. Only read-only source/diff/log/receipt review and this local report were produced.",
+    "The scope is the two current production repairs, seven new cases/retained interactions and seventeen fixture panic-context replacements. This is not a new full49-file feature review or a replacement for retained independent conformance/ownership review.",
+    "Source hashes are qualifier-pinned identities, not reviewer recomputation; all statements about execution name their original checked source. Historical archive trees, original RED, preformat handoffs, bounded517 inputs, parent commit and private binary remain distinct.",
+    "Core failure test injects the real serial recoverable CommandOutcome path; it is not fresh SDK send, actual30-second timeout passage, live enterprise-governance enforcement or terminal-host proof. The retained SDK controls prove only their named admission/failure paths.",
+    "UI/App tests exercise actual UI/App routing, TestBackend paint and a real typed command channel, not a real terminal draw acknowledgement or native KAS request. The approved no-draw-ack/captured-form/local-v decisions remain unchanged.",
+    "Qualifier/Main owns final no-default/strict-KAS/fmt and source-stability receipt. This review's correct verdict does not declare the full remaining matrix PASS.",
+    "Main still owns explicit final-Tqr repair propagation and affected requalification, fresh final-source/private-binary provenance, required assembled repository/CI/integration proof, separately authorized controlled consumer/native acceptance, post-smoke documentation/changelog, issue/PR publication and any Caar-specific startup/deadline/platform obligations. Current b750 lineage/private binary is not called the final propagated delivery.",
+    "There is no new scoped source-review blocker. Existing final-parent, final-qualification and consumer/native dependencies remain pending with their existing owners; none is silently reduced, waived or declared complete."
+  ]
+}

@@ -1,0 +1,622 @@
+{
+  "archive": "/tmp/cyril-nk4o-owned-run04-evidence-20261021-810182.tar.gz",
+  "sha256": "7bb2b8717c507939a79aae189de2b80b5532e49a9593b8d8f24b1b351ec457eb",
+  "bytes": 750644,
+  "members": 150,
+  "all_member_names_and_bytes_verified": true,
+  "canonical_receipt": "local://nk4o-current-owned-consumer-run04.json",
+  "canonical_receipt_sha256": "b745a925aa85d21bc2ce27c7dfeb29f17fe48a7b855e63b571e3fbc6e3693351",
+  "actual_consumer_assertions_passed": 33,
+  "peer_management_assertions_passed": 9,
+  "client_wire_frames": 11,
+  "runtime_files": 128,
+  "prior_failed_run03_bundle_embedded": {
+    "member": "prior/cyril-nk4o-owned-run03-evidence-20261021-727462.tar.gz",
+    "sha256": "a61f737ee3e84f1af0fb54ef5a94e54c51600464ac02b76e1c38f7eccbe96679",
+    "original_status": "FAIL remains FAIL"
+  },
+  "allowlist": [
+    {
+      "member": "run04/01-unknown-inventory-not-empty.cells.json",
+      "sha256": "7ae1ad2da0051351ffb1e9965a86b28e7add2210699fe8fa1daabb6b7adfc515"
+    },
+    {
+      "member": "run04/01-unknown-inventory-not-empty.txt",
+      "sha256": "18e30ea4b1b5c6fcebf60f6f44aeec035022afea88a0efb6218a2048bc27aae4"
+    },
+    {
+      "member": "run04/02-live-named-status-and-catalog.cells.json",
+      "sha256": "6364e0fecb16f0acd3d41390ee675c1f1d64eac5972311b0cc2f4a84d30b6927"
+    },
+    {
+      "member": "run04/02-live-named-status-and-catalog.txt",
+      "sha256": "c182dffcb3e24e001a359cce8ce1b7b71f65bc838e879b45235eac42d37bccf5"
+    },
+    {
+      "member": "run04/03-tools-inspection-only.cells.json",
+      "sha256": "3286d3daa35d97254ee8796924487af01f15075ed8a880fdb6033f65420498d7"
+    },
+    {
+      "member": "run04/03-tools-inspection-only.txt",
+      "sha256": "360411a38a862b05b0c21548176d2d6671325f9f1dbf002330175f6708af3b35"
+    },
+    {
+      "member": "run04/04-display-title-and-canonical-name.cells.json",
+      "sha256": "a792cfcb5e385332bf15282ce13ebf56f8b06caf1762f727343b4e9f1e781ddf"
+    },
+    {
+      "member": "run04/04-display-title-and-canonical-name.txt",
+      "sha256": "ff3dcbac9013a3c34a4c05cd96a61dea85292f0d39f1f17dd140bd4d97ff70c4"
+    },
+    {
+      "member": "run04/05-composed-data-independent-caret-inside.cells.json",
+      "sha256": "3a1728fb78ad8b12d6587923111acf7a6fe600bcec79449dc15543ef5f919c7d"
+    },
+    {
+      "member": "run04/05-composed-data-independent-caret-inside.txt",
+      "sha256": "fde428f6e6e12ad00bc3b0fad97c3af7c25c0c28f44e74c8960df2f7bdd873c9"
+    },
+    {
+      "member": "run04/06-composed-data-existing-boundary.cells.json",
+      "sha256": "e64c2047ef05b85143f230a6bb0a23a716037c3cc403247debbf4fa331f3e723"
+    },
+    {
+      "member": "run04/06-composed-data-existing-boundary.txt",
+      "sha256": "fde428f6e6e12ad00bc3b0fad97c3af7c25c0c28f44e74c8960df2f7bdd873c9"
+    },
+    {
+      "member": "run04/07-grapheme-prepend.cells.json",
+      "sha256": "2a6d43f003935b1cf94e21420477b963bd626ae53d72508a7a49cd7edd37bfeb"
+    },
+    {
+      "member": "run04/07-grapheme-prepend.txt",
+      "sha256": "53d11c8175844600afe1bedbe361b366af3e8254bf91de7b609c3cf390010eec"
+    },
+    {
+      "member": "run04/07-grapheme-spacing.cells.json",
+      "sha256": "1babd7ec24c52e8a8145baf6126f830a60e1b36427dbeeccf7ed30a94198eb38"
+    },
+    {
+      "member": "run04/07-grapheme-spacing.txt",
+      "sha256": "22ce30c6482c4903ed232a5db8db2bff3812f4d32451a1f135af783ea4afb802"
+    },
+    {
+      "member": "run04/07-grapheme-variation.cells.json",
+      "sha256": "98905effd916da19379d20c6d0cfd2e475d1f3f15f1f4e94e197261f065dbb81"
+    },
+    {
+      "member": "run04/07-grapheme-variation.txt",
+      "sha256": "2466abb873f201f935e566e896ac0209b3aa8d1216e9c0cec9005e1156901cea"
+    },
+    {
+      "member": "run04/08-opaque-argument-controls-escaped.cells.json",
+      "sha256": "7f8f0fd528222fc81790fb171db226a07da7d9e5b7ee8ddea8c49c7bf0eb4857"
+    },
+    {
+      "member": "run04/08-opaque-argument-controls-escaped.txt",
+      "sha256": "f3f5baf3f44cc53e92cedd6f9e9ae1b7d525313211e0101c6c3a2a158940f101"
+    },
+    {
+      "member": "run04/09-fixed-readonly-prompt-preview.cells.json",
+      "sha256": "3bf7cc93ad7382f0d7a38db1341e03f32c506b1a9bd037a2bbe0da05047f7591"
+    },
+    {
+      "member": "run04/09-fixed-readonly-prompt-preview.txt",
+      "sha256": "5fddf14e8e1c2c567683b4a554867ada2ce115405dcc207dd847f067695c2284"
+    },
+    {
+      "member": "run04/10-fixed-resource-preview-head.cells.json",
+      "sha256": "1caacc7dff8b82a352bedcf70b72abf158acf6a287bfebb880ee0d9e44ac2e28"
+    },
+    {
+      "member": "run04/10-fixed-resource-preview-head.txt",
+      "sha256": "1ef3142f5e714b59acc43b49d7b8f4a4fcbeddda7f630dc01faf45742b89ba28"
+    },
+    {
+      "member": "run04/11-resource-preview-scroll-tail-and-nontext.cells.json",
+      "sha256": "1cdddcc0687ecfd599530538fd6f9e2c4a0dd40ce7c9b079fa28063fe50135f5"
+    },
+    {
+      "member": "run04/11-resource-preview-scroll-tail-and-nontext.txt",
+      "sha256": "487fa391abdb2a176b0503222ab84bc9d42dbe10c3745eab2e67b416b7b84f77"
+    },
+    {
+      "member": "run04/12-resource-selection-follows-scroll.cells.json",
+      "sha256": "9dd63477d0938536f9a9fb3287f5b2845f9119e6fcf1daf07c87432e6fbd54d2"
+    },
+    {
+      "member": "run04/12-resource-selection-follows-scroll.txt",
+      "sha256": "022a6222a2f3739d2659283661e74973d57dd7c2946694f6e4d83d24faa5e5d1"
+    },
+    {
+      "member": "run04/13-offscreen-enter-reanchors-no-request.cells.json",
+      "sha256": "a8ba93a62936638d0fbdc0d99501d8f755d464f17d38c4a0105f8d9e1758cfbc"
+    },
+    {
+      "member": "run04/13-offscreen-enter-reanchors-no-request.txt",
+      "sha256": "022a6222a2f3739d2659283661e74973d57dd7c2946694f6e4d83d24faa5e5d1"
+    },
+    {
+      "member": "run04/14-explicit-empty-resource-not-malformed.cells.json",
+      "sha256": "a9512ee894af716b8692642aed95d1c4ae11446477cffe0a57cefeb4e190d416"
+    },
+    {
+      "member": "run04/14-explicit-empty-resource-not-malformed.txt",
+      "sha256": "d608baa9150e418b58edef3142725ac56e0a46071d015b2984b7324cf56c309c"
+    },
+    {
+      "member": "run04/15-template-inspection-only.cells.json",
+      "sha256": "4252f512ef929632bfd40a6b1f9ba571a8efbc85bd07ad9f00a2910c95327581"
+    },
+    {
+      "member": "run04/15-template-inspection-only.txt",
+      "sha256": "887d6d355bed55dedaafd48305dfbd6d295cdae15b6bb5551c6f2ffba05fa3e4"
+    },
+    {
+      "member": "run04/16-distinct-refusal.cells.json",
+      "sha256": "04eb375a543c2b954415da60db853523e4e4a580a76cae4aac89fa5b23235ee0"
+    },
+    {
+      "member": "run04/16-distinct-refusal.txt",
+      "sha256": "fe2539d7e2b2b481fb591900899ddc2cf04a41811654a777880d233111dc3388"
+    },
+    {
+      "member": "run04/17-distinct-malformed.cells.json",
+      "sha256": "73ed29a25abcfa0662d4308dd41372289a04c8b62302ffd5e934653178e0b461"
+    },
+    {
+      "member": "run04/17-distinct-malformed.txt",
+      "sha256": "0c201bde34b4ac87bef56d802d3ea6c415e8cc80a2a72de599b57e6ae73c3c0b"
+    },
+    {
+      "member": "run04/18-explicit-empty-prompt.cells.json",
+      "sha256": "757025931127f34902b5d0feda996af8253b2e6ff1dd85c288440a135f12d8e9"
+    },
+    {
+      "member": "run04/18-explicit-empty-prompt.txt",
+      "sha256": "3a8a43b4e46f2e103ea27177448b63230ba72ae98e7aa7e168f30a32a9ebfec6"
+    },
+    {
+      "member": "run04/19-late-result-Disconnected.cells.json",
+      "sha256": "03bb14843044f6943545319d1a0ca1d720810ca8cd3dd0de58bd5f9281bc859c"
+    },
+    {
+      "member": "run04/19-late-result-Disconnected.txt",
+      "sha256": "f487b6d5167e25591e452d7a3e662b418ad1866be3696744739596f1d822f312"
+    },
+    {
+      "member": "run04/19-pending-live-before-disconnect.cells.json",
+      "sha256": "7596fd1608bcf89a39214cc1d7ec9532a52887040b8abf23de2e3a417d03cfe1"
+    },
+    {
+      "member": "run04/19-pending-live-before-disconnect.txt",
+      "sha256": "8653dc15c0fbbc7b6dde9e9503f9ff2c62cadfe9a0232d5f8047c7e411baf03e"
+    },
+    {
+      "member": "run04/20-late-result-EntryMissing.cells.json",
+      "sha256": "bcd1b460815d20f75b286acf4c8f91521ca027dbd4417940ee4d9e9e717043e6"
+    },
+    {
+      "member": "run04/20-late-result-EntryMissing.txt",
+      "sha256": "72df6cba653ac1d50a0926b76f396828e10a99da030efae76a3bff69d8b61655"
+    },
+    {
+      "member": "run04/20-pending-live-before-entry-missing.cells.json",
+      "sha256": "600d29f4c4ad22e483faa1fa32a7ca829004a1944aef3756294120671865727f"
+    },
+    {
+      "member": "run04/20-pending-live-before-entry-missing.txt",
+      "sha256": "8653dc15c0fbbc7b6dde9e9503f9ff2c62cadfe9a0232d5f8047c7e411baf03e"
+    },
+    {
+      "member": "run04/21-late-result-ServerMissing.cells.json",
+      "sha256": "52455e06804929e4d84d4ce6471ca216f3198d7cbe77db9f7950d3da0c2e8347"
+    },
+    {
+      "member": "run04/21-late-result-ServerMissing.txt",
+      "sha256": "5f2f8be8554674f4061130dc58fec9163aadd6618c00d4b251650b3fb8707a2d"
+    },
+    {
+      "member": "run04/21-pending-live-before-server-missing.cells.json",
+      "sha256": "b969d4356c8c743654d5c7c1cd7e9b44e0cd4883e3af0b63a63e20a202efe1fb"
+    },
+    {
+      "member": "run04/21-pending-live-before-server-missing.txt",
+      "sha256": "8653dc15c0fbbc7b6dde9e9503f9ff2c62cadfe9a0232d5f8047c7e411baf03e"
+    },
+    {
+      "member": "run04/22-malformed-snapshot-retains-valid-state.cells.json",
+      "sha256": "dc4b5027b8a80187b45ac4c659f3c5bbaaa560bf8e335eaf754591e6ff288555"
+    },
+    {
+      "member": "run04/22-malformed-snapshot-retains-valid-state.txt",
+      "sha256": "56f163e24e1de977a3112c5efe1466ca75a84d95e2f3643228908c5419e183ca"
+    },
+    {
+      "member": "run04/23-known-empty-registry-and-policy-exclusions.cells.json",
+      "sha256": "b749c32593dff4f7cb6b235d4cadd66d164ff2c250003fc2c99e6157470a6d43"
+    },
+    {
+      "member": "run04/23-known-empty-registry-and-policy-exclusions.txt",
+      "sha256": "3c5db16464e50e6c9e4be9dadb4bab89697f0dd2ad914ffe8ebbb87405e1c079"
+    },
+    {
+      "member": "run04/24-governance-api_failure.cells.json",
+      "sha256": "27a433a4162c008b5905d24531991d1a119721d34679405b41d2f2752adae4e8"
+    },
+    {
+      "member": "run04/24-governance-api_failure.txt",
+      "sha256": "32a38a13712024f1843c5c5ea565c6f3df8d0f1f846ce2d83c3888fe99b1155a"
+    },
+    {
+      "member": "run04/25-governance-admin_disabled.cells.json",
+      "sha256": "6f5f0906c253d6c2abad2cac5bd9208d72e6a4f6578ad5596f8552bbe2372bf0"
+    },
+    {
+      "member": "run04/25-governance-admin_disabled.txt",
+      "sha256": "4363407d9f51c17ad319c6069a8a23eabb7bf91d2250352b013ab00baf170668"
+    },
+    {
+      "member": "run04/26-governance-future_owned_reason.cells.json",
+      "sha256": "c35967d66f87222e0a03f98c3cf361f36235ea034f8963474a00e3fb3d63a866"
+    },
+    {
+      "member": "run04/26-governance-future_owned_reason.txt",
+      "sha256": "931349ac7a03a44f7cf206b2a52e449bdf6eeed88c1d73b30aa7cbacc79fba8d"
+    },
+    {
+      "member": "run04/27-escape-chat-input-isolation.cells.json",
+      "sha256": "adbb3b8c0748cd553ce799176467fb63327f4d75003b4a82a82c07123b2b403f"
+    },
+    {
+      "member": "run04/27-escape-chat-input-isolation.txt",
+      "sha256": "c34e31380149d24cb35b716f19450a5c31d65a24302cb549512ad41b794caf39"
+    },
+    {
+      "member": "run04/ack-0001.json",
+      "sha256": "8c1c8d96eba5e555a49215c93bf135ec56c7d44c56d5cc6d43d12ba25b1f55dd"
+    },
+    {
+      "member": "run04/ack-0002.json",
+      "sha256": "51bec73a968acd667cc85cb0dbb85fcef0a398e29e9ffbd270ab1d4881d0a589"
+    },
+    {
+      "member": "run04/ack-0003.json",
+      "sha256": "8c1c8d96eba5e555a49215c93bf135ec56c7d44c56d5cc6d43d12ba25b1f55dd"
+    },
+    {
+      "member": "run04/ack-0004.json",
+      "sha256": "f61ea2d4369c0e0d189c8d6565d938840fbd920335e9f1220bb68b1546b70e51"
+    },
+    {
+      "member": "run04/ack-0005.json",
+      "sha256": "1466bd0ff7f687d7c23ed3eba5ecb43a3d1e2c814717bf3610299e2cb8c7486c"
+    },
+    {
+      "member": "run04/ack-0006.json",
+      "sha256": "8c1c8d96eba5e555a49215c93bf135ec56c7d44c56d5cc6d43d12ba25b1f55dd"
+    },
+    {
+      "member": "run04/ack-0007.json",
+      "sha256": "604539502f2d3d24b9a9ec440af62593d56d411e463f4bc07941a860ec6ef02e"
+    },
+    {
+      "member": "run04/ack-0008.json",
+      "sha256": "1466bd0ff7f687d7c23ed3eba5ecb43a3d1e2c814717bf3610299e2cb8c7486c"
+    },
+    {
+      "member": "run04/ack-0009.json",
+      "sha256": "8c1c8d96eba5e555a49215c93bf135ec56c7d44c56d5cc6d43d12ba25b1f55dd"
+    },
+    {
+      "member": "run04/ack-0010.json",
+      "sha256": "a1f1efe547e35d54c5e80284e6cc9353dd89f6e9d693bd74b3ede8de1cf33b53"
+    },
+    {
+      "member": "run04/ack-0011.json",
+      "sha256": "1466bd0ff7f687d7c23ed3eba5ecb43a3d1e2c814717bf3610299e2cb8c7486c"
+    },
+    {
+      "member": "run04/ack-0012.json",
+      "sha256": "8c1c8d96eba5e555a49215c93bf135ec56c7d44c56d5cc6d43d12ba25b1f55dd"
+    },
+    {
+      "member": "run04/ack-0013.json",
+      "sha256": "568b3769c56b178054c96f4ec883f3007265b88487c74f245fa06b0cd6521e4a"
+    },
+    {
+      "member": "run04/ack-0014.json",
+      "sha256": "4f1e3d162f3e8a9540f11399702f4f39df00b695fc132af2b8c44b4a1f4083c7"
+    },
+    {
+      "member": "run04/ack-0015.json",
+      "sha256": "08c08e43228a3fc0f60b64427590631f183495740b5dfbc6aba4041c8b9889dc"
+    },
+    {
+      "member": "run04/ack-0016.json",
+      "sha256": "c0e4c9c1ada3641cabc202ed3fe22e966e539213b8e8750a7d8a227081d9ebed"
+    },
+    {
+      "member": "run04/ack-0017.json",
+      "sha256": "eb5c430051c12304ec9eb4d4c2e79a2963e8582a1afa890f44df38af5c7700ca"
+    },
+    {
+      "member": "run04/ack-0018.json",
+      "sha256": "c0e4c9c1ada3641cabc202ed3fe22e966e539213b8e8750a7d8a227081d9ebed"
+    },
+    {
+      "member": "run04/authorization.snapshot.json",
+      "sha256": "dd0aa8be07c3249ec689f59113cd66e104cf8148c92f8dfdda1312486c42b692"
+    },
+    {
+      "member": "run04/canonical-source.snapshot.json",
+      "sha256": "48f84d46a6dbbebecc82b182a0729020824bc836bf3b9079903c4fb286f206d9"
+    },
+    {
+      "member": "run04/client-wire.jsonl",
+      "sha256": "240a6858f2ee246b509625406c0c64090fbd76f0210b5394d405a8a347639c28"
+    },
+    {
+      "member": "run04/config.snapshot.toml",
+      "sha256": "e63d84fc2a0055f091d13ef44e5273c63c92bfcaa28c845e24bc8e87513feb3e"
+    },
+    {
+      "member": "run04/control-0001.json",
+      "sha256": "186d73651fce61c9340f8f32a4884bbb5b616e44ba0e2427cf52ce3dfa10f980"
+    },
+    {
+      "member": "run04/control-0002.json",
+      "sha256": "ae2fc4242155f11e77120738b4f4edb673cccb5c8cf74aeb712410cee1cfbb10"
+    },
+    {
+      "member": "run04/control-0003.json",
+      "sha256": "186d73651fce61c9340f8f32a4884bbb5b616e44ba0e2427cf52ce3dfa10f980"
+    },
+    {
+      "member": "run04/control-0004.json",
+      "sha256": "897c0f71e8fb3f55811966ee51be3e3c90a4894a21cae8348e96d3c7307ccb9a"
+    },
+    {
+      "member": "run04/control-0005.json",
+      "sha256": "5117ef094099e519a6e0195b2fac3ad56f08b66a9ee4d61cb5fba912b2438152"
+    },
+    {
+      "member": "run04/control-0006.json",
+      "sha256": "186d73651fce61c9340f8f32a4884bbb5b616e44ba0e2427cf52ce3dfa10f980"
+    },
+    {
+      "member": "run04/control-0007.json",
+      "sha256": "3bcd4a973f0a14e90b8cdb8b26dccf3bd039b00a0077efa844495c52f0e48789"
+    },
+    {
+      "member": "run04/control-0008.json",
+      "sha256": "5117ef094099e519a6e0195b2fac3ad56f08b66a9ee4d61cb5fba912b2438152"
+    },
+    {
+      "member": "run04/control-0009.json",
+      "sha256": "186d73651fce61c9340f8f32a4884bbb5b616e44ba0e2427cf52ce3dfa10f980"
+    },
+    {
+      "member": "run04/control-0010.json",
+      "sha256": "6196eb644c74cb9d8f32df92dd30bb02670ef724d204e035135ebff0ca4de79e"
+    },
+    {
+      "member": "run04/control-0011.json",
+      "sha256": "5117ef094099e519a6e0195b2fac3ad56f08b66a9ee4d61cb5fba912b2438152"
+    },
+    {
+      "member": "run04/control-0012.json",
+      "sha256": "186d73651fce61c9340f8f32a4884bbb5b616e44ba0e2427cf52ce3dfa10f980"
+    },
+    {
+      "member": "run04/control-0013.json",
+      "sha256": "cfcb7c5da30746d98dfa029b249793e314a4dcff5eac5937511395cb14be70e5"
+    },
+    {
+      "member": "run04/control-0014.json",
+      "sha256": "bcfa738cb5477c45f1324142fd87b0bb4cd15e28caa21dfa39e2661db9fd71da"
+    },
+    {
+      "member": "run04/control-0015.json",
+      "sha256": "83472c22af4513626eaf650a9455d8ec75a02badacf426599798dd7cd867b977"
+    },
+    {
+      "member": "run04/control-0016.json",
+      "sha256": "e2a47a87da410f15d77c571a9aaf6603b3842fdda306903b0f7724d33ed72c1e"
+    },
+    {
+      "member": "run04/control-0017.json",
+      "sha256": "166ca7804a9357a2203d41d8adfa91c8f92817e24a5f84fb7bb1983031a49a0b"
+    },
+    {
+      "member": "run04/control-0018.json",
+      "sha256": "e2a47a87da410f15d77c571a9aaf6603b3842fdda306903b0f7724d33ed72c1e"
+    },
+    {
+      "member": "run04/cyril-start-identity.json",
+      "sha256": "53abdd9b62fb8c824f80290cd1b0987850f216c408e1c8645c048050e2fb937d"
+    },
+    {
+      "member": "run04/events.jsonl",
+      "sha256": "237bde6e5873c47661476c37ff0ac38f662afbb294861527f26a7cb1e43319fb"
+    },
+    {
+      "member": "run04/fake-cli-argv.txt",
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e"
+    },
+    {
+      "member": "run04/fake-kiro-cli.snapshot.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d"
+    },
+    {
+      "member": "run04/final.cells.json",
+      "sha256": "8813f1b1a83062b9083b55f65b4bc30a891b85bdc92963340a36f5487ddf2f20"
+    },
+    {
+      "member": "run04/final.txt",
+      "sha256": "c34e31380149d24cb35b716f19450a5c31d65a24302cb549512ad41b794caf39"
+    },
+    {
+      "member": "run04/harness.snapshot.py",
+      "sha256": "13865bc1dff67e06c6e5a5dd38e6bf3dfb79a3bc27d4fd22ddcfb9d15122f142"
+    },
+    {
+      "member": "run04/owned-process-chain.json",
+      "sha256": "bca217b21f3209340def2cb65a9174e0e08b4e9507da1536c2ca2e5d7ddd9094"
+    },
+    {
+      "member": "run04/owned-process-identities.json",
+      "sha256": "c356bf03fb264e18650f64aeac08620aa578615ccbead570505e81e004e3dc68"
+    },
+    {
+      "member": "run04/owned-server.snapshot.js",
+      "sha256": "188c2beee4b4685fba63db5a9b1be4eca5b76ebee04d78141cc37698f61420dc"
+    },
+    {
+      "member": "run04/peer-assertions.jsonl",
+      "sha256": "926d2b0fa50a6b520d916827c1e63c8914035ab1a166816a026d1619acce0996"
+    },
+    {
+      "member": "run04/peer-state.json",
+      "sha256": "9c39fd466d1d3ba738f244b4b7870c7a2745081ff37d51f2f545a84c81552709"
+    },
+    {
+      "member": "run04/peer-wire.jsonl",
+      "sha256": "b34f19ef1fff8882a129234a52df742f019255eb7f872d31accde9dab1b5400f"
+    },
+    {
+      "member": "run04/pre-cleanup-cells.json",
+      "sha256": "8813f1b1a83062b9083b55f65b4bc30a891b85bdc92963340a36f5487ddf2f20"
+    },
+    {
+      "member": "run04/pre-cleanup-screen.txt",
+      "sha256": "c34e31380149d24cb35b716f19450a5c31d65a24302cb549512ad41b794caf39"
+    },
+    {
+      "member": "run04/pre-cleanup.client-wire.jsonl",
+      "sha256": "240a6858f2ee246b509625406c0c64090fbd76f0210b5394d405a8a347639c28"
+    },
+    {
+      "member": "run04/pre-cleanup.events.jsonl",
+      "sha256": "237bde6e5873c47661476c37ff0ac38f662afbb294861527f26a7cb1e43319fb"
+    },
+    {
+      "member": "run04/pre-cleanup.peer-state.json",
+      "sha256": "9c39fd466d1d3ba738f244b4b7870c7a2745081ff37d51f2f545a84c81552709"
+    },
+    {
+      "member": "run04/pre-cleanup.peer-wire.jsonl",
+      "sha256": "b34f19ef1fff8882a129234a52df742f019255eb7f872d31accde9dab1b5400f"
+    },
+    {
+      "member": "run04/pre-cleanup.terminal.ansi",
+      "sha256": "bcf32c0877ddea5fdbafd3cdb10b646afb1afe116896009929812b35ced1cedd"
+    },
+    {
+      "member": "run04/result.json",
+      "sha256": "b53ae0da11fd547f46d33490d473d4e7aae4f3f10786d0f43bf8eb20942a452f"
+    },
+    {
+      "member": "run04/safety.json",
+      "sha256": "562973f2811ba43f03b236e37e94078b0fc6c02bfe7dd9e980fdf5a24a37c92c"
+    },
+    {
+      "member": "run04/terminal.ansi",
+      "sha256": "bcf32c0877ddea5fdbafd3cdb10b646afb1afe116896009929812b35ced1cedd"
+    },
+    {
+      "member": "run04/wide_overwrite.snapshot.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-all-attempts.json",
+      "sha256": "9823eea97f042442ca11fce8eb593cc0ab94c0cf32cfc148eea3f62bdc78a8c8"
+    },
+    {
+      "member": "handoff/nk4o-decoder-reuse.diff",
+      "sha256": "0cebd2ff8b7846080b1461a4a08b29c7741172a12f97a17a4bc2ab1d3e06a0f0"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt1.py",
+      "sha256": "729f8f6f23470310bd4ba6fcdeb02683cc5f9060ee96c2a0a193a3b68d2e6355"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt1.json",
+      "sha256": "9e07419048eeeeab85b610822efea3348ef77af46917f6e40e88bd00a86eef7b"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt1-console.txt",
+      "sha256": "021b8f0b03325210c8ba97e5e4c70b16d71e1692129bbc92ce5a25e200b969aa"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt1-invocation.txt",
+      "sha256": "ca035ffd1210359f5ee3f10995b77e1c45f9f1545806b8d8965d740acc2331a3"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay.py",
+      "sha256": "729f8f6f23470310bd4ba6fcdeb02683cc5f9060ee96c2a0a193a3b68d2e6355"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay.json",
+      "sha256": "9e07419048eeeeab85b610822efea3348ef77af46917f6e40e88bd00a86eef7b"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-console.txt",
+      "sha256": "021b8f0b03325210c8ba97e5e4c70b16d71e1692129bbc92ce5a25e200b969aa"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-invocation.txt",
+      "sha256": "ca035ffd1210359f5ee3f10995b77e1c45f9f1545806b8d8965d740acc2331a3"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt2.py",
+      "sha256": "c39008c5a90bb06f8456dc706b7f4e1cc38646e2546137806ddbbec5ec514153"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt2.json",
+      "sha256": "a65a98efd3fe2c9b83b27558a6624e9931be5fe8aba38340f5d686c77b53320b"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt2-console.txt",
+      "sha256": "d950cedd947457d16179d285bf2647c5f933fc9c47854580fb6e0ba26fdb05ac"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt2-invocation.txt",
+      "sha256": "1856b0861e6d0dd8c426e178b971f3964c429f96efe2858d93aa4b1910fed7b4"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt3.py",
+      "sha256": "7fb9a1d15f751548129fab991e2ff25321e76568e35fcfebe73211fdc032285d"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt3.json",
+      "sha256": "647aeda44a0b3e273b23fdac2d96557fed4b6c5c593aad0a532d81e5776de79b"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt3-console.txt",
+      "sha256": "feb95dbad6e8b2deb8b1f71a6196f180491d248bad094d5b279b3fdf852ffefa"
+    },
+    {
+      "member": "handoff/nk4o-run03-offline-adapter-replay-attempt3-invocation.txt",
+      "sha256": "eeaddfcc5a0341592691bcf2956e4bdbdff7ba96a2c937f802c6899b1eb605d1"
+    },
+    {
+      "member": "handoff/nk4o-decoder-reuse-review.json",
+      "sha256": "42d3544cd4f0aa4ca9c554171f84a49aba3fcddd787cacf58e5e0c80f5f06ad5"
+    },
+    {
+      "member": "handoff/nk4o-decoder-reuse-handoff.json",
+      "sha256": "0c64188531a55c01e99ec68e0bf2cc7e0c6968c4fe7fbc9c87e4d649b216c0de"
+    },
+    {
+      "member": "handoff/nk4o-current-owned-consumer-run04.json",
+      "sha256": "b745a925aa85d21bc2ce27c7dfeb29f17fe48a7b855e63b571e3fbc6e3693351"
+    },
+    {
+      "member": "prior/cyril-nk4o-owned-run03-evidence-20261021-727462.tar.gz",
+      "sha256": "a61f737ee3e84f1af0fb54ef5a94e54c51600464ac02b76e1c38f7eccbe96679"
+    }
+  ],
+  "nonsecret_policy": "Only explicit owned/synthetic runtime artifacts, code/hash/source qualification metadata, offline-prerequisite failure/replay records and parent bounded review. No real native private IDs/logs, account/token/config/HOME/cache state or unlisted files. Binary itself not bundled; exact qualified hash is recorded. Archive member count is NOT server inventory scale.",
+  "acceptance_boundary": "Current91771/source49+517 owned readonly MCP proof only; no native/futureTqr/Caar/finalintegration/URLgutter/natural>=90/real80/95/hostglyph acceptance."
+}

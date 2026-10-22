@@ -1,0 +1,118 @@
+{
+  "schema": "cyril-caar-current-draft-proof-index/v1",
+  "status": "CURRENT563_LOCAL10_AND_ONE_OWNED_SAME_ID_APP_SMOKE_PASS_DRAFT_NATIVE_CI_FINAL_COMBINED_PENDING",
+  "as_of": "2026-10-22",
+  "authority": "Main authorized one exact current assembled local matrix, one owned actual-App same-ID smoke and bounded publication preparation. Main alone owns final parent/source binding and publication. No native/auth/CI/final-combined waiver, issue closure or merge authorization follows.",
+  "issue": {"id": "cyril-caar", "state": "Keep open; no closure authorized"},
+  "publication": {
+    "prepared_head_branch": "fix/cyril-caar-final",
+    "draft": true,
+    "base": "main",
+    "explicit_dependency_PR": 196,
+    "dependency_url": "https://github.com/dwalleck/cyril/pull/196",
+    "logical_delivery_order": "Tqr #193 -> NK #196 -> separate Caar PR",
+    "CI_trigger_limit": "Main reports existing CI targets main; do not broaden workflows, add empty commits or request reruns. No Caar CI PASS is asserted here.",
+    "PR_body": "../pr-body.md",
+    "worker_publication_operations": "None: Main owns completing the held normal three-parent assembly merge and draft PR198 publication/update. This index records checked held frames, not an unobserved final merge commit or CI result.",
+    "cumulative_diff_limit": "Before dependencies merge, the main-targeted PR diff can include inherited Tqr/NK paths. feature-files.json identifies the25 Caar-owned paths; inherited source is not relabeled Caar work.",
+    "PR187": "Untouched"
+  },
+  "records": {
+    "historical_original529_source_and_binary_pins": "source-pins.json",
+    "historical_original529_held_integration_boundary_verbatim": "integration-boundary.json",
+    "historical_original529_input_inventory_verbatim": "source-inventory.json",
+    "Caar_owned_feature_paths": "feature-files.json",
+    "historical_original529_local_qualification": "qualification.json",
+    "historical_original529_reviews_and_formatter_applicability": "review-applicability.json",
+    "historical_native_attempts_observation_gaps_and_original_auth_blocker": "native-consumer.json",
+    "approved_timing_contract_clauses_verbatim": "timing-contract-citations.json",
+    "independent_metadata_review_not_final_source_conformance": "metadata-review.json",
+    "historical_preP3_publication_manifest": "publication-manifest.json",
+    "current_owning_repair_record": "../review-decisions.md#current-ordinary-review-repair--caar62p3",
+    "current_portable_archive": "p3-assembled-proof.zip",
+    "current_portable_member_index": "p3-assembled-proof-members.json"
+  },
+  "current_checked_frame": {
+    "HEAD": "62e313d4d27c5c76348ce7e6a58f794e56ff839b",
+    "held_MERGE_HEADs": ["1740221839f3c4455ed9c4536c1a23b1905fc531", "2d1c93843834e21966ca8e816349d891ac97d5d9"],
+    "final_publication_commit": null,
+    "source529_descriptor": "d4b06156946dc410b95bbde91e7157587bd5185d48713701c011472ebec09f2f",
+    "identified563_descriptor": "badeaff8ddbbe360cb5c357b2996abd8603c0726441f216bb88d00b05ba1852d",
+    "descriptors_are_not_Git_revisions": true,
+    "identified563_manifest_sha256": "75895ad1080713787d763118500826dfbb942e52a99f9c96c8b834fbe38776d1",
+    "unchanged_P3_state_rs_sha256": "4eaf57c51abb3b064fccc67df971eab2997ae4377cff96728222b9d2393569c5",
+    "unchanged_App_startup_tests_sha256": "efbb14aa5b184d828a6a3719c5fe45afc0f76563de90cd8a373a39477db0fe5a",
+    "parent_source_retention": "Whole-file NK4 and Tqr Core typed-error test match their exact qualified parent pins; unchanged production pieces retain only their recorded scoped reviews, not a new combined verdict.",
+    "private_default_App_sha256": "0c339b4bbc0203dde6de2dadfbb2312b11425e0fb6872f7756f11ce7cabd5ca1",
+    "private_default_App_bytes": 105294088,
+    "production_binary_bundled": false,
+    "current_canonical_archive_member": "qualification/canonical-current563-exact10.json",
+    "current_canonical_sha256": "71eac9997df2bcb39cbee296b1f91a7afb9b6dbba60912a0ce209414df3cb9cc",
+    "historical_P3_only_no_held_merge_descriptor": "46c3224cc9826ae644bc428184e75577d3e173f0471997311f8a001a61d2a5f7",
+    "historical_original529_descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "old529_a5_binary_not_current": true
+  },
+  "portable_evidence": {
+    "archive": "p3-assembled-proof.zip",
+    "archive_sha256": "c93bd2acca6ce363770d69d166789ce362fb705dfdf3454bd4f7c7cb4d81c9b1",
+    "archive_bytes": 200536,
+    "member_index": "p3-assembled-proof-members.json",
+    "member_index_sha256": "8ffb91805c7e9dc9a0e516dc23235f66ee32b5bf9d1fc277a3d4b947e6db75aa",
+    "member_count": 33,
+    "uncompressed_bytes": 813424,
+    "contents": "Byte-exact canonical, two manifests, ten logs, original FAIL/scoped PASS review pair, owned same-ID authority/guards/receipt/frame journal and before-pending-after text+ANSI/release/exit evidence; no binaries/full tree.",
+    "originals_unchanged": true,
+    "not_complete_standalone_replay": true
+  },
+  "review_attribution": {
+    "original62_full_review": {"verdict": "FAIL / incorrect", "sha256": "3e7ca7038f9d3dec999761923ece662548e81a0ea8943165e7f45fb94080f254", "archive_member": "reviews/assembled-review-62e313d4-original.md"},
+    "P3_scoped_source_rereview": {"verdict": "PASS", "sha256": "9f8c22ab606718b9e08f7863c08f70178816775383b8b4bb7607ef37677b2060", "archive_member": "reviews/same-id-load-scoped-review.md"},
+    "limits": "The original FAIL is not rewritten; scoped repair/component reviews plus exact production identity do not assert fresh final combined conformance."
+  },
+  "local_qualification": {
+    "state": "All10 assigned current held-parent/source563 local commands PASS",
+    "owner": "../review-decisions.md#current-ordinary-review-repair--caar62p3",
+    "actual_current_results": {"three_package_KAS": {"passed": 3006, "failed": 0, "ignored": 12}, "isolated_App_no_default": {"passed": 380, "failed": 0, "ignored": 1}, "isolated_Core_no_default": {"passed": 1067, "failed": 0, "ignored": 4}, "overlapping_executions_not_globally_unique": {"passed": 4453, "failed": 0, "ignored": 17}},
+    "current_App_startup_cases": "15 freshly executed PASS in both full-default and isolated no-default lanes",
+    "nonclaims": ["Whole workspace", "All-features", "nextest", "release", "platform CI", "native/provider acceptance", "final combined conformance"],
+    "historical_original529_immutable_failure": "Initial fmt check failed92hunks10paths. A separately Main-authorized single standard formatter pass and fresh complete local22 matrix followed in its original frame, not this current ten-command run.",
+    "historical_original529_metadata_discrepancy": "The old sealed receipt's copied preflight NOT_RUN field remains disclosed in qualification.json/review-applicability.json; original receipt not rewritten."
+  },
+  "owned_same_id_App_smoke": {
+    "state": "PASS_ONE_AUTHORIZED_ACTUAL_APP_TMUX_V2_CASE_TEN_CHECKS",
+    "archive_member": "same-id-smoke/execution-handoff.json",
+    "receipt_sha256": "23fdb0a6dbb93d37329e92478ece143cd2598cb5f366d4ea529aab733e14ac51",
+    "source_and_binary": "Current checked frame/private default App above; entry/postflight source/ref/immutable guards PASS",
+    "observed": "Root A established and still current; actual /load A plus Enter; matching A-scoped progress renders requested load; response pending once before held reply, retained once after matching release; Main read pending capture",
+    "rpc_methods": ["initialize", "session/new", "session/load"],
+    "App_bwrap_exit": 0,
+    "launcher_exit": "UNOBSERVED",
+    "separate_peer_exit_code": "UNOBSERVED",
+    "no_forced_signals": true,
+    "owned_tmux_stopped_and_launcher_pidfd_closed": true,
+    "limits": "One owned tmux/bwrap App/V2 peer run, not native/provider/KAS/auth/startup-inventory acceptance; frame-object journal is not a byte-for-byte stdio recording; no new timing budget."
+  },
+  "native": {
+    "state": "Required native acceptance remains incomplete; original529/a5 attempt was BLOCKED before initialize/session-new by reported not-logged-in error. Current assembled frame has not reprobed native/auth.",
+    "latest_governing_original": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/current-joint529-native-after-startup-surface-result.json",
+    "latest_governing_original_sha256": "3ab184029376efdce7bb2cce4e885b19ef13f8aad0c4ea55b8ebc7165171091f",
+    "no_latest_acceptance": ["startup2", "navigation9", "previews", "natural inventory", "New80", "New95"],
+    "historical_observations": "Earlier actual New/present-preview observations remain valid only within their exact earlier attempt/source/driver predicates. Both fixture-observation gaps and failed totals remain retained. Corrected d558 startup/navigation layers are reviewed but unexercised because of auth; no product fix is inferred.",
+    "cause_limit": "Exact CLI report only, not a diagnosis of global logout, credential expiry, auth-root correctness or a product defect. No credential/config probing, login/retry or native execution was performed for this publication packet.",
+    "timer_limit": "The >=90s New product policy remains mandatory. Deterministic actual-request tests and live80/95 integration have complementary approved roles. Natural inventory's independent95s actual>=90s observation is separate. Proxy-request-to-first-UI-result is not independent product timer creation-to-fire evidence; no new threshold/observer is introduced."
+  },
+  "remaining_acceptance": [
+    "Required native consumer startup/navigation, preview/resource/final-side-effect, natural-inventory and New80/New95 acceptance under fresh Main authority",
+    "Source-bound Caar CI/platform status",
+    "Final combined assembled-source conformance/review at Main's final binding; scoped component results are not a blanket verdict",
+    "Main final three-parent normal-merge/source binding and publication receipt; checked held frames do not predict a final commit"
+  ],
+  "packet_contract": {
+    "included": "Current owning Caar records/PR body/index plus compact byte-exact current local qualification and owned same-ID evidence; historical projections retain their named original frames.",
+    "retained_originals": "Historical canonical handoffs, complete500-group case records, raw native/auth/environment archives, old binaries and earlier patches remain at exact original paths/hashes. The compact archive bundles only its member-index allowlist.",
+    "not_self_contained_replay_or_archive": true,
+    "excluded": ["Auth/config/native fixture data or tokens", "Production credentials", "Raw private native/environment archives", "Private binaries", "Old source/lockfile overlays", "Unrelated tracker drift"],
+    "historical_record_rule": "Imported workflow documents preserve their canonical historical text. Their older source pins, commands and statuses do not supersede this current index or authorize source reapplication.",
+    "source_hold": "No product/Cargo/Git/build/runtime operations by publication-metadata workers. Final parent/source binding and publication remain Main-owned; current identified563 input scope is explicit in its archived manifest."
+  }
+}

@@ -1,0 +1,109 @@
+SCOPED_POSTFORMAT_TEST_ONLY_QUALIFICATION {"label": "exact-Core-KAS-mcp_error-module-nocapture", "argv": ["cargo", "test", "-p", "cyril-core", "--features", "kas", "--lib", "protocol::domain_mediator::tests::mcp_error", "--", "--nocapture"], "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8", "CARGO_TARGET_DIR": "/home/dwalleck/repos/cyril/target", "GIT_OPTIONAL_LOCKS": "0", "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22", "postformat_test_source_pre_sha256": "50ac7d68ea110499798577ddaa0ad8921811955dfcacae4f3770430c13304095", "current_postformat_source503_descriptor": "afeebb5d6ca23e0d5a0cc845fbb151a6d30f9854513dc6e86069dea12d535737", "profile": "test opt-level1", "features": "Core explicit kas; no other CLI features, no all-features or no-default flag", "started_utc": "2026-10-22T15:21:54.211623+00:00", "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-d0cc60d7-typed-mcp-error-test-only-qualification-20261022T151416942873Z/authorized-normal-format-continuation-20261022T152049180253Z/02-exact-Core-KAS-mcp_error-module-nocapture.log"}
+COMMAND cargo test -p cyril-core --features kas --lib protocol::domain_mediator::tests::mcp_error -- --nocapture
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.44
+   Compiling libc v0.2.186
+   Compiling serde_core v1.0.228
+   Compiling serde v1.0.228
+   Compiling crossbeam-utils v0.8.21
+   Compiling zmij v1.0.21
+   Compiling parking_lot_core v0.9.12
+   Compiling serde_json v1.0.149
+   Compiling rustix v1.1.4
+   Compiling typenum v1.19.0
+   Compiling httparse v1.10.1
+   Compiling ref-cast v1.0.25
+   Compiling async-io v2.6.0
+   Compiling getrandom v0.4.2
+   Compiling anyhow v1.0.101
+   Compiling generic-array v0.14.7
+   Compiling num-traits v0.2.19
+   Compiling rstest_macros v0.25.0
+   Compiling libsqlite3-sys v0.37.0
+   Compiling thiserror v2.0.18
+   Compiling nix v0.31.3
+   Compiling polling v3.11.0
+   Compiling concurrent-queue v2.5.0
+   Compiling rusqlite v0.39.0
+   Compiling event-listener v5.4.1
+   Compiling chrono v0.4.45
+   Compiling event-listener-strategy v0.5.4
+   Compiling async-channel v2.5.0
+   Compiling async-lock v3.4.2
+   Compiling syn v2.0.116
+   Compiling syn v3.0.4
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling blocking v1.7.0
+   Compiling digest v0.10.7
+   Compiling sha2 v0.10.9
+   Compiling errno v0.3.14
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.2
+   Compiling open v5.4.2
+   Compiling uuid v1.22.0
+   Compiling tempfile v3.27.0
+   Compiling signal-hook-registry v1.4.8
+   Compiling parking_lot v0.12.5
+   Compiling serde_path_to_error v0.1.20
+   Compiling serde_spanned v1.0.4
+   Compiling toml_datetime v1.0.1+spec-1.1.0
+   Compiling async-signal v0.2.14
+   Compiling async-process v2.5.0
+   Compiling toml v1.0.7+spec-1.1.0
+   Compiling tokio-macros v2.7.2
+   Compiling agent-client-protocol-derive v2.0.0
+   Compiling tokio v1.53.1
+   Compiling darling_core v0.23.0
+   Compiling serde_derive_internals v0.29.1
+   Compiling serde_derive v1.0.228
+   Compiling tracing-attributes v0.1.31
+   Compiling futures-macro v0.3.32
+   Compiling ref-cast-impl v1.0.25
+   Compiling strum_macros v0.28.0
+   Compiling pin-project-internal v1.1.13
+   Compiling derive_more-impl v2.1.1
+   Compiling clap_derive v4.5.55
+   Compiling thiserror-impl v2.0.18
+   Compiling async-trait v0.1.89
+   Compiling futures-util v0.3.32
+   Compiling pin-project v1.1.13
+   Compiling futures-concurrency v7.7.1
+   Compiling schemars_derive v1.2.1
+   Compiling tracing v0.1.44
+   Compiling derive_more v2.1.1
+   Compiling axum-core v0.5.6
+   Compiling strum v0.28.0
+   Compiling clap v4.5.60
+   Compiling darling_macro v0.23.0
+   Compiling darling v0.23.0
+   Compiling serde_with_macros v3.22.0
+   Compiling schemars v1.2.1
+   Compiling serde_urlencoded v0.7.1
+   Compiling tracing-serde v0.2.0
+   Compiling tracing-subscriber v0.3.23
+   Compiling futures-executor v0.3.32
+   Compiling rstest v0.25.0
+   Compiling futures v0.3.32
+   Compiling serde_with v3.22.0
+   Compiling hyper v1.11.1
+   Compiling tower v0.5.3
+   Compiling tokio-util v0.7.18
+   Compiling cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-review)
+   Compiling hyper-util v0.1.20
+   Compiling axum v0.8.9
+   Compiling agent-client-protocol-schema v1.5.0
+   Compiling agent-client-protocol-trace-viewer v2.0.0
+   Compiling agent-client-protocol v2.0.0
+   Compiling agent-client-protocol-conductor v2.0.0
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core)
+    Finished `test` profile [optimized + debuginfo] target(s) in 1m 09s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_core-5b7bf32d2da0c87b)
+
+running 3 tests
+test protocol::domain_mediator::tests::mcp_error::kas_mcp_display_error_does_not_claim_other_error_kinds_or_missing_envelopes ... ok
+test protocol::domain_mediator::tests::mcp_error::kas_mcp_display_error_preserves_conversion_result_and_message ... ok
+test protocol::domain_mediator::tests::mcp_error::kas_mcp_display_error_requires_flat_classification_and_nonempty_message ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 1500 filtered out; finished in 0.00s
+

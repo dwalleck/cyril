@@ -137,6 +137,7 @@ pub trait TuiState {
     fn review_form(&self) -> Option<&ReviewForm>;
     fn hooks_panel(&self) -> Option<&HooksPanelState>;
     fn powers_panel(&self) -> Option<&PowersPanelState>;
+    fn mcp_panel(&self) -> Option<&crate::mcp_panel::McpPanelState>;
     fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData>;
     fn usage_panel(&self) -> Option<&UsagePanelState>;
     fn code_intelligence_active(&self) -> bool;
@@ -186,6 +187,8 @@ pub enum Overlay {
     Powers,
     /// Hooks panel (`/hooks`).
     Hooks,
+    /// Session-bound MCP inspection and read-only previews (`/mcp` on KAS).
+    Mcp,
     /// Command-option picker (`/model`, `/theme`, and every
     /// `CommandOptionsReceived` reply, which also arrives unprompted).
     Picker,
@@ -199,11 +202,12 @@ pub enum Overlay {
 
 impl Overlay {
     /// Every overlay, bottom-most (painted first, keyed last) to top-most.
-    pub const ALL: [Overlay; 7] = [
+    pub const ALL: [Overlay; 8] = [
         Overlay::Usage,
         Overlay::Code,
         Overlay::Powers,
         Overlay::Hooks,
+        Overlay::Mcp,
         Overlay::Picker,
         Overlay::Review,
         Overlay::Approval,
@@ -1348,6 +1352,7 @@ pub mod test_support {
         pub picker: Option<PickerState>,
         pub hooks_panel: Option<HooksPanelState>,
         pub powers_panel: Option<PowersPanelState>,
+        pub mcp_panel: Option<crate::mcp_panel::McpPanelState>,
         pub code_panel: Option<cyril_core::types::CodePanelData>,
         pub usage_panel: Option<UsagePanelState>,
         pub code_intelligence_active: bool,
@@ -1394,6 +1399,7 @@ pub mod test_support {
                 picker: None,
                 hooks_panel: None,
                 powers_panel: None,
+                mcp_panel: None,
                 code_panel: None,
                 usage_panel: None,
                 code_intelligence_active: false,
@@ -1522,6 +1528,9 @@ pub mod test_support {
         }
         fn powers_panel(&self) -> Option<&PowersPanelState> {
             self.powers_panel.as_ref()
+        }
+        fn mcp_panel(&self) -> Option<&crate::mcp_panel::McpPanelState> {
+            self.mcp_panel.as_ref()
         }
         fn code_panel(&self) -> Option<&cyril_core::types::CodePanelData> {
             self.code_panel.as_ref()

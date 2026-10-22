@@ -1,0 +1,62 @@
+--- a/crates/cyril-core/src/protocol/kas/auth.rs
++++ b/crates/cyril-core/src/protocol/kas/auth.rs
+@@ -262,6 +262,7 @@
+ /// the user out.
+ #[derive(Debug)]
+ pub(crate) struct KasTokenSource {
++    frozen_lock_key: String,
+     kiro_cli: AgentCommand,
+     environment: SpawnEnvironment,
+     deadline: Duration,
+@@ -498,14 +499,17 @@
+     /// A source running `kiro_cli` (the invocation prefix, e.g. `kiro-cli` or
+     /// `wsl -d Ubuntu kiro-cli`) under `environment`.
+     pub(crate) fn new(kiro_cli: AgentCommand, environment: SpawnEnvironment) -> Self {
+-        Self {
++        let mut source = Self {
++            frozen_lock_key: String::new(),
+             kiro_cli,
+             environment,
+             deadline: GET_KAS_TOKEN_DEADLINE,
+             spawn_remedy: AGENT_COMMAND_REMEDY,
+             store: StoreLocation::FromEnvironment,
+             fallback_warned: std::sync::atomic::AtomicBool::new(false),
+-        }
++        };
++        source.frozen_lock_key = source.current_lock_key();
++        source
+     }
+ 
+     /// The free-path source: the kiro-cli [`resolve_free_kiro_cli`] finds in
+@@ -617,7 +621,7 @@
+         // Resolved per fetch, just before taking the lock: a versioned-symlink
+         // install retargeted mid-session (an upgrade) must still map every
+         // source onto the binary it now runs.
+-        let key = self.current_lock_key();
++        let key = self.frozen_lock_key.clone();
+         let gate = helper_gate::for_invocation(&key);
+         let _serialized = gate.lock().await;
+         if let Some(version) = missing_helper::lookup(&key) {
+@@ -1792,7 +1796,22 @@
+         );
+         assert_ne!(before_key, after.current_lock_key());
+         assert_eq!(before.current_lock_key(), after.current_lock_key());
++        let script_writer = std::fs::OpenOptions::new()
++            .write(true)
++            .open(&fake.args()[0])
++            .unwrap();
+         let (first, second) = tokio::join!(before.fetch(false), after.fetch(false));
++        drop(script_writer);
++        let busy = [&first, &second].iter().any(|result| {
++            matches!(result, Err(KasTokenError::Spawn { source, .. })
++                if source.raw_os_error() == Some(26))
++        });
++        let overlap = [&first, &second].iter().any(|result| {
++            matches!(result, Err(KasTokenError::NonZeroExit { status, .. })
++                if status == "exit status: 9")
++        });
++        eprintln!("AUTH_RETARGET_PROOF busy={busy} overlap={overlap} success={}",
++            first.is_ok() && second.is_ok());
+         assert!(first.is_ok(), "{first:?}");
+         assert!(second.is_ok(), "{second:?}");
+     }
