@@ -1420,8 +1420,8 @@ impl UiState {
         true
     }
 
-    /// Show a report that does not yet belong to the active root: either a
-    /// requested Load target or an uncorrelated New/cold-start scope.
+    /// Show qualified startup progress: an explicitly requested Load target
+    /// awaiting its response, or an uncorrelated New/cold-start scope.
     /// Its notice is durable history, not a root-state update or replay entry.
     pub fn show_unbound_mcp_progress(
         &mut self,
@@ -1434,7 +1434,7 @@ impl UiState {
         };
         let qualification = match startup {
             Some(StartupObservation::BoundRequestedLoad { .. }) => {
-                "requested load; not yet current root"
+                "requested load; response pending"
             }
             Some(StartupObservation::UnboundNew { .. }) | None => "not yet correlated to root",
         };

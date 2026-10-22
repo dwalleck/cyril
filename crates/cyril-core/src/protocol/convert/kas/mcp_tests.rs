@@ -13,6 +13,19 @@ fn update(method: &str, value: Value) -> McpUpdate {
     }
 }
 
+fn status_with_provenance(resource: Value, on_server: bool) -> Value {
+    let mut value = json!({"sessionId":"root","servers":[
+        {"name":"replacement","status":"disabled"}
+    ]});
+    let target = if on_server {
+        &mut value["servers"][0]
+    } else {
+        &mut value
+    };
+    target["_meta"] = json!({"kiro":{"resource":resource}});
+    value
+}
+
 #[test]
 fn kas_engine_decodes_complete_union_catalog_registry_and_resource_provenance() {
     let value = json!({"sessionId":"real-root", "servers":[
@@ -110,6 +123,132 @@ fn absent_registry_is_not_non_registry_and_malformed_known_status_is_visible() {
         )
         .is_none()
     );
+}
+
+#[test]
+fn kas_provenance_malformed_known_fields_are_diagnostic_and_retain_inventory() {
+    let valid = update(
+        "kiro/mcp/status",
+        json!({"sessionId":"root","servers":[{
+            "name":"last-valid","status":"connected",
+            "tools":[{"name":"retained-tool","disabled":false,"inputSchema":{}}],
+            "prompts":[],"resources":[],"resourceTemplates":[]
+        }]}),
+    );
+    let McpUpdate::Snapshot(last_valid) = &valid else {
+        panic!("initial inventory must be valid");
+    };
+    for on_server in [true, false] {
+        let location = if on_server { "server" } else { "snapshot" };
+        for (field, resource) in [
+            ("krn", json!({"krn":[]})),
+            ("source.origin", json!({"source":{"origin":17}})),
+            ("resourceType", json!({"resourceType":false})),
+            ("layer", json!({"layer":{}})),
+            ("source", json!({"source":[]})),
+            ("source", json!({"source":["workspace"]})),
+            ("source", json!({"source":[null]})),
+            ("source", json!({"source":17})),
+            ("source", json!({"source":"workspace"})),
+        ] {
+            let mut state = McpState::for_session(SessionId::new("root"));
+            assert!(state.apply(&valid));
+            let converted = update(
+                "kiro/mcp/status",
+                status_with_provenance(resource, on_server),
+            );
+            let McpUpdate::Diagnostic {
+                session_id,
+                message,
+            } = &converted
+            else {
+                panic!("{location} provenance {field} must be diagnostic, got {converted:?}");
+            };
+            assert_eq!(session_id.as_str(), "root");
+            assert!(message.contains("Malformed"), "{message}");
+            assert!(state.apply(&converted));
+            assert!(
+                state
+                    .snapshot
+                    .as_ref()
+                    .is_some_and(|snapshot| Arc::ptr_eq(snapshot, last_valid)),
+                "{location} provenance {field} replaced the last valid inventory"
+            );
+            assert_eq!(state.diagnostic.as_deref(), Some(message.as_str()));
+        }
+    }
+}
+
+#[test]
+fn kas_provenance_missing_and_null_optional_fields_remain_valid() {
+    for on_server in [true, false] {
+        for resource in [
+            json!({}),
+            json!({"resourceType":null,"krn":null,"layer":null,"source":null}),
+            json!({"source":{}}),
+            json!({"source":{"origin":null}}),
+        ] {
+            let McpUpdate::Snapshot(snapshot) = update(
+                "kiro/mcp/status",
+                status_with_provenance(resource.clone(), on_server),
+            ) else {
+                panic!("absent/null optional provenance must remain valid: {resource}");
+            };
+            let provenance = if on_server {
+                snapshot.servers[0].provenance.as_ref()
+            } else {
+                snapshot.provenance.as_ref()
+            }
+            .unwrap_or_else(|| panic!("present descriptor must retain provenance"));
+            assert!(provenance.resource_type.is_none());
+            assert!(provenance.origin.is_none());
+            assert!(provenance.krn.is_none());
+            assert!(provenance.layer.is_none());
+            assert_eq!(
+                must_succeed(
+                    serde_json::from_str::<Value>(&provenance.details),
+                    "preserved optional provenance descriptor",
+                ),
+                resource
+            );
+        }
+    }
+}
+
+#[test]
+fn kas_provenance_future_fields_and_string_values_are_preserved() {
+    let resource = json!({
+        "resourceType":"future-type",
+        "source":{"origin":"future-origin","future":{"origin":[17,false,null]}},
+        "krn":"krn:exact",
+        "layer":"future-layer",
+        "future":{"krn":[],"layer":17}
+    });
+    for on_server in [true, false] {
+        let McpUpdate::Snapshot(snapshot) = update(
+            "kiro/mcp/status",
+            status_with_provenance(resource.clone(), on_server),
+        ) else {
+            panic!("unknown descriptor fields must remain valid");
+        };
+        let provenance = if on_server {
+            snapshot.servers[0].provenance.as_ref()
+        } else {
+            snapshot.provenance.as_ref()
+        }
+        .unwrap_or_else(|| panic!("present descriptor must retain provenance"));
+        assert_eq!(provenance.resource_type.as_deref(), Some("future-type"));
+        assert_eq!(provenance.origin.as_deref(), Some("future-origin"));
+        assert_eq!(provenance.krn.as_deref(), Some("krn:exact"));
+        assert_eq!(provenance.layer.as_deref(), Some("future-layer"));
+        assert_eq!(
+            must_succeed(
+                serde_json::from_str::<Value>(&provenance.details),
+                "preserved future provenance descriptor",
+            ),
+            resource
+        );
+    }
 }
 
 #[test]

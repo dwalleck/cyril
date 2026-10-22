@@ -1,0 +1,13 @@
+   Compiling cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-core)
+   Compiling cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui)
+    Finished `test` profile [optimized + debuginfo] target(s) in 15.91s
+     Running unittests src/lib.rs (/home/dwalleck/repos/cyril/target/debug/deps/cyril_ui-a48b0b6077a5f241)
+
+running 4 tests
+test mcp_panel::tests::hidden_target_empty_catalog_reset_reanchors_before_dispatch ... ok
+test mcp_panel::tests::hidden_target_empty_catalog_authenticate_reanchors_before_dispatch ... ok
+test mcp_panel::tests::hidden_target_unavailable_catalog_reset_reanchors_before_dispatch ... ok
+test mcp_panel::tests::hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 972 filtered out; finished in 0.00s
+

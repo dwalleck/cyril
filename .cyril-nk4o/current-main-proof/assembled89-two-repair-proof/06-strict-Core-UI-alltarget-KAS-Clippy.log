@@ -1,0 +1,12 @@
+    Checking tokio v1.53.1
+    Checking hyper v1.11.1
+    Checking tower v0.5.3
+    Checking tokio-util v0.7.18
+    Checking cyril-review v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-review)
+    Checking hyper-util v0.1.20
+    Checking axum v0.8.9
+    Checking agent-client-protocol-trace-viewer v2.0.0
+    Checking agent-client-protocol-conductor v2.0.0
+    Checking cyril-core v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-core)
+    Checking cyril-ui v0.2.0-alpha.1 (/home/dwalleck/repos/cyril-wt-fix-cyril-nk4o/crates/cyril-ui)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 20.61s

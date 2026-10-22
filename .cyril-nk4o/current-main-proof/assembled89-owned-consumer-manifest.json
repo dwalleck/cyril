@@ -1,0 +1,1188 @@
+{
+  "schema": "cyril-nk4o-assembled89-minimal-owned-consumer-evidence/v1",
+  "archive": "assembled89-owned-consumer-evidence.tar.gz",
+  "sha256": "7df56fe86d1e98a9528755323252d440296fb306795d38406d3d1d4bdca720f4",
+  "bytes": 157843,
+  "members": [
+    {
+      "path": "original-consumer-source-review/authorization.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-original-review-FAIL-20261022/authorization.json",
+      "sha256": "d63901f5250bc0680be9b8a4620ac343e633f550aeac10d9cb70346957040aa1",
+      "bytes": 1991,
+      "kind": "byte-identical original source-review FAIL/provenance; not runtime"
+    },
+    {
+      "path": "original-consumer-source-review/driver.py",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-original-review-FAIL-20261022/driver.py",
+      "sha256": "3d0210ed93e5da4fae3c241895ba0abb14868324e22406cff5631e3851876712",
+      "bytes": 27268,
+      "kind": "byte-identical original source-review FAIL/provenance; not runtime"
+    },
+    {
+      "path": "original-consumer-source-review/preparation.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-original-review-FAIL-20261022/preparation.json",
+      "sha256": "e17defc90dda0403883acf225fb95b88118630492eef69222e6f818ba1922f59",
+      "bytes": 12532,
+      "kind": "byte-identical original source-review FAIL/provenance; not runtime"
+    },
+    {
+      "path": "original-consumer-source-review/review-original-FAIL.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-original-review-FAIL-20261022/review-original-FAIL.json",
+      "sha256": "e53c4d443182f58e5721eeb864702b877037dabd4797a5f37a6178d3da25b0d6",
+      "bytes": 2610,
+      "kind": "byte-identical original source-review FAIL/provenance; not runtime"
+    },
+    {
+      "path": "provenance/current-default-App-build.log",
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-89-final-four-file-repaired-green-attempt1-20261022T163518055006Z/authorized-normal-format-continuation-20261022T164146461789Z/fresh-default-App-build-only-20261022T165359625083Z/cargo-build-p-cyril-bin-cyril.log",
+      "sha256": "4f1f575d8bdba1f7b1ddaf10fcbd0677080d7f5209c45fd522bf948070c8c415",
+      "bytes": 4137,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/preparation-run02.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/preparation-run02.json",
+      "sha256": "08b48d5f4e882a2444ed2f33e4d00b63984958aad7e46d2881e80da2b9545f9e",
+      "bytes": 8563,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/preparation.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/preparation.json",
+      "sha256": "7a52020d28e76e1565b31f96c12a4770ed8a3c3fae627f17f4f766346d8cb082",
+      "bytes": 16457,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/run01-to-run02-runtime-only.patch",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01-to-run02-runtime-only.patch",
+      "sha256": "07af359681c25afbe3559913a0913c08e34f304489f1acbf989ae08c1b33fdc8",
+      "bytes": 2190,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/runtime-capability-probe-run02-attempt1-FAIL.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/runtime-capability-probe-run02-attempt1-FAIL.json",
+      "sha256": "1702aff7fee6ed3df40695dfa994da0df4340101e28fc30d97d26a8e32ee1fd4",
+      "bytes": 1431,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/runtime-capability-probe-run02-attempt1-FAIL.py",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/runtime-capability-probe-run02-attempt1-FAIL.py",
+      "sha256": "0e137712d0626999ad5328e0e5fc5ba2cc504085cf3617f40ae22298ccd5798b",
+      "bytes": 4141,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/runtime-capability-probe-run02.py",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/runtime-capability-probe-run02.py",
+      "sha256": "4a4cafe85cdf9b71293b5050cbf8e1fae477adc50068f5c17d1dd36ae5bbb34f",
+      "bytes": 4043,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/runtime-capability-run02.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/runtime-capability-run02.json",
+      "sha256": "f549d0fb0a77548bd9187df50dfc4615d6497327ca6e075924af7ac0f53d7f16",
+      "bytes": 11960,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "provenance/source-repair-rereview-PASS.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/source-repair-rereview-PASS.json",
+      "sha256": "f5effb1df8eda2c19d7ad0b6921872c7d1233aa3088e16989168d0371e2ed8a7",
+      "bytes": 2856,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "retained-imports/fake-kiro-cli.sh",
+      "origin": "/tmp/cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/fake-kiro-cli.sh",
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "retained-imports/harness.py",
+      "origin": "/tmp/cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/harness.py",
+      "sha256": "2a1d810983b5c739e1eb2315af126417a86039a7a757456376fb509ee407c4ae",
+      "bytes": 60311,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "retained-imports/wide_overwrite.py",
+      "origin": "/tmp/cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/wide_overwrite.py",
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "bytes": 934,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/authorization.snapshot.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/authorization.snapshot.json",
+      "sha256": "a547e8bd831dac1a9cfa2e12b5cdc546d0c92a54037a5a709169138cb06416c2",
+      "bytes": 3571,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/client-wire.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/client-wire.jsonl",
+      "sha256": "ed494f11545088883c62676d8863305514d306e1d2f384a26136bca3a952e681",
+      "bytes": 1093,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/client-wire.raw",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/client-wire.raw",
+      "sha256": "3f3f5fc7773ebe43b2e239967f1ae78bf57cb68b49b03ae5d43a16d01fe62847",
+      "bytes": 1004,
+      "kind": "byte-identical actual retained raw ACP wire"
+    },
+    {
+      "path": "run01/config.snapshot.toml",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/config.snapshot.toml",
+      "sha256": "e63d84fc2a0055f091d13ef44e5273c63c92bfcaa28c845e24bc8e87513feb3e",
+      "bytes": 66,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/driver.snapshot.py",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/driver.snapshot.py",
+      "sha256": "31e23a52055947de950a0a6c43af928c9840526fcce11452079a7150f52dc364",
+      "bytes": 29938,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/fake-cli-argv.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/fake-cli-argv.txt",
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "bytes": 21,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/original-failure.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/original-failure.json",
+      "sha256": "851ca05c80826ae55a800206963378424987bd5a88a391e91e9e504b8c83a452",
+      "bytes": 795,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/owned-peer.snapshot.sh",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/owned-peer.snapshot.sh",
+      "sha256": "4d52b7245d118d2fb66122397faee90c50ec91e43c07a22e6346fdf616f36343",
+      "bytes": 156,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/owned-process-identities.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/owned-process-identities.json",
+      "sha256": "62ee3724edc772c64a974bc1e18ced37f053e72e93ee4aef96e735681d30b71f",
+      "bytes": 4206,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/owned-server.snapshot.js",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/owned-server.snapshot.js",
+      "sha256": "3cf13cb53637b029cfc25d7b2145f2ef99a5ba873015c0b362434e306c198bd7",
+      "bytes": 213,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/peer-state.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/peer-state.json",
+      "sha256": "073b8694d40927970d03a99618e12946e82598230ee80fca9e979f22885d78cc",
+      "bytes": 141,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/peer-wire.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/peer-wire.jsonl",
+      "sha256": "b8caed7a5b2d22647b63d10ab5df8dbf78c08b8453da8092af776933dd7271cd",
+      "bytes": 420,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/pre-cleanup-cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/pre-cleanup-cells.json",
+      "sha256": "5ae82366bdfe77584282698afc283b7c8bbe9347e4cdac1428c82abda4e97cd0",
+      "bytes": 1897658,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run01/pre-cleanup-screen.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/pre-cleanup-screen.txt",
+      "sha256": "0f9fdd6e28245f452141da3601819335db5952f2ac7742d3e9729af5260daae2",
+      "bytes": 7728,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run01/pre-cleanup.terminal.ansi",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/pre-cleanup.terminal.ansi",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "kind": "byte-identical actual retained PTY ANSI; treat as inert control bytes"
+    },
+    {
+      "path": "run01/qualification.snapshot.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/qualification.snapshot.json",
+      "sha256": "ab94ed9f1ffa05913a38aa7f0a9d7ff449a07483dc8ef5f0a12ba41743a99542",
+      "bytes": 1940,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run01/result-recording-failed.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/result-recording-failed.json",
+      "sha256": "7bdd6b86ca4d610f14cab13fd44d7229f7767707d9cd553a7800af1856c1c0e9",
+      "bytes": 7174,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run01/safety.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/safety.json",
+      "sha256": "ae05c83b18ac393d2f4d44b85fc3352d499c1749bd834ec11e09ac0bc128e09a",
+      "bytes": 8259,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-fenced-reopened-original.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-fenced-reopened-original.cells.json",
+      "sha256": "c4cf54eb0f4ca28e70e0cf49c8abeedd79fc6e177bf175c4549f8980c8d8a74a",
+      "bytes": 118409,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-fenced-reopened-original.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-fenced-reopened-original.txt",
+      "sha256": "912eb84498dc2adacdd7aca49d5f2fee3632a9fd2ee7edab09090676f5508468",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-hidden.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-hidden.cells.json",
+      "sha256": "45b19df80d90b120d45ea9b1a7d6756a8ccbb2d8d96c91907064c8a25054e71b",
+      "bytes": 118469,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-hidden.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-hidden.txt",
+      "sha256": "ac3e38cd46a55861fdd0ebe7d3b3bc0dde8e4674227748343878abe34d1d05cd",
+      "bytes": 656,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-reanchored.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-reanchored.cells.json",
+      "sha256": "7fca2ca03b7b6fc4c27fcede554c5a207031774fb10029947fad780bf7c5634d",
+      "bytes": 118408,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-reanchored.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-reanchored.txt",
+      "sha256": "5133d7c6c3b4d4b9124cae13d5a314c0b68da35674479176124d40f3bcb8ed69",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-visible-action.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-visible-action.cells.json",
+      "sha256": "cc4c2b1fcd93b31629e441b7b365c1827011dd9c85ccbb3fa4c95b241f7650fc",
+      "bytes": 118409,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-fenced-reopened-original.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-fenced-reopened-original.cells.json",
+      "sha256": "a6e1e1254cc2d8fb504753d2c05792d5cf621e4d7f02cadc06019c32da32b9a3",
+      "bytes": 118409,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-fenced-reopened-original.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-fenced-reopened-original.txt",
+      "sha256": "6c41ceb0c88c4112119b68520d90e0f87d2b80cc5b583345a6ddccd05443e03b",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-hidden.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-hidden.cells.json",
+      "sha256": "9fdc20259ee9dd812eecf92c735f9374f8e07209ea64f4b71803740980a527dc",
+      "bytes": 118470,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-hidden.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-hidden.txt",
+      "sha256": "caf2b4d9d7bf89ca413eec9a897e5862219e55ecc946d22e5e51f28921ee3de3",
+      "bytes": 656,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-reanchored.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-reanchored.cells.json",
+      "sha256": "27133eec90e0ab2c233375d7344abade72c0e01698a7ad6fbc1b77731389c840",
+      "bytes": 118409,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-visible-action.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-visible-action.cells.json",
+      "sha256": "eebd4491f243fadea091d09da8335c4dc9bc93d6f96b8a9967eb17a3a02e6375",
+      "bytes": 118409,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/03-empty-resources-reset-fenced-reopened-original.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-fenced-reopened-original.cells.json",
+      "sha256": "12823c3d7de472c7a055965d1abed976c01c5ef3e3cf78b1cfec7fd8a08fac09",
+      "bytes": 118431,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/03-empty-resources-reset-fenced-reopened-original.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-fenced-reopened-original.txt",
+      "sha256": "4ac1bbac964f66fea98ed83bcfc9c2e46ba6a6147c41ca2e8c6f2df35ba586e1",
+      "bytes": 660,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/03-empty-resources-reset-hidden.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-hidden.cells.json",
+      "sha256": "cd829ad97529bb40bc536d6d467926b24050f3c237e5c3cea32e201d1a22b3dc",
+      "bytes": 118471,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/03-empty-resources-reset-hidden.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-hidden.txt",
+      "sha256": "eb890ac240d90dbe123552bf710df8cca040209dfd3b8a670fe18707dd8338ba",
+      "bytes": 657,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/03-empty-resources-reset-reanchored.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-reanchored.cells.json",
+      "sha256": "1eca56c214c5c3dc3484350bddc2d625661da4296e3c522fbcd2bc1236055d72",
+      "bytes": 118431,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/03-empty-resources-reset-visible-action.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-visible-action.cells.json",
+      "sha256": "8bba76dcf9ecddbca6326f916eff609e663ea4806164799181e0f48989d690c7",
+      "bytes": 118431,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/04-empty-templates-auth-fenced-reopened-original.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-fenced-reopened-original.cells.json",
+      "sha256": "c71a797c235c4f8f0aa7f0a68d071c480d5a42e032fe4c1f1867e91d8194fc30",
+      "bytes": 118430,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/04-empty-templates-auth-fenced-reopened-original.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-fenced-reopened-original.txt",
+      "sha256": "4c401ac6f4c247a4bb5f0ccf215fdad7fee6139da4ddfe04f6875cfd69cab879",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/04-empty-templates-auth-hidden.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-hidden.cells.json",
+      "sha256": "52967195365b01366a854b36720422a3ae4afd29ec5505bb0f4dce93b499239d",
+      "bytes": 118470,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/04-empty-templates-auth-hidden.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-hidden.txt",
+      "sha256": "26452054e8a9095a508964ef0410024b88fd55fc2706cb1020d766a43af00e60",
+      "bytes": 656,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/04-empty-templates-auth-reanchored.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-reanchored.cells.json",
+      "sha256": "80d87998f3a7bb33ce1cba9458724346973320da4ba4bfbf408fb268a7030646",
+      "bytes": 118430,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/04-empty-templates-auth-visible-action.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-visible-action.cells.json",
+      "sha256": "8cdba12e95f06a57ab998b6d70f9fc47904d115db3a1cf80b4552d4e05b42e2c",
+      "bytes": 118430,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/05-server-krn-array-stale-valid-inventory.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/05-server-krn-array-stale-valid-inventory.cells.json",
+      "sha256": "4930636e1ca35adf8e5fd1a2280962f12dc7f82bfe797acaee4197f002e4b9a1",
+      "bytes": 1896688,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/05-server-krn-array-stale-valid-inventory.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/05-server-krn-array-stale-valid-inventory.txt",
+      "sha256": "023ac5ff34f4ccb66cbbd45c55963fff60a7465e3321c4b079c37e2b2543d5d2",
+      "bytes": 8971,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/05-server-source-null-array-stale-valid-inventory.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/05-server-source-null-array-stale-valid-inventory.cells.json",
+      "sha256": "140e6a42fc044d3afe6d496918d20c87587dafb3e1d69be24199f7546f5bfa6d",
+      "bytes": 1896707,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/05-server-source-null-array-stale-valid-inventory.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/05-server-source-null-array-stale-valid-inventory.txt",
+      "sha256": "1799cc61493ff3779468ce83e739f4618b31ed7471eff943fdf9c4a3d4b2c452",
+      "bytes": 8971,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/05-snapshot-source-string-array-stale-valid-inventory.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/05-snapshot-source-string-array-stale-valid-inventory.cells.json",
+      "sha256": "4429b06029d1c5c1a38c7a486b6cfafd793ece66e0753bb48124f461078da79e",
+      "bytes": 1896707,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/ack-0001.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0001.json",
+      "sha256": "f23d04336461a8da652f84ffb38b9b20c6adf8fbefaaca45dc4556ecc2bf8006",
+      "bytes": 73,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0002.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0002.json",
+      "sha256": "35d205cdd8fef37391de174d45d38a3585d27ecd0473a33c1cd2858c3419aa9b",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0003.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0003.json",
+      "sha256": "31b0409af2f85d778d49e509442abc369c6db4d36caf652404033ea2c4752a18",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0004.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0004.json",
+      "sha256": "98f930455d627da3da995bc54807f6ddab58fc2ce6a29767af96087c01283c6a",
+      "bytes": 73,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0005.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0005.json",
+      "sha256": "ce2e39eceb5889b6352f881a3d12a18362aa9add4552d38fdf5797f3d579777c",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0006.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0006.json",
+      "sha256": "26fac6ba9db3bb05d4828225b99de5b70a9bdf57be2fcd140a7bfc9ca99a0205",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0007.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0007.json",
+      "sha256": "75216accc14d582c19f8e895e1865a7cd43ef53a6e2f26abd4bf234af15389b8",
+      "bytes": 73,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0008.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0008.json",
+      "sha256": "e5adba5cc1d8d74091e54561971e3ccbbd978107a9d29d3d2bcccdec95561569",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0009.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0009.json",
+      "sha256": "586ecf601db80e570c6a530cd1890033a1a4b64be2212c103de91c5bbcd9bc8e",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0010.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0010.json",
+      "sha256": "fc65069147c03dc080ac4e2ad901848374e6b1273c352fb2c2caa52911ec1beb",
+      "bytes": 73,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0011.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0011.json",
+      "sha256": "0da9e11fdd44dadcd835145d88aa589819f624dc008682a285cc2c27dd959cd5",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0012.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0012.json",
+      "sha256": "0cab30596d6c30d8240b4d4db9795807c13d7e5fe58319eee4794db4b383c892",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0013.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0013.json",
+      "sha256": "250b1bc27791f027929dc8b4d22950fb9bbba2501f4c22476c176b051cf417ae",
+      "bytes": 71,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0014.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0014.json",
+      "sha256": "a8511c644808c2c1546136873e1e1254dfd928d868197e5ce4a958a3d75a07ec",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0015.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0015.json",
+      "sha256": "187b46fdb3ae89430f1e722a4a856a32acf32ec1128fd0553f51b40b15a375a0",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0016.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0016.json",
+      "sha256": "8b53fa214087e60c178fe2eeebb8a70dc25293de31311302c5ff28d94ad070f6",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0017.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0017.json",
+      "sha256": "a559e556cad6295ba7fcdfa521a902f355da921ac4fe1702149c82ab849f4841",
+      "bytes": 71,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0018.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0018.json",
+      "sha256": "3e1cb7722b46cb9b0241584f153986bbec600df0101451d003c25a8a710a92fe",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0019.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0019.json",
+      "sha256": "0635fce90c8c67d65ddba8e6bf0c4e59c632d7990c5e53120f316ae2e5aa66a7",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0020.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0020.json",
+      "sha256": "76751ba8805c47be428248f6ab974106af772236a74b7438919c42b55ce76095",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0021.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0021.json",
+      "sha256": "3cb859600102acaedc0d4c274562765f69b2c4565c6e6b264700644b2e89b650",
+      "bytes": 71,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0022.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0022.json",
+      "sha256": "335d6b5ffd711af6547d96d3d85bb5d038acfe4fab2f82859cf41dc47985debf",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0023.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0023.json",
+      "sha256": "f8c151ee200dde3ee3871c6b9c1a5f4ad951081bd55212f35cce749cff1caec5",
+      "bytes": 66,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/ack-0024.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/ack-0024.json",
+      "sha256": "fb0ecd1c434b99814f1c48152eefd76ac5fa23117bc5fc0c4b5d68bd3683ee4e",
+      "bytes": 75,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/authorization.snapshot.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/authorization.snapshot.json",
+      "sha256": "373922186a349c6cf3f68e74665eb5b52b2fdcafeed9ced61e7eff4b5607bab3",
+      "bytes": 3532,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run02/client-wire.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/client-wire.jsonl",
+      "sha256": "ad514c7145d60f4451d7b1bee6c21b73f4919ecdd28715daa7afcb21c98f73eb",
+      "bytes": 3133,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/client-wire.raw",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/client-wire.raw",
+      "sha256": "fd4e60ce010aeb499f4a3d05c4d676fb20feed75b95db443750656a3b224c5f9",
+      "bytes": 2944,
+      "kind": "byte-identical actual retained raw ACP wire"
+    },
+    {
+      "path": "run02/control-0001.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0001.json",
+      "sha256": "61f1c3af57b9f640e05a70cda8bfc48d762f07a051591096f0e962e652e91564",
+      "bytes": 28,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0002.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0002.json",
+      "sha256": "6084c67cc1a8590f4eaced49bf5b80098e9ecb9da021e1016fc50d6bfe1bba2e",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0003.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0003.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0004.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0004.json",
+      "sha256": "390509856302c77a652b6de2a70c443645c63970ee500dd14e2f837e43b1e8c2",
+      "bytes": 28,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0005.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0005.json",
+      "sha256": "29209f5e65683ccab9855f537aeaaf2d2a5125ea70e83fefec4a42d099d5c09d",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0007.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0007.json",
+      "sha256": "b2a10fd9f2587ea7f12a670441e8126e2becb7ad4dc21e90c709aedfe88b09b0",
+      "bytes": 28,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0008.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0008.json",
+      "sha256": "48ee50a96d704b55b6b5c5d4bfcdfad0c42c427288bfdb039793a7500ccf3af9",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0010.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0010.json",
+      "sha256": "3af9d28977ff53d61dcb2d38b8e7674aae3a9d23e4e9ba91c04d721967bd4962",
+      "bytes": 28,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0011.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0011.json",
+      "sha256": "14e58c906873c38428a2d1cec19c1e8c60d00fd79aab8ce1efe5dcb606f43212",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0013.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0013.json",
+      "sha256": "e20cff84ead1c920d348580344ce4855d883b891e3760cac3cce892d3c7454d8",
+      "bytes": 26,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0014.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0014.json",
+      "sha256": "9b269d90ef5b27c38f5d9c828b7e5dd7984d0be0f5f58b7b399c0e1b40ab423c",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0015.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0015.json",
+      "sha256": "c84ff3b0a574260f8c3852ddb1859a2b0f60b8e7cffaf570bf5bcf2fb37a0552",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0017.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0017.json",
+      "sha256": "1e4dd4874037d72509673357b4e2a1761421a7c1ff95c4c89cc6b08a9d927f5b",
+      "bytes": 26,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0018.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0018.json",
+      "sha256": "01f31616cd1d1046f5460e797092d41cb9d95aaf77ddb4afce85125d50edea8e",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0019.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0019.json",
+      "sha256": "7ff30ac7d0964c6c252d7989427129a7b7a3968ac7afd8b0a10218024e9deacf",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0021.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0021.json",
+      "sha256": "15483f665ac30ff8a5b111f1f31f6ba8c25d75efd5cd71c5ec6e2199d85b6b76",
+      "bytes": 26,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0022.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0022.json",
+      "sha256": "c445a2362bc8109416c66c9efd6472bae00b35a8e81f2dbdc4d30f08de070164",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/control-0023.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0023.json",
+      "sha256": "d4e5059c2c733655a14c3188ea59be7f48784e116a24f1f31e326dcbed31ad22",
+      "bytes": 24,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/cyril-start-identity.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/cyril-start-identity.json",
+      "sha256": "75f21d5bd059ca45954de51223ba22f53b32f2c6efbd568622c5a98aa142f888",
+      "bytes": 1475,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/driver.snapshot.py",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/driver.snapshot.py",
+      "sha256": "78af5129468ff2660ac0731cb4bbc9fde62b7f1ab9c5e935aca4d5328528e051",
+      "bytes": 29873,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run02/events.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/events.jsonl",
+      "sha256": "726021952bfca51c1ce724d0f6a39ae6154fc779cb7031ca2d422c05586e9900",
+      "bytes": 13533,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/final.cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/final.cells.json",
+      "sha256": "182ab7949e348e7839542cc2632d7c821c7cc0a28d674ac0b1e9662f1b45064f",
+      "bytes": 1897180,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels"
+    },
+    {
+      "path": "run02/final.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/final.txt",
+      "sha256": "aaa7e1a1648a2640e6459916110faa25b1411099eb2cebabc6e296c78d8975b7",
+      "bytes": 8376,
+      "kind": "byte-identical actual-run decoder screen projection"
+    },
+    {
+      "path": "run02/owned-peer.snapshot.sh",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/owned-peer.snapshot.sh",
+      "sha256": "24102e131c0ba972044213ccd1742362e4b01daa8539c384094453475dc016f9",
+      "bytes": 91,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run02/owned-process-identities.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/owned-process-identities.json",
+      "sha256": "b48c0b808d314106d1202c4361a2921ae19977f36f6d8a6affb5e2ff2dfe69e3",
+      "bytes": 25761,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/owned-server.snapshot.js",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/owned-server.snapshot.js",
+      "sha256": "3361480aef96c6b7d1134c9377a2a6674a225d8b86b69f5dbc85dd608f2fc1be",
+      "bytes": 213,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only"
+    },
+    {
+      "path": "run02/peer-assertions.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/peer-assertions.jsonl",
+      "sha256": "af5128e87d92e4e5533ac4ba799fe9e63c9947218b27aa98c7da3a3e4f40327d",
+      "bytes": 1258,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/peer-fence-receipts.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/peer-fence-receipts.jsonl",
+      "sha256": "6d046fb750751577ff6149be2344c2e008f81cdfd2c829086f838b86a35b227e",
+      "bytes": 1252,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/peer-state.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/peer-state.json",
+      "sha256": "714490c3448e208ea2649b2358887b1b667f6af71278d7202fde3bf4d9605541",
+      "bytes": 141,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/peer-wire.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/peer-wire.jsonl",
+      "sha256": "7e959b0c4198b48cd9dddd711c7ea0980240f2a7390ab1cc55bc0a846e64e391",
+      "bytes": 4570,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/pre-cleanup.terminal.ansi",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup.terminal.ansi",
+      "sha256": "fb6001ff0b633eb32de9b3933547cf94dd116f2378f485a7b9da4bda985b49aa",
+      "bytes": 123728,
+      "kind": "byte-identical actual retained PTY ANSI; treat as inert control bytes"
+    },
+    {
+      "path": "run02/result.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/result.json",
+      "sha256": "05b9a28aa9cd5fc2a77c002edc3f0d8224d8b4460526c04d8bc42eed0d2a7b97",
+      "bytes": 13486,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    },
+    {
+      "path": "run02/safety.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/safety.json",
+      "sha256": "dcc0c7eb4d9868054e04afcaa15b412fe2265917e4b8b12fca7d5ad57745ed6a",
+      "bytes": 8194,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact"
+    }
+  ],
+  "exact_duplicate_aliases": [
+    {
+      "path": "run01/peer-wire.raw",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/peer-wire.raw",
+      "sha256": "b8caed7a5b2d22647b63d10ab5df8dbf78c08b8453da8092af776933dd7271cd",
+      "bytes": 420,
+      "kind": "byte-identical actual retained raw ACP wire",
+      "stored_as": "run01/peer-wire.jsonl",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run01/result.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/result.json",
+      "sha256": "7bdd6b86ca4d610f14cab13fd44d7229f7767707d9cd553a7800af1856c1c0e9",
+      "bytes": 7174,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run01/result-recording-failed.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run01/terminal.ansi",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run01/terminal.ansi",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "kind": "byte-identical actual retained PTY ANSI; treat as inert control bytes",
+      "stored_as": "run01/pre-cleanup.terminal.ansi",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/01-unavailable-tools-reset-visible-action.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/01-unavailable-tools-reset-visible-action.txt",
+      "sha256": "912eb84498dc2adacdd7aca49d5f2fee3632a9fd2ee7edab09090676f5508468",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/01-unavailable-tools-reset-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-reanchored.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-reanchored.txt",
+      "sha256": "6c41ceb0c88c4112119b68520d90e0f87d2b80cc5b583345a6ddccd05443e03b",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/02-unavailable-prompts-auth-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/02-unavailable-prompts-auth-visible-action.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/02-unavailable-prompts-auth-visible-action.txt",
+      "sha256": "6c41ceb0c88c4112119b68520d90e0f87d2b80cc5b583345a6ddccd05443e03b",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/02-unavailable-prompts-auth-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/03-empty-resources-reset-reanchored.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-reanchored.txt",
+      "sha256": "4ac1bbac964f66fea98ed83bcfc9c2e46ba6a6147c41ca2e8c6f2df35ba586e1",
+      "bytes": 660,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/03-empty-resources-reset-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/03-empty-resources-reset-visible-action.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/03-empty-resources-reset-visible-action.txt",
+      "sha256": "4ac1bbac964f66fea98ed83bcfc9c2e46ba6a6147c41ca2e8c6f2df35ba586e1",
+      "bytes": 660,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/03-empty-resources-reset-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/04-empty-templates-auth-reanchored.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-reanchored.txt",
+      "sha256": "4c401ac6f4c247a4bb5f0ccf215fdad7fee6139da4ddfe04f6875cfd69cab879",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/04-empty-templates-auth-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/04-empty-templates-auth-visible-action.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/04-empty-templates-auth-visible-action.txt",
+      "sha256": "4c401ac6f4c247a4bb5f0ccf215fdad7fee6139da4ddfe04f6875cfd69cab879",
+      "bytes": 659,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/04-empty-templates-auth-fenced-reopened-original.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/05-snapshot-source-string-array-stale-valid-inventory.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/05-snapshot-source-string-array-stale-valid-inventory.txt",
+      "sha256": "1799cc61493ff3779468ce83e739f4618b31ed7471eff943fdf9c4a3d4b2c452",
+      "bytes": 8971,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/05-server-source-null-array-stale-valid-inventory.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/config.snapshot.toml",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/config.snapshot.toml",
+      "sha256": "e63d84fc2a0055f091d13ef44e5273c63c92bfcaa28c845e24bc8e87513feb3e",
+      "bytes": 66,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only",
+      "stored_as": "run01/config.snapshot.toml",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/control-0006.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0006.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/control-0003.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/control-0009.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0009.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/control-0003.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/control-0012.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0012.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/control-0003.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/control-0016.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0016.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/control-0003.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/control-0020.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0020.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/control-0003.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/control-0024.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/control-0024.json",
+      "sha256": "b2073f39dcc0436bbed25d5aba3bb3c11461fd0456bbc34e22086c022100fcf6",
+      "bytes": 30,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/control-0003.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/fake-cli-argv.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/fake-cli-argv.txt",
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "bytes": 21,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run01/fake-cli-argv.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/peer-wire.raw",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/peer-wire.raw",
+      "sha256": "7e959b0c4198b48cd9dddd711c7ea0980240f2a7390ab1cc55bc0a846e64e391",
+      "bytes": 4570,
+      "kind": "byte-identical actual retained raw ACP wire",
+      "stored_as": "run02/peer-wire.jsonl",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/pre-cleanup-cells.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup-cells.json",
+      "sha256": "182ab7949e348e7839542cc2632d7c821c7cc0a28d674ac0b1e9662f1b45064f",
+      "bytes": 1897180,
+      "kind": "byte-identical actual-run decoder-derived unnormalized cells, not native pixels",
+      "stored_as": "run02/final.cells.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/pre-cleanup-screen.txt",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup-screen.txt",
+      "sha256": "aaa7e1a1648a2640e6459916110faa25b1411099eb2cebabc6e296c78d8975b7",
+      "bytes": 8376,
+      "kind": "byte-identical actual-run decoder screen projection",
+      "stored_as": "run02/final.txt",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/pre-cleanup.client-wire.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup.client-wire.jsonl",
+      "sha256": "ad514c7145d60f4451d7b1bee6c21b73f4919ecdd28715daa7afcb21c98f73eb",
+      "bytes": 3133,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/client-wire.jsonl",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/pre-cleanup.events.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup.events.jsonl",
+      "sha256": "726021952bfca51c1ce724d0f6a39ae6154fc779cb7031ca2d422c05586e9900",
+      "bytes": 13533,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/events.jsonl",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/pre-cleanup.peer-state.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup.peer-state.json",
+      "sha256": "714490c3448e208ea2649b2358887b1b667f6af71278d7202fde3bf4d9605541",
+      "bytes": 141,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/peer-state.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/pre-cleanup.peer-wire.jsonl",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/pre-cleanup.peer-wire.jsonl",
+      "sha256": "7e959b0c4198b48cd9dddd711c7ea0980240f2a7390ab1cc55bc0a846e64e391",
+      "bytes": 4570,
+      "kind": "byte-identical actual-run receipt, event, control, ACK, fence or ownership artifact",
+      "stored_as": "run02/peer-wire.jsonl",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/qualification.snapshot.json",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/qualification.snapshot.json",
+      "sha256": "ab94ed9f1ffa05913a38aa7f0a9d7ff449a07483dc8ef5f0a12ba41743a99542",
+      "bytes": 1940,
+      "kind": "byte-identical actual authority, executed snapshot or named prerequisite/review provenance; inert evidence only",
+      "stored_as": "run01/qualification.snapshot.json",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    },
+    {
+      "path": "run02/terminal.ansi",
+      "origin": "/tmp/cyril-nk4o-two-repair-consumer-prepare-20261022/run02/terminal.ansi",
+      "sha256": "fb6001ff0b633eb32de9b3933547cf94dd116f2378f485a7b9da4bda985b49aa",
+      "bytes": 123728,
+      "kind": "byte-identical actual retained PTY ANSI; treat as inert control bytes",
+      "stored_as": "run02/pre-cleanup.terminal.ansi",
+      "reason": "Exact identical bytes stored once; this logical source path remains explicit, not rewritten or silently dropped."
+    }
+  ],
+  "stored_members": 124,
+  "logical_original_files": 152,
+  "stored_uncompressed_bytes": 11876402,
+  "source521_descriptor": "3e460e39a327f5c7882e8d5336e255ee9a63a0b6c4259ce579b13fea110ff322",
+  "private_binary_sha256_not_packaged": "fdd6ee6c53c6237f70d24f1cfcc80fbbe7a857dd16a6001d62944c92c3988341",
+  "run01": {
+    "result": "FAIL-STOPPED-NO-RETRY",
+    "result_sha256": "7bdd6b86ca4d610f14cab13fd44d7229f7767707d9cd553a7800af1856c1c0e9",
+    "checks": 0,
+    "captures": 0,
+    "first_failure": "Pinned uv Python3.13 lacks os.pidfd_open before scenarios",
+    "cleanup_errors": 2,
+    "direct_owned_App_returncode": 0,
+    "limit": "Original FAIL remains FAIL. Empty pidfd registrations and failed discovery do not establish global/complete group absence; embedded HELD boundary was stale seed prose despite actual Main GO."
+  },
+  "run02": {
+    "result": "PASS",
+    "result_sha256": "05b9a28aa9cd5fc2a77c002edc3f0d8224d8b4460526c04d8bc42eed0d2a7b97",
+    "checks": 24,
+    "captures": 20,
+    "management_requests": 7,
+    "read_only_causal_FIFO_fences": 4,
+    "hidden_target_pairs": 4,
+    "malformed_retention_cases": 3,
+    "direct_owned_App_returncode": 0,
+    "cleanup_errors": [],
+    "cleanup_scope": "Actual observed owned direct/Node/Python identities and observed peer group absent, isolated root removed, retained pidfds closed, frozen inputs unchanged. Not global process absence or unexercised cleanup proof."
+  },
+  "runtime_and_review_provenance": {
+    "final_executed_driver_sha256": "78af5129468ff2660ac0731cb4bbc9fde62b7f1ab9c5e935aca4d5328528e051",
+    "ordinary_semantic_source_review": "source-repair-rereview-PASS.json: correct/no findings/.99 at declared9b77 driver; not independent review of final78af bytes",
+    "applicability_owner": "Main; subsequent two postformat test-pin changes before run01 and four runtime-only changes before run02 explicitly attributed, not claimed independently re-reviewed",
+    "capability": "Successful system Python3.14/pyte/wcwidth/WideOverwrite imports and self-pidfd open/signal0/close only; no App in probe. Initial false-FAIL .py-only probe restriction retained separately from actual run01 failure."
+  },
+  "scope_limits": [
+    "Owned App/PTy and declared pyte/WideOverwrite logical-cell projection, not native physical glyph/auth/live KAS/enterprise/Windows/CI/full integration acceptance",
+    "Four hidden-key fences close/query/reopen with same fixture identity/tab; not uninterrupted panel-state proof",
+    "Seven reset/auth requests are synthetic owned-peer operations; no model turns/grants/host callbacks/auth URL/browser/clipboard/real provider activity",
+    "Capture count is twenty actual retained screen checkpoints, not twenty distinct workflows or native screenshots"
+  ],
+  "required_existing_evidence_not_duplicated": [
+    {
+      "path": "assembled89-two-repair-proof/canonical-green.json",
+      "sha256": "bf30032b507b804599fd0101c1c73767b09593378fd0c4ab9c89cf5be3121764"
+    },
+    {
+      "path": "assembled89-two-repair-proof/green-source521-manifest.json",
+      "sha256": "c0619624e468ed5fc1cfe46b9654767b3b2eea64fc64e56fb4d5caa322cff768"
+    }
+  ],
+  "exclusions": [
+    "No App/interpreter/Node/.so binary or dependency/environment tree",
+    "No repository/full source tree, native/private logs or unrelated old evidence archive",
+    "No duplicate green canonical/source manifest; existing packet owns these",
+    "Exact identical bytes deduplicated with explicit logical-path aliases, no normalized replacement bytes"
+  ],
+  "handling": "Archive members are inert snapshots/recordings; raw ANSI must not be printed directly to a terminal. Absolute paths are provenance only. No self-contained replay or automatic runtime authorization: private binary, external dependencies, current prerequisite binding and fresh Main GO remain required.",
+  "packaging_operations": "Explicitly selected original artifacts only, hashing/compression/manifest creation; no product/Git/build/test/lint/fmt/runtime/auth execution or source mutation."
+}

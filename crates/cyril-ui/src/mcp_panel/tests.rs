@@ -1648,6 +1648,153 @@ fn offscreen_server_authenticate_reanchors_before_dispatching_the_retained_ident
     assert_offscreen_server_action_reanchors(KeyCode::Char('a'), true)
 }
 
+fn assert_hidden_target_catalog_action_reanchors(
+    status: McpServerStatus,
+    code: KeyCode,
+    start_oauth: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let original = "server exact / 日";
+    let other = "other visible / 日";
+    let draft = "untouched chat draft";
+    for (tab_index, tab) in [
+        super::Tab::Tools,
+        super::Tab::Prompts,
+        super::Tab::Resources,
+        super::Tab::Templates,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let mut selected = server(original);
+        selected.status = status.clone();
+        let mut ui = UiState::new(100);
+        ui.show_mcp_panel(state(vec![selected, server(other)]));
+        ui.insert_text(draft);
+        assert!(render(&mut ui, 80, 6)?.contains(&format!("> {original}")));
+        let placed = crate::render::mcp_geometry(&ui).unwrap_or_else(|| panic!("compact popup"));
+        assert_eq!(placed.popup.height, 2, "no server identity in a header");
+        assert_eq!(placed.body.height, 1, "only one document row is painted");
+        for _ in 0..=tab_index {
+            assert!(ui.handle_mcp_key(key(KeyCode::Tab)).is_none());
+        }
+        // Free scrolling must not change the server action's retained target.
+        // Start at the unrelated Session row even if Tab anchors correctly.
+        for _ in 0..3 {
+            assert!(ui.handle_mcp_key(key(KeyCode::PageUp)).is_none());
+        }
+        let hidden = render(&mut ui, 80, 6)?;
+        assert!(hidden.contains("Session: root"), "{tab:?}: {hidden}");
+        assert!(!hidden.contains(original), "{tab:?}: hidden server target");
+        assert!(!hidden.contains(other), "{tab:?}: no painted server target");
+        let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
+        assert_eq!(panel.tab, tab);
+        assert_eq!(panel.selected_server.as_deref(), Some(original));
+        assert!(panel.selected_entry.is_none());
+        assert!(panel.submitted.is_none());
+
+        assert!(
+            ui.handle_mcp_key(key(code)).is_none(),
+            "{tab:?}: the first hidden-target reset/auth must reanchor without dispatch"
+        );
+        let panel = ui.mcp_panel().unwrap_or_else(|| panic!("panel"));
+        assert!(matches!(panel.page, super::Page::Catalog));
+        assert_eq!(panel.tab, tab);
+        assert_eq!(panel.selected_server.as_deref(), Some(original));
+        assert!(panel.selected_entry.is_none());
+        assert!(panel.submitted.is_none());
+        assert_eq!(ui.input_text(), draft);
+        let reanchored = render(&mut ui, 80, 6)?;
+        assert!(
+            reanchored.contains(&format!("> {original}")),
+            "{tab:?}: the original action target must now be painted"
+        );
+        assert!(!reanchored.contains(other));
+        assert!(!reanchored.contains("Session: root"));
+        let request = ui
+            .handle_mcp_key(key(code))
+            .unwrap_or_else(|| panic!("{tab:?}: second explicit visible activation"));
+        assert_eq!(
+            request,
+            McpRequest {
+                session_id: SessionId::new("root"),
+                server_name: original.into(),
+                operation: McpOperation::Reset { start_oauth },
+            }
+        );
+        assert!(ui.messages().is_empty());
+        assert_eq!(ui.input_text(), draft);
+        assert!(ui.handle_mcp_key(key(KeyCode::Esc)).is_none());
+        assert!(ui.mcp_panel().is_none());
+        assert_eq!(ui.input_text(), draft);
+    }
+    Ok(())
+}
+
+fn assert_hidden_target_unavailable_catalog_action_reanchors(
+    code: KeyCode,
+    start_oauth: bool,
+) -> Result<(), Box<dyn std::error::Error>> {
+    for failed_authorization in [false, true] {
+        assert_hidden_target_catalog_action_reanchors(
+            McpServerStatus::Failed {
+                failed_authorization,
+                authorization_url: None,
+                error_message: "catalog unavailable".into(),
+                error_code: None,
+            },
+            code,
+            start_oauth,
+        )?;
+    }
+    Ok(())
+}
+
+#[test]
+fn hidden_target_unavailable_catalog_reset_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    assert_hidden_target_unavailable_catalog_action_reanchors(KeyCode::Char('r'), false)
+}
+
+#[test]
+fn hidden_target_unavailable_catalog_authenticate_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    assert_hidden_target_unavailable_catalog_action_reanchors(KeyCode::Char('a'), true)
+}
+
+#[test]
+fn hidden_target_empty_catalog_reset_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    assert_hidden_target_catalog_action_reanchors(
+        McpServerStatus::Connected {
+            catalog: Arc::new(McpCatalog {
+                tools: Vec::new(),
+                prompts: Vec::new(),
+                resources: Vec::new(),
+                resource_templates: Vec::new(),
+            }),
+        },
+        KeyCode::Char('r'),
+        false,
+    )
+}
+
+#[test]
+fn hidden_target_empty_catalog_authenticate_reanchors_before_dispatch()
+-> Result<(), Box<dyn std::error::Error>> {
+    assert_hidden_target_catalog_action_reanchors(
+        McpServerStatus::Connected {
+            catalog: Arc::new(McpCatalog {
+                tools: Vec::new(),
+                prompts: Vec::new(),
+                resources: Vec::new(),
+                resource_templates: Vec::new(),
+            }),
+        },
+        KeyCode::Char('a'),
+        true,
+    )
+}
+
 #[test]
 fn titled_prompt_keeps_its_display_label_and_dispatches_only_its_canonical_name() {
     let mut entries = (*catalog()).clone();
