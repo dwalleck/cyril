@@ -18,7 +18,8 @@ The application entry point and event loop orchestrator.
 
 The central orchestrator. Owns:
 - `BridgeSender` + notification/permission receivers (split from `BridgeHandle`)
-- `UiState` — all UI state
+- `UiState` — mutable UI state
+- `RenderState` — retained rendering data, created once and reused by `draw_frame()` across frames
 - `SessionController` — session metadata
 - `CommandRegistry` — command dispatch
 
@@ -138,7 +139,7 @@ UI state machine, rendering, and widgets.
 
 The central UI state machine. Implements `TuiState` trait. Manages:
 
-- Chat messages (with enforced limit), streaming text/thought buffers
+- Committed chat messages in `MessageHistory` (with enforced limit), streaming text/thought buffers and their `LiveRevision`
 - Tool call tracking (`TrackedToolCall` with index for O(1) updates)
 - Input text, cursor, autocomplete state
 - Overlay state: approval, picker, hooks panel
@@ -151,9 +152,13 @@ Key methods:
 - `show_picker()` / `show_approval()` / `show_hooks_panel()` — overlay management
 - `focus_subagent()` / `unfocus_subagent()` — subagent drill-in
 
+### `message_history.rs` — MessageHistory
+
+Concrete committed-message owner for `UiState` and each `SubagentStream`. Encapsulates message mutation, stable retained positions, per-message revisions and a coalesced latest-change index. Owner/epoch-aware history cursors let the renderer distinguish incremental changes from a reset.
+
 ### `traits.rs` — TuiState Trait + Display Types
 
-- **`TuiState`** — read-only trait for the renderer (messages, input, activity, overlays, subagents)
+- **`TuiState`** — read-only trait for the renderer (`history() -> &MessageHistory`, live text/thought accessors and `live_revision() -> LiveRevision`, input, activity, overlays, subagents)
 - **`Activity`** — enum: Idle, Ready, Sending, Waiting, Streaming, ToolRunning
 - **`ChatMessage`** / **`ChatMessageKind`** — display message types
 - **`TrackedToolCall`** — tool call with display metadata
@@ -164,14 +169,15 @@ Includes `test_support::MockTuiState` for widget testing.
 
 ### `render.rs` — Frame Layout
 
-`draw()` — panic-safe top-level renderer. Lays out: toolbar, chat, crew panel, input, status bar. Renders overlays on top (approval, picker, hooks panel).
+`draw(frame: &mut Frame, state: &dyn TuiState, render_state: &mut RenderState)` — panic-safe top-level renderer. Lays out: toolbar, chat, crew panel, input, status bar. Renders overlays on top (approval, picker, hooks panel). `RenderState` retains `ChatRenderState` across frames; caught panics clear it before fallback rendering.
 
 ### `widgets/` — Widget Modules
 
 | Widget | File | Purpose |
 |--------|------|---------|
-| `chat` | `chat.rs` | Message display with tool call diffs, subagent drill-in |
-| `markdown` | `markdown.rs` | Pulldown-cmark → ratatui spans with syntax highlighting |
+| `chat` | `chat.rs`, `chat/` | Semantic message/tool presentation and source selectors; transcript selection, invalidation and fixed scrollbar-gutter policy |
+| `chat_layout` | `chat_layout/` | Physical wrapping/prepared blocks, row-height index, viewport seek/traversal and cell painting |
+| `markdown` | `markdown.rs` | Pulldown-cmark → styled, syntax-highlighted `Arc<[Line<'static>]>` |
 | `input` | `input.rs` | Multi-line input with cursor and autocomplete overlay |
 | `toolbar` | `toolbar.rs` | Top bar (session, mode, model) + bottom status bar (context, activity) |
 | `crew_panel` | `crew_panel.rs` | Subagent status panel (bordered, max 6 rows + overflow) |
@@ -179,9 +185,13 @@ Includes `test_support::MockTuiState` for widget testing.
 | `picker` | `picker.rs` | Fuzzy-filtered selection list overlay |
 | `approval` | `approval.rs` | Permission approval dialog overlay |
 
+`chat_layout::PreparedBlock<Presentation>` owns an opaque chat presentation payload together with its physical rows. Chat resolves authoritative text sources for intersecting blocks; layout owns their indexed traversal and painting without interpreting presentation sources.
+
+`markdown::render_with_theme(markdown: &str, width: usize, theme: &Theme) -> Arc<[Line<'static>]>` caches by content, width and complete Markdown style. Cache hits clone the `Arc`, sharing immutable lines retained by chat presentations; those lines remain valid after cache eviction.
+
 ### `subagent_ui.rs` — SubagentUiState
 
-Per-subagent message streams (`SubagentStream`). Manages focused subagent for drill-in view. Routes notifications to the correct subagent stream.
+Per-subagent message streams (`SubagentStream`), each owning a `MessageHistory`, live text and `LiveRevision`. Manages focused subagent for drill-in view. Routes notifications to the correct subagent stream.
 
 ### `file_completer.rs` — FileCompleter
 
