@@ -1,0 +1,8 @@
+cwd=/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1
+CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target
+command=cargo fmt --all
+started_utc=2026-10-20T16:01:21.173505+00:00
+
+
+qualification_exit_code=0
+qualification_elapsed_seconds=0.875815

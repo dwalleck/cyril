@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "source_review": {
+    "agent": "ReviewZjCurrentStack",
+    "result": "No findings; correct within reviewed integration seams",
+    "confidence": 0.96,
+    "archive_path": "review/source-review.txt",
+    "sha256": "78fd3233655ad100e5f3af58a9ea185b703c80a0879df6659fd370f5b8301c3b",
+    "scope": "Actual working files, all7 Zj owners, inherited Fiv policies, first-Diff exclusive/invalidation/clone/pending, callers/lifetimes, width/Markdown fullstyle/cache/floor and documentary history boundary",
+    "limits": "Static only; no independent hash recomputation, tests, runtime, source-conformance claim beyond named seams or GREEN."
+  },
+  "bootstrap_review": {
+    "agent": "ReviewZjDecoderBootstrap",
+    "result": "No findings; correct within requested static-review scope",
+    "confidence": 0.96,
+    "archive_path": "review/bootstrap-review.txt",
+    "sha256": "d4fc711008f29b236f80ff5b6d44374a589a7d3ecb4b4f560d18178d4e238972",
+    "bootstrap_sha256": "912c7b40a0a29e5776cfb2ac3e1c09582cf2a6aaa71973ff11ea9c31945b25d0",
+    "adapter_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+    "scope": "Exact executed adapter transplant, memory-only Screen draw seam, frozen scenario/assertions/13paths, ownership-proven pidfd bounded cleanup and overall PASS requiring wrapper+cleanup",
+    "point_in_time": "Reviewed before GO when go:false; frozen source is unchanged. First UV wrapper preflight subsequently failed before spawn. Review did not prove interpreter API availability.",
+    "environment_applicability": "Main unchanged offline proof under host Python3.14.8 with recorded pure-Python dependencies exited0; actual same bootstrap/adapter owned02 then exited0/all13PASS/cleanupCOMPLETE. No source repair or pidfd shim."
+  },
+  "general_terminal_conformance": "Not reviewed or claimed; no graphical/native terminal qualification."
+}

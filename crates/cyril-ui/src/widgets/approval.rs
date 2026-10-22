@@ -632,7 +632,7 @@ fn plan_comparison(tc: &crate::traits::TrackedToolCall) -> Option<&str> {
 ///
 /// Runs every frame, so it never logs: a malformed payload's warning is
 /// emitted once when the approval is installed (cyril-q0kg).
-fn preview_lines<'a>(state: &ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
+fn preview_lines<'a>(state: &'a ApprovalState, theme: &Theme, text_width: usize) -> Vec<Line<'a>> {
     let tc = &state.tool_call;
     // A KAS workflow plan approval (cyril-8wh0) shows the typed plan's step
     // tree in place of KAS's Text rendering of the same plan, plus the one

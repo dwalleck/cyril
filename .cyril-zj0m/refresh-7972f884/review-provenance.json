@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "kind": "separately completed bounded static refresh review",
+  "original_input": "local://zj0m-refreshed-review.txt",
+  "resolved_original_input": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/zj0m-refreshed-review.txt",
+  "portable_text": "review/accepted-review.txt",
+  "publication_text": ".cyril-zj0m/refresh-7972f884/review.txt",
+  "text_sha256": "6bc19601d95f0f2c9df3b175559c5b4560122023c3d5829b90f58b8d829acbef",
+  "reviewer": "ReviewRefreshedResultStacks",
+  "verdict": "correct",
+  "confidence": 0.97,
+  "findings": [],
+  "reviewed_head": "7972f884fa35de6a0cffa8cb7e78349af4b7d3f3",
+  "compared_first_parent": "7a19fc742f109411c421af296addc5fe4db4d42b",
+  "merged_parent": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+  "accepted_review_receipt": {
+    "original_input": "/tmp/cyril-perf-consumer-20261020/zj0m-refreshed-qualification.json",
+    "archive_path": "consumer/zj0m-refreshed-qualification.json",
+    "json_section": "review"
+  },
+  "scope": "New Zj merge delta / consumer dispatch integration; first-Diff cache, independent raw output alias, error precedence, preserved owner files and fixture regression.",
+  "not_claimed": [
+    "Not the fiv1/x5 joint review or a relabeled older Zj verdict.",
+    "No independent qualification-tree or private-binary inspection by reviewer.",
+    "No check, consumer, benchmark or native execution by reviewer."
+  ],
+  "qualification_identity_source": "gates/canonical-handoff.json and source/qualified-source.source.json, not this static review",
+  "packager_action": "Exact review text copied unchanged; provenance metadata assembled only."
+}

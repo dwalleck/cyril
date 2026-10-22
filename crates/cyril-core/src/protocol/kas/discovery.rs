@@ -148,7 +148,8 @@ fn windows_kiro_data_dir(
     Some(local.join("Kiro-Cli"))
 }
 
-/// The one platform resolution of kiro-cli's data dir (the KAS bundle root).
+/// The platform default shared by the asset cache and credential store.
+/// `KIRO_DATA_DIR` overrides only assets, through [`bundle_data_dir`].
 /// Windows uses local AppData, macOS/iOS use Library/Application Support,
 /// and other targets follow the XDG/HOME rules.
 fn kiro_data_dir_from_env() -> Option<PathBuf> {
@@ -173,6 +174,20 @@ fn kiro_data_dir_from_env() -> Option<PathBuf> {
     }
 }
 
+/// Kiro 2.32.0 tests trimmed emptiness, but returns a nonblank override AS-IS:
+/// no trimming of the returned value, absolute-path requirement, or extra leaf.
+/// See `.cyril-0ssb/evidence.md` for the current binary's override branch.
+/// Resolve the platform default lazily, particularly its Windows known folder.
+fn bundle_data_dir(
+    override_value: Option<&OsStr>,
+    platform_default: impl FnOnce() -> Option<PathBuf>,
+) -> Option<PathBuf> {
+    match override_value.and_then(OsStr::to_str) {
+        Some(value) if !value.trim().is_empty() => Some(PathBuf::from(value)),
+        _ => platform_default(),
+    }
+}
+
 /// kiro-cli's credential store under `data_dir` — read ONLY by the
 /// stored-token fallback for a kiro-cli without `chat _ get-kas-token`
 /// (cyril-zbu7 amendment).
@@ -184,6 +199,7 @@ fn store_path(data_dir: &Path) -> PathBuf {
 /// `%LOCALAPPDATA%\Kiro-Cli` on Windows, Library/Application Support on
 /// macOS/iOS, or the XDG/HOME root on other targets. Consulted only by the
 /// stored-token fallback ([`super::auth`]).
+/// `KIRO_DATA_DIR` intentionally does not relocate this store.
 pub(crate) fn default_store_path() -> Option<PathBuf> {
     kiro_data_dir_from_env().map(|d| store_path(&d))
 }
@@ -427,10 +443,26 @@ pub(crate) async fn resolve_kas_command(
     // Resolved ONCE per spawn: the root scan and `resolve` both derive from
     // this value (F19b), and an invalid directory environment value warns
     // once rather than once per consumer.
-    let data_dir = kiro_data_dir_from_env();
+    let asset_override = std::env::var_os("KIRO_DATA_DIR");
+    let data_dir = bundle_data_dir(asset_override.as_deref(), kiro_data_dir_from_env);
     let server_override = nonempty(std::env::var("KIRO_KAS_SERVER_PATH").ok());
     let node_override = nonempty(std::env::var("KIRO_AGENT_PATH").ok());
     let path_var = std::env::var_os("PATH");
+    // Anchor discovery before the agent changes cwd, but append `kas` first:
+    // Windows normalizes trailing spaces/dots differently on a final component
+    // than on the interior user-root component in the actual extraction path.
+    // Pop only that known suffix; the pure resolver appends it again unchanged.
+    // Explicit server/node overrides retain their existing verbatim semantics.
+    let data_dir = match data_dir {
+        Some(path) if server_override.is_none() && path.is_relative() => {
+            let root = kas_root(&path);
+            let mut anchored = std::path::absolute(&root)
+                .map_err(|_| KasMissing::Server(root.join(SERVER_IN_ROOT_REL)))?;
+            anchored.pop();
+            Some(anchored)
+        }
+        other => other,
+    };
     // The dir scan + `kiro-cli --version` subprocess only run when they can
     // influence selection: an override names the server directly (and must win
     // without paying that cost), and no data dir means no root to scan
@@ -921,6 +953,56 @@ mod tests {
         }
     }
 
+    #[test]
+    fn bundle_override_is_as_is_and_does_not_resolve_platform_default() {
+        let absolute = abs_fixture("asset ü cache");
+        let padded = format!(" {} ", absolute.display());
+        for value in [
+            absolute.as_os_str(),
+            OsStr::new(&padded),
+            OsStr::new("relative assets"),
+        ] {
+            let bundle = bundle_data_dir(Some(value), || {
+                panic!("nonblank KIRO_DATA_DIR must not consult the platform default")
+            })
+            .expect("override root");
+            assert_eq!(bundle, PathBuf::from(value));
+            assert_eq!(kas_root(&bundle), Path::new(value).join("kas"));
+        }
+    }
+
+    #[test]
+    fn blank_bundle_override_preserves_each_platform_store_root() {
+        let home = abs_fixture("profile");
+        let xdg = abs_fixture("xdg");
+        let local = abs_fixture("Local AppData");
+        let defaults = [
+            kiro_data_dir(Some(&home), Some(xdg.as_os_str())),
+            apple_kiro_data_dir(Some(&home)),
+            windows_kiro_data_dir(Some(local.as_os_str()), || {
+                panic!("valid local AppData must not query the known folder")
+            }),
+            None,
+        ];
+        let override_root = abs_fixture("assets");
+        for default in defaults {
+            for value in [
+                None,
+                Some(OsStr::new("")),
+                Some(OsStr::new(" \t\u{1680}\u{2003} ")),
+            ] {
+                assert_eq!(bundle_data_dir(value, || default.clone()), default);
+            }
+            let bundle = bundle_data_dir(Some(override_root.as_os_str()), || default.clone())
+                .expect("asset override works without a default root");
+            assert_eq!(bundle, override_root);
+            if let Some(default) = &default {
+                assert_ne!(bundle, *default, "assets must not move the credential root");
+                assert_eq!(store_path(default), default.join("data.sqlite3"));
+            }
+        }
+    }
+
     // C1 fence: an absolute, non-empty XDG_DATA_HOME wins for ANY home —
     // including no home at all (kills the ignore-XDG / home-first impl).
     #[test]
@@ -1199,47 +1281,90 @@ mod tests {
     async fn env_wrappers_resolve_xdg_data_home_like_kiro_cli() {
         const CHILD: &str = "CYRIL_BRUI_XDG_WRAPPER_CHILD";
         let Some(completed) = std::env::var_os(CHILD) else {
-            // Parent: lay out <home>, <xdg>, a fake node, a fake versioned
-            // extraction under the dir the wrappers must resolve on this
-            // host, then re-run exactly this test in a child process.
-            let root = tempfile::tempdir().expect("tempdir");
-            let home = root.path().join("home");
-            let xdg = root.path().join("xdg");
-            let local = root.path().join("Profile With Spaces/AppData/Local");
-            let node = root.path().join("node");
-            std::fs::create_dir_all(&home).expect("home dir");
-            std::fs::write(&node, "").expect("fake node file");
-            let server_dir = kas_root(&expected_data_dir_on_host(&home, &xdg, &local))
-                .join(format!("2.24.0-{SHA_A}"))
-                .join("node_modules/@kiro/agent/dist/server");
-            std::fs::create_dir_all(&server_dir).expect("fake extraction");
-            std::fs::write(server_dir.join("acp-server.js"), "//").expect("fake entry");
-            let completed = root.path().join("completed");
-            let status = std::process::Command::new(
-                std::env::current_exe().expect("current test binary"),
-            )
-            .args([
-                "--exact",
-                "protocol::kas::discovery::tests::env_wrappers_resolve_xdg_data_home_like_kiro_cli",
-                "--nocapture",
-            ])
-            .env(CHILD, &completed)
-            .env("HOME", &home)
-            .env("USERPROFILE", &home)
-            .env("XDG_DATA_HOME", &xdg)
-            .env("LOCALAPPDATA", &local)
-            .env("KIRO_AGENT_PATH", &node)
-            // No kiro-cli anywhere on PATH: the version probe fails and
-            // selection takes the newest extraction; nothing real can run.
-            .env("PATH", root.path())
-            .env_remove("KIRO_KAS_SERVER_PATH")
-            .status()
-            .expect("re-run this test binary");
-            assert!(status.success(), "child-side wrapper assertions failed");
-            assert_eq!(
-                std::fs::read_to_string(&completed).expect("completion marker"),
-                "wrappers checked"
-            );
+            // Every arm has its own tree: an incorrect default-root scan cannot
+            // find an extraction left behind by a preceding arm.
+            for case in [
+                "unset",
+                "empty",
+                "whitespace",
+                "absolute",
+                "relative",
+                "padded",
+                "period-suffixed",
+            ] {
+                let root = tempfile::tempdir().expect("tempdir");
+                let home = root.path().join("home");
+                let xdg = root.path().join("xdg");
+                let local = root.path().join("Profile With Spaces/AppData/Local");
+                let node = root.path().join("node");
+                let platform_default = expected_data_dir_on_host(&home, &xdg, &local);
+                let (value, bundle_root) = match case {
+                    "absolute" => {
+                        let assets = root.path().join("asset ü cache");
+                        (Some(assets.clone().into_os_string()), assets)
+                    }
+                    "relative" => (Some("asset cache".into()), PathBuf::from("asset cache")),
+                    "padded" => (Some(" asset cache ".into()), PathBuf::from(" asset cache ")),
+                    "period-suffixed" => (
+                        Some("asset cache...".into()),
+                        PathBuf::from("asset cache..."),
+                    ),
+                    "empty" => (Some("".into()), platform_default),
+                    "whitespace" => (Some(" \t\u{2003} ".into()), platform_default),
+                    _ => (None, platform_default),
+                };
+                std::fs::create_dir_all(&home).expect("home dir");
+                std::fs::write(&node, "").expect("fake node file");
+                // A final separator makes Windows create the literal padded/
+                // triple-dot root. Recursive descendant creation alone would
+                // first create that ancestor as a normalized final component.
+                std::fs::create_dir_all(root.path().join(&bundle_root).join(""))
+                    .expect("literal bundle root directory");
+                let server_dir = root
+                    .path()
+                    .join(kas_root(&bundle_root))
+                    .join(format!("2.24.0-{SHA_A}"))
+                    .join("node_modules/@kiro/agent/dist/server");
+                std::fs::create_dir_all(&server_dir).expect("fake extraction");
+                std::fs::write(server_dir.join("acp-server.js"), "//").expect("fake entry");
+                let completed = root.path().join("completed");
+                let mut command = std::process::Command::new(
+                    std::env::current_exe().expect("current test binary"),
+                );
+                command
+                    .args([
+                        "--exact",
+                        "protocol::kas::discovery::tests::env_wrappers_resolve_xdg_data_home_like_kiro_cli",
+                        "--nocapture",
+                    ])
+                    .current_dir(root.path())
+                    .env(CHILD, &completed)
+                    .env("HOME", &home)
+                    .env("USERPROFILE", &home)
+                    .env("XDG_DATA_HOME", &xdg)
+                    .env("LOCALAPPDATA", &local)
+                    .env("KIRO_AGENT_PATH", &node)
+                    .env("PATH", root.path())
+                    .env("CYRIL_0SSB_EXPECTED_BUNDLE", &bundle_root)
+                    .env_remove("KIRO_KAS_SERVER_PATH");
+                match value {
+                    Some(value) => {
+                        command.env("KIRO_DATA_DIR", value);
+                    }
+                    None => {
+                        command.env_remove("KIRO_DATA_DIR");
+                    }
+                }
+                let status = command.status().expect("re-run this test binary");
+                assert!(
+                    status.success(),
+                    "child-side {case} wrapper assertions failed"
+                );
+                assert_eq!(
+                    std::fs::read_to_string(&completed).expect("completion marker"),
+                    "wrappers checked"
+                );
+            }
             return;
         };
         // Child: the real environment IS the private one the parent set.
@@ -1250,13 +1375,16 @@ mod tests {
         // variable wrapper would report `Server`/`NoHome` instead), so the
         // spawn reaches the login gate — which refuses it because no kiro-cli
         // can be run (cyril-zbu7: the gate asks kiro-cli, never a store).
-        let data_dir = expected_data_dir_on_host(&home, &xdg, &local);
+        let data_dir = PathBuf::from(
+            std::env::var_os("CYRIL_0SSB_EXPECTED_BUNDLE").expect("expected bundle root"),
+        );
         assert!(kas_root(&data_dir).is_dir(), "fixture extraction present");
-        // The stored-token fallback's store follows the same resolver (R2).
+        // Assets alone relocate. The stored-token fallback keeps its native
+        // default even when KIRO_DATA_DIR names an entirely different tree.
         assert_eq!(
             default_store_path(),
-            Some(data_dir.join(STORE_FILE_NAME)),
-            "default_store_path must follow the resolver on this host"
+            Some(expected_data_dir_on_host(&home, &xdg, &local).join(STORE_FILE_NAME)),
+            "KIRO_DATA_DIR must never relocate the credential store"
         );
         // The real free-path source over the child's private PATH and HOME,
         // with an executable probe confined to the test's private root —
@@ -1283,6 +1411,119 @@ mod tests {
             "the gate must name the helper it could not run and where it looked: {why}"
         );
         std::fs::write(completed, "wrappers checked").expect("completion marker");
+    }
+
+    /// A relative extraction root belongs to discovery's cwd, while the real
+    /// child runs in the selected workspace. Load the selected entry there,
+    /// rather than stopping at the login gate as the environment matrix does.
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn relative_bundle_survives_a_different_agent_working_directory() {
+        use tokio::io::AsyncReadExt;
+        const CHILD: &str = "CYRIL_0SSB_RELATIVE_SPAWN_CHILD";
+        let Some(completed) = std::env::var_os(CHILD) else {
+            for value in ["assets", " assets "] {
+                let root = tempfile::tempdir().expect("owned spawn fixture");
+                let launch = root.path().join("launch");
+                let workspace = root.path().join("workspace");
+                let home = root.path().join("home");
+                let bin = root.path().join("bin");
+                for directory in [&launch, &workspace, &home, &bin] {
+                    std::fs::create_dir_all(directory).expect("fixture directory");
+                }
+                for (fixture, name) in [
+                    ("fake-kiro-cli.sh", "kiro-cli"),
+                    ("relative-bundle-node.sh", "node"),
+                ] {
+                    std::os::unix::fs::symlink(
+                        Path::new(env!("CARGO_MANIFEST_DIR"))
+                            .join("tests/fixtures")
+                            .join(fixture),
+                        bin.join(name),
+                    )
+                    .expect("committed executable fixture symlink");
+                }
+                let server = launch
+                    .join(value)
+                    .join("kas")
+                    .join(format!("2.24.0-{SHA_A}"))
+                    .join("node_modules/@kiro/agent/dist/server/acp-server.js");
+                std::fs::create_dir_all(server.parent().expect("server directory"))
+                    .expect("versioned extraction");
+                std::fs::write(&server, "CYRIL_0SSB_SELECTED_BUNDLE\n")
+                    .expect("selected bundle entry");
+                assert!(
+                    !workspace.join(value).exists(),
+                    "no competing workspace tree"
+                );
+                let completed = root.path().join("completed");
+                let status = std::process::Command::new(
+                    std::env::current_exe().expect("current test binary"),
+                )
+                .args([
+                    "--exact",
+                    "protocol::kas::discovery::tests::relative_bundle_survives_a_different_agent_working_directory",
+                    "--nocapture",
+                ])
+                .current_dir(&launch)
+                .env(CHILD, &completed)
+                .env("CYRIL_0SSB_AGENT_WORKSPACE", &workspace)
+                .env("HOME", &home)
+                .env("USERPROFILE", &home)
+                .env("XDG_DATA_HOME", root.path().join("xdg"))
+                .env("KIRO_DATA_DIR", value)
+                .env("KIRO_AGENT_PATH", bin.join("node"))
+                .env("PATH", &bin)
+                .env_remove("KIRO_KAS_SERVER_PATH")
+                .status()
+                .expect("reentered child");
+                assert!(
+                    status.success(),
+                    "relative override {value:?} failed child startup"
+                );
+                assert_eq!(
+                    std::fs::read_to_string(completed).expect("executed child receipt"),
+                    "selected bundle opened in workspace"
+                );
+            }
+            return;
+        };
+        let workspace =
+            PathBuf::from(std::env::var_os("CYRIL_0SSB_AGENT_WORKSPACE").expect("agent workspace"));
+        assert_ne!(std::env::current_dir().expect("discovery cwd"), workspace);
+        let command = resolve_kas_command(&crate::protocol::kas::auth::KasTokenSource::on_path())
+            .await
+            .expect("fake CLI login gate passes and extraction is discovered");
+        let mut process = crate::protocol::transport::AgentProcess::spawn(
+            &command,
+            &workspace,
+            &crate::types::SpawnEnvironment::Inherit,
+        )
+        .await
+        .expect("spawn actual workspace child");
+        let mut output = String::new();
+        tokio::time::timeout(
+            std::time::Duration::from_secs(5),
+            process.stdout.read_to_string(&mut output),
+        )
+        .await
+        .expect("owned child completes")
+        .expect("child output");
+        let status = process._child.wait().await.expect("owned child exit");
+        assert!(
+            status.success(),
+            "bundle found during discovery must load from the workspace: {status}; {output:?}"
+        );
+        let expected_cwd = workspace.canonicalize().expect("physical workspace cwd");
+        assert_eq!(
+            output,
+            format!(
+                "cwd={}\nbundle=CYRIL_0SSB_SELECTED_BUNDLE\n",
+                expected_cwd.display()
+            )
+        );
+        std::fs::write(completed, "selected bundle opened in workspace")
+            .expect("completion receipt");
     }
 
     // cyril-zbu7 C1 (red-first): the free-path login gate asks kiro-cli —
@@ -1337,6 +1578,7 @@ mod tests {
             // are shell builtins, and KIRO_AGENT_PATH makes node lookup moot.
             .env("PATH", &bin)
             .env_remove("KIRO_KAS_SERVER_PATH")
+            .env_remove("KIRO_DATA_DIR")
             .status()
             .expect("re-run this test binary");
             assert!(status.success(), "child-side gate assertions failed");
@@ -1424,6 +1666,7 @@ mod tests {
             // are shell builtins, and KIRO_AGENT_PATH makes node lookup moot.
             .env("PATH", &empty_path)
             .env_remove("KIRO_KAS_SERVER_PATH")
+            .env_remove("KIRO_DATA_DIR")
             .status()
             .expect("re-run this test binary");
             assert!(status.success(), "child-side assertions failed");

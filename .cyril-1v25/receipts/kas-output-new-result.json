@@ -1,0 +1,12 @@
+{
+  "result": "PASS",
+  "binary": "/tmp/cyril-1v25-after-output-extension-20261020",
+  "engine": "kas",
+  "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/.cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+  "expected": [
+    "\u2713 Run the exact sed/tr pipeline requested",
+    "| XAVT_BEGIN XAVT_END"
+  ],
+  "proof": "real Cyril binary, controlled ACP peer, PTY-decoded TUI",
+  "captured_frames_preserved": true
+}

@@ -98,6 +98,14 @@ credential-reading capability from a normal binary. A workspace build is not
 proof of exclusion: `cyril-workbench` enables core KAS through feature
 unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 
+On v2, a tool rejected during argument validation is shown as a failed call with
+its validation error, even when the agent sends only an input chunk and a failed
+update without a start. Error text supplied in the update's content is displayed
+when no usable raw-output error is available. Empty or whitespace-only raw
+strings and error fields do not suppress that content fallback. Nonblank raw
+errors retain precedence; the original raw output remains unchanged. A chunk
+alone remains activity, not a fabricated tool result.
+
 The default KAS `free` spawn runs discovered Node.js plus the extracted
 `acp-server.js` directly, with callback authentication: on each KAS token
 callback Cyril runs `kiro-cli chat _ get-kas-token` (cyril-zbu7), so kiro-cli
@@ -115,14 +123,23 @@ do not relocate credentials. There is no silent Wrapper or v2 fallback.
 
 ### KAS on native platforms
 
-Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas` and, only
-for the stored-token fallback above, reads `<data dir>/data.sqlite3`. Both use the same platform root:
+By default, Cyril discovers Kiro's extracted KAS bundles under `<data dir>/kas`.
+The stored-token fallback reads `<data dir>/data.sqlite3`. Native defaults are:
 
-| Platform | Kiro data directory |
+| Platform | Default Kiro data directory |
 | --- | --- |
 | Linux | `$XDG_DATA_HOME/kiro-cli` when absolute; otherwise `~/.local/share/kiro-cli` |
 | macOS | `~/Library/Application Support/kiro-cli` |
 | Native Windows | `%LOCALAPPDATA%\Kiro-Cli`, falling back to Windows' local-app-data known folder when `LOCALAPPDATA` is unset or not absolute |
+
+`KIRO_DATA_DIR` overrides **bundle discovery only**. A value that is nonblank
+after checking whitespace is used with its original spelling, including leading
+or trailing spaces; Cyril does not append a `kiro-cli` or `Kiro-Cli` directory.
+An unset, empty, or whitespace-only value uses the native default above. Relative
+bundle roots resolve from Cyril's launch directory and stay bound there even
+when the agent runs in a different `--cwd` workspace. The credential store always
+keeps its native default location; neither `KIRO_DATA_DIR` nor `KIRO_HOME`
+relocates it.
 
 `XDG_DATA_HOME` does not redirect macOS or native Windows KAS discovery.
 macOS also ignores `LOCALAPPDATA`; native Windows ignores `HOME` and does not
@@ -135,6 +152,21 @@ The macOS data-root correction from
 [PR #167](https://github.com/dwalleck/cyril/pull/167) is integrated.
 Live native macOS/Windows KAS qualification is not claimed here. See the
 [ROADMAP parity table](docs/ROADMAP.md#current-default-policy-and-parity-cyril-4c4d).
+
+### Kiro profile roots
+
+Cyril uses one validated Kiro profile root for KAS settings, sidecar reads,
+global agent configurations and trust writes, and global host hooks. It defaults
+to `<home>/.kiro`; `KIRO_HOME` selects another profile without relocating KAS
+bundles or credentials.
+
+`KIRO_HOME` has leading/trailing whitespace trimmed; an unset, empty, or
+whitespace-only value uses the default. A nonempty value must be absolute on Unix
+or rooted on Windows (drive-relative paths such as `C:profile` are rejected).
+Filesystem roots and paths equal to or containing the user's home are also
+rejected, including symlink aliases. Rejected overrides produce a warning and
+fall back to the default profile. Workspace agents still shadow globals, and
+workspace hooks still merge with global hooks.
 
 ### Local memory runtime
 
@@ -179,6 +211,56 @@ Key presses and held-key repeats are handled; key releases are ignored to preven
 duplicate input on Windows. Windows `Alt+numpad` character entry is unsupported
 because Crossterm reports those characters only on release. Paste the character
 instead; Unicode paste remains supported.
+
+### Themes and Markdown rendering
+
+Use `/theme` to preview a bundled palette. `Esc` cancels the preview and
+restores the previous colors; `Enter` applies the selection for the current
+session. Committed and streaming Markdown, including syntax-highlighted code,
+use the selected palette without changing the preview/cancel/commit behavior.
+
+Highlighting and Markdown caches identify their output by the concrete style
+inputs their renderers use, rather than every role in the full theme.
+Highlighting depends on the resolved syntax palette and fallback text color;
+Markdown also includes its own formatting colors and render width. Unrelated
+theme-role changes can reuse cached output, while changes to a used style
+remain isolated. Adding a rendering dependency to a style input automatically
+includes it in that input's derived identity.
+
+Display budgets use the released `ratatui-core 0.1.2` /
+`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
+and affected popup/status text. Halfwidth sound marks occupy their painted
+columns; combining marks and original input bytes are preserved. The input
+editor retains character wrapping and its character-cursor contract.
+
+The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
+separates this source state and its outstanding qualification from the frozen
+earlier benchmark and consumer evidence.
+
+### Tool call history
+
+Tool rows stay at their first observed position in the conversation. An update
+without a preceding start creates a row from the fields it supplies, including
+KAS **Tool Load** and **Subagent Response** updates. Later frames for the same
+call within a session merge into that row rather than adding duplicates,
+preserving the text before and after it. A new session can reuse a tool ID
+without changing the previous session's history.
+
+Completed Write calls use the **first diff** for both the `+added -removed`
+summary and the inline body. An unchanged first diff shows no change counts,
+even if a later diff in the same call changed. The body keeps one context line
+and at most 20 rows, followed by an ellipsis when truncated.
+
+The tracked call retains one theme-independent derivation for unchanged diff
+text. Redraws, resizes and palette changes reuse it while applying the current
+colors; replacing the selected source refreshes the summary and body together.
+Pending approval comparisons use the same diff renderer without requiring the
+tool to be completed.
+
+For successful KAS commands, string-valued `rawOutput.output` is shown beneath
+the completed row, including completions that omit `kind`. Existing output
+formats keep precedence; non-string `output` values and the formatted `message`
+field are not used as substitutes.
 
 ### Rejecting a tool with feedback (KAS)
 
@@ -255,18 +337,23 @@ keeps 20 diff lines plus its marker. Workflow comparison pagination does not
 expand ordinary diffs or their cached content.
 
 The independent-tree cutover, final repaired PR #188 content and retained-path
-window reconciliation now have scoped local qualification, source review and
-an accepted fresh **24-specimen owned-consumer PASS**. The
-[verification record](.cyril-ej7y/verification.md#accepted-current-qualification-review-and-consumer)
-distinguishes that run from the preserved original pyte failure and offline
-instrument repair, and explains retained preformat results versus fresh checks.
-Public receipts are mapped by the [current evidence index](.cyril-ej7y/evidence-current-index.json)
-into the [current evidence archive](.cyril-ej7y/evidence-current-488-bbef35cf.tar.gz).
-The 488-input qualification descriptor is not a committed head. Main still owns
-held-merge completion, normal final-parent/current-main integrations and affected
-proof retention or requalification, final head and publication. Inherited auth6c,
-remaining feature/platform CI and applicable native obligations remain unwaived;
-owned decoded-screen evidence is not live Kiro, real-account or native-glyph proof.
+window reconciliation now have current **497-input workspace qualification**
+and one Main-accepted complete **24-specimen composer-geometry owned-consumer PASS**.
+The [verification record](.cyril-ej7y/verification.md#accepted-current-qualification-review-and-consumer)
+is the sole actual-result owner: it separates current fresh local gates from
+historical 488-input proof, preserves failures and causal/exit-code limits, and
+owns review applicability. Public receipts are mapped by the
+[current evidence index](.cyril-ej7y/evidence-current-index.json) into the
+[current evidence archive](.cyril-ej7y/evidence-current-497-cfeb275f.tar.gz).
+The [current ordinary source review](.cyril-ej7y/review-current497-cfeb275f.md)
+found no actionable defects (correct, confidence 0.94) in the assembled
+five-file main-relative approval delta and affected cache/chat, key-dispatch
+and workflow interactions; this is static review, not runtime or CI acceptance.
+The workspace descriptor is not a Git tree or committed head. Main still owns
+completion of the held current-main merge, final-head binding, affected proof
+retention or requalification, final-head review applicability and publication. Remaining exact CI,
+platform/native and common-provider obligations stay unwaived; ordinary local
+auth-fixture coverage is not live Kiro, real-account or native-glyph acceptance.
 
 ### Host hooks (KAS)
 
@@ -411,6 +498,7 @@ findings and the path to `report.md`.
 | `/clear` | Clear the chat |
 | `/mode <id>` | Switch agent mode |
 | `/model [id]` | Switch model (opens picker if no ID given) |
+| `/theme` | Preview a palette; `Enter` applies it for this session, `Esc` cancels |
 | `/memory status` | Show local memory runtime health, store versions, and project binding |
 | `/memory teach <text>` | Store an explicit lesson for the bound project |
 | `/memory teach --replace <id> <text>` | Supersede one lesson with new text |

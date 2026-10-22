@@ -1,0 +1,120 @@
+{
+  "scope": "Refreshed published fiv1 stack qualification; approved output alias/capture test/common fixture merged by parent",
+  "expected_head": "5e523ebf10978cc990746934732e4256596244ff",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1",
+  "commands": [
+    {
+      "label": "00-initial-fmt",
+      "command": "cargo fmt --all",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1",
+      "started_utc": "2026-10-20T16:01:21.173505+00:00",
+      "elapsed_seconds": 0.8758148140041158,
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/00-initial-fmt.log",
+      "log_sha256": "3715615deaba382d64d2eda93c74e2b3703489a66f0492bd9c6df95342a56497"
+    },
+    {
+      "label": "01-clippy",
+      "command": "cargo clippy --workspace --all-targets -- -D warnings",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1",
+      "started_utc": "2026-10-20T16:01:22.694709+00:00",
+      "elapsed_seconds": 16.886847293004394,
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/01-clippy.log",
+      "log_sha256": "f5977293fda45c2c902bf291de454a86c83b0e29baf63ace25e6059ff284d180"
+    },
+    {
+      "label": "02-test",
+      "command": "cargo test --workspace",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1",
+      "started_utc": "2026-10-20T16:01:39.581972+00:00",
+      "elapsed_seconds": 85.36611986800563,
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/02-test.log",
+      "log_sha256": "11e99f6cd7407d85ab7dcc754a37c63bf82e371e19974d40793b5866e5785f00"
+    },
+    {
+      "label": "03-build",
+      "command": "cargo build -p cyril",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1",
+      "started_utc": "2026-10-20T16:03:04.948614+00:00",
+      "elapsed_seconds": 14.568194734980352,
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/03-build.log",
+      "log_sha256": "4382c2e8d5516a887b44c8fa678cd67e30d9a3da2dbac222d5ebb8d84bf1daf7"
+    },
+    {
+      "label": "04-fmt-check",
+      "command": "cargo fmt --all --check",
+      "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1",
+      "started_utc": "2026-10-20T16:03:19.517106+00:00",
+      "elapsed_seconds": 0.8937599580094684,
+      "exit_code": 0,
+      "expected_exit": 0,
+      "log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/04-fmt-check.log",
+      "log_sha256": "52fdaaf7bf281146771675e5334eff0ea2e6a22932a390c60f7666b335cec668"
+    }
+  ],
+  "cargo_slot": "released after both trees completed",
+  "benchmarks": "Not requested; none executed",
+  "native_smoke_permission": "Main GO required",
+  "pre-format": {
+    "actual_source_tree": "7ba80340f2e37516df31d964454126c12a22df36",
+    "head": "5e523ebf10978cc990746934732e4256596244ff",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/pre-format.source.json",
+    "source_manifest_sha256": "461ebb580794db5db6a5564cb4a7d4412214f8568f298d7d78335aa4760d3a80",
+    "real_index_sha256": "e3e914ef7b482231eb1518d359ebf259567a4e94c271b055948ad669acf0b38d"
+  },
+  "qualified-source": {
+    "actual_source_tree": "7ba80340f2e37516df31d964454126c12a22df36",
+    "head": "5e523ebf10978cc990746934732e4256596244ff",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/qualified-source.source.json",
+    "source_manifest_sha256": "1b4fbaa002e82592ac313b59617e5c9d13f3c75a99a8a8f567b8baca22fbf957",
+    "real_index_sha256": "e3e914ef7b482231eb1518d359ebf259567a4e94c271b055948ad669acf0b38d"
+  },
+  "gates_passed": true,
+  "qualified_binary": {
+    "path": "/tmp/cyril-fiv1-refreshed-20261020",
+    "sha256": "e3f072bcd89cc8e1bf935fb52912035ffb273ac913cd1c31f40c225405534db1",
+    "bytes": 101936464,
+    "head": "5e523ebf10978cc990746934732e4256596244ff",
+    "actual_source_tree": "7ba80340f2e37516df31d964454126c12a22df36",
+    "source_manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/refreshed-published-stack/fiv1/qualified-source.source.json",
+    "source_build_output": "/home/dwalleck/repos/cyril/target/debug/cyril",
+    "command": "CARGO_TARGET_DIR=/home/dwalleck/repos/cyril/target cargo build -p cyril",
+    "profile": "dev; opt-level0,incremental=true",
+    "features": "cyril default=[kas];voice disabled; no explicit feature flags",
+    "target": "x86_64-unknown-linux-gnu host default",
+    "preserved_utc": "2026-10-20T16:03:31.807616+00:00",
+    "gates_passed": [
+      "initial cargo fmt --all",
+      "cargo clippy --workspace --all-targets -- -D warnings",
+      "cargo test --workspace",
+      "cargo build -p cyril",
+      "cargo fmt --all --check"
+    ],
+    "native_smoke_permission": "Main GO required"
+  },
+  "test_totals": {
+    "passed": 2826,
+    "failed": 0,
+    "ignored": 13,
+    "measured": 0,
+    "filtered_out": 0,
+    "top_level_summary_groups": 42,
+    "nested_child_summaries_excluded": 6,
+    "complete_workspace": true,
+    "attribution": "Top-level Cargo-launched test/doc-test summaries only; nested one-test process summaries excluded to avoid double counting."
+  },
+  "limits": [
+    "Default-feature Linux qualification only; no other platform or all-features claim.",
+    "No benchmark requested or run.",
+    "Private dev binary preserved and SHA256 matched shared debug build output before next build.",
+    "No native consumer proof or per-head GO from qualifier; Main owns GO.",
+    "No inline repair, retries, commits, pushes or tracker mutations by qualifier."
+  ]
+}

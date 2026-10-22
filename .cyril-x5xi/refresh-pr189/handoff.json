@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "issue": "cyril-x5xi",
+  "pr": 189,
+  "pr_url": "https://github.com/dwalleck/cyril/pull/189",
+  "status": "COMPLETE — refresh documentation/evidence package; publication by Main pending",
+  "canonical_handoff": ".cyril-x5xi/refresh-pr189/handoff.json",
+  "verification_index": ".cyril-x5xi/refresh-pr189/verification.md",
+  "verification_sha256": "1594b5b6396ad9a7d57899ade68212fbbddba1bd02b82e2f815d74f745f36215",
+  "publication_manifest": ".cyril-x5xi/refresh-pr189/publication-manifest.json",
+  "publication_owner": "Main",
+  "publication_file_count": 4,
+  "files_for_main_to_add": [
+    ".cyril-x5xi/refresh-pr189/handoff.json",
+    ".cyril-x5xi/refresh-pr189/publication-manifest.json",
+    ".cyril-x5xi/refresh-pr189/verification-evidence.tar.gz",
+    ".cyril-x5xi/refresh-pr189/verification.md"
+  ],
+  "source_pins": {
+    "qualified_head": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+    "actual_qualified_tree": "0280a33d5667e4da217fe572d42e0b9541df2a99",
+    "dev_binary_sha256": "8b28f0661276925b5d17b5333c75bc03ed24c2a61902c3c81651ae163e711785",
+    "binary_bytes": 101931840,
+    "binary_included": false,
+    "source_receipt_in_archive": "gates/x5xi/qualified-source.source.json",
+    "binary_receipt_in_archive": "gates/x5xi/qualified-binary.json",
+    "post_documentation_commit": "The future documentation commit changes HEAD/tree. These pins continue to identify the pre-publication checked source; only four new documentation/evidence files may be added."
+  },
+  "archive": {
+    "path": ".cyril-x5xi/refresh-pr189/verification-evidence.tar.gz",
+    "sha256": "bef26e3fd3e323503d2e65e4ceec0b1a68870bd9e6c565f898446cc5224c4689",
+    "bytes": 1627807,
+    "members": 166,
+    "index": "index.json",
+    "indexed_payload_members": 165
+  },
+  "gates": {
+    "result": "PASS",
+    "passed": 2833,
+    "failed": 0,
+    "ignored": 13,
+    "ignored_exercised": false,
+    "features": "workspace defaults; cyril default=[kas]; voice disabled; no explicit feature flags",
+    "platform": "x86_64-unknown-linux-gnu host default",
+    "commands_all_exit_zero": [
+      "cargo fmt --all",
+      "cargo clippy --workspace --all-targets -- -D warnings",
+      "cargo test --workspace",
+      "cargo build -p cyril",
+      "cargo fmt --all --check"
+    ],
+    "receipt_in_archive": "gates/x5xi/canonical-handoff.json",
+    "environment_in_archive": "gates/x5xi/environment.json",
+    "benchmark_or_other_platform_claim": false
+  },
+  "accepted_review": {
+    "reviewer": "ReviewRefreshedResultStacks",
+    "verdict": "correct",
+    "confidence": 0.97,
+    "findings": [],
+    "original_saved_source": "local://fiv1-x5xi-original-refresh-review.txt",
+    "exact_portable_text": "review/fiv1-x5xi-original-refresh-review.txt",
+    "text_sha256": "196ebdf9a0adc51a76427c386eb91e538d4c14308a2405ecc787eb09436485ab",
+    "provenance": "review/provenance.json",
+    "x5xi_delta_base": "194ec404a325843a1b002940784dda7296ef355c",
+    "boundary": "Static source/README/tracker-intent review only. Reviewer did not run builds, tests or replays, inspect private qualification artifacts, or independently establish the actual tree fingerprint. Qualifier and consumer receipts separately bind actual tree and binary.",
+    "not_used": "Latest agent output is a different Zj review; not substituted."
+  },
+  "owner_hashes": {
+    "crates/cyril-ui/src/highlight.rs": "f4142b29e3561b392a08e65eb5ca5827735e671577510f4d46a41a041f29fdc9",
+    "crates/cyril-ui/src/theme.rs": "fefab546a9d63cf300d70c986f48ed485ddf99c1cf7f240b13e649cb58215eaf",
+    "crates/cyril-ui/src/widgets/markdown.rs": "37719f3bf96799c5240660db27607ab43582ffce098bc21c5242bc4794b2ff2a"
+  },
+  "consumer": {
+    "result": "PASS",
+    "first_attempt_launches_passed": 4,
+    "first_attempt_launches_failed": 0,
+    "summary_in_archive": "consumer/x5xi-refreshed-qualification.json",
+    "theme_commands_in_archive": "consumer/x5xi-refreshed-commands.json",
+    "theme_runs": [
+      "x5xi-refreshed-truecolor-01",
+      "x5xi-refreshed-none-01",
+      "x5xi-refreshed-truecolor-return-01"
+    ],
+    "per_theme_run": {
+      "checkpoints_including_final": 14,
+      "passing_explicit_checks": 7,
+      "bidirectional_wire_frames": 11,
+      "unexpected_host_callbacks": []
+    },
+    "theme_coverage": "Committed and live Markdown/code; truecolor/none/truecolor-return separate startup processes; preview/cancel/commit and original palette restoration; resize 160x48 -> 80x24 -> 160x48, oldest/middle/follow scroll and append/completion.",
+    "kas_run": "x5xi-refreshed-kas-output-01",
+    "kas_coverage": "Exact approved sanitized Completed parsed frame/session ID preserved; repeated twice, exact header and rawOutput.output body appear once each between BEFORE_TOOL_ROWS and AFTER_TOOL_ROWS.",
+    "kas_source_layout": "kas-replay-repo/ preserves frozen .cyril-1v25 harness, trace and repository-relative fake helper lookup; no reimplementation.",
+    "proof_layer": "Actual refreshed binary through PTY/ANSI/pyte, not native graphical glyph or live upstream account/model proof."
+  },
+  "retained_old_pin_proof": {
+    "boundary_in_archive": "source/refresh-boundary.json",
+    "original_manifest": ".cyril-x5xi/publication-manifest.json",
+    "original_manifest_sha256": "951ef2e3d998363349e726057b4f25581eb786ef01db30f80ac707b490d63155",
+    "original_archive": ".cyril-x5xi/verification-evidence.tar.gz",
+    "original_archive_sha256": "afde35dcf77edf4fbb8d3d2a78417692be9380cd842700ba95db28e9180b155f",
+    "original_archive_included_in_refresh": false,
+    "status": "Original source-fence A/B and sensitivity remain at old pins, byte-unchanged; not rerun or relabeled as refreshed-head proof."
+  },
+  "privacy_and_scope": [
+    "Explicit file whitelist only; no blanket scratch recursion.",
+    "No binaries, private indexes, HOME/XDG/workspace/cache trees, credential stores or ambient private environment; only approved nonsecret receipts and gate logs.",
+    "No unrelated issue evidence/fiv1 directory/zj-c6-mcp historical logs; approved exact joint review and stack metadata are context only.",
+    "No account/model turns, real file/tool operations, terminal callback requests or permission grants; fake token helper only; captured command is inert.",
+    "No native graphical glyph, same-process color-mode switch, native50000, child-focus, performance-counter, benchmark, all-features or other-platform claim."
+  ],
+  "reproduction_in_archive": "reproduction.json",
+  "packaging_actions": "Copied and hashed explicit approved input bytes, generated scoped provenance/reproduction receipts, created normalized portable tar.gz and four new publication files only. No product/check/harness runs, source/README/tracker edits, old evidence edits, commits or pushes.",
+  "missing_prerequisites": [],
+  "main_next_action": "Add exactly files_for_main_to_add, create/push the documentation-only PR189 refresh commit, and adjudicate subsequent PR CI/publication. Do not re-stage or modify old publication files or infer fresh old-pin A/B/native coverage."
+}

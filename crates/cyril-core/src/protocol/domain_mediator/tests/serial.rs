@@ -1164,3 +1164,175 @@ fn kas_token_source_moves_into_the_dispatch_context() {
     assert!(mediator.host_ctx.kas_token.is_some());
     assert!(mediator.config.kas_token.is_none(), "moved, not copied");
 }
+
+#[cfg(feature = "kas")]
+#[test]
+fn global_profile_drives_trust_and_inbound_hook_registry() -> Result<(), Box<dyn std::error::Error>>
+{
+    use super::super::{DomainConfig, DomainMediator};
+    use crate::protocol::bridge::create_channel_pair;
+    use crate::protocol::engine::KasEngine;
+    use crate::protocol::kas::hooks::HooksListArgs;
+    use std::path::PathBuf;
+    use std::rc::Rc;
+    use std::time::Duration;
+
+    const CHILD: &str = "CYRIL_D7VE_PROFILE_CHILD";
+    let Some(root) = std::env::var_os(CHILD) else {
+        for case in ["override", "ancestor"] {
+            let root = tempfile::tempdir()?;
+            let home = root.path().join("home");
+            let workspace = root.path().join("workspace");
+            let relocated = root.path().join("profile ü");
+            for (profile, label) in [
+                (home.join(".kiro"), "default"),
+                (relocated.clone(), "relocated"),
+                (root.path().to_path_buf(), "ancestor"),
+            ] {
+                std::fs::create_dir_all(profile.join("agents"))?;
+                std::fs::write(
+                    profile.join("agents/fixture.json"),
+                    serde_json::json!({"name":"fixture","source":label}).to_string(),
+                )?;
+                std::fs::create_dir_all(profile.join("hooks"))?;
+                std::fs::write(
+                    profile.join("hooks/profile.json"),
+                    serde_json::json!({
+                        "version":"v1",
+                        "hooks":[{
+                            "name":label, "trigger":"Stop",
+                            "action":{"type":"command","command":"echo fixture"}
+                        }]
+                    })
+                    .to_string(),
+                )?;
+            }
+            std::fs::create_dir_all(workspace.join(".kiro/hooks"))?;
+            std::fs::write(
+                workspace.join(".kiro/hooks/workspace.json"),
+                r#"{"version":"v1","hooks":[{"name":"workspace","trigger":"Stop","action":{"type":"command","command":"echo fixture"}}]}"#,
+            )?;
+            let value = if case == "override" {
+                format!(" \t{} \u{2003}", relocated.display())
+            } else {
+                root.path().display().to_string()
+            };
+            let status = std::process::Command::new(std::env::current_exe()?)
+                .args([
+                    "--exact",
+                    "protocol::domain_mediator::tests::serial::global_profile_drives_trust_and_inbound_hook_registry",
+                    "--nocapture",
+                ])
+                .current_dir(root.path())
+                .env(CHILD, root.path())
+                .env("CYRIL_D7VE_PROFILE_CASE", case)
+                .env("HOME", &home)
+                .env("USERPROFILE", &home)
+                .env("KIRO_HOME", value)
+                .status()?;
+            assert!(
+                status.success(),
+                "{case} profile consumer assertions failed"
+            );
+            assert_eq!(
+                std::fs::read_to_string(root.path().join("completed"))?,
+                "profile consumers checked"
+            );
+        }
+        return Ok(());
+    };
+    let root = PathBuf::from(root);
+    let home = root.join("home");
+    let workspace = root.join("workspace");
+    let relocated = root.join("profile ü");
+    let case = std::env::var("CYRIL_D7VE_PROFILE_CASE")?;
+    let (active, inactive, label) = if case == "override" {
+        (relocated, home.join(".kiro"), "relocated")
+    } else {
+        (home.join(".kiro"), relocated, "default")
+    };
+    // This is the ambient resolver the sidecar also captures at startup.
+    assert_eq!(
+        crate::kiro_agent_config::kiro_home_dir(),
+        Some(active.clone())
+    );
+    let active_agent = active.join("agents/fixture.json");
+    let inactive_agent = inactive.join("agents/fixture.json");
+    let inactive_before = std::fs::read(&inactive_agent)?;
+    let ancestor_before = std::fs::read(root.join("agents/fixture.json"))?;
+    let written = crate::kiro_agent_config::persist_trust_grant(
+        "fixture",
+        &workspace,
+        "allowedCommands",
+        &["echo fixture".into()],
+    )?;
+    assert_eq!(written, active_agent);
+    let global_after = std::fs::read(&active_agent)?;
+    let config: serde_json::Value = serde_json::from_slice(&global_after)?;
+    assert_eq!(config["source"], label);
+    assert_eq!(
+        config["toolsSettings"]["execute_bash"]["allowedCommands"],
+        serde_json::json!(["echo fixture"])
+    );
+    assert_eq!(std::fs::read(&inactive_agent)?, inactive_before);
+    assert_eq!(
+        std::fs::read(root.join("agents/fixture.json"))?,
+        ancestor_before
+    );
+
+    // Workspace trust still wins, without altering the selected global config.
+    std::fs::create_dir_all(workspace.join(".kiro/agents"))?;
+    let workspace_agent = workspace.join(".kiro/agents/fixture.json");
+    std::fs::write(
+        &workspace_agent,
+        r#"{"name":"fixture","source":"workspace"}"#,
+    )?;
+    assert_eq!(
+        crate::kiro_agent_config::persist_trust_grant(
+            "fixture",
+            &workspace,
+            "allowedCommands",
+            &["echo workspace".into()],
+        )?,
+        workspace_agent
+    );
+    assert_eq!(std::fs::read(active_agent)?, global_after);
+
+    let (_handle, bridge) = create_channel_pair();
+    let (mediator, _channels) = DomainMediator::new(
+        DomainConfig {
+            engine: Rc::new(KasEngine {
+                hooks_mode: crate::types::kas_hooks::KasHooksMode::Host,
+                ..KasEngine::default()
+            }),
+            cwd: workspace,
+            present_as: None,
+            stall_threshold: Duration::from_secs(30),
+            host_shell: None,
+            kas_token: None,
+        },
+        bridge,
+    )?;
+    let registry = mediator
+        .host_ctx
+        .hooks
+        .as_ref()
+        .ok_or("inbound hooks missing")?;
+    let response = registry.respond_list(&HooksListArgs::parse(
+        &serde_json::json!({"trigger":"agentStop"}),
+    ))?;
+    let response: serde_json::Value = serde_json::from_str(response.0.get())?;
+    let mut ids: Vec<_> = response["hooks"]
+        .as_array()
+        .ok_or("hooks array missing")?
+        .iter()
+        .map(|hook| hook["id"].as_str().expect("hook id"))
+        .collect();
+    ids.sort_unstable();
+    assert_eq!(
+        ids,
+        [format!("profile:{label}"), "workspace:workspace".into()]
+    );
+    std::fs::write(root.join("completed"), "profile consumers checked")?;
+    Ok(())
+}
