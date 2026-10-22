@@ -7,6 +7,19 @@ use crate::widgets::markdown;
 
 use crate::spinner::{SPINNER_CHARS, SPINNER_FRAME_MS};
 
+/// Reserve a stable scrollbar column without sacrificing width-zero/one content.
+fn content_and_gutter(area: Rect) -> (Rect, Option<Rect>) {
+    if area.width <= 1 {
+        return (area, None);
+    }
+    let content = Rect {
+        width: area.width - 1,
+        ..area
+    };
+    let gutter = Rect::new(content.right(), area.y, 1, area.height);
+    (content, Some(gutter))
+}
+
 /// Render the chat area. If a subagent is focused, renders the focused
 /// subagent's stream instead of the main chat.
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
@@ -16,16 +29,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
         return;
     }
 
-    // Keep wrapping stable as content overflows or the user enters browse mode.
-    // The scrollbar must never paint over the last cell of a wrapped URL.
-    let content_area = Rect {
-        width: if area.width > 1 {
-            area.width - 1
-        } else {
-            area.width
-        },
-        ..area
-    };
+    let (content_area, gutter) = content_and_gutter(area);
 
     let mut lines: Vec<Line> = Vec::new();
 
@@ -81,10 +85,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
     frame.render_widget(chat, content_area);
 
     // Scrollbar
-    if area.width > 1 && total_lines > visible_height {
+    if let Some(gutter) = gutter
+        && total_lines > visible_height
+    {
         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-        let gutter = Rect::new(area.right() - 1, area.y, 1, area.height);
         frame.render_stateful_widget(scrollbar, gutter, &mut scrollbar_state);
     }
 }
@@ -98,6 +103,7 @@ fn render_subagent_drill_in(
     stream: &crate::subagent_ui::SubagentStream,
     theme: &Theme,
 ) {
+    let (content_area, gutter) = content_and_gutter(area);
     let mut lines: Vec<Line> = Vec::new();
 
     // Header bar with subagent name
@@ -121,7 +127,7 @@ fn render_subagent_drill_in(
 
     // Render committed messages
     for msg in stream.messages() {
-        render_message(&mut lines, msg, area.width as usize, theme);
+        render_message(&mut lines, msg, content_area.width as usize, theme);
         lines.push(Line::default());
     }
 
@@ -134,7 +140,7 @@ fn render_subagent_drill_in(
                 .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
+        let md_lines = markdown::render_with_theme(streaming, content_area.width as usize, theme);
         lines.extend(md_lines);
     }
 
@@ -144,7 +150,7 @@ fn render_subagent_drill_in(
         .wrap(Wrap { trim: false })
         .block(Block::default());
 
-    let total_lines = chat.line_count(area.width);
+    let total_lines = chat.line_count(content_area.width);
     let scroll_offset = if total_lines > visible_height {
         total_lines.saturating_sub(visible_height)
     } else {
@@ -153,12 +159,14 @@ fn render_subagent_drill_in(
 
     let scroll_clamped = scroll_offset.min(u16::MAX as usize) as u16;
     let chat = chat.scroll((scroll_clamped, 0));
-    frame.render_widget(chat, area);
+    frame.render_widget(chat, content_area);
 
-    if total_lines > visible_height {
+    if let Some(gutter) = gutter
+        && total_lines > visible_height
+    {
         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-        frame.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
+        frame.render_stateful_widget(scrollbar, gutter, &mut scrollbar_state);
     }
 }
 
@@ -186,7 +194,12 @@ fn push_thought_lines(lines: &mut Vec<Line>, text: &str, theme: &Theme) {
     }
 }
 
-fn render_message(lines: &mut Vec<Line>, msg: &ChatMessage, width: usize, theme: &Theme) {
+fn render_message<'a>(
+    lines: &mut Vec<Line<'a>>,
+    msg: &'a ChatMessage,
+    width: usize,
+    theme: &Theme,
+) {
     match msg.kind() {
         ChatMessageKind::UserText(text) => {
             lines.push(Line::styled(
@@ -320,7 +333,7 @@ fn render_activity_indicator(lines: &mut Vec<Line>, state: &dyn TuiState, theme:
     ]));
 }
 
-fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
+fn render_tool_call<'a>(lines: &mut Vec<Line<'a>>, tc: &'a TrackedToolCall, theme: &Theme) {
     use cyril_core::types::{ToolCallStatus, ToolKind};
 
     let status_icon = match tc.status() {
@@ -386,7 +399,7 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) 
         Span::styled(label, Style::default().fg(kind_color)),
     ];
 
-    if let Some((added, removed)) = compute_diff_summary(tc) {
+    if let Some((added, removed)) = tc.diff_preview().summary() {
         header_spans.push(Span::styled(
             format!("  +{added} -{removed}"),
             Style::default().fg(theme.subdued),
@@ -402,98 +415,39 @@ fn render_tool_call(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) 
     render_tool_output(lines, tc, theme);
 }
 
-/// Compute (added, removed) line counts from diff content using `similar`.
-fn compute_diff_summary(tc: &TrackedToolCall) -> Option<(usize, usize)> {
-    use similar::{ChangeTag, TextDiff};
+/// Style retained diff rows with the current palette, borrowing source text.
+/// Approval previews deliberately use this without a completion/kind gate.
+pub(crate) fn render_diff_lines<'a>(
+    lines: &mut Vec<Line<'a>>,
+    tc: &'a TrackedToolCall,
+    theme: &Theme,
+) {
+    use similar::ChangeTag;
 
-    for content in tc.content() {
-        if let cyril_core::types::ToolCallContent::Diff {
-            old_text, new_text, ..
-        } = content
-        {
-            let old = old_text.as_deref().unwrap_or("");
-            let diff = TextDiff::from_lines(old, new_text);
-            let mut added = 0usize;
-            let mut removed = 0usize;
-            for change in diff.iter_all_changes() {
-                match change.tag() {
-                    ChangeTag::Insert => added += 1,
-                    ChangeTag::Delete => removed += 1,
-                    ChangeTag::Equal => {}
-                }
-            }
-            if added > 0 || removed > 0 {
-                return Some((added, removed));
-            }
-        }
+    let preview = tc.diff_preview();
+    let Some(source) = tc.diff_source() else {
+        return;
+    };
+    for row in preview.rows() {
+        let (marker, color) = match row.tag {
+            ChangeTag::Delete => ("- ", theme.subdued_negative),
+            ChangeTag::Insert => ("+ ", theme.subdued_positive),
+            ChangeTag::Equal => ("  ", theme.subdued),
+        };
+        let line_no = row.line_number;
+        lines.push(Line::from(vec![
+            Span::styled(
+                format!("    {line_no:>4} │{marker}"),
+                Style::default().fg(color),
+            ),
+            Span::styled(row.text(source), Style::default().fg(color)),
+        ]));
     }
-    None
-}
-
-/// Render actual diff lines with line numbers for edit operations.
-/// Uses the `similar` crate for proper diff computation with context lines.
-pub(crate) fn render_diff_lines(lines: &mut Vec<Line>, tc: &TrackedToolCall, theme: &Theme) {
-    use similar::{ChangeTag, TextDiff};
-
-    const MAX_DIFF_LINES: usize = 20;
-
-    for content in tc.content() {
-        if let cyril_core::types::ToolCallContent::Diff {
-            old_text, new_text, ..
-        } = content
-        {
-            let old = old_text.as_deref().unwrap_or("");
-            let diff = TextDiff::from_lines(old, new_text);
-            let mut count = 0;
-
-            for group in diff.grouped_ops(1) {
-                for op in &group {
-                    for change in diff.iter_changes(op) {
-                        if count >= MAX_DIFF_LINES {
-                            lines.push(Line::styled(
-                                "      ...".to_string(),
-                                Style::default().fg(theme.subdued),
-                            ));
-                            return;
-                        }
-
-                        let line_text = change.value().trim_end_matches('\n');
-
-                        let (prefix, color) = match change.tag() {
-                            ChangeTag::Delete => {
-                                let line_no = change.old_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │- "), theme.subdued_negative)
-                            }
-                            ChangeTag::Insert => {
-                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │+ "), theme.subdued_positive)
-                            }
-                            ChangeTag::Equal => {
-                                let line_no = change.new_index().map(|i| i + 1).unwrap_or(0);
-                                (format!("    {line_no:>4} │  "), theme.subdued)
-                            }
-                        };
-
-                        lines.push(Line::from(vec![
-                            Span::styled(prefix, Style::default().fg(color)),
-                            Span::styled(
-                                line_text.to_string(),
-                                if change.tag() == ChangeTag::Equal {
-                                    Style::default().fg(theme.subdued)
-                                } else {
-                                    Style::default().fg(color)
-                                },
-                            ),
-                        ]));
-
-                        count += 1;
-                    }
-                }
-            }
-
-            // Only render first diff block
-            return;
-        }
+    if preview.truncated() {
+        lines.push(Line::styled(
+            "      ...",
+            Style::default().fg(theme.subdued),
+        ));
     }
 }
 
@@ -666,7 +620,7 @@ mod tests {
             .join("\n")
     }
 
-    fn rendered_tool_lines(tool: &TrackedToolCall, theme: &Theme) -> Vec<Line<'static>> {
+    fn rendered_tool_lines<'a>(tool: &'a TrackedToolCall, theme: &Theme) -> Vec<Line<'a>> {
         let mut lines = Vec::new();
         render_tool_call(&mut lines, tool, theme);
         lines
@@ -767,10 +721,8 @@ mod tests {
             (ToolKind::SwitchMode, "shape", "tool-kind/switch-mode"),
             (ToolKind::Other, "shape", "tool-kind/other"),
         ] {
-            let lines = rendered_tool_lines(
-                &matrix_tool("kind", "shape", kind, ToolCallStatus::Pending),
-                &theme,
-            );
+            let tool = matrix_tool("kind", "shape", kind, ToolCallStatus::Pending);
+            let lines = rendered_tool_lines(&tool, &theme);
             let label_text = lines[0].spans[1].content.as_ref();
             anyhow::ensure!(
                 label_text == expected,
@@ -785,10 +737,8 @@ mod tests {
             (ToolCallStatus::Completed, "✓ ", "tool-status/completed"),
             (ToolCallStatus::Failed, "✗ ", "tool-status/failed"),
         ] {
-            let lines = rendered_tool_lines(
-                &matrix_tool("status", "status", ToolKind::Other, status),
-                &theme,
-            );
+            let tool = matrix_tool("status", "status", ToolKind::Other, status);
+            let lines = rendered_tool_lines(&tool, &theme);
             let actual = lines[0].spans[0].content.as_ref();
             anyhow::ensure!(
                 actual == icon,
@@ -1735,10 +1685,320 @@ mod tests {
             &crate::traits::test_support::marker_theme(),
         );
 
-        // Header should show +2 -1 (one changed + one added = 2 inserts, 1 delete)
-        let header = lines[0].to_string();
-        assert!(header.contains('+'), "should show additions: {header}");
-        assert!(header.contains('-'), "should show removals: {header}");
+        assert_eq!(lines[0].to_string(), "✓ Edit(file.rs)  +2 -1");
+        assert_eq!(
+            lines[1..].iter().map(Line::to_string).collect::<Vec<_>>(),
+            [
+                "       1 │  line1",
+                "       2 │- line2",
+                "       2 │+ changed",
+                "       3 │  line3",
+                "       4 │+ new_line",
+            ]
+        );
+    }
+
+    fn cached_diff_test_call(
+        status: cyril_core::types::ToolCallStatus,
+    ) -> cyril_core::types::ToolCall {
+        use cyril_core::types::*;
+        ToolCall::new(
+            ToolCallId::new("cached-diff"),
+            "Edit".into(),
+            ToolKind::Write,
+            status,
+            None,
+        )
+        .with_content(vec![ToolCallContent::Diff {
+            path: "file.rs".into(),
+            old_text: Some("before\nold\nafter\n".into()),
+            new_text: "before\nnew\nextra\nafter\n".into(),
+        }])
+    }
+
+    fn diff_screen_text(terminal: &Terminal<TestBackend>) -> String {
+        let buffer = terminal.backend().buffer();
+        let area = buffer.area();
+        (0..area.height)
+            .map(|y| {
+                (0..area.width)
+                    .map(|x| buffer[(x, y)].symbol())
+                    .collect::<String>()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    #[test]
+    fn render_tool_call_unchanged_first_diff_hides_later_changes() {
+        use cyril_core::types::*;
+
+        let tc = TrackedToolCall::new(
+            cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
+                ToolCallContent::Text("not a diff".into()),
+                ToolCallContent::Diff {
+                    path: "first.rs".into(),
+                    old_text: Some("same\n".into()),
+                    new_text: "same\n".into(),
+                },
+                ToolCallContent::Diff {
+                    path: "later.rs".into(),
+                    old_text: Some("old\n".into()),
+                    new_text: "changed\nextra\n".into(),
+                },
+            ]),
+        );
+        let theme = crate::traits::test_support::marker_theme();
+        let lines = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            lines.iter().map(Line::to_string).collect::<Vec<_>>(),
+            ["✓ Edit(first.rs)"]
+        );
+    }
+
+    #[test]
+    fn render_tool_call_first_diff_supplies_both_counts_and_body() {
+        use cyril_core::types::*;
+
+        let mut content = cached_diff_test_call(ToolCallStatus::Completed)
+            .content()
+            .to_vec();
+        content.push(ToolCallContent::Diff {
+            path: "later.rs".into(),
+            old_text: None,
+            new_text: "invisible\n".repeat(30),
+        });
+        let tc = TrackedToolCall::new(
+            cached_diff_test_call(ToolCallStatus::Completed).with_content(content),
+        );
+        let theme = crate::traits::test_support::marker_theme();
+        let lines = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            lines.iter().map(Line::to_string).collect::<Vec<_>>(),
+            [
+                "✓ Edit(file.rs)  +2 -1",
+                "       1 │  before",
+                "       2 │- old",
+                "       2 │+ new",
+                "       3 │+ extra",
+                "       4 │  after",
+            ]
+        );
+    }
+
+    #[test]
+    fn render_tool_call_reuses_one_derivation_and_borrows_source_across_palettes() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::ToolCallStatus;
+
+        let tc = TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Completed));
+        let mut theme = crate::traits::test_support::marker_theme();
+        let before = text_diff_constructions();
+        let initial = rendered_tool_lines(&tc, &theme);
+        assert_eq!(initial[0].to_string(), "✓ Edit(file.rs)  +2 -1");
+        assert_eq!(text_diff_constructions() - before, 1);
+        let expected: Vec<_> = initial.iter().map(Line::to_string).collect();
+        for _ in 0..10 {
+            assert_eq!(
+                rendered_tool_lines(&tc, &theme)
+                    .iter()
+                    .map(Line::to_string)
+                    .collect::<Vec<_>>(),
+                expected
+            );
+        }
+        theme.subdued_positive = Color::Rgb(10, 20, 30);
+        theme.subdued_negative = Color::Rgb(40, 50, 60);
+        theme.subdued = Color::Rgb(70, 80, 90);
+        let restyled = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            restyled.iter().map(Line::to_string).collect::<Vec<_>>(),
+            expected
+        );
+        for (line, color) in [
+            (&restyled[1], theme.subdued),
+            (&restyled[2], theme.subdued_negative),
+            (&restyled[3], theme.subdued_positive),
+        ] {
+            assert!(line.spans.iter().all(|span| span.style.fg == Some(color)));
+            assert!(matches!(
+                &line.spans[1].content,
+                std::borrow::Cow::Borrowed(_)
+            ));
+        }
+        let source = tc.diff_source().unwrap();
+        assert_eq!(
+            restyled[2].spans[1].content.as_ptr(),
+            source.old[7..10].as_ptr()
+        );
+        assert_eq!(
+            restyled[3].spans[1].content.as_ptr(),
+            source.new[7..10].as_ptr()
+        );
+        assert_eq!(text_diff_constructions() - before, 1);
+    }
+
+    #[test]
+    fn render_tool_call_changed_update_detaches_clone_without_stale_rows() {
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::*;
+
+        let mut tc = TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Completed));
+        let theme = crate::traits::test_support::marker_theme();
+        let before = text_diff_constructions();
+        let original = rendered_tool_lines(&tc, &theme)
+            .iter()
+            .map(Line::to_string)
+            .collect::<Vec<_>>();
+        let snapshot = tc.clone();
+        tc.update(
+            &cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
+                ToolCallContent::Diff {
+                    path: "replacement.rs".into(),
+                    old_text: None,
+                    new_text: "replacement\n".into(),
+                },
+            ]),
+        );
+        let updated = rendered_tool_lines(&tc, &theme);
+        assert_eq!(
+            updated.iter().map(Line::to_string).collect::<Vec<_>>(),
+            ["✓ Edit(replacement.rs)  +1 -0", "       1 │+ replacement"]
+        );
+        assert_eq!(
+            rendered_tool_lines(&snapshot, &theme)
+                .iter()
+                .map(Line::to_string)
+                .collect::<Vec<_>>(),
+            original
+        );
+        assert_eq!(text_diff_constructions() - before, 2);
+    }
+
+    #[test]
+    fn completed_write_root_draw_reuses_diff_after_notifications_resize_and_theme_change() {
+        use crate::state::UiState;
+        use crate::theme::{ColorMode, ThemeId};
+        use crate::tool_diff::text_diff_constructions;
+        use cyril_core::types::*;
+
+        let mut state = UiState::new(100);
+        let started = cached_diff_test_call(ToolCallStatus::InProgress);
+        assert!(state.apply_notification(&Notification::ToolCallStarted(started.clone())));
+        assert!(
+            state.apply_notification(&Notification::ToolCallUpdated(ToolCall::new(
+                started.id().clone(),
+                String::new(),
+                ToolKind::Write,
+                ToolCallStatus::Completed,
+                None,
+            )))
+        );
+        let mut terminal = Terminal::new(TestBackend::new(160, 48)).unwrap();
+        let before = text_diff_constructions();
+        terminal
+            .draw(|frame| crate::render::draw(frame, &state))
+            .unwrap();
+        let screen = diff_screen_text(&terminal);
+        assert!(screen.contains("✓ Edit(file.rs)  +2 -1"), "{screen}");
+        assert!(screen.contains("2 │- old"), "{screen}");
+        assert!(screen.contains("3 │+ extra"), "{screen}");
+        assert_eq!(text_diff_constructions() - before, 1);
+        for _ in 0..10 {
+            terminal
+                .draw(|frame| crate::render::draw(frame, &state))
+                .unwrap();
+        }
+        assert_eq!(text_diff_constructions() - before, 1);
+        for (width, palette) in [(120, ThemeId::GruvboxDark), (80, ThemeId::CyrilDark)] {
+            terminal.backend_mut().resize(width, 48);
+            state.set_appearance(palette, ColorMode::TrueColor);
+            terminal
+                .draw(|frame| crate::render::draw(frame, &state))
+                .unwrap();
+            let screen = diff_screen_text(&terminal);
+            assert!(screen.contains("✓ Edit(file.rs)  +2 -1"), "{screen}");
+            assert!(screen.contains("3 │+ extra"), "{screen}");
+        }
+        assert_eq!(text_diff_constructions() - before, 1);
+        assert!(state.apply_notification(&Notification::ToolCallUpdated(
+            cached_diff_test_call(ToolCallStatus::Completed).with_content(vec![
+                ToolCallContent::Diff {
+                    path: "file.rs".into(),
+                    old_text: None,
+                    new_text: "replacement\n".into(),
+                },
+            ]),
+        )));
+        terminal
+            .draw(|frame| crate::render::draw(frame, &state))
+            .unwrap();
+        let screen = diff_screen_text(&terminal);
+        assert!(screen.contains("✓ Edit(file.rs)  +1 -0"), "{screen}");
+        assert!(screen.contains("1 │+ replacement"), "{screen}");
+        assert!(!screen.contains("│- old"), "{screen}");
+        assert_eq!(text_diff_constructions() - before, 2);
+    }
+
+    #[test]
+    fn pending_approval_diff_preview_reuses_derivation_and_current_colors() {
+        use crate::tool_diff::text_diff_constructions;
+        use crate::traits::{ApprovalPhase, ApprovalState};
+        use cyril_core::types::*;
+
+        let approval = ApprovalState {
+            session_id: SessionId::new("main"),
+            tool_call: TrackedToolCall::new(cached_diff_test_call(ToolCallStatus::Pending)),
+            message: "Allow edit?".into(),
+            options: vec![PermissionOption {
+                id: PermissionOptionId::new("allow"),
+                label: "Allow".into(),
+                kind: PermissionOptionKind::AllowOnce,
+                is_destructive: false,
+            }],
+            trust_options: vec![],
+            selected: 0,
+            can_reject_with_reason: false,
+            phase: ApprovalPhase::SelectOption,
+            responder: tokio::sync::oneshot::channel().0,
+            consent: None,
+            workflow_plan: None,
+        };
+        let mut theme = crate::traits::test_support::marker_theme();
+        let mut terminal = Terminal::new(TestBackend::new(100, 40)).unwrap();
+        let before = text_diff_constructions();
+        for (width, positive, negative) in [
+            (100, theme.subdued_positive, theme.subdued_negative),
+            (80, Color::Rgb(10, 20, 30), Color::Rgb(40, 50, 60)),
+        ] {
+            theme.subdued_positive = positive;
+            theme.subdued_negative = negative;
+            terminal.backend_mut().resize(width, 40);
+            terminal
+                .draw(|frame| {
+                    let area = frame.area();
+                    super::super::approval::render(frame, area, 40, &approval, None, &theme);
+                })
+                .unwrap();
+            let screen = diff_screen_text(&terminal);
+            assert!(screen.contains("2 │- old"), "{screen}");
+            assert!(screen.contains("3 │+ extra"), "{screen}");
+            assert!(screen.contains("▸ Allow"), "{screen}");
+            let buffer = terminal.backend().buffer();
+            for (marker, expected) in [("old", negative), ("extra", positive)] {
+                let mut found = false;
+                for y in 0..40 {
+                    let row: String = (0..width).map(|x| buffer[(x, y)].symbol()).collect();
+                    if let Some(byte) = row.find(marker) {
+                        let column = row[..byte].chars().count() as u16;
+                        assert_eq!(buffer[(column, y)].fg, expected);
+                        found = true;
+                    }
+                }
+                assert!(found, "missing {marker}: {screen}");
+            }
+        }
+        assert_eq!(text_diff_constructions() - before, 1);
     }
 
     #[test]
@@ -1795,18 +2055,11 @@ mod tests {
         let mut lines: Vec<Line> = Vec::new();
         render_tool_call(&mut lines, &tc, &theme);
 
-        // Should have header + at most 20 diff lines + "..." overflow
-        let last_line = lines.last().map(|l| l.to_string()).unwrap_or_default();
-        assert!(
-            last_line.contains("..."),
-            "large diff should show overflow indicator: {last_line}"
-        );
-        // Total lines should be capped (header + <=21 diff lines including overflow)
-        assert!(
-            lines.len() <= 23,
-            "should be capped, got {} lines",
-            lines.len()
-        );
+        assert_eq!(lines.len(), 22, "header + 20 body rows + ellipsis");
+        assert_eq!(lines[0].to_string(), "✓ Edit(big.rs)  +30 -30");
+        assert_eq!(lines[1].to_string(), "       1 │- old line 0");
+        assert_eq!(lines[20].to_string(), "      20 │- old line 19");
+        assert_eq!(lines[21].to_string(), "      ...");
         assert_eq!(
             lines.last().and_then(|line| line.style.fg),
             Some(theme.subdued)
@@ -2349,6 +2602,160 @@ mod tests {
                             "width={width} scroll_back={scroll_back:?} cell=({x},{y})"
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn focused_mcp_error_bytes_survive_scrollbar() {
+        use crate::state::UiState;
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = UiState::new(500);
+        let child = SessionId::new("gutter-child");
+        for _ in 0..20 {
+            state.apply_subagent_notification(
+                &child,
+                &Notification::AgentMessage(AgentMessage {
+                    text: "Earlier child text".into(),
+                    is_streaming: false,
+                }),
+            );
+        }
+        let opaque = "Ab0%2F_café界'\"\\xyz".repeat(12);
+        state.apply_subagent_notification(
+            &child,
+            &Notification::McpConnectionError {
+                message: format!("MCP failed {opaque}\u{1b}[31m\n\u{202e}#FULL_ERROR_END"),
+            },
+        );
+        // Re-enter through the supported UI interface after notice delivery.
+        assert!(state.focus_subagent(child.clone()));
+        let expected =
+            format!("[error] MCP failed {opaque}\\u{{1b}}[31m\\n\\u{{202e}}#FULL_ERROR_END");
+        assert!(matches!(
+            state
+                .subagent_ui()
+                .streams()[&child]
+                .messages()
+                .last()
+                .expect("canonical scoped error")
+                .kind(),
+            ChatMessageKind::System(text) if text == &expected
+        ));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme()))
+            .expect("draw focused error");
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        // Word wrapping may consume the separator at the prefix's row boundary.
+        // Compare every opaque payload byte without inventing that separator.
+        let prefix = "[error] MCP failed";
+        let payload = format!("{opaque}\\u{{1b}}[31m\\n\\u{{202e}}#FULL_ERROR_END");
+        let prefix_position = visible
+            .find(prefix)
+            .unwrap_or_else(|| panic!("focused error prefix lost: {visible:?}"));
+        let payload_position = visible
+            .find(&payload)
+            .unwrap_or_else(|| panic!("full focused error payload lost: {visible:?}"));
+        assert!(prefix_position + prefix.len() <= payload_position);
+        assert!(
+            (0..8).any(|y| buffer[(139, y)].symbol() != " "),
+            "overflow must exercise the scrollbar"
+        );
+        assert!(!visible.contains('\u{1b}') && !visible.contains('\u{202e}'));
+        assert_eq!(state.subagent_ui().focused_session_id(), Some(&child));
+    }
+
+    #[test]
+    fn focused_gutter_width_is_stable_without_overflow() {
+        use cyril_core::types::SessionId;
+
+        let mut state = MockTuiState::default();
+        let child = SessionId::new("child");
+        state
+            .subagent_ui
+            .add_system_message(&child, "x".repeat(140));
+        assert!(state.subagent_ui.focus(child));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw short focused history");
+        let buffer = terminal.backend().buffer();
+        assert!(viewport_content_text(buffer, Rect::new(0, 0, 139, 8)).contains(&"x".repeat(140)));
+        assert!((0..8).all(|y| buffer[(139, y)].symbol() == " "));
+        assert_eq!(buffer[(0, 3)].symbol(), "x");
+        assert!(viewport_content_text(buffer, Rect::new(0, 0, 139, 2)).contains("[Esc] Back"));
+    }
+
+    #[test]
+    fn focused_live_text_uses_reserved_content_width() {
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = MockTuiState::default();
+        let child = SessionId::new("child");
+        for _ in 0..20 {
+            state
+                .subagent_ui
+                .add_system_message(&child, "Earlier child status".into());
+        }
+        state.subagent_ui.apply_notification(
+            &child,
+            &Notification::AgentMessage(AgentMessage {
+                text: "L".repeat(415),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.subagent_ui.focus(child));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw focused live text");
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        assert_eq!(
+            visible
+                .chars()
+                .filter(|character| *character == 'L')
+                .count(),
+            415
+        );
+        assert!((0..8).any(|y| buffer[(139, y)].symbol() != " "));
+    }
+
+    #[test]
+    fn zero_and_one_column_focused_chat_keep_content_without_scrollbar() {
+        use cyril_core::types::SessionId;
+
+        for width in [0, 1] {
+            let mut state = MockTuiState::default();
+            let child = SessionId::new("child");
+            for _ in 0..3 {
+                state.subagent_ui.add_system_message(&child, "X".into());
+            }
+            assert!(state.subagent_ui.focus(child));
+            // Four rows leave a nonempty track even after both arrowheads.
+            let mut terminal = Terminal::new(TestBackend::new(3, 6)).expect("test terminal");
+            terminal
+                .draw(|frame| {
+                    render(frame, Rect::new(1, 1, width, 4), &state, &state.theme);
+                })
+                .expect("draw narrow focused chat");
+            let buffer = terminal.backend().buffer();
+            for y in 0..6 {
+                for x in 0..3 {
+                    let expected = if width == 1 && x == 1 && matches!(y, 1 | 3) {
+                        "X"
+                    } else {
+                        " "
+                    };
+                    assert_eq!(
+                        buffer[(x, y)].symbol(),
+                        expected,
+                        "width={width} cell=({x},{y})"
+                    );
                 }
             }
         }

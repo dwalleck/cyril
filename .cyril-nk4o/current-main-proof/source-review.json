@@ -1,0 +1,101 @@
+{
+  "schema": "cyril-nk4o-current-source-review-selected/v1",
+  "kind": "explicit-field-projection-of-independent-review",
+  "origin_sha256": "f3c42f03819a3fdd9ead20f864561548e500ebc04883a0160912fc65409ce418",
+  "original_availability": "Retained locally; selected substantive review/provenance below, not an uploaded original.",
+  "review": {
+    "schema": "nk4o-current-integration-repair-review/v1",
+    "status": "SCOPED_FINALFMT_F1_F2_REPAIR_REVIEW_COMPLETE_NO_FINDINGS",
+    "overall_correctness": "correct",
+    "explanation": "The exact three-production-file F1/F2 repair resolves printable-identity over-escaping and hidden elicitation-decline notices without a concrete patch-introduced regression in affected NK/Tqr consumers. The final formatter delta changes only the same import order and App-test whitespace; frozen test semantics and the example test module remain intact. This is an ordinary independent scoped review, not isolated reconstruction, whole-feature re-review, full qualification, publication or native acceptance.",
+    "confidence": 0.98,
+    "findings": [],
+    "reviewed_source_authority": {
+      "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+      "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+      "qualified_Tqr_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+      "reviewed_final_postformat_combined521_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+      "source_manifest_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
+      "identity_method_and_limit": "Current worktree source and read-only git diff were read directly. File hashes/descriptors are qualifier-pinned identities consumed from its manifest and supplied freeze, not recomputed by this reviewer. The 521-input descriptor is bounded source identity, not a Git tree or completed integrated commit; held ancestry and qualified overlay are not conflated."
+    },
+    "reviewed_final_file_sha256": {
+      "crates/cyril/examples/test_bridge.rs": "8f51bc683b8587e244a3f5d2a997903ba7c5d183b81e4c2273868ad4ea36d3c5",
+      "crates/cyril-ui/src/state.rs": "650741c521b836512b75293e843fb5cc7a4a18921b92cc3e3b15594a9695d025",
+      "crates/cyril-ui/src/mcp_panel/integration.rs": "a79911bf6ef3ad4899e9addbc2df9f785f37a719e03aaf11fccf4af6f936884a",
+      "crates/cyril/src/app/tests/mcp_panel.rs": "7f39942bfb2fda3ea89bb61fdf03a8d2e1720cf95e9ec004dbcd4268d752cb53"
+    },
+    "per_item_verdicts": [
+      {
+        "id": "Integration/F1",
+        "verdict": "resolved",
+        "evidence_state": "Verified",
+        "decision_retained": "Accept",
+        "source_evidence": [
+          "test_bridge.rs817-820,844-845,868-873,887-895,897-904,930-936 replaces exactly six whole-string identity escape_debug expressions with borrowed canonical terminal_safe: session, snapshot server, retained-URL server, pending server, outcome server and elicitation tool.",
+          "mcp_notice.rs5-49 borrows input and streams characters into the existing summary. Printable quotes, apostrophes, backslashes, Japanese, combining marks and ZWJ remain literal; is_control plus all twelve explicit bidi controls are visibly escaped. No per-field allocation, clone, duplicate formatter or intermediate to_string was added.",
+          "test_bridge.rs805-938 retains fixed operation/status labels and inventory/preview counts. Authorization values, request arguments, fetched prompt/resource content and URIs, diagnostic/error payloads, unknown policy/mode payloads and elicitation message/URL values remain omitted. No new disclosure source is introduced.",
+          "Frozen tests1010-1092 independently isolate all six identity fields using complete literal summary equality;1094-1179 has seven complete control/bidi fixtures;1181-1298 has five privacy/inventory fixtures;947-1008 retains the original secret-exclusion control. No expectation was weakened."
+        ],
+        "actual_output_consumer": "bridge.split receiver79-90 -> drain_notifications326-330 -> print_notification Notification::McpUpdate arm619-620 -> println using Display summary. No downstream debug escaping, shell execution, escape decoding or parser is added.",
+        "new_findings": []
+      },
+      {
+        "id": "Integration/F2",
+        "verdict": "resolved",
+        "evidence_state": "Verified",
+        "decision_retained": "Accept",
+        "source_evidence": [
+          "state.rs1413 changes only existing add_mcp_notice visibility to pub(crate);1414-1416 retains add_system_message, unfocus_subagent and chat_scroll_reset in order. Existing URL/error/scoped-error caller sites1142,1151,1421 remain unchanged. integration.rs85-93 changes only the ElicitationDeclined caller to reuse that owner.",
+          "state.rs1404-1417 still flushes earlier agent text/thought before durable insertion. No commit_streaming/active-tool clearing, activity completion, session/model/input mutation or command dispatch is added. subagent_ui.rs242-244 clears only focus, preserving child buffers/activity. state.rs3595-3597 clears only main browse offset. Ordinary add_system_message is unchanged.",
+          "presentation.rs199-217 still includes actual session/tool/mode/message and explicitly not-opened URL through terminal_safe. This visible UI context is intentionally distinct from diagnostic non-disclosure; neither formatter's payload is broadened.",
+          "Current App tests337-491 retain the original both-mode storage/no-command control and independent form/URL real-App cases. Stored unique context/redraw, exact draft/cursor, root/model/MCP authority, Busy/Streaming/active tool, untouched child and no overlay/command precede physical paint; the tail checks visible decline, cleared focus/browse and no automatic action. The intentionally new elicitation record is excluded from immutable authority comparisons.",
+          "Current state controls6246-6409 retain URL/error nonterminal semantics and ordinary-system-message focus/browse policy. The patch does not change general system-message policy."
+        ],
+        "receiving_dispatch_and_render": [
+          "domain_mediator/mcp.rs195-209 explicitly publishes ElicitationDeclined globally with its actual context, independently of root state acceptance; other live updates remain scoped. Early/foreign/workflow callbacks therefore reach the global consumer without mutating another root's MCP reducer.",
+          "App1281-1545 routes scoped main to Main and global frames directly to the main pipeline, explicitly invoking SessionController and UiState1540-1542. SessionController301-306 and types/mcp.rs303-306 independently admit only matching root identities. UiState1129 -> integration.rs85-93 explicitly consumes decline and returns true; App1762 requests redraw. No new type/variant/message boundary or silent drop is introduced.",
+          "widgets/chat.rs25-30 otherwise selects the focused child and returns before main rendering. Cleared focus now selects durable main history;74-77 uses None for bottom-follow;246-252 renders system text literally, not Markdown. Gutter/width policy is unchanged."
+        ],
+        "new_findings": []
+      },
+      {
+        "id": "FinalFmt",
+        "verdict": "semantics_preserved",
+        "source_evidence": [
+          "Read complete-one-format-delta.patch, SHA25609aac9699755f60cc2eeb58f6aa8f2dc3255c85f4550454990de242f6987ec05: only integration same-three-import order and App-test assertion reflow. Current git diff matches final three production changes plus test-only whitespace; import ordering cancels worker-save drift relative to the index.",
+          "Read one-format-test-token-and-literal-preservation.json: App35d3c666->7f39942b retains all4524 Rust tokens including literals/punctuation/comments; integration51d73054->a79911bf retains578 tokens except expressly disclosed import ordering, with identical literals and no added/removed/aliased binding.",
+          "Entire example mcp_summary_tests remains byte-identical at SHA2567c250e6f62ab42340e433dceeec5852a16129e6fb85ea2cc630ba740eb848776. Marker939->942 moves only because the production session-format statement grows three lines. Preformat App/integration identities are not relabeled final."
+        ],
+        "new_findings": []
+      }
+    ],
+    "prior_review_retention": {
+      "artifact": "local://nk4o-current-repair-review.json",
+      "sha256_from_owning_workflow_record": "29f0879404e4764440b380bbaaecb2b1118c66d0ba01eb3417873ea142e69643",
+      "original_verdict": "correct/no findings/confidence0.98",
+      "original_source_descriptors_retained": [
+        "24694a4d00e70abc7d4d78a9f52b39b5bab2aa3aa985ce1e1c3688117fe2547c",
+        "993da5647248390a32b7592fea3026befa05765e13ea3cad9db0482d3dc62005"
+      ],
+      "applicability": [
+        "Assembly/Core-F1 replay/live-admission remains applicable: current manifest exactly matches prior reviewed McpOwner e7c2f1cb, Core tests c55ec5d9, reducer be6af213, SessionController ea2ebc49, session publication a6ae7c0e and mediator/inbound f7c03ccf/1d2b6135. F1/F2 do not alter staging, failure-drop, activation replay, live identity, admission or timeouts. Current owner and affected current App/UI dispatch were read afresh, not blanket-retained across changed App bytes.",
+        "Assembly/UI-F1 hidden-target and Proof/Unwrap17 remain applicable: catalog6b68d5c0, UI testsb58a5400, presentation251d6fc6, widget157f92e4 and rendererf93f8ff5 retain exact pins. Integration geometry/Request forwarding is unchanged; only decline notice insertion changes semantically. Current App493-594 retains actual reset/auth reanchor-before-dispatch, exact second request, draft and close checks.",
+        "D20 byte/caret/physical-width ownership is unchanged. Borrowed CellWidth projection, source-offset caret boundaries and widget split painting remain unchanged; no alternate grapheme/width/input path is introduced. Current D20 qualifier lanes prove their named cases, not native-host behavior.",
+        "Historical Core/UI/wire/callback/placement decisions outside these mechanisms retain the original review's applicability and limits. No full review restart is warranted. Old runtime evidence retains original source identities and is not promoted to final combined proof.",
+        "Old App production2461dd52 is not current e4501ee0; old App tests64942696 are not current7f39942b. Affected current routing/rendering/tests were reviewed afresh. Unaffected conclusions are retained with dependency-specific reasons, not filename-only reasoning."
+      ]
+    },
+    "tool_limit": "LSP references for add_mcp_notice returned no references despite rust-analyzer ready and direct calls at1142/1151/1421/integration88. Reported through xd://report_issue; empty result was not absence evidence. Exact helper/body/callers and receiving dispatch were read directly; no rename/refactor/edit occurred.",
+    "explicit_limits_and_remaining_owners": [
+      "Reviewer/scout performed no repository edits, Git mutations, tests, builds, lint, fmt, smoke, runtime/native/account actions. Only read-only source/diff/receipt review, tool QA and this local report were produced.",
+      "Ordinary independent scope is exact F1/F2 and affected current NK/Tqr interactions, retaining unaffected prior review. Not isolated reconstruction, full-feature/security review or whole-repository correctness certification.",
+      "Summary tests call actual helper, not captured stdout/native terminal output. Unchanged raw routed-session prefix at test_bridge.rs327-328 is outside these six changes; no claim all example output is sanitized.",
+      "App tests use typed routing, real draw_frame/TestBackend and typed command channel, not new SDK callback/wire responder execution or native terminal. Existing callback/wire proof keeps its own scope. No new authenticated KAS, enterprise enforcement, browser launch or credential-storage evidence is supplied.",
+      "Root scoping and global contextual decline visibility are existing intentional contracts. F2 changes presentation focus/follow, not authority/callback policy. No draw-ack latch, automatic command, modal opening, activity completion or generic system-message-policy change is introduced.",
+      "Main/sole qualifier owns pending feature matrix/final canonical/source stability, held merge/final-parent ancestry and docs reconciliation, delivery CI/conformance, separately authorized controlled consumer/native acceptance and issue/PR publication. Caar final-parent/startup/deadline/platform obligations remain separate. Existing failed/native/owned-run limitations are not waived or reclassified.",
+      "No scoped source-review blocker or new finding remains. Correct verdict does not close pending non-review obligations or authorize publication before their owner records completion."
+    ]
+  },
+  "qualification_progress_note": "Any earlier-progress wording in the source review describes its read-time; qualification.json owns the later completed40-gate outcome.",
+  "retention_limit": "ExactIntegration/F1/F2/final-format and affected consumers reviewed; prior bounded reviews retained by dependency-specific reasons, not whole-feature/native/final-parent conformance."
+}

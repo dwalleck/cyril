@@ -22,8 +22,8 @@ tracing = { workspace = true }
 nucleo-matcher = { workspace = true }
 pulldown-cmark = { workspace = true }
 similar = { workspace = true }
-unicode-width = { workspace = true }
 unicode-segmentation = { workspace = true }
+unicode-width = { workspace = true }
 
 [dev-dependencies]
 cyril-core = { path = "../cyril-core", features = ["kas", "test-support"] }
@@ -32,3 +32,7 @@ rstest = { workspace = true }
 insta = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "rt"] }
+
+[[bench]]
+name = "conversation_render"
+harness = false
