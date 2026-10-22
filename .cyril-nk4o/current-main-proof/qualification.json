@@ -1,0 +1,933 @@
+{
+  "schema": "cyril-nk4o-current-local-qualification-selected/v1",
+  "kind": "explicit-field-projection-not-byte-identical-canonical",
+  "origin_sha256": "ed0f7dc582a493951eb3257704287d88f99887a471d5c6a4b6fab6cd73f77b65",
+  "original_availability": "Retained locally, not published or uploaded by this packet.",
+  "checked": {
+    "status": "PASS_ALL40_AUTHORIZED_LOCAL_NK_REPAIRED_GREEN_COMBINED_CARGO_GATES_NOT_FULL_NATIVE_CONSUMER_REVIEW_CI_PUBLICATION_ACCEPTANCE",
+    "source_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "source_input_rows": 521,
+    "preformat_source_descriptor": "ace2474f79083d4d1298114ece508adaf65f0248751755e4f308de56a882fdea",
+    "postformat_source_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "command_totals": {
+      "actual_commands": 40,
+      "all_exit0": 40,
+      "by_kind": {
+        "fmt": 2,
+        "test": 29,
+        "clippy": 6,
+        "build": 3
+      },
+      "test_observations_inclusive_overlap_NOT_unique_tests": {
+        "passed": 8044,
+        "failed": 0,
+        "ignored": 31,
+        "measured": 0
+      },
+      "counts_limit": "29testcommands;8044PASS0FAIL31ignored observations includefocused/full/featureoverlap. Fullworkspacealone3155PASS0FAIL13ignored. LastsummaryperCargo target excludesnestedchildsummarydoublecount.",
+      "unexpected_failures": 0,
+      "retries": 0,
+      "initial_mutating_format": 1,
+      "required_final_format_CHECK": 1
+    },
+    "commands": [
+      {
+        "label": "ONE-initial-pinned-canonical-format",
+        "argv": [
+          "cargo",
+          "fmt",
+          "--all"
+        ],
+        "RUSTUP_TOOLCHAIN": "1.94.0-x86_64-unknown-linux-gnu",
+        "checked_preformat_source_descriptor": "ace2474f79083d4d1298114ece508adaf65f0248751755e4f308de56a882fdea",
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS_ONE_AUTHORIZED_PINNED_FORMAT_TEST_TOKENS_AND_LITERALS_PRESERVED_WITH_DISCLOSED_IMPORT_ORDER_CANONICALIZATION",
+        "full_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "full_log_bytes": 0,
+        "started_utc": "2026-10-22T03:39:40.650587+00:00",
+        "finished_utc": "2026-10-22T03:39:41.718681+00:00"
+      },
+      {
+        "label": "F1-nine-summary-cases-current-GREEN",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--example",
+          "test_bridge",
+          "mcp_summary_tests"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "2edbf61f0669bff062656664390b5cfd5c96e36b7ec278a0ddfd4bcd292589ad",
+        "full_log_bytes": 1645,
+        "started_utc": "2026-10-22T03:41:50.355896+00:00",
+        "finished_utc": "2026-10-22T03:41:56.945075+00:00"
+      },
+      {
+        "label": "F2-three-decline-cases-current-GREEN-all-tail-assertions",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "elicitation_decline"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "cbfe9e8ea925b98f22bd735063ca15f5f5117459e78e4d78199169cef4fc974f",
+        "full_log_bytes": 2382,
+        "started_utc": "2026-10-22T03:41:57.009461+00:00",
+        "finished_utc": "2026-10-22T03:41:59.536291+00:00"
+      },
+      {
+        "label": "NK20-App-panel-eleven-current-GREEN",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril",
+          "--bin",
+          "cyril",
+          "app::tests::mcp_panel::"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "65721886a5a149c7507a57e046e12f7b482dc38443b3bd3fccd881fc4ccf2c9c",
+        "full_log_bytes": 1440,
+        "started_utc": "2026-10-22T03:45:38.629200+00:00",
+        "finished_utc": "2026-10-22T03:45:39.184770+00:00"
+      },
+      {
+        "label": "focused-App-MCP-oauth-fourteen-current-GREEN",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril",
+          "--bin",
+          "cyril",
+          "app::tests::mcp_oauth::"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "4ec14ca0edc763989ebb173ed2411ceaba49f5bbe4138a2ccc890258f13456e0",
+        "full_log_bytes": 1811,
+        "started_utc": "2026-10-22T03:45:39.303645+00:00",
+        "finished_utc": "2026-10-22T03:45:39.573644+00:00"
+      },
+      {
+        "label": "CLI-two-existing-external-URL-safety-controls",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--example",
+          "test_bridge",
+          "external_url_output_"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "85de835ab7874adbe8430f3569ad7abbb0346fe62c8dc21da5bf11a9f05d0cca",
+        "full_log_bytes": 438,
+        "started_utc": "2026-10-22T03:45:39.667843+00:00",
+        "finished_utc": "2026-10-22T03:45:39.808233+00:00"
+      },
+      {
+        "label": "current-UI-MCP-sixtysix-including-panel56-and-predecessorMCP10",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "mcp_"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "7543fa7d8c7565d0e7412ae0a2ca455dfb15de71dd5907a871d525879030c72e",
+        "full_log_bytes": 6907,
+        "started_utc": "2026-10-22T03:45:39.871925+00:00",
+        "finished_utc": "2026-10-22T03:46:12.293136+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-ordinary_system_message_keeps_child_focus_and_main_browse_position",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "state::tests::ordinary_system_message_keeps_child_focus_and_main_browse_position",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "5f05e291fbb7f0c8a48c8c15c3f020843e3995a9ec4206304ffd2c97cddaff03",
+        "full_log_bytes": 385,
+        "started_utc": "2026-10-22T03:46:12.365938+00:00",
+        "finished_utc": "2026-10-22T03:46:12.516395+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::manual_url_bytes_survive_scrollbar_in_follow_and_browse",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "a44ea5ae3a204bf3c2fc79f3937b6bd1b353f939cee2264d3a2a8b14e8a3a596",
+        "full_log_bytes": 382,
+        "started_utc": "2026-10-22T03:46:12.581196+00:00",
+        "finished_utc": "2026-10-22T03:46:12.720816+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-chat_gutter_width_is_stable_without_overflow",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::chat_gutter_width_is_stable_without_overflow",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "cb0be0bc30ecdb1dfb324e778eae30f86a802db3889b388a9d0a4a391e467df8",
+        "full_log_bytes": 371,
+        "started_utc": "2026-10-22T03:46:12.784832+00:00",
+        "finished_utc": "2026-10-22T03:46:12.926386+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-zero_and_one_column_chat_keep_available_content_without_scrollbar",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::zero_and_one_column_chat_keep_available_content_without_scrollbar",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "91e5e46d538eee264f997818db7b8d61872d5c6fc6cd3088711202ba3d3f5978",
+        "full_log_bytes": 392,
+        "started_utc": "2026-10-22T03:46:12.991719+00:00",
+        "finished_utc": "2026-10-22T03:46:13.136357+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-focused_gutter_width_is_stable_without_overflow",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::focused_gutter_width_is_stable_without_overflow",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "3bab34ce68445acb909c4a8851e981c7da24df8891af9d34ccc9bbaaf79fccbc",
+        "full_log_bytes": 374,
+        "started_utc": "2026-10-22T03:46:13.202782+00:00",
+        "finished_utc": "2026-10-22T03:46:13.342505+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-focused_live_text_uses_reserved_content_width",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::focused_live_text_uses_reserved_content_width",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "1e293961c068264a716f346d6a5d14bd4467b2bc28b847db71fd4606b697da08",
+        "full_log_bytes": 372,
+        "started_utc": "2026-10-22T03:46:13.410888+00:00",
+        "finished_utc": "2026-10-22T03:46:13.551928+00:00"
+      },
+      {
+        "label": "exact-current-UI-control-zero_and_one_column_focused_chat_keep_content_without_scrollbar",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "widgets::chat::tests::zero_and_one_column_focused_chat_keep_content_without_scrollbar",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "c1b36103caeb5bc94c97a07d271e7f9f6213510920f0f6ea04cd19efff85068a",
+        "full_log_bytes": 390,
+        "started_utc": "2026-10-22T03:46:13.617836+00:00",
+        "finished_utc": "2026-10-22T03:46:13.756034+00:00"
+      },
+      {
+        "label": "standing-canonical-D20-two_cell_contract",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "two_cell_contract",
+          "--",
+          "--nocapture"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "3ddc8d90e6c32a80f4154167ce7810d79dd199976a6a9e46469a888d936cfd50",
+        "full_log_bytes": 713,
+        "started_utc": "2026-10-22T03:46:13.822871+00:00",
+        "finished_utc": "2026-10-22T03:46:13.955355+00:00"
+      },
+      {
+        "label": "standing-canonical-D20-one_cell_contract",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "one_cell_contract",
+          "--",
+          "--nocapture"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "24f8b802d049697322449831f9e5a7fa6166aa342f17190f6793fe47decf3872",
+        "full_log_bytes": 747,
+        "started_utc": "2026-10-22T03:46:14.021266+00:00",
+        "finished_utc": "2026-10-22T03:46:14.158974+00:00"
+      },
+      {
+        "label": "standing-canonical-D20-argument_preserves_data_caret_and_canonical_bytes",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "argument_preserves_data_caret_and_canonical_bytes",
+          "--",
+          "--nocapture"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "ca0adfd017f8a2569d1b0e25f457fa11586d856a1be90bad08d650f52d7a16b9",
+        "full_log_bytes": 709,
+        "started_utc": "2026-10-22T03:46:14.224541+00:00",
+        "finished_utc": "2026-10-22T03:46:14.364029+00:00"
+      },
+      {
+        "label": "standing-canonical-D20-argument_preserves_one_cell_data_caret_and_bytes",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "argument_preserves_one_cell_data_caret_and_bytes",
+          "--",
+          "--nocapture"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "b73cab405cc31788baf6518c927e6f4c95e943b74f3ffe4cfacfc39fbe3cd18a",
+        "full_log_bytes": 739,
+        "started_utc": "2026-10-22T03:46:14.432244+00:00",
+        "finished_utc": "2026-10-22T03:46:14.583947+00:00"
+      },
+      {
+        "label": "standing-canonical-D20-prepend_argument_",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "prepend_argument_",
+          "--",
+          "--nocapture"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "65bc068b9e7245efaff6576d4f8e1e03844254832bd719a70bec94049a7177f2",
+        "full_log_bytes": 683,
+        "started_utc": "2026-10-22T03:46:14.650509+00:00",
+        "finished_utc": "2026-10-22T03:46:14.780608+00:00"
+      },
+      {
+        "label": "Un4-seven-malformed-preview-warning-and-silence-controls",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--lib",
+          "malformed_preview"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "15046aacec0f5b3a344110296111f81880ce52e39a063c64444eb35e32a90d34",
+        "full_log_bytes": 1068,
+        "started_utc": "2026-10-22T03:46:14.848427+00:00",
+        "finished_utc": "2026-10-22T03:46:14.992359+00:00"
+      },
+      {
+        "label": "Un4-App-overlay-drop-warning-and-landed-control",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "overlay_guards_log_what_they_drop"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "7281b9f43a39a58b75ecb53c43cb8c0ebe48f13e0b2717685a37597c873cd536",
+        "full_log_bytes": 1992,
+        "started_utc": "2026-10-22T03:46:15.062563+00:00",
+        "finished_utc": "2026-10-22T03:46:15.221142+00:00"
+      },
+      {
+        "label": "Un4-App-formatter-nonboolean-positive-capture",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "format_response_context_items_log_non_boolean_auto_flag"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "561ec0167a9065c002858719487fe4c027840dd89ed40007e77f15a594518cdb",
+        "full_log_bytes": 2014,
+        "started_utc": "2026-10-22T03:46:15.289370+00:00",
+        "finished_utc": "2026-10-22T03:46:15.444369+00:00"
+      },
+      {
+        "label": "Un4-Core-JSON-capture-positive-and-known-degraded-silence",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-core",
+          "--lib",
+          "usage::tests::latency_lookup_warns_on_a_missing_group_but_not_when_degraded",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "9347652509981c37a8564a127554e42c71d034edb1064b20fb06f348cf56709e",
+        "full_log_bytes": 488,
+        "started_utc": "2026-10-22T03:46:15.511640+00:00",
+        "finished_utc": "2026-10-22T03:46:44.219914+00:00"
+      },
+      {
+        "label": "Un4-Core-formatted-capture-positive-and-completion-silence",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-core",
+          "--lib",
+          "protocol::turn_mediator::tests::generic_wake_reason_is_logged",
+          "--",
+          "--exact"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "86289978ee2997cc4199d352bb88d28f4e03322e0b6c752450e9e2f4253a3f93",
+        "full_log_bytes": 369,
+        "started_utc": "2026-10-22T03:46:44.294549+00:00",
+        "finished_utc": "2026-10-22T03:46:44.423722+00:00"
+      },
+      {
+        "label": "current-combined-default-full-workspace-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "--workspace"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "553a7b35ae7845b36312387c64272040a25629f2eb8b7886d973fa47b286d147",
+        "full_log_bytes": 272756,
+        "started_utc": "2026-10-22T03:46:44.496193+00:00",
+        "finished_utc": "2026-10-22T03:48:24.691919+00:00"
+      },
+      {
+        "label": "current-combined-default-workspace-strict-all-target-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "--workspace",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "f7e47cb50f7c7501eddcc96e1575e0e821eb7b9128ef130159218ba9c49543fa",
+        "full_log_bytes": 807,
+        "started_utc": "2026-10-22T03:48:24.771773+00:00",
+        "finished_utc": "2026-10-22T03:48:46.042651+00:00"
+      },
+      {
+        "label": "current-combined-default-App-allbins-build",
+        "argv": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--bins"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "676ed6c678e2510b60921b3761a57c403d059fbe52d889d021d897e43f1b2637",
+        "full_log_bytes": 479,
+        "started_utc": "2026-10-22T03:48:46.161762+00:00",
+        "finished_utc": "2026-10-22T03:49:09.219378+00:00"
+      },
+      {
+        "label": "current-combined-default-runnable-test-bridge-example-build",
+        "argv": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--example",
+          "test_bridge"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "c7ae357e4713a5707f7ec40efaee2cb094baaddb1ab4f7f91f07b67f9bd9d406",
+        "full_log_bytes": 479,
+        "started_utc": "2026-10-22T03:50:20.728951+00:00",
+        "finished_utc": "2026-10-22T03:50:40.332434+00:00"
+      },
+      {
+        "label": "isolated-App-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--no-default-features"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "b9a18faef274e64a75aee6a07c040f3f4edfac5b94a956e324b8812297074b46",
+        "full_log_bytes": 32276,
+        "started_utc": "2026-10-22T03:52:02.448689+00:00",
+        "finished_utc": "2026-10-22T03:52:50.817608+00:00"
+      },
+      {
+        "label": "isolated-App-no-default-strict-all-target-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "28cf3cff9843b077d0164131355017f7bc053495bbf76fb77d0048337a921bd6",
+        "full_log_bytes": 587,
+        "started_utc": "2026-10-22T03:52:50.933666+00:00",
+        "finished_utc": "2026-10-22T03:53:08.016614+00:00"
+      },
+      {
+        "label": "isolated-App-no-default-allbins-build",
+        "argv": [
+          "cargo",
+          "build",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--bins"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "d9fd9383dbca5619e293de169779a99780be7b0b59f942486479761fcce68494",
+        "full_log_bytes": 479,
+        "started_utc": "2026-10-22T03:53:08.148901+00:00",
+        "finished_utc": "2026-10-22T03:53:24.745624+00:00"
+      },
+      {
+        "label": "isolated-UI-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-ui",
+          "--no-default-features"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "a4d1b1ae8f645b8ed9ea31ed8be8912f4a4b9c10586541dddc3bfe4925adeebc",
+        "full_log_bytes": 83934,
+        "started_utc": "2026-10-22T03:53:25.054918+00:00",
+        "finished_utc": "2026-10-22T03:53:31.854631+00:00"
+      },
+      {
+        "label": "isolated-UI-no-default-strict-all-target-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril-ui",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "3348d9ddd18c867359b222657d8147ebfaa097a98301986c68e0609951057001",
+        "full_log_bytes": 277,
+        "started_utc": "2026-10-22T03:53:31.988434+00:00",
+        "finished_utc": "2026-10-22T03:53:51.577945+00:00"
+      },
+      {
+        "label": "isolated-Core-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril-core",
+          "--no-default-features"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "1d7ed0d58340e7d635cba18177ab722f368c633322c5b4b1b80c39383377b2d7",
+        "full_log_bytes": 86878,
+        "started_utc": "2026-10-22T03:53:51.716748+00:00",
+        "finished_utc": "2026-10-22T03:54:22.029812+00:00"
+      },
+      {
+        "label": "isolated-Core-no-default-strict-all-target-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "d4d6fb324d40171b671b8f40aa0bc43e2230b11cc5b0b76ed6c4523789e6bdde",
+        "full_log_bytes": 285,
+        "started_utc": "2026-10-22T03:54:22.154008+00:00",
+        "finished_utc": "2026-10-22T03:54:36.755230+00:00"
+      },
+      {
+        "label": "isolated-App-only-explicit-KAS-no-default-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--features",
+          "cyril/kas"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "f494d379b2b8100dfcda83f1eb1e975cf405f10da576779f7b8934e8e058f805",
+        "full_log_bytes": 33099,
+        "started_utc": "2026-10-22T03:54:36.895059+00:00",
+        "finished_utc": "2026-10-22T03:55:02.623127+00:00"
+      },
+      {
+        "label": "isolated-App-only-explicit-KAS-strict-all-target-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "--no-default-features",
+          "--features",
+          "cyril/kas",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "9992cde36928725a57ae80ee77fbd3581eb415a8c3bfe9fb6efdc0565e2d0130",
+        "full_log_bytes": 479,
+        "started_utc": "2026-10-22T03:55:02.769743+00:00",
+        "finished_utc": "2026-10-22T03:55:22.099500+00:00"
+      },
+      {
+        "label": "isolated-both-App-Core-explicit-KAS-full-tests",
+        "argv": [
+          "cargo",
+          "test",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--features",
+          "cyril/kas,cyril-core/kas"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "c611ff00b023fdb0cf6787d0a418286ccfda207ae4843b6c4b52387e3474773e",
+        "full_log_bytes": 172000,
+        "started_utc": "2026-10-22T03:55:22.193336+00:00",
+        "finished_utc": "2026-10-22T03:56:06.956859+00:00"
+      },
+      {
+        "label": "isolated-both-App-Core-explicit-KAS-strict-all-target-Clippy",
+        "argv": [
+          "cargo",
+          "clippy",
+          "-p",
+          "cyril",
+          "-p",
+          "cyril-core",
+          "--no-default-features",
+          "--features",
+          "cyril/kas,cyril-core/kas",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "RUSTUP_TOOLCHAIN": null,
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "40c19a3c6ba2b33e784fb46843a44951a619ea0a88ef2c343e650415f88f335a",
+        "full_log_bytes": 266,
+        "started_utc": "2026-10-22T03:56:07.053458+00:00",
+        "finished_utc": "2026-10-22T03:56:14.485403+00:00"
+      },
+      {
+        "label": "FINAL-pinned-all-workspace-format-CHECK",
+        "argv": [
+          "cargo",
+          "fmt",
+          "--all",
+          "--check"
+        ],
+        "RUSTUP_TOOLCHAIN": "1.94.0-x86_64-unknown-linux-gnu",
+        "checked_preformat_source_descriptor": null,
+        "checked_source_descriptor": null,
+        "returncode": 0,
+        "classification": "PASS",
+        "full_log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "full_log_bytes": 0,
+        "started_utc": "2026-10-22T03:56:14.588883+00:00",
+        "finished_utc": "2026-10-22T03:56:15.753498+00:00"
+      }
+    ],
+    "actual_F1_F2_GREEN": {
+      "F1": {
+        "passed": 9,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0
+      },
+      "F2": {
+        "passed": 3,
+        "failed": 0,
+        "ignored": 0,
+        "measured": 0
+      },
+      "all12runtime_names_exact": true,
+      "both_F2_postvisibility_tail_assertions_reached": "Both case1form/case2url nowreturnPASS after visibility, cleared focused session, main browseNone, no modal and no outbound command; all prior authority/draft/caret guards retained by exact4524AppRusttokens.",
+      "genuine_RED_proof_retained_without_replay": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-current-main-integration-contract-test-only-red-attempt2/canonical-handoff.json",
+      "formatter_raw_identity_limits": "Apptestfile35d3→7f399 whitespace/reflow ONLY4524tokens exact; exampletestmodule7c25 rawbyte-exact; productionintegration imports canonicalized as expressly disclosed."
+    },
+    "current_CI_roster": {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/nk4o-current-main-integration-repaired-green-attempt1/current-NK-workflow-CI-roster.json",
+      "sha256": "34210fde6d32150dd0d152d2930b7adab2d82ebb1dda6afccce1a252ef56403a",
+      "outer_workflow_entries": 24,
+      "current_local_same_argv_rows": 5,
+      "final_fmt_equivalent_rows": 1,
+      "deferred_exact_rows": 18
+    },
+    "outstanding_outside_qualification_worker_scope": [
+      "Mainindependentscopedrepair/conformancereviewaftergates and owningboundedreview/route/plan/docsupdates; no workerGit/tracker/docs edits.",
+      "FreshactualcurrentCLI/UIownedconsumer and anynative terminal/authenticatedKAS/liveOAuth/enterpriseacceptance; unitTestBackend/SDKfake/wirefixturepassesarenotnativeproof.",
+      "AllfeaturesClippy/nextest/doctests, release/tagbuilds, exactunexecutedCIcommands, macOS/Windows/host-prefix/currentWindowsmutationwrapper/currentPR-headCI;24-entryliteralrosterretains5sameargvlocal+finalfmt equivalence, notworkflowexecution.",
+      "Maincompletesheld09andnormalfinalTqrd0ccancestry/docsintegrationpreservingqualifiedsource, descendantCaarparentqualification, per-issuePR/publicationandopenplatformfailures; noancestor/native/performancecompletionclaimed."
+    ],
+    "source_identity_limit": "Actual521worktree byte inputs, uncommittedonheld09merge plusMain038 sourceoverlay+NK+approvedF1/F2repair and ONEformat. Descriptor is NOTGit tree/commit/indexsemanticidentity/finalTqrancestry; HEADef46held09 accurately recorded. No oldqualified24694a/Tqr503/RED1fdb/parsef5ec sourceclaim reused ascurrent.",
+    "source_manifest_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
+    "genuine_RED_canonical_sha256": "6f0f7eda7ecbfbfcf280d11dfbb02c46c30d2565fb28711df94fd81c834c98f2",
+    "genuine_RED_source": "1fdb4cd63b20ad311dbc71a773fc3fa7d5e4fca895e904fc156fb989531a8b6a"
+  },
+  "source_identity": "521-input03f68 descriptor is not a Git tree or completed integrated commit; initial mutating format command names its actual preformat frame, later commands consume final postformat frame.",
+  "default_workspace_actual": {
+    "passed": 3155,
+    "failed": 0,
+    "ignored": 13
+  },
+  "overlap_limit": "8044pass/31ignored observations across29testcommands include overlap and are NOT unique tests. No ignored/native/CI requirement is promoted to PASS.",
+  "environment_and_replay": "Exact argv/classification/log pins are selected below. Raw environment manifests, private absolute working-directory/target paths, full source inventory, canonical/guard originals and products are not published. Exact replay needs those retained originals, matching qualified worktree/toolchain and new owner authorization; this packet is not a self-contained authorized runner.",
+  "post_smoke_docs_only": "No gate was rerun for this publication documentation task."
+}

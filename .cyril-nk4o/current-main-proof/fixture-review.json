@@ -1,0 +1,104 @@
+{
+  "schema": "cyril-nk4o-fixture-and-runtime-binding-selected/v1",
+  "kind": "selected-review-and-host-probe-facts",
+  "source_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+  "independent_lifecycle_repair_review": {
+    "origin_sha256": "0b36a98a2522076668aca9f513a3cfe13766c36abd2856b26cde951afb18ae97",
+    "findings": [],
+    "correctness": "correct",
+    "confidence": 0.97,
+    "scope": "Complete330lineccdd lifecycle repair diff: authoritative direct Popen ownership, first-caught primary preservation, separate cleanup, failed scratch/raw retention and unchanged protocol/oracles/bounds. Static review only, no original masked cause identified."
+  },
+  "Main_environment_binding_review": "Main approved exact2line8597 Python-path/SHA correction only; retained lifecycle review applies to unchanged logic. No new pidfd backend/framework/install.",
+  "binding": {
+    "preimage_fixture_sha256": "ccdd84d2604766887f5a8c85dd10fbc573beb5a3a2e69f46eb07bb3b1deb716a",
+    "postimage_fixture_sha256": "38f1b78496698a84841296dc26fb8481e770ed97b18d161c6d79f1d4654db215",
+    "patch_sha256": "8597caa651322f41d5e904bd133c9498af3d3605968569e49de660e5f57e76dc",
+    "Python_version": "3.14.8 (main, Oct 13 2026, 10:43:33) [GCC 16.2.1 20260810]",
+    "Python_sha256": "7579d289e4d95778305acd13fc71be2a3800f7f6a202619505875234659c2c60",
+    "Node_sha256": "ed30fdcc71cd7134c5324aeedea64f1088f0dfd22bfba3834fcbee0402c28c5a",
+    "direct_stdlib_origins": {
+      "argparse": {
+        "file": "/usr/lib/python3.14/argparse.py",
+        "origin": "/usr/lib/python3.14/argparse.py"
+      },
+      "hashlib": {
+        "file": "/usr/lib/python3.14/hashlib.py",
+        "origin": "/usr/lib/python3.14/hashlib.py"
+      },
+      "json": {
+        "file": "/usr/lib/python3.14/json/__init__.py",
+        "origin": "/usr/lib/python3.14/json/__init__.py"
+      },
+      "os": {
+        "file": "/usr/lib/python3.14/os.py",
+        "origin": "frozen"
+      },
+      "pathlib": {
+        "file": "/usr/lib/python3.14/pathlib/__init__.py",
+        "origin": "/usr/lib/python3.14/pathlib/__init__.py"
+      },
+      "select": {
+        "file": "/usr/lib/python3.14/lib-dynload/select.cpython-314-x86_64-linux-gnu.so",
+        "origin": "/usr/lib/python3.14/lib-dynload/select.cpython-314-x86_64-linux-gnu.so"
+      },
+      "selectors": {
+        "file": "/usr/lib/python3.14/selectors.py",
+        "origin": "/usr/lib/python3.14/selectors.py"
+      },
+      "shutil": {
+        "file": "/usr/lib/python3.14/shutil.py",
+        "origin": "/usr/lib/python3.14/shutil.py"
+      },
+      "signal": {
+        "file": "/usr/lib/python3.14/signal.py",
+        "origin": "/usr/lib/python3.14/signal.py"
+      },
+      "subprocess": {
+        "file": "/usr/lib/python3.14/subprocess.py",
+        "origin": "/usr/lib/python3.14/subprocess.py"
+      },
+      "sys": {
+        "file": null,
+        "origin": "built-in"
+      },
+      "tempfile": {
+        "file": "/usr/lib/python3.14/tempfile.py",
+        "origin": "/usr/lib/python3.14/tempfile.py"
+      },
+      "time": {
+        "file": null,
+        "origin": "built-in"
+      },
+      "traceback": {
+        "file": "/usr/lib/python3.14/traceback.py",
+        "origin": "/usr/lib/python3.14/traceback.py"
+      }
+    },
+    "direct_stdlib_SHA256": {
+      "/usr/lib/python3.14/argparse.py": "b9f0fa53be3d7c9c10a71a8eecc538a27c32fbe7abe337818d0d36e138bfc5c5",
+      "/usr/lib/python3.14/hashlib.py": "88fa624821fbdee7eb2ef87c2437b207afe328cf117c7463367e2db5eb1af492",
+      "/usr/lib/python3.14/json/__init__.py": "2dd10f1bf4c9ea5478e589216805e7f279d0e4bce134a19efa297404fb87407d",
+      "/usr/lib/python3.14/lib-dynload/select.cpython-314-x86_64-linux-gnu.so": "027fc46122e070d129e86df2cd35c575d88c69b96bfc2da18ede11e8776c6b5b",
+      "/usr/lib/python3.14/os.py": "976bdb3e24925f2fb3ce43a4d788de6dcbb88a7cc8604c60ae690fbdd6507546",
+      "/usr/lib/python3.14/pathlib/__init__.py": "042a4d0a5e1ef66778daa86dc269af205bd42d06e793e53d8b99dff4c45928ca",
+      "/usr/lib/python3.14/selectors.py": "4b8a60cfbb619d080f87dffe1578372e56e8c0ac826f043224a154cf7b77606d",
+      "/usr/lib/python3.14/shutil.py": "28a5df6415bf1a7ab36cbd544d6d35ae0f056a198e3872a786dc4e156d5fcd7d",
+      "/usr/lib/python3.14/signal.py": "0363c964c90ac0b3e515de5749205e6e6454051a1211058375d84d91eab6071a",
+      "/usr/lib/python3.14/subprocess.py": "7fa4af83422024a19e64a80937f6c8094244c3397372a495b348dfbe44a5dd72",
+      "/usr/lib/python3.14/tempfile.py": "3714372b63f6bc05a5273425d446f6ad3a2112a659c71c321bb4575fd082d634",
+      "/usr/lib/python3.14/traceback.py": "a8fbeea470aa4e29691560de889de136570bead76d9c8a2b6a891849c047a3b3"
+    }
+  },
+  "actual_host_self_pidfd": {
+    "origin_sha256": "20827c2dffbbb9d581c592d98e284a7ebeeeca7c0a62e673b5fb4b90e8b29a94",
+    "invocations": 1,
+    "returncode": 0,
+    "operation": "Open own PID pidfd; signal0; close in finally",
+    "opened": true,
+    "signal_zero_succeeded": true,
+    "closed": true,
+    "product_launches": 0
+  },
+  "replay": "Executed fixture snapshots remain unchanged/inert, including required canonical/manifest/guard references not included publicly. Replay requires retained originals and a fresh Main GO; do not modify fixtures to pretend self-contained portability."
+}

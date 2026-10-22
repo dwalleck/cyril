@@ -1,0 +1,182 @@
+{
+  "scope": "Portable immutable RED/GREEN/one-owned-consumer evidence for PR184 FIV-F1; packaging only, no new runtime checks",
+  "archive": "evidence.tar.gz",
+  "archive_sha256": "7e11370fb4570b0fee3d2a712db8a7d6edc1ea5364db0307a14ac2553291b7bc",
+  "archive_root": "fiv1-blank-raw-evidence/",
+  "qualified_assembled_source_tree": "5b579b908d5424462cc7663b1e7ce416724b2a58",
+  "postformat_owned_file_sha256": {
+    "crates/cyril-ui/src/traits.rs": "ee7e2a709bdbeebed2f5ddb0b29e5f595c29650ae6c0cb0ded3f71c176608329",
+    "crates/cyril-ui/tests/v2_failed_validation.rs": "51f8dc25595bceb457cf6810399838fede1abe9bac783e730e7bb5f732a3fe9c",
+    "README.md": "bf8b452212ae156821b5978d4f6127b5dfdc0615c7ac71b62e6c4fa0d9479f05",
+    ".cyril-fiv1/route.md": "4747c37faa289c0385010e1a75f51c008786e621db0ca3a7bb0acb0f9680d74d"
+  },
+  "route_pin_applicability": "The route hash above is qualified-tree historical provenance. Later status/evidence packaging is a documented post-qualification docs delta, not relabeled checked source.",
+  "red": {
+    "member": "red/canonical-handoff.json",
+    "sha256": "e107b571fcdf7964886847706be73499bfc4de343c8f48d054804bc01c34a5ef",
+    "source_tree": "8ecaa55b8c161f99b25daa467c51e080419ec9d8",
+    "result": "Expected firstcase 0 passed / 1 failed"
+  },
+  "green": {
+    "member": "green/canonical-handoff.json",
+    "sha256": "529f9cc860d984ba7ed07aca7b275f64267f44b4e453a92c17ff6c8728de907f",
+    "result": "v2 integration 3 passed incl12case body; Completed guard1; workspace2827/0/13; Clippy/build/fmt PASS"
+  },
+  "consumer": {
+    "member": "consumer/canonical-handoff.json",
+    "sha256": "0e93dfb29b279e4d94fe03d610a1559d9f0ab0b41c655e6ae10b2a7b86acd048",
+    "result": "PASS on one run; four exact labels once; three unwanted tokens zero; two complete original tool updates each twice; chronological two unique failed rows"
+  },
+  "independent_review": {
+    "reviewer": "ReviewFivBlankRepair",
+    "member": "review.txt",
+    "result": "correct",
+    "confidence": 0.98,
+    "findings": [],
+    "scope": "Read-only production/regression/README/route and RED/GREEN receipt inspection; did not execute checks, reopen EOF qualification, or observe the separately performed current-binary consumer."
+  },
+  "portable_replay": {
+    "cwd_after_extraction": "fiv1-blank-raw-evidence/replay",
+    "argv": [
+      "uv",
+      "run",
+      "--offline",
+      "--script",
+      ".cyril-1v25/smoke.py",
+      "--binary",
+      "EXTERNAL_PARENT_BUILT_BINARY",
+      "--engine",
+      "v2",
+      "--capture",
+      "controls-content-blank-raw.jsonl",
+      "--preserve-session-id",
+      "--expect",
+      "✗ FIV1 content selection",
+      "--expect",
+      "Error: FIV1_CONTENT_FIRST",
+      "--expect",
+      "✗ FIV1 unknown raw object",
+      "--expect",
+      "Error: FIV1_UNKNOWN_CONTENT_FIRST",
+      "--output",
+      "FRESH_OWNED_OUTPUT_DIRECTORY"
+    ],
+    "environment": {
+      "SHELL": "/bin/bash"
+    },
+    "negative_screen_counts_required_zero": [
+      "FIV1_CONTENT_SECOND",
+      "FIV1_UNKNOWN_CONTENT_SECOND",
+      "FIV1_UNKNOWN_RAW_MUST_NOT_RENDER"
+    ],
+    "note": "Actual run used byte-identical original harness/fake CLI, not this archived copy. Supply an external binary and a fresh output path explicitly. Harness checks positive counts/chronology/full-frame equality; inspect retained screen for the three negative predicates."
+  },
+  "members": {
+    "consumer/agent-wire.jsonl": {
+      "sha256": "ebe9c82d82184af88c287f224ca2843bd485d03fcfb7d1dd629074d819304fdf",
+      "bytes": 3187,
+      "origin": "/tmp/cyril-fiv1-blank-error-consumer-20261020-01/agent-wire.jsonl"
+    },
+    "consumer/canonical-handoff.json": {
+      "sha256": "0e93dfb29b279e4d94fe03d610a1559d9f0ab0b41c655e6ae10b2a7b86acd048",
+      "bytes": 4607,
+      "origin": "/tmp/cyril-fiv1-blank-error-consumer-20261020-01/canonical-handoff.json"
+    },
+    "consumer/cyril.log": {
+      "sha256": "8448fbe0c6b5962ff82f15204e396e4832cbcf923084d4cc1b9d6bf53b655d08",
+      "bytes": 3336,
+      "origin": "/tmp/cyril-fiv1-blank-error-consumer-20261020-01/cyril.log"
+    },
+    "consumer/result.json": {
+      "sha256": "5786d00e342eccda10688d49695a1ceff99abda36d762c551f642e66aa778b83",
+      "bytes": 545,
+      "origin": "/tmp/cyril-fiv1-blank-error-consumer-20261020-01/result.json"
+    },
+    "consumer/screen.txt": {
+      "sha256": "60fee0dc00daf52d2ff4bb8de8de1df718dbe8796b7c5cd8bde47f212b3b8391",
+      "bytes": 10686,
+      "origin": "/tmp/cyril-fiv1-blank-error-consumer-20261020-01/screen.txt"
+    },
+    "consumer/terminal.ansi": {
+      "sha256": "0f93551cceb43e0827c71315999adcb7aaeecf1d0667ff307927958e16e3ff60",
+      "bytes": 2197,
+      "origin": "/tmp/cyril-fiv1-blank-error-consumer-20261020-01/terminal.ansi"
+    },
+    "green/01-initial-format.log": {
+      "sha256": "3c51fd8efc4f9a46e0a8a7965ae0061561d78df09a6b791e90de9994c7578ec8",
+      "bytes": 257,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/01-initial-format.log"
+    },
+    "green/02-full-v2-failed-validation-integration.log": {
+      "sha256": "5a48ec8f8fe827ade1d0417400be27ed5d085d7594f95634efdbe70e13826df4",
+      "bytes": 1065,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/02-full-v2-failed-validation-integration.log"
+    },
+    "green/03-exact-preserved-completed-empty-output.log": {
+      "sha256": "0a3650c07f5137efa5b60835047b50f78e9635feba81474591e9f7ff56e68ba0",
+      "bytes": 881,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/03-exact-preserved-completed-empty-output.log"
+    },
+    "green/04-whole-workspace-tests.log": {
+      "sha256": "10aa14dd711733380bf6cfda01432d50be3472d7863bfcef0ba4ac2f1a9ac658",
+      "bytes": 234351,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/04-whole-workspace-tests.log"
+    },
+    "green/05-workspace-alltargets-clippy.log": {
+      "sha256": "64dcff746e85c293a7e6fdf50543c8acab54f8106dcea0affac00311857cd340",
+      "bytes": 1103,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/05-workspace-alltargets-clippy.log"
+    },
+    "green/06-default-cyril-build.log": {
+      "sha256": "641d63dae8fd4dea8f9ecc15516505276d49c8eac906071a2a2fa675c9dfd13f",
+      "bytes": 742,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/06-default-cyril-build.log"
+    },
+    "green/07-final-format-check.log": {
+      "sha256": "1af740ced30afaf3cfda14c9dc1ad6e85fae36e8fbe0739be3ee3cb3327c2f08",
+      "bytes": 265,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/07-final-format-check.log"
+    },
+    "green/canonical-handoff.json": {
+      "sha256": "529f9cc860d984ba7ed07aca7b275f64267f44b4e453a92c17ff6c8728de907f",
+      "bytes": 73452,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-repaired-green-attempt1/canonical-handoff.json"
+    },
+    "red/01-exact-blank-raw-test-only-RED.log": {
+      "sha256": "4a3dc82ce58ede7b46f5d4e894fc484a13809c84f1d47a19c5b0a704514b0cab",
+      "bytes": 1505,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-test-only-red-attempt1/01-exact-blank-raw-test-only-RED.log"
+    },
+    "red/canonical-handoff.json": {
+      "sha256": "e107b571fcdf7964886847706be73499bfc4de343c8f48d054804bc01c34a5ef",
+      "bytes": 7639,
+      "origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/fiv1-blank-raw-test-only-red-attempt1/canonical-handoff.json"
+    },
+    "replay/.cyril-1v25/smoke.py": {
+      "sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+      "bytes": 16779,
+      "origin": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/.cyril-1v25/smoke.py"
+    },
+    "replay/controls-content-blank-raw.jsonl": {
+      "sha256": "61354e9e58a87144d8246268ec122f4a31c0ac6158b56d58ac03b814d41141d2",
+      "bytes": 1108,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-blank-raw-controls-content.jsonl"
+    },
+    "replay/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh": {
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "bytes": 779,
+      "origin": "/home/dwalleck/repos/cyril-wt-fix-cyril-fiv1/crates/cyril-core/tests/fixtures/fake-kiro-cli.sh"
+    },
+    "review.txt": {
+      "sha256": "9ef3bfda4f2c8517b83d228655fa7375eb9e07dcac1a888242ba6feb1b22d76e",
+      "bytes": 799,
+      "origin": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/fiv1-blank-raw-source-review.txt"
+    }
+  },
+  "limits": [
+    "No binary, private HOME/config/data, credentials, index files or .git merge-state files packaged. Original receipts retain their provenance descriptions of parent-owned index/merge state.",
+    "Immutable receipt bytes retain original absolute origin paths and then-current pending-review notes; this index supplies current aggregate review scope without rewriting them.",
+    "Owned synthetic-peer PTY/pyte wiring only; no native/live Kiro/account/model/grant/Windows/macOS/benchmark claim.",
+    "Packaging performed no Cargo, application rerun, source change, index mutation or commit."
+  ]
+}

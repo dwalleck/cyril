@@ -1,0 +1,92 @@
+{
+  "schema": "cyril-caar-draft-publication-source-pins/v1",
+  "status": "FROZEN_PREPUBLICATION_BOUNDARY_MAIN_HELD_NORMAL_NK_MERGE",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-caar-final",
+  "head_branch": "fix/cyril-caar-final",
+  "logical_Caar_source_commit": "8795052670d8fed6010caeb6563a072a146a9058",
+  "held_NK_merge_head": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+  "final_merge_or_publication_commit": null,
+  "final_commit_limit": "Not yet created/observed in this frozen preparation receipt. Main owns normal held-merge completion, metadata commit/push and opening a draft; no Git/index operations by this worker.",
+  "source_descriptor_NOT_Git_tree_or_commit": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+  "source_descriptor_definition": "SHA256 of compact sorted-key JSON array sorted by path of {path,mode,blob,sha256} for all tracked source-scope files in inventory; not a Git tree/commit or qualified binary.",
+  "qualified_source_inputs": 529,
+  "qualified_source_bytes": 9427928,
+  "source_scope": [
+    "Cargo.toml",
+    "Cargo.lock",
+    "clippy.toml",
+    ".clippy.toml",
+    "rust-toolchain.toml",
+    "rust-toolchain",
+    ".cargo",
+    "crates"
+  ],
+  "source_inventory": {
+    "path": "source-inventory.json",
+    "sha256": "72d048af54fbde509641a8df865b41ae0cd00113426a2b778f8324291ed8111a"
+  },
+  "source_manifest_sha256": "337817bc160b3a27d3aaa763260ae542f46412091f815835cb3863a0467c4630",
+  "original_build_qualification_frame": {
+    "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+    "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "canonical_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/caar-current-qualified-nk-joint529-postformat-green-attempt2/canonical-handoff.json",
+    "canonical_sha256": "070fd867a1099a39e929c3e7aa629260dbbce152c0b4563bb6213521d8a71a71"
+  },
+  "actual_held_frame_source_equivalence": {
+    "authority": "Main-owned frozen integration-boundary.json; no fresh source check by metadata worker",
+    "HEAD": "8795052670d8fed6010caeb6563a072a146a9058",
+    "held_MERGE_HEAD": "89ef8075c9972d5c2489485041adcdd962ed5f54",
+    "descriptor": "5c63c3965c6b653f5ff7cce0b00c83a79153c0e025f7929f2391e8be00a3a9ee",
+    "recorded_actual_source_differences": [],
+    "source_overlay_reapplied": false
+  },
+  "private_default_App": {
+    "path": "/tmp/cyril-caar-current-joint529-default-App-qualified-20261022T063116890453Z",
+    "sha256": "a5c6c8a7e2b7fc5bd853cc7222467217beaaca7e989d40411f18d4964dbab36a",
+    "bytes": 105233696,
+    "features": "Appdefaultkas;voiceoff;owningpackagebuild",
+    "build_argv": [
+      "cargo",
+      "build",
+      "-p",
+      "cyril",
+      "--bins"
+    ],
+    "build_log_sha256": "ca0ba1394b05f95de86a84c3661346c48d8271c11e751afd7b2c0a1d560036bd",
+    "actual_native_attempts": "native-consumer.json"
+  },
+  "private_ordinary_default_CLI_example": {
+    "path": "/tmp/cyril-caar-current-joint529-default-ordinary-CLI-example-qualified-20261022T063129420678Z",
+    "sha256": "39ba44f242dffd4f65930394780ff4a1eaf9b67803c29629d279f502878198c9",
+    "bytes": 79615472,
+    "features": "Appdefaultkas;ordinaryexampleNOTtestharness",
+    "build_argv": [
+      "cargo",
+      "build",
+      "-p",
+      "cyril",
+      "--example",
+      "test_bridge"
+    ],
+    "build_log_sha256": "2fe2a9a608c4fefa47855b361cea0d29e99f3b880691e866e7f07349c67a8e87"
+  },
+  "owned_feature_manifest": "feature-files.json",
+  "publication_intent": {
+    "draft": true,
+    "base": "main",
+    "explicit_dependency_PR": 196,
+    "Tqr_dependency_PR": 193,
+    "issue": "cyril-caar",
+    "issue_closure_authorized": false,
+    "PR187": "Untouched",
+    "cumulative_main_diff_limit": "Before dependencies merge, inherited Tqr/NK paths can appear in the main-targeted PR diff; they are not all Caar-owned."
+  },
+  "native_state": "AUTH_BLOCKED; latest pinned CLI reports not logged in before initialize response/session-new; no latest startup2/nav9/preview/inventory/New80/New95 acceptance.",
+  "pending": [
+    "Remaining real native consumer acceptance under a fresh Main authorization",
+    "Source-bound platform/CI status",
+    "Final independent design-conformance/review",
+    "Main normal held-merge completion and publication receipts"
+  ],
+  "no_qualification_or_closure_waiver": true
+}

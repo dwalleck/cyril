@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "issue": "cyril-zj0m",
+  "status": "COMPLETE \u2014 scoped README/workflow/evidence publication handoff; Main owns commit/PR/CI/tracker closure",
+  "canonical_handoff": ".cyril-zj0m/handoff.json",
+  "verification_index": ".cyril-zj0m/verification.md",
+  "publication_manifest": ".cyril-zj0m/publication-manifest.json",
+  "publication_file_count": 17,
+  "publication_owner": "Main",
+  "actual_qualified_checkout_tree": "6241931fecb663e9bb17e5cc0e76c35c12833828",
+  "observed_head": "6ab6d77e03b73a3a45d6d526fbc19641dace5513",
+  "base_pr": "https://github.com/dwalleck/cyril/pull/189",
+  "old_base_pr_commit": "194ec404a325843a1b002940784dda7296ef355c",
+  "common_fixture_prerequisite": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+  "production_files_sha256": {
+    "crates/cyril-ui/Cargo.toml": "dca84714e572fbd0543f20b150c928b09ace0e7ebc8ee34dae9dabc5c2b64c93",
+    "crates/cyril-ui/benches/conversation_render.rs": "72e4dd8534216d23bf4ed2b1843ee05aa11cbcaf2ab393ca7bb6c6ec3b19e510",
+    "crates/cyril-ui/src/lib.rs": "5e438d425bbab3621f36808025a6f4fd9b416e0941ce0ae7bbf91c6b22a1a4d6",
+    "crates/cyril-ui/src/tool_diff.rs": "d4ae79652e8eca09f1c61145cddd23f8ee3f6723a5b04de3588cec1cafdc0036",
+    "crates/cyril-ui/src/traits.rs": "7acbafe0c279c9b0134e5c96b906e474be54a2a10213216767d0d08df26f926d",
+    "crates/cyril-ui/src/widgets/approval.rs": "76d03ff8fc99290683455afba94e6fd1edbb515bc267e2d5cde17fa184bd5234",
+    "crates/cyril-ui/src/widgets/chat.rs": "9f763f63588e61b438111908f4ef7ba217709c54deed6b9fac3670f711c8ef53"
+  },
+  "qualified_whole_source_manifest": {
+    "archive_path": "source/qualified-source.json",
+    "sha256": "5862499da0e4db3f8acde23b0e735e46af351a350628449a0a454cee0db06b94"
+  },
+  "raw_qualification_handoff": {
+    "original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/zj0m-repair1/canonical-handoff.json",
+    "archive_path": "gates/canonical-handoff.json",
+    "sha256": "6e2743d4ceac88185f8010c087917f2ce89ddfae85a8d9389ef58c02d4b7c5f8"
+  },
+  "actual_app_binary_sha256": "b603b8c5ac261acb827d9a95c90010ea339abff6bbfd687ec5d9991a6732da00",
+  "executables_included": false,
+  "archive": {
+    "path": ".cyril-zj0m/verification-evidence.tar.gz",
+    "sha256": "05c8d8abb9ea050dcb9bf0720218dc0eeaf53a593da7038cfc2956029bc896dc",
+    "bytes": 1366757,
+    "members": 88,
+    "index": "index.json"
+  },
+  "observed_results": {
+    "workspace": "2845 PASS; 0 FAIL; 13 existing ignored, not exercised; nested child summaries excluded from total to avoid double-counting",
+    "clippy_workspace_all_targets": "PASS; -D warnings",
+    "cli_build": "PASS",
+    "formatting": "PASS",
+    "completed_write_benchmark": "PASS: full-root TestBackend sparse2k/dense20k/pending positive controls; cold+100warm+30x100 samples each, 90 raw sample rows; no timing threshold or baseline comparison",
+    "separate_unknown_mode_cli": "PASS: explicitly authorized direct existing benchmark private copy exited1 with error/usage, empty stdout, no measurement; observed-now benchmark SHA1009bd865f876771dafd36aba2960e11ab6b59fe49ef1fd7bb65ae350a7543e9, not backdated",
+    "fresh_actual_delivery_independent_review": "ReviewDiffReuse correct, confidence0.98, no findings; actual seven-source qualified-tree static review; F1 resolved; no check execution by reviewer",
+    "owned_actual_app_consumer": "PASS first attempt:13 screen/cell checkpoints,18 ACP frames; first-Diff counts/body/second exclusion/unchanged suppression/replacement/width/palette/offscreen-back/pending RejectOnly/turn completion"
+  },
+  "historical_evidence": {
+    "original_sensitivity_base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
+    "original_patch_sha256": "5c0d35de8fd980228f9f595199f86014b70e6f7a376ae51c40d7ceb915a655f9",
+    "original_patch_bytes": 60053,
+    "original_sensitivity_boundary": "Original-base instrumented RED/GREEN and original review retained separately, not relabeled current-tree full-gate execution",
+    "first_actual_attempt": "Historical FAIL: benchmark manual_is_multiple_of lint, exit101; no tests/build/finalfmt/benchmark/binary from that attempt. Bounded owner repair followed by fresh qualified source and all required gates; no baseline waiver or suppression"
+  },
+  "qualification_limits": [
+    "Exact current tree only; later parent output-alias refresh/future stack/c6la is NOT qualified",
+    "Actual App/PTY/ANSI/pyte cell evidence, not native graphical font/glyph/emoji/CJK/combining-width proof or live model/Kiro session",
+    "No real file operation, external account/model, host callback or permission grant; actual reject-only wire outcome retained",
+    "No focused-child/native50000 claim; max1000 configured/default500;70 padding paragraphs not70 retained messages",
+    "Original canonical handoffs retain historical C6 rows only as provenance; no C6 qualification conclusion supplied here",
+    "Inherited requester-approved cyril-u62f Windows readiness baseline exception remains bounded; cancelled coverage not green; no new failures accepted",
+    "Original qualified-binary.json predates benchmark completion and retains benchmark_pending=true; later canonical receipt/raw benchmark supplies completion"
+  ],
+  "worker_actions": "Only README and .cyril-zj0m workflow/evidence/publication files changed. No source/fixture/Cargo edits, Cargo/build/test/lint/formatter/measurement reruns/smoke/commits/pushes/tracker writes. One explicit Main-GO direct existing benchmark unknown-mode invocation was performed and separately recorded; its temporary private executable copy was removed after recording.",
+  "remaining_parent_actions": [
+    "Publish exactly the manifest file set as the zj0m issue-specific PR on its currently qualified old PR189/common-fixture base",
+    "Adjudicate own-PR CI with only the already requester-approved Windows readiness baseline exception",
+    "Update/close tracker under Main publication authorization",
+    "Handle later output-alias/stack refresh separately and assess/reverify all affected evidence; this handoff does not prequalify it"
+  ]
+}

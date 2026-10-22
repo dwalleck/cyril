@@ -1,0 +1,6 @@
+Source: /tmp/cyril-fiv1-241-smoke-shell-20261020/screen.txt
+Selected physical screen lines; trailing terminal padding omitted.
+10: BEFORE_TOOL_ROWS
+13: ✗ Read(/home/dwalleck/repos/cyril/Cargo.toml)
+14:     Error: The tool arguments failed validation: '/home/dwalleck/repos/cyril/crates/cyril-core/src/protocol/convert' is not a file
+17: AFTER_TOOL_ROWS

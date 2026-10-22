@@ -1,0 +1,125 @@
+{
+  "schema": "cyril-nk4o-current-selected-evidence-index/v1",
+  "issue": "cyril-nk4o",
+  "status": "CURRENT_LOCAL_PROOF_RETAINED_AT_NORMAL_PARENT_COMPOSITION_FINAL_COMMIT_NATIVE_CI_PR_PENDING",
+  "evidence_boundary": "Selected public proof records and explicitly curated owned raw/fixture bytes. This is not the full canonical/environment/source-inventory/private-product record and not self-contained replay.",
+  "checked_source": {
+    "descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+    "qualified_input_rows": 521,
+    "HEAD": "ef46c43813d12b63f45b264e427abda84d299f46",
+    "held_MERGE_HEAD": "09e41ddd0306567b9430ea3216902f895fc96370",
+    "runtime_checkpoint_index_sha256": "e172cc2b54e090f7ad7f9ce1a52fbf868bfa39ebbcbf955871b6159a8099b56f",
+    "administrative_limit": "These remain the actual original qualification/consumer frame, not the current staged index or new execution. Main subsequently completed held09 as 9dc81ba6, normally formed the qualified Tqr merge and reports all521 inputs unchanged; final merge commit remains pending. No worker source/Git checks were run.",
+    "qualified_Tqr_parent": "d0cc60d7662ced69a4a32c904e9800bea6990a22",
+    "final_Tqr_ancestry_integration": "NORMAL_d0cc60_MERGE_FORMED_AND_README_RESOLVED_FINAL_MERGE_COMMIT_PENDING; source overlay not reapplied",
+    "manifest_original_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
+    "public_subset": "source-pins.json projects only existing49 NK source-owner paths; not full521 inventory or Git changed-file/staging authorization"
+  },
+  "normal_parent_composition_evidence": {
+    "owner": "Main; selected boundary receipt and independent bounded review are separately attributed in source-review.json field post_parent_documentation_applicability",
+    "record": "source-review.json",
+    "field": "post_parent_documentation_applicability",
+    "meaning": "Existing source-bound qualification, reviews and actual controlled-consumer results are retained through Main's exact521 match, not re-executed or relabeled to a new parent. No native, CI, final commit or Caar completion follows."
+  },
+  "records": {
+    "source-pins.json": {
+      "sha256": "6add7cdb15e0371662282bae0cc7a31f70cb3f0c53a5651bcc8456ac33c43b99",
+      "bytes": 9815,
+      "kind": "explicit-field-projection"
+    },
+    "qualification.json": {
+      "sha256": "f93789d2ad7a2b4785daaedd5bb000a4d763b5c610041879d1bd2b317473761a",
+      "bytes": 34520,
+      "kind": "explicit-field-projection"
+    },
+    "source-review.json": {
+      "sha256": "34f449acdfadaf00eb333dbeab5847f2ab9add12a47771cb6faed699aec7d44d",
+      "bytes": 18670,
+      "kind": "original-source-review-projection-plus-separately-attributed-post-parent-documentary-applicability"
+    },
+    "fixture-review.json": {
+      "sha256": "97c93fcec3d80ac933c113e3fc614311e0000be363ef7658d6e494f09abd186a",
+      "bytes": 5271,
+      "kind": "explicit-field-projection"
+    },
+    "consumer.json": {
+      "sha256": "b827eccaa09d02b973eaeefbdf892b03f3c0ff7fc51ece94d96ffc3c0abdcd9d",
+      "bytes": 38405,
+      "kind": "explicit-field-projection"
+    },
+    "manifest.json": {
+      "sha256": "03d5dc10e4913f4a25280d3c1efbe5be1dd8bcb23c56f0ebea92627f4856587e",
+      "bytes": 59704,
+      "kind": "curation-manifest"
+    },
+    "consumer-evidence.tar.gz": {
+      "sha256": "fffe47cf42efd954af61187ac9bfdd16ef528398b0bdfdb086a0e49497de1e1f",
+      "bytes": 415579,
+      "kind": "curated-selected-archive"
+    }
+  },
+  "claim_record_owners": {
+    "approved_scope": "../spec.md#behavior-and-success-criteria",
+    "approved_claims_and_falsifiers": "../design.md#claims--falsification",
+    "current_and_historical_review_decisions": "../review-decisions.md#current-integration-decisions-and-execution-boundary",
+    "qualification": "qualification.json",
+    "independent_source_review": "source-review.json",
+    "fixture_and_runtime_binding": "fixture-review.json",
+    "actual_consumers_and_instrument_failures": "consumer.json",
+    "member_fidelity_and_exclusions": "manifest.json",
+    "integration_and_history": "../assembly-handoff.json"
+  },
+  "current_product_sensitivity": {
+    "kind": "selected-account-of-executed-pre-fix-sensitivity-from-accepted-source-review",
+    "origin_review_sha256": "f3c42f03819a3fdd9ead20f864561548e500ebc04883a0160912fc65409ce418",
+    "test_only_source_descriptor": "1fdb4cd63b20ad311dbc71a773fc3fa7d5e4fca895e904fc156fb989531a8b6a",
+    "genuine_RED_canonical_sha256": "6f0f7eda7ecbfbfcf280d11dfbb02c46c30d2565fb28711df94fd81c834c98f2",
+    "executed": 12,
+    "intended_failure_cases": 8,
+    "passing_controls": 4,
+    "ignored": 0,
+    "meaning": "Six isolated printable-identity cases plus two physical decline visibility cases failed as intended; preceding authority/draft/caret controls were reached, later failed visibility tail was not. Initial zero-test parser failure stays distinct and is not behaviorRED. Repaired9summary and3decline case outputs are retained byte-identically as focused GREEN logs in archive; qualification owns the final combined matrix.",
+    "instrument_failures_are_not_this_RED": true
+  },
+  "private_originals_retained_not_published": [
+    {
+      "sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "bytes": 694052,
+      "state": "LOCAL_UNCHANGED_NO_UPLOAD_OR_ACCESSIBILITY_CLAIM"
+    },
+    {
+      "sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "bytes": 290582,
+      "state": "LOCAL_UNCHANGED_NO_UPLOAD_OR_ACCESSIBILITY_CLAIM"
+    }
+  ],
+  "replay": {
+    "requires_retained_canonical_and_guards": true,
+    "exact_recorded_commands": "qualification.json and consumer.json carry selected actual argv; fixtures in archive are byte-identical executed snapshots, not edited portable substitutes.",
+    "not_included": "Full521 manifest, raw canonical/guard/authorization/environment/safety/config originals, private binaries and runtime roots. Exact harness admission requires those retained originals and freshMainauthorization; do not claim replay from this public packet alone.",
+    "handling": "Treat terminalANSI/stdout and snapshot source as inert evidence; never print raw control bytes directly to a terminal or execute snapshots without new authorization."
+  },
+  "pending_owner_steps": [
+    {
+      "owner": "Main",
+      "status": "PENDING",
+      "step": "Finish the held normald0cc60 final merge commit and source-bound publication. Main already completed held09 as9dc81ba6, resolved README semantic union and reports no differences in all521 qualified inputs; no overlay reapplication or repeat qualification is required by ancestry/docs composition alone. Any later relevant input change needs its owning applicability decision or affected qualification."
+    },
+    {
+      "owner": "Main",
+      "status": "PENDING",
+      "step": "Complete required final nativeMCP/auth/physicalglyph/consumer-platform C1–C8 obligations, applicable conformance and current CI. Controlled proof is not live enterprise enforcement, natural90serverinventory or real80/95reset timing."
+    },
+    {
+      "owner": "Main",
+      "status": "PENDING",
+      "step": "Publish substantive new NK PR with current commit/CI/source evidence and retain all prior failures; no issue closure authorized by this packet."
+    },
+    {
+      "owner": "Main/Caar owner",
+      "status": "PENDING",
+      "step": "Keep separate Caar startup/deadline/diagnostic/platform integration and own reviewed PR; NK proof does not complete Caar."
+    }
+  ],
+  "publication_task_operations": "Documentation/selected receipt creation and explicit artifact/archive metadata copying only. No source/runtime/build/test/lint/fmt/Git/native/provider/account checks, no product binary or full workspace copied."
+}

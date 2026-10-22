@@ -1,0 +1,1106 @@
+{
+  "schema": "cyril-nk4o-current-curated-owned-evidence/v1",
+  "archive": "consumer-evidence.tar.gz",
+  "sha256": "fffe47cf42efd954af61187ac9bfdd16ef528398b0bdfdb086a0e49497de1e1f",
+  "bytes": 415579,
+  "members": [
+    {
+      "path": "app/run05/final.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897420,
+      "sha256": "8813f1b1a83062b9083b55f65b4bc30a891b85bdc92963340a36f5487ddf2f20",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/final.cells.json"
+    },
+    {
+      "path": "app/run05/final.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8376,
+      "sha256": "c34e31380149d24cb35b716f19450a5c31d65a24302cb549512ad41b794caf39",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/final.txt"
+    },
+    {
+      "path": "app/run05/27-escape-chat-input-isolation.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897420,
+      "sha256": "adbb3b8c0748cd553ce799176467fb63327f4d75003b4a82a82c07123b2b403f",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/27-escape-chat-input-isolation.cells.json"
+    },
+    {
+      "path": "app/run05/27-escape-chat-input-isolation.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8376,
+      "sha256": "c34e31380149d24cb35b716f19450a5c31d65a24302cb549512ad41b794caf39",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/27-escape-chat-input-isolation.txt"
+    },
+    {
+      "path": "app/run05/26-governance-future_owned_reason.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896756,
+      "sha256": "c35967d66f87222e0a03f98c3cf361f36235ea034f8963474a00e3fb3d63a866",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/26-governance-future_owned_reason.cells.json"
+    },
+    {
+      "path": "app/run05/26-governance-future_owned_reason.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8960,
+      "sha256": "931349ac7a03a44f7cf206b2a52e449bdf6eeed88c1d73b30aa7cbacc79fba8d",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/26-governance-future_owned_reason.txt"
+    },
+    {
+      "path": "app/run05/25-governance-admin_disabled.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896780,
+      "sha256": "6f5f0906c253d6c2abad2cac5bd9208d72e6a4f6578ad5596f8552bbe2372bf0",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/25-governance-admin_disabled.cells.json"
+    },
+    {
+      "path": "app/run05/25-governance-admin_disabled.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8960,
+      "sha256": "4363407d9f51c17ad319c6069a8a23eabb7bf91d2250352b013ab00baf170668",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/25-governance-admin_disabled.txt"
+    },
+    {
+      "path": "app/run05/24-governance-api_failure.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896767,
+      "sha256": "27a433a4162c008b5905d24531991d1a119721d34679405b41d2f2752adae4e8",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/24-governance-api_failure.cells.json"
+    },
+    {
+      "path": "app/run05/24-governance-api_failure.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8960,
+      "sha256": "32a38a13712024f1843c5c5ea565c6f3df8d0f1f846ce2d83c3888fe99b1155a",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/24-governance-api_failure.txt"
+    },
+    {
+      "path": "app/run05/23-known-empty-registry-and-policy-exclusions.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896849,
+      "sha256": "b749c32593dff4f7cb6b235d4cadd66d164ff2c250003fc2c99e6157470a6d43",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/23-known-empty-registry-and-policy-exclusions.cells.json"
+    },
+    {
+      "path": "app/run05/23-known-empty-registry-and-policy-exclusions.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8960,
+      "sha256": "3c5db16464e50e6c9e4be9dadb4bab89697f0dd2ad914ffe8ebbb87405e1c079",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/23-known-empty-registry-and-policy-exclusions.txt"
+    },
+    {
+      "path": "app/run05/22-malformed-snapshot-retains-valid-state.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896613,
+      "sha256": "dc4b5027b8a80187b45ac4c659f3c5bbaaa560bf8e335eaf754591e6ff288555",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/22-malformed-snapshot-retains-valid-state.cells.json"
+    },
+    {
+      "path": "app/run05/22-malformed-snapshot-retains-valid-state.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8974,
+      "sha256": "56f163e24e1de977a3112c5efe1466ca75a84d95e2f3643228908c5419e183ca",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/22-malformed-snapshot-retains-valid-state.txt"
+    },
+    {
+      "path": "app/run05/21-late-result-ServerMissing.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896982,
+      "sha256": "52455e06804929e4d84d4ce6471ca216f3198d7cbe77db9f7950d3da0c2e8347",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/21-late-result-ServerMissing.cells.json"
+    },
+    {
+      "path": "app/run05/21-late-result-ServerMissing.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "5f2f8be8554674f4061130dc58fec9163aadd6618c00d4b251650b3fb8707a2d",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/21-late-result-ServerMissing.txt"
+    },
+    {
+      "path": "app/run05/21-pending-live-before-server-missing.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897095,
+      "sha256": "b969d4356c8c743654d5c7c1cd7e9b44e0cd4883e3af0b63a63e20a202efe1fb",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/21-pending-live-before-server-missing.cells.json"
+    },
+    {
+      "path": "app/run05/21-pending-live-before-server-missing.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "8653dc15c0fbbc7b6dde9e9503f9ff2c62cadfe9a0232d5f8047c7e411baf03e",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/21-pending-live-before-server-missing.txt"
+    },
+    {
+      "path": "app/run05/20-late-result-EntryMissing.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897001,
+      "sha256": "bcd1b460815d20f75b286acf4c8f91521ca027dbd4417940ee4d9e9e717043e6",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/20-late-result-EntryMissing.cells.json"
+    },
+    {
+      "path": "app/run05/20-late-result-EntryMissing.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "72df6cba653ac1d50a0926b76f396828e10a99da030efae76a3bff69d8b61655",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/20-late-result-EntryMissing.txt"
+    },
+    {
+      "path": "app/run05/20-pending-live-before-entry-missing.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897095,
+      "sha256": "600d29f4c4ad22e483faa1fa32a7ca829004a1944aef3756294120671865727f",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/20-pending-live-before-entry-missing.cells.json"
+    },
+    {
+      "path": "app/run05/20-pending-live-before-entry-missing.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "8653dc15c0fbbc7b6dde9e9503f9ff2c62cadfe9a0232d5f8047c7e411baf03e",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/20-pending-live-before-entry-missing.txt"
+    },
+    {
+      "path": "app/run05/19-late-result-Disconnected.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896985,
+      "sha256": "03bb14843044f6943545319d1a0ca1d720810ca8cd3dd0de58bd5f9281bc859c",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/19-late-result-Disconnected.cells.json"
+    },
+    {
+      "path": "app/run05/19-late-result-Disconnected.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "f487b6d5167e25591e452d7a3e662b418ad1866be3696744739596f1d822f312",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/19-late-result-Disconnected.txt"
+    },
+    {
+      "path": "app/run05/19-pending-live-before-disconnect.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897094,
+      "sha256": "7596fd1608bcf89a39214cc1d7ec9532a52887040b8abf23de2e3a417d03cfe1",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/19-pending-live-before-disconnect.cells.json"
+    },
+    {
+      "path": "app/run05/19-pending-live-before-disconnect.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "8653dc15c0fbbc7b6dde9e9503f9ff2c62cadfe9a0232d5f8047c7e411baf03e",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/19-pending-live-before-disconnect.txt"
+    },
+    {
+      "path": "app/run05/18-explicit-empty-prompt.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897050,
+      "sha256": "757025931127f34902b5d0feda996af8253b2e6ff1dd85c288440a135f12d8e9",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/18-explicit-empty-prompt.cells.json"
+    },
+    {
+      "path": "app/run05/18-explicit-empty-prompt.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8950,
+      "sha256": "3a8a43b4e46f2e103ea27177448b63230ba72ae98e7aa7e168f30a32a9ebfec6",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/18-explicit-empty-prompt.txt"
+    },
+    {
+      "path": "app/run05/17-distinct-malformed.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897017,
+      "sha256": "73ed29a25abcfa0662d4308dd41372289a04c8b62302ffd5e934653178e0b461",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/17-distinct-malformed.cells.json"
+    },
+    {
+      "path": "app/run05/17-distinct-malformed.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "0c201bde34b4ac87bef56d802d3ea6c415e8cc80a2a72de599b57e6ae73c3c0b",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/17-distinct-malformed.txt"
+    },
+    {
+      "path": "app/run05/16-distinct-refusal.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896960,
+      "sha256": "04eb375a543c2b954415da60db853523e4e4a580a76cae4aac89fa5b23235ee0",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/16-distinct-refusal.cells.json"
+    },
+    {
+      "path": "app/run05/16-distinct-refusal.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8948,
+      "sha256": "fe2539d7e2b2b481fb591900899ddc2cf04a41811654a777880d233111dc3388",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/16-distinct-refusal.txt"
+    },
+    {
+      "path": "app/run05/15-template-inspection-only.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896908,
+      "sha256": "4252f512ef929632bfd40a6b1f9ba571a8efbc85bd07ad9f00a2910c95327581",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/15-template-inspection-only.cells.json"
+    },
+    {
+      "path": "app/run05/15-template-inspection-only.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8972,
+      "sha256": "887d6d355bed55dedaafd48305dfbd6d295cdae15b6bb5551c6f2ffba05fa3e4",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/15-template-inspection-only.txt"
+    },
+    {
+      "path": "app/run05/14-explicit-empty-resource-not-malformed.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897017,
+      "sha256": "a9512ee894af716b8692642aed95d1c4ae11446477cffe0a57cefeb4e190d416",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/14-explicit-empty-resource-not-malformed.cells.json"
+    },
+    {
+      "path": "app/run05/14-explicit-empty-resource-not-malformed.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8950,
+      "sha256": "d608baa9150e418b58edef3142725ac56e0a46071d015b2984b7324cf56c309c",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/14-explicit-empty-resource-not-malformed.txt"
+    },
+    {
+      "path": "app/run05/13-offscreen-enter-reanchors-no-request.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896414,
+      "sha256": "a8ba93a62936638d0fbdc0d99501d8f755d464f17d38c4a0105f8d9e1758cfbc",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/13-offscreen-enter-reanchors-no-request.cells.json"
+    },
+    {
+      "path": "app/run05/13-offscreen-enter-reanchors-no-request.txt",
+      "kind": "byte-identical-original",
+      "bytes": 9002,
+      "sha256": "022a6222a2f3739d2659283661e74973d57dd7c2946694f6e4d83d24faa5e5d1",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/13-offscreen-enter-reanchors-no-request.txt"
+    },
+    {
+      "path": "app/run05/12-resource-selection-follows-scroll.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896414,
+      "sha256": "9dd63477d0938536f9a9fb3287f5b2845f9119e6fcf1daf07c87432e6fbd54d2",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/12-resource-selection-follows-scroll.cells.json"
+    },
+    {
+      "path": "app/run05/12-resource-selection-follows-scroll.txt",
+      "kind": "byte-identical-original",
+      "bytes": 9002,
+      "sha256": "022a6222a2f3739d2659283661e74973d57dd7c2946694f6e4d83d24faa5e5d1",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/12-resource-selection-follows-scroll.txt"
+    },
+    {
+      "path": "app/run05/11-resource-preview-scroll-tail-and-nontext.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897045,
+      "sha256": "1cdddcc0687ecfd599530538fd6f9e2c4a0dd40ce7c9b079fa28063fe50135f5",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/11-resource-preview-scroll-tail-and-nontext.cells.json"
+    },
+    {
+      "path": "app/run05/11-resource-preview-scroll-tail-and-nontext.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8943,
+      "sha256": "487fa391abdb2a176b0503222ab84bc9d42dbe10c3745eab2e67b416b7b84f77",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/11-resource-preview-scroll-tail-and-nontext.txt"
+    },
+    {
+      "path": "app/run05/10-fixed-resource-preview-head.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896607,
+      "sha256": "1caacc7dff8b82a352bedcf70b72abf158acf6a287bfebb880ee0d9e44ac2e28",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/10-fixed-resource-preview-head.cells.json"
+    },
+    {
+      "path": "app/run05/10-fixed-resource-preview-head.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8951,
+      "sha256": "1ef3142f5e714b59acc43b49d7b8f4a4fcbeddda7f630dc01faf45742b89ba28",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/10-fixed-resource-preview-head.txt"
+    },
+    {
+      "path": "app/run05/09-fixed-readonly-prompt-preview.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896675,
+      "sha256": "3bf7cc93ad7382f0d7a38db1341e03f32c506b1a9bd037a2bbe0da05047f7591",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/09-fixed-readonly-prompt-preview.cells.json"
+    },
+    {
+      "path": "app/run05/09-fixed-readonly-prompt-preview.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8955,
+      "sha256": "5fddf14e8e1c2c567683b4a554867ada2ce115405dcc207dd847f067695c2284",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/09-fixed-readonly-prompt-preview.txt"
+    },
+    {
+      "path": "app/run05/peer-assertions.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 2217,
+      "sha256": "926d2b0fa50a6b520d916827c1e63c8914035ab1a166816a026d1619acce0996",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/peer-assertions.jsonl"
+    },
+    {
+      "path": "app/run05/08-opaque-argument-controls-escaped.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896879,
+      "sha256": "7f8f0fd528222fc81790fb171db226a07da7d9e5b7ee8ddea8c49c7bf0eb4857",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/08-opaque-argument-controls-escaped.cells.json"
+    },
+    {
+      "path": "app/run05/08-opaque-argument-controls-escaped.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8953,
+      "sha256": "f3f5baf3f44cc53e92cedd6f9e9ae1b7d525313211e0101c6c3a2a158940f101",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/08-opaque-argument-controls-escaped.txt"
+    },
+    {
+      "path": "app/run05/07-grapheme-variation.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896936,
+      "sha256": "98905effd916da19379d20c6d0cfd2e475d1f3f15f1f4e94e197261f065dbb81",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/07-grapheme-variation.cells.json"
+    },
+    {
+      "path": "app/run05/07-grapheme-variation.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8953,
+      "sha256": "2466abb873f201f935e566e896ac0209b3aa8d1216e9c0cec9005e1156901cea",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/07-grapheme-variation.txt"
+    },
+    {
+      "path": "app/run05/07-grapheme-prepend.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896940,
+      "sha256": "2a6d43f003935b1cf94e21420477b963bd626ae53d72508a7a49cd7edd37bfeb",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/07-grapheme-prepend.cells.json"
+    },
+    {
+      "path": "app/run05/07-grapheme-prepend.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8953,
+      "sha256": "53d11c8175844600afe1bedbe361b366af3e8254bf91de7b609c3cf390010eec",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/07-grapheme-prepend.txt"
+    },
+    {
+      "path": "app/run05/07-grapheme-spacing.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896943,
+      "sha256": "1babd7ec24c52e8a8145baf6126f830a60e1b36427dbeeccf7ed30a94198eb38",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/07-grapheme-spacing.cells.json"
+    },
+    {
+      "path": "app/run05/07-grapheme-spacing.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8949,
+      "sha256": "22ce30c6482c4903ed232a5db8db2bff3812f4d32451a1f135af783ea4afb802",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/07-grapheme-spacing.txt"
+    },
+    {
+      "path": "app/run05/06-composed-data-existing-boundary.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896935,
+      "sha256": "e64c2047ef05b85143f230a6bb0a23a716037c3cc403247debbf4fa331f3e723",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/06-composed-data-existing-boundary.cells.json"
+    },
+    {
+      "path": "app/run05/06-composed-data-existing-boundary.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8949,
+      "sha256": "fde428f6e6e12ad00bc3b0fad97c3af7c25c0c28f44e74c8960df2f7bdd873c9",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/06-composed-data-existing-boundary.txt"
+    },
+    {
+      "path": "app/run05/05-composed-data-independent-caret-inside.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896935,
+      "sha256": "3a1728fb78ad8b12d6587923111acf7a6fe600bcec79449dc15543ef5f919c7d",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/05-composed-data-independent-caret-inside.cells.json"
+    },
+    {
+      "path": "app/run05/05-composed-data-independent-caret-inside.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8949,
+      "sha256": "fde428f6e6e12ad00bc3b0fad97c3af7c25c0c28f44e74c8960df2f7bdd873c9",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/05-composed-data-independent-caret-inside.txt"
+    },
+    {
+      "path": "app/run05/04-display-title-and-canonical-name.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896859,
+      "sha256": "a792cfcb5e385332bf15282ce13ebf56f8b06caf1762f727343b4e9f1e781ddf",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/04-display-title-and-canonical-name.cells.json"
+    },
+    {
+      "path": "app/run05/04-display-title-and-canonical-name.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8971,
+      "sha256": "ff3dcbac9013a3c34a4c05cd96a61dea85292f0d39f1f17dd140bd4d97ff70c4",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/04-display-title-and-canonical-name.txt"
+    },
+    {
+      "path": "app/run05/03-tools-inspection-only.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1896982,
+      "sha256": "3286d3daa35d97254ee8796924487af01f15075ed8a880fdb6033f65420498d7",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/03-tools-inspection-only.cells.json"
+    },
+    {
+      "path": "app/run05/03-tools-inspection-only.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8973,
+      "sha256": "360411a38a862b05b0c21548176d2d6671325f9f1dbf002330175f6708af3b35",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/03-tools-inspection-only.txt"
+    },
+    {
+      "path": "app/run05/02-live-named-status-and-catalog.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897124,
+      "sha256": "6364e0fecb16f0acd3d41390ee675c1f1d64eac5972311b0cc2f4a84d30b6927",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/02-live-named-status-and-catalog.cells.json"
+    },
+    {
+      "path": "app/run05/02-live-named-status-and-catalog.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8969,
+      "sha256": "c182dffcb3e24e001a359cce8ce1b7b71f65bc838e879b45235eac42d37bccf5",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/02-live-named-status-and-catalog.txt"
+    },
+    {
+      "path": "app/run05/01-unknown-inventory-not-empty.cells.json",
+      "kind": "byte-identical-original",
+      "bytes": 1897368,
+      "sha256": "7ae1ad2da0051351ffb1e9965a86b28e7add2210699fe8fa1daabb6b7adfc515",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/01-unknown-inventory-not-empty.cells.json"
+    },
+    {
+      "path": "app/run05/01-unknown-inventory-not-empty.txt",
+      "kind": "byte-identical-original",
+      "bytes": 8938,
+      "sha256": "18e30ea4b1b5c6fcebf60f6f44aeec035022afea88a0efb6218a2048bc27aae4",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/01-unknown-inventory-not-empty.txt"
+    },
+    {
+      "path": "app/run05/peer-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 39003,
+      "sha256": "dc2e8c6f897c447039f20bb171a74d78be5e96d60b82f25ad126d6ead92ad241",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/peer-wire.jsonl"
+    },
+    {
+      "path": "app/run05/client-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 2994,
+      "sha256": "6a8622f74266d2baa271675c9b01da412f310cdf0be42df182720f918eb4309c",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/client-wire.jsonl"
+    },
+    {
+      "path": "app/run05/terminal.ansi",
+      "kind": "byte-identical-original",
+      "bytes": 140898,
+      "sha256": "bcf32c0877ddea5fdbafd3cdb10b646afb1afe116896009929812b35ced1cedd",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/terminal.ansi"
+    },
+    {
+      "path": "app/run05/fake-kiro-cli.snapshot.sh",
+      "kind": "byte-identical-original",
+      "bytes": 779,
+      "sha256": "61586cd278cb555d29f84b49805a1811705112713d0b6774feec42310d0ced6d",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/fake-kiro-cli.snapshot.sh"
+    },
+    {
+      "path": "app/run05/owned-server.snapshot.js",
+      "kind": "byte-identical-original",
+      "bytes": 304,
+      "sha256": "610859d06481bbfb02001afd55f023be422658dfb23a67853e572f255fdd3c04",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/owned-server.snapshot.js"
+    },
+    {
+      "path": "app/run05/wide_overwrite.snapshot.py",
+      "kind": "byte-identical-original",
+      "bytes": 934,
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/wide_overwrite.snapshot.py"
+    },
+    {
+      "path": "app/run05/harness.snapshot.py",
+      "kind": "byte-identical-original",
+      "bytes": 60311,
+      "sha256": "2a1d810983b5c739e1eb2315af126417a86039a7a757456376fb509ee407c4ae",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-owned-consumer-prepare-McpLifecycle-03f68b427128/run05/harness.snapshot.py"
+    },
+    {
+      "path": "cli/python314/printable/stdout.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1455,
+      "sha256": "002f1e2450c0775963facdc6c03178d4564c0f3345140c388749f1b41e01151e",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/stdout.bin"
+    },
+    {
+      "path": "cli/python314/printable/stderr.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1275,
+      "sha256": "29ed7de25f694480fecbd091db8afa6a8cd584ff5ae89711bf6c553687af9f16",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/stderr.bin"
+    },
+    {
+      "path": "cli/python314/printable/client-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 1330,
+      "sha256": "d41511890eed7c7b52a83324675038369d9ebb3b0067512059e9689e9487f2fd",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/client-wire.jsonl"
+    },
+    {
+      "path": "cli/python314/printable/agent-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 2101,
+      "sha256": "f46e0e9c2b2485eead690319ecd120810797576269ae80507f1d1b32a1fac395",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/agent-wire.jsonl"
+    },
+    {
+      "path": "cli/python314/printable/decline-acks.json",
+      "kind": "byte-identical-original",
+      "bytes": 139,
+      "sha256": "daa5fc4fba8508fa559410763217affbd946a76e70b8b7355af7ec1345a0af4f",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/decline-acks.json"
+    },
+    {
+      "path": "cli/python314/printable/observer-bound.json",
+      "kind": "byte-identical-original",
+      "bytes": 686,
+      "sha256": "978aec97156404d9a2c25777af20ca1489cb7adcddc42b12e560b5488c8bcc10",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/observer-bound.json"
+    },
+    {
+      "path": "cli/python314/printable/cutoff-preconditions.json",
+      "kind": "byte-identical-original",
+      "bytes": 2036,
+      "sha256": "7a5200c3117d0f147ebdc935f0ba86811528342b0e3fd7dbf86f0064818d59ef",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/cutoff-preconditions.json"
+    },
+    {
+      "path": "cli/python314/printable/cleanup-progress.json",
+      "kind": "byte-identical-original",
+      "bytes": 1490,
+      "sha256": "14dbb68b1634ec72fdcb4f0adbf584fa07bbcb48c5c8171abdfa90c89f636796",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/cleanup-progress.json"
+    },
+    {
+      "path": "cli/python314/printable/direct-child.json",
+      "kind": "byte-identical-original",
+      "bytes": 241,
+      "sha256": "164d82736e5044cb94cd3702fd681f37058c6efe39e83a963acdc1c5a5b40412",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/direct-child.json"
+    },
+    {
+      "path": "cli/python314/printable/control.json",
+      "kind": "byte-identical-original",
+      "bytes": 805,
+      "sha256": "fb4dba29b3b14cc7aba05acbfd42361ca860c5b66254fd7cc69cb0ed8f9b6388",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/control.json"
+    },
+    {
+      "path": "cli/python314/printable/agent-peer.json",
+      "kind": "byte-identical-original",
+      "bytes": 64,
+      "sha256": "29246cddfd72395324492ed59a93ec3fbc5b1342f6dbbc7fe7f966ecc9d1ffa8",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/agent-peer.json"
+    },
+    {
+      "path": "cli/python314/printable/agent-node.json",
+      "kind": "byte-identical-original",
+      "bytes": 38,
+      "sha256": "b816727cabc94c84edac2b735e87bec67aa77858945fe5a1b37369f09d4f8033",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/agent-node.json"
+    },
+    {
+      "path": "cli/python314/printable/kiro-cli-argv.txt",
+      "kind": "byte-identical-original",
+      "bytes": 21,
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/kiro-cli-argv.txt"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/stdout.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1415,
+      "sha256": "bfd67abc5fd3e0c5da96d8f5464b7727e8cc34eff208cb264fce8c64c7719367",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/stdout.bin"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/stderr.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1275,
+      "sha256": "9d9c9efd9d532e17beffd274b66298b7f215799aed7a38a2390db45660791ad2",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/stderr.bin"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/client-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 1338,
+      "sha256": "6e3f0f12af8883a52ab1a49a62b28153cd91a39388523e45d52cddb5c5ec30d4",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/client-wire.jsonl"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/agent-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 2110,
+      "sha256": "f10cf679837e5e25d520e7ec237afecb2b46ad8b4df30df100cc4caf357f2271",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/agent-wire.jsonl"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/decline-acks.json",
+      "kind": "byte-identical-original",
+      "bytes": 139,
+      "sha256": "daa5fc4fba8508fa559410763217affbd946a76e70b8b7355af7ec1345a0af4f",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/decline-acks.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/observer-bound.json",
+      "kind": "byte-identical-original",
+      "bytes": 702,
+      "sha256": "239733dc6b3dbc4019311b202bc047bd54c764615f46d44098c4990741a451e1",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/observer-bound.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/cutoff-preconditions.json",
+      "kind": "byte-identical-original",
+      "bytes": 2091,
+      "sha256": "8c2f018315e2bc37ee0035ba45fe1fb2db71d7774f65e2e9e70d7fbf855c5115",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/cutoff-preconditions.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/cleanup-progress.json",
+      "kind": "byte-identical-original",
+      "bytes": 1522,
+      "sha256": "e1b6fb25e9633631739088915816cc80b267c1846a1090563d1ddc354afd7052",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/cleanup-progress.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/direct-child.json",
+      "kind": "byte-identical-original",
+      "bytes": 241,
+      "sha256": "a6c685f117052775730c4c8b1ffa1b4bd95715e88be1e9362a27af2139d94d6a",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/direct-child.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/control.json",
+      "kind": "byte-identical-original",
+      "bytes": 829,
+      "sha256": "01afe16fb452ca2e886f1cd4d851dde48e90a24bdf5e0725b9c6534db7cb6f78",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/control.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/agent-peer.json",
+      "kind": "byte-identical-original",
+      "bytes": 64,
+      "sha256": "ff3a21a0c08029b5b8a398ef7d0705be454359b2ef1d8f1435b46b58e0159fc0",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/agent-peer.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/agent-node.json",
+      "kind": "byte-identical-original",
+      "bytes": 38,
+      "sha256": "4125f0a47132e1b1cac5ac60ac685f389741014cd677cd1f04315fbafc2960b6",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/agent-node.json"
+    },
+    {
+      "path": "cli/python314/snapshot-controls/kiro-cli-argv.txt",
+      "kind": "byte-identical-original",
+      "bytes": 21,
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/snapshot-controls/kiro-cli-argv.txt"
+    },
+    {
+      "path": "cli/python314/retained-controls/stdout.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1270,
+      "sha256": "18d26f3380647740d171b8c40aff12010123f51a218c5029969a1e3ddb1315d3",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/stdout.bin"
+    },
+    {
+      "path": "cli/python314/retained-controls/stderr.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1275,
+      "sha256": "9b7a2f4fcdecaafe71d6405be3862d0ed46fea1704c3df7b4c010daf261e4af1",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/stderr.bin"
+    },
+    {
+      "path": "cli/python314/retained-controls/client-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 1338,
+      "sha256": "853becaf6d595a4b7b608b57f2a28797f30db44fe4fda3fdac372a24802d53a2",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/client-wire.jsonl"
+    },
+    {
+      "path": "cli/python314/retained-controls/agent-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 1962,
+      "sha256": "65c07466f71fc30e4455661a95c8bbae2b362f777c90d0863b1f90e3b66db94b",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/agent-wire.jsonl"
+    },
+    {
+      "path": "cli/python314/retained-controls/decline-acks.json",
+      "kind": "byte-identical-original",
+      "bytes": 139,
+      "sha256": "daa5fc4fba8508fa559410763217affbd946a76e70b8b7355af7ec1345a0af4f",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/decline-acks.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/observer-bound.json",
+      "kind": "byte-identical-original",
+      "bytes": 702,
+      "sha256": "24891e85f34699e1208f4f28752b036a592437351b4cc78ca5f14b9dbbe0f95c",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/observer-bound.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/cutoff-preconditions.json",
+      "kind": "byte-identical-original",
+      "bytes": 1951,
+      "sha256": "4828648514ab532eb2b029cc4077a9b37f3c28b5261fdecf29ed2769d2dfc598",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/cutoff-preconditions.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/cleanup-progress.json",
+      "kind": "byte-identical-original",
+      "bytes": 1522,
+      "sha256": "5f356314d2a66720720967add2c56b5126a71bcc7aed1fee8688e490b47e4abf",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/cleanup-progress.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/direct-child.json",
+      "kind": "byte-identical-original",
+      "bytes": 241,
+      "sha256": "c9de95b189f880dfaabffaf0dcbca94f1c03ad36784d435dec04c759a215d005",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/direct-child.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/control.json",
+      "kind": "byte-identical-original",
+      "bytes": 829,
+      "sha256": "b95ee04605c2ecbc5347ce5027535ecb4e96ef76c21cbd46f88021086c353e36",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/control.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/agent-peer.json",
+      "kind": "byte-identical-original",
+      "bytes": 64,
+      "sha256": "41cf5bec1792aa492fa9a040a070cb77b5af680f0eda3b39b3806dea290264a6",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/agent-peer.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/agent-node.json",
+      "kind": "byte-identical-original",
+      "bytes": 38,
+      "sha256": "e61ac7e3b09f02f158f0d03f126b0f9eb244e86a26fc432ac224dd0c4976b667",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/agent-node.json"
+    },
+    {
+      "path": "cli/python314/retained-controls/kiro-cli-argv.txt",
+      "kind": "byte-identical-original",
+      "bytes": 21,
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/retained-controls/kiro-cli-argv.txt"
+    },
+    {
+      "path": "instrument-failures/original4da/kiro-cli-argv.txt",
+      "kind": "byte-identical-original",
+      "bytes": 21,
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/kiro-cli-argv.txt"
+    },
+    {
+      "path": "instrument-failures/original4da/agent-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 266,
+      "sha256": "34d7fd09ee9c546ac9807eb0c791d3b4cb66b12ed4948b412a051645d5d0349c",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/agent-wire.jsonl"
+    },
+    {
+      "path": "instrument-failures/original4da/client-wire.jsonl",
+      "kind": "byte-identical-original",
+      "bytes": 1190,
+      "sha256": "54fd12646730f30c8e52cc7c23b69e7b2fe9eec19940ba9b52e78474d54d9393",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/client-wire.jsonl"
+    },
+    {
+      "path": "instrument-failures/original4da/agent-peer.json",
+      "kind": "byte-identical-original",
+      "bytes": 64,
+      "sha256": "6fcb2512b8749cf9e88e287277aa9c5fea6661798ebbdc01cd502213d21aff34",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/agent-peer.json"
+    },
+    {
+      "path": "instrument-failures/original4da/agent-node.json",
+      "kind": "byte-identical-original",
+      "bytes": 38,
+      "sha256": "137e171e5f90a3983f36c281c6a6f3f511bf50bc25e2de629aa41c0116d328e3",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/agent-node.json"
+    },
+    {
+      "path": "instrument-failures/original4da/stderr.bin",
+      "kind": "byte-identical-original",
+      "bytes": 1527,
+      "sha256": "89ac05a8df8b62480b2f164be0d0308696ec8c51bd2bae875595af8fb179225e",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/stderr.bin"
+    },
+    {
+      "path": "instrument-failures/original4da/stdout.bin",
+      "kind": "byte-identical-original",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/stdout.bin"
+    },
+    {
+      "path": "instrument-failures/ccdd-py313/stdout.bin",
+      "kind": "byte-identical-original",
+      "bytes": 235,
+      "sha256": "741ff5639db1445497fabd7d4d37606320cf9abc5991881a694513ce468e424c",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "instrument-failures/ccdd-py313/stdout.bin"
+    },
+    {
+      "path": "instrument-failures/ccdd-py313/stderr.bin",
+      "kind": "byte-identical-original",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "instrument-failures/ccdd-py313/stderr.bin"
+    },
+    {
+      "path": "instrument-failures/ccdd-py313/cleanup-progress.json",
+      "kind": "byte-identical-original",
+      "bytes": 521,
+      "sha256": "c0e9ab498983d9dffbd1437e5c41f26b006481b2321e4a0e08b15f08d3780b65",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "instrument-failures/ccdd-py313/cleanup-progress.json"
+    },
+    {
+      "path": "instrument-failures/ccdd-py313/direct-child.json",
+      "kind": "byte-identical-original",
+      "bytes": 84,
+      "sha256": "cc68dc199cf25890d62ff41efa792c1a221e66ec21c018f0f985d5690f4191cd",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "instrument-failures/ccdd-py313/direct-child.json"
+    },
+    {
+      "path": "instrument-failures/ccdd-py313/kiro-cli-argv.txt",
+      "kind": "byte-identical-original",
+      "bytes": 21,
+      "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "instrument-failures/ccdd-py313/kiro-cli-argv.txt"
+    },
+    {
+      "path": "fixtures/cli-python314-38f1.py",
+      "kind": "byte-identical-original",
+      "bytes": 39507,
+      "sha256": "38f1b78496698a84841296dc26fb8481e770ed97b18d161c6d79f1d4654db215",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/probe.py"
+    },
+    {
+      "path": "fixtures/cli-inputs-e70b.json",
+      "kind": "byte-identical-original",
+      "bytes": 8758,
+      "sha256": "e70b146c0225214cef7a7cf6e9b6dbb6fa0a72a6a4a55e313dc9fe4cf9c1f0e7",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "cases/printable/inputs-and-literals.json"
+    },
+    {
+      "path": "fixtures/cli-lifecycle-ccdd.py",
+      "kind": "byte-identical-original",
+      "bytes": 39572,
+      "sha256": "ccdd84d2604766887f5a8c85dd10fbc573beb5a3a2e69f46eb07bb3b1deb716a",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "instrument-failures/ccdd-py313/probe.py"
+    },
+    {
+      "path": "fixtures/python314-binding.patch",
+      "kind": "byte-identical-original",
+      "bytes": 779,
+      "sha256": "8597caa651322f41d5e904bd133c9498af3d3605968569e49de660e5f57e76dc",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "fixture/python314-binding.patch"
+    },
+    {
+      "path": "fixtures/host-self-pidfd-capability.json",
+      "kind": "byte-identical-original",
+      "bytes": 6948,
+      "sha256": "20827c2dffbbb9d581c592d98e284a7ebeeeca7c0a62e673b5fb4b90e8b29a94",
+      "origin_archive_sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "origin_member": "fixture/host-self-pidfd-capability.json"
+    },
+    {
+      "path": "fixtures/cli-original4da.py",
+      "kind": "byte-identical-original",
+      "bytes": 31770,
+      "sha256": "4da50a05de691c566f3a989045ba90c302500a98f31d7603312a86f6ef27bc7b",
+      "origin_archive_sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "origin_member": "cyril-nk4o-current-main-cli-four-ingress-printable-run-Main-authorized-once/probe.py"
+    },
+    {
+      "path": "fixtures/cli-lifecycle-repair.patch",
+      "kind": "byte-identical-original",
+      "bytes": 20112,
+      "sha256": "c9bb517c972b31fe2c043018da1b436880198fe0c8eb882c6eed65dc72b236f5",
+      "origin": "retained-owned-artifact"
+    },
+    {
+      "path": "logs/F1-nine-summary-cases-GREEN.log",
+      "kind": "byte-identical-original",
+      "bytes": 1645,
+      "sha256": "2edbf61f0669bff062656664390b5cfd5c96e36b7ec278a0ddfd4bcd292589ad",
+      "origin": "retained-owned-artifact"
+    },
+    {
+      "path": "logs/F2-three-decline-cases-GREEN.log",
+      "kind": "byte-identical-original",
+      "bytes": 2382,
+      "sha256": "cbfe9e8ea925b98f22bd735063ca15f5f5117459e78e4d78199169cef4fc974f",
+      "origin": "retained-owned-artifact"
+    },
+    {
+      "path": "receipts/consumer-selected.json",
+      "kind": "explicit-field-projection",
+      "bytes": 38405,
+      "sha256": "b827eccaa09d02b973eaeefbdf892b03f3c0ff7fc51ece94d96ffc3c0abdcd9d",
+      "origin": "selected-consumer-projection"
+    }
+  ],
+  "selection": "Explicit individual members of retained owned archives plus named focused logs and selected receipt. Byte-identical means the original member bytes; projection has a different SHA and is explicitly labelled. No full archive nesting or broad directory recursion.",
+  "excluded": [
+    "Full521 repository source inventory and raw all40 canonical/qualifier handoff manifests",
+    "Raw environment/safety/config/authorization/guard manifests and private-index/admin files",
+    "All isolatedHOME/config/cache/data/workspace/runtime trees and production/executable binary products",
+    "Real credentials/cookies/accounts/native/private journals; all visible canaries are controlled fixture data",
+    "Unselected duplicates/controlacks/scratch artifacts; original raw result JSON retained locally and replaced only in this packet by explicitselectedreceipts"
+  ],
+  "retained_original_archives": [
+    {
+      "sha256": "8d6bf661e45b746da2f59371b1ef3165eb15ed645cd097a556c800f2c2596496",
+      "bytes": 694052,
+      "availability": "Local only; unchanged, not uploaded/published or claimed accessible."
+    },
+    {
+      "sha256": "f2ea06179b2842e44ce127bf8ac2f3b6e36c1c08d8e738c73d120416c1098733",
+      "bytes": 290582,
+      "availability": "Local only; unchanged, not uploaded/published or claimed accessible."
+    }
+  ],
+  "handling": "Inert source/data. Do not print terminalANSI/raw stdout directly to a terminal. Fixture snapshots preserve attribution, not a newly supported runner. Exact replay requires retained canonical/manifest/guard/authorization/private-binary originals and freshMainGO; this curated packet is deliberately not complete self-contained replay evidence.",
+  "packaging_execution": "Explicit metadata/hash/archive copying only. No product/source/runtime/build/test/lint/fmt/Git/native/provider/account operation."
+}

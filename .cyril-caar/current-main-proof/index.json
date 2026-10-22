@@ -1,0 +1,62 @@
+{
+  "schema": "cyril-caar-current-draft-proof-index/v1",
+  "status": "SOURCE_COMPLETE_LOCAL_QUALIFIED_DRAFT_NATIVE_AUTH_BLOCKED",
+  "as_of": "2026-10-22",
+  "authority": "Main authorized reachable draft publication while native authentication is blocked. This is not an acceptance waiver, issue closure, final-conformance verdict, CI result or merge authorization.",
+  "issue": {"id": "cyril-caar", "state": "Keep open; no closure authorized"},
+  "publication": {
+    "prepared_head_branch": "fix/cyril-caar-final",
+    "draft": true,
+    "base": "main",
+    "explicit_dependency_PR": 196,
+    "dependency_url": "https://github.com/dwalleck/cyril/pull/196",
+    "logical_delivery_order": "Tqr #193 -> NK #196 -> separate Caar PR",
+    "CI_trigger_limit": "Main reports existing CI targets main; do not broaden workflows, add empty commits or request reruns. No Caar CI PASS is asserted here.",
+    "PR_body": "../pr-body.md",
+    "worker_publication_operations": "None: Main alone completes the held normal NK merge, commits/pushes and opens the draft. This index freezes preparation evidence, not a subsequently created PR or final merge commit.",
+    "cumulative_diff_limit": "Before dependencies merge, the main-targeted PR diff can include inherited Tqr/NK paths. feature-files.json identifies the25 Caar-owned paths; inherited source is not relabeled Caar work.",
+    "PR187": "Untouched"
+  },
+  "records": {
+    "source_and_binary_pins": "source-pins.json",
+    "Main_held_integration_boundary_verbatim": "integration-boundary.json",
+    "qualified529_input_inventory_verbatim": "source-inventory.json",
+    "Caar_owned_feature_paths": "feature-files.json",
+    "local_qualification_commands_and_scope": "qualification.json",
+    "independent_source_reviews_and_formatter_applicability": "review-applicability.json",
+    "native_attempts_observation_gaps_and_latest_auth_blocker": "native-consumer.json",
+    "approved_timing_contract_clauses_verbatim": "timing-contract-citations.json",
+    "independent_metadata_review_not_final_source_conformance": "metadata-review.json",
+    "exact_publication_postimages_and_retention_manifest": "publication-manifest.json"
+  },
+  "local_qualification": {
+    "state": "All22 assigned current post-format529 local gates PASS",
+    "owner": "qualification.json",
+    "nonclaims": ["All-features", "nextest", "release", "platform CI", "native acceptance", "final design conformance"],
+    "immutable_failure": "Initial fmt check failed92hunks10paths. A separately Main-authorized single standard formatter pass and fresh complete local matrix followed. Import reordering/braces/trailing commas are not described as whitespace-only or full-token identity.",
+    "metadata_discrepancy": "The sealed canonical receipt contains a stale copied preflight NOT_RUN field beside its actual executed22-gate PASS records. qualification.json and review-applicability.json preserve/disclose it; the private original is not rewritten."
+  },
+  "native": {
+    "state": "BLOCKED before initialize response/session-new by pinned native CLI reported not logged in",
+    "latest_governing_original": "/home/dwalleck/.claude/tmp/cyril-mcp-consumer-ri0o3aod/current-joint529-native-after-startup-surface-result.json",
+    "latest_governing_original_sha256": "3ab184029376efdce7bb2cce4e885b19ef13f8aad0c4ea55b8ebc7165171091f",
+    "no_latest_acceptance": ["startup2", "navigation9", "previews", "natural inventory", "New80", "New95"],
+    "historical_observations": "Earlier actual New/present-preview observations remain valid only within their exact earlier attempt/source/driver predicates. Both fixture-observation gaps and failed totals remain retained. Corrected d558 startup/navigation layers are reviewed but unexercised because of auth; no product fix is inferred.",
+    "cause_limit": "Exact CLI report only, not a diagnosis of global logout, credential expiry, auth-root correctness or a product defect. No credential/config probing, login/retry or native execution was performed for this publication packet.",
+    "timer_limit": "The >=90s New product policy remains mandatory. Deterministic actual-request tests and live80/95 integration have complementary approved roles. Natural inventory's independent95s actual>=90s observation is separate. Proxy-request-to-first-UI-result is not independent product timer creation-to-fire evidence; no new threshold/observer is introduced."
+  },
+  "remaining_acceptance": [
+    "Required native consumer startup/navigation, preview/resource/final-side-effect, natural-inventory and New80/New95 acceptance under fresh Main authority",
+    "Source-bound Caar CI/platform status",
+    "Final independent design-conformance/review",
+    "Main final normal-merge and publication receipt; preparation records do not predict future commit/PR identities"
+  ],
+  "packet_contract": {
+    "included": "Own Caar approved/workflow records with current draft banners, narrow README addition, draft PR body, exact source metadata and curated qualification/review/native projections.",
+    "retained_originals": "Private canonical handoffs, complete500-group case records, logs, raw native receipts, trace/terminal/wire archives and earlier patches remain at their exact cited original paths/hashes; they are not all bundled.",
+    "not_self_contained_replay_or_archive": true,
+    "excluded": ["Auth/config/native fixture data or tokens", "Production credentials", "Raw private native/environment archives", "Private binaries", "Old source/lockfile overlays", "Unrelated tracker drift"],
+    "historical_record_rule": "Imported workflow documents preserve their canonical historical text. Their older source pins, commands and statuses do not supersede this current index or authorize source reapplication.",
+    "source_hold": "No code/Cargo/Git/index/check/runtime operations by the metadata workers. README/.cyril-caar metadata is outside the recorded529 source scope; Main owns any later source/publication binding."
+  }
+}

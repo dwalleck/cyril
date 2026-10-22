@@ -1,0 +1,256 @@
+{
+  "schema": "cyril-nk4o-selected-approved-source-owner-pins/v1",
+  "kind": "field-projection-of-qualified-source-manifest-not-a-Git-delta-or-full-source-inventory",
+  "source_descriptor": "03f68b427128d98b1d11aee19a287338cb2e54590964e2d02d6dd8fdd8bd8d63",
+  "qualified_input_count": 521,
+  "original_manifest_sha256": "9d4b102d3a89ef189337f4aaecc4a33a40fb17cc5d9140b2963f1213111dc1c5",
+  "selection_basis": "Exactly the existing49-path NK source owner allowlist from the preserved pre-current-main assembly record; current SHA/bytes are looked up in the accepted521 manifest, not rehashed by this docs task. Shared Tqr/main prerequisites are inherited in place and are not source-overlay staging instructions.",
+  "source_paths": [
+    {
+      "path": "crates/cyril-core/src/commands/mod.rs",
+      "sha256": "8a0af7b18f277d9a1b676b3f70b1091da9acec0e8e6d5a5a23fd16b40f38ae46",
+      "bytes": 105875
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/commands.rs",
+      "sha256": "35ef2fb5f9a483626d622dd31ae8ec89ce5fcd27d06d46c72c05f620eda75856",
+      "bytes": 24826
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/mod.rs",
+      "sha256": "8ece8de9892a7b5d819e403f147f84339874fcb0a0413ddb5e6771b574a1dc61",
+      "bytes": 4164
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/bridge/tests/current_runtime_contract/saturation.rs",
+      "sha256": "e455860e6bfac1f2d0ea8b571399b5251809a0c9637099be204e365cdc15392e",
+      "bytes": 14061
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas.rs",
+      "sha256": "4eb91d95634f36843a063f95ead26c36fdd2c9bbd3794c1244841e9fa0bec70f",
+      "bytes": 107548
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/mod.rs",
+      "sha256": "6e06c1b50b1143a88f6a83b6e9be8b23c2572780adbfa0976bde145cb9da7471",
+      "bytes": 8150
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/session.rs",
+      "sha256": "a6ae7c0eb05b2c2106967376518000996b197fd25630770655cb99ac7bf444c7",
+      "bytes": 29607
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/host.rs",
+      "sha256": "d4e64d6b25799c011a7c9a6ed8c9807c2e6f2ea641f3be3146124c83a6db8a08",
+      "bytes": 27911
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/inbound.rs",
+      "sha256": "1d2b613502d209566182dee3c373d584e09269a489cf7597caadbb914520b171",
+      "bytes": 9418
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mod.rs",
+      "sha256": "f7c03ccf8e2c511c7901cdd0e97a540cb19beaf9f0280a07fbeaf773b7f00d93",
+      "bytes": 33428
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mod.rs",
+      "sha256": "ef477a10fc9906a834da87d5ffa4a7a76247cf48813d637d9097e879c68cc3ce",
+      "bytes": 268
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/engine.rs",
+      "sha256": "768e90520a0383d7f7a5c14b69d0838f2d974664d0a8441e5d5e1770994434a9",
+      "bytes": 42721
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/callbacks.rs",
+      "sha256": "b924c11261c1fe804d260fbfccff5acd59055e203a5c6c57150cfa6476afb87a",
+      "bytes": 30910
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/mod.rs",
+      "sha256": "d6b370e0fd274b32cf8ce8955d765613789a8488965f9f6f3df7df9700479c02",
+      "bytes": 2284
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/probe_dn91.rs",
+      "sha256": "18569468a12bf2f0263e4aff058f90a128ac8a69c6dd614df2c9277bdd922ced",
+      "bytes": 5732
+    },
+    {
+      "path": "crates/cyril-core/src/session.rs",
+      "sha256": "ea2ebc490e36ba6bfe93589eae140f06c68aaa43d8125dd04ba9841eece9e10c",
+      "bytes": 73476
+    },
+    {
+      "path": "crates/cyril-core/src/types/event.rs",
+      "sha256": "b49d196d7dce3b1f572c2107d751996c1a8df412cef5d81fb34fe8cf7f788d1e",
+      "bytes": 53098
+    },
+    {
+      "path": "crates/cyril-core/src/types/mod.rs",
+      "sha256": "fe33a26ffbcea22485cdfed8c7599bac64916a9ad5120068c9fd4af964dbb948",
+      "bytes": 5467
+    },
+    {
+      "path": "crates/cyril-core/src/types/mcp.rs",
+      "sha256": "be6af2133977d8ce0988483891c747ef23ec39f23cd33cfae801318cf27ddf72",
+      "bytes": 14863
+    },
+    {
+      "path": "crates/cyril-core/src/types/mcp_tests.rs",
+      "sha256": "3865015d96a3e92f401147073cdfa5a38511c435033b92ddca84a415fc6f514e",
+      "bytes": 14028
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/mcp.rs",
+      "sha256": "2faaff9a52f8e978577280809561af9650b9489f3201a3f18397162cbffc6463",
+      "bytes": 15501
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/convert/kas/mcp_tests.rs",
+      "sha256": "207696302fc2cb6257ac7bff2045289e31fe5a8d5f5281f0fe7ff82ea04f5689",
+      "bytes": 12729
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/mcp.rs",
+      "sha256": "e7c2f1cb90988faf32996dd2965da89f389e28e1fede2ff499a1b23a306e2a1b",
+      "bytes": 8576
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/commands/mcp.rs",
+      "sha256": "d2b7887ca867f5b91d7a38c38ad0905ace627db95ebb9d35f636a46013975bd5",
+      "bytes": 7550
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/kas/mcp.rs",
+      "sha256": "334b3a7fe96e3252938f786bffefc2163994abb0c831d9fb0318f0002a7a8a72",
+      "bytes": 4444
+    },
+    {
+      "path": "crates/cyril-core/src/commands/mcp.rs",
+      "sha256": "7f6372c3ac3991cf04e4cf683f0d34ffed2d337d65388e0fe1eff606412e3b4c",
+      "bytes": 4219
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp.rs",
+      "sha256": "c55ec5d964e0d7c22409b27183fa154216384fb265b620494ea69b4cd0e6c5b7",
+      "bytes": 24701
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_runtime.rs",
+      "sha256": "91b787b87d81bf58492b8879027cb89cae0fc80c51c907a7cd332ed63f555210",
+      "bytes": 12559
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_wire.rs",
+      "sha256": "0159174666d0417bf290ec073b5f15b593a3d516f6a4c705ba8af05add909758",
+      "bytes": 7826
+    },
+    {
+      "path": "crates/cyril-core/src/protocol/domain_mediator/tests/mcp_admission.rs",
+      "sha256": "37d1c0d1e8698b92ab24fe78805f7e4c661554f4ef52020abd14f9d695c170ad",
+      "bytes": 15987
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "bytes": 101371
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "bytes": 3557
+    },
+    {
+      "path": "crates/cyril-ui/Cargo.toml",
+      "sha256": "c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c",
+      "bytes": 1090
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "sha256": "13ebd90c9afc7b64ba78952ed99e33bb2ed6c1f41c5337f846cd96750f821dad",
+      "bytes": 524
+    },
+    {
+      "path": "crates/cyril-ui/src/render.rs",
+      "sha256": "f93f8ff52b22e24b9594a1ff42635b0034420cd30a13963190de15d38e4c857a",
+      "bytes": 66711
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "sha256": "650741c521b836512b75293e843fb5cc7a4a18921b92cc3e3b15594a9695d025",
+      "bytes": 420084
+    },
+    {
+      "path": "crates/cyril-ui/src/theme.rs",
+      "sha256": "52f4c87eb29ad0559c29064edd056cb4c0f25687783476fa740db48591d5eeba",
+      "bytes": 89016
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "f3c07acfe83086edd8732aef9c872740af4ecf3a1e3cc7635ed41a24640e37b3",
+      "bytes": 87165
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/mod.rs",
+      "sha256": "03d2a3f3c85d6edfae6bc6e2d302564d6d77f2fdc610b5ce8fad5cb549b00c83",
+      "bytes": 318
+    },
+    {
+      "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+      "sha256": "b6ddcf2b672d022257522002f0853b136f854b28b00a659a6e514a5c03521368",
+      "bytes": 10008
+    },
+    {
+      "path": "crates/cyril/examples/test_bridge.rs",
+      "sha256": "8f51bc683b8587e244a3f5d2a997903ba7c5d183b81e4c2273868ad4ea36d3c5",
+      "bytes": 49939
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "e4501ee00778db38ea6ec7bf8ed76c156dcbf8e3f5e18a9ccef816dfc26808d7",
+      "bytes": 466642
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/arguments.rs",
+      "sha256": "a1ed26e0040ed681923a821877920fc251be7b0653ddb7f29e3ec149f7f495cf",
+      "bytes": 4386
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/integration.rs",
+      "sha256": "a79911bf6ef3ad4899e9addbc2df9f785f37a719e03aaf11fccf4af6f936884a",
+      "bytes": 2983
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/mod.rs",
+      "sha256": "6b68d5c039a0c5cdd31aec70107516965168db521ce5b5240eee8636a138ebf8",
+      "bytes": 17069
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/presentation.rs",
+      "sha256": "251d6fc63604dca833f93bea21eb63a34d78790ed0880671cd1e164523e2f02d",
+      "bytes": 32721
+    },
+    {
+      "path": "crates/cyril-ui/src/mcp_panel/tests.rs",
+      "sha256": "b58a54004388d5e4b3ca09e73d2fa9f7cc9d418e9acf7747367b55aa50e91f7d",
+      "bytes": 72564
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/mcp_panel.rs",
+      "sha256": "157f92e4fd5306d26d03018216b0548a28b2a397743c00cc04092ae74298d92e",
+      "bytes": 6272
+    },
+    {
+      "path": "crates/cyril/src/app/tests/mcp_panel.rs",
+      "sha256": "7f39942bfb2fda3ea89bb61fdf03a8d2e1720cf95e9ec004dbcd4268d752cb53",
+      "bytes": 22068
+    }
+  ],
+  "publication_owner": "Main: finish held09 merge, normally merge qualifiedd0cc60 ancestry, compare actual521 against retained manifest or migrate and qualify before publication. This49-path catalog is not a newly authorized exact staged delta."
+}
