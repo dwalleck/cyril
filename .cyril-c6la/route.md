@@ -305,3 +305,79 @@ CI/platform/delivery decisions. PR187 stays untouched/unmerged; user-native Kiro
 turns remain separately paused, not waived. No Structural terminal completion or
 blanket merge approval follows.
 
+## Restored layout-owner qualification and runtime (2026-10-22)
+
+This section owns current evidence status. The
+[restored-owner manifest](current-restored-layout-owner-7d88498e/publication-manifest.json)
+binds the 506-input descriptor `7d88498e…`, manifest `2401dcc7…` and default App
+`e31ef685…`; full hashes, inventories and receipts belong there. The preceding
+b5 Main038 and e3 native/benchmark checkpoints remain dated source history,
+not current D1 producer proof or substitutes for the fresh results below.
+
+Main chose **D1 restoration of the approved owner**, not an ownership waiver:
+layout owns physical preparation/aggregation/index/seek/traversal/painting;
+chat retains presentation/source resolution and transcript policy. D2's Core
+receipt metadata and D3's `traits.rs` projections were already approved and are
+now recorded in the existing ledger without new permission. The
+[finding dispositions](review-decisions.md#restored-layout-owner-findings-and-current-evidence-2026-10-22)
+preserve the original c084 reconstruction and conformance FAIL.
+
+Fresh source-level conformance is now **PASS**. `ReconstructC6RestoredFinal`
+derived the working-production map blind to design/change artifacts, then
+`CompareC6RestoredFinal` independently checked that frozen reconstruction
+against the unchanged approved design and load-bearing working source. They
+inspected the committed census plus the three working repairs, not merely
+the c084 HEAD tree. Main binds this restored target to the qualification
+descriptor `7d88498e…`; the reviewers did not independently qualify the 506-input
+manifest, executable, benchmark, native or CI results.
+
+- [Frozen reconstruction](reconstruction-restored-7d88498e.md), 44,955 bytes,
+  SHA256 `97c8f8c7baf33453eaeb0a38eec052c2227925e276682e956ea89f0cc4881fad`.
+- [Fresh comparison](conformance-restored-7d88498e.md), 22,607 bytes,
+  SHA256 `08d9f1bfbea3e44b5386728479ba80bc69cc3049e0b3766083fe64446fcdde4e`.
+
+All 16 changed production files map exactly once to nine approved ledger rows:
+9 MATCH, 0 MISMATCH, 0 UNCOVERED, 0 MISSING and no unresolved conformance
+candidates. D1's restored owner and the already-approved D2/D3 ledger
+reconciliations leave no residual discrepancy. The
+[report quartet and reconstructed map](review-decisions.md#fresh-isolated-source-conformance-and-frozen-report-quartet)
+preserve the old c084 FAIL separately. Design SHA256
+`219f959520dd99b75d14a6b93ee2850e42bab80c62c3f1cd99118ac3e993a8e9`
+remains byte-exact reviewed input: its prior pending snapshot is history,
+superseded for this current source-conformance gate by the new reports, not
+rewritten or promoted to final acceptance.
+
+- **Local qualification PASS:** all 17 assigned commands; workspace 3118 passed,
+  0 failed, 13 ignored. The manifest separates inherited case groups from the
+  current owner-case roster; these are local package/feature scopes, not CI.
+- **Fresh complete benchmark PASS:** all 79 ordered executions / 2370 samples:
+  three completed-Write cases including pending preview, plus 76 long-history
+  cases. This supersedes the b5 retained78/pending-timing restriction only for
+  restored-source timing; it is TestBackend measurement, not native performance
+  or an unmeasured-baseline speedup.
+- **Both-mode PTY PASS:** the [actual consumer aggregate](current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json)
+  records separate first-attempt `truecolor` and `none` App lifetimes, each with
+  all 67 checks, 49 capture pairs and COMPLETE independent owned cleanup.
+  Pending comparison/resize/deny and chronology/viewport/lifecycle controls
+  passed. PTY submissions are not App-consumed-key, retained-row or work counts;
+  wrapper exit0 is not an independently recorded graceful App exit0.
+- **Supported native PASS with explicit limits:** fresh Ghostty/Xvfb launches
+  each recorded 79/0 content assertions, 96 PNGs and 40 obligations, natural exit
+  and complete owned cleanup. All 192 images / 80 obligations were reviewed;
+  [Main's qualified judgment and exact limits](design.md#current-supported-native-judgment-and-limits)
+  preserve the distinct review dispositions, four actual resize changes,
+  toast occlusion and unattached-mark export omissions. Raw capture-time
+  pending-review statuses remain unchanged, not relabeled PASS.
+
+The descriptor names compiled/executed inputs, not a Git commit or the final
+documentation/staged tree. These five-doc changes are a publication overlay.
+Main owns publication/index/commit/tracker work on **existing draft PR197**;
+the older NEW-PR/held-merge wording above is historical, and PR187 is untouched.
+Restored-head CI/platform, applicable all-feature/release/doc gates and final
+combined acceptance remain **PENDING**, as do Main's final Git/publication
+decisions. The source-level conformance PASS above is not Structural completion,
+merge readiness or issue closure. Retained workbench/cross-feature obligations
+and separately paused user-native Kiro turns are not waived. Original burst
+FAIL/pre-C6 ASSERTFAIL remain failures; ordinary 10×40 cadence adoption is not
+a throughput fix or global exoneration.
+

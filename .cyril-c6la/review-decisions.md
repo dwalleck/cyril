@@ -377,3 +377,113 @@ README's post-smoke bytes are a documented publication overlay; the qualified
 completion/new C6 PR/CI/platform and remaining delivery decisions. PR187 stays
 untouched/unmerged; no new waiver or whole-issue acceptance is recorded.
 
+## Restored layout-owner findings and current evidence (2026-10-22)
+
+The [restored-owner manifest](current-restored-layout-owner-7d88498e/publication-manifest.json)
+owns current source `7d88498e…`, its 506-input manifest and default App
+`e31ef685…`, qualification/runtime receipts and exact review bindings. The
+preceding b5/e3 source reviews, one-mode consumer, native/benchmark carry-forward,
+failed prelaunch and authorization chronology remain historical as recorded;
+none is relabeled fresh D1 evidence.
+
+### D1/D2/D3 dispositions
+
+The original [c084 conformance report](conformance-final-c0846f99.md) remains
+**FAIL**, and its [isolated reconstruction](reconstruction-final-c0846f99.md)
+remains the pre-restoration source record. Main selected the restoration in the
+[repair plan](local://c6la-final-layout-owner-repair-plan.md); the following
+dispositions do not rewrite either report.
+
+| Finding | Applied disposition | Remaining boundary |
+|---|---|---|
+| D1 — physical-layout ownership | Restore the approved boundary: layout owns physical preparation, aggregate/index mutation, seek, traversal and painting; chat retains presentation/source resolution and transcript/live policy. This is a production responsibility repair, not a clerical correction or waiver. | Fresh isolated reconstruction and independent comparison PASS for working production: approved layout owner restored, no remaining ownership/interface discrepancy. |
+| D2 — Core ledger | Existing design row108 now names approved `HarvestedReceipts`, ordered receipts/`into_parts` and conservative earliest-removal metadata; forbidden renderer dependencies stay unchanged. | Documentation-only reconciliation confirmed MATCH by the fresh comparison; no residual ledger gap or new Core permission. |
+| D3 — `traits.rs` ledger | Existing design row109 names approved read-only history/live and authoritative borrowed/derived/Cow/direct-source/indexed-diff projections, forbidding physical-layout ownership and event routing. | Documentation-only reconciliation confirmed MATCH by the fresh comparison; no uncovered module, new interface or dependency-direction claim. |
+
+### Fresh isolated source conformance and frozen report quartet
+
+`ReconstructC6RestoredFinal` reconstructed production without reading design,
+plans, checkpoints or prior reviews. Its frozen report preceded the separate
+fresh-context `CompareC6RestoredFinal` comparison, which read that reconstruction
+and the approved design, then verified load-bearing claims against actual
+working production. Both reports explicitly include the three uncommitted
+restoration files; the c084 HEAD tree was not substituted. Main connects the
+restored target to `7d88498e…`. Neither report independently attests the 506-input
+manifest or executed qualification, benchmark, native or CI outcomes.
+
+The four Main-owned reports are immutable publication evidence:
+
+| Source target / report | Bytes | SHA256 | Disposition |
+|---|---:|---|---|
+| [Original c084 reconstruction](reconstruction-final-c0846f99.md) | 32,469 | `4e9affba97fea12e9069a7d8aecd1ae5c21fd0f7fc5e587922c88d4113e55997` | Historical pre-restoration reconstruction, not a verdict. |
+| [Original c084 comparison](conformance-final-c0846f99.md) | 19,200 | `51629a36040a118ee7cb6637a969c906b44fb32d83418e2e2bf35a9a759b3fd3` | **FAIL remains FAIL** for that source/design target. |
+| [Restored working-production reconstruction](reconstruction-restored-7d88498e.md) | 44,955 | `97c8f8c7baf33453eaeb0a38eec052c2227925e276682e956ea89f0cc4881fad` | Fresh blind reconstruction, not qualification or conformance by itself. |
+| [Restored working-production comparison](conformance-restored-7d88498e.md) | 22,607 | `08d9f1bfbea3e44b5386728479ba80bc69cc3049e0b3766083fe64446fcdde4e` | **PASS**, source-level design conformance only; a separate target, not reversal of the old FAIL. |
+
+Approved `design.md` SHA256
+`219f959520dd99b75d14a6b93ee2850e42bab80c62c3f1cd99118ac3e993a8e9`
+is retained byte-exact as reviewed input. Its prior pending-conformance snapshot
+at lines402–404 is historical and superseded for the current source gate by
+the fresh reports, not a reason to rewrite the design, its ledger or quotes.
+
+The reconstructed 16-file map below is grouped by the comparison's nine approved
+rows; `UI/` means `crates/cyril-ui/src/`. The frozen reconstruction's
+lines228–245 supply its production map, and the fresh comparison's lines34–46
+supply per-row approved-design evidence and verdicts.
+
+| Approved row | Changed production paths assigned exactly once | Reconstructed responsibility / final verdict |
+|---|---|---|
+| L1 | `UI/message_history.rs`; `UI/lib.rs` | Concrete committed-history owner and export wiring — MATCH. |
+| L2 | `UI/state.rs`; `UI/subagent_ui.rs` | Main/child notifications, live revisions, lifecycle and history policy — MATCH. |
+| L3 | `UI/widgets/chat_layout/mod.rs`; `UI/widgets/chat_layout/index.rs`; `UI/widgets/chat_layout/wrap.rs`; `UI/widgets/mod.rs` | Physical preparation, block/index ownership, seek/traversal/painting and private registration — MATCH. |
+| L4 | `UI/widgets/chat.rs`; `UI/widgets/chat/presentation.rs`; `UI/widgets/chat/retained.rs` | Chat facade, semantic presentation/source resolution, transcript invalidation and window/gutter policy — MATCH. |
+| L5 | `UI/widgets/markdown.rs` | Markdown derivation and immutable shared cache results — MATCH. |
+| L6 | `UI/render.rs` | Retained root interface, frame geometry and panic invalidation — MATCH. |
+| L7 | `crates/cyril/src/app.rs` | Application render-state lifetime and draw wiring — MATCH. |
+| L8 | `crates/cyril-core/src/types/steer_receipt.rs` | Receipt-transform metadata without renderer ownership — MATCH. |
+| L9 | `UI/traits.rs` | Read-only render contract and authoritative tracked-tool projections — MATCH. |
+
+**Final source-conformance result: PASS — 16 changed production files, nine
+approved rows, 9 MATCH, 0 MISMATCH, 0 UNCOVERED, 0 MISSING and no unresolved
+candidates.** The comparison separately disposes private opaque `Layout<P>`
+payload ownership, the history/traits type dependency, current-reference versus
+adaptation provenance and the retained wrapping/storage/test-coupling tradeoffs
+(lines98–159). No new responsibility/interface approval or residual discrepancy
+is inferred. This closes D1/D2/D3 for source conformance, not CI or whole-issue
+acceptance.
+
+### Current source-bound evidence and limits
+
+All 17 assigned local qualification commands PASS (workspace 3118/0/13).
+Fresh timing covers the complete 79 ordered executions / 2370 samples, including
+pending preview: three completed-Write cases plus 76 long-history cases. This
+supersedes only the historical retained78/pending-timing restriction; local
+qualification and TestBackend measurements do not imply CI or native performance.
+
+The [actual consumer aggregate](current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json)
+records both authorized modes PASS on their first attempts, each with 67/67
+checks, 49 capture pairs and COMPLETE independent owned cleanup. Pending resize
+and deny-only response passed without a grant. Actual PTY submissions are not
+App-consumed-key/work or retained-row counts, and wrapper exit0 is not separate
+graceful-App-exit0 evidence.
+
+Main's fresh [supported-native judgment](design.md#current-supported-native-judgment-and-limits)
+is **PASS with explicit limits**, based on current captures, both complete
+independent visual reviews and separately attributed exact/content/action proof.
+All 192 PNGs / 80 obligations were reviewed, not all80 unqualified visual PASS.
+The manifest preserves both raw reviews, the baseline/no-op plus four actual
+resize changes, toast occlusion and omitted initial unattached marks in native
+exports. Capture-time pending-visual statuses stay immutable; Main's later
+qualified disposition is separate.
+
+Original burst FAIL/pre-C6 ASSERTFAIL remain unchanged; ordinary 10×40 cadence
+adoption is not a throughput repair, user waiver or global exoneration. Earlier
+0.94/0.97 source/preparation reviews are not restored-source final conformance.
+Restored-head CI/platform, applicable all-feature/release/doc gates and final
+combined acceptance remain **PENDING**. Main owns final Git/publication/index/
+commit/tracker work and existing draft **PR197**, not a new PR187. Five-doc
+publication postimages are outside compiled506 and do not establish final-tree
+identity. Remaining Structural, retained workbench/cross-feature and separately
+paused user-native Kiro obligations remain. The fresh source-conformance PASS
+above grants no merge readiness, issue closure or global PASS.
+

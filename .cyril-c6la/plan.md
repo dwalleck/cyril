@@ -343,3 +343,59 @@ timeout, UI control or risk waiver. The original burst failures, actual
 permission boundaries, separately paused user-native Kiro turns and existing
 Windows exception remain unchanged.
 
+## Restored layout-owner acceptance boundary (2026-10-22)
+
+The [restored-owner manifest](current-restored-layout-owner-7d88498e/publication-manifest.json)
+and [current route](route.md#restored-layout-owner-qualification-and-runtime-2026-10-22)
+own status for source `7d88498e…` / default App `e31ef685…`. Earlier e3 and b5
+sections retain their dated identities and outcomes; their native/benchmark
+carry-forward and pending-timing wording is historical, not current D1 proof.
+The manifest owns full source/receipt pins and detailed evidence accounting.
+
+- **D1/D2/D3 source conformance discharged:** Main restored the approved
+  physical-layout owner for D1; D2/Core and D3/`traits.rs` remain reconciliation
+  of already-approved interfaces, not new behavior or architecture approval.
+  Blind `ReconstructC6RestoredFinal` followed by fresh `CompareC6RestoredFinal`
+  inspected actual working production including all three repairs, not the
+  c084 tree: **PASS**, 16 changed production files mapped exactly once to nine
+  approved rows, with 0 MISMATCH/UNCOVERED/MISSING or unresolved candidates.
+  The [frozen reports, hashes and map](review-decisions.md#fresh-isolated-source-conformance-and-frozen-report-quartet)
+  preserve the original c084 FAIL. Main connects the target to `7d88498e…`;
+  reviewer source inspection does not independently attest compiled506 or
+  qualification/runtime/benchmark/native/CI results. Byte-exact approved
+  design `219f9595…` remains the reviewed input; its prior pending snapshot is
+  superseded only for current source conformance, not rewritten.
+- **Discharged local gates:** all 17 assigned restored-source commands PASS;
+  workspace 3118/0/13. Existing source-policy and inventory limits are unchanged.
+- **Fresh full timing:** all 79 ordered executions / 2370 samples PASS, including
+  the pending-preview case (three completed-Write plus 76 long-history cases),
+  not the old78 subset. TestBackend work/timing and retained-layout metrics
+  remain distinct from actual App interaction, native rendering and process
+  RSS/allocation or baseline-speedup claims.
+- **Discharged scoped PTY pair:** the [consumer aggregate](current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json)
+  owns separate first-attempt `truecolor`/`none` PASS with the complete unchanged
+  check/capture sequence and independent COMPLETE cleanup in each mode.
+  Actual pending/resize/deny passed; submitted inputs are not internal App work
+  or retained/rendered-row counts.
+- **Discharged supported-native lane, only within Main's qualified scope:**
+  fresh captures and complete reviews support the
+  [current judgment and limits](design.md#current-supported-native-judgment-and-limits).
+  Four actual resize changes follow a baseline/no-op; toast occlusion,
+  unattached-mark export omissions and qualified rather than universal visual
+  PASS remain explicit. API/action, exact state/render, export and PNG evidence
+  are separate. Existing tests own focus/back, all-four-mode state/render and
+  same-process invalidation; no native50,000 or internal-performance expansion.
+
+**Still Main-owned and PENDING:** final publication/index/commit/tracker
+reconciliation on existing draft **PR197**, restored-head CI/platform and
+applicable all-feature/release/doc gates, final combined acceptance and the
+remaining Structural terminal and retained workbench/cross-feature obligations.
+Source-level conformance PASS is not merge readiness or issue closure. Earlier
+held-merge/NEW-PR wording is historical; PR187 remains untouched/unmerged.
+These publication-only doc postimages are not compiled506 inputs or tested
+final-tree identity. Original burst FAIL/pre-C6 ASSERTFAIL, ordinary-cadence
+limits, the exact prior Windows exception and separately paused user-native
+Kiro turns remain unchanged.
+No control, dependency, fixture requirement, risk waiver or acceptance reduction
+is introduced.
+

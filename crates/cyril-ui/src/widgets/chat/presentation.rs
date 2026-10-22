@@ -12,7 +12,7 @@ use crate::tool_diff::{DiffPreview, DiffSource};
 use crate::traits::{
     ChatMessage, ChatMessageKind, SteerEchoStatus, ToolText, ToolTextSource, TrackedToolCall,
 };
-use crate::widgets::chat_layout::wrap::{SourceLine, SourceSpan, WrappedRow, wrap_lines};
+use crate::widgets::chat_layout::{self, LogicalLine, PreparedBlock};
 use crate::widgets::markdown;
 
 #[derive(Debug)]
@@ -43,10 +43,9 @@ struct SourceSlot {
 }
 
 #[derive(Default)]
-pub(super) struct PreparedBlock {
+pub(super) struct Presentation {
     sources: Vec<SourceSlot>,
     markdown: Vec<Arc<[Line<'static>]>>,
-    pub rows: Vec<WrappedRow>,
 }
 
 #[derive(Clone, Copy, Default)]
@@ -110,7 +109,7 @@ impl<'a> Sources<'a> {
     }
 }
 
-impl PreparedBlock {
+impl Presentation {
     pub fn source_text<'a>(&'a self, slot: usize, sources: Sources<'a>) -> &'a str {
         let slot = &self.sources[slot];
         let text = match &slot.source {
@@ -129,8 +128,7 @@ impl PreparedBlock {
         &text[slot.range.clone()]
     }
 
-    pub fn metrics(&self) -> (usize, usize, usize) {
-        let runs = self.rows.iter().map(|row| row.runs.len()).sum();
+    pub fn metrics(&self) -> (usize, usize) {
         let owned = self
             .sources
             .iter()
@@ -139,7 +137,7 @@ impl PreparedBlock {
                 _ => 0,
             })
             .sum::<usize>();
-        (runs, self.sources.len(), owned)
+        (self.sources.len(), owned)
     }
 
     pub fn shared_markdown(&self) -> &[Arc<[Line<'static>]>] {
@@ -147,15 +145,9 @@ impl PreparedBlock {
     }
 }
 
-struct LogicalLine {
-    spans: Vec<(usize, Style)>,
-    style: Style,
-    alignment: Alignment,
-}
-
 #[derive(Default)]
 pub(super) struct Preparation {
-    block: PreparedBlock,
+    block: Presentation,
     lines: Vec<LogicalLine>,
 }
 
@@ -733,28 +725,11 @@ impl Preparation {
         }
     }
 
-    pub fn finish(mut self, sources: Sources<'_>, width: u16) -> PreparedBlock {
-        let lines: Vec<_> = self
-            .lines
-            .iter()
-            .map(|line| SourceLine {
-                spans: line
-                    .spans
-                    .iter()
-                    .map(|(source, style)| SourceSpan {
-                        source: *source,
-                        offset: 0,
-                        text: self.block.source_text(*source, sources),
-                        style: *style,
-                    })
-                    .collect(),
-                style: line.style,
-                alignment: line.alignment,
-            })
-            .collect();
-        let rows = wrap_lines(&lines, width);
-        self.block.rows = rows;
-        self.block
+    pub fn finish(self, sources: Sources<'_>, width: u16) -> PreparedBlock<Presentation> {
+        let rows = chat_layout::prepare(&self.lines, width, |slot| {
+            self.block.source_text(slot, sources)
+        });
+        PreparedBlock::new(self.block, rows)
     }
 
     #[cfg(test)]
@@ -796,7 +771,7 @@ fn subslice(source: &str, slice: &str) -> Range<usize> {
 #[cfg(test)]
 mod tests {
     use crate::widgets::chat_layout::wrap::{
-        assert_repaired_rows, legacy_reference_is_unsafe, repaired_window,
+        SourceLine, SourceSpan, assert_repaired_rows, legacy_reference_is_unsafe, repaired_window,
     };
     use ratatui::buffer::Buffer;
     use ratatui::widgets::{Paragraph, Widget, Wrap};
@@ -808,10 +783,10 @@ mod tests {
         sources: Sources<'_>,
         reference: Vec<Line<'_>>,
         width: u16,
-    ) -> PreparedBlock {
+    ) -> PreparedBlock<Presentation> {
         let block = preparation.finish(sources, width);
         if width == 0 {
-            assert!(block.rows.is_empty());
+            assert!(block.rows().is_empty());
             return block;
         }
         let background = Style::default().fg(Color::White).bg(Color::DarkGray);
@@ -843,8 +818,8 @@ mod tests {
         if unsafe_reference {
             assert_repaired_rows(
                 &original,
-                &block.rows,
-                |slot| block.source_text(slot, sources),
+                block.rows(),
+                |slot| block.payload().source_text(slot, sources),
                 width,
             );
         }
@@ -852,14 +827,14 @@ mod tests {
             .style(background)
             .wrap(Wrap { trim: false });
         if !unsafe_reference {
-            assert_eq!(block.rows.len(), paragraph.line_count(width));
+            assert_eq!(block.rows().len(), paragraph.line_count(width));
         }
-        for start in 0..block.rows.len() {
+        for start in 0..block.rows().len() {
             let area = Rect::new(3, 2, width, 3);
             let expected = if unsafe_reference {
                 repaired_window(
-                    &block.rows,
-                    |slot| block.source_text(slot, sources),
+                    block.rows(),
+                    |slot| block.payload().source_text(slot, sources),
                     start,
                     area,
                     background,
@@ -874,9 +849,9 @@ mod tests {
             };
             let mut actual = Buffer::empty(area);
             actual.set_style(area, background);
-            for (y, row) in block.rows[start..].iter().take(3).enumerate() {
+            for (y, row) in block.rows()[start..].iter().take(3).enumerate() {
                 crate::widgets::chat_layout::paint_row(&mut actual, area, y as u16, row, |slot| {
-                    block.source_text(slot, sources)
+                    block.payload().source_text(slot, sources)
                 });
             }
             assert_eq!(actual, expected, "width {width}, row {start}");
@@ -977,17 +952,19 @@ mod tests {
                 2,
             );
             let actual_rows: Vec<String> = block
-                .rows
+                .rows()
                 .iter()
                 .map(|row| {
                     row.runs
                         .iter()
-                        .map(|run| &block.source_text(run.source, sources)[run.range.clone()])
+                        .map(|run| {
+                            &block.payload().source_text(run.source, sources)[run.range.clone()]
+                        })
                         .collect()
                 })
                 .collect();
             assert_eq!(actual_rows, expected_rows, "{body:?}");
-            for (index, row) in block.rows.iter().enumerate() {
+            for (index, row) in block.rows().iter().enumerate() {
                 let style = if index < 2 { header } else { Style::default() };
                 assert!(row.runs.iter().all(|run| run.style == style));
             }
@@ -1006,13 +983,13 @@ mod tests {
                 }
                 let mut actual = Buffer::empty(area);
                 actual.set_style(area, background);
-                for (y, row) in block.rows.iter().skip(start).take(3).enumerate() {
+                for (y, row) in block.rows().iter().skip(start).take(3).enumerate() {
                     crate::widgets::chat_layout::paint_row(
                         &mut actual,
                         area,
                         y as u16,
                         row,
-                        |slot| block.source_text(slot, sources),
+                        |slot| block.payload().source_text(slot, sources),
                     );
                 }
                 assert_eq!(actual, expected, "{body:?}, start={start}");
@@ -1170,17 +1147,19 @@ mod tests {
             );
             assert_repaired_rows(
                 &original,
-                &block.rows,
-                |slot| block.source_text(slot, sources),
+                block.rows(),
+                |slot| block.payload().source_text(slot, sources),
                 3,
             );
             let actual_rows: Vec<String> = block
-                .rows
+                .rows()
                 .iter()
                 .map(|row| {
                     row.runs
                         .iter()
-                        .map(|run| &block.source_text(run.source, sources)[run.range.clone()])
+                        .map(|run| {
+                            &block.payload().source_text(run.source, sources)[run.range.clone()]
+                        })
                         .collect()
                 })
                 .collect();
@@ -1190,7 +1169,7 @@ mod tests {
                 affixed.as_bytes(),
                 "generated boundary and body retain every original byte"
             );
-            for (index, row) in block.rows.iter().enumerate() {
+            for (index, row) in block.rows().iter().enumerate() {
                 let style = if index < 2 { header } else { Style::default() };
                 assert!(row.runs.iter().all(|run| run.style == style));
             }
@@ -1211,13 +1190,13 @@ mod tests {
                 }
                 let mut actual = Buffer::empty(area);
                 actual.set_style(area, background);
-                for (y, row) in block.rows.iter().skip(start).take(3).enumerate() {
+                for (y, row) in block.rows().iter().skip(start).take(3).enumerate() {
                     crate::widgets::chat_layout::paint_row(
                         &mut actual,
                         area,
                         y as u16,
                         row,
-                        |slot| block.source_text(slot, sources),
+                        |slot| block.payload().source_text(slot, sources),
                     );
                 }
                 assert_eq!(actual, expected, "{:?}, start={start}", fixture.body);
@@ -1296,7 +1275,7 @@ mod tests {
         preparation.message(&message, 32, &crate::traits::test_support::marker_theme());
         let block = preparation.finish(Sources::message(&message), 32);
         assert_eq!(
-            block.metrics().2,
+            block.payload().metrics().1,
             0,
             "a noncrossing grapheme is not generated text"
         );
@@ -1306,11 +1285,14 @@ mod tests {
         let body = current.split_once('\n').expect("second source line").1;
         let range = subslice(current, body);
         let slot = block
+            .payload()
             .sources
             .iter()
             .position(|slot| matches!(slot.source, Source::MessageText) && slot.range == range)
             .expect("second line retains its authoritative selector range");
-        let resolved = block.source_text(slot, Sources::message(&message));
+        let resolved = block
+            .payload()
+            .source_text(slot, Sources::message(&message));
         assert_eq!(resolved, body);
         assert_eq!(resolved.as_ptr(), body.as_ptr());
     }
@@ -1323,17 +1305,20 @@ mod tests {
         preparation.message(&message, 32, &crate::traits::test_support::marker_theme());
         let block = preparation.finish(Sources::message(&message), 32);
         assert_eq!(
-            block.metrics().2,
+            block.payload().metrics().1,
             0,
             "plain source must not be retained as owned text"
         );
-        assert!(matches!(block.sources[0].source, Source::MessageText));
+        assert!(matches!(
+            block.payload().sources[0].source,
+            Source::MessageText
+        ));
         drop(message);
         let moved = ChatMessage::system(text);
         let ChatMessageKind::System(current) = moved.kind() else {
             panic!("system source");
         };
-        let resolved = block.source_text(0, Sources::message(&moved));
+        let resolved = block.payload().source_text(0, Sources::message(&moved));
         assert_eq!(resolved, current);
         assert_eq!(resolved.as_ptr(), current.as_ptr());
     }

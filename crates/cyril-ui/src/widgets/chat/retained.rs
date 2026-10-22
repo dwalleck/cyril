@@ -1,6 +1,6 @@
-//! Retained layout for exactly one selected transcript.
+//! Transcript selection, presentation invalidation and fixed-gutter geometry.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 use std::ops::Range;
 
 use ratatui::prelude::*;
@@ -9,9 +9,16 @@ use ratatui::widgets::{Scrollbar, ScrollbarOrientation, ScrollbarState};
 use crate::message_history::{HistoryRevision, LiveRevision, MessageHistory, MessagePosition};
 use crate::theme::Theme;
 use crate::traits::{Activity, TuiState};
-use crate::widgets::chat_layout::{index::RowHeights, paint_row};
+#[cfg(test)]
+use crate::widgets::chat_layout;
+use crate::widgets::chat_layout::{BlockLocation, Layout, PreparedBlock};
 
-use super::presentation::{Preparation, PreparedBlock, Sources};
+use super::presentation::{Preparation, Presentation, Sources};
+
+const LIVE_LABEL: usize = 0;
+const LIVE_TEXT: usize = 1;
+const LIVE_THOUGHT: usize = 2;
+const ACTIVITY: usize = 3;
 
 #[cfg(test)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -24,19 +31,35 @@ pub(crate) struct WorkCounts {
 }
 
 #[cfg(test)]
+#[derive(Clone, Copy, Default)]
+struct PreparationCounts {
+    prepared_messages: usize,
+    prepared_live: usize,
+}
+
+#[cfg(test)]
 thread_local! {
-    static WORK: std::cell::Cell<WorkCounts> = const { std::cell::Cell::new(WorkCounts {
-        prepared_messages: 0, prepared_live: 0, painted_rows: 0, resolved_runs: 0, index_steps: 0,
-    }) };
+    static WORK: std::cell::Cell<PreparationCounts> =
+        const { std::cell::Cell::new(PreparationCounts {
+            prepared_messages: 0, prepared_live: 0,
+        }) };
 }
 
 #[cfg(test)]
 pub(crate) fn work_counts() -> WorkCounts {
-    WORK.with(std::cell::Cell::get)
+    let prepared = WORK.with(std::cell::Cell::get);
+    let physical = chat_layout::work_counts();
+    WorkCounts {
+        prepared_messages: prepared.prepared_messages,
+        prepared_live: prepared.prepared_live,
+        painted_rows: physical.painted_rows,
+        resolved_runs: physical.resolved_runs,
+        index_steps: physical.index_steps,
+    }
 }
 
 #[cfg(test)]
-fn count(update: impl FnOnce(&mut WorkCounts)) {
+fn count(update: impl FnOnce(&mut PreparationCounts)) {
     WORK.with(|work| {
         let mut value = work.get();
         update(&mut value);
@@ -49,18 +72,12 @@ pub(crate) struct ChatRenderState {
     geometry: Option<(u16, Theme)>,
     revision: HistoryRevision,
     retained: Option<Range<MessagePosition>>,
-    messages: VecDeque<PreparedBlock>,
-    heights: RowHeights,
-    header: PreparedBlock,
+    layout: Layout<Presentation>,
     child_name: Option<String>,
     live_key: Option<u64>,
     live_nonempty: bool,
-    live_label: PreparedBlock,
-    live: PreparedBlock,
     thought_key: Option<u64>,
-    thought: PreparedBlock,
     activity_key: Option<(bool, usize, u64)>,
-    activity: PreparedBlock,
 }
 
 impl ChatRenderState {
@@ -70,26 +87,19 @@ impl ChatRenderState {
 
     pub(crate) fn layout_metrics(&self) -> crate::render::LayoutMetrics {
         let mut metrics = crate::render::LayoutMetrics {
-            messages: self.messages.len(),
-            rows: self.total_rows(),
+            messages: 0,
+            rows: 0,
             owned_text_bytes: self.child_name.as_ref().map_or(0, String::len),
             ..crate::render::LayoutMetrics::default()
         };
         // Metrics are explicitly outside timed drawing. Deduplicate shared
         // Markdown allocations here; no pointer or registry survives this call.
         let mut shared = HashSet::new();
-        for block in self.messages.iter().chain([
-            &self.header,
-            &self.live_label,
-            &self.live,
-            &self.thought,
-            &self.activity,
-        ]) {
-            let (runs, sources, owned) = block.metrics();
-            metrics.runs += runs;
+        let physical = self.layout.metrics(|presentation| {
+            let (sources, owned) = presentation.metrics();
             metrics.source_slots += sources;
             metrics.owned_text_bytes += owned;
-            for lines in block.shared_markdown() {
+            for lines in presentation.shared_markdown() {
                 if shared.insert(std::sync::Arc::as_ptr(lines).cast::<Line<'static>>()) {
                     metrics.owned_text_bytes += lines
                         .iter()
@@ -101,17 +111,11 @@ impl ChatRenderState {
                         .sum::<usize>();
                 }
             }
-        }
+        });
+        metrics.messages = physical.blocks;
+        metrics.rows = physical.rows;
+        metrics.runs = physical.runs;
         metrics
-    }
-
-    fn total_rows(&self) -> usize {
-        self.header.rows.len()
-            + self.heights.total()
-            + self.live_label.rows.len()
-            + self.live.rows.len()
-            + self.thought.rows.len()
-            + self.activity.rows.len()
     }
 
     fn synchronize(&mut self, history: &MessageHistory, width: u16, theme: &Theme) {
@@ -122,8 +126,7 @@ impl ChatRenderState {
             self.geometry = Some((width, *theme));
             for position in changes.retained.start.0..changes.retained.end.0 {
                 let block = prepare_message(history, MessagePosition(position), width, theme);
-                self.heights.push(block.rows.len());
-                self.messages.push_back(block);
+                self.layout.push(block);
             }
         } else if let Some(previous) = &self.retained {
             let removed = changes
@@ -131,28 +134,19 @@ impl ChatRenderState {
                 .start
                 .0
                 .saturating_sub(previous.start.0)
-                .min(self.messages.len());
-            for _ in 0..removed {
-                self.messages.pop_front();
-            }
-            self.heights.discard_prefix(removed);
-            if removed > 0 && self.messages.capacity() > self.messages.len().saturating_mul(4) {
-                self.messages
-                    .shrink_to(self.messages.len().saturating_mul(2));
-            }
+                .min(self.layout.len());
+            self.layout.discard_prefix(removed);
             // Latest-edit order is not transcript order. Append chronological slots
             // separately, then replace only pre-existing changed positions.
             for position in previous.end.0.max(changes.retained.start.0)..changes.retained.end.0 {
                 let block = prepare_message(history, MessagePosition(position), width, theme);
-                self.heights.push(block.rows.len());
-                self.messages.push_back(block);
+                self.layout.push(block);
             }
             for position in changes.changed {
                 if position.0 < previous.end.0 && position.0 >= changes.retained.start.0 {
                     let index = position.0 - changes.retained.start.0;
                     let block = prepare_message(history, position, width, theme);
-                    self.heights.set(index, block.rows.len());
-                    self.messages[index] = block;
+                    self.layout.replace(index, block);
                 }
             }
         }
@@ -175,7 +169,8 @@ impl ChatRenderState {
             if let Some(name) = name {
                 header.child_header(name, theme);
             }
-            self.header = header.finish(Sources::default(), width);
+            self.layout
+                .replace_leading(header.finish(Sources::default(), width));
             self.child_name = name.map(str::to_string);
         }
         let text_changed = self.live_key != Some(revision.text);
@@ -193,7 +188,8 @@ impl ChatRenderState {
             if self.live_nonempty {
                 label.live_label(name, theme);
             }
-            self.live_label = label.finish(Sources::default(), width);
+            self.layout
+                .replace_trailing(LIVE_LABEL, label.finish(Sources::default(), width));
         }
         if let Some(text) = changed_text {
             #[cfg(test)]
@@ -202,7 +198,8 @@ impl ChatRenderState {
             if !text.is_empty() {
                 live.markdown(text, width, theme);
             }
-            self.live = live.finish(Sources::default(), width);
+            self.layout
+                .replace_trailing(LIVE_TEXT, live.finish(Sources::default(), width));
             self.live_key = Some(revision.text);
         }
         if self.thought_key != Some(revision.thought) {
@@ -214,12 +211,15 @@ impl ChatRenderState {
             {
                 live.thought(thought, true, theme);
             }
-            self.thought = live.finish(
-                Sources {
-                    thought,
-                    ..Sources::default()
-                },
-                width,
+            self.layout.replace_trailing(
+                LIVE_THOUGHT,
+                live.finish(
+                    Sources {
+                        thought,
+                        ..Sources::default()
+                    },
+                    width,
+                ),
             );
             self.thought_key = Some(revision.thought);
         }
@@ -229,78 +229,10 @@ impl ChatRenderState {
         if self.activity_key != key {
             let mut activity = Preparation::default();
             activity.activity(key, theme);
-            self.activity = activity.finish(Sources::default(), width);
+            self.layout
+                .replace_trailing(ACTIVITY, activity.finish(Sources::default(), width));
             self.activity_key = key;
         }
-    }
-
-    fn paint(
-        &self,
-        frame: &mut Frame,
-        area: Rect,
-        history: &MessageHistory,
-        sources: Sources<'_>,
-        start: usize,
-    ) {
-        let mut skip = start;
-        let mut y = 0;
-        paint_block(
-            frame,
-            area,
-            &self.header,
-            Sources::default(),
-            &mut skip,
-            &mut y,
-        );
-        let history_rows = self.heights.total();
-        if y < area.height && skip < history_rows {
-            if let Some((mut index, mut row)) = self.heights.locate(skip) {
-                #[cfg(test)]
-                count(|work| work.index_steps += self.heights.locate_steps());
-                skip = 0;
-                let first = match &self.retained {
-                    Some(retained) => retained.start.0,
-                    None => panic!("prepared history range"),
-                };
-                while y < area.height && index < self.messages.len() {
-                    let message = match history.get(MessagePosition(first + index)) {
-                        Some(message) => message.0,
-                        None => panic!("prepared message remains retained"),
-                    };
-                    let mut within = row;
-                    paint_block(
-                        frame,
-                        area,
-                        &self.messages[index],
-                        Sources::message(message),
-                        &mut within,
-                        &mut y,
-                    );
-                    index += 1;
-                    row = 0;
-                }
-            }
-        } else {
-            skip = skip.saturating_sub(history_rows);
-        }
-        paint_block(
-            frame,
-            area,
-            &self.live_label,
-            Sources::default(),
-            &mut skip,
-            &mut y,
-        );
-        paint_block(frame, area, &self.live, sources, &mut skip, &mut y);
-        paint_block(frame, area, &self.thought, sources, &mut skip, &mut y);
-        paint_block(
-            frame,
-            area,
-            &self.activity,
-            Sources::default(),
-            &mut skip,
-            &mut y,
-        );
     }
 }
 
@@ -309,7 +241,7 @@ fn prepare_message(
     position: MessagePosition,
     width: u16,
     theme: &Theme,
-) -> PreparedBlock {
+) -> PreparedBlock<Presentation> {
     #[cfg(test)]
     count(|work| work.prepared_messages += 1);
     let message = match history.get(position) {
@@ -320,33 +252,6 @@ fn prepare_message(
     preparation.message(message, width, theme);
     preparation.blank();
     preparation.finish(Sources::message(message), width)
-}
-
-fn paint_block(
-    frame: &mut Frame,
-    area: Rect,
-    block: &PreparedBlock,
-    sources: Sources<'_>,
-    skip: &mut usize,
-    y: &mut u16,
-) {
-    if *skip >= block.rows.len() {
-        *skip -= block.rows.len();
-        return;
-    }
-    let first = *skip;
-    *skip = 0;
-    let remaining = usize::from(area.height - *y);
-    for row in block.rows[first..].iter().take(remaining) {
-        #[cfg(test)]
-        count(|work| work.painted_rows += 1);
-        paint_row(frame.buffer_mut(), area, *y, row, |source| {
-            #[cfg(test)]
-            count(|work| work.resolved_runs += 1);
-            block.source_text(source, sources)
-        });
-        *y += 1;
-    }
 }
 
 pub(super) fn activity_key(state: &dyn TuiState) -> Option<(bool, usize, u64)> {
@@ -422,7 +327,7 @@ pub(super) fn render(
     if content.is_empty() {
         return;
     }
-    let total = retained.total_rows();
+    let total = retained.layout.total_rows();
     let max_scroll = total.saturating_sub(usize::from(content.height));
     let start = if child.is_some() {
         max_scroll
@@ -431,15 +336,33 @@ pub(super) fn render(
             .chat_scroll_back()
             .map_or(max_scroll, |back| max_scroll.saturating_sub(back))
     };
-    retained.paint(
-        frame,
+    retained.layout.paint(
+        frame.buffer_mut(),
         content,
-        history,
-        Sources {
-            thought,
-            ..Sources::default()
-        },
         start,
+        |location, presentation| {
+            // Acquire the authoritative context once per intersecting block,
+            // before resolving only that block's visible source runs.
+            let sources = match location {
+                BlockLocation::Indexed(index) => {
+                    let first = match &retained.retained {
+                        Some(range) => range.start.0,
+                        None => panic!("prepared history range"),
+                    };
+                    let message = match history.get(MessagePosition(first + index)) {
+                        Some(message) => message.0,
+                        None => panic!("prepared message remains retained"),
+                    };
+                    Sources::message(message)
+                }
+                BlockLocation::Trailing(LIVE_TEXT | LIVE_THOUGHT) => Sources {
+                    thought,
+                    ..Sources::default()
+                },
+                BlockLocation::Leading | BlockLocation::Trailing(_) => Sources::default(),
+            };
+            move |slot| presentation.source_text(slot, sources)
+        },
     );
     if area.width > 1 && total > usize::from(content.height) {
         let mut scroll = ScrollbarState::new(total).position(start);
@@ -460,6 +383,16 @@ mod tests {
 
     use super::*;
 
+    fn first_rows(state: &ChatRenderState) -> Option<*const chat_layout::wrap::WrappedRow> {
+        (state.layout.len() > 0).then(|| {
+            state
+                .layout
+                .block(BlockLocation::Indexed(0))
+                .rows()
+                .as_ptr()
+        })
+    }
+
     #[test]
     fn zero_and_one_column_use_full_content_and_one_to_two_keeps_preparation() {
         let theme = crate::traits::test_support::marker_theme();
@@ -471,7 +404,7 @@ mod tests {
         for width in [0, 1, 2, 1, 0] {
             let content_width = if width > 1 { width - 1 } else { width };
             let previous_geometry = retained.geometry;
-            let previous_rows = retained.messages.front().map(|block| block.rows.as_ptr());
+            let previous_rows = first_rows(&retained);
             let before = work_counts();
             let markdown = crate::widgets::markdown::work_counts();
             let wraps = crate::widgets::chat::wrap_count();
@@ -492,10 +425,7 @@ mod tests {
                 assert_eq!(work_counts().prepared_live, before.prepared_live);
                 assert_eq!(crate::widgets::markdown::work_counts(), markdown);
                 assert_eq!(crate::widgets::chat::wrap_count(), wraps);
-                assert_eq!(
-                    retained.messages.front().map(|block| block.rows.as_ptr()),
-                    previous_rows
-                );
+                assert_eq!(first_rows(&retained), previous_rows);
             }
             let buffer = terminal.backend().buffer();
             if width == 0 {
@@ -503,7 +433,7 @@ mod tests {
                 assert!(buffer.content.iter().all(|cell| cell.symbol() == " "));
                 continue;
             }
-            assert_eq!(retained.total_rows(), 5);
+            assert_eq!(retained.layout.total_rows(), 5);
             assert_eq!(work_counts().painted_rows - before.painted_rows, 3);
             for (y, expected) in [(2, "C"), (3, "D")] {
                 let cell = &buffer[(2, y)];
@@ -543,7 +473,11 @@ mod tests {
         ]);
         let mut state = ChatRenderState::default();
         state.synchronize(&history, 30, &theme);
-        let untouched_rows = state.messages[1].rows.as_ptr();
+        let untouched_rows = state
+            .layout
+            .block(BlockLocation::Indexed(1))
+            .rows()
+            .as_ptr();
         let before = work_counts();
         let start = history.retained_range().start.0;
         assert!(
@@ -562,7 +496,14 @@ mod tests {
             work_counts().prepared_messages - before.prepared_messages,
             3
         );
-        assert_eq!(state.messages[1].rows.as_ptr(), untouched_rows);
+        assert_eq!(
+            state
+                .layout
+                .block(BlockLocation::Indexed(1))
+                .rows()
+                .as_ptr(),
+            untouched_rows
+        );
         for (index, expected) in ["first edited", "untouched", "last coalesced", "appended"]
             .into_iter()
             .enumerate()
@@ -572,7 +513,11 @@ mod tests {
                 .expect("retained")
                 .0;
             assert_eq!(
-                state.messages[index].source_text(0, Sources::message(message)),
+                state
+                    .layout
+                    .block(BlockLocation::Indexed(index))
+                    .payload()
+                    .source_text(0, Sources::message(message)),
                 expected
             );
         }
@@ -580,8 +525,15 @@ mod tests {
         history.drop_prefix(1);
         state.synchronize(&history, 30, &theme);
         assert_eq!(work_counts().prepared_messages, before.prepared_messages);
-        assert_eq!(state.messages[0].rows.as_ptr(), untouched_rows);
-        assert_eq!(state.heights.len(), 3);
+        assert_eq!(
+            state
+                .layout
+                .block(BlockLocation::Indexed(0))
+                .rows()
+                .as_ptr(),
+            untouched_rows
+        );
+        assert_eq!(state.layout.len(), 3);
     }
 
     #[test]
@@ -596,7 +548,7 @@ mod tests {
         history.drop_prefix(12);
         let before = work_counts();
         state.synchronize(&history, 30, &theme);
-        assert_eq!(state.messages.len(), 1);
+        assert_eq!(state.layout.len(), 1);
         assert_eq!(
             work_counts().prepared_messages - before.prepared_messages,
             1
@@ -606,7 +558,11 @@ mod tests {
             .expect("last retained")
             .0;
         assert_eq!(
-            state.messages[0].source_text(0, Sources::message(message)),
+            state
+                .layout
+                .block(BlockLocation::Indexed(0))
+                .payload()
+                .source_text(0, Sources::message(message)),
             "new 11"
         );
     }
@@ -627,7 +583,11 @@ mod tests {
             30,
             &theme,
         );
-        let live_rows = state.live.rows.as_ptr();
+        let live_rows = state
+            .layout
+            .block(BlockLocation::Trailing(LIVE_TEXT))
+            .rows()
+            .as_ptr();
         let before = crate::widgets::markdown::work_counts();
         let work = work_counts();
         // No live source is supplied on the unchanged revision, even though the
@@ -635,9 +595,30 @@ mod tests {
         state.synchronize_live(revision, None, None, Some("beta"), 30, &theme);
         assert_eq!(crate::widgets::markdown::work_counts(), before);
         assert_eq!(work_counts().prepared_live, work.prepared_live);
-        assert_eq!(state.live.rows.as_ptr(), live_rows);
-        assert_eq!(state.header.source_text(0, Sources::default()), "─── beta ");
-        assert_eq!(state.live_label.source_text(0, Sources::default()), "beta:");
+        assert_eq!(
+            state
+                .layout
+                .block(BlockLocation::Trailing(LIVE_TEXT))
+                .rows()
+                .as_ptr(),
+            live_rows
+        );
+        assert_eq!(
+            state
+                .layout
+                .block(BlockLocation::Leading)
+                .payload()
+                .source_text(0, Sources::default()),
+            "─── beta "
+        );
+        assert_eq!(
+            state
+                .layout
+                .block(BlockLocation::Trailing(LIVE_LABEL))
+                .payload()
+                .source_text(0, Sources::default()),
+            "beta:"
+        );
     }
 
     #[test]
@@ -650,17 +631,26 @@ mod tests {
         );
         let mut state = ChatRenderState::default();
         state.synchronize(&history, 30, &theme);
-        let retained_rows = state.messages[80].rows.as_ptr();
+        let retained_rows = state
+            .layout
+            .block(BlockLocation::Indexed(80))
+            .rows()
+            .as_ptr();
         let before = work_counts();
         let wraps = crate::widgets::chat::wrap_count();
         history.drop_prefix(80);
         state.synchronize(&history, 30, &theme);
         assert_eq!(work_counts().prepared_messages, before.prepared_messages);
         assert_eq!(crate::widgets::chat::wrap_count(), wraps);
-        assert_eq!(state.messages[0].rows.as_ptr(), retained_rows);
-        assert_eq!(state.messages.len(), 20);
-        assert_eq!(state.heights.len(), 20);
-        assert_eq!(state.heights.total(), 40);
-        assert_eq!(state.heights.locate(39), Some((19, 1)));
+        assert_eq!(
+            state
+                .layout
+                .block(BlockLocation::Indexed(0))
+                .rows()
+                .as_ptr(),
+            retained_rows
+        );
+        assert_eq!(state.layout.len(), 20);
+        assert_eq!(state.layout.total_rows(), 40);
     }
 }

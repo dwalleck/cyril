@@ -249,24 +249,37 @@ For viewports wider than one column, the conversation reserves the rightmost
 column for its scrollbar in both follow and browse modes, even when no thumb is
 needed. At zero or one column it uses the full content width with no indicator.
 
-The [current-main integration evidence](.cyril-c6la/current-main038-b5d45fe2/publication-manifest.json)
-binds the 506-input local qualification and a fresh actual-App `truecolor`
-consumer. The [earlier retained-history packet](.cyril-c6la/current-width-e3f2a7c7/publication-manifest.json)
-keeps its original source bindings, including the
-[supported native outcomes](.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.json).
-These local/component results are not final staged-tree or new-PR CI/platform
-approval.
+The [restored layout-owner evidence](.cyril-c6la/current-restored-layout-owner-7d88498e/publication-manifest.json)
+owns the current 506-input qualification, fresh complete 79-case benchmark and
+[both-mode actual-App consumer](.cyril-c6la/current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json).
+The earlier [b5 integration](.cyril-c6la/current-main038-b5d45fe2/publication-manifest.json)
+and [e3 retained-history packet](.cyril-c6la/current-width-e3f2a7c7/publication-manifest.json)
+keep their original identities; their native/benchmark results are historical,
+not substitutes for the restored D1 owner's fresh proof.
 
 Under the [supported-controls user approval](.cyril-c6la/design.md#supported-controls-user-approval),
-the actual owned Ghostty/Xvfb `truecolor`/`none` pair uses separate launches;
-existing state/render/root tests own focus/back. The all-four-mode state/render
-matrix and same-process invalidation evidence remain distinct.
-[Main's technical native-gate judgment](.cyril-c6la/design.md#main-technical-native-gate-judgment)
-combines exact deterministic root cells/styles/conservation, native-export/source
-correlation and positive actual-PNG appearance with no observed defect. The
-visual reviews do not independently prove exact literal claims; raw capture-time
-pending-review statuses remain historical. No native50,000-history result,
-new UI control, pixel oracle or waiver is claimed.
+the fresh owned Ghostty/Xvfb `truecolor`/`none` pair uses separate launches.
+[Main's current supported-native judgment](.cyril-c6la/design.md#current-supported-native-judgment-and-limits)
+is PASS with explicit limits, combining deterministic exactness, native-export
+correlation and reviewed PNG appearance. Both complete image sets were reviewed;
+not every obligation is an unqualified visual PASS. Four actual resize changes
+follow one baseline/no-op capture. Clipboard toasts obscure the lower-center
+composer/footer, and native exports omit initial unattached U+0301/U+200B;
+screenshots alone do not establish exact URL/scalar/RGB/process claims.
+
+Existing state/render/root tests own focus/back; all-four-mode state/render
+coverage and same-process invalidation/performance evidence remain distinct.
+No native50,000-history, native child-focus/back, same-process native switching,
+unsampled-transient or internal-performance result is claimed. Capture-time
+pending-review receipts remain unchanged beside the later qualified judgment.
+Fresh [isolated reconstruction](.cyril-c6la/reconstruction-restored-7d88498e.md)
+and [independent design comparison](.cyril-c6la/conformance-restored-7d88498e.md)
+now record source-level conformance **PASS**: 16 changed production files map
+exactly once to nine approved rows, with no unresolved discrepancies. This
+review inspected actual restored working production, not the earlier c084 tree;
+it does not attest qualification, native/performance or CI outcomes. Restored-head
+CI/platform, Main's final Git/publication and combined acceptance remain
+**PENDING** under existing draft PR197, not PR187.
 
 The [ordinary-scroll verification disposition](.cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json)
 records Main's technical adoption of the coverage-preserving cadence instrument;

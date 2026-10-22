@@ -105,7 +105,8 @@ Pinned upstream Paragraph remains the independent existing cell/style/count refe
 | `widgets/markdown.rs` | Retain Markdown derivation/cache; share immutable outputs. | No transcript versioning or App ownership. Existing style-input identity from x5xi retained. | Existing Markdown/cache/theme tests and Arc-backed caller migration. |
 | `render.rs` | Own concrete RenderState interface and root geometry/render wiring. | Protected parent for chat layout: no layout/index algorithms. Retain fallback and exact frame geometry. | Existing floor/overlay tests and independent review. |
 | `cyril/src/app.rs` | Own long-lived RenderState and pass it to draw. | Wiring only; no row selection, theme/cache derivation or history bookkeeping. | Compiler/caller checks and real App draw smoke. |
-| `cyril-core` | Unchanged typed source domain. | No history display revisions, Theme, ratatui or rendering dependency. | Dependency/compiler checks and review. |
+| `cyril-core` | Retain typed source domain; the existing approved receipt-transform exception returns `HarvestedReceipts` with ordered receipts and conservative earliest-removal splice metadata, consumed via `into_parts` (see Receipt transform metadata below). | No history display revisions, Theme, ratatui or rendering dependency. Preserve recognition, surviving bytes, receipt order and UI-owned metadata interpretation. | Existing parser metadata/receipt tests, dependency/compiler checks and review. |
+| `traits.rs` | Retain the read-only `TuiState` history/live contract and authoritative tracked-tool borrowed/derived text projections, public Cow adaptations, direct recorded-source resolution and indexed first-Diff/cached preview views, as already approved in the Concrete implementation handoff and First-Diff source ownership amendments below. | No physical prepared-row/index/wrap algorithms, retained transcript layout owner, event routing, mutable history escape, generic source-provider service or new diff-derivation path. | Existing history/live/tool-text/diff projection tests, public-root caller/compiler checks and independent review. |
 
 The history owner earns depth by making missed mutation invalidation impossible at the Vec seam, rather than relying on all 22 sites to remember independent counters. The layout owner earns depth by hiding physical row preparation/index/seek from chat/root callers. No generic cache, scheduler, event bus or renderer adapter family is created. No custom AST/source-policy gate is warranted; compiler visibility and ordinary independent ownership review suffice.
 
@@ -341,4 +342,69 @@ later documentation overlay or the final Git tree. Main still owns held038
 merge/publication, NEW C6 PR and remaining CI/platform/delivery approval.
 Original burst failures and paused user-native Kiro turns remain unchanged;
 PR187 is untouched/unmerged. No Structural terminal completion is declared.
+
+## Restored layout-owner evidence boundary (2026-10-22)
+
+The [restored-owner manifest](current-restored-layout-owner-7d88498e/publication-manifest.json)
+owns current qualification/execution source `7d88498e…` (506 inputs), its full
+manifest/default-App pins and evidence inventories. Earlier e3 native judgments,
+including the then-current PASS above, and b5 native/benchmark carry-forward
+remain source-bound history; they are not current D1 producer acceptance.
+
+No approved responsibility, interface, C1–C6 obligation, F11/F12 exception or
+user approval changes. Main restored D1's approved separation: layout owns
+physical preparation/aggregation/index/seek/traversal/painting; chat owns
+presentation/source resolution and transcript policy. The existing Core row108
+and `traits.rs` row109 already reconcile D2/D3 under their approved amendments,
+without new behavior or dependencies. The [finding dispositions](review-decisions.md#restored-layout-owner-findings-and-current-evidence-2026-10-22)
+preserve the original c084 reconstruction and conformance FAIL.
+
+All 17 assigned restored-source local gates PASS. The fresh full benchmark
+contains 79 ordered executions / 2370 samples, including pending preview, not
+the retained78 subset. The [actual consumer aggregate](current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json)
+owns first-attempt PASS and complete independent cleanup for both separate PTY
+modes. Exact state/render/work tests, TestBackend timing, API/action/wire
+observations and native appearance remain distinct evidence layers; submitted
+input counts are not internal consumption, retained counts or performance proof.
+
+### Current supported-native judgment and limits
+
+**PASS — Main's combined approved supported-native judgment, with explicit
+limits, for restored source `7d88498e…` / default App `e31ef685…`.** The manifest
+binds fresh Ghostty/Xvfb captures, both complete independent reviews and Main's
+later disposition. Each mode recorded 79/0 content assertions, 96 PNGs and 40
+obligations with natural exit and complete owned cleanup. Main matched the
+complete path/hash sets and source/binary identities. All 192 images / 80
+obligations were reviewed: truecolor has nine visual and 31 qualified passes;
+none has 39 qualified passes and one clean baseline/no-op, with no demonstrated
+render regression. This is not all80 unqualified visual PASS.
+
+- Five resize capture states comprise baseline/no-op obligation10 at 160×48
+  cells / 1446×960 pixels and **four actual transitions**, obligations11–14.
+- Clipboard toasts obscure the lower-center composer/footer. Required
+  conversation content remains visible; no full-window unobscured claim follows.
+- Exact deterministic cells/styles/conservation, native-export/source
+  correlation and PNG appearance retain separate attribution. Screenshots do
+  not independently establish exact URL/scalar/RGB/process claims.
+- Native exports omit initial unattached U+0301 and U+200B: no exact source/native
+  scalar equality or bare-mark visibility is claimed there. Positive-width
+  suffix/repeated-run evidence keeps its separately recorded scope.
+- Separate `truecolor`/`none` launches do not establish same-process native mode
+  switching or all-four-mode native coverage. Existing state/render/root tests
+  own approved focus/back and all-four-mode coverage; same-process invalidation
+  tests and benchmark keep their own scope. No unsampled-transient, native
+  child-focus/back, native50,000-history or native internal-performance claim.
+
+Raw capture-time pending-visual statuses remain unchanged beside the later
+qualified reviews and Main judgment. This is a source-bound combined native
+result, not a pixel oracle, new control or acceptance waiver.
+
+Fresh isolated reconstruction/design conformance, restored-head CI/platform,
+applicable all-feature/release/doc gates and final combined acceptance remain
+**PENDING**. Main owns final publication/index/commit/tracker work on existing
+draft **PR197**; earlier NEW-PR/held-merge wording is historical. These five-doc
+postimages are a publication overlay outside compiled506, not tested final-tree
+identity. Original burst FAIL/pre-C6 ASSERTFAIL and ordinary-cadence limits,
+remaining Structural/workbench/cross-feature obligations and separately paused
+user-native Kiro turns remain unchanged. PR187 remains untouched/unmerged.
 
