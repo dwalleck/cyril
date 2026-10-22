@@ -10464,7 +10464,7 @@ mod tests {
                     let ends = is_main
                         && matches!(routed.notification, Notification::TurnCompleted { .. });
                     let label = format!("{index}:{}", lki9_variant(&routed.notification));
-                    app.handle_notification(routed);
+                    app.handle_notification(*routed);
                     if begins {
                         started += 1;
                         in_turn = true;
@@ -10483,7 +10483,7 @@ mod tests {
                     });
                     // App::run's own permission path, including the review
                     // router; an ordinary wake uses the normal overlay.
-                    app.handle_permission_request(request);
+                    app.handle_permission_request(*request);
                     format!("{index}:permission")
                 }
             };
@@ -10944,9 +10944,9 @@ mod tests {
         for frame in kas_trace_replay(&rows, main) {
             match frame {
                 ReplayFrame::Notification(routed) => {
-                    app.handle_notification(routed);
+                    app.handle_notification(*routed);
                 }
-                ReplayFrame::Permission(request) => app.handle_permission_request(request),
+                ReplayFrame::Permission(request) => app.handle_permission_request(*request),
             }
         }
     }

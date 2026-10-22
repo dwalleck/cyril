@@ -1,5 +1,69 @@
 # cyril-xavt shell approval review decisions
 
+## PR191 F4 — Windows DEFAULT ReplayFrame layout
+
+**Scoped Linux repair qualification: PASS; fresh current-head Windows CI remains blocking.** This bounded repair supersedes the historical no-net-replay-boxing conclusion below for the current source only. Earlier October20 and held-af78 receipts keep their original source scope.
+
+| finding-id | finding | reviewer | evidence-state | evidence | decision | fix | note |
+|---|---|---|---|---|---|---|---|
+| F4 | The current replay enum fails Windows DEFAULT strict Clippy; compact both large replay payloads without reshaping production types. | CI39847823115, relayed by Main | Verified | PR191 pre-repair head `75b6d148dd1936210399e725b17a6be75dce9b69`: Windows `Clippy (default features)` fails at pre-repair `crates/cyril-core/src/test_support.rs:438`, `clippy::large_enum_variant`, Permission at least584 bytes versus Notification at least376. Exact retained hosted diagnostic and skipped-step metadata are portable in the F4 archive below. | Accept | Box both `ReplayFrame` payloads, both creation paths, and move out of each box at all four existing handler calls in the two App replay helpers. | blocking until fresh repair-head Windows CI; ordinary review and the three scoped Linux repair commands passed, without rerunning the reported old-head hosted failure. |
+
+### Delivered behavior and authorization
+
+DG — Main authorizes the minimal compact test-support representation in this delegated repair assignment. This is an approved-contract qualification repair under existing Slice1/design C5 ownership and permission-semantics obligations, not a production-domain redesign or relaxed lint requirement.
+
+- `crates/cyril-core/src/test_support.rs:435-509`: `ReplayFrame::Notification(Box<RoutedNotification>)` and `ReplayFrame::Permission(Box<PermissionRequest>)`; `kas_trace_replay` boxes the complete existing permission literal and each already-mediated routed notification. Each replay vector slot carries a pointer-sized payload rather than the entire domain object. Boxing only Permission would leave the other large inline alternative against a pointer and can invert the lint.
+- `crates/cyril/src/app.rs:10444-10509,10926-10952`: `lki9_replay_trace` and `q9104_feed` move `*routed`/`*request` into the unchanged production handlers. No payload reconstruction, cloning, sender replacement, sorting, batching or new wiring is introduced. Permission session/title observations, frame labels, turn/busy checks, transcript/order assertions and all existing test assertions remain unchanged.
+- The permission oneshot sender remains inside its original non-Clone request until the existing App handler takes ownership. Existing replay receiver disposal is unchanged. Notification iteration still follows trace order and `mediated.forward` order.
+- No production domain type, method, dependency, feature, threshold, platform gate or lint configuration changes. This adds one owned allocation per replay frame only; it does not add allocation to the live bridge/App path. The earlier static at-most200-byte gap prediction is not current Windows evidence and is superseded by the observed584/376 diagnostic. No exact post-repair layout or successful Clippy result is claimed from source reasoning.
+
+### API inventory and production reachability
+
+LSP was used first for `ReplayFrame` references at declaration/constructor positions, `kas_trace_replay` references, hover, and payload definitions. Although rust-analyzer reported ready, these returned empty results despite visible source callsites; the tool inconsistency was reported. Complete Rust-source fallback found one enum, its sole creator with two construction paths, and exactly two consuming helpers, both migrated.
+
+`crates/cyril-core/src/lib.rs:17-21` gates `test_support` with `any(test, feature = "test-support")`; the enum/helper additionally require `kas`. Both App consumers are inside the `#[cfg(test)]` module at `app.rs:3239-3240` and independently `#[cfg(feature = "kas")]`. `RoutedNotification` and the non-Clone, oneshot-owning `PermissionRequest` remain unchanged at `types/event.rs:492,614`; production handlers remain unchanged at `app.rs:1177,1185`.
+
+Workspace resolver2 and the package manifests keep normal `cyril`/UI core dependencies free of `test-support`; their dev-dependencies opt in (`crates/cyril/Cargo.toml:46-51`, `crates/cyril-ui/Cargo.toml:28-29`). App defaults still enable `kas`, while Core `kas` remains opt-in. The standalone historical `.cyril-vhfz/probe` explicitly enables test support and is not live binary wiring. All-target test compilation can therefore expose this enum without making its allocations part of normal production execution.
+
+### Source handoff pins
+
+These exact file-byte identities are bound to the scoped qualification below, not a newly published commit. Source ancestry is PR191 head `75b6d148dd1936210399e725b17a6be75dce9b69`, with no held merge. Main must use the actual published repair HEAD, not that pre-repair ancestry pin or a guessed next commit, for final propagation.
+
+| File | Before repair SHA-256 | Source handoff SHA-256 |
+|---|---|---|
+| `crates/cyril-core/src/test_support.rs` | `503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee` | `390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207` |
+| `crates/cyril/src/app.rs` | `75241006e287566870b67dfae9234cbb04c1edde72ded0f260890aa2c3eaf26d` | `f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0` |
+
+### Performed checks, repair review, and unresolved qualification
+
+The implementation worker performed source/reference/feature inspection and SHA-256 identity capture only; no Cargo, formatter, application runtime or final-integration-worktree edit. The sole HOST coordinator subsequently performed the three scoped commands recorded below exactly once. This metadata finalization consumes those retained receipts, not another qualification run.
+
+Independent ordinary repair review: **NONE / correct / confidence0.97 — ReviewReplayRepair, 2026-10-22**, covering both exact source handoff pins above, both creator paths, all four consuming moves and affected assertions/ownership/order/feature interactions. The reviewer independently found no payload loss/cloning, replay reordering, responder-ownership change, live-path allocation or lint/configuration bypass. Box field inspections followed by whole-payload moves were judged plausible by source reasoning, explicitly uncompiled. No isolated reconstruction, new proof machinery or repository checks were performed. This is source-only review, not successful qualification or Windows CI.
+
+**HOST coordinator scoped qualification: PASS**, canonical `xavt75-two-box-replay-repair-scoped-qualified-attempt1-handoff.json`, SHA-256 `5cbecc649c234205e0ff3341d19c402d3ebd2afb11cb2f021e19ea14cc81a727`, completed2026-10-22T20:58:01Z on Linux. Canonical commands and full logs are retained byte-for-byte in [F4 portable evidence](evidence-replay-repair532-e8728c85-index.json).
+
+| Recorded command | Actual result | Portable full log |
+|---|---|---|
+| `cargo fmt --all -- --check` | PASS, exit0; no formatter applied | `gates/01-initial-fmt-CHECK.log` (empty successful log; exit result is in the canonical) |
+| Exact replay-dependent App nextest selection below | PASS, exit0: **13 passed, 456 skipped/filtered**; skipped cases are not executed coverage | `gates/02-exact-thirteen-replay-dependent-App-nextest.log` |
+| `cargo clippy -p cyril -p cyril-core --features kas --all-targets -- -D warnings` | PASS, exit0 | `gates/03-strict-App-Core-KAS-alltargets-Clippy.log` |
+
+The current full532 manifest has SHA-256 `49365a2068906cf0847ea77751057449b13641020b964fd221af54b4efa115c2`, descriptor `e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e`. Exactly the two source rows above differ from the prior modal532 inventory; the other530 rows and Cargo.lock (`52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035`) are unchanged. Before/after command guards retain that descriptor. This is not a claim that old held-bc6/af78 metadata equals published75, a full historical-matrix replay, a new private App/consumer run, or final integration acceptance.
+
+The minimal portable archive `evidence-replay-repair532-e8728c85.tar.gz` is55,420 bytes, SHA-256 `faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b`. Its index inventories nine members: eight bounded payloads plus their manifest—current canonical, full532 manifest, three full command logs, the original independent reviewer output, retained hosted failure/six skipped product steps, and the exact two-file diff. No binaries, full source tree, nested archives or unrelated hosted logs are included. Prior evidence archives/indexes remain unchanged; the original evidence-index.json is not amended.
+
+Main additionally authorized only read-only `git ls-files --stage --` for the exact five existing delta paths and the raw-index SHA-256. Their actual stage0 mode/blob preimages are carried by publication-files.json; index identity is `2234c0ac507ccb7479dc8ad67e33d2c8b1876c12ee4bbef5332570cdd4cefeb3`. No index mutation, commit, push or tracker operation was performed by this worker.
+
+The thirteen existing replay-dependent App tests cover both consuming helpers: the five `lki9_replay_` cases plus `repeat_cap_wake_is_labelled_in_live_capture`, `parked_step_question_shows_in_live_capture`, `parent_answer_renders_inside_its_labelled_wake`, `answer_command_prompts_the_parked_step_and_the_run_resumes`, `failed_answer_reopens_the_parked_step`, `wake_credits_and_run_totals_in_live_capture`, `run_completion_line_renders`, and `stale_repeat_cap_pause_never_labels_a_later_wake`. These are the recorded HOST-coordinator qualification commands, **not instructions to rerun them**:
+
+```sh
+cargo fmt --all -- --check
+cargo nextest run -p cyril --bin cyril --features kas -E 'test(lki9_replay_) | test(repeat_cap_wake_is_labelled_in_live_capture) | test(parked_step_question_shows_in_live_capture) | test(parent_answer_renders_inside_its_labelled_wake) | test(answer_command_prompts_the_parked_step_and_the_run_resumes) | test(failed_answer_reopens_the_parked_step) | test(wake_credits_and_run_totals_in_live_capture) | test(run_completion_line_renders) | test(stale_repeat_cap_pause_never_labels_a_later_wake)'
+cargo clippy -p cyril -p cyril-core --features kas --all-targets -- -D warnings
+```
+
+Fresh actual Windows DEFAULT `cargo clippy --workspace --all-targets -- -D warnings` and the six subsequent product steps remain required on Main's actual published repair HEAD. In CI39847823115 those steps did not run: workspace-default tests; binary no-KAS build, Clippy and tests; Core no-KAS Clippy and tests (`.github/workflows/ci.yml:219-237`). The retained terminal run/job metadata and exact diagnostic establish the original failure and skips; Linux success does not turn them into PASS. Main owns publication, fresh current-head CI and final integration/propagation. No whole-issue or merge acceptance is claimed here.
+
 ## Scope and authorization
 
 This delivery copy retains the original combined-source and October20 reconstruction/repair history below, including F1/F2/F3 and the superseded representation repair. Its EJ `9400e7c8ddd53776f6fd8b4d28d4c7fc69e45ab4` reconstruction, gates860, private338 and review0.98 are historical, not the current held HEADbc6 + MERGE_HEADaf78 qualification. delivery-handoff.md preserves reconstruction identities; [current verification](verification.md#current-held-af78-checkpoint) and the [portable index](evidence-current-modal532-b6a846be-index.json) own current scope and immutable receipt mapping.

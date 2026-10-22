@@ -1,0 +1,184 @@
+{
+  "schema": "cyril-xavt-F4-portable-index/1",
+  "archive": "evidence-replay-repair532-e8728c85.tar.gz",
+  "archive_bytes": 55420,
+  "archive_sha256": "faa150a7ffa25831e454c8a6abddb783a76a0dc9e56ac0185c7c809f3bd8722b",
+  "archive_mode": "0644",
+  "archive_member_count": 9,
+  "payload_manifest_sha256": "508d816da7ac8ffa268388a45043fba28171697a68e23719f5ca99c8e7962d86",
+  "scope": "Current X75 two-file replay-only repair; three scoped Linux commands PASS, Windows fresh-current-head CI still required",
+  "source_binding": {
+    "ancestry_HEAD": "75b6d148dd1936210399e725b17a6be75dce9b69",
+    "repair_commit": "Not created by this worker; Main must use actual published repair HEAD for final propagation",
+    "count": 532,
+    "descriptor": "e8728c859208f056dc17fbfd44db5611ee2ed5a01d9fe9caf1ae2589de08db9e",
+    "manifest_sha256": "49365a2068906cf0847ea77751057449b13641020b964fd221af54b4efa115c2",
+    "two_source_pins": {
+      "crates/cyril-core/src/test_support.rs": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+      "crates/cyril/src/app.rs": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0"
+    },
+    "actual_two_changed_rows": [
+      "crates/cyril-core/src/test_support.rs",
+      "crates/cyril/src/app.rs"
+    ],
+    "other530_unchanged": true,
+    "Cargo_lock_unchanged_sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035"
+  },
+  "qualification": {
+    "canonical_member": "qualification/xavt75-two-box-replay-repair-scoped-qualified-attempt1-handoff.json",
+    "canonical_sha256": "5cbecc649c234205e0ff3341d19c402d3ebd2afb11cb2f021e19ea14cc81a727",
+    "result": "PASS for exactly three scoped Linux commands, not Windows CI or final integration",
+    "commands": [
+      {
+        "command": "cargo fmt --all -- --check",
+        "returncode": 0,
+        "log_member": "gates/01-initial-fmt-CHECK.log",
+        "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "log_bytes": 0
+      },
+      {
+        "command": "cargo nextest run -p cyril --bin cyril --features kas -E 'test(lki9_replay_) | test(repeat_cap_wake_is_labelled_in_live_capture) | test(parked_step_question_shows_in_live_capture) | test(parent_answer_renders_inside_its_labelled_wake) | test(answer_command_prompts_the_parked_step_and_the_run_resumes) | test(failed_answer_reopens_the_parked_step) | test(wake_credits_and_run_totals_in_live_capture) | test(run_completion_line_renders) | test(stale_repeat_cap_pause_never_labels_a_later_wake)'",
+        "returncode": 0,
+        "log_member": "gates/02-exact-thirteen-replay-dependent-App-nextest.log",
+        "log_sha256": "21ab8348e918fe3e2b4d0c2cca5e827fdabb2748a9d0312e1b01544a7bb59364",
+        "log_bytes": 2119
+      },
+      {
+        "command": "cargo clippy -p cyril -p cyril-core --features kas --all-targets -- -D warnings",
+        "returncode": 0,
+        "log_member": "gates/03-strict-App-Core-KAS-alltargets-Clippy.log",
+        "log_sha256": "2074bd83ef8c4afd3e40606141a0c41a1db101a5ba2ed46803a89361441b5499",
+        "log_bytes": 479
+      }
+    ],
+    "actual_test_counts": {
+      "tests_run": 13,
+      "passed": 13,
+      "skipped": 456
+    },
+    "no_format_application": true,
+    "no_binary_build_copy_consumer": true,
+    "no_final_matrix_resumption": true
+  },
+  "review": {
+    "member": "reviews/ordinary-repair-review.txt",
+    "original_reference": "agent://RepairReplayFrameSize.ReviewReplayRepair",
+    "sha256": "25ae20253c4813e1553f5a7d6d941d0e0d8467f9bfb5ec722dc98cd0de936b04",
+    "result": "NONE / correct / confidence0.97, ordinary independent source-only review",
+    "chronology": "Review-time qualification-pending wording preserved; subsequent scoped qualification is separately recorded, not rewritten into reviewer output",
+    "canonical_source_review_sha256_meaning": "Canonical source_review.sha256 6ed311ed... identifies the prequalification decision-log copy, not this distinct raw reviewer output. No hash or source identity is substituted."
+  },
+  "CI": {
+    "member": "ci/windows-default-failure-and-six-unrun-steps.json",
+    "old_head": "75b6d148dd1936210399e725b17a6be75dce9b69",
+    "run_id": 39847823115,
+    "run_url": "https://github.com/dwalleck/cyril/actions/runs/39847823115",
+    "status": "FAIL retained; fresh repair-head Windows DEFAULT lint and six unrun product steps remain required",
+    "no_new_fetch_rerun_or_waiver": true
+  },
+  "source_diff": {
+    "member": "source/two-file-replay-repair.diff",
+    "paths": [
+      "crates/cyril-core/src/test_support.rs",
+      "crates/cyril/src/app.rs"
+    ],
+    "before": {
+      "crates/cyril-core/src/test_support.rs": {
+        "sha256": "503161a2a8d23bb166a3c05f5faeda1f6ba31269c53fda7136203323201d5cee",
+        "stage0_blob_sha1": "07b30e5fb49f1f05b0bde32f6d49e034ca82caf6",
+        "mode": "100644"
+      },
+      "crates/cyril/src/app.rs": {
+        "sha256": "75241006e287566870b67dfae9234cbb04c1edde72ded0f260890aa2c3eaf26d",
+        "stage0_blob_sha1": "696beaacdd624f1c466cd29db1bfdf8b68c5d886",
+        "mode": "100644"
+      }
+    },
+    "after": {
+      "crates/cyril-core/src/test_support.rs": {
+        "sha256": "390f3a3bd277495926384f9ea6e9aae280786f5e3fc62f5165040349965ac207",
+        "blob_sha1": "a40212c6d34c0a383ff96ee30b0efa85bb4c6805",
+        "mode": "100644"
+      },
+      "crates/cyril/src/app.rs": {
+        "sha256": "f19d9d4fb29e32cb4c78651082e4d27584e52cc11ebb6b2a65fe33f0dd3e8ac0",
+        "blob_sha1": "8ca3ac3174209d44e2749bc800e950bc0ad21146",
+        "mode": "100644"
+      }
+    },
+    "no_other_source_delta": true
+  },
+  "archive_payload_inventory": [
+    {
+      "path": "ci/windows-default-failure-and-six-unrun-steps.json",
+      "bytes": 10315,
+      "sha256": "4594f1c1bff934d73466f9f9700c7fb07e38db5891150a409f00e1769eceb895",
+      "mode": "0644"
+    },
+    {
+      "path": "gates/01-initial-fmt-CHECK.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mode": "0644"
+    },
+    {
+      "path": "gates/02-exact-thirteen-replay-dependent-App-nextest.log",
+      "bytes": 2119,
+      "sha256": "21ab8348e918fe3e2b4d0c2cca5e827fdabb2748a9d0312e1b01544a7bb59364",
+      "mode": "0644"
+    },
+    {
+      "path": "gates/03-strict-App-Core-KAS-alltargets-Clippy.log",
+      "bytes": 479,
+      "sha256": "2074bd83ef8c4afd3e40606141a0c41a1db101a5ba2ed46803a89361441b5499",
+      "mode": "0644"
+    },
+    {
+      "path": "payload-manifest.json",
+      "bytes": 3423,
+      "sha256": "508d816da7ac8ffa268388a45043fba28171697a68e23719f5ca99c8e7962d86",
+      "mode": "0644"
+    },
+    {
+      "path": "qualification/xavt75-two-box-replay-repair-scoped-qualified-attempt1-handoff.json",
+      "bytes": 27748,
+      "sha256": "5cbecc649c234205e0ff3341d19c402d3ebd2afb11cb2f021e19ea14cc81a727",
+      "mode": "0644"
+    },
+    {
+      "path": "reviews/ordinary-repair-review.txt",
+      "bytes": 2408,
+      "sha256": "25ae20253c4813e1553f5a7d6d941d0e0d8467f9bfb5ec722dc98cd0de936b04",
+      "mode": "0644"
+    },
+    {
+      "path": "source/initial-X75-replay-repaired-actual532-inputs.json",
+      "bytes": 138485,
+      "sha256": "49365a2068906cf0847ea77751057449b13641020b964fd221af54b4efa115c2",
+      "mode": "0644"
+    },
+    {
+      "path": "source/two-file-replay-repair.diff",
+      "bytes": 3494,
+      "sha256": "81939f5f1670add97c819bfa96aaeabc6a17009eaeca778fd22363ac0953132e",
+      "mode": "0644"
+    }
+  ],
+  "retained_prior_proof_unchanged": {
+    "modal_archive": ".cyril-xavt/evidence-current-modal532-b6a846be.tar.gz",
+    "modal_archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+    "modal_index": ".cyril-xavt/evidence-current-modal532-b6a846be-index.json",
+    "modal_index_sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19",
+    "original_evidence_index": ".cyril-xavt/evidence-index.json",
+    "meaning": "Prior proof remains at its original source/consumer/native scope; not a rerun or current repair-head CI PASS"
+  },
+  "exclusions": [
+    "binaries",
+    "full source trees",
+    "nested archives",
+    "full hosted logs or unrelated CI coverage",
+    "private HOME/credentials/token-helper logs",
+    "new test/runtime execution",
+    "final integration or native acceptance"
+  ]
+}
