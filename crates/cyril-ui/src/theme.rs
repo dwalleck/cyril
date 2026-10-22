@@ -63,7 +63,7 @@ enum SourceColor {
 /// Every variant names a component bundled with Syntect's default theme set;
 /// `tests::all_bundled_syntax_themes_exist` fails if a name drifts out of that
 /// set, so a palette cannot silently render unstyled.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SyntaxTheme {
     Base16EightiesDark,
     Base16OceanLight,
@@ -384,7 +384,7 @@ fn source(id: ThemeId) -> SourceTheme {
 }
 
 /// Resolved semantic colors consumed by renderers.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Theme {
     pub syntax: Option<SyntaxTheme>,
     pub canvas: Color,
@@ -418,6 +418,46 @@ pub struct Theme {
     pub inset_background: Color,
     pub text_secondary: Color,
     pub accent_violet: Color,
+}
+
+/// Concrete inputs consumed by syntax highlighting and its cache identity.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct HighlightStyle {
+    pub syntax: Option<SyntaxTheme>,
+    pub text: Color,
+}
+
+impl From<&Theme> for HighlightStyle {
+    fn from(theme: &Theme) -> Self {
+        Self {
+            syntax: theme.syntax,
+            text: theme.text,
+        }
+    }
+}
+
+/// Direct and nested highlighting inputs consumed by Markdown rendering.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct MarkdownStyle {
+    pub highlight: HighlightStyle,
+    pub code: Color,
+    pub subdued: Color,
+    pub emphasis: Color,
+    pub accent_tertiary: Color,
+    pub accent_quinary: Color,
+}
+
+impl From<&Theme> for MarkdownStyle {
+    fn from(theme: &Theme) -> Self {
+        Self {
+            highlight: HighlightStyle::from(theme),
+            code: theme.code,
+            subdued: theme.subdued,
+            emphasis: theme.emphasis,
+            accent_tertiary: theme.accent_tertiary,
+            accent_quinary: theme.accent_quinary,
+        }
+    }
 }
 
 impl SourceColor {
@@ -847,7 +887,56 @@ pub fn resolve_startup_appearance(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::hash::{DefaultHasher, Hash, Hasher};
     use syntect::highlighting::ThemeSet;
+
+    #[test]
+    fn rendering_styles_project_resolved_inputs() {
+        let mut theme = crate::traits::test_support::marker_theme();
+        theme.syntax = Some(SyntaxTheme::Base16MochaDark);
+        let highlight = HighlightStyle::from(&theme);
+        assert_eq!(
+            highlight,
+            HighlightStyle {
+                syntax: theme.syntax,
+                text: theme.text,
+            }
+        );
+        assert_eq!(
+            MarkdownStyle::from(&theme),
+            MarkdownStyle {
+                highlight,
+                code: theme.code,
+                subdued: theme.subdued,
+                emphasis: theme.emphasis,
+                accent_tertiary: theme.accent_tertiary,
+                accent_quinary: theme.accent_quinary,
+            }
+        );
+    }
+
+    #[test]
+    fn full_theme_hash_includes_previously_omitted_roles_and_syntax() {
+        let fingerprint = |theme: Theme| {
+            let mut hasher = DefaultHasher::new();
+            theme.hash(&mut hasher);
+            hasher.finish()
+        };
+        let base = crate::traits::test_support::marker_theme();
+        let baseline = fingerprint(base);
+        let mut secondary = base;
+        secondary.text_secondary = Color::Indexed(255);
+        let mut violet = base;
+        violet.accent_violet = Color::Indexed(255);
+        let mut syntax = base;
+        syntax.syntax = Some(SyntaxTheme::Base16EightiesDark);
+
+        for changed in [secondary, violet, syntax] {
+            assert_ne!(changed, base);
+            assert_ne!(fingerprint(changed), baseline);
+        }
+        assert_eq!(fingerprint(base), baseline);
+    }
 
     bundled_theme_ids! {
         #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1858,6 +1947,7 @@ mod tests {
         for source in production_sources {
             let source_without_allowed_seams = source
                 .replace("use crate::theme::Theme;", "")
+                .replace("use crate::theme::{MarkdownStyle, Theme};", "")
                 .replace("use crate::theme::{ColorMode, Theme, ThemeId};", "");
             assert!(!source_without_allowed_seams.contains("crate::theme"));
             assert!(!source_without_allowed_seams.contains("theme::"));

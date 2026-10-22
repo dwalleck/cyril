@@ -61,6 +61,10 @@ mod saturation;
 // cyril-sm36: KAS session-scoped settings ride session/new; v2 stays bare.
 mod session_settings;
 mod stall;
+// Root admission/deadline/scoped diagnostics are shared by v2 and KAS.
+mod startup;
+// caar F2: preflight ordering uses a separate base-compatible SDK fixture.
+mod startup_fingerprint;
 // cyril-9104: no `kas`-specific arm — the step answer is a standard prompt.
 mod step_answer;
 // cyril-8wh0: a KAS workflow plan approval carries its typed plan to the App.

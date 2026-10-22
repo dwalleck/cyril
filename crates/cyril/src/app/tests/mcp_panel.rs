@@ -6,6 +6,7 @@ use cyril_core::types::{
     McpOperationError, McpOperationResult, McpOutcome, McpPending, McpPreview, McpPrompt,
     McpPromptArgument, McpRequest, McpResource, McpServer, McpServerStatus, McpSnapshot, McpUpdate,
 };
+use cyril_ui::traits::Activity;
 use ratatui::backend::TestBackend;
 
 fn snapshot(session: &SessionId) -> Arc<McpSnapshot> {
@@ -361,6 +362,131 @@ fn elicitation_decline_notice_does_not_open_a_panel_or_send_a_command() {
         assert!(messages.contains(expected), "missing {expected}");
     }
     assert!(app.ui_state.topmost_overlay().is_none());
+    assert!(commands.try_recv().is_err());
+}
+
+#[rstest::rstest]
+#[case::form(McpElicitationMode::Form, "MCP form elicitation declined")]
+#[case::url(McpElicitationMode::Url, "MCP URL elicitation declined")]
+fn elicitation_decline_reveals_main_after_child_focus_without_changing_authority(
+    #[case] mode: McpElicitationMode,
+    #[case] expected: &str,
+) {
+    let (mut app, mut commands) = test_app_with_engine_and_command_rx(AgentEngine::Kas);
+    let main = SessionId::new("actual-mcp-session");
+    let child = SessionId::new("mcp-decline-viewer");
+    establish_main_session(&mut app, &main);
+    push(&mut app, &main, McpUpdate::Snapshot(snapshot(&main)));
+    assert!(
+        app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            Notification::TurnStarted,
+        ))
+        .is_empty()
+    );
+    assert!(
+        app.handle_notification(RoutedNotification::scoped(
+            main.clone(),
+            Notification::ToolCallStarted(ToolCall::new(
+                ToolCallId::new("mcp-live-tool"),
+                "Active tool".into(),
+                ToolKind::Execute,
+                ToolCallStatus::InProgress,
+                None,
+            )),
+        ))
+        .is_empty()
+    );
+    for _ in 0..40 {
+        app.ui_state.add_system_message("Older main history".into());
+    }
+    assert!(
+        app.handle_notification(agent_text_frame(&main, "Main before MCP decline", true))
+            .is_empty()
+    );
+    assert!(
+        app.handle_notification(agent_text_frame(&child, "Child before MCP decline", true))
+            .is_empty()
+    );
+    app.ui_state.insert_text("keep café draft");
+    app.ui_state.handle_input_key(KeyCode::Left.into());
+    let cursor = app.ui_state.input_cursor();
+    let model = app.session.current_model().map(str::to_owned);
+    let authority = app.session.mcp();
+    assert!(authority.snapshot.is_some());
+    app.ui_state.chat_scroll_up(usize::MAX);
+    assert!(app.ui_state.focus_subagent(child.clone()));
+    assert!(screen(&mut app).contains("Child before MCP decline"));
+    assert!(app.ui_state.chat_scroll_back().is_some());
+    app.redraw_needed = false;
+
+    push(
+        &mut app,
+        &main,
+        McpUpdate::ElicitationDeclined(McpElicitationNotice {
+            session_id: main.clone(),
+            tool_call_id: ToolCallId::new("actual-tool"),
+            mode,
+            message: "real request".into(),
+            url: Some("https://never-open.invalid/".into()),
+        }),
+    );
+
+    let messages = system_messages(&app);
+    assert_eq!(
+        messages
+            .iter()
+            .filter(|text| text.starts_with(expected))
+            .count(),
+        1
+    );
+    for context in [
+        "actual-mcp-session",
+        "actual-tool",
+        "real request",
+        "not opened",
+    ] {
+        assert!(
+            messages
+                .iter()
+                .any(|text| { text.starts_with(expected) && text.contains(context) }),
+            "decline notice lost {context}"
+        );
+    }
+    assert!(app.redraw_needed);
+    assert_eq!(app.ui_state.input_text(), "keep café draft");
+    assert_eq!(app.ui_state.input_cursor(), cursor);
+    assert_eq!(app.session.id(), Some(&main));
+    assert_eq!(app.ui_state.main_session_id(), Some(&main));
+    assert_eq!(app.session.current_model(), model.as_deref());
+    assert_eq!(app.session.status(), &SessionStatus::Busy);
+    assert_eq!(app.ui_state.activity(), Activity::Streaming);
+    assert_eq!(app.ui_state.active_tool_calls().len(), 1);
+    assert!(app.session.last_turn().is_none());
+    assert!(app.ui_state.last_turn().is_none());
+    let retained = app.session.mcp();
+    assert_eq!(retained.session_id, authority.session_id);
+    assert_eq!(retained.snapshot, authority.snapshot);
+    assert_eq!(retained.policy, authority.policy);
+    assert_eq!(retained.diagnostic, authority.diagnostic);
+    assert_eq!(retained.authorization_urls, authority.authorization_urls);
+    assert_eq!(retained.pending, authority.pending);
+    assert_eq!(retained.outcomes, authority.outcomes);
+    let stream = &app.ui_state.subagent_ui().streams()[&child];
+    assert!(stream.messages().is_empty());
+    assert_eq!(stream.streaming_text(), "Child before MCP decline");
+    assert_eq!(stream.activity(), Activity::Streaming);
+    assert!(app.ui_state.topmost_overlay().is_none());
+    assert!(commands.try_recv().is_err());
+
+    let visible = screen(&mut app);
+    assert!(
+        visible.contains(expected),
+        "decline notice remains behind child focus or prior main browse:\n{visible}"
+    );
+    assert!(app.ui_state.subagent_ui().focused_session_id().is_none());
+    assert_eq!(app.ui_state.chat_scroll_back(), None);
+    assert!(!app.ui_state.has_modal_overlay());
     assert!(commands.try_recv().is_err());
 }
 

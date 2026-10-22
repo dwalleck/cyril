@@ -14,6 +14,8 @@ use tokio::time::{sleep, timeout};
 
 type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 
+const SHORT_STARTUP_TIMEOUT: Duration = Duration::from_secs(1);
+
 struct Peer {
     root: tempfile::TempDir,
     config: ReviewerConfig,
@@ -43,7 +45,8 @@ impl Peer {
                 std::env::var_os("PATH").ok_or("PATH missing")?,
             )]),
             limits: ReviewLimits {
-                startup_timeout: Duration::from_secs(1),
+                // Positive tests exercise real process startup, not a one-second SLA.
+                startup_timeout: Duration::from_secs(5),
                 stall_threshold: Duration::from_millis(100),
                 ..ReviewLimits::default()
             },
@@ -67,7 +70,8 @@ impl Peer {
     }
 
     async fn event(&self, name: &str) -> TestResult<Value> {
-        timeout(Duration::from_secs(5), async {
+        // Leave observation headroom beyond the fixture's startup budget.
+        timeout(Duration::from_secs(10), async {
             loop {
                 if let Some(row) = self.journal()?.into_iter().find(|row| row["event"] == name) {
                     return Ok(row);
@@ -129,7 +133,8 @@ fn complete(outcome: ReviewOutcome) -> TestResult<String> {
 
 #[tokio::test]
 async fn model_mismatch_never_starts_inspection() -> TestResult {
-    let peer = Peer::new("wrong")?;
+    let mut peer = Peer::new("wrong")?;
+    peer.config.limits.startup_timeout = SHORT_STARTUP_TIMEOUT;
     let result = finish(peer.reviewer()?.start(input("visible")).await?).await?;
     assert!(matches!(
         result,
@@ -144,7 +149,8 @@ async fn model_mismatch_never_starts_inspection() -> TestResult {
 }
 
 async fn readiness_rejects(scenario: &str) -> TestResult {
-    let peer = Peer::new(scenario)?;
+    let mut peer = Peer::new(scenario)?;
+    peer.config.limits.startup_timeout = SHORT_STARTUP_TIMEOUT;
     assert!(matches!(
         finish(peer.reviewer()?.start(input("visible")).await?).await?,
         ReviewOutcome::Incomplete {
@@ -174,6 +180,10 @@ async fn missing_configuration_never_starts() -> TestResult {
 #[tokio::test]
 async fn late_configuration_starts_once() -> TestResult {
     let peer = Peer::new("late")?;
+    fs::write(
+        peer.root.path().join("peer-config.json"),
+        serde_json::to_vec(&json!({"scenario": "late", "configuration_delay_seconds": 1.2}))?,
+    )?;
     let result = finish(peer.reviewer()?.start(input("authorized")).await?).await?;
     assert_eq!(complete(result)?, "authorized");
     let prompts = peer.events("prompt")?;
@@ -185,6 +195,13 @@ async fn late_configuration_starts_once() -> TestResult {
         .find(|event| event["model"] == "claude-sonnet-4.6")
         .ok_or("missing valid config")?;
     assert!(prompts[0]["time"].as_f64().ok_or("time")? >= valid["time"].as_f64().ok_or("time")?);
+    let switched = peer.events("set_mode")?.remove(0);
+    assert!(
+        valid["time"].as_f64().ok_or("configuration time")?
+            - switched["time"].as_f64().ok_or("mode time")?
+            > SHORT_STARTUP_TIMEOUT.as_secs_f64(),
+        "positive readiness did not cross the short timeout boundary"
+    );
     peer.cleaned()
 }
 
@@ -326,6 +343,7 @@ async fn stalled_turn_stays_active() -> TestResult {
     let peer = Peer::new("stall")?;
     let run = peer.reviewer()?.start(input("visible")).await?;
     let mut status = run.subscribe();
+    peer.event("prompt").await?;
     // Core samples stalled turns every five seconds, independently of threshold.
     timeout(Duration::from_secs(7), async {
         loop {
@@ -427,27 +445,19 @@ async fn dropping_owner_terminates_process_tree_before_removing_evidence() -> Te
     peer.event("prompt").await?;
     let cwd = std::path::PathBuf::from(spawn["cwd"].as_str().ok_or("cwd")?);
     assert!(cwd.join("evidence/manifest.json").is_file());
+    let private_root = cwd.parent().ok_or("private runtime root")?;
     let child = spawn["child"].as_u64().ok_or("child")?;
     let pid = spawn["pid"].as_u64().ok_or("pid")?;
     drop(run);
     timeout(Duration::from_secs(15), async {
-        while fs::read_dir(&peer.config.runtime_parent)?
-            .next()
-            .transpose()?
-            .is_some()
-        {
+        while !runtime_drop_cleanup_complete(private_root, &[pid, child])? {
             sleep(Duration::from_millis(20)).await;
         }
         Ok::<_, Box<dyn Error>>(())
     })
     .await??;
     for id in [pid, child] {
-        // A reparented zombie is already terminated; it cannot read or mutate.
-        match fs::read_to_string(format!("/proc/{id}/stat")) {
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Ok(stat) => assert_eq!(stat.split_whitespace().nth(2), Some("Z")),
-            Err(error) => return Err(error.into()),
-        }
+        assert!(process_has_exited(id)?, "process {id} still running");
     }
     peer.cleaned()
 }
@@ -669,7 +679,9 @@ async fn failed_tool_is_observed_without_inventing_permission_denial() -> TestRe
 
 #[tokio::test]
 async fn continuation_after_startup_deadline_still_completes() -> TestResult {
-    let peer = Peer::new("slow-follow-up")?;
+    let mut peer = Peer::new("slow-follow-up")?;
+    // The fixture's 1.2s first turn must cross this deadline before continuing.
+    peer.config.limits.startup_timeout = SHORT_STARTUP_TIMEOUT;
     let mut review = input("visible");
     review.follow_up_instructions.push("Continue".into());
     assert_eq!(
@@ -677,6 +689,49 @@ async fn continuation_after_startup_deadline_still_completes() -> TestResult {
         "visiblecontinued"
     );
     peer.cleaned()
+}
+
+#[cfg(target_os = "linux")]
+fn process_has_exited(id: u64) -> TestResult<bool> {
+    match fs::read_to_string(format!("/proc/{id}/stat")) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(true),
+        // A reparented zombie is terminated; it cannot read or mutate evidence.
+        Ok(stat) => Ok(stat.split_whitespace().nth(2) == Some("Z")),
+        Err(error) => Err(error.into()),
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn runtime_drop_cleanup_complete(private_root: &Path, processes: &[u64]) -> TestResult<bool> {
+    let root_removed = !private_root.try_exists()?;
+    let mut processes_exited = true;
+    for &id in processes {
+        processes_exited &= process_has_exited(id)?;
+    }
+    Ok(root_removed && processes_exited)
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn runtime_drop_cleanup_requires_owning_root_and_process_exit() -> TestResult {
+    let parent = tempfile::tempdir()?;
+    let private_root = parent.path().join("run");
+    let workspace = private_root.join("workspace");
+    fs::create_dir_all(&workspace)?;
+    fs::create_dir(private_root.join("home"))?;
+
+    // Recursive removal can delete the workspace before the enclosing root.
+    fs::remove_dir(&workspace)?;
+    assert!(!runtime_drop_cleanup_complete(&private_root, &[])?);
+
+    fs::remove_dir_all(&private_root)?;
+    // Filesystem cleanup alone does not acknowledge process exit.
+    assert!(!runtime_drop_cleanup_complete(
+        &private_root,
+        &[u64::from(std::process::id())]
+    )?);
+    assert!(runtime_drop_cleanup_complete(&private_root, &[])?);
+    Ok(())
 }
 
 #[cfg(target_os = "linux")]
@@ -692,16 +747,27 @@ fn runtime_drop_retains_evidence_until_core_completion() -> TestResult {
         Ok::<_, Box<dyn Error>>((run, peer.event("spawn").await?))
     })?;
     let cwd = std::path::PathBuf::from(spawn["cwd"].as_str().ok_or("cwd")?);
+    let private_root = cwd.parent().ok_or("private runtime root")?;
+    let processes = [
+        spawn["pid"].as_u64().ok_or("pid")?,
+        spawn["child"].as_u64().ok_or("child")?,
+    ];
     drop(runtime);
     drop(run);
     let deadline = Instant::now() + Duration::from_secs(15);
     // Observe the full EOF window even if a defect removes the tree early.
-    while (cwd.exists() || peer.events("cleanup-window-end")?.is_empty())
+    while (!runtime_drop_cleanup_complete(private_root, &processes)?
+        || peer.events("cleanup-window-end")?.is_empty())
         && Instant::now() < deadline
     {
         std::thread::sleep(Duration::from_millis(10));
     }
     assert!(!cwd.exists(), "cleanup waiter did not release evidence");
+    assert!(
+        !private_root.try_exists()?,
+        "cleanup waiter did not remove private root {}",
+        private_root.display()
+    );
     for event in ["cleanup-window", "cleanup-window-end"] {
         assert_eq!(
             peer.events(event)?
@@ -711,13 +777,8 @@ fn runtime_drop_retains_evidence_until_core_completion() -> TestResult {
             "{event}: evidence removed before core completion"
         );
     }
-    for key in ["pid", "child"] {
-        let id = spawn[key].as_u64().ok_or("pid")?;
-        match fs::read_to_string(format!("/proc/{id}/stat")) {
-            Err(error) if error.kind() == std::io::ErrorKind::NotFound => {}
-            Ok(stat) => assert_eq!(stat.split_whitespace().nth(2), Some("Z")),
-            Err(error) => return Err(error.into()),
-        }
+    for id in processes {
+        assert!(process_has_exited(id)?, "process {id} still running");
     }
     peer.cleaned()
 }

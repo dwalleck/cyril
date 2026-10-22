@@ -1117,6 +1117,11 @@ pub(crate) fn to_ext_notification(
                 .filter(|s| !s.is_empty())
                 .map(String::from);
             Ok(Some(Notification::McpServerInitFailure {
+                session_id: params
+                    .get("sessionId")
+                    .and_then(|value| value.as_str())
+                    .filter(|id| !id.is_empty())
+                    .map(SessionId::new),
                 server_name,
                 error,
             }))
@@ -1141,7 +1146,15 @@ pub(crate) fn to_ext_notification(
                 tracing::warn!("mcp/oauth_request missing oauthUrl");
                 Ok(None)
             } else {
-                Ok(Some(Notification::McpOAuthRequest { server_name, url }))
+                Ok(Some(Notification::McpOAuthRequest {
+                    session_id: params
+                        .get("sessionId")
+                        .and_then(|value| value.as_str())
+                        .filter(|id| !id.is_empty())
+                        .map(SessionId::new),
+                    server_name,
+                    url,
+                }))
             }
         }
         "kiro.dev/mcp/server_initialized" => {
@@ -1154,7 +1167,14 @@ pub(crate) fn to_ext_notification(
                     "unknown"
                 })
                 .to_string();
-            Ok(Some(Notification::McpServerInitialized { server_name }))
+            Ok(Some(Notification::McpServerInitialized {
+                session_id: params
+                    .get("sessionId")
+                    .and_then(|value| value.as_str())
+                    .filter(|id| !id.is_empty())
+                    .map(SessionId::new),
+                server_name,
+            }))
         }
         "kiro.dev/agent/not_found" => {
             let requested = params

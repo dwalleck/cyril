@@ -1,10 +1,21 @@
 {
   "issue": "cyril-tqr8",
   "date": "2026-10-20",
-  "status": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
-  "ready_for_parent_staging_issue_close_and_PR_actions": true,
+  "status": "HISTORICAL_A09_PUBLICATION_RECORD_CURRENT_PR193_REPAIR_LINKED_SEPARATELY",
+  "ready_for_parent_staging_issue_close_and_PR_actions": false,
   "shipping_authorized_by_this_record": false,
   "publication_actions_performed": false,
+  "historical_status_before_PR193_repair": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+  "historical_ready_for_parent_staging_issue_close_and_PR_actions": true,
+  "scope_of_legacy_fields": "All original a09 source, qualification, six-capture runtime, documentation/index hashes and archives below are retained prior-checkpoint evidence. Fields originally named current are historical at that checkpoint, not current repaired-source or freshly edited documentation identities; do not use their inventories as the new staging allowlist.",
+  "current_PR193_repair": {
+    "evidence_index": ".cyril-tqr8/current-publication-evidence/pr193-repair/index.json",
+    "source_identity_kind": "bounded498actual-input-SHA256-descriptor-NOT-Git-tree-or-commit",
+    "source_descriptor": "d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117",
+    "status": "SCOPED_LOCAL_QUALIFICATION_PASS_REPAIR_REVIEW_NO_FINDINGS_ONE_OWNED_CONSUMER_PASS",
+    "publication_shipping_or_issue_closure_authorized": false,
+    "remaining": "Tqr main038 integration/current-head PR193 CI still parent-owned; Peaq194 merged with refreshed greenCI, u62f attribution still open. Native/final NK/C4/Caar/C6/platform acceptance unclaimed."
+  },
   "qualified_source_state": {
     "git_tree_not_commit": "a09f1dfb63b17d380f4661823de431bfb5d72160",
     "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",

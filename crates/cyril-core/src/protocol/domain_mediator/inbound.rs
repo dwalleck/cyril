@@ -32,9 +32,12 @@ impl DomainMediator {
 
     pub(super) async fn handle_routed_with_source_disposition(
         &mut self,
-        routed: RoutedNotification,
+        mut routed: RoutedNotification,
         terminal_disposition: Option<crate::types::SourceTurnDisposition>,
     ) -> crate::Result<bool> {
+        routed.startup = self
+            .startup
+            .observe(&routed.notification, routed.session_id.as_ref());
         let routed = match routed {
             RoutedNotification {
                 notification: Notification::McpUpdate(update),
@@ -209,6 +212,18 @@ impl DomainMediator {
                         ..
                     }
                     | Notification::MetadataUpdated {
+                        session_id: Some(id),
+                        ..
+                    }
+                    | Notification::McpServerInitialized {
+                        session_id: Some(id),
+                        ..
+                    }
+                    | Notification::McpServerInitFailure {
+                        session_id: Some(id),
+                        ..
+                    }
+                    | Notification::McpOAuthRequest {
                         session_id: Some(id),
                         ..
                     } => RoutedNotification::scoped(id.clone(), notification),

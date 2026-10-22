@@ -85,7 +85,7 @@ impl UiState {
     pub(crate) fn apply_mcp_notice(&mut self, update: &McpUpdate) -> bool {
         match update {
             McpUpdate::ElicitationDeclined(notice) => {
-                self.add_system_message(presentation::elicitation_notice(notice));
+                self.add_mcp_notice(presentation::elicitation_notice(notice));
                 true
             }
             _ => false,

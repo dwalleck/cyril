@@ -38,7 +38,7 @@ pub use command::{
 pub use event::{
     AgentInitiation, BridgeCommand, Notification, PermissionOption, PermissionOptionId,
     PermissionOptionKind, PermissionRequest, PermissionResponse, RoutedNotification,
-    SET_CONFIG_OPTION_OPERATION, TrustOption,
+    SET_CONFIG_OPTION_OPERATION, StartupAttemptId, StartupObservation, TrustOption,
 };
 pub use hook::HookInfo;
 pub use kas_config::{

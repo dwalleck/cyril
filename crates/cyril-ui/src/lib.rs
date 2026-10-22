@@ -18,6 +18,7 @@ pub mod state;
 pub mod subagent_ui;
 pub mod text;
 pub mod theme;
+mod tool_diff;
 pub mod traits;
 pub(crate) mod turn_labels;
 pub mod widgets;

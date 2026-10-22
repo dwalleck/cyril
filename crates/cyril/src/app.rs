@@ -1350,6 +1350,7 @@ impl App {
             // turns are announced once per turn by the bridge (design C10); it
             // is bound only to carry it through the pending buffer.
             origin,
+            startup,
         } = routed;
 
         if usage_only {
@@ -1471,14 +1472,27 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Route session-scoped notifications. `classify_notification_route` is
-        // total over its four inputs, so this match has no routing decision of
-        // its own to make — cyril-tglp was exactly such a decision (an extra
-        // `&& self.session.id().is_some()`) leaking back into the caller and
-        // re-admitting an unattributable frame to the main pipeline.
+        // Startup provenance is display-only. A requested Load target may
+        // already be a tracked child; an unbound New report has no such claim.
+        // Everything else retains the ordinary four-input routing decision.
         if let Some(ref sid) = session_id {
             let tracked = self.ui_state.subagent_tracker().is_subagent(sid);
             let workflow_owned = self.workflow_tracker.session_owner(sid).is_some();
+            let show_startup = match startup {
+                Some(StartupObservation::BoundRequestedLoad { .. }) => true,
+                Some(StartupObservation::UnboundNew { .. }) => {
+                    !tracked && !workflow_owned && self.session.id() != Some(sid)
+                }
+                None => false,
+            };
+            if show_startup
+                && self
+                    .ui_state
+                    .show_unbound_mcp_progress(sid, &notification, startup)
+            {
+                self.redraw_needed = true;
+                return Vec::new();
+            }
             match classify_notification_route(Some(sid), self.session.id(), tracked, workflow_owned)
             {
                 NotificationRoute::Workflow => {
@@ -1507,6 +1521,13 @@ impl App {
                     return Vec::new();
                 }
                 NotificationRoute::Pending => {
+                    if self
+                        .ui_state
+                        .show_unbound_mcp_progress(sid, &notification, startup)
+                    {
+                        self.redraw_needed = true;
+                        return Vec::new();
+                    }
                     if self.pending_session_notifications.len() == MAX_PENDING_SESSION_NOTIFICATIONS
                     {
                         let dropped = self.pending_session_notifications.pop_front();
@@ -1529,6 +1550,7 @@ impl App {
                             notification,
                             turn,
                             origin,
+                            startup,
                         });
                     return Vec::new();
                 }
@@ -1644,15 +1666,11 @@ impl App {
             self.redraw_needed = true;
         }
 
-        // Handle MCP OAuth request — display URL for the user to copy
-        if let Notification::McpOAuthRequest {
-            ref server_name,
-            ref url,
-        } = notification
+        // The UI owns literal, safe notice formatting; delivery is not OAuth
+        // completion. Scoped peers took their own history route above.
+        if matches!(&notification, Notification::McpOAuthRequest { .. })
+            && self.ui_state.show_mcp_progress(&notification)
         {
-            self.ui_state.add_system_message(format!(
-                "MCP server '{server_name}' requires authentication. Open in browser: {url}"
-            ));
             self.redraw_needed = true;
         }
 
@@ -7424,8 +7442,12 @@ mod tests {
     /// draw path (which also records the frame size in `UiState`), and return
     /// the screen as one string per row.
     fn vojx_draw(app: &mut App, height: u16) -> Vec<String> {
-        let mut terminal =
-            Terminal::new(ratatui::backend::TestBackend::new(80, height)).expect("test terminal");
+        approval_draw_at(app, 80, height)
+    }
+
+    fn approval_draw_at(app: &mut App, width: u16, height: u16) -> Vec<String> {
+        let mut terminal = Terminal::new(ratatui::backend::TestBackend::new(width, height))
+            .expect("test terminal");
         app.draw_frame(&mut terminal, "vojx draw").expect("draw");
         let buffer = terminal.backend().buffer();
         (0..buffer.area.height)
@@ -7613,6 +7635,459 @@ mod tests {
             editor_without_path > 0,
             path.is_some(),
             "editor-only heights: {editor_without_path}"
+        );
+    }
+
+    /// cyril-un4p: the rendered buffer, not page geometry, determines whether
+    /// Enter has sufficient target context. Exercise both axes and the
+    /// notice that formerly displaced the path on the reason page.
+    #[rstest::rstest]
+    #[case::options(false, false)]
+    #[case::reason(true, false)]
+    #[case::reason_with_notice(true, true)]
+    #[tokio::test]
+    async fn approval_confirm_requires_visible_path_tail_at_every_size(
+        #[case] reason_phase: bool,
+        #[case] notice: bool,
+        #[values(1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 24, 60, 80)] width: u16,
+    ) {
+        let mut answered = 0;
+        let mut ignored = 0;
+        for height in 4..=24 {
+            let mut app = test_app();
+            let (request, mut receiver) = vojx_request(Some(VOJX_PATH));
+            app.ui_state.show_approval(request);
+            let draft = if notice {
+                "x".repeat(4_096)
+            } else {
+                "why".into()
+            };
+            if reason_phase {
+                approval_draw_at(&mut app, 80, 40);
+                app.handle_key(key(KeyCode::Down)).await.expect("reject");
+                app.handle_key(key(KeyCode::Char('r')))
+                    .await
+                    .expect("reason");
+                app.handle_terminal_event(Event::Paste(draft.clone()))
+                    .await
+                    .expect("reason draft");
+                if notice {
+                    app.handle_terminal_event(Event::Paste("overflow".into()))
+                        .await
+                        .expect("refused insertion");
+                    assert!(
+                        app.ui_state
+                            .approval()
+                            .and_then(|approval| match &approval.phase {
+                                cyril_ui::traits::ApprovalPhase::EnterReason { editor, .. } => {
+                                    editor.notice()
+                                }
+                                _ => None,
+                            })
+                            .is_some()
+                    );
+                }
+            }
+            let screen = approval_draw_at(&mut app, width, height);
+            // Read wrapped target rows back from the drawn border cells:
+            // the last two filename characters can straddle physical rows.
+            // The inline one-row layout is checked directly as well.
+            let drawn_path: String = screen
+                .iter()
+                .filter_map(|row| {
+                    let start = row.find("│  ")? + "│  ".len();
+                    let end = row.rfind('│')?;
+                    row.get(start..end).map(str::trim_end)
+                })
+                .collect();
+            let tail_drawn =
+                drawn_path.contains("md") || screen.iter().any(|row| row.contains("md"));
+            let action_drawn = screen.iter().any(|row| {
+                if reason_phase {
+                    row.contains('█')
+                } else {
+                    row.contains('▸')
+                }
+            });
+            let should_answer = tail_drawn && action_drawn;
+            let context = format!(
+                "{width}x{height} reason={reason_phase} notice={notice}\n{}",
+                screen.join("\n")
+            );
+            if reason_phase && width == 80 {
+                let inner = vojx_inner_rows(&screen, "Reject with reason");
+                if inner == Some(2) {
+                    assert!(tail_drawn && action_drawn, "path + editor first: {context}");
+                    assert!(
+                        !screen.iter().any(|row| row.contains("Limit:")),
+                        "chrome cannot displace the path: {context}"
+                    );
+                }
+            }
+            app.handle_key(key(KeyCode::Enter)).await.expect("enter");
+            match receiver.try_recv() {
+                Ok(response) => {
+                    assert!(should_answer, "answered without visible context: {context}");
+                    if reason_phase {
+                        assert!(
+                            matches!(response, PermissionResponse::RejectWithReason { reason, .. } if reason == draft),
+                            "wrong reason response: {context}"
+                        );
+                    } else {
+                        assert!(
+                            matches!(response, PermissionResponse::Selected { option_id, .. } if option_id.as_str() == "allow"),
+                            "wrong option response: {context}"
+                        );
+                    }
+                    answered += 1;
+                }
+                Err(_) => {
+                    assert!(!should_answer, "ignored visible context: {context}");
+                    assert!(app.ui_state.has_approval(), "draft/request lost: {context}");
+                    ignored += 1;
+                    app.handle_key(key(KeyCode::Esc)).await.expect("escape");
+                    if reason_phase {
+                        app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+                    }
+                    assert!(matches!(
+                        receiver.try_recv(),
+                        Ok(PermissionResponse::Cancel)
+                    ));
+                }
+            }
+        }
+        assert!(
+            ignored > 0,
+            "must include hidden approvals at width {width}"
+        );
+        if width >= 12 {
+            assert!(
+                answered > 0,
+                "must include actionable approvals at width {width}"
+            );
+        }
+    }
+
+    /// cyril-un4p: a pathless approval must not bypass the inner-width
+    /// guard merely because its selection/editor has an allocated row.
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn pathless_approval_cannot_confirm_a_border_only_width(
+        #[values(false, true)] reason_phase: bool,
+        #[values(1, 2, 3, 4, 5, 6)] width: u16,
+    ) {
+        let mut app = test_app();
+        let (request, mut receiver) = vojx_request(None);
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+        }
+        approval_draw_at(&mut app, width, 24);
+        app.handle_key(key(KeyCode::Enter)).await.expect("enter");
+        assert!(
+            receiver.try_recv().is_err(),
+            "width={width}, reason={reason_phase}"
+        );
+        assert!(app.ui_state.has_approval());
+        app.handle_key(key(KeyCode::Esc)).await.expect("escape");
+        if reason_phase {
+            app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+        }
+        assert!(matches!(
+            receiver.try_recv(),
+            Ok(PermissionResponse::Cancel)
+        ));
+    }
+
+    /// Enough physical space for two path rows and the action must remain
+    /// actionable, rather than spending the identifying row on chrome.
+    #[rstest::rstest]
+    #[case::options(false, false)]
+    #[case::reason(true, false)]
+    #[case::reason_with_notice(true, true)]
+    #[tokio::test]
+    async fn un4p_identifying_path_rows_keep_narrow_approval_actionable(
+        #[case] reason_phase: bool,
+        #[case] notice: bool,
+    ) {
+        let mut app = test_app();
+        let (request, mut receiver) = vojx_request(Some("/tmp/a"));
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+            if notice {
+                app.handle_terminal_event(Event::Paste("x".repeat(4_096)))
+                    .await
+                    .expect("refused insertion");
+                let cyril_ui::traits::ApprovalPhase::EnterReason { editor, .. } =
+                    &app.ui_state.approval().expect("reason approval").phase
+                else {
+                    panic!("reason editor must stay active");
+                };
+                assert_eq!(editor.text(), "why");
+                assert!(editor.notice().is_some());
+            }
+        }
+
+        // A ten-column frame gives a six-column popup at x=2. Height
+        // twelve leaves three inner popup rows above the protected input.
+        let screen = approval_draw_at(&mut app, 10, 12);
+        let context = format!(
+            "reason={reason_phase} notice={notice}\n{}",
+            screen.join("\n")
+        );
+        let top = screen
+            .iter()
+            .position(|row| row.chars().nth(2) == Some('┌'))
+            .expect("popup top border");
+        assert_eq!(screen[top].chars().nth(7), Some('┐'), "{context}");
+        let body: Vec<String> = screen[top + 1..]
+            .iter()
+            .take_while(|row| row.chars().nth(2) == Some('│'))
+            .map(|row| row.chars().skip(3).take(4).collect())
+            .collect();
+        assert_eq!(body.len(), 3, "{context}");
+        let expected = ["/…", "/a", if reason_phase { "why█" } else { "▸ Al" }];
+        let drawn: Vec<_> = body
+            .iter()
+            .map(|row| row.strip_prefix("  ").unwrap_or(row).trim_end())
+            .collect();
+        assert_eq!(drawn, expected, "{context}");
+
+        app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+        match receiver.try_recv() {
+            Ok(PermissionResponse::Selected { option_id, .. }) if !reason_phase => {
+                assert_eq!(option_id.as_str(), "allow", "{context}");
+            }
+            Ok(PermissionResponse::RejectWithReason { option_id, reason }) if reason_phase => {
+                assert_eq!(option_id.as_str(), "reject", "{context}");
+                assert_eq!(reason, "why", "{context}");
+            }
+            response => {
+                panic!("identifying path plus action must permit Enter: {response:?}\n{context}")
+            }
+        }
+        assert!(!app.ui_state.has_approval(), "{context}");
+    }
+
+    /// A larger preferred budget must not replace an available identifying
+    /// elision with whole-path wrapping whose prefix is physically clipped.
+    #[rstest::rstest]
+    #[tokio::test]
+    async fn un4p_nonmonotone_path_fit_keeps_approval_actionable(
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        let mut app = test_app();
+        let (request, mut receiver) = vojx_request(Some("界/ab"));
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+        }
+
+        let height = if reason_phase { 20 } else { 16 };
+        let screen = approval_draw_at(&mut app, 9, height);
+        let context = format!("reason={reason_phase}\n{}", screen.join("\n"));
+        let top = screen
+            .iter()
+            .position(|row| row.chars().nth(2) == Some('┌'))
+            .expect("popup top border");
+        assert_eq!(screen[top].chars().nth(6), Some('┐'), "{context}");
+        let body: Vec<String> = screen[top + 1..]
+            .iter()
+            .take_while(|row| row.chars().nth(2) == Some('│'))
+            .map(|row| row.chars().skip(3).take(3).collect())
+            .collect();
+        assert_eq!(body.len(), if reason_phase { 11 } else { 7 }, "{context}");
+        assert!(
+            body.iter()
+                .any(|row| row.contains(if reason_phase { '█' } else { '▸' })),
+            "the editor/selection must actually be drawn: {context}"
+        );
+        let path: Vec<_> = body
+            .iter()
+            .filter_map(|row| row.strip_prefix("  ").map(str::trim_end))
+            .filter(|row| !row.is_empty())
+            .collect();
+        assert!(path.ends_with(&["a", "b"]), "fixture tail: {context}");
+
+        app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+        match receiver.try_recv() {
+            Ok(PermissionResponse::Selected { option_id, .. }) if !reason_phase => {
+                assert_eq!(option_id.as_str(), "allow", "{context}");
+            }
+            Ok(PermissionResponse::RejectWithReason { option_id, reason }) if reason_phase => {
+                assert_eq!(option_id.as_str(), "reject", "{context}");
+                assert_eq!(reason, "why", "{context}");
+            }
+            response => {
+                panic!("an available identifying fit must permit Enter: {response:?}\n{context}")
+            }
+        }
+        assert_eq!(
+            path,
+            ["…", "a", "b"],
+            "the selected fit must actually be painted: {context}"
+        );
+        assert!(!app.ui_state.has_approval(), "{context}");
+    }
+
+    /// A literal omission glyph and a one-character filename are valid
+    /// targets when the complete path is actually visible.
+    #[rstest::rstest]
+    #[case::literal_ellipsis("/tmp/report…")]
+    #[case::one_character("a")]
+    #[tokio::test]
+    async fn un4p_review_fully_visible_literal_targets_can_confirm(
+        #[case] target: &str,
+        #[values(false, true)] reason_phase: bool,
+    ) {
+        let mut app = test_app();
+        let (request, mut receiver) = vojx_request(Some(target));
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        if reason_phase {
+            app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+            app.handle_key(key(KeyCode::Char('r')))
+                .await
+                .expect("reason");
+            app.handle_terminal_event(Event::Paste("why".into()))
+                .await
+                .expect("draft");
+        }
+        let screen = approval_draw_at(&mut app, 80, 40);
+        let context = format!(
+            "target={target:?} reason={reason_phase}\n{}",
+            screen.join("\n")
+        );
+        assert!(
+            screen
+                .iter()
+                .any(|row| row.trim().trim_matches('│').trim() == target),
+            "the complete literal target must be drawn: {context}"
+        );
+        assert!(
+            screen.iter().any(|row| row.contains(if reason_phase {
+                "why█"
+            } else {
+                "▸ Allow"
+            })),
+            "the selected action or reason editor must be drawn: {context}"
+        );
+
+        app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+        match receiver.try_recv() {
+            Ok(PermissionResponse::Selected { option_id, .. }) if !reason_phase => {
+                assert_eq!(option_id.as_str(), "allow", "{context}");
+            }
+            Ok(PermissionResponse::RejectWithReason { option_id, reason }) if reason_phase => {
+                assert_eq!(option_id.as_str(), "reject", "{context}");
+                assert_eq!(reason, "why", "{context}");
+            }
+            response => {
+                panic!("a fully visible target must permit confirmation: {response:?}\n{context}")
+            }
+        }
+        assert!(!app.ui_state.has_approval(), "{context}");
+    }
+
+    /// Scalar widths must not authorize a target whose final emoji-style
+    /// grapheme is clipped by the actual rendered path row.
+    #[tokio::test]
+    async fn un4p_review_clipped_target_grapheme_cannot_submit_reason() {
+        const TARGET: &str = "#\u{FE0F}#\u{FE0F}";
+
+        let mut app = test_app();
+        let (request, mut receiver) = vojx_request(Some(TARGET));
+        app.ui_state.show_approval(request);
+        approval_draw_at(&mut app, 80, 40);
+        app.handle_key(key(KeyCode::Down)).await.expect("Reject");
+        app.handle_key(key(KeyCode::Char('r')))
+            .await
+            .expect("reason");
+        app.handle_terminal_event(Event::Paste("why".into()))
+            .await
+            .expect("draft");
+
+        // Four horizontal margin cells leave a six-column popup. At
+        // height eleven, the five-row input leaves two popup inner rows:
+        // one target row (two text cells after the indent) and the editor.
+        let screen = approval_draw_at(&mut app, 10, 11);
+        let context = screen.join("\n");
+        let top = screen
+            .iter()
+            .position(|row| row.contains('┌'))
+            .expect("popup border");
+        let border: Vec<_> = screen[top].chars().collect();
+        let left = border
+            .iter()
+            .position(|ch| *ch == '┌')
+            .expect("left corner");
+        let right = border
+            .iter()
+            .position(|ch| *ch == '┐')
+            .expect("right corner");
+        assert_eq!(right - left + 1, 6, "{context}");
+        let inner_rows: Vec<_> = screen[top + 1..]
+            .iter()
+            .take_while(|row| row.chars().nth(left) == Some('│'))
+            .collect();
+        assert_eq!(inner_rows.len(), 2, "{context}");
+        assert!(
+            inner_rows.iter().any(|row| row.contains("why█")),
+            "{context}"
+        );
+        let drawn_target_graphemes: usize = inner_rows
+            .iter()
+            .map(|row| row.matches("#\u{FE0F}").count())
+            .sum();
+        assert!(
+            drawn_target_graphemes < 2,
+            "the complete target must not fit: {context}"
+        );
+
+        app.handle_key(key(KeyCode::Enter)).await.expect("Enter");
+        assert!(
+            matches!(
+                receiver.try_recv(),
+                Err(tokio::sync::oneshot::error::TryRecvError::Empty)
+            ),
+            "a clipped target must not authorize the reason: {context}"
+        );
+        let cyril_ui::traits::ApprovalPhase::EnterReason { editor, .. } =
+            &app.ui_state.approval().expect("request stays open").phase
+        else {
+            panic!("the reason editor must remain active: {context}");
+        };
+        assert_eq!(editor.text(), "why", "{context}");
+        app.handle_key(key(KeyCode::Esc))
+            .await
+            .expect("back to options");
+        assert!(app.ui_state.has_approval(), "{context}");
+        app.handle_key(key(KeyCode::Esc)).await.expect("cancel");
+        assert!(
+            matches!(receiver.try_recv(), Ok(PermissionResponse::Cancel)),
+            "{context}"
         );
     }
 
@@ -8264,58 +8739,6 @@ mod tests {
         Notification::Workflow(Box::new(WorkflowEvent::RunCompleted(completion)))
     }
 
-    /// A dispatch interested in every callsite that captures nothing itself.
-    ///
-    /// `tracing` caches a callsite's interest **process-wide**, and the guard
-    /// callsites under test are also driven by tests that install no subscriber
-    /// (`paste_mouse_and_voice_respect_every_overlay`,
-    /// `usage_modal_command_and_key_priority`), which caches them as
-    /// uninterested — after which a `with_default` capture records nothing at
-    /// all. Measured on this toolchain, with the log fence below:
-    ///
-    /// | arrangement                                            | result |
-    /// |--------------------------------------------------------|--------|
-    /// | fence alone                                            | pass   |
-    /// | fence beside a bare driver, fmt capture                | empty  |
-    /// | fence beside a bare driver, `Interest::always` capture | empty  |
-    /// | …plus `rebuild_interest_cache` under the capture       | serial pass, parallel empty |
-    /// | …with every driver individually wrapped                | pass, until the next bare driver |
-    ///
-    /// An always-interested **global** default is what holds: it rebuilds the
-    /// interest cache on install, and from then on a bare evaluation caches
-    /// `always` rather than `never`, leaving the per-call decision to whichever
-    /// dispatch the current thread has installed. It captures nothing itself
-    /// (`enabled` is `false`), so events still go nowhere unless a test installs
-    /// a capture.
-    struct AlwaysInterested;
-
-    impl tracing::Subscriber for AlwaysInterested {
-        fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
-            false
-        }
-
-        fn register_callsite(
-            &self,
-            _metadata: &'static tracing::Metadata<'static>,
-        ) -> tracing::subscriber::Interest {
-            tracing::subscriber::Interest::always()
-        }
-
-        fn new_span(&self, _attributes: &tracing::span::Attributes<'_>) -> tracing::span::Id {
-            tracing::span::Id::from_u64(1)
-        }
-
-        fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
-
-        fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
-
-        fn event(&self, _event: &tracing::Event<'_>) {}
-
-        fn enter(&self, _span: &tracing::span::Id) {}
-
-        fn exit(&self, _span: &tracing::span::Id) {}
-    }
-
     /// Run `f` under a WARN-level capture subscriber; return its result and
     /// the captured log text.
     fn with_captured_logs<T>(f: impl FnOnce() -> T) -> (T, String) {
@@ -8325,12 +8748,6 @@ mod tests {
     /// Run `f` under a capture subscriber admitting events up to `level`;
     /// return its result and the captured log text.
     fn with_captured_logs_at<T>(level: tracing::Level, f: impl FnOnce() -> T) -> (T, String) {
-        static GLOBAL: std::sync::OnceLock<()> = std::sync::OnceLock::new();
-        GLOBAL.get_or_init(|| {
-            if let Err(error) = tracing::subscriber::set_global_default(AlwaysInterested) {
-                tracing::debug!(%error, "another test installed a tracing default first");
-            }
-        });
         let _capture_lock = cyril_core::test_support::tracing_capture_lock();
         let capture = cyril_core::test_support::CaptureWriter::default();
         let subscriber = tracing_subscriber::fmt()
@@ -10174,6 +10591,7 @@ mod tests {
     mod current_runtime_contract;
     mod mcp_oauth;
     mod mcp_panel;
+    mod mcp_startup;
     mod review;
 
     // ── cyril-qaq0: /theme command and picker session ───────────────────────

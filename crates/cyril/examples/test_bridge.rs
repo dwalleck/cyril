@@ -619,14 +619,23 @@ fn print_notification(n: &Notification) {
         Notification::McpUpdate(update) => {
             println!("  [McpUpdate] {}", mcp_update_summary(update));
         }
-        Notification::McpServerInitFailure { server_name, error } => {
+        Notification::McpServerInitFailure {
+            server_name, error, ..
+        } => {
             println!(
-                "  [McpInitFail] {server_name}: {}",
-                error.as_deref().unwrap_or("(no detail)")
+                "  [McpInitFail] {}: {}",
+                cyril_ui::mcp_notice::terminal_safe(server_name),
+                cyril_ui::mcp_notice::terminal_safe(error.as_deref().unwrap_or("(no detail)"))
             );
         }
-        Notification::McpOAuthRequest { server_name, url } => {
-            println!("  [McpOAuth] {server_name}: {url}");
+        Notification::McpOAuthRequest {
+            server_name, url, ..
+        } => {
+            println!(
+                "  [McpOAuth] {}: {}",
+                cyril_ui::mcp_notice::terminal_safe(server_name),
+                cyril_ui::mcp_notice::terminal_safe(url)
+            );
         }
         Notification::ExternalUrlRequested { url } => {
             println!(
@@ -635,10 +644,16 @@ fn print_notification(n: &Notification) {
             );
         }
         Notification::McpConnectionError { message } => {
-            println!("  [McpConnectionError] [error] {}", message.escape_debug());
+            println!(
+                "  [McpConnectionError] [error] {}",
+                cyril_ui::mcp_notice::terminal_safe(message)
+            );
         }
-        Notification::McpServerInitialized { server_name } => {
-            println!("  [McpReady] {server_name}");
+        Notification::McpServerInitialized { server_name, .. } => {
+            println!(
+                "  [McpReady] {}",
+                cyril_ui::mcp_notice::terminal_safe(server_name)
+            );
         }
         Notification::AgentNotFound {
             requested,
@@ -811,7 +826,10 @@ fn mcp_operation_kind(operation: &McpOperation) -> &'static str {
 
 /// Diagnostic inventory, not a dump of OAuth values or fetched external data.
 fn mcp_update_summary(update: &McpUpdate) -> String {
-    let mut summary = format!("session={} ", update.session_id().as_str().escape_debug());
+    let mut summary = format!(
+        "session={} ",
+        cyril_ui::mcp_notice::terminal_safe(update.session_id().as_str())
+    );
     match update {
         McpUpdate::Snapshot(snapshot) => {
             write!(summary, "kind=status servers={}", snapshot.servers.len())
@@ -836,7 +854,7 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
                     McpServerStatus::Unknown { .. } => ("unrecognized", false),
                 };
                 write!(summary, " [server={} status={status} authorization_url_present={authorization_url_present}",
-                    server.name.escape_debug()).expect("String write");
+                    cyril_ui::mcp_notice::terminal_safe(&server.name)).expect("String write");
                 if let McpServerStatus::Connected { catalog } = &server.status {
                     write!(
                         summary,
@@ -862,7 +880,7 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
                 write!(
                     summary,
                     " [server={} authorization_url_present=true]",
-                    name.escape_debug()
+                    cyril_ui::mcp_notice::terminal_safe(name)
                 )
                 .expect("String write");
             }
@@ -881,7 +899,7 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
             write!(
                 summary,
                 "kind=pending server={} operation={} correlation={}",
-                pending.request.server_name.escape_debug(),
+                cyril_ui::mcp_notice::terminal_safe(&pending.request.server_name),
                 mcp_operation_kind(&pending.request.operation),
                 pending.id
             )
@@ -891,7 +909,7 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
             write!(
                 summary,
                 "kind=outcome server={} operation={} correlation={} result=",
-                outcome.request.server_name.escape_debug(),
+                cyril_ui::mcp_notice::terminal_safe(&outcome.request.server_name),
                 mcp_operation_kind(&outcome.request.operation),
                 outcome.id
             )
@@ -924,7 +942,7 @@ fn mcp_update_summary(update: &McpUpdate) -> String {
             write!(
                 summary,
                 "kind=elicitation-declined tool={} mode={mode} authorization_url_present={}",
-                notice.tool_call_id.as_str().escape_debug(),
+                cyril_ui::mcp_notice::terminal_safe(notice.tool_call_id.as_str()),
                 notice.url.is_some()
             )
             .expect("String write");
@@ -999,6 +1017,296 @@ mod mcp_summary_tests {
         }
         for forbidden in ["https://", "secret=", "never-print", "#fragment"] {
             assert!(!retained.contains(forbidden), "leaked {forbidden}");
+        }
+    }
+
+    // Each case isolates one formatting site; U+0301 and U+200D remain identity data.
+    #[rstest::rstest]
+    #[case::common_session_prefix(
+        McpUpdate::Policy {
+            session_id: SessionId::new("session'\"\\日本語e\u{301}👩\u{200d}💻"),
+            policy: McpPolicy::AdminDisabled,
+        },
+        "session=session'\"\\日本語e\u{301}👩\u{200d}💻 kind=policy reason=administrator-disabled"
+    )]
+    #[case::snapshot_server(
+        McpUpdate::Snapshot(Arc::new(McpSnapshot {
+            session_id: SessionId::new("actual-session"),
+            servers: vec![McpServer {
+                name: "server'\"\\日本語e\u{301}👩\u{200d}💻".into(),
+                auth_type: None,
+                status: McpServerStatus::Failed {
+                    failed_authorization: true,
+                    authorization_url: Some(
+                        "https://auth.invalid/?secret=never-print#fragment".into(),
+                    ),
+                    error_message: "private failure details".into(),
+                    error_code: Some("private failure code".into()),
+                },
+                provenance: None,
+            }],
+            access_mode: None,
+            registry_servers: None,
+            access_mode_filtered_servers: None,
+            unresolved_registry_servers: None,
+            provenance: None,
+        })),
+        "session=actual-session kind=status servers=1 [server=server'\"\\日本語e\u{301}👩\u{200d}💻 status=authentication-required authorization_url_present=true]"
+    )]
+    #[case::retained_url_server(
+        McpUpdate::AuthorizationUrls {
+            session_id: SessionId::new("actual-session"),
+            urls: std::collections::BTreeMap::from([(
+                "server'\"\\日本語e\u{301}👩\u{200d}💻".into(),
+                "https://auth.invalid/retained?secret=never-print#fragment".into(),
+            )]),
+        },
+        "session=actual-session kind=retained-authorization servers=1 [server=server'\"\\日本語e\u{301}👩\u{200d}💻 authorization_url_present=true]"
+    )]
+    #[case::pending_server(
+        McpUpdate::Pending(McpPending {
+            id: 41,
+            request: McpRequest {
+                session_id: SessionId::new("actual-session"),
+                server_name: "server'\"\\日本語e\u{301}👩\u{200d}💻".into(),
+                operation: McpOperation::Reset { start_oauth: true },
+            },
+        }),
+        "session=actual-session kind=pending server=server'\"\\日本語e\u{301}👩\u{200d}💻 operation=authenticate correlation=41"
+    )]
+    #[case::outcome_server(
+        McpUpdate::Outcome(McpOutcome {
+            id: 42,
+            request: McpRequest {
+                session_id: SessionId::new("actual-session"),
+                server_name: "server'\"\\日本語e\u{301}👩\u{200d}💻".into(),
+                operation: McpOperation::Reset { start_oauth: false },
+            },
+            result: Ok(McpOperationResult::Acknowledged),
+        }),
+        "session=actual-session kind=outcome server=server'\"\\日本語e\u{301}👩\u{200d}💻 operation=reset correlation=42 result=acknowledged-not-connected"
+    )]
+    #[case::elicitation_tool(
+        McpUpdate::ElicitationDeclined(McpElicitationNotice {
+            session_id: SessionId::new("actual-session"),
+            tool_call_id: ToolCallId::new("tool'\"\\日本語e\u{301}👩\u{200d}💻"),
+            mode: McpElicitationMode::Url,
+            message: "private elicitation message".into(),
+            url: Some("https://auth.invalid/?secret=never-print#fragment".into()),
+        }),
+        "session=actual-session kind=elicitation-declined tool=tool'\"\\日本語e\u{301}👩\u{200d}💻 mode=url authorization_url_present=true"
+    )]
+    fn summaries_preserve_printable_identities_exactly(
+        #[case] update: McpUpdate,
+        #[case] expected: &str,
+    ) {
+        assert_eq!(mcp_update_summary(&update), expected);
+    }
+
+    #[test]
+    fn summaries_escape_terminal_controls_and_bidi_in_every_identity_site() {
+        let cases = [
+            (
+                McpUpdate::Snapshot(Arc::new(McpSnapshot {
+                    session_id: SessionId::new("session\0\u{1b}[2J"),
+                    servers: vec![McpServer {
+                        name: "server\n\r\t\u{7f}\u{85}".into(),
+                        auth_type: None,
+                        status: McpServerStatus::Connected {
+                            catalog: Arc::new(McpCatalog::default()),
+                        },
+                        provenance: None,
+                    }],
+                    access_mode: None,
+                    registry_servers: None,
+                    access_mode_filtered_servers: None,
+                    unresolved_registry_servers: None,
+                    provenance: None,
+                })),
+                r"session=session\0\u{1b}[2J kind=status servers=1 [server=server\n\r\t\u{7f}\u{85} status=connected authorization_url_present=false tools=0 prompts=0 resources=0 templates=0]",
+            ),
+            (
+                McpUpdate::AuthorizationUrls {
+                    session_id: SessionId::new("session\u{61c}"),
+                    urls: std::collections::BTreeMap::from([(
+                        "server\u{200e}\u{200f}".into(),
+                        "https://auth.invalid/?secret=never-print".into(),
+                    )]),
+                },
+                r"session=session\u{61c} kind=retained-authorization servers=1 [server=server\u{200e}\u{200f} authorization_url_present=true]",
+            ),
+            (
+                McpUpdate::Pending(McpPending {
+                    id: 43,
+                    request: McpRequest {
+                        session_id: SessionId::new("session\u{202a}"),
+                        server_name: "server\u{202b}\u{202c}".into(),
+                        operation: McpOperation::Reset { start_oauth: false },
+                    },
+                }),
+                r"session=session\u{202a} kind=pending server=server\u{202b}\u{202c} operation=reset correlation=43",
+            ),
+            (
+                McpUpdate::Outcome(McpOutcome {
+                    id: 44,
+                    request: McpRequest {
+                        session_id: SessionId::new("session\u{202d}"),
+                        server_name: "server\u{202e}".into(),
+                        operation: McpOperation::Reset { start_oauth: true },
+                    },
+                    result: Err(McpOperationError {
+                        kind: McpErrorKind::Rejected,
+                        message: "private failure details".into(),
+                    }),
+                }),
+                r"session=session\u{202d} kind=outcome server=server\u{202e} operation=authenticate correlation=44 result=error:Rejected",
+            ),
+            (
+                McpUpdate::ElicitationDeclined(McpElicitationNotice {
+                    session_id: SessionId::new("session\u{2066}\u{2067}"),
+                    tool_call_id: ToolCallId::new("tool\u{2068}\u{2069}"),
+                    mode: McpElicitationMode::Form,
+                    message: "private elicitation message".into(),
+                    url: None,
+                }),
+                r"session=session\u{2066}\u{2067} kind=elicitation-declined tool=tool\u{2068}\u{2069} mode=form authorization_url_present=false",
+            ),
+            (
+                McpUpdate::Policy {
+                    session_id: SessionId::new("session\u{7}"),
+                    policy: McpPolicy::Unknown("private policy details".into()),
+                },
+                r"session=session\u{7} kind=policy reason=unrecognized",
+            ),
+            (
+                McpUpdate::Diagnostic {
+                    session_id: SessionId::new("session\u{9b}"),
+                    message: "private diagnostic details".into(),
+                },
+                r"session=session\u{9b} kind=status-diagnostic",
+            ),
+        ];
+        for (update, expected) in cases {
+            assert_eq!(mcp_update_summary(&update), expected);
+        }
+    }
+
+    #[test]
+    fn summaries_report_inventory_without_external_content_or_request_secrets() {
+        let cases = [
+            (
+                McpUpdate::Snapshot(Arc::new(McpSnapshot {
+                    session_id: SessionId::new("actual-session"),
+                    servers: vec![McpServer {
+                        name: "actual-server".into(),
+                        auth_type: Some("private auth details".into()),
+                        status: McpServerStatus::Connected {
+                            catalog: Arc::new(McpCatalog {
+                                tools: vec![McpTool {
+                                    name: "private tool name".into(),
+                                    description: Some("private tool description".into()),
+                                    disabled: false,
+                                    input_schema: "private schema".into(),
+                                }],
+                                ..McpCatalog::default()
+                            }),
+                        },
+                        provenance: None,
+                    }],
+                    access_mode: None,
+                    registry_servers: None,
+                    access_mode_filtered_servers: None,
+                    unresolved_registry_servers: None,
+                    provenance: None,
+                })),
+                "session=actual-session kind=status servers=1 [server=actual-server status=connected authorization_url_present=false tools=1 prompts=0 resources=0 templates=0]",
+            ),
+            (
+                McpUpdate::Pending(McpPending {
+                    id: 51,
+                    request: McpRequest {
+                        session_id: SessionId::new("actual-session"),
+                        server_name: "actual-server".into(),
+                        operation: McpOperation::GetPrompt {
+                            name: "private prompt name".into(),
+                            arguments: std::collections::BTreeMap::from([(
+                                "secret".into(),
+                                "never-print".into(),
+                            )]),
+                        },
+                    },
+                }),
+                "session=actual-session kind=pending server=actual-server operation=getPrompt correlation=51",
+            ),
+            (
+                McpUpdate::Outcome(McpOutcome {
+                    id: 51,
+                    request: McpRequest {
+                        session_id: SessionId::new("actual-session"),
+                        server_name: "actual-server".into(),
+                        operation: McpOperation::GetPrompt {
+                            name: "private prompt name".into(),
+                            arguments: std::collections::BTreeMap::new(),
+                        },
+                    },
+                    result: Ok(McpOperationResult::Preview(Arc::new(McpPreview::Prompt {
+                        description: Some("private fetched description".into()),
+                        messages: vec![McpMessage {
+                            role: "private fetched role".into(),
+                            content: McpContent::Text {
+                                text: "private fetched prompt body\u{1b}[2J".into(),
+                                mime_type: Some("private mime type".into()),
+                                uri: Some("https://fetched.invalid/?secret=never-print".into()),
+                            },
+                        }],
+                    }))),
+                }),
+                "session=actual-session kind=outcome server=actual-server operation=getPrompt correlation=51 result=prompt-preview messages=1",
+            ),
+            (
+                McpUpdate::Outcome(McpOutcome {
+                    id: 52,
+                    request: McpRequest {
+                        session_id: SessionId::new("actual-session"),
+                        server_name: "actual-server".into(),
+                        operation: McpOperation::GetResource {
+                            uri: "https://resource.invalid/?secret=never-print".into(),
+                        },
+                    },
+                    result: Ok(McpOperationResult::Preview(Arc::new(
+                        McpPreview::Resource {
+                            contents: vec![
+                                McpContent::Text {
+                                    text: "private fetched resource body\u{202e}".into(),
+                                    mime_type: Some("private mime type".into()),
+                                    uri: Some("private fetched resource uri".into()),
+                                },
+                                McpContent::NonText {
+                                    kind: "private content kind".into(),
+                                    mime_type: Some("private mime type".into()),
+                                    uri: Some("private fetched image uri".into()),
+                                    name: Some("private fetched image name".into()),
+                                    description: Some("private fetched image description".into()),
+                                },
+                            ],
+                        },
+                    ))),
+                }),
+                "session=actual-session kind=outcome server=actual-server operation=getResource correlation=52 result=resource-preview contents=2",
+            ),
+            (
+                McpUpdate::ElicitationDeclined(McpElicitationNotice {
+                    session_id: SessionId::new("actual-session"),
+                    tool_call_id: ToolCallId::new("actual-tool"),
+                    mode: McpElicitationMode::Unknown("private mode details".into()),
+                    message: "private elicitation message\u{1b}[2J".into(),
+                    url: Some("https://auth.invalid/?secret=never-print#fragment".into()),
+                }),
+                "session=actual-session kind=elicitation-declined tool=actual-tool mode=unrecognized authorization_url_present=true",
+            ),
+        ];
+        for (update, expected) in cases {
+            assert_eq!(mcp_update_summary(&update), expected);
         }
     }
 }

@@ -168,10 +168,17 @@ does not launch a browser or copy the URL to the clipboard. Printable quotes,
 apostrophes, backslashes and Unicode remain unchanged; terminal controls and
 Unicode bidirectional controls are shown as visible escape sequences.
 
-The main conversation reserves a fixed right-hand scrollbar column whenever
-at least two columns are available, so scrolling does not paint over wrapped
-URL text or change its wrapping width. A zero- or one-column viewport keeps
-all available content space and omits the scrollbar.
+Main/global MCP notices appear once in the main conversation and reveal its
+latest content even after browsing older history. A scoped connection error
+keeps its canonical child/workflow owner and adds one attributed, safely escaped
+main-conversation presentation; a later workflow claim does not present it again.
+This does not add a workflow view or a production focus-entry command/key.
+
+Both existing main and focused conversation render branches reserve a fixed
+right-hand scrollbar column whenever at least two columns are available.
+Content preparation, wrapping, line counts, scrolling and painting use the same
+remaining width, so chrome cannot overwrite opaque URL/error text. A zero- or
+one-column viewport keeps all available content space and omits the scrollbar.
 
 The callback's `{success:true}` reply acknowledges accepted delivery for
 display, **not** a browser launch, completed authorization or a connected MCP
@@ -179,12 +186,29 @@ server. MCP connection-error messages remain in the conversation independently
 of later notifications. This callback does not add an MCP management panel,
 persist OAuth credentials or implement a completion-notification protocol;
 passive inventory and server-management actions belong to the separate MCP
-management change. See the [qualification record](.cyril-tqr8/evidence.md#delivery-checkpoint-2026-10-20)
-for the exact exercised scope and evidence. Current local workspace, isolated
-KAS and no-default qualification pass, as does one current owned ACP/PTy
-consumer covering full-URL PageUp/PageDown, escaping, durable errors and draft
-preservation. These are not real-native KAS, native-terminal/host or CI
-acceptance claims.
+management change. See the [current qualification record](.cyril-tqr8/evidence.md#current-pr193-repair-checkpoint-2026-10-21)
+and [portable repair package](.cyril-tqr8/current-publication-evidence/pr193-repair/index.json)
+for the exact exercised scope. The approved four-finding repair has scoped local
+qualification PASS and independent repair review with no findings (correct0.97).
+Eleven preformat test/Clippy/build gates remain applicable through four test-only
+reflows preserving exact Rust tokens including punctuation and production bytes;
+the original fmt failure is retained, and actual postformat fmt/default build
+passed. This is not a claim that every gate reran postformat.
+
+One authorized owned ACP/PTy invocation passed eleven captures: full opaque
+URLs and scoped child/workflow payloads, PageUp/PageDown recovery, main-follow
+reveal after browsing, chronology/no duplicate late-claim presentation, exact
+draft and independent caret preservation. Hidden canonical routing/adoption/
+pending authority and focused-renderer/reveal behavior remain source/API tests,
+not this visible-main screen proof or a new production focus-entry UI. Prior
+a09/twelve-lane/six-capture and native failures retain their historical scopes.
+
+These are not fresh native KAS/auth, native-terminal/host, platform or final
+`nk4o`/C4, `caar` or C6 integration acceptance. PR193 CI remains old RED.
+Peaq PR194's refresh/review/CI blocker is resolved and landed at main
+`03838a501dad8be140acd78dc3fff4cae35fafef`, but current Tqr b750+repairs has not
+yet integrated it; separate `u62f` Windows attribution remains open despite
+green Windows CI. Main owns Tqr ancestry reconciliation and current CI.
 
 ### Local memory runtime
 

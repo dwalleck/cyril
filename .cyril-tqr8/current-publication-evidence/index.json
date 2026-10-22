@@ -1,10 +1,24 @@
 {
   "issue": "cyril-tqr8",
-  "status": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+  "status": "HISTORICAL_A09_PUBLICATION_PACKAGE_RETAINED_CURRENT_REPAIR_IN_PR193_REPAIR_INDEX",
   "shipping_authorized_by_this_record": false,
-  "ready_for_parent_publication_actions": true,
+  "ready_for_parent_publication_actions": false,
   "owning_evidence": ".cyril-tqr8/evidence.md#delivery-checkpoint-2026-10-20",
   "acceptance_summary": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+  "historical_status_before_PR193_repair": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+  "historical_ready_for_parent_publication_actions": true,
+  "scope_of_legacy_fields": "All original source trees, current_evidence_files/current_documentation_files arrays, acceptance_summary and six-capture receipts below describe the prior a09 checkpoint. Their values and original artifacts are retained historically, not hashes of newly edited documentation or current repaired-source postimages. The distinct pr193-repair index owns current scoped proof; do not dereference historical inventory paths as a current source-copy allowlist.",
+  "current_repair": {
+    "index": "pr193-repair/index.json",
+    "qualification": "pr193-repair/qualification.json",
+    "repair_review": "pr193-repair/repair-review.json",
+    "owned_consumer": "pr193-repair/owned-consumer.json",
+    "status": "LOCAL_SCOPED_QUALIFICATION_PASS_REPAIR_REVIEW_NO_FINDINGS_OWNED_CONSUMER_PASS",
+    "source_identity_kind": "bounded498actual-input-SHA256-descriptor-NOT-Git-tree-or-commit",
+    "source_descriptor": "d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117",
+    "publication_or_shipping_authorized": false,
+    "remaining": "Main owns main038 integration/current-head PR193 CI; old CI remains RED. PeaqPR194 is merged/main038 after refreshed CI39690453316GREEN; u62f attribution is still open. Native/final NK/C4/Caar/C6/platform acceptance is not claimed."
+  },
   "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
   "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",
   "merge_parents": [

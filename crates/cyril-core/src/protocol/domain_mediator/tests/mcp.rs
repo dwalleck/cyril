@@ -3,6 +3,7 @@ use serde_json::json;
 use std::rc::Rc;
 use std::time::Duration;
 
+use super::super::startup::{RootStartKind, RootStartResult};
 use super::super::{CommandOutcome, DomainConfig, DomainMediator};
 use crate::protocol::bridge::create_channel_pair;
 use crate::protocol::engine::KasEngine;
@@ -141,12 +142,13 @@ async fn early_status_and_policy_promote_only_matching_response_after_reset_and_
         rx.try_recv().is_err(),
         "old and workflow snapshots never publish into current root"
     );
-    must_succeed(
+    let attempt = must_succeed(
         mediator
-            .mcp
-            .begin_session(Some(SessionId::new("failed-load"))),
+            .begin_root_start(RootStartKind::Load, Some(SessionId::new("failed-load")))
+            .await,
         "admit failed load",
-    );
+    )
+    .unwrap_or_else(|| panic!("load admission"));
     must_succeed(
         mediator
             .handle_extension_notification(must_succeed(
@@ -162,12 +164,10 @@ async fn early_status_and_policy_promote_only_matching_response_after_reset_and_
     assert!(
         must_succeed(
             mediator
-                .apply_command_outcome(CommandOutcome::SessionStartFailed(Box::new(
-                    Notification::BridgeError {
-                        operation: "Load session".into(),
-                        message: "not found".into()
-                    }
-                )))
+                .apply_command_outcome(CommandOutcome::RootStartFinished {
+                    attempt,
+                    result: RootStartResult::Failed("not found".into()),
+                })
                 .await,
             "load failure"
         )
@@ -437,12 +437,13 @@ async fn active_mcp_root() -> (
 
 async fn active_root_updates_during_failed_load(target: &str) {
     let (mut mediator, mut rx, mut controller) = active_mcp_root().await;
-    assert!(must_succeed(
+    let attempt = must_succeed(
         mediator
-            .begin_mcp_session(Some(SessionId::new(target)))
+            .begin_root_start(RootStartKind::Load, Some(SessionId::new(target)))
             .await,
-        "admit load"
-    ));
+        "admit load",
+    )
+    .unwrap_or_else(|| panic!("load admission"));
     // A different candidate and an unrelated peer must remain isolated even
     // though updates for the still-active root remain authoritative.
     for candidate in ["peer", target]
@@ -495,12 +496,10 @@ async fn active_root_updates_during_failed_load(target: &str) {
     assert!(
         must_succeed(
             mediator
-                .apply_command_outcome(CommandOutcome::SessionStartFailed(Box::new(
-                    Notification::BridgeError {
-                        operation: "Load session".into(),
-                        message: "recoverable load refusal".into()
-                    }
-                ),))
+                .apply_command_outcome(CommandOutcome::RootStartFinished {
+                    attempt,
+                    result: RootStartResult::Failed("recoverable load refusal".into()),
+                })
                 .await,
             "recoverable load failure"
         )

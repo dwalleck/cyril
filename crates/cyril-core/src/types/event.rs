@@ -201,10 +201,13 @@ pub enum Notification {
     /// Typed, session-bound KAS MCP management; v2 retains its existing events.
     McpUpdate(crate::types::McpUpdate),
     McpServerInitFailure {
+        /// Real outer v2 session ID; absent on legacy sessionless frames.
+        session_id: Option<SessionId>,
         server_name: String,
         error: Option<String>,
     },
     McpOAuthRequest {
+        session_id: Option<SessionId>,
         server_name: String,
         url: String,
     },
@@ -219,6 +222,7 @@ pub enum Notification {
         message: String,
     },
     McpServerInitialized {
+        session_id: Option<SessionId>,
         server_name: String,
     },
     AgentNotFound {
@@ -485,6 +489,26 @@ pub enum Notification {
     },
 }
 
+/// Identity of one admitted root-start generation, allocated only by its owner.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct StartupAttemptId(u64);
+
+impl StartupAttemptId {
+    pub(crate) fn new(generation: u64) -> Self {
+        Self(generation)
+    }
+}
+
+/// A scoped MCP report observed while a root request was still outstanding.
+/// This is presentation provenance, never evidence that the session is current.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StartupObservation {
+    /// New has no response-supplied root ID; the report remains uncorrelated.
+    UnboundNew { generation: StartupAttemptId },
+    /// Load explicitly requested this report's actual session ID.
+    BoundRequestedLoad { generation: StartupAttemptId },
+}
+
 /// A notification paired with its source session ID for routing.
 ///
 /// `session_id == None` means the notification is **global** — bridge
@@ -496,8 +520,9 @@ pub enum Notification {
 /// `session_id == Some(id)` means the notification originated from a
 /// specific session (every standard ACP `SessionNotification` is wrapped
 /// this way with the envelope's `session_id`). The App compares `id` against
-/// its known main session: if it matches, dispatches to the main state
-/// machines; otherwise routes to `SubagentUiState`.
+/// its known main session: matching scope dispatches to the main state
+/// machines. Other scopes retain their ordinary peer/workflow routing unless
+/// the startup owner qualified the MCP report for display-only history.
 ///
 /// This is the primary channel type from the bridge to the App.
 #[derive(Debug, Clone)]
@@ -528,6 +553,9 @@ pub struct RoutedNotification {
     /// per turn (cyril-lki9 C10); content consumers never need it. `None` for
     /// everything else, and always on the v2 engine.
     pub origin: Option<AgentInitiation>,
+    /// Stamped only by the serial startup owner, without changing actual scope
+    /// or notification content. Consumers must not promote root/registry state.
+    pub startup: Option<StartupObservation>,
 }
 
 /// A frame of a turn the agent started without a client prompt (cyril-lki9) —
@@ -571,6 +599,7 @@ impl RoutedNotification {
             notification,
             turn: None,
             origin: None,
+            startup: None,
         }
     }
 
@@ -581,6 +610,7 @@ impl RoutedNotification {
             notification,
             turn: None,
             origin: None,
+            startup: None,
         }
     }
 

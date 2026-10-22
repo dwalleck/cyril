@@ -223,7 +223,7 @@ async fn kas_sdk_url_callbacks_and_mcp_errors_survive_initialize_and_new_session
                             ))?;
                             request_url(&callback_connection, "https://login.invalid/after-new")
                                 .await?;
-                            // Wait for the real SessionStarted outcome to bind main
+                            // Wait for the admitted root's real success to bind main
                             // before emitting a main-session turn bracket.
                             session_bound.notified().await;
                             callback_connection
