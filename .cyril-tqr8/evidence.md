@@ -1,6 +1,6 @@
 # cyril-tqr8 — supported KAS OAuth evidence
 
-Historical investigation date: 2026-10-19; inspected production base `8e5c325e`. The delivery checkpoint below owns the current assembled local qualification, source/binary pins, owned-consumer result and explicit native/CI limits. Historical failures and partial checkpoints retain their original identities and results; the new current PASS does not rewrite them.
+Historical investigation date: 2026-10-19; inspected production base `8e5c325e`. The [current PR193 repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21) owns the current bounded-input qualification, repair review and one authorized eleven-capture owned-consumer result. The [prior a09 delivery checkpoint](#delivery-checkpoint-2026-10-20), six-capture proof, earlier failures and partial checkpoints retain their original identities/results/scopes; the current scoped PASS does not rewrite them or establish native/CI/integration completion.
 
 ## Premises
 
@@ -161,7 +161,234 @@ Drive the displayed synthetic authorization URL with a local HTTP client preserv
 **Timing boundary:** fixture declarations deliberately have `waitForReady:false`; `--slow-ready 35` delays MCP initialize, not necessarily `session/new`. It cannot by itself prove caar's >30s new-session wait. Use caar's actual SDK gated-new regression and separately qualify any real delayed-new fixture before claiming that timing case.
 
 
-## Delivery checkpoint 2026-10-20
+## Current PR193 repair checkpoint 2026-10-21
+
+**Current approved repair scope — PASS, not all-claims acceptance.** All four
+PR193 findings are resolved within the approved scope. The
+[portable repair index](current-publication-evidence/pr193-repair/index.json)
+links the selected [qualification](current-publication-evidence/pr193-repair/qualification.json),
+[repair review](current-publication-evidence/pr193-repair/repair-review.json),
+[owned consumer](current-publication-evidence/pr193-repair/owned-consumer.json)
+and [history/CLI](current-publication-evidence/pr193-repair/history-and-cli.json)
+records. These are the current pointers; existing a09/native/A/B/C receipts and
+archives below remain historical, not overwritten or relabelled.
+
+### Current source identity and bounded review
+
+The current **498-row bounded actual-input SHA-256 descriptor**, **not a Git
+tree or commit**, is
+`d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117`.
+Published base HEAD `b75010427c16b1dac13b7cf00c595ce2492f391f` alone does not
+identify the repaired working source. The [source-input metadata](current-publication-evidence/pr193-repair/source-inputs.json)
+preserves the qualifier-owned manifest provenance. The final canonical receipt
+is 798,044 bytes, SHA-256
+`2ba47cce19d4f09deb62759d4d298b91b656eaa579496311000847207c9cbad0`;
+the portable qualification is a selected record, not an assertion that it has
+the full canonical's bytes/hash.
+
+The separately retained postformat default executable
+`/tmp/cyril-tqr8-current-postfmt-tested-20261021` has SHA-256
+`691519208093d6b682fea20ce0cb366e01e15d39f739218c7b98d61e979a81f6`.
+The qualifier recorded stable bounded source and HEAD/ref/merge pins but
+unknown-cause raw-index-only drift. Neither original logical-index identity,
+restoration nor a whole-repository identity is claimed. This documentation
+update is not an index/staging/commit action.
+
+Independent bounded repair review concluded **no findings; correct,
+confidence 0.97**:
+
+| PR193 finding | Current scoped disposition |
+|---|---|
+| F-URL / 4332636456 | One global chronological main notice, MCP-only reveal/follow reset; no invented session/server attribution or duplicate URL path. |
+| F-GUTTER / 4332636462 | One allocation-free content/gutter split reused by both existing render branches; content preparation, line counts, scrolling and paint share width; widths0/1 retain content without chrome. |
+| F-WORKFLOW / 4332636476 | Scoped canonical storage remains with its owner; one escaped actual-session main presentation, without main lifecycle-authority migration or repeated presentation on adoption. |
+| F-CLI / 4332636469 | Actual initial drain reuses the unchanged terminal-safe formatter for MCP errors; printable opaque text is preserved and terminal/bidi controls visibly escaped. |
+
+This is ordinary independent bounded source review, not isolated reconstruction,
+whole-feature/native/platform/CI review. The review's earlier optional-field
+comma-removal claim was retracted: the preserved preformat fixture had no such
+field comma. Exact token identity **including punctuation** stands; no extra
+fence/rerun or risk waiver is implied.
+
+### Current qualification, retained RED and oracle corrections
+
+The immutable original test-only run actually executed **21 runnable cases**:
+17 new/replacement cases comprised **14 intended behavioral RED + three new
+GREEN controls**, with **four retained prior App GREEN controls**; zero ignored
+and zero unexpected compile/setup/wrong-assertion failures. This is not a claim
+that all later postconditions or all19 declared input iterations were reached:
+18 iterations entered; the second UI-state input and later assertions after
+first failures remained unreached. [History/CLI](current-publication-evidence/pr193-repair/history-and-cli.json)
+retains those reach limits and original failure pins.
+
+Two subsequent repair-attempt failures remain immutable:
+
+- **Attempt1 focused-error oracle FAIL:** actual locked widgets0.3.2 wrapping
+  consumes separator whitespace at the prefix/overlong-word boundary. The
+  approved correction asserts the entire306-byte canonical message including
+  separator, ordered rendered prefix and the entire unchanged287-byte
+  opaque/escaped tail plus final marker contiguously. The retained old-gutter
+  capture loses an underscore inside that required tail; the repaired capture
+  preserves it. No product/input/geometry/helper or whitespace-policy change,
+  normalization or reinsertion was made. Corrected Rust execution actually
+  passed in attempt2 and later suites; the old capture comparison is not a
+  retroactive corrected-test execution.
+- **Attempt2 App projection FAIL:** the old physical-cell-to-text helper
+  inserted a phantom blank after wide `日`. The approved helper correction
+  uses the existing width-advancing pattern and already available `CellWidth`,
+  skipping only covered continuation cells while retaining real spaces and
+  row newlines. All14 case bodies/later helpers (23,444 bytes) were unchanged
+  **at that correction**; later rustfmt changes raw bytes, not their tokens.
+  Fresh whole-App execution in attempt3 actually passed14/14, including the
+  URL case's later preservation/authority assertions. No corrected-helper
+  old-production run or generic original-RED mutation rerun is claimed.
+
+The current [qualification](current-publication-evidence/pr193-repair/qualification.json)
+records these **11 actual successful preformat gates**:
+
+| Gate | Actual preformat result |
+|---|---|
+| 01 — whole App `mcp_oauth` module | 14 passed / 0 failed / 0 ignored |
+| 02 — full workspace tests | 2,885 / 0 / 13 |
+| 03 — workspace all-target Clippy | PASS |
+| 04 — default all-bins build | PASS |
+| 05 — isolated App no-default tests | 287 / 0 / 1 |
+| 06 — isolated App no-default all-target Clippy | PASS |
+| 07 — isolated App no-default all-bins build | PASS |
+| 08 — isolated UI no-default tests | 862 / 0 / 2 |
+| 09 — isolated UI no-default all-target Clippy | PASS |
+| 10 — isolated App explicit-KAS/no-default tests | 303 / 0 / 1 |
+| 11 — isolated App explicit-KAS/no-default all-target Clippy | PASS |
+
+All21 scoped cases passed within the fresh preformat workspace run. Isolated
+App no-default executed13 MCP cases; explicit-KAS App executed14. The seven
+earlier exact UI selector passes are retained, not fresh individual reruns;
+all seven also passed in fresh workspace/isolated UI suites. UI's dev Core-KAS
+dependency does **not** establish isolated no-KAS Core proof. The unchanged
+199 Core inputs and their separately retained feature-matrix obligations are
+not relabelled as a fresh combined App/Core command.
+
+**Gate12 `cargo fmt --all --check` actually FAILed and remains immutable.**
+Main then authorized exactly one formatter correction (gate13, exit0), limited
+to four test-only reflows in `app/tests/mcp_oauth.rs`, UI `state.rs`,
+`subagent_ui.rs` and `widgets/chat.rs`. The
+[format applicability receipt](current-publication-evidence/pr193-repair/format-applicability.json)
+records exact full Rust tokens **including punctuation**, literals, comments,
+operators, assertions/cases/inputs and production-prefix byte identity.
+That explicit identity retains the eleven successful gates and unaffected
+review; it is not eleven postformat reruns. Actual postformat gate14
+`cargo fmt --all --check` and gate15 `cargo build -p cyril --bins` both PASS.
+No full postformat tests or variant rebuilds are claimed.
+
+Totals: **15 Cargo commands, 14 exit0 plus the preserved fmt FAIL**;
+**4,351 passed / 0 failed / 17 ignored test executions**, including suite
+overlap, **not unique cases**. Ignored tests did not execute. The prior
+no-default binary is not a fresh postformat rebuild; equal old/new default
+binary hashes do not make the old preformat source binding current.
+
+### Retained actual CLI proof
+
+The [history/CLI record](current-publication-evidence/pr193-repair/history-and-cli.json)
+retains the actual finite-peer initial-drain RED and GREEN three-exact-row
+proof. The probe and formatter are unchanged; the current example source is
+SHA-256 `42d991b5008f86c583bf65503310afd0c381c8eb2736511efb242def13f43c12`.
+Printable quotes/backslashes/Unicode/combining/ZWJ and literal escape text remain
+exact while actual controls/bidi are visibly escaped. This is retained actual
+CLI evidence, not a new run, replay, full-example, native, network or CI claim.
+
+### Current owned consumer — one invocation, eleven captures PASS
+
+The [current owned-consumer record](current-publication-evidence/pr193-repair/owned-consumer.json)
+owns **one Main-authorized actual invocation, zero retries, consumer exit0,
+11 capture points, client5 / peer67 and zero native Kiro sessions**. Its final
+outer source receipt has SHA-256
+`4a6f0d2b89cb5c20eb9002b526fe607d2606cea1ff5cf03516d6901ac5dd17c2`;
+it is distinct from the runtime result and archive-internal core result.
+The executable/source binding is the postformat path/d265 descriptor above,
+not the historical six-capture binary.
+
+At140×40 outer /139 content columns with actual gutter chrome, the retained
+six-stage sequence passed full published fixture URL, durable error, exact
+printable/control-safe URL, later content/draft, PageUp recovery and PageDown
+return. Original stage6's draft field remains recorded-only; appended stages
+independently assert exact draft plus block caret.
+
+The appended five captures actually establish browse-before-current-URL,
+the complete escaped current URL/ACK30 and visible main-follow restoration;
+browse-before-errors; exact main/optimistic-child presentations once with
+escaped actual session attribution and **entire opaque child payload**;
+then a late workflow claim with the old child presentation still once and
+**entire opaque workflow payload** once. Visible chronology, foreign child-text
+isolation, exact draft and independent caret are preserved. Client wire is
+initialize1/session-new1/three success delivery ACKs only; peer wire contains
+three URL callbacks/four display errors. No prompt/reset/permission/tool
+management or connected/authorized claim follows: **delivery ACK is not
+authorization**.
+
+Hidden canonical child/workflow storage, adoption, pending/internal authority
+and focused-renderer/reveal remain source/API-test proof, **not** visible-main
+screen proof or production focused entry. No production focus-entry caller,
+new binding/view/backdoor was added. Incoming synthetic workflow lifecycle
+events with the client's existing `workflows=false` advertisement do not prove
+that natural native workflows originate with that gate off.
+
+The [consumer archive index](current-publication-evidence/pr193-repair/owned-consumer-archive-index.json)
+identifies the unchanged [49-member evidence archive](current-publication-evidence/pr193-repair/owned-consumer-evidence.tar.gz),
+270,484 bytes, SHA-256
+`56aa494a80e05a5abf414447a5ff51847d82cdf0214e7c22472cd05496067231`.
+The binary is not embedded. Prior preparation/HOLD and historical receipts
+keep their original unexecuted/pre-run state; the separate authorization and
+actual result own this one execution.
+
+**Observed cleanup, with explicit visibility limits:** the actual owned root
+was absent; zero owned markers were found in **readable** cwd/exe links.
+The962-entry global census had475 permission/other errors **per link**;
+the494-entry same-UID supplement had **five EACCES +29 ENOENT per link**.
+Opaque entries are not claimed inspected, absent or attributed. No observer
+signals were sent. This is direct root absence plus a bounded readable-marker
+census, not a complete historical/live/PGID tree or universal process absence.
+
+### Current remaining boundaries and parent ownership
+
+- **PR193 CI is still old RED**, not current-head/platform CI PASS. Current
+  Tqr b750+repairs has not yet integrated main
+  `03838a501dad8be140acd78dc3fff4cae35fafef`; Main owns ancestry reconciliation
+  and current CI after this package.
+- **Peaq PR194 refresh/review/CI blocker is resolved and landed** at that main
+  merge, following refreshed head `991b16f9f902ff225c18ec528df7ee999f914e36`,
+  base `7a0716dc7f28035244dd7ba451a4e2293e887a0c` and GREEN CI run39690453316.
+  The [Peaq publication record](https://github.com/dwalleck/cyril/pull/194#issuecomment-6329881410)
+  belongs to Peaq, not Tqr's current-head CI. Separate **`u62f` Windows
+  attribution remains open**, not waived by green Windows CI; older Peaq
+  failures retain their historical scope.
+- No fresh native KAS/auth/bootstrap/model/provider/browser/clipboard/network,
+  native-host, Windows or macOS acceptance is claimed. The earlier native-auth
+  stop remains in force; this package authorizes no retry/login/account/config
+  or token-store action.
+- Final `nk4o`/C4 reset→callback→authoritative-connected status, `caar` and C6
+  retained-history/live/gutter integration are not claimed complete. NK local
+  checkpoint `ef46c43813d12b63f45b264e427abda84d299f46` exists, but does not
+  establish propagation into Tqr or final NK/native/C4 acceptance.
+- The original native31/32 FAIL, owned A FAIL, workspace EOF FAIL, partial
+  candidate2954 B/C, historical818 and prior a09/12-lane/0.96-review/six-capture
+  records retain their original scope. No historical mutation is presented as
+  a fresh current sensitivity run.
+- Main owns staging/commit/PR/tracker and stack disposition. This Tqr record
+  does not claim issue closure, shipping, merge, PR publication or publication GO.
+
+This documentation worker edited the four assigned existing documents and
+hashed them only; it ran no checks/builds/formatters, source changes, runtime,
+Git/index/ref, tracker or PR/publication action.
+
+<a id="delivery-checkpoint-2026-10-20"></a>
+## Historical delivery checkpoint 2026-10-20 — prior a09 package
+
+**Historical scope notice:** all a09/12-lane/0.96-review/six-capture results and
+source pins in this checkpoint retain their original dates and scope.
+“Current” in retained receipt names or descriptions below means current at
+that prior checkpoint, not the PR193 repair. The
+[current repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21)
+supersedes this section as the current evidence ledger without rewriting it.
 
 ### Source, ownership and publication
 
@@ -179,11 +406,11 @@ retained auth6c/EOF3730 fixtures, 17 unchanged feature postimages and exact READ
 reconciliation. Landed root/output-first tracking and released width helpers
 are part of this qualified assembly, not inferred from HEAD alone.
 
-The preserved current default-KAS executable is
+The preserved prior a09 default-KAS executable is
 `/tmp/cyril-tqr8-current-tested-20261020`, SHA-256
 `1d7948e61584937f6355973f987280a3d1974a5b2adc86c751919c1122d69df0`.
-**Current local qualification: all 12 requested Cargo lanes PASS.**
-The independently sourced current source review and one owned B consumer also
+**Prior a09 local qualification: all 12 requested Cargo lanes PASS.**
+The independently sourced then-current source review and one owned B consumer also
 PASS within their scopes below. Main owns staging, merge/feature commits,
 tracker closure and the substantive PR; none is claimed performed here.
 
@@ -217,7 +444,7 @@ instruction to replay active terminal controls.
 
 ### Repository, sensitivity and independent review
 
-**Current assembled qualification — PASS:** the exact copied parent receipt is
+**Prior a09 assembled qualification — PASS:** the exact copied parent receipt is
 `current-publication-evidence/qualification/canonical-handoff.json`, SHA-256
 `e5ed71d712d514ff04c9f5df11167c1780e08384251ad0f6ce812850d65b3104`.
 It records treea09 unchanged before/after all requested gates, zero retries,
@@ -246,7 +473,7 @@ subprocess summaries. Four all-target Clippy lanes and both build variants
 passed. These are local Linux default/no-default/explicit-KAS results, not
 CI-all-features, native KAS, live ignored-test, or host/platform qualification.
 
-**Fresh current source review — no findings, confidence0.96:** ReviewCurrentTqr
+**Prior a09 source review — no findings, confidence0.96:** ReviewCurrentTqr
 inspected the exact 19-path feature delta699→a09 and source context, including
 adapter/capability refusal, bounded delivery ACK, opaque escaping/nonterminal
 notices, callback cleanup, stable gutter/four tests and both-sides integration.
@@ -402,7 +629,7 @@ The publication chat postimage is SHA256
 `76065d35db2febc4b3c0627a6f02edeccb4673baf9979887f5789d766c3874c5`.
 Source/format boundaries, command logs and exact restoration are preserved in
 `publication-evidence/gutter-attempt2-canonical-handoff.json`.
-Current qualification retains these **five historical** RED/restored-GREEN
+The prior a09 qualification retains these **five historical** RED/restored-GREEN
 pairs; it did not rerun them under the released ratatui pair. The copied
 `qualification/retained-gutter-mutation-applicability.json` records the
 unchanged production geometry, three byte-identical test bodies, and only
@@ -443,7 +670,7 @@ passed278 with1ignored (not executed). These are separate lanes, not a unique
 aggregate count or a replacement for failed workspace acceptance.
 The worker did not reapply source or run Cargo/format/checks.
 
-### Historical partial qualification — superseded current gate
+### Historical partial qualification — superseded by a09 gate
 
 Attempt2 preserved four old-layout/restored pairs and the named indicator-only
 pair, then passed workspace all-target Clippy. Its full workspace test command
@@ -469,7 +696,7 @@ The continued receipt is
 `publication-evidence/gutter-continued1-canonical-handoff.json`.
 Candidate2954 was copied from the default build before no-default builds;
 its SHA was confirmed by the qualifier afterward.
-**WORKSPACEBLOCKED was that historical candidate's result.** The fresh12-lane assembled-source PASS above supersedes the current blocker; the original failed receipt is neither waived nor rewritten.
+**WORKSPACEBLOCKED was that historical candidate's result.** The prior12-lane a09 PASS superseded that candidate's workspace blocker; it is not the current PR193 repair qualification. The original failed receipt is neither waived nor rewritten.
 
 ### Historical post-repair consumer — scoped PASS on partial candidate
 
@@ -528,14 +755,19 @@ or establish native/host/full-gate qualification.
 
 The original A FAIL, raw workspace FAIL, historical native31/32 FAIL and their
 scope/adjudications remain separate and immutable. B/C established partial
-candidate2954 navigation proof only. The fresh assembled local gates and
-current owned B checkpoint now own current status; Main still owns
-commit/tracker/own-PR publication. No blanket all-claims/native/CI PASS follows.
+candidate2954 navigation proof only. The a09 gates and six-capture owned B proof
+below are also prior evidence; the [current PR193 repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21)
+owns current scoped status. No blanket all-claims/native/CI PASS follows.
 
 
-### Current owned B consumer — one invocation PASS
+<a id="current-owned-b-consumer--one-invocation-pass"></a>
+### Historical a09 owned B consumer — prior six-capture invocation PASS
 
-Main authorized exactly one current owned B scenario:
+This prior proof is retained unchanged in scope; the
+[current eleven-capture consumer](#current-owned-consumer--one-invocation-eleven-captures-pass)
+above owns the current repaired-source result.
+
+Main authorized exactly one then-current a09 owned B scenario:
 
 ```sh
 uv run --offline --script /tmp/cyril-tqr8-current-owned-setup-20261020/controlled-peer-current-harness.py \

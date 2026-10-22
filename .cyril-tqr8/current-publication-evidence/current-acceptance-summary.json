@@ -1,9 +1,24 @@
 {
   "issue": "cyril-tqr8",
-  "status": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
-  "ready_for_parent_staging_issue_close_and_PR_actions": true,
+  "status": "HISTORICAL_A09_CHECKPOINT_SUPERSEDED_NOT_CURRENT_PR193_REPAIR_READY",
+  "ready_for_parent_staging_issue_close_and_PR_actions": false,
   "publication_actions_performed_by_this_worker": false,
   "shipping_authorized_by_this_record": false,
+  "editorial_relabel": {
+    "authority": "Main-approved historical relabel only; no raw qualification/consumer result rewritten",
+    "scope": "All original a09/twelve-lane/0.96-review/six-capture facts and inner current-style labels below retain their prior checkpoint meaning, not current repaired-source readiness.",
+    "original_status": "CURRENT_LOCAL_QUALIFICATION_PASS_OWNED_CONSUMER_PASS_SOURCE_REVIEW_NO_FINDINGS",
+    "original_ready_for_parent_staging_issue_close_and_PR_actions": true,
+    "current_repair_index": "pr193-repair/index.json",
+    "original_exact_bytes_preserved": {
+      "bytes": 7757,
+      "sha256": "a28842c3462352ed78fdaf207efaf62015ca8dd2e213d926887d761489b08b76",
+      "archive": "../tqr8-current-publication-evidence.tar.gz",
+      "archive_sha256_from_existing_sidecar": "0ba5f98f8958181e1b6ec933a6d97212524baa1cc7712df2a7763461a2bd12c9",
+      "archive_member": ".cyril-tqr8/current-publication-evidence/current-acceptance-summary.json",
+      "preservation_evidence": "Selected archived member read and SHA256 matched the pre-editorial file exactly; the existing archive/sidecar were not rebuilt or modified."
+    }
+  },
   "qualified_source_tree": "a09f1dfb63b17d380f4661823de431bfb5d72160",
   "qualified_source_tree_kind": "Git tree, not commit; not the subsequent documentation-updated whole tree",
   "prerequisite_only_index_tree": "699256c2b0dadf4000f72f6beb178b15ae8d1b90",

@@ -1,0 +1,92 @@
+{
+  "schema": "cyril-tqr8-pr193-selected-qualification/v1",
+  "record_kind": "selected projection; not a byte-identical canonical or executable portable replay",
+  "status": "PASS_APPROVED_CURRENT_TQR_REPAIRED_SCOPE_ALL_TESTS_CLIPPY_BUILDS_AND_POSTFORMAT_FMT; CONTROLLED_FORMAT_ONLY_APPLICABILITY; NOT_CONSUMER_NATIVE_PLATFORM_CI_ACCEPTANCE",
+  "completed_utc": "2026-10-21T22:56:06.430163+00:00",
+  "original": {
+    "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/canonical-handoff.json",
+    "bytes": 798044,
+    "sha256": "2ba47cce19d4f09deb62759d4d298b91b656eaa579496311000847207c9cbad0",
+    "hash_provenance": "Qualifier-owned pin, also hashed during evidence packaging; no qualification rerun",
+    "portable_archive_member": "owned-consumer-evidence.tar.gz:evidence/canonical-qualification.json"
+  },
+  "links": {"source_manifest":"source-inputs.json","format_applicability":"format-applicability.json","history":"history-and-cli.json","review":"repair-review.json","later_actual_consumer":"owned-consumer.json","archive_index":"owned-consumer-archive-index.json"},
+  "source": {
+    "identity_kind": "498 bounded actual workspace inputs SHA256; NOT a Git tree, commit or source-revision alias",
+    "rows": 498,
+    "current_descriptor": "d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117",
+    "preformat_descriptor": "64af45e112cbd4fb9201af6b3273e64de29e127b34e3f392e185944d65c8bfb8",
+    "published_base_HEAD_only": "b75010427c16b1dac13b7cf00c595ce2492f391f",
+    "manifest_original_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/checked-post-authorized-format-only-correction.bounded-workspace-inputs.json",
+    "manifest_sha256": "7ce4c25911d2a3cd28dd7a6d6edb51833f5841c648b95b7cbdf3567ed0b14dd6"
+  },
+  "command_conventions": {
+    "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8",
+    "CARGO_TARGET_DIR_for_test_Clippy_build": "/home/dwalleck/repos/cyril/target",
+    "GIT_OPTIONAL_LOCKS": "0",
+    "log_original_directory": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3",
+    "log_path_resolution": "Exact original log path is log_original_directory + '/' + label + '.log'; logs are provenance pins, not additional package members",
+    "source_binding_resolution": "preformat and current resolve to source.preformat_descriptor and source.current_descriptor; formatter13 records preformat input and produces current input",
+    "test_counts": "[passed, failed, ignored]; null means not a test command, not zero tests",
+    "applicability": "01-11 actually executed before formatting and are retained on current source by format-applicability.json; 12 is immutable historical FAIL; 13 authorized correction; only14fmt/15defaultbins actually executed postformat"
+  },
+  "commands": [
+    {"label":"01-fresh-whole-App-mcp_oauth-current-wide-cell-helper","argv":["cargo","test","--locked","-p","cyril","--bin","cyril","app::tests::mcp_oauth::"],"source_binding":"preformat","exit_code":0,"test_counts":[14,0,0],"log_sha256":"c304a111e70eff1a81297b6e59135451e949291ceaefea18586c8b2e669b0e7b"},
+    {"label":"02-fresh-full-workspace-tests","argv":["cargo","test","--workspace"],"source_binding":"preformat","exit_code":0,"test_counts":[2885,0,13],"log_sha256":"0f420d9b7bc9f2bcaa15800723554fb28c71e9adaad50433777e9e18ddb18b50"},
+    {"label":"03-fresh-workspace-alltargets-Clippy","argv":["cargo","clippy","--workspace","--all-targets","--","-D","warnings"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"cc8947ebe93c8127777fce09c45e31701b30ca861a28886032a355f2f4828b9e"},
+    {"label":"04-fresh-default-cyril-all-bins-build","argv":["cargo","build","-p","cyril","--bins"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"02481e3887f03e408eccf678a9c2d95458026200c849b7ba88bcd48b4ce2c668"},
+    {"label":"05-isolated-App-no-default-fulltests","argv":["cargo","test","-p","cyril","--no-default-features"],"source_binding":"preformat","exit_code":0,"test_counts":[287,0,1],"log_sha256":"22010741b6d4048e54610621a87b2788c2472a9aef6ea181d438700436da9ae7"},
+    {"label":"06-isolated-App-no-default-alltargets-Clippy","argv":["cargo","clippy","-p","cyril","--no-default-features","--all-targets","--","-D","warnings"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"b77dcccb265429c2b2343fb96759304bad117880a723a214d67701caea1f77ce"},
+    {"label":"07-isolated-App-no-default-allbins-build","argv":["cargo","build","-p","cyril","--no-default-features","--bins"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"b297100de3611fbd8756f4eb22f0959e0af663ded7d4f7c8138af639785a88f5"},
+    {"label":"08-isolated-UI-no-default-fulltests","argv":["cargo","test","-p","cyril-ui","--no-default-features"],"source_binding":"preformat","exit_code":0,"test_counts":[862,0,2],"log_sha256":"509f1c48ee173b71f067d1af56562706d796838209e6a8629036e8352a18a376"},
+    {"label":"09-isolated-UI-no-default-alltargets-Clippy","argv":["cargo","clippy","-p","cyril-ui","--no-default-features","--all-targets","--","-D","warnings"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"3030327afbc4a0fc8263709664d3d20e653148f44af4eb361f427cfff0bb5730"},
+    {"label":"10-isolated-App-explicit-KAS-no-default-fulltests","argv":["cargo","test","-p","cyril","--no-default-features","--features","cyril/kas"],"source_binding":"preformat","exit_code":0,"test_counts":[303,0,1],"log_sha256":"82ec8809579987ed4e38e99bf274698fd83cbad2bca5e739d2991f5e33b075d5"},
+    {"label":"11-isolated-App-explicit-KAS-no-default-alltargets-Clippy","argv":["cargo","clippy","-p","cyril","--no-default-features","--features","cyril/kas","--all-targets","--","-D","warnings"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"8d8b554f403583ce190d13ac9a13c9879d6fad6f05ce457191d3e0fb86fd8e5d"},
+    {"label":"12-final-format-check","argv":["cargo","fmt","--all","--check"],"source_binding":"preformat","exit_code":1,"test_counts":null,"log_sha256":"b867a4f81ee3efba565d4c1897a2412ada32ca1379fce79610ba1fc5b5be0c4f"},
+    {"label":"13-ONE-authorized-four-file-format-only-correction","argv":["cargo","fmt","--all"],"source_binding":"preformat","exit_code":0,"test_counts":null,"log_sha256":"17719bd6226fa1465b10e586d9bf0ed2f1f42fa6a482ff5c7f0a99855f5b3249"},
+    {"label":"14-actual-postformat-final-format-check","argv":["cargo","fmt","--all","--check"],"source_binding":"current","exit_code":0,"test_counts":null,"log_sha256":"eb94d149ec801334b243662b080aacd78438b36c2ec6ae22616b253715f5dbd0"},
+    {"label":"15-ONE-incremental-postformat-default-allbins-build","argv":["cargo","build","-p","cyril","--bins"],"source_binding":"current","exit_code":0,"test_counts":null,"log_sha256":"b9cbfe3cf8299ba934af57e70b776efc255c209d6f2939a9009abe1b344275ee"}
+  ],
+  "actual_totals": {"Cargo_commands":15,"exit0_commands":14,"historical_fmt_exit1_preserved":1,"test_commands_before_format":5,"passed_test_executions_including_suite_overlap_NOT_unique":4351,"failed_test_executions":0,"ignored_executions_including_overlap":17,"all21scoped_cases_freshPASS_in_preformat_workspace":true,"declared17new_replacement_cases_and19inputs_completed":true,"postformat_tests_or_variant_rebuilds":0,"old_Core_CLI_RED_mutation_replays":0},
+  "format_only_retention": {
+    "authorization": "Main authorized ONE formatter for four reported test-only reflows, one actual finalfmt and one incremental defaultbins build; no semantic changes/full tests/variant rebuilds",
+    "proof": "format-applicability.json",
+    "proof_sha256": "72af3b7be781cdc957a407713a10ca47ef85130f115bb3486b868d579e7c5a2a",
+    "identity": "Exact complete Rust tokens INCLUDING punctuation, literals, comments, identifiers, operators, assertions, cases and input semantics. All three UI production prefixes and App production files byte-identical. Raw test bytes changed; historical raw hashes are not current raw identity.",
+    "retained_successful_preformat_gates": 11,
+    "immutable_preformat_failed_receipt": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/preformat-failed-attempt3-immutable-receipt.json",
+    "immutable_preformat_failed_receipt_sha256": "221ec6dd5448bdfc3de20858b116aad056f4df752b2268670e32cce3d6bdab55",
+    "retracted_comma_claim": "See repair-review.json; preserved preformat fixture already had no optional field comma; punctuation is identical. No extra fence/rerun/waiver required."
+  },
+  "feature_reach": {
+    "default_App_MCP_cases":14,"isolated_no_default_App_MCP_cases":13,"isolated_explicit_KAS_App_MCP_cases":14,
+    "App_UI_invocations_separate":true,
+    "UI_dev_Core_KAS_not_isolated_nonKAS_Core_proof":true,
+    "explicit_KAS_argv_is_App_only_not_historical_combined_App_Core_rerun":true,
+    "seven_exact_UI_individual_passes": "Retained actual attempts1/2, not fresh exact-selector reruns; all seven freshly PASS also in preformat workspace and isolated UI suites",
+    "unchanged_Core_obligations": "Historical no-default1035/0/4 and explicit-KAS Core portion1522/0/9 plus Clippy retained via 199 Core +179 Review input identities; history-and-cli.json"
+  },
+  "workspace_ignored_identifiers_and_reasons": [
+    {"name":"app::tests::usage_prompt_coordination_budget_reference","reason":"reference-workstation prompt coordination budget"},
+    {"name":"protocol::convert::kas::tests::account_usage_conversion_budget_reference","reason":"reference-workstation account conversion budget"},
+    {"name":"usage::tests::append_10k_tools_budget_reference","reason":"reference-workstation append budget"},
+    {"name":"usage::tests::grouped_percentile_stays_within_budget","reason":"reference-workstation grouped-percentile budget"},
+    {"name":"usage::tests::kiro_snapshot_100k_budget_reference","reason":"reference-workstation 100k snapshot budget"},
+    {"name":"usage::tests::observer_10k_tools_budget_reference","reason":"reference-workstation observer budget"},
+    {"name":"freepath_turn_completes_through_bridge","reason":"live: needs --features kas, kiro-cli login, the KAS bundle, and node"},
+    {"name":"fs_read_write_served_by_cyril","reason":"live: needs --features kas, a kiro-cli login, the KAS bundle, and node"},
+    {"name":"settings_handshake_turn_completes_and_orchestrates","reason":"live: needs --features kas, a kiro-cli login, the KAS bundle, and node"},
+    {"name":"wrapper_turn_completes_with_auth_responder","reason":"live: needs --features kas, a fresh kiro-cli login, kiro-cli >= 2.7.1"},
+    {"name":"store::tests::source_turn_operations_meet_production_scale_budgets","reason":"production-scale performance gate"},
+    {"name":"widgets::usage_panel::tests::usage_panel_render_budget_reference","reason":"reference-workstation render budget"},
+    {"name":"generate_baseline","reason":"one-shot pre-migration baseline generator; do not run after migration"}
+  ],
+  "administrative_limit": {
+    "original_index_sha256":"11f9cc8fe95143a97bc29636ae8d110a3b188e02dd1073fb324f2682b7cb1c51",
+    "observed_postdrift_index_sha256":"ca657622a7dbe342043cdf6f8d1c79e8f9dce9f0644a8f84b6270e541fc1867d",
+    "observation_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/observed-midqualification-admin-index-only-drift.json",
+    "observation_sha256":"3e761693a56416f81d1da63deacb26a6ffbfc33a785d052eb76a085977b2d375",
+    "meaning":"Raw index-only drift, unknown cause; bounded actual source/HEAD/ref/merge pins stable. Initial full index entries unavailable; no original logical-index identity/restoration/repin or causal attribution claim. Main accepted source-bound completion; publication staging separate."
+  },
+  "time_and_scope": "Qualifier did not execute private App binaries; later one-shot execution belongs only to owned-consumer.json. Neither this projection nor that run establishes current-head platform CI, native/auth or final integration acceptance. Later Peaq landing and remaining blockers are separated in index.json. No issue closure/shipping/merge/PR-publication authorization."
+}

@@ -631,7 +631,10 @@ fn print_notification(n: &Notification) {
             );
         }
         Notification::McpConnectionError { message } => {
-            println!("  [McpConnectionError] [error] {}", message.escape_debug());
+            println!(
+                "  [McpConnectionError] [error] {}",
+                cyril_ui::mcp_notice::terminal_safe(message)
+            );
         }
         Notification::McpServerInitialized { server_name } => {
             println!("  [McpReady] {server_name}");

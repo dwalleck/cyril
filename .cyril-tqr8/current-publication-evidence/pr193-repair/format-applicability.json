@@ -1,0 +1,78 @@
+{
+  "preformat_source_descriptor": "64af45e112cbd4fb9201af6b3273e64de29e127b34e3f392e185944d65c8bfb8",
+  "only_the_four_reported_paths_changed": true,
+  "records": [
+    {
+      "path": "crates/cyril/src/app/tests/mcp_oauth.rs",
+      "before_sha256": "711ca762a990ae9a17b699b13847d2d72332e7c4e57f52d4d80dbda727ad6c08",
+      "after_sha256": "70bde9a2ea9c981c4fc98a9e7b7136a83dab98797997c958834cb01f69acab33",
+      "before_bytes": 24226,
+      "after_bytes": 24314,
+      "before_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/pre-authorized-format-correction/source/crates/cyril/src/app/tests/mcp_oauth.rs.source",
+      "after_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/authorized-format-only-postframes/crates/cyril/src/app/tests/mcp_oauth.rs.source",
+      "all_Rust_tokens_including_every_literal_comment_identifier_operator_and_assertion_exact_equal": true,
+      "production_prefix_halfopen_range": [
+        0,
+        0
+      ],
+      "production_prefix_byte_exact_unchanged": true,
+      "production_prefix_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "test_statement_cases_and_input_semantics_unchanged": true
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "before_sha256": "2b639a7915019e7c18d13e5ab2f1a38b8fcbd1ee521de3ed47730afa1c6bcfe2",
+      "after_sha256": "c822da04b290645d08c4a99e41155d9d50d11ba56259d02402356f6fc2d5c979",
+      "before_bytes": 419548,
+      "after_bytes": 419594,
+      "before_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/pre-authorized-format-correction/source/crates/cyril-ui/src/state.rs.source",
+      "after_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/authorized-format-only-postframes/crates/cyril-ui/src/state.rs.source",
+      "all_Rust_tokens_including_every_literal_comment_identifier_operator_and_assertion_exact_equal": true,
+      "production_prefix_halfopen_range": [
+        0,
+        155123
+      ],
+      "production_prefix_byte_exact_unchanged": true,
+      "production_prefix_sha256": "af39a717b098d86abe6875a2159d9b57f233fc58336e94ecda6783b06db773bc",
+      "test_statement_cases_and_input_semantics_unchanged": true
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "before_sha256": "13c597c76a7e4e25ed28d90e8ed121cf9bd572e6678475128639bc1faeb3470a",
+      "after_sha256": "abebac758d9d004c8a5794301c4f2d9c89d1fb9ce6dc39352df9b381217a1737",
+      "before_bytes": 21267,
+      "after_bytes": 21375,
+      "before_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/pre-authorized-format-correction/source/crates/cyril-ui/src/subagent_ui.rs.source",
+      "after_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/authorized-format-only-postframes/crates/cyril-ui/src/subagent_ui.rs.source",
+      "all_Rust_tokens_including_every_literal_comment_identifier_operator_and_assertion_exact_equal": true,
+      "production_prefix_halfopen_range": [
+        0,
+        10321
+      ],
+      "production_prefix_byte_exact_unchanged": true,
+      "production_prefix_sha256": "97f17f827b94a95cb957cf3b5909c383eec5d1491b8d9f13937c1dbb832c496a",
+      "test_statement_cases_and_input_semantics_unchanged": true
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "before_sha256": "813f988ae4754c3d2e15c65e798e9e8ce8d89c0bae624923eb0f7df3bbc3eddb",
+      "after_sha256": "4476b26264428205839aa29f0e9b4329364cb4b669d0c475cd09267c80823eaf",
+      "before_bytes": 102833,
+      "after_bytes": 102980,
+      "before_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/pre-authorized-format-correction/source/crates/cyril-ui/src/widgets/chat.rs.source",
+      "after_snapshot": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/authorized-format-only-postframes/crates/cyril-ui/src/widgets/chat.rs.source",
+      "all_Rust_tokens_including_every_literal_comment_identifier_operator_and_assertion_exact_equal": true,
+      "production_prefix_halfopen_range": [
+        0,
+        21761
+      ],
+      "production_prefix_byte_exact_unchanged": true,
+      "production_prefix_sha256": "e52606425f585025f14cfa040c46d5dd48a52ec91976f32ab50a01aa27f62210",
+      "test_statement_cases_and_input_semantics_unchanged": true
+    }
+  ],
+  "complete_patch": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/complete-authorized-four-test-files-format-only.patch",
+  "complete_patch_sha256": "8ab9b59f61fd590b0926ce81e4c287ad4e15b9f5e866cbe937646ea6575635bc",
+  "no_test_inputs_expected_values_assertions_or_productionbytes_changed": true,
+  "all11successful_preformat_gates_remain_applicable_NO_RETESTS": true
+}

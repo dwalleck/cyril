@@ -7,6 +7,19 @@ use crate::widgets::markdown;
 
 use crate::spinner::{SPINNER_CHARS, SPINNER_FRAME_MS};
 
+/// Reserve a stable scrollbar column without sacrificing width-zero/one content.
+fn content_and_gutter(area: Rect) -> (Rect, Option<Rect>) {
+    if area.width <= 1 {
+        return (area, None);
+    }
+    let content = Rect {
+        width: area.width - 1,
+        ..area
+    };
+    let gutter = Rect::new(content.right(), area.y, 1, area.height);
+    (content, Some(gutter))
+}
+
 /// Render the chat area. If a subagent is focused, renders the focused
 /// subagent's stream instead of the main chat.
 pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
@@ -16,16 +29,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
         return;
     }
 
-    // Keep wrapping stable as content overflows or the user enters browse mode.
-    // The scrollbar must never paint over the last cell of a wrapped URL.
-    let content_area = Rect {
-        width: if area.width > 1 {
-            area.width - 1
-        } else {
-            area.width
-        },
-        ..area
-    };
+    let (content_area, gutter) = content_and_gutter(area);
 
     let mut lines: Vec<Line> = Vec::new();
 
@@ -81,10 +85,11 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
     frame.render_widget(chat, content_area);
 
     // Scrollbar
-    if area.width > 1 && total_lines > visible_height {
+    if let Some(gutter) = gutter
+        && total_lines > visible_height
+    {
         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-        let gutter = Rect::new(area.right() - 1, area.y, 1, area.height);
         frame.render_stateful_widget(scrollbar, gutter, &mut scrollbar_state);
     }
 }
@@ -98,6 +103,7 @@ fn render_subagent_drill_in(
     stream: &crate::subagent_ui::SubagentStream,
     theme: &Theme,
 ) {
+    let (content_area, gutter) = content_and_gutter(area);
     let mut lines: Vec<Line> = Vec::new();
 
     // Header bar with subagent name
@@ -121,7 +127,7 @@ fn render_subagent_drill_in(
 
     // Render committed messages
     for msg in stream.messages() {
-        render_message(&mut lines, msg, area.width as usize, theme);
+        render_message(&mut lines, msg, content_area.width as usize, theme);
         lines.push(Line::default());
     }
 
@@ -134,7 +140,7 @@ fn render_subagent_drill_in(
                 .fg(theme.agent)
                 .add_modifier(Modifier::BOLD),
         ));
-        let md_lines = markdown::render_with_theme(streaming, area.width as usize, theme);
+        let md_lines = markdown::render_with_theme(streaming, content_area.width as usize, theme);
         lines.extend(md_lines);
     }
 
@@ -144,7 +150,7 @@ fn render_subagent_drill_in(
         .wrap(Wrap { trim: false })
         .block(Block::default());
 
-    let total_lines = chat.line_count(area.width);
+    let total_lines = chat.line_count(content_area.width);
     let scroll_offset = if total_lines > visible_height {
         total_lines.saturating_sub(visible_height)
     } else {
@@ -153,12 +159,14 @@ fn render_subagent_drill_in(
 
     let scroll_clamped = scroll_offset.min(u16::MAX as usize) as u16;
     let chat = chat.scroll((scroll_clamped, 0));
-    frame.render_widget(chat, area);
+    frame.render_widget(chat, content_area);
 
-    if total_lines > visible_height {
+    if let Some(gutter) = gutter
+        && total_lines > visible_height
+    {
         let mut scrollbar_state = ScrollbarState::new(total_lines).position(scroll_offset);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight);
-        frame.render_stateful_widget(scrollbar, area, &mut scrollbar_state);
+        frame.render_stateful_widget(scrollbar, gutter, &mut scrollbar_state);
     }
 }
 
@@ -2349,6 +2357,160 @@ mod tests {
                             "width={width} scroll_back={scroll_back:?} cell=({x},{y})"
                         );
                     }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn focused_mcp_error_bytes_survive_scrollbar() {
+        use crate::state::UiState;
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = UiState::new(500);
+        let child = SessionId::new("gutter-child");
+        for _ in 0..20 {
+            state.apply_subagent_notification(
+                &child,
+                &Notification::AgentMessage(AgentMessage {
+                    text: "Earlier child text".into(),
+                    is_streaming: false,
+                }),
+            );
+        }
+        let opaque = "Ab0%2F_café界'\"\\xyz".repeat(12);
+        state.apply_subagent_notification(
+            &child,
+            &Notification::McpConnectionError {
+                message: format!("MCP failed {opaque}\u{1b}[31m\n\u{202e}#FULL_ERROR_END"),
+            },
+        );
+        // Re-enter through the supported UI interface after notice delivery.
+        assert!(state.focus_subagent(child.clone()));
+        let expected =
+            format!("[error] MCP failed {opaque}\\u{{1b}}[31m\\n\\u{{202e}}#FULL_ERROR_END");
+        assert!(matches!(
+            state
+                .subagent_ui()
+                .streams()[&child]
+                .messages()
+                .last()
+                .expect("canonical scoped error")
+                .kind(),
+            ChatMessageKind::System(text) if text == &expected
+        ));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme()))
+            .expect("draw focused error");
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        // Word wrapping may consume the separator at the prefix's row boundary.
+        // Compare every opaque payload byte without inventing that separator.
+        let prefix = "[error] MCP failed";
+        let payload = format!("{opaque}\\u{{1b}}[31m\\n\\u{{202e}}#FULL_ERROR_END");
+        let prefix_position = visible
+            .find(prefix)
+            .unwrap_or_else(|| panic!("focused error prefix lost: {visible:?}"));
+        let payload_position = visible
+            .find(&payload)
+            .unwrap_or_else(|| panic!("full focused error payload lost: {visible:?}"));
+        assert!(prefix_position + prefix.len() <= payload_position);
+        assert!(
+            (0..8).any(|y| buffer[(139, y)].symbol() != " "),
+            "overflow must exercise the scrollbar"
+        );
+        assert!(!visible.contains('\u{1b}') && !visible.contains('\u{202e}'));
+        assert_eq!(state.subagent_ui().focused_session_id(), Some(&child));
+    }
+
+    #[test]
+    fn focused_gutter_width_is_stable_without_overflow() {
+        use cyril_core::types::SessionId;
+
+        let mut state = MockTuiState::default();
+        let child = SessionId::new("child");
+        state
+            .subagent_ui
+            .add_system_message(&child, "x".repeat(140));
+        assert!(state.subagent_ui.focus(child));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw short focused history");
+        let buffer = terminal.backend().buffer();
+        assert!(viewport_content_text(buffer, Rect::new(0, 0, 139, 8)).contains(&"x".repeat(140)));
+        assert!((0..8).all(|y| buffer[(139, y)].symbol() == " "));
+        assert_eq!(buffer[(0, 3)].symbol(), "x");
+        assert!(viewport_content_text(buffer, Rect::new(0, 0, 139, 2)).contains("[Esc] Back"));
+    }
+
+    #[test]
+    fn focused_live_text_uses_reserved_content_width() {
+        use cyril_core::types::{AgentMessage, Notification, SessionId};
+
+        let mut state = MockTuiState::default();
+        let child = SessionId::new("child");
+        for _ in 0..20 {
+            state
+                .subagent_ui
+                .add_system_message(&child, "Earlier child status".into());
+        }
+        state.subagent_ui.apply_notification(
+            &child,
+            &Notification::AgentMessage(AgentMessage {
+                text: "L".repeat(415),
+                is_streaming: true,
+            }),
+        );
+        assert!(state.subagent_ui.focus(child));
+        let mut terminal = Terminal::new(TestBackend::new(140, 8)).expect("test terminal");
+        terminal
+            .draw(|frame| render(frame, frame.area(), &state, &state.theme))
+            .expect("draw focused live text");
+        let buffer = terminal.backend().buffer();
+        let visible = viewport_content_text(buffer, Rect::new(0, 0, 139, 8));
+        assert_eq!(
+            visible
+                .chars()
+                .filter(|character| *character == 'L')
+                .count(),
+            415
+        );
+        assert!((0..8).any(|y| buffer[(139, y)].symbol() != " "));
+    }
+
+    #[test]
+    fn zero_and_one_column_focused_chat_keep_content_without_scrollbar() {
+        use cyril_core::types::SessionId;
+
+        for width in [0, 1] {
+            let mut state = MockTuiState::default();
+            let child = SessionId::new("child");
+            for _ in 0..3 {
+                state.subagent_ui.add_system_message(&child, "X".into());
+            }
+            assert!(state.subagent_ui.focus(child));
+            // Four rows leave a nonempty track even after both arrowheads.
+            let mut terminal = Terminal::new(TestBackend::new(3, 6)).expect("test terminal");
+            terminal
+                .draw(|frame| {
+                    render(frame, Rect::new(1, 1, width, 4), &state, &state.theme);
+                })
+                .expect("draw narrow focused chat");
+            let buffer = terminal.backend().buffer();
+            for y in 0..6 {
+                for x in 0..3 {
+                    let expected = if width == 1 && x == 1 && matches!(y, 1 | 3) {
+                        "X"
+                    } else {
+                        " "
+                    };
+                    assert_eq!(
+                        buffer[(x, y)].symbol(),
+                        expected,
+                        "width={width} cell=({x},{y})"
+                    );
                 }
             }
         }

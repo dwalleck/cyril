@@ -1,0 +1,58 @@
+{
+  "schema":"cyril-tqr8-pr193-selected-repair-review/v1",
+  "record_kind":"Selected final ordinary independent bounded repair review; not isolated production reconstruction, whole-feature/native/platformCI review or executable replay",
+  "original":{
+    "path":"local://tqr8-current-repair-review.json",
+    "resolved_path":"/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/tqr8-current-repair-review.json",
+    "bytes":31197,
+    "sha256":"0b483522337b4ffb2c8a48c0e4a50f3c3f4abf11a637ce69a3e1e10f33a6cf9d",
+    "hash_provenance":"Computed during evidence packaging; not an invented reviewer-owned hash. Reviewer itself read qualifier-owned pins, did not independently hash source."
+  },
+  "reviewer":"ReviewTqrCurrentRepairs",
+  "status":"COMPLETE_SCOPED_SOURCE_REVIEW_FINAL_CANONICAL_BOUND_NO_FINDINGS",
+  "overall_correctness":"correct",
+  "confidence":0.97,
+  "findings":[],
+  "links":{"qualification":"qualification.json","source_manifest":"source-inputs.json","format_applicability":"format-applicability.json","original_RED_and_oracles_and_CLI":"history-and-cli.json","later_actual_consumer":"owned-consumer.json"},
+  "source_binding":{"kind":"Qualifier-owned bounded actual-input descriptor, not independently recomputed reviewer Git tree/commit","rows":498,"descriptor":"d265f295d35ba2eabe692d6000c3127771ded51f30865361b55cb86406bb7117","manifest_sha256":"7ce4c25911d2a3cd28dd7a6d6edb51833f5841c648b95b7cbdf3567ed0b14dd6","published_HEAD_only":"b75010427c16b1dac13b7cf00c595ce2492f391f"},
+  "original_findings_disposition":[
+    {"id":"F-URL /4332636456","verdict":"resolved","confidence":0.98,"evidence":"One global callback envelope; App applies once. MCP-only private notice helper delegates chronological insertion to ordinary add_system_message, then clears child focus/resets main follow. Actual URL test includes40 prior main messages/browse/child focus, exact URL/count, later preservation/authority/no-command checks.","scope":"Global remains global, no invented session/server/child copy; v2/ordinary system policy unchanged. Existing programmatic focus only; no new production focus-entry binding."},
+    {"id":"F-GUTTER /4332636462","verdict":"resolved","confidence":0.98,"evidence":"One allocation-free content/gutter split shared by main/focused render branches. Content width consistently drives committed/live preparation, line_count, scroll/paint; optional gutter holds chrome. Width0/1 preserve content without scrollbar. Actual focused error/stable short/live415/tiny cases PASS in fresh suites.","scope":"No shortening/masking/larger terminal/new renderer or C6 acceptance claim."},
+    {"id":"F-WORKFLOW /4332636476","verdict":"resolved","confidence":0.98,"evidence":"App invokes workflow seam once and returns before main authority dispatch. Scoped canonical storage is applied first, followed by one escaped actual-SessionId main-history presentation. Canonical text/classification/activity and ordinary System renderer remain authoritative; actual workflow/pending-workflow cases PASS.","scope":"No workflow view, routing state machine, authority migration or turn-completion inference."},
+    {"id":"F-CLI /4332636469","verdict":"resolved","confidence":0.99,"evidence":"Actual example initial drain calls print_notification; MCP-error arm reuses unchanged terminal_safe instead of whole-string escape_debug. Actual retained finite-peer RED/GREEN prove three exact rows including printable quote/backslash/Unicode/combining/ZWJ and escaped controls/bidi.","scope":"No new helper/allocation/interface/protocol change; no rerun/full-example/native claim."}
+  ],
+  "interaction_review":{
+    "chronology":"Private helper preserves ordinary agent text/thought flush, chronological System append, messages_version, retention and tool-index maintenance. Reveal is not a second insertion/generation path. Scoped push_system flushes earlier scoped text, not activity/tool authority. Ordinary non-MCP focus/browse policy is unchanged.",
+    "authority":"Scoped branches return before main SessionController/UiState dispatch. Presentation/focus/follow changes do not change draft/cursor/session/model/activity/stall/tool/turn state or issue commands; main controller catch-all is nonterminal.",
+    "exact_once":"Main-ID equality outranks workflow ownership. Workflow/tracked/optimistic each call one seam and return; pending only queues then pops/reclassifies once after SessionCreated. Annotation has no MCP/URL arm. Real repeat events are not suppressed.",
+    "adoption":"Claim sweep moves/merges canonical history without reapplying notification or producing another presentation/browse reset; production routing/adoption unchanged.",
+    "independent_map":"Read-only consumer-map scout plus reviewer direct source/patch inspection found no actionable issue. No isolated reconstruction claimed."
+  },
+  "oracle_review":{
+    "separator":"Narrow coverage-preserving assertion correction: canonical306 bytes including separator, ordered prefix and complete unchanged287-byte contiguous opaque/escaped suffix/final marker. Locked widgets0.3.2 consumes wrap separator; old capture misses underscore. No product/input/geometry/helper normalization. Original FAIL immutable; corrected test actually PASS later, not retroactively executed on old product.",
+    "wide_cell":"Established test-helper correction for phantom continuation-cell blank after 日. Append symbol then advance by cell_width().max(1), preserve real spaces/newlines. All23444 case/later-helper bytes unchanged at correction; later formatter changes raw bytes, not tokens. Original wrong-child/pending/adoption RED remains valid with explicit reach limits; fresh App14PASS reaches later assertions."
+  },
+  "format_only_amendment":{
+    "authorization":"One Main-authorized four-test-file formatter correction, actual finalfmt14/defaultbuild15; retain11 actual successful preformat gates without full tests/variant rebuilds",
+    "complete_patch_original_path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-scoped-notices-repaired-green-attempt3/complete-authorized-four-test-files-format-only.patch",
+    "complete_patch_sha256":"8ab9b59f61fd590b0926ce81e4c287ad4e15b9f5e866cbe937646ea6575635bc",
+    "identity":"Every actual formatter hunk inspected: exact complete Rust tokens INCLUDING punctuation, literals/comments/identifiers/operators/assertions/cases/inputs/helper algorithm; all three UI production prefixes and other production bytes unchanged. Unaffected review retained at0.97, not restarted.",
+    "proof":"format-applicability.json",
+    "proof_sha256":"72af3b7be781cdc957a407713a10ca47ef85130f115bb3486b868d579e7c5a2a",
+    "review_correction":{
+      "retracted_claim":"Earlier review mistakenly said formatting removed an optional field comma and questioned exact token equality.",
+      "actual_preserved_fixture":"Preformat subagent_ui.rs.source line513 is &Notification::McpServerInitialized { server_name: \"later-status\".into() }, with NO field comma before the brace. Postformat517-520 uses identical tokens on separate lines; outer expression comma after brace is present both before/after. Actual patch line187 confirms the same minus line.",
+      "resolution":"Comma-removal/evidence-narrowing claim WITHDRAWN. Exact token equality INCLUDING punctuation stands. No product/evidence correction, extra fence/rerun or risk waiver required; source verdict/confidence unchanged."
+    }
+  },
+  "operations_and_limits":{
+    "reviewer_checks_executed":false,
+    "reviewer_runtime_executed":false,
+    "reviewer_source_index_ref_edits":false,
+    "read_only_git_diff":"One GIT_OPTIONAL_LOCKS=0 git diff, complete output artifact://2545; no current packaging Git action",
+    "LSP_limit":"Ready rust-analyzer reference lookup returned none for known linked-worktree methods; reported as tool issue, decisive contexts read. No rename/refactor.",
+    "temporal_limit":"Reviewer/private-ready receipts truthfully say binaries unexecuted at review/qualification time. Later actual execution is owned-consumer.json, not rewritten into old receipts.",
+    "remaining":"App TestBackend/source/API proof is not fresh native KAS OAuth/auth, native host, Windows/macOS, current-head CI, final NK/C4 reset-callback-status-connected, caar or C6 cutover acceptance. Later Peaq landing is separately recorded in index.json; U62 attribution remains open. No issue closure/shipping/merge/publication authorization.",
+    "administrative":"Raw index-only drift unknown cause, bounded actual source/HEAD/ref stable; original logical-index identity not proven or restored."
+  }
+}
