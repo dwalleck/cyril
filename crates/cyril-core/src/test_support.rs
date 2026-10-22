@@ -12,22 +12,30 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard};
 
 static TRACING_CAPTURE_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
+static TRACING_CAPTURE_DEFAULT: LazyLock<()> = LazyLock::new(|| {
+    if let Err(error) = tracing::subscriber::set_global_default(AlwaysInterested) {
+        tracing::debug!(%error, "another test installed a tracing default first");
+    }
+});
 
-/// Serializes tests that install a tracing capture subscriber. Belt and
-/// braces: `tracing::subscriber::with_default` is thread-scoped (the only
-/// installer these suites use), so interleaving requires a future test to
-/// install globally — this lock keeps that mistake from corrupting captures.
-/// Recovers from poisoning — a panicking test must not cascade.
+/// Initializes the non-capturing global tracing default once per test binary,
+/// then serializes tests that install thread-scoped capture subscribers.
+///
+/// The global default protects tracing's process-wide callsite-interest cache
+/// from bare drivers; the lock alone cannot protect against uncaptured tests.
+/// Events remain scoped to each test's dispatch. Recovers from poisoning so a
+/// panicking test must not cascade.
 pub fn tracing_capture_lock() -> MutexGuard<'static, ()> {
+    LazyLock::force(&TRACING_CAPTURE_DEFAULT);
     match TRACING_CAPTURE_LOCK.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     }
 }
 
-/// Creates a structural event capture subscriber while holding the shared
-/// capture lock. `register_callsite` returns `always`, avoiding tracing's
-/// process-global interest cache when parallel tests use different dispatches.
+/// Creates a structural event capture subscriber after initializing the shared
+/// non-capturing global default and acquiring the capture lock. Install the
+/// returned dispatch thread-locally around the operation being observed.
 pub fn capture_json_subscriber() -> (MutexGuard<'static, ()>, JsonEventCapture, tracing::Dispatch) {
     let guard = tracing_capture_lock();
     let capture = JsonEventCapture::default();
@@ -36,6 +44,47 @@ pub fn capture_json_subscriber() -> (MutexGuard<'static, ()>, JsonEventCapture, 
         next_span_id: AtomicU64::new(1),
     };
     (guard, capture, tracing::Dispatch::new(subscriber))
+}
+
+/// A global default interested in every callsite that captures nothing itself.
+///
+/// In the existing App capture measurements, a thread-local `Interest::always`
+/// subscriber alone still captured nothing beside bare drivers of the same
+/// callsite. Rebuilding the interest cache under capture worked serially but
+/// not in parallel; wrapping each bare driver was incomplete as drivers grew.
+/// A persistent always-interested global default held across those orders.
+///
+/// Installation rebuilds tracing's process-wide interest cache; the persistent
+/// default keeps bare evaluations from caching `never`. The active thread's
+/// dispatch still owns event handling. This subscriber's `enabled` is false and
+/// its event handler is a no-op, so it never captures other threads' events.
+struct AlwaysInterested;
+
+impl tracing::Subscriber for AlwaysInterested {
+    fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+        false
+    }
+
+    fn register_callsite(
+        &self,
+        _metadata: &'static tracing::Metadata<'static>,
+    ) -> tracing::subscriber::Interest {
+        tracing::subscriber::Interest::always()
+    }
+
+    fn new_span(&self, _attributes: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+        tracing::span::Id::from_u64(1)
+    }
+
+    fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+    fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+    fn event(&self, _event: &tracing::Event<'_>) {}
+
+    fn enter(&self, _span: &tracing::span::Id) {}
+
+    fn exit(&self, _span: &tracing::span::Id) {}
 }
 
 #[derive(Clone, Default)]
@@ -333,6 +382,54 @@ pub fn kas_trace_routed(trace: &str) -> Vec<crate::types::RoutedNotification> {
         capture.push('\n');
     }
     kas_capture_routed(&capture)
+}
+
+/// Replays v2 recorder `{ts, dir: "in", msg}` notification rows through the
+/// bound production V2 engine, including `kiro.dev/*` tool-call chunks.
+pub fn v2_trace_to_routed(
+    trace: &str,
+) -> Vec<(Option<crate::types::SessionId>, crate::types::Notification)> {
+    use agent_client_protocol::schema::v1 as acp;
+
+    use crate::protocol::engine::{Engine, V2Engine};
+    use crate::types::SessionId;
+
+    let engine = V2Engine;
+    let mut forwarded = Vec::new();
+    for line in trace.lines().filter(|line| !line.is_empty()) {
+        let row: serde_json::Value =
+            must_succeed(serde_json::from_str(line), "v2 trace row is valid JSON");
+        if row.get("dir").and_then(serde_json::Value::as_str) != Some("in") {
+            continue;
+        }
+        let frame = &row["msg"];
+        if frame.get("id").is_some() {
+            continue; // Requests and responses are not notifications.
+        }
+        let Some(method) = frame.get("method").and_then(serde_json::Value::as_str) else {
+            continue;
+        };
+        if method == "session/update" {
+            let args: acp::SessionNotification = must_succeed(
+                serde_json::from_value(frame["params"].clone()),
+                "v2 session/update deserializes at the ACP boundary",
+            );
+            if let Some(notification) = engine.convert_session_update(&args) {
+                forwarded.push((
+                    Some(SessionId::new(args.session_id.to_string())),
+                    notification,
+                ));
+            }
+        } else if let Some(method) = method.strip_prefix('_')
+            && let Some(notification) = must_succeed(
+                engine.convert_ext_notification(method, &frame["params"]),
+                "v2 extension notification converts",
+            )
+        {
+            forwarded.push((None, notification));
+        }
+    }
+    forwarded
 }
 
 /// One step of a mediated capture replay (cyril-lki9 C20).

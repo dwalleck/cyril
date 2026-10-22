@@ -20,7 +20,7 @@
 //! the agent's. The widget only chooses cells.
 
 use ratatui::prelude::*;
-use ratatui::widgets::{Block, Borders, Clear, Paragraph};
+use ratatui::widgets::{Block, Borders, Paragraph};
 use unicode_width::UnicodeWidthStr;
 
 use crate::text::{truncate, truncate_and_pad};
@@ -76,7 +76,7 @@ pub(crate) fn placement(len: usize, area: Rect, input_top: u16) -> Option<(Rect,
 /// `input_top` is the absolute row of the input box's top border; placement
 /// goes through [`crate::widgets::modal::place`] so the popup never covers the
 /// input. A zero-height area or one with no room above the input paints
-/// nothing at all — not even `Clear`.
+/// nothing at all — not even clearing.
 pub fn render(
     frame: &mut Frame,
     area: Rect,
@@ -89,7 +89,7 @@ pub fn render(
     };
     let width = popup_area.width;
 
-    frame.render_widget(Clear, popup_area);
+    super::modal::clear(frame, popup_area);
 
     // Content width inside the borders and the two-cell indent. Floor division
     // is deliberate: a trailing partial line is left unpainted rather than
@@ -709,7 +709,7 @@ mod tests {
     }
 
     /// REGRESSION FENCE (cyril-v19o C6): with no room above the input the panel
-    /// paints nothing — in particular it must not `Clear` over the input.
+    /// paints nothing — in particular it must not clear over the input.
     #[test]
     fn tiny_area_paints_nothing() {
         let state = PowersPanelState {

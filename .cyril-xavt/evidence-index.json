@@ -213,5 +213,37 @@
     "output_alias_fix_in_x": false
   },
   "raw_gate_outputs_archived": true,
-  "raw_gate_note": "Main explicitly authorized named nonsecret Cargo outputs454/542/575/688/860. Private journals, Cyril logs, HOME, credential-bearing and unknown toolspills remain excluded."
+  "raw_gate_note": "Main explicitly authorized named nonsecret Cargo outputs454/542/575/688/860. Private journals, Cyril logs, HOME, credential-bearing and unknown toolspills remain excluded.",
+  "current_companion": {
+    "scope": "Current held-af78 modal532 checkpoint; all original archive fields, payload inventory and historical provenance above retain their old meaning.",
+    "archive": "evidence-current-modal532-b6a846be.tar.gz",
+    "archive_bytes": 998746,
+    "archive_mode": "0644",
+    "archive_sha256": "fe73734158342ada8b3948c04cb57281b472d34b5cabf74a8382ce4ca834be71",
+    "index": "evidence-current-modal532-b6a846be-index.json",
+    "index_bytes": 564215,
+    "index_mode": "0644",
+    "index_sha256": "698239516a08bffd9926201c0394b6b8e6b332f795de4053b01d3acd2dbc9d19",
+    "archive_member_count": 160,
+    "unique_original_payloads": 159,
+    "payload_manifest_sha256": "5946fd708bd0c33bcd05c8e36069f2d58c50887d533221549d9609534d3a3894",
+    "source_inputs": 225,
+    "reference_aliases": 298,
+    "duplicate_copies_avoided": 66,
+    "held_HEAD": "bc6f48a21016320cc6491356f880f37463cf8c6e",
+    "held_MERGE_HEAD": "af78b1615bd5b97b4c702542fd3ab193151bd4c1",
+    "current_source_count": 532,
+    "current_source_descriptor": "b6a846bee5f24ab0c2d0b1a48f066dd69ae575abb82bc7033c3f42a56ff48308",
+    "current_private_App_sha256": "8e2b7c3a82b360d4ca4f1c1b6410084bf3a5a9e1673612d04bfd6c61739ee7f0",
+    "qualification_canonical_sha256": "e6e36df131049a29fb154faf8968233de4da2c53df41d85e7d97d0e9e4aead89",
+    "additional_modal_DG_sha256": "475c6c4ea2ff7f896b3f50397f4a1336cfbfa508d6b28f72d726248670bd5540",
+    "ordinary_source_review_sha256": "1e578f47aa86b01877bf86423b11fe34f281228c233b87341ebf45040bd62dce",
+    "actual_runtime_handoff_sha256": "16906a511b6161cee06645138fd11a888dc3047860907d8e2dc5df13188c2599",
+    "actual_runtime_inventory_sha256": "49f25d414274ddf4ba5182cf06bf0b67f50ca8dea7b5d4bb60f32edc8b6b7109",
+    "current_case_results": "Both exactly once PASS; driver0/App0 each; Node/peer exitcodes UNOBSERVED;22observations/24scenario captures plus2cleanup final screens; owned cleanup COMPLETE.",
+    "failure_history": "Original controlled FAIL and source-inferred internal skip cause preserved; exactly two decisive producer emission REDs, separate third restoration-oracle correction; no historical mutation replay or old control-loop completion claim.",
+    "qualification_history": "Old exact10 retained at original530+2posthoc scope; current532 pins both fixtures before current UI/App. Initial fmt CHECK FAIL and seven subsequent successful command records remain distinct. Review NONE/correct/.97 is source-only with Main-approved rustfmt applicability.",
+    "portable_mapping": "Companion /archive_payload_inventory inventories members; /payload/source_inputs and /payload/reference_map preserve original references, hashes, bytes, modes and roles without rewriting canonical bytes.",
+    "exclusions": "No binaries, full trees, private HOME/token-helper logs, caches, nested archives or repeated identical payloads. No native-glyph, global MCP13, final assembly, CI or whole-issue PASS."
+  }
 }

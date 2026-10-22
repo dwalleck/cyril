@@ -269,9 +269,7 @@ impl DomainMediator {
                 crate::protocol::engine::HooksAdapter::Inbound => {
                     Some(Rc::new(crate::protocol::kas::hooks::HookRegistry::load(
                         &config.cwd,
-                        crate::kiro_agent_config::home_dir()
-                            .map(|home| home.join(".kiro"))
-                            .as_deref(),
+                        crate::kiro_agent_config::kiro_home_dir().as_deref(),
                     )))
                 }
                 _ => None,

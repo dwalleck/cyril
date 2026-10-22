@@ -1,0 +1,21 @@
+{
+  "result": "PASS",
+  "binary": "/home/dwalleck/repos/cyril/target/debug/cyril",
+  "engine": "kas",
+  "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25/crates/cyril-ui/tests/fixtures/kas_missing_start_2_31_1.jsonl",
+  "expected": [
+    "Tool Load",
+    "Subagent Response"
+  ],
+  "proof": "real Cyril binary, controlled ACP peer, PTY-decoded TUI",
+  "scenario": "two-sessions-reused-tool-ids",
+  "sessions": [
+    "sess_missing_updates_1",
+    "sess_missing_updates_2"
+  ],
+  "tool_ids": [
+    "toolu_bdrk_017cMtUEMTsbFJMpcucyD7Xv",
+    "toolu_bdrk_01X3NZonr582McywS8fzognM"
+  ],
+  "expected_count_per_label": 2
+}

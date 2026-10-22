@@ -1,0 +1,55 @@
+sess_missing_updates_2                                                                                                                                                              
+Connecting to agent...                                                                                                                                                              
+                                                                                                                                                                                    
+Session created: sess_missing_updates_1                                                                                                                                             
+                                                                                                                                                                                    
+You:                                                                                                                                                                                
+  Replay missing-start tool rows                                                                                                                                                    
+                                                                                                                                                                                    
+Kiro:                                                                                                                                                                               
+BEFORE_TOOL_ROWS_SESSION_1                                                                                                                                                          
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+✓ Tool Load                                                                                                                                                                         
+                                                                                                                                                                                    
+✓ Subagent Response                                                                                                                                                                 
+                                                                                                                                                                                    
+Kiro:                                                                                                                                                                               
+AFTER_TOOL_ROWS_SESSION_1                                                                                                                                                           
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+Session created: sess_missing_updates_2                                                                                                                                             
+                                                                                                                                                                                    
+You:                                                                                                                                                                                
+  Replay the same tool IDs in the second session                                                                                                                                    
+                                                                                                                                                                                    
+Kiro:                                                                                                                                                                               
+BEFORE_TOOL_ROWS_SESSION_2                                                                                                                                                          
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+✓ Tool Load                                                                                                                                                                         
+                                                                                                                                                                                    
+✓ Subagent Response                                                                                                                                                                 
+                                                                                                                                                                                    
+Kiro:                                                                                                                                                                               
+AFTER_TOOL_ROWS_SESSION_2                                                                                                                                                           
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+                                                                                                                                                                                    
+┌ > ───────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│█                                                                                                                                                                                 │
+│                                                                                                                                                                                  │
+│                                                                                                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+cyril                                                                                                                                                                               

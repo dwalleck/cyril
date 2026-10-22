@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "issue": "cyril-x5xi",
+  "pr": 189,
+  "publication_owner": "Main",
+  "publication_status": "Refresh documentation/evidence only; not committed or pushed by packaging worker",
+  "publication_root": ".cyril-x5xi/refresh-pr189",
+  "canonical_handoff": ".cyril-x5xi/refresh-pr189/handoff.json",
+  "publication_file_count": 4,
+  "publication_files": [
+    ".cyril-x5xi/refresh-pr189/handoff.json",
+    ".cyril-x5xi/refresh-pr189/publication-manifest.json",
+    ".cyril-x5xi/refresh-pr189/verification-evidence.tar.gz",
+    ".cyril-x5xi/refresh-pr189/verification.md"
+  ],
+  "content_digests": [
+    {
+      "path": ".cyril-x5xi/refresh-pr189/handoff.json",
+      "bytes": 7043,
+      "sha256": "9a0099dc54020fc0fa945129c0cffb48324866816844c137dbf06030fa58aef9"
+    },
+    {
+      "path": ".cyril-x5xi/refresh-pr189/verification-evidence.tar.gz",
+      "bytes": 1627807,
+      "sha256": "bef26e3fd3e323503d2e65e4ceec0b1a68870bd9e6c565f898446cc5224c4689"
+    },
+    {
+      "path": ".cyril-x5xi/refresh-pr189/verification.md",
+      "bytes": 12632,
+      "sha256": "1594b5b6396ad9a7d57899ade68212fbbddba1bd02b82e2f815d74f745f36215"
+    }
+  ],
+  "digest_exclusions": [
+    {
+      "path": ".cyril-x5xi/refresh-pr189/publication-manifest.json",
+      "reason": "Self digest omitted to avoid recursive hashing. This manifest hashes all three other new files, including the canonical handoff; the handoff names this manifest without hashing it."
+    }
+  ],
+  "source_pins": {
+    "head": "aca1aa503a5183c1183ec3bb62b3d61f0bdb8b77",
+    "actual_qualified_tree": "0280a33d5667e4da217fe572d42e0b9541df2a99",
+    "binary_sha256": "8b28f0661276925b5d17b5333c75bc03ed24c2a61902c3c81651ae163e711785",
+    "binary_included": false
+  },
+  "evidence_archive": {
+    "path": ".cyril-x5xi/refresh-pr189/verification-evidence.tar.gz",
+    "sha256": "bef26e3fd3e323503d2e65e4ceec0b1a68870bd9e6c565f898446cc5224c4689",
+    "bytes": 1627807,
+    "members": 166,
+    "index": "index.json",
+    "indexed_payload_members": 165
+  },
+  "allowlist_rule": "Only these four new refresh-pr189 paths may be staged for this refresh. No directory-wide add, old publication file, production source, README, Cargo file or tracker record is authorized by this manifest.",
+  "approved_archive_selection": "Explicit individual file whitelist in archive index.json; 162 byte-identical approved input files, 3 generated scoped receipts, and index.json. No blanket scratch-dir recursion.",
+  "retained_original_publication": {
+    "manifest": ".cyril-x5xi/publication-manifest.json",
+    "manifest_sha256": "951ef2e3d998363349e726057b4f25581eb786ef01db30f80ac707b490d63155",
+    "archive": ".cyril-x5xi/verification-evidence.tar.gz",
+    "archive_sha256": "afde35dcf77edf4fbb8d3d2a78417692be9380cd842700ba95db28e9180b155f",
+    "included_in_refresh": false,
+    "modified": false
+  },
+  "excluded": [
+    "All pre-existing .cyril-x5xi files, old archive records and old-pin payloads; source-fence A/B and sensitivity retain original attribution.",
+    "All production implementation, README, Cargo and tracker changes; this is not a product change. Only approved frozen harness/fixture/helper source bytes appear inside the evidence archive.",
+    "All compiled binaries and installed executables, target/build directories and private git indexes; approved executable-script source is retained unchanged.",
+    "All isolated HOME/USERPROFILE/XDG/workspace/cache/config/data/runtime/state trees, credentials, ambient private environment and unnecessary cyril.log files.",
+    "Other issue evidence, fiv1 sibling directory and unrelated zj/c6/mcp historical logs; only explicitly approved joint review/stack/source-inventory metadata is retained as context."
+  ],
+  "qualification_boundary": "Fresh default-feature Linux gates and actual-process consumer receipts bind refreshed source pins. Static review does not independently verify qualifier artifacts/tree. Old sensitivity/fence proof is retained, not rerun or relabeled. No native graphical glyph, same-process mode-switch, native50000, child-focus, benchmark, performance-counter, other-platform or all-features claim.",
+  "worker_actions": "Packaging and content hashing only. No builds, tests, lint, format, product/harness runs, commits, pushes, tracker writes or changes outside this new directory."
+}

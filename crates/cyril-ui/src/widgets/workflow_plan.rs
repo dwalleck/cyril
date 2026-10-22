@@ -12,8 +12,8 @@
 //! terminal: a bidi override in a step id must not be able to make an
 //! approval read differently from what it approves.
 
+use crate::text;
 use ratatui::prelude::*;
-use unicode_width::UnicodeWidthStr;
 
 use crate::theme::Theme;
 use cyril_core::types::{
@@ -21,9 +21,9 @@ use cyril_core::types::{
     WorkflowPlanOmission, WorkflowPlanStep, WorkflowRepeatStop, WorkflowStopCondition,
 };
 
-/// Rows of plan the preview shows, omission markers included. Larger than
-/// the five-row text cap: a plan is what the user is approving, so every
-/// step of an ordinary plan should be on screen.
+/// Independent tree-row budget, omission markers included. Also the maximum
+/// visible preview body, including its scroll status. The complete comparison
+/// follows the bounded tree and may need scrolling to reach.
 pub(crate) const MAX_PLAN_ROWS: usize = 12;
 
 /// Indent before every plan row, matching the preview's text rows.
@@ -67,10 +67,9 @@ pub(crate) fn plan_lines(
         .iter()
         .flat_map(|row| wrap_words(row, width, 4))
         .collect();
-    // Reserve the comparison before cutting the tree, as KAS does. Its
-    // complete 600-character value stays reachable through the approval
-    // viewport; a long comparison must not be cut again by a row limit.
-    // Keep a tree omission marker even when the comparison needs all rows.
+    // Keep the tree's budget independent of the comparison. Its complete
+    // cleaned 600-codepoint value follows the bounded tree without another
+    // row cap; both share the bounded approval viewport.
     let tail: Vec<String> = match comparison {
         Some(comparison) => wrap_words(
             &clean(comparison, LIST_CHARS),
@@ -79,7 +78,7 @@ pub(crate) fn plan_lines(
         ),
         None => Vec::new(),
     };
-    let tree = cap_rows(tree, MAX_PLAN_ROWS.saturating_sub(tail.len()).max(1));
+    let tree = cap_rows(tree, MAX_PLAN_ROWS);
 
     tree.into_iter()
         .chain(tail)
@@ -163,7 +162,7 @@ fn wrap_words(row: &str, width: usize, continuation_indent: usize) -> Vec<String
     let mut has_word = false;
     for word in body.split(' ') {
         let gap = usize::from(has_word);
-        if current.width() + gap + word.width() <= width {
+        if text::width(&current) + gap + text::width(word) <= width {
             if has_word {
                 current.push(' ');
             }
@@ -178,7 +177,7 @@ fn wrap_words(row: &str, width: usize, continuation_indent: usize) -> Vec<String
         // later piece a continuation row of its own.
         let mut rest = word;
         loop {
-            let room = width.saturating_sub(current.width()).max(1);
+            let room = width.saturating_sub(text::width(&current)).max(1);
             let pieces = super::approval::wrap_columns(rest, room);
             let Some(first) = pieces.first() else {
                 break;
@@ -403,6 +402,8 @@ mod tests {
     #[case::keeps_indent("  x: alpha beta", 10, &["  x: alpha", "      beta"])]
     #[case::splits_long_word("t: abcdefghij", 7, &["t:", "    abc", "    def", "    ghi", "    j"])]
     #[case::splits_leading_long_word("abcdefghij: x", 6, &["abcdef", "    gh", "    ij", "    :", "    x"])]
+    #[case::halfwidth_cells_wrap("a: ｶﾞ Z", 6, &["a: ｶﾞ", "    Z"])]
+    #[case::combining_mark_still_fits("a: ｶ\u{3099} Z", 6, &["a: ｶ\u{3099} Z"])]
     #[case::empty("", 5, &[""])]
     fn wrap_words_wraps_at_spaces(
         #[case] row: &str,
@@ -412,8 +413,155 @@ mod tests {
         let rows = wrap_words(row, width, 4);
         assert_eq!(rows, expected);
         for row in &rows {
-            assert!(row.width() <= width, "{row:?} wider than {width}");
+            assert!(text::width(row) <= width, "{row:?} wider than {width}");
         }
+    }
+
+    /// Literal rows and emitted cell coordinates distinguish physical halfwidth
+    /// sound marks from ordinary combining marks, including long-word splits.
+    #[rstest::rstest]
+    #[case::voiced_current(
+        "ｶﾞ x yy",
+        &["ｶﾞ x", "    yy"],
+        &[(0, 0, "ｶﾞ"), (3, 0, "x"), (4, 1, "y"), (5, 1, "y")]
+    )]
+    #[case::semivoiced_current(
+        "ﾊﾟ x yy",
+        &["ﾊﾟ x", "    yy"],
+        &[(0, 0, "ﾊﾟ"), (3, 0, "x"), (4, 1, "y"), (5, 1, "y")]
+    )]
+    #[case::combining_voiced_current(
+        "ｶ\u{3099} x yy",
+        &["ｶ\u{3099} x yy"],
+        &[(0, 0, "ｶ\u{3099}"), (2, 0, "x"), (4, 0, "y"), (5, 0, "y")]
+    )]
+    #[case::combining_semivoiced_current(
+        "ﾊ\u{309A} x yy",
+        &["ﾊ\u{309A} x yy"],
+        &[(0, 0, "ﾊ\u{309A}"), (2, 0, "x"), (4, 0, "y"), (5, 0, "y")]
+    )]
+    #[case::voiced_next_word(
+        "xxxx ｶﾞ",
+        &["xxxx", "    ｶﾞ"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (4, 1, "ｶﾞ")]
+    )]
+    #[case::semivoiced_next_word(
+        "xxxx ﾊﾟ",
+        &["xxxx", "    ﾊﾟ"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (4, 1, "ﾊﾟ")]
+    )]
+    #[case::combining_voiced_next_word(
+        "xxxx ｶ\u{3099}",
+        &["xxxx ｶ\u{3099}"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (5, 0, "ｶ\u{3099}")]
+    )]
+    #[case::combining_semivoiced_next_word(
+        "xxxx ﾊ\u{309A}",
+        &["xxxx ﾊ\u{309A}"],
+        &[(0, 0, "x"), (1, 0, "x"), (2, 0, "x"), (3, 0, "x"), (5, 0, "ﾊ\u{309A}")]
+    )]
+    #[case::voiced_long_word(
+        "ｶﾞabcde",
+        &["ｶﾞabcd", "    e"],
+        &[(0, 0, "ｶﾞ"), (2, 0, "a"), (3, 0, "b"), (4, 0, "c"), (5, 0, "d"), (4, 1, "e")]
+    )]
+    #[case::semivoiced_long_word(
+        "ﾊﾟabcde",
+        &["ﾊﾟabcd", "    e"],
+        &[(0, 0, "ﾊﾟ"), (2, 0, "a"), (3, 0, "b"), (4, 0, "c"), (5, 0, "d"), (4, 1, "e")]
+    )]
+    #[case::combining_voiced_long_word(
+        "ｶ\u{3099}abcde",
+        &["ｶ\u{3099}abcde"],
+        &[(0, 0, "ｶ\u{3099}"), (1, 0, "a"), (2, 0, "b"), (3, 0, "c"), (4, 0, "d"), (5, 0, "e")]
+    )]
+    #[case::combining_semivoiced_long_word(
+        "ﾊ\u{309A}abcde",
+        &["ﾊ\u{309A}abcde"],
+        &[(0, 0, "ﾊ\u{309A}"), (1, 0, "a"), (2, 0, "b"), (3, 0, "c"), (4, 0, "d"), (5, 0, "e")]
+    )]
+    fn wrap_words_matches_released_cell_columns_and_diff(
+        #[case] row: &str,
+        #[case] expected_rows: &[&str],
+        #[case] expected_cells: &[(u16, u16, &str)],
+    ) {
+        let rows = wrap_words(row, 6, 4);
+        assert_eq!(rows, expected_rows);
+
+        let area = Rect::new(0, 0, 6, 2);
+        let previous = Buffer::empty(area);
+        let mut painted = previous.clone();
+        for (y, row) in rows.iter().enumerate() {
+            painted.set_line(0, y as u16, &Line::raw(row.as_str()), 6);
+        }
+        let diff = previous.diff(&painted);
+        let cells: Vec<_> = diff
+            .iter()
+            .map(|(x, y, cell)| (*x, *y, cell.symbol()))
+            .collect();
+        assert_eq!(cells, expected_cells);
+    }
+
+    /// Comparisons use the adaptive three-column continuation at width five,
+    /// while the inherited tree continues to use its four-column indent.
+    #[rstest::rstest]
+    #[case::voiced(
+        "ｶﾞ x y",
+        &["    ｶﾞ x", "       y"],
+        &[(4, 0, "ｶﾞ"), (7, 0, "x"), (7, 1, "y")]
+    )]
+    #[case::semivoiced(
+        "ﾊﾟ x y",
+        &["    ﾊﾟ x", "       y"],
+        &[(4, 0, "ﾊﾟ"), (7, 0, "x"), (7, 1, "y")]
+    )]
+    #[case::combining_voiced(
+        "ｶ\u{3099} x y",
+        &["    ｶ\u{3099} x y"],
+        &[(4, 0, "ｶ\u{3099}"), (6, 0, "x"), (8, 0, "y")]
+    )]
+    #[case::combining_semivoiced(
+        "ﾊ\u{309A} x y",
+        &["    ﾊ\u{309A} x y"],
+        &[(4, 0, "ﾊ\u{309A}"), (6, 0, "x"), (8, 0, "y")]
+    )]
+    fn comparison_tail_matches_released_cell_columns_and_diff(
+        #[case] comparison: &str,
+        #[case] expected_rows: &[&str],
+        #[case] expected_cells: &[(u16, u16, &str)],
+    ) {
+        let plan = WorkflowPlan {
+            workflow_id: cyril_core::types::WorkflowId::try_from("wf_6b22f0c99f407f0e".to_owned())
+                .expect("workflow id"),
+            proposed_by: None,
+            kind: WorkflowPlanKind::Edit,
+            workflow_ref: "generated://gen_09d8668976ecd154".to_owned(),
+            kept_step_ids: Vec::new(),
+            steps: Vec::new(),
+            omitted: None,
+        };
+        let theme = crate::theme::resolve(
+            crate::theme::ThemeId::CyrilDark,
+            crate::theme::ColorMode::TrueColor,
+        );
+        let lines = plan_lines(&plan, Some(comparison), 5, &theme);
+        let tail = &lines[lines.len() - expected_rows.len()..];
+        let rows: Vec<_> = tail.iter().map(ToString::to_string).collect();
+        assert_eq!(rows, expected_rows);
+
+        let area = Rect::new(0, 0, 9, 2);
+        let mut previous = Buffer::empty(area);
+        previous.set_style(area, Style::default().fg(theme.subdued));
+        let mut painted = previous.clone();
+        for (y, line) in tail.iter().enumerate() {
+            painted.set_line(0, y as u16, line, 9);
+        }
+        let diff = previous.diff(&painted);
+        let cells: Vec<_> = diff
+            .iter()
+            .map(|(x, y, cell)| (*x, *y, cell.symbol()))
+            .collect();
+        assert_eq!(cells, expected_cells);
     }
 
     /// `cap_rows` keeps everything that fits; otherwise the marker takes the

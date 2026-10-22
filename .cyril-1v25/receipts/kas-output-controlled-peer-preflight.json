@@ -1,0 +1,45 @@
+{
+  "status": "STATIC_REVIEW_READY_NOT_RUN",
+  "worktree": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25",
+  "harness": ".cyril-1v25/smoke.py",
+  "harness_sha256": "30346dd420fdf9eafc9b00bb602e9928c471157ca310da49adaa0e1f4f63e3bb",
+  "fixture": "crates/cyril-ui/tests/fixtures/kas_completed_raw_output.json",
+  "fixture_sha256": "0d613a49514f698c5dd3862d62a24b0fe5616f544d0078880898a441b68720cc",
+  "trace": ".cyril-1v25/receipts/kas-completed-output-trace.jsonl",
+  "trace_sha256": "f80aae8a8fac961f4224c505d112231a669c71784c4b7b993026bd5b5a4c5e71",
+  "observed_static_payload_facts": {
+    "trace_frames": 1,
+    "trace_msg_equals_full_sanitized_fixture_parsed": true,
+    "session_id": "sess_973df141-0181-47bf-977a-2f58ca21220f",
+    "session_id_will_be_preserved": true,
+    "kind_omitted": true,
+    "status": "completed",
+    "title": "Run the exact sed/tr pipeline requested",
+    "raw_output_output": "XAVT_BEGIN XAVT_END\n",
+    "raw_output_exit_code": 0
+  },
+  "renderer_predicates": {
+    "completed_header": "✓ Run the exact sed/tr pipeline requested",
+    "stdout_body": "| XAVT_BEGIN XAVT_END",
+    "required_header_count": 1,
+    "expected_old_body_count": 0,
+    "required_new_body_count": 1,
+    "chronology": "Each expected string must occur once strictly after BEFORE marker and before AFTER marker.",
+    "basis": "convert/mod.rs:233-264 defaults omitted kind to Other and preserves raw_output. chat.rs renders Other using captured title and Completed with ✓; normal successful output body has a literal | prefix. Body predicate therefore cannot be satisfied by command metadata/title. Duplicate replay must still leave one completed header/body."
+  },
+  "invocation_template": ["uv", "run", "--script", ".cyril-1v25/smoke.py", "--binary", "$MAIN_PROVIDED_BINARY", "--engine", "kas", "--capture", ".cyril-1v25/receipts/kas-completed-output-trace.jsonl", "--preserve-session-id", "--expect", "✓ Run the exact sed/tr pipeline requested", "--expect", "| XAVT_BEGIN XAVT_END", "--output", "$FRESH_OWNED_OUTPUT"],
+  "old_failure_fidelity_receipt_required": {
+    "reason": "The frozen harness intentionally reaches its frame-equality check only after presentation expectations, so expected old missing-body RED exits before that check/result.json.",
+    "checks": ["Saved agent-wire contains original complete parsed fixture frame exactly twice (intentional duplicate update).", "Saved session/new result uses captured session ID.", "Saved screen completed-header count is one and body count zero, with BEFORE and AFTER reached.", "No agent permission request or terminal operation was emitted.", "Record actual harness exit, binary hash, harness/fixture/trace hashes, output paths and cleanup evidence."],
+    "owner_consult": "RepairKasOutputProjection confirms no harness/hash changes; use separate old fidelity receipt."
+  },
+  "safety_static_review": {
+    "payload_command_is_inert_json": true,
+    "local_fake_cli_auth": true,
+    "isolated_home_path_and_cwd": true,
+    "no_permission_requests_in_replayed_payload": true,
+    "no_shell_true_or_execution_of_raw_input": true,
+    "display_limitation": "Actual Cyril process under PTY with pyte decoded screen, not native-terminal glyph qualification."
+  },
+  "pending_authority": "Await Main's exact preextension private binary hash and explicit GO before ONE old run; ONE same-input new run only after Main supplies repaired binary and gate/GO. No Cargo, source changes, or product run performed in this preflight."
+}

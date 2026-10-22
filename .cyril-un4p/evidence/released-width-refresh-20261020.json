@@ -1,0 +1,580 @@
+{
+  "status": "CURRENT_LOCAL_AFFECTED_GATES_U10_AND_SCOPED_REVIEW_COMPLETE; PUBLICATION_UNCOMMITTED; REQUIRED_MAIN_TARGET_CI_AUTH6C_NOT_WAIVED",
+  "issue": "cyril-un4p",
+  "pr": 188,
+  "date": "2026-10-20",
+  "packaging_delta_scope": "Exactly the five paths below; not a replacement for the parent-owned complete merge/source staging manifest.",
+  "publication_allowlist": [
+    ".cyril-un4p/route.md",
+    ".cyril-un4p/review-decisions.md",
+    ".cyril-un4p/verification.md",
+    ".cyril-un4p/evidence/released-width-refresh-20261020.tar.gz",
+    ".cyril-un4p/evidence/released-width-refresh-20261020.json"
+  ],
+  "existing_document_postimages": {
+    ".cyril-un4p/route.md": {
+      "sha256": "560da3322294354bd5dc8e256d84ba5058d65a9acba3b8b94185d9c05672930c",
+      "bytes": 9552
+    },
+    ".cyril-un4p/review-decisions.md": {
+      "sha256": "99daa6a359d4fdd07ba3e6f1e07c67a19400d8a4fa4c9ba8a6492f342cb28e73",
+      "bytes": 12466
+    },
+    ".cyril-un4p/verification.md": {
+      "sha256": "3d36d339a4ddecd613b6ed9fc7f48bbf71e8ad665885f0045755ee968efcb175",
+      "bytes": 12735
+    }
+  },
+  "qualified_source_identity": {
+    "actual_assembled_source_tree": "b4c644051b65b500053dea089a1206d93220d43b",
+    "HEAD": "2fd94879db1b4281dc85cf7dcf528649c1da3087",
+    "MERGE_HEAD": [
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "parent_staged_preformat_tree": "b40b28053db4a90ce3c76d7bdf194c48aa9d5088",
+    "note": "b4c64405... is a tested assembled TREE, not a commit. Parent-staged preformat approval.rs is not the tested source. Documentation/evidence publication changes the whole tree but not the runtime source pinned below."
+  },
+  "released_pair": {
+    "ratatui": "0.30.0",
+    "ratatui-core": "0.1.2",
+    "ratatui-widgets": "0.3.2"
+  },
+  "archive": {
+    "path": ".cyril-un4p/evidence/released-width-refresh-20261020.tar.gz",
+    "bytes": 681274,
+    "sha256": "c0788379fabd04e5f45a8d5e8fb4989b76f638b0f5d4e77a889bdce1ed73244b",
+    "file_count": 65,
+    "inventory": [
+      {
+        "path": "ReviewCurrentUn4.txt",
+        "bytes": 2151,
+        "sha256": "89ae685431f18da7c46b31170225d9715c33d72783c002b5566f05061b34dda1"
+      },
+      {
+        "path": "archive-notes.txt",
+        "bytes": 6819,
+        "sha256": "17d606677d1b48bd2e396774a347cc1b83e9fce7f532aaab00edb8d11431fefc"
+      },
+      {
+        "path": "consumer/adaptation.json",
+        "bytes": 2927,
+        "sha256": "67ac46c24f8559557706fe04d06e1bb8b819d529d90b395519468bd7f2a9e023"
+      },
+      {
+        "path": "consumer/evidence-manifest.json",
+        "bytes": 12854,
+        "sha256": "d32d9f2d233479cb9bd5e3144fba525db7c5d36751d16ebe89699cacb8e9a075"
+      },
+      {
+        "path": "consumer/run/00-chat-draft-before-permissions.txt",
+        "bytes": 2922,
+        "sha256": "3ace7e94212e80765c0ede582d2f7359a6ae01ffb0219477c6ecb377548f9715"
+      },
+      {
+        "path": "consumer/run/01-long-option-clamped-answered.txt",
+        "bytes": 2924,
+        "sha256": "b1124bbe721e4cfc66242731fff96901ec5aa702d22d8b6f564847e407d0c09a"
+      },
+      {
+        "path": "consumer/run/01-long-option-clamped-inner-two.txt",
+        "bytes": 1441,
+        "sha256": "6bee1df0d44e7fc84735569f4f7ff635356b77e61bb44cee5cd5ac4ea125563d"
+      },
+      {
+        "path": "consumer/run/01-long-option-clamped-pending.txt",
+        "bytes": 3173,
+        "sha256": "82bc369d1e4ecd276072ba6799e9b3c46e54d330720b75e9c66d0f487327e059"
+      },
+      {
+        "path": "consumer/run/02-long-reason-clamped-answered.txt",
+        "bytes": 2926,
+        "sha256": "30114a5e6b2ab955552c6258a400c2cb3702982fccdc6dccb9a05fa7acd96372"
+      },
+      {
+        "path": "consumer/run/02-long-reason-clamped-inner-two.txt",
+        "bytes": 1459,
+        "sha256": "135408ec6ead24e6ac7a0af67f6acc1e21800838bb689c702f5146ccba1bc8c1"
+      },
+      {
+        "path": "consumer/run/02-long-reason-clamped-pending.txt",
+        "bytes": 3175,
+        "sha256": "466b2b9445e489672b6a264160d07135431d0928cc9c69b47a689a1070736351"
+      },
+      {
+        "path": "consumer/run/03-long-reason-notice-clamped-answered.txt",
+        "bytes": 2978,
+        "sha256": "a04c20716562fa57e11433a5211a260ece95f6ad6ab8a6cb01c18d78d0c93060"
+      },
+      {
+        "path": "consumer/run/03-long-reason-notice-clamped-inner-two.txt",
+        "bytes": 1459,
+        "sha256": "a7ca767ac4c4ef49ff427dd62abd25fd877b184bba685a56e4ee581395d215b8"
+      },
+      {
+        "path": "consumer/run/03-long-reason-notice-clamped-pending.txt",
+        "bytes": 3227,
+        "sha256": "0da39f035344700bd17c87d4ae27cf15586b3bfdeeda7eed65a0df56cba8f7ab"
+      },
+      {
+        "path": "consumer/run/04-literal-ellipsis-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "388d6c487bbde4a179ee79da63697070e20585d1ceae0b3b411755da10ef3b0b"
+      },
+      {
+        "path": "consumer/run/04-literal-ellipsis-option-full-target.txt",
+        "bytes": 3217,
+        "sha256": "15eb49f64fa67cbf22a131a5f178afa0910f3aba74063c0e4a9ce1e18ce23110"
+      },
+      {
+        "path": "consumer/run/04-literal-ellipsis-option-pending.txt",
+        "bytes": 3217,
+        "sha256": "15eb49f64fa67cbf22a131a5f178afa0910f3aba74063c0e4a9ce1e18ce23110"
+      },
+      {
+        "path": "consumer/run/05-literal-ellipsis-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "703f01bab46f8e4d8e30b1ad0c545983d4dbda348580c4e3e218a678b48b7831"
+      },
+      {
+        "path": "consumer/run/05-literal-ellipsis-reason-full-target.txt",
+        "bytes": 3257,
+        "sha256": "1f26691eb2bf5c67974ee719d89b663322407befd1efe51872c092ebb9370883"
+      },
+      {
+        "path": "consumer/run/05-literal-ellipsis-reason-pending.txt",
+        "bytes": 3217,
+        "sha256": "e25084081362c513cfb77c97d384070b27f73df3d3000469639bc5a7d9e41c36"
+      },
+      {
+        "path": "consumer/run/06-single-character-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "94005b8b6ba4153905f18a12a2a3aba146ea8546b0c4366cf9e26bce4d5870b2"
+      },
+      {
+        "path": "consumer/run/06-single-character-option-full-target.txt",
+        "bytes": 3213,
+        "sha256": "37610ff00f416432fa93aac728c3648ba79a304c0b0a8f7e88b0781e69d1259f"
+      },
+      {
+        "path": "consumer/run/06-single-character-option-pending.txt",
+        "bytes": 3213,
+        "sha256": "37610ff00f416432fa93aac728c3648ba79a304c0b0a8f7e88b0781e69d1259f"
+      },
+      {
+        "path": "consumer/run/07-single-character-reason-answered.txt",
+        "bytes": 2980,
+        "sha256": "7ca13fb9572308757edd3f17bef5a3f803771fc583fc91e9e878b071f57e7796"
+      },
+      {
+        "path": "consumer/run/07-single-character-reason-full-target.txt",
+        "bytes": 3255,
+        "sha256": "ef5d442dc71beff712494118c66303ff9c6998d137693058ad9622815e1b78eb"
+      },
+      {
+        "path": "consumer/run/07-single-character-reason-pending.txt",
+        "bytes": 3213,
+        "sha256": "cdf062b3cc5015da30891a600e11da37d859a6026fef905bed6a0dae57399386"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-answered.txt",
+        "bytes": 3078,
+        "sha256": "9245b2f2658c957a161c2957349b735a3f6c976cfa56a2d2c8492ed647c12891"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-expanded.txt",
+        "bytes": 3255,
+        "sha256": "bdf012e84e9f7cb9f73e23b1906f6537bd7e5089de80ed734bf653cc3ea25261"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-narrow-before-enter.txt",
+        "bytes": 208,
+        "sha256": "1c36e2221e7cec4e0541a6dcdf58dd993c0b6c00e617016ae0ef27441c2c197a"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-narrow-enter-ignored.txt",
+        "bytes": 208,
+        "sha256": "d3d3f3ee8cdc255686be1c0455774cef9b384b907235ae16706094dfb66c70a8"
+      },
+      {
+        "path": "consumer/run/08-clipped-grapheme-reason-pending.txt",
+        "bytes": 3213,
+        "sha256": "c75ca5c62a352a8730358b6305eb804120927bef68f49aa541087d0f02189555"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-answered.txt",
+        "bytes": 2980,
+        "sha256": "525565a6080bfb804a5b9287da33660725baf14e5b1f2ed5ac165a2bbfd441fb"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-border-before-enter.txt",
+        "bytes": 294,
+        "sha256": "5d1ac3ae401b40fc71bec57f486c4fb31e7bf44f503df903a1a73a67bdd3788b"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-pending.txt",
+        "bytes": 3303,
+        "sha256": "8aac933d6d89ec1a9a3898974b882b138b0842c0b5544035fa3bfe76fa0f2a9b"
+      },
+      {
+        "path": "consumer/run/09-pathless-border-option-restored-enter-ignored.txt",
+        "bytes": 3251,
+        "sha256": "1346c078c42c4d36bcab27619d4943ea2350c20d8275878d00916cccb609d401"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-answered.txt",
+        "bytes": 2977,
+        "sha256": "3da50ad178ffbe8253698b6dd1f7c96333935449a318552942b0c7ae9f7fb0c4"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-border-before-enter.txt",
+        "bytes": 306,
+        "sha256": "ba2c5a99e6cf10c537b4459dd80d81ea84fc328520beaadb53f115ce2c987097"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-pending.txt",
+        "bytes": 3209,
+        "sha256": "f3387d2415c09401b01f4efd62ed76430306431df3e39ebae5b6971074f405e2"
+      },
+      {
+        "path": "consumer/run/10-pathless-border-reason-restored-enter-ignored.txt",
+        "bytes": 3251,
+        "sha256": "bb07cd9621ece603151964b2cb3c7037ccc2156a61e4fa0fd7621af5d8c03c54"
+      },
+      {
+        "path": "consumer/run/agent-wire.jsonl",
+        "bytes": 14132,
+        "sha256": "351d91a34e2aff740946461e3810d99bde7029826d0a8ca94c1919bf8ab6db38"
+      },
+      {
+        "path": "consumer/run/client-wire.jsonl",
+        "bytes": 6748,
+        "sha256": "5bc65d30ae0122abc66b685e90606b1d00771c6c32408fe40f5fb773ef9c55e6"
+      },
+      {
+        "path": "consumer/run/control.json",
+        "bytes": 27,
+        "sha256": "42bbe83d66da645328433b266f6354b894a1b89ea476d8a8078fbf947ffe5d21"
+      },
+      {
+        "path": "consumer/run/cyril.log",
+        "bytes": 7453,
+        "sha256": "278402b9e82b2258a8a3a549f31772367fc5d414d2eb52806aa8dc15df889dd2"
+      },
+      {
+        "path": "consumer/run/final-screen.txt",
+        "bytes": 2977,
+        "sha256": "3da50ad178ffbe8253698b6dd1f7c96333935449a318552942b0c7ae9f7fb0c4"
+      },
+      {
+        "path": "consumer/run/harness.py",
+        "bytes": 24363,
+        "sha256": "f6d95550e79bc5492a7e362b3085c8de2b10a3c4bbb9485ebccd72ea927be943"
+      },
+      {
+        "path": "consumer/run/kiro-cli-argv.txt",
+        "bytes": 21,
+        "sha256": "d0b31b3b95e1266ee8a3d2f00411236f1a3dd320880644a7de7adfa590f0c06e"
+      },
+      {
+        "path": "consumer/run/observations.jsonl",
+        "bytes": 10413,
+        "sha256": "42a7b12d2a37d67ac725c3e091764309aea9918b351b6333747d80e372940658"
+      },
+      {
+        "path": "consumer/run/result.json",
+        "bytes": 10343,
+        "sha256": "b92ef636ba28e06ff668573b549d021f6f4680ae88b4ac61527472dfa7e628f0"
+      },
+      {
+        "path": "consumer/run/terminal.ansi",
+        "bytes": 308735,
+        "sha256": "67994b43ea74449e762bbe1f5361eda747e7402ac08fbab0b148190a612e545b"
+      },
+      {
+        "path": "consumer/smoke/harness.py",
+        "bytes": 24363,
+        "sha256": "f6d95550e79bc5492a7e362b3085c8de2b10a3c4bbb9485ebccd72ea927be943"
+      },
+      {
+        "path": "members.json",
+        "bytes": 11144,
+        "sha256": "83acd87524bea7bcadcab68cdcf3847f8538bd507977540ebc9fa1d81ced60d3"
+      },
+      {
+        "path": "qualifier/01-initial-canonical-format.log",
+        "bytes": 232,
+        "sha256": "edefc9c4b7df665850f8ef94956f25eb181bfe3928d549a2d36c22dae0ebec7e"
+      },
+      {
+        "path": "qualifier/02-full-affected-UI-and-App-package-tests.log",
+        "bytes": 103179,
+        "sha256": "1deffb9ef3836369b03b9b4aacc5ed845371c41da7d6559b6af3255fef9204fe"
+      },
+      {
+        "path": "qualifier/03-workspace-all-targets-clippy.log",
+        "bytes": 970,
+        "sha256": "0e0e70b20691aa455dfe2ff40fd674b42cadfe599438466306e5cb664bd83ad7"
+      },
+      {
+        "path": "qualifier/04-default-binary-build-bins.log",
+        "bytes": 724,
+        "sha256": "677b408361ba09cd3228ad8aca6e9d271c8bfadd9c4645b79d2290cfe45e8bbb"
+      },
+      {
+        "path": "qualifier/05-final-format-check.log",
+        "bytes": 240,
+        "sha256": "3aa23a50d16e6210ada8373b8d3c22a4d9f48e02a5f1a1c15a320eaef5d5bfc9"
+      },
+      {
+        "path": "qualifier/canonical-handoff.json",
+        "bytes": 68044,
+        "sha256": "50d78b6d7280fe360a226f25b955bd158290149b0b92395921067ed3e4ff8ad5"
+      },
+      {
+        "path": "qualifier/final-actual-assembled-after-requested-local-gates.source-manifest.json",
+        "bytes": 1122209,
+        "sha256": "791290c07adc5687764cf88c6bebe1007a62366372d7ffbb610f979ebe4b3c11"
+      },
+      {
+        "path": "qualifier/final-actual-assembled-after-requested-local-gates.source-pin.json",
+        "bytes": 7820,
+        "sha256": "1f1263ee1a54984d7e2150ad614e0044e668529c2573e9249db6e23ac56b465d"
+      },
+      {
+        "path": "qualifier/final-actual-assembled-after-requested-local-gates.versus-HEAD.patch",
+        "bytes": 599500,
+        "sha256": "382261585054d29a4a8b7a7dca839dc2bf7d7049811da56ec4f85e130c53e46a"
+      },
+      {
+        "path": "qualifier/final-actual-assembled-after-requested-local-gates.versus-parent-staged.patch",
+        "bytes": 3179,
+        "sha256": "a854da139e19680e39dedbd789f34290c6952fb4359a94695d49ec0ed9439321"
+      },
+      {
+        "path": "qualifier/private-binary-provenance.json",
+        "bytes": 697,
+        "sha256": "0c8792445d6c77615312981aff48d1a52e85a68b6c138b46cdcb674bfd17b51d"
+      },
+      {
+        "path": "qualifier/running-command-receipts.json",
+        "bytes": 29145,
+        "sha256": "d8922d627afce40a9907cceddf0620cc3b3a87a0b13f6ba74e798576bdb01d20"
+      },
+      {
+        "path": "review.json",
+        "bytes": 2900,
+        "sha256": "7adeab1819baa6b152360ab706071e410c68c4849ec17323555188d5e0444525"
+      },
+      {
+        "path": "source-preservation.json",
+        "bytes": 4057,
+        "sha256": "756cecd3c55c9fac8cf7f969a9c7f9a0bc329d9e651f97098bb6e537a35c8165"
+      }
+    ]
+  },
+  "qualifier": {
+    "canonical_member": "qualifier/canonical-handoff.json",
+    "canonical_sha256": "50d78b6d7280fe360a226f25b955bd158290149b0b92395921067ed3e4ff8ad5",
+    "recorded_gate_summary": {
+      "initialfmt": "PASS;onlyapproval.rsformatted;stagedpreformatb40 andcheckedpostformatb4c identitiesseparate",
+      "affected_packages": "PASS1263/0/3; cyril351/0/1,cyril-ui912/0/2",
+      "workspace_all_targets_Clippy_Dwarnings": "PASS",
+      "default_cyril_binary_build_bins": "PASS",
+      "finalfmt": "PASS",
+      "unexpected_failures": 0,
+      "retries": 0,
+      "new_mutants_or_tests_added_by_worker": 0
+    },
+    "executed_commands": [
+      "cargo fmt --all",
+      "cargo test -p cyril-ui -p cyril",
+      "cargo clippy --workspace --all-targets -- -D warnings",
+      "cargo build -p cyril --bins",
+      "cargo fmt --all --check"
+    ],
+    "affected_test_counts": {
+      "all_15_targets": {
+        "passed": 1263,
+        "failed": 0,
+        "ignored": 3
+      },
+      "cyril": {
+        "passed": 351,
+        "failed": 0,
+        "ignored": 1
+      },
+      "cyril-ui": {
+        "passed": 912,
+        "failed": 0,
+        "ignored": 2
+      }
+    },
+    "qualifier_not_run_preserved": [
+      "fullworkspace tests",
+      "core unit/integration test execution",
+      "newmutants or testdrivers",
+      "native/auth/ownedconsumer smoke",
+      "CIallfeatures/platform/core",
+      "commit/push/trackerpublication"
+    ],
+    "later_owned_consumer": "Separate accepted U10 below; qualifier raw omissions remain unchanged."
+  },
+  "private_binary": {
+    "path": "/tmp/cyril-un4p-width-current-tested-20261020",
+    "sha256": "df8c6bf50a262ba361c86682f7642eadc27d42730c5d03ab3947a13bfa6e3077",
+    "bytes": 101973704,
+    "bundled": false,
+    "provenance_member": "qualifier/private-binary-provenance.json"
+  },
+  "consumer": {
+    "result": "PASS",
+    "attempts": 1,
+    "retries": 0,
+    "normalizations": 0,
+    "exit_code": 0,
+    "wall_seconds": 14.87,
+    "permission_requests": 10,
+    "permission_responses": 10,
+    "accepts": 4,
+    "rejects": 6,
+    "screen_captures": 36,
+    "draft": "D",
+    "external_operation_callbacks": [],
+    "command": "uv run --script /tmp/cyril-un4p-width-owned-u10-b4c64405-20261020-cOCyv1/smoke/harness.py --binary /tmp/cyril-un4p-width-current-tested-20261020 --expected-sha256 df8c6bf50a262ba361c86682f7642eadc27d42730c5d03ab3947a13bfa6e3077 --repository /home/dwalleck/repos/cyril-wt-fix-cyril-un4p --output /tmp/cyril-un4p-width-owned-u10-b4c64405-20261020-cOCyv1/run",
+    "raw_manifest_member": "consumer/evidence-manifest.json",
+    "raw_manifest_sha256": "d32d9f2d233479cb9bd5e3144fba525db7c5d36751d16ebe89699cacb8e9a075",
+    "raw_manifest_evidence_file_count": 47,
+    "raw_manifest_evidence_files_bundled": 47,
+    "result_member": "consumer/run/result.json",
+    "result_sha256": "b92ef636ba28e06ff668573b549d021f6f4680ae88b4ac61527472dfa7e628f0",
+    "unchanged_harness_sha256": "f6d95550e79bc5492a7e362b3085c8de2b10a3c4bbb9485ebccd72ea927be943",
+    "harness_source_changes": [],
+    "adaptation": "Existing CLI selects qualified binary/digest, matching repository and fresh output; no oracle changes.",
+    "raw_field_interpretation": "The preserved source_head fields mean actual_assembled_source_tree b4c64405..., NOT a commit HEAD. Literal artifact476 limitation citation is historical metadata, not new-source PASS.",
+    "scope": "Actual process/converter/UI/manual permission wire and PTY decoded ASCII/text geometry; NOT live KAS/backend/account/auth or native Unicode-cell qualification."
+  },
+  "review": {
+    "reference": "agent://ReviewCurrentUn4",
+    "original_member": "ReviewCurrentUn4.txt",
+    "portable_transcription_member": "review.json",
+    "findings": [],
+    "overall_correctness": "correct within scoped source review",
+    "confidence": 0.94,
+    "scope": "Actual postformat working source, not merely index; feature metadata, physical graphemes/guards/callers and literal Buffer/diff tests; static review only."
+  },
+  "source_preservation": {
+    "phase": "Before/after the three existing documentation edits; subsequent archive/index assembly writes only the two new evidence paths.",
+    "qualified_actual_assembled_source_tree": "b4c644051b65b500053dea089a1206d93220d43b",
+    "qualified_HEAD": "2fd94879db1b4281dc85cf7dcf528649c1da3087",
+    "qualified_MERGE_HEAD": [
+      "3a5b88b66b1267844ea764c4ff58e48294c93141"
+    ],
+    "qualified_parent_staged_tree": "b40b28053db4a90ce3c76d7bdf194c48aa9d5088",
+    "identity_note": "Assembled tree is not a commit HEAD. Final publication tree changes for docs/evidence; source content remains pinned independently.",
+    "canonical_sha256": "50d78b6d7280fe360a226f25b955bd158290149b0b92395921067ed3e4ff8ad5",
+    "qualified_source_manifest_sha256": "791290c07adc5687764cf88c6bebe1007a62366372d7ffbb610f979ebe4b3c11",
+    "fingerprint_scope": "Manifest-listed entries under crates/, .cargo/, .github/workflows/, plus root Cargo.toml/Cargo.lock/build.rs/rust-toolchain/rust-toolchain.toml when present. Includes code/tests/fixtures/build+CI configuration, not only the two widget files.",
+    "fingerprint_algorithm": "SHA-256 of json.dumps(records, sort_keys=True, separators=(comma,colon)).encode(); records preserve qualified manifest order and contain path, mode, sha256, bytes. Symlink content is link target bytes.",
+    "source_file_count": 490,
+    "before_source_fingerprint_sha256": "e17e7a4ca78b2804ecb594e6533be8a533e49d562047011ed9726eb80eec2a5f",
+    "after_source_fingerprint_sha256": "e17e7a4ca78b2804ecb594e6533be8a533e49d562047011ed9726eb80eec2a5f",
+    "before_mismatches_against_qualified_manifest": [],
+    "after_mismatches_against_qualified_manifest": [],
+    "runtime_source_unchanged": true,
+    "widget_source_pins": [
+      {
+        "path": "crates/cyril-ui/src/widgets/approval.rs",
+        "mode": "100644",
+        "sha256": "4a68792ea8cbe34631833455c736d2a2efa495d2ab6c8a3d77bb711747161983",
+        "bytes": 134629
+      },
+      {
+        "path": "crates/cyril-ui/src/widgets/workflow_plan.rs",
+        "mode": "100644",
+        "sha256": "702a09e4eba2a9ec66e0801b081d60c93faeebfe7a37af09fbe2c2e0e6a9864f",
+        "bytes": 20189
+      }
+    ],
+    "known_removed_source_path": {
+      "path": "crates/cyril-ui/src/snapshots/cyril_ui__floor_tests__roomy_inflow_80x24.snap",
+      "present_before": false,
+      "present_after": false
+    },
+    "documentation_preimages": {
+      ".cyril-un4p/route.md": {
+        "sha256": "afcfcf74368190bf7de6022a99e2a9be46736490b84cbb4f9ab0ac330b72634b",
+        "bytes": 7264
+      },
+      ".cyril-un4p/review-decisions.md": {
+        "sha256": "b70bc2bfb2ee1475123573a03a9e8f2074cba23e816855ee88cd8d567c111194",
+        "bytes": 9979
+      },
+      ".cyril-un4p/verification.md": {
+        "sha256": "24e998ad203457adeb72dcb2ea7a128a5f8a7f12bc23caf81cd6517a5e92cf8a",
+        "bytes": 6178
+      }
+    },
+    "documentation_postimages": {
+      ".cyril-un4p/route.md": {
+        "sha256": "560da3322294354bd5dc8e256d84ba5058d65a9acba3b8b94185d9c05672930c",
+        "bytes": 9552
+      },
+      ".cyril-un4p/review-decisions.md": {
+        "sha256": "99daa6a359d4fdd07ba3e6f1e07c67a19400d8a4fa4c9ba8a6492f342cb28e73",
+        "bytes": 12466
+      },
+      ".cyril-un4p/verification.md": {
+        "sha256": "3d36d339a4ddecd613b6ed9fc7f48bbf71e8ad665885f0045755ee968efcb175",
+        "bytes": 12735
+      }
+    },
+    "exact_repository_write_allowlist_this_packaging_phase": [
+      ".cyril-un4p/route.md",
+      ".cyril-un4p/review-decisions.md",
+      ".cyril-un4p/verification.md",
+      ".cyril-un4p/evidence/released-width-refresh-20261020.tar.gz",
+      ".cyril-un4p/evidence/released-width-refresh-20261020.json"
+    ],
+    "historical_archive": {
+      "path": ".cyril-un4p/evidence/verification-20261020.tar.gz",
+      "sha256": "10a5377c4a3faf89dd4f58233696c19a1595546fd4ef91477b8f56f842a1f9e7",
+      "unchanged_from_recorded_prepackaging_sha256": true
+    },
+    "ambient_delivery_patches": "No enumeration, copy, write, removal or staging by this packaging phase.",
+    "source_Cargo_tracker_child_edits": [],
+    "Git_staging_commit_push_commands_this_phase": [],
+    "gates_consumers_native_commands_this_packaging_phase": []
+  },
+  "historical_evidence": {
+    "path": ".cyril-un4p/evidence/verification-20261020.tar.gz",
+    "sha256": "10a5377c4a3faf89dd4f58233696c19a1595546fd4ef91477b8f56f842a1f9e7",
+    "unchanged": true,
+    "old_gate_and_consumer_receipts": "Retained historical proof only; not migrated-state full-workspace/native qualification."
+  },
+  "not_locally_executed_for_refresh": [
+    "full-workspace tests",
+    "core unit/integration test execution",
+    "new mutation/test drivers",
+    "all-feature/platform CI lanes",
+    "native/auth acceptance"
+  ],
+  "mandatory_remaining_obligations": [
+    "Main-target CI is mandatory; corresponding core/full-workspace/all-feature/platform obligations are not discharged by these affected local tests or workspace Clippy.",
+    "Inherited auth6c is unavailable on this branch and NOT WAIVED.",
+    "Native acceptance needs a newly qualified MCP binary and separate bounded authorization; user working-bootstrap confirmation is satisfied.",
+    "Parent stages actual formatted source plus this five-file publication delta, resolves index, commits/pushes and obtains CI; no child integration until separate exact qualified-parent commit GO."
+  ],
+  "packaging_commands_excluded": [
+    "Git/staging/commit/push",
+    "Cargo/test/lint/format",
+    "second consumer or normalization",
+    "native/auth/login/bootstrap retry"
+  ],
+  "protected_paths": [
+    ".cyril-un4p/delivery-patches/ (not enumerated/copied/changed)",
+    "historical evidence archive",
+    "runtime/Cargo/tracker/AGENTS/README source",
+    "PR190/PR191 worktrees"
+  ],
+  "index_self_digest": "Recorded in external handoff rather than recursively in this index."
+}

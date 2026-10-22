@@ -1,0 +1,10 @@
+{
+  "result": "PASS",
+  "binary": "/home/dwalleck/repos/cyril/target/debug/cyril",
+  "engine": "v2",
+  "capture": "/home/dwalleck/repos/cyril-wt-fix-cyril-1v25-missing-tool-results/crates/cyril-ui/tests/fixtures/v2_failed_validation_2_4_1.jsonl",
+  "expected": [
+    "The tool arguments failed validation:"
+  ],
+  "proof": "real Cyril binary, controlled ACP peer, PTY-decoded TUI"
+}

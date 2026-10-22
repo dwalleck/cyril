@@ -158,7 +158,7 @@ pub fn render(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme
 /// the trailing affordances always stay.
 pub fn render_status_bar(frame: &mut Frame, area: Rect, state: &dyn TuiState, theme: &Theme) {
     let full = Line::from(status_bar_spans(state, theme, true));
-    let line = if full.width() <= usize::from(area.width) {
+    let line = if crate::text::line_width(&full) <= usize::from(area.width) {
         full
     } else {
         Line::from(status_bar_spans(state, theme, false))

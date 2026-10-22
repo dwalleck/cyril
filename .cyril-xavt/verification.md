@@ -1,5 +1,67 @@
 # cyril-xavt delivery verification
 
+## Current held-af78 checkpoint
+
+**PASS for the explicitly bounded current qualification and both owned consumer cases below.** Main still owns completing the held parent merge, committing, publishing PR191, and final cross-batch/platform qualification. This is not whole-issue, native-glyph, MCP13, or final-assembly acceptance.
+
+### Source, binary, and approval boundary
+
+- Worktree remains `/home/dwalleck/repos/cyril-wt-fix-cyril-xavt`, held HEAD `bc6f48a21016320cc6491356f880f37463cf8c6e` plus MERGE_HEAD `af78b1615bd5b97b4c702542fd3ab193151bd4c1`. These are ancestry pins, not a claim that HEAD alone contains the assembled source.
+- Current **532-input** descriptor: `b6a846bee5f24ab0c2d0b1a48f066dd69ae575abb82bc7033c3f42a56ff48308`. Inventory SHA-256: `3dc4772aa56a9cc5551c2a105ae3b13010cf2c6233286d5f8bd09cbdc858df16`. README is separately owner-pinned, not a claimed runtime input.
+- Current private default App: `/tmp/cyril-xavt-overlay-wide-boundary-repaired-default-App-qualified-20261022T192920439038Z`, SHA-256 `8e2b7c3a82b360d4ca4f1c1b6410084bf3a5a9e1673612d04bfd6c61739ee7f0`, 102,230,376 bytes, mode0755. No binary is published or substituted from the shared target.
+- Completed current qualification: `overlay-wide-boundary-repaired-X-local-qualified-attempt1-handoff.json`, SHA-256 `e6e36df131049a29fb154faf8968233de4da2c53df41d85e7d97d0e9e4aead89`. Its eleven current owner pins include README plus ten UI files; they are not the old eleven X-feature files.
+- Original [design](design.md) requirements and approvals remain intact. The additional **Main DG** `approved-overlay-wide-boundary-repair.md`, SHA-256 `475c6c4ea2ff7f896b3f50397f4a1336cfbfa508d6b28f72d726248670bd5540`, owns the modal repair: evict whole painted spans intersecting the clipped rectangle at either edge, arbitrary widths, preserve disjoint cells/styles/other rows, use released CellWidth without production allocation/copy/normalization or backend/diff-flag changes. All twelve current Clear callers use existing `widgets/modal.rs`; the final MCP thirteenth caller remains separate integration.
+
+All named receipts, approvals, manifests, logs, exact consumer instruments, and raw records resolve through the [current portable index](evidence-current-modal532-b6a846be-index.json); original receipt bytes and their absolute/local references are preserved rather than rewritten.
+
+### Retained evidence and the observed failure
+
+- Retain the prior exact-ten-command PASS, canonical `873df2d9…`. Its source scope was **530 execution-pinned inputs plus two posthoc fixtures**, not a retroactive532 qualification. The current532 inventory included both known fixtures before the fresh default UI/App execution.
+- All197 current Core rows and root manifests/lock/toolchain/config match that retained checked state. Current Core dependencies were compiled through UI/App gates; Core-only units, the old ten-command matrix, and no-default jobs were **not replayed** for the UI-only modal repair.
+- Preserve original captured892 PASS and original controlled FAIL (`xavt-af78-owned-runtime-handoff-b27bd94f.json`, `4961eea3…`). The controlled case failed at the reason wait before any narrow control: zero observations; raw ANSI and the exact frozen decoder/predicate reproduce an empty extracted body because `(8,12)` contains `ﾞ`, not the expected border. The internal Buffer skip mechanism remains **source-derived inference**, not instrumented App state or a timing/scheduler diagnosis.
+- The original producer RED (`ef10a364…`) contains **two decisive released-backend border-emission failures at original render.rs1112**. The third failure at1142 is a separate restoration-oracle error, not another emission RED or proof that every old control-loop fixture completed. The corrected width-one ordinary-combining controls preserve disjoint cells/styles and require no close re-emission; actual crossing border/diff/backend/restoration obligations remain.
+
+### Current modal qualification and source review
+
+The initial fmt CHECK **failed** on initial source `c2fd9799…` and remains immutable (`2ce6db27…`). Main authorized one normal formatter confined to seven of the eleven owners. The following **seven subsequent command records succeeded**; the formatter is not misreported as an additional test gate:
+
+| Command | Actual result on the recorded source |
+| --- | --- |
+| `cargo fmt --all` | One authorized formatter; current descriptor becomes `b6a846be…` |
+| `cargo fmt --all -- --check` | PASS after formatting |
+| `cargo test -p cyril-ui render::tests::overlay_occludes_chat_grapheme -- --nocapture` | 3 passed, including unchanged/changed real chat leads and literal width controls |
+| `cargo test -p cyril-ui widgets::modal::tests::clear_ -- --nocapture` | 7 passed: both edges, arbitrary widths, clipping, preservation, persistent backend/restoration |
+| `cargo test -p cyril-ui -p cyril` | **1,574 passed, 0 failed, 3 ignored**; focused cases overlap this run and are not added as unique tests |
+| `cargo clippy -p cyril-ui -p cyril --all-targets -- -D warnings` | PASS |
+| `cargo build -p cyril --bins` | PASS; fresh private default App copied before any other build |
+
+Independent ordinary source review: **NONE / correct / confidence0.97**, receipt `overlay-wide-boundary-source-review.md`, SHA-256 `1e578f47aa86b01877bf86423b11fe34f281228c233b87341ebf45040bd62dce`. It reviewed the actual eleven-owner repair and affected producer/composition/released-diff/backend interactions. Main retained semantic applicability after the authoritative rustfmt-only normalization; this is not a new postformat review or raw byte identity. The review-time “qualification pending” language is historical chronology, not a replacement for the later receipts.
+
+### Current two-case owned consumer
+
+New Main GO and passed entry guards bound the current532 source/private8e App to a **binding-only copy** of b27: new harness `b2484210…`, exact diff `e82544f7…`, changing only original lines36–38,166,493–494. Case payloads, keys, predicates, budgets, captures, and cleanup are unchanged. Each case ran exactly once; controlled ran only after captured scenario and ownership cleanup passed.
+
+| Case | Actual exercised result | Retained records |
+| --- | --- | --- |
+| Original captured892 | Exact full command+cwd; draft/navigation/reason retained; cwd-only/tiny Enter refused; one RejectOnce, no execution | 12 observations, 13 scenario captures |
+| Controlled `{"command":"ｶﾞ\n:","path":"界界"}` | Home and End Enter inert in both phases; identifying two-row path retained; width12 whole pair emitted raw+decoded; restored80×40 full command+path+selected Deny before one RejectOnce | 10 observations, 11 scenario captures |
+
+Canonical actual-capture handoff: `xavt-overlay-wide-boundary-owned-runtime-actual-captures-handoff.json`, SHA-256 `16906a511b6161cee06645138fd11a888dc3047860907d8e2dc5df13188c2599`. Exact evidence inventory: `49f25d414274ddf4ba5182cf06bf0b67f50ca8dea7b5d4bb60f32edc8b6b7109`.
+
+Both original driver waits and actual App waits returned0. Node/peer exitcodes remain **UNOBSERVED**; pidfd readiness is not an exitcode. Both ordinary close and independent proven-owned cleanup were COMPLETE, no signals/survivors/unproven markers, with scratch removed only after attestation. The single143-check entry (`5dacd4c5…`) and single143-check postflight (`53b44b6b…`) passed. There were **22 observations, 24 scenario captures, plus two cleanup final screens**, no retries or extra waits. The first metadata classifier omitted letter-suffixed03b/07b/07c; its correction changes only classification, never raw bytes/assertions/runtime.
+
+These were actual default-feature Cyril/KAS-route owned-peer cases, not real provider/account/auth/model/tool execution or native CJK glyph/reflow evidence. No historical mutants were rerun or newly claimed. Original live-KAS limitations and the separate PR183 output-alias exclusion below remain.
+
+### Current portable evidence and publication
+
+[Current compressed evidence](evidence-current-modal532-b6a846be.tar.gz) and its [member/alias index](evidence-current-modal532-b6a846be-index.json) retain canonical/manifests/logs/reviews/approved control contracts and original FAIL/new PASS ANSI/screens/wires/results without binaries, full trees, private HOME/token-helper logs, nested archives, or repeated identical payloads. The original delivery zip/index remain historical and unchanged in payload meaning.
+
+[publication-files.json](publication-files.json) now owns the current delta against the held index, not the old21-path X-feature selection: eleven already-qualified repair owners plus the explicitly selected metadata/new evidence. Its own path is selected but its recursive self-hash is external in Main's final handoff. No source edits were made during final publication preparation.
+
+## Historical October20 record
+
+The remaining original receipt preserves the older860/private338/.98 proof and native limitations. Those identities and results are historical, not qualifications of current532/private8e; they are not rewritten into current PASS.
+
 ## Result and source boundary
 
 **Implementation, repository qualification, independent source review, and bounded consumer handoff: PASS within the scopes below.** Main owns the remaining commit, tracker, and own-PR publication actions. This receipt does not declare those publication actions performed.
@@ -101,7 +163,7 @@ The exact invocation is retained as `actual-delivery-owned/invocation.txt`. It r
 
 - Archive: [cyril-xavt-delivery-nonsecret.zip](cyril-xavt-delivery-nonsecret.zip), **1,845,417 bytes**, SHA-256 `3886ee35c06274160ae6b736671ecfa3e90467e034140564e42eaf7233d34c48`.
 - [evidence-index.json](evidence-index.json) gives every selected payload's exact size/hash, the archive hash, internal manifest hash, source provenance and exclusions. The archive has38 entries, including its internal `payload-manifest.json`.
-- [publication-files.json](publication-files.json) enumerates the exact issue-owned publication paths and hashes, distinguishing the eleven frozen source/test/fixture files from README and workflow/evidence. Its own path is explicit; its self-hash is intentionally external to avoid recursive hashing. Main receives a complete external manifest including that file's hash.
+- The original21-path publication roster is retained as historical provenance in the current portable bundle. [publication-files.json](publication-files.json) now enumerates the current held-index delta; its self-hash remains external. It must not be read as the old eleven-X-feature-file manifest.
 
 Selection was explicit: the allowed original native zip/manifest/receipt/wire and separately labeled completed supplement, the established EJ harness, new owned controlled-peer outputs, Main-authorized named nonsecret Cargo outputs454/542/575/688/860, canonical source review and source-identity records. Main explicitly clarified that these named Cargo outputs are permitted portable logs; the toolspill exclusion concerns credential-bearing/private-journal or unknown output. No recursive `/tmp/evidence` scan or private-journal inspection was used. **Excluded:** kas-private.jsonl, all private HOME/KIRO_HOME and Cyril logs, credential stores, compiled binaries, credential-bearing or unknown toolspills, unrelated source/fixtures, tracker data and output-alias repair. Evidence hashes identify bytes; they do not substitute for behavioral receipts or imply arbitrary secret detection.
 
