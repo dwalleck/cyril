@@ -3,6 +3,7 @@ use serde_json::json;
 
 use crate::protocol::engine::{Engine, KasEngine, V2Engine};
 use crate::test_support::must_succeed;
+use crate::types::Notification;
 
 fn session_info_frame(kiro: serde_json::Value) -> acp::SessionNotification {
     must_succeed(
@@ -16,8 +17,6 @@ fn session_info_frame(kiro: serde_json::Value) -> acp::SessionNotification {
 
 /// Source-derived MCP payload, not a claimed raw MCP capture. The producer's
 /// flat fields are authoritative; displayError is the optional emitted mirror.
-/// This test deliberately uses only base production interfaces, allowing a real
-/// pre-fix red on missing conversion rather than an unknown-variant compile error.
 #[test]
 fn kas_mcp_display_error_preserves_conversion_result_and_message() {
     let message = "  MCP server 'private-server' connection failed: authorization refused.  ";
@@ -34,13 +33,14 @@ fn kas_mcp_display_error_preserves_conversion_result_and_message() {
             });
         }
         let frame = session_info_frame(kiro);
-        let Some(converted) = KasEngine::default().convert_session_update(&frame) else {
-            panic!("a source-shaped MCP display_error must produce a consumer event");
+        let Some(Notification::McpConnectionError { message: converted }) =
+            KasEngine::default().convert_session_update(&frame)
+        else {
+            panic!("a source-shaped MCP display_error must produce a classified consumer event");
         };
         assert_eq!(
-            format!("{converted:?}"),
-            format!("McpConnectionError {{ message: {message:?} }}"),
-            "classification and original message must survive conversion",
+            converted, message,
+            "the original message must survive conversion",
         );
         assert!(V2Engine.convert_session_update(&frame).is_none());
     }

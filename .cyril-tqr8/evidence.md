@@ -1,6 +1,6 @@
 # cyril-tqr8 — supported KAS OAuth evidence
 
-Historical investigation date: 2026-10-19; inspected production base `8e5c325e`. The [held-main integration 2026-10-22 addendum](#held-main-integration-2026-10-22) owns the current actual503-input identity, fresh32-gate qualification, scoped static integration review and one fresh authorized eleven-capture owned-consumer PASS. The [standalone PR193 repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21), [prior a09 delivery checkpoint](#delivery-checkpoint-2026-10-20), earlier failures and partial checkpoints retain their original identities/results/scopes. Held-source qualification is not a completed merge, current-head CI, native acceptance or final integration acceptance.
+Historical investigation date: 2026-10-19; inspected production base `8e5c325e`. The [review-layer record](#review-layers-and-retained-proof-applicability) owns the frozen ordinary assembled d0cc60d7 source-review PASS, supplemental reconstruction's former design mismatch and fresh scoped qualification PASS for Main's typed-test correction at postformat source50ac7d68/overlayafeebb5d. The initial formatter FAIL and preformat63f15d8a snapshot remain explicitly historical. The [held-main integration addendum](#held-main-integration-2026-10-22) retains its actual503-input identity,32-gate qualification, scoped static integration review and one authorized eleven-capture owned-consumer PASS at their original source state. The [standalone PR193 repair checkpoint](#current-pr193-repair-checkpoint-2026-10-21), [prior a09 delivery checkpoint](#delivery-checkpoint-2026-10-20), earlier failures and partial checkpoints likewise retain their original identities/results/scopes. The focused result does not rerun or promote those32 gates, workspace/App consumer proof, current-head CI, native/host/platform or final downstream acceptance; these remain separate and pending where unsupplied.
 
 ## Premises
 
@@ -163,14 +163,14 @@ Drive the displayed synthetic authorization URL with a local HTTP client preserv
 
 ## Held-main integration 2026-10-22
 
-**Current held-source checkpoint — fresh qualification and owned consumer PASS,
+**Historical held-source checkpoint — qualification and owned consumer PASS,
 not all-claims acceptance.** Main's source integration of Tqr HEAD
 `09e41ddd0306567b9430ea3216902f895fc96370` with held MERGE_HEAD
-`03838a501dad8be140acd78dc3fff4cae35fafef` is qualified in its held state.
-Completed merge/ancestry, commit/push and current PR-head CI/review remain
-Main-owned and are not claimed here. This addendum supersedes the standalone
-checkpoint's active source pointer and not-yet-integrated chronology, without
-rewriting any prior receipt, archive, empirical result or approval.
+`03838a501dad8be140acd78dc3fff4cae35fafef` was qualified in that held state.
+The current ordinary assembled source-review layer is recorded below against
+d0cc60d7; it neither changes these held-input pins nor relabels their execution.
+This addendum superseded the standalone source pointer at its checkpoint;
+all prior receipts, archives, empirical results and approvals remain immutable.
 
 ### Current source and private executable binding
 
@@ -308,23 +308,141 @@ historical evidence; none is replaced by these48-member/256,279-byte/d3 facts.
 
 ### Review layers and retained-proof applicability
 
-The canonical's `both_parent_static_review_scope_only` selects
-`agent://IntegrateTqrPrerequisite.ReviewHeldMainTqrIntegration`: **no actionable
-source-integration findings; correct for scoped static integration review,
-confidence0.96**. It found both parents' relevant routing/reveal, canonical
-ownership/dedup, shared gutters, incoming theme/cache/diff/selected-fit,
-CLI formatter and Peaq fixture behavior preserved. This is static integration
-review, **not** qualification PASS, a fresh whole-merge review or isolated
-production reconstruction. The fresh32 gates and subsequent eleven-capture
-consumer separately establish only their exercised empirical layers.
+**Current ordinary assembled source review — PASS, not empirical acceptance.**
+The frozen `.cyril-tqr8/review-current-d0cc60d7.md`, SHA-256
+`fe7d53e27bd9af403187fcc55f31a66c5f035128df4e101ff310f4871260c0f8`,
+judges HEAD `d0cc60d7662ced69a4a32c904e9800bea6990a22` against
+`03838a501dad8be140acd78dc3fff4cae35fafef`: no actionable findings,
+correct/confidence0.94. It inspected all11 behavior/export files, affected
+consumers and dedicated/inline tests as source; App's delta only registers a
+test module. It ran no tests, formatters, builds, apps or auth probes.
 
-The standalone09/d265 ordinary repair review remains correct/no findings,
-confidence0.97 **within its original scope**. Changed UI production inputs,
-App tests, manifests/lockfile, Core test support and five incoming inputs
-prevent blanket promotion of its App/UI/workspace/Core gates or consumer.
-Unchanged formatter/example mechanism preserves that reviewed mechanism,
-not whole-production byte identity or fresh merged CLI execution. The
-separate historical CLI RED/GREEN remains historical.
+The supplemental blind production reconstruction is
+`.cyril-tqr8/reconstruction-d0cc60d7.md`, SHA-256
+`958703296e9563def4f2c16a28db2435dc717ba2df935319eeb0e3cd74c05886`.
+The literal comparison against the former private-formatter requirement
+found a genuine public/private mismatch, not a behavioral finding or an
+ordinary-review FAIL. Main's explicit DG in [design Approval](design.md#approval)
+retains the narrow shared public Display entry point and corrects that design
+requirement; frozen artifacts remain unchanged. Current repository gilfoyle
+CONTRACT/assessing-review-feedback/module-shape make ordinary independent
+review the default and isolation conditional. No further reconstruction,
+formatting-only conformance round or universal NK/Caar isolation gate follows.
+
+**Inspected source applicability, distinct from execution:** direct source
+inspection found only UI presentation ownership plus the existing binary→UI
+example use, with no broader interface/process/storage/protocol boundary.
+These SHA-256 pins identify the inspected files, not a new whole-tree manifest:
+
+| Source | SHA-256 | Applicable conclusion |
+|---|---|---|
+| `crates/cyril-ui/src/mcp_notice.rs` | `d9cffbb385cfa6f04b306053b3827f5b5557f61effab1c2fd9b63dc19f794ba5` | Public `terminal_safe`; concrete type/iterator/escape details internal. `characters` is called only by `TerminalSafe::fmt`, not a cached-panel adapter. |
+| `crates/cyril-ui/src/lib.rs` | `e661fb1bc4f24dd579087d5715e0965a808805e2251af3a7d0546af2a6febaef` | Public module export, not additional behavior. |
+| `crates/cyril/examples/test_bridge.rs` | `42d991b5008f86c583bf65503310afd0c381c8eb2736511efb242def13f43c12` | Existing URL test-forwarder and direct MCP-error consumer reuse the same formatter; the subscriber explicitly caps logging at INFO. |
+| `crates/cyril/src/main.rs` | `493a74776530f9f4fc60af009cc4a954539010f4a17b74ea31b1af3e02197c5f` | Startup invokes `setup_logging`; its JSON file subscriber has no EnvFilter or maximum-level override. |
+| `crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs` — current qualified postformat | `50ac7d68ea110499798577ddaa0ad8921811955dfcacae4f3770430c13304095` | Main's typed variant destructuring and original-message equality remain, with both mirror inputs and V2 rejection. All three focused module tests, fresh fmt check and strict Core KAS all-target Clippy PASS on this4,642-byte source; proof is owned below. |
+| Same test — historical corrected/preformat snapshot, not current | `63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555` | The4,522-byte snapshot already contained Main's typed repair, before authoritative formatting; initial fmt check FAILed on four existing assert-block reflows, with test/Clippy stopped and unexecuted in that attempt. |
+
+Concrete formatter consumers were checked at UI `state.rs:1130-1147,1410-1417`,
+`subagent_ui.rs:154-160` and example `test_bridge.rs:44-47,627-637`.
+LSP returned no references despite those visible calls; that empty result
+was discarded, reported, and not treated as a no-consumer proof. Source reads
+and the concrete consumer search establish this bounded applicability.
+
+**Logging qualification:** pinned Cargo.lock resolves tracing-subscriber0.3.23
+and agent-client-protocol2.0.0. The installed subscriber's
+`src/fmt/mod.rs:341-349,467-473` fixes its builder default at INFO; application
+`main.rs:280-300` retains that filter, with no RUST_LOG/EnvFilter path. SDK
+`src/jsonrpc/handlers.rs:104-115,232-243` records payload-bearing events at
+DEBUG/TRACE, outside this application filter. Local callback parsing uses a
+fixed parameter-error string (`callbacks.rs:173-189`), callback completion
+uses safe kind metadata (`:403-439`), and conversion warnings use fixed text
+(`convert/kas.rs:588-610`). No concrete supported-application diagnostic leak
+was found in the callback/error path. This is source applicability, not a
+new logging run or proof under arbitrary permissive/replacement subscribers;
+the approved no-secret-diagnostic behavior remains required, not waived.
+
+**Coverage and typed-test repair:** `tests/oauth.rs:67-135` directly fills the
+domain queue and checks enqueue-before-success. Separate wire/lifecycle tests
+at `tests/external_url_wire.rs:19-102` and `tests/oauth.rs:166-357` cover SDK
+initialize/new-session routing; they do not establish combined full
+initialization-saturation progress. C2 has no separate all-saturation stress
+obligation, so no new stress framework or coverage gate is imposed merely
+for that qualification. The five current observation decisions and technical
+repair record live only in [review-decisions](review-decisions.md#current-assembled-review-and-held-main-applicability--2026-10-22).
+Main's typed assertion keeps C3's classified-event/original-message coverage
+without Debug representation coupling. **Fresh scoped qualification PASS:**
+QualifyPerformanceTrees' byte-exact [canonical receipt](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/qualification.json),
+SHA-256 `1ca5fa41a714224c631f97dff18a159954c6c7a803e59c93b189066469bd6f99`,
+is copied from `local://tqr8-d0cc60d7-typed-mcp-error-scoped-qualified-handoff.json`;
+all external canonical/log/manifest provenance paths are retained unchanged.
+It binds HEADd0cc60d7 plus the sole test overlay to the503-row descriptor
+`afeebb5d6ca23e0d5a0cc845fbb151a6d30f9854513dc6e86069dea12d535737`,
+not a new Git tree or old32-lane source identity. The exact portable
+[postformat input manifest](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/source-inputs.json),
+SHA-256 `9fa64ec10ef69b0d4feffbde89e1c2bf90e471facd54d7486c76f990b09e9b47`,
+pins current test50ac7d68; all503 input rows remained exact around the checks.
+
+| Actual authorized command | Result | Portable log / SHA-256 |
+|---|---|---|
+| Initial `cargo fmt --all -- --check` on historical63f15d8a | FAIL, exit1; stop before test/Clippy, not behavior RED | [initial failure](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/logs/00-initial-fmt-failure.log), `7cac82f7f02a40568c156a4db4717141294b40a7cfe8b76bb5d1e5f1bb67efee` |
+| One Main-authorized `cargo fmt --all` | PASS, exit0; exactly four assert-block expansions in the sole allowed test file | [formatter](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/logs/01-authoritative-format.log), `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855` |
+| Fresh `cargo fmt --all -- --check` on50ac7d68 | PASS, exit0 | [fmt check](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/logs/02-fmt-check.log), `365890cacca92deace722ad0f41c6d303f304dc517074d19260245327585301c` |
+| `cargo test -p cyril-core --features kas --lib protocol::domain_mediator::tests::mcp_error -- --nocapture` | PASS,3 passed/0 failed/0 ignored/1,500 filtered out | [focused module](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/logs/03-core-kas-mcp-error.log), `b004fd0e26b4b00483ce0b2b155a76ab3112409612382f5e80339a051b98944f` |
+| `cargo clippy -p cyril-core --features kas --all-targets -- -D warnings` | PASS, exit0 | [strict Core KAS Clippy](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/logs/04-strict-core-kas-clippy.log), `e630ae0db45c54e662a215bf6db17226c663c8c38d18bb9c0c3e7b4e3507eac8` |
+
+The [initial failure canonical](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/initial-fmt-failure.json),
+SHA-256 `7b0320ddd2901845e9ca0b913faab3f6f030eb7a382d1ff3b0f3d7ac805f3e83`,
+is preserved byte-exact from the original external
+`tqr8-d0cc60d7-typed-mcp-error-test-only-qualification-20261022T151416942873Z/canonical-first-fmtFAIL-handoff.json`.
+The [complete authoritative-format patch](current-publication-evidence/d0cc60d7-typed-mcp-error-review-20261022/authoritative-format.patch),
+SHA-256 `737191bb1c86f43fe0351b9393b99c6e555afa1176309fbe28f240c116e4d618`,
+contains precisely those four reflows; the canonical establishes every other
+byte, including typed assertion/literals/punctuation, unchanged. Byte-preserving
+entrypoint mtime touches did not change their source hashes. GIT_OPTIONAL_LOCKS
+remained0; test/Clippy used the established shared target, not a private cache.
+
+These are five actual commands across the stopped attempt and explicitly
+authorized continuation: four exit0 and the immutable initial fmt exit1,
+not an all-five-PASS claim. The three named tests are three libtest cases;
+their internal input arms and1,500 filtered cases are not extra passing tests.
+Earlier pre-fix behavioral RED keeps its original source/assertion/reach,
+not typed-test RED; no mutation, old32-lane rerun, workspace/App build,
+consumer or native execution occurred in this scoped qualification.
+Retain old32 results only for their original checked state and applicable
+unchanged-input obligations; they never execute the changed typed assertion.
+The new focused proof discharges that affected assertion/fmt/Core-Clippy
+obligation without changing the earlier empirical receipt or expanding scope.
+The unchanged production review remains applicable; this test-only change
+does not reopen the completed ordinary assembled production review.
+
+**Scoped repair review:** `agent://ReviewTqrTypedRepair` inspected the typed
+source and all three owning docs after receiving the supplied qualification.
+It found the typed repair and DG interface sound, with no other actionable
+source finding; its oneP2/confidence0.99 finding was stale PENDING qualification
+and a preformat pin labelled current. Its scoped documentation-correction
+rereview is now **COMPLETE: TQR-D0-EVIDENCE resolved, no actionable findings,
+correct/confidence0.99**. It confirmed current50ac7d68/overlayafeebb5d,
+historical63f15d8a/initial fmtFAIL, exact scoped command accounting and retained
+old32/consumer/ordinary-review boundaries. The reviewer ran no checks or new
+execution and claimed no independent rehash/archive/copy audit. This result-only
+incorporation retains that review; no further review round or test/runtime/
+isolated-conformance gate is requested merely to record it.
+
+**Earlier held-source review layer:** the canonical's
+`both_parent_static_review_scope_only` selects
+`agent://IntegrateTqrPrerequisite.ReviewHeldMainTqrIntegration`: no actionable
+source-integration findings, correct for scoped static integration review,
+confidence0.96. Its routing/reveal, canonical/dedup, gutters, incoming
+theme/cache/diff/selected-fit, CLI formatter and Peaq fixture conclusions
+retain that scope; it is not promoted into the distinct d0cc60d7 ordinary
+review. The32 gates and eleven-capture consumer above separately establish
+only their exercised empirical layers on503. The standalone09/d265 ordinary
+repair review remains correct/no findings, confidence0.97 in its original
+scope. Changed UI/App/manifests/Core support prevented blanket promotion of
+standalone gates or consumer into503. Unchanged formatter/example mechanism
+preserves that reviewed mechanism, not whole-production byte identity or
+fresh merged CLI execution; separate CLI RED/GREEN remains historical.
 
 The retained consumer recipe behavior review
 `b1e891f5befdbbacebf4e192ce037d4f0f082bbd9b2a036ba19f686deb65a1d0`
@@ -338,10 +456,10 @@ consumer run.
 
 ### Current remaining boundaries and Main ownership
 
-- **Main038 source integration is held and qualified, not a completed merge
-  or push.** Main owns ancestry completion, staging/commit/push, current
-  PR-head CI/review and tracker/PR/stack disposition. PR193's retained CI
-  result remains old RED, not current-head/platform CI PASS.
+- **Main owns current Git/publication and CI disposition.** The held503
+  receipt above does not assert a completed merge or push. The later d0cc60d7
+  ordinary source review is now complete; current PR-head/platform CI
+  evidence remains pending here until supplied and is not inferred from it.
 - **Peaq PR194 is resolved and landed** at main038 after refreshed
   head991b16f9/base7a0716dc and GREEN CI run39690453316. Its
   [publication record](https://github.com/dwalleck/cyril/pull/194#issuecomment-6329881410)
@@ -365,9 +483,10 @@ consumer run.
   held-main sensitivity run. This addendum is no issue-closure, shipping,
   merge/publication authorization or acceptance waiver.
 
-This docs/evidence-only amendment changes the four assigned existing owning
-documents and hashes those documents only. It runs no checks, tests, builds,
-linters, formatters, product/native runtime, Git/index/ref, tracker or PR action.
+This current amendment changes only the three assigned owning documents and
+Main's nine explicitly allowlisted byte-exact portable evidence copies.
+It runs no checks, tests, builds, linters, formatters, product/native runtime,
+Git/index/ref, tracker or PR action; no source/binary copy or archive is added.
 
 ## Current PR193 repair checkpoint 2026-10-21
 

@@ -1,0 +1,65 @@
+SCOPED_TEST_ONLY_QUALIFICATION {"label": "initial-actual-fmt-CHECK-no-normalization-retry", "argv": ["cargo", "fmt", "--all", "--", "--check"], "cwd": "/home/dwalleck/repos/cyril-wt-fix-cyril-tqr8", "CARGO_TARGET_DIR": null, "GIT_OPTIONAL_LOCKS": "0", "HEAD": "d0cc60d7662ced69a4a32c904e9800bea6990a22", "test_source_pre_sha256": "63f15d8ae47c487679a5d638c84f8ceab0cb0c68802fc7e06861e9c9c12b7555", "source503_descriptor": "5025d7bd393e24b409bd7b2e4966f57c77ec7c56ea6d488b9462097bc941de5e", "profile": "none (formatter check only)", "features": "No selection (fmt workspace source traversal only)", "started_utc": "2026-10-22T15:15:09.342622+00:00", "full_log": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/tqr8-d0cc60d7-typed-mcp-error-test-only-qualification-20261022T151416942873Z/01-initial-actual-fmt-CHECK-no-normalization-retry.log"}
+COMMAND cargo fmt --all -- --check
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs:62:
+                 "errorType": "mcp_connection_error", "message": "private-error-not-for-logs",
+             }}),
+         ] {
+[31m-            assert!(KasEngine::default()
+(B[m[31m-                .convert_session_update(&session_info_frame(kiro))
+(B[m[31m-                .is_none());
+(B[m[32m+            assert!(
+(B[m[32m+                KasEngine::default()
+(B[m[32m+                    .convert_session_update(&session_info_frame(kiro))
+(B[m[32m+                    .is_none()
+(B[m[32m+            );
+(B[m         }
+     });
+     let events = capture.captured();
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs:75:
+             .count(),
+         8
+     );
+[31m-    assert!(!must_succeed(
+(B[m[31m-        serde_json::to_string(&events),
+(B[m[31m-        "error diagnostics serialize"
+(B[m[31m-    )
+(B[m[31m-    .contains("private-error-not-for-logs"));
+(B[m[32m+    assert!(
+(B[m[32m+        !must_succeed(
+(B[m[32m+            serde_json::to_string(&events),
+(B[m[32m+            "error diagnostics serialize"
+(B[m[32m+        )
+(B[m[32m+        .contains("private-error-not-for-logs")
+(B[m[32m+    );
+(B[m }
+ 
+ #[test]
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs:92:
+         json!({"errorType": "mcp_connection_error", "message": "no kind"}),
+         serde_json::Value::Null,
+     ] {
+[31m-        assert!(KasEngine::default()
+(B[m[31m-            .convert_session_update(&session_info_frame(kiro))
+(B[m[31m-            .is_none());
+(B[m[32m+        assert!(
+(B[m[32m+            KasEngine::default()
+(B[m[32m+                .convert_session_update(&session_info_frame(kiro))
+(B[m[32m+                .is_none()
+(B[m[32m+        );
+(B[m     }
+     let no_meta = must_succeed(
+         serde_json::from_value(json!({
+Diff in /home/dwalleck/repos/cyril-wt-fix-cyril-tqr8/crates/cyril-core/src/protocol/domain_mediator/tests/mcp_error.rs:103:
+         })),
+         "missing optional metadata remains a valid SDK envelope",
+     );
+[31m-    assert!(KasEngine::default()
+(B[m[31m-        .convert_session_update(&no_meta)
+(B[m[31m-        .is_none());
+(B[m[32m+    assert!(
+(B[m[32m+        KasEngine::default()
+(B[m[32m+            .convert_session_update(&no_meta)
+(B[m[32m+            .is_none()
+(B[m[32m+    );
+(B[m }
+ 
