@@ -1,0 +1,24 @@
+{
+  "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la-conversation-rendering",
+  "parent_qualification_head": "ffb9a2be5fdd41291f6b379cf135629cdae973da",
+  "parent_pre_format_tree": "53386832198e5c430e9a48a5e6567aee53a4be76",
+  "parent_post_format_clippy_failed_tree": "519b1445d0a3f13f24a01b05dc3ca93556111964",
+  "parent_common_fixture_commit": "6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69",
+  "reconstructed_after_clippy_repair_tree": "0aa5eec7ce7d476d133cf2eb19f4d4afc51929e6",
+  "delta_path": ".cyril-c6la/review-clippy-repair.patch",
+  "delta_bytes": 11028,
+  "delta_sha256": "8ad00e53daa307c6bfbc52b90b5237641d514aef632418d4080dbff3c2759b2d",
+  "delta_files": [
+    "crates/cyril-ui/benches/conversation_render.rs",
+    "crates/cyril-ui/src/conversation_performance_tests.rs",
+    "crates/cyril-ui/src/widgets/chat/presentation.rs",
+    "crates/cyril-ui/src/widgets/chat/retained.rs",
+    "crates/cyril-ui/src/widgets/chat_layout/index.rs",
+    "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+    "crates/cyril-ui/src/widgets/chat_layout/wrap.rs"
+  ],
+  "parent_provenance_directory": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la",
+  "worker_checks_run": [],
+  "historical_feature_and_proof_artifacts": "Unchanged; no c690/e3d/harness/snapshot overwrite or auth-delta regeneration.",
+  "qualification_status": "PENDING Main: formatter/checks, clippy, tests, build, benchmarks/native consumer and repair review."
+}

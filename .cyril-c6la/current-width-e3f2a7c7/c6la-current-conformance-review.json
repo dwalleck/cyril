@@ -1,0 +1,230 @@
+{
+  "schema": 1,
+  "issue": "cyril-c6la",
+  "record_kind": "independent current assembled-source design-conformance and code review",
+  "reviewer": "ReviewC6CurrentConformance",
+  "review_complete": true,
+  "findings": [],
+  "overall_correctness": "correct",
+  "confidence": 0.96,
+  "explanation": "No patch-introduced actionable defect was found against qualified incoming93bcf1f5. Current history/live/cache ownership, source borrowing and output policies, indexed physical rows, narrow F11 correction, sole F12 gutter owner, structural theme invalidation and source fences conform to the approved decisions. Source review is complete; consumer/native acceptance, publication staging and future unmerged Tqr/NK/Caar are not approved by this result.",
+  "source_binding": {
+    "worktree": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la",
+    "HEAD": "7826ff01d703570c419d8b28f1fbb8812e84829d",
+    "incoming_qualified_parent": "93bcf1f5bdf111bccbeb28020297501e5d71687f",
+    "comparison": "Actual working files versus incoming93bcf1f5; held --no-commit merge/index and formatting delta distinguished from HEAD. Incoming common released-width/input/floor/README/lock ancestry is not misattributed as newly introduced C6 behavior.",
+    "introduced_source_paths_versus_incoming": 34,
+    "current_postformat_bounded_descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "descriptor_rows": 505,
+    "descriptor_is_not_a_Git_tree": true,
+    "manifest": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/checked-post-initial-format.bounded-workspace-inputs.json",
+    "manifest_sha256_from_qualifier": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "pin_method": "Independently read current qualifier per-file SHA256/byte manifest and actual working source; no reviewer hashing/checking script or synthesized Git tree.",
+    "preformat_handoff": ".cyril-c6la/current-width-integration.json",
+    "preformat_limit": "Historical integration/provenance/conflict dispositions only, not post-format qualification.",
+    "format_record": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/authorized-format-only-source-frame-applicability.json",
+    "format_patch_sha256_from_record": "905ac3dd29e1667008507aed64fc7c263c742adf1cf21dee3e9f357b89726525",
+    "format_review": "Read complete478-line observed patch: seven files contain whitespace/layout, identical ordinary import permutations and optional trailing commas only; literals, fixture membership, statement order and assertions preserved. No incidental deleted snapshot restored or repinned.",
+    "canonical_receipt": {
+      "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/canonical-handoff.json",
+      "sha256_supplied_by_qualifier": "1716bd3091f8c41835afb8cdda2d6214c77a73d99a0ebcbe138be502f02ccb96",
+      "bytes_supplied_by_qualifier": 1024045,
+      "completed_utc": "2026-10-21T06:19:39.200992+00:00",
+      "independently_read": true,
+      "read_sections": ["status","HEAD/incoming/checked_source","actual_totals","admin_raw_index_chronology","final_checked_source_admin_artifact_pin_state","retained_historical_sensitivity_applicability_receipt","scope_limits","native_consumer_Git_PR_GO","private_product_binary"],
+      "result": "All approved current gates/new physical mutation pairs/full-root benchmarks PASS, bound to505actual worktree inputs. Late external raw-index drift disclosed; NOT publication staging or native/consumer acceptance."
+    },
+    "held_index_provenance": {
+      "index_through_all_commands_and_Cargo_release": "02d4a1750f955041a5d980dbcf0deaa31eb11eb7e7a1b07286cc4d92e42c816c",
+      "Cargo_release_utc": "2026-10-21T06:10:25.517644+00:00",
+      "late_index": "5bf463d25305b9c90a5aecf6b1b576d0eced050f8bb23a01b54b6cd2a22c78f2",
+      "qualifier_observations": "All505actual worktree inputs remain exact e3f2a7c; current505staged source blob IDs match original pre-format content; other admin pins unchanged. Complete original index bytes/4158-entrylist unavailable, so full logical staged-entry identity is NOT proved.",
+      "reviewer_disclosure": "Authorized read-only git diff/log commands were run without GIT_OPTIONAL_LOCKS=0, including cached-stat inspection. No git status, explicit Git mutation or repository source edit. Stat refresh is plausible, NOT proved. All seven actual command strings/chronology were sent to Main; tools/history exposed no exact wall-clock command times. No rerun to reproduce.",
+      "disposition": "Source/product gate results remain valid; publication staging HOLD for Main adjudication. No index restore, posthoc repin or retest requested by reviewer; no further Git calls after first drift notice."
+    }
+  },
+  "inspected_source_file_pins": [
+    {"path":"Cargo.lock","sha256":"52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035","bytes":101371},
+    {"path":"Cargo.toml","sha256":"9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1","bytes":3557},
+    {"path":"crates/cyril-core/src/types/steer_receipt.rs","sha256":"a3ef0b7878451eccf11b83479aea7bfe38898a5e83e5b9fb4db68e35abda6652","bytes":16429},
+    {"path":"crates/cyril-ui/Cargo.toml","sha256":"c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c","bytes":1090},
+    {"path":"crates/cyril-ui/benches/conversation_render.rs","sha256":"42c8e6ab9cdfab91c8aa40a8c5b8ebb4f6029f76e70793de917a682ed3173bb0","bytes":34558},
+    {"path":"crates/cyril-ui/src/always_allow_tests.rs","sha256":"987e117835e780547b115dda101e3a574da78bef4a3e3738333e56a300b809a0","bytes":26457},
+    {"path":"crates/cyril-ui/src/chrome_theme_tests.rs","sha256":"a1194ffb5de8920a90e39e8c07dbac2be6e2e0995849104b464456e102bd1bcf","bytes":30894},
+    {"path":"crates/cyril-ui/src/conversation_performance_tests.rs","sha256":"627d56b0e59b4761bfe4dd55ef3b8358abdb99158892d3f82067c6cc6f18a31e","bytes":79338},
+    {"path":"crates/cyril-ui/src/floor_tests.rs","sha256":"2ce6c6bb9dd41cd9a82b2c657232486918e86c8ab9a8f954e2421e6b1048affa","bytes":38146},
+    {"path":"crates/cyril-ui/src/lib.rs","sha256":"ed3d6043f355abefddff516687c92281f2a60f1afab587d69e3c541ea828d947","bytes":593},
+    {"path":"crates/cyril-ui/src/message_history.rs","sha256":"e2021e106365f0c464c10642c7e393f036b5bfd6ff2bcc94253fbc8fb4ed8914","bytes":16446},
+    {"path":"crates/cyril-ui/src/render.rs","sha256":"8930584ca07188a1e48854a39aad2aceffdf9c910d3f4c7b7835115b68bf5682","bytes":73529},
+    {"path":"crates/cyril-ui/src/state.rs","sha256":"8e3837a3c210d56905e6b66b949c3faeee5553234b8327e40d7b68f1080a410e","bytes":428071},
+    {"path":"crates/cyril-ui/src/subagent_ui.rs","sha256":"2e4f7aeb7695a143b059377a94fc33df430e6bdd2aee9a891f68e064fab762da","bytes":23764},
+    {"path":"crates/cyril-ui/src/theme.rs","sha256":"ab095b47d6282842869fcac5589754d00862573d11b3d7704b93deea015d9d4e","bytes":95630},
+    {"path":"crates/cyril-ui/src/tool_text_tests.rs","sha256":"4b1689b79a8a7b3715a7c29ac873239923fa37d18877a3e403b1cfc4933dc715","bytes":8774},
+    {"path":"crates/cyril-ui/src/traits.rs","sha256":"9892f7ca11b90c9158f83aa463bbee032ff064ac1d7b4a635dbf0e7d372c12f5","bytes":95266},
+    {"path":"crates/cyril-ui/src/widgets/chat.rs","sha256":"4686f32b8d9ab059736515b991fa30d702ed4d5265777e63945887ba863e4f6f","bytes":87157},
+    {"path":"crates/cyril-ui/src/widgets/chat/presentation.rs","sha256":"842a4d50103f13b273415f7a9ce77c59855be793d35d7138ee898c608adb7af6","bytes":50710},
+    {"path":"crates/cyril-ui/src/widgets/chat/retained.rs","sha256":"d9dba837b78efb26e2812d111afb5022f17b21396aa323ae409441a96c50f71b","bytes":24317},
+    {"path":"crates/cyril-ui/src/widgets/chat_layout/index.rs","sha256":"b97d9d0daebaf0957b13e4ee10edf4182b6fa81ffbe115310d4b8e903943b2c9","bytes":13609},
+    {"path":"crates/cyril-ui/src/widgets/chat_layout/mod.rs","sha256":"28a4004ce917c4e4d9c5654323c987f962c30af1fd93d2ea52377d5c9f505db2","bytes":2296},
+    {"path":"crates/cyril-ui/src/widgets/chat_layout/wrap.rs","sha256":"68eab558852a4dfb05454b657dcd8186f0e877f9c1cc00f4438e95f1341778ad","bytes":52204},
+    {"path":"crates/cyril-ui/src/widgets/markdown.rs","sha256":"6a7121911bded6fc08d698e25ffa2eaf5afb8349b4ca2be3d7ff2eeb45cede0c","bytes":78457},
+    {"path":"crates/cyril-ui/src/widgets/mod.rs","sha256":"9a7866f7fea1edf560c97c140672e522ee6182d13fea8dd1cd83f67505521e24","bytes":316},
+    {"path":"crates/cyril-ui/src/widgets/powers_panel.rs","sha256":"e02edd55e5f9c939471da391ec64baccb8410b0a2982d4d7cb5970587e7a5dd5","bytes":28692},
+    {"path":"crates/cyril-ui/src/workflow_ui.rs","sha256":"bf3f1793a1b69c3253298f6343e10dc53cb0a3040ffdeeb767a80fe425f706b2","bytes":11829},
+    {"path":"crates/cyril-ui/tests/missing_tool_updates.rs","sha256":"3baf98ed189fe1b89292f6baf71cf6b234c56d8d12623033a514b508beb6804c","bytes":15701},
+    {"path":"crates/cyril-ui/tests/v2_failed_validation.rs","sha256":"5a13798ae11916389c2855ba11f6eb1fd2df22e1c753c7ac7a74dcc162bef7d7","bytes":11826},
+    {"path":"crates/cyril-ui/tests/widget_theme_sources.rs","sha256":"e3d7b75288869fae0a885c8318ea3600a4dd853c5655dcc6ec8702c7bb191403","bytes":12752},
+    {"path":"crates/cyril/src/app.rs","sha256":"9fa89d9811ad047c2ec095323cd0883673f77578591b611e343a71adcdac41a9","bytes":451155},
+    {"path":"crates/cyril/src/app/tests/current_runtime_contract/ordering.rs","sha256":"d24f933a45eb405b13e3ff9f41e270c60b4b771e3cbbf3242f090fa4f2e4d9f7","bytes":3303},
+    {"path":"crates/cyril/src/app/tests/review.rs","sha256":"249b661f800f5018588d8cdda64de5bb298759ff400404c613f844d7d56158ba","bytes":85063},
+    {"path":"crates/cyril/tests/event_routing.rs","sha256":"01da7c3f83ee894b2faa4339fefabdd005c3da005b91e454a9cbbd88e3e4d897","bytes":12423}
+  ],
+  "approved_inputs_read": [
+    ".cyril-c6la/design.md:1-283, including module ledger, C1-C6, F8/F11/F12",
+    ".cyril-c6la/plan.md:1-177",
+    ".cyril-c6la/review-decisions.md:1-148",
+    ".cyril-c6la/current-width-integration.json:1-340",
+    ".cyril-c6la/current-width-source-review.txt",
+    ".cyril-c6la/current-width-upstream-reference.txt",
+    "local://approved-ratatui-release-migration.md",
+    "skill://gilfoyle/references/CONTRACT.md",
+    "skill://gilfoyle/references/module-shape.md:71-79"
+  ],
+  "per_claim_assessment": [
+    {
+      "claim": "C1 indexed visible-only steady redraw",
+      "owners": ["widgets/chat/retained.rs","widgets/chat_layout/index.rs","widgets/chat_layout/mod.rs"],
+      "assessment": "Conforms. Borrowed changes select reset/new/changed blocks only; heights update locally. Paint seeks one indexed history row, directly slices prepared descriptors and visits viewport-intersecting rows/runs. Height/scroll-only changes do not wrap source; explicit storage metrics are outside timed drawing.",
+      "evidence": ["retained.rs:115-163,245-360","index.rs:21-165","chat_layout/mod.rs:28-55","C1 giant/same-suffix/portable consumer controls"]
+    },
+    {
+      "claim": "C2 released physical fidelity and F11 narrow correction",
+      "owners": ["widgets/chat_layout/wrap.rs","widgets/chat_layout/mod.rs","widgets/chat/presentation.rs"],
+      "assessment": "Conforms. Filtered borrowed styled graphemes use released CellWidth for caches and paint advances. Production true-mode flushes only an already-full carried prefix before another positive start; no unreleased incoming-inclusive fit semantics. Original-mode classifier checks positive starts, not width excess. Safe cases retain real full Paragraph comparisons; unsafe cases retain independent literal rows/cells, conservation/styles/bounds and per-row Paragraph cells. CJK and halfwidth width3 final overhang remains one width4 row. Span boundaries/control-gap offsets remain distinct.",
+      "evidence": ["wrap.rs:116-126,145-267,325-485,534-578,586-1095,1220-1240","chat_layout/mod.rs:35-54","presentation.rs:885-1233","conversation_performance_tests.rs:397-472"],
+      "reference": {"core":"0.1.2","widgets":"0.3.2","published_revision":"e665c36cb14752a61cd777fbd06dbef8474f2add","original_derivation_revision":"0a2a7c0363a4806b0cf05c1915bf7cdd438f756c"},
+      "MIT": "wrap.rs:6-45 retains original derivation, both copyright notices and full MIT permission/warranty text; released reference is additive. Painter links this notice at mod.rs:3-12."
+    },
+    {
+      "claim": "C2/C5 F12 sole stable gutter owner",
+      "owners": ["widgets/chat/retained.rs"],
+      "assessment": "Conforms. Root passes actual chatRect unchanged. Retained render alone subtracts one rightmost column when width>1, uses the same content width for committed/live/thought/activity preparation and contentRect for window/paint, then paints scrollbar only in separate gutter. Width0/1 retains full content/no indicator. Follow/browse/overflow/focus cannot change content width.",
+      "evidence": ["render.rs:207-220","retained.rs:370-455,465-541","conversation_performance_tests.rs:659-853","conversation_render.rs giant-source content-width arithmetic"]
+    },
+    {
+      "claim": "C3 history identity, stable positions, coalesced revisions and tool safety",
+      "owners": ["message_history.rs","state.rs","subagent_ui.rs","workflow_ui.rs"],
+      "assessment": "Conforms. Concrete owner holds identity/epoch/stable positions and latest-edit BTreeMap bounded by retained messages, immutable reads/borrowed changes and no raw mutable Vec escape. Prune keeps survivor positions; clear/prepend reset epochs. Main/child updates validate position and tool ID before edit; prune retires only still-matching lookup entries, clear empties lookup, occupied adoption rebuilds chronological positions/duplicate-ID semantics. Notification/retention policy stays in existing domain owners.",
+      "evidence": ["message_history.rs:13-258,291-472","state.rs:1267-1303,1893-1896,3576-3590,3611-3888","subagent_ui.rs:84-98,140-156,261-266","workflow_ui.rs:61-74","retained.rs:117-163"]
+    },
+    {
+      "claim": "C4/F8 displayed live revisions and receipt crossing boundary",
+      "owners": ["state.rs","cyril-core/src/types/steer_receipt.rs"],
+      "assessment": "Conforms. Both append paths share cutoff/removal-metadata decision. Cutoff reuse needs unchanged raw length and no earlier removal; otherwise legacy withholding sees full context. Length change or removal touching old displayed prefix invalidates text, receipt chips independently edit history. Nonempty raw flush commits original raw bytes, resets cutoff/bump; thought revision is independent. Legacy harvest's existing whole-buffer search is NOT claimed eliminated.",
+      "evidence": ["state.rs:209-225,498-513,1333-1352,1518-1618,4714-4739","steer_receipt.rs:77-218,239-369","conversation_performance_tests.rs:2074-2185"],
+      "all_nine_old_harvest_calls": ["state.rs:1523","steer_receipt.rs:239,264,281,299,309,320,335,348"],
+      "dispatch": "HarvestedReceipts::into_parts supplies earliest removal offset and ordered receipts; UI consumes offset then dispatches every receipt. Parser recognition/removal/order/surviving bytes preserved; no Vec shim or new root re-export."
+    },
+    {
+      "claim": "C4/C5 selected-cache lifetime and App interface",
+      "owners": ["cyril/src/app.rs","render.rs","widgets/chat/retained.rs"],
+      "assessment": "Conforms. App owns one long-lived separate RenderState and passes actual root draw. Root has geometry/wiring, no layout/index algorithm. Caught draw panic invalidates partial retained state. Only selected transcript is retained; identity/geometry reset clears header/live/thought/activity keys; child name-only changes rebuild header/label not Markdown. Child bottom-follows/ignores main browse; workflow streams storage-only.",
+      "evidence": ["app.rs:76-77,463-467,950-979,1022-1041,1435-1510","render.rs:23-53,193-220","retained.rs:47-69,117-235,375-449"],
+      "panic_limit": "Catch/invalidation source-reviewed. render.rs:630-681 explicitly resets state, not an induced-panic execution receipt."
+    },
+    {
+      "claim": "Borrowed source and incoming Display/Error policy",
+      "owners": ["traits.rs","widgets/chat/presentation.rs"],
+      "assessment": "Conforms to incoming93bc stage3. Display preserves blank root/item/direct strings; stdout/stderr nonblank; first item Text then Json; aliases text/content/result/output with output last. Failed-only Error prefers nonblank error/message then raw candidates, skips blanks and falls back to first nonblank ACP Text. Eligibility does not trim returned bytes. Public output/error use Cow from same decoder; only JSON serialization owns derived output. Actual callers support borrowed/string operations; no completed-content fallback or old String shim.",
+      "evidence": ["traits.rs:369-395,575-726","presentation.rs:68-132,629-756","tool_text_tests.rs:20-106,143-247","v2_failed_validation.rs:34-313","missing_tool_updates.rs:166-174"],
+      "incoming_source": {"path":"/home/dwalleck/.claude/tmp/cyril-c6la-merge-93bcf1f5/traits.stage3.rs.source","blob":"f0b2a87bbf424320e42a54228f639eaef205d1db","sha256":"0149dac8b5171a1ad133add709661098cb23376edfe8c8677ba8bfaa37c150a8"}
+    },
+    {
+      "claim": "F6 Diff cache and generated/shared ownership",
+      "owners": ["traits.rs","tool_diff.rs","widgets/chat/presentation.rs"],
+      "assessment": "Conforms. Indexed first-Diff selection initializes existing cache including absence. Equivalent effective old/new source retains Arc despite preceding Text ordinal shifts; re-preparation records new ordinal. Paint directly indexes content/preview row, no hidden-content reselection. Retained blocks hold source selectors/ranges/generated text/Arc Markdown, not movable-source pointers or owning plain/Diff bodies. Only genuinely crossing affix clusters are derived/copied and counted.",
+      "evidence": ["traits.rs:422-433,458-505,1692-1929","presentation.rs:19-140,197-310,571-627,735-759,1291-1340","retained.rs:143-159,257-285"]
+    },
+    {
+      "claim": "C5 structural styles and shared Markdown",
+      "owners": ["theme.rs","widgets/markdown.rs","highlight.rs","widgets/chat/retained.rs"],
+      "assessment": "Conforms. Cache key includes source/width/full MarkdownStyle with nested HighlightStyle matching actual style reads. Arc<[Line]> cache hits clone handles; presentation retains shared backing. Structural Theme/content-width changes invalidate selected preparation; height is not a preparation key. Root/callers migrated without deep-clone return shim.",
+      "evidence": ["theme.rs:424-463","markdown.rs:17-76,79-424,1150-1210,1270-1345","highlight.rs:33-133","presentation.rs:286-310","retained.rs:49-64,115-163","conversation_performance_tests.rs:1355-1445"]
+    },
+    {
+      "claim": "Recursive inventories, raw300000-byte cap and unchanged policies",
+      "owners": ["theme.rs tests","widgets/markdown.rs tests","tests/widget_theme_sources.rs"],
+      "assessment": "Conforms. Earliest ordinary test-module boundary across four LF/CRLF/mixed spellings uses original byte offsets and retains runtime counters. Theme sums raw production-prefix source.len BEFORE allowed-seam replacement, enforces exact22-source recursive/duplicate census, <=300000bytes and all five prohibitions. Separate color checker retains22widgets+highlight and existing signed/Reset/palette rules; its own audit CRLF normalization does not discount theme bytes. No automatic future23widget authorization.",
+      "evidence": ["theme.rs:1276-1313,2021-2121","markdown.rs production-source fence","widget_theme_sources.rs:4-28,81-153,285-352","current19 exact theme gate log"]
+    },
+    {
+      "claim": "C6 benchmark and consumer claim bounds",
+      "owners": ["benches/conversation_render.rs","render::LayoutMetrics"],
+      "assessment": "Conforms for production-shaped TestBackend measurement. Real UiState notifications/retained root drive100/1k/10k/50k asserted-retained histories, unique Markdown beyond cache256 and common visible controls. Updates/scroll/focus/appearance and giant80k sources remain. Content width159 retains all80000 newline-free segments/deep70000 markers.100warmups+30x100 stable draws; construction/controls/metrics outside timing, cold/transition/mutation separate, absent mutation timing not_measured. No hard latency, RSS/allocations, native or baseline-improvement acceptance.",
+      "evidence": ["conversation_render.rs:28-130,366-565,605-1011","retained.rs:71-105","current ordered benchmark receipts"],
+      "memory_scope": "owned_text_bytes counts generated String lengths/child name/owned Markdown spans, shared allocations transiently deduplicated in explicit metrics; excludes borrowed/static bytes, allocator capacity, descriptor bytes, process-wide ownership and RSS. Rows/runs/source_slots separately reported."
+    }
+  ],
+  "cross_boundary_dispatch_review": [
+    {"value":"HistoryRevision/HistoryChanges/MessagePosition","consumer":"retained.rs:115-163,257-285 and main/child stable tool maps","result":"Explicit reset/incremental/prune branches; descriptors refreshed before changed source consumption."},
+    {"value":"LiveRevision","consumer":"retained.rs:165-235,400-412","result":"Separate text/thought keys, identity reset, changed-only text retrieval."},
+    {"value":"HarvestedReceipts","consumer":"state.rs:1522-1543 plus8Core test calls","result":"Removal metadata consumed, every ordered receipt dispatched."},
+    {"value":"ToolText/ToolTextSource","consumer":"traits.rs:698-718; presentation.rs:68-132,629-756","result":"Borrowed/Derived and everyRawOutput/RawField/ItemText/Content variant routed."},
+    {"value":"Presentation Source/Diff content-row ordinals","consumer":"PreparedBlock::source_text/Sources::external/paint_row","result":"Every variant resolves authoritative/generated/shared backing; no silent unmatched branch."},
+    {"value":"Arc<[Line]> Markdown","consumer":"presentation backing and root/test borrowers","result":"Immutable shared handles consumed, no Vec clone shim."},
+    {"value":"RenderState/LayoutMetrics","consumer":"App::draw_frame/root chat/benchmark","result":"Actual retained owner/callers migrated; metrics outside timed frame."}
+  ],
+  "module_placement": {
+    "ledger": ".cyril-c6la/design.md Module shape / ownership ledger",
+    "result": "Conforms; no concrete gap warrants new map/isolated reconstruction.",
+    "history": "message_history mutation/revision only; no ratatui/theme/event routing.",
+    "presentation": "chat/presentation concrete selectors/labels/backing; no generic source-provider framework.",
+    "layout": "chat_layout rows/metadata index/paint; no retention/protocol/Markdown parser/Myers implementation.",
+    "retained": "chat/retained selected preparation/lifetime/window/gutter; domain policies remain state/child.",
+    "protected_parents": "render.rs/App wiring/geometry only; state.rs/subagent_ui.rs call history APIs, not layout/index bodies.",
+    "core": "Approved F8 parser metadata remains typed source-domain work, no UI history/display/theme/ratatui dependency.",
+    "review_mode": "Ordinary independent assembled behavior/ownership/interface/dependency review under current module-shape.md71-79. No requester isolation requirement or named unresolved architectural risk."
+  },
+  "retained_evidence_applicability": [
+    {"item":"Original Layout/Root/History and F6/F7/F8 repairs","disposition":"Retain defect provenance and unaffected ownership conclusions, not original incorrect verdict as approval. Fresh review covers repairs/interactions; current22performance lane includes hidden-Diff/complete/chunked/nested receipt PASS. F6 selected ordinals and F8 cutoff/removal metadata unchanged; harvest's old whole-buffer search outside work-elimination claim."},
+    {"item":"F9 color checker review/A-B","disposition":"Retain narrowly: current widget_theme_sources.rs SHAe3d7b75288869fae0a885c8318ea3600a4dd853c5655dcc6ec8702c7bb191403 equals original AFTER; same census/audit semantics. Original bg116 evidence is not current rendering/native proof."},
+    {"item":"F10 mechanical Clippy repair review","disposition":"Retain valid-input borrow/invariant/equivalent-predicate conclusions; current source freshly reviewed and all-target Clippy separately PASS. Historical hashes not relabeled current."},
+    {"item":"F11 carry source review/actual sensitivity","disposition":"Retain entry discrimination only: same true-to-false production entry/firstliteral a-CJK-a row assertion and unchanged a1/CJK2 physical geometry. OldRED stops first row assertion, not later windows. Current fence PASS in wrap11/workspace; changed physical width is separately proved by new mutations.","historical_RED_sha256":"17e604df6437b8fd3d74259f1f4a6265a42afc9326d39aad9b885eb056b4f518","historical_restore_GREEN_sha256":"79a1c85be6596d8d0beb8166433546f73306b28491d81bfb1478e1a908503386"},
+    {"item":"F12 gutter source review/actual sensitivity","disposition":"Retain gutter discrimination only: retained.rs byte-identical, both geometry mutation lines/ASCII opaqueURL278/280/281/full byte-style-reconstruction/warm-scroll controls unchanged semantically. OldRED stops first URL byte mismatch, not later PageUp/native assertions. Current fence PASS in22performance/workspace.","historical_RED_sha256":"f6cd98299a4262cc1f1229419c864fd01d3f9d0948ec65cfc75de1a1ea7d53cd","historical_restore_GREEN_sha256":"6f897564f9683ae3599f7ad7e475abdee7ac78d4f31b691849555d1254bc4bc5"},
+    {"item":"LF/CRLF/mixed/raw-byte policies","disposition":"Retain policy mechanism only: earliest raw-boundary search/rawprefix lengths/five prohibitions/recursive inventory preserved. Original24named outcomes12PASS/12intended assertionFAIL bound old0dc72b5e; no compile/zero-test substitution. Old pair cannot prove released physical rendering; current ordinary theme/Markdown/workspace gates separately fresh."},
+    {"item":"Pre-format current-width independent review","disposition":"Retain unaffected policy/caller/fidelity conclusions after full formatter-only delta read; freshly reviewed assembled source/new width interactions. Preformat record not current qualified tree."}
+  ],
+  "qualification_evidence": {
+    "supplied_summary_vs_read_receipts": "Main supplied35gates/2953-0-13/physical pairs/bench summary. Reviewer subsequently independently read individual receipts/raw logs and final canonical sections above; these are qualifier-executed results, not reviewer executions.",
+    "independently_read": ["505postformat manifest","complete observed formatter delta/applicability","cargo-command-complete-release.json","running-command-receipts.json source/command/mutation records","13performance log","19theme log","20/22/24mutation rawlogs","21/23/25restore rawlogs","retained-F11-F12-CRLF applicability","historical delivery canonical F11/F12","historical old-pair-CRLF continuation canonical","benchmark provenance and both ordered receipts","private binary receipt","final canonical source/totals/admin/limits"],
+    "actual_totals_from_final_canonical": {"Cargo_commands":35,"exit0":29,"expected_mutation_RED_exit101":3,"expected_CLI_exit1":3,"unexpected_failures":0,"workspace_passed":2953,"workspace_failed":0,"workspace_ignored":13,"new_exact_passed":4,"focused14_case_executions_passed":147,"test_executions_including_overlapping_focus_restore_workspace":3107,"bench_cases":79,"bench_samples":2370,"historical_mutation_reruns":0},
+    "current_performance_lane": "22passed0failed; hiddenDiff cold1/257/4097visits and warm0 across100draws; receipt withheld chunks live/hash/parse/wrap0 and completed only legitimatechip1wrap; nested changed-source positives execute/PASS.",
+    "new_mutation_layers": [
+      {"layer":"PRODUCTION cached wrapper width","RED":"20 compiled literal cachedwidth2vs3 atwrap932","restore":"21 exact68eab558restored/1PASS","RED_log_sha256":"6f7ef418bee7124ea3128236e64c0ce4ce3dc62893e2deb161d88d8f1267293c","GREEN_log_sha256":"8dba1b0d2b046fbbd61e588117ee8cf48790993c987dd6829ac42e4e6eb012eb"},
+      {"layer":"PRODUCTION painter physical advance","RED":"22 compiled Buffer mismatch Zhiddenlocal1vsphysical2 atwrap977","restore":"23 exact28a4004crestored/1PASS","RED_log_sha256":"e4fd47da55140e4e423fa8751a1575d820953679445c2dc078220e03ac647f19","GREEN_log_sha256":"cf4e00d5065032d4dbc119124b6728df9ae6ff4a088e2ccf2962b17a52b8f67a"},
+      {"layer":"TEST ONLY unsafe-reference classifier, NOT production rendering","RED":"24 compiled unsafebooleanfalsevstrue onhalfwidthcarry atwrap938","restore":"25 exact68eab558restored/1PASS","RED_log_sha256":"2dfd78a5df469736fe4df27fb46d7867afe3d5a8e69a4cd74cd0095d21dcc49e","GREEN_log_sha256":"225dde2b4f2ed8ffe88505376a7203105fe272a34b324f4a9a8a4aecdc91e907"}
+    ],
+    "retained_applicability_record": {"path":"/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/retained-F11-F12-CRLF-applicability-no-generic-reruns.json","sha256_from_qualifier":"6bad8e06001351d46b70b8e23151fbfe0492bfc326defd897983bdf876e7d5e7"},
+    "benchmark": {"completed_write_cases":3,"long_history_cases":76,"sampled_draws":237000,"warmup_draws":7900,"samples_per_case":30,"draws_per_sample":100,"positive_controls":"all required substring and applicable semantic style controls outside timing PASS","follow_median_ns_100_1k_10k_50k":[79980.740,80266.375,84476.520,80952.170],"scope":"Pinned runner TestBackend selected-transcript costs/counts only; p95 nearest-rank sample-mean, not individual-frame p95. No baseline-improvement/universal-latency/RSS/zero-allocation/native claim."},
+    "private_product_binary": {"path":"/tmp/cyril-c6la-current-width-tested-20261021","sha256":"3efb0b67f240a55236d8fbabdaa45a0cbd8acfd2ad59f5071a7f936f81c1fd72","bytes":102610680,"executed":false},
+    "reviewer_executed_checks": [],
+    "no_additional_checks_or_mutations_requested": true
+  },
+  "remaining_limits": [
+    "Current C6 App/owned-peer consumer and native terminal acceptance remain PENDING fresh scoped MainGO/current source-binary binding/actual execution. Built private product, TestBackend and benchmarks are not those receipts.",
+    "Historical current-parent Zj13checkpoint/6check and x5xi consumers are not currentC6 acceptance. Prepared older C6 actor is unexecuted and needs current binding/review, not silent reuse.",
+    "Prepared older actor does not exercise focus entry or main-turn failure/cancel/transport-error. Child metadata routing/termination is not focused transcript proof; separate color-mode processes are not same-process cache invalidation.",
+    "No native50k, giant-row/u16, glyph/font, terminal latency, RSS/allocation or baseline-speedup acceptance inferred. No native Kiro/auth/model retry/credential change authorized by review.",
+    "13ignored workspace tests not executed; no new feature-matrix/platform-green claim. Requester-accepted Windows baseline exception remains exact: existing memory initial-readiness failures/cancelled coverage do not waive new failures.",
+    "Tqr/NK/Caar future feature/caller integrations unmerged and not reviewed/qualified here. Later widget inventory/consumer interactions require approved-constraint reconciliation, not automatic limit increase.",
+    "Late raw-index drift leaves full logical staging identity unproved; publication staging HOLD for Main. Passed505source qualification is not invalidated and does not justify rerunning gates or restoring index.",
+    "Remaining consumer/native proof, post-smoke permanent architecture/changelog documentation and publication remain Main-owned. Completed source review is not whole-issue completion."
+  ],
+  "independent_slices": [
+    {"reviewer":"ReviewC6CurrentConformance.HistoryRevisionReview","receipt":"agent://ReviewC6CurrentConformance.HistoryRevisionReview","result":"no introduced actionable defects","confidence":0.95,"scope":"history/stable tools/live metadata/cache/App routing"},
+    {"reviewer":"ReviewC6CurrentConformance.PhysicalLayoutReview","receipt":"agent://ReviewC6CurrentConformance.PhysicalLayoutReview","result":"no introduced actionable defects","scope":"released width/F11/F12/source ranges/index/paint/MIT"},
+    {"reviewer":"ReviewC6CurrentConformance.OutputThemeReview","receipt":"agent://ReviewC6CurrentConformance.OutputThemeReview","result":"no introduced actionable defects","scope":"incoming output/error/Diff/Arc/style/raw byte policies"}
+  ],
+  "tool_limit": "Linked-worktree LSP references timed out then falsely returned no references despite actual App draw caller; reported through xd://report_issue. Bounded source/AST inspection used, not zero-caller inference.",
+  "actions": "Source/docs/receipt reads, read-only diff/log/AST/LSP review and local scratch artifact only. No repository edit, explicit Git mutation, Cargo/build/test/lint/fmt/smoke/native/product execution or hypothetical mutation request. Incidental raw-index refresh possibility disclosed, not asserted as proved."
+}

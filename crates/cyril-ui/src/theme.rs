@@ -1271,12 +1271,140 @@ mod tests {
         }
     }
 
-    /// Production section of a widget source file (everything above the
-    /// first `#[cfg(test)]`), shared by the source-fence tests.
+    /// Production section of a widget source file, up to its conventional
+    /// test module. Instrumentation attributes inside runtime code are not a boundary.
     fn production_source(source: &str) -> &str {
-        source
-            .split_once("#[cfg(test)]")
-            .map_or(source, |(production, _)| production)
+        [
+            source.find("\n#[cfg(test)]\nmod tests {"),
+            source.find("\r\n#[cfg(test)]\r\nmod tests {"),
+            source.find("\n#[cfg(test)]\r\nmod tests {"),
+            source.find("\r\n#[cfg(test)]\nmod tests {"),
+        ]
+        .into_iter()
+        .flatten()
+        .min()
+        .map_or(source, |boundary| &source[..boundary])
+    }
+
+    fn assert_widget_uses_explicit_theme(path: &str, source: &str) {
+        let source_without_allowed_seams = source
+            .replace("use crate::theme::Theme;", "")
+            .replace("use crate::theme::{MarkdownStyle, Theme};", "")
+            .replace("use crate::theme::{ColorMode, Theme, ThemeId};", "");
+        assert!(
+            !source_without_allowed_seams.contains("crate::theme"),
+            "{path}: widget imports the theme module outside an allowed seam"
+        );
+        assert!(
+            !source_without_allowed_seams.contains("theme::"),
+            "{path}: widget accesses the theme module outside an allowed seam"
+        );
+        assert!(
+            !source_without_allowed_seams.contains("ThemeId"),
+            "{path}: widget selects a theme identity"
+        );
+        assert!(
+            !source_without_allowed_seams.contains("ColorMode"),
+            "{path}: widget selects a color mode"
+        );
+        assert!(
+            !source_without_allowed_seams.contains("resolve("),
+            "{path}: widget resolves a theme instead of using its explicit theme"
+        );
+    }
+
+    #[test]
+    fn production_source_keeps_runtime_after_test_instrumentation() {
+        let runtime = concat!(
+            "use crate::theme::Theme;\n",
+            "#[cfg(test)]\n",
+            "thread_local! { static COUNTER: Cell<usize> = Cell::new(0); }\n",
+            "fn render() {\n",
+            "    #[cfg(test)]\n",
+            "    record_work();\n",
+            "    crate::theme::resolve();\n",
+            "}",
+        );
+        let source = format!(
+            "{runtime}\n#[cfg(test)]\nmod tests {{\n    const TEST_FIXTURE_ONLY: u8 = 0;\n}}"
+        );
+        assert_eq!(production_source(runtime), runtime);
+        assert_eq!(production_source(&source), runtime);
+        assert!(production_source(&source).contains("crate::theme::resolve("));
+        assert!(!production_source(&source).contains("TEST_FIXTURE_ONLY"));
+    }
+
+    #[test]
+    fn production_theme_fence_accepts_lf_and_crlf_test_only_forbidden_patterns() {
+        let runtime = concat!(
+            "use crate::theme::Theme;\n",
+            "#[cfg(test)]\n",
+            "thread_local! { static COUNTER: Cell<usize> = Cell::new(0); }\n",
+            "fn render() {\n",
+            "    #[cfg(test)]\n",
+            "    record_work();\n",
+            "}\n",
+        );
+        for (newline, module_newline) in [
+            ("\n", "\n"),
+            ("\r\n", "\r\n"),
+            ("\n", "\r\n"),
+            ("\r\n", "\n"),
+        ] {
+            let runtime = runtime.replace('\n', newline);
+            let mut source = format!(
+                "{runtime}{newline}#[cfg(test)]{module_newline}mod tests {{{newline}\
+                 // crate::theme theme:: ThemeId ColorMode resolve({newline}\
+                 }}{newline}"
+            );
+            // Both markers exist; only the first ordinary test module may end production.
+            let later_newline = if newline == "\n" { "\r\n" } else { "\n" };
+            source.push_str(&format!(
+                "{later_newline}#[cfg(test)]{later_newline}mod tests {{{later_newline}}}"
+            ));
+            assert_widget_uses_explicit_theme("test-only-fixture.rs", production_source(&source));
+        }
+    }
+
+    #[test]
+    fn production_theme_fence_rejects_lf_and_crlf_runtime_after_instrumentation() {
+        for (newline, module_newline) in [
+            ("\n", "\n"),
+            ("\r\n", "\r\n"),
+            ("\n", "\r\n"),
+            ("\r\n", "\n"),
+        ] {
+            for forbidden in [
+                "crate::theme",
+                "theme::",
+                "ThemeId",
+                "ColorMode",
+                "resolve(",
+            ] {
+                let source = format!(
+                    "use crate::theme::Theme;{newline}\
+                     #[cfg(test)]{newline}\
+                     thread_local! {{ static COUNTER: Cell<usize> = Cell::new(0); }}{newline}\
+                     fn render() {{{newline}\
+                         #[cfg(test)]{newline}\
+                         record_work();{newline}\
+                         // {forbidden}{newline}\
+                     }}{newline}\
+                     #[cfg(test)]{module_newline}\
+                     mod tests {{}}{newline}"
+                );
+                let rejected = std::panic::catch_unwind(|| {
+                    assert_widget_uses_explicit_theme(
+                        "runtime-violation.rs",
+                        production_source(&source),
+                    );
+                });
+                assert!(
+                    rejected.is_err(),
+                    "{forbidden:?} after instrumentation escaped with {newline:?}/{module_newline:?}"
+                );
+            }
+        }
     }
 
     /// cyril-nrnq slice-2 stress: a duplicated marker value would blind the
@@ -1903,56 +2031,93 @@ mod tests {
     #[test]
     fn widgets_only_use_the_explicit_theme() {
         let widget_sources = [
-            include_str!("widgets/approval.rs"),
-            include_str!("widgets/chat.rs"),
-            include_str!("widgets/code_panel.rs"),
-            include_str!("widgets/crew_panel.rs"),
-            include_str!("widgets/hooks_panel.rs"),
-            include_str!("widgets/input.rs"),
-            include_str!("widgets/markdown.rs"),
-            include_str!("widgets/mod.rs"),
-            include_str!("widgets/modal.rs"),
-            include_str!("widgets/picker.rs"),
-            include_str!("widgets/review.rs"),
-            include_str!("widgets/powers_panel.rs"),
-            include_str!("widgets/suggestions.rs"),
-            include_str!("widgets/toolbar.rs"),
-            include_str!("widgets/usage_panel.rs"),
-            include_str!("widgets/voice.rs"),
-            include_str!("widgets/workflow_plan.rs"),
+            ("approval.rs", include_str!("widgets/approval.rs")),
+            ("chat.rs", include_str!("widgets/chat.rs")),
+            (
+                "chat/presentation.rs",
+                include_str!("widgets/chat/presentation.rs"),
+            ),
+            ("chat/retained.rs", include_str!("widgets/chat/retained.rs")),
+            (
+                "chat_layout/index.rs",
+                include_str!("widgets/chat_layout/index.rs"),
+            ),
+            (
+                "chat_layout/mod.rs",
+                include_str!("widgets/chat_layout/mod.rs"),
+            ),
+            (
+                "chat_layout/wrap.rs",
+                include_str!("widgets/chat_layout/wrap.rs"),
+            ),
+            ("code_panel.rs", include_str!("widgets/code_panel.rs")),
+            ("crew_panel.rs", include_str!("widgets/crew_panel.rs")),
+            ("hooks_panel.rs", include_str!("widgets/hooks_panel.rs")),
+            ("input.rs", include_str!("widgets/input.rs")),
+            ("markdown.rs", include_str!("widgets/markdown.rs")),
+            ("mod.rs", include_str!("widgets/mod.rs")),
+            ("modal.rs", include_str!("widgets/modal.rs")),
+            ("picker.rs", include_str!("widgets/picker.rs")),
+            ("review.rs", include_str!("widgets/review.rs")),
+            ("powers_panel.rs", include_str!("widgets/powers_panel.rs")),
+            ("suggestions.rs", include_str!("widgets/suggestions.rs")),
+            ("toolbar.rs", include_str!("widgets/toolbar.rs")),
+            ("usage_panel.rs", include_str!("widgets/usage_panel.rs")),
+            ("voice.rs", include_str!("widgets/voice.rs")),
+            ("workflow_plan.rs", include_str!("widgets/workflow_plan.rs")),
         ];
-        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
-        let on_disk = std::fs::read_dir(&manifest_dir)
-            .unwrap_or_else(|error| panic!("failed to read {}: {error}", manifest_dir.display()))
-            .filter(|entry| {
-                let entry = entry.as_ref().unwrap_or_else(|error| {
-                    panic!(
-                        "failed to read entry in {}: {error}",
-                        manifest_dir.display()
-                    )
+        fn collect_widget_sources(
+            root: &std::path::Path,
+            directory: &std::path::Path,
+            sources: &mut std::collections::BTreeSet<std::path::PathBuf>,
+        ) {
+            let entries = std::fs::read_dir(directory)
+                .unwrap_or_else(|error| panic!("failed to read {}: {error}", directory.display()));
+            for entry in entries {
+                let entry = entry.unwrap_or_else(|error| {
+                    panic!("failed to read entry in {}: {error}", directory.display())
                 });
-                entry.file_name().to_string_lossy().ends_with(".rs")
-            })
-            .count();
+                let path = entry.path();
+                let file_type = entry.file_type().unwrap_or_else(|error| {
+                    panic!("failed to read file type for {}: {error}", path.display())
+                });
+                if file_type.is_dir() {
+                    collect_widget_sources(root, &path, sources);
+                } else if path.extension().is_some_and(|extension| extension == "rs") {
+                    sources.insert(
+                        path.strip_prefix(root)
+                            .expect("widget source must be below its inventory root")
+                            .to_path_buf(),
+                    );
+                }
+            }
+        }
+        let manifest_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/widgets");
+        let listed_paths: std::collections::BTreeSet<_> = widget_sources
+            .iter()
+            .map(|(path, _)| std::path::PathBuf::from(*path))
+            .collect();
         assert_eq!(
+            listed_paths.len(),
             widget_sources.len(),
-            on_disk,
-            "widgets/ gained or lost a file — update this fence's include_str list"
+            "widget source inventory contains a duplicate path"
         );
-        let production_sources = widget_sources.map(production_source);
-        let scanned_bytes: usize = production_sources.iter().map(|source| source.len()).sum();
-        assert!(production_sources.len() <= 17);
+        let mut on_disk = std::collections::BTreeSet::new();
+        collect_widget_sources(&manifest_dir, &manifest_dir, &mut on_disk);
+        assert_eq!(
+            listed_paths, on_disk,
+            "widgets/ gained or lost a source — update this fence's recursive include_str inventory"
+        );
+        let production_sources =
+            widget_sources.map(|(path, source)| (path, production_source(source)));
+        let scanned_bytes: usize = production_sources
+            .iter()
+            .map(|(_, source)| source.len())
+            .sum();
+        assert!(production_sources.len() <= 22);
         assert!(scanned_bytes <= 300_000);
-        for source in production_sources {
-            let source_without_allowed_seams = source
-                .replace("use crate::theme::Theme;", "")
-                .replace("use crate::theme::{MarkdownStyle, Theme};", "")
-                .replace("use crate::theme::{ColorMode, Theme, ThemeId};", "");
-            assert!(!source_without_allowed_seams.contains("crate::theme"));
-            assert!(!source_without_allowed_seams.contains("theme::"));
-            assert!(!source_without_allowed_seams.contains("ThemeId"));
-            assert!(!source_without_allowed_seams.contains("ColorMode"));
-            assert!(!source_without_allowed_seams.contains("resolve("));
+        for (path, source) in production_sources {
+            assert_widget_uses_explicit_theme(path, source);
         }
     }
 

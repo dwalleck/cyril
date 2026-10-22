@@ -2,28 +2,35 @@ use std::collections::HashMap;
 
 use cyril_core::types::{Notification, SessionId, ToolCallId, message::AgentMessage};
 
+use crate::message_history::{LiveRevision, MessageHistory, MessagePosition};
 use crate::traits::{Activity, ChatMessage, ChatMessageKind, TrackedToolCall};
 
 /// Per-subagent message stream.
 pub struct SubagentStream {
-    messages: Vec<ChatMessage>,
+    messages: MessageHistory,
     streaming_text: String,
-    tool_call_index: HashMap<ToolCallId, usize>,
+    live_revision: LiveRevision,
+    tool_call_index: HashMap<ToolCallId, MessagePosition>,
     activity: Activity,
 }
 
 impl SubagentStream {
     pub(crate) fn new() -> Self {
         Self {
-            messages: Vec::new(),
+            messages: MessageHistory::new(),
             streaming_text: String::new(),
+            live_revision: LiveRevision::default(),
             tool_call_index: HashMap::new(),
             activity: Activity::Idle,
         }
     }
 
-    pub fn messages(&self) -> &[ChatMessage] {
+    pub fn history(&self) -> &MessageHistory {
         &self.messages
+    }
+
+    pub fn live_revision(&self) -> LiveRevision {
+        self.live_revision
     }
 
     pub fn streaming_text(&self) -> &str {
@@ -38,6 +45,7 @@ impl SubagentStream {
             return Some(&self.streaming_text);
         }
         self.messages
+            .messages()
             .iter()
             .rev()
             .find_map(|message| match message.kind() {
@@ -75,16 +83,18 @@ impl SubagentStream {
     /// collision the later (self) entry wins.
     pub(crate) fn absorb_earlier(&mut self, mut earlier: SubagentStream) {
         earlier.flush_streaming_text();
-        let offset = earlier.messages.len();
-        if offset == 0 {
+        if earlier.messages.messages().is_empty() {
             return;
         }
-        for (id, idx) in self.tool_call_index.drain() {
-            earlier.tool_call_index.insert(id, idx + offset);
+        self.messages.prepend(earlier.messages);
+        self.tool_call_index.clear();
+        let start = self.messages.retained_range().start.0;
+        for (index, message) in self.messages.messages().iter().enumerate() {
+            if let ChatMessageKind::ToolCall(tracked) = message.kind() {
+                self.tool_call_index
+                    .insert(tracked.id().clone(), MessagePosition(start + index));
+            }
         }
-        self.tool_call_index = earlier.tool_call_index;
-        earlier.messages.append(&mut self.messages);
-        self.messages = earlier.messages;
     }
 
     /// Append a system line after committing any streaming text, so it lands
@@ -99,12 +109,16 @@ impl SubagentStream {
         if !self.streaming_text.is_empty() {
             let text = std::mem::take(&mut self.streaming_text);
             self.messages.push(ChatMessage::agent_text(text));
+            self.live_revision.bump_text();
         }
     }
 
     pub(crate) fn apply_notification(&mut self, notification: &Notification) -> bool {
         match notification {
             Notification::AgentMessage(AgentMessage { text, is_streaming }) => {
+                if !text.is_empty() {
+                    self.live_revision.bump_text();
+                }
                 if *is_streaming {
                     self.streaming_text.push_str(text);
                     self.activity = Activity::Streaming;
@@ -118,18 +132,21 @@ impl SubagentStream {
             Notification::ToolCallStarted(tc) => {
                 self.flush_streaming_text();
                 let tracked = TrackedToolCall::new(tc.clone());
-                let idx = self.messages.len();
-                self.messages.push(ChatMessage::tool_call(tracked));
-                self.tool_call_index.insert(tc.id().clone(), idx);
+                let position = self.messages.push(ChatMessage::tool_call(tracked));
+                self.tool_call_index.insert(tc.id().clone(), position);
                 self.activity = Activity::ToolRunning;
                 true
             }
             Notification::ToolCallUpdated(tc) => {
-                if let Some(&idx) = self.tool_call_index.get(tc.id())
-                    && let Some(msg) = self.messages.get_mut(idx)
-                    && let ChatMessageKind::ToolCall(ref mut tracked) = msg.kind
+                if let Some(&position) = self.tool_call_index.get(tc.id())
+                    && let Some((message, _)) = self.messages.get(position)
+                    && matches!(message.kind(), ChatMessageKind::ToolCall(tracked) if tracked.id() == tc.id())
                 {
-                    tracked.update(tc);
+                    self.messages.edit(position, |message| {
+                        if let ChatMessageKind::ToolCall(tracked) = &mut message.kind {
+                            tracked.update(tc);
+                        }
+                    });
                     return true;
                 }
                 tracing::debug!(
@@ -300,6 +317,110 @@ mod tests {
     }
 
     #[test]
+    fn live_text_revision_changes_only_for_real_source_mutations() {
+        let mut stream = SubagentStream::new();
+        let initial = stream.live_revision();
+        let history = stream.history().revision();
+        stream.apply_notification(&make_agent_msg("", true));
+        assert_eq!(stream.live_revision(), initial);
+        stream.apply_notification(&make_agent_msg("live", true));
+        let streaming = stream.live_revision();
+        assert_ne!(streaming.text, initial.text);
+        assert_eq!(streaming.thought, initial.thought);
+        assert_eq!(stream.history().revision(), history);
+        stream.mark_terminated();
+        assert_eq!(stream.live_revision(), streaming);
+        stream.flush_streaming_text();
+        assert_ne!(stream.live_revision().text, streaming.text);
+        assert_ne!(stream.history().revision(), history);
+        let settled = stream.live_revision();
+        stream.flush_streaming_text();
+        assert_eq!(stream.live_revision(), settled);
+    }
+
+    #[test]
+    fn unknown_and_wrong_id_child_updates_never_edit_an_unrelated_row() {
+        let mut stream = SubagentStream::new();
+        stream.apply_notification(&make_tool_call("b", "retained b"));
+        let b = stream.tool_call_index[&ToolCallId::new("b")];
+        let before = stream.history().revision();
+        let update_a = Notification::ToolCallUpdated(ToolCall::new(
+            ToolCallId::new("a"),
+            "late a".to_owned(),
+            ToolKind::Read,
+            ToolCallStatus::Failed,
+            None,
+        ));
+        assert!(
+            !stream.apply_notification(&update_a),
+            "child unknown-update policy remains drop"
+        );
+        assert_eq!(stream.history().revision(), before);
+        stream.tool_call_index.insert(ToolCallId::new("a"), b);
+        assert!(
+            !stream.apply_notification(&update_a),
+            "validate the requested id before editing"
+        );
+        assert_eq!(stream.history().revision(), before);
+        assert_eq!(stream.history().messages().len(), 1);
+        let update_b = Notification::ToolCallUpdated(ToolCall::new(
+            ToolCallId::new("b"),
+            "updated b".to_owned(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        ));
+        assert!(stream.apply_notification(&update_b));
+        assert_eq!(
+            stream
+                .history()
+                .changed_since(before)
+                .changed
+                .collect::<Vec<_>>(),
+            [b]
+        );
+        assert!(matches!(
+            stream.history().get(b).map(|(message, _)| message.kind()),
+            Some(ChatMessageKind::ToolCall(call)) if call.title() == "updated b"
+        ));
+    }
+
+    #[test]
+    fn repeated_child_starts_remain_distinct_and_latest_start_receives_updates() {
+        let mut stream = SubagentStream::new();
+        stream.apply_notification(&make_tool_call("same", "earlier"));
+        stream.apply_notification(&make_tool_call("same", "later"));
+        assert_eq!(stream.history().messages().len(), 2);
+        let before = stream.history().revision();
+        let latest = stream.tool_call_index[&ToolCallId::new("same")];
+        stream.apply_notification(&Notification::ToolCallUpdated(ToolCall::new(
+            ToolCallId::new("same"),
+            String::new(),
+            ToolKind::Read,
+            ToolCallStatus::Completed,
+            None,
+        )));
+        assert_eq!(
+            stream
+                .history()
+                .changed_since(before)
+                .changed
+                .collect::<Vec<_>>(),
+            [latest]
+        );
+        assert!(matches!(
+            stream.history().messages()[0].kind(),
+            ChatMessageKind::ToolCall(call)
+                if call.title() == "earlier" && call.status() == ToolCallStatus::InProgress
+        ));
+        assert!(matches!(
+            stream.history().messages()[1].kind(),
+            ChatMessageKind::ToolCall(call)
+                if call.title() == "later" && call.status() == ToolCallStatus::Completed
+        ));
+    }
+
+    #[test]
     fn creates_stream_on_first_notification() {
         let mut state = SubagentUiState::new();
         let sid = SessionId::new("sub-1");
@@ -324,21 +445,21 @@ mod tests {
         state.apply_notification(&sid, &make_agent_msg("done", false));
 
         let stream = &state.streams[&sid];
-        assert_eq!(stream.messages.len(), 3);
+        assert_eq!(stream.history().messages().len(), 3);
         assert!(matches!(
-            stream.messages[0].kind,
+            stream.history().messages()[0].kind,
             ChatMessageKind::AgentText(_)
         ));
         assert!(matches!(
-            stream.messages[1].kind,
+            stream.history().messages()[1].kind,
             ChatMessageKind::ToolCall(_)
         ));
         assert!(matches!(
-            stream.messages[2].kind,
+            stream.history().messages()[2].kind,
             ChatMessageKind::AgentText(_)
         ));
 
-        if let ChatMessageKind::AgentText(ref text) = stream.messages[0].kind {
+        if let ChatMessageKind::AgentText(ref text) = stream.history().messages()[0].kind {
             assert_eq!(text, "part1 part2");
         }
     }
@@ -357,7 +478,7 @@ mod tests {
 
         let stream = &state.streams[&sid];
         assert_eq!(stream.streaming_text(), "");
-        assert_eq!(stream.messages.len(), 1);
+        assert_eq!(stream.history().messages().len(), 1);
         assert_eq!(stream.activity(), Activity::Ready);
     }
 
@@ -394,7 +515,7 @@ mod tests {
         state.focus(sid.clone());
 
         let stream = state.focused_stream().expect("should have focused stream");
-        assert_eq!(stream.messages.len(), 1);
+        assert_eq!(stream.history().messages().len(), 1);
     }
 
     #[test]
@@ -472,7 +593,7 @@ mod tests {
 
         let stream = &state.streams[&sid];
         // Should be: AgentText("before tool"), ToolCall, AgentText("after tool")
-        assert_eq!(stream.messages.len(), 3);
+        assert_eq!(stream.history().messages().len(), 3);
     }
 
     // ── cyril-jxfu C8 seam: remove_stream ────────────────────────────────────
@@ -497,7 +618,11 @@ mod tests {
         let Some(stream) = state.remove_stream(&sid) else {
             panic!("existing stream must be returned");
         };
-        assert_eq!(stream.messages().len(), 2, "history rides the removal");
+        assert_eq!(
+            stream.history().messages().len(),
+            2,
+            "history rides the removal"
+        );
         assert!(
             state.focused_session_id().is_none(),
             "removing the focused stream must clear drill-in focus"

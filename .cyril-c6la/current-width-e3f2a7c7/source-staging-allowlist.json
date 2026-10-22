@@ -1,0 +1,296 @@
+{
+  "schema": "cyril.c6la.qualified-source-ownership-allowlist.v1",
+  "issue": "cyril-c6la",
+  "record_kind": "Ownership-and-qualified-content staging allowlist, NOT a current Git diff or final staged tree",
+  "qualified_source": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "descriptor": "e3f2a7c73e2de8dfb1895be825305a572dd203a94743633490f8de8f91165f94",
+    "bounded_rows": 505,
+    "manifest_origin": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-width-integration-attempt1/checked-post-initial-format.bounded-workspace-inputs.json",
+    "manifest_sha256": "19bbbc77ad4ddd548512d780dc6a662a3101f3096c49a57c5394bbed4f9b4098",
+    "manifest_in_archive": "qualification-evidence.tar.gz:current/checked-post-initial-format.bounded-workspace-inputs.json",
+    "not_a_Git_tree_commit_or_source_revision_alias": true
+  },
+  "ownership_origin": {
+    "path": ".cyril-c6la/complete-c6-source43db.source.json",
+    "field": "file_ledger[].path",
+    "historical_export_base_tree": "84b4681afd30af1f537a56ca6ec4fe3b6951cbb4",
+    "historical_candidate": "43db6bd5ef8d3b7919a501094e8e6bca10570a9a",
+    "boundary": "Ownership only; source hashes below are current checked505 hashes, not the historical export hashes."
+  },
+  "source_staging_allowlist_count": 34,
+  "source_staging_allowlist": [
+    {
+      "path": "Cargo.lock",
+      "sha256": "52a1751579bce849fe5d349c3b6994f70455a6321378318b237f7e2882830035",
+      "bytes": 101371,
+      "executable": false
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "9180cb1a6d1d60223904fbe8e63063d122906f06ba91519b2e5a571a9e4a4dc1",
+      "bytes": 3557,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-core/src/types/steer_receipt.rs",
+      "sha256": "a3ef0b7878451eccf11b83479aea7bfe38898a5e83e5b9fb4db68e35abda6652",
+      "bytes": 16429,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/Cargo.toml",
+      "sha256": "c0e36b0550ae43fa3d86b2c90075fcf67a22ad2da8455d75e4fcdc6db224398c",
+      "bytes": 1090,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/benches/conversation_render.rs",
+      "sha256": "42c8e6ab9cdfab91c8aa40a8c5b8ebb4f6029f76e70793de917a682ed3173bb0",
+      "bytes": 34558,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/always_allow_tests.rs",
+      "sha256": "987e117835e780547b115dda101e3a574da78bef4a3e3738333e56a300b809a0",
+      "bytes": 26457,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/chrome_theme_tests.rs",
+      "sha256": "a1194ffb5de8920a90e39e8c07dbac2be6e2e0995849104b464456e102bd1bcf",
+      "bytes": 30894,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/conversation_performance_tests.rs",
+      "sha256": "627d56b0e59b4761bfe4dd55ef3b8358abdb99158892d3f82067c6cc6f18a31e",
+      "bytes": 79338,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "sha256": "2ce6c6bb9dd41cd9a82b2c657232486918e86c8ab9a8f954e2421e6b1048affa",
+      "bytes": 38146,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/lib.rs",
+      "sha256": "ed3d6043f355abefddff516687c92281f2a60f1afab587d69e3c541ea828d947",
+      "bytes": 593,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/message_history.rs",
+      "sha256": "e2021e106365f0c464c10642c7e393f036b5bfd6ff2bcc94253fbc8fb4ed8914",
+      "bytes": 16446,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/render.rs",
+      "sha256": "8930584ca07188a1e48854a39aad2aceffdf9c910d3f4c7b7835115b68bf5682",
+      "bytes": 73529,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/state.rs",
+      "sha256": "8e3837a3c210d56905e6b66b949c3faeee5553234b8327e40d7b68f1080a410e",
+      "bytes": 428071,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/subagent_ui.rs",
+      "sha256": "2e4f7aeb7695a143b059377a94fc33df430e6bdd2aee9a891f68e064fab762da",
+      "bytes": 23764,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/theme.rs",
+      "sha256": "ab095b47d6282842869fcac5589754d00862573d11b3d7704b93deea015d9d4e",
+      "bytes": 95630,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/tool_text_tests.rs",
+      "sha256": "4b1689b79a8a7b3715a7c29ac873239923fa37d18877a3e403b1cfc4933dc715",
+      "bytes": 8774,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "9892f7ca11b90c9158f83aa463bbee032ff064ac1d7b4a635dbf0e7d372c12f5",
+      "bytes": 95266,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat.rs",
+      "sha256": "4686f32b8d9ab059736515b991fa30d702ed4d5265777e63945887ba863e4f6f",
+      "bytes": 87157,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat/presentation.rs",
+      "sha256": "842a4d50103f13b273415f7a9ce77c59855be793d35d7138ee898c608adb7af6",
+      "bytes": 50710,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat/retained.rs",
+      "sha256": "d9dba837b78efb26e2812d111afb5022f17b21396aa323ae409441a96c50f71b",
+      "bytes": 24317,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/index.rs",
+      "sha256": "b97d9d0daebaf0957b13e4ee10edf4182b6fa81ffbe115310d4b8e903943b2c9",
+      "bytes": 13609,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "sha256": "28a4004ce917c4e4d9c5654323c987f962c30af1fd93d2ea52377d5c9f505db2",
+      "bytes": 2296,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "sha256": "68eab558852a4dfb05454b657dcd8186f0e877f9c1cc00f4438e95f1341778ad",
+      "bytes": 52204,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/markdown.rs",
+      "sha256": "6a7121911bded6fc08d698e25ffa2eaf5afb8349b4ca2be3d7ff2eeb45cede0c",
+      "bytes": 78457,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/mod.rs",
+      "sha256": "9a7866f7fea1edf560c97c140672e522ee6182d13fea8dd1cd83f67505521e24",
+      "bytes": 316,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/powers_panel.rs",
+      "sha256": "e02edd55e5f9c939471da391ec64baccb8410b0a2982d4d7cb5970587e7a5dd5",
+      "bytes": 28692,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/workflow_ui.rs",
+      "sha256": "bf3f1793a1b69c3253298f6343e10dc53cb0a3040ffdeeb767a80fe425f706b2",
+      "bytes": 11829,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/tests/missing_tool_updates.rs",
+      "sha256": "3baf98ed189fe1b89292f6baf71cf6b234c56d8d12623033a514b508beb6804c",
+      "bytes": 15701,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "sha256": "5a13798ae11916389c2855ba11f6eb1fd2df22e1c753c7ac7a74dcc162bef7d7",
+      "bytes": 11826,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/tests/widget_theme_sources.rs",
+      "sha256": "e3d7b75288869fae0a885c8318ea3600a4dd853c5655dcc6ec8702c7bb191403",
+      "bytes": 12752,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril/src/app.rs",
+      "sha256": "9fa89d9811ad047c2ec095323cd0883673f77578591b611e343a71adcdac41a9",
+      "bytes": 451155,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril/src/app/tests/current_runtime_contract/ordering.rs",
+      "sha256": "d24f933a45eb405b13e3ff9f41e270c60b4b771e3cbbf3242f090fa4f2e4d9f7",
+      "bytes": 3303,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril/src/app/tests/review.rs",
+      "sha256": "249b661f800f5018588d8cdda64de5bb298759ff400404c613f844d7d56158ba",
+      "bytes": 85063,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril/tests/event_routing.rs",
+      "sha256": "01da7c3f83ee894b2faa4339fefabdd005c3da005b91e454a9cbbd88e3e4d897",
+      "bytes": 12423,
+      "executable": false
+    }
+  ],
+  "manual_restage_allowlist_count": 8,
+  "manual_restage_allowlist": [
+    {
+      "path": "crates/cyril-ui/src/traits.rs",
+      "sha256": "9892f7ca11b90c9158f83aa463bbee032ff064ac1d7b4a635dbf0e7d372c12f5",
+      "bytes": 95266,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/floor_tests.rs",
+      "sha256": "2ce6c6bb9dd41cd9a82b2c657232486918e86c8ab9a8f954e2421e6b1048affa",
+      "bytes": 38146,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/wrap.rs",
+      "sha256": "68eab558852a4dfb05454b657dcd8186f0e877f9c1cc00f4438e95f1341778ad",
+      "bytes": 52204,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat_layout/mod.rs",
+      "sha256": "28a4004ce917c4e4d9c5654323c987f962c30af1fd93d2ea52377d5c9f505db2",
+      "bytes": 2296,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/widgets/chat/presentation.rs",
+      "sha256": "842a4d50103f13b273415f7a9ce77c59855be793d35d7138ee898c608adb7af6",
+      "bytes": 50710,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/conversation_performance_tests.rs",
+      "sha256": "627d56b0e59b4761bfe4dd55ef3b8358abdb99158892d3f82067c6cc6f18a31e",
+      "bytes": 79338,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/src/tool_text_tests.rs",
+      "sha256": "4b1689b79a8a7b3715a7c29ac873239923fa37d18877a3e403b1cfc4933dc715",
+      "bytes": 8774,
+      "executable": false
+    },
+    {
+      "path": "crates/cyril-ui/tests/v2_failed_validation.rs",
+      "sha256": "5a13798ae11916389c2855ba11f6eb1fd2df22e1c753c7ac7a74dcc162bef7d7",
+      "bytes": 11826,
+      "executable": false
+    }
+  ],
+  "manual_set_is_subset_not_additional_paths": true,
+  "qualification_inventory_is_not_staging_authorization": "All505 qualified inputs are evidence metadata only; never stage505 files or directories wholesale.",
+  "not_established": [
+    "Which of34 differ from the final publication base",
+    "The currentmain/incoming-parent diff outside34",
+    "A final staged tree, publication commit, complete4158entry logical index identity, or newPRCI result"
+  ],
+  "separately_owned_not_C6_staging_authorization": [
+    "crates/cyril-core/src/protocol/kas/auth.rs (common testfixture6c0f41c74bd94fa49ab1b3a2ae06e3ed70d3de69)",
+    "Inherited workbench EOF prerequisite paths",
+    "crates/cyril-ui/src/highlight.rs historical unrelated formatting",
+    ".cyril-x5xi/**",
+    ".cyril-zj0m/**",
+    "All other505inputs outside34, including text.rs/clippy.toml/entrypoint files"
+  ],
+  "parent_only_boundary": "Main completes held93/currentmain integration, adjudicates and stages only matching qualified owned content, commits and opens a NEW C6 PR. Any changed production source after integration requires its own affected qualification. PR187 remains untouched/unmerged.",
+  "operations_performed_for_this_record": "Read existing metadata and generated this JSON only; no Git/source/check/runtime/format operations."
+}

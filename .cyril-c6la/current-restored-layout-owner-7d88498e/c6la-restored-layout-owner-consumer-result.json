@@ -1,0 +1,109 @@
+{
+  "schema": "cyril.c6la.restored-owner-current506-owned-consumer-result/1",
+  "ticket": "cyril-c6la",
+  "status": "PASS_SCOPED_CURRENT506_OWNED_INTERACTIVE_CONSUMER",
+  "canonical_handoff": "local://c6la-restored-owner-current506-consumer-result.json",
+  "scope": "Both explicitly authorized actual default-App/owned-ACP PTY modes passed the unchanged67-check/49-pair sequence with complete independent cleanup. This is current506 scoped interactive-consumer acceptance, not native/global C6 acceptance.",
+  "source_binary_binding": {
+    "identity_kind": "bounded-workspace-inputs-sha256",
+    "checked_source_descriptor": "7d88498eedf9521688e62d2e43e2450fd0c475c8d118d46e6e9efcacd1ebff5d",
+    "bounded_rows": 506,
+    "HEAD": "c0846f994994575683dd9d1568ed08f003859886",
+    "held_MERGE_HEAD": null,
+    "not_Git_tree_or_source_revision_alias": true,
+    "qualification_receipt_uri": "local://c6la-restored-layout-owner-current506-qualified-handoff.json",
+    "qualification_receipt_sha256": "5da60e03e29e873922e982e0a6f06a123dfeba5dcfd41492487fb23b76ad3554",
+    "source_manifest_sha256": "2401dcc7855b2c05f5a9418595d58c361fce64994c6468ef6130c4b51ad34fd4",
+    "private_binary": "/tmp/cyril-c6la-restored-layout-owner-default-App-qualified-20261022T112748482994Z",
+    "private_binary_sha256": "e31ef685e1e0fcea9ce14aa3f4a6c4f8384cf756944a176602001dd334c73480",
+    "private_binary_bytes": 102731584,
+    "private_binary_mode": "0o755",
+    "bootstrap_sha256": "3aaeb7f806ddbcdf24ca6fca8db1dd84046c1e391b122a280130a593258d28e5",
+    "binding_guard_basis": "All mandatory source/manifest/HEAD/nullmerge/product/default-build/hash/size/mode/decoder/adapter guards ran before both actual App dispatches. Current guards were independently reviewed with no blockers; no-default App not selected.",
+    "source_gate_attribution": "Upstream qualifier/Main reported17source gates and79bench cases PASS. This worker ran no Cargo/benchmarks and does not substitute consumer observations for those proofs."
+  },
+  "authorization": {
+    "path": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-prepare/main-go.json",
+    "sha256": "f0bbda7675a7cb32b1dccd7385be670bfbf42c0763ebb388f9362563ed96e223",
+    "bytes": 912,
+    "owner": "Main",
+    "scopes": ["c6la"],
+    "modes": ["truecolor", "none"],
+    "prior_consumed_GO_reused": false,
+    "conditional_none_gate": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-truecolor-gate.json",
+    "conditional_gate_observed_before_none": true
+  },
+  "runtime": {
+    "actual_commands_and_cwd": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-prepare/commands.json",
+    "interpreter": "/usr/bin/python",
+    "outer_environment_overrides": {"PYTHONDONTWRITEBYTECODE": "1", "PYTHONPATH": "/home/dwalleck/.cache/uv/environments-v2/smoke-dfb66bf98567089b/lib/python3.13/site-packages"},
+    "no_uv_or_extra_flags_PATH_noUserSite_LC_ALL_override": true,
+    "pyte": "0.8.2",
+    "wcwidth": "0.9.2",
+    "pyte_screens_source_sha256": "43bcd10d5555f6a8e53a1f9c0e557a47ec801b3914533d5b51af5828a5242ecb",
+    "package_version_basis": "Passed immutable pre-dispatch bootstrap guards, not a new probe/setup command. Interpreter version was not separately queried.",
+    "tool_pty": false,
+    "timeout_seconds_each": 900,
+    "App_lifetime": "One actual long-lived App process with real V2 bridge and owned fake peer per mode; separate isolated startup lifetimes, not a new TestBackend render per capture or same-process color transition.",
+    "private_environment": "Actual staged App argv and replacement private environment are in each safety.json. No provider/account/proxy/token inheritance; existing App-private PATH/LC_ALL construction unchanged."
+  },
+  "phase_results": [
+    {"mode": "truecolor", "wrapper_exit_code": 0, "attempts": 1, "result": "PASS", "checks_recorded": 67, "checks_true": 67, "capture_pairs": 49, "wire_frames": 877, "controls": 57, "successful_acks": 57, "input_writes": 97, "requested_bytes": 6085, "written_bytes": 6085, "selected_navigation_sends": 30, "selected_navigation_bytes": 4800, "selected_Page_sequences": 1200, "unexpected_host_callbacks": [], "cleanup": "COMPLETE — no proven-owned survivors or unproven marker matches", "tool_wall_seconds": 89.69, "harness_seconds": 88.97052404898568, "output": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-truecolor-01", "data_receipt": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-truecolor-receipt.json", "data_receipt_sha256": "27c2c621ede0b04faa8f312b4dfd51bb93528892ef79264bcc973d237c6a10a0", "raw_ANSI_sha256": "a4dac96ace835c38be82b32045649a3bf10031c04e31155b2a0c848485ce0ff0"},
+    {"mode": "none", "wrapper_exit_code": 0, "attempts": 1, "result": "PASS", "checks_recorded": 67, "checks_true": 67, "capture_pairs": 49, "wire_frames": 877, "controls": 57, "successful_acks": 57, "input_writes": 97, "requested_bytes": 6085, "written_bytes": 6085, "selected_navigation_sends": 30, "selected_navigation_bytes": 4800, "selected_Page_sequences": 1200, "unexpected_host_callbacks": [], "cleanup": "COMPLETE — no proven-owned survivors or unproven marker matches", "tool_wall_seconds": 88.48, "harness_seconds": 87.94669116899604, "output": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-none-01", "data_receipt": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-none-receipt.json", "data_receipt_sha256": "f9e421f390cb293c53a67ed564d811fcdb793149538da135fccb3f2cee7c712b", "raw_ANSI_sha256": "d860d53aa03ed32978c898ae2b650eb5c2761a69d0582554d29ab5a5d666e168"}
+  ],
+  "aggregate_actual_counts": {"checks_true": 134, "capture_pairs": 98, "wire_frames": 1754, "controls": 114, "successful_acks": 114, "input_writes": 194, "requested_bytes": 12170, "written_bytes": 12170, "short_writes": 0, "selected_navigation_sends": 60, "selected_navigation_bytes": 9600, "selected_Page_sequences": 2400, "count_layer": "Actual PTY os.write requested/returned bytes and literal submitted Page sequences; not App decoded/dispatched keys or UiState offsets. Selected30x160 sends per mode exclude three other inherited160-byte sends and all other navigation."},
+  "meaningful_actual_outcomes": [
+    "Committed/live Markdown code both recolored in truecolor preview; cancel restored originals, commit retained preview and palette return restored original styles. Startup-none code foreground/background stayed default with preview/palette equality. Actual unchanged cell/style vectors and ANSI are retained.",
+    "Width/history/live interactions passed visible checkpoints; completed first Diff owned+2 -1 and first-body content, suppressed second Diff, unchanged-first replacement removed stale counts/body, restored source and retained palette/offscreen-return controls passed.",
+    "Pending comparison survived resize; each actual wire contains owned-deny-only result.outcome={outcome:selected,optionId:deny} with Reject as the only offered option. No permission allow/grant.",
+    "Thought/text/tool chronology stayed exact-once/in-order; visible tool source update, clear-preserves-live/drops-committed, reused-ID/new-path and no prior-source resurrection passed.",
+    "270 unique Markdown inputs and270 tool boundaries reached27 positive viewport batch endpoints. Oldest/updated-old-tool/positive-interior/follow controls passed; actual truecolor interior163..166 is recorded. Width/height-only and retained palette transitions preserved newest/live-tail order.",
+    "Crew create/status replacement/termination/removal preserved selected-main chronology without child leakage. Genuine captured failed-validation replay rendered before/error/after once with one content-backed error and final main commit. This is not child focus/back, transport cancellation or a new real filesystem failure."
+  ],
+  "history_and_safety": {
+    "source_limit_evidence": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-7d88498e-prepare/history-limits.json",
+    "product_default": 500,
+    "actual_generated_config_max_messages": 1000,
+    "configured1000_is_product_maximum": false,
+    "enforcement": "No smaller fixed application-specific cap observed; usize/TOML representability/resources apply. Oldest committed rows are trimmed at enforcement boundaries; zero removes all when enforced; tool insertion can temporarily exceed the configured value mid-turn.",
+    "fixture_rows": 540,
+    "actual_retained_count_eviction_or_cache_work": "NOT_INTROSPECTED",
+    "owned_peer_each_mode": {"sessions": 1, "prompts": 5, "pending_prompt": false, "note": "Same fixed fixture UUID across two isolated lifetimes, not distinct IDs or model calls"},
+    "real_account_model_turn_user_tool_file_operation_or_grant": false,
+    "scratch_files_boundary": "Private config/history/staging/control/ack/evidence writes exist by design; no exercised agent/tool operation on real-user files. Callback collection covers fs/ and terminal/ methods, not a general syscall/network sandbox."
+  },
+  "portable_evidence": {
+    "run_receipt": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-run-receipt.json",
+    "run_receipt_member": "consumer/c6la-restored-owner-current506-consumer-run-receipt.json",
+    "archive": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-evidence.tar.gz",
+    "archive_sha256": "0361cc44d62256f0a426007ae443b4c859c7fffb2362a6fc84056ceaa036ce67",
+    "archive_bytes": 6498708,
+    "logical_members_from_explicit_allowlist": 476,
+    "creation_attempts": 1,
+    "creation_exit_status": 0,
+    "index": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-archive-index.json",
+    "index_sha256": "c5b7c606f7289dff6bdc4861a3bca5b51c4ea59ce7fa3a8ccf8c32523fe50a3c",
+    "allowlist": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-allowlist.txt",
+    "allowlist_sha256": "93e20221ea68196c281220999681a78fa5f629a9077320e75b09811615b817d3",
+    "packaging_receipt": "/tmp/cyril-perf-consumer-20261022/c6la-restored-owner-current506-consumer-packaging.json",
+    "included": "Both complete224-file phase inventories/all98pairs/rawANSI/cast/events/wire/control/ack/state/safety/config/log/results/snapshots,18-file prepared asset/metadata/GO/cleanup union, both rich phase receipts, compact portable run receipt, exact qualified canonical/506manifest and unchanged originalburstFAIL archive.",
+    "excluded": "Both isolated subtrees/private staged binaries and original executable; unrelated repositories/accounts/native artifacts. Final canonical result and packaging receipt are external, avoiding self-hash cycles.",
+    "creation_boundary": "GNU tar ran once with explicit nonrecursive allowlist, no stderr. Logical count is from that allowlist, not fabricated archive listing; no extraction/replay/validation run."
+  },
+  "preserved_boundaries": [
+    "Wrapper stdout was observed through tool completion but not independently captured to a file; no reconstructed transcript.",
+    "Truecolor raw ANSI preserves62 bytes after final capture offset; no replay/normalization. Second selected paging window lacks intermediate capture before middle seek: ANSI interval is conservative, not exact per-action output offsets.",
+    "No native glyph/full-frame/right-edge/auth-URL, native50000, authentic child-focus/back, same-process color-mode transition, internalcache/work/retained-count/latency/storage/performance or upstreamburstfix/globalC6exoneration claim.",
+    "No retries, post-GO source/fixture/oracle/parser changes, setup/probe, Cargo/benchmarks, native execution or production/docs/Git/tracker edits by this worker.",
+    "Pre-GO preparation records intentionally retain historical READY/NO_GO/NOT_RUN labels; they were not rewritten. Actual authorization/outcomes are separately recorded here and in archived execution/phase receipts."
+  ],
+  "historical_evidence_unchanged": {
+    "original_burst_FAIL": {"result": "local://c6la-current-owned-consumer-result.json", "archive_sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f", "nested_member": "prior-failure/original-burst-failure.tar.gz", "status": "FAIL remains immutable; no causal fix/exoneration"},
+    "old505_cadence_PASS": "local://c6la-input-cadence-consumer-result.json",
+    "separate_shared_width_wrapper_failures": "/tmp/cyril-perf-consumer-20261020/shared-width-prepare/handoff.json",
+    "x5_publication_handoff": "/home/dwalleck/repos/cyril-wt-perf-cyril-x5xi-stack/.cyril-x5xi/refresh-pr189/handoff.json",
+    "Zj_publication_handoff": "/home/dwalleck/repos/cyril-wt-perf-cyril-zj0m/.cyril-zj0m/refresh-7972f884/handoff.json",
+    "old_benchmark_and_actual_evidence_repinned_or_relabelled": false
+  },
+  "next_action": "Main combines this exact current506 owned-consumer proof with independently owned native/CI/platform/release/final-conformance evidence and publication/tracker work. No further product invocation is requested or authorized by this handoff."
+}

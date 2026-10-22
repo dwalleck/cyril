@@ -1,0 +1,31 @@
+{
+  "schema": "cyril.c6la.publication-wording-review.v1",
+  "issue": "cyril-c6la",
+  "reviewer": "AssembleConversationDelivery.ReviewC6PublicationWording",
+  "record_kind": "Static documentation and source-allowlist review; not production/archive/staging/native/CI approval",
+  "overall_correctness": "correct",
+  "findings": [],
+  "confidence": 0.97,
+  "assessed_scope": [
+    "README.md:216-231",
+    ".cyril-c6la/route.md:138-208",
+    ".cyril-c6la/review-decisions.md:150-250",
+    ".cyril-c6la/plan.md:179-241",
+    "local://c6la-current-pr-body.md:1-45",
+    ".cyril-c6la/current-width-e3f2a7c7/source-staging-allowlist.json:1-296"
+  ],
+  "source_review_remains_separate": {
+    "correct": true,
+    "findings": [],
+    "confidence": 0.96,
+    "path": "c6la-current-conformance-review.json",
+    "sha256": "d185f4b50d9f743c2e7ab5a7db56cf16cc457e195328c26ec3a3da5a986d5af7"
+  },
+  "limits": [
+    "Pending publication-manifest link was intentionally excluded from findings",
+    "Does not approve production code, final archive contents, historical byte immutability, staging, integrated tree, native acceptance or CI",
+    "No files written and no Git/build/test/lint/fmt/proof/runtime execution by reviewer"
+  ],
+  "original_report_uri": "agent://AssembleConversationDelivery.ReviewC6PublicationWording",
+  "original_report_text": "**Overall correctness: correct — bounded docs/publication review only.**  \n**Findings: none.**  \n**Confidence: 0.97.**\n\nThe assessed additions agree with the supplied facts and owning records, without overstating source identity, qualification counts, consumer outcomes or acceptance. Historical receipts remain explicitly historical; the separate source-review verdict of **correct / no findings / 0.96** is neither replaced nor expanded by this review.\n\n### Precise assessed scope\nPaths below are relative to the assigned worktree unless noted:\n\n- `README.md:216–231`\n- `.cyril-c6la/route.md:138–208`\n- `.cyril-c6la/review-decisions.md:150–250`\n- `.cyril-c6la/plan.md:179–241`\n- `local://c6la-current-pr-body.md:1–45`\n- `.cyril-c6la/current-width-e3f2a7c7/source-staging-allowlist.json:1–296`\n\n### Evidence-backed assessment\n- **34 / 8 / 505:** All 34 allowlisted paths match the historical ownership ledger, and their recorded hashes, byte sizes and executable flags match the qualified 505-input manifest. The eight manual-restage entries are a subset—not additional paths—and match current qualified hashes. The record explicitly prohibits staging all 505 inputs wholesale.\n- **Qualification:** The summaries preserve **35 invocations = 29 exit-0 + 3 intended compiled RED + 3 expected CLI-negative**, workspace **2953/0/13**, and **79 ordered executions / 2370 samples**, including the **3/90 + 76/2280** benchmark split.\n- **Layer attribution:** Historical F11/F12 applicability and assertion-reach limits remain distinct from the two current production-width mutation pairs and one test-only classifier pair. Auth6c remains separately attributed test-fixture evidence.\n- **Consumer outcomes:** Original C6 burst FAIL, pre-C6 baseline ASSERTFAIL at **114.94s—not timeout**, and current cadence PASS in both independent startups remain separate. Per-mode counts match the owning result: **67 checks, 49 capture pairs, 1200 selected intended actions, 30 selected writes/4800 bytes, 97 total writes/6085 bytes**.\n- **Claim limits:** No unsupported native, CI, upstream-root-cause, baseline-performance, App-key-consumption or universal/graceful-exit claim was found. Final integration/staging and new-PR responsibilities remain Main-owned.\n\nThe pending publication-manifest assembly/link was intentionally not treated as a finding. This result does **not** approve production code, final archive contents, historical byte immutability, staging, an integrated tree, native acceptance or CI. No files were written, and no Git, build, test, lint, format, proof or runtime execution occurred."
+}

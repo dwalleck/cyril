@@ -1,0 +1,1032 @@
+{
+  "schema_version": 1,
+  "ticket": "cyril-c6la",
+  "comparison_case": "pre-C6-Zj-original1600B-C6scenario",
+  "actual_result": "FAIL",
+  "source_tree": "1226b07c56bf010c8595c9309dcc175d4546850e",
+  "binary_sha256": "b9c988540861e4a9d8e3379d6a2833225bbe417e7ff1ec0aea40321677e687e1",
+  "archive": {
+    "path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-evidence.tar.gz",
+    "sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f",
+    "bytes": 1801572,
+    "regular_file_members": 201,
+    "uncompressed_member_bytes": 80417887,
+    "allowlist_path": "/tmp/cyril-perf-consumer-20261021/c6la-scroll-preC6-zj-baseline-allowlist.txt",
+    "allowlist_sha256": "b5ebb351a397a533720a0c0e8141a5fa99f33c6d97fc3c1aa6da41ae54d2a69e",
+    "member_integrity": "All 201 archived regular-file names, sizes and SHA-256 payloads matched the explicit allowlist and source member index; no extraction or runtime replay."
+  },
+  "source_base": "/tmp/cyril-perf-consumer-20261021",
+  "self_hash_policy": "Index and result receipt are outside the archive to avoid recursive self-hashes; allowlist is separate and pinned by this index.",
+  "excluded": [
+    "isolated executable and entire isolated HOME/XDG/workspace tree",
+    "all sibling original-C6, cadence and historical-Zj evidence",
+    "archive/index/result self-references"
+  ],
+  "members": [
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-command-output.txt",
+      "bytes": 31017,
+      "sha256": "fb89479faa14d103cc6186bf8f2aa8a82b44f319a5671754d14fec7af3b0f5b1"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/authorization.pending.json",
+      "bytes": 4282,
+      "sha256": "9244edb102041b784821ba229cb0e37fdae2ecf53d249b75f746a94cd605961a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/baseline-original400-cleanup.json",
+      "bytes": 649,
+      "sha256": "9918c52a3151755bf510ece80e9c18d946f912a8dca35c3ec5391aea1a2bfbf7"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/bootstrap-binding-only.patch",
+      "bytes": 4179,
+      "sha256": "557370bebdadb21e0b6618c2fbdf924559c7a0a4224801e544bf164a3280f7e9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/bootstrap.py",
+      "bytes": 9409,
+      "sha256": "b067a860134c4df26cf624ba62ba2326d3ba700ee47c216a7d86df67b16e6127"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/c6la_scenario.py",
+      "bytes": 20567,
+      "sha256": "d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/canonical-handoff.json",
+      "bytes": 96807,
+      "sha256": "9ffea80c46ce8b703f0ae6d9795290b7d80affdea0667d21cda1325218cf8dcd"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/decoder-proof.py",
+      "bytes": 10446,
+      "sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/final-actual-assembled-after-all-requested-gates.source-manifest.json",
+      "bytes": 1146753,
+      "sha256": "2d4e94560cc1b83a2ae6299113ea7d24f7d91264effa063388fe9bc92daa03ec"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/main-go.json",
+      "bytes": 4775,
+      "sha256": "6e633796eb5ba88fe58082e8852177a51668efcd3a656b69af0914b614e3a6bb"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/owned_peer.py",
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/private-binary-provenance.json",
+      "bytes": 680,
+      "sha256": "def4c5a63ab5ef18dba5933d968154d98d23c32a516f0d45afe59506e875fcb2"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/smoke.py",
+      "bytes": 23335,
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/v2_failed_validation_2_11_0.jsonl",
+      "bytes": 1924,
+      "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-baseline-prepare/wide_overwrite.py",
+      "bytes": 934,
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/01-markdown-committed-and-live.cells.json",
+      "bytes": 1958620,
+      "sha256": "7eeee42075bdac9a86de5c869ff869740750693ac62ffde1d14c622a8f26a556"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/01-markdown-committed-and-live.txt",
+      "bytes": 9400,
+      "sha256": "99a378b942b99318b83cbbc05d4726b93f46099c78da19c15bd2c86aa74a3e4f"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/02-theme-picker-open.cells.json",
+      "bytes": 1958658,
+      "sha256": "9af9ae13dda26b82221b5598aa727bc6374b8e3f357c14bc997f04a5da92f9da"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/02-theme-picker-open.txt",
+      "bytes": 9744,
+      "sha256": "e31e793f18efdac4a36a4fe4cf8792f8809a6a12feabc080ed39f96154f0e279"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/03-theme-preview.cells.json",
+      "bytes": 1952720,
+      "sha256": "9fdc5cab76ffa95f709b225a830f6f3e0b1def9a53c3c946d7d1283eff0c9ec6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/03-theme-preview.txt",
+      "bytes": 9722,
+      "sha256": "1147319a8932c47c898ca3fa82bff7ffc1c15758d3f194a0f7e2e2d1cd3aa1b1"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/04-theme-preview-cancelled.cells.json",
+      "bytes": 1958620,
+      "sha256": "860c9a3ee03ae9f17e8e2e50293ab38703c8f4c4c32c354708ba79eb8508e961"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/04-theme-preview-cancelled.txt",
+      "bytes": 9400,
+      "sha256": "bb92bf2d75da334470f0d34fc8f4d01eb99f7972183db82ba8be3bcc9e0d3b61"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/05-theme-preview-committed.cells.json",
+      "bytes": 1952221,
+      "sha256": "e6bc464925bc3f8176e7b522e54c8a52a49c2284737ce3eac0d0a09fb5d67fc8"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/05-theme-preview-committed.txt",
+      "bytes": 9400,
+      "sha256": "08fcf2d8180b0bb229ab4434f2411d0925d7892e8f7880bc6bb1b346cc87fbcf"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/07-return-original-palette.cells.json",
+      "bytes": 1958621,
+      "sha256": "31abe7b99bb02e97162332e076798ce2baf4ba3e4908b3d79978af3b5635bb44"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/07-return-original-palette.txt",
+      "bytes": 9400,
+      "sha256": "77669393082ae3eb5c6e5d028c700d5e5270bd1b9a4c3dca589a09e2d6127eb7"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/08-resize-narrow-live.cells.json",
+      "bytes": 488244,
+      "sha256": "2e472d4d0984140d56028bef7d9cc3b124cd86945261b2a2f280a6378d5ce3eb"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/08-resize-narrow-live.txt",
+      "bytes": 2920,
+      "sha256": "2479c3e44c1065c65634f45e76c5618e9eb954dc117d7d6c4632a1759b2348c6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/09-resize-wide-live.cells.json",
+      "bytes": 1958621,
+      "sha256": "f07a2eea088e865634a411ef85aba4ee0e2ad0e49ef9825544da1dde7785f849"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/09-resize-wide-live.txt",
+      "bytes": 9400,
+      "sha256": "28e4db3010529957c3adf2389d1edf89fc94282fada9c1f948aadc20df99d030"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/10-scroll-oldest.cells.json",
+      "bytes": 1958952,
+      "sha256": "349d38563138faa695a918f09924c70565da92633c7bfffdc6985880388b6b7d"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/10-scroll-oldest.txt",
+      "bytes": 8510,
+      "sha256": "5f1079c902044097844d5e833eea8587446aa8ffa8942a8ec893fcca1b26adfe"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/11-scroll-middle.cells.json",
+      "bytes": 1959266,
+      "sha256": "d37c6c098230531d55987d70e4c61364169896ded8ee4bfd8e5395feeb1e61a1"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/11-scroll-middle.txt",
+      "bytes": 8462,
+      "sha256": "ab93c69e8bf2cc9fb429669b06aff18dea587c349e775ac86831ddebbbb62d45"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/12-scroll-return-to-follow.cells.json",
+      "bytes": 1958620,
+      "sha256": "37f3e28b8168d89cdc7fa53f7e329f1f559aa040a5948e58a0fffcb15dc7d2df"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/12-scroll-return-to-follow.txt",
+      "bytes": 9400,
+      "sha256": "ef4ed90086f3e093e92cb342c50e57e51768e451af2064fe7c82f31c6a030577"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/13-live-append-after-interactions.cells.json",
+      "bytes": 1958620,
+      "sha256": "7218e86ddc80156260892c0512b808b3c05ec7b34c4706913738571080b65daf"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/13-live-append-after-interactions.txt",
+      "bytes": 9400,
+      "sha256": "1621c0aafc0636b0018e7770fde065a1698313b68752640e382e84c91c6c29b8"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/14-live-committed.cells.json",
+      "bytes": 1958622,
+      "sha256": "296aab948d1738376acb63d5d5e8d41a4e7532e12aceda6aa16935930e383381"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/14-live-committed.txt",
+      "bytes": 9397,
+      "sha256": "0f2c5681e2b2339d301490f962dfe8f27b2fb4f98d6531512859618ba763c9d5"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0001.json",
+      "bytes": 58,
+      "sha256": "3626d1cfd3a7f8a77be0b6518efe927320ed0280651f06e37fae85052ebce7ae"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0002.json",
+      "bytes": 58,
+      "sha256": "410fb37ebd149fc5debd16f8f1a80aab74011447dc8bae0b6e1d61da910bd987"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0003.json",
+      "bytes": 58,
+      "sha256": "54ce20770df0407661041b347466b35f3bc2ac1a441e29a39d5fedc6eec5e22b"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0004.json",
+      "bytes": 58,
+      "sha256": "165a9c1c1bbcb058e30cbd9dbabdd0bc74541ac58540bcc7c88639e2f381bc71"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0005.json",
+      "bytes": 58,
+      "sha256": "b6b09a8e0d9bdc33293dae03dfa3b4b43560a0532059755974add4451233102e"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0006.json",
+      "bytes": 58,
+      "sha256": "7582d2caecb5406462bcecccc21d6742838cda1ae0d12962351a5411a9cec263"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0007.json",
+      "bytes": 58,
+      "sha256": "411dd6966d7a999011b050f77f8d7a94a9ca0702b56a607ae23117e573701436"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0008.json",
+      "bytes": 58,
+      "sha256": "e53ced5c930e47129bb184f57f9e8f84b435ca5fbe1d8ad848b72616a9756e97"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0009.json",
+      "bytes": 58,
+      "sha256": "054500bcc22a82ab5075256dc7bb8fdfd4cb40d151b6960b18167e4e671f294e"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0010.json",
+      "bytes": 59,
+      "sha256": "8038f8ba702cd1d5ccdcae18fd488b70ed9f163efae6d5b9231969a9511f36c4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0011.json",
+      "bytes": 59,
+      "sha256": "c990a1f7ad12e4a06e83a97dbf06ce19dfee20531eb42c1a725bb2d9090ca439"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0012.json",
+      "bytes": 59,
+      "sha256": "3b3c1083f5cf1ae0c9279f0380c4617902d5ec9d41743489574f5d221fa076c5"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0013.json",
+      "bytes": 59,
+      "sha256": "88d066ace90f541d06f9b1962c5309ee6f2cbf339453b763c1d8130133a24800"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0014.json",
+      "bytes": 59,
+      "sha256": "9bc9f7d8b69eaca2fb405b490e31d8c53b0226b4f515fcb12edf4533fc362dd4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0015.json",
+      "bytes": 59,
+      "sha256": "a8c81b78dc3043bb52e084a6529dd6458a3e3f0dfa2a30d3205cdc7b810d49e4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0016.json",
+      "bytes": 59,
+      "sha256": "7be1f56a5effb471656e4495f91b472cebe5e32e1835c20ed96132a5b8a048ee"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0017.json",
+      "bytes": 59,
+      "sha256": "a16dec9113e9c43d39b8aa10b49a6c7a50f443e1d9e7a96990c698773b967f09"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0018.json",
+      "bytes": 59,
+      "sha256": "d49a321bb7ed878b5f5fcd7bc60f22e01dbddad5cd9fdd46b3d9dcaa866ea142"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0019.json",
+      "bytes": 59,
+      "sha256": "a3779809aef6e50583e3aa1b92880eb6c1c3aec22652ac90d5a1704f2428b7c6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0020.json",
+      "bytes": 59,
+      "sha256": "896e4a94e0d87fcacc62c1284d874a66d93971dbea370fcd9786e03343d31288"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0021.json",
+      "bytes": 59,
+      "sha256": "77251f88a087674b1ff5d3456f3ee91060d64bc79e3846251d6a047c5a676f87"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0022.json",
+      "bytes": 59,
+      "sha256": "1b86a126368134f92cd943c44be89e42d28139870eb833f9ca07bb04187a27a0"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0023.json",
+      "bytes": 59,
+      "sha256": "2454220b8c8e4a9b3325454f74e371434b41ee5dc4f0d673eca55c69db883a29"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0024.json",
+      "bytes": 59,
+      "sha256": "0397670ea400390c052c4924368ae6b9ebe04618a05ab793f626a0dcf5374b39"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0025.json",
+      "bytes": 59,
+      "sha256": "7140a14b5f6bfad8437f14df75fa00e377d73d60275e342916b63f3e285a27a3"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0026.json",
+      "bytes": 59,
+      "sha256": "b2e11f15ea5a3accd792c14d40cd56987ba5a82a3fd5f7f9fe79cf6a6a5e47f3"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0027.json",
+      "bytes": 59,
+      "sha256": "bc5020a5997ef4ee6a22c73b137fee85a2ad7e54698155fdb9a50d6304911061"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0028.json",
+      "bytes": 59,
+      "sha256": "63719b0b8ea5ad2d14852dd63ac7de9b5a105cce7bff738d91ad5bf4ea2d0f9a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0029.json",
+      "bytes": 59,
+      "sha256": "573f66e75b7916bc98985ea7db9a080d491c2c31d01861b115f908d2d86e693f"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0030.json",
+      "bytes": 59,
+      "sha256": "1e5495cd4249de8c810f92b3ff9753f801c676e2f67022e0494b999b623c9da4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0031.json",
+      "bytes": 59,
+      "sha256": "c99e9867423059aa754eb426218888867adf95ed0800035269e4daaefe2da0be"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0032.json",
+      "bytes": 59,
+      "sha256": "12e0cff163d3cab25d205eecddb52d15608504707803a86debd76f490fb0e94f"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0033.json",
+      "bytes": 59,
+      "sha256": "83a7ba67a78c19c63dad8a130ddf781a87133a8366cb416d78986f030d77a058"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0034.json",
+      "bytes": 58,
+      "sha256": "fb767e12d34fb578e014f74cf03fb98f6ca2eedaf99425c68ddbbe54118ad6de"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0035.json",
+      "bytes": 59,
+      "sha256": "98ca9a9d72a5301f8cad3bc6064b7246997a372fa965f8ed7fdf52b080c82575"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0036.json",
+      "bytes": 59,
+      "sha256": "131b672912c4475927c853ce9c0180307ea5a19dd638d628dc717ccb72a22458"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0037.json",
+      "bytes": 59,
+      "sha256": "c4070454b2cfb295359e77ba8c328ebd5a5aa072230c114d1bc2555af9425b53"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0038.json",
+      "bytes": 59,
+      "sha256": "225d50016155ad4e3c41f5bc21e1b60e91fa2a5fe8a0915cd6fcebd8361cebea"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0039.json",
+      "bytes": 59,
+      "sha256": "ab3e0ce48b0d3805688486162d0d1601f3365e154e76460cbfb0108000a18962"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0040.json",
+      "bytes": 59,
+      "sha256": "640ddc904355ab66dc5e7610e69c824c63f257459ee5ea4c6323263a7271ad17"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0041.json",
+      "bytes": 58,
+      "sha256": "f4d87afea9aeb2a923bf7ecf40c9cc66d9432823a5e3b5ae8569934b02b64a71"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0042.json",
+      "bytes": 58,
+      "sha256": "d61bb96cd848c34a14999926095dcc7bf7394b97ff87b919ef31e5edc8941a9a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0043.json",
+      "bytes": 59,
+      "sha256": "3ed4cb2c6eb410190610a7296f6237d5e1e0195cb29665db5d65dc7289ce12d0"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0044.json",
+      "bytes": 59,
+      "sha256": "8ad03110e430daafafceadf56de8dcc767adb5213f19c891661a7e9269063e0e"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0045.json",
+      "bytes": 59,
+      "sha256": "ac42762aeff7a8e14f24b20a5894faf649dd8985b6a68be9ea7760683b6671ef"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0046.json",
+      "bytes": 59,
+      "sha256": "ed92997386386fe20f64138bf19a3793fb1ba87b3465259382b739fb3ab74150"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0047.json",
+      "bytes": 59,
+      "sha256": "2f00613a71b5e18b02d1aed5ca16c1fc000938b3aefeff734e5934be29ff83cc"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0048.json",
+      "bytes": 59,
+      "sha256": "6fb124798fef8b12af9141c7cc64106cedf5598f759c60fbd6fc03b387efef2b"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0049.json",
+      "bytes": 59,
+      "sha256": "1ee4c9fa957047fb7425d75134dca2f7f7430147d317bef24ba8680fd594c126"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0050.json",
+      "bytes": 58,
+      "sha256": "1e7ec10c008d76715616a6fb35472e9d98cd2fbe0ec86861d360832b149c99c1"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/ack-0051.json",
+      "bytes": 59,
+      "sha256": "f2baa9d0b2c8d0f25f4a7d60870f0821a886370a14a01d9bb077d923c478b576"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c01-live-thought-append.cells.json",
+      "bytes": 1959110,
+      "sha256": "32e714ecc10ff7fc17a4ee8a93f251092f35e42193347cf18e5d32484d3b9940"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c01-live-thought-append.txt",
+      "bytes": 8382,
+      "sha256": "e85d142f9747f1221ffaed815a3b7faaa35915ef94431897e5b0ac4f7499c713"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c02-live-text-append.cells.json",
+      "bytes": 1959076,
+      "sha256": "eac8e5b18723c5955750d93b7060862de14812be042c3221008efdbf613a7418"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c02-live-text-append.txt",
+      "bytes": 8380,
+      "sha256": "e5dbd98b2869c48858d8eb5d44884939a1fa17e29d6c2e8858cd5467fa9286ac"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c03-tool-boundary-chronology.cells.json",
+      "bytes": 1958919,
+      "sha256": "07dba2ac34bad4f5e04a32aeef27fe948b103537c0771cbe7c336014f37b060c"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c03-tool-boundary-chronology.txt",
+      "bytes": 8392,
+      "sha256": "b3536ca750322ac66a372286889cc4b2c3f65af07547f9160256f7d3227a3fc8"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c04-visible-tool-source-update.cells.json",
+      "bytes": 1958914,
+      "sha256": "b27d07d645659e85ab282a370f4ceafb6e78f1778323a025aaef7928e5f8432b"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c04-visible-tool-source-update.txt",
+      "bytes": 8392,
+      "sha256": "dadbd6abfb9093c249fe4054c2764c1be3228f9f4fec489517675b0cd56554cf"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c05-clear-during-live-text-and-thought.cells.json",
+      "bytes": 1959144,
+      "sha256": "454cc464acb26cf741d23cef988c51962787172f826ee186521a2e9d1412b280"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c05-clear-during-live-text-and-thought.txt",
+      "bytes": 8380,
+      "sha256": "b4a9396baced064cae4eb91319b168e7458b7fd29d18e4cd8b82b54648217069"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c06-clear-reused-tool-and-turn-complete.cells.json",
+      "bytes": 1959044,
+      "sha256": "ffc284bf55b45893c46946863ca5da5ef58678a4d82848196b37369733a2040c"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c06-clear-reused-tool-and-turn-complete.txt",
+      "bytes": 8383,
+      "sha256": "8163701e85b95b4523705250a3ec4061af21d87b62f7c23b84a6f72b2648b5c0"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c07-cache-pressure-newest-and-live.cells.json",
+      "bytes": 1958142,
+      "sha256": "1d587b48f7cdb38deff01ee524bcebe3c2ed69f0169b00ec523cda57da69c1e7"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c07-cache-pressure-newest-and-live.txt",
+      "bytes": 9878,
+      "sha256": "29e1070a64555aebde5541cfd3595eb92813e5c3aac5e36ccf793e0c0b769c48"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c08-cache-pressure-oldest.cells.json",
+      "bytes": 1958053,
+      "sha256": "54798a2cec9314240f5901fc6c5ee487920e6b312e26d2ba5fb9dcf8c5ba1c69"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c08-cache-pressure-oldest.txt",
+      "bytes": 9884,
+      "sha256": "5870ae57ac9583cfe16c4c8d568d4cadc4d217783f8f8393dc4c48909c8c1cc6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c09-old-visible-tool-updated.cells.json",
+      "bytes": 1958042,
+      "sha256": "ae19d96b6000bd00c2ccbcf208dd7475e84b454eee366e37a23160fa5c0d88f2"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/c09-old-visible-tool-updated.txt",
+      "bytes": 9884,
+      "sha256": "fcd88785136bded264c265f22374e64c30d1461e71551718a1a51a980abc63f5"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/config-final.toml",
+      "bytes": 159,
+      "sha256": "08ece5ae40189a9cf4f31ea3e15793775100de29648099689511c94e98754cf9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0001.json",
+      "bytes": 4290,
+      "sha256": "3a93081db084c7e629ecb3fef331fe5b9bdfa3d588bacfcafba13a0a7ac28de6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0002.json",
+      "bytes": 236,
+      "sha256": "fc2391d4e618c105165337de12355f0acb92918af37714bef10de9a2c39a2ba7"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0003.json",
+      "bytes": 174,
+      "sha256": "b358196d37a004cfe63c2cf319145e92f2dec536118f98b99f64188a9faabc0f"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0004.json",
+      "bytes": 23,
+      "sha256": "ad1ed6243ea081e7d97d9e7bf7443870a40e1ea693c6c7fb4a35354451f1de93"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0005.json",
+      "bytes": 404,
+      "sha256": "f4ee2e047b7ce055b3b01601cb4ad0fcaa17933520ece63901ac873f9644b978"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0006.json",
+      "bytes": 602,
+      "sha256": "2608083577ffd32c8988e1cb8b59ed125e7957018636204197f78923dbab0935"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0007.json",
+      "bytes": 163,
+      "sha256": "38045d08069609c39f9d7287a5b94c4983168045b56186750373e784491adf83"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0008.json",
+      "bytes": 520,
+      "sha256": "e4e5ff8f35fbb016fc9cbe0be05309336fa6c49b4d7a3229a8957c6c25de84cf"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0009.json",
+      "bytes": 600,
+      "sha256": "4f6ad0001397d18867d680fecf9781b93652f7b810bcc9ee8ee77e86786c932a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0010.json",
+      "bytes": 2157,
+      "sha256": "95097f147fc94d2c25b143fe28420b7b9c68933b527b7e757d5df5450f169f80"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0011.json",
+      "bytes": 454,
+      "sha256": "6e8d1f59aaa04ff6298f579e0abb29c458e8e696e57d79ae31d0071d93a3b8e4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0012.json",
+      "bytes": 369,
+      "sha256": "17a66b6a86cb21830bf6b6ec4e953f66075e18f97c10976f300b2d0a9ae8ac72"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0013.json",
+      "bytes": 195,
+      "sha256": "c281b7b2cc0026ef8fa0d402e20dd22b7df81aec6987c101fad29ea1791a6ff5"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0014.json",
+      "bytes": 170,
+      "sha256": "94e62c8fb92b2d15aa9dd600f0a83361137105f2589496aafcd1bf85052349ca"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0015.json",
+      "bytes": 172,
+      "sha256": "09d2fcd9bd35cb3646c6d234255c79a2bd24d4210b56f06bf061444c6325b1a0"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0016.json",
+      "bytes": 200,
+      "sha256": "67faea41eb8751ec006a97ddb458bd6a51f40d5566186ec19c249d7cb370f488"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0017.json",
+      "bytes": 169,
+      "sha256": "c50e6e8369f19ce8976e69d562549c0d3252fee1f1fd09b199609d1a689d2035"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0018.json",
+      "bytes": 170,
+      "sha256": "8941275bb5ac086a1e9c26800cb51fd0e2e008541b747e5abb098261d135da4c"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0019.json",
+      "bytes": 618,
+      "sha256": "88240ae19305f193f912b27fff905ce914f2870b75bdac0cdf0f369719ebdefb"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0020.json",
+      "bytes": 393,
+      "sha256": "240d9f81be8136a9943ba63803acbb2872175a6f750e2a8590894c613a80fd65"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0021.json",
+      "bytes": 327,
+      "sha256": "955f38d7cec5ee958e397caa59b7d063600e52aeef4d39b3f0d939b9a5df19c9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0022.json",
+      "bytes": 772,
+      "sha256": "c679d98fbc07387c922d5b30d3efd69fe30207dfe45fb5416c5ef144b8dcf2f7"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0023.json",
+      "bytes": 6933,
+      "sha256": "0524cccaa93fa052db60380fdba146581ab60197f31ebff7cae2e03e9d9f1392"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0024.json",
+      "bytes": 6742,
+      "sha256": "9398251558d873c538b5a6d5dbff026f374ca13bf7c889ee4c6809bac8169080"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0025.json",
+      "bytes": 6742,
+      "sha256": "a46e142f020dcfcc246040c3a9ea6a8e08ae618fc1084df4a41d5efc3f7b0b5b"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0026.json",
+      "bytes": 6742,
+      "sha256": "c59d5c6aac913298b46cec89d189872c0e7db4d5f1cbd2aff2e7d23d91971ad0"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0027.json",
+      "bytes": 6742,
+      "sha256": "588b9142b4f6756654a19ab210859891d95d66901220909a2b43aaceac78d272"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0028.json",
+      "bytes": 6742,
+      "sha256": "0b2ad77cadb8874649fd86709e2cfa78c155ccb9b1c14ad7dd8310758b52e992"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0029.json",
+      "bytes": 6742,
+      "sha256": "cd54759d549da612109835b5a5ce69bff65e4670d06ecfec54602e09101e2891"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0030.json",
+      "bytes": 6742,
+      "sha256": "b58fdfabd98f803d6721f3db57ad70582d7905c00de6a0e1d14cb12e82c369d4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0031.json",
+      "bytes": 6742,
+      "sha256": "0b9279732a1bdeadac09dac25ab21aabfca85a21c4811b6813d4d9ba8d8c6210"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0032.json",
+      "bytes": 6742,
+      "sha256": "d2c94670276fa173028b4a0f7b6b47378a9ad1aab8bce89477b8b12ebe7bae85"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0033.json",
+      "bytes": 6762,
+      "sha256": "01a0ccd387c20e6ab3b6278e048b5570f867786037348dd10915f930a6a2ebe1"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0034.json",
+      "bytes": 6762,
+      "sha256": "f4fbfe554940d5f0d6aa80261de9c5e2e4a70c05eb08be871606942541f5d8f3"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0035.json",
+      "bytes": 6762,
+      "sha256": "60fbcce5f33cf558c4740990e2fca3678ceb36612f648955452a688351c8528e"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0036.json",
+      "bytes": 6762,
+      "sha256": "1d04bf3550e57717051789bd2dbb4482e67db9a518b37b1c243fe644cae20ad9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0037.json",
+      "bytes": 6762,
+      "sha256": "d9cfe6332fb7984c161155eb9f2c4f10ac26e633ff115c26fb3cb278bb88a7b4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0038.json",
+      "bytes": 6762,
+      "sha256": "c67ab6de048037c454ca3d7922cfdb7282c0b83a20bc1f7ed990a8f55816f377"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0039.json",
+      "bytes": 6762,
+      "sha256": "b00232e4303a84c19c7e343d7cfeee368bd7c3324bd0f15da496cf4fb0fa4437"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0040.json",
+      "bytes": 6762,
+      "sha256": "87b692aa6f969ed287dcec72cac78542845f2ee28ae02124dd7c0e14cf593c7e"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0041.json",
+      "bytes": 6762,
+      "sha256": "49e7589607a9ccd461cf11aa8252753fa2948908fca792d11f90e77fe3c1b369"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0042.json",
+      "bytes": 6762,
+      "sha256": "690ec0b52d92bf6b1dffeab6cf9a3267eacf0d7c984c8972432922e07d2ee03c"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0043.json",
+      "bytes": 6762,
+      "sha256": "9600b83cacfde8f8c12b3c83f94d626f64ae60d8c2b1c51b8011054f2db4efb1"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0044.json",
+      "bytes": 6762,
+      "sha256": "8f83cee545d5f8adbde7dda00bc29b136e997a41534cc117fc436ad84ef86468"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0045.json",
+      "bytes": 6762,
+      "sha256": "497e0665e9ae728d5054b5c44089d23a445cc3d96749fcbf913ee1ad82e9f6aa"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0046.json",
+      "bytes": 6762,
+      "sha256": "ed97078c481d1ba075e57dfd3c89c325e0cd0ae5f8f80bc0712e63f77c92d613"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0047.json",
+      "bytes": 6762,
+      "sha256": "2373c472f8f1ace7aa7403829f03533a1e26c8e125c44d9bcb276a508f6e4526"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0048.json",
+      "bytes": 6762,
+      "sha256": "894d42b987128c28bdb122ef9bbcebd59b716d685f997a54cd35acdde31deb6a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0049.json",
+      "bytes": 6762,
+      "sha256": "ba9d264c66bce8ffe27224f6d822ffc766fd81862f00b9e80ad5ff13ded80faf"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0050.json",
+      "bytes": 175,
+      "sha256": "af724f1b28f4affb7434533860127c940e22dcb57ff2dc04bd7754ff50fe7d52"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/control-0051.json",
+      "bytes": 392,
+      "sha256": "67aafd741f17da70a4996db7029171722470134ea6c168f75c9351e4677bee96"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/cyril.log",
+      "bytes": 165519,
+      "sha256": "91dee0cf22c34f387d1e3b194ddcd97c0f3291cd4bd8c3a5ed5a8b044720fdd5"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/events.jsonl",
+      "bytes": 177847,
+      "sha256": "7b857c7ebc9b746b998fc9b1a6ae19143441de59d61f7eeab9e86702530c16c9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/failure.cells.json",
+      "bytes": 1958042,
+      "sha256": "cb28dcc5ad1c6936c5c17b3bcdde9cf459bf57548b0fff9f179879ef2ebae84a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/failure.txt",
+      "bytes": 9884,
+      "sha256": "65a3a61a8fd180d34647c970d88c24f709c01ad6c221caf645b36c2ebde08009"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/final.cells.json",
+      "bytes": 1958042,
+      "sha256": "9459b6769187f81316cc269293b575c4eab9b33268432a8eb8c7f3262822d207"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/final.txt",
+      "bytes": 9884,
+      "sha256": "ad9337a19bf12f76e8d5dbda4d329e709128c21eefd944c65f09a7072402422b"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/harness-snapshot/c6la_scenario.py",
+      "bytes": 20567,
+      "sha256": "d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/harness-snapshot/owned_peer.py",
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/harness-snapshot/smoke.py",
+      "bytes": 23335,
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/peer-state.json",
+      "bytes": 325,
+      "sha256": "47d3389a27b6c7d9cd05fe0f289e7bda45dfae1fec02ee0bc1b22b001584bfb7"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/result.json",
+      "bytes": 118133,
+      "sha256": "745c7e720384d606bf90ffd35ed8d8a6fc2198ac8b8b18c63da6b95ef82c4cc9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/safety.json",
+      "bytes": 7536,
+      "sha256": "3f1903bd237a2033f8e3a63a39902c40d0eea5f98e5490f2fd0b58243ac870b2"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/session.cast",
+      "bytes": 6207682,
+      "sha256": "02a76f1e43df6e562371574fbb31f2936ae90e53821a3f29f9c63c92741adb75"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/terminal.ansi",
+      "bytes": 4796612,
+      "sha256": "c5eb5343fb7d918cd46e561146856a4662107127d2cb8884d147af5f0dd80fe9"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/wire.jsonl",
+      "bytes": 312302,
+      "sha256": "35f896eeda80cb1d893f3e1b5406df28147336f652e3439eec954c7a1efe32ae"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z01-write-start.cells.json",
+      "bytes": 1958561,
+      "sha256": "d8e512ff424a2e2ea62bffc40f3769c2229a9a7783894e1e060065c83282febe"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z01-write-start.txt",
+      "bytes": 9403,
+      "sha256": "41761f8e97f85e8f44a5965dcef2fbbe3cb1a72f2715e2fee26985dc201634d2"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z02-write-incremental.cells.json",
+      "bytes": 1958556,
+      "sha256": "89cc1bda4187b9c39c391647031438e5f46a82199ba205ddae949992a9acc89a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z02-write-incremental.txt",
+      "bytes": 9404,
+      "sha256": "1013005b1b9ca69ce9474ca26382b407099637b987e8fe364a3e4590c43bf1a5"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z03-write-completed.cells.json",
+      "bytes": 1958451,
+      "sha256": "7c3a0654b38352d1566bc04b2ba4a400ff60ffe3437f9d460205ce0c932fd24f"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z03-write-completed.txt",
+      "bytes": 9414,
+      "sha256": "4acb9f062f1bd48bac3b8ab8e293cdc264021904dd56b52635e800f45c899a95"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z04-write-resized.cells.json",
+      "bytes": 814359,
+      "sha256": "00e8d874c96dc3472b42109b27c556c4a21c6112f518f2876eaa8d2bc624b6c8"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z04-write-resized.txt",
+      "bytes": 4092,
+      "sha256": "0ba2cec04ac677daf54fd774fd9a3a23be4ac2f1518a75faf95ee2ba272250ac"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z05-unchanged-first-changed-second.cells.json",
+      "bytes": 1958563,
+      "sha256": "4f3fcae01de9958ca92a60cd7b64bd922427b6a9f785c7fd214c61d0cc1d197d"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z05-unchanged-first-changed-second.txt",
+      "bytes": 9404,
+      "sha256": "5604b5016ae63fde2d2490fb50588e7f4a75ed5af9e1cf54e3419a7720da56c2"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06-replaced-diff-source.cells.json",
+      "bytes": 1958451,
+      "sha256": "ec508cadf9f81c938eb4c4e0a80a9a0826f97d289dd382e3d35e05653680e38a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06-replaced-diff-source.txt",
+      "bytes": 9414,
+      "sha256": "bedf5a863c22347419e43848fec1cf9aa27e36e65e7f6edc0870d53b8fe4fc17"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06a-retained-diff-new-palette.cells.json",
+      "bytes": 1952051,
+      "sha256": "acc63e86ba50cf903f426611de7bd3195559218ba8a1f94d4303de8017eb3795"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06a-retained-diff-new-palette.txt",
+      "bytes": 9414,
+      "sha256": "7afc4cf890fd9201ef94c4af9847567ff2a336ea6977890089ae3462ba06a96b"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06b-diff-scrolled-out.cells.json",
+      "bytes": 1951885,
+      "sha256": "a35d648a6d2f34b76f772984bc154c00277ba31c722b12c3e748cbd94e339d6a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06b-diff-scrolled-out.txt",
+      "bytes": 8464,
+      "sha256": "c6ef78b7e3422d5bcfa1076aa1a77829ea8e893b6cc952be9df78eeb1443c1aa"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06c-diff-browsed-back.cells.json",
+      "bytes": 1951739,
+      "sha256": "306dcf080079b4f436527dd785f62d2da0122cda44ab3bb6bc1d9a17f908817c"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z06c-diff-browsed-back.txt",
+      "bytes": 8474,
+      "sha256": "6f40c3d1720e30f5ec11d93e41ee826a362e9ac2c03033b20892ba503f08535a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z07-pending-comparison.cells.json",
+      "bytes": 1952421,
+      "sha256": "a0e1b5001d5a59a8d752c69d6d7f9107994f04ab76f20645210059380d227ba6"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z07-pending-comparison.txt",
+      "bytes": 8701,
+      "sha256": "79656bebabd4a18bc02082978093756120f1a9ecabe1c8beb968b5094831ad8a"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z08-pending-resized.cells.json",
+      "bytes": 812229,
+      "sha256": "5be1b80d30fef2d9bb3fcdf74cd5dcd4d63eaedf4f808f3759dc2a424835bc04"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z08-pending-resized.txt",
+      "bytes": 3933,
+      "sha256": "8b09269057b362bc29db3ce6d18cb2a26a5f6bd39fe4738a2385c602dee1d0c4"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z09-completed-and-rejected.cells.json",
+      "bytes": 1959211,
+      "sha256": "c03daaf7b97ce335bc17d9c6d37633d568cd2b0d08ac7397ab2edb781e0de9b8"
+    },
+    {
+      "path": "c6la-scroll-preC6-zj-original400-truecolor-01/z09-completed-and-rejected.txt",
+      "bytes": 8460,
+      "sha256": "000d0b4ebc861b003da2f87b688c2dcce95f5b21441c15b891c21fe8a3fcc8ff"
+    }
+  ]
+}

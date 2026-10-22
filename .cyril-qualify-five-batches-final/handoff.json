@@ -1,12 +1,12 @@
 {
   "schema": 1,
-  "status": "SOURCE_ASSEMBLED_NOT_QUALIFIED",
+  "status": "SOURCE_ASSEMBLY_IN_PROGRESS_NOT_QUALIFIED",
   "integration_owner": "AssembleFiveBatchIntegration",
   "worktree": "/home/dwalleck/repos/cyril-wt-qualify-five-batches-final",
   "branch": "ci/qualify-five-batches-final-20261020",
   "base": "8e5c325ebb5dac3a4ad89f71838fd198cc177543",
   "issue_count": 9,
-  "source_revision_scope": "Nine-issue assembly plus shared reviewer EOF test prerequisite, before the current handoff refresh; source_commit and source_tree include the prior handoff, not this updated record or later integration additions.",
+  "source_revision_scope": "Legacy nine-issue snapshot below; current C6/MCP refresh authority, source pins and held-merge state are recorded separately in source_assembly_refresh. Neither snapshot nor refresh is assembled qualification.",
   "source_commit": "a847f3f726e7e6a8db575348c2d3b8cf572dfe03",
   "source_tree": "8286218456c4ed0f9aa8fcea390e79d91102924a",
   "previous_assembly": {
@@ -207,6 +207,76 @@
     "Later MCP mock/root-draw API seams remain under Main's original integration map; do not import unsupplied heads or broaden those contracts.",
     "Session routing remains App-owned. Existing subagent_ui.rs unknown-ID update drop is identical in base and all assembled sources; workflow streams share it. It is a pre-existing boundary, not an integration regression or a new repair in this assembly."
   ],
+  "source_assembly_refresh": {
+    "status": "C6_SOURCE_RESOLVED_READY_FOR_AUTHORIZED_SEQUENCING_COMMIT_MCP_PENDING",
+    "owner": "AssembleFiveBatchIntegration",
+    "preceding_head": "7c7f1813d2a02b8e4c6b349a11e3b0d126e22c20",
+    "preceding_tree": "627089b5adbfaed791a43cfe764529ee7b397f28",
+    "frozen_c6": "96fae2712888489dccd4cdfbf60e290879e8f6a5",
+    "frozen_c6_tree": "63f8ac3052856074c8af39475aa58fc6d8986ba5",
+    "frozen_mcp": "ec2cae8c6816f30823b105bc649843c7b78430db",
+    "frozen_mcp_tree": "ff7c752a8275328b7d115d128dd5a09ada783749",
+    "frozen_mcp_parents": [
+      "62e313d4d27c5c76348ce7e6a58f794e56ff839b",
+      "1740221839f3c4455ed9c4536c1a23b1905fc531",
+      "2d1c93843834e21966ca8e816349d891ac97d5d9"
+    ],
+    "authority": {
+      "commit_limit": 1,
+      "authorized_commit_message": "chore(integration): assemble C6 baseline before MCP refresh",
+      "purpose": "One local UNQUALIFIED C6 sequencing merge commit only, then a normal --no-commit repaired MCP merge resolved without a final commit.",
+      "no_push_or_pr_or_acceptance_claim": true,
+      "no_checks_builds_tests_lints_formatters_runtime_or_native": true,
+      "isolated_integration_worktree_only": true
+    },
+    "octopus_attempt": "Normal --no-commit two-head octopus refused complex first merge and rolled back cleanly; no commit or manual rollback occurred.",
+    "held_c6_conflict": {
+      "path": "crates/cyril-ui/src/widgets/approval.rs",
+      "original_blocks": 10,
+      "base_blob": "39e3f749a02d772dc4d56149e7aa25ef72500aad",
+      "ours_blob": "51c7484f28b76f65d5e247b0f4293232e3bde6b7",
+      "theirs_blob": "a53cc444cf1ce2ece589f3522c03b90c7c2dc11e",
+      "resolution_owner": "AssembleFiveBatchIntegration.ResolveC6ApprovalBothSides",
+      "contract": "Retain C6 selected identifying FittedPath, shared fit/guard geometry, physical-width policy and borrowed cache/lifetimes together with existing X typed Shell paging, command-row/context allocation and current-window meaningful-command guards. No blanket side selection or invented wide Clear repair.",
+      "resolved_blob": "e948a821ce1e4ba6b690e94b6005cac97a53c162",
+      "resolutions": [
+        "Keep PreviewContent<'a>, true body_width, scrolling state and Shell body alongside the retained fitted_path.",
+        "Keep C6 identifying_path_rows actual-fit/nonmonotone search; path_shown, body_window and into_lines consume the selected retained fit rather than independently refitting.",
+        "OptionPage and ReasonPage reserve the existing X meaningful command row while reclaiming chrome for the retained identifying path fit plus that command row.",
+        "Both current-viewport confirmation paths require path identification and current command-window visibility; zero body width still refuses.",
+        "Use released borrowed CellWidth and existing text::char_width physical accounting; original bytes, borrowed Diff source lifetime, workflow budgets and existing tests remain."
+      ],
+      "exact_resolution_patches": [
+        {
+          "path": ".cyril-qualify-five-batches-final/c6-approval-resolution.combined.patch",
+          "format": "Git combined diff captured against original unmerged stage blobs before staging",
+          "sha256": "7a7aad3ac553973d5fe4cefc8c9f5b657fac04c76b9eddc5aae57a39e1f4a501",
+          "bytes": 24757
+        },
+        {
+          "path": ".cyril-qualify-five-batches-final/c6-approval-resolution.against-c6.patch",
+          "format": "Git patch from frozen C6 to the exact resolved approval file",
+          "sha256": "6714af8ded51eeec35054ba7669b9e43935d2ddc5503b8b3ae6f51b17b26ec23",
+          "bytes": 46911
+        }
+      ]
+    },
+    "retained_ownership": [
+      "C6 MessageHistory stable positions/identity/epoch and revision-aware real history mutation remain authoritative; no raw Vec or messages_version compatibility restoration.",
+      "C6 live text/thought revisions and one persistent App RenderState remain authoritative; panic recovery invalidates retained render state.",
+      "Thin chat::render forwards the original rectangle; retained::render alone reserves one gutter column when width > 1.",
+      "Repaired MCP notice, admission, provenance parsing and startup routing arrive only from frozen ec2 and are adapted to those C6 owners."
+    ],
+    "pending_final_x": {
+      "status": "NOT_SUPPLIED_NOT_ACCEPTED",
+      "existing_shell_guards_retained_until_superseded": true,
+      "boundary_repair_owner": "RepairOverlayWideBoundary",
+      "approved_design": "local://approved-overlay-wide-boundary-repair.md",
+      "integration_rule": "Do not invent a duplicate whole-grapheme clear helper or repair. After final X supplies existing widgets/modal.rs crate-private clear helper, migrate the additional incoming MCP overlay clear caller through that same owner."
+    },
+    "executed_verification": [],
+    "qualification": "SOURCE ONLY. Fresh final assembled qualification/review and affected consumer/platform evidence remain Main-owned; historical individual evidence is not promoted."
+  },
   "qualification_and_publication": {
     "owner": "Main",
     "build_test_lint_format_gate_smoke_runs_by_integrator": [],

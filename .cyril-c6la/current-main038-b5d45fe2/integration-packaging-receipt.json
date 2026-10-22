@@ -1,0 +1,945 @@
+{
+  "schema": "cyril.c6la.main038.integration-packaging-receipt/1",
+  "issue": "cyril-c6la",
+  "status": "COMPLETE_METADATA_ONLY_NO_NEW_PRODUCT_OR_PROOF_RUN",
+  "packet_directory": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-main038-b5d45fe2",
+  "files": [
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/c6la-main038-consumer-result.json",
+      "bytes": 3848,
+      "sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-evidence.tar.gz",
+      "bytes": 2763595,
+      "sha256": "ae236b1c10f2e499446b549f533e1c68475ca32b4bb03abcb86dd4e4a64a88fc"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-archive-index.json",
+      "bytes": 157048,
+      "sha256": "460df51d3c9f9e81395bf175638e8f31c2cfbc121108cecc7fae8311b5d35d75"
+    },
+    {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-allowlist.txt",
+      "bytes": 11084,
+      "sha256": "4981adad50a07d1582eb3a71626e1126b3e39e6b88efea13bca926377bfbf55c"
+    }
+  ],
+  "archive": {
+    "regular_member_count": 282,
+    "original_available_evidence_files": 280,
+    "generated_files": 2,
+    "member_counts_by_root": {
+      "consumer": 244,
+      "historical": 3,
+      "metadata": 3,
+      "provenance": 4,
+      "qualification": 28
+    },
+    "uncompressed_member_bytes": 111883444,
+    "compression": "gzip level9, mtime0, no original filename",
+    "gzip_header_hex": "1f8b08000000000002ff",
+    "tar_format": "PAX regular files only; uid/gid/mtime0, mode0644; empty uname/gname; no PAX extended headers needed; sorted explicit names; no recursion/symlinks/hardlinks/directories",
+    "actual_member_bytes_hashes_and_normalized_metadata_match_index": true,
+    "allowlist_exact_member_order_and_unique": true,
+    "index_inside_outside_byte_identical": true,
+    "allowlist_inside_outside_byte_identical": true,
+    "aggregate_inside_outside_local_byte_identical": true,
+    "index_arcname": "metadata/integration-archive-index.json",
+    "allowlist_arcname": "metadata/integration-allowlist.txt"
+  },
+  "actual_raw_coverage": {
+    "qualification_gate_logs": 17,
+    "actual_all17_local_receipts_exit0": 17,
+    "original_predicate_count": 67,
+    "original_predicates_PASS": 67,
+    "original_capture_pairs": 49,
+    "capture_txt_files": 49,
+    "capture_cells_files": 49,
+    "control_files": 57,
+    "ack_files": 57,
+    "actual_completed_run_regular_raws_excluding_snapshots": 221,
+    "actual_executed_python_snapshots": 3,
+    "wire_frames_recorded": 877,
+    "actual_App_runs_started": 1,
+    "failed_prelaunch_attempts_preserved": 1,
+    "failed_prelaunch_App_runs_started": 0,
+    "independent_cleanup": "COMPLETE; no survivors/unproven-marker matches/signals",
+    "all_R_root_verification_input_and_lineage_regular_files": 20,
+    "fabricated_missing_stdout_cleanup_or_capture_files": 0
+  },
+  "metadata_integrity": {
+    "provenance_pin_comparisons": 85,
+    "mismatches": [],
+    "comparisons": [
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/canonical-handoff.json",
+        "authority": "assigned evidence pin",
+        "expected_sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484",
+        "expected_bytes": 2783831,
+        "actual_sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484",
+        "actual_bytes": 2783831,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/checked-current-main038.bounded-workspace-inputs.json",
+        "authority": "assigned evidence pin",
+        "expected_sha256": "f14e529a5bcec86983edac49be4b83958c86ea53b504eb9ee7299b22e4106f77",
+        "expected_bytes": 105645,
+        "actual_sha256": "f14e529a5bcec86983edac49be4b83958c86ea53b504eb9ee7299b22e4106f77",
+        "actual_bytes": 105645,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/01-initial-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_bytes": 0,
+        "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "actual_bytes": 0,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/02-current-main038-full-workspace-ordinary-tests.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "2ac30fdd66199d4cfec8cb06dfda3f7825b8b5c660670a5e2c0a4a78377c888d",
+        "expected_bytes": 267867,
+        "actual_sha256": "2ac30fdd66199d4cfec8cb06dfda3f7825b8b5c660670a5e2c0a4a78377c888d",
+        "actual_bytes": 267867,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/03-current-main038-workspace-all-targets-strict-Clippy.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "0b635f57787bb46fa97d4fe677b8a2f45f964d59ba2fdc857b906d95359cff0b",
+        "expected_bytes": 705,
+        "actual_sha256": "0b635f57787bb46fa97d4fe677b8a2f45f964d59ba2fdc857b906d95359cff0b",
+        "actual_bytes": 705,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/04-current-main038-default-App-all-bins-build.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "bb034cfa10f38773364e067fed5ef3645d05cd50d59aa3832a7776a273cfd4e7",
+        "expected_bytes": 483,
+        "actual_sha256": "bb034cfa10f38773364e067fed5ef3645d05cd50d59aa3832a7776a273cfd4e7",
+        "actual_bytes": 483,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/05-isolated-App-no-default-full-tests.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "320437d7a7bb6e30c801dfa0afae694dc9f3a86245f17ad48f2f0643461d6694",
+        "expected_bytes": 29716,
+        "actual_sha256": "320437d7a7bb6e30c801dfa0afae694dc9f3a86245f17ad48f2f0643461d6694",
+        "actual_bytes": 29716,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/06-isolated-App-no-default-all-targets-strict-Clippy.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "d6353786d0ec8ed8dfab5f24e082a708108155e388d8639b4ae81dbc6bd73d52",
+        "expected_bytes": 482,
+        "actual_sha256": "d6353786d0ec8ed8dfab5f24e082a708108155e388d8639b4ae81dbc6bd73d52",
+        "actual_bytes": 482,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/07-isolated-App-no-default-all-bins-build.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "522ca36cfb756bda0e7bd7b0c7c30f2f680e6aadcf54aca2b57c652d44bb05c2",
+        "expected_bytes": 482,
+        "actual_sha256": "522ca36cfb756bda0e7bd7b0c7c30f2f680e6aadcf54aca2b57c652d44bb05c2",
+        "actual_bytes": 482,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/08-isolated-UI-no-default-full-tests.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "cd495ac67afa9e2ba0704ed7c7609d317d7f1f1709e8b2fc8d2ef2a1a3347ef4",
+        "expected_bytes": 86430,
+        "actual_sha256": "cd495ac67afa9e2ba0704ed7c7609d317d7f1f1709e8b2fc8d2ef2a1a3347ef4",
+        "actual_bytes": 86430,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/09-isolated-UI-no-default-all-targets-strict-Clippy.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "0d6daea146738954eddda6521ef67a6fd0a7638e3044b27272be9f8de639d65a",
+        "expected_bytes": 279,
+        "actual_sha256": "0d6daea146738954eddda6521ef67a6fd0a7638e3044b27272be9f8de639d65a",
+        "actual_bytes": 279,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/10-isolated-Core-no-default-full-tests.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "e7fa72fadf1ecb089823c534534e66c0c3279e9cff6d6ff09bf5c70ba4498079",
+        "expected_bytes": 85979,
+        "actual_sha256": "e7fa72fadf1ecb089823c534534e66c0c3279e9cff6d6ff09bf5c70ba4498079",
+        "actual_bytes": 85979,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/11-isolated-Core-no-default-all-targets-strict-Clippy.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "5b88892144d43a3446421f9272cfd4c2f584bec0ddfe8cea5bc89d53f7a49014",
+        "expected_bytes": 177,
+        "actual_sha256": "5b88892144d43a3446421f9272cfd4c2f584bec0ddfe8cea5bc89d53f7a49014",
+        "actual_bytes": 177,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/12-isolated-App-explicit-KAS-full-tests.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "89e283d4b20a876819f5f77ad7a879ce37cc99153a44e4f786767ba8f32b904e",
+        "expected_bytes": 30750,
+        "actual_sha256": "89e283d4b20a876819f5f77ad7a879ce37cc99153a44e4f786767ba8f32b904e",
+        "actual_bytes": 30750,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/13-isolated-App-explicit-KAS-all-targets-strict-Clippy.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "dc9c3c9b3898592251c0d703112e3a2b1d95342edeae31553d7963ed88fdda5f",
+        "expected_bytes": 483,
+        "actual_sha256": "dc9c3c9b3898592251c0d703112e3a2b1d95342edeae31553d7963ed88fdda5f",
+        "actual_bytes": 483,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/14-isolated-App-and-Core-explicit-KAS-full-tests.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "e9e8b5a40a6af734c57a50ce9dbdf196116fd2e0db8ee3074c43a757f49a532b",
+        "expected_bytes": 164718,
+        "actual_sha256": "e9e8b5a40a6af734c57a50ce9dbdf196116fd2e0db8ee3074c43a757f49a532b",
+        "actual_bytes": 164718,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/15-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "0c4a355921877c660002ca9e5a0f5b46f23fd2a9d4726b87db94f813a0a7896d",
+        "expected_bytes": 268,
+        "actual_sha256": "0c4a355921877c660002ca9e5a0f5b46f23fd2a9d4726b87db94f813a0a7896d",
+        "actual_bytes": 268,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/16-isolated-App-and-Core-explicit-KAS-build.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "fecede7c2157efe2f16c8c8b9dce94b0fb4dd384dca8207046c8bf7636eb0ffe",
+        "expected_bytes": 72,
+        "actual_sha256": "fecede7c2157efe2f16c8c8b9dce94b0fb4dd384dca8207046c8bf7636eb0ffe",
+        "actual_bytes": 72,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/17-final-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+        "authority": "actual canonical command receipt",
+        "expected_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "expected_bytes": 0,
+        "actual_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "actual_bytes": 0,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/rustc-Vv.txt",
+        "authority": "canonical compiler/host metadata",
+        "expected_sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "expected_bytes": null,
+        "actual_sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+        "actual_bytes": 196,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/cargo-version.txt",
+        "authority": "canonical compiler/host metadata",
+        "expected_sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "expected_bytes": null,
+        "actual_sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+        "actual_bytes": 36,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/pinned-rustfmt-path.txt",
+        "authority": "canonical compiler/host metadata",
+        "expected_sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+        "expected_bytes": null,
+        "actual_sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+        "actual_bytes": 78,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/kernel.txt",
+        "authority": "canonical compiler/host metadata",
+        "expected_sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "expected_bytes": null,
+        "actual_sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+        "actual_bytes": 107,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/CPU.txt",
+        "authority": "canonical compiler/host metadata",
+        "expected_sha256": "d3af9aed56b8c7f91d73b0abb631ba1b859ec6da552e89cd1d97a18d2b4d4f65",
+        "expected_bytes": null,
+        "actual_sha256": "d3af9aed56b8c7f91d73b0abb631ba1b859ec6da552e89cd1d97a18d2b4d4f65",
+        "actual_bytes": 3990,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/bootstrap.py",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+        "expected_bytes": 13529,
+        "actual_sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+        "actual_bytes": 13529,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/smoke.py",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "expected_bytes": 23847,
+        "actual_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "actual_bytes": 23847,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/owned_peer.py",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "expected_bytes": 4271,
+        "actual_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "actual_bytes": 4271,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/wide_overwrite.py",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "expected_bytes": 934,
+        "actual_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "actual_bytes": 934,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/decoder-proof.py",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "expected_bytes": 10446,
+        "actual_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "actual_bytes": 10446,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/c6la_scenario.py",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "expected_bytes": 20648,
+        "actual_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "actual_bytes": 20648,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/v2_failed_validation_2_11_0.jsonl",
+        "authority": "as-prepared input manifest",
+        "expected_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "expected_bytes": 1924,
+        "actual_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "actual_bytes": 1924,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/smoke.py",
+        "authority": "runtime-correction unchanged original input",
+        "expected_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "expected_bytes": 23847,
+        "actual_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "actual_bytes": 23847,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/owned_peer.py",
+        "authority": "runtime-correction unchanged original input",
+        "expected_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "expected_bytes": 4271,
+        "actual_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "actual_bytes": 4271,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/wide_overwrite.py",
+        "authority": "runtime-correction unchanged original input",
+        "expected_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "expected_bytes": 934,
+        "actual_sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+        "actual_bytes": 934,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/decoder-proof.py",
+        "authority": "runtime-correction unchanged original input",
+        "expected_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "expected_bytes": 10446,
+        "actual_sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+        "actual_bytes": 10446,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/c6la_scenario.py",
+        "authority": "runtime-correction unchanged original input",
+        "expected_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "expected_bytes": 20648,
+        "actual_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "actual_bytes": 20648,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/v2_failed_validation_2_11_0.jsonl",
+        "authority": "runtime-correction unchanged original input",
+        "expected_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "expected_bytes": 1924,
+        "actual_sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+        "actual_bytes": 1924,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/bootstrap.py",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+        "expected_bytes": 13529,
+        "actual_sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+        "actual_bytes": 13529,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/bootstrap-original-runtime.py",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "7c18776c075f2847029b6d4dca0009be731255b4669cb30966a086b3b37c9a10",
+        "expected_bytes": 13546,
+        "actual_sha256": "7c18776c075f2847029b6d4dca0009be731255b4669cb30966a086b3b37c9a10",
+        "actual_bytes": 13546,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/original-runtime-binding-only.diff",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "6988b0c748ba368237c6c784c76737df52282a1c71d33b3fd44179b1c5cae9aa",
+        "expected_bytes": 1369,
+        "actual_sha256": "6988b0c748ba368237c6c784c76737df52282a1c71d33b3fd44179b1c5cae9aa",
+        "actual_bytes": 1369,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/original-runtime-host-self-probe.json",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "36288c9374a541f556371a16450cb4a6cc801eea37dd25bd550d101b39974401",
+        "expected_bytes": 2873,
+        "actual_sha256": "36288c9374a541f556371a16450cb4a6cc801eea37dd25bd550d101b39974401",
+        "actual_bytes": 2873,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-01-result.json",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "4467f828ec86543887c3adebbd91e2c28d5c0821daf919b8ba9cdcf8c0d51b5c",
+        "expected_bytes": 6733,
+        "actual_sha256": "4467f828ec86543887c3adebbd91e2c28d5c0821daf919b8ba9cdcf8c0d51b5c",
+        "actual_bytes": 6733,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-02-result.json",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "4c952505bd6a8d8efa5c07332925126d8cd0f9993f8f0b034a0e5054847b61b8",
+        "expected_bytes": 25683,
+        "actual_sha256": "4c952505bd6a8d8efa5c07332925126d8cd0f9993f8f0b034a0e5054847b61b8",
+        "actual_bytes": 25683,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/result.json",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "4fcb3d08709cac47401b37dec6ca7dfaa5f71c1c6feb280363f502f8165aa24b",
+        "expected_bytes": 126439,
+        "actual_sha256": "4fcb3d08709cac47401b37dec6ca7dfaa5f71c1c6feb280363f502f8165aa24b",
+        "actual_bytes": 126439,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once-cleanup.json",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "c75301c4ba2a31444445eb4db07dc50d32246b699989def23ce8b992a0875595",
+        "expected_bytes": 656,
+        "actual_sha256": "c75301c4ba2a31444445eb4db07dc50d32246b699989def23ce8b992a0875595",
+        "actual_bytes": 656,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/authorization.original-runtime.go.json",
+        "authority": "preserved consumer chronology/runtime correction",
+        "expected_sha256": "fc6e490ccb0684e6589038ecb7a70a3ba68a33889a72a258bbc5d655ab34f645",
+        "expected_bytes": 2228,
+        "actual_sha256": "fc6e490ccb0684e6589038ecb7a70a3ba68a33889a72a258bbc5d655ab34f645",
+        "actual_bytes": 2228,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-consumer-preparation.json",
+        "authority": "assigned evidence pin",
+        "expected_sha256": "aefaeff07b58650cd87b0ea4745eade2f5b518a21972c04f69b742274fbd4a0d",
+        "expected_bytes": 50580,
+        "actual_sha256": "aefaeff07b58650cd87b0ea4745eade2f5b518a21972c04f69b742274fbd4a0d",
+        "actual_bytes": 50580,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-integration-preflight.json",
+        "authority": "assigned evidence pin",
+        "expected_sha256": "e7478afc19157bf0c14ac5e3cfc73595c8b9445c7a6f5639a7d39264212e1ed1",
+        "expected_bytes": 41740,
+        "actual_sha256": "e7478afc19157bf0c14ac5e3cfc73595c8b9445c7a6f5639a7d39264212e1ed1",
+        "actual_bytes": 41740,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-original-runtime-correction.json",
+        "authority": "assigned evidence pin",
+        "expected_sha256": "37d0f8476799ae5695e47e3ff72a1556650455b0ecb4fe3b25fa3867d36cb5ea",
+        "expected_bytes": 12966,
+        "actual_sha256": "37d0f8476799ae5695e47e3ff72a1556650455b0ecb4fe3b25fa3867d36cb5ea",
+        "actual_bytes": 12966,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-01-tool-result.txt",
+        "authority": "assigned evidence pin",
+        "expected_sha256": "3572c1071944ee27c4069955c74530c12463f6fbd7e8e22bc37523d6559723eb",
+        "expected_bytes": 448,
+        "actual_sha256": "3572c1071944ee27c4069955c74530c12463f6fbd7e8e22bc37523d6559723eb",
+        "actual_bytes": 448,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/harness-snapshot/smoke.py",
+        "authority": "actual run safety snapshot pin",
+        "expected_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "expected_bytes": null,
+        "actual_sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+        "actual_bytes": 23847,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/harness-snapshot/owned_peer.py",
+        "authority": "actual run safety snapshot pin",
+        "expected_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "expected_bytes": null,
+        "actual_sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+        "actual_bytes": 4271,
+        "match": true
+      },
+      {
+        "path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/harness-snapshot/c6la_scenario.py",
+        "authority": "actual run safety snapshot pin",
+        "expected_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "expected_bytes": null,
+        "actual_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+        "actual_bytes": 20648,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-current-main038-integration-qualified-handoff.json",
+        "authority": "canonical exact local alias",
+        "expected_sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484",
+        "expected_bytes": 2783831,
+        "actual_sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484",
+        "actual_bytes": 2783831,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-current-conformance-review.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "d185f4b50d9f743c2e7ab5a7db56cf16cc457e195328c26ec3a3da5a986d5af7",
+        "expected_bytes": 32929,
+        "actual_sha256": "d185f4b50d9f743c2e7ab5a7db56cf16cc457e195328c26ec3a3da5a986d5af7",
+        "actual_bytes": 32929,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-allowlist.txt",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "baacbeb8e621199ca7309e2e07a2be674b37a12e32bdffa2ff77e72e41d951ed",
+        "expected_bytes": 17903,
+        "actual_sha256": "baacbeb8e621199ca7309e2e07a2be674b37a12e32bdffa2ff77e72e41d951ed",
+        "actual_bytes": 17903,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-archive-index.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "f3e41ae429e95d96e535e7d331d6df219cfc729afb3196fa4b79f333ae0c80a5",
+        "expected_bytes": 46398,
+        "actual_sha256": "f3e41ae429e95d96e535e7d331d6df219cfc729afb3196fa4b79f333ae0c80a5",
+        "actual_bytes": 46398,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-current-owned-consumer-result.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "5ad8039f9b42d3185279a56b27aa098a842efe8880734630e544b8f4b5d64337",
+        "expected_bytes": 19072,
+        "actual_sha256": "5ad8039f9b42d3185279a56b27aa098a842efe8880734630e544b8f4b5d64337",
+        "actual_bytes": 19072,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-allowlist.txt",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "e67f8ed9613a66b2937fb2f28a2d07ea7f62ec72e6aeec53dbfdeb20720d785e",
+        "expected_bytes": 40670,
+        "actual_sha256": "e67f8ed9613a66b2937fb2f28a2d07ea7f62ec72e6aeec53dbfdeb20720d785e",
+        "actual_bytes": 40670,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-archive-index.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "5b7a82d7c0f3ad3002c6ff45f1221af32598c6e944e250ac88a684359ca26b4d",
+        "expected_bytes": 103101,
+        "actual_sha256": "5b7a82d7c0f3ad3002c6ff45f1221af32598c6e944e250ac88a684359ca26b4d",
+        "actual_bytes": 103101,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-evidence.tar.gz",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "8e5d12db44945f6a5478048acef2f5976ecbc3b08ba04db89af9fc2db4a9c5a5",
+        "expected_bytes": 6359670,
+        "actual_sha256": "8e5d12db44945f6a5478048acef2f5976ecbc3b08ba04db89af9fc2db4a9c5a5",
+        "actual_bytes": 6359670,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-input-cadence-consumer-result.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "984957cfda121a36e44e64478de7577c9bbc02bba816198033b93dff0b2b4c2b",
+        "expected_bytes": 51506,
+        "actual_sha256": "984957cfda121a36e44e64478de7577c9bbc02bba816198033b93dff0b2b4c2b",
+        "actual_bytes": 51506,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-scroll-baseline-comparison-preparation.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "308ef967779c2752ff15f379cda79dcfa9b2d210f1c49ef9acb635d038258042",
+        "expected_bytes": 29894,
+        "actual_sha256": "308ef967779c2752ff15f379cda79dcfa9b2d210f1c49ef9acb635d038258042",
+        "actual_bytes": 29894,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-scroll-baseline-comparison-result.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "76e9a8bff64aecfe734fe19022d78b915df448ca0ce077102a77c497c3faf07a",
+        "expected_bytes": 37004,
+        "actual_sha256": "76e9a8bff64aecfe734fe19022d78b915df448ca0ce077102a77c497c3faf07a",
+        "actual_bytes": 37004,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-allowlist.txt",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "b5ebb351a397a533720a0c0e8141a5fa99f33c6d97fc3c1aa6da41ae54d2a69e",
+        "expected_bytes": 13620,
+        "actual_sha256": "b5ebb351a397a533720a0c0e8141a5fa99f33c6d97fc3c1aa6da41ae54d2a69e",
+        "actual_bytes": 13620,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-archive-index.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "4335a322c49f47112e57d7fbd63ca03d0bcde0cd2f139bf7cf5c2c02469f080f",
+        "expected_bytes": 41937,
+        "actual_sha256": "4335a322c49f47112e57d7fbd63ca03d0bcde0cd2f139bf7cf5c2c02469f080f",
+        "actual_bytes": 41937,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/c6la-scroll-preC6-zj-baseline-evidence.tar.gz",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f",
+        "expected_bytes": 1801572,
+        "actual_sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f",
+        "actual_bytes": 1801572,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/publication-wording-review.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "ab3bc2a93add5bc6bf08d49c0700a3dd81abfc48f98a3aa9861695f716159693",
+        "expected_bytes": 3978,
+        "actual_sha256": "ab3bc2a93add5bc6bf08d49c0700a3dd81abfc48f98a3aa9861695f716159693",
+        "actual_bytes": 3978,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-allowlist.txt",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "bf3737990c680e9b872ab1b2790e7bb7abd41076c9b0a6c1108bcb9209c4ff01",
+        "expected_bytes": 11601,
+        "actual_sha256": "bf3737990c680e9b872ab1b2790e7bb7abd41076c9b0a6c1108bcb9209c4ff01",
+        "actual_bytes": 11601,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-archive-index.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "6185afe9d96f9eb4fb10dcfcb2650a52e8ddb000074d6c188b67ecf95ae4d94d",
+        "expected_bytes": 266756,
+        "actual_sha256": "6185afe9d96f9eb4fb10dcfcb2650a52e8ddb000074d6c188b67ecf95ae4d94d",
+        "actual_bytes": 266756,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-evidence.tar.gz",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "cf90bd944f19b50636511506125c8ebdb1e08022f8d04f1ff3732e8285a2ac3e",
+        "expected_bytes": 1036000,
+        "actual_sha256": "cf90bd944f19b50636511506125c8ebdb1e08022f8d04f1ff3732e8285a2ac3e",
+        "actual_bytes": 1036000,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/qualification-packaging-receipt.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "ef9f0672bab33ab55414f36a217a5a8e9453f5e4336a36541e7bd5a64fa3092b",
+        "expected_bytes": 7622,
+        "actual_sha256": "ef9f0672bab33ab55414f36a217a5a8e9453f5e4336a36541e7bd5a64fa3092b",
+        "actual_bytes": 7622,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "13fbb1df145f2ba8f7a8a1af37148f307f45bb8c5cf245dfffc7a519fd5db04c",
+        "expected_bytes": 10738,
+        "actual_sha256": "13fbb1df145f2ba8f7a8a1af37148f307f45bb8c5cf245dfffc7a519fd5db04c",
+        "actual_bytes": 10738,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/source-staging-allowlist.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "255859571d1c9753b5431f085e4beaa74098090d6f68b694abe57ec6b110d6bc",
+        "expected_bytes": 11181,
+        "actual_sha256": "255859571d1c9753b5431f085e4beaa74098090d6f68b694abe57ec6b110d6bc",
+        "actual_bytes": 11181,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.tar.gz",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "3de2ff92e9f7c75337b31c853ad614e3ac3eb7cfb5bcfcb14839fa1a8ecf0c05",
+        "expected_bytes": 12680792,
+        "actual_sha256": "3de2ff92e9f7c75337b31c853ad614e3ac3eb7cfb5bcfcb14839fa1a8ecf0c05",
+        "actual_bytes": 12680792,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-archive-index.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "cf2e68ff84b620f94bc034d868a211259af318e1ba8664d5c34de591a6f031a6",
+        "expected_bytes": 4130163,
+        "actual_sha256": "cf2e68ff84b620f94bc034d868a211259af318e1ba8664d5c34de591a6f031a6",
+        "actual_bytes": 4130163,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-allowlist.txt",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "2ba07044e31d1c2271434e4e7b421912ab847f58ffdb57fc50991c6fe44ce355",
+        "expected_bytes": 189739,
+        "actual_sha256": "2ba07044e31d1c2271434e4e7b421912ab847f58ffdb57fc50991c6fe44ce355",
+        "actual_bytes": 189739,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-packaging-receipt.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "822488e13a7166705740f588db7c1a0cf158d3c7328dcd15d6c4f94fd3eb16bf",
+        "expected_bytes": 14033,
+        "actual_sha256": "822488e13a7166705740f588db7c1a0cf158d3c7328dcd15d6c4f94fd3eb16bf",
+        "actual_bytes": 14033,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/native-supported-controls-evidence.json",
+        "authority": "historical publication manifest binding",
+        "expected_sha256": "c18edf0392e015d1619a01234dbe7e284844be14865acd71cc517c4463508337",
+        "expected_bytes": 22034,
+        "actual_sha256": "c18edf0392e015d1619a01234dbe7e284844be14865acd71cc517c4463508337",
+        "actual_bytes": 22034,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/README.md",
+        "authority": "parent frozen final postsmoke document pin",
+        "expected_sha256": "57687ba8094268e19662dd62e8ae35b459e32e027d640d9f22dd38bfba6da8b1",
+        "expected_bytes": 28637,
+        "actual_sha256": "57687ba8094268e19662dd62e8ae35b459e32e027d640d9f22dd38bfba6da8b1",
+        "actual_bytes": 28637,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/route.md",
+        "authority": "parent frozen final postsmoke document pin",
+        "expected_sha256": "927477d4659ce6d15c727dd6a5b3f81230fc30e073bd189905fedf655826d013",
+        "expected_bytes": 39365,
+        "actual_sha256": "927477d4659ce6d15c727dd6a5b3f81230fc30e073bd189905fedf655826d013",
+        "actual_bytes": 39365,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/plan.md",
+        "authority": "parent frozen final postsmoke document pin",
+        "expected_sha256": "7cc736b372e8a0d1a4198eff8fe5891b6d9a2adda234d6ab8577bc9e8474812a",
+        "expected_bytes": 41912,
+        "actual_sha256": "7cc736b372e8a0d1a4198eff8fe5891b6d9a2adda234d6ab8577bc9e8474812a",
+        "actual_bytes": 41912,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/review-decisions.md",
+        "authority": "parent frozen final postsmoke document pin",
+        "expected_sha256": "469cfcad552911192b2c73a34c7cb0c722be5638257aee6092247a00de376973",
+        "expected_bytes": 56731,
+        "actual_sha256": "469cfcad552911192b2c73a34c7cb0c722be5638257aee6092247a00de376973",
+        "actual_bytes": 56731,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/design.md",
+        "authority": "parent frozen final postsmoke document pin",
+        "expected_sha256": "cf4be88e638430e1d9ecafa2d2815e573cca5815353eacc91504fb5f19873628",
+        "expected_bytes": 62552,
+        "actual_sha256": "cf4be88e638430e1d9ecafa2d2815e573cca5815353eacc91504fb5f19873628",
+        "actual_bytes": 62552,
+        "match": true
+      },
+      {
+        "path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-main038-b5d45fe2/c6la-main038-consumer-result.json",
+        "authority": "parent final exact aggregate",
+        "expected_sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b",
+        "expected_bytes": 3848,
+        "actual_sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b",
+        "actual_bytes": 3848,
+        "match": true
+      }
+    ],
+    "source_descriptor_recomputed_from_hash_only_506_rows": "b5d45fe2b8c78d23b5e5e26f5f8ff963822822830d2b5d54cba39f85f6c2c157",
+    "owned34_current_rows_matched_prior": 33,
+    "owned34_changed_whole_file_rows": [
+      {
+        "before": {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "9fa89d9811ad047c2ec095323cd0883673f77578591b611e343a71adcdac41a9",
+          "bytes": 451155,
+          "executable": false
+        },
+        "after": {
+          "path": "crates/cyril/src/app.rs",
+          "sha256": "1addbd0d9ceb2d077fdcb5fd8a6bf4fa23fe5749ed044d0b40872fbb92165358",
+          "bytes": 467344,
+          "executable": false
+        }
+      }
+    ],
+    "manual8_current_rows_identical": true,
+    "all5_frozen_docs_outside_compiled506": true,
+    "checks_are_metadata_integrity_not_product_qualification": true
+  },
+  "exclusions": [
+    {
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/private-pre-gates.index",
+      "category": "private-Git-index",
+      "reason": "Private index bytes excluded; canonical records hash-only administrative stability.",
+      "known_sha256_from_canonical": "37ad619383d27ffed386b7355997b58f8b30819a201af79243ea44418bd9492b"
+    },
+    {
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/qualification-progress.json",
+      "category": "duplicate-progress",
+      "reason": "Final canonical-handoff.json is complete actual qualification authority; mutable progress copy not needed."
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/isolated",
+      "category": "entire-isolated-subtree",
+      "reason": "Entire subtree excluded without traversal, including product binary/privateHOME/ws/cache/config/data/runtime/state/bin. Only separately recorded final config/safety/cleanup are included.",
+      "recursive_content_enumerated": false
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/isolated/cyril-tested",
+      "category": "product-executable",
+      "reason": "Do not publish product executable; binding retained in actual safety/attempt/canonical metadata.",
+      "known_sha256_from_actual_safety": "993a2fd5f32353b7d0701ca37281f5b7ad5c03e5d58b3e9e0c2e60da6de57388"
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-current-main038-default-qualified-20261022T051828480539Z",
+      "category": "product-executable",
+      "reason": "Private qualified binary excluded; only actual build/ready/hash records included.",
+      "known_sha256_from_canonical": "993a2fd5f32353b7d0701ca37281f5b7ad5c03e5d58b3e9e0c2e60da6de57388",
+      "known_bytes_from_canonical": 102704856
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-current-main038-no-default-qualified-20261022T052256152442Z",
+      "category": "product-executable",
+      "reason": "Private qualified binary excluded; only actual build/ready/hash records included.",
+      "known_sha256_from_canonical": "f6cc5938b0aef33baed0aa0bb69c880f388f56e914d5c106d9bff2344263351d",
+      "known_bytes_from_canonical": 88261512
+    },
+    {
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7",
+      "category": "historical-payloads-retained-in-sibling",
+      "reason": "Only three named historical metadata files copied into new archive. All 26 sibling files/archives remain immutable and publication-pinned externally; no native/mutation/benchmark proof bodies re-bound to current506."
+    },
+    {
+      "source_path": "README.md; .cyril-c6la/route.md; .cyril-c6la/plan.md; .cyril-c6la/review-decisions.md; .cyril-c6la/design.md",
+      "category": "five-live-publication-documents",
+      "reason": "Excluded from archive; final publication manifest pins the postdoc overlay independently, preventing archive/index/manifest cycles.",
+      "read_before_parent_final_signal": false
+    },
+    {
+      "source_path": "out-of-allowlist scopes",
+      "category": "global-deny-policy",
+      "reason": "No full HOME, credentials, .git, caches, full Rust/workspace/production-source snapshots, broad exports, unrelated artifacts, product/benchmark executables, or full history/session exports. Not enumerated/copied; named raw hash-only metadata may record original paths."
+    }
+  ],
+  "exclusion_records": 9,
+  "self_digest_policy": {
+    "self": {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/integration-packaging-receipt.json",
+      "bytes": null,
+      "sha256": null,
+      "reason": "Own digest cannot be embedded without cycle; publication manifest and external handoff pin final receipt."
+    },
+    "publication_manifest": {
+      "path": ".cyril-c6la/current-main038-b5d45fe2/publication-manifest.json",
+      "bytes": null,
+      "sha256": null,
+      "reason": "Receipt precedes manifest; manifest pins receipt, so only external handoff pins final manifest."
+    },
+    "index_self_row": "Only archive-index self row has null bytes/SHA256; exact final index pin is in this receipt and final manifest/handoff."
+  },
+  "worker_operations": {
+    "metadata_hashing_accounting_archive_generation_and_actual_bundle_integrity_only": true,
+    "product_runtime_harness_proof_imports_or_runs": 0,
+    "build_test_check_lint_fmt_bench_mutation_native_runs": 0,
+    "Git_commands_or_mutations": 0,
+    "source_changes": 0,
+    "live_document_changes": 0,
+    "historical_packet_writes": 0,
+    "new_owned_packet_files": 6
+  },
+  "qualification_limits": "Packaging creates no PASS, waiver, runtime GO, current native frame or benchmark timing, staged/commit identity, CI/platform result, Structural terminal completion or issue closure. Existing qualification and actual consumer results retain exact original evidence layers."
+}

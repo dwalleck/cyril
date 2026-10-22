@@ -8,6 +8,8 @@
   "publication_status": "Not committed/pushed/PR-created/tracker-written by documentation worker",
   "publication_files": [
     ".cyril-x5xi/design.md",
+    ".cyril-x5xi/final-fiv-refresh/INDEX.json",
+    ".cyril-x5xi/final-fiv-refresh/evidence.tar.gz",
     ".cyril-x5xi/gate-review-f1.py",
     ".cyril-x5xi/handoff.json",
     ".cyril-x5xi/plan.md",
@@ -24,14 +26,16 @@
   ],
   "content_sha256": {
     ".cyril-x5xi/design.md": "f49124a00cda418a6639d24cbddabcfa1c3150b9d65f6f7f85973a32727fec46",
+    ".cyril-x5xi/final-fiv-refresh/INDEX.json": "07364246504f2c935c69eb1f9e5341f868f39505ee1561038b32910b38596d5a",
+    ".cyril-x5xi/final-fiv-refresh/evidence.tar.gz": "cfdfb0819a91a8a1e5b5780ce54e2a02fe336500c708fcd8705a32400b5510a7",
     ".cyril-x5xi/gate-review-f1.py": "8addc4d32d1901bbfd6342417ad5a8c42a4a8fa04f5d36a80cb08b28747ac41f",
     ".cyril-x5xi/plan.md": "96d822b581383cdc8b1f785130ec1489d79ad26340c2fd1a82480c8902e15674",
     ".cyril-x5xi/production.patch": "9ac057ccb15ee7e809330f41bb3abf39259018ea61a8066950635eb02bd93585",
-    ".cyril-x5xi/review-decisions.md": "52674be2ecca58610cd207f9bcdf65c9372e58fc894f76a6313d15fe23d386a9",
+    ".cyril-x5xi/review-decisions.md": "3f068d2573baa253b61932c5ce3dc3ea9e351b01c80d75723a11797aa4bd2d07",
     ".cyril-x5xi/route.md": "1fc83c785ca03dfc4749028651169688af235602cbf114ca23b15bda0214eea0",
     ".cyril-x5xi/verification-evidence.tar.gz": "afde35dcf77edf4fbb8d3d2a78417692be9380cd842700ba95db28e9180b155f",
     ".cyril-x5xi/verification.md": "df74181e7d0bcaa73f68c592cca0e284251d3929d417fb112be89c017b412a96",
-    "README.md": "8c2fe73a81a493692fb08648bbe1f360580e44e36ee89b9d4082418aab7d643a",
+    "README.md": "d3378756b07445fe057f7bf8523e10c3a891b5e6fd718d8da928627a3c8e01e4",
     "crates/cyril-ui/src/highlight.rs": "f4142b29e3561b392a08e65eb5ca5827735e671577510f4d46a41a041f29fdc9",
     "crates/cyril-ui/src/theme.rs": "fefab546a9d63cf300d70c986f48ed485ddf99c1cf7f240b13e649cb58215eaf",
     "crates/cyril-ui/src/widgets/markdown.rs": "37719f3bf96799c5240660db27607ab43582ffce098bc21c5242bc4794b2ff2a"
@@ -46,6 +50,13 @@
     "bytes": 1335366,
     "members": 162,
     "index": "index.json"
+  },
+  "current_final_fiv_refresh": {
+    "index": ".cyril-x5xi/final-fiv-refresh/INDEX.json",
+    "archive": ".cyril-x5xi/final-fiv-refresh/evidence.tar.gz",
+    "checked_source_tree": "55fd655ebcaa390310486b492c080c028fd635df",
+    "checked_tree_excludes_this_later_packet_and_publication_update": true,
+    "original_source_base_and_evidence_archive_are_historical": true
   },
   "production_ownership": "These three production files were already qualified by Main and were not modified by this documentation assignment.",
   "preserved_existing_evidence": "gate-review-f1.py remains Main corrected executed version; production.patch remains historical original-base 9ac sensitivity snapshot, not the current assembled diff.",

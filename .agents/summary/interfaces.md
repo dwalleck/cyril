@@ -189,18 +189,40 @@ classDiagram
     CommandResult --> CommandResultKind
 ```
 
+### Render State
+
+```rust
+pub fn draw(frame: &mut Frame, state: &dyn TuiState, render_state: &mut RenderState)
+```
+
+`App` creates one `RenderState::new()` beside `UiState` and passes the same mutable render state to every frame. It retains prepared chat data across frames; it is not stored in `TuiState` or recreated for each `Frame`.
+
+Chat owns history-identity/epoch, theme and content-width invalidation. If rendering panics, `draw()` clears the retained chat state before drawing the fallback, so the next frame cannot reuse partially updated data.
+
+### Message History
+
+`MessageHistory` is the concrete, non-`Clone` mutable owner of committed display messages in `UiState` and each `SubagentStream`. Its renderer-facing methods borrow data or return revision values:
+
+- `messages(&self) -> &[ChatMessage]`
+- `revision(&self) -> HistoryRevision`
+- `retained_range(&self) -> Range<MessagePosition>`
+- `get(&self, position: MessagePosition) -> Option<(&ChatMessage, MessageRevision)>`
+- `changed_since(&self, revision: HistoryRevision) -> HistoryChanges<'_>`
+
+`MessagePosition` stays stable through append, edit and prefix eviction. Clearing or prepending earlier messages starts a new epoch. The opaque `HistoryRevision` cursor identifies one owner, epoch and sequence; a default, foreign-owner/epoch or ahead-of-current cursor requests a reset. `HistoryChanges` returns that reset flag, the retained range and a borrowed iterator of coalesced changed positions.
+
 ### TuiState Trait
 
-The renderer's read-only view of application state:
+The renderer's read-only view of application state, passed as `&dyn TuiState`:
 
 ```mermaid
 classDiagram
     class TuiState {
         <<trait>>
-        +messages() [ChatMessage]
-        +streaming_text() str
-        +streaming_thought() Option~str~
-        +messages_version() u64
+        +history() &MessageHistory
+        +streaming_text() &str
+        +streaming_thought() Option~&str~
+        +live_revision() LiveRevision
         +active_tool_calls() [TrackedToolCall]
         +current_plan() Option~Plan~
         +input_text() str
@@ -237,6 +259,8 @@ classDiagram
     TuiState <|.. UiState
     TuiState <|.. MockTuiState
 ```
+
+Committed history is borrowed through `history()`; the live text/thought accessors borrow their separate buffers. `LiveRevision { text, thought }` supplies independent invalidation revisions for those two live sources.
 
 ### Permission Request Flow
 

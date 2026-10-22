@@ -1,0 +1,632 @@
+diff --cc crates/cyril-ui/src/widgets/approval.rs
+index 51c7484f,a53cc444..00000000
+--- a/crates/cyril-ui/src/widgets/approval.rs
++++ b/crates/cyril-ui/src/widgets/approval.rs
+@@@ -100,10 -101,9 +101,12 @@@ struct Preview<'a> 
+      path_width: usize,
+      /// Rows the whole path needs when wrapped.
+      path_rows: usize,
++     /// The chosen path fit is shared by allocation, painting and the guard.
++     fitted_path: FittedPath,
+ -    body: Vec<Line<'a>>,
+ +    body: PreviewContent<'a>,
+ +    body_width: usize,
+ +    scrollable: bool,
+ +    scroll_offset: usize,
+  }
+  
+  impl<'a> Preview<'a> {
+@@@ -112,24 -112,20 +115,28 @@@
+          // Keep the actual width for the confirm guard. Layout still needs
+          // at least one column, even when the border/indent clips every glyph.
+          let path_width = usize::from(super::modal::popup_width(area, desired_width))
+-             .saturating_sub(2 + PATH_INDENT.width());
+-         let path_rows = path.map_or(0, |path| wrap_columns(path, path_width.max(1)).len());
++             .saturating_sub(2 + text::width(PATH_INDENT));
++         let path_rows = path.map_or(0, |path| wrapped_row_count(path, path_width.max(1)));
+          let text_width = usize::from(super::modal::popup_width(area, desired_width))
+-             .saturating_sub(2 + TEXT_INDENT.width());
+ -            .saturating_sub(2 + text::width(TEXT_INDENT))
+ -            .max(1);
+++            .saturating_sub(2 + text::width(TEXT_INDENT));
+ +        let body = preview_lines(state, theme, text_width.max(1));
+ +        let scrollable = matches!(body, PreviewContent::Shell(_))
+ +            || state
+ +                .workflow_plan
+ +                .as_ref()
+ +                .is_some_and(|plan| !plan.steps.is_empty());
+          Self {
+              path,
+              path_width,
+              path_rows,
++             fitted_path: FittedPath {
++                 rows: Vec::new(),
++                 target_shown: false,
++             },
+ -            body: preview_lines(state, theme, text_width),
+ +            body,
+ +            body_width: text_width,
+ +            scrollable,
+ +            scroll_offset: state.preview_scroll_offset,
+          }
+      }
+  
+@@@ -147,46 -138,41 +154,64 @@@
+          self.path.is_some()
+      }
+  
+ +    fn has_command(&self) -> bool {
+ +        matches!(self.body, PreviewContent::Shell(_))
+ +    }
+ +
+ +    fn has_context(&self) -> bool {
+ +        self.has_path() || self.has_command()
+ +    }
+ +
+ +    fn path_budget(&self, rows: usize) -> usize {
+ +        rows.saturating_sub(usize::from(self.has_command()))
+ +    }
+ +
+-     /// A wholly drawn one-grapheme target is valid; an actually elided
+-     /// target still needs two retained tail graphemes.
+-     fn path_shown(&self, rows: usize) -> bool {
+-         let Some(path) = self.path else {
+-             return true;
+-         };
++     /// Keep the preferred allocation only when its actual fit identifies
++     /// the target. More rows can expose an overwide whole-path prefix, so
++     /// otherwise retain the smallest identifying fit, not just its budget.
++     fn identifying_path_rows(&mut self, preferred: usize, available: usize) -> Option<usize> {
++         let path = self.path?;
++         let preferred = self.path_rows.min(preferred);
++         self.fitted_path =
++             fit_path_with_rows(path, self.path_width.max(1), preferred, self.path_rows);
+          if self.path_width == 0 {
+-             return false;
++             return None;
+          }
+-         fit_path(
+-             path,
+-             self.path_width,
+-             self.path_rows.min(self.path_budget(rows)),
+-         )
+-         .target_shown
++         if self.fitted_path.target_shown {
++             return Some(preferred);
++         }
++         for rows in 1..=self.path_rows.min(available) {
++             if rows == preferred {
++                 continue; // This exact fit has already failed.
++             }
++             let fitted = fit_path_with_rows(path, self.path_width, rows, self.path_rows);
++             if fitted.target_shown {
++                 self.fitted_path = fitted;
++                 return Some(rows);
++             }
++         }
++         // No identifying fit: preserve the preferred insufficient-space
++         // rendering and its strict refusal, rather than the last candidate.
++         None
++     }
++ 
++     /// A wholly drawn one-grapheme target is valid; an actually elided
++     /// target still needs two retained tail graphemes.
++     fn path_shown(&self) -> bool {
++         !self.has_path() || (self.path_width > 0 && self.fitted_path.target_shown)
+      }
+  
+ +    fn command_shown(&self, rows: usize) -> bool {
+ +        let PreviewContent::Shell(shell) = &self.body else {
+ +            return true;
+ +        };
+ +        if self.body_width == 0 {
+ +            return false;
+ +        }
+ +        let window = self.body_window(rows);
+ +        shell.command_shown(&window)
+ +    }
+ +
+      /// The path fitted into one run of `width` columns, for a row it shares
+      /// with an option label. `None` without a path or without a column to
+      /// show it in.
+@@@ -198,323 -184,22 +223,307 @@@
+          Some(fit_path(path, width, 1))
+      }
+  
+ -    /// The preview laid out in at most `rows` rows. The path takes rows
+ -    /// first and is fitted to its share; the body fills whatever is left.
+ +    fn body_window(&self, rows: usize) -> BodyWindow {
+-         let path_rows = self.path.map_or(0, |path| {
+-             fit_path(
+-                 path,
+-                 self.path_width.max(1),
+-                 self.path_rows.min(self.path_budget(rows)),
+-             )
+-             .rows
+-             .len()
+-         });
+++        let path_rows = self.fitted_path.rows.len();
+ +        BodyWindow::new(
+ +            self.body.len(),
+ +            rows.saturating_sub(path_rows),
+ +            self.scroll_offset,
+ +            self.scrollable,
+ +        )
+ +    }
+ +
+-     /// The preview laid out in at most `rows` rows. The path takes rows
+-     /// first and is fitted to its share; the body fills whatever is left.
+++    /// The preview laid out in at most `rows` rows. The retained path fit
+++    /// takes its selected share; the body fills whatever is left.
+      fn into_lines(self, rows: usize, theme: &Theme) -> Vec<Line<'a>> {
+ +        let window = self.body_window(rows);
+          let mut lines: Vec<Line<'a>> = Vec::with_capacity(rows);
+-         if let Some(path) = self.path {
+-             for row in fit_path(
+-                 path,
+-                 self.path_width.max(1),
+-                 self.path_rows.min(self.path_budget(rows)),
+-             )
+-             .rows
+-             {
+-                 lines.push(Line::styled(
+-                     format!("{PATH_INDENT}{row}"),
+-                     Style::default().fg(theme.text_secondary),
+-                 ));
+-             }
++         for row in self.fitted_path.rows {
++             lines.push(Line::styled(
++                 format!("{PATH_INDENT}{row}"),
++                 Style::default().fg(theme.text_secondary),
++             ));
+          }
+ -        let body_rows = rows.saturating_sub(lines.len());
+ -        lines.extend(self.body.into_iter().take(body_rows));
+ +        self.body.extend_lines(&mut lines, &window, theme);
+ +        if window.status {
+ +            lines.push(Line::styled(
+ +                format!(
+ +                    "{TEXT_INDENT}↑ {}–{}/{} ↓ PgUp/PgDn",
+ +                    window.start + 1,
+ +                    window.start + window.visible,
+ +                    window.total
+ +                ),
+ +                Style::default().fg(theme.subdued),
+ +            ));
+ +        }
+          lines
+      }
+  }
+  
+ +/// One bounded body viewport; the path, choices and editor never scroll.
+ +struct BodyWindow {
+ +    start: usize,
+ +    visible: usize,
+ +    total: usize,
+ +    status: bool,
+ +    border_hint: bool,
+ +}
+ +
+ +impl BodyWindow {
+ +    fn new(total: usize, available: usize, offset: usize, scrollable: bool) -> Self {
+ +        let available = if scrollable {
+ +            available.min(super::workflow_plan::MAX_PLAN_ROWS)
+ +        } else {
+ +            available
+ +        };
+ +        let overflow = scrollable && total > available;
+ +        let status = overflow && available >= 2;
+ +        let visible = total.min(available.saturating_sub(usize::from(status)));
+ +        let max_offset = total.saturating_sub(visible);
+ +        Self {
+ +            start: if scrollable && visible > 0 {
+ +                offset.min(max_offset)
+ +            } else {
+ +                0
+ +            },
+ +            visible,
+ +            total,
+ +            status,
+ +            border_hint: overflow && available == 1,
+ +        }
+ +    }
+ +}
+ +
+ +enum PreviewContent<'a> {
+ +    Lines(Vec<Line<'a>>),
+ +    Shell(ShellBody<'a>),
+ +}
+ +
+ +impl<'a> PreviewContent<'a> {
+ +    fn len(&self) -> usize {
+ +        match self {
+ +            Self::Lines(lines) => lines.len(),
+ +            Self::Shell(shell) => shell.total_rows,
+ +        }
+ +    }
+ +
+ +    fn extend_lines(self, lines: &mut Vec<Line<'a>>, window: &BodyWindow, theme: &Theme) {
+ +        match self {
+ +            Self::Lines(body) => {
+ +                lines.extend(body.into_iter().skip(window.start).take(window.visible));
+ +            }
+ +            Self::Shell(shell) => shell.extend_lines(lines, window, theme),
+ +        }
+ +    }
+ +}
+ +
+ +/// Count the complete command without allocating hidden rows; only the
+ +/// current viewport is materialized. Raw command/cwd remain untouched.
+ +struct ShellBody<'a> {
+ +    shell: &'a cyril_core::types::ShellCommand,
+ +    width: usize,
+ +    command_rows: usize,
+ +    /// Total meaningful command graphemes, capped at two by the count pass.
+ +    command_glyphs: usize,
+ +    total_rows: usize,
+ +}
+ +
+ +impl<'a> ShellBody<'a> {
+ +    fn new(shell: &'a cyril_core::types::ShellCommand, width: usize) -> Self {
+ +        let command = shell_rows(shell.command(), "", width, None, false, |_, _| {});
+ +        let cwd_rows = shell.cwd().map_or(0, |cwd| {
+ +            shell_rows(cwd, "Cwd: ", width, None, false, |_, _| {}).rows
+ +        });
+ +        Self {
+ +            shell,
+ +            width,
+ +            command_rows: command.rows,
+ +            command_glyphs: command.meaningful_graphemes,
+ +            total_rows: command.rows.saturating_add(cwd_rows),
+ +        }
+ +    }
+ +
+ +    fn extend_lines(self, lines: &mut Vec<Line<'a>>, window: &BodyWindow, theme: &Theme) {
+ +        let end = window.start.saturating_add(window.visible);
+ +        if window.start < self.command_rows {
+ +            shell_rows(
+ +                self.shell.command(),
+ +                "",
+ +                self.width,
+ +                Some(window.start..end.min(self.command_rows)),
+ +                true,
+ +                |row, _| lines.push(Line::styled(row, Style::default().fg(theme.text_secondary))),
+ +            );
+ +        }
+ +        if end > self.command_rows
+ +            && let Some(cwd) = self.shell.cwd()
+ +        {
+ +            shell_rows(
+ +                cwd,
+ +                "Cwd: ",
+ +                self.width,
+ +                Some(window.start.saturating_sub(self.command_rows)..end - self.command_rows),
+ +                true,
+ +                |row, _| lines.push(Line::styled(row, Style::default().fg(theme.subdued))),
+ +            );
+ +        }
+ +    }
+ +
+ +    fn command_shown(&self, window: &BodyWindow) -> bool {
+ +        let end = window
+ +            .start
+ +            .saturating_add(window.visible)
+ +            .min(self.command_rows);
+ +        if window.start >= end || self.command_glyphs == 0 {
+ +            return false;
+ +        }
+ +        let mut visible = 0usize;
+ +        shell_rows(
+ +            self.shell.command(),
+ +            "",
+ +            self.width,
+ +            Some(window.start..end),
+ +            false,
+ +            |_, glyphs| visible = (visible + glyphs).min(2),
+ +        );
+ +        visible >= self.command_glyphs
+ +    }
+ +}
+ +
+ +struct ShellRows {
+ +    rows: usize,
+ +    /// Meaningful graphemes visited by a count pass, capped at two.
+ +    meaningful_graphemes: usize,
+ +}
+ +
+ +/// Borrow safe graphemes intact, replacing only controls and bidi marks.
+ +/// Splitting unsafe chunks also preserves CRLF as a space followed by LF,
+ +/// rather than replacing the whole raw CRLF grapheme with one space.
+ +fn shell_graphemes(text: &str) -> impl Iterator<Item = &str> {
+ +    text.graphemes(true).flat_map(|grapheme| {
+ +        grapheme
+ +            .split_inclusive(|ch: char| ch.is_control() || super::workflow_plan::is_bidi_format(ch))
+ +            .flat_map(|chunk| {
+ +                let (safe, replacement) = match chunk.chars().next_back() {
+ +                    Some('\n') => (&chunk[..chunk.len() - 1], Some("\n")),
+ +                    Some(ch) if ch.is_control() || super::workflow_plan::is_bidi_format(ch) => {
+ +                        (&chunk[..chunk.len() - ch.len_utf8()], Some(" "))
+ +                    }
+ +                    _ => (chunk, None),
+ +                };
+ +                [(!safe.is_empty()).then_some(safe), replacement]
+ +                    .into_iter()
+ +                    .flatten()
+ +            })
+ +    })
+ +}
+ +
+ +/// Sanitize while wrapping, retaining spaces and logical newlines. `None`
+ +/// counts all rows; a range visits only its rows and stops at its end.
+ +/// Materialize strings only for rendering, never for the visibility guard.
+ +/// Nonmaterialized counts exclude whitespace and zero-width graphemes; the
+ +/// viewport callback also excludes clipped graphemes. Totals are capped at two.
+ +fn shell_rows(
+ +    text: &str,
+ +    prefix: &str,
+ +    width: usize,
+ +    range: Option<std::ops::Range<usize>>,
+ +    materialize: bool,
+ +    mut emit: impl FnMut(String, usize),
+ +) -> ShellRows {
+ +    if range.as_ref().is_some_and(std::ops::Range::is_empty) {
+ +        return ShellRows {
+ +            rows: 0,
+ +            meaningful_graphemes: 0,
+ +        };
+ +    }
+ +    let mut row_index = 0usize;
+ +    let mut used = 0usize;
+ +    let mut occupied = false;
+ +    let mut row = String::new();
+ +    let mut glyphs = 0usize;
+ +    let mut meaningful_graphemes = 0usize;
+ +    for grapheme in shell_graphemes(prefix).chain(shell_graphemes(text)) {
+ +        let newline = grapheme == "\n";
+-         let columns = grapheme.width();
+++        let columns = usize::from(grapheme.cell_width());
+ +        if newline || (occupied && used.saturating_add(columns) > width) {
+ +            emit_shell_row(
+ +                &mut row,
+ +                glyphs,
+ +                row_index,
+ +                range.as_ref(),
+ +                materialize,
+ +                &mut emit,
+ +            );
+ +            row_index += 1;
+ +            used = 0;
+ +            occupied = false;
+ +            glyphs = 0;
+ +            if range.as_ref().is_some_and(|range| row_index >= range.end) {
+ +                return ShellRows {
+ +                    rows: row_index,
+ +                    meaningful_graphemes,
+ +                };
+ +            }
+ +            if newline {
+ +                continue;
+ +            }
+ +        }
+ +        let in_range = range
+ +            .as_ref()
+ +            .is_some_and(|range| range.contains(&row_index));
+ +        let needs_glyph_count =
+ +            !materialize && (meaningful_graphemes < 2 || (in_range && glyphs < 2));
+ +        if needs_glyph_count
+ +            && columns > 0
+ +            && grapheme.chars().any(|ch| {
+-                 !ch.is_whitespace() && UnicodeWidthChar::width(ch).is_some_and(|width| width > 0)
+++                !ch.is_whitespace() && text::char_width(ch) > 0
+ +            })
+ +        {
+ +            meaningful_graphemes = (meaningful_graphemes + 1).min(2);
+ +            if in_range && used.saturating_add(columns) <= width {
+ +                glyphs = (glyphs + 1).min(2);
+ +            }
+ +        }
+ +        if in_range && materialize {
+ +            if row.is_empty() {
+ +                row.push_str(TEXT_INDENT);
+ +            }
+ +            row.push_str(grapheme);
+ +        }
+ +        used = used.saturating_add(columns);
+ +        occupied = true;
+ +    }
+ +    emit_shell_row(
+ +        &mut row,
+ +        glyphs,
+ +        row_index,
+ +        range.as_ref(),
+ +        materialize,
+ +        &mut emit,
+ +    );
+ +    ShellRows {
+ +        rows: row_index + 1,
+ +        meaningful_graphemes,
+ +    }
+ +}
+ +
+ +fn emit_shell_row(
+ +    row: &mut String,
+ +    glyphs: usize,
+ +    index: usize,
+ +    range: Option<&std::ops::Range<usize>>,
+ +    materialize: bool,
+ +    emit: &mut impl FnMut(String, usize),
+ +) {
+ +    if range.is_some_and(|range| range.contains(&index)) {
+ +        if materialize && row.is_empty() {
+ +            row.push_str(TEXT_INDENT);
+ +        }
+ +        emit(std::mem::take(row), glyphs);
+ +    }
+ +}
+ +
+  /// Gap between an option label and a path sharing its row.
+  const INLINE_PATH_GAP: &str = "  ";
+  
+@@@ -925,42 -604,7 +943,42 @@@ fn preview_lines<'a>
+              Style::default().fg(theme.subdued),
+          )),
+      }
+ -    lines
+ +    PreviewContent::Lines(lines)
+ +}
+ +
+ +pub(crate) struct PreviewWindow {
+ +    pub max_offset: usize,
+ +    pub visible_rows: usize,
+ +}
+ +
+ +/// Current body navigation bounds from the same page/window the renderer
+ +/// uses. Paths, choices and editors never contribute to the scroll range.
+ +pub(crate) fn preview_window(state: &dyn TuiState) -> Option<PreviewWindow> {
+ +    let approval = state.approval()?;
+ +    let (width, height) = state.terminal_size();
+ +    let area = Rect::new(0, 0, width, height);
+ +    let input_top = crate::render::input_top(area, state);
+ +    let theme = state.theme();
+ +    let (popup, preview, rows) = match &approval.phase {
+ +        ApprovalPhase::SelectOption => {
+ +            let page = OptionPage::new(area, input_top, approval, &theme)?;
+ +            (page.popup, page.preview, page.layout.preview_rows)
+ +        }
+ +        ApprovalPhase::EnterReason { editor, .. } => {
+ +            let page =
+ +                ReasonPage::new(area, input_top, approval, editor.notice().is_some(), &theme)?;
+ +            (page.popup, page.preview, page.preview_rows)
+ +        }
+ +        _ => return None,
+ +    };
+-     if !preview.scrollable || usize::from(popup.width.saturating_sub(2)) <= TEXT_INDENT.width() {
+++    if !preview.scrollable || usize::from(popup.width.saturating_sub(2)) <= text::width(TEXT_INDENT) {
+ +        return None;
+ +    }
+ +    let window = preview.body_window(rows);
+ +    (window.visible > 0).then_some(PreviewWindow {
+ +        max_offset: window.total.saturating_sub(window.visible),
+ +        visible_rows: window.visible,
+ +    })
+  }
+  
+  /// Whether a confirm key may answer the front approval in the frame the
+@@@ -1077,7 -721,24 +1095,26 @@@ impl<'a> OptionPage<'a> 
+          // [`OptionLayout`]: the selection always, the path beside any option,
+          // then message, blanks, the rest of the preview and the other options.
+          let inner = usize::from(popup.height.saturating_sub(2));
+-         let layout = OptionLayout::new(inner, preview.len(), preview.has_context());
+ -        let mut layout = OptionLayout::new(inner, preview.len(), preview.has_path());
+ -        if let Some(path_rows) =
+ -            preview.identifying_path_rows(layout.preview_rows, inner.saturating_sub(1))
+ -        {
+++        let mut layout = OptionLayout::new(inner, preview.len(), preview.has_context());
+++        if let Some(path_rows) = preview.identifying_path_rows(
+++            preview.path_budget(layout.preview_rows),
+++            preview.path_budget(inner.saturating_sub(1)),
+++        ) {
+++            let context_rows = path_rows.saturating_add(usize::from(preview.has_command()));
++             for chrome in [
++                 &mut layout.separator,
++                 &mut layout.blank,
++                 &mut layout.message,
++             ] {
+ -                if layout.preview_rows >= path_rows {
+++                if layout.preview_rows >= context_rows {
++                     break;
++                 }
++                 if *chrome {
++                     *chrome = false;
++                     layout.preview_rows += 1;
++                 }
++             }
++         }
+          let mut option_rows = layout.option_rows;
+          let show_feedback_hint = show_feedback_hint && option_rows > 1;
+          if show_feedback_hint {
+@@@ -1250,18 -906,17 +1285,19 @@@ impl<'a> ReasonPage<'a> 
+          let popup = super::modal::place(area, input_top, REASON_POPUP_WIDTH, desired_height)?;
+          let inner = usize::from(popup.height.saturating_sub(2));
+  
+-         // Keep the editor and target/command context ahead of chrome.
+ -        // Start with the established chrome policy, then give back only the
+ -        // rows needed to identify the path beside the reserved editor row.
+ -        let reserved = usize::from(preview.has_path()).min(inner.saturating_sub(1));
+++        // Keep the editor and target/command context ahead of chrome, then
+++        // give back the rows needed by the retained identifying path fit.
+ +        let context_rows = usize::from(preview.has_path()) + usize::from(preview.has_command());
+ +        let reserved = context_rows.min(inner.saturating_sub(1));
+ +        let extra = reserved.saturating_sub(1);
+-         let show_limit = inner >= 2 + reserved;
+-         let show_notice = has_notice && inner >= 3 + 2 * reserved;
+-         let show_editor_label = inner >= 4 + extra;
+-         let show_tool_title = inner >= 6 + extra;
+-         let show_selected = inner >= 7 + extra;
+-         let show_message = inner >= 8 + extra;
+-         let show_blank = inner >= 9 + extra;
+-         let fixed = 1usize
++         let mut show_limit = inner >= 2 + reserved;
++         let mut show_notice = has_notice && inner >= 3 + 2 * reserved;
+ -        let mut show_editor_label = inner >= 4;
+ -        let mut show_tool_title = inner >= 6;
+ -        let mut show_selected = inner >= 7;
+ -        let mut show_message = inner >= 8;
+ -        let mut show_blank = inner >= 9;
+++        let mut show_editor_label = inner >= 4 + extra;
+++        let mut show_tool_title = inner >= 6 + extra;
+++        let mut show_selected = inner >= 7 + extra;
+++        let mut show_message = inner >= 8 + extra;
+++        let mut show_blank = inner >= 9 + extra;
++         let mut fixed = 1usize
+              .saturating_add(usize::from(show_editor_label))
+              .saturating_add(usize::from(show_limit))
+              .saturating_add(usize::from(show_notice))
+@@@ -1269,6 -924,29 +1305,31 @@@
+              .saturating_add(usize::from(show_selected))
+              .saturating_add(usize::from(show_message))
+              .saturating_add(usize::from(show_blank));
+ -        if let Some(path_rows) =
+ -            preview.identifying_path_rows(inner.saturating_sub(fixed), inner.saturating_sub(1))
+ -        {
+ -            let mut missing = path_rows.saturating_sub(inner.saturating_sub(fixed));
+++        if let Some(path_rows) = preview.identifying_path_rows(
+++            preview.path_budget(inner.saturating_sub(fixed)),
+++            preview.path_budget(inner.saturating_sub(1)),
+++        ) {
+++            let context_rows = path_rows.saturating_add(usize::from(preview.has_command()));
+++            let mut missing = context_rows.saturating_sub(inner.saturating_sub(fixed));
++             for chrome in [
++                 &mut show_blank,
++                 &mut show_message,
++                 &mut show_selected,
++                 &mut show_tool_title,
++                 &mut show_notice,
++                 &mut show_editor_label,
++                 &mut show_limit,
++             ] {
++                 if missing == 0 {
++                     break;
++                 }
++                 if *chrome {
++                     *chrome = false;
++                     fixed -= 1;
++                     missing -= 1;
++                 }
++             }
++         }
+          let preview_rows = preview.len().min(inner.saturating_sub(fixed));
+          let editor_rows = inner
+              .saturating_sub(fixed.saturating_add(preview_rows))
+@@@ -1292,9 -970,7 +1353,9 @@@
+      /// Whether the editor row is drawn, with the path on screen when the
+      /// call has one (the path leads the preview rows).
+      fn editor_shown_with_path(&self) -> bool {
+ -        has_inner_row(self.popup) && self.preview.path_shown()
+ +        has_inner_row(self.popup)
+-             && self.preview.path_shown(self.preview_rows)
+++            && self.preview.path_shown()
+ +            && self.preview.command_shown(self.preview_rows)
+      }
+  }
+  

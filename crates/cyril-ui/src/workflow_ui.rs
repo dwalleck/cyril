@@ -135,7 +135,7 @@ mod tests {
         let mut state = WorkflowUiState::new();
         let sid = SessionId::new("step-1");
         state.apply_notification(&sid, &agent_msg("hello", false));
-        assert_eq!(state.streams()[&sid].messages().len(), 1);
+        assert_eq!(state.streams()[&sid].history().messages().len(), 1);
     }
 
     // C5 substrate: adoption preserves order AND the tool-call index — a
@@ -149,14 +149,30 @@ mod tests {
         let Some(stream) = donor.remove_stream(&sid) else {
             panic!("donor stream must exist");
         };
+        let before_move = stream.history().revision();
 
         let mut state = WorkflowUiState::new();
         state.adopt(sid.clone(), stream);
+        assert_eq!(state.streams()[&sid].history().revision(), before_move);
         assert!(
             state.apply_notification(&sid, &tool_completed("tc-1")),
             "a post-adoption tool update must merge into the moved stream"
         );
-        let messages = state.streams()[&sid].messages();
+        assert!(
+            !state.streams()[&sid]
+                .history()
+                .changed_since(before_move)
+                .reset
+        );
+        assert_eq!(
+            state.streams()[&sid]
+                .history()
+                .changed_since(before_move)
+                .changed
+                .count(),
+            1
+        );
+        let messages = state.streams()[&sid].history().messages();
         assert_eq!(messages.len(), 2, "adopted history must survive the move");
     }
 
@@ -174,9 +190,23 @@ mod tests {
 
         let mut state = WorkflowUiState::new();
         state.apply_notification(&sid, &tool_started("tc-late", "late tool"));
+        let before_adoption = state.streams()[&sid].history().revision();
+        let donor_revision = earlier.history().revision();
         state.adopt(sid.clone(), earlier);
+        assert!(
+            state.streams()[&sid]
+                .history()
+                .changed_since(before_adoption)
+                .reset
+        );
+        assert!(
+            state.streams()[&sid]
+                .history()
+                .changed_since(donor_revision)
+                .reset
+        );
 
-        let messages = state.streams()[&sid].messages();
+        let messages = state.streams()[&sid].history().messages();
         assert_eq!(messages.len(), 3, "no side of the merge may drop history");
         assert!(
             state.apply_notification(&sid, &tool_completed("tc-early")),
@@ -186,6 +216,85 @@ mod tests {
             state.apply_notification(&sid, &tool_completed("tc-late")),
             "later side's tool update must still merge after the splice"
         );
+    }
+
+    #[test]
+    fn occupied_adoption_rebuilds_tool_positions_with_later_id_winning() {
+        use crate::traits::ChatMessageKind;
+
+        let sid = SessionId::new("step-1");
+        let mut donor = crate::subagent_ui::SubagentUiState::new();
+        donor.apply_notification(&sid, &tool_started("shared", "earlier shared"));
+        donor.apply_notification(&sid, &tool_started("early", "earlier unique"));
+        donor.apply_notification(&sid, &agent_msg("earlier pending", true));
+        let Some(earlier) = donor.remove_stream(&sid) else {
+            panic!("donor stream exists");
+        };
+        let mut state = WorkflowUiState::new();
+        state.apply_notification(&sid, &tool_started("shared", "later shared"));
+        state.apply_notification(&sid, &tool_started("late", "later unique"));
+        state.apply_notification(&sid, &agent_msg("later pending", true));
+        let live_before = state.streams()[&sid].live_revision();
+        state.adopt(sid.clone(), earlier);
+        let stream = &state.streams()[&sid];
+        assert_eq!(
+            stream.streaming_text(),
+            "later pending",
+            "recipient live text is not flushed"
+        );
+        assert_eq!(stream.live_revision(), live_before);
+        assert_eq!(stream.activity(), Activity::Streaming);
+        assert_eq!(stream.history().messages().len(), 5);
+        assert!(matches!(
+            stream.history().messages()[2].kind(),
+            ChatMessageKind::AgentText(text) if text == "earlier pending"
+        ));
+        let before_updates = stream.history().revision();
+        for id in ["shared", "early", "late"] {
+            assert!(state.apply_notification(&sid, &tool_completed(id)));
+        }
+        let stream = &state.streams()[&sid];
+        assert_eq!(
+            stream.history().messages().len(),
+            5,
+            "updates merge without duplicate rows"
+        );
+        assert_eq!(
+            stream
+                .history()
+                .changed_since(before_updates)
+                .changed
+                .count(),
+            3
+        );
+        assert!(matches!(
+            stream.history().messages()[0].kind(),
+            ChatMessageKind::ToolCall(call)
+                if call.title() == "earlier shared" && call.status() == ToolCallStatus::InProgress
+        ));
+        for index in [1, 3, 4] {
+            assert!(matches!(
+                stream.history().messages()[index].kind(),
+                ChatMessageKind::ToolCall(call) if call.status() == ToolCallStatus::Completed
+            ));
+        }
+        assert!(matches!(
+            stream.history().messages()[3].kind(),
+            ChatMessageKind::ToolCall(call) if call.title() == "later shared"
+        ));
+    }
+
+    #[test]
+    fn occupied_adoption_of_an_empty_stream_leaves_history_and_live_unchanged() {
+        let sid = SessionId::new("step-1");
+        let mut state = WorkflowUiState::new();
+        state.apply_notification(&sid, &agent_msg("pending", true));
+        let before = state.streams()[&sid].history().revision();
+        let live_before = state.streams()[&sid].live_revision();
+        state.adopt(sid.clone(), SubagentStream::new());
+        assert_eq!(state.streams()[&sid].history().revision(), before);
+        assert_eq!(state.streams()[&sid].live_revision(), live_before);
+        assert_eq!(state.streams()[&sid].streaming_text(), "pending");
     }
 
     // C7 substrate: activity aggregation, with its adversarial counterpart.

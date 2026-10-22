@@ -1,0 +1,1057 @@
+diff --git a/crates/cyril-ui/benches/conversation_render.rs b/crates/cyril-ui/benches/conversation_render.rs
+index 704593961bfc347af4334898a424b22f15dfe931..6336fa6cbe4d154c4671f98c51d73cfa00fd3bc1 100644
+--- a/crates/cyril-ui/benches/conversation_render.rs
++++ b/crates/cyril-ui/benches/conversation_render.rs
+@@ -10,7 +10,7 @@ use std::fmt::Write as _;
+ use std::hint::black_box;
+ use std::time::{Duration, Instant};
+ 
+-use anyhow::{Result, bail, ensure};
++use anyhow::{bail, ensure, Result};
+ use cyril_core::types::{
+     AgentMessage, AgentThought, Notification, PermissionOption, PermissionOptionId,
+     PermissionOptionKind, PermissionRequest, SessionId, StopReason, ToolCall, ToolCallContent,
+@@ -20,9 +20,9 @@ use cyril_ui::render;
+ use cyril_ui::state::UiState;
+ use cyril_ui::theme::{ColorMode, ThemeId};
+ use cyril_ui::traits::{ChatMessageKind, TuiState};
+-use ratatui::Terminal;
+ use ratatui::backend::TestBackend;
+ use ratatui::style::Modifier;
++use ratatui::Terminal;
+ 
+ const WIDTH: u16 = 160;
+ const HEIGHT: u16 = 48;
+@@ -235,22 +235,20 @@ fn run_completed_write(workload: WriteWorkload) -> Result<()> {
+             None,
+         )))
+     );
+-    ensure!(
+-        state.apply_notification(&Notification::ToolCallUpdated(
+-            ToolCall::new(
+-                id.clone(),
+-                String::new(),
+-                ToolKind::Write,
+-                ToolCallStatus::InProgress,
+-                None,
+-            )
+-            .with_content(vec![ToolCallContent::Diff {
+-                path: workload.path().into(),
+-                old_text: Some(old_text),
+-                new_text,
+-            }]),
+-        ))
+-    );
++    ensure!(state.apply_notification(&Notification::ToolCallUpdated(
++        ToolCall::new(
++            id.clone(),
++            String::new(),
++            ToolKind::Write,
++            ToolCallStatus::InProgress,
++            None,
++        )
++        .with_content(vec![ToolCallContent::Diff {
++            path: workload.path().into(),
++            old_text: Some(old_text),
++            new_text,
++        }]),
++    )));
+     // Completion is deliberately content-free: exercise the real merge seam
+     // retaining the earlier diff, then render the historical snapshot alone.
+     ensure!(
+@@ -881,13 +879,15 @@ fn run_history_transitions(
+ 
+ fn run_giant_sources() -> Result<()> {
+     const ROWS: usize = 80_000;
++    // Match the fixed scrollbar gutter without changing the outer backend geometry.
++    let content_width = usize::from(WIDTH - 1);
+     for unbroken in [false, true] {
+-        let mut source = String::with_capacity(ROWS * usize::from(WIDTH));
++        let mut source = String::with_capacity(ROWS * content_width);
+         for row in 0..ROWS {
+             if unbroken {
+                 let token = format!("unbroken_{row:05}_");
+                 source.push_str(&token);
+-                source.extend(std::iter::repeat_n('x', usize::from(WIDTH) - token.len()));
++                source.extend(std::iter::repeat_n('x', content_width - token.len()));
+             } else {
+                 writeln!(
+                     source,
+diff --git a/crates/cyril-ui/src/conversation_performance_tests.rs b/crates/cyril-ui/src/conversation_performance_tests.rs
+index 5fbfaabbecc074ea0b97c1b783dd17edb874a509..4876bc0d7d2a5f8ce8594a965886fcb2033020ce 100644
+--- a/crates/cyril-ui/src/conversation_performance_tests.rs
++++ b/crates/cyril-ui/src/conversation_performance_tests.rs
+@@ -9,11 +9,11 @@ use cyril_core::types::{
+     AgentMessage, AgentThought, Notification, SessionId, StopReason, ToolCall, ToolCallContent,
+     ToolCallId, ToolCallStatus, ToolKind,
+ };
+-use ratatui::Terminal;
+ use ratatui::backend::TestBackend;
+ use ratatui::buffer::Buffer;
+ use ratatui::layout::Rect;
+ use ratatui::style::{Color, Modifier};
++use ratatui::Terminal;
+ 
+ use crate::render::{self, RenderState};
+ use crate::state::UiState;
+@@ -22,6 +22,7 @@ use crate::traits::{Activity, ChatMessageKind, SteerEchoStatus, TuiState};
+ use crate::widgets::{chat, markdown};
+ 
+ const WIDTH: u16 = 160;
++const CONTENT_WIDTH: u16 = WIDTH - 1;
+ const HEIGHT: u16 = 48;
+ const STABLE_DRAWS: usize = 100;
+ const SIZES: [usize; 4] = [100, 1_000, 10_000, 50_000];
+@@ -532,6 +533,244 @@ fn scroll_to(root: &Root, state: &mut UiState, top: usize) {
+     state.chat_scroll_up(total.saturating_sub(chat_height).saturating_sub(top));
+ }
+ 
++fn opaque_auth_url(length: usize, last: char) -> String {
++    let mut source = "https://auth.example.invalid/oauth/authorize?response_type=code&client_id=cyril&redirect_uri=http%3A%2F%2F127.0.0.1%3A43117%2Fcallback&scope=openid&code_challenge=".to_owned();
++    assert!(source.len() < length);
++    source.extend(std::iter::repeat_n('a', length - source.len() - 1));
++    source.push(last);
++    assert!(source.is_ascii());
++    assert_eq!(source.len(), length);
++    source
++}
++
++fn assert_gutter(root: &Root, state: &UiState, overflow: bool) {
++    let symbols = ratatui::symbols::scrollbar::DOUBLE_VERTICAL;
++    let content_width = root.buffer().area.width - 1;
++    let bottom = render::input_top(root.buffer().area, state);
++    for y in 1..bottom {
++        for x in 0..content_width {
++            assert!(
++                ![symbols.begin, symbols.end, symbols.track, symbols.thumb]
++                    .contains(&root.buffer()[(x, y)].symbol()),
++                "indicator entered content at ({x}, {y})"
++            );
++        }
++        let gutter = root.buffer()[(content_width, y)].symbol();
++        if overflow {
++            assert!(
++                [symbols.begin, symbols.end, symbols.track, symbols.thumb].contains(&gutter),
++                "missing gutter indicator at ({content_width}, {y}): {gutter:?}"
++            );
++        } else {
++            assert_eq!(gutter, " ", "reserved gutter contains source at row {y}");
++        }
++    }
++    if overflow {
++        assert_eq!(root.buffer()[(content_width, 1)].symbol(), symbols.begin);
++        assert_eq!(
++            root.buffer()[(content_width, bottom - 1)].symbol(),
++            symbols.end
++        );
++    }
++}
++
++fn assert_complete_auth_url(root: &Root, state: &UiState, source: &str) {
++    root.contains(&["https://auth.example.invalid/oauth/authorize?"]);
++    let content_width = root.buffer().area.width - 1;
++    let bottom = render::input_top(root.buffer().area, state);
++    let first = (1..bottom)
++        .find(|&y| root.buffer()[(0, y)].symbol() == "h")
++        .expect("opaque URL starts at the content's left edge");
++    let mut reconstructed = String::new();
++    for (row, expected) in source
++        .as_bytes()
++        .chunks(usize::from(content_width))
++        .enumerate()
++    {
++        let y = first + u16::try_from(row).unwrap();
++        assert!(y < bottom, "complete URL must remain in the chat viewport");
++        let mut rendered = String::new();
++        for x in 0..content_width {
++            let cell = &root.buffer()[(x, y)];
++            if let Some(&byte) = expected.get(usize::from(x)) {
++                assert_eq!(cell.symbol().as_bytes(), [byte], "URL byte at ({x}, {y})");
++                assert_eq!(cell.fg, state.theme().system);
++                assert!(cell.modifier.contains(Modifier::ITALIC));
++            } else {
++                assert_eq!(cell.symbol(), " ", "unexpected content after URL tail");
++            }
++            rendered.push_str(cell.symbol());
++        }
++        reconstructed.push_str(rendered.trim_end());
++    }
++    assert_eq!(
++        reconstructed, source,
++        "wrapped URL lost or reordered source bytes"
++    );
++}
++
++#[test]
++fn c2_c5_stable_gutter_preserves_complete_auth_url_at_bottom_and_page_up() {
++    const URL_WIDTH: u16 = 140;
++    const URL_HEIGHT: u16 = 40;
++    // Exercise the final content column, the old outer-right edge, and the
++    // character immediately after that edge. These are whole opaque sources,
++    // not a prefix assertion that could miss an overwritten token tail.
++    for length in [
++        2 * usize::from(URL_WIDTH - 1),
++        2 * usize::from(URL_WIDTH),
++        2 * usize::from(URL_WIDTH) + 1,
++    ] {
++        let url = opaque_auth_url(length, 'Z');
++        let mut state = new_state(8);
++        send(
++            &mut state,
++            agent(format!("**GUTTER_HISTORY_HEAD_{length}**"), false),
++        );
++        let mut source = String::new();
++        for row in 0..2 * URL_HEIGHT {
++            writeln!(source, "gutter_padding_{row:03}").unwrap();
++        }
++        writeln!(source, "{url}").unwrap();
++        // App's PageUp uses half the terminal height. Leave that many rows
++        // after the URL so the complete source is visible before and after it.
++        let half_page = usize::from(URL_HEIGHT / 2);
++        for row in 0..half_page {
++            writeln!(source, "gutter_tail_{row:03}").unwrap();
++        }
++        state.add_system_message(source.clone());
++        state.set_activity(Activity::Idle);
++        let mut root = Root::new();
++        root.resize(&mut state, URL_WIDTH, URL_HEIGHT);
++        let before = Work::now();
++        root.draw(&state);
++        let cold = Work::now().since(before);
++        assert_eq!(cold.messages, 2);
++        assert!(
++            cold.hashes > 0 && cold.wraps >= 2,
++            "cold controls: {cold:?}"
++        );
++        let metrics = root.retained.layout_metrics();
++        assert!(metrics.rows > usize::from(chat_height(&root, &state)));
++        root.contains(&["gutter_tail_019"]);
++        assert_complete_auth_url(&root, &state, &url);
++        assert_gutter(&root, &state, true);
++        for (up, rows, offset) in [
++            (true, half_page, Some(half_page)),
++            (false, half_page / 2, Some(half_page / 2)),
++            (false, half_page / 2, None),
++        ] {
++            if up {
++                state.chat_scroll_up(rows);
++            } else {
++                state.chat_scroll_down(rows);
++            }
++            assert_eq!(state.chat_scroll_back(), offset);
++            let before = Work::now();
++            root.draw(&state);
++            let work = Work::now().since(before);
++            work.no_derivation();
++            work.selected_window(1, 2, URL_WIDTH - 1, chat_height(&root, &state));
++            assert_eq!(root.retained.layout_metrics(), metrics);
++            assert_complete_auth_url(&root, &state, &url);
++            assert_gutter(&root, &state, true);
++        }
++        for browse in [true, false] {
++            if browse {
++                state.chat_scroll_up(0);
++            } else {
++                state.chat_scroll_reset();
++            }
++            assert_eq!(state.chat_scroll_back(), browse.then_some(0));
++            let before = Work::now();
++            root.draw(&state);
++            Work::now().since(before).no_derivation();
++            assert_complete_auth_url(&root, &state, &url);
++            assert_gutter(&root, &state, true);
++            assert_eq!(root.retained.layout_metrics(), metrics);
++        }
++        assert!(matches!(
++            state.history().messages()[1].kind(),
++            ChatMessageKind::System(text) if text == &source
++        ));
++    }
++}
++
++#[test]
++fn c1_c5_gutter_overflow_threshold_keeps_committed_content_width_and_work_stable() {
++    let url = opaque_auth_url(2 * usize::from(WIDTH), 'Q');
++    let mut state = new_state(8);
++    send(&mut state, agent("**GUTTER_THRESHOLD_MARKDOWN**", false));
++    state.add_system_message(url.clone());
++    state.set_activity(Activity::Idle);
++    let mut root = Root::new();
++    root.draw(&state);
++    let metrics = root.retained.layout_metrics();
++    let chrome = HEIGHT - chat_height(&root, &state);
++    let fit = u16::try_from(metrics.rows).unwrap() + chrome;
++    for (height, overflow) in [
++        (fit + 1, false),
++        (fit, false),
++        (fit - 1, true),
++        (fit, false),
++    ] {
++        root.resize(&mut state, WIDTH, height);
++        let before = Work::now();
++        root.draw(&state);
++        let work = Work::now().since(before);
++        work.no_derivation();
++        work.selected_window(1, 2, CONTENT_WIDTH, chat_height(&root, &state));
++        assert_eq!(
++            metrics.rows > usize::from(chat_height(&root, &state)),
++            overflow,
++            "fixture must cross the actual root overflow threshold"
++        );
++        assert_eq!(root.retained.layout_metrics(), metrics);
++        root.contains(&["GUTTER_THRESHOLD_MARKDOWN"]);
++        root.style_control("GUTTER_THRESHOLD_MARKDOWN", None, Modifier::BOLD);
++        assert_complete_auth_url(&root, &state, &url);
++        assert_gutter(&root, &state, overflow);
++    }
++    // Crossing through a real append may derive the new block, but none of
++    // the two already committed sources or the stable live/Markdown blocks.
++    root.resize(&mut state, WIDTH, fit + 1);
++    let before = Work::now();
++    root.draw(&state);
++    Work::now().since(before).no_derivation();
++    assert_gutter(&root, &state, false);
++    state.add_system_message("GUTTER_APPEND_CONTROL".into());
++    let before = Work::now();
++    root.draw(&state);
++    let appended = Work::now().since(before);
++    assert_eq!(
++        (
++            appended.messages,
++            appended.live,
++            appended.hashes,
++            appended.parses,
++            appended.wraps,
++            appended.myers,
++        ),
++        (1, 0, 0, 0, 1, 0),
++        "only the appended plain System block may derive: {appended:?}"
++    );
++    appended.selected_window(1, 3, CONTENT_WIDTH, chat_height(&root, &state));
++    let after = root.retained.layout_metrics();
++    assert_eq!(after.messages, metrics.messages + 1);
++    assert_eq!(after.rows, metrics.rows + 2);
++    assert!(after.rows > usize::from(chat_height(&root, &state)));
++    root.contains(&["GUTTER_THRESHOLD_MARKDOWN", "GUTTER_APPEND_CONTROL"]);
++    assert_complete_auth_url(&root, &state, &url);
++    assert_gutter(&root, &state, true);
++    let before = Work::now();
++    state.chat_scroll_up(1);
++    root.draw(&state);
++    Work::now().since(before).no_derivation();
++    assert_complete_auth_url(&root, &state, &url);
++    assert_gutter(&root, &state, true);
++    assert_eq!(root.retained.layout_metrics(), after);
++}
++
+ #[test]
+ fn c2_physical_rows_first_middle_last_follow_back_and_overlarge_back() {
+     const ROWS: usize = 80_010;
+@@ -603,12 +842,15 @@ fn c2_physical_rows_first_middle_last_follow_back_and_overlarge_back() {
+ fn c1_c2_giant_markdown_and_single_unbroken_line_seek_only_selected_rows_and_runs() {
+     const ROWS: usize = 80_000;
+     for unbroken in [false, true] {
+-        let mut source = String::with_capacity(ROWS * usize::from(WIDTH));
++        let mut source = String::with_capacity(ROWS * usize::from(CONTENT_WIDTH));
+         for row in 0..ROWS {
+             if unbroken {
+                 let token = format!("unbroken_{row:05}_");
+                 source.push_str(&token);
+-                source.extend(std::iter::repeat_n('x', usize::from(WIDTH) - token.len()));
++                source.extend(std::iter::repeat_n(
++                    'x',
++                    usize::from(CONTENT_WIDTH) - token.len(),
++                ));
+             } else {
+                 writeln!(source, "markdown_{row:05} **styled_control** retained multi-megabyte source with hard breaks.  ").unwrap();
+             }
+diff --git a/crates/cyril-ui/src/widgets/chat/presentation.rs b/crates/cyril-ui/src/widgets/chat/presentation.rs
+index b3b8882aab004fc838901f8b90bfdceb7d81ad7e..52fca6728692b9298b006d0344dca318fa9c3147 100644
+--- a/crates/cyril-ui/src/widgets/chat/presentation.rs
++++ b/crates/cyril-ui/src/widgets/chat/presentation.rs
+@@ -797,6 +797,9 @@ fn subslice(source: &str, slice: &str) -> Range<usize> {
+ mod tests {
+     use ratatui::buffer::Buffer;
+     use ratatui::widgets::{Paragraph, Widget, Wrap};
++    use crate::widgets::chat_layout::wrap::{
++        assert_repaired_rows, legacy_reference_is_unsafe, repaired_window,
++    };
+ 
+     use super::*;
+ 
+@@ -805,24 +808,63 @@ mod tests {
+         sources: Sources<'_>,
+         reference: Vec<Line<'_>>,
+         width: u16,
+-    ) {
++    ) -> PreparedBlock {
+         let block = preparation.finish(sources, width);
+         if width == 0 {
+             assert!(block.rows.is_empty());
+-            return;
++            return block;
+         }
+         let background = Style::default().fg(Color::White).bg(Color::DarkGray);
++        // Classify the ORIGINAL single-span affixed presentation, not the corrected rows or a
++        // Unicode/width heuristic. Real Paragraph remains the oracle for every safe input.
++        let mut slot = 0;
++        let original: Vec<_> = reference.iter().map(|line| SourceLine {
++            spans: line.spans.iter().map(|span| {
++                let source = slot;
++                slot += 1;
++                SourceSpan {
++                    source,
++                    offset: 0,
++                    text: span.content.as_ref(),
++                    style: span.style,
++                }
++            }).collect(),
++            style: line.style,
++            alignment: line.alignment.unwrap_or(Alignment::Left),
++        }).collect();
++        let unsafe_reference = legacy_reference_is_unsafe(&original, width);
++        if unsafe_reference {
++            assert_repaired_rows(
++                &original,
++                &block.rows,
++                |slot| block.source_text(slot, sources),
++                width,
++            );
++        }
+         let paragraph = Paragraph::new(reference)
+             .style(background)
+             .wrap(Wrap { trim: false });
+-        assert_eq!(block.rows.len(), paragraph.line_count(width));
++        if !unsafe_reference {
++            assert_eq!(block.rows.len(), paragraph.line_count(width));
++        }
+         for start in 0..block.rows.len() {
+             let area = Rect::new(3, 2, width, 3);
+-            let mut expected = Buffer::empty(area);
+-            paragraph
+-                .clone()
+-                .scroll((start as u16, 0))
+-                .render(area, &mut expected);
++            let expected = if unsafe_reference {
++                repaired_window(
++                    &block.rows,
++                    |slot| block.source_text(slot, sources),
++                    start,
++                    area,
++                    background,
++                )
++            } else {
++                let mut expected = Buffer::empty(area);
++                paragraph
++                    .clone()
++                    .scroll((start as u16, 0))
++                    .render(area, &mut expected);
++                expected
++            };
+             let mut actual = Buffer::empty(area);
+             actual.set_style(area, background);
+             for (y, row) in block.rows[start..].iter().take(3).enumerate() {
+@@ -832,6 +874,82 @@ mod tests {
+             }
+             assert_eq!(actual, expected, "width {width}, row {start}");
+         }
++        block
++    }
++
++    #[test]
++    fn generated_affix_carry_repair_has_literal_rows_cells_and_styles() {
++        let theme = crate::traits::test_support::marker_theme();
++        let header = Style::default().fg(theme.user).add_modifier(Modifier::BOLD);
++        let fixtures: &[(&str, &[&str], &[[&str; 2]])] = &[
++            ("a界a", &["Yo", "u:", "  ", "a", "界", "a"],
++                &[["Y", "o"], ["u", ":"], [" ", " "], ["a", " "], ["界", " "], ["a", " "]]),
++            ("a🌞b", &["Yo", "u:", "  ", "a", "🌞", "b"],
++                &[["Y", "o"], ["u", ":"], [" ", " "], ["a", " "], ["🌞", " "], ["b", " "]]),
++            ("a\u{3000}b", &["Yo", "u:", "  ", "a", "\u{3000}", "b"],
++                &[["Y", "o"], ["u", ":"], [" ", " "], ["a", " "], ["\u{3000}", " "], ["b", " "]]),
++            ("\u{301}a界b", &["Yo", "u:", "  \u{301}", "a", "界", "b"],
++                &[["Y", "o"], ["u", ":"], [" ", " \u{301}"], ["a", " "], ["界", " "], ["b", " "]]),
++            // The spacing mark joins the LAST prefix space. Its width-two cluster must be
++            // emitted intact before "s", rather than starting "s" outside the physical row.
++            ("\u{903}s", &["Yo", "u:", " ", " \u{903}", "s"],
++                &[["Y", "o"], ["u", ":"], [" ", " "], [" \u{903}", " "], ["s", " "]]),
++        ];
++        let background = Style::default().fg(Color::White).bg(Color::DarkGray);
++        for &(body, expected_rows, expected_cells) in fixtures {
++            let message = ChatMessage::user_text(body.into());
++            let sources = Sources::message(&message);
++            let mut preparation = Preparation::default();
++            preparation.message(&message, 2, &theme);
++            let affixed = format!("  {body}");
++            let original = SourceLine {
++                spans: vec![SourceSpan {
++                    source: 0, offset: 0, text: &affixed, style: Style::default(),
++                }],
++                style: Style::default(),
++                alignment: Alignment::Left,
++            };
++            assert!(legacy_reference_is_unsafe(&[original], 2), "{body:?}");
++            let block = assert_reference(
++                preparation,
++                sources,
++                vec![Line::styled("You:", header), Line::raw(affixed)],
++                2,
++            );
++            let actual_rows: Vec<String> = block.rows.iter().map(|row| {
++                row.runs.iter().map(|run| {
++                    &block.source_text(run.source, sources)[run.range.clone()]
++                }).collect()
++            }).collect();
++            assert_eq!(actual_rows, expected_rows, "{body:?}");
++            for (index, row) in block.rows.iter().enumerate() {
++                let style = if index < 2 { header } else { Style::default() };
++                assert!(row.runs.iter().all(|run| run.style == style));
++            }
++            for start in 0..=expected_rows.len() + 1 {
++                let area = Rect::new(3, 2, 2, 3);
++                let mut expected = Buffer::empty(area);
++                expected.set_style(area, background);
++                for (y, cells) in expected_cells.iter().skip(start).take(3).enumerate() {
++                    for (x, symbol) in cells.iter().enumerate() {
++                        let cell = &mut expected[(3 + x as u16, 2 + y as u16)];
++                        cell.set_symbol(symbol);
++                        if start + y < 2 {
++                            cell.set_style(header);
++                        }
++                    }
++                }
++                let mut actual = Buffer::empty(area);
++                actual.set_style(area, background);
++                for (y, row) in block.rows.iter().skip(start).take(3).enumerate() {
++                    crate::widgets::chat_layout::paint_row(
++                        &mut actual, area, y as u16, row,
++                        |slot| block.source_text(slot, sources),
++                    );
++                }
++                assert_eq!(actual, expected, "{body:?}, start={start}");
++            }
++        }
+     }
+ 
+     #[test]
+diff --git a/crates/cyril-ui/src/widgets/chat/retained.rs b/crates/cyril-ui/src/widgets/chat/retained.rs
+index 2913028db1fb0559b50a77b406e3751d79e32a42..78f8f7457d5a78a84e6b7b7e9d015fea982cc814 100644
+--- a/crates/cyril-ui/src/widgets/chat/retained.rs
++++ b/crates/cyril-ui/src/widgets/chat/retained.rs
+@@ -373,6 +373,12 @@ pub(super) fn render(
+     theme: &Theme,
+     retained: &mut ChatRenderState,
+ ) {
++    // Reserve the indicator column even while following or before overflow.
++    // Scroll state must never change the retained content's wrapping width.
++    let content = Rect {
++        width: area.width - u16::from(area.width > 1),
++        ..area
++    };
+     let child = state.subagent_ui().focused_stream();
+     let (history, revision, thought) = if let Some(child) = child {
+         (child.history(), child.live_revision(), None)
+@@ -391,7 +397,7 @@ pub(super) fn render(
+             .or_else(|| focused.map(|id| id.as_str()))
+             .unwrap_or("subagent")
+     });
+-    retained.synchronize(history, area.width, theme);
++    retained.synchronize(history, content.width, theme);
+     // UiState's accessor filters withheld receipt tails. Consult it only after
+     // the revision/identity guard, not on unchanged spinner/input redraws.
+     let text = if retained.live_key != Some(revision.text) {
+@@ -403,21 +409,21 @@ pub(super) fn render(
+     } else {
+         None
+     };
+-    retained.synchronize_live(revision, text, thought, name, area.width, theme);
++    retained.synchronize_live(revision, text, thought, name, content.width, theme);
+     retained.synchronize_activity(
+         if child.is_some() {
+             None
+         } else {
+             activity_key(state)
+         },
+-        area.width,
++        content.width,
+         theme,
+     );
+-    if area.is_empty() {
++    if content.is_empty() {
+         return;
+     }
+     let total = retained.total_rows();
+-    let max_scroll = total.saturating_sub(usize::from(area.height));
++    let max_scroll = total.saturating_sub(usize::from(content.height));
+     let start = if child.is_some() {
+         max_scroll
+     } else {
+@@ -427,7 +433,7 @@ pub(super) fn render(
+     };
+     retained.paint(
+         frame,
+-        area,
++        content,
+         history,
+         Sources {
+             thought,
+@@ -435,11 +441,11 @@ pub(super) fn render(
+         },
+         start,
+     );
+-    if total > usize::from(area.height) {
++    if area.width > 1 && total > usize::from(content.height) {
+         let mut scroll = ScrollbarState::new(total).position(start);
+         frame.render_stateful_widget(
+             Scrollbar::new(ScrollbarOrientation::VerticalRight),
+-            area,
++            Rect::new(content.right(), content.y, 1, content.height),
+             &mut scroll,
+         );
+     }
+@@ -447,10 +453,86 @@ pub(super) fn render(
+ 
+ #[cfg(test)]
+ mod tests {
++    use ratatui::backend::TestBackend;
++
++    use crate::state::UiState;
+     use crate::traits::ChatMessage;
+ 
+     use super::*;
+ 
++    #[test]
++    fn zero_and_one_column_use_full_content_and_one_to_two_keeps_preparation() {
++        let theme = crate::traits::test_support::marker_theme();
++        let mut source = UiState::new(8);
++        source.add_system_message("ABCD".into());
++        let mut retained = ChatRenderState::default();
++        let mut terminal = Terminal::new(TestBackend::new(8, 8)).expect("test terminal");
++        let symbols = ratatui::symbols::scrollbar::DOUBLE_VERTICAL;
++        for width in [0, 1, 2, 1, 0] {
++            let content_width = if width > 1 { width - 1 } else { width };
++            let previous_geometry = retained.geometry;
++            let previous_rows = retained.messages.front().map(|block| block.rows.as_ptr());
++            let before = work_counts();
++            let markdown = crate::widgets::markdown::work_counts();
++            let wraps = crate::widgets::chat::wrap_count();
++            terminal
++                .draw(|frame| {
++                    render(
++                        frame,
++                        Rect::new(2, 2, width, 3),
++                        &source,
++                        &theme,
++                        &mut retained,
++                    );
++                })
++                .expect("narrow retained draw");
++            assert_eq!(retained.geometry, Some((content_width, theme)));
++            if previous_geometry == retained.geometry {
++                assert_eq!(work_counts().prepared_messages, before.prepared_messages);
++                assert_eq!(work_counts().prepared_live, before.prepared_live);
++                assert_eq!(crate::widgets::markdown::work_counts(), markdown);
++                assert_eq!(crate::widgets::chat::wrap_count(), wraps);
++                assert_eq!(
++                    retained.messages.front().map(|block| block.rows.as_ptr()),
++                    previous_rows
++                );
++            }
++            let buffer = terminal.backend().buffer();
++            if width == 0 {
++                assert_eq!(work_counts().painted_rows, before.painted_rows);
++                assert!(buffer.content.iter().all(|cell| cell.symbol() == " "));
++                continue;
++            }
++            assert_eq!(retained.total_rows(), 5);
++            assert_eq!(work_counts().painted_rows - before.painted_rows, 3);
++            for (y, expected) in [(2, "C"), (3, "D")] {
++                let cell = &buffer[(2, y)];
++                assert_eq!(cell.symbol(), expected, "width {width} source column");
++                assert_eq!(cell.fg, theme.system);
++                assert!(cell.modifier.contains(Modifier::ITALIC));
++            }
++            for y in 0..8 {
++                for x in 0..8 {
++                    if x == 2 && [2, 3].contains(&y) {
++                        continue;
++                    }
++                    let cell = buffer[(x, y)].symbol();
++                    if width == 2 && x == 3 && (2..5).contains(&y) {
++                        if y == 2 {
++                            assert_eq!(cell, symbols.begin);
++                        } else if y == 4 {
++                            assert_eq!(cell, symbols.end);
++                        } else {
++                            assert!([symbols.track, symbols.thumb].contains(&cell));
++                        }
++                    } else {
++                        assert_eq!(cell, " ", "paint escaped content/gutter at ({x}, {y})");
++                    }
++                }
++            }
++        }
++    }
++
+     #[test]
+     fn revision_order_edits_append_and_prune_preserve_untouched_preparation() {
+         let theme = crate::traits::test_support::marker_theme();
+diff --git a/crates/cyril-ui/src/widgets/chat_layout/wrap.rs b/crates/cyril-ui/src/widgets/chat_layout/wrap.rs
+index bbca48b973a6905bc0699c659f0c5de140ae52d9..9881199a65740ef90d532810e71efbc6055db070 100644
+--- a/crates/cyril-ui/src/widgets/chat_layout/wrap.rs
++++ b/crates/cyril-ui/src/widgets/chat_layout/wrap.rs
+@@ -9,6 +9,11 @@
+ //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/ratatui-widgets/src/reflow.rs>
+ //! <https://github.com/ratatui/ratatui/blob/0a2a7c0363a4806b0cf05c1915bf7cdd438f756c/LICENSE>
+ //!
++//! Narrow parity exception: after upstream emits a row, its carried word/whitespace can
++//! already fill the next row. Emit that retained prefix before another positive-width glyph
++//! would start outside the row. All valid starts retain pinned behavior, including a final
++//! wide glyph overhanging the right edge; zero-width symbols and whitespace policy are unchanged.
++//!
+ //! The MIT License (MIT)
+ //!
+ //! Copyright (c) 2016-2022 Florian Dehau
+@@ -96,12 +101,21 @@ struct PendingGrapheme {
+     run: RowRun,
+ }
+ 
+-/// Wrap logical lines with the exact pinned `WordWrapper` behavior for `trim: false`.
++/// Wrap logical lines with pinned `WordWrapper` behavior, except unsafe carried-prefix starts.
+ ///
+ /// Width zero emits no rows, while each empty/control-only/overwide-only logical line at a
+ /// nonzero width emits one empty row. This deliberately preserves upstream's incidental
+ /// whitespace and wide-symbol behavior rather than substituting character wrapping.
+ pub(crate) fn wrap_lines(lines: &[SourceLine<'_>], width: u16) -> Vec<WrappedRow> {
++    wrap_lines_with_carry::<true>(lines, width)
++}
++
++// The false instantiation is used only by tests to classify the original reference's unsafe
++// positive starts, never as an independent correctness oracle for the repaired layout.
++fn wrap_lines_with_carry<const REPAIR_CARRY: bool>(
++    lines: &[SourceLine<'_>],
++    width: u16,
++) -> Vec<WrappedRow> {
+     #[cfg(test)]
+     WRAPS.with(|count| count.set(count.get() + 1));
+     let mut rows = Vec::new();
+@@ -167,6 +181,21 @@ pub(crate) fn wrap_lines(lines: &[SourceLine<'_>], width: u16) -> Vec<WrappedRow
+                     }
+                 }
+ 
++                if REPAIR_CARRY
++                    && symbol_width > 0
++                    && word_width
++                        >= width
++                            .saturating_sub(line_width)
++                            .saturating_sub(whitespace_width)
++                {
++                    pending_line.extend(pending_whitespace.drain(..));
++                    pending_line.append(&mut pending_word);
++                    finish_row(&mut rows, &mut pending_line, line.alignment);
++                    line_width = 0;
++                    whitespace_width = 0;
++                    word_width = 0;
++                }
++
+                 // ratatui-core 0.1.0 Span::styled_graphemes returns borrowed grapheme subslices,
+                 // filtering any grapheme containing char::is_control. Summing returned lengths
+                 // would therefore produce wrong offsets after tabs/CRLF/etc. Address subtraction
+@@ -233,6 +262,9 @@ fn finish_row(
+     });
+ }
+ 
++#[cfg(test)]
++pub(crate) use tests::{assert_repaired_rows, legacy_reference_is_unsafe, repaired_window};
++
+ #[cfg(test)]
+ mod tests {
+     use ratatui::buffer::Buffer;
+@@ -282,6 +314,152 @@ mod tests {
+             .add_modifier(Modifier::ITALIC)
+     }
+ 
++    /// Classify only original positive starts outside the target row. The unchanged source-derived
++    /// mode preserves original span segmentation; its row count is checked against real Paragraph.
++    /// It classifies undefined reference painting, not the correctness of the repaired rows.
++    pub(crate) fn legacy_reference_is_unsafe(lines: &[SourceLine<'_>], width: u16) -> bool {
++        let legacy = wrap_lines_with_carry::<false>(lines, width);
++        assert_eq!(legacy.len(), reference(lines).line_count(width));
++        legacy.iter().any(|row| {
++            let mut x = 0;
++            for run in &row.runs {
++                let text = lines
++                    .iter()
++                    .flat_map(|line| &line.spans)
++                    .find_map(|span| {
++                        if span.source != run.source {
++                            return None;
++                        }
++                        let start = run.range.start.checked_sub(span.offset)?;
++                        let end = run.range.end.checked_sub(span.offset)?;
++                        span.text.get(start..end)
++                    })
++                    .expect("legacy run belongs to an original source span");
++                let span = Span::raw(text);
++                for grapheme in span.styled_graphemes(Style::default()) {
++                    let advance = grapheme.symbol.width();
++                    if advance > 0 && x >= usize::from(width) {
++                        return true;
++                    }
++                    x += advance;
++                }
++            }
++            false
++        })
++    }
++
++    pub(crate) fn assert_repaired_rows<'a>(
++        lines: &[SourceLine<'_>],
++        rows: &[WrappedRow],
++        source_text: impl Fn(usize) -> &'a str,
++        width: u16,
++    ) {
++        if width == 0 {
++            assert!(rows.is_empty());
++            return;
++        }
++        let mut original = Vec::new();
++        for line in lines {
++            for source in &line.spans {
++                let span = Span::styled(source.text, source.style);
++                for grapheme in span.styled_graphemes(line.style) {
++                    if grapheme.symbol.width() <= usize::from(width) {
++                        original.push((
++                            grapheme.symbol.to_string(),
++                            grapheme.style,
++                            grapheme.is_whitespace(),
++                            line.alignment,
++                        ));
++                    }
++                }
++            }
++        }
++        let mut retained = Vec::new();
++        for row in rows {
++            let mut measured = 0;
++            let offset = match row.alignment {
++                Alignment::Left => 0,
++                Alignment::Center => (width / 2).saturating_sub(row.width / 2),
++                Alignment::Right => width.saturating_sub(row.width),
++            };
++            for run in &row.runs {
++                let text = source_text(run.source)
++                    .get(run.range.clone())
++                    .expect("retained ranges are original UTF-8 source bytes");
++                let span = Span::styled(text, run.style);
++                let mut run_width = 0;
++                for grapheme in span.styled_graphemes(Style::default()) {
++                    let advance = grapheme.symbol.width();
++                    if advance > 0 {
++                        assert!(
++                            usize::from(offset) + measured < usize::from(width),
++                            "positive glyph {:?} starts outside width {width}",
++                            grapheme.symbol
++                        );
++                    }
++                    measured += advance;
++                    run_width += advance;
++                    retained.push((
++                        grapheme.symbol.to_string(),
++                        grapheme.style,
++                        grapheme.is_whitespace(),
++                        row.alignment,
++                    ));
++                }
++                assert_eq!(usize::from(run.width), run_width);
++            }
++            assert_eq!(usize::from(row.width), measured);
++        }
++        // U+200B is whitespace in the pinned library, so it follows the same discard policy.
++        // Non-whitespace zero-width graphemes, by contrast, must survive with their effective style.
++        assert_eq!(
++            retained.iter().filter(|grapheme| !grapheme.2).collect::<Vec<_>>(),
++            original.iter().filter(|grapheme| !grapheme.2).collect::<Vec<_>>(),
++            "eligible non-whitespace graphemes, effective styles and alignment are conserved"
++        );
++        let mut remaining = original.iter();
++        for grapheme in &retained {
++            loop {
++                let next = remaining.next().expect("no invented or reordered source grapheme");
++                if next == grapheme {
++                    break;
++                }
++                assert!(next.2, "only pinned whitespace may be discarded");
++            }
++        }
++        assert!(remaining.all(|grapheme| grapheme.2));
++    }
++
++    /// Real Paragraph paints each explicitly selected corrected row. This is only a cell/style
++    /// oracle: source conservation and literal goldens below establish the repaired wrapping.
++    pub(crate) fn repaired_window<'a>(
++        rows: &[WrappedRow],
++        source_text: impl Fn(usize) -> &'a str,
++        start: usize,
++        area: Rect,
++        background: Style,
++    ) -> Buffer {
++        let mut expected = Buffer::empty(area);
++        expected.set_style(area, background);
++        if area.is_empty() {
++            return expected;
++        }
++        for (y, row) in rows.iter().skip(start).take(usize::from(area.height)).enumerate() {
++            let spans: Vec<_> = row.runs.iter().map(|run| {
++                Span::styled(&source_text(run.source)[run.range.clone()], run.style)
++            }).collect();
++            let paragraph = Paragraph::new(Line::from(spans).alignment(row.alignment))
++                .style(background)
++                .wrap(Wrap { trim: false });
++            assert_eq!(paragraph.line_count(area.width), 1, "explicit row stays one row");
++            paragraph.render(
++                Rect::new(area.x, area.y + y as u16, area.width, 1),
++                &mut expected,
++            );
++        }
++        expected
++    }
++
+     // A descriptor sink, not a second wrapping oracle: emit only the selected source ranges.
+     // Its cell writes follow pinned paragraph.rs::render_line, including ignored zero-width
+     // graphemes and untouched continuation cells. The independent expected Buffer comes from
+@@ -330,7 +508,12 @@ mod tests {
+     fn assert_matches(lines: &[SourceLine<'_>], sources: &[&str], width: u16) {
+         let rows = wrap_lines(lines, width);
+         let paragraph = reference(lines);
+-        assert_eq!(rows.len(), paragraph.line_count(width), "width={width}");
++        let unsafe_reference = legacy_reference_is_unsafe(lines, width);
++        if unsafe_reference {
++            assert_repaired_rows(lines, &rows, |source| sources[source], width);
++        } else {
++            assert_eq!(rows.len(), paragraph.line_count(width), "width={width}");
++        }
+         for row in &rows {
+             let mut row_width = 0;
+             for run in &row.runs {
+@@ -356,8 +539,119 @@ mod tests {
+             rows.len() + 1,
+         ] {
+             for height in [0, 1, 2, 5] {
+-                assert_window(&rows, sources, &paragraph, width, start, height);
++                if unsafe_reference {
++                    let area = Rect::new(3, 2, width, height);
++                    assert_eq!(
++                        paint_window(&rows, sources, start, area),
++                        repaired_window(&rows, |source| sources[source], start, area, background()),
++                        "repaired width={width}, start={start}, height={height}"
++                    );
++                } else {
++                    assert_window(&rows, sources, &paragraph, width, start, height);
++                }
++            }
++        }
++    }
++
++    #[test]
++    fn legacy_classifier_detects_only_actual_unsafe_positive_starts() {
++        for text in ["a界a", "a🌞b", "a\u{3000}b", "\u{301}a界b", "\u{903}界b"] {
++            let lines = [source_line(0, text)];
++            assert!(legacy_reference_is_unsafe(&lines, 2), "{text:?}");
++            let rows = wrap_lines(&lines, 2);
++            assert_repaired_rows(&lines, &rows, |_| text, 2);
++        }
++        for (text, width) in [
++            ("界界", 3), // Legal final overhang is NOT an unsafe positive start.
++            ("a界", 2),
++            ("ordinary ASCII words", 4),
++            ("e\u{301} αβ", 3),
++            ("\u{301}A\u{200b}", 4),
++            ("👩‍💻🙂", 4),
++            ("", 0),
++        ] {
++            assert!(!legacy_reference_is_unsafe(&[source_line(0, text)], width), "{text:?}");
++        }
++        // Original span segmentation matters: splitting a combining sequence is not a reason
++        // to exempt it, while changing styles around the carried wide glyph still is unsafe.
++        let text = "a\u{301}b";
++        let mut split = source_line(0, "");
++        split.spans = [0..1, 1..3, 3..4].into_iter().map(|range| SourceSpan {
++            source: 0,
++            offset: range.start,
++            text: &text[range],
++            style: Style::default(),
++        }).collect();
++        assert!(!legacy_reference_is_unsafe(std::slice::from_ref(&split), 2));
++        assert_matches(&[split], &[text], 2);
++        let line = SourceLine {
++            spans: vec![
++                SourceSpan { source: 0, offset: 0, text: "a", style: Style::default() },
++                SourceSpan {
++                    source: 1, offset: 0, text: "界",
++                    style: Style::default().fg(Color::Yellow),
++                },
++                SourceSpan { source: 2, offset: 0, text: "b", style: Style::default() },
++            ],
++            style: Style::default().add_modifier(Modifier::BOLD),
++            alignment: Alignment::Right,
++        };
++        assert!(legacy_reference_is_unsafe(std::slice::from_ref(&line), 2));
++        assert_matches(&[line], &["a", "界", "b"], 2);
++    }
++
++    #[test]
++    fn carried_prefix_repair_has_literal_rows_cells_styles_and_windows() {
++        let fixtures: &[(&str, &[&str], &[[&str; 2]])] = &[
++            ("a界a", &["a", "界", "a"], &[["a", " "], ["界", " "], ["a", " "]]),
++            ("a🌞b", &["a", "🌞", "b"], &[["a", " "], ["🌞", " "], ["b", " "]]),
++            ("a\u{3000}b", &["a", "\u{3000}", "b"],
++                &[["a", " "], ["\u{3000}", " "], ["b", " "]]),
++            ("\u{301}a界b", &["\u{301}a", "界", "b"],
++                &[["a", " "], ["界", " "], ["b", " "]]),
++            ("\u{903}界b", &["\u{903}", "界", "b"],
++                &[["\u{903}", " "], ["界", " "], ["b", " "]]),
++            // ZWSP fits the prior row and is discarded by the original whitespace policy;
++            // the full-width whitespace above does not fit and must survive the repair.
++            ("a\u{200b}界b", &["a", "界", "b"],
++                &[["a", " "], ["界", " "], ["b", " "]]),
++        ];
++        for &(text, expected_rows, expected_cells) in fixtures {
++            let mut line = source_line(0, text);
++            line.style = Style::default().fg(Color::Cyan).bg(Color::Black)
++                .add_modifier(Modifier::BOLD);
++            line.spans[0].style = Style::default().fg(Color::Yellow)
++                .remove_modifier(Modifier::BOLD).add_modifier(Modifier::UNDERLINED);
++            let style = line.style.patch(line.spans[0].style);
++            let rows = wrap_lines(std::slice::from_ref(&line), 2);
++            let actual_rows: Vec<String> = rows.iter().map(|row| {
++                row.runs.iter().map(|run| &text[run.range.clone()]).collect()
++            }).collect();
++            assert_eq!(actual_rows, expected_rows, "{text:?}");
++            assert!(legacy_reference_is_unsafe(std::slice::from_ref(&line), 2), "{text:?}");
++            assert_repaired_rows(std::slice::from_ref(&line), &rows, |_| text, 2);
++            for (row, expected) in rows.iter().zip(expected_rows) {
++                assert_eq!(usize::from(row.width), expected.width());
++                assert!(row.runs.iter().all(|run| run.style == style));
++            }
++            for start in 0..=expected_rows.len() + 1 {
++                for height in [0, 1, 2, 5] {
++                    let area = Rect::new(3, 2, 2, height);
++                    let mut expected = Buffer::empty(area);
++                    expected.set_style(area, background());
++                    for (y, cells) in expected_cells.iter().skip(start)
++                        .take(usize::from(height)).enumerate()
++                    {
++                        for (x, symbol) in cells.iter().enumerate() {
++                            expected[(3 + x as u16, 2 + y as u16)].set_symbol(symbol);
++                        }
++                        expected[(3, 2 + y as u16)].set_style(style);
++                    }
++                    assert_eq!(paint_window(&rows, &[text], start, area), expected,
++                        "{text:?}, start={start}, height={height}");
++                }
+             }
++            assert_matches(std::slice::from_ref(&line), &[text], 2);
+         }
+     }
+ 

@@ -1,0 +1,99 @@
+{
+  "schema": "cyril.c6la.scroll-obligation-adjudication.v1",
+  "issue": "cyril-c6la",
+  "record_kind": "Owning verification-scope record: Main technical instrument-adoption decision, not a user quote or risk waiver",
+  "status": "MAIN_ADOPTED_COVERAGE_PRESERVING_CADENCE_FOR_APPROVED_ORDINARY_SCROLL_OUTCOMES",
+  "authority_precedence": "Original DG-approved design owns acceptance; the plan operationalizes it. Main's technical verification decision adopts an equivalent instrument within that scope. Execution GO alone was not treated as final acceptance adoption.",
+  "original_approved_authority": {
+    "frozen_workflow_root": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la-conversation-rendering/.cyril-c6la",
+    "recorded_pin_source": ".cyril-c6la/complete-c6-source43db.source.json#workflow_copy_inventory",
+    "design": {
+      "path": ".cyril-c6la/design.md",
+      "recorded_sha256": "e76044d9de077e89dcc5f35275a0555d9b6497ccd878197a3818b1c97ac6623f",
+      "recorded_bytes": 51878,
+      "approval_anchor": "design.md:152; route.md:30-32",
+      "approval": "DG-approved by parent Main on2026-10-19 under delegated routine sign-off; scope changes, relaxed acceptance and explicit risk acceptance require asking.",
+      "C2_anchor": "design.md:117",
+      "C2_quote": "Preserve first/middle/last windows, follow/rows-back/overlarge-back, zero-size, 3-row floor, input and resize; F12 scrollbar never overwrites content or changes width on scroll.",
+      "C6_anchor": "design.md:121",
+      "C6_quote": "Run benchmark below on one pinned runner with cold/warm/stream/scroll/invalidation cases and recorded samples. Smoke uses real App draw and actual terminal scroll/resize/theme. Review timings and retained storage against source/work results; do not fabricate an uncalibrated hard latency PASS.",
+      "smoke_anchor": "design.md:142",
+      "smoke_quote": "Smoke must exercise the production App draw lifetime, not create a fresh RenderState per frame. With a safe owned fixture, stream text/thought/tool updates, scroll oldest/middle/newest and back to follow, resize during streaming, switch palettes/modes and focus child/back. Retain actual terminal screen/text evidence plus source/revision. Synthetic TestBackend comparisons prove geometry/fidelity; native terminal smoke proves the integrated interaction is still usable."
+    },
+    "route": {
+      "path": ".cyril-c6la/route.md",
+      "recorded_original_sha256": "f4d716533e8c801b545d7bdd2397e2c69068466b8db4fafc07b2cf6a2d4c2493",
+      "anchor": "route.md:57",
+      "quote": "Native smoke must reuse the App-owned RenderState across actual streamed text/thought/tool/failure updates, oldest/middle/newest/back-to-follow scrolling, live resize/palette/no-color and focused-child/back interactions in an owned fixture. Retain actual screen/source/environment receipts, not TestBackend output as terminal proof."
+    },
+    "scope_conclusion": "The positive owning requirements are observed browse/scroll/follow return, rows-back and overlarge-back behavior with the stated source/lifetime/evidence controls. These inspected original approval sources do not mandate400 keys in one write, an input-throughput rate or burst-consumption measurement.",
+    "other_obligations_unchanged": "This adjudicates ordinary scroll only, not the full native-smoke gate. The later user instrument replacement is owned by .cyril-c6la/design.md#supported-controls-user-approval. Required supported native outcomes are now PASS under Main's separate combined-layer technical judgment in native-supported-controls-evidence.json; visual-only literal limitations remain explicit. Deterministic retained-history/giant/>u16 proof keeps its own layer; final integration, staging and CI remain Main-owned."
+  },
+  "instrument_lineage": {
+    "original_canonical_scenario": {
+      "path": "/tmp/cyril-perf-consumer-20261020/c6la_scenario.py",
+      "sha256": "3f96c458cf2912412fd84c6e8c83aa00f41a077ab1072e016f64590dfd209f17",
+      "pages_helper_anchor": "65-66",
+      "callsite_anchors": "232,247-248,262-263",
+      "intent_quote": "Return from the deliberately oversized rows-back value before seeking middle.",
+      "visible_assertions": "C6LA_HISTORY_LIVE_TAIL/C6LA_COMMIT_269 and cache-pressure browse return-to-main-follow ordering; no keys-per-second or App-consumed-count assertion."
+    },
+    "original_send": {
+      "path": "/tmp/cyril-perf-consumer-20261020/smoke.py",
+      "sha256": "c9ce883004155aef05e5a1dd68723be16e3507cc2873aff977e3cb554f34ec2a",
+      "anchor": "169-172",
+      "behavior": "Each pages400 call joined400 four-byte keys into one intended1600-byte os.write, followed by ordinary drain0.25. Original write returns were discarded."
+    },
+    "original_current_C6_scenario_sha256": "d41cf6718f65fd2d2299b7ae5c4a2b8ded96a0a9cde310cc0c0e567f70431b55",
+    "adopted_current_scenario_sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+    "preserved_actions": "All three existing400-key calls remain:400PageUp+400PageDown+400PageDown=1200 intended actions per mode. Each is10x40 ordinary sends with the same0.25s drain. All other cases/actions/assertions/geometry/timeouts remain.",
+    "third_call_scope": "The third400 call was not reached in either original-burst FAIL. Its cadence change was approved class consistency, not an observed third-call failure.",
+    "causal_limit": "Chunk size and cumulative draining/pacing changed together. Neither baseline reproduction nor cadence PASS isolates the input/library cause, proves App consumption, fixes the product or globally exonerates C6."
+  },
+  "Main_technical_decision": {
+    "actor": "Main",
+    "authority_kind": "DG technical verification decision under CONTRACT Approval semantics/verification complexity",
+    "source": "Explicit parent IRC steering in this assignment after the original-obligation mapping",
+    "is_user_quote": false,
+    "is_user_risk_waiver": false,
+    "decision_quote": "Approved obligation design142/C2:117/route57 is observed scroll oldest/middle/newest→follow, rows-back and overlarge-back, not singlewrite throughput. Adopt current ten×40 cadence as coverage-preserving consumer instrument for those same outcomes/all1200actions, retaining all cases/assertions and terminal evidence. No userriskwaiver/N/A needed for changing incidentalinput batching. Original burst FAIL remains preserved observed inherited limitation, NOT promotedPASS or claimedfixed/globalexonerated. It does not by itself block C6 approved scroll obligation now proven by current fullcadence run; any separatelymandated burst/throughput obligation discovered would block.",
+    "effect": "Main explicitly adopts the current cadence instrument for the approved ordinary-scroll outcomes. This is not inferred merely from preparation/runtime GO or the baseline FAIL, and is not relaxation of a mandated throughput target.",
+    "acceptance_scope": "Approved ordinary-scroll outcomes only; not blanket C6 issue closure, final integrated-source qualification, native/CI approval or a waiver of any remaining obligation."
+  },
+  "outcomes_kept_distinct": {
+    "original_current_C6_burst": {
+      "status": "FAIL_PRESERVED",
+      "result_sha256": "5ad8039f9b42d3185279a56b27aa098a842efe8880734630e544b8f4b5d64337",
+      "archive_sha256": "24361adf4f9650cbdec718c0313cd1e8a5eadc75d9c4594a9994e1475cff058f",
+      "observation": "Postc09 missing-tail assertion; oldest history and SCROLL remain. Original result is not PASS, N/A, fixed or rewritten."
+    },
+    "qualified_pre_C6_Zj_original_burst": {
+      "status": "ASSERTFAIL_PRESERVED_NOT_OUTER_TIMEOUT",
+      "wall_seconds": 114.94,
+      "result_sha256": "76e9a8bff64aecfe734fe19022d78b915df448ca0ce077102a77c497c3faf07a",
+      "archive_sha256": "2f6d53d6eae82db224db58c036ed6abefc88c790704441a2b82d63103f23af6f",
+      "interpretation": "Matched inherited observable limitation under original burst delivery, not an automatic waiver or root-cause attribution."
+    },
+    "current_C6_adopted_cadence": {
+      "status": "PASS_FOR_ADOPTED_ORDINARY_SCROLL_INSTRUMENT",
+      "result_sha256": "984957cfda121a36e44e64478de7577c9bbc02bba816198033b93dff0b2b4c2b",
+      "archive_sha256": "8e5d12db44945f6a5478048acef2f5976ecbc3b08ba04db89af9fc2db4a9c5a5",
+      "per_independent_startup": "Truecolor and none each67/67 checks,49 capture pairs,1200 selected intended actions in30 writes,4800 selected requested=written bytes,6085 total requested=written bytes, cleanupCOMPLETE.",
+      "submission_not_consumption": true
+    }
+  },
+  "merge_boundary": {
+    "ordinary_scroll_obligation": "Covered by current full cadence run using Main's explicitly adopted instrument; the preserved original burst FAIL does not by itself block that approved obligation.",
+    "separately_mandated_burst_or_throughput": "If a controlling separately mandated burst/throughput obligation is discovered, it blocks merge until repaired or explicit user-risk approval is recorded. This record supplies no such waiver.",
+    "remaining_requirements": "Main still owns currentmain/held93 integration, staging, final commit/new-PR CI/platform and future cross-feature qualification. Required supported native outcomes are separately PASS under native-supported-controls-evidence.json, not by this earlier scroll decision. The two user-approved instruments follow .cyril-c6la/design.md#supported-controls-user-approval. PR187 remains untouched/unmerged. Packet readiness is not blanket merge or final-tree approval."
+  },
+  "later_user_approved_native_instruments": {
+    "owning_approval": ".cyril-c6la/design.md#supported-controls-user-approval",
+    "scope": "Only native same-process mode switching and native main-child focus/back are replaced; no new controls, product behavior or source changes.",
+    "separate_native_launch_modes": ["truecolor", "none"],
+    "state_render_mode_matrix": "Existing all-four-mode coverage remains separate; two native startup modes do not claim all-four-mode coverage.",
+    "focus_replacement": "Existing state/render/root focus-back tests, with their source-qualified receipts, not a native input claim.",
+    "actual_native_status": "PASS for required supported outcomes by Main's combined deterministic/native-export/actual-PNG gate judgment; see native-supported-controls-evidence.json. No native50000, native child-focus/back, same-process native mode-switch or visual-only exact-cell claim."
+  },
+  "worker_actions": "Read original approved sources and immutable proof inputs; recorded Main's technical decision and evidence scope. No product changes, new harness hardening, new runtime, source qualification, Git/tracker/check/fmt or PR action. Reproduction inputs are not execution GO."
+}

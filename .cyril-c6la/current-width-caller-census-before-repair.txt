@@ -1,0 +1,185 @@
+INITIAL STATIC CENSUS BEFORE REPAIRS. The two reported integration problems were subsequently repaired; see current-width-integration.json and current-width-source-review.txt. Historical findings/anchors below are preserved, not asserted current.
+
+## Summary
+
+The retained public `Option<Cow<'_, str>>` API and crate-private borrowed source views are **compatible with the current callers found by static inspection**. No live caller was found requiring `String`, `Option<String>`, or String-only mutation.
+
+Two current-tree integration problems remain:
+
+1. **Two automerged validation tests still call the old one-argument rendering helper.**
+2. **One borrowed-error test still expects an empty raw string to override nonblank content**, contradicting the incoming Error policy.
+
+No files were changed and no checks, tests, Cargo commands, or executable qualification were run.
+
+### Search limitation
+
+LSP discovery was attempted first: this scout’s mounted tools do **not** include `xd://lsp`; reading its documentation returned “No such tool.” Consequently this is a **bounded static caller map**, not semantic reference-index evidence. Searches covered all Rust files under the actual worktree, with focused reads of declarations and callers. Historical patches/docs were excluded from current-caller conclusions. No future MCP consumers are assumed.
+
+All paths below are relative to `/home/dwalleck/repos/cyril-wt-perf-cyril-c6la`.
+
+## Findings requiring attention
+
+### 1. Automerged validation tests missed the retained `RenderState` helper argument
+
+**File:** `crates/cyril-ui/tests/v2_failed_validation.rs`
+
+The current helper is:
+
+```rust
+// :17
+fn rendered(state: &UiState, render_state: &mut RenderState) -> String
+```
+
+The original capture test correctly creates `RenderState` at **:36** and passes it at **:105**.
+
+However, both incoming policy tests retain one-argument calls:
+
+- **:239** — `blank_raw_errors_fall_back_to_visible_content_without_changing_precedence`
+- **:303** — `failed_raw_selection_skips_blank_fields_without_changing_completed_output`
+
+Both contain:
+
+```rust
+let text = rendered(&state);
+```
+
+These calls do not match the helper’s current signature. This is a **source-visible arity mismatch**, not an observed compiler result. Their public `Cow` API assertions themselves are compatible.
+
+### 2. Borrowed raw-error test retains an obsolete empty-string expectation
+
+**File:** `crates/cyril-ui/src/tool_text_tests.rs:180-222`
+
+Test:
+
+```text
+tool_text_tests::failed_raw_error_precedence_is_borrowed_and_completion_has_no_error
+```
+
+Its fixture list includes **:188**:
+
+```rust
+(json!(""), ""),
+```
+
+Every case also supplies nonblank content at **:199**:
+
+```rust
+.with_content(vec![ToolCallContent::Text("content fallback".into())])
+```
+
+The test then requires the returned error to equal, and pointer-alias, the raw value at **:202-213**.
+
+For the empty-root case, current `RawOutputPolicy::Error` rejects the blank string at `traits.rs:593-597`; `error_text_view` then selects `"content fallback"` at **:676-690**. Thus this case’s raw-text equality and pointer-identity expectations are outdated. The other nonblank raw cases and completion assertions remain consistent with the current implementation.
+
+### 3. Mixed-raw regression placement in the inspected tree
+
+The explicit mixed-raw policy regression is currently:
+
+```text
+crates/cyril-ui/tests/v2_failed_validation.rs:253
+failed_raw_selection_skips_blank_fields_without_changing_completed_output
+```
+
+It covers:
+
+- `{"text": "", "output": RAW_ERROR}`
+- `{"items": [{"Text": " \t"}], "output": RAW_ERROR}`
+
+It expects Display to retain the first blank candidate and Error to continue to nonblank `output`. Those expectations match the decoder.
+
+No separate mixed-raw policy test was found in the current `traits.rs` test module. Its current relevant tests cover normal extraction, explicit errors, serialization, and output-alias precedence/boundaries.
+
+## Exported API and semantic compatibility
+
+| Declaration | Current contract |
+|---|---|
+| `crates/cyril-ui/src/lib.rs:25` | `traits` remains a public module. |
+| `crates/cyril-ui/src/traits.rs:578` | `pub fn output_text(&self) -> Option<Cow<'_, str>>` |
+| `crates/cyril-ui/src/traits.rs:586` | `pub(crate) fn output_text_view(&self) -> Option<ToolText<'_>>` |
+| `crates/cyril-ui/src/traits.rs:668` | `pub fn error_message(&self) -> Option<Cow<'_, str>>` |
+| `crates/cyril-ui/src/traits.rs:672` | `pub(crate) fn error_text_view(&self) -> Option<ToolText<'_>>` |
+| `crates/cyril-ui/src/traits.rs:694` | `pub(crate) fn resolve_text_source(&self, source: ToolTextSource) -> Option<&str>` |
+
+`ToolText` and `ToolTextSource` remain crate-visible, not public exports (**traits.rs:373-386**). `ToolText::into_cow` maps borrowed strings to `Cow::Borrowed` and moves derived serialization into `Cow::Owned` (**:389-395**).
+
+**Display semantics, :586-655:**
+
+- Preserves blank root strings and blank item/direct-field strings.
+- Uses nonblank `stdout`, then `stderr`.
+- Uses first item `Text`, then serialized `Json`.
+- Direct-field precedence remains `text`, `content`, `result`, **`output` last**.
+- Does not introduce `error`/`message` as display fields.
+- Non-string, non-object raw values are serialized.
+
+**Error semantics, :590-655 and :672-691:**
+
+- Requires Failed status.
+- Prefers nonblank explicit `error`, then `message`.
+- Continues through supported raw candidates past blank strings.
+- Falls back to the first nonblank ACP Text content.
+- Uses trimming only to decide eligibility; returned authoritative text is untrimmed.
+
+Current public callers use `.as_deref()`, `.is_none()`, comparison to `None`, string methods through `Cow` dereference, or an intentional `Cow::Borrowed` match. None requires conversion back to owned `String`.
+
+## Current caller map
+
+Let **UI** mean `crates/cyril-ui`.
+
+### Public API callers
+
+| File and call anchors | API / use |
+|---|---|
+| `UI/src/traits.rs:2221,2237,2253,2269,2283,2383,2401,2441,2473,2492,2509,2526` | `output_text`: borrowed comparisons, absence checks, or `.contains()` on an inferred `Cow`. |
+| `UI/src/traits.rs:2330,2348,2365,2545,2563` | `error_message`: borrowed comparisons or absence checks. |
+| `UI/src/tool_text_tests.rs:172` | Explicit `Cow::Borrowed` assertion for content-backed errors; compatible and verifies borrowing. |
+| `UI/src/tool_text_tests.rs:222` | Completed-call `error_message().is_none()` assertion. |
+| `UI/tests/missing_tool_updates.rs:167` | `output_text().as_deref()` in the exact captured-output/render assertion. |
+| `UI/tests/v2_failed_validation.rs:104,143,148,157,169,232,280,286` | `error_message`: content/raw precedence, blank fallback, and status assertions. |
+| `UI/tests/v2_failed_validation.rs:276,291` | `output_text().as_deref()`: Display must remain unchanged even for Failed calls. |
+
+No production consumer of the **public** wrappers was found in the bounded Rust search; current production presentation uses the private views instead. The `error_message` helper in `cyril-core/src/protocol/kas/host_shell.rs:602` is unrelated.
+
+### Private source-view callers
+
+| File and call anchors | API / compatibility |
+|---|---|
+| `UI/src/traits.rs:579,669` | Public wrappers convert `ToolText` into `Cow`; no string copy for authoritative sources. |
+| `UI/src/widgets/chat/presentation.rs:634` | Failed output selects `error_text_view()`. |
+| `UI/src/widgets/chat/presentation.rs:650` | Completed output selects `output_text_view()`. |
+| `UI/src/widgets/chat/presentation.rs:653-654` | Read summary handles both borrowed and derived text as `&str`. |
+| `UI/src/widgets/chat/presentation.rs:669-725` | `tool_text` stores selectors for borrowed text and generated backing for derived text. |
+| `UI/src/widgets/chat/presentation.rs:92` | Resolves stored `ToolTextSource` directly against the current tool. |
+| `UI/src/tool_text_tests.rs:53,73,103,125,139` | Output borrowing, reselection, derived backing, unsupported-shape assertions. |
+| `UI/src/tool_text_tests.rs:58,78,99,171,213` | Recorded-source resolution assertions. |
+| `UI/src/tool_text_tests.rs:166,208,221` | Error borrowing/status assertions; **:208** participates in the stale empty-root case described above. |
+
+## Architecture
+
+Both public and renderer-facing APIs share the same private decoder, parameterized by Display versus Error policy. Incoming `error`/`message` selections fit the existing `ToolTextSource::RawField(&'static str)` representation; no new selector variant is needed.
+
+Presentation retains `Source::Tool(selector)` and byte ranges, not a `Cow` borrowing across frames. Painting resolves them through `Sources::external` → `resolve_text_source`. Derived JSON owns retained generated backing instead.
+
+Relevant connections:
+
+- `UI/src/widgets/chat/presentation.rs:18-35,54-109,669-725` — source representation, resolution, borrowed/derived handling.
+- `UI/src/widgets/chat/retained.rs:117-160` — changed history positions are re-prepared.
+- `UI/src/widgets/chat/retained.rs:307-346` — preparation receives current message sources; paint resolves retained source slots.
+
+## Required qualification selectors for Main
+
+**Selectors only; none executed.**
+
+| Target | Required selectors |
+|---|---|
+| `cyril-ui` library | Prefix `traits::tests::tracked_tool_call_output_text_` |
+| `cyril-ui` library | Prefix `traits::tests::tracked_tool_call_error_message_` |
+| `cyril-ui` library | Exact `traits::tests::tracked_tool_call_output_field_preserves_existing_precedence` |
+| `cyril-ui` library | Exact `traits::tests::tracked_tool_call_output_field_accepts_only_strings_without_message_fallback` |
+| `cyril-ui` library | Prefix `tool_text_tests::` — all six ownership/source-view tests, including the stale case |
+| Integration target `missing_tool_updates` | Exact `kas_completed_output_capture_renders_exact_body_without_kind` |
+| Integration target `v2_failed_validation` | Exact `v2_failed_validation_captures_render_one_attributed_failure_and_its_error` |
+| Integration target `v2_failed_validation` | Exact `content_backed_error_fallback_preserves_raw_output_precedence_and_status` |
+| Integration target `v2_failed_validation` | Exact `blank_raw_errors_fall_back_to_visible_content_without_changing_precedence` |
+| Integration target `v2_failed_validation` | Exact `failed_raw_selection_skips_blank_fields_without_changing_completed_output` |
+
+**Conclusion:** the current caller map supports retaining both public `Option<Cow<str>>` APIs and the borrowed source-view implementation. The identified blockers are test integration/expectation mismatches—not a missed production String-only consumer.

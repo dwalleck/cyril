@@ -1,0 +1,564 @@
+diff --git a/crates/cyril-ui/benches/conversation_render.rs b/crates/cyril-ui/benches/conversation_render.rs
+index 9a8e87e62aeb9defef3ac7bd1c072e7adb2de488..afb444f93b5e990d1aa225e7146a1e5426e61957 100644
+--- a/crates/cyril-ui/benches/conversation_render.rs
++++ b/crates/cyril-ui/benches/conversation_render.rs
+@@ -607,7 +607,7 @@ fn retained_fixture(size: usize) -> Result<UiState> {
+     state.add_steer_echo("OLDER_RECEIPT_CONTROL");
+     state.apply_notification(&Notification::SteeringQueued {
+         message: None,
+-        message_id: Some("older-receipt".into()),
++        message_id: Some("steer-older-receipt".into()),
+     });
+     for index in 2..size - 6 {
+         match index % 9 {
+@@ -752,7 +752,7 @@ fn run_history_transitions(
+     let start = Instant::now();
+     agent(
+         state,
+-        "[STEERING older-receipt: RECEIPT_NOTE_CHANGED]".into(),
++        "[STEERING steer-older-receipt: RECEIPT_NOTE_CHANGED]".into(),
+         true,
+     );
+     let mutation = start.elapsed();
+diff --git a/crates/cyril-ui/src/conversation_performance_tests.rs b/crates/cyril-ui/src/conversation_performance_tests.rs
+index 560e054075b8f7391226a813519a49feb3a2be10..73c579216102b7fb36c0d4b6e486a79899542164 100644
+--- a/crates/cyril-ui/src/conversation_performance_tests.rs
++++ b/crates/cyril-ui/src/conversation_performance_tests.rs
+@@ -288,7 +288,7 @@ fn mixed_history(size: usize) -> UiState {
+         &mut state,
+         Notification::SteeringQueued {
+             message: None,
+-            message_id: Some("older-receipt".into()),
++            message_id: Some("steer-older-receipt".into()),
+         },
+     );
+     for index in 2..size - 6 {
+@@ -671,11 +671,11 @@ fn c3_old_tool_and_receipt_edits_coalesce_without_repreparing_other_sources() {
+     let before = Work::now();
+     send(
+         &mut state,
+-        agent("[STEERING older-receipt: RECEIPT_INTERMEDIATE]", true),
++        agent("[STEERING steer-older-receipt: RECEIPT_INTERMEDIATE]", true),
+     );
+     send(
+         &mut state,
+-        agent("[STEERING older-receipt: RECEIPT_FINAL]", true),
++        agent("[STEERING steer-older-receipt: RECEIPT_FINAL]", true),
+     );
+     assert_eq!(
+         state.streaming_text(),
+@@ -1382,3 +1382,466 @@ fn c3_occupied_adoption_rebases_both_tool_indices_without_invalidating_main_layo
+         matches!(history[3].kind(), ChatMessageKind::AgentText(text) if text == "LATER_AGENT_CONTROL")
+     );
+ }
++
++#[test]
++fn review_hidden_diff_blocks_are_not_reselected_by_unchanged_root_draws() {
++    const CONTROLS: &[&str] = &[
++        "✓ Edit(review_hidden_diff.rs)  +1 -1",
++        "│- const REVIEW_OLD_DIFF",
++        "│+ const REVIEW_NEW_DIFF",
++    ];
++    let mut expected_cells = None;
++    let mut workloads = Vec::new();
++    for hidden_blocks in [0, 256, 4_096] {
++        let mut content = Vec::with_capacity(hidden_blocks + 1);
++        for index in 0..hidden_blocks {
++            content.push(ToolCallContent::Text(format!(
++                "REVIEW_HIDDEN_TEXT_{index:04}"
++            )));
++        }
++        content.push(ToolCallContent::Diff {
++            path: "review_hidden_diff.rs".into(),
++            old_text: Some("const REVIEW_OLD_DIFF: u64 = 1;\n".into()),
++            new_text: "const REVIEW_NEW_DIFF: u64 = 2;\n".into(),
++        });
++        let mut state = new_state(8);
++        send(
++            &mut state,
++            Notification::ToolCallStarted(
++                ToolCall::new(
++                    ToolCallId::new("review-hidden-diff"),
++                    "Review hidden Diff".into(),
++                    ToolKind::Write,
++                    ToolCallStatus::Completed,
++                    Some(serde_json::json!({"path": "review_hidden_diff.rs"})),
++                )
++                .with_content(content),
++            ),
++        );
++        state.commit_streaming();
++        state.set_activity(Activity::Idle);
++        let mut root = Root::new();
++        let before = Work::now();
++        let selection_before = crate::traits::diff_selection_steps();
++        root.draw(&state);
++        let cold = Work::now().since(before);
++        let cold_selection = crate::traits::diff_selection_steps() - selection_before;
++        root.contains(CONTROLS);
++        root.absent(&["REVIEW_HIDDEN_TEXT"]);
++        root.styled(
++            "const REVIEW_OLD_DIFF",
++            state.theme().subdued_negative,
++            Modifier::empty(),
++        );
++        root.styled(
++            "const REVIEW_NEW_DIFF",
++            state.theme().subdued_positive,
++            Modifier::empty(),
++        );
++        assert_eq!(cold.messages, 1, "completed Write must actually prepare");
++        assert_eq!(
++            cold.myers, 1,
++            "completed Write must construct its real diff"
++        );
++        assert!(cold.wraps > 0, "actual wrapping did not execute: {cold:?}");
++        assert!(
++            cold_selection >= hidden_blocks + 1,
++            "actual first-Diff selection did not visit the fixture: {cold_selection}"
++        );
++        if let Some(expected) = &expected_cells {
++            assert_eq!(
++                root.buffer(),
++                expected,
++                "hidden content changed the visible summary, rows or styles"
++            );
++        } else {
++            expected_cells = Some(root.buffer().clone());
++        }
++        let before = Work::now();
++        let selection_before = crate::traits::diff_selection_steps();
++        for _ in 0..STABLE_DRAWS {
++            root.draw(&state);
++        }
++        let warm = Work::now().since(before);
++        let warm_selection = crate::traits::diff_selection_steps() - selection_before;
++        root.contains(CONTROLS);
++        root.absent(&["REVIEW_HIDDEN_TEXT"]);
++        assert!(warm.rows > 0 && warm.runs > 0, "empty warm paint: {warm:?}");
++        eprintln!(
++            "C6LA_REVIEW_CONTROLS_EXECUTED case=hidden-diff hidden_text_blocks={hidden_blocks} diff_blocks=1 stable_draws={STABLE_DRAWS} cold_selection_visits={cold_selection} warm_selection_visits={warm_selection} cold={cold:?} warm={warm:?}"
++        );
++        workloads.push((hidden_blocks, warm, warm_selection));
++    }
++    // Exercise every hidden-prefix size and print its real controls before
++    // asserting the work bound, so an early RED cannot hide a later workload.
++    for (hidden_blocks, warm, warm_selection) in workloads {
++        assert_eq!(
++            warm_selection, 0,
++            "unchanged visible Diff rows rescanned {hidden_blocks} hidden Text blocks"
++        );
++        warm.no_derivation();
++        warm.selected_window(STABLE_DRAWS, 1, WIDTH, HEIGHT);
++    }
++}
++
++fn draw_with_fixed_activity_clock(root: &mut Root, state: &mut UiState) {
++    state.set_activity_elapsed_for_test(std::time::Duration::from_secs(3));
++    root.draw(state);
++}
++
++fn warmed_live_receipt(id: &str) -> (UiState, Root, String, Work, Work) {
++    const PARAGRAPHS: usize = 4_096;
++    let mut source = format!("# REVIEW_LIVE_HEAD {id}\n\n**REVIEW_LIVE_BOLD**\n\n");
++    for row in 0..PARAGRAPHS {
++        writeln!(
++            source,
++            "review_live_{row:04} **retained emphasis** with authoritative Markdown bytes that must remain prepared.\n"
++        )
++        .unwrap();
++    }
++    source.push_str("REVIEW_LIVE_TAIL\n");
++    assert!(source.len() > 256 * 1_024, "live source must be nontrivial");
++    let mut state = new_state(8);
++    state.add_steer_echo("REVIEW_RECEIPT_ECHO");
++    send(
++        &mut state,
++        Notification::SteeringQueued {
++            message: None,
++            message_id: Some(id.into()),
++        },
++    );
++    send(&mut state, agent(source.clone(), true));
++    assert_eq!(state.streaming_text().as_bytes(), source.as_bytes());
++    assert_receipt_chip(&state, id, SteerEchoStatus::Queued, None);
++    // Browse the earlier chip and the nonempty live head together, rather than
++    // letting a giant live tail hide all reconciliation/source controls.
++    state.chat_scroll_up(usize::MAX);
++    let mut root = Root::new();
++    let before = Work::now();
++    draw_with_fixed_activity_clock(&mut root, &mut state);
++    let cold = Work::now().since(before);
++    root.contains(&[
++        "REVIEW_RECEIPT_ECHO",
++        "queued",
++        "Kiro:",
++        "REVIEW_LIVE_HEAD",
++        "REVIEW_LIVE_BOLD",
++    ]);
++    root.style_control("REVIEW_LIVE_BOLD", None, Modifier::BOLD);
++    assert_eq!(cold.messages, 1, "the bound chip must actually prepare");
++    assert!(cold.live > 0, "nonempty live preparation did not execute");
++    assert_eq!(cold.hashes, 1, "the large live Markdown must actually hash");
++    assert!(cold.wraps > 0, "the large live Markdown must actually wrap");
++    let before = Work::now();
++    draw_with_fixed_activity_clock(&mut root, &mut state);
++    let warm = Work::now().since(before);
++    root.contains(&[
++        "REVIEW_RECEIPT_ECHO",
++        "REVIEW_LIVE_HEAD",
++        "REVIEW_LIVE_BOLD",
++    ]);
++    assert!(warm.rows > 0 && warm.runs > 0, "empty warm paint: {warm:?}");
++    (state, root, source, cold, warm)
++}
++
++fn assert_receipt_chip(
++    state: &UiState,
++    id: &str,
++    expected_status: SteerEchoStatus,
++    expected_note: Option<&str>,
++) {
++    assert_eq!(state.history().messages().len(), 1);
++    match state.history().messages()[0].kind() {
++        ChatMessageKind::SteerEcho {
++            text,
++            status,
++            message_id,
++            note,
++        } => {
++            assert_eq!(text, "REVIEW_RECEIPT_ECHO");
++            assert_eq!(*status, expected_status);
++            assert_eq!(message_id.as_deref(), Some(id));
++            assert_eq!(note.as_deref(), expected_note);
++        }
++        other => panic!("receipt fixture lost its real bound chip: {other:?}"),
++    }
++    assert_eq!(
++        state.steering_queued(),
++        usize::from(expected_status == SteerEchoStatus::Queued)
++    );
++}
++
++fn receipt_only_work(work: Work) {
++    assert_eq!(
++        work.messages, 1,
++        "only the reconciled chip may prepare: {work:?}"
++    );
++    assert_eq!(
++        work.live, 0,
++        "unchanged live Markdown was prepared: {work:?}"
++    );
++    assert_eq!(
++        work.hashes, 0,
++        "unchanged live Markdown was hashed: {work:?}"
++    );
++    assert_eq!(
++        work.parses, 0,
++        "unchanged live Markdown was parsed: {work:?}"
++    );
++    assert_eq!(work.wraps, 1, "only the reconciled chip may wrap: {work:?}");
++    assert_eq!(work.myers, 0);
++}
++
++#[test]
++fn review_complete_receipt_keeps_large_live_markdown_prepared() {
++    const ID: &str = "steer-review-complete";
++    const NOTE: &str = "REVIEW_COMPLETE_NOTE";
++    let (mut state, mut root, source, cold, warm) = warmed_live_receipt(ID);
++    let before = Work::now();
++    send(&mut state, agent(format!("[STEERING {ID}: {NOTE}]"), true));
++    assert_eq!(
++        state.streaming_text().as_bytes(),
++        source.as_bytes(),
++        "a complete receipt changed the displayed source bytes"
++    );
++    assert_receipt_chip(&state, ID, SteerEchoStatus::Applied, Some(NOTE));
++    draw_with_fixed_activity_clock(&mut root, &mut state);
++    let receipt = Work::now().since(before);
++    root.contains(&[
++        "REVIEW_RECEIPT_ECHO",
++        "applied",
++        NOTE,
++        "REVIEW_LIVE_HEAD",
++        "REVIEW_LIVE_BOLD",
++    ]);
++    root.absent(&["[STEERING"]);
++    assert!(
++        receipt.rows > 0 && receipt.runs > 0,
++        "empty receipt paint: {receipt:?}"
++    );
++    eprintln!(
++        "C6LA_REVIEW_CONTROLS_EXECUTED case=complete-receipt live_paragraphs=4096 live_bytes={} marker_bytes={} cold={cold:?} warm={warm:?} receipt={receipt:?}",
++        source.len(),
++        format!("[STEERING {ID}: {NOTE}]").len(),
++    );
++    warm.no_derivation();
++    receipt_only_work(receipt);
++}
++
++fn withheld_receipt_chunks(id: &str, chunks: &[&str], note: &str) {
++    let (mut state, mut root, source, cold, warm) = warmed_live_receipt(id);
++    let mut emitted = String::new();
++    let mut withheld_work = Vec::with_capacity(chunks.len());
++    for (index, chunk) in chunks.iter().enumerate() {
++        emitted.push_str(chunk);
++        let before = Work::now();
++        send(&mut state, agent(*chunk, true));
++        assert_eq!(
++            state.streaming_text().as_bytes(),
++            source.as_bytes(),
++            "incomplete receipt escaped withholding at chunk {index}: {emitted:?}"
++        );
++        assert_receipt_chip(&state, id, SteerEchoStatus::Queued, None);
++        draw_with_fixed_activity_clock(&mut root, &mut state);
++        let work = Work::now().since(before);
++        root.contains(&[
++            "REVIEW_RECEIPT_ECHO",
++            "queued",
++            "REVIEW_LIVE_HEAD",
++            "REVIEW_LIVE_BOLD",
++        ]);
++        root.absent(&["[STEERING", note]);
++        assert!(
++            work.rows > 0 && work.runs > 0,
++            "empty chunk paint: {work:?}"
++        );
++        eprintln!(
++            "C6LA_REVIEW_CONTROLS_EXECUTED case=withheld-receipt id={id} phase=incomplete chunk_index={index} chunk_bytes={} marker_bytes={} live_paragraphs=4096 live_bytes={} cold={cold:?} warm={warm:?} chunk={work:?}",
++            chunk.len(),
++            emitted.len(),
++            source.len(),
++        );
++        withheld_work.push(work);
++    }
++    assert_eq!(emitted, format!("[STEERING {id}: {note}"));
++    let before = Work::now();
++    send(&mut state, agent("]", true));
++    assert_eq!(state.streaming_text().as_bytes(), source.as_bytes());
++    assert_receipt_chip(&state, id, SteerEchoStatus::Applied, Some(note));
++    draw_with_fixed_activity_clock(&mut root, &mut state);
++    let completed = Work::now().since(before);
++    root.contains(&[
++        "REVIEW_RECEIPT_ECHO",
++        "applied",
++        note,
++        "REVIEW_LIVE_HEAD",
++        "REVIEW_LIVE_BOLD",
++    ]);
++    root.absent(&["[STEERING"]);
++    assert!(
++        completed.rows > 0 && completed.runs > 0,
++        "empty completed receipt paint: {completed:?}"
++    );
++    eprintln!(
++        "C6LA_REVIEW_CONTROLS_EXECUTED case=withheld-receipt id={id} phase=completed chunks={} marker_bytes={} live_paragraphs=4096 live_bytes={} completed={completed:?}",
++        chunks.len() + 1,
++        emitted.len() + 1,
++        source.len(),
++    );
++    // All chunks, withholding controls and final status/note reconciliation
++    // execute before any zero-work bound is asserted.
++    warm.no_derivation();
++    for work in withheld_work {
++        work.no_derivation();
++    }
++    receipt_only_work(completed);
++}
++
++#[test]
++fn review_chunked_receipt_opening_keeps_large_live_markdown_prepared() {
++    withheld_receipt_chunks(
++        "steer-review-opening",
++        &[
++            "[",
++            "S",
++            "TEER",
++            "ING",
++            " ",
++            "st",
++            "eer-",
++            "review-opening",
++            ": ",
++            "REVIEW_OPENING_NOTE",
++        ],
++        "REVIEW_OPENING_NOTE",
++    );
++}
++
++#[test]
++fn review_chunked_receipt_body_keeps_large_live_markdown_prepared() {
++    withheld_receipt_chunks(
++        "steer-review-body",
++        &[
++            "[STEERING steer-review-body: ",
++            "REVIEW_BODY_NOTE",
++            " kept ",
++            "the visible Markdown",
++            " unchanged.",
++        ],
++        "REVIEW_BODY_NOTE kept the visible Markdown unchanged.",
++    );
++}
++
++#[test]
++fn review_nested_receipt_visible_prefix_semantics() {
++    const ID: &str = "steer-older-receipt";
++    let equal_before = "A[STEERING steer-older-receipt: [x";
++    let replacement = "z".repeat(equal_before.len() - 1);
++    let equal_after = format!("A{replacement}");
++    assert_eq!(equal_before.len(), equal_after.len());
++    assert_ne!(equal_before, equal_after);
++    let mut workloads = Vec::new();
++    for (case, raw_before, displayed_before, append, displayed_after, note) in [
++        (
++            "equal-length-visible-replacement",
++            equal_before,
++            equal_before,
++            format!("]{replacement}"),
++            equal_after,
++            "[x",
++        ),
++        (
++            "earlier-prefix-becomes-withheld",
++            "[STEER[",
++            "[STEER",
++            "STEERING steer-older-receipt: n]".into(),
++            String::new(),
++            "n",
++        ),
++    ] {
++        let mut state = new_state(8);
++        state.add_steer_echo("REVIEW_RECEIPT_ECHO");
++        send(
++            &mut state,
++            Notification::SteeringQueued {
++                message: None,
++                message_id: Some(ID.into()),
++            },
++        );
++        send(&mut state, agent(raw_before, true));
++        assert_eq!(
++            state.streaming_text().as_bytes(),
++            displayed_before.as_bytes()
++        );
++        assert_receipt_chip(&state, ID, SteerEchoStatus::Queued, None);
++        let mut root = Root::new();
++        let before = Work::now();
++        draw_with_fixed_activity_clock(&mut root, &mut state);
++        let cold = Work::now().since(before);
++        root.contains(&["REVIEW_RECEIPT_ECHO", "queued", "Kiro:", displayed_before]);
++        assert!(
++            cold.live > 0,
++            "initial live source did not prepare: {cold:?}"
++        );
++        assert_eq!(cold.hashes, 1, "initial live source did not hash: {cold:?}");
++        assert!(cold.wraps > 0, "initial live source did not wrap: {cold:?}");
++        let before = Work::now();
++        draw_with_fixed_activity_clock(&mut root, &mut state);
++        let warm = Work::now().since(before);
++        root.contains(&["REVIEW_RECEIPT_ECHO", "Kiro:", displayed_before]);
++
++        // Legacy harvest can remove previously displayed bytes when a note
++        // contains '['. Its splice can also expose an earlier plausible prefix;
++        // neither a length-only key nor a suffix-only cutoff preserves this.
++        let before = Work::now();
++        send(&mut state, agent(append.clone(), true));
++        assert_eq!(
++            state.streaming_text().as_bytes(),
++            displayed_after.as_bytes(),
++            "legacy nested receipt standing changed: {case}"
++        );
++        assert_receipt_chip(&state, ID, SteerEchoStatus::Applied, Some(note));
++        draw_with_fixed_activity_clock(&mut root, &mut state);
++        let changed = Work::now().since(before);
++        root.contains(&["REVIEW_RECEIPT_ECHO", "applied"]);
++        root.absent(&[displayed_before]);
++        if displayed_after.is_empty() {
++            root.contains(&["⤷ n"]);
++            root.absent(&["Kiro:", "[STEER"]);
++        } else {
++            root.contains(&["Kiro:", &displayed_after, "⤷ [x"]);
++        }
++        assert!(
++            changed.rows > 0 && changed.runs > 0,
++            "nested receipt standing did not paint: {changed:?}"
++        );
++        eprintln!(
++            "C6LA_REVIEW_CONTROLS_EXECUTED case={case} raw_before_bytes={} displayed_before_bytes={} append_bytes={} displayed_after_bytes={} cold={cold:?} warm={warm:?} changed={changed:?}",
++            raw_before.len(),
++            displayed_before.len(),
++            append.len(),
++            displayed_after.len(),
++        );
++        workloads.push((case, warm, changed, !displayed_after.is_empty()));
++    }
++    // These are positive behavioral controls, not the receipt-only RED lane:
++    // both updates really change the displayed source and must prepare it.
++    for (case, warm, changed, nonempty_after) in workloads {
++        warm.no_derivation();
++        assert_eq!(changed.messages, 1, "receipt chip must reconcile: {case}");
++        assert_eq!(
++            changed.live, 1,
++            "changed live source was not prepared: {case}"
++        );
++        assert_eq!(
++            changed.hashes,
++            usize::from(nonempty_after),
++            "only a nonempty changed source requires Markdown hashing: {case}"
++        );
++        assert!(changed.wraps > 0, "changed source was not wrapped: {case}");
++        assert_eq!(changed.myers, 0);
++        if !nonempty_after {
++            assert_eq!(changed.parses, 0, "empty source was parsed: {case}");
++        }
++    }
++}
+diff --git a/crates/cyril-ui/src/traits.rs b/crates/cyril-ui/src/traits.rs
+index 86e656f318fe440c87e35f4473126bd0b4d06315..4ef981e7fd100f85cbd479938f3c20eb8437ec28 100644
+--- a/crates/cyril-ui/src/traits.rs
++++ b/crates/cyril-ui/src/traits.rs
+@@ -11,6 +11,16 @@ use crate::message_history::{LiveRevision, MessageHistory};
+ use crate::theme::Theme;
+ use crate::tool_diff::{DiffPreview, DiffSource};
+ 
++#[cfg(test)]
++std::thread_local! {
++    static DIFF_SELECTION_STEPS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
++}
++
++#[cfg(test)]
++pub(crate) fn diff_selection_steps() -> usize {
++    DIFF_SELECTION_STEPS.with(std::cell::Cell::get)
++}
++
+ /// Which transcript a line belongs in (cyril-lki9): the main conversation, or
+ /// the stream of a workflow step / subagent session. The App decides which —
+ /// it owns session routing — and the UI renders into it.
+@@ -448,14 +458,18 @@ impl TrackedToolCall {
+     }
+ 
+     fn selected_diff(content: &[cyril_core::types::ToolCallContent]) -> Option<DiffSource<'_>> {
+-        content.iter().find_map(|block| match block {
+-            cyril_core::types::ToolCallContent::Diff {
+-                old_text, new_text, ..
+-            } => Some(DiffSource {
+-                old: old_text.as_deref().unwrap_or(""),
+-                new: new_text,
+-            }),
+-            cyril_core::types::ToolCallContent::Text(_) => None,
++        content.iter().find_map(|block| {
++            #[cfg(test)]
++            DIFF_SELECTION_STEPS.with(|steps| steps.set(steps.get() + 1));
++            match block {
++                cyril_core::types::ToolCallContent::Diff {
++                    old_text, new_text, ..
++                } => Some(DiffSource {
++                    old: old_text.as_deref().unwrap_or(""),
++                    new: new_text,
++                }),
++                cyril_core::types::ToolCallContent::Text(_) => None,
++            }
+         })
+     }
+ 

@@ -1,0 +1,2632 @@
+{
+  "schema": "cyril.c6la.main038.integration-archive-index/1",
+  "issue": "cyril-c6la",
+  "status": "METADATA_PACKAGING_ONLY_NO_NEW_EXECUTION",
+  "archive": "integration-evidence.tar.gz",
+  "source_descriptor": "b5d45fe2b8c78d23b5e5e26f5f8ff963822822830d2b5d54cba39f85f6c2c157",
+  "source_input_rows": 506,
+  "canonical_sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484",
+  "member_count": 282,
+  "member_counts_by_root": {
+    "consumer": 244,
+    "historical": 3,
+    "metadata": 3,
+    "provenance": 4,
+    "qualification": 28
+  },
+  "members": [
+    {
+      "arcname": "consumer/attempt-01-result.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-01-result.json",
+      "bytes": 6733,
+      "sha256": "4467f828ec86543887c3adebbd91e2c28d5c0821daf919b8ba9cdcf8c0d51b5c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/attempt-01-tool-result.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-01-tool-result.txt",
+      "bytes": 448,
+      "sha256": "3572c1071944ee27c4069955c74530c12463f6fbd7e8e22bc37523d6559723eb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/attempt-02-result.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/attempt-02-result.json",
+      "bytes": 25683,
+      "sha256": "4c952505bd6a8d8efa5c07332925126d8cd0f9993f8f0b034a0e5054847b61b8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/authorization.go.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/authorization.go.json",
+      "bytes": 1381,
+      "sha256": "a0b3146b835b47b592b954d7452beaa48ac14db38c45b077bd900ba96e571ac2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/authorization.original-runtime.go.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/authorization.original-runtime.go.json",
+      "bytes": 2228,
+      "sha256": "fc6e490ccb0684e6589038ecb7a70a3ba68a33889a72a258bbc5d655ab34f645",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/authorization.original-runtime.pending.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/authorization.original-runtime.pending.json",
+      "bytes": 1995,
+      "sha256": "d6d738be21805f93bb0b2897fa21d5de52528c98d5f0bdce65ca49bddeaec3dc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/authorization.pending.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/authorization.pending.json",
+      "bytes": 1726,
+      "sha256": "e86261efed2be41c3a4bc0e816262e81565c93d68c58a873a2ce124b59c90661",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/binding-only.diff",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/binding-only.diff",
+      "bytes": 7925,
+      "sha256": "85d13bbac7e22873a082de08f9cd8ff0ff032bfbc829e864fff352cee5dc3082",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/bootstrap-original-runtime.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/bootstrap-original-runtime.py",
+      "bytes": 13546,
+      "sha256": "7c18776c075f2847029b6d4dca0009be731255b4669cb30966a086b3b37c9a10",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/bootstrap.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/bootstrap.py",
+      "bytes": 13529,
+      "sha256": "0b5f73bcf63e75c12ade2c04bf04f217cfad37484ef75184d2651ee146a8ff6b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/c6la_scenario.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/c6la_scenario.py",
+      "bytes": 20648,
+      "sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/decoder-proof.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/decoder-proof.py",
+      "bytes": 10446,
+      "sha256": "e0e744c261b360693a6352ca5225b452a1099bc836636bff718d7da6ce15ffd6",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/original-runtime-binding-only.diff",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/original-runtime-binding-only.diff",
+      "bytes": 1369,
+      "sha256": "6988b0c748ba368237c6c784c76737df52282a1c71d33b3fd44179b1c5cae9aa",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/original-runtime-host-self-probe.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/original-runtime-host-self-probe.json",
+      "bytes": 2873,
+      "sha256": "36288c9374a541f556371a16450cb4a6cc801eea37dd25bd550d101b39974401",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/owned_peer.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/owned_peer.py",
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "source_mode": "0755",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/run-truecolor-original-runtime-once-cleanup.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once-cleanup.json",
+      "bytes": 656,
+      "sha256": "c75301c4ba2a31444445eb4db07dc50d32246b699989def23ce8b992a0875595",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/run/01-markdown-committed-and-live.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/01-markdown-committed-and-live.cells.json",
+      "bytes": 1958626,
+      "sha256": "8636bc9d3c80dbd74d9643883ba4c88ace481a27afddc9f2986ff507acf758b9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/01-markdown-committed-and-live.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/01-markdown-committed-and-live.txt",
+      "bytes": 9400,
+      "sha256": "99a378b942b99318b83cbbc05d4726b93f46099c78da19c15bd2c86aa74a3e4f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/02-theme-picker-open.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/02-theme-picker-open.cells.json",
+      "bytes": 1958664,
+      "sha256": "b8020bdf6ee7e96a8f061e3ae94219a1e9287723e2009cd4e9adfc2dc6492bc5",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/02-theme-picker-open.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/02-theme-picker-open.txt",
+      "bytes": 9744,
+      "sha256": "486e510ccbf3609b1b0ae70982370ea48bc5f79cc8c0836561c5f61805641231",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/03-theme-preview.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/03-theme-preview.cells.json",
+      "bytes": 1952721,
+      "sha256": "662f4147d842f5f33823b83baf44ea2c68dd852e8230d588e7d28da58a9b9c49",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/03-theme-preview.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/03-theme-preview.txt",
+      "bytes": 9722,
+      "sha256": "1da6c68d9567933e3a456f857e578472436beb4b642633a36d70b204bb17cb2c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/04-theme-preview-cancelled.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/04-theme-preview-cancelled.cells.json",
+      "bytes": 1958627,
+      "sha256": "a15ae96f40c06fa20923040551a15c29872d6f818e486c58fe67f51a21d4f62d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/04-theme-preview-cancelled.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/04-theme-preview-cancelled.txt",
+      "bytes": 9400,
+      "sha256": "bb92bf2d75da334470f0d34fc8f4d01eb99f7972183db82ba8be3bcc9e0d3b61",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/05-theme-preview-committed.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/05-theme-preview-committed.cells.json",
+      "bytes": 1952221,
+      "sha256": "647bc44bf1b29f50256743a8011cdf39910918f4869319cd99b387205d9e5977",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/05-theme-preview-committed.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/05-theme-preview-committed.txt",
+      "bytes": 9400,
+      "sha256": "08fcf2d8180b0bb229ab4434f2411d0925d7892e8f7880bc6bb1b346cc87fbcf",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/07-return-original-palette.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/07-return-original-palette.cells.json",
+      "bytes": 1958627,
+      "sha256": "3ca0de184d322a6ee88e7dca948fbe332d7b7278c306c3cefebc27d84ec8d473",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/07-return-original-palette.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/07-return-original-palette.txt",
+      "bytes": 9400,
+      "sha256": "bef0192f67bb1abb4cd46dddaeba0b8833b3cda7dde0f5fc8ab906726e5ef4b8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/08-resize-narrow-live.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/08-resize-narrow-live.cells.json",
+      "bytes": 488254,
+      "sha256": "50e82ef89caac71e159e84ccb6e3fac2a5b712af3a1c2ad44de0153c671a2ab7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/08-resize-narrow-live.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/08-resize-narrow-live.txt",
+      "bytes": 2920,
+      "sha256": "925b8103232b083ba16edf25fab560f38327b1ea133003fbe0db46e96ffc49da",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/09-resize-wide-live.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/09-resize-wide-live.cells.json",
+      "bytes": 1958627,
+      "sha256": "3e1785b57d8a6abb2b3691691176d350cef34b569110ad91021c83399aa96fe8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/09-resize-wide-live.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/09-resize-wide-live.txt",
+      "bytes": 9400,
+      "sha256": "28e4db3010529957c3adf2389d1edf89fc94282fada9c1f948aadc20df99d030",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/10-scroll-oldest.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/10-scroll-oldest.cells.json",
+      "bytes": 1958952,
+      "sha256": "5f3c13442fff67a996eb7cb64a1764e08844e45821998585fd22bcc3f46eed9f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/10-scroll-oldest.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/10-scroll-oldest.txt",
+      "bytes": 8510,
+      "sha256": "5f1079c902044097844d5e833eea8587446aa8ffa8942a8ec893fcca1b26adfe",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/11-scroll-middle.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/11-scroll-middle.cells.json",
+      "bytes": 1959266,
+      "sha256": "802efc835ae975df4eb8139a1f683fa456bdb98343ebabec73883192d24139d0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/11-scroll-middle.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/11-scroll-middle.txt",
+      "bytes": 8462,
+      "sha256": "ab93c69e8bf2cc9fb429669b06aff18dea587c349e775ac86831ddebbbb62d45",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/12-scroll-return-to-follow.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/12-scroll-return-to-follow.cells.json",
+      "bytes": 1958626,
+      "sha256": "f446bd269c7425204797c2094570a500f02db9e1a9cf49b39c5bf84e34ae2ee3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/12-scroll-return-to-follow.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/12-scroll-return-to-follow.txt",
+      "bytes": 9400,
+      "sha256": "3f62573c695892e83669acdea6d5155a745469175990c403f14f53410ed0e9ae",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/13-live-append-after-interactions.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/13-live-append-after-interactions.cells.json",
+      "bytes": 1958626,
+      "sha256": "3891167bc4c0425890e9d806efe44a1cb4e5f52404e961297d86820f3770bc3a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/13-live-append-after-interactions.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/13-live-append-after-interactions.txt",
+      "bytes": 9400,
+      "sha256": "1621c0aafc0636b0018e7770fde065a1698313b68752640e382e84c91c6c29b8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/14-live-committed.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/14-live-committed.cells.json",
+      "bytes": 1958628,
+      "sha256": "68bb00ee16597ca65747b68e11f4777a32ca16ef819df432f494a938269120e9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/14-live-committed.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/14-live-committed.txt",
+      "bytes": 9397,
+      "sha256": "0f2c5681e2b2339d301490f962dfe8f27b2fb4f98d6531512859618ba763c9d5",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0001.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0001.json",
+      "bytes": 58,
+      "sha256": "25ad3c6754482eeba66280f030ce87fe9e94a2af19e9f710c43bae44437f54c2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0002.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0002.json",
+      "bytes": 58,
+      "sha256": "1c73e127d545cca75376cb00b61c24198331d263e9e8b1c3279ca53b58e3eca9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0003.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0003.json",
+      "bytes": 58,
+      "sha256": "5eb3a9e3912975f00423a9917d9123ced8ade8a95714ee08a2dc9ae1b9a8d808",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0004.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0004.json",
+      "bytes": 58,
+      "sha256": "0e3ae5c215435fc0ff55c1444d88cd66d6717eaaa480b7a89da74fc354089a63",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0005.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0005.json",
+      "bytes": 58,
+      "sha256": "bd415f3f60e5e83935e35cde1f74f267cb169d4f9f7fc8f0f178ca86c3ef04b2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0006.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0006.json",
+      "bytes": 58,
+      "sha256": "b6059d4b57264d04f03f468aeda8baa18697c2774b85145a8b673f2af2265439",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0007.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0007.json",
+      "bytes": 58,
+      "sha256": "8ac93b87a2b5dcb36fc9239eced58ab88b167e374ee3a494741307d7824a1f16",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0008.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0008.json",
+      "bytes": 58,
+      "sha256": "652fa5c1049b84d2d0adfa4d7acf7a5fccca090c3d403ddb97ae868b27a8cc8a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0009.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0009.json",
+      "bytes": 58,
+      "sha256": "f901b7738dce7f6445040ce3a708ed4b6469fa3c6b1ef503474cf153e2b952b9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0010.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0010.json",
+      "bytes": 59,
+      "sha256": "ddb6f03ffd76e0cd8a7949f968618492cac1318819998da22cbfbe4f0893dbfc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0011.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0011.json",
+      "bytes": 59,
+      "sha256": "73421d37dcd604c3cff87265d267c9b24b7c4f45801baca8c67461c5c31177b1",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0012.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0012.json",
+      "bytes": 59,
+      "sha256": "a43d739be113eca11b584dc23863c142e58d32cc3eed5e917e6746d3b6537ecc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0013.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0013.json",
+      "bytes": 59,
+      "sha256": "3f33f419db42e304dcc038b1763a44fc1ce48f885138fcf29b56e359331973c4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0014.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0014.json",
+      "bytes": 59,
+      "sha256": "9112613a509b030b3d1d83af27dee27689c4b9242e32bd4ce08ee8871412e016",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0015.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0015.json",
+      "bytes": 59,
+      "sha256": "30f5bd97bebd57443f1da0e8a9e07149cd7382939c6996921eb9e4daadffbcae",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0016.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0016.json",
+      "bytes": 59,
+      "sha256": "5356e6cff8398990e95137cd3a678f521b6b5d3ee874af93092f355e0053f452",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0017.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0017.json",
+      "bytes": 59,
+      "sha256": "c6cec881b851ff8d985cb98ab7e115c51ab2264f4c40adf76f3698d2539f5e41",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0018.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0018.json",
+      "bytes": 57,
+      "sha256": "9091c04539e1a8b5828931d737a6633f12fa956052e96287a4ce861218a4f664",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0019.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0019.json",
+      "bytes": 59,
+      "sha256": "37ca12b763fc4e4c5865cb040bacb2cf5f320ecaad8eba62f5cb30df2eeb7ee6",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0020.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0020.json",
+      "bytes": 59,
+      "sha256": "c1ebf4bfa48b8b766d079f918030e48177152aaf1f8c5f6e6414313c3c0d5a99",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0021.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0021.json",
+      "bytes": 59,
+      "sha256": "01845672d2161bcc31e905d14b4df4cea7cfa9a6490d025eb20cc7076374b05d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0022.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0022.json",
+      "bytes": 59,
+      "sha256": "4a6fa948c827bbc222f2cb28c4bb0855d2a669e29fbcdc4b190bbaa0a087d106",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0023.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0023.json",
+      "bytes": 59,
+      "sha256": "16a364f602ed3d2d9b052ce0d44d3e40cb00e938ebad5543fc6ea42493b13ebd",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0024.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0024.json",
+      "bytes": 59,
+      "sha256": "807dec8d8788eaf0d4d4825a4fb1c7f177f626f9cd9eef1652a338fb2c051d0b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0025.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0025.json",
+      "bytes": 59,
+      "sha256": "06e3f607029455cffb5cac1161d4eb5c44c823ce8d18685a7cd017a96bd672f2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0026.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0026.json",
+      "bytes": 58,
+      "sha256": "74f9d84568060670fa09bea4ca0e73eacf2cbff18343298396ae071eb541dd9b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0027.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0027.json",
+      "bytes": 59,
+      "sha256": "e13ed11757f905b5d01123ae1808b8d3fbf338f24c898e0b2406a1cabab2e878",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0028.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0028.json",
+      "bytes": 59,
+      "sha256": "437d09b2a5f040f85c06fe047db7921f5dfb82b1b0df5f1b5a65cf6ce0a73d9d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0029.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0029.json",
+      "bytes": 58,
+      "sha256": "0218db525f62cf4f23164e4934d1ca4db2b7542a5a5a20d695949b7bf5490168",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0030.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0030.json",
+      "bytes": 59,
+      "sha256": "2b39ac193ca19d153f20c461f9a54730703b765c306e4edaa79169c52126a130",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0031.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0031.json",
+      "bytes": 59,
+      "sha256": "b67e2a996e2382576f263a7c712aa8c4a2b65fbc11ad21fc27435333efe5aaa0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0032.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0032.json",
+      "bytes": 59,
+      "sha256": "0aa7c180ee41e161092c311f058b5d37c5178dc5265faa60582dbf37a4814b9f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0033.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0033.json",
+      "bytes": 59,
+      "sha256": "619c9a32c2d9e8daf7164d8396ff7acc44a5e01b1c82c5f6d0c68de405d0549a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0034.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0034.json",
+      "bytes": 59,
+      "sha256": "d6ae49c3fd341317be842df5242e4c9769c42d294793214656ec533dd9adf8e5",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0035.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0035.json",
+      "bytes": 58,
+      "sha256": "07d84a341b9b0024739190678afe8194ecd7dde32b526ec09e0b4b31f4fbc505",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0036.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0036.json",
+      "bytes": 59,
+      "sha256": "ca14fcee7578ff12376a12dd6cff8b4de6bb176411957bcbf07ea8c35d479807",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0037.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0037.json",
+      "bytes": 59,
+      "sha256": "633ef5f616424d13456199e840d07476654c2d5d970e92417bb66b5729f923f6",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0038.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0038.json",
+      "bytes": 59,
+      "sha256": "ebebf1198907063f6c07f8b73e66ad7ebc891d92a484fe86855122d8f83c59eb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0039.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0039.json",
+      "bytes": 58,
+      "sha256": "8ccdcd2ada4078260aee44e592e7c6c8c98b0d5302f33fe3363950411ecf40f6",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0040.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0040.json",
+      "bytes": 59,
+      "sha256": "094a1689acf9ccc3fc7f26e3f967855b9a1d3da556745c60ac3f55c922a8bdbc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0041.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0041.json",
+      "bytes": 59,
+      "sha256": "325dff7541ae581554d96756b1cb19cfebf0fe1087f8fcd700af369dc8a449fb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0042.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0042.json",
+      "bytes": 59,
+      "sha256": "d9837971e5cdf9516fcd45608f46d5b80cbc3663217f16d4e0244b8967795383",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0043.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0043.json",
+      "bytes": 59,
+      "sha256": "b99cfce11c3a6b55c9c664e43c2f0dd962ef22805a6b6c35e5eea2381e0ddbca",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0044.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0044.json",
+      "bytes": 59,
+      "sha256": "085c0b8e7e35aa21e164d1f48e8b228c5dc853f4a40ebcb99ac9856f1b5dc9ab",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0045.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0045.json",
+      "bytes": 59,
+      "sha256": "dd3ecc27032910bef384708d41ccb4f0dda37b062f7d5dc524b7e91de13099f2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0046.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0046.json",
+      "bytes": 58,
+      "sha256": "20a5b6c501d75c43ccb29ec51bcacacbb3a87dc7b328f9c826bfdbeb3aba9d84",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0047.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0047.json",
+      "bytes": 58,
+      "sha256": "0e409e2934a78f296448c914d0ac2495ed4076247b17d8d8008d64c551101a91",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0048.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0048.json",
+      "bytes": 59,
+      "sha256": "cb2c4dc7d194528fc745e3d23a2cc61d972879878ca4f4faa5eb46444239a140",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0049.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0049.json",
+      "bytes": 59,
+      "sha256": "611f763a7f334e2dda287df8a0f8091ad0ef8ee02787d3cda287989b226c5896",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0050.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0050.json",
+      "bytes": 59,
+      "sha256": "c7b15cff261b2cc2eb35a527cc98c2fe6dc254be3e1dbfcf74617ba801fef24e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0051.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0051.json",
+      "bytes": 59,
+      "sha256": "3cc57a2cdfa95f92398f702039ec08b43df33ffe633753b1005f7e4d8cf46d63",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0052.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0052.json",
+      "bytes": 59,
+      "sha256": "f3493aa931f5e78f8cfa8c1535b9d9beab9683e3cb670c15ab0f02d1a1de9326",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0053.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0053.json",
+      "bytes": 59,
+      "sha256": "deccd10e6a6e5eabcf3c7671de50836b61a1fd3d6add148f37cd3a488f48ccbe",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0054.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0054.json",
+      "bytes": 59,
+      "sha256": "46b98f1078b8779d2bbc06664bd50cfb478d96b596d3a7e6d116dc568b5166ca",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0055.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0055.json",
+      "bytes": 59,
+      "sha256": "a73ff51773b1f8cfb527319a9e8581244181df18cfbefeee10533689a9903d17",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0056.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0056.json",
+      "bytes": 59,
+      "sha256": "b050299f778bb475a4587ab7532ba6f0e98be2d1db8c1d7d6ae2de73cbaa1f83",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/ack-0057.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/ack-0057.json",
+      "bytes": 59,
+      "sha256": "031503b58b695b6ecc1f8377325552cc5fc79f833e7b011c86b3396dc542c052",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c01-live-thought-append.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c01-live-thought-append.cells.json",
+      "bytes": 1959110,
+      "sha256": "5bfa81976940807efb6c5f9ac67ce8ec02ebcf9c313499a554df2eb3b62fa8c5",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c01-live-thought-append.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c01-live-thought-append.txt",
+      "bytes": 8382,
+      "sha256": "e85d142f9747f1221ffaed815a3b7faaa35915ef94431897e5b0ac4f7499c713",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c02-live-text-append.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c02-live-text-append.cells.json",
+      "bytes": 1959076,
+      "sha256": "254e67529691b55ab68b67f34d690a10bdb9aad89cf6eb061fd73380e797b535",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c02-live-text-append.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c02-live-text-append.txt",
+      "bytes": 8380,
+      "sha256": "e5dbd98b2869c48858d8eb5d44884939a1fa17e29d6c2e8858cd5467fa9286ac",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c03-tool-boundary-chronology.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c03-tool-boundary-chronology.cells.json",
+      "bytes": 1958920,
+      "sha256": "93de8f3180b16e1c33b2c221be999241c0b3cc74fb0084848c27f7808e3a6af2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c03-tool-boundary-chronology.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c03-tool-boundary-chronology.txt",
+      "bytes": 8392,
+      "sha256": "5f0153b257cfa5bc3c5c5e5c097470e29dd913bab757af225e7435be0fb2bbde",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c04-visible-tool-source-update.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c04-visible-tool-source-update.cells.json",
+      "bytes": 1958915,
+      "sha256": "cec41b4576610b822399744e1357cf92cf1da3feb6abbd16d8a30bd28bfefc48",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c04-visible-tool-source-update.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c04-visible-tool-source-update.txt",
+      "bytes": 8392,
+      "sha256": "dadbd6abfb9093c249fe4054c2764c1be3228f9f4fec489517675b0cd56554cf",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c05-clear-during-live-text-and-thought.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c05-clear-during-live-text-and-thought.cells.json",
+      "bytes": 1959145,
+      "sha256": "ef3bd455a377e1e7da854e815912e1474f5855d4837086a8ad53465051a8417b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c05-clear-during-live-text-and-thought.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c05-clear-during-live-text-and-thought.txt",
+      "bytes": 8380,
+      "sha256": "b4a9396baced064cae4eb91319b168e7458b7fd29d18e4cd8b82b54648217069",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c06-clear-reused-tool-and-turn-complete.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c06-clear-reused-tool-and-turn-complete.cells.json",
+      "bytes": 1959045,
+      "sha256": "9bc2ea32c3a3234323ed577d512de2a956e90fd776bf454fb29de8fbf965a759",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c06-clear-reused-tool-and-turn-complete.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c06-clear-reused-tool-and-turn-complete.txt",
+      "bytes": 8383,
+      "sha256": "8163701e85b95b4523705250a3ec4061af21d87b62f7c23b84a6f72b2648b5c0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c07-cache-pressure-newest-and-live.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c07-cache-pressure-newest-and-live.cells.json",
+      "bytes": 1958151,
+      "sha256": "0328e2e9e422c3a761b0fa6780e9f94ac6aa78961bd7210398beb6b213abf51f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c07-cache-pressure-newest-and-live.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c07-cache-pressure-newest-and-live.txt",
+      "bytes": 9878,
+      "sha256": "9cc77c6565c6199505668dd7876f26aea32376f95e446b49cb23d60d782a27f4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c08-cache-pressure-oldest.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c08-cache-pressure-oldest.cells.json",
+      "bytes": 1958062,
+      "sha256": "00e876367e74f3338c8bc7303276ffdfe3d30da2ec507357f22eca22f2d22be8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c08-cache-pressure-oldest.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c08-cache-pressure-oldest.txt",
+      "bytes": 9884,
+      "sha256": "cc24c67182efb66dedb5e004f00e4280c330f190ff5d8fa35dcccc672b0477f3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c09-old-visible-tool-updated.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c09-old-visible-tool-updated.cells.json",
+      "bytes": 1958051,
+      "sha256": "81ef81721f92d5f704408946238c63c7aec9f603f9097a1e816286862f3ec123",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c09-old-visible-tool-updated.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c09-old-visible-tool-updated.txt",
+      "bytes": 9884,
+      "sha256": "35b3475ed920f0dfbc55da5368163bdd8f931465a3e8c040dbedf8bc0f4b69a2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c10-cache-pressure-middle.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c10-cache-pressure-middle.cells.json",
+      "bytes": 1958082,
+      "sha256": "f8a5e63e3bd6c118c4b601cd7ac6d62e9da44c8059df3c5c68287c5baeeee7ae",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c10-cache-pressure-middle.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c10-cache-pressure-middle.txt",
+      "bytes": 9880,
+      "sha256": "abd038cfb6574e897f2aef0dfb3f649a9ba0e458ae0cfe6cbe5067235014f304",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c11-cache-pressure-return-to-follow.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c11-cache-pressure-return-to-follow.cells.json",
+      "bytes": 1958151,
+      "sha256": "f1b7b4e3c26a127c1e89b8174f067d7a9628923cde6e0e9ff690494cb63896a8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c11-cache-pressure-return-to-follow.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c11-cache-pressure-return-to-follow.txt",
+      "bytes": 9878,
+      "sha256": "035c282f0872c6142373d47d5be4e87fd6b7fb33bf14e7b268abba51f7545844",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c12-cache-pressure-narrow.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c12-cache-pressure-narrow.cells.json",
+      "bytes": 488352,
+      "sha256": "34cd21880a801ca16f1b495e4911489dbb5cc148533a8eece6cd18c2e6ce1dd8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c12-cache-pressure-narrow.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c12-cache-pressure-narrow.txt",
+      "bytes": 2618,
+      "sha256": "423470955d9bcc203d951303af0b28d42ad3ddd19a3305992e11f7f8e9fc9c0d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c13-cache-pressure-wide.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c13-cache-pressure-wide.cells.json",
+      "bytes": 1958151,
+      "sha256": "d4fe2880928c283cd6bfb6d364a79164347a95fa7fd1eb6c98a5c22db79e9725",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c13-cache-pressure-wide.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c13-cache-pressure-wide.txt",
+      "bytes": 9878,
+      "sha256": "0c0378f4aa075b7c64bc9dda1a8c7305d264ce1ad5aef11e1e5ec7695d6f59c7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c14-cache-pressure-height-only-short.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c14-cache-pressure-height-only-short.cells.json",
+      "bytes": 488577,
+      "sha256": "365e130c33c9eecb23e801cf0dbb4a93c55ce37efd05284443a1c0d3601c1da0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c14-cache-pressure-height-only-short.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c14-cache-pressure-height-only-short.txt",
+      "bytes": 2594,
+      "sha256": "3f9878c489541e977435e661c759f22742402ff14551ac002ee27f7674c37cec",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c15-cache-pressure-height-only-restored.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c15-cache-pressure-height-only-restored.cells.json",
+      "bytes": 1958151,
+      "sha256": "7e9f8daaf24f726d15866d2dc15950f892b473f20bd44da4d3c97f254338014f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c15-cache-pressure-height-only-restored.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c15-cache-pressure-height-only-restored.txt",
+      "bytes": 9878,
+      "sha256": "c7a49a0cfb8d3d565a34481a51cfcd432130336ff07b6647ec22fb7e3726c13f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c16-cache-pressure-palette-changed.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c16-cache-pressure-palette-changed.cells.json",
+      "bytes": 1952222,
+      "sha256": "77605e0a2fd8a87be1180144b977805ec1facd79908f32bc593ce055a5a454d2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c16-cache-pressure-palette-changed.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c16-cache-pressure-palette-changed.txt",
+      "bytes": 9878,
+      "sha256": "aeb32b4a106912bd7fdb2779e599ed1e1aa6b17188f9e7ea4f75d00764d7a07e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c17-cache-pressure-palette-restored.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c17-cache-pressure-palette-restored.cells.json",
+      "bytes": 1958151,
+      "sha256": "33a2ad98d1aad63fd5294daaa84846e6908be5ff81056a444621da999a873b09",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c17-cache-pressure-palette-restored.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c17-cache-pressure-palette-restored.txt",
+      "bytes": 9878,
+      "sha256": "80fc60f0db7ea55b28dd43ee5f44af73a794115ed0a2cd2a66e8c9e81225fa60",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c18-crew-child-created-main-stays-selected.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c18-crew-child-created-main-stays-selected.cells.json",
+      "bytes": 1958762,
+      "sha256": "e5b3e83b5dbc29fa3209fb55cb2e1da9c8c07f9f034f673ebd9f65039c20fb86",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c18-crew-child-created-main-stays-selected.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c18-crew-child-created-main-stays-selected.txt",
+      "bytes": 10480,
+      "sha256": "e85b5244798be2d1ea1ec3acb72de161f44a1b62b4d6bce37d32d9ac7a5f4fc8",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c19-crew-child-status-and-stream-updated.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c19-crew-child-status-and-stream-updated.cells.json",
+      "bytes": 1958762,
+      "sha256": "825a115879357a6db4eb29be398e161ac1ebcbefe5cae0ae6885c8d7736fe656",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c19-crew-child-status-and-stream-updated.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c19-crew-child-status-and-stream-updated.txt",
+      "bytes": 10480,
+      "sha256": "e4745a4802287e5101992f6e98695d9878904ce017c32607154192c0672b4b2b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c20-crew-child-terminated.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c20-crew-child-terminated.cells.json",
+      "bytes": 1958770,
+      "sha256": "2a8799099f3d8342e3e47edd6db7b93fdf8dcbe7a859fe579a38df78359c6a78",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c20-crew-child-terminated.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c20-crew-child-terminated.txt",
+      "bytes": 10480,
+      "sha256": "5f4d05342bd7c6221ccdc1539a5671cc3b3ce394b14657dbdd8cfe3cfeea93ba",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c21-crew-child-removed.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c21-crew-child-removed.cells.json",
+      "bytes": 1958178,
+      "sha256": "1904a2664e343b191928e335de376b363114bab626a3b566f1cba00b68ab0e81",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c21-crew-child-removed.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c21-crew-child-removed.txt",
+      "bytes": 9876,
+      "sha256": "02c5197c95f0bdd09b8decdcb646ea48c3e390f8b33ccb24d4e2de06267c0d75",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c21a-captured-failed-validation.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c21a-captured-failed-validation.cells.json",
+      "bytes": 1958361,
+      "sha256": "e8a29fd5226df678bbc61be77c52030aa4c617ff45eb3c9057b50d9a518f045c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c21a-captured-failed-validation.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c21a-captured-failed-validation.txt",
+      "bytes": 9410,
+      "sha256": "551c6737d4e0157c6f5daf0d0ed55b2b010c250eff4116abd92eb9a92435631c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c22-final-main-turn-committed.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c22-final-main-turn-committed.cells.json",
+      "bytes": 1958363,
+      "sha256": "991f38e684536d591608f253e804c858ac942dc0805ef011ebaab377ea1601bb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/c22-final-main-turn-committed.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/c22-final-main-turn-committed.txt",
+      "bytes": 9407,
+      "sha256": "078bf504d4d7a6d5f21dff1692f75205bc6c896b08b2a6b2a67b8e7d137e61c7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/config-final.toml",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/config-final.toml",
+      "bytes": 159,
+      "sha256": "08ece5ae40189a9cf4f31ea3e15793775100de29648099689511c94e98754cf9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0001.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0001.json",
+      "bytes": 4290,
+      "sha256": "3a93081db084c7e629ecb3fef331fe5b9bdfa3d588bacfcafba13a0a7ac28de6",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0002.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0002.json",
+      "bytes": 236,
+      "sha256": "fc2391d4e618c105165337de12355f0acb92918af37714bef10de9a2c39a2ba7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0003.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0003.json",
+      "bytes": 174,
+      "sha256": "b358196d37a004cfe63c2cf319145e92f2dec536118f98b99f64188a9faabc0f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0004.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0004.json",
+      "bytes": 23,
+      "sha256": "ad1ed6243ea081e7d97d9e7bf7443870a40e1ea693c6c7fb4a35354451f1de93",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0005.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0005.json",
+      "bytes": 404,
+      "sha256": "f4ee2e047b7ce055b3b01601cb4ad0fcaa17933520ece63901ac873f9644b978",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0006.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0006.json",
+      "bytes": 602,
+      "sha256": "2608083577ffd32c8988e1cb8b59ed125e7957018636204197f78923dbab0935",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0007.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0007.json",
+      "bytes": 163,
+      "sha256": "38045d08069609c39f9d7287a5b94c4983168045b56186750373e784491adf83",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0008.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0008.json",
+      "bytes": 520,
+      "sha256": "e4e5ff8f35fbb016fc9cbe0be05309336fa6c49b4d7a3229a8957c6c25de84cf",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0009.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0009.json",
+      "bytes": 600,
+      "sha256": "4f6ad0001397d18867d680fecf9781b93652f7b810bcc9ee8ee77e86786c932a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0010.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0010.json",
+      "bytes": 2157,
+      "sha256": "95097f147fc94d2c25b143fe28420b7b9c68933b527b7e757d5df5450f169f80",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0011.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0011.json",
+      "bytes": 454,
+      "sha256": "6e8d1f59aaa04ff6298f579e0abb29c458e8e696e57d79ae31d0071d93a3b8e4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0012.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0012.json",
+      "bytes": 369,
+      "sha256": "17a66b6a86cb21830bf6b6ec4e953f66075e18f97c10976f300b2d0a9ae8ac72",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0013.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0013.json",
+      "bytes": 195,
+      "sha256": "c281b7b2cc0026ef8fa0d402e20dd22b7df81aec6987c101fad29ea1791a6ff5",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0014.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0014.json",
+      "bytes": 170,
+      "sha256": "94e62c8fb92b2d15aa9dd600f0a83361137105f2589496aafcd1bf85052349ca",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0015.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0015.json",
+      "bytes": 172,
+      "sha256": "09d2fcd9bd35cb3646c6d234255c79a2bd24d4210b56f06bf061444c6325b1a0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0016.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0016.json",
+      "bytes": 200,
+      "sha256": "67faea41eb8751ec006a97ddb458bd6a51f40d5566186ec19c249d7cb370f488",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0017.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0017.json",
+      "bytes": 169,
+      "sha256": "c50e6e8369f19ce8976e69d562549c0d3252fee1f1fd09b199609d1a689d2035",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0018.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0018.json",
+      "bytes": 170,
+      "sha256": "8941275bb5ac086a1e9c26800cb51fd0e2e008541b747e5abb098261d135da4c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0019.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0019.json",
+      "bytes": 618,
+      "sha256": "88240ae19305f193f912b27fff905ce914f2870b75bdac0cdf0f369719ebdefb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0020.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0020.json",
+      "bytes": 393,
+      "sha256": "240d9f81be8136a9943ba63803acbb2872175a6f750e2a8590894c613a80fd65",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0021.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0021.json",
+      "bytes": 327,
+      "sha256": "955f38d7cec5ee958e397caa59b7d063600e52aeef4d39b3f0d939b9a5df19c9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0022.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0022.json",
+      "bytes": 772,
+      "sha256": "c679d98fbc07387c922d5b30d3efd69fe30207dfe45fb5416c5ef144b8dcf2f7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0023.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0023.json",
+      "bytes": 6933,
+      "sha256": "0524cccaa93fa052db60380fdba146581ab60197f31ebff7cae2e03e9d9f1392",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0024.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0024.json",
+      "bytes": 6742,
+      "sha256": "9398251558d873c538b5a6d5dbff026f374ca13bf7c889ee4c6809bac8169080",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0025.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0025.json",
+      "bytes": 6742,
+      "sha256": "a46e142f020dcfcc246040c3a9ea6a8e08ae618fc1084df4a41d5efc3f7b0b5b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0026.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0026.json",
+      "bytes": 6742,
+      "sha256": "c59d5c6aac913298b46cec89d189872c0e7db4d5f1cbd2aff2e7d23d91971ad0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0027.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0027.json",
+      "bytes": 6742,
+      "sha256": "588b9142b4f6756654a19ab210859891d95d66901220909a2b43aaceac78d272",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0028.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0028.json",
+      "bytes": 6742,
+      "sha256": "0b2ad77cadb8874649fd86709e2cfa78c155ccb9b1c14ad7dd8310758b52e992",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0029.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0029.json",
+      "bytes": 6742,
+      "sha256": "cd54759d549da612109835b5a5ce69bff65e4670d06ecfec54602e09101e2891",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0030.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0030.json",
+      "bytes": 6742,
+      "sha256": "b58fdfabd98f803d6721f3db57ad70582d7905c00de6a0e1d14cb12e82c369d4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0031.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0031.json",
+      "bytes": 6742,
+      "sha256": "0b9279732a1bdeadac09dac25ab21aabfca85a21c4811b6813d4d9ba8d8c6210",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0032.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0032.json",
+      "bytes": 6742,
+      "sha256": "d2c94670276fa173028b4a0f7b6b47378a9ad1aab8bce89477b8b12ebe7bae85",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0033.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0033.json",
+      "bytes": 6762,
+      "sha256": "01a0ccd387c20e6ab3b6278e048b5570f867786037348dd10915f930a6a2ebe1",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0034.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0034.json",
+      "bytes": 6762,
+      "sha256": "f4fbfe554940d5f0d6aa80261de9c5e2e4a70c05eb08be871606942541f5d8f3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0035.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0035.json",
+      "bytes": 6762,
+      "sha256": "60fbcce5f33cf558c4740990e2fca3678ceb36612f648955452a688351c8528e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0036.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0036.json",
+      "bytes": 6762,
+      "sha256": "1d04bf3550e57717051789bd2dbb4482e67db9a518b37b1c243fe644cae20ad9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0037.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0037.json",
+      "bytes": 6762,
+      "sha256": "d9cfe6332fb7984c161155eb9f2c4f10ac26e633ff115c26fb3cb278bb88a7b4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0038.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0038.json",
+      "bytes": 6762,
+      "sha256": "c67ab6de048037c454ca3d7922cfdb7282c0b83a20bc1f7ed990a8f55816f377",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0039.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0039.json",
+      "bytes": 6762,
+      "sha256": "b00232e4303a84c19c7e343d7cfeee368bd7c3324bd0f15da496cf4fb0fa4437",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0040.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0040.json",
+      "bytes": 6762,
+      "sha256": "87b692aa6f969ed287dcec72cac78542845f2ee28ae02124dd7c0e14cf593c7e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0041.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0041.json",
+      "bytes": 6762,
+      "sha256": "49e7589607a9ccd461cf11aa8252753fa2948908fca792d11f90e77fe3c1b369",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0042.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0042.json",
+      "bytes": 6762,
+      "sha256": "690ec0b52d92bf6b1dffeab6cf9a3267eacf0d7c984c8972432922e07d2ee03c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0043.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0043.json",
+      "bytes": 6762,
+      "sha256": "9600b83cacfde8f8c12b3c83f94d626f64ae60d8c2b1c51b8011054f2db4efb1",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0044.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0044.json",
+      "bytes": 6762,
+      "sha256": "8f83cee545d5f8adbde7dda00bc29b136e997a41534cc117fc436ad84ef86468",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0045.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0045.json",
+      "bytes": 6762,
+      "sha256": "497e0665e9ae728d5054b5c44089d23a445cc3d96749fcbf913ee1ad82e9f6aa",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0046.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0046.json",
+      "bytes": 6762,
+      "sha256": "ed97078c481d1ba075e57dfd3c89c325e0cd0ae5f8f80bc0712e63f77c92d613",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0047.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0047.json",
+      "bytes": 6762,
+      "sha256": "2373c472f8f1ace7aa7403829f03533a1e26c8e125c44d9bcb276a508f6e4526",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0048.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0048.json",
+      "bytes": 6762,
+      "sha256": "894d42b987128c28bdb122ef9bbcebd59b716d685f997a54cd35acdde31deb6a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0049.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0049.json",
+      "bytes": 6762,
+      "sha256": "ba9d264c66bce8ffe27224f6d822ffc766fd81862f00b9e80ad5ff13ded80faf",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0050.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0050.json",
+      "bytes": 175,
+      "sha256": "af724f1b28f4affb7434533860127c940e22dcb57ff2dc04bd7754ff50fe7d52",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0051.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0051.json",
+      "bytes": 392,
+      "sha256": "67aafd741f17da70a4996db7029171722470134ea6c168f75c9351e4677bee96",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0052.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0052.json",
+      "bytes": 2266,
+      "sha256": "6d06dc556e31fea2d89a3c55d446bc01a4bb6f5d38ef3ba3e6431c07d204f02c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0053.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0053.json",
+      "bytes": 2302,
+      "sha256": "7fc38df682383efb208e447a76da29b2e4c7aaad039f635e71f6db8f678c40d4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0054.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0054.json",
+      "bytes": 839,
+      "sha256": "53fa945585acac5079ef9e53a14a564e8bcfa886742a1fe75699186b48c948b0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0055.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0055.json",
+      "bytes": 456,
+      "sha256": "9bc4275c0df3e4ab579f87efd947544650a917d93a734cfb51cb9bddc69c84cc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0056.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0056.json",
+      "bytes": 2559,
+      "sha256": "e433c0c070d857534312cd265f201fa5c836438d09c231e767b2d2959a540f49",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/control-0057.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/control-0057.json",
+      "bytes": 182,
+      "sha256": "395db1d7dde09c9f1011728ceefbc81511b1f0f20bcbfcdda0a09dd87628a39a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/cyril.log",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/cyril.log",
+      "bytes": 169171,
+      "sha256": "a814682f03413319e9b9aa6a8bcb809fb5c45ca277d66d0a14e4ffede0ba2a4c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/events.jsonl",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/events.jsonl",
+      "bytes": 204833,
+      "sha256": "804aa0a96d00d9ca8e07c4224ee8050341708c94404ab954531784b824c5eef3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/final.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/final.cells.json",
+      "bytes": 1958363,
+      "sha256": "991f38e684536d591608f253e804c858ac942dc0805ef011ebaab377ea1601bb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/final.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/final.txt",
+      "bytes": 9407,
+      "sha256": "078bf504d4d7a6d5f21dff1692f75205bc6c896b08b2a6b2a67b8e7d137e61c7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/harness-snapshot/c6la_scenario.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/harness-snapshot/c6la_scenario.py",
+      "bytes": 20648,
+      "sha256": "0f230351b67945f800b92da4d7141bfe06d0f0de0f5bf035618ba1a31303f79e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Exact executed actor/scenario Python snapshot recorded by actual safety.json; stored inert."
+    },
+    {
+      "arcname": "consumer/run/harness-snapshot/owned_peer.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/harness-snapshot/owned_peer.py",
+      "bytes": 4271,
+      "sha256": "6c5b5b64f1e5d4ec306b6028e299a96340891961dfaf0cdb046dc2b1240f9cfe",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Exact executed actor/scenario Python snapshot recorded by actual safety.json; stored inert."
+    },
+    {
+      "arcname": "consumer/run/harness-snapshot/smoke.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/harness-snapshot/smoke.py",
+      "bytes": 23847,
+      "sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Exact executed actor/scenario Python snapshot recorded by actual safety.json; stored inert."
+    },
+    {
+      "arcname": "consumer/run/peer-state.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/peer-state.json",
+      "bytes": 326,
+      "sha256": "310af990a68e8ca7f1a3689b4cc577cdd87f301654e70c276be690e38e9f6cc3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/result.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/result.json",
+      "bytes": 126439,
+      "sha256": "4fcb3d08709cac47401b37dec6ca7dfaa5f71c1c6feb280363f502f8165aa24b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/safety.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/safety.json",
+      "bytes": 5038,
+      "sha256": "2ba199fdfda4a7ab5ee8e18a8f04aa2d64ff4cce9999175e25cfacd5e08b17e9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/session.cast",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/session.cast",
+      "bytes": 10740583,
+      "sha256": "f6fa755fd2ad54b65557b8d2c4c486cf66845276b61a4e8c9c60b43c4aead4c9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/terminal.ansi",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/terminal.ansi",
+      "bytes": 6317012,
+      "sha256": "755573027bbf7f117bca46fa360f12482488659eb09f6310f3ee10af6d4f4b55",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/wire.jsonl",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/wire.jsonl",
+      "bytes": 320130,
+      "sha256": "8283433e45c9c9ea2a9e4009dc392ce2f35ecf088d53c793fbc43a36f5a79e08",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z01-write-start.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z01-write-start.cells.json",
+      "bytes": 1958567,
+      "sha256": "840001c0e53d6d4ea788fd57ff152d06eaddf2a08005673f547ccfe4af3bcd31",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z01-write-start.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z01-write-start.txt",
+      "bytes": 9403,
+      "sha256": "41761f8e97f85e8f44a5965dcef2fbbe3cb1a72f2715e2fee26985dc201634d2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z02-write-incremental.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z02-write-incremental.cells.json",
+      "bytes": 1958562,
+      "sha256": "2e1024cc2302977b04e32f67743714ab79c4a11c61339274c56c28f838596f66",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z02-write-incremental.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z02-write-incremental.txt",
+      "bytes": 9404,
+      "sha256": "1013005b1b9ca69ce9474ca26382b407099637b987e8fe364a3e4590c43bf1a5",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z03-write-completed.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z03-write-completed.cells.json",
+      "bytes": 1958457,
+      "sha256": "e1f99053ad1e81791dc4d5f481848e0ae1e6724c745ae32167d0088d1eb50804",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z03-write-completed.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z03-write-completed.txt",
+      "bytes": 9414,
+      "sha256": "4acb9f062f1bd48bac3b8ab8e293cdc264021904dd56b52635e800f45c899a95",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z04-write-resized.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z04-write-resized.cells.json",
+      "bytes": 814364,
+      "sha256": "236959aa7661531e61774cea4063635229f2ce17ec5d90ef31a2c0476918f136",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z04-write-resized.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z04-write-resized.txt",
+      "bytes": 4092,
+      "sha256": "0ba2cec04ac677daf54fd774fd9a3a23be4ac2f1518a75faf95ee2ba272250ac",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z05-unchanged-first-changed-second.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z05-unchanged-first-changed-second.cells.json",
+      "bytes": 1958569,
+      "sha256": "500e61f427845af98c410ddaa45b081743dff4a9b30a81bd92bfe5189c7baf55",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z05-unchanged-first-changed-second.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z05-unchanged-first-changed-second.txt",
+      "bytes": 9404,
+      "sha256": "5604b5016ae63fde2d2490fb50588e7f4a75ed5af9e1cf54e3419a7720da56c2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06-replaced-diff-source.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06-replaced-diff-source.cells.json",
+      "bytes": 1958457,
+      "sha256": "00860b4eda799059d2fdbfb259be3d7ef67044b4e5140ee4bd2d9b51316c1cf9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06-replaced-diff-source.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06-replaced-diff-source.txt",
+      "bytes": 9414,
+      "sha256": "bedf5a863c22347419e43848fec1cf9aa27e36e65e7f6edc0870d53b8fe4fc17",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06a-retained-diff-new-palette.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06a-retained-diff-new-palette.cells.json",
+      "bytes": 1952051,
+      "sha256": "76e9392c92eac807101b3bbcb12832e5bd93edd0803047645e1b475f5a6c4660",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06a-retained-diff-new-palette.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06a-retained-diff-new-palette.txt",
+      "bytes": 9414,
+      "sha256": "7afc4cf890fd9201ef94c4af9847567ff2a336ea6977890089ae3462ba06a96b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06b-diff-scrolled-out.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06b-diff-scrolled-out.cells.json",
+      "bytes": 1951885,
+      "sha256": "4d27d00087f01759ea8a66913bebc9a834f16a7267653073a8328dd3e4d24ee0",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06b-diff-scrolled-out.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06b-diff-scrolled-out.txt",
+      "bytes": 8464,
+      "sha256": "c6ef78b7e3422d5bcfa1076aa1a77829ea8e893b6cc952be9df78eeb1443c1aa",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06c-diff-browsed-back.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06c-diff-browsed-back.cells.json",
+      "bytes": 1951739,
+      "sha256": "05b1c2a82fd457d546325e95cf01f687f5907bcef9fdc698cfdc1d32944b43b7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z06c-diff-browsed-back.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z06c-diff-browsed-back.txt",
+      "bytes": 8474,
+      "sha256": "93d2daf09f743f9119d03728619095fa5a8733da08ea3c9dffabfcadbc34a36e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z07-pending-comparison.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z07-pending-comparison.cells.json",
+      "bytes": 1952421,
+      "sha256": "0b27b411cfc756769ee6cb3d89131cd17611ecd8604b36d0bbd2bbfd524765c3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z07-pending-comparison.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z07-pending-comparison.txt",
+      "bytes": 8701,
+      "sha256": "79656bebabd4a18bc02082978093756120f1a9ecabe1c8beb968b5094831ad8a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z08-pending-resized.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z08-pending-resized.cells.json",
+      "bytes": 812229,
+      "sha256": "514f80586eb6026f7cc424acd481dc2d64b7b167bdf91e5097cc356154fb32fc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z08-pending-resized.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z08-pending-resized.txt",
+      "bytes": 3933,
+      "sha256": "42844291ef7fbe05a8329366eef103cdaa051a24d67f01b8e51824f7ea8b8300",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z09-completed-and-rejected.cells.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z09-completed-and-rejected.cells.json",
+      "bytes": 1959211,
+      "sha256": "aaa35b40e7c1a518313ded26d27421d15af1a621e8a8518be374b13113b2bf62",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/run/z09-completed-and-rejected.txt",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/z09-completed-and-rejected.txt",
+      "bytes": 8460,
+      "sha256": "000d0b4ebc861b003da2f87b688c2dcce95f5b21441c15b891c21fe8a3fcc8ff",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed truecolor run raw: capture pair/control/ack/events/wire/safety/config/log/cast/ANSI/result; no fabricated stdout or capture."
+    },
+    {
+      "arcname": "consumer/smoke.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/smoke.py",
+      "bytes": 23847,
+      "sha256": "3506f50b60ac495ab10383108de81a22b45bcf77b41f4d4887e9d19175987e05",
+      "source_mode": "0755",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/static-review-inputs.json",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/static-review-inputs.json",
+      "bytes": 25808,
+      "sha256": "ad434284e7d18d2881eb3d5bfebecf9fab197f985c09273e91d91aeae0e5a7f1",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/v2_failed_validation_2_11_0.jsonl",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/v2_failed_validation_2_11_0.jsonl",
+      "bytes": 1924,
+      "sha256": "4b9ee48758874a98a4eb275e35632aa32f782550d2dfdc0f285c3ec6f576da0d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "consumer/wide_overwrite.py",
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/wide_overwrite.py",
+      "bytes": 934,
+      "sha256": "0ce4ddf57372fb428355dc0f02088fb0fb1a75499ccd796f27b899f34a400beb",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Immutable actual consumer chronology, consumed/false GO, wrappers, unchanged six verification inputs, binding diffs, host-self probe, attempt records or independent cleanup; stored inert."
+    },
+    {
+      "arcname": "historical/publication-manifest.json",
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/publication-manifest.json",
+      "bytes": 52355,
+      "sha256": "104ce9b1a795c8e788cd259cf4a7994c91af7aead8a811791ea50f746c5d35d3",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Unchanged historical checkpoint/binding and Main technical cadence authority only; no current native/mutation/benchmark repinning."
+    },
+    {
+      "arcname": "historical/scroll-obligation-adjudication.json",
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json",
+      "bytes": 10738,
+      "sha256": "13fbb1df145f2ba8f7a8a1af37148f307f45bb8c5cf245dfffc7a519fd5db04c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Unchanged historical checkpoint/binding and Main technical cadence authority only; no current native/mutation/benchmark repinning."
+    },
+    {
+      "arcname": "historical/source-staging-allowlist.json",
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7/source-staging-allowlist.json",
+      "bytes": 11181,
+      "sha256": "255859571d1c9753b5431f085e4beaa74098090d6f68b694abe57ec6b110d6bc",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Unchanged historical checkpoint/binding and Main technical cadence authority only; no current native/mutation/benchmark repinning."
+    },
+    {
+      "arcname": "metadata/c6la-main038-consumer-result.json",
+      "source_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-current-consumer-result.json",
+      "bytes": 3848,
+      "sha256": "41d4eba31878c328c95a20e002d3c7631be7466e81db28b7bfaa145f1bcc183b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Exact current aggregate copied portably, original raw paths retained with source-to-member index mapping."
+    },
+    {
+      "arcname": "metadata/integration-allowlist.txt",
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-main038-b5d45fe2/integration-allowlist.txt",
+      "bytes": 11084,
+      "sha256": "4981adad50a07d1582eb3a71626e1126b3e39e6b88efea13bca926377bfbf55c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Generated explicit sorted exact member allowlist; no directory recursion or dynamic glob."
+    },
+    {
+      "arcname": "metadata/integration-archive-index.json",
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-main038-b5d45fe2/integration-archive-index.json",
+      "bytes": null,
+      "sha256": null,
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Generated index self-row deliberately unpinned to avoid self-hash cycle; final exact bytes/hash held by packaging receipt, publication manifest and external handoff."
+    },
+    {
+      "arcname": "provenance/c6la-main038-consumer-preparation.json",
+      "source_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-consumer-preparation.json",
+      "bytes": 50580,
+      "sha256": "aefaeff07b58650cd87b0ea4745eade2f5b518a21972c04f69b742274fbd4a0d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "As-recorded preparation/static review/preflight/boundary/runtime correction metadata; original stage/limits preserved, not relabelled as runtime qualification."
+    },
+    {
+      "arcname": "provenance/c6la-main038-integration-boundary.json",
+      "source_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-integration-boundary.json",
+      "bytes": 3143,
+      "sha256": "2f690ce332bed11a15a7eefabe845460a9e2614b703bd6cfc5faa504171bf1ee",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "As-recorded preparation/static review/preflight/boundary/runtime correction metadata; original stage/limits preserved, not relabelled as runtime qualification."
+    },
+    {
+      "arcname": "provenance/c6la-main038-integration-preflight.json",
+      "source_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-integration-preflight.json",
+      "bytes": 41740,
+      "sha256": "e7478afc19157bf0c14ac5e3cfc73595c8b9445c7a6f5639a7d39264212e1ed1",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "As-recorded preparation/static review/preflight/boundary/runtime correction metadata; original stage/limits preserved, not relabelled as runtime qualification."
+    },
+    {
+      "arcname": "provenance/c6la-main038-original-runtime-correction.json",
+      "source_path": "/home/dwalleck/.omp/agent/sessions/-repos-cyril/2026-10-20T01-31-44-917Z_01a156ef-9795-746f-956d-cbffdc8e8692/local/c6la-main038-original-runtime-correction.json",
+      "bytes": 12966,
+      "sha256": "37d0f8476799ae5695e47e3ff72a1556650455b0ecb4fe3b25fa3867d36cb5ea",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "As-recorded preparation/static review/preflight/boundary/runtime correction metadata; original stage/limits preserved, not relabelled as runtime qualification."
+    },
+    {
+      "arcname": "qualification/01-initial-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/01-initial-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/02-current-main038-full-workspace-ordinary-tests.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/02-current-main038-full-workspace-ordinary-tests.log",
+      "bytes": 267867,
+      "sha256": "2ac30fdd66199d4cfec8cb06dfda3f7825b8b5c660670a5e2c0a4a78377c888d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/03-current-main038-workspace-all-targets-strict-Clippy.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/03-current-main038-workspace-all-targets-strict-Clippy.log",
+      "bytes": 705,
+      "sha256": "0b635f57787bb46fa97d4fe677b8a2f45f964d59ba2fdc857b906d95359cff0b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/04-current-main038-default-App-all-bins-build.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/04-current-main038-default-App-all-bins-build.log",
+      "bytes": 483,
+      "sha256": "bb034cfa10f38773364e067fed5ef3645d05cd50d59aa3832a7776a273cfd4e7",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/05-isolated-App-no-default-full-tests.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/05-isolated-App-no-default-full-tests.log",
+      "bytes": 29716,
+      "sha256": "320437d7a7bb6e30c801dfa0afae694dc9f3a86245f17ad48f2f0643461d6694",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/06-isolated-App-no-default-all-targets-strict-Clippy.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/06-isolated-App-no-default-all-targets-strict-Clippy.log",
+      "bytes": 482,
+      "sha256": "d6353786d0ec8ed8dfab5f24e082a708108155e388d8639b4ae81dbc6bd73d52",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/07-isolated-App-no-default-all-bins-build.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/07-isolated-App-no-default-all-bins-build.log",
+      "bytes": 482,
+      "sha256": "522ca36cfb756bda0e7bd7b0c7c30f2f680e6aadcf54aca2b57c652d44bb05c2",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/08-isolated-UI-no-default-full-tests.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/08-isolated-UI-no-default-full-tests.log",
+      "bytes": 86430,
+      "sha256": "cd495ac67afa9e2ba0704ed7c7609d317d7f1f1709e8b2fc8d2ef2a1a3347ef4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/09-isolated-UI-no-default-all-targets-strict-Clippy.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/09-isolated-UI-no-default-all-targets-strict-Clippy.log",
+      "bytes": 279,
+      "sha256": "0d6daea146738954eddda6521ef67a6fd0a7638e3044b27272be9f8de639d65a",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/10-isolated-Core-no-default-full-tests.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/10-isolated-Core-no-default-full-tests.log",
+      "bytes": 85979,
+      "sha256": "e7fa72fadf1ecb089823c534534e66c0c3279e9cff6d6ff09bf5c70ba4498079",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/11-isolated-Core-no-default-all-targets-strict-Clippy.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/11-isolated-Core-no-default-all-targets-strict-Clippy.log",
+      "bytes": 177,
+      "sha256": "5b88892144d43a3446421f9272cfd4c2f584bec0ddfe8cea5bc89d53f7a49014",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/12-isolated-App-explicit-KAS-full-tests.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/12-isolated-App-explicit-KAS-full-tests.log",
+      "bytes": 30750,
+      "sha256": "89e283d4b20a876819f5f77ad7a879ce37cc99153a44e4f786767ba8f32b904e",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/13-isolated-App-explicit-KAS-all-targets-strict-Clippy.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/13-isolated-App-explicit-KAS-all-targets-strict-Clippy.log",
+      "bytes": 483,
+      "sha256": "dc9c3c9b3898592251c0d703112e3a2b1d95342edeae31553d7963ed88fdda5f",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/14-isolated-App-and-Core-explicit-KAS-full-tests.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/14-isolated-App-and-Core-explicit-KAS-full-tests.log",
+      "bytes": 164718,
+      "sha256": "e9e8b5a40a6af734c57a50ce9dbdf196116fd2e0db8ee3074c43a757f49a532b",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/15-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/15-isolated-App-and-Core-explicit-KAS-all-targets-strict-Clippy.log",
+      "bytes": 268,
+      "sha256": "0c4a355921877c660002ca9e5a0f5b46f23fd2a9d4726b87db94f813a0a7896d",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/16-isolated-App-and-Core-explicit-KAS-build.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/16-isolated-App-and-Core-explicit-KAS-build.log",
+      "bytes": 72,
+      "sha256": "fecede7c2157efe2f16c8c8b9dce94b0fb4dd384dca8207046c8bf7636eb0ffe",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/17-final-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/17-final-format-CHECK-no-mutation-CARGO_TARGET_DIR_UNSET.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/CPU.txt",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/CPU.txt",
+      "bytes": 3990,
+      "sha256": "d3af9aed56b8c7f91d73b0abb631ba1b859ec6da552e89cd1d97a18d2b4d4f65",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/canonical-handoff.json",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/canonical-handoff.json",
+      "bytes": 2783831,
+      "sha256": "018f7b4b70de5933d3bf1b59b89729638b55ce0a8ca94cf003c29266adbda484",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/cargo-version.txt",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/cargo-version.txt",
+      "bytes": 36,
+      "sha256": "6a36a8bf8bd42aa197681c3cbafaf785b3a6cf5ed0361cc7240a31c458d10db9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/checked-current-main038.bounded-workspace-inputs.json",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/checked-current-main038.bounded-workspace-inputs.json",
+      "bytes": 105645,
+      "sha256": "f14e529a5bcec86983edac49be4b83958c86ea53b504eb9ee7299b22e4106f77",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/current-publication-metadata-pins.json",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/current-publication-metadata-pins.json",
+      "bytes": 1007,
+      "sha256": "f51b7696304eb217ca998c022802b7e2df33b99e1f9ec71dc414f77a26ff4c02",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/fresh-current506-default-App-binary.json",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/fresh-current506-default-App-binary.json",
+      "bytes": 1514,
+      "sha256": "65e8aa69429be076ab51e598da3bf6cc7b294497f7849f75225a3bfaa2f7e360",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/fresh-current506-no-default-App-binary.json",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/fresh-current506-no-default-App-binary.json",
+      "bytes": 1086,
+      "sha256": "e5fb14fb41793979a2e87b2e9d54f143fb57ca3952fe16e1e1b8ace7dd6322a9",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/initial-admin-index-ref-scope.json",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/initial-admin-index-ref-scope.json",
+      "bytes": 1736,
+      "sha256": "0d7032a899e450379b4ac2f056fab6e8154529960154c01df969e5c5b83a93db",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/kernel.txt",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/kernel.txt",
+      "bytes": 107,
+      "sha256": "23091af4531d87de28fbf1555500411e51bd369c371b448537f7020ee5edbf5c",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/pinned-rustfmt-path.txt",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/pinned-rustfmt-path.txt",
+      "bytes": 78,
+      "sha256": "0a890c9e15de5780ca98cf914706b1cf9b0d8f7f8433a49e8f1a83b6a61181d4",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    },
+    {
+      "arcname": "qualification/rustc-Vv.txt",
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/rustc-Vv.txt",
+      "bytes": 196,
+      "sha256": "b75985398e5509a90a7d5d68f8ec6690675f703c5cfa11893b04fc9c3fceca69",
+      "source_mode": "0644",
+      "archive_mode": "0644",
+      "reason": "Actual completed current506 qualification: canonical/17 original gate logs/hash-only inputs/ready/host/compiler/admin stability metadata; not a replay."
+    }
+  ],
+  "exclusions": [
+    {
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/private-pre-gates.index",
+      "category": "private-Git-index",
+      "reason": "Private index bytes excluded; canonical records hash-only administrative stability.",
+      "known_sha256_from_canonical": "37ad619383d27ffed386b7355997b58f8b30819a201af79243ea44418bd9492b"
+    },
+    {
+      "source_path": "/home/dwalleck/.claude/tmp/cyril-batch3-qualification-20261020-ipe924db/c6la-current-main038-integration-green-attempt1/qualification-progress.json",
+      "category": "duplicate-progress",
+      "reason": "Final canonical-handoff.json is complete actual qualification authority; mutable progress copy not needed."
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/isolated",
+      "category": "entire-isolated-subtree",
+      "reason": "Entire subtree excluded without traversal, including product binary/privateHOME/ws/cache/config/data/runtime/state/bin. Only separately recorded final config/safety/cleanup are included.",
+      "recursive_content_enumerated": false
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-main038-consumer-prepared-niYHEjqJ/run-truecolor-original-runtime-once/isolated/cyril-tested",
+      "category": "product-executable",
+      "reason": "Do not publish product executable; binding retained in actual safety/attempt/canonical metadata.",
+      "known_sha256_from_actual_safety": "993a2fd5f32353b7d0701ca37281f5b7ad5c03e5d58b3e9e0c2e60da6de57388"
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-current-main038-default-qualified-20261022T051828480539Z",
+      "category": "product-executable",
+      "reason": "Private qualified binary excluded; only actual build/ready/hash records included.",
+      "known_sha256_from_canonical": "993a2fd5f32353b7d0701ca37281f5b7ad5c03e5d58b3e9e0c2e60da6de57388",
+      "known_bytes_from_canonical": 102704856
+    },
+    {
+      "source_path": "/tmp/cyril-c6la-current-main038-no-default-qualified-20261022T052256152442Z",
+      "category": "product-executable",
+      "reason": "Private qualified binary excluded; only actual build/ready/hash records included.",
+      "known_sha256_from_canonical": "f6cc5938b0aef33baed0aa0bb69c880f388f56e914d5c106d9bff2344263351d",
+      "known_bytes_from_canonical": 88261512
+    },
+    {
+      "source_path": "/home/dwalleck/repos/cyril-wt-perf-cyril-c6la/.cyril-c6la/current-width-e3f2a7c7",
+      "category": "historical-payloads-retained-in-sibling",
+      "reason": "Only three named historical metadata files copied into new archive. All 26 sibling files/archives remain immutable and publication-pinned externally; no native/mutation/benchmark proof bodies re-bound to current506."
+    },
+    {
+      "source_path": "README.md; .cyril-c6la/route.md; .cyril-c6la/plan.md; .cyril-c6la/review-decisions.md; .cyril-c6la/design.md",
+      "category": "five-live-publication-documents",
+      "reason": "Excluded from archive; final publication manifest pins the postdoc overlay independently, preventing archive/index/manifest cycles.",
+      "read_before_parent_final_signal": false
+    },
+    {
+      "source_path": "out-of-allowlist scopes",
+      "category": "global-deny-policy",
+      "reason": "No full HOME, credentials, .git, caches, full Rust/workspace/production-source snapshots, broad exports, unrelated artifacts, product/benchmark executables, or full history/session exports. Not enumerated/copied; named raw hash-only metadata may record original paths."
+    }
+  ],
+  "digest_policy": {
+    "self_row": "metadata/integration-archive-index.json",
+    "self_bytes_and_sha256": null,
+    "reason": "Self digest is outside archive in receipt/manifest/handoff; included and external index bytes are identical.",
+    "allowlist": "Exact name-only list includes its own name and index; its exact bytes/hash are bound by the index.",
+    "manifest_and_receipt_excluded": true
+  },
+  "archive_metadata": {
+    "format": "PAX tar",
+    "member_kind": "regular files only; no directories/symlinks/hardlinks",
+    "mode": "0644",
+    "uid": 0,
+    "gid": 0,
+    "uname": "",
+    "gname": "",
+    "mtime": 0,
+    "gzip": "level9,mtime0,empty original filename",
+    "ordering": "UTF-8 member names sorted lexicographically"
+  },
+  "scope": "Portable current506 actual qualification and one actual truecolor App run with failed prelaunch chronology; not a hermetic product/runtime/source distribution or historical requalification."
+}

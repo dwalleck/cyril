@@ -101,8 +101,10 @@ unification. See [ADR-0002](docs/adr/0002-kas-cargo-feature-gate.md).
 On v2, a tool rejected during argument validation is shown as a failed call with
 its validation error, even when the agent sends only an input chunk and a failed
 update without a start. Error text supplied in the update's content is displayed
-when no usable raw-output error is available; a chunk alone remains activity,
-not a fabricated tool result.
+when no usable raw-output error is available. Empty or whitespace-only raw
+strings and error fields do not suppress that content fallback. Nonblank raw
+errors retain precedence; the original raw output remains unchanged. A chunk
+alone remains activity, not a fabricated tool result.
 
 The default KAS `free` spawn runs discovered Node.js plus the extracted
 `acp-server.js` directly, with callback authentication: on each KAS token
@@ -224,6 +226,64 @@ Markdown also includes its own formatting colors and render width. Unrelated
 theme-role changes can reuse cached output, while changes to a used style
 remain isolated. Adding a rendering dependency to a style input automatically
 includes it in that input's derived identity.
+
+Display budgets use the released `ratatui-core 0.1.2` /
+`ratatui-widgets 0.3.2` physical-cell widths for Markdown tables, code frames
+and affected popup/status text. Halfwidth sound marks occupy their painted
+columns; combining marks and original input bytes are preserved. The input
+editor retains character wrapping and its character-cursor contract.
+
+The [current diff-reuse integration binding](.cyril-zj0m/current-integration.json)
+separates this source state and its outstanding qualification from the frozen
+earlier benchmark and consumer evidence.
+
+### Session history and viewport
+
+The selected conversation retains prepared history across redraws and selects
+the visible physical rows when you browse older messages or return to following
+live output. Content revisions, viewport width and the selected semantic theme
+and color mode govern preparation; scrolling and height-only resizing reuse
+prepared content without changing its wrapping width.
+
+For viewports wider than one column, the conversation reserves the rightmost
+column for its scrollbar in both follow and browse modes, even when no thumb is
+needed. At zero or one column it uses the full content width with no indicator.
+
+The [restored layout-owner evidence](.cyril-c6la/current-restored-layout-owner-7d88498e/publication-manifest.json)
+owns the current 506-input qualification, fresh complete 79-case benchmark and
+[both-mode actual-App consumer](.cyril-c6la/current-restored-layout-owner-7d88498e/c6la-restored-layout-owner-consumer-result.json).
+The earlier [b5 integration](.cyril-c6la/current-main038-b5d45fe2/publication-manifest.json)
+and [e3 retained-history packet](.cyril-c6la/current-width-e3f2a7c7/publication-manifest.json)
+keep their original identities; their native/benchmark results are historical,
+not substitutes for the restored D1 owner's fresh proof.
+
+Under the [supported-controls user approval](.cyril-c6la/design.md#supported-controls-user-approval),
+the fresh owned Ghostty/Xvfb `truecolor`/`none` pair uses separate launches.
+[Main's current supported-native judgment](.cyril-c6la/design.md#current-supported-native-judgment-and-limits)
+is PASS with explicit limits, combining deterministic exactness, native-export
+correlation and reviewed PNG appearance. Both complete image sets were reviewed;
+not every obligation is an unqualified visual PASS. Four actual resize changes
+follow one baseline/no-op capture. Clipboard toasts obscure the lower-center
+composer/footer, and native exports omit initial unattached U+0301/U+200B;
+screenshots alone do not establish exact URL/scalar/RGB/process claims.
+
+Existing state/render/root tests own focus/back; all-four-mode state/render
+coverage and same-process invalidation/performance evidence remain distinct.
+No native50,000-history, native child-focus/back, same-process native switching,
+unsampled-transient or internal-performance result is claimed. Capture-time
+pending-review receipts remain unchanged beside the later qualified judgment.
+Fresh [isolated reconstruction](.cyril-c6la/reconstruction-restored-7d88498e.md)
+and [independent design comparison](.cyril-c6la/conformance-restored-7d88498e.md)
+now record source-level conformance **PASS**: 16 changed production files map
+exactly once to nine approved rows, with no unresolved discrepancies. This
+review inspected actual restored working production, not the earlier c084 tree;
+it does not attest qualification, native/performance or CI outcomes. Restored-head
+CI/platform, Main's final Git/publication and combined acceptance remain
+**PENDING** under existing draft PR197, not PR187.
+
+The [ordinary-scroll verification disposition](.cyril-c6la/current-width-e3f2a7c7/scroll-obligation-adjudication.json)
+records Main's technical adoption of the coverage-preserving cadence instrument;
+the original burst FAIL and all remaining acceptance limits stay recorded.
 
 ### Tool call history
 

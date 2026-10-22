@@ -60,9 +60,9 @@ fn turn_completed_commits_streaming_and_updates_session() {
 
     // Streaming committed to messages
     assert!(ui.streaming_text().is_empty());
-    assert_eq!(ui.messages().len(), 1);
+    assert_eq!(ui.history().messages().len(), 1);
     assert!(matches!(
-        ui.messages()[0].kind(),
+        ui.history().messages()[0].kind(),
         ChatMessageKind::AgentText(_)
     ));
 
@@ -174,7 +174,7 @@ fn bridge_disconnect_updates_both() {
     assert_eq!(session.status(), &SessionStatus::Disconnected);
     assert_eq!(ui.activity(), Activity::Idle);
     // UI should show a disconnect message
-    assert!(!ui.messages().is_empty());
+    assert!(!ui.history().messages().is_empty());
 }
 
 #[test]
@@ -234,7 +234,7 @@ fn agent_switched_shows_message_and_activates() {
 
     assert_eq!(session.status(), &SessionStatus::Active);
     // UI should show welcome message
-    assert!(!ui.messages().is_empty());
+    assert!(!ui.history().messages().is_empty());
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn message_limit_enforced() {
     for i in 0..5 {
         ui.add_user_message(&format!("msg {i}"));
     }
-    assert_eq!(ui.messages().len(), 3);
+    assert_eq!(ui.history().messages().len(), 3);
 }
 
 #[test]
